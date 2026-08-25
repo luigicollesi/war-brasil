@@ -1,0 +1,3 @@
+source=/home/luigi/.cache/codex-openai/plugins/plugins/ngs-analysis/skills/ngs-runtime-env
+repository=https://github.com/openai/plugins.git
+ref=main

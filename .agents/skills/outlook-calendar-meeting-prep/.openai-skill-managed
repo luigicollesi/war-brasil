@@ -1,0 +1,3 @@
+source=/home/luigi/.cache/codex-openai/plugins/plugins/outlook-calendar/skills/outlook-calendar-meeting-prep
+repository=https://github.com/openai/plugins.git
+ref=main

@@ -1,0 +1,3 @@
+source=/home/luigi/.cache/codex-openai/plugins/plugins/canva/skills/canva-resize-for-all-social-media
+repository=https://github.com/openai/plugins.git
+ref=main

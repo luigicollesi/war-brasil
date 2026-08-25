@@ -1,0 +1,3 @@
+source=/home/luigi/.cache/codex-openai/plugins/plugins/airtable/skills/airtable-cli
+repository=https://github.com/openai/plugins.git
+ref=main

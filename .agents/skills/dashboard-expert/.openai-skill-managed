@@ -1,0 +1,3 @@
+source=/home/luigi/.cache/codex-openai/plugins/plugins/mixpanel-headless/skills/dashboard-expert
+repository=https://github.com/openai/plugins.git
+ref=main

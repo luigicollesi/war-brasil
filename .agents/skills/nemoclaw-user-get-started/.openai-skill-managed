@@ -1,0 +1,3 @@
+source=/home/luigi/.cache/codex-openai/plugins/plugins/nvidia/skills/nemoclaw-user-get-started
+repository=https://github.com/openai/plugins.git
+ref=main

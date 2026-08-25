@@ -1,0 +1,3 @@
+source=/home/luigi/.cache/codex-openai/plugins/plugins/superpowers/skills/dispatching-parallel-agents
+repository=https://github.com/openai/plugins.git
+ref=main

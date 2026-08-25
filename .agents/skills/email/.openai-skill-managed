@@ -1,0 +1,3 @@
+source=/home/luigi/.cache/codex-openai/plugins/plugins/vercel/skills/email
+repository=https://github.com/openai/plugins.git
+ref=main

@@ -1,0 +1,3 @@
+source=/home/luigi/.cache/codex-openai/plugins/plugins/midpage/skills/cite-check
+repository=https://github.com/openai/plugins.git
+ref=main

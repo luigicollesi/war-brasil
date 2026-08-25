@@ -1,0 +1,3 @@
+source=/home/luigi/.cache/codex-openai/plugins/plugins/daloopa/skills/bull-bear
+repository=https://github.com/openai/plugins.git
+ref=main

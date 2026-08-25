@@ -1,0 +1,3 @@
+source=/home/luigi/.cache/codex-openai/plugins/plugins/build-web-data-visualization/skills/visualization-strategy-and-critique
+repository=https://github.com/openai/plugins.git
+ref=main

@@ -1,0 +1,3 @@
+source=/home/luigi/.cache/codex-openai/plugins/plugins/build-macos-apps/skills/test-triage
+repository=https://github.com/openai/plugins.git
+ref=main

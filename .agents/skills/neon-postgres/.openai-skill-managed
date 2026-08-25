@@ -1,0 +1,3 @@
+source=/home/luigi/.cache/codex-openai/plugins/plugins/neon-postgres/skills/neon-postgres
+repository=https://github.com/openai/plugins.git
+ref=main

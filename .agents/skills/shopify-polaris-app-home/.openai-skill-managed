@@ -1,0 +1,3 @@
+source=/home/luigi/.cache/codex-openai/plugins/plugins/shopify/skills/shopify-polaris-app-home
+repository=https://github.com/openai/plugins.git
+ref=main

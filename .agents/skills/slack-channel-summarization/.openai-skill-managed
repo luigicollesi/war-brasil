@@ -1,0 +1,3 @@
+source=/home/luigi/.cache/codex-openai/plugins/plugins/slack/skills/slack-channel-summarization
+repository=https://github.com/openai/plugins.git
+ref=main

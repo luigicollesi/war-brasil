@@ -1,0 +1,3 @@
+source=/home/luigi/.cache/codex-openai/plugins/plugins/plugin-eval/fixtures/multi-skill-plugin/skills/beta
+repository=https://github.com/openai/plugins.git
+ref=main

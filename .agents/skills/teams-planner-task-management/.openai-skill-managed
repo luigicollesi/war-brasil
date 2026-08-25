@@ -1,0 +1,3 @@
+source=/home/luigi/.cache/codex-openai/plugins/plugins/teams/skills/teams-planner-task-management
+repository=https://github.com/openai/plugins.git
+ref=main

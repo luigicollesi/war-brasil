@@ -1,0 +1,3 @@
+source=/home/luigi/.cache/codex-openai/plugins/plugins/build-ios-apps/skills/ios-simulator-browser
+repository=https://github.com/openai/plugins.git
+ref=main

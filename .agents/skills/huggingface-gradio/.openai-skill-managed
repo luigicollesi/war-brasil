@@ -1,0 +1,3 @@
+source=/home/luigi/.cache/codex-openai/plugins/plugins/hugging-face/skills/gradio
+repository=https://github.com/openai/plugins.git
+ref=main

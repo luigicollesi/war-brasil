@@ -1,0 +1,3 @@
+source=/home/luigi/.cache/codex-openai/plugins/plugins/catalyst-by-zoho/skills/catalyst-by-zoho
+repository=https://github.com/openai/plugins.git
+ref=main

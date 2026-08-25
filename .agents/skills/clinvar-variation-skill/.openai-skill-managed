@@ -1,0 +1,3 @@
+source=/home/luigi/.cache/codex-openai/plugins/plugins/life-science-research/skills/clinvar-variation-skill
+repository=https://github.com/openai/plugins.git
+ref=main

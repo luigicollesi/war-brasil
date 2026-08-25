@@ -1,0 +1,3 @@
+source=/home/luigi/.cache/codex-openai/plugins/plugins/zoom/skills/websockets
+repository=https://github.com/openai/plugins.git
+ref=main
