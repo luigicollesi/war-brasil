@@ -43,11 +43,13 @@ export function findTerritoryConnection(
   territoryA: number,
   territoryB: number,
 ) {
-  return connections.find(
+  const matches = connections.filter(
     (connection) =>
       (connection.territoryA === territoryA && connection.territoryB === territoryB) ||
       (connection.territoryA === territoryB && connection.territoryB === territoryA),
-  ) ?? {
+  );
+
+  return matches.find((connection) => connection.passable) ?? matches[0] ?? {
     territoryA,
     territoryB,
     exists: false,
