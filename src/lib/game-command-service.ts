@@ -3,21 +3,8 @@ import "server-only";
 import { randomInt } from "node:crypto";
 import type { PoolClient } from "pg";
 import { gameCommand } from "@/src/lib/game-command";
-import {
-  TERRITORY_METADATA,
-  type CardSymbol,
-} from "@/src/lib/game-config";
-import {
-  isValidTrade,
-  reinforcementFor,
-  tradeValue,
-} from "@/src/lib/game-rules";
-import { objectiveWon } from "@/src/lib/game-objective-service";
-import {
-  jurassicTunnelConnection,
-  reachableTerritoryIds,
-  type TerritoryConnection,
-} from "@/src/lib/territory-connections";
+import { TERRITORY_METADATA } from "@/src/lib/game-config";
+import { reinforcementFor } from "@/src/lib/game-rules";
 import { RoomError } from "@/src/lib/rooms";
 
 type CommandRoom = {
@@ -26,11 +13,8 @@ type CommandRoom = {
   order_roll_round: number;
   phase: string;
   current_player_id: string | null;
-  round_number: number;
   jurassic_tunnel_territory_id: number | null;
-  reinforcements_remaining: number;
   conquered_this_turn: boolean;
-  trade_count: number;
   pending_from_territory_id: number | null;
   last_battle: unknown | null;
 };
@@ -38,13 +22,6 @@ type CommandRoom = {
 type CommandPlayer = {
   id: string;
   turn_position: number | null;
-};
-
-type OwnedTerritory = {
-  territory_id: number;
-  owner_player_id: string;
-  troops: number;
-  moved_in_turn: number;
 };
 
 type OrderPlayer = {
@@ -57,13 +34,6 @@ type OrderRoll = {
   value: number;
 };
 
-type TradeCard = {
-  id: string;
-  territory_id: number | null;
-  symbol: CardSymbol | null;
-  is_wild: boolean;
-};
-
 function normalizeRoomId(value: string) {
   if (!/^\d+$/.test(value)) {
     throw new RoomError("Partida não encontrada.", 404);
@@ -71,18 +41,11 @@ function normalizeRoomId(value: string) {
   return value;
 }
 
-function positiveInteger(value: unknown, message: string) {
-  if (typeof value !== "number" || !Number.isInteger(value) || value < 1) {
-    throw new RoomError(message, 422);
-  }
-  return value;
-}
-
 async function loadRoom(client: PoolClient, roomId: string) {
   const result = await client.query<CommandRoom>(
-    `SELECT id,status,order_roll_round,phase,current_player_id,round_number,
-            jurassic_tunnel_territory_id,reinforcements_remaining,
-            conquered_this_turn,trade_count,pending_from_territory_id,last_battle
+    `SELECT id,status,order_roll_round,phase,current_player_id,
+            jurassic_tunnel_territory_id,conquered_this_turn,
+            pending_from_territory_id,last_battle
      FROM game_rooms
      WHERE id=$1`,
     [roomId],
@@ -144,17 +107,6 @@ function chooseJurassicTunnelDestination(previous: number | null) {
   return candidates[randomInt(0, candidates.length)];
 }
 
-async function ensureJurassicTunnel(client: PoolClient, room: CommandRoom) {
-  if (room.status !== "playing" || room.jurassic_tunnel_territory_id) return;
-
-  const destination = chooseJurassicTunnelDestination(null);
-  await client.query(
-    "UPDATE game_rooms SET jurassic_tunnel_territory_id=$2 WHERE id=$1",
-    [room.id, destination],
-  );
-  room.jurassic_tunnel_territory_id = destination;
-}
-
 async function advanceJurassicTunnelRound(
   client: PoolClient,
   room: CommandRoom,
@@ -169,9 +121,6 @@ async function advanceJurassicTunnelRound(
      WHERE id=$1`,
     [room.id, destination],
   );
-
-  room.round_number += 1;
-  room.jurassic_tunnel_territory_id = destination;
 }
 
 async function beginReinforcement(
@@ -438,293 +387,6 @@ export async function phaseCommand(
            reinforcements_remaining=0,conquered_this_turn=FALSE
        WHERE id=$1`,
       [room.id, next.id],
-    );
-
-    return null;
-  });
-}
-
-export async function reinforceCommand(
-  value: string,
-  session: string,
-  input: Record<string, unknown>,
-) {
-  const roomId = normalizeRoomId(value);
-  const territoryId = positiveInteger(
-    input.territoryId,
-    "Território inválido.",
-  );
-  const troops = positiveInteger(
-    input.troops,
-    "Quantidade de tropas inválida.",
-  );
-
-  return gameCommand(roomId, async (client) => {
-    const room = await loadRoom(client, roomId);
-    const player = await playerFor(client, room.id, session);
-    assertTurn(room, player, "reinforcement");
-
-    if (troops > room.reinforcements_remaining) {
-      throw new RoomError("Você não possui reforços suficientes.", 409);
-    }
-
-    const own = await client.query(
-      `SELECT 1
-       FROM game_territories
-       WHERE room_id=$1 AND territory_id=$2 AND owner_player_id=$3
-       FOR UPDATE`,
-      [room.id, territoryId, player.id],
-    );
-
-    if (!own.rowCount) {
-      throw new RoomError(
-        "Você só pode reforçar territórios próprios.",
-        409,
-      );
-    }
-
-    const remaining = room.reinforcements_remaining - troops;
-    await client.query(
-      `UPDATE game_territories
-       SET troops=troops+$3
-       WHERE room_id=$1 AND territory_id=$2`,
-      [room.id, territoryId, troops],
-    );
-    await client.query(
-      `UPDATE game_rooms
-       SET reinforcements_remaining=$2,
-           phase=CASE WHEN $2=0 THEN 'attack' ELSE phase END
-       WHERE id=$1`,
-      [room.id, remaining],
-    );
-
-    await objectiveWon(client, room.id, player.id);
-    return null;
-  });
-}
-
-export async function tradeCardsCommand(
-  value: string,
-  session: string,
-  input: Record<string, unknown>,
-) {
-  const roomId = normalizeRoomId(value);
-  const ids = Array.isArray(input.cardIds)
-    ? input.cardIds.filter((card): card is string => typeof card === "string")
-    : [];
-
-  if (ids.length !== 3 || new Set(ids).size !== 3) {
-    throw new RoomError("Selecione exatamente três cartas diferentes.", 422);
-  }
-
-  return gameCommand(roomId, async (client) => {
-    const room = await loadRoom(client, roomId);
-    const player = await playerFor(client, room.id, session);
-
-    if (
-      room.status !== "playing" ||
-      room.current_player_id !== player.id ||
-      !["cards", "reinforcement"].includes(room.phase)
-    ) {
-      throw new RoomError("A troca não está disponível neste momento.", 409);
-    }
-
-    const cards = await client.query<TradeCard>(
-      `SELECT id,territory_id,symbol,is_wild
-       FROM game_cards
-       WHERE room_id=$1
-         AND owner_player_id=$2
-         AND zone='hand'
-         AND id=ANY($3::bigint[])
-       FOR UPDATE`,
-      [room.id, player.id, ids],
-    );
-
-    if (cards.rowCount !== 3) {
-      throw new RoomError(
-        "Uma das cartas selecionadas não está na sua mão.",
-        409,
-      );
-    }
-
-    const symbols = cards.rows.map((card) =>
-      card.is_wild ? "wild" : card.symbol!,
-    ) as Array<CardSymbol | "wild">;
-
-    if (!isValidTrade(symbols)) {
-      throw new RoomError("Esta combinação de cartas não é válida.", 422);
-    }
-
-    const owned = new Set(
-      (
-        await client.query<{ territory_id: number }>(
-          `SELECT territory_id
-           FROM game_territories
-           WHERE room_id=$1 AND owner_player_id=$2`,
-          [room.id, player.id],
-        )
-      ).rows.map((row) => row.territory_id),
-    );
-
-    await client.query(
-      `UPDATE game_cards
-       SET zone='discard',owner_player_id=NULL,deck_order=NULL
-       WHERE id=ANY($1::bigint[])`,
-      [ids],
-    );
-
-    for (const card of cards.rows) {
-      if (card.territory_id && owned.has(card.territory_id)) {
-        await client.query(
-          `UPDATE game_territories
-           SET troops=troops+2
-           WHERE room_id=$1 AND territory_id=$2`,
-          [room.id, card.territory_id],
-        );
-      }
-    }
-
-    await client.query(
-      `UPDATE game_rooms
-       SET reinforcements_remaining=reinforcements_remaining+$2,
-           trade_count=trade_count+1
-       WHERE id=$1`,
-      [room.id, tradeValue(room.trade_count)],
-    );
-
-    await objectiveWon(client, room.id, player.id);
-    return null;
-  });
-}
-
-export async function maneuverCommand(
-  value: string,
-  session: string,
-  input: Record<string, unknown>,
-) {
-  const roomId = normalizeRoomId(value);
-  const from = positiveInteger(
-    input.fromTerritoryId,
-    "Território de origem inválido.",
-  );
-  const to = positiveInteger(
-    input.toTerritoryId,
-    "Território de destino inválido.",
-  );
-  const troops = positiveInteger(
-    input.troops,
-    "Quantidade de tropas inválida.",
-  );
-
-  return gameCommand(roomId, async (client) => {
-    const room = await loadRoom(client, roomId);
-    const player = await playerFor(client, room.id, session);
-    assertTurn(room, player, "maneuver");
-    await ensureJurassicTunnel(client, room);
-
-    if (from === to) {
-      throw new RoomError(
-        "Origem e destino precisam ser territórios diferentes.",
-        422,
-      );
-    }
-
-    const owned = (
-      await client.query<OwnedTerritory>(
-        `SELECT territory_id,owner_player_id,troops,moved_in_turn
-         FROM game_territories
-         WHERE room_id=$1 AND owner_player_id=$2
-         FOR UPDATE`,
-        [room.id, player.id],
-      )
-    ).rows;
-
-    const source = owned.find((territory) => territory.territory_id === from);
-    const destination = owned.find(
-      (territory) => territory.territory_id === to,
-    );
-
-    if (!source || !destination) {
-      throw new RoomError(
-        "Você só pode deslocar tropas entre territórios próprios.",
-        409,
-        {
-          fromTerritoryId: from,
-          toTerritoryId: to,
-          requestPlayerId: player.id,
-        },
-      );
-    }
-
-    const connectionRows = (
-      await client.query<{
-        territory_a: number;
-        territory_b: number;
-        is_passable: boolean;
-        barrier_name: string | null;
-        description: string | null;
-      }>(
-        `SELECT territory_a,territory_b,is_passable,barrier_name,description
-         FROM territory_connections
-         WHERE is_passable=TRUE`,
-      )
-    ).rows;
-
-    const connections: TerritoryConnection[] = connectionRows.map(
-      (connection) => ({
-        territoryA: connection.territory_a,
-        territoryB: connection.territory_b,
-        exists: true,
-        passable: connection.is_passable,
-        barrierName: connection.barrier_name,
-        description: connection.description,
-      }),
-    );
-
-    const tunnelConnection = jurassicTunnelConnection(
-      room.jurassic_tunnel_territory_id,
-    );
-    if (tunnelConnection) connections.push(tunnelConnection);
-
-    const reachable = new Set(
-      reachableTerritoryIds(
-        connections,
-        from,
-        owned.map((territory) => territory.territory_id),
-      ),
-    );
-
-    if (!reachable.has(to)) {
-      throw new RoomError(
-        "Não existe um caminho contínuo por territórios próprios entre a origem e o destino.",
-        409,
-        { fromTerritoryId: from, toTerritoryId: to },
-      );
-    }
-
-    if (troops > source.troops - source.moved_in_turn - 1) {
-      throw new RoomError(
-        "Estas tropas já foram deslocadas ou o território ficaria vazio.",
-        409,
-        {
-          fromTerritoryId: from,
-          toTerritoryId: to,
-          requestedTroops: troops,
-          sourceTroops: source.troops,
-          movedInTurn: source.moved_in_turn,
-        },
-      );
-    }
-
-    await client.query(
-      "UPDATE game_territories SET troops=troops-$3 WHERE room_id=$1 AND territory_id=$2",
-      [room.id, from, troops],
-    );
-    await client.query(
-      `UPDATE game_territories
-       SET troops=troops+$3,moved_in_turn=moved_in_turn+$3
-       WHERE room_id=$1 AND territory_id=$2`,
-      [room.id, to, troops],
     );
 
     return null;
