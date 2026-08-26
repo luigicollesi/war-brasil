@@ -1,6 +1,9 @@
 import type { GameSnapshot } from "@/src/lib/game-contract";
 import type { GameViewModel } from "@/src/lib/game-view-model";
-import { reachableTerritoryIds, type TerritoryConnection } from "@/src/lib/territory-connections";
+import {
+  reachableTerritoryIds,
+  type TerritoryConnection,
+} from "@/src/lib/territory-connections";
 
 export type GameInteractionDialog =
   | { kind: "reinforce"; targetId: number }
@@ -78,7 +81,8 @@ export function gameInteractionReducer(
   if (action.type === "select-source") {
     return {
       ...current,
-      sourceId: current.sourceId === action.territoryId ? null : action.territoryId,
+      sourceId:
+        current.sourceId === action.territoryId ? null : action.territoryId,
       dialog: null,
       barrier: null,
     };
@@ -133,11 +137,7 @@ export function maneuverTargetIds(
   ).filter((territoryId) => territoryId !== sourceId);
 }
 
-export function attackTargetIds(
-  snapshot: GameSnapshot,
-  game: GameViewModel,
-  sourceId: number,
-) {
+export function attackTargetIds(game: GameViewModel, sourceId: number) {
   const connections = game.connectionsByTerritory.get(sourceId) ?? [];
   const meId = game.me?.id;
 
@@ -149,7 +149,8 @@ export function attackTargetIds(
         : connection.territoryA,
     )
     .filter(
-      (territoryId) => game.territoriesById.get(territoryId)?.ownerPlayerId !== meId,
+      (territoryId) =>
+        game.territoriesById.get(territoryId)?.ownerPlayerId !== meId,
     );
 }
 
@@ -181,7 +182,7 @@ export function deriveMapHints(
         }
       : {
           available: [],
-          targets: attackTargetIds(snapshot, game, state.sourceId),
+          targets: attackTargetIds(game, state.sourceId),
         };
   }
 
@@ -204,7 +205,9 @@ export function deriveMapHints(
   return { available: [], targets: [] };
 }
 
-export function deriveInteractionArrow(state: GameInteractionState): InteractionArrow {
+export function deriveInteractionArrow(
+  state: GameInteractionState,
+): InteractionArrow {
   return state.dialog?.kind === "maneuver"
     ? {
         fromTerritoryId: state.dialog.sourceId,
