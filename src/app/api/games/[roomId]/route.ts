@@ -54,7 +54,10 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     }
 
     if (knownTopology === GAME_TOPOLOGY_VERSION) {
-      const { connections: _connections, ...dynamicSnapshot } = result.snapshot;
+      const dynamicSnapshot: Partial<typeof result.snapshot> = {
+        ...result.snapshot,
+      };
+      delete dynamicSnapshot.connections;
       return noStoreJson(dynamicSnapshot, { headers });
     }
 
