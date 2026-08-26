@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { GameClient } from "@/src/components/game-client";
 import { ServerConnectionIndicator } from "@/src/components/server-connection-indicator";
+import "./game-polish.css";
 
 type GamePageProps = {
   params: Promise<{ roomId: string }>;
