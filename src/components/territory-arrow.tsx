@@ -5,15 +5,11 @@ import { useId } from "react";
 export type TerritoryAnchor = { x: number; y: number };
 export type TerritoryArrowKind = "attack" | "movement";
 
-export const territoryArrowOffsets: Partial<Record<number, TerritoryAnchor>> = {};
-
 export function getTerritoryAnchor(pathElement: SVGPathElement): TerritoryAnchor {
   const bbox = pathElement.getBBox();
-  const territoryId = Number(pathElement.dataset.id);
-  const offset = territoryArrowOffsets[territoryId];
   return {
-    x: bbox.x + bbox.width / 2 + (offset?.x ?? 0),
-    y: bbox.y + bbox.height / 2 + (offset?.y ?? 0),
+    x: bbox.x + bbox.width / 2,
+    y: bbox.y + bbox.height / 2,
   };
 }
 
@@ -30,9 +26,10 @@ export function TerritoryArrow({
   const color = kind === "attack" ? "#d64b45" : "#3976c5";
   const dx = to.x - from.x;
   const dy = to.y - from.y;
-  const bend = Math.min(72, Math.max(28, Math.hypot(dx, dy) * 0.18));
-  const controlX = (from.x + to.x) / 2 - dy / Math.max(1, Math.hypot(dx, dy)) * bend;
-  const controlY = (from.y + to.y) / 2 + dx / Math.max(1, Math.hypot(dx, dy)) * bend;
+  const distance = Math.max(1, Math.hypot(dx, dy));
+  const bend = Math.min(72, Math.max(28, distance * 0.18));
+  const controlX = (from.x + to.x) / 2 - (dy / distance) * bend;
+  const controlY = (from.y + to.y) / 2 + (dx / distance) * bend;
 
   return (
     <svg aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full overflow-visible" viewBox="0 0 1254 1254">
