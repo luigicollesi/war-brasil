@@ -15,6 +15,7 @@ export default async function GamePage({ params }: GamePageProps) {
 
   return (
     <main className="game-screen" aria-label="Partida War Brasil">
+      <style>{`.game-runtime > div > section:first-of-type span[class*="rounded-full"] { visibility: hidden; }`}</style>
       <div className="game-runtime">
         <GameClient roomId={roomId} />
       </div>
