@@ -7,8 +7,7 @@ export type TerritoryConnection = {
   description: string | null;
 };
 
-export const JURASSIC_TUNNEL_SOURCE_ID = 3;
-export const JURASSIC_TUNNEL_EXCLUDED_IDS = [1, 3] as const;
+const JURASSIC_TUNNEL_SOURCE_ID = 3;
 
 export function isJurassicTunnelConnection(
   destinationTerritoryId: number | null,
