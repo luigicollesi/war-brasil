@@ -45,6 +45,10 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
       return noStoreEmpty({ status: 204, headers });
     }
 
+    if ((result.snapshot.room.status as string) === "waiting") {
+      throw new RoomError("Partida não encontrada.", 404);
+    }
+
     return noStoreJson(result.snapshot, { headers });
   } catch (error) {
     return roomErrorResponse(error, {
