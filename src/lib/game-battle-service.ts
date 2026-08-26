@@ -141,7 +141,6 @@ async function applyBattleOutcome(
        WHERE room_id=$1 AND territory_id=$2`,
       [room.id, defender.territory_id, defenderTroops],
     );
-    await objectiveWon(client, room.id, battle.attackerPlayerId);
     return;
   }
 
@@ -179,11 +178,23 @@ async function applyBattleOutcome(
       [room.id, battle.defenderPlayerId, battle.attackerPlayerId],
     );
 
-    if (!(await objectiveWon(client, room.id, battle.attackerPlayerId))) {
+    if (
+      !(await objectiveWon(
+        client,
+        room.id,
+        battle.attackerPlayerId,
+        "territory_control_changed",
+      ))
+    ) {
       await resolveFallbacks(client, room.id, battle.defenderPlayerId);
     }
   } else {
-    await objectiveWon(client, room.id, battle.attackerPlayerId);
+    await objectiveWon(
+      client,
+      room.id,
+      battle.attackerPlayerId,
+      "territory_control_changed",
+    );
   }
 }
 
