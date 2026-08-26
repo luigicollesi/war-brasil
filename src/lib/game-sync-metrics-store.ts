@@ -28,7 +28,9 @@ export const gameSyncMetricsStore = {
 
   subscribe(listener: Listener) {
     listeners.add(listener);
-    return () => listeners.delete(listener);
+    return () => {
+      listeners.delete(listener);
+    };
   },
 
   recordSuccess(latencyMs: number) {
