@@ -27,6 +27,29 @@ export async function readGameRevision(
   return row.revision;
 }
 
+export async function readPlayerGameRevision(
+  client: PoolClient,
+  roomId: string,
+  session: string,
+): Promise<GameRevision> {
+  const result = await client.query<{ revision: number }>(
+    `SELECT gr.revision
+     FROM game_rooms gr
+     JOIN room_players rp
+       ON rp.room_id=gr.id
+      AND rp.player_session=$2
+     WHERE gr.id=$1`,
+    [roomId, session],
+  );
+
+  const row = result.rows[0];
+  if (!row) {
+    throw new RoomError("Partida não encontrada ou jogador sem acesso.", 404);
+  }
+
+  return row.revision;
+}
+
 export async function bumpGameRevision(
   client: PoolClient,
   roomId: string,
