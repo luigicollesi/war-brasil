@@ -4,6 +4,7 @@ import { ServerConnectionIndicator } from "@/src/components/server-connection-in
 import "./game-polish.css";
 import "./game-quantity.css";
 import "./game-interaction-fix.css";
+import "./game-safe-layout.css";
 
 type GamePageProps = {
   params: Promise<{ roomId: string }>;
