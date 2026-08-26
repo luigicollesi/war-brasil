@@ -92,3 +92,76 @@ test("rede viária agrupa rotas base e individualiza somente destaques", () => {
   assert.match(source, /connectedToSelection \|\| reachesTarget/);
   assert.doesNotMatch(source, /roadPaths\.map\(/);
 });
+
+test("mobile usa budget de GPU reduzido sem alterar acabamento desktop", () => {
+  const page = readFileSync("src/app/game/[roomId]/page.tsx", "utf8");
+  const css = readFileSync(
+    "src/app/game/[roomId]/game-performance.css",
+    "utf8",
+  );
+
+  assert.match(page, /game-roads\.css["'];\nimport ["']\.\/game-performance\.css/);
+  assert.match(css, /@media \(max-width: 767px\)/);
+  assert.match(css, /backdrop-filter: blur\(10px\)/);
+  assert.match(css, /\.road-route-shadow \{[\s\S]*?filter: none;/);
+  assert.match(css, /prefers-reduced-motion: reduce/);
+  assert.match(css, /transition: none !important/);
+});
+
+test("objetivos usam agregações específicas em vez de materializar o tabuleiro inteiro", () => {
+  const source = readFileSync("src/lib/game-objective-service.ts", "utf8");
+
+  assert.match(source, /COUNT\(\*\)::int count/);
+  assert.match(source, /SELECT EXISTS\(/);
+  assert.match(source, /ownedTerritoryIds/);
+  assert.match(source, /eventCanAffectObjective/);
+  assert.match(source, /type ObjectiveEvent/);
+  assert.doesNotMatch(source, /SELECT territory_id,troops,owner_player_id/);
+});
+
+test("mudanças apenas de tropas não reavaliam objetivos de domínio", () => {
+  const service = readFileSync(
+    "src/lib/game-troop-command-service.ts",
+    "utf8",
+  );
+  const reinforcementRoute = readFileSync(
+    "src/app/api/games/[roomId]/reinforce/route.ts",
+    "utf8",
+  );
+  const tradeRoute = readFileSync(
+    "src/app/api/games/[roomId]/cards/trade/route.ts",
+    "utf8",
+  );
+
+  assert.match(service, /"troops_changed"/);
+  assert.match(service, /changedTroops/);
+  assert.match(reinforcementRoute, /game-troop-command-service/);
+  assert.match(tradeRoute, /game-troop-command-service/);
+});
+
+test("combate avalia objetivo somente quando controle territorial muda", () => {
+  const source = readFileSync("src/lib/game-battle-service.ts", "utf8");
+  const survivingDefense = source.match(
+    /if \(defenderTroops > 0\) \{[\s\S]*?\n  \}/,
+  )?.[0];
+
+  assert.ok(survivingDefense);
+  assert.doesNotMatch(survivingDefense, /objectiveWon/);
+  assert.match(source, /"territory_control_changed"/);
+});
+
+test("transferência pós-conquista reavalia somente objetivos afetados por tropas", () => {
+  const route = readFileSync(
+    "src/app/api/games/[roomId]/conquest/route.ts",
+    "utf8",
+  );
+  const service = readFileSync(
+    "src/lib/game-conquest-command-service.ts",
+    "utf8",
+  );
+
+  assert.match(route, /game-conquest-command-service/);
+  assert.match(service, /"troops_changed"/);
+  assert.match(service, /advanceBattlePresentation/);
+  assert.match(service, /saveBattle/);
+});
