@@ -1,0 +1,150 @@
+/* Rede viária opcional do mapa. Mantém interação do SVG totalmente livre. */
+
+.road-network {
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 180ms ease, filter 180ms ease;
+}
+
+.road-network[data-visible="false"] {
+  opacity: 0;
+}
+
+.road-route {
+  opacity: 0.78;
+  transition: opacity 160ms ease, filter 160ms ease;
+}
+
+.road-route[data-active="true"],
+.road-route[data-target="true"] {
+  opacity: 1;
+  filter: drop-shadow(0 0 5px rgba(224, 194, 105, 0.35));
+}
+
+.road-route-shadow,
+.road-route-surface,
+.road-route-center {
+  fill: none;
+  vector-effect: non-scaling-stroke;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* Acostamento/sombra: cria volume e separa a estrada da cor do território. */
+.road-route-shadow {
+  stroke: rgba(36, 32, 25, 0.88);
+  stroke-width: 12;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.28));
+}
+
+/* Pavimento principal. */
+.road-route-surface {
+  stroke: #756f63;
+  stroke-width: 8;
+}
+
+/* Faixa central de rodovia. */
+.road-route-center {
+  stroke: #dcc67e;
+  stroke-width: 1.75;
+  stroke-dasharray: 9 8;
+  opacity: 0.92;
+}
+
+.road-route[data-active="true"] .road-route-surface,
+.road-route[data-target="true"] .road-route-surface {
+  stroke: #878071;
+}
+
+.road-route[data-active="true"] .road-route-center,
+.road-route[data-target="true"] .road-route-center {
+  stroke: #f1d77c;
+  stroke-width: 2.1;
+}
+
+/* Toggle colocado na zona segura superior para nunca cobrir território. */
+.game-road-toggle {
+  position: absolute;
+  z-index: 24;
+  top: calc(var(--game-map-safe-top, 90px) - 42px);
+  left: 18px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  padding: 7px 11px;
+  border: 0;
+  border-radius: 999px;
+  pointer-events: auto;
+  cursor: pointer;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(217, 182, 80, 0.12), transparent 48%),
+    rgba(5, 27, 21, 0.76);
+  color: #dce8e2;
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(12px) saturate(1.05);
+  font-size: 0.7rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  transition: background 150ms ease, transform 150ms ease, color 150ms ease;
+}
+
+.game-road-toggle:hover {
+  transform: translateY(-1px);
+  background:
+    radial-gradient(circle at 20% 0%, rgba(217, 182, 80, 0.18), transparent 48%),
+    rgba(7, 39, 30, 0.86);
+}
+
+.game-road-toggle:focus-visible {
+  outline: 2px solid rgba(232, 195, 94, 0.72);
+  outline-offset: 3px;
+}
+
+.game-road-toggle strong {
+  min-width: 2.1rem;
+  color: #8ba99b;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-align: center;
+}
+
+.game-road-toggle[aria-pressed="true"] {
+  color: #fff7db;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(232, 195, 94, 0.23), transparent 50%),
+    rgba(11, 54, 41, 0.90);
+}
+
+.game-road-toggle[aria-pressed="true"] strong {
+  color: #e8c35e;
+}
+
+@media (max-width: 767px) {
+  .game-road-toggle {
+    top: calc(var(--game-map-safe-top, 110px) - 38px);
+    left: 10px;
+    min-height: 32px;
+    padding: 6px 9px;
+  }
+
+  .game-road-toggle > span:nth-child(2) {
+    display: none;
+  }
+
+  .road-route-shadow {
+    stroke-width: 10;
+  }
+
+  .road-route-surface {
+    stroke-width: 6.5;
+  }
+
+  .road-route-center {
+    stroke-width: 1.45;
+    stroke-dasharray: 8 7;
+  }
+}
