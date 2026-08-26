@@ -7,12 +7,12 @@ import { TERRITORY_METADATA, type CardSymbol, type Region } from "@/src/lib/game
 import { isValidTrade, reinforcementFor, resolveBattle, tradeValue } from "@/src/lib/game-rules";
 import type { PlayerColor } from "@/src/lib/lobby";
 import { RoomError } from "@/src/lib/rooms";
-import { reachableTerritoryIds, type TerritoryConnection } from "@/src/lib/territory-connections";
+import { isJurassicTunnelConnection, jurassicTunnelConnection, reachableTerritoryIds, type TerritoryConnection } from "@/src/lib/territory-connections";
 import { getTerritoryConnection } from "@/src/lib/territory-connections.server";
 
 type Status = "order_roll" | "playing" | "finished";
 export type GamePhase = "cards" | "reinforcement" | "attack" | "maneuver" | "end_turn" | "finished";
-type Room = { id:string; code:string; status:Status; order_roll_round:number; phase:GamePhase; current_player_id:string|null; turn_number:number; reinforcements_remaining:number; conquered_this_turn:boolean; trade_count:number; winner_player_id:string|null; pending_from_territory_id:number|null; pending_to_territory_id:number|null; last_battle:Battle|null };
+type Room = { id:string; code:string; status:Status; order_roll_round:number; phase:GamePhase; current_player_id:string|null; turn_number:number; round_number:number; jurassic_tunnel_territory_id:number|null; reinforcements_remaining:number; conquered_this_turn:boolean; trade_count:number; winner_player_id:string|null; pending_from_territory_id:number|null; pending_to_territory_id:number|null; last_battle:Battle|null };
 type Player = { id:string; faction_name:string; color:PlayerColor; turn_position:number|null; is_me?:boolean };
 type Territory = { territory_id:number; owner_player_id:string; color:PlayerColor; troops:number; moved_in_turn:number };
 type LockedTerritory = Omit<Territory, "color">;
@@ -24,7 +24,7 @@ type BattleStage = "awaiting_attacker_roll" | "show_attacker_result" | "awaiting
 type BattleResult = { attacker:number[]; defender:number[]; attackerLosses:number; defenderLosses:number; conquered:boolean };
 type Battle = BattleResult & { attackerTerritoryId:number; defenderTerritoryId:number; attackerPlayerId:string; defenderPlayerId:string; stage:BattleStage; stageStartedAt:string; attackerTroopsAfter?:number; defenderTroopsAfter?:number };
 export type GameSnapshot = {
-  room:{id:string;code:string;status:Status;orderRollRound:number;orderRollPlayerId:string|null;lastOrderRollPlayerId:string|null;phase:GamePhase;currentPlayerId:string|null;turnNumber:number;reinforcementsRemaining:number;winnerPlayerId:string|null;pendingConquest:{fromTerritoryId:number;toTerritoryId:number}|null;battle:Battle|null};
+  room:{id:string;code:string;status:Status;orderRollRound:number;orderRollPlayerId:string|null;lastOrderRollPlayerId:string|null;phase:GamePhase;currentPlayerId:string|null;turnNumber:number;roundNumber:number;jurassicTunnelDestinationId:number|null;reinforcementsRemaining:number;winnerPlayerId:string|null;pendingConquest:{fromTerritoryId:number;toTerritoryId:number}|null;battle:Battle|null};
   players:Array<{id:string;factionName:string;color:PlayerColor;turnPosition:number|null;isMe:boolean;rolls:Array<{round:number;value:number}>}>;
   territories:Array<{territoryId:number;ownerPlayerId:string;ownerColor:PlayerColor;troops:number;movedInTurn:number}>;
   eligiblePlayerIds:string[];
@@ -33,7 +33,7 @@ export type GameSnapshot = {
   myObjective:{id:string;name:string;description:string;targetFactionName:string|null}|null;
 };
 
-const roomFields = "id, code, status, order_roll_round, phase, current_player_id, turn_number, reinforcements_remaining, conquered_this_turn, trade_count, winner_player_id, pending_from_territory_id, pending_to_territory_id, last_battle";
+const roomFields = "id, code, status, order_roll_round, phase, current_player_id, turn_number, round_number, jurassic_tunnel_territory_id, reinforcements_remaining, conquered_this_turn, trade_count, winner_player_id, pending_from_territory_id, pending_to_territory_id, last_battle";
 function roomId(value:string) { if (!/^\d+$/.test(value)) throw new RoomError("Partida não encontrada.", 404); return value; }
 function integer(value:unknown, message:string) { if (typeof value !== "number" || !Number.isInteger(value) || value < 1) throw new RoomError(message, 422); return value; }
 async function transaction<T>(fn:(client:PoolClient)=>Promise<T>) { const client=await pool.connect(); try { await client.query("BEGIN"); const result=await fn(client); await client.query("COMMIT"); return result; } catch (error) { await client.query("ROLLBACK"); throw error; } finally { client.release(); } }
@@ -49,6 +49,27 @@ const BATTLE_PRESENTATION_MS=2_000;
 function isBattle(value:Battle|null): value is Battle { return Boolean(value&&"stage" in value&&"attackerTerritoryId" in value&&"defenderTerritoryId" in value); }
 function battleExpired(battle:Battle) { return Date.now()-Date.parse(battle.stageStartedAt)>=BATTLE_PRESENTATION_MS; }
 async function saveBattle(client:PoolClient,room:Room,battle:Battle|null) { await client.query("UPDATE game_rooms SET last_battle=$2 WHERE id=$1",[room.id,battle?JSON.stringify(battle):null]); room.last_battle=battle; }
+
+function chooseJurassicTunnelDestination(previous:number|null) {
+  const candidates=Object.keys(TERRITORY_METADATA)
+    .map(Number)
+    .filter(territoryId=>territoryId!==1&&territoryId!==3&&territoryId!==previous);
+  return candidates[randomInt(0,candidates.length)];
+}
+
+async function ensureJurassicTunnel(client:PoolClient,room:Room) {
+  if(room.status!=="playing"||room.jurassic_tunnel_territory_id) return;
+  const destination=chooseJurassicTunnelDestination(null);
+  await client.query("UPDATE game_rooms SET jurassic_tunnel_territory_id=$2 WHERE id=$1",[room.id,destination]);
+  room.jurassic_tunnel_territory_id=destination;
+}
+
+async function advanceJurassicTunnelRound(client:PoolClient,room:Room) {
+  const destination=chooseJurassicTunnelDestination(room.jurassic_tunnel_territory_id);
+  await client.query("UPDATE game_rooms SET round_number=round_number+1,jurassic_tunnel_territory_id=$2 WHERE id=$1",[room.id,destination]);
+  room.round_number+=1;
+  room.jurassic_tunnel_territory_id=destination;
+}
 
 async function objectiveWon(client:PoolClient, room:Room, playerId:string) {
   const objective=(await client.query<Objective>(`SELECT o.id,o.type,o.name,o.description,o.params,a.target_player_id,t.faction_name target_name FROM game_player_objectives a JOIN objectives o ON o.id=a.objective_id LEFT JOIN room_players t ON t.id=a.target_player_id WHERE a.room_id=$1 AND a.player_id=$2`,[room.id,playerId])).rows[0];
@@ -154,7 +175,7 @@ async function advanceOrderRollPresentation(client:PoolClient,room:Room) {
   }
 
   await client.query(
-    "UPDATE game_rooms SET status='playing',started_at=NOW(),phase='cards',current_player_id=$2,turn_number=1,reinforcements_remaining=0,conquered_this_turn=FALSE WHERE id=$1",
+    "UPDATE game_rooms SET status='playing',started_at=NOW(),phase='cards',current_player_id=$2,turn_number=1,round_number=1,jurassic_tunnel_territory_id=NULL,reinforcements_remaining=0,conquered_this_turn=FALSE WHERE id=$1",
     [room.id,order[0].id],
   );
 
@@ -162,8 +183,11 @@ async function advanceOrderRollPresentation(client:PoolClient,room:Room) {
   room.phase="cards";
   room.current_player_id=order[0].id;
   room.turn_number=1;
+  room.round_number=1;
+  room.jurassic_tunnel_territory_id=null;
   room.reinforcements_remaining=0;
   room.conquered_this_turn=false;
+  await ensureJurassicTunnel(client,room);
 }
 
 async function snapshot(client:PoolClient, room:Room, session:string):Promise<GameSnapshot> {
@@ -191,9 +215,11 @@ async function snapshot(client:PoolClient, room:Room, session:string):Promise<Ga
   const eligiblePlayerIds=room.status==="order_roll"?eligible(players,rolls.rows,room.order_roll_round):[];
   const orderRollPlayerId=eligiblePlayerIds.find(playerId=>!rolls.rows.some(roll=>roll.player_id===playerId&&roll.roll_round===room.order_roll_round))??null;
   const lastOrderRollPlayerId=rolls.rows.filter(roll=>roll.roll_round===room.order_roll_round).at(-1)?.player_id??null;
-  return { room:{id:room.id,code:room.code,status:room.status,orderRollRound:room.order_roll_round,orderRollPlayerId,lastOrderRollPlayerId,phase:room.phase,currentPlayerId:room.current_player_id,turnNumber:room.turn_number,reinforcementsRemaining:room.reinforcements_remaining,winnerPlayerId:room.winner_player_id,pendingConquest:room.pending_from_territory_id&&room.pending_to_territory_id?{fromTerritoryId:room.pending_from_territory_id,toTerritoryId:room.pending_to_territory_id}:null,battle:isBattle(room.last_battle)?room.last_battle:null}, players:players.map(player=>({id:player.id,factionName:player.faction_name,color:player.color,turnPosition:player.turn_position,isMe:Boolean(player.is_me),rolls:byPlayer.get(player.id)??[]})), territories:territories.rows.map(territory=>({territoryId:territory.territory_id,ownerPlayerId:territory.owner_player_id,ownerColor:territory.color,troops:territory.troops,movedInTurn:territory.moved_in_turn})), eligiblePlayerIds, connections:connections.rows.map(connection=>({territoryA:connection.territory_a,territoryB:connection.territory_b,exists:true,passable:connection.is_passable,barrierName:connection.barrier_name,description:connection.description})), myCards:cards.rows.map(card=>({id:card.id,territoryId:card.territory_id,symbol:card.is_wild?"wild":card.symbol!})), myObjective:objective?{id:objective.id,name:objective.name,description:objective.description,targetFactionName:objective.target_name}:null };
+  const mappedConnections:TerritoryConnection[]=connections.rows.map(connection=>({territoryA:connection.territory_a,territoryB:connection.territory_b,exists:true,passable:connection.is_passable,barrierName:connection.barrier_name,description:connection.description}));
+  const tunnelConnection=jurassicTunnelConnection(room.jurassic_tunnel_territory_id); if(tunnelConnection) mappedConnections.push(tunnelConnection);
+  return { room:{id:room.id,code:room.code,status:room.status,orderRollRound:room.order_roll_round,orderRollPlayerId,lastOrderRollPlayerId,phase:room.phase,currentPlayerId:room.current_player_id,turnNumber:room.turn_number,roundNumber:room.round_number,jurassicTunnelDestinationId:room.jurassic_tunnel_territory_id,reinforcementsRemaining:room.reinforcements_remaining,winnerPlayerId:room.winner_player_id,pendingConquest:room.pending_from_territory_id&&room.pending_to_territory_id?{fromTerritoryId:room.pending_from_territory_id,toTerritoryId:room.pending_to_territory_id}:null,battle:isBattle(room.last_battle)?room.last_battle:null}, players:players.map(player=>({id:player.id,factionName:player.faction_name,color:player.color,turnPosition:player.turn_position,isMe:Boolean(player.is_me),rolls:byPlayer.get(player.id)??[]})), territories:territories.rows.map(territory=>({territoryId:territory.territory_id,ownerPlayerId:territory.owner_player_id,ownerColor:territory.color,troops:territory.troops,movedInTurn:territory.moved_in_turn})), eligiblePlayerIds, connections:mappedConnections, myCards:cards.rows.map(card=>({id:card.id,territoryId:card.territory_id,symbol:card.is_wild?"wild":card.symbol!})), myObjective:objective?{id:objective.id,name:objective.name,description:objective.description,targetFactionName:objective.target_name}:null };
 }
-export async function getGameSnapshot(value:string, session:string) { const id=roomId(value); return transaction(async client=>{ const room=await lockedRoom(client,id); if(!(["order_roll","playing","finished"] as string[]).includes(room.status)) throw new RoomError("Partida não encontrada.",404); await advanceOrderRollPresentation(client,room); await advanceBattlePresentation(client,room); return snapshot(client,room,session); }); }
+export async function getGameSnapshot(value:string, session:string) { const id=roomId(value); return transaction(async client=>{ const room=await lockedRoom(client,id); if(!(["order_roll","playing","finished"] as string[]).includes(room.status)) throw new RoomError("Partida não encontrada.",404); await advanceOrderRollPresentation(client,room); await advanceBattlePresentation(client,room); await ensureJurassicTunnel(client,room); return snapshot(client,room,session); }); }
 
 export async function rollOrderDie(value:string,session:string) {
   const id=roomId(value);
@@ -245,7 +271,23 @@ export async function rollOrderDie(value:string,session:string) {
 }
 
 async function beginReinforcement(client:PoolClient,room:Room,player:Player) { const owned=(await client.query<{territory_id:number}>("SELECT territory_id FROM game_territories WHERE room_id=$1 AND owner_player_id=$2",[room.id,player.id])).rows; await client.query("UPDATE game_rooms SET phase='reinforcement',reinforcements_remaining=$2 WHERE id=$1",[room.id,reinforcementFor(owned.map(territory=>territory.territory_id))]); }
-export async function advancePhase(value:string,session:string,input:Record<string,unknown>) { const id=roomId(value); return transaction(async client=>{ const room=await lockedRoom(client,id); const player=await playerFor(client,room,session); await advanceBattlePresentation(client,room); if(input.action==="finishCards") { assertTurn(room,player,"cards"); return beginReinforcement(client,room,player); } if(input.action==="finishAttack") { assertTurn(room,player,"attack"); if(isBattle(room.last_battle)||room.pending_from_territory_id) throw new RoomError("Conclua a batalha atual antes de encerrar os ataques.",409); await client.query("UPDATE game_rooms SET phase='maneuver' WHERE id=$1",[room.id]); return; } if(input.action!=="endTurn") throw new RoomError("Ação de fase inválida.",422); assertTurn(room,player,"maneuver"); if(room.conquered_this_turn) await drawCard(client,room,player.id); const next=(await client.query<{id:string}>(`SELECT p.id FROM room_players p WHERE p.room_id=$1 AND p.turn_position>(SELECT turn_position FROM room_players WHERE id=$2) AND EXISTS(SELECT 1 FROM game_territories WHERE room_id=$1 AND owner_player_id=p.id) ORDER BY p.turn_position LIMIT 1`,[room.id,player.id])).rows[0]??(await client.query<{id:string}>("SELECT p.id FROM room_players p WHERE p.room_id=$1 AND EXISTS(SELECT 1 FROM game_territories WHERE room_id=$1 AND owner_player_id=p.id) ORDER BY p.turn_position LIMIT 1",[room.id])).rows[0]; await client.query("UPDATE game_territories SET moved_in_turn=0 WHERE room_id=$1",[room.id]); await client.query("UPDATE game_rooms SET phase='cards',current_player_id=$2,turn_number=turn_number+1,reinforcements_remaining=0,conquered_this_turn=FALSE WHERE id=$1",[room.id,next.id]); }); }
+export async function advancePhase(value:string,session:string,input:Record<string,unknown>) {
+  const id=roomId(value);
+  return transaction(async client=>{
+    const room=await lockedRoom(client,id);
+    const player=await playerFor(client,room,session);
+    await advanceBattlePresentation(client,room);
+    if(input.action==="finishCards") { assertTurn(room,player,"cards"); return beginReinforcement(client,room,player); }
+    if(input.action==="finishAttack") { assertTurn(room,player,"attack"); if(isBattle(room.last_battle)||room.pending_from_territory_id) throw new RoomError("Conclua a batalha atual antes de encerrar os ataques.",409); await client.query("UPDATE game_rooms SET phase='maneuver' WHERE id=$1",[room.id]); return; }
+    if(input.action!=="endTurn") throw new RoomError("Ação de fase inválida.",422);
+    assertTurn(room,player,"maneuver");
+    if(room.conquered_this_turn) await drawCard(client,room,player.id);
+    const next=(await client.query<{id:string;turn_position:number|null}>(`SELECT p.id,p.turn_position FROM room_players p WHERE p.room_id=$1 AND p.turn_position>(SELECT turn_position FROM room_players WHERE id=$2) AND EXISTS(SELECT 1 FROM game_territories WHERE room_id=$1 AND owner_player_id=p.id) ORDER BY p.turn_position LIMIT 1`,[room.id,player.id])).rows[0]??(await client.query<{id:string;turn_position:number|null}>("SELECT p.id,p.turn_position FROM room_players p WHERE p.room_id=$1 AND EXISTS(SELECT 1 FROM game_territories WHERE room_id=$1 AND owner_player_id=p.id) ORDER BY p.turn_position LIMIT 1",[room.id])).rows[0];
+    if((next.turn_position??0)<=(player.turn_position??0)) await advanceJurassicTunnelRound(client,room);
+    await client.query("UPDATE game_territories SET moved_in_turn=0 WHERE room_id=$1",[room.id]);
+    await client.query("UPDATE game_rooms SET phase='cards',current_player_id=$2,turn_number=turn_number+1,reinforcements_remaining=0,conquered_this_turn=FALSE WHERE id=$1",[room.id,next.id]);
+  });
+}
 
 export async function reinforce(value:string,session:string,input:Record<string,unknown>) { const id=roomId(value), territory=integer(input.territoryId,"Território inválido."), troops=integer(input.troops,"Quantidade de tropas inválida."); return transaction(async client=>{ const room=await lockedRoom(client,id),player=await playerFor(client,room,session); assertTurn(room,player,"reinforcement"); if(troops>room.reinforcements_remaining) throw new RoomError("Você não possui reforços suficientes.",409); const own=await client.query("SELECT 1 FROM game_territories WHERE room_id=$1 AND territory_id=$2 AND owner_player_id=$3 FOR UPDATE",[room.id,territory,player.id]); if(!own.rowCount) throw new RoomError("Você só pode reforçar territórios próprios.",409); const remaining=room.reinforcements_remaining-troops; await client.query("UPDATE game_territories SET troops=troops+$3 WHERE room_id=$1 AND territory_id=$2",[room.id,territory,troops]); await client.query("UPDATE game_rooms SET reinforcements_remaining=$2,phase=CASE WHEN $2=0 THEN 'attack' ELSE phase END WHERE id=$1",[room.id,remaining]); await objectiveWon(client,room,player.id); }); }
 export async function tradeCards(value:string,session:string,input:Record<string,unknown>) { const id=roomId(value), ids=Array.isArray(input.cardIds)?input.cardIds.filter((card):card is string=>typeof card==="string"):[]; if(ids.length!==3||new Set(ids).size!==3) throw new RoomError("Selecione exatamente três cartas diferentes.",422); return transaction(async client=>{ const room=await lockedRoom(client,id),player=await playerFor(client,room,session); if(room.status!=="playing"||room.current_player_id!==player.id||!["cards","reinforcement"].includes(room.phase)) throw new RoomError("A troca não está disponível neste momento.",409); const cards=await client.query<Card>("SELECT id,territory_id,symbol,is_wild FROM game_cards WHERE room_id=$1 AND owner_player_id=$2 AND zone='hand' AND id=ANY($3::bigint[]) FOR UPDATE",[room.id,player.id,ids]); if(cards.rowCount!==3) throw new RoomError("Uma das cartas selecionadas não está na sua mão.",409); if(!isValidTrade(cards.rows.map(card=>card.is_wild?"wild":card.symbol!) as Array<CardSymbol|"wild">)) throw new RoomError("Esta combinação de cartas não é válida.",422); const owned=new Set((await client.query<{territory_id:number}>("SELECT territory_id FROM game_territories WHERE room_id=$1 AND owner_player_id=$2",[room.id,player.id])).rows.map(row=>row.territory_id)); await client.query("UPDATE game_cards SET zone='discard',owner_player_id=NULL,deck_order=NULL WHERE id=ANY($1::bigint[])",[ids]); for(const card of cards.rows) if(card.territory_id&&owned.has(card.territory_id)) await client.query("UPDATE game_territories SET troops=troops+2 WHERE room_id=$1 AND territory_id=$2",[room.id,card.territory_id]); await client.query("UPDATE game_rooms SET reinforcements_remaining=reinforcements_remaining+$2,trade_count=trade_count+1 WHERE id=$1",[room.id,tradeValue(room.trade_count)]); await objectiveWon(client,room,player.id); }); }
@@ -255,11 +297,13 @@ export async function attack(value:string,session:string,input:Record<string,unk
   return transaction(async client=>{
     const room=await lockedRoom(client,id), player=await playerFor(client,room,session); assertTurn(room,player,"attack");
     await advanceBattlePresentation(client,room);
+    await ensureJurassicTunnel(client,room);
     if(isBattle(room.last_battle)) throw new RoomError("Aguarde a resolução do combate atual.",409,{stage:room.last_battle.stage});
     if(room.pending_from_territory_id) throw new RoomError("Conclua o deslocamento da conquista antes de atacar novamente.",409,{pendingFromTerritoryId:room.pending_from_territory_id,pendingToTerritoryId:room.pending_to_territory_id});
+    const tunnelActive=isJurassicTunnelConnection(room.jurassic_tunnel_territory_id,from,to);
     const connection=await getTerritoryConnection(client,from,to);
-    if(!connection.exists) throw new RoomError("Os territórios não possuem fronteira militar.",422,{fromTerritoryId:from,toTerritoryId:to,connection});
-    if(!connection.passable) throw new RoomError(connection.barrierName ? `Fronteira bloqueada — ${connection.barrierName}` : "Fronteira militar bloqueada.",422,{fromTerritoryId:from,toTerritoryId:to,connection});
+    if(!tunnelActive&&!connection.exists) throw new RoomError("Os territórios não possuem fronteira militar.",422,{fromTerritoryId:from,toTerritoryId:to,connection});
+    if(!tunnelActive&&!connection.passable) throw new RoomError(connection.barrierName ? `Fronteira bloqueada — ${connection.barrierName}` : "Fronteira militar bloqueada.",422,{fromTerritoryId:from,toTerritoryId:to,connection});
     const rows=(await client.query<LockedTerritory>("SELECT territory_id,owner_player_id,troops,moved_in_turn FROM game_territories WHERE room_id=$1 AND territory_id=ANY($2::smallint[]) FOR UPDATE",[room.id,[from,to]])).rows;
     const attacker=rows.find(row=>row.territory_id===from), defender=rows.find(row=>row.territory_id===to);
     if(!attacker||!defender||attacker.owner_player_id!==player.id||defender.owner_player_id===player.id||attacker.troops<2) throw new RoomError("Ataque inválido.",409,{fromTerritoryId:from,toTerritoryId:to,requestPlayerId:player.id,attacker:attacker?{ownerPlayerId:attacker.owner_player_id,troops:attacker.troops}:null,defender:defender?{ownerPlayerId:defender.owner_player_id,troops:defender.troops}:null});
@@ -327,6 +371,7 @@ export async function maneuver(
     const player=await playerFor(client,room,session);
 
     assertTurn(room,player,"maneuver");
+    await ensureJurassicTunnel(client,room);
 
     if(from===to) {
       throw new RoomError(
@@ -380,6 +425,7 @@ export async function maneuver(
         description:connection.description,
       }),
     );
+    const tunnelConnection=jurassicTunnelConnection(room.jurassic_tunnel_territory_id); if(tunnelConnection) connections.push(tunnelConnection);
 
     const reachable=new Set(
       reachableTerritoryIds(
