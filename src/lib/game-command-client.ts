@@ -7,7 +7,7 @@ import {
   parseGameRevision,
 } from "@/src/lib/game-sync-contract";
 
-export type GameCommandClientResult<T> = {
+type GameCommandClientResult<T> = {
   data: T;
   baseRevision: number | null;
   revision: number | null;
