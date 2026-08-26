@@ -19,7 +19,6 @@ type InteractiveBoardProps = {
   availableTerritoryIds?: number[];
   targetTerritoryIds?: number[];
   arrow?: MapArrow;
-  jurassicTunnelDestinationId?: number | null;
 };
 
 const regionLabels: Record<string,string> = { norte:"Norte", nordeste:"Nordeste", "centro-oeste":"Centro-Oeste", sudeste:"Sudeste", sul:"Sul" };
@@ -38,7 +37,7 @@ const fallbackRegionBorder = {
 function colorHex(color:PlayerColor) { return PLAYER_COLORS.find(item=>item.value===color)?.hex??"#64756f"; }
 function readTerritory(path:SVGPathElement):TerritoryDetails { return { id:Number(path.dataset.id),name:path.dataset.name??"Território",region:path.dataset.region??"",state:path.dataset.uf??"—" }; }
 
-export function InteractiveBoard({ territories, connections=[], onSelect, selectedTerritoryId, availableTerritoryIds=[], targetTerritoryIds=[], arrow=null, jurassicTunnelDestinationId=null }:InteractiveBoardProps) {
+export function InteractiveBoard({ territories, connections=[], onSelect, selectedTerritoryId, availableTerritoryIds=[], targetTerritoryIds=[], arrow=null }:InteractiveBoardProps) {
   const boardRef=useRef<HTMLObjectElement>(null);
   const containerRef=useRef<HTMLDivElement>(null);
   const [mapVersion,setMapVersion]=useState(0);
@@ -93,9 +92,11 @@ export function InteractiveBoard({ territories, connections=[], onSelect, select
   const hoveredState=hovered?territoryById.get(hovered.details.id):undefined;
   const relevantConnection=hovered&&selectedTerritoryId&&selectedTerritoryId!==hovered.details.id?connections.find(connection=>(connection.territoryA===selectedTerritoryId&&connection.territoryB===hovered.details.id)||(connection.territoryB===selectedTerritoryId&&connection.territoryA===hovered.details.id)):undefined;
   const from=arrow?anchors.get(arrow.fromTerritoryId):undefined, to=arrow?anchors.get(arrow.toTerritoryId):undefined;
-  const tunnelFrom=jurassicTunnelDestinationId?anchors.get(3):undefined;
-  const tunnelTo=jurassicTunnelDestinationId?anchors.get(jurassicTunnelDestinationId):undefined;
-  const tunnelTargetName=jurassicTunnelDestinationId?TERRITORY_METADATA[jurassicTunnelDestinationId]?.name:null;
+  const jurassicTunnel=connections.find(connection=>connection.barrierName==="Túnel Jurássico");
+  const jurassicDestinationId=jurassicTunnel?(jurassicTunnel.territoryA===3?jurassicTunnel.territoryB:jurassicTunnel.territoryA):null;
+  const tunnelFrom=jurassicDestinationId?anchors.get(3):undefined;
+  const tunnelTo=jurassicDestinationId?anchors.get(jurassicDestinationId):undefined;
+  const tunnelTargetName=jurassicDestinationId?TERRITORY_METADATA[jurassicDestinationId]?.name:null;
 
   return <section className="min-w-0 rounded-3xl border border-[#17372d]/10 bg-[#f9f7f0] p-2 shadow-[0_18px_55px_rgba(34,48,42,0.08)] sm:p-4">
     <div className="flex flex-col gap-3 px-2 pb-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#8b7a4a]">Territórios distribuídos</p><h2 className="mt-1 text-lg font-semibold">Tabuleiro do Brasil</h2></div><p className="flex items-center gap-2 text-xs text-[#6e7d77]"><span className="h-2 w-2 animate-pulse rounded-full bg-[#3f8b68]"/>Posse sincronizada</p></div>
