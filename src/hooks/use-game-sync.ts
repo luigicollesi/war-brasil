@@ -57,6 +57,7 @@ export function useGameSync(roomId: string) {
   const revisionRef = useRef<number | null>(null);
   const requiredRevisionRef = useRef<number | null>(null);
   const topologyVersionRef = useRef<string | null>(null);
+  const topologyConnectionsRef = useRef<GameSnapshot["connections"] | null>(null);
 
   useEffect(() => {
     let isActive = true;
@@ -65,6 +66,11 @@ export function useGameSync(roomId: string) {
     let timeoutId = 0;
     let inFlight: Promise<void> | null = null;
     let consecutiveFailures = 0;
+
+    // Estado de sincronização é específico da sala; a topologia base não é.
+    snapshotRef.current = null;
+    revisionRef.current = null;
+    requiredRevisionRef.current = null;
 
     function recordRevision(revision: number | null) {
       if (revision === null) return;
@@ -97,7 +103,10 @@ export function useGameSync(roomId: string) {
           if (revisionRef.current !== null) {
             headers.set(GAME_REVISION_HEADER, String(revisionRef.current));
           }
-          if (topologyVersionRef.current !== null) {
+          if (
+            topologyVersionRef.current !== null &&
+            topologyConnectionsRef.current !== null
+          ) {
             headers.set(GAME_TOPOLOGY_HEADER, topologyVersionRef.current);
           }
 
@@ -118,9 +127,6 @@ export function useGameSync(roomId: string) {
 
           if (response.status === 204) {
             recordRevision(responseRevision);
-            if (responseTopologyVersion && snapshotRef.current?.connections) {
-              topologyVersionRef.current = responseTopologyVersion;
-            }
             recordSyncSuccess(startedAt);
             if (isActive) setError("");
             return;
@@ -143,19 +149,22 @@ export function useGameSync(roomId: string) {
           }
 
           const payload = data as GameSnapshotPayload;
-          const connections = payload.connections ?? snapshotRef.current?.connections;
+          const connections = payload.connections ?? topologyConnectionsRef.current;
           if (!connections) {
             throw new Error("A topologia da partida não foi recebida.");
+          }
+
+          if (payload.connections) {
+            topologyConnectionsRef.current = payload.connections;
+            if (responseTopologyVersion) {
+              topologyVersionRef.current = responseTopologyVersion;
+            }
           }
 
           const hydratedSnapshot: GameSnapshot = {
             ...payload,
             connections,
           };
-
-          if (payload.connections && responseTopologyVersion) {
-            topologyVersionRef.current = responseTopologyVersion;
-          }
 
           recordRevision(responseRevision);
           recordSyncSuccess(startedAt);
