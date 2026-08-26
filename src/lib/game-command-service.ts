@@ -7,7 +7,11 @@ import {
   TERRITORY_METADATA,
   type CardSymbol,
 } from "@/src/lib/game-config";
-import { isValidTrade, tradeValue } from "@/src/lib/game-rules";
+import {
+  isValidTrade,
+  reinforcementFor,
+  tradeValue,
+} from "@/src/lib/game-rules";
 import { objectiveWon } from "@/src/lib/game-objective-service";
 import {
   jurassicTunnelConnection,
@@ -22,13 +26,18 @@ type CommandRoom = {
   order_roll_round: number;
   phase: string;
   current_player_id: string | null;
+  round_number: number;
   jurassic_tunnel_territory_id: number | null;
   reinforcements_remaining: number;
+  conquered_this_turn: boolean;
   trade_count: number;
+  pending_from_territory_id: number | null;
+  last_battle: unknown | null;
 };
 
 type CommandPlayer = {
   id: string;
+  turn_position: number | null;
 };
 
 type OwnedTerritory = {
@@ -71,8 +80,9 @@ function positiveInteger(value: unknown, message: string) {
 
 async function loadRoom(client: PoolClient, roomId: string) {
   const result = await client.query<CommandRoom>(
-    `SELECT id,status,order_roll_round,phase,current_player_id,
-            jurassic_tunnel_territory_id,reinforcements_remaining,trade_count
+    `SELECT id,status,order_roll_round,phase,current_player_id,round_number,
+            jurassic_tunnel_territory_id,reinforcements_remaining,
+            conquered_this_turn,trade_count,pending_from_territory_id,last_battle
      FROM game_rooms
      WHERE id=$1`,
     [roomId],
@@ -89,7 +99,7 @@ async function playerFor(
   session: string,
 ) {
   const result = await client.query<CommandPlayer>(
-    `SELECT id
+    `SELECT id,turn_position
      FROM room_players
      WHERE room_id=$1 AND player_session=$2
      FOR UPDATE`,
@@ -143,6 +153,113 @@ async function ensureJurassicTunnel(client: PoolClient, room: CommandRoom) {
     [room.id, destination],
   );
   room.jurassic_tunnel_territory_id = destination;
+}
+
+async function advanceJurassicTunnelRound(
+  client: PoolClient,
+  room: CommandRoom,
+) {
+  const destination = chooseJurassicTunnelDestination(
+    room.jurassic_tunnel_territory_id,
+  );
+
+  await client.query(
+    `UPDATE game_rooms
+     SET round_number=round_number+1,jurassic_tunnel_territory_id=$2
+     WHERE id=$1`,
+    [room.id, destination],
+  );
+
+  room.round_number += 1;
+  room.jurassic_tunnel_territory_id = destination;
+}
+
+async function beginReinforcement(
+  client: PoolClient,
+  room: CommandRoom,
+  player: CommandPlayer,
+) {
+  const owned = (
+    await client.query<{ territory_id: number }>(
+      `SELECT territory_id
+       FROM game_territories
+       WHERE room_id=$1 AND owner_player_id=$2`,
+      [room.id, player.id],
+    )
+  ).rows;
+
+  const reinforcements = reinforcementFor(
+    owned.map((territory) => territory.territory_id),
+  );
+
+  await client.query(
+    `UPDATE game_rooms
+     SET phase='reinforcement',reinforcements_remaining=$2
+     WHERE id=$1`,
+    [room.id, reinforcements],
+  );
+}
+
+async function drawCard(
+  client: PoolClient,
+  room: CommandRoom,
+  playerId: string,
+) {
+  let card = await client.query<{ id: string }>(
+    `SELECT id
+     FROM game_cards
+     WHERE room_id=$1 AND zone='deck'
+     ORDER BY deck_order
+     FOR UPDATE
+     LIMIT 1`,
+    [room.id],
+  );
+
+  if (!card.rowCount) {
+    const discard = (
+      await client.query<{ id: string }>(
+        `SELECT id
+         FROM game_cards
+         WHERE room_id=$1 AND zone='discard'
+         FOR UPDATE`,
+        [room.id],
+      )
+    ).rows;
+
+    const order = discard.map((_, index) => index + 1);
+    for (let index = order.length - 1; index > 0; index -= 1) {
+      const swapIndex = randomInt(0, index + 1);
+      [order[index], order[swapIndex]] = [order[swapIndex], order[index]];
+    }
+
+    for (const [index, item] of discard.entries()) {
+      await client.query(
+        `UPDATE game_cards
+         SET zone='deck',deck_order=$2
+         WHERE id=$1`,
+        [item.id, order[index]],
+      );
+    }
+
+    card = await client.query<{ id: string }>(
+      `SELECT id
+       FROM game_cards
+       WHERE room_id=$1 AND zone='deck'
+       ORDER BY deck_order
+       FOR UPDATE
+       LIMIT 1`,
+      [room.id],
+    );
+  }
+
+  if (card.rowCount) {
+    await client.query(
+      `UPDATE game_cards
+       SET zone='hand',owner_player_id=$2,deck_order=NULL
+       WHERE id=$1`,
+      [card.rows[0].id, playerId],
+    );
+  }
 }
 
 function histories(players: OrderPlayer[], rolls: OrderRoll[]) {
@@ -224,6 +341,106 @@ export async function rollOrderDieCommand(value: string, session: string) {
     );
 
     return { value: die };
+  });
+}
+
+export async function phaseCommand(
+  value: string,
+  session: string,
+  input: Record<string, unknown>,
+) {
+  const roomId = normalizeRoomId(value);
+
+  return gameCommand(roomId, async (client) => {
+    const room = await loadRoom(client, roomId);
+    const player = await playerFor(client, room.id, session);
+
+    if (input.action === "finishCards") {
+      assertTurn(room, player, "cards");
+      await beginReinforcement(client, room, player);
+      return null;
+    }
+
+    if (input.action === "finishAttack") {
+      assertTurn(room, player, "attack");
+      if (room.last_battle !== null || room.pending_from_territory_id) {
+        throw new RoomError(
+          "Conclua a batalha atual antes de encerrar os ataques.",
+          409,
+        );
+      }
+
+      await client.query(
+        "UPDATE game_rooms SET phase='maneuver' WHERE id=$1",
+        [room.id],
+      );
+      return null;
+    }
+
+    if (input.action !== "endTurn") {
+      throw new RoomError("Ação de fase inválida.", 422);
+    }
+
+    assertTurn(room, player, "maneuver");
+
+    if (room.conquered_this_turn) {
+      await drawCard(client, room, player.id);
+    }
+
+    const next =
+      (
+        await client.query<{ id: string; turn_position: number | null }>(
+          `SELECT p.id,p.turn_position
+           FROM room_players p
+           WHERE p.room_id=$1
+             AND p.turn_position>(SELECT turn_position FROM room_players WHERE id=$2)
+             AND EXISTS(
+               SELECT 1
+               FROM game_territories
+               WHERE room_id=$1 AND owner_player_id=p.id
+             )
+           ORDER BY p.turn_position
+           LIMIT 1`,
+          [room.id, player.id],
+        )
+      ).rows[0] ??
+      (
+        await client.query<{ id: string; turn_position: number | null }>(
+          `SELECT p.id,p.turn_position
+           FROM room_players p
+           WHERE p.room_id=$1
+             AND EXISTS(
+               SELECT 1
+               FROM game_territories
+               WHERE room_id=$1 AND owner_player_id=p.id
+             )
+           ORDER BY p.turn_position
+           LIMIT 1`,
+          [room.id],
+        )
+      ).rows[0];
+
+    if (!next) {
+      throw new RoomError("Não há próximo jogador ativo.", 409);
+    }
+
+    if ((next.turn_position ?? 0) <= (player.turn_position ?? 0)) {
+      await advanceJurassicTunnelRound(client, room);
+    }
+
+    await client.query(
+      "UPDATE game_territories SET moved_in_turn=0 WHERE room_id=$1",
+      [room.id],
+    );
+    await client.query(
+      `UPDATE game_rooms
+       SET phase='cards',current_player_id=$2,turn_number=turn_number+1,
+           reinforcements_remaining=0,conquered_this_turn=FALSE
+       WHERE id=$1`,
+      [room.id, next.id],
+    );
+
+    return null;
   });
 }
 
