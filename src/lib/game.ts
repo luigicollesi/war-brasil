@@ -44,6 +44,7 @@ function histories(players:Player[], rolls:Roll[]) { const values=new Map(player
 function unresolved(values:Map<string,number[]>) { const groups=new Map<string,string[]>(); for(const [id,history] of values) { const key=history.join(","); groups.set(key,[...(groups.get(key)??[]),id]); } return [...groups.values()].filter(group=>group.length>1).flat(); }
 function eligible(players:Player[], rolls:Roll[], round:number) { return unresolved(histories(players,rolls.filter(roll=>roll.roll_round<round))); }
 function compare(a:number[],b:number[]) { for(let i=0;i<Math.max(a.length,b.length);i+=1) { const difference=(b[i]??-1)-(a[i]??-1); if(difference) return difference; } return 0; }
+const ORDER_ROLL_PRESENTATION_MS=2_000;
 const BATTLE_PRESENTATION_MS=2_000;
 function isBattle(value:Battle|null): value is Battle { return Boolean(value&&"stage" in value&&"attackerTerritoryId" in value&&"defenderTerritoryId" in value); }
 function battleExpired(battle:Battle) { return Date.now()-Date.parse(battle.stageStartedAt)>=BATTLE_PRESENTATION_MS; }
@@ -96,6 +97,75 @@ async function advanceBattlePresentation(client:PoolClient,room:Room) {
   if(battle.stage==="show_battle_result"&&!room.pending_from_territory_id) await saveBattle(client,room,null);
 }
 
+async function advanceOrderRollPresentation(client:PoolClient,room:Room) {
+  if(room.status!=="order_roll") return;
+
+  const players=(await client.query<Player>(
+    "SELECT id,faction_name,color,turn_position FROM room_players WHERE room_id=$1 ORDER BY joined_at",
+    [room.id],
+  )).rows;
+
+  const rolls=(await client.query<Roll>(
+    "SELECT player_id,roll_round,value,rolled_at FROM game_order_rolls WHERE room_id=$1 ORDER BY roll_round,rolled_at",
+    [room.id],
+  )).rows;
+
+  const current=eligible(players,rolls,room.order_roll_round);
+  if(!current.length) return;
+
+  const currentRolls=rolls.filter(
+    roll=>roll.roll_round===room.order_roll_round&&current.includes(roll.player_id),
+  );
+
+  const allRolled=current.every(
+    playerId=>currentRolls.some(roll=>roll.player_id===playerId),
+  );
+
+  if(!allRolled) return;
+
+  const lastRollAt=currentRolls.reduce(
+    (latest,roll)=>Math.max(latest,roll.rolled_at.getTime()),
+    0,
+  );
+
+  if(!lastRollAt||Date.now()-lastRollAt<ORDER_ROLL_PRESENTATION_MS) return;
+
+  const historiesByPlayer=histories(players,rolls);
+
+  if(unresolved(historiesByPlayer).length) {
+    await client.query(
+      "UPDATE game_rooms SET order_roll_round=order_roll_round+1 WHERE id=$1",
+      [room.id],
+    );
+    room.order_roll_round+=1;
+    return;
+  }
+
+  const order=[...players].sort(
+    (a,b)=>compare(historiesByPlayer.get(a.id)??[],historiesByPlayer.get(b.id)??[]),
+  );
+
+  for(const [index,ordered] of order.entries()) {
+    await client.query(
+      "UPDATE room_players SET turn_position=$1 WHERE id=$2",
+      [index+1,ordered.id],
+    );
+    ordered.turn_position=index+1;
+  }
+
+  await client.query(
+    "UPDATE game_rooms SET status='playing',started_at=NOW(),phase='cards',current_player_id=$2,turn_number=1,reinforcements_remaining=0,conquered_this_turn=FALSE WHERE id=$1",
+    [room.id,order[0].id],
+  );
+
+  room.status="playing";
+  room.phase="cards";
+  room.current_player_id=order[0].id;
+  room.turn_number=1;
+  room.reinforcements_remaining=0;
+  room.conquered_this_turn=false;
+}
+
 async function snapshot(client:PoolClient, room:Room, session:string):Promise<GameSnapshot> {
   const players=(await client.query<Player>("SELECT id,faction_name,color,turn_position,player_session=$2 is_me FROM room_players WHERE room_id=$1 ORDER BY turn_position NULLS LAST,joined_at",[room.id,session])).rows; const me=players.find(player=>player.is_me); if(!me) throw new RoomError("Você não pertence a esta partida.",403);
   const [territories,rolls,cards,objectives,connections]=await Promise.all([
@@ -111,9 +181,56 @@ async function snapshot(client:PoolClient, room:Room, session:string):Promise<Ga
   const lastOrderRollPlayerId=rolls.rows.filter(roll=>roll.roll_round===room.order_roll_round).at(-1)?.player_id??null;
   return { room:{id:room.id,code:room.code,status:room.status,orderRollRound:room.order_roll_round,orderRollPlayerId,lastOrderRollPlayerId,phase:room.phase,currentPlayerId:room.current_player_id,turnNumber:room.turn_number,reinforcementsRemaining:room.reinforcements_remaining,winnerPlayerId:room.winner_player_id,pendingConquest:room.pending_from_territory_id&&room.pending_to_territory_id?{fromTerritoryId:room.pending_from_territory_id,toTerritoryId:room.pending_to_territory_id}:null,battle:isBattle(room.last_battle)?room.last_battle:null}, players:players.map(player=>({id:player.id,factionName:player.faction_name,color:player.color,turnPosition:player.turn_position,isMe:Boolean(player.is_me),rolls:byPlayer.get(player.id)??[]})), territories:territories.rows.map(territory=>({territoryId:territory.territory_id,ownerPlayerId:territory.owner_player_id,ownerColor:territory.color,troops:territory.troops,movedInTurn:territory.moved_in_turn})), eligiblePlayerIds, connections:connections.rows.map(connection=>({territoryA:connection.territory_a,territoryB:connection.territory_b,exists:true,passable:connection.is_passable,barrierName:connection.barrier_name,description:connection.description})), myCards:cards.rows.map(card=>({id:card.id,territoryId:card.territory_id,symbol:card.is_wild?"wild":card.symbol!})), myObjective:objective?{id:objective.id,name:objective.name,description:objective.description,targetFactionName:objective.target_name}:null };
 }
-export async function getGameSnapshot(value:string, session:string) { const id=roomId(value); return transaction(async client=>{ const room=await lockedRoom(client,id); if(!(["order_roll","playing","finished"] as string[]).includes(room.status)) throw new RoomError("Partida não encontrada.",404); await advanceBattlePresentation(client,room); return snapshot(client,room,session); }); }
+export async function getGameSnapshot(value:string, session:string) { const id=roomId(value); return transaction(async client=>{ const room=await lockedRoom(client,id); if(!(["order_roll","playing","finished"] as string[]).includes(room.status)) throw new RoomError("Partida não encontrada.",404); await advanceOrderRollPresentation(client,room); await advanceBattlePresentation(client,room); return snapshot(client,room,session); }); }
 
-export async function rollOrderDie(value:string,session:string) { const id=roomId(value); return transaction(async client=>{ const room=await lockedRoom(client,id); if(room.status!=="order_roll") throw new RoomError("O sorteio de ordem não está disponível.",409); const player=await playerFor(client,room,session); const players=(await client.query<Player>("SELECT id,faction_name,color,turn_position FROM room_players WHERE room_id=$1 ORDER BY joined_at",[room.id])).rows; const rolls=(await client.query<Roll>("SELECT player_id,roll_round,value FROM game_order_rolls WHERE room_id=$1 ORDER BY roll_round,rolled_at",[room.id])).rows; const current=eligible(players,rolls,room.order_roll_round); const nextPlayerId=current.find(playerId=>!rolls.some(roll=>roll.player_id===playerId&&roll.roll_round===room.order_roll_round)); if(player.id!==nextPlayerId) throw new RoomError("Aguarde sua vez de rolar o dado.",409,{nextPlayerId,requestPlayerId:player.id}); const die=randomInt(1,7); await client.query("INSERT INTO game_order_rolls(room_id,player_id,roll_round,value) VALUES($1,$2,$3,$4)",[room.id,player.id,room.order_roll_round,die]); const rolled=(await client.query<Roll>("SELECT player_id,roll_round,value FROM game_order_rolls WHERE room_id=$1 ORDER BY roll_round,rolled_at",[room.id])).rows; if(current.every(playerId=>rolled.some(roll=>roll.player_id===playerId&&roll.roll_round===room.order_roll_round))) { const all=histories(players,rolled); if(unresolved(all).length) await client.query("UPDATE game_rooms SET order_roll_round=order_roll_round+1 WHERE id=$1",[room.id]); else { const order=[...players].sort((a,b)=>compare(all.get(a.id)??[],all.get(b.id)??[])); for(const [index,ordered] of order.entries()) await client.query("UPDATE room_players SET turn_position=$1 WHERE id=$2",[index+1,ordered.id]); await client.query("UPDATE game_rooms SET status='playing',started_at=NOW(),phase='cards',current_player_id=$2,turn_number=1,reinforcements_remaining=0,conquered_this_turn=FALSE WHERE id=$1",[room.id,order[0].id]); } } return {value:die}; }); }
+export async function rollOrderDie(value:string,session:string) {
+  const id=roomId(value);
+
+  return transaction(async client=>{
+    const room=await lockedRoom(client,id);
+
+    if(room.status!=="order_roll") {
+      throw new RoomError("O sorteio de ordem não está disponível.",409);
+    }
+
+    const player=await playerFor(client,room,session);
+
+    const players=(await client.query<Player>(
+      "SELECT id,faction_name,color,turn_position FROM room_players WHERE room_id=$1 ORDER BY joined_at",
+      [room.id],
+    )).rows;
+
+    const rolls=(await client.query<Roll>(
+      "SELECT player_id,roll_round,value,rolled_at FROM game_order_rolls WHERE room_id=$1 ORDER BY roll_round,rolled_at",
+      [room.id],
+    )).rows;
+
+    const current=eligible(players,rolls,room.order_roll_round);
+
+    const nextPlayerId=current.find(
+      playerId=>!rolls.some(
+        roll=>roll.player_id===playerId&&roll.roll_round===room.order_roll_round,
+      ),
+    );
+
+    if(player.id!==nextPlayerId) {
+      throw new RoomError(
+        "Aguarde sua vez de rolar o dado.",
+        409,
+        {nextPlayerId,requestPlayerId:player.id},
+      );
+    }
+
+    const die=randomInt(1,7);
+
+    await client.query(
+      "INSERT INTO game_order_rolls(room_id,player_id,roll_round,value) VALUES($1,$2,$3,$4)",
+      [room.id,player.id,room.order_roll_round,die],
+    );
+
+    return {value:die};
+  });
+}
 
 async function beginReinforcement(client:PoolClient,room:Room,player:Player) { const owned=(await client.query<{territory_id:number}>("SELECT territory_id FROM game_territories WHERE room_id=$1 AND owner_player_id=$2",[room.id,player.id])).rows; await client.query("UPDATE game_rooms SET phase='reinforcement',reinforcements_remaining=$2 WHERE id=$1",[room.id,reinforcementFor(owned.map(territory=>territory.territory_id))]); }
 export async function advancePhase(value:string,session:string,input:Record<string,unknown>) { const id=roomId(value); return transaction(async client=>{ const room=await lockedRoom(client,id); const player=await playerFor(client,room,session); await advanceBattlePresentation(client,room); if(input.action==="finishCards") { assertTurn(room,player,"cards"); return beginReinforcement(client,room,player); } if(input.action==="finishAttack") { assertTurn(room,player,"attack"); if(isBattle(room.last_battle)||room.pending_from_territory_id) throw new RoomError("Conclua a batalha atual antes de encerrar os ataques.",409); await client.query("UPDATE game_rooms SET phase='maneuver' WHERE id=$1",[room.id]); return; } if(input.action!=="endTurn") throw new RoomError("Ação de fase inválida.",422); assertTurn(room,player,"maneuver"); if(room.conquered_this_turn) await drawCard(client,room,player.id); const next=(await client.query<{id:string}>(`SELECT p.id FROM room_players p WHERE p.room_id=$1 AND p.turn_position>(SELECT turn_position FROM room_players WHERE id=$2) AND EXISTS(SELECT 1 FROM game_territories WHERE room_id=$1 AND owner_player_id=p.id) ORDER BY p.turn_position LIMIT 1`,[room.id,player.id])).rows[0]??(await client.query<{id:string}>("SELECT p.id FROM room_players p WHERE p.room_id=$1 AND EXISTS(SELECT 1 FROM game_territories WHERE room_id=$1 AND owner_player_id=p.id) ORDER BY p.turn_position LIMIT 1",[room.id])).rows[0]; await client.query("UPDATE game_territories SET moved_in_turn=0 WHERE room_id=$1",[room.id]); await client.query("UPDATE game_rooms SET phase='cards',current_player_id=$2,turn_number=turn_number+1,reinforcements_remaining=0,conquered_this_turn=FALSE WHERE id=$1",[room.id,next.id]); }); }

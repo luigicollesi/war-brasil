@@ -237,7 +237,13 @@ function OrderRollPanel({
           disabled={!canRoll || isRolling}
           className="mt-5 h-12 w-full rounded-xl bg-[#e4b94f] px-5 text-xs font-bold uppercase tracking-[0.14em] text-[#12392f] transition hover:bg-[#f1ca68] disabled:cursor-not-allowed disabled:opacity-45"
         >
-          {isRolling ? "Rolando…" : canRoll ? "Rolar dado" : "Aguardando jogador"}
+          {isRolling
+            ? "Rolando…"
+            : canRoll
+              ? "Rolar dado"
+              : orderRollPlayerId === null
+                ? "Resultado confirmado"
+                : "Aguardando jogador"}
         </button>
       </div>
 
@@ -246,7 +252,11 @@ function OrderRollPanel({
           Resultado compartilhado
         </p>
         <h2 className="mt-2 text-xl font-semibold">
-          {orderRollPlayerId === meId ? "Sua vez de rolar o dado." : "Aguardando o jogador da vez."}
+          {orderRollPlayerId === null
+            ? "Resultado da rodada."
+            : orderRollPlayerId === meId
+              ? "Sua vez de rolar o dado."
+              : "Aguardando o jogador da vez."}
         </h2>
         <ul className="mt-5 grid gap-2 sm:grid-cols-2">
           {players.map((player) => {

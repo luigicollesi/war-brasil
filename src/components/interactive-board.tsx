@@ -20,6 +20,18 @@ type InteractiveBoardProps = {
 };
 
 const regionLabels: Record<string,string> = { norte:"Norte", nordeste:"Nordeste", "centro-oeste":"Centro-Oeste", sudeste:"Sudeste", sul:"Sul" };
+
+const regionBorders: Record<string,{stroke:string;glow:string}> = {
+  norte: { stroke:"#55d075", glow:"rgba(85,208,117,.72)" },
+  nordeste: { stroke:"#55a8ff", glow:"rgba(85,168,255,.72)" },
+  "centro-oeste": { stroke:"#f4c542", glow:"rgba(244,197,66,.72)" },
+  sudeste: { stroke:"#ef5555", glow:"rgba(239,85,85,.72)" },
+  sul: { stroke:"#f08a35", glow:"rgba(240,138,53,.72)" },
+};
+const fallbackRegionBorder = {
+  stroke:"#ffffff",
+  glow:"rgba(255,255,255,.55)",
+};
 function colorHex(color:PlayerColor) { return PLAYER_COLORS.find(item=>item.value===color)?.hex??"#64756f"; }
 function readTerritory(path:SVGPathElement):TerritoryDetails { return { id:Number(path.dataset.id),name:path.dataset.name??"Território",region:path.dataset.region??"",state:path.dataset.uf??"—" }; }
 
@@ -63,9 +75,14 @@ export function InteractiveBoard({ territories, connections=[], onSelect, select
     mapDocument.querySelectorAll<SVGPathElement>("#territories path.territory").forEach(path=>{
       const territory=territoryById.get(Number(path.dataset.id)); if(!territory) return;
       const id=territory.territoryId,available=availableTerritoryIds.includes(id),target=targetTerritoryIds.includes(id),selected=selectedTerritoryId===id;
-      path.style.fill=colorHex(territory.ownerColor); path.style.fillOpacity=available||target||selected?"0.86":"0.55";
-      path.style.stroke=target?"#e4b94f":available?"#ffffff":"#ffffff"; path.style.strokeWidth=selected?"8":target?"7":available?"5":"4";
-      path.style.filter=target?"brightness(1.15) drop-shadow(0 0 8px rgba(228,185,79,.8))":available?"brightness(1.08)":"";
+      const regionStyle=regionBorders[path.dataset.region??""]??fallbackRegionBorder;
+      path.style.fill=colorHex(territory.ownerColor);
+      path.style.fillOpacity=available||target||selected?"0.86":"0.55";
+      path.style.stroke=regionStyle.stroke;
+      path.style.strokeWidth=selected?"8":target?"7":available?"5":"4";
+      const glowSize=selected||target?"9px":available?"7px":"5px";
+      const brightness=target?"1.15":available||selected?"1.08":"1";
+      path.style.filter=`brightness(${brightness}) drop-shadow(0 0 ${glowSize} ${regionStyle.glow})`;
       path.classList.toggle("is-selected",selected); path.style.cursor="pointer";
     });
   },[mapVersion,territoryById,selectedTerritoryId,availableTerritoryIds,targetTerritoryIds]);

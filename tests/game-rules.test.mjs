@@ -84,6 +84,33 @@ test("rolagem de combate valida atacante e defensor pelo estágio, sem turno glo
   assert.match(rollBattleDice, /player\.id!==battle\.defenderPlayerId/);
 });
 
+test("último dado do sorteio permanece visível antes de avançar", () => {
+  const source = readFileSync("src/lib/game.ts", "utf8");
+  assert.match(source, /ORDER_ROLL_PRESENTATION_MS\s*=\s*2_000/);
+  assert.match(source, /advanceOrderRollPresentation/);
+  assert.match(source, /rolled_at\.getTime\(\)/);
+
+  const rollOrderDie = source.match(
+    /export async function rollOrderDie[\s\S]*?(?=\n\nasync function beginReinforcement)/,
+  )?.[0];
+
+  assert.ok(rollOrderDie);
+  assert.doesNotMatch(rollOrderDie, /order_roll_round=order_roll_round\+1/);
+  assert.doesNotMatch(rollOrderDie, /status='playing'/);
+});
+
+test("territórios mantêm borda brilhante conforme a região", () => {
+  const source = readFileSync("src/components/interactive-board.tsx", "utf8");
+  assert.match(source, /const regionBorders/);
+  assert.match(source, /norte:/);
+  assert.match(source, /nordeste:/);
+  assert.match(source, /"centro-oeste":/);
+  assert.match(source, /sudeste:/);
+  assert.match(source, /sul:/);
+  assert.match(source, /path\.style\.stroke=regionStyle\.stroke/);
+  assert.match(source, /drop-shadow/);
+});
+
 test("setas usam a geometria do path no viewBox do mapa", () => {
   const source = readFileSync("src/components/territory-arrow.tsx", "utf8");
   assert.match(source, /pathElement\.getBBox\(\)/);
