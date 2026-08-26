@@ -26,8 +26,8 @@ export function JurassicTunnelConnection({
   const path = `M ${from.x} ${from.y} Q ${controlX} ${controlY} ${to.x} ${to.y}`;
 
   return (
-    <svg className="absolute inset-0 h-full w-full overflow-visible" viewBox="0 0 1254 1254" aria-hidden="true">
-      <path d={path} fill="none" stroke="rgba(255,255,255,.72)" strokeWidth="10" strokeLinecap="round" pointerEvents="none" />
+    <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible" viewBox="0 0 1254 1254" aria-hidden="true">
+      <path d={path} fill="none" stroke="rgba(255,255,255,.72)" strokeWidth="10" strokeLinecap="round" />
       <path
         d={path}
         fill="none"
@@ -36,9 +36,9 @@ export function JurassicTunnelConnection({
         strokeLinecap="round"
         strokeDasharray="16 10"
         className="jurassic-tunnel-animation"
-        pointerEvents="none"
       />
       <path
+        className="pointer-events-auto"
         d={path}
         fill="none"
         stroke="transparent"
