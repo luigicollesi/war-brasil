@@ -13,7 +13,7 @@ test("manobra reutiliza topologia cacheada sem consultar tabela por jogada", () 
   );
 
   assert.match(route, /game-maneuver-command-service/);
-  assert.match(service, /getBaseTerritoryConnections/);
+  assert.match(service, /getPassableTerritoryConnections/);
   assert.doesNotMatch(service, /FROM territory_connections/);
   assert.match(service, /jurassicTunnelConnection/);
   assert.match(service, /reachableTerritoryIds/);
