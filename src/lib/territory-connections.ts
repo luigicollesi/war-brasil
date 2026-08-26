@@ -39,7 +39,7 @@ export function jurassicTunnelConnection(
 }
 
 export function findTerritoryConnection(
-  connections: TerritoryConnection[],
+  connections: readonly TerritoryConnection[],
   territoryA: number,
   territoryB: number,
 ) {
@@ -60,7 +60,7 @@ export function findTerritoryConnection(
 }
 
 export function reachableTerritoryIds(
-  connections: TerritoryConnection[],
+  connections: readonly TerritoryConnection[],
   startTerritoryId: number,
   allowedTerritoryIds: Iterable<number>,
 ) {
