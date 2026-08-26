@@ -62,11 +62,12 @@ export function useGameSync(roomId: string) {
         }
       })();
 
-      inFlight = run.finally(() => {
-        if (inFlight === run) inFlight = null;
+      const tracked = run.finally(() => {
+        if (inFlight === tracked) inFlight = null;
       });
 
-      return inFlight;
+      inFlight = tracked;
+      return tracked;
     }
 
     async function poll() {
