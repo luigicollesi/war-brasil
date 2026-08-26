@@ -464,12 +464,16 @@ function GameTurnPanel({
 
   useEffect(() => {
     const previous = previousCards.current;
-    const received = snapshot.myCards.find((card) => previous.size > 0 && !previous.has(card.id));
-    previousCards.current = new Set(snapshot.myCards.map((card) => card.id));
+    const received = snapshot.myCards.find(
+      card => previous.size > 0 && !previous.has(card.id),
+    );
+
+    previousCards.current = new Set(snapshot.myCards.map(card => card.id));
+
     if (!received) return;
-    setDrawnCard(received);
-    const timeout = window.setTimeout(() => setDrawnCard(null), 1_700);
-    return () => window.clearTimeout(timeout);
+
+    // Não usa cleanup por heartbeat: a animação controla sua própria saída.
+    queueMicrotask(() => setDrawnCard(received));
   }, [snapshot.myCards]);
 
   const pendingConquestFrom = snapshot.room.pendingConquest?.fromTerritoryId ?? null;
@@ -654,7 +658,7 @@ function GameTurnPanel({
       {modal ? <div className="fixed inset-0 z-30 grid place-items-center bg-[#14241f]/45 p-4"><div className="w-full max-w-sm rounded-3xl bg-[#faf8f2] p-6 shadow-2xl"><h3 className="text-xl font-semibold">{modal === "cards" ? "Pedir reforços" : modal === "conquest" ? "Mover tropas conquistadoras" : modal === "maneuver" ? "Deslocar tropas" : "Adicionar reforços"}</h3>{modal === "cards" ? <><p className="mt-2 text-sm text-[#64756f]">Selecione três cartas na sua mão.</p><button type="button" disabled={selectedCards.length !== 3} onClick={() => action("cards/trade", { cardIds: selectedCards }).then(() => { setSelectedCards([]); setModal(null); })} className="mt-5 rounded-xl bg-[#e4b94f] px-4 py-3 text-xs font-bold uppercase tracking-wider text-[#12392f] disabled:opacity-40">Confirmar troca</button></> : <><p className="mt-2 text-sm text-[#64756f]">{modal === "conquest" ? `Tropas no território de origem: ${snapshot.territories.find(territory => territory.territoryId === snapshot.room.pendingConquest?.fromTerritoryId)?.troops ?? 0}. Máximo que pode ser movido: ${Math.max(0, (snapshot.territories.find(territory => territory.territoryId === snapshot.room.pendingConquest?.fromTerritoryId)?.troops ?? 1) - 1)}.` : modal === "maneuver" ? `Tropas na origem: ${selectedSource?.troops ?? 0}. Máximo transferível: ${Math.max(0, (selectedSource?.troops ?? 1) - (selectedSource?.movedInTurn ?? 0) - 1)}.` : null}</p><NumberField label="Tropas" value={count} setValue={setCount}/><div className="mt-5 flex gap-3"><button type="button" onClick={() => { const path=modal === "reinforce" ? "reinforce" : modal === "conquest" ? "conquest" : "maneuver"; const body=modal === "reinforce" ? { territoryId: Number(to), troops: Number(count) } : modal === "conquest" ? { troops: Number(count) } : { fromTerritoryId: Number(from), toTerritoryId: Number(to), troops: Number(count) }; void action(path, body).then(() => { setModal(null); setFrom(""); onMapArrow(null); }); }} className="rounded-xl bg-[#12392f] px-4 py-3 text-xs font-bold uppercase tracking-wider text-white">Confirmar</button><button type="button" onClick={() => { setModal(null); setTo(""); onMapArrow(null); }} className="rounded-xl border border-[#17372d]/15 px-4 py-3 text-xs font-bold uppercase tracking-wider">Cancelar</button></div></>}</div></div> : null}
       {isTurn && snapshot.room.pendingConquest && modal !== "conquest" ? <button type="button" onClick={() => { setCount("1"); setModal("conquest"); }} className="mt-4 rounded-xl bg-[#a33c33] px-4 py-3 text-xs font-bold uppercase tracking-wider text-white">Concluir conquista</button> : null}
       {barrier ? <div className="fixed bottom-5 left-1/2 z-40 w-[min(28rem,calc(100%-2rem))] -translate-x-1/2 rounded-2xl border border-[#e4b94f]/60 bg-[#17372d] p-4 text-white shadow-xl"><p className="font-semibold">Fronteira bloqueada — {barrier.barrierName ?? "barreira natural"}</p><p className="mt-1 text-sm text-[#d4e2dc]">{barrier.description ?? "Esta barreira impede uma rota militar direta entre esses territórios."}</p><button type="button" onClick={() => setBarrier(null)} className="mt-3 text-xs font-bold uppercase tracking-wider text-[#e8c35e]">Fechar</button></div> : null}
-      {drawnCard ? <div className="pointer-events-none fixed inset-0 z-40 grid place-items-center"><div className="card-draw-animation"><TerritoryCard territoryId={drawnCard.territoryId} symbol={drawnCard.symbol} /></div></div> : null}
+      {drawnCard ? <div className="pointer-events-none fixed inset-0 z-40 grid place-items-center"><div className="card-draw-animation" onAnimationEnd={() => setDrawnCard(null)}><TerritoryCard territoryId={drawnCard.territoryId} symbol={drawnCard.symbol} /></div></div> : null}
       {message ? <p className="mt-4 text-sm text-[#a33c33]">{message}</p> : null}
     </section>
   );

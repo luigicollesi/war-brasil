@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { CARD_LAYOUT, TERRITORY_METADATA, type CardSymbol } from "@/src/lib/game-config";
 
 const symbolAssets: Record<CardSymbol, string> = {
@@ -21,11 +21,16 @@ export function TerritoryCard({ territoryId, symbol, selected, onClick }: Territ
   const wild = symbol === "wild";
   const territory = territoryId ? TERRITORY_METADATA[territoryId] : null;
 
+  const territorySvgRef = useRef<SVGSVGElement>(null);
   const territoryUseRef = useRef<SVGUseElement>(null);
-  const [territoryViewBox, setTerritoryViewBox] = useState("0 0 1254 1254");
 
   useEffect(() => {
-    setTerritoryViewBox("0 0 1254 1254");
+    const svg = territorySvgRef.current;
+
+    if (!svg) return;
+
+    // Reset imperativo do elemento DOM, sem provocar render React.
+    svg.setAttribute("viewBox", "0 0 1254 1254");
 
     if (!territoryId) return;
 
@@ -34,28 +39,28 @@ export function TerritoryCard({ territoryId, symbol, selected, onClick }: Territ
 
     const measure = () => {
       const element = territoryUseRef.current;
+      const currentSvg = territorySvgRef.current;
 
-      if (!element) return;
+      if (!element || !currentSvg) return;
 
       try {
         const box = element.getBBox();
 
         if (box.width > 0 && box.height > 0) {
-          // Usa o maior eixo para todos os territórios terem
-          // escala visual consistente.
           const size = Math.max(box.width, box.height) * 1.28;
 
           const centerX = box.x + box.width / 2;
           const centerY = box.y + box.height / 2;
 
-          setTerritoryViewBox(
+          currentSvg.setAttribute(
+            "viewBox",
             `${centerX - size / 2} ${centerY - size / 2} ${size} ${size}`,
           );
 
           return;
         }
       } catch {
-        // O SVG externo ainda pode não estar pronto.
+        // O <use> externo pode precisar de mais um frame para resolver.
       }
 
       attempts += 1;
@@ -80,9 +85,10 @@ export function TerritoryCard({ territoryId, symbol, selected, onClick }: Territ
       <Image src={wild ? "/card-coringa.png" : "/card-template.png"} alt="" fill sizes="112px" className="object-cover" />
       {territory ? (
         <svg
+          ref={territorySvgRef}
           className="absolute"
           style={CARD_LAYOUT.map}
-          viewBox={territoryViewBox}
+          viewBox="0 0 1254 1254"
           preserveAspectRatio="xMidYMid meet"
           aria-hidden="true"
         >
