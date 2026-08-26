@@ -140,7 +140,29 @@ export async function attack(value:string,session:string,input:Record<string,unk
   });
 }
 
-export async function rollBattleDice(value:string,session:string) { const id=roomId(value); return transaction(async client=>{ const room=await lockedRoom(client,id),player=await playerFor(client,room,session); assertTurn(room,player,"attack"); await advanceBattlePresentation(client,room); const battle=room.last_battle; if(!isBattle(battle)) throw new RoomError("Não há combate aguardando dados.",409); const rows=(await client.query<LockedTerritory>("SELECT territory_id,owner_player_id,troops,moved_in_turn FROM game_territories WHERE room_id=$1 AND territory_id=ANY($2::smallint[]) FOR UPDATE",[room.id,[battle.attackerTerritoryId,battle.defenderTerritoryId]])).rows; const attacker=rows.find(row=>row.territory_id===battle.attackerTerritoryId),defender=rows.find(row=>row.territory_id===battle.defenderTerritoryId); if(!attacker||!defender) throw new RoomError("Os territórios do combate não foram encontrados.",409); if(battle.stage==="awaiting_attacker_roll") { if(player.id!==battle.attackerPlayerId) throw new RoomError("Apenas o atacante pode rolar agora.",403); battle.attacker=Array.from({length:Math.min(3,attacker.troops-1)},()=>randomInt(1,7)).sort((a,b)=>b-a); battle.stage="show_attacker_result"; battle.stageStartedAt=new Date().toISOString(); await saveBattle(client,room,battle); return battle; } if(battle.stage==="awaiting_defender_roll") { if(player.id!==battle.defenderPlayerId) throw new RoomError("Apenas o defensor pode rolar agora.",403); battle.defender=Array.from({length:Math.min(3,defender.troops)},()=>randomInt(1,7)).sort((a,b)=>b-a); const resolved=resolveBattle(battle.attacker,battle.defender); battle.attacker=resolved.attacker; battle.defender=resolved.defender; battle.attackerLosses=resolved.attackerLosses; battle.defenderLosses=resolved.defenderLosses; battle.conquered=resolved.defenderLosses===defender.troops; battle.stage="show_defender_result"; battle.stageStartedAt=new Date().toISOString(); await saveBattle(client,room,battle); return battle; } throw new RoomError("Aguarde a próxima etapa visual do combate.",409,{stage:battle.stage}); }); }
+export async function rollBattleDice(value: string, session: string) {
+  const id = roomId(value);
+
+  return transaction(async (client) => {
+    const room = await lockedRoom(client, id);
+    const player = await playerFor(client, room, session);
+
+    if (room.status !== "playing" || room.phase !== "attack") {
+      throw new RoomError(
+        "Os dados de combate não estão disponíveis neste momento.",
+        409,
+        {
+          roomStatus: room.status,
+          roomPhase: room.phase,
+          requestPlayerId: player.id,
+        },
+      );
+    }
+
+    await advanceBattlePresentation(client, room);
+
+    const battle = room.last_battle;
+    if(!isBattle(battle)) throw new RoomError("Não há combate aguardando dados.",409); const rows=(await client.query<LockedTerritory>("SELECT territory_id,owner_player_id,troops,moved_in_turn FROM game_territories WHERE room_id=$1 AND territory_id=ANY($2::smallint[]) FOR UPDATE",[room.id,[battle.attackerTerritoryId,battle.defenderTerritoryId]])).rows; const attacker=rows.find(row=>row.territory_id===battle.attackerTerritoryId),defender=rows.find(row=>row.territory_id===battle.defenderTerritoryId); if(!attacker||!defender) throw new RoomError("Os territórios do combate não foram encontrados.",409); if(battle.stage==="awaiting_attacker_roll") { if(player.id!==battle.attackerPlayerId) throw new RoomError("Apenas o atacante pode rolar agora.",403); battle.attacker=Array.from({length:Math.min(3,attacker.troops-1)},()=>randomInt(1,7)).sort((a,b)=>b-a); battle.stage="show_attacker_result"; battle.stageStartedAt=new Date().toISOString(); await saveBattle(client,room,battle); return battle; } if(battle.stage==="awaiting_defender_roll") { if(player.id!==battle.defenderPlayerId) throw new RoomError("Apenas o defensor pode rolar agora.",403); battle.defender=Array.from({length:Math.min(3,defender.troops)},()=>randomInt(1,7)).sort((a,b)=>b-a); const resolved=resolveBattle(battle.attacker,battle.defender); battle.attacker=resolved.attacker; battle.defender=resolved.defender; battle.attackerLosses=resolved.attackerLosses; battle.defenderLosses=resolved.defenderLosses; battle.conquered=resolved.defenderLosses===defender.troops; battle.stage="show_defender_result"; battle.stageStartedAt=new Date().toISOString(); await saveBattle(client,room,battle); return battle; } throw new RoomError("Aguarde a próxima etapa visual do combate.",409,{stage:battle.stage}); }); }
 
 export async function completeConquest(value:string,session:string,input:Record<string,unknown>) {
   const id=roomId(value), troops=integer(input.troops,"Quantidade de tropas inválida.");
