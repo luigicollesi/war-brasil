@@ -27,7 +27,11 @@ export async function POST(
     const result = await reinforceCommand(roomId, session, body);
 
     return noStoreJson(
-      { revision: result.revision },
+      {
+        revision: result.revision,
+        baseRevision: result.baseRevision,
+        patch: result.value,
+      },
       {
         headers: {
           [GAME_REVISION_HEADER]: String(result.revision),
