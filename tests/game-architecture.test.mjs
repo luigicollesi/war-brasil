@@ -100,17 +100,74 @@ test("avanço temporal usa expectedRevision e command condicional", () => {
   assert.match(presentation, /advanceBattlePresentation/);
 });
 
-test("cliente trata 204 sem substituir snapshot e avança apenas apresentações", () => {
+test("cliente trata 204 sem substituir snapshot e exige revisão mínima após comandos", () => {
   const source = readFileSync("src/hooks/use-game-sync.ts", "utf8");
 
   assert.match(source, /response\.status === 204/);
   assert.match(source, /GAME_REVISION_HEADER/);
   assert.match(source, /shouldAdvancePresentation/);
   assert.match(source, /\/advance/);
+  assert.match(source, /requiredRevisionRef/);
+  assert.match(source, /minimumRevision/);
 
   const noContentBranch = source.match(
     /if \(response\.status === 204\) \{[\s\S]*?\n\s*\}/,
   )?.[0];
   assert.ok(noContentBranch);
   assert.doesNotMatch(noContentBranch, /setSnapshot/);
+});
+
+test("interação do mapa não reconstrói cliques por selectionVersion ou mapHints em effect", () => {
+  const client = readFileSync("src/components/game-client-v2.tsx", "utf8");
+  const panel = readFileSync("src/components/game-turn-panel.tsx", "utf8");
+  const interaction = readFileSync("src/hooks/use-game-interaction.ts", "utf8");
+
+  assert.match(client, /useGameInteraction/);
+  assert.doesNotMatch(client, /selectionVersion/);
+  assert.doesNotMatch(client, /setMapHints/);
+  assert.doesNotMatch(panel, /onMapHints/);
+  assert.doesNotMatch(panel, /handledSelectionVersion/);
+  assert.match(interaction, /onTerritoryClick/);
+  assert.match(interaction, /deriveMapHints/);
+});
+
+test("estado visual do tabuleiro é derivado da state machine", () => {
+  const source = readFileSync("src/lib/game-interaction.ts", "utf8");
+
+  assert.match(source, /gameInteractionReducer/);
+  assert.match(source, /deriveMapHints/);
+  assert.match(source, /deriveInteractionArrow/);
+  assert.match(source, /deriveSelectedTerritoryId/);
+  assert.match(source, /scopeKey/);
+});
+
+test("tooltip move por RAF sem setState no pointermove e paths ficam cacheados", () => {
+  const source = readFileSync("src/components/interactive-board.tsx", "utf8");
+
+  assert.match(source, /pathsByIdRef/);
+  assert.match(source, /visualSignatureRef/);
+  assert.match(source, /requestAnimationFrame/);
+  assert.match(source, /translate3d/);
+  assert.match(source, /root\.addEventListener\("pointermove"/);
+  assert.doesNotMatch(source, /setHovered\(\{details:/);
+  assert.match(source, /: "none";/);
+});
+
+test("estradas desligadas não permanecem montadas no SVG overlay", () => {
+  const source = readFileSync("src/components/interactive-board.tsx", "utf8");
+  assert.match(source, /roadsVisible \? \([\s\S]*?<RoadNetwork/);
+});
+
+test("indicador de conexão reutiliza o polling do jogo sem health check próprio", () => {
+  const indicator = readFileSync(
+    "src/components/server-connection-indicator.tsx",
+    "utf8",
+  );
+  const sync = readFileSync("src/hooks/use-game-sync.ts", "utf8");
+
+  assert.match(indicator, /useSyncExternalStore/);
+  assert.match(indicator, /gameSyncMetricsStore/);
+  assert.doesNotMatch(indicator, /\/api\/health/);
+  assert.match(sync, /recordSuccess/);
+  assert.match(sync, /recordFailure/);
 });
