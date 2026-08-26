@@ -24,7 +24,6 @@ type ManeuverPlayer = {
 
 type OwnedTerritory = {
   territory_id: number;
-  owner_player_id: string;
   troops: number;
   moved_in_turn: number;
 };
@@ -127,7 +126,7 @@ export async function maneuverCommand(
 
     const owned = (
       await client.query<OwnedTerritory>(
-        `SELECT territory_id,owner_player_id,troops,moved_in_turn
+        `SELECT territory_id,troops,moved_in_turn
          FROM game_territories
          WHERE room_id=$1 AND owner_player_id=$2
          FOR UPDATE`,
