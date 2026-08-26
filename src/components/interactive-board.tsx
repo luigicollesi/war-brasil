@@ -115,7 +115,9 @@ export function InteractiveBoard({
     [territories],
   );
 
-  onSelectRef.current = onSelect;
+  useEffect(() => {
+    onSelectRef.current = onSelect;
+  }, [onSelect]);
 
   useEffect(() => {
     let active = true;
