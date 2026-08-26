@@ -80,7 +80,9 @@ function readTerritory(path: SVGPathElement): TerritoryDetails {
 }
 
 function territoryPathFromEvent(event: Event, root: Element) {
-  const target = event.target as { closest?: (selector: string) => Element | null } | null;
+  const target = event.target as {
+    closest?: (selector: string) => Element | null;
+  } | null;
   const path = target?.closest?.("path.territory") as SVGPathElement | null;
   return path && root.contains(path) ? path : null;
 }
@@ -103,6 +105,7 @@ export function InteractiveBoard({
   const cleanupBoardRef = useRef<(() => void) | null>(null);
   const pointerRef = useRef({ x: 0, y: 0 });
   const tooltipFrameRef = useRef(0);
+  const hoveredTerritoryRef = useRef<number | null>(null);
   const onSelectRef = useRef(onSelect);
   const [anchors, setAnchors] = useState<Map<number, TerritoryAnchor>>(new Map());
   const [hoveredTerritoryId, setHoveredTerritoryId] = useState<number | null>(null);
@@ -202,11 +205,18 @@ export function InteractiveBoard({
     const pointerOver = (event: Event) => {
       const path = territoryPathFromEvent(event, root);
       if (!path) return;
-      setHoveredTerritoryId(Number(path.dataset.id));
+      const id = Number(path.dataset.id);
+      hoveredTerritoryRef.current = id;
+      setHoveredTerritoryId(id);
       scheduleTooltipPosition(event as PointerEvent);
     };
     const pointerMove = (event: Event) => {
-      if (hoveredTerritoryId === null && !territoryPathFromEvent(event, root)) return;
+      if (
+        hoveredTerritoryRef.current === null &&
+        !territoryPathFromEvent(event, root)
+      ) {
+        return;
+      }
       scheduleTooltipPosition(event as PointerEvent);
     };
     const pointerOut = (event: Event) => {
@@ -214,6 +224,7 @@ export function InteractiveBoard({
       if (!path) return;
       const related = (event as PointerEvent).relatedTarget as Node | null;
       if (related && path.contains(related)) return;
+      hoveredTerritoryRef.current = null;
       setHoveredTerritoryId(null);
     };
 
@@ -258,9 +269,16 @@ export function InteractiveBoard({
       visualSignatureRef.current.set(id, signature);
 
       path.style.fill = colorHex(territory.ownerColor);
-      path.style.fillOpacity = isAvailable || isTarget || isSelected ? "0.86" : "0.55";
+      path.style.fillOpacity =
+        isAvailable || isTarget || isSelected ? "0.86" : "0.55";
       path.style.stroke = regionStyle.stroke;
-      path.style.strokeWidth = isSelected ? "8" : isTarget ? "7" : isAvailable ? "5" : "4";
+      path.style.strokeWidth = isSelected
+        ? "8"
+        : isTarget
+          ? "7"
+          : isAvailable
+            ? "5"
+            : "4";
       path.style.filter =
         isSelected || isTarget
           ? `brightness(1.12) drop-shadow(0 0 9px ${regionStyle.glow})`
@@ -269,14 +287,22 @@ export function InteractiveBoard({
             : "none";
       path.classList.toggle("is-selected", isSelected);
     }
-  }, [territories, selectedTerritoryId, availableTerritoryIds, targetTerritoryIds]);
+  }, [
+    anchors,
+    territories,
+    selectedTerritoryId,
+    availableTerritoryIds,
+    targetTerritoryIds,
+  ]);
 
   const hoveredDetails =
     hoveredTerritoryId === null
       ? undefined
       : detailsByIdRef.current.get(hoveredTerritoryId);
   const hoveredState =
-    hoveredTerritoryId === null ? undefined : territoryById.get(hoveredTerritoryId);
+    hoveredTerritoryId === null
+      ? undefined
+      : territoryById.get(hoveredTerritoryId);
   const relevantConnection =
     hoveredTerritoryId !== null &&
     selectedTerritoryId &&
@@ -364,7 +390,11 @@ export function InteractiveBoard({
           <TerritoryArrow from={from} to={to} kind={arrow.kind} />
         ) : null}
         {hoveredDetails && hoveredState ? (
-          <div ref={tooltipRef} className="game-territory-tooltip" style={{ left: 0, top: 0 }}>
+          <div
+            ref={tooltipRef}
+            className="game-territory-tooltip"
+            style={{ left: 0, top: 0 }}
+          >
             <p className="font-semibold">{hoveredDetails.name}</p>
             <p className="mt-1 text-[#c8d9d1]">
               {hoveredState.ownerName} ·{" "}
