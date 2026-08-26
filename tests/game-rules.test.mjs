@@ -228,7 +228,7 @@ test("territórios mantêm borda brilhante conforme a região", () => {
   assert.match(source, /"centro-oeste":/);
   assert.match(source, /sudeste:/);
   assert.match(source, /sul:/);
-  assert.match(source, /path\.style\.stroke=regionStyle\.stroke/);
+  assert.match(source, /path\.style\.stroke\s*=\s*regionStyle\.stroke/);
   assert.match(source, /drop-shadow/);
 });
 
