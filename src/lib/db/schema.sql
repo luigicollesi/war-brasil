@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS game_rooms (
     CHECK (status IN ('waiting', 'order_roll', 'playing', 'finished')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   started_at TIMESTAMPTZ,
+  revision INTEGER NOT NULL DEFAULT 1 CHECK (revision >= 1),
   order_roll_round INTEGER NOT NULL DEFAULT 1
     CHECK (order_roll_round >= 1),
   phase VARCHAR(20) NOT NULL DEFAULT 'cards'
