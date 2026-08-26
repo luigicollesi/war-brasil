@@ -27,7 +27,6 @@ type LockedTerritory = {
   territory_id: number;
   owner_player_id: string;
   troops: number;
-  moved_in_turn: number;
 };
 
 function normalizeRoomId(value: string) {
@@ -130,7 +129,7 @@ export async function completeConquestCommand(
 
     const rows = (
       await client.query<LockedTerritory>(
-        `SELECT territory_id,owner_player_id,troops,moved_in_turn
+        `SELECT territory_id,owner_player_id,troops
          FROM game_territories
          WHERE room_id=$1 AND territory_id=ANY($2::smallint[])
          FOR UPDATE`,
