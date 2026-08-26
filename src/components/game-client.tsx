@@ -307,7 +307,7 @@ function BrazilDie({
       aria-label={"Dado mostrando " + value}
     >
       <Image
-        src="/assets/dado-brasil-hq.svg"
+        src="/dado-brasil-hq.svg"
         alt=""
         fill
         sizes="128px"

@@ -71,6 +71,19 @@ test("combate sincronizado persiste etapas e rolagens separadas", () => {
   assert.match(source, /advanceBattlePresentation/);
 });
 
+test("rolagem de combate valida atacante e defensor pelo estágio, sem turno global", () => {
+  const source = readFileSync("src/lib/game.ts", "utf8");
+  const rollBattleDice = source.match(
+    /export async function rollBattleDice[\s\S]*?(?=\nexport async function completeConquest)/,
+  )?.[0];
+  assert.ok(rollBattleDice);
+  assert.doesNotMatch(rollBattleDice, /assertTurn\(/);
+  assert.match(rollBattleDice, /battle\.stage==="awaiting_attacker_roll"/);
+  assert.match(rollBattleDice, /player\.id!==battle\.attackerPlayerId/);
+  assert.match(rollBattleDice, /battle\.stage==="awaiting_defender_roll"/);
+  assert.match(rollBattleDice, /player\.id!==battle\.defenderPlayerId/);
+});
+
 test("setas usam a geometria do path no viewBox do mapa", () => {
   const source = readFileSync("src/components/territory-arrow.tsx", "utf8");
   assert.match(source, /pathElement\.getBBox\(\)/);

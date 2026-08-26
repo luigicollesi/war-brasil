@@ -81,7 +81,7 @@ export default function Home() {
               </div>
               <div className="rounded-[1.4rem] bg-[#f2eddf] p-3 sm:p-5">
                 <Image
-                  src="/assets/war-brasil-42.production.svg"
+                  src="/war-brasil-42.production.svg"
                   alt="Mapa do Brasil dividido em 42 territórios"
                   width={1254}
                   height={1254}

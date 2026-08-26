@@ -1,9 +1,5 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-  outputFileTracingIncludes: {
-    "/assets/[asset]": ["./src/public/**/*"],
-  },
-};
+const nextConfig: NextConfig = {};
 
 export default nextConfig;
