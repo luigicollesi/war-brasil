@@ -5,6 +5,7 @@ import { PLAYER_COLORS, type PlayerColor } from "@/src/lib/lobby";
 import type { TerritoryConnection } from "@/src/lib/territory-connections";
 import { TERRITORY_METADATA } from "@/src/lib/game-config";
 import { JurassicTunnelConnection } from "@/src/components/jurassic-tunnel-connection";
+import { RoadNetwork } from "@/src/components/road-network";
 import { getTerritoryAnchor, TerritoryArrow, type TerritoryAnchor, type TerritoryArrowKind } from "@/src/components/territory-arrow";
 
 export type BoardTerritory = { territoryId: number; ownerPlayerId: string; ownerName: string; ownerColor: PlayerColor; troops: number };
@@ -21,6 +22,7 @@ type InteractiveBoardProps = {
   arrow?: MapArrow;
 };
 
+const ROAD_VISIBILITY_KEY = "war-brasil:roads-visible";
 const regionLabels: Record<string,string> = { norte:"Norte", nordeste:"Nordeste", "centro-oeste":"Centro-Oeste", sudeste:"Sudeste", sul:"Sul" };
 
 const regionBorders: Record<string,{stroke:string;glow:string}> = {
@@ -43,7 +45,16 @@ export function InteractiveBoard({ territories, connections=[], onSelect, select
   const [mapVersion,setMapVersion]=useState(0);
   const [anchors,setAnchors]=useState<Map<number,TerritoryAnchor>>(new Map());
   const [hovered,setHovered]=useState<{details:TerritoryDetails;x:number;y:number}|null>(null);
+  const [roadsVisible,setRoadsVisible]=useState(false);
   const territoryById=useMemo(()=>new Map(territories.map(territory=>[territory.territoryId,territory])),[territories]);
+
+  useEffect(()=>{
+    try {
+      setRoadsVisible(window.localStorage.getItem(ROAD_VISIBILITY_KEY)==="true");
+    } catch {
+      setRoadsVisible(false);
+    }
+  },[]);
 
   useEffect(()=>{
     if(!mapVersion) return;
@@ -98,8 +109,31 @@ export function InteractiveBoard({ territories, connections=[], onSelect, select
   const tunnelTo=jurassicDestinationId?anchors.get(jurassicDestinationId):undefined;
   const tunnelTargetName=jurassicDestinationId?TERRITORY_METADATA[jurassicDestinationId]?.name:null;
 
+  function toggleRoads() {
+    setRoadsVisible(current=>{
+      const next=!current;
+      try {
+        window.localStorage.setItem(ROAD_VISIBILITY_KEY,String(next));
+      } catch {
+        // A preferência visual continua funcionando na sessão mesmo sem storage.
+      }
+      return next;
+    });
+  }
+
   return (
     <div className="game-map-canvas" aria-label="Tabuleiro do Brasil">
+      <button
+        type="button"
+        className="game-road-toggle"
+        aria-pressed={roadsVisible}
+        onClick={toggleRoads}
+        title={roadsVisible?"Ocultar estradas":"Mostrar estradas"}
+      >
+        <span aria-hidden="true">🛣️</span>
+        <span>Estradas</span>
+        <strong>{roadsVisible?"ON":"OFF"}</strong>
+      </button>
       <div ref={containerRef} className="game-map-surface">
         <object
           ref={boardRef}
@@ -112,6 +146,13 @@ export function InteractiveBoard({ territories, connections=[], onSelect, select
         >
           <p>Não foi possível carregar o mapa interativo.</p>
         </object>
+        <RoadNetwork
+          connections={connections}
+          anchors={anchors}
+          visible={roadsVisible}
+          selectedTerritoryId={selectedTerritoryId}
+          targetTerritoryIds={targetTerritoryIds}
+        />
         {tunnelFrom&&tunnelTo&&tunnelTargetName?<JurassicTunnelConnection from={tunnelFrom} to={tunnelTo} targetName={tunnelTargetName}/>:null}
         {from&&to&&arrow?<TerritoryArrow from={from} to={to} kind={arrow.kind}/>:null}
         {hovered&&hoveredState?<div className="game-territory-tooltip" style={{left:hovered.x,top:hovered.y}}><p className="font-semibold">{hovered.details.name}</p><p className="mt-1 text-[#c8d9d1]">{hoveredState.ownerName} · {regionLabels[hovered.details.region]??hovered.details.region}</p><p className="mt-1 font-semibold text-[#e8c35e]">{hoveredState.troops} tropas</p>{relevantConnection?<p className="mt-2 border-t border-white/15 pt-2 text-[#ffd6a1]">{relevantConnection.barrierName==="Túnel Jurássico"?"🦖 Túnel Jurássico":relevantConnection.passable?"Fronteira militar disponível":relevantConnection.barrierName??"Fronteira bloqueada"}</p>:null}</div>:null}
