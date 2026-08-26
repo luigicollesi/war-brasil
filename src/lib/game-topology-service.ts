@@ -14,8 +14,13 @@ type ConnectionRow = {
   description: string | null;
 };
 
-let cachedConnections: readonly TerritoryConnection[] | null = null;
-let loadingConnections: Promise<readonly TerritoryConnection[]> | null = null;
+type TopologyCache = {
+  all: readonly TerritoryConnection[];
+  passable: readonly TerritoryConnection[];
+};
+
+let cachedTopology: TopologyCache | null = null;
+let loadingTopology: Promise<TopologyCache> | null = null;
 
 function mapConnection(row: ConnectionRow): TerritoryConnection {
   return {
@@ -28,26 +33,41 @@ function mapConnection(row: ConnectionRow): TerritoryConnection {
   };
 }
 
-export async function getBaseTerritoryConnections(client: PoolClient) {
-  if (cachedConnections) return cachedConnections;
-  if (loadingConnections) return loadingConnections;
+async function loadTopology(client: PoolClient) {
+  if (cachedTopology) return cachedTopology;
+  if (loadingTopology) return loadingTopology;
 
-  loadingConnections = client
+  loadingTopology = client
     .query<ConnectionRow>(
       `SELECT territory_a,territory_b,is_passable,barrier_name,description
        FROM territory_connections
        ORDER BY territory_a,territory_b`,
     )
     .then((result) => result.rows.map(mapConnection))
-    .then((connections) => {
-      cachedConnections = connections;
-      return cachedConnections;
+    .then((all) => {
+      cachedTopology = {
+        all,
+        passable: all.filter((connection) => connection.passable),
+      };
+      return cachedTopology;
+    })
+    .catch((error) => {
+      cachedTopology = null;
+      throw error;
     })
     .finally(() => {
-      loadingConnections = null;
+      loadingTopology = null;
     });
 
-  return loadingConnections;
+  return loadingTopology;
+}
+
+export async function getBaseTerritoryConnections(client: PoolClient) {
+  return (await loadTopology(client)).all;
+}
+
+export async function getPassableTerritoryConnections(client: PoolClient) {
+  return (await loadTopology(client)).passable;
 }
 
 export async function getBaseTerritoryConnection(
