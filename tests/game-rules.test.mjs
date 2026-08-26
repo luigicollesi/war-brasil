@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { isValidTrade, reinforcementBase, resolveBattle, tradeValue } from "../.test-build/game-rules.js";
-import { findTerritoryConnection, reachableTerritoryIds } from "../.test-build/territory-connections.js";
+import {
+  findTerritoryConnection,
+  isJurassicTunnelConnection,
+  jurassicTunnelConnection,
+  reachableTerritoryIds,
+} from "../.test-build/territory-connections.js";
 
 test("reforços usam mínimo de três e metade dos territórios", () => {
   assert.equal(reinforcementBase(1), 3);
@@ -63,6 +68,45 @@ test("conexões militares são simétricas e respeitam barreiras", () => {
   assert.equal(findTerritoryConnection(connections, 2, 8).exists, false);
 });
 
+test("Túnel Jurássico é bidirecional e prefere a conexão especial passável", () => {
+  const tunnel = jurassicTunnelConnection(25);
+  assert.ok(tunnel);
+  assert.equal(isJurassicTunnelConnection(25, 3, 25), true);
+  assert.equal(isJurassicTunnelConnection(25, 25, 3), true);
+  assert.equal(isJurassicTunnelConnection(25, 3, 24), false);
+
+  const blockedNormal = {
+    territoryA: 3,
+    territoryB: 25,
+    exists: true,
+    passable: false,
+    barrierName: "Barreira natural",
+    description: null,
+  };
+  assert.equal(findTerritoryConnection([blockedNormal, tunnel], 3, 25).barrierName, "Túnel Jurássico");
+  assert.equal(findTerritoryConnection([blockedNormal, tunnel], 3, 25).passable, true);
+});
+
+test("servidor persiste e renova o Túnel Jurássico por rodada", () => {
+  const source = readFileSync("src/lib/game.ts", "utf8");
+  assert.match(source, /jurassic_tunnel_territory_id/);
+  assert.match(source, /round_number/);
+  assert.match(source, /territoryId!==1&&territoryId!==3/);
+  assert.match(source, /advanceJurassicTunnelRound/);
+  assert.match(source, /round_number=round_number\+1,jurassic_tunnel_territory_id=\$2/);
+});
+
+test("ataque aceita fronteira normal passável ou Túnel Jurássico", () => {
+  const source = readFileSync("src/lib/game.ts", "utf8");
+  const attack = source.match(
+    /export async function attack[\s\S]*?(?=\n\nexport async function rollBattleDice)/,
+  )?.[0];
+  assert.ok(attack);
+  assert.match(attack, /isJurassicTunnelConnection/);
+  assert.match(attack, /if\(!tunnelActive&&!connection\.exists\)/);
+  assert.match(attack, /if\(!tunnelActive&&!connection\.passable\)/);
+});
+
 test("manobra alcança territórios próprios por cadeia de conexões", () => {
   const connections = [
     {
@@ -102,6 +146,19 @@ test("manobra alcança territórios próprios por cadeia de conexões", () => {
   );
 });
 
+test("Túnel Jurássico participa da cadeia de manobra", () => {
+  const tunnel = jurassicTunnelConnection(20);
+  assert.ok(tunnel);
+  const connections = [
+    tunnel,
+    { territoryA: 20, territoryB: 21, exists: true, passable: true, barrierName: null, description: null },
+  ];
+  assert.deepEqual(
+    new Set(reachableTerritoryIds(connections, 3, [3, 20, 21])),
+    new Set([3, 20, 21]),
+  );
+});
+
 test("backend da manobra valida caminho contínuo por territórios próprios", () => {
   const source = readFileSync("src/lib/game.ts", "utf8");
 
@@ -111,6 +168,7 @@ test("backend da manobra valida caminho contínuo por territórios próprios", (
 
   assert.ok(maneuver);
   assert.match(maneuver, /reachableTerritoryIds/);
+  assert.match(maneuver, /jurassicTunnelConnection/);
   assert.doesNotMatch(
     maneuver,
     /const connection=await getTerritoryConnection\(client,from,to\)/,
@@ -172,6 +230,21 @@ test("territórios mantêm borda brilhante conforme a região", () => {
   assert.match(source, /sul:/);
   assert.match(source, /path\.style\.stroke=regionStyle\.stroke/);
   assert.match(source, /drop-shadow/);
+});
+
+test("Túnel Jurássico usa curva derivada dos anchors do SVG", () => {
+  const source = readFileSync("src/components/jurassic-tunnel-connection.tsx", "utf8");
+  const board = readFileSync("src/components/interactive-board.tsx", "utf8");
+  const arrow = readFileSync("src/components/territory-arrow.tsx", "utf8");
+  assert.match(source, /Math\.hypot\(dx, dy\)/);
+  assert.match(source, /normalX = -dy \/ distance/);
+  assert.match(source, /Math\.min\(distance \* 0\.15, MAX_CURVE\)/);
+  assert.match(source, / Q \$\{controlX\} \$\{controlY\}/);
+  assert.match(source, /viewBox="0 0 1254 1254"/);
+  assert.match(source, /Túnel Jurássico/);
+  assert.match(source, /Acre ↔/);
+  assert.match(board, /getTerritoryAnchor\(path\)/);
+  assert.match(arrow, /pathElement\.getBBox\(\)/);
 });
 
 test("conquista libera o resultado antes da transferência", () => {
