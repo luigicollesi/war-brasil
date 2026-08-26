@@ -180,8 +180,10 @@ test("topologia militar base é cacheada e reutilizada por snapshot e fronteiras
     "utf8",
   );
 
-  assert.match(topology, /cachedConnections/);
-  assert.match(topology, /loadingConnections/);
+  assert.match(topology, /cachedTopology/);
+  assert.match(topology, /loadingTopology/);
+  assert.match(topology, /getBaseTerritoryConnections/);
+  assert.match(topology, /getPassableTerritoryConnections/);
   assert.match(topology, /FROM territory_connections/);
   assert.match(snapshot, /getBaseTerritoryConnections/);
   assert.match(connection, /getBaseTerritoryConnection/);
