@@ -6,6 +6,11 @@ import {
   type Region,
 } from "@/src/lib/game-config";
 
+export type ObjectiveEvent =
+  | "any"
+  | "troops_changed"
+  | "territory_control_changed";
+
 type Objective = {
   id: string;
   type: string;
@@ -40,6 +45,14 @@ function requiredRegions(objective: Objective): Region[] {
     (region): region is Region =>
       typeof region === "string" && region in REGION_TERRITORY_IDS,
   );
+}
+
+function eventCanAffectObjective(type: string, event: ObjectiveEvent) {
+  if (event === "any" || event === "territory_control_changed") return true;
+
+  // Reforços e bônus de cartas alteram apenas quantidade de tropas.
+  // Entre os objetivos atuais, somente fortificação pode ser concluída assim.
+  return type === "fortification";
 }
 
 async function ownedTerritoryCount(
@@ -186,6 +199,7 @@ export async function objectiveWon(
   client: PoolClient,
   roomId: string,
   playerId: string,
+  event: ObjectiveEvent = "any",
 ) {
   const objective = (
     await client.query<Objective>(
@@ -197,7 +211,7 @@ export async function objectiveWon(
     )
   ).rows[0];
 
-  if (!objective) return false;
+  if (!objective || !eventCanAffectObjective(objective.type, event)) return false;
 
   const won = await evaluateObjective(client, roomId, playerId, objective);
 
