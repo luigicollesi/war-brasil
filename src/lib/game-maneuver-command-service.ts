@@ -2,7 +2,7 @@ import "server-only";
 
 import type { PoolClient } from "pg";
 import { gameCommand } from "@/src/lib/game-command";
-import { getBaseTerritoryConnections } from "@/src/lib/game-topology-service";
+import { getPassableTerritoryConnections } from "@/src/lib/game-topology-service";
 import {
   jurassicTunnelConnection,
   reachableTerritoryIds,
@@ -149,8 +149,7 @@ export async function maneuverCommand(
       );
     }
 
-    const baseConnections = await getBaseTerritoryConnections(client);
-    const connections = baseConnections.filter((connection) => connection.passable);
+    const connections = [...(await getPassableTerritoryConnections(client))];
     const tunnelConnection = jurassicTunnelConnection(
       room.jurassic_tunnel_territory_id,
     );
