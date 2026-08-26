@@ -1,0 +1,33 @@
+/* Corrige a sobreposição dos HUDs sobre o SVG do mapa.
+   O command deck continua visualmente acima do tabuleiro, mas sua área
+   transparente não intercepta cliques destinados aos territórios. */
+
+.game-map-canvas + section {
+  pointer-events: none;
+}
+
+/* Apenas controles realmente interativos recuperam eventos. */
+.game-map-canvas + section button,
+.game-map-canvas + section input,
+.game-map-canvas + section select,
+.game-map-canvas + section textarea,
+.game-map-canvas + section a,
+.game-map-canvas + section [role="button"],
+.game-map-canvas + section [role="spinbutton"],
+.game-map-canvas + section .game-modal-backdrop,
+.game-map-canvas + section .game-modal-surface {
+  pointer-events: auto;
+}
+
+/* A mão de cartas precisa continuar permitindo rolagem horizontal no mobile. */
+.game-map-canvas + section > div[class*="sticky"] {
+  pointer-events: auto;
+}
+
+/* O player rail atual é apenas informativo. Deixa o mapa clicável através
+   das áreas transparentes do gradiente lateral. */
+@media (min-width: 1200px) {
+  .game-runtime > div > section:nth-of-type(2):not([class~="grid"]) {
+    pointer-events: none;
+  }
+}
