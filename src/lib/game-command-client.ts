@@ -1,6 +1,7 @@
 "use client";
 
 import type { GameCommandPatch } from "@/src/lib/game-command-patch";
+import { dispatchGameCommandPatch } from "@/src/lib/game-command-patch-bus";
 import {
   GAME_REVISION_HEADER,
   parseGameRevision,
@@ -64,11 +65,16 @@ export async function runGameCommand<T = unknown>(
   const data: unknown = await response.json();
   if (!response.ok) throw new Error(errorMessage(data, fallback));
   const envelope = commandEnvelope(data);
-
-  return {
+  const result: GameCommandClientResult<T> = {
     data: data as T,
     baseRevision: envelope.baseRevision,
     revision: parseGameRevision(response.headers.get(GAME_REVISION_HEADER)),
     patch: envelope.patch,
   };
+
+  if (result.patch) {
+    dispatchGameCommandPatch(roomId, result);
+  }
+
+  return result;
 }
