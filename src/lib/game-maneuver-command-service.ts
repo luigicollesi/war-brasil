@@ -2,6 +2,7 @@ import "server-only";
 
 import type { PoolClient } from "pg";
 import { gameCommand } from "@/src/lib/game-command";
+import type { GameCommandPatch } from "@/src/lib/game-command-patch";
 import { getPassableTerritoryConnections } from "@/src/lib/game-topology-service";
 import {
   jurassicTunnelConnection,
@@ -112,7 +113,7 @@ export async function maneuverCommand(
     "Quantidade de tropas inválida.",
   );
 
-  return gameCommand(roomId, async (client) => {
+  return gameCommand<GameCommandPatch>(roomId, async (client) => {
     const room = await loadRoom(client, roomId);
     const player = await loadPlayer(client, room.id, session);
     assertManeuverTurn(room, player);
@@ -185,19 +186,38 @@ export async function maneuverCommand(
       );
     }
 
-    await client.query(
-      `UPDATE game_territories
-       SET troops=troops-$3
-       WHERE room_id=$1 AND territory_id=$2`,
-      [room.id, from, troops],
-    );
-    await client.query(
-      `UPDATE game_territories
-       SET troops=troops+$3,moved_in_turn=moved_in_turn+$3
-       WHERE room_id=$1 AND territory_id=$2`,
-      [room.id, to, troops],
-    );
+    const updatedSource = (
+      await client.query<{ troops: number; moved_in_turn: number }>(
+        `UPDATE game_territories
+         SET troops=troops-$3
+         WHERE room_id=$1 AND territory_id=$2
+         RETURNING troops,moved_in_turn`,
+        [room.id, from, troops],
+      )
+    ).rows[0];
+    const updatedDestination = (
+      await client.query<{ troops: number; moved_in_turn: number }>(
+        `UPDATE game_territories
+         SET troops=troops+$3,moved_in_turn=moved_in_turn+$3
+         WHERE room_id=$1 AND territory_id=$2
+         RETURNING troops,moved_in_turn`,
+        [room.id, to, troops],
+      )
+    ).rows[0];
 
-    return null;
+    return {
+      territories: [
+        {
+          territoryId: from,
+          troops: updatedSource.troops,
+          movedInTurn: updatedSource.moved_in_turn,
+        },
+        {
+          territoryId: to,
+          troops: updatedDestination.troops,
+          movedInTurn: updatedDestination.moved_in_turn,
+        },
+      ],
+    };
   });
 }
