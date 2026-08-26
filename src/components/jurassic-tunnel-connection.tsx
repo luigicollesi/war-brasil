@@ -26,8 +26,8 @@ export function JurassicTunnelConnection({
   const path = `M ${from.x} ${from.y} Q ${controlX} ${controlY} ${to.x} ${to.y}`;
 
   return (
-    <svg className="pointer-events-none absolute inset-0 h-full w-full overflow-visible" viewBox="0 0 1254 1254" aria-hidden="true">
-      <path d={path} fill="none" stroke="rgba(255,255,255,.72)" strokeWidth="10" strokeLinecap="round" />
+    <svg className="absolute inset-0 h-full w-full overflow-visible" viewBox="0 0 1254 1254" aria-hidden="true">
+      <path d={path} fill="none" stroke="rgba(255,255,255,.72)" strokeWidth="10" strokeLinecap="round" pointerEvents="none" />
       <path
         d={path}
         fill="none"
@@ -36,6 +36,7 @@ export function JurassicTunnelConnection({
         strokeLinecap="round"
         strokeDasharray="16 10"
         className="jurassic-tunnel-animation"
+        pointerEvents="none"
       />
       <path
         d={path}
@@ -47,7 +48,7 @@ export function JurassicTunnelConnection({
         onPointerLeave={() => setHovered(false)}
       />
       {hovered ? (
-        <g transform={`translate(${controlX + 14} ${controlY - 18})`}>
+        <g pointerEvents="none" transform={`translate(${controlX + 14} ${controlY - 18})`}>
           <rect x="0" y="0" width="230" height="58" rx="10" fill="rgba(18,57,47,.96)" />
           <text x="12" y="22" fill="#f4df79" fontSize="14" fontWeight="700">🦖 Túnel Jurássico</text>
           <text x="12" y="43" fill="#ffffff" fontSize="12">Acre ↔ {targetName}</text>
