@@ -31,14 +31,16 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     }
 
     ({ roomId } = await params);
+    const knownTopology = request.headers.get(GAME_TOPOLOGY_HEADER);
     const knownRevision = parseGameRevision(
       request.headers.get(GAME_REVISION_HEADER),
     );
-    const knownTopology = request.headers.get(GAME_TOPOLOGY_HEADER);
+    const revisionForFastPath =
+      knownTopology === GAME_TOPOLOGY_VERSION ? knownRevision : null;
     const result = await getGameSnapshotQuery(
       roomId,
       session,
-      knownRevision,
+      revisionForFastPath,
     );
     const headers = {
       [GAME_REVISION_HEADER]: String(result.revision),
