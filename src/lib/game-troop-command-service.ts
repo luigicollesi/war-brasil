@@ -2,6 +2,7 @@ import "server-only";
 
 import type { PoolClient } from "pg";
 import { gameCommand } from "@/src/lib/game-command";
+import type { GameCommandPatch } from "@/src/lib/game-command-patch";
 import type { CardSymbol } from "@/src/lib/game-config";
 import {
   isValidTrade,
@@ -111,7 +112,7 @@ export async function reinforceCommand(
     "Quantidade de tropas inválida.",
   );
 
-  return gameCommand(roomId, async (client) => {
+  return gameCommand<GameCommandPatch>(roomId, async (client) => {
     const room = await loadRoom(client, roomId);
     const player = await loadPlayer(client, room.id, session);
     assertReinforcementTurn(room, player);
@@ -136,12 +137,16 @@ export async function reinforceCommand(
     }
 
     const remaining = room.reinforcements_remaining - troops;
-    await client.query(
-      `UPDATE game_territories
-       SET troops=troops+$3
-       WHERE room_id=$1 AND territory_id=$2`,
-      [room.id, territoryId, troops],
-    );
+    const territory = (
+      await client.query<{ troops: number }>(
+        `UPDATE game_territories
+         SET troops=troops+$3
+         WHERE room_id=$1 AND territory_id=$2
+         RETURNING troops`,
+        [room.id, territoryId, troops],
+      )
+    ).rows[0];
+
     await client.query(
       `UPDATE game_rooms
        SET reinforcements_remaining=$2,
@@ -150,8 +155,33 @@ export async function reinforceCommand(
       [room.id, remaining],
     );
 
-    await objectiveWon(client, room.id, player.id, "troops_changed");
-    return null;
+    const won = await objectiveWon(
+      client,
+      room.id,
+      player.id,
+      "troops_changed",
+    );
+    const patch: GameCommandPatch = {
+      room: won
+        ? {
+            status: "finished",
+            phase: "finished",
+            reinforcementsRemaining: remaining,
+            winnerPlayerId: player.id,
+          }
+        : {
+            phase: remaining === 0 ? "attack" : "reinforcement",
+            reinforcementsRemaining: remaining,
+          },
+      territories: [
+        {
+          territoryId,
+          troops: territory.troops,
+        },
+      ],
+    };
+
+    return patch;
   });
 }
 
