@@ -6,6 +6,7 @@ import "./game-quantity.css";
 import "./game-interaction-fix.css";
 import "./game-safe-layout.css";
 import "./game-roads.css";
+import "./game-performance.css";
 
 type GamePageProps = {
   params: Promise<{ roomId: string }>;
