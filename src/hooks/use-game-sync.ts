@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { GameSnapshot } from "@/src/lib/game-contract";
+import { gameSyncMetricsStore } from "@/src/lib/game-sync-metrics-store";
 import {
   GAME_REVISION_HEADER,
   parseGameRevision,
@@ -76,6 +77,7 @@ export function useGameSync(roomId: string) {
       const run = (async () => {
         const controller = new AbortController();
         requestController = controller;
+        const startedAt = performance.now();
 
         try {
           const headers = new Headers();
@@ -97,6 +99,7 @@ export function useGameSync(roomId: string) {
 
           if (response.status === 204) {
             recordRevision(responseRevision);
+            gameSyncMetricsStore.recordSuccess(performance.now() - startedAt);
             if (isActive) setError("");
             return;
           }
@@ -113,10 +116,12 @@ export function useGameSync(roomId: string) {
             revisionRef.current !== null &&
             responseRevision < revisionRef.current
           ) {
+            gameSyncMetricsStore.recordSuccess(performance.now() - startedAt);
             return;
           }
 
           recordRevision(responseRevision);
+          gameSyncMetricsStore.recordSuccess(performance.now() - startedAt);
 
           if (isActive) {
             const nextSnapshot = data as GameSnapshot;
@@ -125,10 +130,18 @@ export function useGameSync(roomId: string) {
             setError("");
           }
         } catch (requestError) {
-          if (
-            isActive &&
-            !(requestError instanceof DOMException && requestError.name === "AbortError")
-          ) {
+          const aborted =
+            requestError instanceof DOMException && requestError.name === "AbortError";
+
+          if (!aborted) {
+            if (typeof navigator !== "undefined" && !navigator.onLine) {
+              gameSyncMetricsStore.recordOffline();
+            } else {
+              gameSyncMetricsStore.recordFailure();
+            }
+          }
+
+          if (isActive && !aborted) {
             setError(
               requestError instanceof Error
                 ? requestError.message
@@ -223,9 +236,6 @@ export function useGameSync(roomId: string) {
     async function syncUntilRequiredRevision() {
       await sync();
 
-      // Um GET iniciado antes de um POST confirmado pode terminar com uma revisão
-      // antiga. Nesse caso fazemos exatamente mais uma leitura para observar a
-      // revisão mínima retornada pelo comando, sem polling duplicado permanente.
       if (
         isActive &&
         requiredRevisionRef.current !== null &&
@@ -257,6 +267,11 @@ export function useGameSync(roomId: string) {
       await syncUntilRequiredRevision();
     };
 
+    const handleOffline = () => gameSyncMetricsStore.recordOffline();
+    const handleOnline = () => gameSyncMetricsStore.recordOnline();
+    window.addEventListener("offline", handleOffline);
+    window.addEventListener("online", handleOnline);
+
     void poll();
 
     return () => {
@@ -264,6 +279,8 @@ export function useGameSync(roomId: string) {
       window.clearTimeout(timeoutId);
       requestController?.abort();
       advanceController?.abort();
+      window.removeEventListener("offline", handleOffline);
+      window.removeEventListener("online", handleOnline);
       refreshRef.current = async () => {};
     };
   }, [roomId]);
