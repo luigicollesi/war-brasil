@@ -25,3 +25,48 @@ export function findTerritoryConnection(
     description: null,
   };
 }
+
+
+export function reachableTerritoryIds(
+  connections: TerritoryConnection[],
+  startTerritoryId: number,
+  allowedTerritoryIds: Iterable<number>,
+) {
+  const allowed = new Set(allowedTerritoryIds);
+
+  if (!allowed.has(startTerritoryId)) {
+    return [];
+  }
+
+  const visited = new Set<number>([startTerritoryId]);
+  const queue = [startTerritoryId];
+
+  for (let index = 0; index < queue.length; index += 1) {
+    const current = queue[index];
+
+    for (const connection of connections) {
+      if (!connection.exists || !connection.passable) {
+        continue;
+      }
+
+      let neighbor: number | null = null;
+
+      if (connection.territoryA === current) {
+        neighbor = connection.territoryB;
+      } else if (connection.territoryB === current) {
+        neighbor = connection.territoryA;
+      }
+
+      if (
+        neighbor !== null &&
+        allowed.has(neighbor) &&
+        !visited.has(neighbor)
+      ) {
+        visited.add(neighbor);
+        queue.push(neighbor);
+      }
+    }
+  }
+
+  return [...visited];
+}

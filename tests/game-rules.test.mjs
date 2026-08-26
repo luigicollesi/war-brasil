@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { isValidTrade, reinforcementBase, resolveBattle, tradeValue } from "../.test-build/game-rules.js";
-import { findTerritoryConnection } from "../.test-build/territory-connections.js";
+import { findTerritoryConnection, reachableTerritoryIds } from "../.test-build/territory-connections.js";
 
 test("reforços usam mínimo de três e metade dos territórios", () => {
   assert.equal(reinforcementBase(1), 3);
@@ -61,6 +61,69 @@ test("conexões militares são simétricas e respeitam barreiras", () => {
   const connections = [{ territoryA: 2, territoryB: 7, exists: true, passable: false, barrierName: "Floresta Amazônica", description: "Barreira." }];
   assert.equal(findTerritoryConnection(connections, 7, 2).passable, false);
   assert.equal(findTerritoryConnection(connections, 2, 8).exists, false);
+});
+
+test("manobra alcança territórios próprios por cadeia de conexões", () => {
+  const connections = [
+    {
+      territoryA: 1,
+      territoryB: 2,
+      exists: true,
+      passable: true,
+      barrierName: null,
+      description: null,
+    },
+    {
+      territoryA: 2,
+      territoryB: 3,
+      exists: true,
+      passable: true,
+      barrierName: null,
+      description: null,
+    },
+    {
+      territoryA: 3,
+      territoryB: 4,
+      exists: true,
+      passable: true,
+      barrierName: null,
+      description: null,
+    },
+  ];
+
+  assert.deepEqual(
+    new Set(reachableTerritoryIds(connections, 1, [1, 2, 3])),
+    new Set([1, 2, 3]),
+  );
+
+  assert.equal(
+    reachableTerritoryIds(connections, 1, [1, 2, 3]).includes(4),
+    false,
+  );
+});
+
+test("backend da manobra valida caminho contínuo por territórios próprios", () => {
+  const source = readFileSync("src/lib/game.ts", "utf8");
+
+  const maneuver = source.match(
+    /export async function maneuver[\s\S]*?(?=\nasync function drawCard)/,
+  )?.[0];
+
+  assert.ok(maneuver);
+  assert.match(maneuver, /reachableTerritoryIds/);
+  assert.doesNotMatch(
+    maneuver,
+    /const connection=await getTerritoryConnection\(client,from,to\)/,
+  );
+});
+
+test("modal de troca renderiza as cartas da mão", () => {
+  const source = readFileSync("src/components/game-client.tsx", "utf8");
+
+  assert.match(
+    source,
+    /Selecione três cartas na sua mão[\s\S]*snapshot\.myCards\.map/,
+  );
 });
 
 test("combate sincronizado persiste etapas e rolagens separadas", () => {

@@ -7,7 +7,7 @@ import { TERRITORY_METADATA, type CardSymbol, type Region } from "@/src/lib/game
 import { isValidTrade, reinforcementFor, resolveBattle, tradeValue } from "@/src/lib/game-rules";
 import type { PlayerColor } from "@/src/lib/lobby";
 import { RoomError } from "@/src/lib/rooms";
-import type { TerritoryConnection } from "@/src/lib/territory-connections";
+import { reachableTerritoryIds, type TerritoryConnection } from "@/src/lib/territory-connections";
 import { getTerritoryConnection } from "@/src/lib/territory-connections.server";
 
 type Status = "order_roll" | "playing" | "finished";
@@ -312,5 +312,117 @@ export async function completeConquest(value:string,session:string,input:Record<
     await objectiveWon(client,room,player.id);
   });
 }
-export async function maneuver(value:string,session:string,input:Record<string,unknown>) { const id=roomId(value),from=integer(input.fromTerritoryId,"Território de origem inválido."),to=integer(input.toTerritoryId,"Território de destino inválido."),troops=integer(input.troops,"Quantidade de tropas inválida."); return transaction(async client=>{ const room=await lockedRoom(client,id),player=await playerFor(client,room,session); assertTurn(room,player,"maneuver"); const connection=await getTerritoryConnection(client,from,to); if(!connection.exists) throw new RoomError("Os territórios não possuem fronteira militar.",422,{fromTerritoryId:from,toTerritoryId:to,connection}); if(!connection.passable) throw new RoomError(connection.barrierName ? `Fronteira bloqueada — ${connection.barrierName}` : "Fronteira militar bloqueada.",422,{fromTerritoryId:from,toTerritoryId:to,connection}); const rows=(await client.query<LockedTerritory>("SELECT territory_id,owner_player_id,troops,moved_in_turn FROM game_territories WHERE room_id=$1 AND territory_id=ANY($2::smallint[]) FOR UPDATE",[room.id,[from,to]])).rows,source=rows.find(row=>row.territory_id===from),destination=rows.find(row=>row.territory_id===to); if(!source||!destination||source.owner_player_id!==player.id||destination.owner_player_id!==player.id) throw new RoomError("Você só pode deslocar entre territórios próprios.",409,{fromTerritoryId:from,toTerritoryId:to,requestPlayerId:player.id,source:source?{ownerPlayerId:source.owner_player_id,troops:source.troops,movedInTurn:source.moved_in_turn}:null,destination:destination?{ownerPlayerId:destination.owner_player_id,troops:destination.troops,movedInTurn:destination.moved_in_turn}:null}); if(troops>source.troops-source.moved_in_turn-1) throw new RoomError("Estas tropas já foram deslocadas ou o território ficaria vazio.",409,{fromTerritoryId:from,toTerritoryId:to,requestedTroops:troops,sourceTroops:source.troops,movedInTurn:source.moved_in_turn}); await client.query("UPDATE game_territories SET troops=troops-$3 WHERE room_id=$1 AND territory_id=$2",[room.id,from,troops]); await client.query("UPDATE game_territories SET troops=troops+$3,moved_in_turn=moved_in_turn+$3 WHERE room_id=$1 AND territory_id=$2",[room.id,to,troops]); }); }
+export async function maneuver(
+  value:string,
+  session:string,
+  input:Record<string,unknown>,
+) {
+  const id=roomId(value);
+  const from=integer(input.fromTerritoryId,"Território de origem inválido.");
+  const to=integer(input.toTerritoryId,"Território de destino inválido.");
+  const troops=integer(input.troops,"Quantidade de tropas inválida.");
+
+  return transaction(async client=>{
+    const room=await lockedRoom(client,id);
+    const player=await playerFor(client,room,session);
+
+    assertTurn(room,player,"maneuver");
+
+    if(from===to) {
+      throw new RoomError(
+        "Origem e destino precisam ser territórios diferentes.",
+        422,
+      );
+    }
+
+    const owned=(await client.query<LockedTerritory>(
+      "SELECT territory_id,owner_player_id,troops,moved_in_turn FROM game_territories WHERE room_id=$1 AND owner_player_id=$2 FOR UPDATE",
+      [room.id,player.id],
+    )).rows;
+
+    const source=owned.find(
+      territory=>territory.territory_id===from,
+    );
+
+    const destination=owned.find(
+      territory=>territory.territory_id===to,
+    );
+
+    if(!source||!destination) {
+      throw new RoomError(
+        "Você só pode deslocar tropas entre territórios próprios.",
+        409,
+        {
+          fromTerritoryId:from,
+          toTerritoryId:to,
+          requestPlayerId:player.id,
+        },
+      );
+    }
+
+    const connectionRows=(await client.query<{
+      territory_a:number;
+      territory_b:number;
+      is_passable:boolean;
+      barrier_name:string|null;
+      description:string|null;
+    }>(
+      "SELECT territory_a,territory_b,is_passable,barrier_name,description FROM territory_connections WHERE is_passable=TRUE",
+    )).rows;
+
+    const connections:TerritoryConnection[]=connectionRows.map(
+      connection=>({
+        territoryA:connection.territory_a,
+        territoryB:connection.territory_b,
+        exists:true,
+        passable:connection.is_passable,
+        barrierName:connection.barrier_name,
+        description:connection.description,
+      }),
+    );
+
+    const reachable=new Set(
+      reachableTerritoryIds(
+        connections,
+        from,
+        owned.map(territory=>territory.territory_id),
+      ),
+    );
+
+    if(!reachable.has(to)) {
+      throw new RoomError(
+        "Não existe um caminho contínuo por territórios próprios entre a origem e o destino.",
+        409,
+        {
+          fromTerritoryId:from,
+          toTerritoryId:to,
+        },
+      );
+    }
+
+    if(troops>source.troops-source.moved_in_turn-1) {
+      throw new RoomError(
+        "Estas tropas já foram deslocadas ou o território ficaria vazio.",
+        409,
+        {
+          fromTerritoryId:from,
+          toTerritoryId:to,
+          requestedTroops:troops,
+          sourceTroops:source.troops,
+          movedInTurn:source.moved_in_turn,
+        },
+      );
+    }
+
+    await client.query(
+      "UPDATE game_territories SET troops=troops-$3 WHERE room_id=$1 AND territory_id=$2",
+      [room.id,from,troops],
+    );
+
+    await client.query(
+      "UPDATE game_territories SET troops=troops+$3,moved_in_turn=moved_in_turn+$3 WHERE room_id=$1 AND territory_id=$2",
+      [room.id,to,troops],
+    );
+  });
+}
 async function drawCard(client:PoolClient,room:Room,player:string) { let card=await client.query<{id:string}>("SELECT id FROM game_cards WHERE room_id=$1 AND zone='deck' ORDER BY deck_order FOR UPDATE LIMIT 1",[room.id]); if(!card.rowCount) { const discard=(await client.query<{id:string}>("SELECT id FROM game_cards WHERE room_id=$1 AND zone='discard' FOR UPDATE",[room.id])).rows; const order=discard.map((_,index)=>index+1); for(let i=order.length-1;i>0;i-=1){const j=randomInt(0,i+1);[order[i],order[j]]=[order[j],order[i]];} for(const [index,item] of discard.entries()) await client.query("UPDATE game_cards SET zone='deck',deck_order=$2 WHERE id=$1",[item.id,order[index]]); card=await client.query<{id:string}>("SELECT id FROM game_cards WHERE room_id=$1 AND zone='deck' ORDER BY deck_order FOR UPDATE LIMIT 1",[room.id]); } if(card.rowCount) await client.query("UPDATE game_cards SET zone='hand',owner_player_id=$2,deck_order=NULL WHERE id=$1",[card.rows[0].id,player]); }
