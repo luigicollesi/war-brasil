@@ -23,7 +23,7 @@ function elapsedAtLeast(
   const startedAtMs =
     startedAt instanceof Date ? startedAt.getTime() : Date.parse(startedAt);
 
-  return Number.isFinite(startedAtMs) && nowMs - startedAtMs >= durationMs;
+  return isFinite(startedAtMs) && nowMs - startedAtMs >= durationMs;
 }
 
 export function nextBattlePresentationTransition(
