@@ -5,7 +5,7 @@ import test from "node:test";
 test("command boundary serializa a sala e incrementa revisão antes do commit", () => {
   const source = readFileSync("src/lib/game-command.ts", "utf8");
 
-  assert.match(source, /SELECT id FROM game_rooms WHERE id=\$1 FOR UPDATE/);
+  assert.match(source, /SELECT id,revision FROM game_rooms WHERE id=\$1 FOR UPDATE/);
   assert.match(source, /const value = await execute\(client\)/);
   assert.match(source, /const revision = await bumpGameRevision\(client, roomId\)/);
   assert.match(source, /await client\.query\("COMMIT"\)/);
@@ -13,6 +13,14 @@ test("command boundary serializa a sala e incrementa revisão antes do commit", 
   assert.ok(
     source.indexOf("await bumpGameRevision") < source.indexOf('client.query("COMMIT")'),
   );
+});
+
+test("command condicional não incrementa revisão em no-op ou revisão obsoleta", () => {
+  const source = readFileSync("src/lib/game-command.ts", "utf8");
+
+  assert.match(source, /currentRevision !== expectedRevision/);
+  assert.match(source, /changed: false/);
+  assert.match(source, /result\.changed\s*\?\s*await bumpGameRevision/);
 });
 
 test("query boundary usa snapshot read-only sem row lock", () => {
@@ -23,6 +31,23 @@ test("query boundary usa snapshot read-only sem row lock", () => {
     /BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY/,
   );
   assert.doesNotMatch(source, /FOR UPDATE/);
+});
+
+test("snapshot principal é read-only e retorna fast-path por revisão", () => {
+  const route = readFileSync(
+    "src/app/api/games/[roomId]/route.ts",
+    "utf8",
+  );
+  const snapshot = readFileSync("src/lib/game-snapshot-service.ts", "utf8");
+
+  assert.match(route, /getGameSnapshotQuery/);
+  assert.doesNotMatch(route, /from "@\/src\/lib\/game"/);
+  assert.match(route, /status: 204/);
+  assert.match(route, /GAME_REVISION_HEADER/);
+
+  assert.match(snapshot, /gameQuery/);
+  assert.match(snapshot, /knownRevision !== null && room\.revision === knownRevision/);
+  assert.doesNotMatch(snapshot, /FOR UPDATE/);
 });
 
 test("endpoint leve de revisão valida jogador dentro de transação read-only", () => {
@@ -38,21 +63,54 @@ test("endpoint leve de revisão valida jogador dentro de transação read-only",
   assert.match(revision, /rp\.player_session=\$2/);
 });
 
-test("manobra e sorteio já usam o command service versionado", () => {
-  const maneuver = readFileSync(
-    "src/app/api/games/[roomId]/maneuver/route.ts",
+test("rotas mutáveis principais usam command services versionados", () => {
+  const routes = [
+    ["src/app/api/games/[roomId]/maneuver/route.ts", /maneuverCommand/],
+    ["src/app/api/games/[roomId]/roll/route.ts", /rollOrderDieCommand/],
+    ["src/app/api/games/[roomId]/reinforce/route.ts", /reinforceCommand/],
+    ["src/app/api/games/[roomId]/cards/trade/route.ts", /tradeCardsCommand/],
+    ["src/app/api/games/[roomId]/phase/route.ts", /phaseCommand/],
+    ["src/app/api/games/[roomId]/attack/route.ts", /attackCommand/],
+    ["src/app/api/games/[roomId]/attack/roll/route.ts", /rollBattleDiceCommand/],
+    ["src/app/api/games/[roomId]/conquest/route.ts", /completeConquestCommand/],
+  ];
+
+  for (const [path, commandPattern] of routes) {
+    const source = readFileSync(path, "utf8");
+    assert.match(source, commandPattern);
+    assert.doesNotMatch(source, /from "@\/src\/lib\/game"/);
+    assert.match(source, /GAME_REVISION_HEADER/);
+  }
+});
+
+test("avanço temporal usa expectedRevision e command condicional", () => {
+  const route = readFileSync(
+    "src/app/api/games/[roomId]/advance/route.ts",
     "utf8",
   );
-  const roll = readFileSync(
-    "src/app/api/games/[roomId]/roll/route.ts",
+  const presentation = readFileSync(
+    "src/lib/game-presentation-service.ts",
     "utf8",
   );
 
-  assert.match(maneuver, /maneuverCommand/);
-  assert.doesNotMatch(maneuver, /from "@\/src\/lib\/game"/);
-  assert.match(maneuver, /GAME_REVISION_HEADER/);
+  assert.match(route, /expectedRevision/);
+  assert.match(route, /advanceGamePresentationCommand/);
+  assert.match(presentation, /gameConditionalCommand/);
+  assert.match(presentation, /advanceOrderRollPresentation/);
+  assert.match(presentation, /advanceBattlePresentation/);
+});
 
-  assert.match(roll, /rollOrderDieCommand/);
-  assert.doesNotMatch(roll, /from "@\/src\/lib\/game"/);
-  assert.match(roll, /GAME_REVISION_HEADER/);
+test("cliente trata 204 sem substituir snapshot e avança apenas apresentações", () => {
+  const source = readFileSync("src/hooks/use-game-sync.ts", "utf8");
+
+  assert.match(source, /response\.status === 204/);
+  assert.match(source, /GAME_REVISION_HEADER/);
+  assert.match(source, /shouldAdvancePresentation/);
+  assert.match(source, /\/advance/);
+
+  const noContentBranch = source.match(
+    /if \(response\.status === 204\) \{[\s\S]*?\n\s*\}/,
+  )?.[0];
+  assert.ok(noContentBranch);
+  assert.doesNotMatch(noContentBranch, /setSnapshot/);
 });
