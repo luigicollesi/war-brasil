@@ -11,23 +11,6 @@ export type GameCommandResult<T> = {
   revision: GameRevision;
 };
 
-export async function readGameRevision(
-  client: PoolClient,
-  roomId: string,
-): Promise<GameRevision> {
-  const result = await client.query<{ revision: number }>(
-    "SELECT revision FROM game_rooms WHERE id=$1",
-    [roomId],
-  );
-
-  const row = result.rows[0];
-  if (!row) {
-    throw new RoomError("Partida não encontrada.", 404);
-  }
-
-  return row.revision;
-}
-
 export async function readPlayerGameRevision(
   client: PoolClient,
   roomId: string,
