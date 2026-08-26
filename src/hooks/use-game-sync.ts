@@ -29,13 +29,14 @@ function shouldAdvancePresentation(snapshot: GameSnapshot) {
 }
 
 function responseMessage(data: unknown, fallback: string) {
-  return
+  return (
     typeof data === "object" &&
     data !== null &&
     "error" in data &&
     typeof data.error === "string"
       ? data.error
-      : fallback;
+      : fallback
+  );
 }
 
 export function useGameSync(roomId: string) {
