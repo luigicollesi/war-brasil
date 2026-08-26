@@ -184,3 +184,41 @@ test("topologia fixa atravessa a rede apenas quando a versão muda", () => {
   assert.match(sync, /GAME_TOPOLOGY_HEADER/);
   assert.match(sync, /payload\.connections \?\? topologyConnectionsRef\.current/);
 });
+
+test("reforço e manobra retornam patches autoritativos ligados à revisão base", () => {
+  const command = readFileSync("src/lib/game-command.ts", "utf8");
+  const reinforce = readFileSync(
+    "src/app/api/games/[roomId]/reinforce/route.ts",
+    "utf8",
+  );
+  const maneuver = readFileSync(
+    "src/app/api/games/[roomId]/maneuver/route.ts",
+    "utf8",
+  );
+  const maneuverService = readFileSync(
+    "src/lib/game-maneuver-command-service.ts",
+    "utf8",
+  );
+
+  assert.match(command, /const baseRevision = await lockRoomRevision/);
+  assert.match(command, /return \{ value, baseRevision, revision \}/);
+  assert.match(reinforce, /baseRevision: result\.baseRevision/);
+  assert.match(reinforce, /patch: result\.value/);
+  assert.match(maneuver, /baseRevision: result\.baseRevision/);
+  assert.match(maneuver, /patch: result\.value/);
+  assert.match(maneuverService, /RETURNING troops,moved_in_turn/);
+});
+
+test("command patch só é aplicado sobre a revisão base e refresh vira no-op quando já observado", () => {
+  const client = readFileSync("src/lib/game-command-client.ts", "utf8");
+  const bus = readFileSync("src/lib/game-command-patch-bus.ts", "utf8");
+  const sync = readFileSync("src/hooks/use-game-sync.ts", "utf8");
+  const patch = readFileSync("src/lib/game-command-patch.ts", "utf8");
+
+  assert.match(client, /dispatchGameCommandPatch/);
+  assert.match(bus, /registerGameCommandPatchHandler/);
+  assert.match(sync, /revisionRef\.current !== result\.baseRevision/);
+  assert.match(sync, /applyGameCommandPatch/);
+  assert.match(sync, /revisionRef\.current >= minimumRevision/);
+  assert.match(patch, /matched !== updates\.size/);
+});
