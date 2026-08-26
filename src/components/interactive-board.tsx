@@ -49,11 +49,16 @@ export function InteractiveBoard({ territories, connections=[], onSelect, select
   const territoryById=useMemo(()=>new Map(territories.map(territory=>[territory.territoryId,territory])),[territories]);
 
   useEffect(()=>{
-    try {
-      setRoadsVisible(window.localStorage.getItem(ROAD_VISIBILITY_KEY)==="true");
-    } catch {
-      setRoadsVisible(false);
-    }
+    let active=true;
+    queueMicrotask(()=>{
+      if(!active) return;
+      try {
+        setRoadsVisible(window.localStorage.getItem(ROAD_VISIBILITY_KEY)==="true");
+      } catch {
+        setRoadsVisible(false);
+      }
+    });
+    return()=>{active=false;};
   },[]);
 
   useEffect(()=>{
