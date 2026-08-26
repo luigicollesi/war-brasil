@@ -7,6 +7,37 @@ export type TerritoryConnection = {
   description: string | null;
 };
 
+export const JURASSIC_TUNNEL_SOURCE_ID = 3;
+export const JURASSIC_TUNNEL_EXCLUDED_IDS = [1, 3] as const;
+
+export function isJurassicTunnelConnection(
+  destinationTerritoryId: number | null,
+  territoryA: number,
+  territoryB: number,
+) {
+  if (!destinationTerritoryId) return false;
+
+  return (
+    (territoryA === JURASSIC_TUNNEL_SOURCE_ID && territoryB === destinationTerritoryId) ||
+    (territoryB === JURASSIC_TUNNEL_SOURCE_ID && territoryA === destinationTerritoryId)
+  );
+}
+
+export function jurassicTunnelConnection(
+  destinationTerritoryId: number | null,
+): TerritoryConnection | null {
+  if (!destinationTerritoryId) return null;
+
+  return {
+    territoryA: JURASSIC_TUNNEL_SOURCE_ID,
+    territoryB: destinationTerritoryId,
+    exists: true,
+    passable: true,
+    barrierName: "Túnel Jurássico",
+    description: "Conexão temporária do Acre válida durante esta rodada.",
+  };
+}
+
 export function findTerritoryConnection(
   connections: TerritoryConnection[],
   territoryA: number,
@@ -25,7 +56,6 @@ export function findTerritoryConnection(
     description: null,
   };
 }
-
 
 export function reachableTerritoryIds(
   connections: TerritoryConnection[],
