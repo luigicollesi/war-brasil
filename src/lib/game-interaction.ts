@@ -5,19 +5,19 @@ import {
   type TerritoryConnection,
 } from "@/src/lib/territory-connections";
 
-export type GameInteractionDialog =
+type GameInteractionDialog =
   | { kind: "reinforce"; targetId: number }
   | { kind: "maneuver"; sourceId: number; targetId: number }
   | null;
 
-export type GameInteractionState = {
+type GameInteractionState = {
   scopeKey: string;
   sourceId: number | null;
   dialog: GameInteractionDialog;
   barrier: TerritoryConnection | null;
 };
 
-export type GameInteractionAction =
+type GameInteractionAction =
   | { type: "select-source"; scopeKey: string; territoryId: number }
   | { type: "open-reinforce"; scopeKey: string; territoryId: number }
   | {
@@ -31,12 +31,12 @@ export type GameInteractionAction =
   | { type: "clear-selection"; scopeKey: string }
   | { type: "clear-barrier"; scopeKey: string };
 
-export type MapHints = {
+type MapHints = {
   available: number[];
   targets: number[];
 };
 
-export type InteractionArrow = {
+type InteractionArrow = {
   fromTerritoryId: number;
   toTerritoryId: number;
   kind: "movement";
