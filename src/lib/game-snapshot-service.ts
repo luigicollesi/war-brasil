@@ -1,13 +1,11 @@
 import "server-only";
 
 import type { PlayerColor } from "@/src/lib/lobby";
-import type { GameSnapshot } from "@/src/lib/game";
+import type { GameSnapshot } from "@/src/lib/game-contract";
 import { isBattle } from "@/src/lib/game-battle-service";
 import { gameQuery } from "@/src/lib/game-query";
-import {
-  jurassicTunnelConnection,
-  type TerritoryConnection,
-} from "@/src/lib/territory-connections";
+import { getBaseTerritoryConnections } from "@/src/lib/game-topology-service";
+import { jurassicTunnelConnection } from "@/src/lib/territory-connections";
 import { RoomError } from "@/src/lib/rooms";
 
 type SnapshotRoom = {
@@ -198,20 +196,6 @@ export async function getGameSnapshotQuery(
       )
     ).rows[0];
 
-    const connectionRows = (
-      await client.query<{
-        territory_a: number;
-        territory_b: number;
-        is_passable: boolean;
-        barrier_name: string | null;
-        description: string | null;
-      }>(
-        `SELECT territory_a,territory_b,is_passable,barrier_name,description
-         FROM territory_connections
-         ORDER BY territory_a,territory_b`,
-      )
-    ).rows;
-
     const byPlayer = new Map<
       string,
       Array<{ round: number; value: number }>
@@ -241,16 +225,7 @@ export async function getGameSnapshotQuery(
         .filter((roll) => roll.roll_round === room.order_roll_round)
         .at(-1)?.player_id ?? null;
 
-    const connections: TerritoryConnection[] = connectionRows.map(
-      (connection) => ({
-        territoryA: connection.territory_a,
-        territoryB: connection.territory_b,
-        exists: true,
-        passable: connection.is_passable,
-        barrierName: connection.barrier_name,
-        description: connection.description,
-      }),
-    );
+    const connections = [...(await getBaseTerritoryConnections(client))];
     const tunnelConnection = jurassicTunnelConnection(
       room.jurassic_tunnel_territory_id,
     );
