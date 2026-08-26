@@ -62,12 +62,12 @@
   stroke-width: 2.1;
 }
 
-/* Toggle colocado na zona segura superior para nunca cobrir território. */
+/* O controle fica no HUD superior, fora da superfície clicável do mapa. */
 .game-road-toggle {
-  position: absolute;
-  z-index: 24;
-  top: calc(var(--game-map-safe-top, 90px) - 42px);
-  left: 18px;
+  position: fixed;
+  z-index: 69;
+  top: 10px;
+  right: 220px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -125,8 +125,8 @@
 
 @media (max-width: 767px) {
   .game-road-toggle {
-    top: calc(var(--game-map-safe-top, 110px) - 38px);
-    left: 10px;
+    top: 10px;
+    right: 58px;
     min-height: 32px;
     padding: 6px 9px;
   }
