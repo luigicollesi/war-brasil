@@ -46,7 +46,6 @@ type SnapshotRoll = {
   player_id: string;
   roll_round: number;
   value: number;
-  rolled_at: Date;
 };
 
 type SnapshotCard = {
@@ -166,7 +165,7 @@ export async function getGameSnapshotQuery(
       room.status === "order_roll"
         ? (
             await client.query<SnapshotRoll>(
-              `SELECT player_id,roll_round,value,rolled_at
+              `SELECT player_id,roll_round,value
                FROM game_order_rolls
                WHERE room_id=$1
                ORDER BY roll_round,rolled_at`,
