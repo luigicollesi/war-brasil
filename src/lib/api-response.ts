@@ -20,11 +20,24 @@ type DatabaseError = {
   routine?: unknown;
 };
 
-export function noStoreJson(data: unknown, init?: ResponseInit) {
+function noStoreHeaders(init?: ResponseInit) {
   const headers = new Headers(init?.headers);
   headers.set("Cache-Control", "no-store, max-age=0");
+  return headers;
+}
 
-  return NextResponse.json(data ?? {}, { ...init, headers });
+export function noStoreJson(data: unknown, init?: ResponseInit) {
+  return NextResponse.json(data ?? {}, {
+    ...init,
+    headers: noStoreHeaders(init),
+  });
+}
+
+export function noStoreEmpty(init?: ResponseInit) {
+  return new Response(null, {
+    ...init,
+    headers: noStoreHeaders(init),
+  });
 }
 
 function describeInput(value: unknown): unknown {
