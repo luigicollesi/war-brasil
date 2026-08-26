@@ -7,8 +7,13 @@ import { shareGameSnapshot } from "@/src/lib/game-snapshot-sharing";
 import { gameSyncMetricsStore } from "@/src/lib/game-sync-metrics-store";
 import {
   GAME_REVISION_HEADER,
+  GAME_TOPOLOGY_HEADER,
   parseGameRevision,
 } from "@/src/lib/game-sync-contract";
+
+type GameSnapshotPayload = Omit<GameSnapshot, "connections"> & {
+  connections?: GameSnapshot["connections"];
+};
 
 const ADVANCEABLE_BATTLE_STAGES = new Set([
   "show_attacker_result",
@@ -51,6 +56,7 @@ export function useGameSync(roomId: string) {
   const snapshotRef = useRef<GameSnapshot | null>(null);
   const revisionRef = useRef<number | null>(null);
   const requiredRevisionRef = useRef<number | null>(null);
+  const topologyVersionRef = useRef<string | null>(null);
 
   useEffect(() => {
     let isActive = true;
@@ -91,6 +97,9 @@ export function useGameSync(roomId: string) {
           if (revisionRef.current !== null) {
             headers.set(GAME_REVISION_HEADER, String(revisionRef.current));
           }
+          if (topologyVersionRef.current !== null) {
+            headers.set(GAME_TOPOLOGY_HEADER, topologyVersionRef.current);
+          }
 
           const response = await fetch(
             `/api/games/${encodeURIComponent(roomId)}`,
@@ -103,9 +112,15 @@ export function useGameSync(roomId: string) {
           const responseRevision = parseGameRevision(
             response.headers.get(GAME_REVISION_HEADER),
           );
+          const responseTopologyVersion = response.headers.get(
+            GAME_TOPOLOGY_HEADER,
+          );
 
           if (response.status === 204) {
             recordRevision(responseRevision);
+            if (responseTopologyVersion && snapshotRef.current?.connections) {
+              topologyVersionRef.current = responseTopologyVersion;
+            }
             recordSyncSuccess(startedAt);
             if (isActive) setError("");
             return;
@@ -127,13 +142,28 @@ export function useGameSync(roomId: string) {
             return;
           }
 
+          const payload = data as GameSnapshotPayload;
+          const connections = payload.connections ?? snapshotRef.current?.connections;
+          if (!connections) {
+            throw new Error("A topologia da partida não foi recebida.");
+          }
+
+          const hydratedSnapshot: GameSnapshot = {
+            ...payload,
+            connections,
+          };
+
+          if (payload.connections && responseTopologyVersion) {
+            topologyVersionRef.current = responseTopologyVersion;
+          }
+
           recordRevision(responseRevision);
           recordSyncSuccess(startedAt);
 
           if (isActive) {
             const nextSnapshot = shareGameSnapshot(
               snapshotRef.current,
-              data as GameSnapshot,
+              hydratedSnapshot,
             );
             snapshotRef.current = nextSnapshot;
             setSnapshot(nextSnapshot);
