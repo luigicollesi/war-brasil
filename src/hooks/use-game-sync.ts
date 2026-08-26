@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { GameSnapshot } from "@/src/lib/game";
+import type { GameSnapshot } from "@/src/lib/game-contract";
 import {
   GAME_REVISION_HEADER,
   parseGameRevision,
@@ -43,9 +43,12 @@ export function useGameSync(roomId: string) {
   const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null);
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const refreshRef = useRef<() => Promise<void>>(async () => {});
+  const refreshRef = useRef<(minimumRevision?: number) => Promise<void>>(
+    async () => {},
+  );
   const snapshotRef = useRef<GameSnapshot | null>(null);
   const revisionRef = useRef<number | null>(null);
+  const requiredRevisionRef = useRef<number | null>(null);
 
   useEffect(() => {
     let isActive = true;
@@ -53,6 +56,19 @@ export function useGameSync(roomId: string) {
     let advanceController: AbortController | null = null;
     let timeoutId = 0;
     let inFlight: Promise<void> | null = null;
+
+    function recordRevision(revision: number | null) {
+      if (revision === null) return;
+      if (revisionRef.current === null || revision >= revisionRef.current) {
+        revisionRef.current = revision;
+      }
+      if (
+        requiredRevisionRef.current !== null &&
+        revision >= requiredRevisionRef.current
+      ) {
+        requiredRevisionRef.current = null;
+      }
+    }
 
     function sync() {
       if (inFlight) return inFlight;
@@ -80,9 +96,7 @@ export function useGameSync(roomId: string) {
           );
 
           if (response.status === 204) {
-            if (responseRevision !== null) {
-              revisionRef.current = responseRevision;
-            }
+            recordRevision(responseRevision);
             if (isActive) setError("");
             return;
           }
@@ -102,9 +116,7 @@ export function useGameSync(roomId: string) {
             return;
           }
 
-          if (responseRevision !== null) {
-            revisionRef.current = responseRevision;
-          }
+          recordRevision(responseRevision);
 
           if (isActive) {
             const nextSnapshot = data as GameSnapshot;
@@ -183,10 +195,14 @@ export function useGameSync(roomId: string) {
           "changed" in data &&
           data.changed === true;
 
-        return (
-          changed ||
-          (returnedRevision !== null && returnedRevision !== expectedRevision)
-        );
+        if (returnedRevision !== null && returnedRevision !== expectedRevision) {
+          requiredRevisionRef.current = Math.max(
+            requiredRevisionRef.current ?? 0,
+            returnedRevision,
+          );
+        }
+
+        return changed || returnedRevision !== expectedRevision;
       } catch (advanceError) {
         if (
           isActive &&
@@ -204,11 +220,26 @@ export function useGameSync(roomId: string) {
       }
     }
 
-    async function poll() {
+    async function syncUntilRequiredRevision() {
       await sync();
 
-      if (isActive && (await advancePresentation())) {
+      // Um GET iniciado antes de um POST confirmado pode terminar com uma revisão
+      // antiga. Nesse caso fazemos exatamente mais uma leitura para observar a
+      // revisão mínima retornada pelo comando, sem polling duplicado permanente.
+      if (
+        isActive &&
+        requiredRevisionRef.current !== null &&
+        (revisionRef.current ?? 0) < requiredRevisionRef.current
+      ) {
         await sync();
+      }
+    }
+
+    async function poll() {
+      await syncUntilRequiredRevision();
+
+      if (isActive && (await advancePresentation())) {
+        await syncUntilRequiredRevision();
       }
 
       if (isActive) {
@@ -216,13 +247,14 @@ export function useGameSync(roomId: string) {
       }
     }
 
-    refreshRef.current = async () => {
-      const hadInFlightRequest = inFlight !== null;
-      await sync();
-
-      if (hadInFlightRequest && isActive) {
-        await sync();
+    refreshRef.current = async (minimumRevision?: number) => {
+      if (minimumRevision !== undefined) {
+        requiredRevisionRef.current = Math.max(
+          requiredRevisionRef.current ?? 0,
+          minimumRevision,
+        );
       }
+      await syncUntilRequiredRevision();
     };
 
     void poll();
@@ -240,6 +272,9 @@ export function useGameSync(roomId: string) {
     snapshot,
     error,
     isLoading,
-    refresh: useCallback(() => refreshRef.current(), []),
+    refresh: useCallback(
+      (minimumRevision?: number) => refreshRef.current(minimumRevision),
+      [],
+    ),
   };
 }
