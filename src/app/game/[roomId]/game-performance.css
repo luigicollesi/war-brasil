@@ -1,0 +1,61 @@
+/* Budget de composição para telas menores e usuários que preferem menos movimento.
+   O desktop mantém o acabamento completo; estas regras reduzem apenas custos de GPU. */
+
+@media (max-width: 767px) {
+  .game-runtime div[class~="fixed"][class~="inset-0"][class~="z-30"][class~="grid"][class~="place-items-center"] {
+    backdrop-filter: blur(2px) saturate(0.96) !important;
+  }
+
+  .game-runtime div[class~="fixed"][class~="inset-0"][class~="z-30"][class~="grid"][class~="place-items-center"] > div {
+    backdrop-filter: blur(10px) saturate(1.02) !important;
+    box-shadow:
+      0 18px 46px rgba(0, 0, 0, 0.34),
+      inset 0 1px 0 rgba(255, 255, 255, 0.07) !important;
+  }
+
+  .game-runtime div[class~="fixed"][class~="inset-0"][class~="z-40"][class~="grid"][class~="place-items-center"][class~="pointer-events-none"] {
+    backdrop-filter: blur(2px) !important;
+  }
+
+  .game-runtime div[class~="fixed"][class~="inset-0"][class~="z-40"][class~="pointer-events-none"] > section {
+    backdrop-filter: blur(10px) saturate(1.02) !important;
+    box-shadow:
+      -8px 0 22px rgba(151, 55, 49, 0.16),
+      8px 0 22px rgba(48, 91, 151, 0.16),
+      0 20px 54px rgba(0, 0, 0, 0.38) !important;
+  }
+
+  .game-modal-surface.game-action-modal,
+  .game-modal-surface.game-card-modal,
+  .game-runtime > div > section:nth-of-type(2)[class~="grid"] {
+    box-shadow:
+      0 0 0 2px rgba(224, 195, 106, 0.82),
+      0 0 18px 8px rgba(58, 111, 82, 0.14),
+      0 20px 54px rgba(0, 0, 0, 0.36) !important;
+  }
+
+  .game-road-toggle {
+    backdrop-filter: blur(6px) saturate(1.02);
+  }
+
+  .road-route-shadow {
+    filter: none;
+  }
+
+  .road-route[data-active="true"],
+  .road-route[data-target="true"] {
+    filter: drop-shadow(0 0 3px rgba(224, 194, 105, 0.28));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .road-network,
+  .road-route,
+  .game-road-toggle {
+    transition: none !important;
+  }
+
+  .game-road-toggle:hover {
+    transform: none;
+  }
+}
