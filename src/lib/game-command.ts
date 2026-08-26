@@ -5,8 +5,29 @@ import { pool } from "@/src/lib/db/pool";
 import {
   bumpGameRevision,
   type GameCommandResult,
+  type GameRevision,
 } from "@/src/lib/game-revision";
 import { RoomError } from "@/src/lib/rooms";
+
+export type GameConditionalCommandResult<T> = {
+  value: T | null;
+  revision: GameRevision;
+  changed: boolean;
+};
+
+async function lockRoomRevision(client: PoolClient, roomId: string) {
+  const lockedRoom = await client.query<{ id: string; revision: number }>(
+    "SELECT id,revision FROM game_rooms WHERE id=$1 FOR UPDATE",
+    [roomId],
+  );
+
+  const room = lockedRoom.rows[0];
+  if (!room) {
+    throw new RoomError("Partida não encontrada.", 404);
+  }
+
+  return room.revision;
+}
 
 export async function gameCommand<T>(
   roomId: string,
@@ -16,15 +37,7 @@ export async function gameCommand<T>(
 
   try {
     await client.query("BEGIN");
-
-    const lockedRoom = await client.query<{ id: string }>(
-      "SELECT id FROM game_rooms WHERE id=$1 FOR UPDATE",
-      [roomId],
-    );
-
-    if (!lockedRoom.rows[0]) {
-      throw new RoomError("Partida não encontrada.", 404);
-    }
+    await lockRoomRevision(client, roomId);
 
     const value = await execute(client);
     const revision = await bumpGameRevision(client, roomId);
@@ -32,6 +45,48 @@ export async function gameCommand<T>(
     await client.query("COMMIT");
 
     return { value, revision };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+export async function gameConditionalCommand<T>(
+  roomId: string,
+  expectedRevision: GameRevision,
+  execute: (
+    client: PoolClient,
+  ) => Promise<{ value: T; changed: boolean }>,
+): Promise<GameConditionalCommandResult<T>> {
+  const client = await pool.connect();
+
+  try {
+    await client.query("BEGIN");
+    const currentRevision = await lockRoomRevision(client, roomId);
+
+    if (currentRevision !== expectedRevision) {
+      await client.query("COMMIT");
+      return {
+        value: null,
+        revision: currentRevision,
+        changed: false,
+      };
+    }
+
+    const result = await execute(client);
+    const revision = result.changed
+      ? await bumpGameRevision(client, roomId)
+      : currentRevision;
+
+    await client.query("COMMIT");
+
+    return {
+      value: result.value,
+      revision,
+      changed: result.changed,
+    };
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;
