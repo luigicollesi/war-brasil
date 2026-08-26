@@ -6,7 +6,7 @@ import {
   type Region,
 } from "@/src/lib/game-config";
 
-export type ObjectiveEvent =
+type ObjectiveEvent =
   | "any"
   | "troops_changed"
   | "territory_control_changed";
@@ -90,7 +90,7 @@ async function fortificationTerritoryCount(
   return row?.count ?? 0;
 }
 
-async function playerHasTerritories(
+async function playerHasTerritory(
   client: PoolClient,
   roomId: string,
   playerId: string,
@@ -121,78 +121,7 @@ async function ownedTerritoryIds(
        WHERE room_id=$1 AND owner_player_id=$2`,
       [roomId, playerId],
     )
-  ).rows.map((territory) => territory.territory_id);
-}
-
-function completedRegions(ownedIds: Set<number>) {
-  return (Object.keys(REGION_TERRITORY_IDS) as Region[]).filter((region) =>
-    REGION_TERRITORY_IDS[region].every((territoryId) =>
-      ownedIds.has(territoryId),
-    ),
-  );
-}
-
-async function evaluateObjective(
-  client: PoolClient,
-  roomId: string,
-  playerId: string,
-  objective: Objective,
-) {
-  if (objective.type === "territories") {
-    return (
-      (await ownedTerritoryCount(client, roomId, playerId)) >=
-      numericParam(objective, "territories")
-    );
-  }
-
-  if (objective.type === "fortification") {
-    return (
-      (await fortificationTerritoryCount(
-        client,
-        roomId,
-        playerId,
-        numericParam(objective, "minTroops"),
-      )) >= numericParam(objective, "territories")
-    );
-  }
-
-  if (
-    objective.type === "elimination" ||
-    objective.type === "elimination_plus"
-  ) {
-    if (!objective.target_player_id) return false;
-
-    const targetStillOwnsTerritory = await playerHasTerritories(
-      client,
-      roomId,
-      objective.target_player_id,
-    );
-    if (targetStillOwnsTerritory) return false;
-
-    return objective.type === "elimination"
-      ? true
-      : (await ownedTerritoryCount(client, roomId, playerId)) >=
-          (numericParam(objective, "territories") || 1);
-  }
-
-  const ownedIds = new Set(
-    await ownedTerritoryIds(client, roomId, playerId),
-  );
-  const fullRegions = completedRegions(ownedIds);
-  const required = requiredRegions(objective);
-  let won = required.every((region) => fullRegions.includes(region));
-
-  const extra = numericParam(objective, "additionalAnyRegion");
-  if (extra) {
-    won &&=
-      fullRegions.filter((region) => !required.includes(region)).length >= extra;
-  }
-
-  if (objective.type === "presence" || objective.type === "network") {
-    won &&= ownedIds.size >= (numericParam(objective, "territories") || 1);
-  }
-
-  return won;
+  ).rows.map((row) => row.territory_id);
 }
 
 export async function objectiveWon(
@@ -211,9 +140,64 @@ export async function objectiveWon(
     )
   ).rows[0];
 
-  if (!objective || !eventCanAffectObjective(objective.type, event)) return false;
+  if (!objective || !eventCanAffectObjective(objective.type, event)) {
+    return false;
+  }
 
-  const won = await evaluateObjective(client, roomId, playerId, objective);
+  let won = false;
+
+  if (objective.type === "territories") {
+    won =
+      (await ownedTerritoryCount(client, roomId, playerId)) >=
+      numericParam(objective, "territories");
+  } else if (objective.type === "fortification") {
+    won =
+      (await fortificationTerritoryCount(
+        client,
+        roomId,
+        playerId,
+        numericParam(objective, "minTroops"),
+      )) >= numericParam(objective, "territories");
+  } else if (
+    objective.type === "elimination" ||
+    objective.type === "elimination_plus"
+  ) {
+    won =
+      Boolean(objective.target_player_id) &&
+      !(await playerHasTerritory(
+        client,
+        roomId,
+        objective.target_player_id!,
+      ));
+
+    if (won && objective.type === "elimination_plus") {
+      won =
+        (await ownedTerritoryCount(client, roomId, playerId)) >=
+        (numericParam(objective, "territories") || 1);
+    }
+  } else {
+    const ownedIds = new Set(
+      await ownedTerritoryIds(client, roomId, playerId),
+    );
+    const fullRegions = (Object.keys(REGION_TERRITORY_IDS) as Region[]).filter(
+      (region) =>
+        REGION_TERRITORY_IDS[region].every((territoryId) =>
+          ownedIds.has(territoryId),
+        ),
+    );
+    const required = requiredRegions(objective);
+    won = required.every((region) => fullRegions.includes(region));
+
+    const extra = numericParam(objective, "additionalAnyRegion");
+    if (extra) {
+      won &&=
+        fullRegions.filter((region) => !required.includes(region)).length >= extra;
+    }
+
+    if (objective.type === "presence" || objective.type === "network") {
+      won &&= ownedIds.size >= (numericParam(objective, "territories") || 1);
+    }
+  }
 
   if (won) {
     await client.query(
