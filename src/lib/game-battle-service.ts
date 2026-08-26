@@ -8,7 +8,7 @@ import {
 } from "@/src/lib/game-transitions";
 import { RoomError } from "@/src/lib/rooms";
 
-export type BattleResult = {
+type BattleResult = {
   attacker: number[];
   defender: number[];
   attackerLosses: number;
@@ -38,7 +38,6 @@ type LockedTerritory = {
   territory_id: number;
   owner_player_id: string;
   troops: number;
-  moved_in_turn: number;
 };
 
 export function isBattle(value: unknown): value is Battle {
@@ -93,7 +92,7 @@ async function applyBattleOutcome(
 ) {
   const rows = (
     await client.query<LockedTerritory>(
-      `SELECT territory_id,owner_player_id,troops,moved_in_turn
+      `SELECT territory_id,owner_player_id,troops
        FROM game_territories
        WHERE room_id=$1 AND territory_id=ANY($2::smallint[])
        FOR UPDATE`,
