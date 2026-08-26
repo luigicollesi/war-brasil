@@ -116,7 +116,7 @@ export function ServerConnectionIndicator() {
 
   return (
     <div
-      className={`fixed right-3 top-2 z-[70] flex h-11 items-end gap-2 rounded-xl border bg-[#061b15]/92 px-3 py-2 shadow-[0_10px_30px_rgba(0,0,0,.28)] backdrop-blur-xl sm:right-4 sm:top-2.5 ${stateTone[state]}`}
+      className={`fixed right-3 top-2 z-[70] flex h-11 items-end gap-2 rounded-xl border bg-[rgba(6,27,21,0.92)] px-3 py-2 shadow-[0_10px_30px_rgba(0,0,0,.28)] backdrop-blur-xl sm:right-4 sm:top-2.5 ${stateTone[state]}`}
       data-state={state}
       title={title}
       aria-label={title}
