@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 test("command boundary serializa a sala e incrementa revisão antes do commit", () => {
@@ -50,9 +50,9 @@ test("snapshot principal é read-only e retorna fast-path por revisão", () => {
   assert.doesNotMatch(snapshot, /FOR UPDATE/);
 });
 
-test("endpoint leve de revisão valida jogador dentro de transação read-only", () => {
+test("advance valida acesso do jogador dentro de transação read-only", () => {
   const route = readFileSync(
-    "src/app/api/games/[roomId]/revision/route.ts",
+    "src/app/api/games/[roomId]/advance/route.ts",
     "utf8",
   );
   const revision = readFileSync("src/lib/game-revision.ts", "utf8");
@@ -172,20 +172,30 @@ test("indicador de conexão reutiliza o polling do jogo sem health check própri
   assert.match(sync, /recordFailure/);
 });
 
-test("topologia militar base é cacheada e reutilizada por snapshot e fronteiras", () => {
+test("topologia militar base é cacheada e reutilizada por snapshot e combate", () => {
   const topology = readFileSync("src/lib/game-topology-service.ts", "utf8");
   const snapshot = readFileSync("src/lib/game-snapshot-service.ts", "utf8");
-  const connection = readFileSync(
-    "src/lib/territory-connections.server.ts",
-    "utf8",
-  );
+  const combat = readFileSync("src/lib/game-combat-command-service.ts", "utf8");
 
   assert.match(topology, /cachedTopology/);
   assert.match(topology, /loadingTopology/);
   assert.match(topology, /getBaseTerritoryConnections/);
   assert.match(topology, /getPassableTerritoryConnections/);
+  assert.match(topology, /getBaseTerritoryConnection/);
   assert.match(topology, /FROM territory_connections/);
   assert.match(snapshot, /getBaseTerritoryConnections/);
-  assert.match(connection, /getBaseTerritoryConnection/);
+  assert.match(combat, /getBaseTerritoryConnection/);
   assert.doesNotMatch(snapshot, /FROM territory_connections/);
+  assert.doesNotMatch(combat, /FROM territory_connections/);
+});
+
+test("artefatos legados do fluxo de jogo não permanecem no projeto", () => {
+  for (const path of [
+    "src/lib/game.ts",
+    "src/components/game-client.tsx",
+    "src/lib/territory-connections.server.ts",
+    "src/app/api/games/[roomId]/revision/route.ts",
+  ]) {
+    assert.equal(existsSync(path), false, `${path} deveria ter sido removido`);
+  }
 });
