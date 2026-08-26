@@ -7,6 +7,8 @@ import {
 import { getGameSnapshotQuery } from "@/src/lib/game-snapshot-service";
 import {
   GAME_REVISION_HEADER,
+  GAME_TOPOLOGY_HEADER,
+  GAME_TOPOLOGY_VERSION,
   parseGameRevision,
 } from "@/src/lib/game-sync-contract";
 import { getPlayerSession } from "@/src/lib/player-session";
@@ -32,6 +34,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     const knownRevision = parseGameRevision(
       request.headers.get(GAME_REVISION_HEADER),
     );
+    const knownTopology = request.headers.get(GAME_TOPOLOGY_HEADER);
     const result = await getGameSnapshotQuery(
       roomId,
       session,
@@ -39,6 +42,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     );
     const headers = {
       [GAME_REVISION_HEADER]: String(result.revision),
+      [GAME_TOPOLOGY_HEADER]: GAME_TOPOLOGY_VERSION,
     };
 
     if (!result.snapshot) {
@@ -47,6 +51,11 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
 
     if ((result.snapshot.room.status as string) === "waiting") {
       throw new RoomError("Partida não encontrada.", 404);
+    }
+
+    if (knownTopology === GAME_TOPOLOGY_VERSION) {
+      const { connections: _connections, ...dynamicSnapshot } = result.snapshot;
+      return noStoreJson(dynamicSnapshot, { headers });
     }
 
     return noStoreJson(result.snapshot, { headers });
