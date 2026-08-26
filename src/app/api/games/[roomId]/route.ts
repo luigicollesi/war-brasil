@@ -1,6 +1,14 @@
 import { NextRequest } from "next/server";
-import { noStoreJson, roomErrorResponse } from "@/src/lib/api-response";
-import { getGameSnapshot } from "@/src/lib/game";
+import {
+  noStoreEmpty,
+  noStoreJson,
+  roomErrorResponse,
+} from "@/src/lib/api-response";
+import { getGameSnapshotQuery } from "@/src/lib/game-snapshot-service";
+import {
+  GAME_REVISION_HEADER,
+  parseGameRevision,
+} from "@/src/lib/game-sync-contract";
 import { getPlayerSession } from "@/src/lib/player-session";
 import { RoomError } from "@/src/lib/rooms";
 
@@ -13,6 +21,7 @@ export const revalidate = 0;
 
 export async function GET(request: NextRequest, { params }: RouteContext) {
   let roomId: string | undefined;
+
   try {
     const session = getPlayerSession(request);
     if (!session) {
@@ -20,8 +29,28 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     }
 
     ({ roomId } = await params);
-    return noStoreJson(await getGameSnapshot(roomId, session));
+    const knownRevision = parseGameRevision(
+      request.headers.get(GAME_REVISION_HEADER),
+    );
+    const result = await getGameSnapshotQuery(
+      roomId,
+      session,
+      knownRevision,
+    );
+    const headers = {
+      [GAME_REVISION_HEADER]: String(result.revision),
+    };
+
+    if (!result.snapshot) {
+      return noStoreEmpty({ status: 204, headers });
+    }
+
+    return noStoreJson(result.snapshot, { headers });
   } catch (error) {
-    return roomErrorResponse(error, { operation: "get_game_snapshot", route: request.nextUrl.pathname, resource: { roomId } });
+    return roomErrorResponse(error, {
+      operation: "get_game_snapshot",
+      route: request.nextUrl.pathname,
+      resource: { roomId },
+    });
   }
 }
