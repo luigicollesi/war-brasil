@@ -1,6 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  applyGameCommandPatch,
+  type ApplicableGameCommandResult,
+} from "@/src/lib/game-command-patch";
 import type { GameSnapshot } from "@/src/lib/game-contract";
 import { nextGamePollDelay } from "@/src/lib/game-polling";
 import { shareGameSnapshot } from "@/src/lib/game-snapshot-sharing";
@@ -53,6 +57,9 @@ export function useGameSync(roomId: string) {
   const refreshRef = useRef<(minimumRevision?: number) => Promise<void>>(
     async () => {},
   );
+  const applyCommandResultRef = useRef<
+    (result: ApplicableGameCommandResult) => boolean
+  >(() => false);
   const snapshotRef = useRef<GameSnapshot | null>(null);
   const revisionRef = useRef<number | null>(null);
   const requiredRevisionRef = useRef<number | null>(null);
@@ -329,6 +336,30 @@ export function useGameSync(roomId: string) {
       await syncUntilRequiredRevision();
     };
 
+    applyCommandResultRef.current = (result) => {
+      const currentSnapshot = snapshotRef.current;
+      if (
+        !isActive ||
+        !currentSnapshot ||
+        !result.patch ||
+        result.baseRevision === null ||
+        result.revision === null ||
+        revisionRef.current !== result.baseRevision ||
+        result.revision <= result.baseRevision
+      ) {
+        return false;
+      }
+
+      const nextSnapshot = applyGameCommandPatch(currentSnapshot, result.patch);
+      if (!nextSnapshot) return false;
+
+      recordRevision(result.revision);
+      snapshotRef.current = nextSnapshot;
+      setSnapshot(nextSnapshot);
+      setError("");
+      return true;
+    };
+
     const handleOffline = () => gameSyncMetricsStore.recordOffline();
     const handleOnline = () => {
       gameSyncMetricsStore.recordOnline();
@@ -356,6 +387,7 @@ export function useGameSync(roomId: string) {
       window.removeEventListener("online", handleOnline);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       refreshRef.current = async () => {};
+      applyCommandResultRef.current = () => false;
     };
   }, [roomId]);
 
@@ -365,6 +397,10 @@ export function useGameSync(roomId: string) {
     isLoading,
     refresh: useCallback(
       (minimumRevision?: number) => refreshRef.current(minimumRevision),
+      [],
+    ),
+    applyCommandResult: useCallback(
+      (result: ApplicableGameCommandResult) => applyCommandResultRef.current(result),
       [],
     ),
   };
