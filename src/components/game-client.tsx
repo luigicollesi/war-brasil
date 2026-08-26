@@ -35,12 +35,13 @@ export function GameClient({ roomId }: GameClientProps) {
   const [rollError, setRollError] = useState("");
   const [isRolling, setIsRolling] = useState(false);
   const [selectedTerritoryId, setSelectedTerritoryId] = useState<number | null>(null);
+  const [selectionVersion, setSelectionVersion] = useState(0);
   const [mapHints, setMapHints] = useState({ available: [] as number[], targets: [] as number[] });
   const [interactionArrow, setInteractionArrow] = useState<{ fromTerritoryId: number; toTerritoryId: number; kind: "movement" } | null>(null);
-  const selectTerritory = useCallback(
-    (territoryId: number) => setSelectedTerritoryId(current => current === territoryId ? null : territoryId),
-    [],
-  );
+  const selectTerritory = useCallback((territoryId: number) => {
+    setSelectedTerritoryId(current => current === territoryId ? null : territoryId);
+    setSelectionVersion(version => version + 1);
+  }, []);
 
   async function rollDie() {
     setRollError("");
@@ -173,6 +174,7 @@ export function GameClient({ roomId }: GameClientProps) {
         roomId={roomId}
         snapshot={snapshot}
         selectedTerritoryId={selectedTerritoryId}
+        selectionVersion={selectionVersion}
         onRefresh={refresh}
         onMapHints={setMapHints}
         onMapArrow={setInteractionArrow}
@@ -423,6 +425,7 @@ function GameTurnPanel({
   roomId,
   snapshot,
   selectedTerritoryId,
+  selectionVersion,
   onRefresh,
   onMapHints,
   onMapArrow,
@@ -430,6 +433,7 @@ function GameTurnPanel({
   roomId: string;
   snapshot: GameSnapshot;
   selectedTerritoryId: number | null;
+  selectionVersion: number;
   onRefresh: () => Promise<void>;
   onMapHints: (hints: { available: number[]; targets: number[] }) => void;
   onMapArrow: (arrow: { fromTerritoryId: number; toTerritoryId: number; kind: "movement" } | null) => void;
@@ -442,7 +446,7 @@ function GameTurnPanel({
   const [modal, setModal] = useState<"reinforce" | "maneuver" | "conquest" | "cards" | null>(null);
   const [drawnCard, setDrawnCard] = useState<GameSnapshot["myCards"][number] | null>(null);
   const [barrier, setBarrier] = useState<TerritoryConnection | null>(null);
-  const lastSelection = useRef<number | null>(null);
+  const handledSelectionVersion = useRef(-1);
   const previousCards = useRef(new Set<string>());
   const me = snapshot.players.find((player) => player.isMe);
   const isTurn = snapshot.room.status === "playing" && snapshot.room.currentPlayerId === me?.id;
@@ -484,7 +488,6 @@ function GameTurnPanel({
     if (selectedTerritoryId !== null) return;
     queueMicrotask(() => { setFrom(""); setTo(""); setModal(current => current === "maneuver" ? null : current); });
     onMapArrow(null);
-    lastSelection.current = null;
   }, [onMapArrow, selectedTerritoryId]);
 
   useEffect(() => {
@@ -496,24 +499,110 @@ function GameTurnPanel({
   }, [battleBusy, isTurn, myTerritories, onMapHints, phase, selectedSource, targetIds]);
 
   useEffect(() => {
-    if (!isTurn || battleBusy || !selectedTerritoryId || lastSelection.current === selectedTerritoryId) return;
-    lastSelection.current = selectedTerritoryId;
-    const selected = snapshot.territories.find((territory) => territory.territoryId === selectedTerritoryId);
+    if (handledSelectionVersion.current === selectionVersion) return;
+    handledSelectionVersion.current = selectionVersion;
+
+    if (!isTurn || battleBusy || !selectedTerritoryId) return;
+
+    const selected = snapshot.territories.find(
+      territory => territory.territoryId === selectedTerritoryId,
+    );
     if (!selected) return;
-    if (phase === "reinforcement" && selected.ownerPlayerId === me?.id) queueMicrotask(() => { setTo(String(selectedTerritoryId)); setCount("1"); setModal("reinforce"); });
+
+    if (phase === "reinforcement" && selected.ownerPlayerId === me?.id) {
+      queueMicrotask(() => {
+        setTo(String(selectedTerritoryId));
+        setCount("1");
+        setModal("reinforce");
+      });
+      return;
+    }
+
     if (phase === "attack") {
-      if (!from && selected.ownerPlayerId === me?.id && selected.troops > 1) queueMicrotask(() => setFrom(String(selectedTerritoryId)));
-      else if (from && targetIds.includes(selectedTerritoryId)) { void action("attack", { fromTerritoryId: Number(from), toTerritoryId: selectedTerritoryId }).then(() => setFrom("")); }
-      else if (from) { const connection = findTerritoryConnection(snapshot.connections, Number(from), selectedTerritoryId); if (connection.exists && !connection.passable) queueMicrotask(() => setBarrier(connection)); }
+      if (!from) {
+        if (selected.ownerPlayerId === me?.id && selected.troops > 1) {
+          queueMicrotask(() => setFrom(String(selectedTerritoryId)));
+        }
+        return;
+      }
+
+      const sourceId = Number(from);
+      const connection = findTerritoryConnection(
+        snapshot.connections,
+        sourceId,
+        selectedTerritoryId,
+      );
+
+      if (
+        selected.ownerPlayerId !== me?.id &&
+        connection.exists &&
+        connection.passable
+      ) {
+        void action("attack", {
+          fromTerritoryId: sourceId,
+          toTerritoryId: selectedTerritoryId,
+        }).then(() => setFrom(""));
+        return;
+      }
+
+      if (connection.exists && !connection.passable) {
+        queueMicrotask(() => setBarrier(connection));
+      }
+      return;
     }
+
     if (phase === "maneuver") {
-      if (!from && selected.ownerPlayerId === me?.id && selected.troops - selected.movedInTurn > 1) queueMicrotask(() => setFrom(String(selectedTerritoryId)));
-      else if (from && targetIds.includes(selectedTerritoryId)) queueMicrotask(() => { setTo(String(selectedTerritoryId)); setCount("1"); setModal("maneuver"); onMapArrow({ fromTerritoryId: Number(from), toTerritoryId: selectedTerritoryId, kind: "movement" }); });
-      else if (from) { const connection = findTerritoryConnection(snapshot.connections, Number(from), selectedTerritoryId); if (connection.exists && !connection.passable) queueMicrotask(() => setBarrier(connection)); }
+      if (!from) {
+        if (
+          selected.ownerPlayerId === me?.id &&
+          selected.troops - selected.movedInTurn > 1
+        ) {
+          queueMicrotask(() => setFrom(String(selectedTerritoryId)));
+        }
+        return;
+      }
+
+      const sourceId = Number(from);
+      const connection = findTerritoryConnection(
+        snapshot.connections,
+        sourceId,
+        selectedTerritoryId,
+      );
+
+      if (
+        selected.ownerPlayerId === me?.id &&
+        connection.exists &&
+        connection.passable
+      ) {
+        queueMicrotask(() => {
+          setTo(String(selectedTerritoryId));
+          setCount("1");
+          setModal("maneuver");
+          onMapArrow({
+            fromTerritoryId: sourceId,
+            toTerritoryId: selectedTerritoryId,
+            kind: "movement",
+          });
+        });
+      } else if (connection.exists && !connection.passable) {
+        queueMicrotask(() => setBarrier(connection));
+      }
     }
-  // A ação usa apenas o snapshot capturado pelo clique que a disparou.
+
+  // Processa apenas cliques reais do usuário; heartbeats não repetem ações.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [battleBusy, from, isTurn, me?.id, onMapArrow, phase, selectedTerritoryId, snapshot.connections, snapshot.territories, targetIds]);
+  }, [
+    battleBusy,
+    from,
+    isTurn,
+    me?.id,
+    onMapArrow,
+    phase,
+    selectedTerritoryId,
+    selectionVersion,
+    snapshot.connections,
+    snapshot.territories,
+  ]);
 
   async function action(path: string, body: Record<string, unknown>) {
     setMessage("");
