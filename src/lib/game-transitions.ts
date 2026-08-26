@@ -9,7 +9,7 @@ export type BattleStage =
   | "show_comparison"
   | "show_battle_result";
 
-export type BattlePresentationTransition =
+type BattlePresentationTransition =
   | "await_defender_roll"
   | "show_comparison"
   | "resolve_battle"
@@ -31,13 +31,7 @@ export function nextBattlePresentationTransition(
   stageStartedAt: string | Date,
   nowMs = Date.now(),
 ): BattlePresentationTransition | null {
-  if (
-    !elapsedAtLeast(
-      stageStartedAt,
-      BATTLE_PRESENTATION_MS,
-      nowMs,
-    )
-  ) {
+  if (!elapsedAtLeast(stageStartedAt, BATTLE_PRESENTATION_MS, nowMs)) {
     return null;
   }
 
