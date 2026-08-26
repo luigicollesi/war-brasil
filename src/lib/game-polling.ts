@@ -1,4 +1,4 @@
-export type GamePollContext = {
+type GamePollContext = {
   visible: boolean;
   online: boolean;
   failures: number;
