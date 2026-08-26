@@ -68,5 +68,5 @@ export function reachableTerritoryIds(
     }
   }
 
-  return [...visited];
+  return Array.from(visited);
 }
