@@ -171,3 +171,19 @@ test("indicador de conexão reutiliza o polling do jogo sem health check própri
   assert.match(sync, /recordSuccess/);
   assert.match(sync, /recordFailure/);
 });
+
+test("topologia militar base é cacheada e reutilizada por snapshot e fronteiras", () => {
+  const topology = readFileSync("src/lib/game-topology-service.ts", "utf8");
+  const snapshot = readFileSync("src/lib/game-snapshot-service.ts", "utf8");
+  const connection = readFileSync(
+    "src/lib/territory-connections.server.ts",
+    "utf8",
+  );
+
+  assert.match(topology, /cachedConnections/);
+  assert.match(topology, /loadingConnections/);
+  assert.match(topology, /FROM territory_connections/);
+  assert.match(snapshot, /getBaseTerritoryConnections/);
+  assert.match(connection, /getBaseTerritoryConnection/);
+  assert.doesNotMatch(snapshot, /FROM territory_connections/);
+});
