@@ -1,30 +1,20 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { TerritoryCard } from "@/src/components/territory-card";
+import type { GameInteractionController } from "@/src/hooks/use-game-interaction";
+import type { GameSnapshot, GameTerritory } from "@/src/lib/game-contract";
+import { runGameCommand } from "@/src/lib/game-command-client";
 import { TERRITORY_METADATA } from "@/src/lib/game-config";
-import type { GameSnapshot } from "@/src/lib/game";
 import { isValidTrade } from "@/src/lib/game-rules";
-import {
-  findTerritoryConnection,
-  reachableTerritoryIds,
-  type TerritoryConnection,
-} from "@/src/lib/territory-connections";
+import type { GameViewModel } from "@/src/lib/game-view-model";
 
 type GameTurnPanelProps = {
   roomId: string;
   snapshot: GameSnapshot;
-  selectedTerritoryId: number | null;
-  selectionVersion: number;
-  onRefresh: () => Promise<void>;
-  onMapHints: (hints: { available: number[]; targets: number[] }) => void;
-  onMapArrow: (
-    arrow: {
-      fromTerritoryId: number;
-      toTerritoryId: number;
-      kind: "movement";
-    } | null,
-  ) => void;
+  game: GameViewModel;
+  interaction: GameInteractionController;
+  onRefresh: (minimumRevision?: number) => Promise<void>;
 };
 
 type QuantityMode = "reinforce" | "conquest" | "maneuver";
@@ -112,7 +102,9 @@ function TroopQuantitySelector({
               <span className="troop-flow-arrow">→</span>
               <strong>{targetAfter}</strong>
             </div>
-            <span className="troop-flow-caption">+{value} {troopLabel(value)}</span>
+            <span className="troop-flow-caption">
+              +{value} {troopLabel(value)}
+            </span>
           </div>
         ) : (
           <div className="troop-flow-transfer">
@@ -198,90 +190,163 @@ function TroopQuantitySelector({
   );
 }
 
+type QuantityDialogProps = {
+  mode: QuantityMode;
+  max: number;
+  source?: GameTerritory;
+  target?: GameTerritory;
+  reinforcementRemaining: number;
+  onSubmit: (troops: number) => Promise<boolean>;
+  onCancel?: () => void;
+};
+
+function QuantityDialog({
+  mode,
+  max,
+  source,
+  target,
+  reinforcementRemaining,
+  onSubmit,
+  onCancel,
+}: QuantityDialogProps) {
+  const [requestedCount, setRequestedCount] = useState(1);
+  const [submitting, setSubmitting] = useState(false);
+  const safeMax = Math.max(1, max);
+  const count = clamp(requestedCount, 1, safeMax);
+  const valid = max >= 1;
+  const title =
+    mode === "reinforce"
+      ? "Mobilizar reforços"
+      : mode === "conquest"
+        ? "Território conquistado"
+        : "Reposicionar exército";
+  const eyebrow =
+    mode === "reinforce"
+      ? "Fase de reforço"
+      : mode === "conquest"
+        ? "Conquista confirmada"
+        : "Manobra estratégica";
+  const cta = `${mode === "reinforce" ? "POSICIONAR" : "MOVER"} ${count} ${troopLabel(count).toUpperCase()}`;
+  const targetBefore = target?.troops ?? 0;
+  const targetAfter =
+    mode === "reinforce"
+      ? targetBefore + count
+      : mode === "conquest"
+        ? count
+        : targetBefore + count;
+  const sourceBefore = source?.troops;
+  const sourceAfter =
+    sourceBefore === undefined ? undefined : sourceBefore - count;
+  const availableLabel =
+    mode === "reinforce"
+      ? `${reinforcementRemaining} reforços disponíveis`
+      : mode === "conquest"
+        ? `de 1 a ${safeMax} · 1 tropa precisa permanecer na origem`
+        : `de 1 a ${safeMax} · já movidas: ${source?.movedInTurn ?? 0}`;
+
+  async function submit() {
+    if (!valid || submitting) return;
+    setSubmitting(true);
+    try {
+      await onSubmit(count);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="game-modal-backdrop fixed inset-0 z-30 grid place-items-center p-4">
+      <div className="game-modal-surface game-action-modal w-full max-w-md p-6">
+        <p className="game-modal-eyebrow">{eyebrow}</p>
+        <h3 className="text-xl font-semibold">{title}</h3>
+
+        {valid ? (
+          <TroopQuantitySelector
+            mode={mode}
+            value={count}
+            min={1}
+            max={safeMax}
+            onChange={setRequestedCount}
+            sourceName={
+              mode === "reinforce" ? undefined : territoryName(source?.territoryId)
+            }
+            targetName={territoryName(target?.territoryId)}
+            sourceBefore={sourceBefore}
+            sourceAfter={sourceAfter}
+            targetBefore={targetBefore}
+            targetAfter={targetAfter}
+            availableLabel={availableLabel}
+          />
+        ) : (
+          <p className="game-modal-state-warning">
+            O estado da partida mudou e não há mais tropas disponíveis para esta
+            ação.
+          </p>
+        )}
+
+        <div className="game-modal-actions mt-6">
+          <button
+            type="button"
+            disabled={!valid || submitting}
+            onClick={() => void submit()}
+            className="game-primary-action w-full rounded-xl px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] disabled:opacity-40"
+          >
+            {submitting ? "PROCESSANDO…" : cta}
+          </button>
+          {onCancel ? (
+            <button
+              type="button"
+              onClick={onCancel}
+              className="game-cancel-action mt-3 w-full text-xs font-bold uppercase tracking-[0.12em]"
+            >
+              Cancelar
+            </button>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function GameTurnPanel({
   roomId,
   snapshot,
-  selectedTerritoryId,
-  selectionVersion,
+  game,
+  interaction,
   onRefresh,
-  onMapHints,
-  onMapArrow,
 }: GameTurnPanelProps) {
   const [message, setMessage] = useState("");
   const [selectedCards, setSelectedCards] = useState<string[]>([]);
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
-  const [count, setCount] = useState(1);
-  const [modal, setModal] = useState<
-    "reinforce" | "maneuver" | "conquest" | "cards" | null
-  >(null);
+  const [cardsOpen, setCardsOpen] = useState(false);
   const [drawnCard, setDrawnCard] = useState<
     GameSnapshot["myCards"][number] | null
   >(null);
-  const [barrier, setBarrier] = useState<TerritoryConnection | null>(null);
-  const handledSelectionVersion = useRef(-1);
   const previousCards = useRef(new Set<string>());
 
-  const me = snapshot.players.find((player) => player.isMe);
+  const me = game.me;
   const isTurn =
     snapshot.room.status === "playing" &&
     snapshot.room.currentPlayerId === me?.id;
   const phase = snapshot.room.phase;
   const battleBusy = Boolean(snapshot.room.battle);
-  const myTerritories = useMemo(
-    () =>
-      snapshot.territories.filter(
-        (territory) => territory.ownerPlayerId === me?.id,
-      ),
-    [me?.id, snapshot.territories],
-  );
-  const selectedSource = from
-    ? snapshot.territories.find(
-        (territory) => territory.territoryId === Number(from),
-      )
+  const selectedSource =
+    interaction.sourceId === null
+      ? undefined
+      : game.territoriesById.get(interaction.sourceId);
+  const localDialog = interaction.dialog;
+  const localTarget =
+    localDialog?.kind === "reinforce"
+      ? game.territoriesById.get(localDialog.targetId)
+      : localDialog?.kind === "maneuver"
+        ? game.territoriesById.get(localDialog.targetId)
+        : undefined;
+  const pendingConquest = snapshot.room.pendingConquest;
+  const conquestSource = pendingConquest
+    ? game.territoriesById.get(pendingConquest.fromTerritoryId)
     : undefined;
-
-  const targetIds = useMemo(() => {
-    if (!selectedSource) return [];
-
-    if (phase === "maneuver") {
-      return reachableTerritoryIds(
-        snapshot.connections,
-        selectedSource.territoryId,
-        myTerritories.map((territory) => territory.territoryId),
-      ).filter((territoryId) => territoryId !== selectedSource.territoryId);
-    }
-
-    if (phase === "attack") {
-      return snapshot.connections
-        .filter(
-          (connection) =>
-            connection.passable &&
-            (connection.territoryA === selectedSource.territoryId ||
-              connection.territoryB === selectedSource.territoryId),
-        )
-        .map((connection) =>
-          connection.territoryA === selectedSource.territoryId
-            ? connection.territoryB
-            : connection.territoryA,
-        )
-        .filter((territoryId) => {
-          const territory = snapshot.territories.find(
-            (item) => item.territoryId === territoryId,
-          );
-          return territory?.ownerPlayerId !== me?.id;
-        });
-    }
-
-    return [];
-  }, [
-    me?.id,
-    myTerritories,
-    phase,
-    selectedSource,
-    snapshot.connections,
-    snapshot.territories,
-  ]);
+  const conquestTarget = pendingConquest
+    ? game.territoriesById.get(pendingConquest.toTerritoryId)
+    : undefined;
 
   const canTrade = snapshot.myCards.some((first, index) =>
     snapshot.myCards.slice(index + 1).some((second, secondIndex) =>
@@ -293,42 +358,6 @@ export function GameTurnPanel({
     ),
   );
 
-  const pendingConquestFrom =
-    snapshot.room.pendingConquest?.fromTerritoryId ?? null;
-  const pendingConquestTo =
-    snapshot.room.pendingConquest?.toTerritoryId ?? null;
-  const conquestSource = pendingConquestFrom
-    ? snapshot.territories.find(
-        (territory) => territory.territoryId === pendingConquestFrom,
-      )
-    : undefined;
-  const conquestTarget = pendingConquestTo
-    ? snapshot.territories.find(
-        (territory) => territory.territoryId === pendingConquestTo,
-      )
-    : undefined;
-  const selectedTarget = to
-    ? snapshot.territories.find(
-        (territory) => territory.territoryId === Number(to),
-      )
-    : undefined;
-
-  const quantityMax =
-    modal === "reinforce"
-      ? snapshot.room.reinforcementsRemaining
-      : modal === "conquest"
-        ? Math.max(0, (conquestSource?.troops ?? 1) - 1)
-        : modal === "maneuver"
-          ? Math.max(
-              0,
-              (selectedSource?.troops ?? 1) -
-                (selectedSource?.movedInTurn ?? 0) -
-                1,
-            )
-          : 0;
-  const quantityValid = quantityMax >= 1;
-  const safeQuantityMax = Math.max(1, quantityMax);
-
   useEffect(() => {
     const previous = previousCards.current;
     const received = snapshot.myCards.find(
@@ -337,217 +366,14 @@ export function GameTurnPanel({
 
     previousCards.current = new Set(snapshot.myCards.map((card) => card.id));
     if (!received) return;
-
     queueMicrotask(() => setDrawnCard(received));
   }, [snapshot.myCards]);
 
-  useEffect(() => {
-    if (!modal || modal === "cards") return;
-    queueMicrotask(() => {
-      setCount((current) => clamp(current, 1, safeQuantityMax));
-    });
-  }, [modal, safeQuantityMax]);
-
-  useEffect(() => {
-    if (
-      isTurn &&
-      pendingConquestFrom !== null &&
-      pendingConquestTo !== null &&
-      !battleBusy
-    ) {
-      queueMicrotask(() => {
-        setCount(1);
-        setModal("conquest");
-      });
-    }
-  }, [battleBusy, isTurn, pendingConquestFrom, pendingConquestTo]);
-
-  useEffect(() => {
-    if (selectedTerritoryId !== null) return;
-    queueMicrotask(() => {
-      setFrom("");
-      setTo("");
-      setModal((current) => (current === "maneuver" ? null : current));
-    });
-    onMapArrow(null);
-  }, [onMapArrow, selectedTerritoryId]);
-
-  useEffect(() => {
-    if (!isTurn || battleBusy) {
-      return onMapHints({ available: [], targets: [] });
-    }
-    if (phase === "reinforcement") {
-      return onMapHints({
-        available: myTerritories.map((territory) => territory.territoryId),
-        targets: [],
-      });
-    }
-    if (phase === "attack") {
-      return onMapHints({
-        available: selectedSource
-          ? []
-          : myTerritories
-              .filter((territory) => territory.troops > 1)
-              .map((territory) => territory.territoryId),
-        targets: targetIds,
-      });
-    }
-    if (phase === "maneuver") {
-      return onMapHints({
-        available: selectedSource
-          ? []
-          : myTerritories
-              .filter(
-                (territory) =>
-                  territory.troops - territory.movedInTurn > 1,
-              )
-              .map((territory) => territory.territoryId),
-        targets: targetIds,
-      });
-    }
-    onMapHints({ available: [], targets: [] });
-  }, [
-    battleBusy,
-    isTurn,
-    myTerritories,
-    onMapHints,
-    phase,
-    selectedSource,
-    targetIds,
-  ]);
-
-  useEffect(() => {
-    if (handledSelectionVersion.current === selectionVersion) return;
-    handledSelectionVersion.current = selectionVersion;
-    if (!isTurn || battleBusy || !selectedTerritoryId) return;
-
-    const selected = snapshot.territories.find(
-      (territory) => territory.territoryId === selectedTerritoryId,
-    );
-    if (!selected) return;
-
-    if (phase === "reinforcement" && selected.ownerPlayerId === me?.id) {
-      queueMicrotask(() => {
-        setTo(String(selectedTerritoryId));
-        setCount(1);
-        setModal("reinforce");
-      });
-      return;
-    }
-
-    if (phase === "attack") {
-      if (!from) {
-        if (selected.ownerPlayerId === me?.id && selected.troops > 1) {
-          queueMicrotask(() => setFrom(String(selectedTerritoryId)));
-        }
-        return;
-      }
-
-      const sourceId = Number(from);
-      const connection = findTerritoryConnection(
-        snapshot.connections,
-        sourceId,
-        selectedTerritoryId,
-      );
-
-      if (
-        selected.ownerPlayerId !== me?.id &&
-        connection.exists &&
-        connection.passable
-      ) {
-        void action("attack", {
-          fromTerritoryId: sourceId,
-          toTerritoryId: selectedTerritoryId,
-        }).then((success) => {
-          if (success) setFrom("");
-        });
-        return;
-      }
-
-      if (connection.exists && !connection.passable) {
-        queueMicrotask(() => setBarrier(connection));
-      }
-      return;
-    }
-
-    if (phase === "maneuver") {
-      if (!from) {
-        if (
-          selected.ownerPlayerId === me?.id &&
-          selected.troops - selected.movedInTurn > 1
-        ) {
-          queueMicrotask(() => setFrom(String(selectedTerritoryId)));
-        }
-        return;
-      }
-
-      const sourceId = Number(from);
-      if (
-        selected.ownerPlayerId === me?.id &&
-        targetIds.includes(selectedTerritoryId)
-      ) {
-        queueMicrotask(() => {
-          setTo(String(selectedTerritoryId));
-          setCount(1);
-          setModal("maneuver");
-          onMapArrow({
-            fromTerritoryId: sourceId,
-            toTerritoryId: selectedTerritoryId,
-            kind: "movement",
-          });
-        });
-        return;
-      }
-
-      const directConnection = findTerritoryConnection(
-        snapshot.connections,
-        sourceId,
-        selectedTerritoryId,
-      );
-      if (directConnection.exists && !directConnection.passable) {
-        queueMicrotask(() => setBarrier(directConnection));
-      }
-    }
-
-    // Processa apenas cliques reais do usuário; heartbeats não repetem ações.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    battleBusy,
-    from,
-    isTurn,
-    me?.id,
-    onMapArrow,
-    phase,
-    selectedTerritoryId,
-    selectionVersion,
-    snapshot.connections,
-    snapshot.territories,
-  ]);
-
-  async function action(path: string, body: Record<string, unknown>) {
+  async function action(path: string, body?: Record<string, unknown>) {
     setMessage("");
     try {
-      const response = await fetch(
-        `/api/games/${encodeURIComponent(roomId)}/${path}`,
-        {
-          method: "POST",
-          cache: "no-store",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        },
-      );
-      const data: unknown = await response.json();
-      if (!response.ok) {
-        throw new Error(
-          typeof data === "object" &&
-            data !== null &&
-            "error" in data &&
-            typeof data.error === "string"
-            ? data.error
-            : "Não foi possível concluir a ação.",
-        );
-      }
-      await onRefresh();
+      const result = await runGameCommand(roomId, path, body);
+      await onRefresh(result.revision ?? undefined);
       return true;
     } catch (error) {
       setMessage(
@@ -559,77 +385,9 @@ export function GameTurnPanel({
     }
   }
 
-  async function submitQuantity() {
-    if (!modal || modal === "cards" || !quantityValid) return;
-
-    const troops = clamp(count, 1, quantityMax);
-    const path =
-      modal === "reinforce"
-        ? "reinforce"
-        : modal === "conquest"
-          ? "conquest"
-          : "maneuver";
-    const body =
-      modal === "reinforce"
-        ? { territoryId: Number(to), troops }
-        : modal === "conquest"
-          ? { troops }
-          : {
-              fromTerritoryId: Number(from),
-              toTerritoryId: Number(to),
-              troops,
-            };
-
-    if (!(await action(path, body))) return;
-
-    setModal(null);
-    setFrom("");
-    setTo("");
-    onMapArrow(null);
-  }
-
   if (snapshot.room.status === "order_roll") return null;
 
-  const quantityMode =
-    modal === "reinforce" || modal === "conquest" || modal === "maneuver"
-      ? modal
-      : null;
-  const quantityTitle =
-    quantityMode === "reinforce"
-      ? "Mobilizar reforços"
-      : quantityMode === "conquest"
-        ? "Território conquistado"
-        : "Reposicionar exército";
-  const quantityEyebrow =
-    quantityMode === "reinforce"
-      ? "Fase de reforço"
-      : quantityMode === "conquest"
-        ? "Conquista confirmada"
-        : "Manobra estratégica";
-  const quantityCta = `${
-    quantityMode === "reinforce" ? "POSICIONAR" : "MOVER"
-  } ${count} ${troopLabel(count).toUpperCase()}`;
-
-  const quantityTarget =
-    quantityMode === "conquest" ? conquestTarget : selectedTarget;
-  const quantitySource =
-    quantityMode === "conquest" ? conquestSource : selectedSource;
-  const quantityTargetBefore = quantityTarget?.troops ?? 0;
-  const quantityTargetAfter =
-    quantityMode === "reinforce"
-      ? quantityTargetBefore + count
-      : quantityMode === "conquest"
-        ? count
-        : quantityTargetBefore + count;
-  const quantitySourceBefore = quantitySource?.troops;
-  const quantitySourceAfter =
-    quantitySourceBefore === undefined ? undefined : quantitySourceBefore - count;
-  const availableLabel =
-    quantityMode === "reinforce"
-      ? `${snapshot.room.reinforcementsRemaining} reforços disponíveis`
-      : quantityMode === "conquest"
-        ? `de 1 a ${safeQuantityMax} · 1 tropa precisa permanecer na origem`
-        : `de 1 a ${safeQuantityMax} · já movidas: ${selectedSource?.movedInTurn ?? 0}`;
+  const visibleMessage = message || interaction.message;
 
   return (
     <section className="rounded-3xl border border-[#17372d]/10 bg-[#faf8f2] p-5 shadow-[0_18px_50px_rgba(42,55,50,0.07)] sm:p-6">
@@ -662,9 +420,8 @@ export function GameTurnPanel({
       {snapshot.room.status === "finished" ? (
         <p className="mt-4 text-sm text-[#326347]">
           Vitória de{" "}
-          {snapshot.players.find(
-            (player) => player.id === snapshot.room.winnerPlayerId,
-          )?.factionName ?? "uma facção"}
+          {game.playersById.get(snapshot.room.winnerPlayerId ?? "")?.factionName ??
+            "uma facção"}
           .
         </p>
       ) : null}
@@ -692,7 +449,7 @@ export function GameTurnPanel({
               type="button"
               onClick={() => {
                 setSelectedCards([]);
-                setModal("cards");
+                setCardsOpen(true);
               }}
               className="rounded-xl bg-[#e4b94f] px-4 py-3 text-xs font-bold uppercase tracking-wider text-[#12392f]"
             >
@@ -705,17 +462,17 @@ export function GameTurnPanel({
       {isTurn && phase === "attack" ? (
         <div className="mt-5 space-y-3">
           <p className="text-sm text-[#64756f]">
-            {snapshot.room.pendingConquest
+            {pendingConquest
               ? "Escolha as tropas para a conquista pendente."
               : battleBusy
                 ? "Acompanhe a resolução do combate."
-                : from
+                : interaction.sourceId !== null
                   ? "Agora selecione um território inimigo destacado."
                   : "Selecione um território próprio com pelo menos 2 tropas."}
           </p>
           <button
             type="button"
-            disabled={Boolean(snapshot.room.pendingConquest) || battleBusy}
+            disabled={Boolean(pendingConquest) || battleBusy}
             onClick={() => void action("phase", { action: "finishAttack" })}
             className="rounded-xl bg-[#12392f] px-4 py-3 text-xs font-bold uppercase tracking-wider text-white disabled:opacity-40"
           >
@@ -727,7 +484,7 @@ export function GameTurnPanel({
       {isTurn && phase === "maneuver" ? (
         <div className="mt-5 space-y-3">
           <p className="text-sm text-[#64756f]">
-            {from
+            {interaction.sourceId !== null
               ? "Escolha qualquer território próprio conectado à origem."
               : "Selecione a origem do deslocamento no mapa."}
           </p>
@@ -749,7 +506,7 @@ export function GameTurnPanel({
             symbol={card.symbol}
             selected={selectedCards.includes(card.id)}
             onClick={() =>
-              modal === "cards" &&
+              cardsOpen &&
               setSelectedCards((cards) =>
                 cards.includes(card.id)
                   ? cards.filter((id) => id !== card.id)
@@ -762,154 +519,136 @@ export function GameTurnPanel({
         ))}
       </div>
 
-      {modal ? (
+      {cardsOpen ? (
         <div className="game-modal-backdrop fixed inset-0 z-30 grid place-items-center p-4">
-          <div
-            className={`game-modal-surface ${
-              modal === "cards" ? "game-card-modal" : "game-action-modal"
-            } w-full ${modal === "cards" ? "max-w-lg" : "max-w-md"} p-6`}
-          >
-            {modal === "cards" ? (
-              <>
-                <p className="game-modal-eyebrow">Troca de cartas</p>
-                <h3 className="text-xl font-semibold">Pedir reforços</h3>
-                <p className="mt-2 text-sm text-[#64756f]">
-                  Selecione três cartas na sua mão. {selectedCards.length}/3
-                  selecionadas.
-                </p>
+          <div className="game-modal-surface game-card-modal w-full max-w-lg p-6">
+            <p className="game-modal-eyebrow">Troca de cartas</p>
+            <h3 className="text-xl font-semibold">Pedir reforços</h3>
+            <p className="mt-2 text-sm text-[#64756f]">
+              Selecione três cartas na sua mão. {selectedCards.length}/3
+              selecionadas.
+            </p>
 
-                <div className="mt-5 grid max-h-[55vh] grid-cols-2 gap-3 overflow-y-auto p-1 sm:grid-cols-3">
-                  {snapshot.myCards.map((card) => (
-                    <TerritoryCard
-                      key={card.id}
-                      territoryId={card.territoryId}
-                      symbol={card.symbol}
-                      selected={selectedCards.includes(card.id)}
-                      onClick={() =>
-                        setSelectedCards((cards) =>
-                          cards.includes(card.id)
-                            ? cards.filter((id) => id !== card.id)
-                            : cards.length < 3
-                              ? [...cards, card.id]
-                              : cards,
-                        )
-                      }
-                    />
-                  ))}
-                </div>
+            <div className="mt-5 grid max-h-[55vh] grid-cols-2 gap-3 overflow-y-auto p-1 sm:grid-cols-3">
+              {snapshot.myCards.map((card) => (
+                <TerritoryCard
+                  key={card.id}
+                  territoryId={card.territoryId}
+                  symbol={card.symbol}
+                  selected={selectedCards.includes(card.id)}
+                  onClick={() =>
+                    setSelectedCards((cards) =>
+                      cards.includes(card.id)
+                        ? cards.filter((id) => id !== card.id)
+                        : cards.length < 3
+                          ? [...cards, card.id]
+                          : cards,
+                    )
+                  }
+                />
+              ))}
+            </div>
 
-                <div className="game-modal-actions mt-5 flex gap-3">
-                  <button
-                    type="button"
-                    disabled={selectedCards.length !== 3}
-                    onClick={() => {
-                      void action("cards/trade", {
-                        cardIds: selectedCards,
-                      }).then((success) => {
-                        if (!success) return;
-                        setSelectedCards([]);
-                        setModal(null);
-                      });
-                    }}
-                    className="game-primary-action rounded-xl bg-[#e4b94f] px-4 py-3 text-xs font-bold uppercase tracking-wider text-[#12392f] disabled:opacity-40"
-                  >
-                    Confirmar troca
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
+            <div className="game-modal-actions mt-5 flex gap-3">
+              <button
+                type="button"
+                disabled={selectedCards.length !== 3}
+                onClick={() => {
+                  void action("cards/trade", { cardIds: selectedCards }).then(
+                    (success) => {
+                      if (!success) return;
                       setSelectedCards([]);
-                      setModal(null);
-                    }}
-                    className="game-secondary-action rounded-xl px-4 py-3 text-xs font-bold uppercase tracking-wider"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </>
-            ) : quantityMode ? (
-              <>
-                <p className="game-modal-eyebrow">{quantityEyebrow}</p>
-                <h3 className="text-xl font-semibold">{quantityTitle}</h3>
-
-                {quantityValid ? (
-                  <TroopQuantitySelector
-                    mode={quantityMode}
-                    value={count}
-                    min={1}
-                    max={safeQuantityMax}
-                    onChange={setCount}
-                    sourceName={
-                      quantityMode === "reinforce"
-                        ? undefined
-                        : territoryName(quantitySource?.territoryId)
-                    }
-                    targetName={territoryName(quantityTarget?.territoryId)}
-                    sourceBefore={quantitySourceBefore}
-                    sourceAfter={quantitySourceAfter}
-                    targetBefore={quantityTargetBefore}
-                    targetAfter={quantityTargetAfter}
-                    availableLabel={availableLabel}
-                  />
-                ) : (
-                  <p className="game-modal-state-warning">
-                    O estado da partida mudou e não há mais tropas disponíveis para
-                    esta ação.
-                  </p>
-                )}
-
-                <div className="game-modal-actions mt-6">
-                  <button
-                    type="button"
-                    disabled={!quantityValid}
-                    onClick={() => void submitQuantity()}
-                    className="game-primary-action w-full rounded-xl px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] disabled:opacity-40"
-                  >
-                    {quantityCta}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setModal(null);
-                      setTo("");
-                      onMapArrow(null);
-                    }}
-                    className="game-cancel-action mt-3 w-full text-xs font-bold uppercase tracking-[0.12em]"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </>
-            ) : null}
+                      setCardsOpen(false);
+                    },
+                  );
+                }}
+                className="game-primary-action rounded-xl bg-[#e4b94f] px-4 py-3 text-xs font-bold uppercase tracking-wider text-[#12392f] disabled:opacity-40"
+              >
+                Confirmar troca
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCards([]);
+                  setCardsOpen(false);
+                }}
+                className="game-secondary-action rounded-xl px-4 py-3 text-xs font-bold uppercase tracking-wider"
+              >
+                Cancelar
+              </button>
+            </div>
           </div>
         </div>
       ) : null}
 
-      {isTurn && snapshot.room.pendingConquest && modal !== "conquest" ? (
-        <button
-          type="button"
-          onClick={() => {
-            setCount(1);
-            setModal("conquest");
+      {localDialog?.kind === "reinforce" && localTarget ? (
+        <QuantityDialog
+          key={`reinforce-${localDialog.targetId}`}
+          mode="reinforce"
+          max={snapshot.room.reinforcementsRemaining}
+          target={localTarget}
+          reinforcementRemaining={snapshot.room.reinforcementsRemaining}
+          onCancel={interaction.clearDialog}
+          onSubmit={async (troops) => {
+            const success = await action("reinforce", {
+              territoryId: localDialog.targetId,
+              troops,
+            });
+            if (success) interaction.clearSelection();
+            return success;
           }}
-          className="mt-4 rounded-xl bg-[#a33c33] px-4 py-3 text-xs font-bold uppercase tracking-wider text-white"
-        >
-          Concluir conquista
-        </button>
+        />
       ) : null}
 
-      {barrier ? (
+      {localDialog?.kind === "maneuver" && selectedSource && localTarget ? (
+        <QuantityDialog
+          key={`maneuver-${localDialog.sourceId}-${localDialog.targetId}`}
+          mode="maneuver"
+          max={Math.max(
+            0,
+            selectedSource.troops - selectedSource.movedInTurn - 1,
+          )}
+          source={selectedSource}
+          target={localTarget}
+          reinforcementRemaining={snapshot.room.reinforcementsRemaining}
+          onCancel={interaction.clearDialog}
+          onSubmit={async (troops) => {
+            const success = await action("maneuver", {
+              fromTerritoryId: localDialog.sourceId,
+              toTerritoryId: localDialog.targetId,
+              troops,
+            });
+            if (success) interaction.clearSelection();
+            return success;
+          }}
+        />
+      ) : null}
+
+      {isTurn && pendingConquest && !battleBusy && conquestSource && conquestTarget ? (
+        <QuantityDialog
+          key={`conquest-${pendingConquest.fromTerritoryId}-${pendingConquest.toTerritoryId}`}
+          mode="conquest"
+          max={Math.max(0, conquestSource.troops - 1)}
+          source={conquestSource}
+          target={conquestTarget}
+          reinforcementRemaining={snapshot.room.reinforcementsRemaining}
+          onSubmit={(troops) => action("conquest", { troops })}
+        />
+      ) : null}
+
+      {interaction.barrier ? (
         <div className="fixed bottom-5 left-1/2 z-40 w-[min(28rem,calc(100%-2rem))] -translate-x-1/2 rounded-2xl border border-[#e4b94f]/60 bg-[#17372d] p-4 text-white shadow-xl">
           <p className="font-semibold">
-            Fronteira bloqueada — {barrier.barrierName ?? "barreira natural"}
+            Fronteira bloqueada —{" "}
+            {interaction.barrier.barrierName ?? "barreira natural"}
           </p>
           <p className="mt-1 text-sm text-[#d4e2dc]">
-            {barrier.description ??
+            {interaction.barrier.description ??
               "Esta barreira impede uma rota militar direta entre esses territórios."}
           </p>
           <button
             type="button"
-            onClick={() => setBarrier(null)}
+            onClick={interaction.clearBarrier}
             className="mt-3 text-xs font-bold uppercase tracking-wider text-[#e8c35e]"
           >
             Fechar
@@ -931,8 +670,8 @@ export function GameTurnPanel({
         </div>
       ) : null}
 
-      {message ? (
-        <p className="mt-4 text-sm text-[#a33c33]">{message}</p>
+      {visibleMessage ? (
+        <p className="mt-4 text-sm text-[#a33c33]">{visibleMessage}</p>
       ) : null}
     </section>
   );
