@@ -37,14 +37,14 @@ export async function gameCommand<T>(
 
   try {
     await client.query("BEGIN");
-    await lockRoomRevision(client, roomId);
+    const baseRevision = await lockRoomRevision(client, roomId);
 
     const value = await execute(client);
     const revision = await bumpGameRevision(client, roomId);
 
     await client.query("COMMIT");
 
-    return { value, revision };
+    return { value, baseRevision, revision };
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;
