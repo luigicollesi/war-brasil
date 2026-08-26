@@ -3,6 +3,7 @@ import { GameClient } from "@/src/components/game-client-v2";
 import { ServerConnectionIndicator } from "@/src/components/server-connection-indicator";
 import "./game-polish.css";
 import "./game-quantity.css";
+import "./game-interaction-fix.css";
 
 type GamePageProps = {
   params: Promise<{ roomId: string }>;
