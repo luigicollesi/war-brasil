@@ -7,6 +7,7 @@ export type GameRevision = number;
 
 export type GameCommandResult<T> = {
   value: T;
+  baseRevision: GameRevision;
   revision: GameRevision;
 };
 
