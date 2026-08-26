@@ -1,29 +1,24 @@
 import type { TerritoryConnection } from "@/src/lib/territory-connections";
 
-export type RoadKind = "road";
-export type RoadTier = "secondary";
-
-export type Road = {
+type Road = {
   id: string;
   fromTerritoryId: number;
   toTerritoryId: number;
-  kind: RoadKind;
-  tier: RoadTier;
 };
 
 function normalizedPair(territoryA: number, territoryB: number) {
   return territoryA < territoryB
-    ? [territoryA, territoryB] as const
-    : [territoryB, territoryA] as const;
+    ? ([territoryA, territoryB] as const)
+    : ([territoryB, territoryA] as const);
 }
 
-export function roadId(territoryA: number, territoryB: number) {
+function roadId(territoryA: number, territoryB: number) {
   const [from, to] = normalizedPair(territoryA, territoryB);
   return `road-${from}-${to}`;
 }
 
 export function roadsFromConnections(
-  connections: TerritoryConnection[],
+  connections: readonly TerritoryConnection[],
 ): Road[] {
   const roads = new Map<string, Road>();
 
@@ -46,13 +41,12 @@ export function roadsFromConnections(
       id,
       fromTerritoryId,
       toTerritoryId,
-      kind: "road",
-      tier: "secondary",
     });
   }
 
-  return Array.from(roads.values()).sort((first, second) =>
-    first.fromTerritoryId - second.fromTerritoryId ||
-    first.toTerritoryId - second.toTerritoryId,
+  return Array.from(roads.values()).sort(
+    (first, second) =>
+      first.fromTerritoryId - second.fromTerritoryId ||
+      first.toTerritoryId - second.toTerritoryId,
   );
 }
