@@ -4,7 +4,7 @@ export function reinforcementBase(territoryCount: number) {
   return Math.max(3, Math.floor(territoryCount / 2));
 }
 
-export function regionBonus(territoryIds: number[]) {
+function regionBonus(territoryIds: number[]) {
   const controlled = new Set(territoryIds);
   return Object.entries(REGION_REINFORCEMENT_BONUSES).reduce((total, [region, bonus]) => {
     const regionTerritories = Object.entries(TERRITORY_METADATA)
