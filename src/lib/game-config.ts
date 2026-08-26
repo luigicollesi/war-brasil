@@ -56,7 +56,7 @@ export const TERRITORY_METADATA: Record<number, { name: string; region: Region }
 };
 
 export const CARD_LAYOUT = {
-  map: { left: "13%", top: "13%", width: "74%", height: "48%" },
-  name: { left: "12%", top: "66%", width: "76%" },
+  map: { left: "-45%", top: "-25%", width: "200%", height: "200%" },
+  name: { left: "12%", top: "67.5%", width: "76%" },
   symbol: { left: "39%", top: "80%", size: "22%" },
 } as const;

@@ -468,14 +468,17 @@ function GameTurnPanel({
     return () => window.clearTimeout(timeout);
   }, [snapshot.myCards]);
 
+  const pendingConquestFrom = snapshot.room.pendingConquest?.fromTerritoryId ?? null;
+  const pendingConquestTo = snapshot.room.pendingConquest?.toTerritoryId ?? null;
+
   useEffect(() => {
-    if (isTurn && snapshot.room.pendingConquest && !battleBusy) {
+    if (isTurn && pendingConquestFrom !== null && pendingConquestTo !== null && !battleBusy) {
       queueMicrotask(() => {
         setCount("1");
         setModal("conquest");
       });
     }
-  }, [battleBusy, isTurn, snapshot.room.pendingConquest]);
+  }, [battleBusy, isTurn, pendingConquestFrom, pendingConquestTo]);
 
   useEffect(() => {
     if (selectedTerritoryId !== null) return;
