@@ -11,12 +11,9 @@ import {
 } from "@/src/lib/game-battle-service";
 import { gameCommand } from "@/src/lib/game-command";
 import { TERRITORY_METADATA } from "@/src/lib/game-config";
-import { objectiveWon } from "@/src/lib/game-objective-service";
 import { resolveBattle } from "@/src/lib/game-rules";
-import {
-  isJurassicTunnelConnection,
-} from "@/src/lib/territory-connections";
-import { getTerritoryConnection } from "@/src/lib/territory-connections.server";
+import { getBaseTerritoryConnection } from "@/src/lib/game-topology-service";
+import { isJurassicTunnelConnection } from "@/src/lib/territory-connections";
 import { RoomError } from "@/src/lib/rooms";
 
 type CombatRoom = BattleRoomState & {
@@ -34,7 +31,6 @@ type LockedTerritory = {
   territory_id: number;
   owner_player_id: string;
   troops: number;
-  moved_in_turn: number;
 };
 
 function normalizeRoomId(value: string) {
@@ -168,7 +164,7 @@ export async function attackCommand(
       from,
       to,
     );
-    const connection = await getTerritoryConnection(client, from, to);
+    const connection = await getBaseTerritoryConnection(client, from, to);
 
     if (!tunnelActive && !connection.exists) {
       throw new RoomError(
@@ -190,7 +186,7 @@ export async function attackCommand(
 
     const rows = (
       await client.query<LockedTerritory>(
-        `SELECT territory_id,owner_player_id,troops,moved_in_turn
+        `SELECT territory_id,owner_player_id,troops
          FROM game_territories
          WHERE room_id=$1 AND territory_id=ANY($2::smallint[])
          FOR UPDATE`,
@@ -274,7 +270,7 @@ export async function rollBattleDiceCommand(value: string, session: string) {
 
     const rows = (
       await client.query<LockedTerritory>(
-        `SELECT territory_id,owner_player_id,troops,moved_in_turn
+        `SELECT territory_id,owner_player_id,troops
          FROM game_territories
          WHERE room_id=$1 AND territory_id=ANY($2::smallint[])
          FOR UPDATE`,
@@ -338,88 +334,5 @@ export async function rollBattleDiceCommand(value: string, session: string) {
       409,
       { stage: battle.stage },
     );
-  });
-}
-
-export async function completeConquestCommand(
-  value: string,
-  session: string,
-  input: Record<string, unknown>,
-) {
-  const roomId = normalizeRoomId(value);
-  const troops = positiveInteger(
-    input.troops,
-    "Quantidade de tropas inválida.",
-  );
-
-  return gameCommand(roomId, async (client) => {
-    const room = await loadRoom(client, roomId);
-    const player = await playerFor(client, room.id, session);
-    assertAttackTurn(room, player);
-
-    await advanceBattlePresentation(client, room);
-
-    const from = room.pending_from_territory_id;
-    const to = room.pending_to_territory_id;
-    if (!from || !to) {
-      throw new RoomError("Não há conquista pendente.", 409);
-    }
-
-    if (isBattle(room.last_battle)) {
-      throw new RoomError(
-        "Aguarde o resultado da batalha antes de transferir tropas.",
-        409,
-        { stage: room.last_battle.stage },
-      );
-    }
-
-    const rows = (
-      await client.query<LockedTerritory>(
-        `SELECT territory_id,owner_player_id,troops,moved_in_turn
-         FROM game_territories
-         WHERE room_id=$1 AND territory_id=ANY($2::smallint[])
-         FOR UPDATE`,
-        [room.id, [from, to]],
-      )
-    ).rows;
-
-    const source = rows.find((row) => row.territory_id === from);
-    const target = rows.find((row) => row.territory_id === to);
-
-    if (
-      !source ||
-      !target ||
-      source.owner_player_id !== player.id ||
-      target.owner_player_id !== player.id ||
-      troops > source.troops - 1
-    ) {
-      throw new RoomError("Deslocamento de conquista inválido.", 409);
-    }
-
-    await client.query(
-      `UPDATE game_territories
-       SET troops=troops-$3
-       WHERE room_id=$1 AND territory_id=$2`,
-      [room.id, from, troops],
-    );
-    await client.query(
-      `UPDATE game_territories
-       SET troops=$3,moved_in_turn=$3
-       WHERE room_id=$1 AND territory_id=$2`,
-      [room.id, to, troops],
-    );
-    await client.query(
-      `UPDATE game_rooms
-       SET pending_from_territory_id=NULL,pending_to_territory_id=NULL
-       WHERE id=$1`,
-      [room.id],
-    );
-
-    room.pending_from_territory_id = null;
-    room.pending_to_territory_id = null;
-    await saveBattle(client, room, null);
-    await objectiveWon(client, room.id, player.id);
-
-    return null;
   });
 }
