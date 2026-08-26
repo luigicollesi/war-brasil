@@ -3,7 +3,12 @@ import "server-only";
 import { randomInt } from "node:crypto";
 import type { PoolClient } from "pg";
 import { gameCommand } from "@/src/lib/game-command";
-import { TERRITORY_METADATA } from "@/src/lib/game-config";
+import {
+  TERRITORY_METADATA,
+  type CardSymbol,
+} from "@/src/lib/game-config";
+import { isValidTrade, tradeValue } from "@/src/lib/game-rules";
+import { objectiveWon } from "@/src/lib/game-objective-service";
 import {
   jurassicTunnelConnection,
   reachableTerritoryIds,
@@ -18,6 +23,8 @@ type CommandRoom = {
   phase: string;
   current_player_id: string | null;
   jurassic_tunnel_territory_id: number | null;
+  reinforcements_remaining: number;
+  trade_count: number;
 };
 
 type CommandPlayer = {
@@ -41,6 +48,13 @@ type OrderRoll = {
   value: number;
 };
 
+type TradeCard = {
+  id: string;
+  territory_id: number | null;
+  symbol: CardSymbol | null;
+  is_wild: boolean;
+};
+
 function normalizeRoomId(value: string) {
   if (!/^\d+$/.test(value)) {
     throw new RoomError("Partida não encontrada.", 404);
@@ -57,7 +71,8 @@ function positiveInteger(value: unknown, message: string) {
 
 async function loadRoom(client: PoolClient, roomId: string) {
   const result = await client.query<CommandRoom>(
-    `SELECT id,status,order_roll_round,phase,current_player_id,jurassic_tunnel_territory_id
+    `SELECT id,status,order_roll_round,phase,current_player_id,
+            jurassic_tunnel_territory_id,reinforcements_remaining,trade_count
      FROM game_rooms
      WHERE id=$1`,
     [roomId],
@@ -209,6 +224,159 @@ export async function rollOrderDieCommand(value: string, session: string) {
     );
 
     return { value: die };
+  });
+}
+
+export async function reinforceCommand(
+  value: string,
+  session: string,
+  input: Record<string, unknown>,
+) {
+  const roomId = normalizeRoomId(value);
+  const territoryId = positiveInteger(
+    input.territoryId,
+    "Território inválido.",
+  );
+  const troops = positiveInteger(
+    input.troops,
+    "Quantidade de tropas inválida.",
+  );
+
+  return gameCommand(roomId, async (client) => {
+    const room = await loadRoom(client, roomId);
+    const player = await playerFor(client, room.id, session);
+    assertTurn(room, player, "reinforcement");
+
+    if (troops > room.reinforcements_remaining) {
+      throw new RoomError("Você não possui reforços suficientes.", 409);
+    }
+
+    const own = await client.query(
+      `SELECT 1
+       FROM game_territories
+       WHERE room_id=$1 AND territory_id=$2 AND owner_player_id=$3
+       FOR UPDATE`,
+      [room.id, territoryId, player.id],
+    );
+
+    if (!own.rowCount) {
+      throw new RoomError(
+        "Você só pode reforçar territórios próprios.",
+        409,
+      );
+    }
+
+    const remaining = room.reinforcements_remaining - troops;
+    await client.query(
+      `UPDATE game_territories
+       SET troops=troops+$3
+       WHERE room_id=$1 AND territory_id=$2`,
+      [room.id, territoryId, troops],
+    );
+    await client.query(
+      `UPDATE game_rooms
+       SET reinforcements_remaining=$2,
+           phase=CASE WHEN $2=0 THEN 'attack' ELSE phase END
+       WHERE id=$1`,
+      [room.id, remaining],
+    );
+
+    await objectiveWon(client, room.id, player.id);
+    return null;
+  });
+}
+
+export async function tradeCardsCommand(
+  value: string,
+  session: string,
+  input: Record<string, unknown>,
+) {
+  const roomId = normalizeRoomId(value);
+  const ids = Array.isArray(input.cardIds)
+    ? input.cardIds.filter((card): card is string => typeof card === "string")
+    : [];
+
+  if (ids.length !== 3 || new Set(ids).size !== 3) {
+    throw new RoomError("Selecione exatamente três cartas diferentes.", 422);
+  }
+
+  return gameCommand(roomId, async (client) => {
+    const room = await loadRoom(client, roomId);
+    const player = await playerFor(client, room.id, session);
+
+    if (
+      room.status !== "playing" ||
+      room.current_player_id !== player.id ||
+      !["cards", "reinforcement"].includes(room.phase)
+    ) {
+      throw new RoomError("A troca não está disponível neste momento.", 409);
+    }
+
+    const cards = await client.query<TradeCard>(
+      `SELECT id,territory_id,symbol,is_wild
+       FROM game_cards
+       WHERE room_id=$1
+         AND owner_player_id=$2
+         AND zone='hand'
+         AND id=ANY($3::bigint[])
+       FOR UPDATE`,
+      [room.id, player.id, ids],
+    );
+
+    if (cards.rowCount !== 3) {
+      throw new RoomError(
+        "Uma das cartas selecionadas não está na sua mão.",
+        409,
+      );
+    }
+
+    const symbols = cards.rows.map((card) =>
+      card.is_wild ? "wild" : card.symbol!,
+    ) as Array<CardSymbol | "wild">;
+
+    if (!isValidTrade(symbols)) {
+      throw new RoomError("Esta combinação de cartas não é válida.", 422);
+    }
+
+    const owned = new Set(
+      (
+        await client.query<{ territory_id: number }>(
+          `SELECT territory_id
+           FROM game_territories
+           WHERE room_id=$1 AND owner_player_id=$2`,
+          [room.id, player.id],
+        )
+      ).rows.map((row) => row.territory_id),
+    );
+
+    await client.query(
+      `UPDATE game_cards
+       SET zone='discard',owner_player_id=NULL,deck_order=NULL
+       WHERE id=ANY($1::bigint[])`,
+      [ids],
+    );
+
+    for (const card of cards.rows) {
+      if (card.territory_id && owned.has(card.territory_id)) {
+        await client.query(
+          `UPDATE game_territories
+           SET troops=troops+2
+           WHERE room_id=$1 AND territory_id=$2`,
+          [room.id, card.territory_id],
+        );
+      }
+    }
+
+    await client.query(
+      `UPDATE game_rooms
+       SET reinforcements_remaining=reinforcements_remaining+$2,
+           trade_count=trade_count+1
+       WHERE id=$1`,
+      [room.id, tradeValue(room.trade_count)],
+    );
+
+    await objectiveWon(client, room.id, player.id);
+    return null;
   });
 }
 
