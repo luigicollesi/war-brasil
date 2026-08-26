@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PLAYER_COLORS, type PlayerColor } from "@/src/lib/lobby";
 import type { TerritoryConnection } from "@/src/lib/territory-connections";
+import { TERRITORY_METADATA } from "@/src/lib/game-config";
+import { JurassicTunnelConnection } from "@/src/components/jurassic-tunnel-connection";
 import { getTerritoryAnchor, TerritoryArrow, type TerritoryAnchor, type TerritoryArrowKind } from "@/src/components/territory-arrow";
 
 export type BoardTerritory = { territoryId: number; ownerPlayerId: string; ownerName: string; ownerColor: PlayerColor; troops: number };
@@ -17,6 +19,7 @@ type InteractiveBoardProps = {
   availableTerritoryIds?: number[];
   targetTerritoryIds?: number[];
   arrow?: MapArrow;
+  jurassicTunnelDestinationId?: number | null;
 };
 
 const regionLabels: Record<string,string> = { norte:"Norte", nordeste:"Nordeste", "centro-oeste":"Centro-Oeste", sudeste:"Sudeste", sul:"Sul" };
@@ -35,7 +38,7 @@ const fallbackRegionBorder = {
 function colorHex(color:PlayerColor) { return PLAYER_COLORS.find(item=>item.value===color)?.hex??"#64756f"; }
 function readTerritory(path:SVGPathElement):TerritoryDetails { return { id:Number(path.dataset.id),name:path.dataset.name??"Território",region:path.dataset.region??"",state:path.dataset.uf??"—" }; }
 
-export function InteractiveBoard({ territories, connections=[], onSelect, selectedTerritoryId, availableTerritoryIds=[], targetTerritoryIds=[], arrow=null }:InteractiveBoardProps) {
+export function InteractiveBoard({ territories, connections=[], onSelect, selectedTerritoryId, availableTerritoryIds=[], targetTerritoryIds=[], arrow=null, jurassicTunnelDestinationId=null }:InteractiveBoardProps) {
   const boardRef=useRef<HTMLObjectElement>(null);
   const containerRef=useRef<HTMLDivElement>(null);
   const [mapVersion,setMapVersion]=useState(0);
@@ -90,13 +93,17 @@ export function InteractiveBoard({ territories, connections=[], onSelect, select
   const hoveredState=hovered?territoryById.get(hovered.details.id):undefined;
   const relevantConnection=hovered&&selectedTerritoryId&&selectedTerritoryId!==hovered.details.id?connections.find(connection=>(connection.territoryA===selectedTerritoryId&&connection.territoryB===hovered.details.id)||(connection.territoryB===selectedTerritoryId&&connection.territoryA===hovered.details.id)):undefined;
   const from=arrow?anchors.get(arrow.fromTerritoryId):undefined, to=arrow?anchors.get(arrow.toTerritoryId):undefined;
+  const tunnelFrom=jurassicTunnelDestinationId?anchors.get(3):undefined;
+  const tunnelTo=jurassicTunnelDestinationId?anchors.get(jurassicTunnelDestinationId):undefined;
+  const tunnelTargetName=jurassicTunnelDestinationId?TERRITORY_METADATA[jurassicTunnelDestinationId]?.name:null;
 
   return <section className="min-w-0 rounded-3xl border border-[#17372d]/10 bg-[#f9f7f0] p-2 shadow-[0_18px_55px_rgba(34,48,42,0.08)] sm:p-4">
     <div className="flex flex-col gap-3 px-2 pb-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#8b7a4a]">Territórios distribuídos</p><h2 className="mt-1 text-lg font-semibold">Tabuleiro do Brasil</h2></div><p className="flex items-center gap-2 text-xs text-[#6e7d77]"><span className="h-2 w-2 animate-pulse rounded-full bg-[#3f8b68]"/>Posse sincronizada</p></div>
     <div ref={containerRef} className="relative overflow-hidden rounded-2xl border border-[#17372d]/8 bg-[#e9e4d7]">
       <object ref={boardRef} data="/war-brasil-42.production.svg" type="image/svg+xml" title="Mapa interativo do Brasil" aria-label="Mapa interativo do Brasil" onLoad={()=>setMapVersion(version=>version+1)} className="aspect-square h-auto min-h-[62vh] w-full lg:min-h-[76vh]"><p>Não foi possível carregar o mapa interativo.</p></object>
+      {tunnelFrom&&tunnelTo&&tunnelTargetName?<JurassicTunnelConnection from={tunnelFrom} to={tunnelTo} targetName={tunnelTargetName}/>:null}
       {from&&to&&arrow?<TerritoryArrow from={from} to={to} kind={arrow.kind}/>:null}
-      {hovered&&hoveredState?<div className="pointer-events-none absolute z-20 w-52 rounded-xl bg-[#12392f]/95 p-3 text-xs text-white shadow-xl backdrop-blur" style={{left:hovered.x,top:hovered.y}}><p className="font-semibold">{hovered.details.name}</p><p className="mt-1 text-[#c8d9d1]">{hoveredState.ownerName} · {regionLabels[hovered.details.region]??hovered.details.region}</p><p className="mt-1 font-semibold text-[#e8c35e]">{hoveredState.troops} tropas</p>{relevantConnection?<p className="mt-2 border-t border-white/15 pt-2 text-[#ffd6a1]">{relevantConnection.passable?"Fronteira militar disponível":relevantConnection.barrierName??"Fronteira bloqueada"}</p>:null}</div>:null}
+      {hovered&&hoveredState?<div className="pointer-events-none absolute z-20 w-52 rounded-xl bg-[#12392f]/95 p-3 text-xs text-white shadow-xl backdrop-blur" style={{left:hovered.x,top:hovered.y}}><p className="font-semibold">{hovered.details.name}</p><p className="mt-1 text-[#c8d9d1]">{hoveredState.ownerName} · {regionLabels[hovered.details.region]??hovered.details.region}</p><p className="mt-1 font-semibold text-[#e8c35e]">{hoveredState.troops} tropas</p>{relevantConnection?<p className="mt-2 border-t border-white/15 pt-2 text-[#ffd6a1]">{relevantConnection.barrierName==="Túnel Jurássico"?"🦖 Túnel Jurássico":relevantConnection.passable?"Fronteira militar disponível":relevantConnection.barrierName??"Fronteira bloqueada"}</p>:null}</div>:null}
     </div>
   </section>;
 }
