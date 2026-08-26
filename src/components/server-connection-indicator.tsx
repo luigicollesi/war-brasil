@@ -1,19 +1,33 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useSyncExternalStore } from "react";
+import {
+  gameSyncMetricsStore,
+  type GameSyncMetrics,
+} from "@/src/lib/game-sync-metrics-store";
 
-type ConnectionState = "checking" | "excellent" | "good" | "unstable" | "slow" | "reconnecting" | "offline";
+type ConnectionState =
+  | "checking"
+  | "excellent"
+  | "good"
+  | "unstable"
+  | "slow"
+  | "reconnecting"
+  | "offline";
 
-const CHECK_INTERVAL_MS = 3_000;
-const REQUEST_TIMEOUT_MS = 4_000;
+const SERVER_METRICS: GameSyncMetrics = {
+  latencyMs: null,
+  failures: 0,
+  online: true,
+};
 
-function stateFor(latency: number | null, failures: number): ConnectionState {
-  if (failures >= 3) return "offline";
-  if (failures > 0) return "reconnecting";
-  if (latency === null) return "checking";
-  if (latency < 180) return "excellent";
-  if (latency < 400) return "good";
-  if (latency < 900) return "unstable";
+function stateFor(metrics: GameSyncMetrics): ConnectionState {
+  if (!metrics.online || metrics.failures >= 3) return "offline";
+  if (metrics.failures > 0) return "reconnecting";
+  if (metrics.latencyMs === null) return "checking";
+  if (metrics.latencyMs < 180) return "excellent";
+  if (metrics.latencyMs < 400) return "good";
+  if (metrics.latencyMs < 900) return "unstable";
   return "slow";
 }
 
@@ -48,71 +62,19 @@ const stateTone: Record<ConnectionState, string> = {
 };
 
 export function ServerConnectionIndicator() {
-  const [smoothedLatency, setSmoothedLatency] = useState<number | null>(null);
-  const [failures, setFailures] = useState(0);
-
-  useEffect(() => {
-    let active = true;
-    let timeoutId = 0;
-
-    async function check() {
-      if (!navigator.onLine) {
-        if (active) setFailures(3);
-        timeoutId = window.setTimeout(check, CHECK_INTERVAL_MS);
-        return;
-      }
-
-      const controller = new AbortController();
-      const requestTimeout = window.setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-      const startedAt = performance.now();
-
-      try {
-        const response = await fetch("/api/health", {
-          cache: "no-store",
-          signal: controller.signal,
-        });
-
-        if (!response.ok) throw new Error("Health check indisponível");
-
-        const latency = performance.now() - startedAt;
-        if (active) {
-          setFailures(0);
-          setSmoothedLatency((previous) => previous === null ? latency : previous * 0.7 + latency * 0.3);
-        }
-      } catch {
-        if (active) setFailures((value) => Math.min(3, value + 1));
-      } finally {
-        window.clearTimeout(requestTimeout);
-        if (active) timeoutId = window.setTimeout(check, CHECK_INTERVAL_MS);
-      }
-    }
-
-    const offline = () => setFailures(3);
-    const online = () => {
-      setFailures(0);
-      void check();
-    };
-
-    window.addEventListener("offline", offline);
-    window.addEventListener("online", online);
-    void check();
-
-    return () => {
-      active = false;
-      window.clearTimeout(timeoutId);
-      window.removeEventListener("offline", offline);
-      window.removeEventListener("online", online);
-    };
-  }, []);
-
-  const state = stateFor(smoothedLatency, failures);
-  const latencyLabel = smoothedLatency === null || state === "offline"
-    ? null
-    : `${Math.round(smoothedLatency)} ms`;
-  const title = useMemo(
-    () => latencyLabel ? `${labels[state]} · ${latencyLabel}` : labels[state],
-    [latencyLabel, state],
+  const metrics = useSyncExternalStore(
+    gameSyncMetricsStore.subscribe,
+    gameSyncMetricsStore.getSnapshot,
+    () => SERVER_METRICS,
   );
+  const state = stateFor(metrics);
+  const latencyLabel =
+    metrics.latencyMs === null || state === "offline"
+      ? null
+      : `${Math.round(metrics.latencyMs)} ms`;
+  const title = latencyLabel
+    ? `${labels[state]} · ${latencyLabel}`
+    : labels[state];
 
   return (
     <div
@@ -125,7 +87,11 @@ export function ServerConnectionIndicator() {
         {[1, 2, 3, 4].map((bar) => (
           <span
             key={bar}
-            className={`w-[3px] rounded-full transition-all ${bar <= activeBars[state] ? "bg-current opacity-100" : "bg-white/20 opacity-50"}`}
+            className={`w-[3px] rounded-full transition-all ${
+              bar <= activeBars[state]
+                ? "bg-current opacity-100"
+                : "bg-white/20 opacity-50"
+            }`}
             style={{ height: `${5 + bar * 3}px` }}
           />
         ))}
@@ -134,7 +100,9 @@ export function ServerConnectionIndicator() {
         <strong className="max-w-36 truncate text-[10px] font-bold uppercase tracking-[0.08em]">
           {labels[state]}
         </strong>
-        {latencyLabel ? <small className="mt-1 text-[10px] text-white/55">{latencyLabel}</small> : null}
+        {latencyLabel ? (
+          <small className="mt-1 text-[10px] text-white/55">{latencyLabel}</small>
+        ) : null}
       </span>
     </div>
   );
