@@ -28,6 +28,11 @@ type TerritoryDetails = {
   state: string;
 };
 
+type HoveredTerritory = {
+  id: number;
+  details: TerritoryDetails;
+};
+
 type MapArrow = {
   fromTerritoryId: number;
   toTerritoryId: number;
@@ -100,7 +105,6 @@ export function InteractiveBoard({
   const containerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const pathsByIdRef = useRef(new Map<number, SVGPathElement>());
-  const detailsByIdRef = useRef(new Map<number, TerritoryDetails>());
   const visualSignatureRef = useRef(new Map<number, string>());
   const cleanupBoardRef = useRef<(() => void) | null>(null);
   const pointerRef = useRef({ x: 0, y: 0 });
@@ -108,7 +112,8 @@ export function InteractiveBoard({
   const hoveredTerritoryRef = useRef<number | null>(null);
   const onSelectRef = useRef(onSelect);
   const [anchors, setAnchors] = useState<Map<number, TerritoryAnchor>>(new Map());
-  const [hoveredTerritoryId, setHoveredTerritoryId] = useState<number | null>(null);
+  const [hoveredTerritory, setHoveredTerritory] =
+    useState<HoveredTerritory | null>(null);
   const [roadsVisible, setRoadsVisible] = useState(false);
   const territoryById = useMemo(
     () => new Map(territories.map((territory) => [territory.territoryId, territory])),
@@ -173,13 +178,11 @@ export function InteractiveBoard({
     if (!paths.length) return;
 
     const nextPaths = new Map<number, SVGPathElement>();
-    const nextDetails = new Map<number, TerritoryDetails>();
     const nextAnchors = new Map<number, TerritoryAnchor>();
 
     for (const path of paths) {
       const id = Number(path.dataset.id);
       nextPaths.set(id, path);
-      nextDetails.set(id, readTerritory(path));
       nextAnchors.set(id, getTerritoryAnchor(path));
       path.setAttribute("tabindex", "0");
       path.setAttribute("role", "button");
@@ -188,7 +191,6 @@ export function InteractiveBoard({
     }
 
     pathsByIdRef.current = nextPaths;
-    detailsByIdRef.current = nextDetails;
     visualSignatureRef.current.clear();
     setAnchors(nextAnchors);
 
@@ -209,7 +211,9 @@ export function InteractiveBoard({
       if (!path) return;
       const id = Number(path.dataset.id);
       hoveredTerritoryRef.current = id;
-      setHoveredTerritoryId(id);
+      setHoveredTerritory((current) =>
+        current?.id === id ? current : { id, details: readTerritory(path) },
+      );
       scheduleTooltipPosition(event as PointerEvent);
     };
     const pointerMove = (event: Event) => {
@@ -227,7 +231,7 @@ export function InteractiveBoard({
       const related = (event as PointerEvent).relatedTarget as Node | null;
       if (related && path.contains(related)) return;
       hoveredTerritoryRef.current = null;
-      setHoveredTerritoryId(null);
+      setHoveredTerritory(null);
     };
 
     root.addEventListener("click", click);
@@ -297,17 +301,16 @@ export function InteractiveBoard({
     targetTerritoryIds,
   ]);
 
-  const hoveredDetails =
-    hoveredTerritoryId === null
-      ? undefined
-      : detailsByIdRef.current.get(hoveredTerritoryId);
+  const hoveredTerritoryId = hoveredTerritory?.id ?? null;
+  const hoveredDetails = hoveredTerritory?.details;
   const hoveredState =
     hoveredTerritoryId === null
       ? undefined
       : territoryById.get(hoveredTerritoryId);
   const relevantConnection =
     hoveredTerritoryId !== null &&
-    selectedTerritoryId &&
+    selectedTerritoryId !== null &&
+    selectedTerritoryId !== undefined &&
     selectedTerritoryId !== hoveredTerritoryId
       ? connections.find(
           (connection) =>
