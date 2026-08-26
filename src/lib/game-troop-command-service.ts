@@ -25,7 +25,6 @@ type TroopPlayer = {
 };
 
 type TradeCard = {
-  id: string;
   territory_id: number | null;
   symbol: CardSymbol | null;
   is_wild: boolean;
@@ -212,7 +211,7 @@ export async function tradeCardsCommand(
     }
 
     const cards = await client.query<TradeCard>(
-      `SELECT id,territory_id,symbol,is_wild
+      `SELECT territory_id,symbol,is_wild
        FROM game_cards
        WHERE room_id=$1
          AND owner_player_id=$2
