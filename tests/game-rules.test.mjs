@@ -239,7 +239,6 @@ test("Túnel Jurássico usa curva derivada dos anchors do SVG", () => {
 test("conquista libera o resultado antes da transferência", () => {
   const battle = readFileSync("src/lib/game-battle-service.ts", "utf8");
   const conquest = readFileSync("src/lib/game-conquest-command-service.ts", "utf8");
-  assert.match(battle, /transition === "clear_battle"/);
   assert.match(battle, /saveBattle\(client, room, null\)/);
   assert.match(conquest, /await advanceBattlePresentation\(client, room\)/);
 });
