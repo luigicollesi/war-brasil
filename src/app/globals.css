@@ -69,3 +69,11 @@ input {
   stroke-dasharray: 14 9;
   animation: territory-arrow-flow 700ms linear infinite;
 }
+
+@keyframes jurassic-tunnel-flow {
+  to { stroke-dashoffset: -26; }
+}
+
+.jurassic-tunnel-animation {
+  animation: jurassic-tunnel-flow 1.8s linear infinite;
+}
