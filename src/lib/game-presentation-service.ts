@@ -4,7 +4,6 @@ import { randomInt } from "node:crypto";
 import type { PoolClient } from "pg";
 import {
   advanceBattlePresentation,
-  type Battle,
   type BattleRoomState,
 } from "@/src/lib/game-battle-service";
 import { gameConditionalCommand } from "@/src/lib/game-command";
@@ -16,18 +15,10 @@ import { RoomError } from "@/src/lib/rooms";
 type PresentationRoom = BattleRoomState & {
   status: "order_roll" | "playing" | "finished";
   order_roll_round: number;
-  phase: string;
-  current_player_id: string | null;
-  round_number: number;
-  jurassic_tunnel_territory_id: number | null;
-  reinforcements_remaining: number;
-  conquered_this_turn: boolean;
-  last_battle: Battle | null;
 };
 
 type OrderPlayer = {
   id: string;
-  turn_position: number | null;
 };
 
 type OrderRoll = {
@@ -46,9 +37,7 @@ function normalizeRoomId(value: string) {
 
 async function loadRoom(client: PoolClient, roomId: string) {
   const result = await client.query<PresentationRoom>(
-    `SELECT id,status,order_roll_round,phase,current_player_id,round_number,
-            jurassic_tunnel_territory_id,reinforcements_remaining,
-            conquered_this_turn,pending_from_territory_id,
+    `SELECT id,status,order_roll_round,pending_from_territory_id,
             pending_to_territory_id,last_battle
      FROM game_rooms
      WHERE id=$1`,
@@ -141,7 +130,7 @@ async function advanceOrderRollPresentation(
 
   const players = (
     await client.query<OrderPlayer>(
-      `SELECT id,turn_position
+      `SELECT id
        FROM room_players
        WHERE room_id=$1
        ORDER BY joined_at`,
