@@ -1,6 +1,7 @@
 import { NextRequest } from "next/server";
 import { noStoreJson, roomErrorResponse } from "@/src/lib/api-response";
-import { rollOrderDie } from "@/src/lib/game";
+import { rollOrderDieCommand } from "@/src/lib/game-command-service";
+import { GAME_REVISION_HEADER } from "@/src/lib/game-sync-contract";
 import { getPlayerSession } from "@/src/lib/player-session";
 import { RoomError } from "@/src/lib/rooms";
 
@@ -10,6 +11,7 @@ type RouteContext = {
 
 export async function POST(request: NextRequest, { params }: RouteContext) {
   let roomId: string | undefined;
+
   try {
     const session = getPlayerSession(request);
     if (!session) {
@@ -17,8 +19,21 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     }
 
     ({ roomId } = await params);
-    return noStoreJson(await rollOrderDie(roomId, session));
+    const result = await rollOrderDieCommand(roomId, session);
+
+    return noStoreJson(
+      { ...result.value, revision: result.revision },
+      {
+        headers: {
+          [GAME_REVISION_HEADER]: String(result.revision),
+        },
+      },
+    );
   } catch (error) {
-    return roomErrorResponse(error, { operation: "roll_order_die", route: request.nextUrl.pathname, resource: { roomId } });
+    return roomErrorResponse(error, {
+      operation: "roll_order_die",
+      route: request.nextUrl.pathname,
+      resource: { roomId },
+    });
   }
 }
