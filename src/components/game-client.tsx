@@ -469,8 +469,13 @@ function GameTurnPanel({
   }, [snapshot.myCards]);
 
   useEffect(() => {
-    if (isTurn && snapshot.room.pendingConquest) queueMicrotask(() => setModal("conquest"));
-  }, [isTurn, snapshot.room.pendingConquest]);
+    if (isTurn && snapshot.room.pendingConquest && !battleBusy) {
+      queueMicrotask(() => {
+        setCount("1");
+        setModal("conquest");
+      });
+    }
+  }, [battleBusy, isTurn, snapshot.room.pendingConquest]);
 
   useEffect(() => {
     if (selectedTerritoryId !== null) return;

@@ -111,6 +111,47 @@ test("territórios mantêm borda brilhante conforme a região", () => {
   assert.match(source, /drop-shadow/);
 });
 
+test("conquista libera o resultado antes da transferência", () => {
+  const source = readFileSync("src/lib/game.ts", "utf8");
+
+  const presentation = source.match(
+    /async function advanceBattlePresentation[\s\S]*?(?=\n\nasync function advanceOrderRollPresentation)/,
+  )?.[0];
+
+  assert.ok(presentation);
+  assert.match(
+    presentation,
+    /battle\.stage==="show_battle_result"\) await saveBattle\(client,room,null\)/,
+  );
+  assert.doesNotMatch(
+    presentation,
+    /show_battle_result"&&!room\.pending_from_territory_id/,
+  );
+
+  const conquest = source.match(
+    /export async function completeConquest[\s\S]*?(?=\nexport async function maneuver)/,
+  )?.[0];
+
+  assert.ok(conquest);
+  assert.match(conquest, /await advanceBattlePresentation\(client,room\)/);
+});
+
+test("snapshot não executa queries concorrentes no mesmo PoolClient", () => {
+  const source = readFileSync("src/lib/game.ts", "utf8");
+
+  const snapshot = source.match(
+    /async function snapshot[\s\S]*?(?=\n}\nexport async function getGameSnapshot)/,
+  )?.[0];
+
+  assert.ok(snapshot);
+  assert.doesNotMatch(snapshot, /Promise\.all/);
+});
+
+test("layout declara scroll smooth para transições do Next", () => {
+  const source = readFileSync("src/app/layout.tsx", "utf8");
+  assert.match(source, /data-scroll-behavior="smooth"/);
+});
+
 test("setas usam a geometria do path no viewBox do mapa", () => {
   const source = readFileSync("src/components/territory-arrow.tsx", "utf8");
   assert.match(source, /pathElement\.getBBox\(\)/);

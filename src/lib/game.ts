@@ -94,7 +94,7 @@ async function advanceBattlePresentation(client:PoolClient,room:Room) {
   if(battle.stage==="show_attacker_result") { battle.stage="awaiting_defender_roll"; battle.stageStartedAt=new Date().toISOString(); await saveBattle(client,room,battle); return; }
   if(battle.stage==="show_defender_result") { battle.stage="show_comparison"; battle.stageStartedAt=new Date().toISOString(); await saveBattle(client,room,battle); return; }
   if(battle.stage==="show_comparison") { await applyBattleOutcome(client,room,battle); battle.stage="show_battle_result"; battle.stageStartedAt=new Date().toISOString(); await saveBattle(client,room,battle); return; }
-  if(battle.stage==="show_battle_result"&&!room.pending_from_territory_id) await saveBattle(client,room,null);
+  if(battle.stage==="show_battle_result") await saveBattle(client,room,null);
 }
 
 async function advanceOrderRollPresentation(client:PoolClient,room:Room) {
@@ -168,13 +168,25 @@ async function advanceOrderRollPresentation(client:PoolClient,room:Room) {
 
 async function snapshot(client:PoolClient, room:Room, session:string):Promise<GameSnapshot> {
   const players=(await client.query<Player>("SELECT id,faction_name,color,turn_position,player_session=$2 is_me FROM room_players WHERE room_id=$1 ORDER BY turn_position NULLS LAST,joined_at",[room.id,session])).rows; const me=players.find(player=>player.is_me); if(!me) throw new RoomError("Você não pertence a esta partida.",403);
-  const [territories,rolls,cards,objectives,connections]=await Promise.all([
-    client.query<Territory>("SELECT t.territory_id,t.owner_player_id,p.color,t.troops,t.moved_in_turn FROM game_territories t JOIN room_players p ON p.id=t.owner_player_id WHERE t.room_id=$1 ORDER BY t.territory_id",[room.id]),
-    client.query<Roll>("SELECT player_id,roll_round,value,rolled_at FROM game_order_rolls WHERE room_id=$1 ORDER BY roll_round,rolled_at",[room.id]),
-    client.query<Card>("SELECT id,territory_id,symbol,is_wild FROM game_cards WHERE room_id=$1 AND owner_player_id=$2 AND zone='hand' ORDER BY id",[room.id,me.id]),
-    client.query<Objective>("SELECT o.id,o.type,o.name,o.description,o.params,a.target_player_id,t.faction_name target_name FROM game_player_objectives a JOIN objectives o ON o.id=a.objective_id LEFT JOIN room_players t ON t.id=a.target_player_id WHERE a.room_id=$1 AND a.player_id=$2",[room.id,me.id]),
-    client.query<{territory_a:number;territory_b:number;is_passable:boolean;barrier_name:string|null;description:string|null}>("SELECT territory_a,territory_b,is_passable,barrier_name,description FROM territory_connections ORDER BY territory_a,territory_b"),
-  ]);
+  const territories=await client.query<Territory>(
+    "SELECT t.territory_id,t.owner_player_id,p.color,t.troops,t.moved_in_turn FROM game_territories t JOIN room_players p ON p.id=t.owner_player_id WHERE t.room_id=$1 ORDER BY t.territory_id",
+    [room.id],
+  );
+  const rolls=await client.query<Roll>(
+    "SELECT player_id,roll_round,value,rolled_at FROM game_order_rolls WHERE room_id=$1 ORDER BY roll_round,rolled_at",
+    [room.id],
+  );
+  const cards=await client.query<Card>(
+    "SELECT id,territory_id,symbol,is_wild FROM game_cards WHERE room_id=$1 AND owner_player_id=$2 AND zone='hand' ORDER BY id",
+    [room.id,me.id],
+  );
+  const objectives=await client.query<Objective>(
+    "SELECT o.id,o.type,o.name,o.description,o.params,a.target_player_id,t.faction_name target_name FROM game_player_objectives a JOIN objectives o ON o.id=a.objective_id LEFT JOIN room_players t ON t.id=a.target_player_id WHERE a.room_id=$1 AND a.player_id=$2",
+    [room.id,me.id],
+  );
+  const connections=await client.query<{territory_a:number;territory_b:number;is_passable:boolean;barrier_name:string|null;description:string|null}>(
+    "SELECT territory_a,territory_b,is_passable,barrier_name,description FROM territory_connections ORDER BY territory_a,territory_b",
+  );
   const byPlayer=new Map<string,Array<{round:number;value:number}>>(); for(const roll of rolls.rows) byPlayer.set(roll.player_id,[...(byPlayer.get(roll.player_id)??[]),{round:roll.roll_round,value:roll.value}]); const objective=objectives.rows[0];
   const eligiblePlayerIds=room.status==="order_roll"?eligible(players,rolls.rows,room.order_roll_round):[];
   const orderRollPlayerId=eligiblePlayerIds.find(playerId=>!rolls.rows.some(roll=>roll.player_id===playerId&&roll.roll_round===room.order_roll_round))??null;
@@ -285,7 +297,10 @@ export async function completeConquest(value:string,session:string,input:Record<
   const id=roomId(value), troops=integer(input.troops,"Quantidade de tropas inválida.");
   return transaction(async client=>{
     const room=await lockedRoom(client,id), player=await playerFor(client,room,session); assertTurn(room,player,"attack");
-    const from=room.pending_from_territory_id, to=room.pending_to_territory_id; if(!from||!to||!isBattle(room.last_battle)||room.last_battle.stage!=="show_battle_result") throw new RoomError("Não há conquista pendente.",409);
+    await advanceBattlePresentation(client,room);
+    const from=room.pending_from_territory_id, to=room.pending_to_territory_id;
+    if(!from||!to) throw new RoomError("Não há conquista pendente.",409);
+    if(isBattle(room.last_battle)) throw new RoomError("Aguarde o resultado da batalha antes de transferir tropas.",409,{stage:room.last_battle.stage});
     const rows=(await client.query<LockedTerritory>("SELECT territory_id,owner_player_id,troops,moved_in_turn FROM game_territories WHERE room_id=$1 AND territory_id=ANY($2::smallint[]) FOR UPDATE",[room.id,[from,to]])).rows;
     const source=rows.find(row=>row.territory_id===from), target=rows.find(row=>row.territory_id===to);
     if(!source||!target||source.owner_player_id!==player.id||target.owner_player_id!==player.id||troops>source.troops-1) throw new RoomError("Deslocamento de conquista inválido.",409);
