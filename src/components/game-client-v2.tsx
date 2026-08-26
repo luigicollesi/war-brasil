@@ -1,15 +1,18 @@
 "use client";
 
 import Image from "next/image";
-import { useCallback, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   InteractiveBoard,
   type BoardTerritory,
 } from "@/src/components/interactive-board";
 import { GameTurnPanel } from "@/src/components/game-turn-panel";
+import { useGameInteraction } from "@/src/hooks/use-game-interaction";
 import { useGameSync } from "@/src/hooks/use-game-sync";
+import type { GameSnapshot } from "@/src/lib/game-contract";
+import { runGameCommand } from "@/src/lib/game-command-client";
+import { buildGameViewModel } from "@/src/lib/game-view-model";
 import { PLAYER_COLORS, type PlayerColor } from "@/src/lib/lobby";
-import type { GameSnapshot } from "@/src/lib/game";
 
 type GameClientProps = {
   roomId: string;
@@ -32,56 +35,6 @@ export function GameClient({ roomId }: GameClientProps) {
   const { snapshot, error, isLoading, refresh } = useGameSync(roomId);
   const [rollError, setRollError] = useState("");
   const [isRolling, setIsRolling] = useState(false);
-  const [selectedTerritoryId, setSelectedTerritoryId] = useState<number | null>(null);
-  const [selectionVersion, setSelectionVersion] = useState(0);
-  const [mapHints, setMapHints] = useState({
-    available: [] as number[],
-    targets: [] as number[],
-  });
-  const [interactionArrow, setInteractionArrow] = useState<{
-    fromTerritoryId: number;
-    toTerritoryId: number;
-    kind: "movement";
-  } | null>(null);
-
-  const selectTerritory = useCallback((territoryId: number) => {
-    setSelectedTerritoryId((current) =>
-      current === territoryId ? null : territoryId,
-    );
-    setSelectionVersion((version) => version + 1);
-  }, []);
-
-  async function rollDie() {
-    setRollError("");
-    setIsRolling(true);
-
-    try {
-      const response = await fetch(
-        "/api/games/" + encodeURIComponent(roomId) + "/roll",
-        { method: "POST", cache: "no-store" },
-      );
-      const data: unknown = await response.json();
-      if (!response.ok) {
-        const message =
-          typeof data === "object" &&
-          data !== null &&
-          "error" in data &&
-          typeof data.error === "string"
-            ? data.error
-            : "Não foi possível rolar o dado.";
-        throw new Error(message);
-      }
-      await refresh();
-    } catch (requestError) {
-      setRollError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Não foi possível rolar o dado.",
-      );
-    } finally {
-      window.setTimeout(() => setIsRolling(false), 850);
-    }
-  }
 
   if (isLoading && !snapshot) {
     return (
@@ -99,30 +52,62 @@ export function GameClient({ roomId }: GameClientProps) {
     );
   }
 
-  const me = snapshot.players.find((player) => player.isMe);
-  const playersById = new Map(
-    snapshot.players.map((player) => [player.id, player]),
+  return (
+    <GameReadyClient
+      roomId={roomId}
+      snapshot={snapshot}
+      error={error}
+      refresh={refresh}
+      rollError={rollError}
+      setRollError={setRollError}
+      isRolling={isRolling}
+      setIsRolling={setIsRolling}
+    />
   );
-  const boardTerritories: BoardTerritory[] = snapshot.territories.flatMap(
-    (territory) => {
-      const owner = playersById.get(territory.ownerPlayerId);
-      return owner
-        ? [
-            {
-              territoryId: territory.territoryId,
-              ownerPlayerId: territory.ownerPlayerId,
-              ownerName: owner.factionName,
-              ownerColor: territory.ownerColor,
-              troops: territory.troops,
-            },
-          ]
-        : [];
-    },
+}
+
+function GameReadyClient({
+  roomId,
+  snapshot,
+  error,
+  refresh,
+  rollError,
+  setRollError,
+  isRolling,
+  setIsRolling,
+}: {
+  roomId: string;
+  snapshot: GameSnapshot;
+  error: string;
+  refresh: (minimumRevision?: number) => Promise<void>;
+  rollError: string;
+  setRollError: (value: string) => void;
+  isRolling: boolean;
+  setIsRolling: (value: boolean) => void;
+}) {
+  const game = useMemo(() => buildGameViewModel(snapshot), [snapshot]);
+  const interaction = useGameInteraction({ roomId, snapshot, game, refresh });
+  const boardTerritories = useMemo<BoardTerritory[]>(
+    () =>
+      snapshot.territories.flatMap((territory) => {
+        const owner = game.playersById.get(territory.ownerPlayerId);
+        return owner
+          ? [
+              {
+                territoryId: territory.territoryId,
+                ownerPlayerId: territory.ownerPlayerId,
+                ownerName: owner.factionName,
+                ownerColor: territory.ownerColor,
+                troops: territory.troops,
+              },
+            ]
+          : [];
+      }),
+    [game.playersById, snapshot.territories],
   );
+  const me = game.me;
   const currentRound = snapshot.room.orderRollRound;
-  const myCurrentRoll = me?.rolls.find(
-    (roll) => roll.round === currentRound,
-  );
+  const myCurrentRoll = me?.rolls.find((roll) => roll.round === currentRound);
   const canRoll = Boolean(
     snapshot.room.status === "order_roll" &&
       me &&
@@ -136,6 +121,29 @@ export function GameClient({ roomId }: GameClientProps) {
         kind: "attack" as const,
       }
     : null;
+
+  async function rollDie() {
+    setRollError("");
+    setIsRolling(true);
+
+    try {
+      const result = await runGameCommand(
+        roomId,
+        "roll",
+        undefined,
+        "Não foi possível rolar o dado.",
+      );
+      await refresh(result.revision ?? undefined);
+    } catch (requestError) {
+      setRollError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Não foi possível rolar o dado.",
+      );
+    } finally {
+      window.setTimeout(() => setIsRolling(false), 850);
+    }
+  }
 
   return (
     <div className="space-y-5">
@@ -186,21 +194,19 @@ export function GameClient({ roomId }: GameClientProps) {
       <InteractiveBoard
         territories={boardTerritories}
         connections={snapshot.connections}
-        onSelect={selectTerritory}
-        selectedTerritoryId={selectedTerritoryId}
-        availableTerritoryIds={mapHints.available}
-        targetTerritoryIds={mapHints.targets}
-        arrow={battleArrow ?? interactionArrow}
+        onSelect={interaction.onTerritoryClick}
+        selectedTerritoryId={interaction.selectedTerritoryId}
+        availableTerritoryIds={interaction.mapHints.available}
+        targetTerritoryIds={interaction.mapHints.targets}
+        arrow={battleArrow ?? interaction.arrow}
       />
 
       <GameTurnPanel
         roomId={roomId}
         snapshot={snapshot}
-        selectedTerritoryId={selectedTerritoryId}
-        selectionVersion={selectionVersion}
+        game={game}
+        interaction={interaction}
         onRefresh={refresh}
-        onMapHints={setMapHints}
-        onMapArrow={setInteractionArrow}
       />
 
       {snapshot.room.battle ? (
@@ -340,9 +346,7 @@ function OrderRollPanel({
             );
           })}
         </ul>
-        {error ? (
-          <p className="mt-4 text-sm text-[#ffd2c9]">{error}</p>
-        ) : null}
+        {error ? <p className="mt-4 text-sm text-[#ffd2c9]">{error}</p> : null}
       </div>
     </section>
   );
@@ -476,21 +480,15 @@ function BattleOverlay({
   battle: NonNullable<GameSnapshot["room"]["battle"]>;
   players: GameSnapshot["players"];
   meId: string | undefined;
-  onRefresh: () => Promise<void>;
+  onRefresh: (minimumRevision?: number) => Promise<void>;
 }) {
   const [error, setError] = useState("");
   const [rolling, setRolling] = useState(false);
-  const attacker = players.find(
-    (player) => player.id === battle.attackerPlayerId,
-  );
-  const defender = players.find(
-    (player) => player.id === battle.defenderPlayerId,
-  );
+  const attacker = players.find((player) => player.id === battle.attackerPlayerId);
+  const defender = players.find((player) => player.id === battle.defenderPlayerId);
   const canRoll =
-    (battle.stage === "awaiting_attacker_roll" &&
-      meId === battle.attackerPlayerId) ||
-    (battle.stage === "awaiting_defender_roll" &&
-      meId === battle.defenderPlayerId);
+    (battle.stage === "awaiting_attacker_roll" && meId === battle.attackerPlayerId) ||
+    (battle.stage === "awaiting_defender_roll" && meId === battle.defenderPlayerId);
   const label =
     battle.stage === "awaiting_attacker_roll"
       ? "Aguardando o atacante..."
@@ -510,22 +508,13 @@ function BattleOverlay({
     setError("");
     setRolling(true);
     try {
-      const response = await fetch(
-        `/api/games/${encodeURIComponent(roomId)}/attack/roll`,
-        { method: "POST", cache: "no-store" },
+      const result = await runGameCommand(
+        roomId,
+        "attack/roll",
+        undefined,
+        "Não foi possível rolar os dados.",
       );
-      const data: unknown = await response.json();
-      if (!response.ok) {
-        throw new Error(
-          typeof data === "object" &&
-            data !== null &&
-            "error" in data &&
-            typeof data.error === "string"
-            ? data.error
-            : "Não foi possível rolar os dados.",
-        );
-      }
-      await onRefresh();
+      await onRefresh(result.revision ?? undefined);
     } catch (requestError) {
       setError(
         requestError instanceof Error
@@ -553,8 +542,7 @@ function BattleOverlay({
         </p>
         <h2 className="mt-2 text-2xl font-semibold">{label}</h2>
         <p className="mt-1 text-sm text-[#c8d9d1]">
-          {attacker?.factionName ?? "Atacante"} ×{" "}
-          {defender?.factionName ?? "Defensor"}
+          {attacker?.factionName ?? "Atacante"} × {defender?.factionName ?? "Defensor"}
         </p>
         <div className="mt-6 flex justify-center gap-8">
           {battle.attacker.length ? (
@@ -566,9 +554,7 @@ function BattleOverlay({
                     key={`${value}-${index}-${battle.stage}`}
                     value={value}
                     color={attacker?.color ?? "forest"}
-                    isRolling={
-                      rolling || battle.stage === "show_attacker_result"
-                    }
+                    isRolling={rolling || battle.stage === "show_attacker_result"}
                   />
                 ))}
               </div>
@@ -583,35 +569,27 @@ function BattleOverlay({
                     key={`${value}-${index}-${battle.stage}`}
                     value={value}
                     color={defender?.color ?? "ruby"}
-                    isRolling={
-                      rolling || battle.stage === "show_defender_result"
-                    }
+                    isRolling={rolling || battle.stage === "show_defender_result"}
                   />
                 ))}
               </div>
             </div>
           ) : null}
         </div>
-        {battle.stage === "show_comparison" ||
-        battle.stage === "show_battle_result" ? (
+        {battle.stage === "show_comparison" || battle.stage === "show_battle_result" ? (
           <div className="mt-6 space-y-1 rounded-2xl bg-white/8 p-4 text-sm">
             {pairs.map((pair, index) => (
               <p key={index}>
                 Ataque {pair.attack} × Defesa {pair.defense} →{" "}
-                {pair.attack > pair.defense
-                  ? "defesa perde 1"
-                  : "ataque perde 1"}
+                {pair.attack > pair.defense ? "defesa perde 1" : "ataque perde 1"}
               </p>
             ))}
           </div>
         ) : null}
         {battle.stage === "show_battle_result" ? (
           <p className="mt-5 text-sm font-semibold text-[#e8c35e]">
-            Perdas: atacante {battle.attackerLosses} · defesa{" "}
-            {battle.defenderLosses}
-            {battle.conquered
-              ? " · conquista aguardando transferência"
-              : ""}
+            Perdas: atacante {battle.attackerLosses} · defesa {battle.defenderLosses}
+            {battle.conquered ? " · conquista aguardando transferência" : ""}
           </p>
         ) : null}
         {canRoll ? (
@@ -624,9 +602,7 @@ function BattleOverlay({
             {rolling ? "Rolando…" : "Rolar dados"}
           </button>
         ) : null}
-        {error ? (
-          <p className="mt-3 text-sm text-[#ffd2c9]">{error}</p>
-        ) : null}
+        {error ? <p className="mt-3 text-sm text-[#ffd2c9]">{error}</p> : null}
       </section>
     </div>
   );
