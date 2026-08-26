@@ -177,8 +177,10 @@ test("topologia fixa atravessa a rede apenas quando a versão muda", () => {
   assert.match(contract, /GAME_TOPOLOGY_HEADER/);
   assert.match(contract, /GAME_TOPOLOGY_VERSION/);
   assert.match(route, /knownTopology === GAME_TOPOLOGY_VERSION/);
+  assert.match(route, /revisionForFastPath/);
   assert.match(route, /delete dynamicSnapshot\.connections/);
   assert.match(sync, /topologyVersionRef/);
+  assert.match(sync, /topologyConnectionsRef/);
   assert.match(sync, /GAME_TOPOLOGY_HEADER/);
-  assert.match(sync, /payload\.connections \?\? snapshotRef\.current\?\.connections/);
+  assert.match(sync, /payload\.connections \?\? topologyConnectionsRef\.current/);
 });
