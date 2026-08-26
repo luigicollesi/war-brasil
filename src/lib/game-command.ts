@@ -9,7 +9,7 @@ import {
 } from "@/src/lib/game-revision";
 import { RoomError } from "@/src/lib/rooms";
 
-export type GameConditionalCommandResult<T> = {
+type GameConditionalCommandResult<T> = {
   value: T | null;
   revision: GameRevision;
   changed: boolean;
