@@ -1,4 +1,4 @@
-export type RoadPoint = {
+type RoadPoint = {
   x: number;
   y: number;
 };
