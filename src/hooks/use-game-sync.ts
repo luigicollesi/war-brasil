@@ -5,6 +5,7 @@ import {
   applyGameCommandPatch,
   type ApplicableGameCommandResult,
 } from "@/src/lib/game-command-patch";
+import { registerGameCommandPatchHandler } from "@/src/lib/game-command-patch-bus";
 import type { GameSnapshot } from "@/src/lib/game-contract";
 import { nextGamePollDelay } from "@/src/lib/game-polling";
 import { shareGameSnapshot } from "@/src/lib/game-snapshot-sharing";
@@ -327,6 +328,14 @@ export function useGameSync(roomId: string) {
     }
 
     refreshRef.current = async (minimumRevision?: number) => {
+      if (
+        minimumRevision !== undefined &&
+        revisionRef.current !== null &&
+        revisionRef.current >= minimumRevision
+      ) {
+        return;
+      }
+
       if (minimumRevision !== undefined) {
         requiredRevisionRef.current = Math.max(
           requiredRevisionRef.current ?? 0,
@@ -360,6 +369,11 @@ export function useGameSync(roomId: string) {
       return true;
     };
 
+    const unregisterCommandPatchHandler = registerGameCommandPatchHandler(
+      roomId,
+      (result) => applyCommandResultRef.current(result),
+    );
+
     const handleOffline = () => gameSyncMetricsStore.recordOffline();
     const handleOnline = () => {
       gameSyncMetricsStore.recordOnline();
@@ -383,6 +397,7 @@ export function useGameSync(roomId: string) {
       window.clearTimeout(timeoutId);
       requestController?.abort();
       advanceController?.abort();
+      unregisterCommandPatchHandler();
       window.removeEventListener("offline", handleOffline);
       window.removeEventListener("online", handleOnline);
       document.removeEventListener("visibilitychange", handleVisibilityChange);
