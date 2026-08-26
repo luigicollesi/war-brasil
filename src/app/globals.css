@@ -3,6 +3,11 @@
 :root {
   --background: #f3f0e8;
   --foreground: #14241f;
+  --game-ink: #f3efe3;
+  --game-deep: #071a15;
+  --game-green: #0b2a22;
+  --game-panel: rgba(7, 26, 21, 0.88);
+  --game-gold: #d9b650;
 }
 
 @theme inline {
@@ -38,15 +43,9 @@ input {
 }
 
 @keyframes dice-roll {
-  0% {
-    transform: rotate(0deg) scale(1);
-  }
-  45% {
-    transform: rotate(420deg) scale(0.82);
-  }
-  100% {
-    transform: rotate(720deg) scale(1);
-  }
+  0% { transform: rotate(0deg) scale(1); }
+  45% { transform: rotate(420deg) scale(0.82); }
+  100% { transform: rotate(720deg) scale(1); }
 }
 
 .dice-roll-animation {
@@ -76,4 +75,398 @@ input {
 
 .jurassic-tunnel-animation {
   animation: jurassic-tunnel-flow 1.8s linear infinite;
+}
+
+/* ------------------------------------------------------------------ */
+/* Game screen                                                        */
+/* ------------------------------------------------------------------ */
+
+.game-screen {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(63, 117, 91, 0.20), transparent 38%),
+    radial-gradient(circle at 12% 12%, rgba(217, 182, 80, 0.08), transparent 24%),
+    linear-gradient(145deg, #102d25 0%, #081d17 52%, #061611 100%);
+  color: var(--game-ink);
+}
+
+.game-screen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background:
+    linear-gradient(to bottom, rgba(3, 14, 11, 0.48), transparent 18%, transparent 72%, rgba(3, 14, 11, 0.64)),
+    radial-gradient(ellipse at center, transparent 46%, rgba(0, 0, 0, 0.18) 100%);
+}
+
+.game-runtime,
+.game-runtime > div {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+
+.game-runtime > div {
+  overflow: hidden;
+}
+
+/* Neutraliza o space-y antigo: HUDs agora ocupam camadas da viewport. */
+.game-runtime > div > * {
+  margin-block-start: 0 !important;
+}
+
+/* Header antigo reaproveitado como top HUD. */
+.game-runtime > div > section:first-of-type {
+  position: absolute;
+  inset: 0 0 auto 0;
+  z-index: 40;
+  min-height: 64px;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: linear-gradient(to bottom, rgba(5, 22, 17, 0.96), rgba(5, 22, 17, 0.66) 72%, transparent) !important;
+  box-shadow: none !important;
+  padding: 12px 18px 22px !important;
+  color: var(--game-ink);
+}
+
+.game-runtime > div > section:first-of-type h1 {
+  color: #fffdf5;
+  font-size: 1.05rem;
+  letter-spacing: 0.01em;
+}
+
+.game-runtime > div > section:first-of-type p {
+  color: #d9b650 !important;
+}
+
+.game-runtime > div > section:first-of-type span[class*="rounded-full"] {
+  border: 1px solid rgba(217, 182, 80, 0.24);
+  background: rgba(15, 54, 43, 0.72) !important;
+  color: #dce9e2 !important;
+  backdrop-filter: blur(12px);
+}
+
+/* Canvas do mapa: a superfície continua quadrada para manter coordenadas SVG. */
+.game-map-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 72px 252px 154px 18px;
+  pointer-events: none;
+}
+
+.game-map-surface {
+  position: relative;
+  width: min(calc(100vw - 280px), calc(100dvh - 112px));
+  max-width: 1254px;
+  aspect-ratio: 1;
+  flex: 0 0 auto;
+  pointer-events: auto;
+  filter: drop-shadow(0 30px 42px rgba(0, 0, 0, 0.24));
+}
+
+.game-map-object {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.game-territory-tooltip {
+  pointer-events: none;
+  position: absolute;
+  z-index: 30;
+  width: 13rem;
+  border: 1px solid rgba(217, 182, 80, 0.24);
+  border-radius: 12px;
+  background: rgba(6, 30, 23, 0.95);
+  padding: 12px;
+  color: white;
+  font-size: 0.75rem;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.32);
+  backdrop-filter: blur(14px);
+}
+
+/* A ordem deixa de ser um card e vira player rail no desktop. */
+@media (min-width: 1200px) {
+  .game-runtime > div > section:nth-of-type(2):not([class~="grid"]) {
+    position: absolute;
+    z-index: 25;
+    top: 76px;
+    right: 12px;
+    width: 232px;
+    max-height: calc(100dvh - 238px);
+    overflow: auto;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: linear-gradient(to left, rgba(5, 23, 18, 0.84), rgba(5, 23, 18, 0.54) 66%, transparent) !important;
+    box-shadow: none !important;
+    padding: 10px 8px 16px 34px !important;
+    color: var(--game-ink);
+    backdrop-filter: blur(6px);
+  }
+
+  .game-runtime > div > section:nth-of-type(2):not([class~="grid"]) > p {
+    color: rgba(217, 182, 80, 0.82) !important;
+  }
+
+  .game-runtime > div > section:nth-of-type(2):not([class~="grid"]) ol {
+    display: flex !important;
+    flex-direction: column;
+    gap: 6px !important;
+  }
+
+  .game-runtime > div > section:nth-of-type(2):not([class~="grid"]) li {
+    border: 1px solid transparent;
+    background: rgba(255, 255, 255, 0.045) !important;
+    color: #d7e3dd !important;
+    box-shadow: none !important;
+    ring: 0 !important;
+  }
+}
+
+/* Sorteio inicial continua central, porém sobre o tabuleiro. */
+.game-runtime > div > section:nth-of-type(2)[class~="grid"] {
+  position: absolute;
+  z-index: 35;
+  top: 50%;
+  left: 50%;
+  width: min(720px, calc(100vw - 32px));
+  transform: translate(-50%, -50%);
+  border: 1px solid rgba(217, 182, 80, 0.26);
+  background: rgba(7, 34, 27, 0.93) !important;
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.42) !important;
+  backdrop-filter: blur(18px);
+}
+
+/* GameTurnPanel vira command deck inferior. */
+.game-map-canvas + section {
+  position: absolute;
+  z-index: 35;
+  inset: auto 0 0 0;
+  max-height: 34dvh;
+  overflow-y: auto;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: linear-gradient(to bottom, transparent 0, rgba(6, 25, 20, 0.80) 34px, rgba(5, 21, 17, 0.97) 100%) !important;
+  box-shadow: none !important;
+  padding: 48px 260px 16px 18px !important;
+  color: var(--game-ink);
+  scrollbar-width: thin;
+}
+
+.game-map-canvas + section h2,
+.game-map-canvas + section strong {
+  color: #fffdf6;
+}
+
+.game-map-canvas + section p {
+  color: #c7d7cf !important;
+}
+
+.game-map-canvas + section > p[class*="bg-[#12392f]"] {
+  border-left: 2px solid var(--game-gold);
+  border-radius: 0 !important;
+  background: transparent !important;
+  padding: 4px 0 4px 12px !important;
+}
+
+.game-map-canvas + section > div[class*="sticky"] {
+  position: static !important;
+  justify-content: flex-start !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin-top: 12px !important;
+  backdrop-filter: none !important;
+}
+
+.game-map-canvas + section button {
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
+}
+
+/* Erros de sync aparecem como aviso flutuante abaixo do HUD superior. */
+.game-runtime > div > p[class*="bg-[#fff0eb]"] {
+  position: absolute;
+  z-index: 60;
+  top: 68px;
+  left: 50%;
+  width: min(420px, calc(100vw - 32px));
+  transform: translateX(-50%);
+  border: 1px solid rgba(216, 105, 86, 0.4);
+  background: rgba(92, 32, 24, 0.92) !important;
+  color: #ffd8cf !important;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(12px);
+}
+
+/* Tablet: ordem horizontal no topo, mapa central e command deck maior. */
+@media (min-width: 768px) and (max-width: 1199px) {
+  .game-map-canvas {
+    padding: 106px 12px 174px;
+  }
+
+  .game-map-surface {
+    width: min(94vw, calc(100dvh - 172px));
+  }
+
+  .game-runtime > div > section:nth-of-type(2):not([class~="grid"]) {
+    position: absolute;
+    z-index: 28;
+    top: 62px;
+    left: 0;
+    right: 0;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: linear-gradient(to bottom, rgba(6, 27, 21, 0.72), transparent) !important;
+    box-shadow: none !important;
+    padding: 8px 16px 22px !important;
+    color: var(--game-ink);
+  }
+
+  .game-runtime > div > section:nth-of-type(2):not([class~="grid"]) > p {
+    display: none;
+  }
+
+  .game-runtime > div > section:nth-of-type(2):not([class~="grid"]) ol {
+    display: flex !important;
+    justify-content: center;
+    gap: 6px !important;
+  }
+
+  .game-runtime > div > section:nth-of-type(2):not([class~="grid"]) li {
+    min-width: 0;
+    flex: 0 1 180px;
+    background: rgba(255, 255, 255, 0.06) !important;
+    color: #e4eee9 !important;
+  }
+
+  .game-map-canvas + section {
+    max-height: 38dvh;
+    padding: 48px 18px 16px !important;
+  }
+}
+
+/* Mobile: mapa permanece canvas e comandos viram bottom sheet. */
+@media (max-width: 767px) {
+  .game-runtime > div > section:first-of-type {
+    min-height: 58px;
+    padding: 9px 12px 20px !important;
+  }
+
+  .game-runtime > div > section:first-of-type h1 {
+    font-size: 0.9rem;
+  }
+
+  .game-runtime > div > section:first-of-type p {
+    font-size: 8px !important;
+    letter-spacing: 0.12em !important;
+  }
+
+  .game-map-canvas {
+    padding: 104px 0 204px;
+  }
+
+  .game-map-surface {
+    width: min(112vw, calc(100dvh - 168px));
+  }
+
+  .game-runtime > div > section:nth-of-type(2):not([class~="grid"]) {
+    position: absolute;
+    z-index: 28;
+    top: 55px;
+    left: 0;
+    right: 0;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: linear-gradient(to bottom, rgba(6, 27, 21, 0.76), transparent) !important;
+    box-shadow: none !important;
+    padding: 6px 8px 18px !important;
+    color: white;
+  }
+
+  .game-runtime > div > section:nth-of-type(2):not([class~="grid"]) > p {
+    display: none;
+  }
+
+  .game-runtime > div > section:nth-of-type(2):not([class~="grid"]) ol {
+    display: flex !important;
+    justify-content: center;
+    gap: 7px !important;
+  }
+
+  .game-runtime > div > section:nth-of-type(2):not([class~="grid"]) li {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    justify-content: center;
+    overflow: hidden;
+    padding: 0 !important;
+    border-radius: 999px !important;
+    background: rgba(255, 255, 255, 0.06) !important;
+    color: white !important;
+  }
+
+  .game-runtime > div > section:nth-of-type(2):not([class~="grid"]) li > span:not([class*="h-3"]) {
+    display: none;
+  }
+
+  .game-runtime > div > section:nth-of-type(2):not([class~="grid"]) li > span[class*="h-3"] {
+    width: 20px !important;
+    height: 20px !important;
+  }
+
+  .game-runtime > div > section:nth-of-type(2)[class~="grid"] {
+    width: calc(100vw - 20px);
+    max-height: calc(100dvh - 118px);
+    overflow-y: auto;
+    padding: 18px !important;
+  }
+
+  .game-map-canvas + section {
+    max-height: 42dvh;
+    padding: 42px 12px calc(12px + env(safe-area-inset-bottom)) !important;
+    border-top: 1px solid rgba(217, 182, 80, 0.18) !important;
+  }
+
+  .game-map-canvas + section::before {
+    content: "";
+    position: absolute;
+    top: 30px;
+    left: 50%;
+    width: 42px;
+    height: 4px;
+    transform: translateX(-50%);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.24);
+  }
+
+  .game-map-canvas + section > div[class*="sticky"] {
+    flex-wrap: nowrap !important;
+    overflow-x: auto;
+    padding-bottom: 4px !important;
+  }
+
+  .game-map-canvas + section > div[class*="sticky"] > button {
+    flex: 0 0 auto;
+    transform: scale(0.82);
+    transform-origin: bottom left;
+    margin-right: -12px;
+  }
+
+  .game-territory-tooltip {
+    width: 11.5rem;
+    font-size: 0.68rem;
+  }
 }
