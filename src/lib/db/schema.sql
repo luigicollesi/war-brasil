@@ -11,6 +11,15 @@ CREATE TABLE IF NOT EXISTS game_rooms (
     CHECK (phase IN ('cards', 'reinforcement', 'attack', 'maneuver', 'end_turn', 'finished')),
   current_player_id BIGINT,
   turn_number INTEGER NOT NULL DEFAULT 1 CHECK (turn_number >= 1),
+  round_number INTEGER NOT NULL DEFAULT 1 CHECK (round_number >= 1),
+  jurassic_tunnel_territory_id SMALLINT
+    CHECK (
+      jurassic_tunnel_territory_id IS NULL
+      OR (
+        jurassic_tunnel_territory_id BETWEEN 1 AND 42
+        AND jurassic_tunnel_territory_id NOT IN (1, 3)
+      )
+    ),
   reinforcements_remaining INTEGER NOT NULL DEFAULT 0 CHECK (reinforcements_remaining >= 0),
   conquered_this_turn BOOLEAN NOT NULL DEFAULT FALSE,
   trade_count INTEGER NOT NULL DEFAULT 0 CHECK (trade_count >= 0),
