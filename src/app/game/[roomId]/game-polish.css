@@ -150,12 +150,31 @@
   opacity: 0 !important;
 }
 
+/* A cor dos pips vem do jogador via style inline do BrazilDie. */
 .game-runtime div[class~="fixed"][class~="inset-0"][class~="z-40"][class~="pointer-events-none"]
   > section > div[class~="mt-6"][class~="flex"][class~="justify-center"]
   div[class~="aspect-square"] span {
-  background-color: #f8f0dc !important;
-  border-color: rgba(255, 255, 255, 0.62) !important;
-  box-shadow: 0 2px 7px rgba(0, 0, 0, 0.28) !important;
+  border-color: rgba(255, 255, 255, 0.78) !important;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.24),
+    0 2px 7px rgba(0, 0, 0, 0.32) !important;
+}
+
+/* O estado local de rolagem é compartilhado pelo overlay. Enquanto a defesa
+   está sendo rolada, congelamos explicitamente os dados já resolvidos do ataque.
+   Antes da resposta existe um botão de rolagem com os dados de ataque presentes;
+   depois da resposta a coluna de defesa passa a existir. Nos dois casos o ataque
+   permanece estático e somente a defesa conserva dice-roll-animation. */
+.game-runtime div[class~="fixed"][class~="inset-0"][class~="z-40"][class~="pointer-events-none"]
+  > section:has(> button)
+  > div[class~="mt-6"][class~="flex"][class~="justify-center"]
+  > div:first-child .dice-roll-animation,
+.game-runtime div[class~="fixed"][class~="inset-0"][class~="z-40"][class~="pointer-events-none"]
+  > section
+  > div[class~="mt-6"][class~="flex"][class~="justify-center"]:has(> div:nth-child(2))
+  > div:first-child .dice-roll-animation {
+  animation: none !important;
+  transform: none !important;
 }
 
 /* Aviso de barreira natural: mesma linguagem sem contorno duro. */
