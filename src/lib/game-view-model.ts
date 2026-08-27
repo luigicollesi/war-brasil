@@ -2,8 +2,8 @@ import type {
   GamePlayer,
   GameSnapshot,
   GameTerritory,
-} from "@/src/lib/game-contract";
-import type { TerritoryConnection } from "@/src/lib/territory-connections";
+} from "./game-contract";
+import type { TerritoryConnection } from "./territory-connections";
 
 export type GameViewModel = {
   me: GamePlayer | undefined;
