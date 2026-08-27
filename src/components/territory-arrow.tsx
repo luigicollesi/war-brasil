@@ -10,6 +10,7 @@ export type { TerritoryAnchor } from "@/src/lib/territory-geometry";
 // Compatibilidade temporária para consumidores atuais. A geometria real vive em
 // src/lib e inclui safeRadius para os símbolos especiais das próximas fases.
 export function getTerritoryAnchor(pathElement: SVGPathElement): TerritoryAnchor {
+  // O adapter chamado abaixo executa pathElement.getBBox() e os demais probes SVG.
   return territoryGeometryFromPath(pathElement);
 }
 
