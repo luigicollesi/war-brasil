@@ -320,6 +320,12 @@ export async function phaseCommand(
       }
 
       await client.query(
+        `UPDATE game_territories
+         SET moved_in_turn=0
+         WHERE room_id=$1 AND owner_player_id=$2`,
+        [room.id, player.id],
+      );
+      await client.query(
         "UPDATE game_rooms SET phase='maneuver' WHERE id=$1",
         [room.id],
       );
