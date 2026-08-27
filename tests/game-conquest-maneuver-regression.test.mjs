@@ -14,6 +14,25 @@ test("tropas transferidas após conquista continuam disponíveis para manobra", 
   assert.equal(maneuverMovableTroops(4, 0), 3);
 });
 
+test("entrada na fase de manobra começa sem bloqueios herdados do ataque", () => {
+  const phaseService = readFileSync(
+    "src/lib/game-command-service.ts",
+    "utf8",
+  );
+  const finishAttack = phaseService.match(
+    /if \(input\.action === "finishAttack"\) \{[\s\S]*?return null;\n    \}/,
+  )?.[0];
+
+  assert.ok(finishAttack);
+  assert.match(finishAttack, /SET moved_in_turn=0/);
+  assert.match(finishAttack, /owner_player_id=\$2/);
+  assert.match(finishAttack, /phase='maneuver'/);
+  assert.ok(
+    finishAttack.indexOf("SET moved_in_turn=0") <
+      finishAttack.indexOf("phase='maneuver'"),
+  );
+});
+
 test("somente tropas recebidas durante manobra entram no bloqueio moved_in_turn", () => {
   const maneuver = readFileSync(
     "src/lib/game-maneuver-command-service.ts",
