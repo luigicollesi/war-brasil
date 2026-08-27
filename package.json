@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "tsc --outDir .test-build --noEmit false --module commonjs --moduleResolution node src/lib/game-config.ts src/lib/game-rules.ts src/lib/territory-connections.ts src/lib/game-transitions.ts src/lib/game-polling.ts && node --test tests/game-rules.test.mjs tests/game-transitions.test.mjs tests/game-architecture.test.mjs tests/game-p1-performance.test.mjs tests/game-p2-performance.test.mjs tests/game-topology-cache.test.mjs tests/game-maneuver.test.mjs"
+    "test": "tsc --outDir .test-build --noEmit false --module commonjs --moduleResolution node src/lib/game-config.ts src/lib/game-rules.ts src/lib/territory-connections.ts src/lib/game-transitions.ts src/lib/game-polling.ts src/lib/game-contract.ts src/lib/game-view-model.ts src/lib/game-interaction.ts src/lib/game-command-patch.ts src/lib/game-snapshot-hydration.ts src/lib/game-snapshot-sharing.ts && node --test tests/game-rules.test.mjs tests/game-transitions.test.mjs tests/game-architecture.test.mjs tests/game-p1-performance.test.mjs tests/game-p2-performance.test.mjs tests/game-topology-cache.test.mjs tests/game-maneuver.test.mjs tests/game-interaction.test.mjs tests/game-regression.test.mjs"
   },
   "dependencies": {
     "next": "16.3.2",
