@@ -1,14 +1,14 @@
 "use client";
 
 import { useMemo } from "react";
-import type { TerritoryAnchor } from "@/src/components/territory-arrow";
 import { createRoadCurve } from "@/src/lib/road-geometry";
 import { roadsFromConnections } from "@/src/lib/road-network";
 import type { TerritoryConnection } from "@/src/lib/territory-connections";
+import type { TerritoryAnchor } from "@/src/lib/territory-geometry";
 
 type RoadNetworkProps = {
-  connections: TerritoryConnection[];
-  anchors: Map<number, TerritoryAnchor>;
+  connections: readonly TerritoryConnection[];
+  anchors: ReadonlyMap<number, TerritoryAnchor>;
   visible: boolean;
   selectedTerritoryId?: number | null;
   targetTerritoryIds?: number[];
