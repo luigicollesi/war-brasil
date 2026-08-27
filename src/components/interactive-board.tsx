@@ -6,6 +6,7 @@ import type { TerritoryConnection } from "@/src/lib/territory-connections";
 import { TERRITORY_METADATA } from "@/src/lib/game-config";
 import { JurassicTunnelConnection } from "@/src/components/jurassic-tunnel-connection";
 import { RoadNetwork } from "@/src/components/road-network";
+import { useRoadVisibility } from "@/src/components/road-visibility-provider";
 import {
   getTerritoryAnchor,
   TerritoryArrow,
@@ -49,7 +50,6 @@ type InteractiveBoardProps = {
   arrow?: MapArrow;
 };
 
-const ROAD_VISIBILITY_KEY = "war-brasil:roads-visible";
 const regionLabels: Record<string, string> = {
   norte: "Norte",
   nordeste: "Nordeste",
@@ -114,7 +114,7 @@ export function InteractiveBoard({
   const [anchors, setAnchors] = useState<Map<number, TerritoryAnchor>>(new Map());
   const [hoveredTerritory, setHoveredTerritory] =
     useState<HoveredTerritory | null>(null);
-  const [roadsVisible, setRoadsVisible] = useState(false);
+  const roadsVisible = useRoadVisibility();
   const territoryById = useMemo(
     () => new Map(territories.map((territory) => [territory.territoryId, territory])),
     [territories],
@@ -123,21 +123,6 @@ export function InteractiveBoard({
   useEffect(() => {
     onSelectRef.current = onSelect;
   }, [onSelect]);
-
-  useEffect(() => {
-    let active = true;
-    queueMicrotask(() => {
-      if (!active) return;
-      try {
-        setRoadsVisible(window.localStorage.getItem(ROAD_VISIBILITY_KEY) === "true");
-      } catch {
-        setRoadsVisible(false);
-      }
-    });
-    return () => {
-      active = false;
-    };
-  }, []);
 
   useEffect(
     () => () => {
@@ -338,31 +323,8 @@ export function InteractiveBoard({
     ? TERRITORY_METADATA[jurassicDestinationId]?.name
     : null;
 
-  function toggleRoads() {
-    setRoadsVisible((current) => {
-      const next = !current;
-      try {
-        window.localStorage.setItem(ROAD_VISIBILITY_KEY, String(next));
-      } catch {
-        // A preferência visual continua funcionando na sessão mesmo sem storage.
-      }
-      return next;
-    });
-  }
-
   return (
     <div className="game-map-canvas" aria-label="Tabuleiro do Brasil">
-      <button
-        type="button"
-        className="game-road-toggle"
-        aria-pressed={roadsVisible}
-        onClick={toggleRoads}
-        title={roadsVisible ? "Ocultar estradas" : "Mostrar estradas"}
-      >
-        <span aria-hidden="true">🛣️</span>
-        <span>Estradas</span>
-        <strong>{roadsVisible ? "ON" : "OFF"}</strong>
-      </button>
       <div ref={containerRef} className="game-map-surface">
         <object
           ref={boardRef}
