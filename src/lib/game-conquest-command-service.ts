@@ -158,7 +158,7 @@ export async function completeConquestCommand(
     );
     await client.query(
       `UPDATE game_territories
-       SET troops=$3,moved_in_turn=$3
+       SET troops=$3,moved_in_turn=0
        WHERE room_id=$1 AND territory_id=$2`,
       [room.id, to, troops],
     );
@@ -173,6 +173,8 @@ export async function completeConquestCommand(
     room.pending_to_territory_id = null;
     await saveBattle(client, room, null);
 
+    // A transferência obrigatória da conquista ainda acontece na fase de ataque.
+    // moved_in_turn rastreia apenas tropas recebidas durante a fase de manobra.
     // A conquista em si já foi avaliada quando o controle territorial mudou.
     // Aqui apenas a distribuição de tropas pode desbloquear um objetivo novo.
     await objectiveWon(client, room.id, player.id, "troops_changed");
