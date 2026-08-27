@@ -108,7 +108,23 @@ export function getTerritoryAnchor(pathElement: SVGPathElement): TerritoryAnchor
     }
   }
 
-  return bestPoint ?? bboxCenter;
+  if (!bestPoint) {
+    // Última tentativa para polígonos muito finos: cordas entre pontos opostos
+    // da borda costumam atravessar o interior mesmo quando a grade não o acerta.
+    const half = Math.floor(boundary.length / 2);
+    for (let index = 0; index < half; index += 1) {
+      const opposite = boundary[(index + half) % boundary.length];
+      consider({
+        x: (boundary[index].x + opposite.x) / 2,
+        y: (boundary[index].y + opposite.y) / 2,
+      });
+    }
+  }
+
+  // Se o browser não encontrar área interior (path degenerado), ancorar na
+  // própria borda é preferível a devolver o centro do bbox, que pode estar em
+  // outro território.
+  return bestPoint ?? boundary[0];
 }
 
 export function TerritoryArrow({
