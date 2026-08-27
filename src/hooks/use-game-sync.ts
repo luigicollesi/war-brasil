@@ -8,6 +8,10 @@ import {
 import { registerGameCommandPatchHandler } from "@/src/lib/game-command-patch-bus";
 import type { GameSnapshot } from "@/src/lib/game-contract";
 import { nextGamePollDelay } from "@/src/lib/game-polling";
+import {
+  hydrateGameSnapshot,
+  type GameSnapshotPayload,
+} from "@/src/lib/game-snapshot-hydration";
 import { shareGameSnapshot } from "@/src/lib/game-snapshot-sharing";
 import { gameSyncMetricsStore } from "@/src/lib/game-sync-metrics-store";
 import {
@@ -15,11 +19,6 @@ import {
   GAME_TOPOLOGY_HEADER,
   parseGameRevision,
 } from "@/src/lib/game-sync-contract";
-import { effectiveTerritoryConnections } from "@/src/lib/territory-connections";
-
-type GameSnapshotPayload = Omit<GameSnapshot, "connections"> & {
-  connections?: GameSnapshot["connections"];
-};
 
 const ADVANCEABLE_BATTLE_STAGES = new Set([
   "show_attacker_result",
@@ -171,14 +170,7 @@ export function useGameSync(roomId: string) {
             }
           }
 
-          const connections = effectiveTerritoryConnections(
-            baseConnections,
-            payload.room.jurassicTunnelDestinationId,
-          );
-          const hydratedSnapshot: GameSnapshot = {
-            ...payload,
-            connections,
-          };
+          const hydratedSnapshot = hydrateGameSnapshot(payload, baseConnections);
 
           recordRevision(responseRevision);
           recordSyncSuccess(startedAt);
