@@ -1,4 +1,4 @@
-import type { GamePhase, GameSnapshot, GameStatus } from "@/src/lib/game-contract";
+import type { GamePhase, GameSnapshot, GameStatus } from "./game-contract";
 
 export type GameCommandPatch = {
   room?: {
