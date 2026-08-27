@@ -55,10 +55,10 @@ type InteractiveBoardProps = {
   selectedTerritoryId?: number | null;
   availableTerritoryIds?: number[];
   targetHints?: readonly MapTargetHint[];
-  // Nome legado mantido enquanto GameClient migra para o contrato enriquecido.
-  targetTerritoryIds?: readonly MapTargetHint[];
   arrow?: MapArrow;
 };
+
+const EMPTY_TARGET_HINTS: readonly MapTargetHint[] = [];
 
 const regionLabels: Record<string, string> = {
   norte: "Norte",
@@ -115,11 +115,9 @@ export function InteractiveBoard({
   onSelect,
   selectedTerritoryId,
   availableTerritoryIds = [],
-  targetHints,
-  targetTerritoryIds,
+  targetHints = EMPTY_TARGET_HINTS,
   arrow = null,
 }: InteractiveBoardProps) {
-  const resolvedTargetHints = targetHints ?? targetTerritoryIds ?? [];
   const boardRef = useRef<HTMLObjectElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -144,22 +142,22 @@ export function InteractiveBoard({
   const targetById = useMemo(
     () =>
       new Map(
-        resolvedTargetHints.map((target) => [target.territoryId, target]),
+        targetHints.map((target) => [target.territoryId, target]),
       ),
-    [resolvedTargetHints],
+    [targetHints],
   );
   const roadTargetTerritoryIds = useMemo(
-    () => resolvedTargetHints.map((target) => target.territoryId),
-    [resolvedTargetHints],
+    () => targetHints.map((target) => target.territoryId),
+    [targetHints],
   );
   const specialMarkerIds = useMemo(
     () =>
       new Set(
-        resolvedTargetHints
+        targetHints
           .filter((target) => target.kind !== "normal")
           .map((target) => target.territoryId),
       ),
-    [resolvedTargetHints],
+    [targetHints],
   );
 
   useEffect(() => {
@@ -447,7 +445,7 @@ export function InteractiveBoard({
           />
         ) : null}
         <TerritorySpecialMarkers
-          targets={resolvedTargetHints}
+          targets={targetHints}
           geometries={geometries}
         />
         {from && to && arrow ? (
