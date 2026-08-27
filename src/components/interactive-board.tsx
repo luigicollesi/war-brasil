@@ -1,9 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { PLAYER_COLORS, type PlayerColor } from "@/src/lib/lobby";
-import type { TerritoryConnection } from "@/src/lib/territory-connections";
-import { TERRITORY_METADATA } from "@/src/lib/game-config";
 import { JurassicTunnelConnection } from "@/src/components/jurassic-tunnel-connection";
 import { RoadNetwork } from "@/src/components/road-network";
 import {
@@ -11,11 +8,19 @@ import {
   useTroopVisibility,
 } from "@/src/components/road-visibility-provider";
 import {
-  getTerritoryAnchor,
   TerritoryArrow,
-  type TerritoryAnchor,
   type TerritoryArrowKind,
 } from "@/src/components/territory-arrow";
+import { TerritorySpecialMarkers } from "@/src/components/territory-special-markers";
+import { TERRITORY_METADATA } from "@/src/lib/game-config";
+import type { MapTargetHint } from "@/src/lib/game-interaction";
+import { PLAYER_COLORS, type PlayerColor } from "@/src/lib/lobby";
+import {
+  findTerritoryConnection,
+  type TerritoryConnection,
+} from "@/src/lib/territory-connections";
+import type { TerritoryGeometry } from "@/src/lib/territory-geometry";
+import { territoryGeometryFromPath } from "@/src/lib/territory-svg-geometry";
 
 export type BoardTerritory = {
   territoryId: number;
@@ -49,7 +54,7 @@ type InteractiveBoardProps = {
   onSelect?: (territoryId: number) => void;
   selectedTerritoryId?: number | null;
   availableTerritoryIds?: number[];
-  targetTerritoryIds?: number[];
+  targetHints?: readonly MapTargetHint[];
   arrow?: MapArrow;
 };
 
@@ -108,7 +113,7 @@ export function InteractiveBoard({
   onSelect,
   selectedTerritoryId,
   availableTerritoryIds = [],
-  targetTerritoryIds = [],
+  targetHints = [],
   arrow = null,
 }: InteractiveBoardProps) {
   const boardRef = useRef<HTMLObjectElement>(null);
@@ -121,7 +126,9 @@ export function InteractiveBoard({
   const tooltipFrameRef = useRef(0);
   const hoveredTerritoryRef = useRef<number | null>(null);
   const onSelectRef = useRef(onSelect);
-  const [anchors, setAnchors] = useState<Map<number, TerritoryAnchor>>(new Map());
+  const [geometries, setGeometries] = useState<Map<number, TerritoryGeometry>>(
+    new Map(),
+  );
   const [hoveredTerritory, setHoveredTerritory] =
     useState<HoveredTerritory | null>(null);
   const roadsVisible = useRoadVisibility();
@@ -129,6 +136,23 @@ export function InteractiveBoard({
   const territoryById = useMemo(
     () => new Map(territories.map((territory) => [territory.territoryId, territory])),
     [territories],
+  );
+  const targetById = useMemo(
+    () => new Map(targetHints.map((target) => [target.territoryId, target])),
+    [targetHints],
+  );
+  const targetTerritoryIds = useMemo(
+    () => targetHints.map((target) => target.territoryId),
+    [targetHints],
+  );
+  const specialMarkerIds = useMemo(
+    () =>
+      new Set(
+        targetHints
+          .filter((target) => target.kind !== "normal")
+          .map((target) => target.territoryId),
+      ),
+    [targetHints],
   );
 
   useEffect(() => {
@@ -174,12 +198,12 @@ export function InteractiveBoard({
     if (!paths.length) return;
 
     const nextPaths = new Map<number, SVGPathElement>();
-    const nextAnchors = new Map<number, TerritoryAnchor>();
+    const nextGeometries = new Map<number, TerritoryGeometry>();
 
     for (const path of paths) {
       const id = Number(path.dataset.id);
       nextPaths.set(id, path);
-      nextAnchors.set(id, getTerritoryAnchor(path));
+      nextGeometries.set(id, territoryGeometryFromPath(path));
       path.setAttribute("tabindex", "0");
       path.setAttribute("role", "button");
       path.setAttribute("aria-label", path.dataset.name ?? "Território");
@@ -188,7 +212,7 @@ export function InteractiveBoard({
 
     pathsByIdRef.current = nextPaths;
     visualSignatureRef.current.clear();
-    setAnchors(nextAnchors);
+    setGeometries(nextGeometries);
 
     const click = (event: Event) => {
       const path = territoryPathFromEvent(event, root);
@@ -247,7 +271,6 @@ export function InteractiveBoard({
 
   useEffect(() => {
     const available = new Set(availableTerritoryIds);
-    const targets = new Set(targetTerritoryIds);
 
     for (const territory of territories) {
       const path = pathsByIdRef.current.get(territory.territoryId);
@@ -255,7 +278,9 @@ export function InteractiveBoard({
 
       const id = territory.territoryId;
       const isAvailable = available.has(id);
-      const isTarget = targets.has(id);
+      const targetHint = targetById.get(id);
+      const isTarget = Boolean(targetHint);
+      const targetSelectable = targetHint?.selectable ?? false;
       const isSelected = selectedTerritoryId === id;
       const regionStyle =
         regionBorders[path.dataset.region ?? ""] ?? fallbackRegionBorder;
@@ -263,6 +288,7 @@ export function InteractiveBoard({
         territory.ownerColor,
         isAvailable ? 1 : 0,
         isTarget ? 1 : 0,
+        targetSelectable ? 1 : 0,
         isSelected ? 1 : 0,
         regionStyle.stroke,
       ].join(":");
@@ -271,30 +297,35 @@ export function InteractiveBoard({
       visualSignatureRef.current.set(id, signature);
 
       path.style.fill = colorHex(territory.ownerColor);
-      path.style.fillOpacity =
-        isAvailable || isTarget || isSelected ? "0.86" : "0.55";
+      path.style.fillOpacity = isSelected || isAvailable || targetSelectable
+        ? "0.86"
+        : isTarget
+          ? "0.72"
+          : "0.55";
       path.style.stroke = regionStyle.stroke;
       path.style.strokeWidth = isSelected
         ? "8"
-        : isTarget
+        : targetSelectable
           ? "7"
-          : isAvailable
-            ? "5"
-            : "4";
+          : isTarget
+            ? "6"
+            : isAvailable
+              ? "5"
+              : "4";
       path.style.filter =
-        isSelected || isTarget
+        isSelected || targetSelectable
           ? `brightness(1.12) drop-shadow(0 0 9px ${regionStyle.glow})`
-          : isAvailable
+          : isTarget || isAvailable
             ? `brightness(1.06) drop-shadow(0 0 7px ${regionStyle.glow})`
             : "none";
       path.classList.toggle("is-selected", isSelected);
     }
   }, [
-    anchors,
+    geometries,
     territories,
     selectedTerritoryId,
     availableTerritoryIds,
-    targetTerritoryIds,
+    targetById,
   ]);
 
   const hoveredTerritoryId = hoveredTerritory?.id ?? null;
@@ -303,21 +334,21 @@ export function InteractiveBoard({
     hoveredTerritoryId === null
       ? undefined
       : territoryById.get(hoveredTerritoryId);
+  const hoveredTargetHint =
+    hoveredTerritoryId === null ? undefined : targetById.get(hoveredTerritoryId);
   const relevantConnection =
     hoveredTerritoryId !== null &&
     selectedTerritoryId !== null &&
     selectedTerritoryId !== undefined &&
     selectedTerritoryId !== hoveredTerritoryId
-      ? connections.find(
-          (connection) =>
-            (connection.territoryA === selectedTerritoryId &&
-              connection.territoryB === hoveredTerritoryId) ||
-            (connection.territoryB === selectedTerritoryId &&
-              connection.territoryA === hoveredTerritoryId),
+      ? findTerritoryConnection(
+          connections,
+          selectedTerritoryId,
+          hoveredTerritoryId,
         )
       : undefined;
-  const from = arrow ? anchors.get(arrow.fromTerritoryId) : undefined;
-  const to = arrow ? anchors.get(arrow.toTerritoryId) : undefined;
+  const from = arrow ? geometries.get(arrow.fromTerritoryId) : undefined;
+  const to = arrow ? geometries.get(arrow.toTerritoryId) : undefined;
   const jurassicTunnel = connections.find(
     (connection) => connection.barrierName === "Túnel Jurássico",
   );
@@ -326,9 +357,9 @@ export function InteractiveBoard({
       ? jurassicTunnel.territoryB
       : jurassicTunnel.territoryA
     : null;
-  const tunnelFrom = jurassicDestinationId ? anchors.get(3) : undefined;
+  const tunnelFrom = jurassicDestinationId ? geometries.get(3) : undefined;
   const tunnelTo = jurassicDestinationId
-    ? anchors.get(jurassicDestinationId)
+    ? geometries.get(jurassicDestinationId)
     : undefined;
   const tunnelTargetName = jurassicDestinationId
     ? TERRITORY_METADATA[jurassicDestinationId]?.name
@@ -351,7 +382,7 @@ export function InteractiveBoard({
         {roadsVisible ? (
           <RoadNetwork
             connections={connections}
-            anchors={anchors}
+            anchors={geometries}
             visible
             selectedTerritoryId={selectedTerritoryId}
             targetTerritoryIds={targetTerritoryIds}
@@ -364,14 +395,16 @@ export function InteractiveBoard({
             viewBox="0 0 1254 1254"
           >
             {territories.map((territory) => {
-              const anchor = anchors.get(territory.territoryId);
-              if (!anchor) return null;
+              if (specialMarkerIds.has(territory.territoryId)) return null;
+
+              const geometry = geometries.get(territory.territoryId);
+              if (!geometry) return null;
               const radius = troopMarkerRadius(territory.troops);
 
               return (
                 <g
                   key={territory.territoryId}
-                  transform={`translate(${anchor.x} ${anchor.y})`}
+                  transform={`translate(${geometry.x} ${geometry.y})`}
                 >
                   <circle
                     r={radius}
@@ -406,6 +439,7 @@ export function InteractiveBoard({
             targetName={tunnelTargetName}
           />
         ) : null}
+        <TerritorySpecialMarkers targets={targetHints} geometries={geometries} />
         {from && to && arrow ? (
           <TerritoryArrow from={from} to={to} kind={arrow.kind} />
         ) : null}
@@ -423,7 +457,17 @@ export function InteractiveBoard({
             <p className="mt-1 font-semibold text-[#e8c35e]">
               {hoveredState.troops} tropas
             </p>
-            {relevantConnection ? (
+            {hoveredTargetHint?.kind === "barrier-attack" ? (
+              <p className="mt-2 border-t border-white/15 pt-2 text-[#ffd6a1]">
+                ☠ {hoveredTargetHint.barrierName ?? "Ataque por barreira"}
+                {!hoveredTargetHint.selectable ? " · tropas insuficientes" : ""}
+              </p>
+            ) : hoveredTargetHint?.kind === "barrier-maneuver" ? (
+              <p className="mt-2 border-t border-white/15 pt-2 text-[#b9d7ff]">
+                Travessia por {hoveredTargetHint.barrierName ?? "barreira"} · 1 tropa perdida
+                {!hoveredTargetHint.selectable ? " · tropas insuficientes" : ""}
+              </p>
+            ) : relevantConnection?.exists ? (
               <p className="mt-2 border-t border-white/15 pt-2 text-[#ffd6a1]">
                 {relevantConnection.barrierName === "Túnel Jurássico"
                   ? "🦖 Túnel Jurássico"
