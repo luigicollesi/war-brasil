@@ -35,3 +35,22 @@ test("números de tropas usam os anchors internos calculados do mapa", () => {
   assert.match(anchors, /clearanceFromBoundary/);
   assert.match(anchors, /const divisions = 17/);
 });
+
+test("pips dos dados de combate preservam a cor da facção", () => {
+  const client = readFileSync("src/components/game-client-v2.tsx", "utf8");
+  const polish = readFileSync("src/app/game/[roomId]/game-polish.css", "utf8");
+
+  assert.match(client, /backgroundColor: colorHex\(color\)/);
+  assert.doesNotMatch(polish, /background-color:\s*#f8f0dc\s*!important/);
+  assert.match(polish, /A cor dos pips vem do jogador/);
+});
+
+test("rolagem de defesa mantém os dados de ataque estáticos", () => {
+  const polish = readFileSync("src/app/game/[roomId]/game-polish.css", "utf8");
+
+  assert.match(polish, /section:has\(> button\)/);
+  assert.match(polish, /:has\(> div:nth-child\(2\)\)/);
+  assert.match(polish, /> div:first-child \.dice-roll-animation/);
+  assert.match(polish, /animation: none !important/);
+  assert.match(polish, /transform: none !important/);
+});
