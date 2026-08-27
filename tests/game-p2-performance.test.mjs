@@ -186,7 +186,7 @@ test("topologia fixa atravessa a rede apenas quando a versão muda", () => {
     sync,
     /payload\.connections \?\? baseTopologyConnectionsRef\.current/,
   );
-  assert.match(sync, /effectiveTerritoryConnections\(/);
+  assert.match(sync, /hydrateGameSnapshot\(payload, baseConnections\)/);
 });
 
 test("reforço e manobra retornam patches autoritativos ligados à revisão base", () => {
