@@ -36,7 +36,25 @@ test("configuração dedicada mantém a compilação dos testes fora do tsconfig
   const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
 
   assert.match(config, /"outDir"\s*:\s*"\.test-build"/);
+  assert.match(config, /"rootDir"\s*:\s*"src\/lib"/);
   assert.match(config, /"module"\s*:\s*"commonjs"/);
   assert.equal(packageJson.scripts["test:compile"], "tsc -p tsconfig.test.json");
   assert.equal(packageJson.scripts.test, "npm run test:compile && npm run test:run");
+});
+
+test("UI de manobra reutiliza a regra centralizada de tropas movimentáveis", () => {
+  const panel = readFileSync("src/components/game-turn-panel.tsx", "utf8");
+
+  assert.match(panel, /maneuverMovableTroops\(/);
+  assert.doesNotMatch(
+    panel,
+    /selectedSource\.troops\s*-\s*selectedSource\.movedInTurn\s*-\s*1/,
+  );
+});
+
+test("sincronização delega hidratação e não recompõe topologia efetiva no hook", () => {
+  const sync = readFileSync("src/hooks/use-game-sync.ts", "utf8");
+
+  assert.match(sync, /hydrateGameSnapshot\(payload, baseConnections\)/);
+  assert.doesNotMatch(sync, /effectiveTerritoryConnections/);
 });
