@@ -1,4 +1,5 @@
 import type { GameSnapshot } from "@/src/lib/game-contract";
+import { maneuverMovableTroops } from "@/src/lib/game-rules";
 import type { GameViewModel } from "@/src/lib/game-view-model";
 import {
   reachableTerritoryIds,
@@ -191,7 +192,11 @@ export function deriveMapHints(
       ? {
           available: game.myTerritories
             .filter(
-              (territory) => territory.troops - territory.movedInTurn > 1,
+              (territory) =>
+                maneuverMovableTroops(
+                  territory.troops,
+                  territory.movedInTurn,
+                ) > 0,
             )
             .map((territory) => territory.territoryId),
           targets: [],
