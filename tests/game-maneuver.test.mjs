@@ -1,54 +1,92 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { maneuverTraversalProfile } from "../.test-build/game-barrier-rules.js";
 import { maneuverMovableTroops } from "../.test-build/game-rules.js";
+import { effectiveTerritoryConnections } from "../.test-build/territory-connections.js";
 import {
-  effectiveTerritoryConnections,
-  reachableTerritoryIds,
-} from "../.test-build/territory-connections.js";
+  bestTerritoryRoute,
+  bestTerritoryRoutes,
+} from "../.test-build/territory-routing.js";
 
-function connection(territoryA, territoryB, passable = true) {
+function connection(territoryA, territoryB, passable = true, barrierName) {
   return {
     territoryA,
     territoryB,
     exists: true,
     passable,
-    barrierName: passable ? null : "Barreira natural",
+    barrierName: passable ? null : barrierName ?? "Barreira natural",
     description: null,
   };
 }
 
-function maneuverTargets(connections, sourceId, ownedIds) {
-  return reachableTerritoryIds(connections, sourceId, ownedIds).filter(
-    (territoryId) => territoryId !== sourceId,
-  );
+function route(connections, sourceId, targetId, ownedIds) {
+  return bestTerritoryRoute(connections, sourceId, targetId, ownedIds);
 }
 
-test("manobra A-B-C permite alcançar C através de B próprio", () => {
+test("manobra A-B-C alcança C sem barreira através de B próprio", () => {
   const connections = [connection(1, 2), connection(2, 3)];
+  const result = route(connections, 1, 3, [1, 2, 3]);
 
-  assert.deepEqual(
-    new Set(maneuverTargets(connections, 1, [1, 2, 3])),
-    new Set([2, 3]),
-  );
+  assert.equal(result.kind, "reachable");
+  assert.deepEqual(result.path, [1, 2, 3]);
+  assert.equal(result.barrierCount, 0);
+  assert.equal(maneuverTraversalProfile(result.barrierCount).kind, "normal");
 });
 
-test("território inimigo intermediário bloqueia propagação da manobra", () => {
+test("território inimigo intermediário não pode servir de ponte na manobra", () => {
   const connections = [connection(1, 2), connection(2, 3)];
+  const result = route(connections, 1, 3, [1, 3]);
 
-  assert.deepEqual(maneuverTargets(connections, 1, [1, 3]), []);
+  assert.deepEqual(result, { kind: "unreachable", territoryId: 3 });
 });
 
-test("barreira intransponível interrompe a cadeia mesmo entre territórios próprios", () => {
-  const connections = [connection(1, 2), connection(2, 3, false)];
+test("uma barreira entre territórios próprios continua alcançável com penalidade", () => {
+  const connections = [
+    connection(1, 2),
+    connection(2, 3, false, "Serra"),
+  ];
+  const result = route(connections, 1, 3, [1, 2, 3]);
 
-  assert.deepEqual(
-    maneuverTargets(connections, 1, [1, 2, 3]),
-    [2],
-  );
+  assert.equal(result.kind, "reachable");
+  assert.equal(result.barrierCount, 1);
+  assert.equal(result.barriers[0]?.barrierName, "Serra");
+  assert.deepEqual(maneuverTraversalProfile(result.barrierCount), {
+    kind: "barrier",
+    barrierCount: 1,
+    troopLoss: 1,
+    minimumTroops: 2,
+  });
 });
 
-test("BFS de manobra tolera ciclos, duplicatas e self-loop sem repetir destinos", () => {
+test("duas barreiras na melhor rota classificam o destino como bloqueado", () => {
+  const connections = [
+    connection(1, 2, false, "Barreira A"),
+    connection(2, 3),
+    connection(3, 4, false, "Barreira B"),
+  ];
+  const result = route(connections, 1, 4, [1, 2, 3, 4]);
+
+  assert.equal(result.kind, "reachable");
+  assert.equal(result.barrierCount, 2);
+  assert.equal(maneuverTraversalProfile(result.barrierCount).kind, "blocked");
+});
+
+test("rota sem barreira é priorizada mesmo quando existe atalho com barreira", () => {
+  const connections = [
+    connection(1, 2),
+    connection(2, 3),
+    connection(3, 4),
+    connection(1, 4, false, "Atalho bloqueado"),
+  ];
+  const result = route(connections, 1, 4, [1, 2, 3, 4]);
+
+  assert.equal(result.kind, "reachable");
+  assert.equal(result.barrierCount, 0);
+  assert.deepEqual(result.path, [1, 2, 3, 4]);
+});
+
+test("roteamento tolera ciclos, duplicatas e self-loop sem perder determinismo", () => {
   const connections = [
     connection(1, 2),
     connection(2, 3),
@@ -57,59 +95,65 @@ test("BFS de manobra tolera ciclos, duplicatas e self-loop sem repetir destinos"
     connection(2, 2),
   ];
 
-  const targets = maneuverTargets(connections, 1, [1, 2, 3]);
-
-  assert.deepEqual(new Set(targets), new Set([2, 3]));
-  assert.equal(targets.length, 2);
+  const routes = bestTerritoryRoutes(connections, 1, [1, 2, 3]);
+  assert.equal(routes.get(2)?.kind, "reachable");
+  assert.equal(routes.get(3)?.kind, "reachable");
+  assert.equal(routes.get(2)?.barrierCount, 0);
+  assert.equal(routes.get(3)?.barrierCount, 0);
 });
 
-test("BFS ignora conexões inexistentes mesmo se marcadas como passáveis", () => {
+test("roteamento ignora conexões inexistentes mesmo se marcadas como passáveis", () => {
   const missingConnection = {
     ...connection(2, 3),
     exists: false,
   };
-  const connections = [connection(1, 2), missingConnection];
-
-  assert.deepEqual(
-    maneuverTargets(connections, 1, [1, 2, 3]),
-    [2],
+  const result = route(
+    [connection(1, 2), missingConnection],
+    1,
+    3,
+    [1, 2, 3],
   );
+
+  assert.deepEqual(result, { kind: "unreachable", territoryId: 3 });
 });
 
-test("Túnel Jurássico funciona como aresta normal na cadeia de manobra", () => {
+test("Túnel Jurássico funciona como aresta normal na melhor rota", () => {
   const baseConnections = [connection(20, 21), connection(21, 22)];
   const effectiveConnections = effectiveTerritoryConnections(
     baseConnections,
     20,
   );
-
-  assert.deepEqual(
-    new Set(maneuverTargets(effectiveConnections, 3, [3, 20, 21, 22])),
-    new Set([20, 21, 22]),
+  const result = route(
+    effectiveConnections,
+    3,
+    22,
+    [3, 20, 21, 22],
   );
+
+  assert.equal(result.kind, "reachable");
+  assert.equal(result.barrierCount, 0);
+  assert.deepEqual(result.path, [3, 20, 21, 22]);
 });
 
-test("Túnel Jurássico vence uma fronteira normal bloqueada para o mesmo par", () => {
+test("Túnel Jurássico vence uma fronteira base bloqueada para o mesmo par", () => {
   const blockedBase = [connection(3, 20, false), connection(20, 21)];
   const effectiveConnections = effectiveTerritoryConnections(blockedBase, 20);
+  const result = route(effectiveConnections, 3, 21, [3, 20, 21]);
 
-  assert.deepEqual(
-    new Set(maneuverTargets(effectiveConnections, 3, [3, 20, 21])),
-    new Set([20, 21]),
-  );
+  assert.equal(result.kind, "reachable");
+  assert.equal(result.barrierCount, 0);
+  assert.deepEqual(result.path, [3, 20, 21]);
 });
 
-test("inimigo após o Túnel Jurássico impede alcançar territórios próprios além dele", () => {
+test("inimigo após o Túnel Jurássico impede usar o território como ponte", () => {
   const baseConnections = [connection(20, 21), connection(21, 22)];
   const effectiveConnections = effectiveTerritoryConnections(
     baseConnections,
     20,
   );
+  const result = route(effectiveConnections, 3, 22, [3, 20, 22]);
 
-  assert.deepEqual(
-    maneuverTargets(effectiveConnections, 3, [3, 20, 22]),
-    [20],
-  );
+  assert.deepEqual(result, { kind: "unreachable", territoryId: 22 });
 });
 
 test("quantidade movimentável preserva uma tropa e bloqueia tropas recém-movidas", () => {
@@ -129,16 +173,19 @@ test("fluxo de manobra limpa a seleção depois de uma ação bem-sucedida", () 
   );
 });
 
-test("backend recalcula topologia efetiva e caminho próprio antes de mover tropas", () => {
+test("backend recalcula topologia completa e melhor rota própria antes de mover tropas", () => {
   const source = readFileSync(
     "src/lib/game-maneuver-command-service.ts",
     "utf8",
   );
 
-  assert.match(source, /getPassableTerritoryConnections/);
+  assert.match(source, /getBaseTerritoryConnections/);
   assert.match(source, /effectiveTerritoryConnections\(/);
-  assert.match(source, /reachableTerritoryIds\(/);
+  assert.match(source, /bestTerritoryRoute\(/);
   assert.match(source, /owned\.map\(\(territory\) => territory\.territory_id\)/);
-  assert.match(source, /if \(!reachable\.has\(to\)\)/);
+  assert.match(source, /maneuverTraversalProfile\(route\.barrierCount\)/);
   assert.match(source, /maneuverMovableTroops\(/);
+  assert.match(source, /const troopsArriving = troops - traversal\.troopLoss/);
+  assert.doesNotMatch(source, /getPassableTerritoryConnections/);
+  assert.doesNotMatch(source, /reachableTerritoryIds/);
 });
