@@ -178,7 +178,7 @@ export function attackTargetHints(
       source.troops,
       connection.passable ? "normal" : "barrier",
     );
-    const hint: MapTargetHint = connection.passable
+    const hint: MapTargetHint | null = connection.passable
       ? profile.kind === "available"
         ? { territoryId, kind: "normal", selectable: true }
         : null
