@@ -6,7 +6,10 @@ import type { TerritoryConnection } from "@/src/lib/territory-connections";
 import { TERRITORY_METADATA } from "@/src/lib/game-config";
 import { JurassicTunnelConnection } from "@/src/components/jurassic-tunnel-connection";
 import { RoadNetwork } from "@/src/components/road-network";
-import { useRoadVisibility } from "@/src/components/road-visibility-provider";
+import {
+  useRoadVisibility,
+  useTroopVisibility,
+} from "@/src/components/road-visibility-provider";
 import {
   getTerritoryAnchor,
   TerritoryArrow,
@@ -75,6 +78,13 @@ function colorHex(color: PlayerColor) {
   return PLAYER_COLORS.find((item) => item.value === color)?.hex ?? "#64756f";
 }
 
+function troopMarkerRadius(troops: number) {
+  const digits = String(Math.max(0, troops)).length;
+  if (digits <= 1) return 19;
+  if (digits === 2) return 22;
+  return 26;
+}
+
 function readTerritory(path: SVGPathElement): TerritoryDetails {
   return {
     id: Number(path.dataset.id),
@@ -115,6 +125,7 @@ export function InteractiveBoard({
   const [hoveredTerritory, setHoveredTerritory] =
     useState<HoveredTerritory | null>(null);
   const roadsVisible = useRoadVisibility();
+  const troopsVisible = useTroopVisibility();
   const territoryById = useMemo(
     () => new Map(territories.map((territory) => [territory.territoryId, territory])),
     [territories],
@@ -345,6 +356,48 @@ export function InteractiveBoard({
             selectedTerritoryId={selectedTerritoryId}
             targetTerritoryIds={targetTerritoryIds}
           />
+        ) : null}
+        {troopsVisible ? (
+          <svg
+            aria-hidden="true"
+            className="game-troop-layer pointer-events-none absolute inset-0 h-full w-full overflow-visible"
+            viewBox="0 0 1254 1254"
+          >
+            {territories.map((territory) => {
+              const anchor = anchors.get(territory.territoryId);
+              if (!anchor) return null;
+              const radius = troopMarkerRadius(territory.troops);
+
+              return (
+                <g
+                  key={territory.territoryId}
+                  transform={`translate(${anchor.x} ${anchor.y})`}
+                >
+                  <circle
+                    r={radius}
+                    fill="rgba(4, 22, 17, 0.88)"
+                    stroke={colorHex(territory.ownerColor)}
+                    strokeWidth="5"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                  <text
+                    x="0"
+                    y="1"
+                    fill="#fffdf5"
+                    fontSize="21"
+                    fontWeight="800"
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    paintOrder="stroke"
+                    stroke="rgba(0,0,0,.34)"
+                    strokeWidth="2"
+                  >
+                    {territory.troops}
+                  </text>
+                </g>
+              );
+            })}
+          </svg>
         ) : null}
         {tunnelFrom && tunnelTo && tunnelTargetName ? (
           <JurassicTunnelConnection
