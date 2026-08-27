@@ -23,17 +23,23 @@ test("visibilidade de tropas é persistente e independente das estradas", () => 
   assert.match(source, /className="game-troop-toggle"/);
 });
 
-test("números de tropas usam os anchors internos calculados do mapa", () => {
+test("números de tropas usam geometria interna extraída do SVG", () => {
   const board = readFileSync("src/components/interactive-board.tsx", "utf8");
-  const anchors = readFileSync("src/components/territory-arrow.tsx", "utf8");
+  const arrow = readFileSync("src/components/territory-arrow.tsx", "utf8");
+  const svgGeometry = readFileSync("src/lib/territory-svg-geometry.ts", "utf8");
+  const geometry = readFileSync("src/lib/territory-geometry.ts", "utf8");
 
   assert.match(board, /useTroopVisibility/);
+  assert.match(board, /getTerritoryAnchor\(path\)/);
   assert.match(board, /anchors\.get\(territory\.territoryId\)/);
   assert.match(board, /className="game-troop-layer/);
   assert.match(board, /\{territory\.troops\}/);
-  assert.match(anchors, /isPointInFill/);
-  assert.match(anchors, /clearanceFromBoundary/);
-  assert.match(anchors, /const divisions = 17/);
+  assert.match(arrow, /territoryGeometryFromPath\(pathElement\)/);
+  assert.match(svgGeometry, /pathElement\.isPointInFill/);
+  assert.match(svgGeometry, /pathElement\.getBBox\(\)/);
+  assert.match(geometry, /distanceSquaredToSegment/);
+  assert.match(geometry, /sampleGrid\(17\)/);
+  assert.match(geometry, /safeRadius/);
 });
 
 test("pips dos dados de combate preservam a cor da facção", () => {
