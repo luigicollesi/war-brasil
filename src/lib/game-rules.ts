@@ -18,6 +18,10 @@ export function reinforcementFor(territoryIds: number[]) {
   return reinforcementBase(territoryIds.length) + regionBonus(territoryIds);
 }
 
+export function maneuverMovableTroops(troops: number, movedInTurn: number) {
+  return Math.max(0, troops - movedInTurn - 1);
+}
+
 export function resolveBattle(attacker: number[], defender: number[]) {
   const sortedAttacker = [...attacker].sort((a, b) => b - a);
   const sortedDefender = [...defender].sort((a, b) => b - a);
