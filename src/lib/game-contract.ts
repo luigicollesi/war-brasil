@@ -1,3 +1,4 @@
+import type { AttackMode } from "./game-barrier-rules";
 import type { CardSymbol } from "./game-config";
 import type { PlayerColor } from "./lobby";
 import type { TerritoryConnection } from "./territory-connections";
@@ -32,6 +33,10 @@ export type GameBattle = {
   defenderPlayerId: string;
   stage: BattleStage;
   stageStartedAt: string;
+  // Optional for snapshots that may still contain a battle created before the
+  // barrier-combat metadata was introduced. Missing means a normal attack.
+  attackMode?: AttackMode;
+  barrierName?: string | null;
   attackerTroopsAfter?: number;
   defenderTroopsAfter?: number;
 };
