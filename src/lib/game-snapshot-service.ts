@@ -5,7 +5,6 @@ import type { GameSnapshot } from "@/src/lib/game-contract";
 import { isBattle } from "@/src/lib/game-battle-service";
 import { gameQuery } from "@/src/lib/game-query";
 import { getBaseTerritoryConnections } from "@/src/lib/game-topology-service";
-import { jurassicTunnelConnection } from "@/src/lib/territory-connections";
 import { RoomError } from "@/src/lib/rooms";
 
 type SnapshotRoom = {
@@ -225,10 +224,6 @@ export async function getGameSnapshotQuery(
         .at(-1)?.player_id ?? null;
 
     const connections = [...(await getBaseTerritoryConnections(client))];
-    const tunnelConnection = jurassicTunnelConnection(
-      room.jurassic_tunnel_territory_id,
-    );
-    if (tunnelConnection) connections.push(tunnelConnection);
 
     const snapshot: GameSnapshot = {
       room: {
