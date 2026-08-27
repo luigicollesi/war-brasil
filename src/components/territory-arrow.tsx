@@ -54,16 +54,16 @@ export function getTerritoryAnchor(pathElement: SVGPathElement): TerritoryAnchor
     y: bbox.y + bbox.height / 2,
   };
 
-  if (
-    bbox.width <= 0 ||
-    bbox.height <= 0 ||
-    typeof pathElement.isPointInFill !== "function"
-  ) {
+  if (bbox.width <= 0 || bbox.height <= 0) {
     return bboxCenter;
   }
 
   const boundary = sampleBoundary(pathElement);
   if (!boundary.length) return bboxCenter;
+
+  if (typeof pathElement.isPointInFill !== "function") {
+    return boundary[Math.floor(boundary.length / 2)];
+  }
 
   let bestPoint: TerritoryAnchor | null = null;
   let bestClearance = -1;
