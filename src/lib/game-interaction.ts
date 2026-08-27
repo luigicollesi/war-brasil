@@ -1,10 +1,10 @@
-import type { GameSnapshot } from "@/src/lib/game-contract";
-import { maneuverMovableTroops } from "@/src/lib/game-rules";
-import type { GameViewModel } from "@/src/lib/game-view-model";
+import type { GameSnapshot } from "./game-contract";
+import { maneuverMovableTroops } from "./game-rules";
+import type { GameViewModel } from "./game-view-model";
 import {
   reachableTerritoryIds,
   type TerritoryConnection,
-} from "@/src/lib/territory-connections";
+} from "./territory-connections";
 
 type GameInteractionDialog =
   | { kind: "reinforce"; targetId: number }
