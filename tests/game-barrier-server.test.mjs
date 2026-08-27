@@ -23,6 +23,13 @@ test("combate persiste o modo de ataque e mantém compatibilidade com batalhas a
   assert.match(combat, /barrierName: attackMode === "barrier"/);
 });
 
+test("structural sharing considera modo e nome da barreira como parte da batalha", () => {
+  const sharing = source("src/lib/game-snapshot-sharing.ts");
+
+  assert.match(sharing, /left\.attackMode === right\.attackMode/);
+  assert.match(sharing, /left\.barrierName === right\.barrierName/);
+});
+
 test("fronteira existente bloqueada vira ataque de barreira em vez de ser rejeitada", () => {
   const combat = source("src/lib/game-combat-command-service.ts");
 
