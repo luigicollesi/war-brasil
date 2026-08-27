@@ -180,9 +180,13 @@ test("topologia fixa atravessa a rede apenas quando a versão muda", () => {
   assert.match(route, /revisionForFastPath/);
   assert.match(route, /delete dynamicSnapshot\.connections/);
   assert.match(sync, /topologyVersionRef/);
-  assert.match(sync, /topologyConnectionsRef/);
+  assert.match(sync, /baseTopologyConnectionsRef/);
   assert.match(sync, /GAME_TOPOLOGY_HEADER/);
-  assert.match(sync, /payload\.connections \?\? topologyConnectionsRef\.current/);
+  assert.match(
+    sync,
+    /payload\.connections \?\? baseTopologyConnectionsRef\.current/,
+  );
+  assert.match(sync, /effectiveTerritoryConnections\(/);
 });
 
 test("reforço e manobra retornam patches autoritativos ligados à revisão base", () => {
