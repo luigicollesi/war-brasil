@@ -37,6 +37,8 @@ export function jurassicTunnelConnection(
   };
 }
 
+// A topologia base é cacheável e nunca deve ser mutada. O Túnel Jurássico é
+// estado dinâmico da rodada e só existe na topologia efetiva derivada.
 export function effectiveTerritoryConnections(
   baseConnections: readonly TerritoryConnection[],
   destinationTerritoryId: number | null,
