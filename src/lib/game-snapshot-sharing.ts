@@ -40,6 +40,8 @@ function sameBattle(left: GameBattle | null, right: GameBattle | null) {
     left.defenderPlayerId === right.defenderPlayerId &&
     left.stage === right.stage &&
     left.stageStartedAt === right.stageStartedAt &&
+    left.attackMode === right.attackMode &&
+    left.barrierName === right.barrierName &&
     left.attackerTroopsAfter === right.attackerTroopsAfter &&
     left.defenderTroopsAfter === right.defenderTroopsAfter &&
     sameNumbers(left.attacker, right.attacker) &&
