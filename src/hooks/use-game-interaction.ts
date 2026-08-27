@@ -12,10 +12,9 @@ import {
   gameInteractionReducer,
   gameInteractionScopeKey,
   initialGameInteractionState,
-  maneuverTargetIds,
+  maneuverTraversalFromTarget,
 } from "@/src/lib/game-interaction";
 import { runGameCommand } from "@/src/lib/game-command-client";
-import { findTerritoryConnection } from "@/src/lib/territory-connections";
 
 type UseGameInteractionInput = {
   roomId: string;
@@ -54,10 +53,6 @@ export function useGameInteraction({
     dispatch({ type: "clear-dialog", scopeKey });
   }, [scopeKey]);
 
-  const clearBarrier = useCallback(() => {
-    dispatch({ type: "clear-barrier", scopeKey });
-  }, [scopeKey]);
-
   const onTerritoryClick = useCallback(
     (territoryId: number) => {
       const meId = game.me?.id;
@@ -89,41 +84,40 @@ export function useGameInteraction({
           return;
         }
 
-        const connection = findTerritoryConnection(
-          snapshot.connections,
-          state.sourceId,
-          territoryId,
+        const targetHint = mapHints.targets.find(
+          (hint) => hint.territoryId === territoryId,
         );
+        if (!targetHint || territory.ownerPlayerId === meId) return;
 
-        if (
-          territory.ownerPlayerId !== meId &&
-          connection.exists &&
-          connection.passable
-        ) {
-          const sourceId = state.sourceId;
-          void runGameCommand(
-            roomId,
-            "attack",
-            { fromTerritoryId: sourceId, toTerritoryId: territoryId },
-            "Não foi possível iniciar o ataque.",
-          )
-            .then(async (result) => {
-              dispatch({ type: "clear-selection", scopeKey });
-              await refresh(result.revision ?? undefined);
-            })
-            .catch((error: unknown) => {
-              setMessage(
-                error instanceof Error
-                  ? error.message
-                  : "Não foi possível iniciar o ataque.",
-              );
-            });
+        if (!targetHint.selectable) {
+          if (targetHint.kind === "barrier-attack") {
+            setMessage(
+              targetHint.barrierName
+                ? `Ataques através de ${targetHint.barrierName} exigem pelo menos ${targetHint.minimumTroops} tropas.`
+                : `Ataques através desta barreira exigem pelo menos ${targetHint.minimumTroops} tropas.`,
+            );
+          }
           return;
         }
 
-        if (connection.exists && !connection.passable) {
-          dispatch({ type: "show-barrier", scopeKey, connection });
-        }
+        const sourceId = state.sourceId;
+        void runGameCommand(
+          roomId,
+          "attack",
+          { fromTerritoryId: sourceId, toTerritoryId: territoryId },
+          "Não foi possível iniciar o ataque.",
+        )
+          .then(async (result) => {
+            dispatch({ type: "clear-selection", scopeKey });
+            await refresh(result.revision ?? undefined);
+          })
+          .catch((error: unknown) => {
+            setMessage(
+              error instanceof Error
+                ? error.message
+                : "Não foi possível iniciar o ataque.",
+            );
+          });
         return;
       }
 
@@ -146,34 +140,38 @@ export function useGameInteraction({
           return;
         }
 
-        const targets = maneuverTargetIds(snapshot, game, state.sourceId);
-        if (territory.ownerPlayerId === meId && targets.includes(territoryId)) {
-          dispatch({
-            type: "open-maneuver",
-            scopeKey,
-            sourceId: state.sourceId,
-            targetId: territoryId,
-          });
+        const targetHint = mapHints.targets.find(
+          (hint) => hint.territoryId === territoryId,
+        );
+        if (!targetHint || territory.ownerPlayerId !== meId) return;
+
+        if (!targetHint.selectable) {
+          if (targetHint.kind === "barrier-maneuver") {
+            setMessage(
+              targetHint.barrierName
+                ? `A travessia de ${targetHint.barrierName} exige mover pelo menos ${targetHint.minimumTroops} tropas.`
+                : `A travessia desta barreira exige mover pelo menos ${targetHint.minimumTroops} tropas.`,
+            );
+          }
           return;
         }
 
-        const directConnection = findTerritoryConnection(
-          snapshot.connections,
-          state.sourceId,
-          territoryId,
-        );
-        if (directConnection.exists && !directConnection.passable) {
-          dispatch({
-            type: "show-barrier",
-            scopeKey,
-            connection: directConnection,
-          });
-        }
+        const traversal = maneuverTraversalFromTarget(targetHint);
+        if (!traversal) return;
+
+        dispatch({
+          type: "open-maneuver",
+          scopeKey,
+          sourceId: state.sourceId,
+          targetId: territoryId,
+          traversal,
+        });
       }
     },
     [
       clearSelection,
       game,
+      mapHints.targets,
       refresh,
       roomId,
       scopeKey,
@@ -186,7 +184,6 @@ export function useGameInteraction({
     state,
     sourceId: state.sourceId,
     dialog: state.dialog,
-    barrier: state.barrier,
     message,
     mapHints,
     arrow,
@@ -194,7 +191,6 @@ export function useGameInteraction({
     onTerritoryClick,
     clearSelection,
     clearDialog,
-    clearBarrier,
   };
 }
 
