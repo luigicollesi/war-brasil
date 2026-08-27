@@ -5,6 +5,8 @@ export type GameSnapshotPayload = Omit<GameSnapshot, "connections"> & {
   connections?: GameSnapshot["connections"];
 };
 
+// O transporte carrega somente a topologia base cacheável; snapshots usados
+// pela aplicação sempre expõem a topologia efetiva da rodada atual.
 export function hydrateGameSnapshot(
   payload: GameSnapshotPayload,
   baseConnections: GameSnapshot["connections"],
