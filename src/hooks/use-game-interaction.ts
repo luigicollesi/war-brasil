@@ -2,6 +2,7 @@
 
 import { useCallback, useMemo, useReducer, useState } from "react";
 import type { GameSnapshot } from "@/src/lib/game-contract";
+import { maneuverMovableTroops } from "@/src/lib/game-rules";
 import type { GameViewModel } from "@/src/lib/game-view-model";
 import {
   deriveInteractionArrow,
@@ -130,7 +131,10 @@ export function useGameInteraction({
         if (state.sourceId === null) {
           if (
             territory.ownerPlayerId === meId &&
-            territory.troops - territory.movedInTurn > 1
+            maneuverMovableTroops(
+              territory.troops,
+              territory.movedInTurn,
+            ) > 0
           ) {
             dispatch({ type: "select-source", scopeKey, territoryId });
           }
