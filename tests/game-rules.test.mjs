@@ -95,11 +95,13 @@ test("servidor renova o Túnel Jurássico ao virar a rodada", () => {
   assert.match(source, /round_number=round_number\+1,jurassic_tunnel_territory_id=\$2/);
 });
 
-test("ataque aceita fronteira normal passável ou Túnel Jurássico", () => {
+test("ataque usa a fronteira existente para classificar combate normal ou de barreira", () => {
   const source = readFileSync("src/lib/game-combat-command-service.ts", "utf8");
   assert.match(source, /isJurassicTunnelConnection/);
   assert.match(source, /if \(!tunnelActive && !connection\.exists\)/);
-  assert.match(source, /if \(!tunnelActive && !connection\.passable\)/);
+  assert.match(source, /attackModeForConnection/);
+  assert.match(source, /attackProfile/);
+  assert.doesNotMatch(source, /if \(!tunnelActive && !connection\.passable\)/);
   assert.match(source, /getBaseTerritoryConnection/);
 });
 
@@ -155,11 +157,14 @@ test("Túnel Jurássico participa da cadeia de manobra", () => {
   );
 });
 
-test("backend da manobra valida caminho contínuo por territórios próprios", () => {
+test("backend da manobra recalcula a melhor rota usando a topologia completa", () => {
   const source = readFileSync("src/lib/game-maneuver-command-service.ts", "utf8");
-  assert.match(source, /reachableTerritoryIds/);
+  assert.match(source, /bestTerritoryRoute/);
+  assert.match(source, /maneuverTraversalProfile/);
   assert.match(source, /effectiveTerritoryConnections/);
-  assert.match(source, /getPassableTerritoryConnections/);
+  assert.match(source, /getBaseTerritoryConnections/);
+  assert.doesNotMatch(source, /reachableTerritoryIds/);
+  assert.doesNotMatch(source, /getPassableTerritoryConnections/);
   assert.doesNotMatch(source, /FROM territory_connections/);
 });
 
@@ -221,10 +226,10 @@ test("territórios mantêm borda brilhante conforme a região", () => {
   assert.match(source, /path\.style\.stroke\s*=\s*regionStyle\.stroke/);
 });
 
-test("Túnel Jurássico usa curva derivada dos anchors do SVG", () => {
+test("Túnel Jurássico usa curva derivada dos anchors calculados do SVG", () => {
   const source = readFileSync("src/components/jurassic-tunnel-connection.tsx", "utf8");
   const board = readFileSync("src/components/interactive-board.tsx", "utf8");
-  const arrow = readFileSync("src/components/territory-arrow.tsx", "utf8");
+  const svgGeometry = readFileSync("src/lib/territory-svg-geometry.ts", "utf8");
   assert.match(source, /Math\.hypot\(dx, dy\)/);
   assert.match(source, /normalX = -dy \/ distance/);
   assert.match(source, /Math\.min\(distance \* 0\.15, MAX_CURVE\)/);
@@ -233,7 +238,7 @@ test("Túnel Jurássico usa curva derivada dos anchors do SVG", () => {
   assert.match(source, /Túnel Jurássico/);
   assert.match(source, /Acre ↔/);
   assert.match(board, /getTerritoryAnchor\(path\)/);
-  assert.match(arrow, /pathElement\.getBBox\(\)/);
+  assert.match(svgGeometry, /pathElement\.getBBox\(\)/);
 });
 
 test("conquista libera o resultado antes da transferência", () => {
@@ -253,8 +258,10 @@ test("layout declara scroll smooth para transições do Next", () => {
   assert.match(source, /data-scroll-behavior="smooth"/);
 });
 
-test("setas usam a geometria do path no viewBox do mapa", () => {
+test("setas delegam o cálculo de geometria do path e mantêm o viewBox do mapa", () => {
   const source = readFileSync("src/components/territory-arrow.tsx", "utf8");
-  assert.match(source, /pathElement\.getBBox\(\)/);
+  const svgGeometry = readFileSync("src/lib/territory-svg-geometry.ts", "utf8");
+  assert.match(source, /territoryGeometryFromPath\(pathElement\)/);
+  assert.match(svgGeometry, /pathElement\.getBBox\(\)/);
   assert.match(source, /viewBox="0 0 1254 1254"/);
 });
