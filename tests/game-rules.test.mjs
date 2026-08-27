@@ -158,7 +158,7 @@ test("Túnel Jurássico participa da cadeia de manobra", () => {
 test("backend da manobra valida caminho contínuo por territórios próprios", () => {
   const source = readFileSync("src/lib/game-maneuver-command-service.ts", "utf8");
   assert.match(source, /reachableTerritoryIds/);
-  assert.match(source, /jurassicTunnelConnection/);
+  assert.match(source, /effectiveTerritoryConnections/);
   assert.match(source, /getPassableTerritoryConnections/);
   assert.doesNotMatch(source, /FROM territory_connections/);
 });
