@@ -62,12 +62,17 @@
   stroke-width: 2.1;
 }
 
-/* O controle fica no HUD superior, fora da superfície clicável do mapa. */
-.game-road-toggle {
+.game-troop-layer {
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Controles visuais do mapa ficam no HUD superior, fora da superfície clicável. */
+.game-road-toggle,
+.game-troop-toggle {
   position: fixed;
   z-index: 69;
   top: 10px;
-  right: 220px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -92,19 +97,30 @@
   transition: background 150ms ease, transform 150ms ease, color 150ms ease;
 }
 
-.game-road-toggle:hover {
+.game-road-toggle {
+  right: 220px;
+}
+
+.game-troop-toggle {
+  right: 344px;
+}
+
+.game-road-toggle:hover,
+.game-troop-toggle:hover {
   transform: translateY(-1px);
   background:
     radial-gradient(circle at 20% 0%, rgba(217, 182, 80, 0.18), transparent 48%),
     rgba(7, 39, 30, 0.86);
 }
 
-.game-road-toggle:focus-visible {
+.game-road-toggle:focus-visible,
+.game-troop-toggle:focus-visible {
   outline: 2px solid rgba(232, 195, 94, 0.72);
   outline-offset: 3px;
 }
 
-.game-road-toggle strong {
+.game-road-toggle strong,
+.game-troop-toggle strong {
   min-width: 2.1rem;
   color: #8ba99b;
   font-size: 0.62rem;
@@ -112,37 +128,55 @@
   text-align: center;
 }
 
-.game-road-toggle[aria-pressed="true"] {
+.game-road-toggle[aria-pressed="true"],
+.game-troop-toggle[aria-pressed="true"] {
   color: #fff7db;
   background:
     radial-gradient(circle at 20% 0%, rgba(232, 195, 94, 0.23), transparent 50%),
     rgba(11, 54, 41, 0.90);
 }
 
-.game-road-toggle[aria-pressed="true"] strong {
+.game-road-toggle[aria-pressed="true"] strong,
+.game-troop-toggle[aria-pressed="true"] strong {
   color: #e8c35e;
 }
 
-/* Tablet e touch layouts ganham uma zona própria abaixo do HUD. O botão deixa
-   de competir com o indicador de conexão no canto superior direito. */
+/* Tablet e touch layouts ganham uma zona própria abaixo do HUD. Os controles
+   deixam de competir com o indicador de conexão no canto superior direito. */
 @media (max-width: 1199px) {
-  .game-road-toggle {
+  .game-road-toggle,
+  .game-troop-toggle {
     z-index: 75;
-    top: calc(108px + env(safe-area-inset-top, 0px));
     right: max(12px, env(safe-area-inset-right, 0px));
     min-height: 44px;
     padding: 8px 12px;
     touch-action: manipulation;
   }
+
+  .game-road-toggle {
+    top: calc(108px + env(safe-area-inset-top, 0px));
+  }
+
+  .game-troop-toggle {
+    top: calc(160px + env(safe-area-inset-top, 0px));
+  }
 }
 
 @media (max-width: 767px) {
-  .game-road-toggle {
-    top: calc(112px + env(safe-area-inset-top, 0px));
+  .game-road-toggle,
+  .game-troop-toggle {
     right: max(10px, env(safe-area-inset-right, 0px));
     min-height: 44px;
     padding: 8px 11px;
     font-size: 0.66rem;
+  }
+
+  .game-road-toggle {
+    top: calc(112px + env(safe-area-inset-top, 0px));
+  }
+
+  .game-troop-toggle {
+    top: calc(164px + env(safe-area-inset-top, 0px));
   }
 
   .road-route-shadow {
