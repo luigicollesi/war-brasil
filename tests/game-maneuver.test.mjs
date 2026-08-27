@@ -92,6 +92,20 @@ test("camada de interação deriva alvos por BFS e abre manobra somente para alv
   assert.match(hook, /const targets = maneuverTargetIds\(snapshot, game, state\.sourceId\)/);
   assert.match(hook, /targets\.includes\(territoryId\)/);
   assert.match(hook, /type: "open-maneuver"/);
+  assert.match(hook, /maneuverMovableTroops\(/);
+});
+
+test("modal usa o mesmo limite e limpa a seleção após uma manobra bem-sucedida", () => {
+  const panel = readFileSync("src/components/game-turn-panel.tsx", "utf8");
+
+  assert.match(
+    panel,
+    /selectedSource\.troops - selectedSource\.movedInTurn - 1/,
+  );
+  assert.match(
+    panel,
+    /action\("maneuver",[\s\S]*?if \(success\) interaction\.clearSelection\(\)/,
+  );
 });
 
 test("backend recalcula topologia efetiva e caminho próprio antes de mover tropas", () => {
