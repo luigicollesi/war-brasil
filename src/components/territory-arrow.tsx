@@ -5,12 +5,110 @@ import { useId } from "react";
 export type TerritoryAnchor = { x: number; y: number };
 export type TerritoryArrowKind = "attack" | "movement";
 
+type BoundaryPoint = TerritoryAnchor;
+
+function distanceSquared(a: TerritoryAnchor, b: BoundaryPoint) {
+  const dx = a.x - b.x;
+  const dy = a.y - b.y;
+  return dx * dx + dy * dy;
+}
+
+function sampleBoundary(pathElement: SVGPathElement) {
+  const totalLength = pathElement.getTotalLength();
+  if (!Number.isFinite(totalLength) || totalLength <= 0) return [];
+
+  const sampleCount = 72;
+  return Array.from({ length: sampleCount }, (_, index) => {
+    const point = pathElement.getPointAtLength(
+      (totalLength * index) / sampleCount,
+    );
+    return { x: point.x, y: point.y };
+  });
+}
+
+function clearanceFromBoundary(
+  point: TerritoryAnchor,
+  boundary: readonly BoundaryPoint[],
+) {
+  let nearest = Number.POSITIVE_INFINITY;
+
+  for (const boundaryPoint of boundary) {
+    nearest = Math.min(nearest, distanceSquared(point, boundaryPoint));
+  }
+
+  return nearest;
+}
+
+function isInside(pathElement: SVGPathElement, point: TerritoryAnchor) {
+  try {
+    return pathElement.isPointInFill(point);
+  } catch {
+    return false;
+  }
+}
+
 export function getTerritoryAnchor(pathElement: SVGPathElement): TerritoryAnchor {
   const bbox = pathElement.getBBox();
-  return {
+  const bboxCenter = {
     x: bbox.x + bbox.width / 2,
     y: bbox.y + bbox.height / 2,
   };
+
+  if (
+    bbox.width <= 0 ||
+    bbox.height <= 0 ||
+    typeof pathElement.isPointInFill !== "function"
+  ) {
+    return bboxCenter;
+  }
+
+  const boundary = sampleBoundary(pathElement);
+  if (!boundary.length) return bboxCenter;
+
+  let bestPoint: TerritoryAnchor | null = null;
+  let bestClearance = -1;
+
+  const consider = (point: TerritoryAnchor) => {
+    if (!isInside(pathElement, point)) return;
+
+    const clearance = clearanceFromBoundary(point, boundary);
+    if (clearance > bestClearance) {
+      bestPoint = point;
+      bestClearance = clearance;
+    }
+  };
+
+  // O centro do bounding box é barato e continua ótimo para formas regulares,
+  // mas não é confiável para territórios côncavos ou muito assimétricos.
+  consider(bboxCenter);
+
+  // Procura um ponto garantidamente interno e afastado da borda. Isso aproxima
+  // o "pole of inaccessibility" sem dependências extras e roda apenas ao carregar
+  // os 42 paths do mapa.
+  const divisions = 17;
+  for (let row = 0; row < divisions; row += 1) {
+    for (let column = 0; column < divisions; column += 1) {
+      consider({
+        x: bbox.x + ((column + 0.5) / divisions) * bbox.width,
+        y: bbox.y + ((row + 0.5) / divisions) * bbox.height,
+      });
+    }
+  }
+
+  if (!bestPoint) {
+    // Formas extremamente estreitas podem não cruzar a malha grossa.
+    const fallbackDivisions = 33;
+    for (let row = 0; row < fallbackDivisions; row += 1) {
+      for (let column = 0; column < fallbackDivisions; column += 1) {
+        consider({
+          x: bbox.x + ((column + 0.5) / fallbackDivisions) * bbox.width,
+          y: bbox.y + ((row + 0.5) / fallbackDivisions) * bbox.height,
+        });
+      }
+    }
+  }
+
+  return bestPoint ?? bboxCenter;
 }
 
 export function TerritoryArrow({
