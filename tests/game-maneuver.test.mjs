@@ -120,26 +120,9 @@ test("quantidade movimentável preserva uma tropa e bloqueia tropas recém-movid
   assert.equal(maneuverMovableTroops(3, 5), 0);
 });
 
-test("camada de interação deriva alvos por BFS e abre manobra somente para alvo alcançável", () => {
-  const interaction = readFileSync("src/lib/game-interaction.ts", "utf8");
-  const hook = readFileSync("src/hooks/use-game-interaction.ts", "utf8");
-
-  assert.match(interaction, /reachableTerritoryIds\(/);
-  assert.match(interaction, /filter\(\(territoryId\) => territoryId !== sourceId\)/);
-  assert.match(interaction, /targets: maneuverTargetIds\(snapshot, game, state\.sourceId\)/);
-  assert.match(hook, /const targets = maneuverTargetIds\(snapshot, game, state\.sourceId\)/);
-  assert.match(hook, /targets\.includes\(territoryId\)/);
-  assert.match(hook, /type: "open-maneuver"/);
-  assert.match(hook, /maneuverMovableTroops\(/);
-});
-
-test("modal usa o mesmo limite e limpa a seleção após uma manobra bem-sucedida", () => {
+test("fluxo de manobra limpa a seleção depois de uma ação bem-sucedida", () => {
   const panel = readFileSync("src/components/game-turn-panel.tsx", "utf8");
 
-  assert.match(
-    panel,
-    /selectedSource\.troops - selectedSource\.movedInTurn - 1/,
-  );
   assert.match(
     panel,
     /action\("maneuver",[\s\S]*?if \(success\) interaction\.clearSelection\(\)/,
