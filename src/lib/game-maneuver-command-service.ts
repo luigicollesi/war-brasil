@@ -3,9 +3,10 @@ import "server-only";
 import type { PoolClient } from "pg";
 import { gameCommand } from "@/src/lib/game-command";
 import type { GameCommandPatch } from "@/src/lib/game-command-patch";
+import { maneuverMovableTroops } from "@/src/lib/game-rules";
 import { getPassableTerritoryConnections } from "@/src/lib/game-topology-service";
 import {
-  jurassicTunnelConnection,
+  effectiveTerritoryConnections,
   reachableTerritoryIds,
 } from "@/src/lib/territory-connections";
 import { RoomError } from "@/src/lib/rooms";
@@ -149,11 +150,10 @@ export async function maneuverCommand(
       );
     }
 
-    const connections = [...(await getPassableTerritoryConnections(client))];
-    const tunnelConnection = jurassicTunnelConnection(
+    const connections = effectiveTerritoryConnections(
+      await getPassableTerritoryConnections(client),
       room.jurassic_tunnel_territory_id,
     );
-    if (tunnelConnection) connections.push(tunnelConnection);
 
     const reachable = new Set(
       reachableTerritoryIds(
@@ -171,7 +171,11 @@ export async function maneuverCommand(
       );
     }
 
-    if (troops > source.troops - source.moved_in_turn - 1) {
+    const movableTroops = maneuverMovableTroops(
+      source.troops,
+      source.moved_in_turn,
+    );
+    if (troops > movableTroops) {
       throw new RoomError(
         "Estas tropas já foram deslocadas ou o território ficaria vazio.",
         409,
@@ -181,6 +185,7 @@ export async function maneuverCommand(
           requestedTroops: troops,
           sourceTroops: source.troops,
           movedInTurn: source.moved_in_turn,
+          movableTroops,
         },
       );
     }
