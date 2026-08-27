@@ -37,6 +37,16 @@ export function jurassicTunnelConnection(
   };
 }
 
+export function effectiveTerritoryConnections(
+  baseConnections: readonly TerritoryConnection[],
+  destinationTerritoryId: number | null,
+): TerritoryConnection[] {
+  const tunnelConnection = jurassicTunnelConnection(destinationTerritoryId);
+  return tunnelConnection
+    ? [...baseConnections, tunnelConnection]
+    : [...baseConnections];
+}
+
 export function findTerritoryConnection(
   connections: readonly TerritoryConnection[],
   territoryA: number,
