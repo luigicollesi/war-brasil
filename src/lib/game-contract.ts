@@ -1,6 +1,6 @@
-import type { CardSymbol } from "@/src/lib/game-config";
-import type { PlayerColor } from "@/src/lib/lobby";
-import type { TerritoryConnection } from "@/src/lib/territory-connections";
+import type { CardSymbol } from "./game-config";
+import type { PlayerColor } from "./lobby";
+import type { TerritoryConnection } from "./territory-connections";
 
 export type GameStatus = "order_roll" | "playing" | "finished";
 
