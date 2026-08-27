@@ -148,7 +148,10 @@ test("fluxo A-B-C destaca C e patch altera somente origem e destino", () => {
     sourceId: 1,
   });
 
-  assert.deepEqual(new Set(hints.targets), new Set([2, 3]));
+  assert.deepEqual(
+    new Set(hints.targets.map((hint) => hint.territoryId)),
+    new Set([2, 3]),
+  );
 
   const middleBefore = gameSnapshot.territories[1];
   const patched = applyGameCommandPatch(gameSnapshot, {
