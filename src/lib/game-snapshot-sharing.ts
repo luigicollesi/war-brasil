@@ -4,8 +4,8 @@ import type {
   GamePlayer,
   GameSnapshot,
   GameTerritory,
-} from "@/src/lib/game-contract";
-import type { TerritoryConnection } from "@/src/lib/territory-connections";
+} from "./game-contract";
+import type { TerritoryConnection } from "./territory-connections";
 
 function sameArray<T>(
   left: readonly T[],
