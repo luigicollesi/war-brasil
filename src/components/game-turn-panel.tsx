@@ -6,7 +6,7 @@ import type { GameInteractionController } from "@/src/hooks/use-game-interaction
 import type { GameSnapshot, GameTerritory } from "@/src/lib/game-contract";
 import { runGameCommand } from "@/src/lib/game-command-client";
 import { TERRITORY_METADATA } from "@/src/lib/game-config";
-import { isValidTrade } from "@/src/lib/game-rules";
+import { isValidTrade, maneuverMovableTroops } from "@/src/lib/game-rules";
 import type { GameViewModel } from "@/src/lib/game-view-model";
 
 type GameTurnPanelProps = {
@@ -604,9 +604,9 @@ export function GameTurnPanel({
         <QuantityDialog
           key={`maneuver-${localDialog.sourceId}-${localDialog.targetId}`}
           mode="maneuver"
-          max={Math.max(
-            0,
-            selectedSource.troops - selectedSource.movedInTurn - 1,
+          max={maneuverMovableTroops(
+            selectedSource.troops,
+            selectedSource.movedInTurn,
           )}
           source={selectedSource}
           target={localTarget}
