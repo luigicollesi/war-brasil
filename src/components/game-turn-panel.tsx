@@ -6,6 +6,7 @@ import type { GameInteractionController } from "@/src/hooks/use-game-interaction
 import type { GameSnapshot, GameTerritory } from "@/src/lib/game-contract";
 import { runGameCommand } from "@/src/lib/game-command-client";
 import { TERRITORY_METADATA } from "@/src/lib/game-config";
+import type { ManeuverTraversalHint } from "@/src/lib/game-interaction";
 import { isValidTrade, maneuverMovableTroops } from "@/src/lib/game-rules";
 import type { GameViewModel } from "@/src/lib/game-view-model";
 
@@ -195,6 +196,7 @@ type QuantityDialogProps = {
   max: number;
   source?: GameTerritory;
   target?: GameTerritory;
+  maneuverTraversal?: ManeuverTraversalHint;
   reinforcementRemaining: number;
   onSubmit: (troops: number) => Promise<boolean>;
   onCancel?: () => void;
@@ -205,15 +207,22 @@ function QuantityDialog({
   max,
   source,
   target,
+  maneuverTraversal,
   reinforcementRemaining,
   onSubmit,
   onCancel,
 }: QuantityDialogProps) {
   const [requestedCount, setRequestedCount] = useState(1);
   const [submitting, setSubmitting] = useState(false);
-  const safeMax = Math.max(1, max);
-  const count = clamp(requestedCount, 1, safeMax);
-  const valid = max >= 1;
+  const minimum =
+    mode === "maneuver" ? (maneuverTraversal?.minimumTroops ?? 1) : 1;
+  const safeMax = Math.max(minimum, max);
+  const count = clamp(requestedCount, minimum, safeMax);
+  const valid = max >= minimum;
+  const maneuverLoss =
+    mode === "maneuver" && maneuverTraversal?.kind === "barrier"
+      ? maneuverTraversal.troopLoss
+      : 0;
   const title =
     mode === "reinforce"
       ? "Mobilizar reforços"
@@ -233,7 +242,7 @@ function QuantityDialog({
       ? targetBefore + count
       : mode === "conquest"
         ? count
-        : targetBefore + count;
+        : targetBefore + count - maneuverLoss;
   const sourceBefore = source?.troops;
   const sourceAfter =
     sourceBefore === undefined ? undefined : sourceBefore - count;
@@ -242,7 +251,7 @@ function QuantityDialog({
       ? `${reinforcementRemaining} reforços disponíveis`
       : mode === "conquest"
         ? `de 1 a ${safeMax} · 1 tropa precisa permanecer na origem`
-        : `de 1 a ${safeMax} · já movidas: ${source?.movedInTurn ?? 0}`;
+        : `de ${minimum} a ${safeMax} · já movidas: ${source?.movedInTurn ?? 0}`;
 
   async function submit() {
     if (!valid || submitting) return;
@@ -264,7 +273,7 @@ function QuantityDialog({
           <TroopQuantitySelector
             mode={mode}
             value={count}
-            min={1}
+            min={minimum}
             max={safeMax}
             onChange={setRequestedCount}
             sourceName={
@@ -485,7 +494,7 @@ export function GameTurnPanel({
         <div className="mt-5 space-y-3">
           <p className="text-sm text-[#64756f]">
             {interaction.sourceId !== null
-              ? "Escolha qualquer território próprio conectado à origem."
+              ? "Escolha qualquer território próprio destacado."
               : "Selecione a origem do deslocamento no mapa."}
           </p>
           <button
@@ -602,7 +611,7 @@ export function GameTurnPanel({
 
       {localDialog?.kind === "maneuver" && selectedSource && localTarget ? (
         <QuantityDialog
-          key={`maneuver-${localDialog.sourceId}-${localDialog.targetId}`}
+          key={`maneuver-${localDialog.sourceId}-${localDialog.targetId}-${localDialog.traversal.kind}`}
           mode="maneuver"
           max={maneuverMovableTroops(
             selectedSource.troops,
@@ -610,6 +619,7 @@ export function GameTurnPanel({
           )}
           source={selectedSource}
           target={localTarget}
+          maneuverTraversal={localDialog.traversal}
           reinforcementRemaining={snapshot.room.reinforcementsRemaining}
           onCancel={interaction.clearDialog}
           onSubmit={async (troops) => {
@@ -634,26 +644,6 @@ export function GameTurnPanel({
           reinforcementRemaining={snapshot.room.reinforcementsRemaining}
           onSubmit={(troops) => action("conquest", { troops })}
         />
-      ) : null}
-
-      {interaction.barrier ? (
-        <div className="fixed bottom-5 left-1/2 z-40 w-[min(28rem,calc(100%-2rem))] -translate-x-1/2 rounded-2xl border border-[#e4b94f]/60 bg-[#17372d] p-4 text-white shadow-xl">
-          <p className="font-semibold">
-            Fronteira bloqueada —{" "}
-            {interaction.barrier.barrierName ?? "barreira natural"}
-          </p>
-          <p className="mt-1 text-sm text-[#d4e2dc]">
-            {interaction.barrier.description ??
-              "Esta barreira impede uma rota militar direta entre esses territórios."}
-          </p>
-          <button
-            type="button"
-            onClick={interaction.clearBarrier}
-            className="mt-3 text-xs font-bold uppercase tracking-wider text-[#e8c35e]"
-          >
-            Fechar
-          </button>
-        </div>
       ) : null}
 
       {drawnCard ? (
