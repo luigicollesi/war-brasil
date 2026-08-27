@@ -55,6 +55,8 @@ type InteractiveBoardProps = {
   selectedTerritoryId?: number | null;
   availableTerritoryIds?: number[];
   targetHints?: readonly MapTargetHint[];
+  // Nome legado mantido enquanto GameClient migra para o contrato enriquecido.
+  targetTerritoryIds?: readonly MapTargetHint[];
   arrow?: MapArrow;
 };
 
@@ -113,9 +115,11 @@ export function InteractiveBoard({
   onSelect,
   selectedTerritoryId,
   availableTerritoryIds = [],
-  targetHints = [],
+  targetHints,
+  targetTerritoryIds,
   arrow = null,
 }: InteractiveBoardProps) {
+  const resolvedTargetHints = targetHints ?? targetTerritoryIds ?? [];
   const boardRef = useRef<HTMLObjectElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -138,21 +142,24 @@ export function InteractiveBoard({
     [territories],
   );
   const targetById = useMemo(
-    () => new Map(targetHints.map((target) => [target.territoryId, target])),
-    [targetHints],
+    () =>
+      new Map(
+        resolvedTargetHints.map((target) => [target.territoryId, target]),
+      ),
+    [resolvedTargetHints],
   );
-  const targetTerritoryIds = useMemo(
-    () => targetHints.map((target) => target.territoryId),
-    [targetHints],
+  const roadTargetTerritoryIds = useMemo(
+    () => resolvedTargetHints.map((target) => target.territoryId),
+    [resolvedTargetHints],
   );
   const specialMarkerIds = useMemo(
     () =>
       new Set(
-        targetHints
+        resolvedTargetHints
           .filter((target) => target.kind !== "normal")
           .map((target) => target.territoryId),
       ),
-    [targetHints],
+    [resolvedTargetHints],
   );
 
   useEffect(() => {
@@ -385,7 +392,7 @@ export function InteractiveBoard({
             anchors={geometries}
             visible
             selectedTerritoryId={selectedTerritoryId}
-            targetTerritoryIds={targetTerritoryIds}
+            targetTerritoryIds={roadTargetTerritoryIds}
           />
         ) : null}
         {troopsVisible ? (
@@ -439,7 +446,10 @@ export function InteractiveBoard({
             targetName={tunnelTargetName}
           />
         ) : null}
-        <TerritorySpecialMarkers targets={targetHints} geometries={geometries} />
+        <TerritorySpecialMarkers
+          targets={resolvedTargetHints}
+          geometries={geometries}
+        />
         {from && to && arrow ? (
           <TerritoryArrow from={from} to={to} kind={arrow.kind} />
         ) : null}
