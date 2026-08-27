@@ -24,7 +24,7 @@ function territoryNameFontSize(name: string) {
   // O espaço do título corresponde a 76% da largura da carta. Nomes curtos
   // podem usar a tipografia cheia; nomes maiores diminuem progressivamente para
   // permanecer sempre em uma única linha, sem alterar o layout da carta.
-  return Math.max(6.25, Math.min(10.5, 155 / Math.max(characterCount, 14)));
+  return Math.max(6.25, Math.min(10.5, 145 / Math.max(characterCount, 14)));
 }
 
 export function TerritoryCard({ territoryId, symbol, selected, onClick }: TerritoryCardProps) {
@@ -117,10 +117,13 @@ export function TerritoryCard({ territoryId, symbol, selected, onClick }: Territ
         className="absolute text-center font-bold text-[#17372d]"
         style={{
           ...CARD_LAYOUT.name,
+          display: "block",
           fontSize: `${territoryNameSize}px`,
           lineHeight: 1,
+          letterSpacing: "-0.01em",
           whiteSpace: "nowrap",
-          overflow: "visible",
+          overflow: "hidden",
+          textOverflow: "clip",
         }}
       >
         {territoryName}
