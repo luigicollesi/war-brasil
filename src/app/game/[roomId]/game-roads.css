@@ -123,16 +123,26 @@
   color: #e8c35e;
 }
 
+/* Tablet e touch layouts ganham uma zona própria abaixo do HUD. O botão deixa
+   de competir com o indicador de conexão no canto superior direito. */
+@media (max-width: 1199px) {
+  .game-road-toggle {
+    z-index: 75;
+    top: calc(108px + env(safe-area-inset-top, 0px));
+    right: max(12px, env(safe-area-inset-right, 0px));
+    min-height: 44px;
+    padding: 8px 12px;
+    touch-action: manipulation;
+  }
+}
+
 @media (max-width: 767px) {
   .game-road-toggle {
-    top: 10px;
-    right: 58px;
-    min-height: 32px;
-    padding: 6px 9px;
-  }
-
-  .game-road-toggle > span:nth-child(2) {
-    display: none;
+    top: calc(112px + env(safe-area-inset-top, 0px));
+    right: max(10px, env(safe-area-inset-right, 0px));
+    min-height: 44px;
+    padding: 8px 11px;
+    font-size: 0.66rem;
   }
 
   .road-route-shadow {
