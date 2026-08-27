@@ -80,17 +80,22 @@ test("snapshot transporta somente a topologia base", () => {
   assert.doesNotMatch(source, /connections\.push\(tunnelConnection\)/);
 });
 
-test("cliente cacheia base e deriva o túnel a partir do snapshot atual", () => {
-  const source = readFileSync("src/hooks/use-game-sync.ts", "utf8");
+test("cliente cacheia base e hidrata o túnel a partir do snapshot atual", () => {
+  const sync = readFileSync("src/hooks/use-game-sync.ts", "utf8");
+  const hydration = readFileSync(
+    "src/lib/game-snapshot-hydration.ts",
+    "utf8",
+  );
 
-  assert.match(source, /baseTopologyConnectionsRef/);
+  assert.match(sync, /baseTopologyConnectionsRef/);
   assert.match(
-    source,
+    sync,
     /payload\.connections \?\? baseTopologyConnectionsRef\.current/,
   );
-  assert.match(source, /effectiveTerritoryConnections\(/);
-  assert.match(source, /payload\.room\.jurassicTunnelDestinationId/);
-  assert.doesNotMatch(source, /topologyConnectionsRef/);
+  assert.match(sync, /hydrateGameSnapshot\(payload, baseConnections\)/);
+  assert.doesNotMatch(sync, /topologyConnectionsRef/);
+  assert.match(hydration, /effectiveTerritoryConnections\(/);
+  assert.match(hydration, /payload\.room\.jurassicTunnelDestinationId/);
 });
 
 test("contrato de topologia v2 invalida caches do formato anterior", () => {
