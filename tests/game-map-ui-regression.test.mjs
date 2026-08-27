@@ -31,4 +31,5 @@ test("âncora territorial procura um ponto interno em vez de confiar só no boun
   assert.match(source, /clearanceFromBoundary\(/);
   assert.match(source, /const divisions = 17/);
   assert.match(source, /const fallbackDivisions = 33/);
+  assert.match(source, /return bestPoint \?\? boundary\[0\]/);
 });
