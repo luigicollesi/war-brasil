@@ -1,21 +1,66 @@
 import type { GameSnapshot } from "./game-contract";
+import {
+  attackProfile,
+  maneuverTraversalProfile,
+} from "./game-barrier-rules";
 import { maneuverMovableTroops } from "./game-rules";
 import type { GameViewModel } from "./game-view-model";
-import {
-  reachableTerritoryIds,
-  type TerritoryConnection,
-} from "./territory-connections";
+import { bestTerritoryRoutes } from "./territory-routing";
+
+export type ManeuverTraversalHint =
+  | {
+      kind: "normal";
+      troopLoss: 0;
+      minimumTroops: 1;
+    }
+  | {
+      kind: "barrier";
+      troopLoss: 1;
+      minimumTroops: 2;
+      barrierName: string | null;
+    };
+
+export type MapTargetHint =
+  | {
+      territoryId: number;
+      kind: "normal";
+      selectable: true;
+    }
+  | {
+      territoryId: number;
+      kind: "barrier-attack";
+      selectable: boolean;
+      barrierName: string | null;
+      minimumTroops: number;
+    }
+  | {
+      territoryId: number;
+      kind: "barrier-maneuver";
+      selectable: boolean;
+      barrierName: string | null;
+      troopLoss: 1;
+      minimumTroops: 2;
+    };
+
+export type MapHints = {
+  available: number[];
+  targets: MapTargetHint[];
+};
 
 type GameInteractionDialog =
   | { kind: "reinforce"; targetId: number }
-  | { kind: "maneuver"; sourceId: number; targetId: number }
+  | {
+      kind: "maneuver";
+      sourceId: number;
+      targetId: number;
+      traversal: ManeuverTraversalHint;
+    }
   | null;
 
 type GameInteractionState = {
   scopeKey: string;
   sourceId: number | null;
   dialog: GameInteractionDialog;
-  barrier: TerritoryConnection | null;
 };
 
 type GameInteractionAction =
@@ -26,16 +71,10 @@ type GameInteractionAction =
       scopeKey: string;
       sourceId: number;
       targetId: number;
+      traversal: ManeuverTraversalHint;
     }
-  | { type: "show-barrier"; scopeKey: string; connection: TerritoryConnection }
   | { type: "clear-dialog"; scopeKey: string }
-  | { type: "clear-selection"; scopeKey: string }
-  | { type: "clear-barrier"; scopeKey: string };
-
-type MapHints = {
-  available: number[];
-  targets: number[];
-};
+  | { type: "clear-selection"; scopeKey: string };
 
 type InteractionArrow = {
   fromTerritoryId: number;
@@ -60,7 +99,6 @@ export function initialGameInteractionState(scopeKey: string): GameInteractionSt
     scopeKey,
     sourceId: null,
     dialog: null,
-    barrier: null,
   };
 }
 
@@ -85,7 +123,6 @@ export function gameInteractionReducer(
       sourceId:
         current.sourceId === action.territoryId ? null : action.territoryId,
       dialog: null,
-      barrier: null,
     };
   }
 
@@ -94,7 +131,6 @@ export function gameInteractionReducer(
       ...current,
       sourceId: null,
       dialog: { kind: "reinforce", targetId: action.territoryId },
-      barrier: null,
     };
   }
 
@@ -106,53 +142,136 @@ export function gameInteractionReducer(
         kind: "maneuver",
         sourceId: action.sourceId,
         targetId: action.targetId,
+        traversal: action.traversal,
       },
-      barrier: null,
     };
-  }
-
-  if (action.type === "show-barrier") {
-    return { ...current, barrier: action.connection };
   }
 
   if (action.type === "clear-dialog") {
     return { ...current, dialog: null };
   }
 
-  if (action.type === "clear-selection") {
-    return { ...current, sourceId: null, dialog: null, barrier: null };
-  }
-
-  return { ...current, barrier: null };
+  return { ...current, sourceId: null, dialog: null };
 }
 
-export function maneuverTargetIds(
+export function attackTargetHints(
+  game: GameViewModel,
+  sourceId: number,
+): MapTargetHint[] {
+  const source = game.territoriesById.get(sourceId);
+  const meId = game.me?.id;
+  if (!source || !meId || source.ownerPlayerId !== meId) return [];
+
+  const byTerritory = new Map<number, MapTargetHint>();
+
+  for (const connection of game.connectionsByTerritory.get(sourceId) ?? []) {
+    if (!connection.exists) continue;
+
+    const territoryId =
+      connection.territoryA === sourceId
+        ? connection.territoryB
+        : connection.territoryA;
+    const target = game.territoriesById.get(territoryId);
+    if (!target || target.ownerPlayerId === meId) continue;
+
+    const profile = attackProfile(
+      source.troops,
+      connection.passable ? "normal" : "barrier",
+    );
+    const hint: MapTargetHint = connection.passable
+      ? profile.kind === "available"
+        ? { territoryId, kind: "normal", selectable: true }
+        : null
+      : {
+          territoryId,
+          kind: "barrier-attack",
+          selectable: profile.kind === "available",
+          barrierName: connection.barrierName,
+          minimumTroops: profile.minimumTroops,
+        };
+
+    if (!hint) continue;
+
+    const current = byTerritory.get(territoryId);
+    // Uma passagem normal (por exemplo, Túnel Jurássico) sempre vence uma
+    // conexão base bloqueada para o mesmo par de territórios.
+    if (!current || (current.kind !== "normal" && hint.kind === "normal")) {
+      byTerritory.set(territoryId, hint);
+    }
+  }
+
+  return Array.from(byTerritory.values()).sort(
+    (left, right) => left.territoryId - right.territoryId,
+  );
+}
+
+export function maneuverTargetHints(
   snapshot: GameSnapshot,
   game: GameViewModel,
   sourceId: number,
-) {
-  return reachableTerritoryIds(
+): MapTargetHint[] {
+  const source = game.territoriesById.get(sourceId);
+  if (!source || source.ownerPlayerId !== game.me?.id) return [];
+
+  const movableTroops = maneuverMovableTroops(
+    source.troops,
+    source.movedInTurn,
+  );
+  const routes = bestTerritoryRoutes(
     snapshot.connections,
     sourceId,
     game.myTerritories.map((territory) => territory.territoryId),
-  ).filter((territoryId) => territoryId !== sourceId);
+  );
+  const targets: MapTargetHint[] = [];
+
+  for (const territory of game.myTerritories) {
+    if (territory.territoryId === sourceId) continue;
+
+    const route = routes.get(territory.territoryId);
+    if (!route || route.kind === "unreachable") continue;
+
+    const traversal = maneuverTraversalProfile(route.barrierCount);
+    if (traversal.kind === "blocked") continue;
+
+    if (traversal.kind === "normal") {
+      if (movableTroops >= traversal.minimumTroops) {
+        targets.push({
+          territoryId: territory.territoryId,
+          kind: "normal",
+          selectable: true,
+        });
+      }
+      continue;
+    }
+
+    targets.push({
+      territoryId: territory.territoryId,
+      kind: "barrier-maneuver",
+      selectable: movableTroops >= traversal.minimumTroops,
+      barrierName: route.barriers[0]?.barrierName ?? null,
+      troopLoss: traversal.troopLoss,
+      minimumTroops: traversal.minimumTroops,
+    });
+  }
+
+  return targets.sort((left, right) => left.territoryId - right.territoryId);
 }
 
-export function attackTargetIds(game: GameViewModel, sourceId: number) {
-  const connections = game.connectionsByTerritory.get(sourceId) ?? [];
-  const meId = game.me?.id;
-
-  return connections
-    .filter((connection) => connection.passable)
-    .map((connection) =>
-      connection.territoryA === sourceId
-        ? connection.territoryB
-        : connection.territoryA,
-    )
-    .filter(
-      (territoryId) =>
-        game.territoriesById.get(territoryId)?.ownerPlayerId !== meId,
-    );
+export function maneuverTraversalFromTarget(
+  target: MapTargetHint,
+): ManeuverTraversalHint | null {
+  if (target.kind === "normal") {
+    return { kind: "normal", troopLoss: 0, minimumTroops: 1 };
+  }
+  if (target.kind === "barrier-maneuver") {
+    return {
+      kind: "barrier",
+      troopLoss: target.troopLoss,
+      minimumTroops: target.minimumTroops,
+      barrierName: target.barrierName,
+    };
+  }
+  return null;
 }
 
 export function deriveMapHints(
@@ -183,7 +302,7 @@ export function deriveMapHints(
         }
       : {
           available: [],
-          targets: attackTargetIds(game, state.sourceId),
+          targets: attackTargetHints(game, state.sourceId),
         };
   }
 
@@ -203,7 +322,7 @@ export function deriveMapHints(
         }
       : {
           available: [],
-          targets: maneuverTargetIds(snapshot, game, state.sourceId),
+          targets: maneuverTargetHints(snapshot, game, state.sourceId),
         };
   }
 
