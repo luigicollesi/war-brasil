@@ -15,6 +15,7 @@ import {
   GAME_TOPOLOGY_HEADER,
   parseGameRevision,
 } from "@/src/lib/game-sync-contract";
+import { effectiveTerritoryConnections } from "@/src/lib/territory-connections";
 
 type GameSnapshotPayload = Omit<GameSnapshot, "connections"> & {
   connections?: GameSnapshot["connections"];
@@ -65,7 +66,7 @@ export function useGameSync(roomId: string) {
   const revisionRef = useRef<number | null>(null);
   const requiredRevisionRef = useRef<number | null>(null);
   const topologyVersionRef = useRef<string | null>(null);
-  const topologyConnectionsRef = useRef<GameSnapshot["connections"] | null>(null);
+  const baseTopologyConnectionsRef = useRef<GameSnapshot["connections"] | null>(null);
 
   useEffect(() => {
     let isActive = true;
@@ -113,7 +114,7 @@ export function useGameSync(roomId: string) {
           }
           if (
             topologyVersionRef.current !== null &&
-            topologyConnectionsRef.current !== null
+            baseTopologyConnectionsRef.current !== null
           ) {
             headers.set(GAME_TOPOLOGY_HEADER, topologyVersionRef.current);
           }
@@ -157,18 +158,23 @@ export function useGameSync(roomId: string) {
           }
 
           const payload = data as GameSnapshotPayload;
-          const connections = payload.connections ?? topologyConnectionsRef.current;
-          if (!connections) {
+          const baseConnections =
+            payload.connections ?? baseTopologyConnectionsRef.current;
+          if (!baseConnections) {
             throw new Error("A topologia da partida não foi recebida.");
           }
 
           if (payload.connections) {
-            topologyConnectionsRef.current = payload.connections;
+            baseTopologyConnectionsRef.current = payload.connections;
             if (responseTopologyVersion) {
               topologyVersionRef.current = responseTopologyVersion;
             }
           }
 
+          const connections = effectiveTerritoryConnections(
+            baseConnections,
+            payload.room.jurassicTunnelDestinationId,
+          );
           const hydratedSnapshot: GameSnapshot = {
             ...payload,
             connections,
