@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { PoolClient } from "pg";
+import type { AttackMode } from "@/src/lib/game-barrier-rules";
 import { objectiveWon } from "@/src/lib/game-objective-service";
 import {
   nextBattlePresentationTransition,
@@ -23,6 +24,10 @@ export type Battle = BattleResult & {
   defenderPlayerId: string;
   stage: BattleStage;
   stageStartedAt: string;
+  // Optional while previously persisted battles can still exist after a deploy.
+  // Missing metadata is interpreted as a normal attack.
+  attackMode?: AttackMode;
+  barrierName?: string | null;
   attackerTroopsAfter?: number;
   defenderTroopsAfter?: number;
 };
@@ -40,6 +45,10 @@ type LockedTerritory = {
   troops: number;
 };
 
+export function battleAttackMode(battle: Pick<Battle, "attackMode">): AttackMode {
+  return battle.attackMode === "barrier" ? "barrier" : "normal";
+}
+
 export function isBattle(value: unknown): value is Battle {
   if (!value || typeof value !== "object") return false;
 
@@ -52,7 +61,13 @@ export function isBattle(value: unknown): value is Battle {
     typeof battle.stage === "string" &&
     typeof battle.stageStartedAt === "string" &&
     Array.isArray(battle.attacker) &&
-    Array.isArray(battle.defender)
+    Array.isArray(battle.defender) &&
+    (battle.attackMode === undefined ||
+      battle.attackMode === "normal" ||
+      battle.attackMode === "barrier") &&
+    (battle.barrierName === undefined ||
+      battle.barrierName === null ||
+      typeof battle.barrierName === "string")
   );
 }
 
@@ -122,6 +137,18 @@ async function applyBattleOutcome(
 
   const attackerTroops = attacker.troops - battle.attackerLosses;
   const defenderTroops = defender.troops - battle.defenderLosses;
+
+  if (attackerTroops < 1) {
+    throw new RoomError(
+      "O resultado do combate removeria a última tropa atacante.",
+      500,
+      {
+        attackerTroops: attacker.troops,
+        attackerLosses: battle.attackerLosses,
+        attackMode: battleAttackMode(battle),
+      },
+    );
+  }
 
   await client.query(
     `UPDATE game_territories
