@@ -1,14 +1,13 @@
 import "server-only";
 
 import type { PoolClient } from "pg";
+import { maneuverTraversalProfile } from "@/src/lib/game-barrier-rules";
 import { gameCommand } from "@/src/lib/game-command";
 import type { GameCommandPatch } from "@/src/lib/game-command-patch";
 import { maneuverMovableTroops } from "@/src/lib/game-rules";
-import { getPassableTerritoryConnections } from "@/src/lib/game-topology-service";
-import {
-  effectiveTerritoryConnections,
-  reachableTerritoryIds,
-} from "@/src/lib/territory-connections";
+import { getBaseTerritoryConnections } from "@/src/lib/game-topology-service";
+import { effectiveTerritoryConnections } from "@/src/lib/territory-connections";
+import { bestTerritoryRoute } from "@/src/lib/territory-routing";
 import { RoomError } from "@/src/lib/rooms";
 
 type ManeuverRoom = {
@@ -151,23 +150,58 @@ export async function maneuverCommand(
     }
 
     const connections = effectiveTerritoryConnections(
-      await getPassableTerritoryConnections(client),
+      await getBaseTerritoryConnections(client),
       room.jurassic_tunnel_territory_id,
     );
-
-    const reachable = new Set(
-      reachableTerritoryIds(
-        connections,
-        from,
-        owned.map((territory) => territory.territory_id),
-      ),
+    const route = bestTerritoryRoute(
+      connections,
+      from,
+      to,
+      owned.map((territory) => territory.territory_id),
     );
 
-    if (!reachable.has(to)) {
+    if (route.kind === "unreachable") {
       throw new RoomError(
         "Não existe um caminho contínuo por territórios próprios entre a origem e o destino.",
         409,
         { fromTerritoryId: from, toTerritoryId: to },
+      );
+    }
+
+    const traversal = maneuverTraversalProfile(route.barrierCount);
+    if (traversal.kind === "blocked") {
+      throw new RoomError(
+        "A melhor rota ainda exige atravessar mais de uma barreira.",
+        409,
+        {
+          fromTerritoryId: from,
+          toTerritoryId: to,
+          minimumBarrierCount: route.barrierCount,
+          barrierNames: route.barriers
+            .map((connection) => connection.barrierName)
+            .filter((name): name is string => Boolean(name)),
+        },
+      );
+    }
+
+    if (troops < traversal.minimumTroops) {
+      const barrierName =
+        traversal.kind === "barrier" ? route.barriers[0]?.barrierName : null;
+      throw new RoomError(
+        traversal.kind === "barrier"
+          ? barrierName
+            ? `A travessia de ${barrierName} exige mover pelo menos ${traversal.minimumTroops} tropas.`
+            : `A travessia da barreira exige mover pelo menos ${traversal.minimumTroops} tropas.`
+          : "Quantidade de tropas inválida.",
+        409,
+        {
+          fromTerritoryId: from,
+          toTerritoryId: to,
+          requestedTroops: troops,
+          minimumTroops: traversal.minimumTroops,
+          barrierCount: route.barrierCount,
+          barrierName,
+        },
       );
     }
 
@@ -190,6 +224,8 @@ export async function maneuverCommand(
       );
     }
 
+    const troopsArriving = troops - traversal.troopLoss;
+
     const updatedSource = (
       await client.query<{ troops: number; moved_in_turn: number }>(
         `UPDATE game_territories
@@ -205,7 +241,7 @@ export async function maneuverCommand(
          SET troops=troops+$3,moved_in_turn=moved_in_turn+$3
          WHERE room_id=$1 AND territory_id=$2
          RETURNING troops,moved_in_turn`,
-        [room.id, to, troops],
+        [room.id, to, troopsArriving],
       )
     ).rows[0];
 
