@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-test("manobra reutiliza topologia cacheada sem consultar tabela por jogada", () => {
+test("manobra reutiliza topologia completa cacheada sem consultar tabela por jogada", () => {
   const route = readFileSync(
     "src/app/api/games/[roomId]/maneuver/route.ts",
     "utf8",
@@ -13,11 +13,11 @@ test("manobra reutiliza topologia cacheada sem consultar tabela por jogada", () 
   );
 
   assert.match(route, /game-maneuver-command-service/);
-  assert.match(service, /getPassableTerritoryConnections/);
+  assert.match(service, /getBaseTerritoryConnections/);
   assert.doesNotMatch(service, /FROM territory_connections/);
   assert.match(service, /effectiveTerritoryConnections/);
   assert.match(service, /jurassic_tunnel_territory_id/);
-  assert.match(service, /reachableTerritoryIds/);
+  assert.match(service, /bestTerritoryRoute/);
 });
 
 test("mapa mantém pointermove fora do estado React", () => {
