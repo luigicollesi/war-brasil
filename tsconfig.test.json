@@ -11,7 +11,11 @@
   "include": [
     "src/lib/game-config.ts",
     "src/lib/game-rules.ts",
+    "src/lib/game-barrier-rules.ts",
     "src/lib/territory-connections.ts",
+    "src/lib/territory-routing.ts",
+    "src/lib/territory-geometry.ts",
+    "src/lib/territory-svg-geometry.ts",
     "src/lib/game-transitions.ts",
     "src/lib/game-polling.ts",
     "src/lib/game-contract.ts",
