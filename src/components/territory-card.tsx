@@ -17,9 +17,21 @@ type TerritoryCardProps = {
   onClick?: () => void;
 };
 
+function territoryNameFontSize(name: string) {
+  const characterCount = Array.from(name.trim()).length;
+  if (characterCount === 0) return 10.5;
+
+  // O espaço do título corresponde a 76% da largura da carta. Nomes curtos
+  // podem usar a tipografia cheia; nomes maiores diminuem progressivamente para
+  // permanecer sempre em uma única linha, sem alterar o layout da carta.
+  return Math.max(6.25, Math.min(10.5, 155 / Math.max(characterCount, 14)));
+}
+
 export function TerritoryCard({ territoryId, symbol, selected, onClick }: TerritoryCardProps) {
   const wild = symbol === "wild";
   const territory = territoryId ? TERRITORY_METADATA[territoryId] : null;
+  const territoryName = wild ? "" : territory?.name ?? "";
+  const territoryNameSize = territoryNameFontSize(territoryName);
 
   const territorySvgRef = useRef<SVGSVGElement>(null);
   const territoryUseRef = useRef<SVGUseElement>(null);
@@ -101,8 +113,17 @@ export function TerritoryCard({ territoryId, symbol, selected, onClick }: Territ
           />
         </svg>
       ) : null}
-      <span className="absolute text-center text-[10px] font-bold leading-tight text-[#17372d]" style={CARD_LAYOUT.name}>
-        {wild ? "" : territory?.name}
+      <span
+        className="absolute text-center font-bold text-[#17372d]"
+        style={{
+          ...CARD_LAYOUT.name,
+          fontSize: `${territoryNameSize}px`,
+          lineHeight: 1,
+          whiteSpace: "nowrap",
+          overflow: "visible",
+        }}
+      >
+        {territoryName}
       </span>
       {!wild ? <Image src={symbolAssets[symbol]} alt={symbol} width={48} height={48} className="absolute" style={{ left: CARD_LAYOUT.symbol.left, top: CARD_LAYOUT.symbol.top, width: CARD_LAYOUT.symbol.size, height: "auto" }} /> : null}
     </button>
