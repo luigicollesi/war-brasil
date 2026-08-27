@@ -48,6 +48,34 @@ test("barreira intransponível interrompe a cadeia mesmo entre territórios pró
   );
 });
 
+test("BFS de manobra tolera ciclos, duplicatas e self-loop sem repetir destinos", () => {
+  const connections = [
+    connection(1, 2),
+    connection(2, 3),
+    connection(3, 1),
+    connection(1, 2),
+    connection(2, 2),
+  ];
+
+  const targets = maneuverTargets(connections, 1, [1, 2, 3]);
+
+  assert.deepEqual(new Set(targets), new Set([2, 3]));
+  assert.equal(targets.length, 2);
+});
+
+test("BFS ignora conexões inexistentes mesmo se marcadas como passáveis", () => {
+  const missingConnection = {
+    ...connection(2, 3),
+    exists: false,
+  };
+  const connections = [connection(1, 2), missingConnection];
+
+  assert.deepEqual(
+    maneuverTargets(connections, 1, [1, 2, 3]),
+    [2],
+  );
+});
+
 test("Túnel Jurássico funciona como aresta normal na cadeia de manobra", () => {
   const baseConnections = [connection(20, 21), connection(21, 22)];
   const effectiveConnections = effectiveTerritoryConnections(
@@ -58,6 +86,16 @@ test("Túnel Jurássico funciona como aresta normal na cadeia de manobra", () =>
   assert.deepEqual(
     new Set(maneuverTargets(effectiveConnections, 3, [3, 20, 21, 22])),
     new Set([20, 21, 22]),
+  );
+});
+
+test("Túnel Jurássico vence uma fronteira normal bloqueada para o mesmo par", () => {
+  const blockedBase = [connection(3, 20, false), connection(20, 21)];
+  const effectiveConnections = effectiveTerritoryConnections(blockedBase, 20);
+
+  assert.deepEqual(
+    new Set(maneuverTargets(effectiveConnections, 3, [3, 20, 21])),
+    new Set([20, 21]),
   );
 });
 
