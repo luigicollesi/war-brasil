@@ -8,13 +8,13 @@ import {
 } from "../.test-build/game-interaction.js";
 import { buildGameViewModel } from "../.test-build/game-view-model.js";
 
-function connection(territoryA, territoryB, passable = true) {
+function connection(territoryA, territoryB, passable = true, barrierName) {
   return {
     territoryA,
     territoryB,
     exists: true,
     passable,
-    barrierName: passable ? null : "Barreira natural",
+    barrierName: passable ? barrierName ?? null : barrierName ?? "Barreira natural",
     description: null,
   };
 }
@@ -94,15 +94,79 @@ function hintsFor(gameSnapshot, sourceId = null) {
   });
 }
 
-test("deriveMapHints expõe toda a cadeia própria A-B-C na manobra", () => {
+function targetKinds(hints) {
+  return Object.fromEntries(
+    hints.targets.map((target) => [target.territoryId, target.kind]),
+  );
+}
+
+test("deriveMapHints expõe toda a cadeia própria normal A-B-C na manobra", () => {
   const gameSnapshot = snapshot({
     territories: [territory(1, "me", 6), territory(2), territory(3)],
     connections: [connection(1, 2), connection(2, 3)],
   });
 
-  assert.deepEqual(
-    new Set(hintsFor(gameSnapshot, 1).targets),
-    new Set([2, 3]),
+  assert.deepEqual(targetKinds(hintsFor(gameSnapshot, 1)), {
+    2: "normal",
+    3: "normal",
+  });
+});
+
+test("manobra destaca destinos cuja melhor rota atravessa exatamente uma barreira", () => {
+  const gameSnapshot = snapshot({
+    territories: [
+      territory(1, "me", 6),
+      territory(2),
+      territory(3),
+      territory(4),
+      territory(5),
+      territory(6),
+    ],
+    connections: [
+      connection(1, 2),
+      connection(2, 3),
+      connection(3, 4, false, "Serra"),
+      connection(4, 5),
+      connection(5, 6, false, "Rio"),
+    ],
+  });
+
+  const hints = hintsFor(gameSnapshot, 1);
+  assert.deepEqual(targetKinds(hints), {
+    2: "normal",
+    3: "normal",
+    4: "barrier-maneuver",
+    5: "barrier-maneuver",
+  });
+  assert.equal(hints.targets.some((target) => target.territoryId === 6), false);
+  assert.equal(
+    hints.targets.find((target) => target.territoryId === 5)?.barrierName,
+    "Serra",
+  );
+});
+
+test("rota sem barreira sempre vence alternativa com barreira na manobra", () => {
+  const gameSnapshot = snapshot({
+    territories: [
+      territory(1, "me", 6),
+      territory(2),
+      territory(3),
+      territory(4),
+      territory(5),
+    ],
+    connections: [
+      connection(1, 2),
+      connection(2, 5, false, "Atalho bloqueado"),
+      connection(1, 3),
+      connection(3, 4),
+      connection(4, 5),
+    ],
+  });
+
+  assert.equal(
+    hintsFor(gameSnapshot, 1).targets.find((target) => target.territoryId === 5)
+      ?.kind,
+    "normal",
   );
 });
 
@@ -117,6 +181,60 @@ test("deriveMapHints não atravessa território inimigo intermediário", () => {
   });
 
   assert.deepEqual(hintsFor(gameSnapshot, 1).targets, []);
+});
+
+test("manobra por barreira permanece visível mas indisponível quando só uma tropa pode sair", () => {
+  const gameSnapshot = snapshot({
+    territories: [territory(1, "me", 2), territory(2)],
+    connections: [connection(1, 2, false, "Serra")],
+  });
+
+  assert.deepEqual(hintsFor(gameSnapshot, 1).targets[0], {
+    territoryId: 2,
+    kind: "barrier-maneuver",
+    selectable: false,
+    barrierName: "Serra",
+    troopLoss: 1,
+    minimumTroops: 2,
+  });
+});
+
+test("ataque mostra caveira em fronteira bloqueada e libera somente com quatro tropas", () => {
+  const blocked = [connection(1, 2, false, "Serra")];
+  const withThree = snapshot({
+    phase: "attack",
+    territories: [territory(1, "me", 3), territory(2, "enemy", 4)],
+    connections: blocked,
+  });
+  const withFour = snapshot({
+    phase: "attack",
+    territories: [territory(1, "me", 4), territory(2, "enemy", 4)],
+    connections: blocked,
+  });
+
+  assert.deepEqual(hintsFor(withThree, 1).targets[0], {
+    territoryId: 2,
+    kind: "barrier-attack",
+    selectable: false,
+    barrierName: "Serra",
+    minimumTroops: 4,
+  });
+  assert.equal(hintsFor(withFour, 1).targets[0].selectable, true);
+});
+
+test("passagem normal paralela vence fronteira bloqueada no ataque", () => {
+  const gameSnapshot = snapshot({
+    phase: "attack",
+    territories: [territory(1, "me", 4), territory(2, "enemy", 4)],
+    connections: [
+      connection(1, 2, false, "Barreira natural"),
+      connection(1, 2, true, "Túnel Jurássico"),
+    ],
+  });
+
+  assert.deepEqual(hintsFor(gameSnapshot, 1).targets, [
+    { territoryId: 2, kind: "normal", selectable: true },
+  ]);
 });
 
 test("origens disponíveis respeitam tropas móveis e movedInTurn", () => {
@@ -150,7 +268,7 @@ test("mapa não oferece ações fora do turno ou durante batalha", () => {
   );
 });
 
-test("reducer seleciona, desmarca, abre manobra e limpa o estado", () => {
+test("reducer seleciona, desmarca, abre manobra com travessia e limpa o estado", () => {
   const scopeKey = "1:maneuver:me:-:-";
   let state = initialGameInteractionState(scopeKey);
 
@@ -173,11 +291,23 @@ test("reducer seleciona, desmarca, abre manobra e limpa o estado", () => {
     scopeKey,
     sourceId: 1,
     targetId: 3,
+    traversal: {
+      kind: "barrier",
+      troopLoss: 1,
+      minimumTroops: 2,
+      barrierName: "Serra",
+    },
   });
   assert.deepEqual(state.dialog, {
     kind: "maneuver",
     sourceId: 1,
     targetId: 3,
+    traversal: {
+      kind: "barrier",
+      troopLoss: 1,
+      minimumTroops: 2,
+      barrierName: "Serra",
+    },
   });
 
   state = gameInteractionReducer(state, {
@@ -186,7 +316,6 @@ test("reducer seleciona, desmarca, abre manobra e limpa o estado", () => {
   });
   assert.equal(state.sourceId, null);
   assert.equal(state.dialog, null);
-  assert.equal(state.barrier, null);
 });
 
 test("mudança de scope invalida seleção e diálogo antigos", () => {
@@ -198,15 +327,12 @@ test("mudança de scope invalida seleção e diálogo antigos", () => {
       scopeKey: oldScope,
       sourceId: 1,
       targetId: 3,
+      traversal: { kind: "normal", troopLoss: 0, minimumTroops: 1 },
     },
   );
 
-  const reset = effectiveGameInteractionState(
-    selected,
-    "2:cards:enemy:-:-",
-  );
+  const reset = effectiveGameInteractionState(selected, "2:cards:enemy:-:-");
 
   assert.equal(reset.sourceId, null);
   assert.equal(reset.dialog, null);
-  assert.equal(reset.barrier, null);
 });
