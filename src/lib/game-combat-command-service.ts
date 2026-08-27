@@ -4,11 +4,13 @@ import { randomInt } from "node:crypto";
 import type { PoolClient } from "pg";
 import {
   advanceBattlePresentation,
+  battleAttackMode,
   isBattle,
   saveBattle,
   type Battle,
   type BattleRoomState,
 } from "@/src/lib/game-battle-service";
+import { attackProfile, type AttackMode } from "@/src/lib/game-barrier-rules";
 import { gameCommand } from "@/src/lib/game-command";
 import { TERRITORY_METADATA } from "@/src/lib/game-config";
 import { resolveBattle } from "@/src/lib/game-rules";
@@ -119,6 +121,13 @@ async function ensureJurassicTunnel(client: PoolClient, room: CombatRoom) {
   room.jurassic_tunnel_territory_id = destination;
 }
 
+function attackModeForConnection(
+  tunnelActive: boolean,
+  passable: boolean,
+): AttackMode {
+  return tunnelActive || passable ? "normal" : "barrier";
+}
+
 export async function attackCommand(
   value: string,
   session: string,
@@ -174,15 +183,7 @@ export async function attackCommand(
       );
     }
 
-    if (!tunnelActive && !connection.passable) {
-      throw new RoomError(
-        connection.barrierName
-          ? `Fronteira bloqueada — ${connection.barrierName}`
-          : "Fronteira militar bloqueada.",
-        422,
-        { fromTerritoryId: from, toTerritoryId: to, connection },
-      );
-    }
+    const attackMode = attackModeForConnection(tunnelActive, connection.passable);
 
     const rows = (
       await client.query<LockedTerritory>(
@@ -201,8 +202,7 @@ export async function attackCommand(
       !attacker ||
       !defender ||
       attacker.owner_player_id !== player.id ||
-      defender.owner_player_id === player.id ||
-      attacker.troops < 2
+      defender.owner_player_id === player.id
     ) {
       throw new RoomError("Ataque inválido.", 409, {
         fromTerritoryId: from,
@@ -223,6 +223,26 @@ export async function attackCommand(
       });
     }
 
+    const profile = attackProfile(attacker.troops, attackMode);
+    if (profile.kind === "unavailable") {
+      throw new RoomError(
+        attackMode === "barrier"
+          ? connection.barrierName
+            ? `Ataque através de ${connection.barrierName} exige pelo menos ${profile.minimumTroops} tropas.`
+            : `Ataque através desta barreira exige pelo menos ${profile.minimumTroops} tropas.`
+          : "Ataque inválido.",
+        409,
+        {
+          fromTerritoryId: from,
+          toTerritoryId: to,
+          attackMode,
+          barrierName: attackMode === "barrier" ? connection.barrierName : null,
+          minimumTroops: profile.minimumTroops,
+          attackerTroops: attacker.troops,
+        },
+      );
+    }
+
     const battle: Battle = {
       attackerTerritoryId: from,
       defenderTerritoryId: to,
@@ -230,6 +250,8 @@ export async function attackCommand(
       defenderPlayerId: defender.owner_player_id,
       stage: "awaiting_attacker_roll",
       stageStartedAt: new Date().toISOString(),
+      attackMode,
+      barrierName: attackMode === "barrier" ? connection.barrierName : null,
       attacker: [],
       defender: [],
       attackerLosses: 0,
@@ -285,9 +307,14 @@ export async function rollBattleDiceCommand(value: string, session: string) {
       (row) => row.territory_id === battle.defenderTerritoryId,
     );
 
-    if (!attacker || !defender) {
+    if (
+      !attacker ||
+      !defender ||
+      attacker.owner_player_id !== battle.attackerPlayerId ||
+      defender.owner_player_id !== battle.defenderPlayerId
+    ) {
       throw new RoomError(
-        "Os territórios do combate não foram encontrados.",
+        "O estado dos territórios do combate foi alterado.",
         409,
       );
     }
@@ -297,8 +324,21 @@ export async function rollBattleDiceCommand(value: string, session: string) {
         throw new RoomError("Apenas o atacante pode rolar agora.", 403);
       }
 
+      const profile = attackProfile(attacker.troops, battleAttackMode(battle));
+      if (profile.kind !== "available") {
+        throw new RoomError(
+          "O território atacante não possui tropas suficientes para esta rolagem.",
+          409,
+          {
+            attackMode: battleAttackMode(battle),
+            attackerTroops: attacker.troops,
+            minimumTroops: profile.minimumTroops,
+          },
+        );
+      }
+
       battle.attacker = Array.from(
-        { length: Math.min(3, attacker.troops - 1) },
+        { length: profile.diceCount },
         () => randomInt(1, 7),
       ).sort((a, b) => b - a);
       battle.stage = "show_attacker_result";
@@ -318,9 +358,37 @@ export async function rollBattleDiceCommand(value: string, session: string) {
       ).sort((a, b) => b - a);
 
       const resolved = resolveBattle(battle.attacker, battle.defender);
+      const profile = attackProfile(attacker.troops, battleAttackMode(battle));
+      if (profile.kind !== "available") {
+        throw new RoomError(
+          "O estado do território atacante ficou incompatível com o combate.",
+          409,
+          {
+            attackMode: battleAttackMode(battle),
+            attackerTroops: attacker.troops,
+            minimumTroops: profile.minimumTroops,
+          },
+        );
+      }
+
+      const attackerLosses =
+        resolved.attackerLosses * profile.attackerLossPerComparison;
+      if (attackerLosses >= attacker.troops) {
+        throw new RoomError(
+          "O resultado calculado removeria a última tropa atacante.",
+          500,
+          {
+            attackMode: battleAttackMode(battle),
+            attackerTroops: attacker.troops,
+            comparisonLosses: resolved.attackerLosses,
+            attackerLosses,
+          },
+        );
+      }
+
       battle.attacker = resolved.attacker;
       battle.defender = resolved.defender;
-      battle.attackerLosses = resolved.attackerLosses;
+      battle.attackerLosses = attackerLosses;
       battle.defenderLosses = resolved.defenderLosses;
       battle.conquered = resolved.defenderLosses === defender.troops;
       battle.stage = "show_defender_result";
