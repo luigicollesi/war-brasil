@@ -18,6 +18,8 @@ export function reinforcementFor(territoryIds: number[]) {
   return reinforcementBase(territoryIds.length) + regionBonus(territoryIds);
 }
 
+// Tropas recebidas durante a fase de manobra não podem ser deslocadas novamente.
+// Uma tropa também deve permanecer no território de origem.
 export function maneuverMovableTroops(troops: number, movedInTurn: number) {
   return Math.max(0, troops - movedInTurn - 1);
 }
