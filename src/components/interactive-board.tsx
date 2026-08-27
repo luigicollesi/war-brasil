@@ -55,6 +55,8 @@ type InteractiveBoardProps = {
   selectedTerritoryId?: number | null;
   availableTerritoryIds?: number[];
   targetHints?: readonly MapTargetHint[];
+  // Compatibilidade temporária enquanto GameClient usa o nome antigo da prop.
+  targetTerritoryIds?: readonly MapTargetHint[];
   arrow?: MapArrow;
 };
 
@@ -115,9 +117,14 @@ export function InteractiveBoard({
   onSelect,
   selectedTerritoryId,
   availableTerritoryIds = [],
-  targetHints = EMPTY_TARGET_HINTS,
+  targetHints,
+  targetTerritoryIds,
   arrow = null,
 }: InteractiveBoardProps) {
+  const resolvedTargetHints = useMemo(
+    () => targetHints ?? targetTerritoryIds ?? EMPTY_TARGET_HINTS,
+    [targetHints, targetTerritoryIds],
+  );
   const boardRef = useRef<HTMLObjectElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -142,22 +149,22 @@ export function InteractiveBoard({
   const targetById = useMemo(
     () =>
       new Map(
-        targetHints.map((target) => [target.territoryId, target]),
+        resolvedTargetHints.map((target) => [target.territoryId, target]),
       ),
-    [targetHints],
+    [resolvedTargetHints],
   );
   const roadTargetTerritoryIds = useMemo(
-    () => targetHints.map((target) => target.territoryId),
-    [targetHints],
+    () => resolvedTargetHints.map((target) => target.territoryId),
+    [resolvedTargetHints],
   );
   const specialMarkerIds = useMemo(
     () =>
       new Set(
-        targetHints
+        resolvedTargetHints
           .filter((target) => target.kind !== "normal")
           .map((target) => target.territoryId),
       ),
-    [targetHints],
+    [resolvedTargetHints],
   );
 
   useEffect(() => {
@@ -445,7 +452,7 @@ export function InteractiveBoard({
           />
         ) : null}
         <TerritorySpecialMarkers
-          targets={targetHints}
+          targets={resolvedTargetHints}
           geometries={geometries}
         />
         {from && to && arrow ? (
