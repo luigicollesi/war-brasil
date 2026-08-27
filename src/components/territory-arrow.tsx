@@ -2,8 +2,16 @@
 
 import { useId } from "react";
 import type { TerritoryAnchor } from "@/src/lib/territory-geometry";
+import { territoryGeometryFromPath } from "@/src/lib/territory-svg-geometry";
 
 export type TerritoryArrowKind = "attack" | "movement";
+export type { TerritoryAnchor } from "@/src/lib/territory-geometry";
+
+// Compatibilidade temporária para consumidores atuais. A geometria real vive em
+// src/lib e inclui safeRadius para os símbolos especiais das próximas fases.
+export function getTerritoryAnchor(pathElement: SVGPathElement): TerritoryAnchor {
+  return territoryGeometryFromPath(pathElement);
+}
 
 export function TerritoryArrow({
   from,
