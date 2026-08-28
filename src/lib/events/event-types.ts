@@ -69,7 +69,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function positiveInteger(value: unknown): value is number {
-  return typeof value === "number" && Number.isInteger(value) && value > 0;
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
 }
 
 function territoryId(value: unknown): value is number {
@@ -82,11 +82,18 @@ function territoryId(value: unknown): value is number {
 }
 
 function parseTerritories(value: unknown, effectType: string): number[] {
-  if (!Array.isArray(value) || !value.every(territoryId)) {
+  if (!Array.isArray(value) || value.length === 0 || !value.every(territoryId)) {
     throw new EventConfigurationError(
       `${effectType} possui uma lista de territórios inválida.`,
     );
   }
+
+  if (new Set(value).size !== value.length) {
+    throw new EventConfigurationError(
+      `${effectType} possui territórios repetidos.`,
+    );
+  }
+
   return [...value];
 }
 
@@ -94,12 +101,13 @@ function parseConnections(
   value: unknown,
   effectType: string,
 ): TerritoryConnectionPair[] {
-  if (!Array.isArray(value)) {
+  if (!Array.isArray(value) || value.length === 0) {
     throw new EventConfigurationError(
       `${effectType} possui uma lista de conexões inválida.`,
     );
   }
 
+  const seen = new Set<string>();
   return value.map((pair) => {
     if (
       !Array.isArray(pair) ||
@@ -112,6 +120,16 @@ function parseConnections(
         `${effectType} possui uma conexão territorial inválida.`,
       );
     }
+
+    const key =
+      pair[0] < pair[1] ? `${pair[0]}:${pair[1]}` : `${pair[1]}:${pair[0]}`;
+    if (seen.has(key)) {
+      throw new EventConfigurationError(
+        `${effectType} possui conexões territoriais repetidas.`,
+      );
+    }
+    seen.add(key);
+
     return [pair[0], pair[1]];
   });
 }
