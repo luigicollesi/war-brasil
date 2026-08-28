@@ -80,11 +80,13 @@ test("resolução mantém crypto na borda e protege a conexão jurássica", () =
     "src/lib/events/event-resolution-service.ts",
     "utf8",
   );
+  const roundRules = readFileSync("src/lib/game-round-rules.ts", "utf8");
   const resolver = readFileSync("src/lib/events/event-resolver.ts", "utf8");
 
   assert.match(service, /randomInt\(exclusiveMax\)/);
   assert.match(service, /getBaseTerritoryConnections/);
-  assert.match(service, /JURASSIC_TUNNEL_SOURCE_ID = 3/);
+  assert.match(service, /JURASSIC_TUNNEL_SOURCE_ID/);
+  assert.match(roundRules, /JURASSIC_TUNNEL_SOURCE_ID = 3/);
   assert.match(service, /protectedConnections/);
   assert.match(service, /resolveEventEffects/);
   assert.doesNotMatch(resolver, /Math\.random|node:crypto|server-only|PoolClient/);
@@ -105,10 +107,11 @@ test("contrato estrutural do catálogo é domínio puro e pode validar o banco n
   assert.match(repository, /FROM event_connections[\s\S]*ORDER BY from_event,to_event/);
 });
 
-test("evento atual é derivado do histórico persistido em vez de duplicado em game_rooms", () => {
+test("evento atual é derivado da rodada exata em vez de duplicado em game_rooms", () => {
   const service = readFileSync("src/lib/events/event-selection-service.ts", "utf8");
   const schema = readFileSync("src/lib/db/schema.sql", "utf8");
 
-  assert.match(service, /getLatestRoomEvent\(client, roomId\)/);
+  assert.match(service, /getRoomRoundEvent\([\s\S]*currentRoundNumber/);
+  assert.doesNotMatch(service, /getLatestRoomEvent/);
   assert.doesNotMatch(schema, /active_event_id|recent_event_ids/);
 });
