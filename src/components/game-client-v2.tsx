@@ -8,8 +8,10 @@ import {
   InteractiveBoard,
   type BoardTerritory,
 } from "@/src/components/interactive-board";
+import { TemporalAnomalyModal } from "@/src/components/temporal-anomaly-modal";
 import { useGameInteraction } from "@/src/hooks/use-game-interaction";
 import { useGameSync } from "@/src/hooks/use-game-sync";
+import { useTemporalAnomaly } from "@/src/hooks/use-temporal-anomaly";
 import { runGameCommand } from "@/src/lib/game-command-client";
 import type { GameSnapshot } from "@/src/lib/game-contract";
 import { buildGameViewModel } from "@/src/lib/game-view-model";
@@ -91,6 +93,7 @@ function GameReadyClient({
 }) {
   const game = useMemo(() => buildGameViewModel(snapshot), [snapshot]);
   const interaction = useGameInteraction({ roomId, snapshot, game, refresh });
+  const anomaly = useTemporalAnomaly(snapshot);
   const boardTerritories = useMemo<BoardTerritory[]>(
     () =>
       snapshot.territories.flatMap((territory) => {
@@ -163,10 +166,21 @@ function GameReadyClient({
               Sala {snapshot.room.code}
             </h1>
           </div>
-          <span className="inline-flex w-fit items-center gap-2 rounded-full bg-[#e3eee6] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#326347]">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-[#3f8b68]" />
-            Sincronizado
-          </span>
+          <div className="flex flex-wrap items-center gap-2">
+            {anomaly.presentation ? (
+              <button
+                type="button"
+                onClick={anomaly.open}
+                className="inline-flex w-fit items-center rounded-full border border-[#9b7a27]/25 bg-[#fff8df] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#7f641f] transition hover:bg-[#f8edc2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d5aa3f]"
+              >
+                Anomalia Temporal
+              </button>
+            ) : null}
+            <span className="inline-flex w-fit items-center gap-2 rounded-full bg-[#e3eee6] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#326347]">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-[#3f8b68]" />
+              Sincronizado
+            </span>
+          </div>
         </div>
       </section>
 
@@ -220,6 +234,13 @@ function GameReadyClient({
           players={snapshot.players}
           meId={me?.id}
           onRefresh={refresh}
+        />
+      ) : null}
+
+      {anomaly.isOpen && anomaly.presentation ? (
+        <TemporalAnomalyModal
+          presentation={anomaly.presentation}
+          onClose={anomaly.close}
         />
       ) : null}
 
