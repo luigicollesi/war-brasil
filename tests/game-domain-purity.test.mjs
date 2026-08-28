@@ -12,6 +12,7 @@ const PURE_MODULES = [
   "src/lib/game-view-model.ts",
   "src/lib/events/event-types.ts",
   "src/lib/events/event-selector.ts",
+  "src/lib/events/event-catalog.ts",
 ];
 
 test("módulos puros de domínio não dependem de browser, React, banco ou server-only", () => {
