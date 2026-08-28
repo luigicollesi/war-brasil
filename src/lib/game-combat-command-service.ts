@@ -12,7 +12,6 @@ import {
 } from "@/src/lib/game-battle-service";
 import { attackProfile, type AttackMode } from "@/src/lib/game-barrier-rules";
 import { gameCommand } from "@/src/lib/game-command";
-import { TERRITORY_METADATA } from "@/src/lib/game-config";
 import { isAttackOriginBlocked } from "@/src/lib/events/event-attack-rules";
 import { getEffectiveGameTopology } from "@/src/lib/game-effective-topology-service";
 import { resolveBattle } from "@/src/lib/game-rules";
@@ -102,28 +101,6 @@ function assertAttackTurn(room: CombatRoom, player: CombatPlayer) {
   }
 }
 
-function chooseJurassicTunnelDestination(previous: number | null) {
-  const candidates = Object.keys(TERRITORY_METADATA)
-    .map(Number)
-    .filter(
-      (territoryId) =>
-        territoryId !== 1 && territoryId !== 3 && territoryId !== previous,
-    );
-
-  return candidates[randomInt(0, candidates.length)];
-}
-
-async function ensureJurassicTunnel(client: PoolClient, room: CombatRoom) {
-  if (room.status !== "playing" || room.jurassic_tunnel_territory_id) return;
-
-  const destination = chooseJurassicTunnelDestination(null);
-  await client.query(
-    "UPDATE game_rooms SET jurassic_tunnel_territory_id=$2 WHERE id=$1",
-    [room.id, destination],
-  );
-  room.jurassic_tunnel_territory_id = destination;
-}
-
 export async function attackCommand(
   value: string,
   session: string,
@@ -145,7 +122,6 @@ export async function attackCommand(
     assertAttackTurn(room, player);
 
     await advanceBattlePresentation(client, room);
-    await ensureJurassicTunnel(client, room);
 
     if (isBattle(room.last_battle)) {
       throw new RoomError("Aguarde a resolução do combate atual.", 409, {
