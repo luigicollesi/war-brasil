@@ -1,0 +1,369 @@
+:root {
+  --z-game-map: 5;
+  --z-game-map-overlay: 20;
+  --z-game-tooltip: 30;
+  --z-game-hud: 40;
+  --z-game-modal-backdrop: 80;
+  --z-game-modal: 81;
+  --z-game-toast: 90;
+}
+
+/* Todo modal de jogo vive acima de HUD, painel inferior e indicador de conexão. */
+.game-modal-backdrop {
+  z-index: var(--z-game-modal-backdrop) !important;
+}
+
+.game-modal-surface {
+  z-index: var(--z-game-modal);
+  animation: game-modal-enter 190ms cubic-bezier(.2,.8,.25,1) both;
+}
+
+@keyframes game-modal-enter {
+  from { opacity: 0; transform: translateY(6px) scale(.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.game-modal--barrier::before {
+  background:
+    radial-gradient(circle at 18% 0%, rgba(201, 105, 69, 0.18), transparent 34%),
+    radial-gradient(circle at 82% 100%, rgba(217, 182, 80, 0.10), transparent 36%) !important;
+}
+
+.game-modal--event::before {
+  background:
+    radial-gradient(circle at 50% -10%, rgba(232, 195, 94, 0.20), transparent 34%),
+    radial-gradient(circle at 82% 100%, rgba(64, 131, 100, 0.10), transparent 38%) !important;
+}
+
+/* A regra da barreira já aparece dentro do fluxo de tropas; evita repetição textual. */
+.maneuver-barrier-summary {
+  display: none !important;
+}
+
+.troop-flow-center--barrier {
+  background: rgba(110, 139, 156, 0.08) !important;
+  box-shadow: inset 0 0 0 1px rgba(185, 215, 255, 0.08);
+}
+
+.game-tooltip-barrier {
+  color: #d9c98e;
+}
+
+.game-tooltip-barrier[data-blocked="true"] {
+  color: #f0a58d;
+}
+
+/* Combate: mesma estrutura dos outros modais, com apenas um accent contextual. */
+.battle-modal h3 {
+  color: #fffdf6 !important;
+  letter-spacing: -0.025em;
+}
+
+.battle-matchup {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 5px;
+  color: #b9cbc3 !important;
+  font-size: .78rem;
+  font-weight: 650;
+}
+
+.battle-matchup span {
+  color: rgba(217, 182, 80, .72);
+}
+
+.battle-barrier-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 16px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: rgba(197, 96, 64, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(235, 151, 119, 0.10);
+}
+
+.battle-barrier-summary strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #f4d1bb !important;
+  font-size: .72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.battle-barrier-summary span {
+  flex: 0 0 auto;
+  color: #e6b39d;
+  font-size: .68rem;
+}
+
+.battle-dice-grid {
+  display: flex;
+  justify-content: center;
+  gap: clamp(18px, 5vw, 42px);
+  margin-top: 24px;
+}
+
+.battle-side {
+  text-align: center;
+}
+
+.battle-side > p {
+  margin-bottom: 8px;
+  color: #9eb6ab !important;
+  font-size: .66rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.battle-side > div {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.battle-die {
+  width: clamp(70px, 8vw, 108px) !important;
+  overflow: visible !important;
+  border-radius: 0 !important;
+}
+
+.battle-side--attack .battle-die {
+  background: url("/dado-ataque-vermelho-hq.svg") center / contain no-repeat !important;
+  filter: drop-shadow(0 12px 16px rgba(67, 8, 6, 0.28));
+}
+
+.battle-side--defense .battle-die {
+  background: url("/dado-defesa-azul-hq.svg") center / contain no-repeat !important;
+  filter: drop-shadow(0 12px 16px rgba(3, 34, 73, 0.28));
+}
+
+.battle-die img {
+  opacity: 0 !important;
+}
+
+.battle-die span {
+  border-color: rgba(255, 255, 255, 0.78) !important;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.24), 0 2px 7px rgba(0, 0, 0, 0.32) !important;
+}
+
+.battle-comparisons {
+  display: grid;
+  gap: 5px;
+  margin-top: 18px;
+}
+
+.battle-comparisons > div {
+  display: grid;
+  grid-template-columns: 28px 18px 28px minmax(0, 1fr);
+  align-items: center;
+  gap: 5px;
+  min-height: 34px;
+  padding: 5px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.045);
+  font-variant-numeric: tabular-nums;
+}
+
+.battle-comparisons > div > span {
+  color: #f7f1df;
+  font-size: 1rem;
+  font-weight: 800;
+  text-align: center;
+}
+
+.battle-comparisons small {
+  color: rgba(217, 182, 80, .62);
+  text-align: center;
+}
+
+.battle-comparisons strong {
+  color: #d9c48e !important;
+  font-size: .72rem;
+  text-align: right;
+}
+
+.battle-result {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px 18px;
+  margin-top: 16px;
+  color: #b8cbc2;
+  font-size: .75rem;
+}
+
+.battle-result strong {
+  color: #f1cf70 !important;
+  font-size: .9rem;
+}
+
+.battle-result em {
+  width: 100%;
+  color: #e6c45e;
+  font-size: .67rem;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+/* Anomalia Temporal: evento primeiro, efeitos como dados compactos. */
+.temporal-anomaly-modal {
+  position: relative;
+}
+
+.temporal-anomaly-modal h3 {
+  max-width: calc(100% - 92px);
+  color: #fffdf5 !important;
+  font-size: clamp(1.45rem, 3vw, 2rem);
+  letter-spacing: -.035em;
+}
+
+.temporal-anomaly-round {
+  position: absolute;
+  top: 24px;
+  right: 26px;
+  padding: 5px 8px;
+  border: 1px solid rgba(217, 182, 80, .18);
+  border-radius: 999px;
+  color: #cbb56c;
+  font-size: .58rem;
+  font-weight: 850;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+}
+
+.temporal-anomaly-description {
+  max-width: 52ch;
+  margin-top: 16px;
+  color: #c7d5cf !important;
+  font-size: .88rem;
+  line-height: 1.6;
+}
+
+.temporal-anomaly-effects {
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(217, 182, 80, .14);
+}
+
+.temporal-anomaly-effects-heading {
+  color: #d9b650 !important;
+  font-size: .58rem;
+  font-weight: 900;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+.temporal-anomaly-effects ul {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.temporal-anomaly-effects li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding: 10px 11px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .035);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .035);
+}
+
+.temporal-anomaly-effect-icon {
+  display: grid;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 9px;
+  background: rgba(217, 182, 80, .09);
+  color: #e7c968;
+  font-size: .8rem;
+  font-weight: 900;
+}
+
+.temporal-anomaly-effect-copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.temporal-anomaly-effect-copy small {
+  color: #9db1a8;
+  font-size: .56rem;
+  font-weight: 850;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.temporal-anomaly-effect-copy strong {
+  overflow: hidden;
+  color: #f0eee5 !important;
+  font-size: .78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.temporal-anomaly-effect-copy > span {
+  overflow: hidden;
+  color: #aebfb7;
+  font-size: .63rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.temporal-anomaly-continue {
+  margin-top: 24px;
+}
+
+@media (min-width: 768px) and (max-width: 1199px) {
+  .game-utility-bar {
+    right: 184px !important;
+  }
+}
+
+@media (max-width: 767px) {
+  .battle-modal {
+    max-height: calc(100dvh - 16px);
+    overflow-y: auto;
+  }
+
+  .battle-barrier-summary {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .battle-dice-grid {
+    gap: 12px;
+  }
+
+  .battle-die {
+    width: clamp(58px, 20vw, 82px) !important;
+  }
+
+  .temporal-anomaly-modal h3 {
+    max-width: calc(100% - 72px);
+  }
+
+  .temporal-anomaly-round {
+    top: 26px;
+    right: 18px;
+    padding: 4px 7px;
+  }
+
+  .temporal-anomaly-effects ul {
+    grid-template-columns: 1fr;
+  }
+}
