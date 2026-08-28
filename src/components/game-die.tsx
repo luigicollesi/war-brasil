@@ -1,6 +1,8 @@
 "use client";
 
 import Image from "next/image";
+import type { CSSProperties } from "react";
+import type { DieRollAnimation } from "@/src/lib/game-battle-display";
 import { PLAYER_COLORS, type PlayerColor } from "@/src/lib/lobby";
 
 export type GameDieValue = 1 | 2 | 3 | 4 | 5 | 6;
@@ -34,12 +36,14 @@ export function GameDie({
   value,
   color = "forest",
   rolling = false,
+  rollAnimation,
   size = "lg",
   className = "",
 }: {
   value: number;
   color?: PlayerColor;
   rolling?: boolean;
+  rollAnimation?: DieRollAnimation;
   size?: keyof typeof sizeClass;
   className?: string;
 }) {
@@ -47,10 +51,24 @@ export function GameDie({
     Number.isInteger(value) && value >= 1 && value <= 6
       ? (value as GameDieValue)
       : 1;
+  const animationClass = rolling
+    ? rollAnimation
+      ? "battle-die-roll-animation"
+      : "dice-roll-animation"
+    : "";
+  const rollStyle = rollAnimation
+    ? ({
+        "--die-roll-angle": `${rollAnimation.direction * rollAnimation.rotations * 360}deg`,
+        "--die-roll-duration": `${rollAnimation.durationMs}ms`,
+        "--die-roll-delay": `${rollAnimation.delayMs}ms`,
+      } as CSSProperties)
+    : undefined;
 
   return (
     <div
-      className={`game-die relative aspect-square overflow-hidden ${sizeClass[size]} ${rolling ? "dice-roll-animation" : ""} ${className}`}
+      className={`game-die relative aspect-square overflow-hidden ${sizeClass[size]} ${animationClass} ${className}`}
+      data-rolling={rolling ? "true" : "false"}
+      style={rollStyle}
       aria-label={`Dado mostrando ${safeValue}`}
     >
       <Image
