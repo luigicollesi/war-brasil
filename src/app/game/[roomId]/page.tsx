@@ -9,6 +9,7 @@ import "./game-safe-layout.css";
 import "./game-roads.css";
 import "./game-performance.css";
 import "./game-ui-refresh.css";
+import "./game-fine-tuning.css";
 
 type GamePageProps = {
   params: Promise<{ roomId: string }>;
