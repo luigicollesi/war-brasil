@@ -9,6 +9,7 @@ import {
   battleAttackMode,
   battleComparisonRows,
 } from "@/src/lib/game-battle-presentation";
+import { buildBattleDisplayDice, type BattleDisplaySide } from "@/src/lib/game-battle-display";
 import { runGameCommand } from "@/src/lib/game-command-client";
 import type { GameSnapshot } from "@/src/lib/game-contract";
 
@@ -26,12 +27,22 @@ export function BattleOverlay({
   onRefresh: (minimumRevision?: number) => Promise<void>;
 }) {
   const [error, setError] = useState("");
-  const [rolling, setRolling] = useState(false);
+  const [rollingSide, setRollingSide] = useState<BattleDisplaySide | null>(null);
   const attacker = players.find((player) => player.id === battle.attackerPlayerId);
   const defender = players.find((player) => player.id === battle.defenderPlayerId);
   const attackMode = battleAttackMode(battle);
   const isBarrierAttack = attackMode === "barrier";
   const comparisonRows = battleComparisonRows(battle);
+  const attackDisplayDice = buildBattleDisplayDice({
+    values: battle.attacker,
+    side: "attack",
+    seed: `${battle.attackerTerritoryId}:${battle.defenderTerritoryId}:${battle.attacker.join(",")}`,
+  });
+  const defenseDisplayDice = buildBattleDisplayDice({
+    values: battle.defender,
+    side: "defense",
+    seed: `${battle.attackerTerritoryId}:${battle.defenderTerritoryId}:${battle.defender.join(",")}`,
+  });
   const lossPerComparison = attackerLossPerComparison(attackMode);
   const barrierSummary = isBarrierAttack
     ? barrierAttackSummary({
@@ -62,8 +73,10 @@ export function BattleOverlay({
                 : "Resultado da batalha";
 
   async function roll() {
+    const side: BattleDisplaySide =
+      battle.stage === "awaiting_defender_roll" ? "defense" : "attack";
     setError("");
-    setRolling(true);
+    setRollingSide(side);
     try {
       const result = await runGameCommand(
         roomId,
@@ -79,9 +92,14 @@ export function BattleOverlay({
           : "Não foi possível rolar os dados.",
       );
     } finally {
-      window.setTimeout(() => setRolling(false), 850);
+      window.setTimeout(() => setRollingSide(null), 950);
     }
   }
+
+  const attackRolling =
+    rollingSide === "attack" || battle.stage === "show_attacker_result";
+  const defenseRolling =
+    rollingSide === "defense" || battle.stage === "show_defender_result";
 
   return (
     <GameModal
@@ -104,33 +122,45 @@ export function BattleOverlay({
       ) : null}
 
       <div className="battle-dice-grid">
-        {battle.attacker.length ? (
+        {attackDisplayDice.length ? (
           <div className="battle-side battle-side--attack">
             <p>Ataque</p>
-            <div>
-              {battle.attacker.map((value, index) => (
-                <GameDie
-                  key={`${value}-${index}-${battle.stage}`}
-                  value={value}
-                  color={attacker?.color ?? "forest"}
-                  rolling={rolling || battle.stage === "show_attacker_result"}
-                />
+            <div className="battle-dice-row">
+              {attackDisplayDice.map((die) => (
+                <div
+                  className="battle-die-slot"
+                  key={`attack-${die.sourceIndex}-${die.value}`}
+                >
+                  <GameDie
+                    value={die.value}
+                    color={attacker?.color ?? "forest"}
+                    rolling={attackRolling}
+                    rollAnimation={die.animation}
+                    className="battle-die"
+                  />
+                </div>
               ))}
             </div>
           </div>
         ) : null}
 
-        {battle.defender.length ? (
+        {defenseDisplayDice.length ? (
           <div className="battle-side battle-side--defense">
             <p>Defesa</p>
-            <div>
-              {battle.defender.map((value, index) => (
-                <GameDie
-                  key={`${value}-${index}-${battle.stage}`}
-                  value={value}
-                  color={defender?.color ?? "ruby"}
-                  rolling={rolling || battle.stage === "show_defender_result"}
-                />
+            <div className="battle-dice-row">
+              {defenseDisplayDice.map((die) => (
+                <div
+                  className="battle-die-slot"
+                  key={`defense-${die.sourceIndex}-${die.value}`}
+                >
+                  <GameDie
+                    value={die.value}
+                    color={defender?.color ?? "ruby"}
+                    rolling={defenseRolling}
+                    rollAnimation={die.animation}
+                    className="battle-die"
+                  />
+                </div>
               ))}
             </div>
           </div>
@@ -171,10 +201,10 @@ export function BattleOverlay({
         <button
           type="button"
           onClick={() => void roll()}
-          disabled={rolling}
+          disabled={rollingSide !== null}
           className="game-primary-action mt-6 h-12 w-full rounded-xl text-xs font-bold uppercase tracking-[.14em] disabled:opacity-50"
         >
-          {rolling ? "Rolando…" : "Rolar dados"}
+          {rollingSide ? "Rolando…" : "Rolar dados"}
         </button>
       ) : null}
 
