@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useMemo, useState } from "react";
 import { BattleOverlay } from "@/src/components/battle-overlay";
 import { GameTurnPanel } from "@/src/components/game-turn-panel";
+import { GameUtilityBar } from "@/src/components/game-utility-bar";
 import {
   InteractiveBoard,
   type BoardTerritory,
@@ -154,7 +155,7 @@ function GameReadyClient({
 
   return (
     <div className="space-y-5">
-      <section className="rounded-3xl border border-[#17372d]/10 bg-[#faf8f2] p-5 shadow-[0_18px_50px_rgba(42,55,50,0.07)] sm:p-6">
+      <section className="game-top-hud rounded-3xl border border-[#17372d]/10 bg-[#faf8f2] p-5 shadow-[0_18px_50px_rgba(42,55,50,0.07)] sm:p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#9b7a27]">
@@ -166,21 +167,10 @@ function GameReadyClient({
               Sala {snapshot.room.code}
             </h1>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {anomaly.presentation ? (
-              <button
-                type="button"
-                onClick={anomaly.open}
-                className="inline-flex w-fit items-center rounded-full border border-[#9b7a27]/25 bg-[#fff8df] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#7f641f] transition hover:bg-[#f8edc2] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d5aa3f]"
-              >
-                Anomalia Temporal
-              </button>
-            ) : null}
-            <span className="inline-flex w-fit items-center gap-2 rounded-full bg-[#e3eee6] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#326347]">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-[#3f8b68]" />
-              Sincronizado
-            </span>
-          </div>
+          <GameUtilityBar
+            anomalyTitle={anomaly.presentation?.title}
+            onOpenAnomaly={anomaly.presentation ? anomaly.open : undefined}
+          />
         </div>
       </section>
 
