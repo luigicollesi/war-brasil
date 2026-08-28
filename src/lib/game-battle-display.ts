@@ -65,10 +65,24 @@ export function buildBattleDisplayDice({
 }): BattleDisplayDie[] {
   const permutation = stablePermutation(values.length, `${seed}:${side}:order`);
   const animationSeed = `${seed}:${side}:animation`;
+  const animations = values.map((_, sourceIndex) =>
+    animationProfile(animationSeed, sourceIndex),
+  );
+
+  if (
+    animations.length > 1 &&
+    animations.every((animation) => animation.direction === animations[0].direction)
+  ) {
+    const last = animations[animations.length - 1];
+    animations[animations.length - 1] = {
+      ...last,
+      direction: last.direction === 1 ? -1 : 1,
+    };
+  }
 
   return permutation.map((sourceIndex) => ({
     value: values[sourceIndex],
     sourceIndex,
-    animation: animationProfile(animationSeed, sourceIndex),
+    animation: animations[sourceIndex],
   }));
 }
