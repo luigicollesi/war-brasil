@@ -217,6 +217,27 @@
 /* Anomalia Temporal: evento primeiro, efeitos como dados compactos. */
 .temporal-anomaly-modal {
   position: relative;
+  max-height: min(760px, calc(100dvh - 32px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-color: rgba(217, 182, 80, .42) rgba(255, 255, 255, .035);
+  scrollbar-width: thin;
+}
+
+.temporal-anomaly-modal::-webkit-scrollbar {
+  width: 8px;
+}
+
+.temporal-anomaly-modal::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, .025);
+}
+
+.temporal-anomaly-modal::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: rgba(217, 182, 80, .42);
+  background-clip: padding-box;
 }
 
 .temporal-anomaly-modal h3 {
@@ -351,6 +372,11 @@
 
   .battle-die {
     width: clamp(58px, 20vw, 82px) !important;
+  }
+
+  .temporal-anomaly-modal {
+    max-height: calc(100dvh - 16px);
+    scrollbar-gutter: auto;
   }
 
   .temporal-anomaly-modal h3 {
