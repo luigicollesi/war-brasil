@@ -33,6 +33,8 @@ export function GameModal({
 }: GameModalProps) {
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+  onCloseRef.current = onClose;
 
   useEffect(() => {
     const previousFocus = document.activeElement as HTMLElement | null;
@@ -45,9 +47,9 @@ export function GameModal({
     (focusable[0] ?? dialog).focus();
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && onClose) {
+      if (event.key === "Escape" && onCloseRef.current) {
         event.preventDefault();
-        onClose();
+        onCloseRef.current();
         return;
       }
 
@@ -78,7 +80,7 @@ export function GameModal({
       document.removeEventListener("keydown", onKeyDown);
       if (previousFocus?.isConnected) previousFocus.focus();
     };
-  }, [onClose]);
+  }, []);
 
   return (
     <div className="game-modal-backdrop fixed inset-0 z-30 grid place-items-center p-4">
