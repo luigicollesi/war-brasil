@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Barlow_Condensed, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import "./war-identity.css";
+import "./war-guide.css";
 
 const interfaceFont = Inter({
   variable: "--font-wb-ui",
