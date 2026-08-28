@@ -16,6 +16,28 @@
     );
   }
 
+  /* O contador de tropas é desenhado dentro do SVG e naturalmente encolhe com
+     o mapa. No mobile reforçamos apenas a tipografia/contraste sem aumentar a
+     área ocupada pelo marcador sobre os territórios. */
+  .game-troop-layer circle {
+    fill: rgba(3, 18, 14, .96) !important;
+    stroke-width: 6px !important;
+  }
+
+  .game-troop-layer text {
+    fill: #ffffff !important;
+    font-family: var(--font-wb-ui), Inter, Arial, sans-serif;
+    font-size: 26px !important;
+    font-weight: 900 !important;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: -.025em;
+    paint-order: stroke fill;
+    stroke: rgba(1, 10, 8, .92) !important;
+    stroke-linejoin: round;
+    stroke-width: 3.2px !important;
+    text-rendering: geometricPrecision;
+  }
+
   /* A mão original permanece como fallback para telas maiores. No mobile ela é
      substituída pelo drawer dedicado para que o command deck tenha altura real. */
   .game-map-canvas + section > div[class*="sticky"] {
