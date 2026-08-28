@@ -1,0 +1,158 @@
+/* Mão de cartas mobile: drawer físico de dois estados sem redimensionar o mapa
+   durante o gesto. Desktop e tablet continuam usando a mão existente. */
+
+.mobile-card-hand-layer {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .game-screen {
+    --game-hand-visible-height: 0px;
+    --game-command-closed-height: 190px;
+    --game-map-safe-bottom: clamp(
+      148px,
+      calc(var(--game-command-closed-height) + 12px),
+      310px
+    );
+  }
+
+  /* A mão original permanece como fallback para telas maiores. No mobile ela é
+     substituída pelo drawer dedicado para que o command deck tenha altura real. */
+  .game-map-canvas + section > div[class*="sticky"] {
+    display: none !important;
+  }
+
+  /* O hub sobe exatamente a mesma distância atualmente revelada pela mão. */
+  .game-map-canvas + section {
+    bottom: var(--game-hand-visible-height) !important;
+    max-height: min(
+      42dvh,
+      calc(100dvh - var(--game-hand-visible-height) - 92px)
+    ) !important;
+    transition: bottom 220ms cubic-bezier(.2, .8, .25, 1);
+  }
+
+  .game-screen[data-mobile-hand-dragging="true"] .game-map-canvas + section {
+    transition: none;
+  }
+
+  .mobile-card-hand-layer {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 36;
+    display: block;
+    height: var(--game-hand-visible-height);
+    pointer-events: none;
+    transition: height 220ms cubic-bezier(.2, .8, .25, 1);
+  }
+
+  .game-screen[data-mobile-hand-dragging="true"] .mobile-card-hand-layer {
+    transition: none;
+  }
+
+  .mobile-card-hand-layer[data-has-cards="false"] {
+    display: none;
+  }
+
+  .mobile-card-hand-viewport {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    border-top: 1px solid rgba(217, 182, 80, .14);
+    background:
+      linear-gradient(to bottom, rgba(8, 35, 27, .98), rgba(5, 22, 17, .995));
+    box-shadow: 0 -14px 34px rgba(0, 0, 0, .18);
+  }
+
+  .mobile-card-hand-track {
+    position: absolute;
+    top: 0;
+    right: 0;
+    left: 0;
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    min-width: 100%;
+    width: max-content;
+    margin: 0;
+    padding: 9px 12px calc(10px + env(safe-area-inset-bottom));
+    list-style: none;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    touch-action: pan-x;
+    pointer-events: none;
+  }
+
+  .mobile-card-hand-track::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mobile-card-hand-layer[data-open="true"] .mobile-card-hand-track {
+    pointer-events: auto;
+  }
+
+  .mobile-card-hand-card {
+    position: relative;
+    flex: 0 0 clamp(82px, 27vw, 96px);
+    width: clamp(82px, 27vw, 96px);
+    aspect-ratio: 2 / 3;
+    overflow: hidden;
+    border-radius: 11px;
+    background: #f9f4df;
+    box-shadow:
+      0 8px 20px rgba(0, 0, 0, .24),
+      0 0 0 1px rgba(217, 182, 80, .13);
+  }
+
+  /* Área tátil maior que a alça visual. Fica sobre a borda inferior do hub e
+     captura somente o gesto vertical; as cartas abertas preservam pan-x. */
+  .mobile-card-hand-handle {
+    position: absolute;
+    top: -30px;
+    left: 50%;
+    z-index: 2;
+    display: grid;
+    width: 88px;
+    height: 46px;
+    padding: 0;
+    transform: translateX(-50%);
+    place-items: center;
+    border: 0;
+    background: transparent;
+    box-shadow: none !important;
+    cursor: ns-resize;
+    pointer-events: auto;
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .mobile-card-hand-handle > span {
+    display: block;
+    width: 42px;
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(242, 236, 216, .42);
+    box-shadow: 0 1px 0 rgba(0, 0, 0, .18);
+    transition:
+      width 160ms ease,
+      background-color 160ms ease;
+  }
+
+  .mobile-card-hand-layer[data-open="true"] .mobile-card-hand-handle > span,
+  .mobile-card-hand-layer[data-dragging="true"] .mobile-card-hand-handle > span {
+    width: 50px;
+    background: rgba(232, 201, 101, .70);
+  }
+}
+
+@media (max-width: 767px) and (prefers-reduced-motion: reduce) {
+  .game-map-canvas + section,
+  .mobile-card-hand-layer,
+  .mobile-card-hand-handle > span {
+    transition: none !important;
+  }
+}
