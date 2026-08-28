@@ -13,6 +13,7 @@
     "src/lib/game-rules.ts",
     "src/lib/game-round-rules.ts",
     "src/lib/game-barrier-rules.ts",
+    "src/lib/game-barrier-presentation.ts",
     "src/lib/game-battle-presentation.ts",
     "src/lib/territory-connections.ts",
     "src/lib/territory-routing.ts",
