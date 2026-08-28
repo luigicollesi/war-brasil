@@ -1,5 +1,6 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import {
   useEffect,
   useId,
@@ -7,10 +8,13 @@ import {
   type ReactNode,
 } from "react";
 
+type GameModalTone = "default" | "barrier" | "event";
+
 type GameModalProps = {
-  eyebrow: string;
+  eyebrow?: string;
   title: string;
   children: ReactNode;
+  tone?: GameModalTone;
   className?: string;
   onClose?: () => void;
 };
@@ -28,6 +32,7 @@ export function GameModal({
   eyebrow,
   title,
   children,
+  tone = "default",
   className = "",
   onClose,
 }: GameModalProps) {
@@ -85,22 +90,25 @@ export function GameModal({
     };
   }, []);
 
-  return (
-    <div className="game-modal-backdrop fixed inset-0 z-30 grid place-items-center p-4">
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
+    <div className="game-modal-backdrop fixed inset-0 grid place-items-center p-4">
       <div
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
         tabIndex={-1}
-        className={`game-modal-surface ${className}`}
+        className={`game-modal-surface game-modal--${tone} ${className}`}
       >
-        <p className="game-modal-eyebrow">{eyebrow}</p>
+        {eyebrow ? <p className="game-modal-eyebrow">{eyebrow}</p> : null}
         <h3 id={titleId} className="text-xl font-semibold">
           {title}
         </h3>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
