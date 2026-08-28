@@ -41,10 +41,35 @@ Invariantes de resolução:
 - o Túnel Jurássico é aplicado por último e permanece uma conexão sintética;
 - `BLOCK_ATTACK` impede apenas que o território listado seja origem de ataque.
 
+## Fase 3 — lifecycle atômico da rodada
+
+- `game-round-rules.ts`: regras puras de candidatos e escolha do Túnel Jurássico com aleatoriedade injetada.
+- `game-round-service.ts`: orquestra início da rodada 1 e transições N → N+1 reutilizando o `PoolClient` da transação externa.
+- `game-presentation-service.ts`: ao terminar o sorteio de ordem, cria primeiro a rodada 1/evento 0 e só então torna a sala `playing`.
+- `game-command-service.ts`: detecta o wrap dos jogadores vivos e delega a nova rodada ao `game-round-service`.
+- `event-selection-service.ts`: exige o evento da rodada atual exata em vez de usar simplesmente o último registro do histórico.
+- `game-effective-topology-service.ts`: partidas ativas sem evento da rodada ou sem Túnel falham explicitamente em vez de receber fallback silencioso.
+
+A rodada 1 registra o evento `0` com `resolvedEffects: []`. Seus efeitos configurados não são resolvidos nem aplicados; a distribuição normal continua responsável por iniciar cada território com uma tropa.
+
+Nas rodadas seguintes a ordem é:
+
+1. escolher o novo destino do Túnel;
+2. escolher o próximo evento pelo grafo e histórico;
+3. resolver efeitos aleatórios protegendo o novo Túnel;
+4. persistir `game_round_events` da nova rodada;
+5. aplicar efeitos permanentes de tropas;
+6. atualizar `round_number` e `jurassic_tunnel_territory_id`;
+7. concluir a troca de jogador/fase no mesmo `gameCommand`.
+
+Nenhum serviço do lifecycle abre uma nova transação. O lock e o rollback continuam pertencendo a `gameCommand`/`gameConditionalCommand`, fazendo com que evento, efeitos, Túnel, rodada, jogador e revisão sejam commitados ou revertidos juntos.
+
+O combate não possui mais self-healing para criar Túnel durante uma jogada. Estado `playing` sem evento da rodada ou sem Túnel é tratado como violação de invariante.
+
 ## Transporte e sincronização
 
 O snapshot continua transportando/cacheando somente a topologia base. O evento ativo transporta `eventId` e `resolvedEffects` separadamente. A hidratação deriva a topologia efetiva no cliente com a mesma composição usada pelo servidor, evitando divergência entre mapa, ataque e manobra.
 
 ## Próxima fase
 
-A Fase 3 deve integrar o lifecycle atômico de rodada: trocar o Túnel Jurássico, escolher o próximo evento, resolver seus efeitos, registrar `game_round_events`, aplicar efeitos permanentes e incrementar a rodada dentro da mesma transação. O evento `0` será registrado no início com `resolvedEffects: []`, preservando a regra atual de uma tropa inicial sem reaplicar seu efeito configurado.
+A próxima etapa é apresentação: expor metadados narrativos do evento atual, gerar descrições estruturadas do que mudou na rodada e apresentar a Anomalia Temporal em modal acessível com botão persistente para reabertura.
