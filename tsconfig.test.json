@@ -12,6 +12,7 @@
     "src/lib/game-config.ts",
     "src/lib/game-rules.ts",
     "src/lib/game-barrier-rules.ts",
+    "src/lib/game-battle-presentation.ts",
     "src/lib/territory-connections.ts",
     "src/lib/territory-routing.ts",
     "src/lib/territory-geometry.ts",
