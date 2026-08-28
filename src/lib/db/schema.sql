@@ -127,6 +127,8 @@ CREATE TABLE IF NOT EXISTS game_round_events (
   event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE RESTRICT,
   resolved_effects JSONB NOT NULL DEFAULT '[]'::jsonb
     CHECK (jsonb_typeof(resolved_effects) = 'array'),
+  applied_troop_changes JSONB NOT NULL DEFAULT '[]'::jsonb
+    CHECK (jsonb_typeof(applied_troop_changes) = 'array'),
   activated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (room_id, round_number)
 );
