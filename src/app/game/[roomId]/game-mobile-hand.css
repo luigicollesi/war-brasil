@@ -16,25 +16,28 @@
     );
   }
 
-  /* O contador de tropas é desenhado dentro do SVG e naturalmente encolhe com
-     o mapa. No mobile reforçamos apenas a tipografia/contraste sem aumentar a
-     área ocupada pelo marcador sobre os territórios. */
+  /* O layer de tropas usa viewBox 1254×1254 e encolhe junto com o mapa. No
+     mobile compensamos essa escala para manter o marcador legível em pixels
+     de tela, sem alterar coordenadas ou lógica do tabuleiro. */
   .game-troop-layer circle {
     fill: rgba(3, 18, 14, .96) !important;
-    stroke-width: 6px !important;
+    stroke-width: 2px !important;
+    transform: scale(1.9);
+    transform-box: fill-box;
+    transform-origin: center;
   }
 
   .game-troop-layer text {
     fill: #ffffff !important;
     font-family: var(--font-wb-ui), Inter, Arial, sans-serif;
-    font-size: 26px !important;
+    font-size: 48px !important;
     font-weight: 900 !important;
     font-variant-numeric: tabular-nums;
-    letter-spacing: -.025em;
+    letter-spacing: -.035em;
     paint-order: stroke fill;
-    stroke: rgba(1, 10, 8, .92) !important;
+    stroke: rgba(1, 10, 8, .96) !important;
     stroke-linejoin: round;
-    stroke-width: 3.2px !important;
+    stroke-width: 4.5px !important;
     text-rendering: geometricPrecision;
   }
 
