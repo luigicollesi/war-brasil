@@ -4,6 +4,7 @@ import test from "node:test";
 
 const PURE_MODULES = [
   "src/lib/game-rules.ts",
+  "src/lib/game-round-rules.ts",
   "src/lib/territory-connections.ts",
   "src/lib/game-interaction.ts",
   "src/lib/game-snapshot-hydration.ts",
