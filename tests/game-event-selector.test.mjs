@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  EVENT_CONNECTION_COUNT,
+  EVENT_COUNT,
+  assertEventCatalogShape,
+} from "../.test-build/events/event-catalog.js";
+import {
   EVENT_HISTORY_SIZE,
   eligibleEventConnections,
   selectWeightedEvent,
@@ -18,6 +23,29 @@ const weightedConnections = [
   { fromEvent: 10, toEvent: 50, weight: 2 },
   { fromEvent: 10, toEvent: 60, weight: 1 },
 ];
+
+function validCatalogGraph() {
+  const eventIds = Array.from({ length: 38 }, (_, index) => index);
+  const connections = [];
+
+  for (let destination = 1; destination <= 10; destination += 1) {
+    connections.push({ fromEvent: 0, toEvent: destination, weight: 1 });
+  }
+
+  const weights = [4, 4, 2, 2, 1];
+  for (let fromEvent = 1; fromEvent <= 37; fromEvent += 1) {
+    for (let offset = 1; offset <= 5; offset += 1) {
+      const toEvent = ((fromEvent - 1 + offset) % 37) + 1;
+      connections.push({
+        fromEvent,
+        toEvent,
+        weight: weights[offset - 1],
+      });
+    }
+  }
+
+  return { eventIds, connections };
+}
 
 test("sorteio ponderado respeita exatamente os intervalos dos pesos", () => {
   assert.equal(totalEventWeight(weightedConnections), 13);
@@ -76,6 +104,17 @@ test("evento zero pode ser origem, mas nunca destino", () => {
   );
 });
 
+test("self-loop é rejeitado mesmo quando o histórico exigiria fallback", () => {
+  assert.throws(
+    () =>
+      eligibleEventConnections(
+        [{ fromEvent: 10, toEvent: 10, weight: 1 }],
+        [10],
+      ),
+    EventConfigurationError,
+  );
+});
+
 test("configuração inválida falha em vez de distorcer o sorteio", () => {
   assert.throws(() => totalEventWeight([]), EventConfigurationError);
   assert.throws(
@@ -95,6 +134,36 @@ test("configuração inválida falha em vez de distorcer o sorteio", () => {
         ],
         [],
       ),
+    EventConfigurationError,
+  );
+});
+
+test("contrato do catálogo aceita exatamente 38 eventos e 195 conexões válidas", () => {
+  const catalog = validCatalogGraph();
+  assert.equal(catalog.eventIds.length, EVENT_COUNT);
+  assert.equal(catalog.connections.length, EVENT_CONNECTION_COUNT);
+  assert.doesNotThrow(() =>
+    assertEventCatalogShape(catalog.eventIds, catalog.connections),
+  );
+});
+
+test("contrato do catálogo detecta catálogo incompleto e grafo inválido", () => {
+  const catalog = validCatalogGraph();
+
+  assert.throws(
+    () => assertEventCatalogShape(catalog.eventIds.slice(0, -1), catalog.connections),
+    EventConfigurationError,
+  );
+  assert.throws(
+    () => assertEventCatalogShape(catalog.eventIds, catalog.connections.slice(0, -1)),
+    EventConfigurationError,
+  );
+
+  const withInitialDestination = catalog.connections.map((connection, index) =>
+    index === 0 ? { ...connection, toEvent: 0 } : connection,
+  );
+  assert.throws(
+    () => assertEventCatalogShape(catalog.eventIds, withInitialDestination),
     EventConfigurationError,
   );
 });
