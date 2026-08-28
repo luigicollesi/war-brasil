@@ -15,6 +15,15 @@ import { runGameCommand } from "@/src/lib/game-command-client";
 import type { GameSnapshot } from "@/src/lib/game-contract";
 import { PLAYER_COLORS, type PlayerColor } from "@/src/lib/lobby";
 
+const FOCUSABLE_SELECTOR = [
+  "button:not([disabled])",
+  "[href]",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  "[tabindex]:not([tabindex='-1'])",
+].join(",");
+
 const pipPositions: Record<number, Array<[number, number]>> = {
   1: [[50, 50]],
   2: [[30, 30], [70, 70]],
@@ -110,7 +119,40 @@ export function BattleOverlay({
                 : "Resultado da batalha";
 
   useEffect(() => {
-    dialogRef.current?.focus();
+    const previousFocus = document.activeElement as HTMLElement | null;
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+
+    dialog.focus();
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Tab") return;
+
+      const items = Array.from(
+        dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR),
+      );
+      if (!items.length) {
+        event.preventDefault();
+        dialog.focus();
+        return;
+      }
+
+      const first = items[0];
+      const last = items[items.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      if (previousFocus?.isConnected) previousFocus.focus();
+    };
   }, []);
 
   async function roll() {
@@ -156,7 +198,10 @@ export function BattleOverlay({
         </p>
 
         {isBarrierAttack ? (
-          <div className="battle-barrier-warning mt-5" role="note">
+          <div
+            className="battle-barrier-warning mt-5 rounded-2xl bg-[#5a1f1a]/35 p-4 ring-1 ring-[#ff9d7a]/20"
+            role="note"
+          >
             <p className="text-xs font-bold uppercase tracking-[.14em] text-[#ffb59d]">
               ☠ Ataque através de barreira
             </p>
@@ -168,7 +213,10 @@ export function BattleOverlay({
             </p>
             <div className="mt-3 flex flex-wrap gap-2 text-xs text-[#e8d8cc]">
               {BARRIER_ATTACK_DICE_BANDS.map((band) => (
-                <span key={band.minimumTroops} className="battle-barrier-band">
+                <span
+                  key={band.minimumTroops}
+                  className="battle-barrier-band rounded-full bg-white/8 px-2.5 py-1"
+                >
                   {band.maximumTroops === null
                     ? `${band.minimumTroops}+`
                     : `${band.minimumTroops}–${band.maximumTroops}`} tropas → {band.diceCount} {band.diceCount === 1 ? "dado" : "dados"}
