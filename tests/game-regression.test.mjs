@@ -30,6 +30,17 @@ function territory(territoryId, troops, movedInTurn = 0) {
   };
 }
 
+function event(eventId, resolvedEffects = [], overrides = {}) {
+  return {
+    eventId,
+    name: `Evento ${eventId}`,
+    description: `Descrição do evento ${eventId}`,
+    resolvedEffects,
+    appliedTroopChanges: [],
+    ...overrides,
+  };
+}
+
 function payload({
   tunnelDestination = null,
   territories = [],
@@ -108,12 +119,9 @@ test("hidratação aplica evento sem contaminar a topologia base cacheada", () =
   const originalBase = structuredClone(baseConnections);
   const hydrated = hydrateGameSnapshot(
     payload({
-      activeEvent: {
-        eventId: 7,
-        resolvedEffects: [
-          { type: "OPEN_CONNECTIONS", connections: [[1, 2]] },
-        ],
-      },
+      activeEvent: event(7, [
+        { type: "OPEN_CONNECTIONS", connections: [[1, 2]] },
+      ]),
     }),
     baseConnections,
   );
@@ -125,10 +133,9 @@ test("hidratação aplica evento sem contaminar a topologia base cacheada", () =
 
 test("shareGameSnapshot preserva referência quando topologia e evento não mudam", () => {
   const baseConnections = [connection(20, 21)];
-  const activeEvent = {
-    eventId: 7,
-    resolvedEffects: [{ type: "BLOCK_ATTACK", territories: [20] }],
-  };
+  const activeEvent = event(7, [
+    { type: "BLOCK_ATTACK", territories: [20] },
+  ]);
   const first = hydrateGameSnapshot(
     payload({ tunnelDestination: 20, activeEvent }),
     baseConnections,
@@ -152,19 +159,13 @@ test("shareGameSnapshot troca referência quando evento ativo muda", () => {
   const baseConnections = [connection(20, 21)];
   const first = hydrateGameSnapshot(
     payload({
-      activeEvent: {
-        eventId: 7,
-        resolvedEffects: [{ type: "BLOCK_ATTACK", territories: [20] }],
-      },
+      activeEvent: event(7, [{ type: "BLOCK_ATTACK", territories: [20] }]),
     }),
     baseConnections,
   );
   const changed = hydrateGameSnapshot(
     payload({
-      activeEvent: {
-        eventId: 8,
-        resolvedEffects: [{ type: "BLOCK_ATTACK", territories: [21] }],
-      },
+      activeEvent: event(8, [{ type: "BLOCK_ATTACK", territories: [21] }]),
     }),
     baseConnections,
   );
@@ -173,6 +174,49 @@ test("shareGameSnapshot troca referência quando evento ativo muda", () => {
 
   assert.notEqual(shared.room, first.room);
   assert.equal(shared.room.activeEvent.eventId, 8);
+});
+
+test("shareGameSnapshot troca referência quando apresentação factual do evento muda", () => {
+  const baseConnections = [connection(20, 21)];
+  const first = hydrateGameSnapshot(
+    payload({
+      activeEvent: event(7, [], {
+        appliedTroopChanges: [
+          {
+            type: "REMOVE_TROOPS",
+            territoryId: 20,
+            beforeTroops: 3,
+            afterTroops: 1,
+            delta: -2,
+          },
+        ],
+      }),
+    }),
+    baseConnections,
+  );
+  const changed = hydrateGameSnapshot(
+    payload({
+      activeEvent: event(7, [], {
+        name: "Evento renomeado",
+        appliedTroopChanges: [
+          {
+            type: "REMOVE_TROOPS",
+            territoryId: 20,
+            beforeTroops: 2,
+            afterTroops: 1,
+            delta: -1,
+          },
+        ],
+      }),
+    }),
+    baseConnections,
+  );
+
+  const shared = shareGameSnapshot(first, changed);
+
+  assert.notEqual(shared.room, first.room);
+  assert.equal(shared.room.activeEvent.name, "Evento renomeado");
+  assert.equal(shared.room.activeEvent.appliedTroopChanges[0].delta, -1);
 });
 
 test("shareGameSnapshot troca referência quando destino jurássico muda", () => {
