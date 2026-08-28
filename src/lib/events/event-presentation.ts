@@ -1,5 +1,4 @@
 import { TERRITORY_METADATA } from "../game-config";
-import { INITIAL_EVENT_ID } from "./event-catalog";
 import type {
   AppliedEventTroopChange,
   ResolvedEventEffect,
@@ -15,20 +14,20 @@ export type TemporalAnomalyChangeKind =
   | "barrier-moved"
   | "information";
 
-export type TemporalAnomalyChange = {
+export type TemporalAnomalyEffectPresentation = {
   kind: TemporalAnomalyChangeKind;
-  text: string;
+  label: string;
+  primary: string;
+  secondary?: string;
 };
 
 export type TemporalAnomalyPresentation = {
   key: string;
+  roundNumber: number;
   eyebrow: string;
   title: string;
   description: string;
-  tunnelMessage: string;
-  contextMessage: string;
-  changesHeading: string;
-  changes: TemporalAnomalyChange[];
+  effects: TemporalAnomalyEffectPresentation[];
 };
 
 type PresentableEvent = {
@@ -51,12 +50,14 @@ function connectionNames(pair: TerritoryConnectionPair) {
   return `${territoryName(pair[0])} ↔ ${territoryName(pair[1])}`;
 }
 
-function troopChangeText(change: AppliedEventTroopChange): TemporalAnomalyChange {
+function troopChange(
+  change: AppliedEventTroopChange,
+): TemporalAnomalyEffectPresentation {
   if (change.type === "ADD_TROOPS") {
-    const amount = change.delta;
     return {
       kind: "troops-added",
-      text: `${territoryName(change.territoryId)} recebeu ${amount} ${troopWord(amount)}.`,
+      label: `+${change.delta} ${troopWord(change.delta)}`,
+      primary: territoryName(change.territoryId),
     };
   }
 
@@ -64,17 +65,22 @@ function troopChangeText(change: AppliedEventTroopChange): TemporalAnomalyChange
   if (removed === 0) {
     return {
       kind: "troops-removed",
-      text: `${territoryName(change.territoryId)} permaneceu com a tropa mínima.`,
+      label: "Tropa mínima",
+      primary: territoryName(change.territoryId),
+      secondary: "Nenhuma tropa removida",
     };
   }
 
   return {
     kind: "troops-removed",
-    text: `${territoryName(change.territoryId)} perdeu ${removed} ${troopWord(removed)}.`,
+    label: `−${removed} ${troopWord(removed)}`,
+    primary: territoryName(change.territoryId),
   };
 }
 
-function resolvedEffectChanges(effect: ResolvedEventEffect): TemporalAnomalyChange[] {
+function resolvedEffectPresentations(
+  effect: ResolvedEventEffect,
+): TemporalAnomalyEffectPresentation[] {
   switch (effect.type) {
     case "ADD_TROOPS":
     case "REMOVE_TROOPS":
@@ -83,81 +89,56 @@ function resolvedEffectChanges(effect: ResolvedEventEffect): TemporalAnomalyChan
     case "BLOCK_ATTACK":
       return effect.territories.map((territoryId) => ({
         kind: "attack-blocked" as const,
-        text: `${territoryName(territoryId)} não pode iniciar ataques nesta rodada.`,
+        label: "Ataques bloqueados",
+        primary: territoryName(territoryId),
       }));
 
     case "OPEN_CONNECTIONS":
     case "RANDOM_OPEN_CONNECTIONS":
       return effect.connections.map((connection) => ({
         kind: "connection-opened" as const,
-        text: `A passagem entre ${territoryName(connection[0])} e ${territoryName(connection[1])} foi aberta.`,
+        label: "Conexão aberta",
+        primary: connectionNames(connection),
       }));
 
     case "BLOCK_CONNECTIONS":
     case "RANDOM_BLOCK_CONNECTIONS":
       return effect.connections.map((connection) => ({
         kind: "connection-blocked" as const,
-        text: `A passagem entre ${territoryName(connection[0])} e ${territoryName(connection[1])} foi bloqueada.`,
+        label: "Conexão bloqueada",
+        primary: connectionNames(connection),
       }));
 
     case "RANDOM_TOGGLE_CONNECTIONS":
       return effect.moves.map((move) => ({
         kind: "barrier-moved" as const,
-        text: `${move.barrierName ?? "Uma barreira"} mudou de ${connectionNames(move.from)} para ${connectionNames(move.to)}.`,
+        label: "Barreira reposicionada",
+        primary: move.barrierName ?? "Barreira natural",
+        secondary: `${connectionNames(move.from)} → ${connectionNames(move.to)}`,
       }));
   }
 }
 
-function normalRoundChanges(event: PresentableEvent) {
-  const changes = [
-    ...event.appliedTroopChanges.map(troopChangeText),
-    ...event.resolvedEffects.flatMap(resolvedEffectChanges),
+function eventEffects(event: PresentableEvent) {
+  return [
+    ...event.appliedTroopChanges.map(troopChange),
+    ...event.resolvedEffects.flatMap(resolvedEffectPresentations),
   ];
-
-  return changes.length > 0
-    ? changes
-    : [
-        {
-          kind: "information" as const,
-          text: "Nenhuma alteração mecânica adicional foi aplicada nesta rodada.",
-        },
-      ];
 }
 
 export function buildTemporalAnomalyPresentation(input: {
   roundNumber: number;
-  jurassicTunnelDestinationId: number | null;
   activeEvent: PresentableEvent | null;
 }): TemporalAnomalyPresentation | null {
-  const { roundNumber, jurassicTunnelDestinationId, activeEvent } = input;
-  if (!activeEvent || jurassicTunnelDestinationId === null) return null;
-
-  const destination = territoryName(jurassicTunnelDestinationId);
-  const isInitial = activeEvent.eventId === INITIAL_EVENT_ID;
+  const { roundNumber, activeEvent } = input;
+  if (!activeEvent) return null;
 
   return {
     key: `${roundNumber}:${activeEvent.eventId}`,
-    eyebrow: `ANOMALIA TEMPORAL · RODADA ${roundNumber}`,
+    roundNumber,
+    eyebrow: "ANOMALIA TEMPORAL",
     title: activeEvent.name,
     description: activeEvent.description,
-    tunnelMessage: isInitial
-      ? `O Túnel Jurássico se manifestou. Acre agora está conectado a ${destination}.`
-      : `O Túnel Jurássico mudou de destino. Acre agora está conectado a ${destination}.`,
-    contextMessage: isInitial
-      ? "A ruptura provocou anomalias temporais em todo o país, recriando acontecimentos do passado."
-      : "A mudança provocou novas anomalias temporais em todo o país, recriando acontecimentos do passado.",
-    changesHeading: isInitial ? "ESTADO DA PARTIDA" : "O QUE MUDOU NESTA RODADA",
-    changes: isInitial
-      ? [
-          {
-            kind: "information",
-            text: "Todos os territórios já iniciam com 1 tropa.",
-          },
-          {
-            kind: "information",
-            text: "Nenhum reforço adicional foi aplicado.",
-          },
-        ]
-      : normalRoundChanges(activeEvent),
+    effects: eventEffects(activeEvent),
   };
 }
