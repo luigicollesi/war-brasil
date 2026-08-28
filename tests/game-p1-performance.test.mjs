@@ -2,22 +2,34 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-test("manobra reutiliza topologia completa cacheada sem consultar tabela por jogada", () => {
+test("manobra reutiliza topologia base cacheada através do serviço efetivo sem consultar tabela por jogada", () => {
   const route = readFileSync(
     "src/app/api/games/[roomId]/maneuver/route.ts",
     "utf8",
   );
-  const service = readFileSync(
+  const maneuver = readFileSync(
     "src/lib/game-maneuver-command-service.ts",
     "utf8",
   );
+  const effectiveTopology = readFileSync(
+    "src/lib/game-effective-topology-service.ts",
+    "utf8",
+  );
+  const topology = readFileSync("src/lib/game-topology-service.ts", "utf8");
 
   assert.match(route, /game-maneuver-command-service/);
-  assert.match(service, /getBaseTerritoryConnections/);
-  assert.doesNotMatch(service, /FROM territory_connections/);
-  assert.match(service, /effectiveTerritoryConnections/);
-  assert.match(service, /jurassic_tunnel_territory_id/);
-  assert.match(service, /bestTerritoryRoute/);
+  assert.match(maneuver, /getEffectiveGameTopology/);
+  assert.match(maneuver, /topology\.connections/);
+  assert.match(maneuver, /jurassic_tunnel_territory_id/);
+  assert.match(maneuver, /bestTerritoryRoute/);
+  assert.doesNotMatch(maneuver, /getBaseTerritoryConnections/);
+  assert.doesNotMatch(maneuver, /FROM territory_connections/);
+
+  assert.match(effectiveTopology, /getBaseTerritoryConnections/);
+  assert.match(effectiveTopology, /effectiveGameConnections/);
+  assert.match(topology, /cachedTopology/);
+  assert.match(topology, /loadingTopology/);
+  assert.match(topology, /FROM territory_connections/);
 });
 
 test("mapa mantém pointermove fora do estado React", () => {
