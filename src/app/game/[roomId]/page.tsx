@@ -10,6 +10,7 @@ import "./game-roads.css";
 import "./game-performance.css";
 import "./game-ui-refresh.css";
 import "./game-fine-tuning.css";
+import "./game-battle-dice-polish.css";
 
 type GamePageProps = {
   params: Promise<{ roomId: string }>;
