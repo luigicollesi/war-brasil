@@ -108,21 +108,25 @@ function MobileTroopCanvas({
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
+    const drawingCanvas: HTMLCanvasElement = canvas;
 
     function draw() {
-      const rect = canvas.getBoundingClientRect();
+      const rect = drawingCanvas.getBoundingClientRect();
       if (rect.width <= 0 || rect.height <= 0) return;
 
       const dpr = Math.min(window.devicePixelRatio || 1, 3);
       const pixelWidth = Math.round(rect.width * dpr);
       const pixelHeight = Math.round(rect.height * dpr);
 
-      if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
-        canvas.width = pixelWidth;
-        canvas.height = pixelHeight;
+      if (
+        drawingCanvas.width !== pixelWidth ||
+        drawingCanvas.height !== pixelHeight
+      ) {
+        drawingCanvas.width = pixelWidth;
+        drawingCanvas.height = pixelHeight;
       }
 
-      const context = canvas.getContext("2d");
+      const context = drawingCanvas.getContext("2d");
       if (!context) return;
 
       context.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -156,7 +160,7 @@ function MobileTroopCanvas({
     }
 
     const observer = new ResizeObserver(draw);
-    observer.observe(canvas);
+    observer.observe(drawingCanvas);
     draw();
 
     return () => observer.disconnect();
