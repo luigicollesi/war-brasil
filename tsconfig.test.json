@@ -32,7 +32,8 @@
     "src/lib/events/event-catalog.ts",
     "src/lib/events/event-resolver.ts",
     "src/lib/events/event-topology.ts",
-    "src/lib/events/event-attack-rules.ts"
+    "src/lib/events/event-attack-rules.ts",
+    "src/lib/events/event-presentation.ts"
   ],
   "exclude": ["node_modules", ".test-build"]
 }
