@@ -18,6 +18,7 @@ const PURE_MODULES = [
   "src/lib/events/event-resolver.ts",
   "src/lib/events/event-topology.ts",
   "src/lib/events/event-attack-rules.ts",
+  "src/lib/events/event-presentation.ts",
 ];
 
 test("módulos puros de domínio não dependem de browser, React, banco ou server-only", () => {
