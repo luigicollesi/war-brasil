@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { GameQuickGuide } from "@/src/components/game-guide/game-quick-guide";
+import { HomeTerritoryMap } from "@/src/components/home-territory-map";
 import { WarShell } from "@/src/components/war-shell";
 import { getSiteUrl } from "@/src/lib/site-url";
+import "./home-territory-map.css";
 
 const HOME_TITLE = "WAR Brasil — Jogo de estratégia no mapa do Brasil";
 const HOME_DESCRIPTION =
@@ -151,15 +153,7 @@ export default function Home() {
               </div>
             </div>
 
-            <div id="mapa" className="wb-home-map" aria-label="Prévia do mapa do jogo">
-              <Image
-                src="/war-brasil-42.production.svg"
-                alt="Mapa do Brasil dividido em 42 territórios"
-                width={1254}
-                height={1254}
-                priority
-              />
-            </div>
+            <HomeTerritoryMap />
           </div>
         </section>
 
