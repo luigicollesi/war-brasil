@@ -87,6 +87,8 @@ export function gameInteractionScopeKey(snapshot: GameSnapshot) {
   const pending = snapshot.room.pendingConquest;
   return [
     snapshot.room.turnNumber,
+    snapshot.room.roundNumber,
+    snapshot.room.jurassicTunnelDestinationId ?? "-",
     snapshot.room.phase,
     snapshot.room.currentPlayerId ?? "-",
     battle?.stage ?? "-",
