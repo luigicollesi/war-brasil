@@ -8,11 +8,15 @@ const PURE_MODULES = [
   "src/lib/game-interaction.ts",
   "src/lib/game-snapshot-hydration.ts",
   "src/lib/game-command-patch.ts",
+  "src/lib/game-effective-connections.ts",
   "src/lib/game-snapshot-sharing.ts",
   "src/lib/game-view-model.ts",
   "src/lib/events/event-types.ts",
   "src/lib/events/event-selector.ts",
   "src/lib/events/event-catalog.ts",
+  "src/lib/events/event-resolver.ts",
+  "src/lib/events/event-topology.ts",
+  "src/lib/events/event-attack-rules.ts",
 ];
 
 test("módulos puros de domínio não dependem de browser, React, banco ou server-only", () => {
@@ -59,5 +63,5 @@ test("sincronização delega hidratação e não recompõe topologia efetiva no 
   const sync = readFileSync("src/hooks/use-game-sync.ts", "utf8");
 
   assert.match(sync, /hydrateGameSnapshot\(payload, baseConnections\)/);
-  assert.doesNotMatch(sync, /effectiveTerritoryConnections/);
+  assert.doesNotMatch(sync, /effectiveTerritoryConnections|effectiveGameConnections/);
 });
