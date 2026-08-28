@@ -2,15 +2,14 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { buildTemporalAnomalyPresentation } from "../.test-build/events/event-presentation.js";
 
-function present(activeEvent, roundNumber = 4, tunnel = 22) {
+function present(activeEvent, roundNumber = 4) {
   return buildTemporalAnomalyPresentation({
     roundNumber,
-    jurassicTunnelDestinationId: tunnel,
     activeEvent,
   });
 }
 
-test("evento inicial é narrativo e não anuncia reforço adicional", () => {
+test("evento inicial é narrativo e não repete estado do mapa", () => {
   const presentation = present(
     {
       eventId: 0,
@@ -20,21 +19,15 @@ test("evento inicial é narrativo e não anuncia reforço adicional", () => {
       appliedTroopChanges: [],
     },
     1,
-    18,
   );
 
   assert.equal(presentation?.key, "1:0");
-  assert.match(presentation?.eyebrow ?? "", /RODADA 1/);
-  assert.match(presentation?.tunnelMessage ?? "", /se manifestou/);
-  assert.match(presentation?.tunnelMessage ?? "", /Goiás/);
-  assert.equal(presentation?.changesHeading, "ESTADO DA PARTIDA");
-  assert.deepEqual(
-    presentation?.changes.map((change) => change.text),
-    [
-      "Todos os territórios já iniciam com 1 tropa.",
-      "Nenhum reforço adicional foi aplicado.",
-    ],
-  );
+  assert.equal(presentation?.roundNumber, 1);
+  assert.equal(presentation?.eyebrow, "ANOMALIA TEMPORAL");
+  assert.equal(presentation?.title, "País em Prosperidade — Tudo Sob Controle");
+  assert.deepEqual(presentation?.effects, []);
+  assert.equal("tunnelMessage" in (presentation ?? {}), false);
+  assert.equal("contextMessage" in (presentation ?? {}), false);
 });
 
 test("mudanças de tropas usam o delta realmente aplicado", () => {
@@ -64,16 +57,21 @@ test("mudanças de tropas usam o delta realmente aplicado", () => {
     ],
   });
 
-  assert.deepEqual(
-    presentation?.changes.map((change) => change.text),
-    [
-      "São Paulo Oeste recebeu 3 tropas.",
-      "Rio de Janeiro perdeu 1 tropa.",
-    ],
-  );
+  assert.deepEqual(presentation?.effects, [
+    {
+      kind: "troops-added",
+      label: "+3 tropas",
+      primary: "São Paulo Oeste",
+    },
+    {
+      kind: "troops-removed",
+      label: "−1 tropa",
+      primary: "Rio de Janeiro",
+    },
+  ]);
 });
 
-test("remoção limitada ao mínimo informa que nenhuma tropa pôde ser removida", () => {
+test("remoção limitada ao mínimo vira informação compacta", () => {
   const presentation = present({
     eventId: 13,
     name: "Evento",
@@ -90,13 +88,15 @@ test("remoção limitada ao mínimo informa que nenhuma tropa pôde ser removida
     ],
   });
 
-  assert.equal(
-    presentation?.changes[0]?.text,
-    "Rio de Janeiro permaneceu com a tropa mínima.",
-  );
+  assert.deepEqual(presentation?.effects[0], {
+    kind: "troops-removed",
+    label: "Tropa mínima",
+    primary: "Rio de Janeiro",
+    secondary: "Nenhuma tropa removida",
+  });
 });
 
-test("efeitos territoriais usam nomes e semântica correta", () => {
+test("efeitos territoriais usam nomes e rótulos compactos", () => {
   const presentation = present({
     eventId: 14,
     name: "Evento",
@@ -109,20 +109,26 @@ test("efeitos territoriais usam nomes e semântica correta", () => {
     ],
   });
 
-  const texts = presentation?.changes.map((change) => change.text) ?? [];
-  assert.equal(texts[0], "Goiás não pode iniciar ataques nesta rodada.");
-  assert.equal(
-    texts[1],
-    "A passagem entre Goiás e Bahia Oeste-Sul foi aberta.",
-  );
-  assert.equal(
-    texts[2],
-    "A passagem entre São Paulo Oeste e Minas Centro-Sul foi bloqueada.",
-  );
-  assert.doesNotMatch(texts.join(" "), /território 18|território 23|território 20/i);
+  assert.deepEqual(presentation?.effects, [
+    {
+      kind: "attack-blocked",
+      label: "Ataques bloqueados",
+      primary: "Goiás",
+    },
+    {
+      kind: "connection-opened",
+      label: "Conexão aberta",
+      primary: "Goiás ↔ Bahia Oeste-Sul",
+    },
+    {
+      kind: "connection-blocked",
+      label: "Conexão bloqueada",
+      primary: "São Paulo Oeste ↔ Minas Centro-Sul",
+    },
+  ]);
 });
 
-test("movimento de barreira preserva o nome e descreve origem e destino", () => {
+test("movimento de barreira preserva nome, origem e destino", () => {
   const presentation = present({
     eventId: 15,
     name: "Evento",
@@ -144,10 +150,12 @@ test("movimento de barreira preserva o nome e descreve origem e destino", () => 
     ],
   });
 
-  assert.equal(
-    presentation?.changes[0]?.text,
-    "Serra Temporal mudou de Goiás ↔ Bahia Oeste-Sul para Goiás ↔ Minas Centro-Sul.",
-  );
+  assert.deepEqual(presentation?.effects[0], {
+    kind: "barrier-moved",
+    label: "Barreira reposicionada",
+    primary: "Serra Temporal",
+    secondary: "Goiás ↔ Bahia Oeste-Sul → Goiás ↔ Minas Centro-Sul",
+  });
 });
 
 test("rodadas normais usam chave composta por rodada e evento", () => {
@@ -161,30 +169,13 @@ test("rodadas normais usam chave composta por rodada e evento", () => {
 
   assert.equal(present(event, 4)?.key, "4:12");
   assert.equal(present(event, 8)?.key, "8:12");
-  assert.match(present(event, 4)?.tunnelMessage ?? "", /mudou de destino/);
 });
 
-test("sem evento ou sem túnel não existe apresentação ativa", () => {
+test("sem evento não existe apresentação ativa", () => {
   assert.equal(
     buildTemporalAnomalyPresentation({
       roundNumber: 1,
-      jurassicTunnelDestinationId: 18,
       activeEvent: null,
-    }),
-    null,
-  );
-
-  assert.equal(
-    buildTemporalAnomalyPresentation({
-      roundNumber: 1,
-      jurassicTunnelDestinationId: null,
-      activeEvent: {
-        eventId: 0,
-        name: "Evento",
-        description: "Descrição",
-        resolvedEffects: [],
-        appliedTroopChanges: [],
-      },
     }),
     null,
   );
