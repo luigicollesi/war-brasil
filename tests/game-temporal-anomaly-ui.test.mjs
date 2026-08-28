@@ -10,6 +10,8 @@ test("modal recebe modelo de apresentação e não interpreta efeitos mecânicos
 
   assert.match(source, /TemporalAnomalyPresentation/);
   assert.match(source, /GameModal/);
+  assert.match(source, /tone="event"/);
+  assert.doesNotMatch(source, /tunnelMessage|contextMessage/);
   assert.doesNotMatch(
     source,
     /ADD_TROOPS|REMOVE_TROOPS|BLOCK_ATTACK|OPEN_CONNECTIONS|BLOCK_CONNECTIONS|RANDOM_/,
@@ -28,14 +30,37 @@ test("controller visual deriva abertura pela chave atual sem setState em effect"
   assert.doesNotMatch(source, /localStorage|sessionStorage|document\.cookie/);
 });
 
-test("cliente oferece reabertura persistente e monta modal controlado", () => {
+test("cliente centraliza utilidades e mantém reabertura da anomalia", () => {
   const source = readFileSync("src/components/game-client-v2.tsx", "utf8");
+  const utility = readFileSync("src/components/game-utility-bar.tsx", "utf8");
+  const visibility = readFileSync(
+    "src/components/road-visibility-provider.tsx",
+    "utf8",
+  );
 
   assert.match(source, /useTemporalAnomaly\(snapshot\)/);
-  assert.match(source, />\s*Anomalia Temporal\s*</);
-  assert.match(source, /onClick=\{anomaly\.open\}/);
+  assert.match(source, /GameUtilityBar/);
+  assert.match(source, /onOpenAnomaly=\{anomaly\.presentation \? anomaly\.open/);
   assert.match(source, /anomaly\.isOpen/);
   assert.match(source, /TemporalAnomalyModal/);
+  assert.match(utility, />Estradas</);
+  assert.match(utility, />Tropas</);
+  assert.match(utility, />Anomalia</);
+  assert.match(utility, /aria-pressed=\{roadsVisible\}/);
+  assert.match(utility, /aria-pressed=\{troopsVisible\}/);
+  assert.doesNotMatch(visibility, /<button/);
+});
+
+test("GameModal controla portal, foco e camada de todos os modais", () => {
+  const source = readFileSync("src/components/game-modal.tsx", "utf8");
+  const battle = readFileSync("src/components/battle-overlay.tsx", "utf8");
+
+  assert.match(source, /createPortal/);
+  assert.match(source, /game-modal-backdrop/);
+  assert.match(source, /game-modal--\$\{tone\}/);
+  assert.match(source, /FOCUSABLE_SELECTOR/);
+  assert.match(battle, /GameModal/);
+  assert.doesNotMatch(battle, /FOCUSABLE_SELECTOR|document\.addEventListener|aria-modal/);
 });
 
 test("snapshot usa read model do evento com catálogo e falha rápido em playing sem evento", () => {
