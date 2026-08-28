@@ -287,7 +287,7 @@ export async function setRoundEventAppliedTroopChanges(
   ).rows[0];
 
   if (!row) {
-    throw new Event(
+    throw new Error(
       `Evento da rodada ${input.roundNumber} não foi encontrado para atualização.`,
     );
   }
