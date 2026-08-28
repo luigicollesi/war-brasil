@@ -50,12 +50,14 @@ test("board permanece camada de apresentação e não calcula regras de jogo", (
   assert.doesNotMatch(board, /maneuverTraversalProfile/);
 });
 
-test("diálogo de manobra respeita mínimo e perda definidos pela travessia", () => {
+test("diálogo de manobra respeita mínimo, perda e chegada definidos pela travessia", () => {
   const panel = source("src/components/game-turn-panel.tsx");
 
   assert.match(panel, /maneuverTraversal\?\.minimumTroops \?\? 1/);
   assert.match(panel, /maneuverTraversal\.troopLoss/);
-  assert.match(panel, /targetBefore \+ count - maneuverLoss/);
+  assert.match(panel, /const arriving = count - maneuverLoss/);
+  assert.match(panel, /targetBefore \+ arriving/);
+  assert.match(panel, /MOVER \$\{count\} · \$\{arriving\} CHEGAM/);
   assert.match(panel, /min=\{minimum\}/);
   assert.match(panel, /maneuverTraversal=\{localDialog\.traversal\}/);
 });
