@@ -4,7 +4,6 @@ import {
   createContext,
   useContext,
   useEffect,
-  useMemo,
   useState,
   type ReactNode,
 } from "react";
@@ -78,13 +77,10 @@ export function RoadVisibilityProvider({ children }: { children: ReactNode }) {
     });
   }
 
-  const value = useMemo(
-    () => ({ roadsVisible, troopsVisible, toggleRoads, toggleTroops }),
-    [roadsVisible, troopsVisible],
-  );
-
   return (
-    <GameMapVisibilityContext.Provider value={value}>
+    <GameMapVisibilityContext.Provider
+      value={{ roadsVisible, troopsVisible, toggleRoads, toggleTroops }}
+    >
       {children}
     </GameMapVisibilityContext.Provider>
   );
