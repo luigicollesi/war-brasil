@@ -64,13 +64,10 @@ export function JoinRoomForm() {
 
   return (
     <form onSubmit={handleSubmit} className="mt-8">
-      <label
-        htmlFor="room-code"
-        className="text-xs font-bold uppercase tracking-[0.14em] text-[#64756f]"
-      >
+      <label htmlFor="room-code" className="wb-label">
         Código da sala
       </label>
-      <div className="mt-2 flex flex-col gap-3 sm:flex-row">
+      <div className="flex flex-col gap-3 sm:flex-row">
         <input
           id="room-code"
           name="roomCode"
@@ -79,20 +76,18 @@ export function JoinRoomForm() {
             setRoomCode(event.target.value);
             setError("");
           }}
-          placeholder="ex: brasil-42"
+          placeholder="BRASIL-42"
           autoComplete="off"
+          spellCheck={false}
           aria-describedby={error ? "room-code-error" : undefined}
-          className="h-13 min-w-0 flex-1 rounded-xl border border-[#17372d]/15 bg-white px-4 font-mono text-sm text-[#14241f] outline-none transition placeholder:text-[#9aa7a2] focus:border-[#b98c1e] focus:ring-3 focus:ring-[#d5a937]/15"
+          className="wb-field wb-room-code-input min-w-0 flex-1"
         />
-        <button
-          type="submit"
-          className="h-13 rounded-xl bg-[#173f34] px-6 text-xs font-bold uppercase tracking-[0.13em] text-white transition hover:bg-[#0f3027] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#173f34]"
-        >
+        <button type="submit" className="wb-button wb-button--secondary">
           Entrar
         </button>
       </div>
       {error ? (
-        <p id="room-code-error" className="mt-2 text-sm text-[#a33c33]">
+        <p id="room-code-error" className="wb-error" role="alert">
           {error}
         </p>
       ) : null}
