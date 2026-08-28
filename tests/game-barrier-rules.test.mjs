@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  BARRIER_ATTACK_DICE_BANDS,
   attackProfile,
+  attackerLossPerComparison,
   maneuverTraversalProfile,
 } from "../.test-build/game-barrier-rules.js";
 
@@ -18,6 +20,11 @@ test("ataque normal preserva a progressão clássica de dados", () => {
 });
 
 test("ataque por barreira usa limiares 4, 7 e 10", () => {
+  assert.deepEqual(BARRIER_ATTACK_DICE_BANDS, [
+    { minimumTroops: 4, maximumTroops: 6, diceCount: 1 },
+    { minimumTroops: 7, maximumTroops: 9, diceCount: 2 },
+    { minimumTroops: 10, maximumTroops: null, diceCount: 3 },
+  ]);
   assert.deepEqual(attackProfile(3, "barrier"), {
     kind: "unavailable",
     mode: "barrier",
@@ -36,6 +43,8 @@ test("ataque por barreira usa limiares 4, 7 e 10", () => {
 });
 
 test("cada derrota do atacante custa uma tropa normal ou três na barreira", () => {
+  assert.equal(attackerLossPerComparison("normal"), 1);
+  assert.equal(attackerLossPerComparison("barrier"), 3);
   assert.equal(attackProfile(4, "normal").attackerLossPerComparison, 1);
   assert.equal(attackProfile(4, "barrier").attackerLossPerComparison, 3);
 });
