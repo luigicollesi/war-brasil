@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { GameModal } from "@/src/components/game-modal";
 import { TerritoryCard } from "@/src/components/territory-card";
 import type { GameInteractionController } from "@/src/hooks/use-game-interaction";
 import type { GameSnapshot, GameTerritory } from "@/src/lib/game-contract";
@@ -33,6 +34,7 @@ type TroopQuantitySelectorProps = {
   targetBefore: number;
   targetAfter: number;
   availableLabel: string;
+  maneuverTraversal?: ManeuverTraversalHint;
 };
 
 function clamp(value: number, min: number, max: number) {
@@ -61,11 +63,17 @@ function TroopQuantitySelector({
   targetBefore,
   targetAfter,
   availableLabel,
+  maneuverTraversal,
 }: TroopQuantitySelectorProps) {
   const midpoint = Math.floor((min + max) / 2);
   const atMin = value <= min;
   const atMax = value >= max;
   const setSafe = (next: number) => onChange(clamp(next, min, max));
+  const maneuverLoss =
+    mode === "maneuver" && maneuverTraversal?.kind === "barrier"
+      ? maneuverTraversal.troopLoss
+      : 0;
+  const arriving = value - maneuverLoss;
 
   return (
     <div
@@ -114,11 +122,23 @@ function TroopQuantitySelector({
               <strong>{sourceBefore}</strong>
               <small>fica com {sourceAfter}</small>
             </div>
-            <div className="troop-flow-center">
-              <span className="troop-flow-transfer-value">{value}</span>
-              <span className="troop-flow-direction">━━▶</span>
-              <small>{troopLabel(value)}</small>
-            </div>
+            {mode === "maneuver" && maneuverTraversal?.kind === "barrier" ? (
+              <div className="troop-flow-center troop-flow-center--barrier">
+                <span className="troop-flow-transfer-value">{value} saem</span>
+                <span className="troop-flow-barrier-name">
+                  ▣ {maneuverTraversal.barrierName ?? "Travessia de barreira"}
+                </span>
+                <small>
+                  -{maneuverLoss} {troopLabel(maneuverLoss)} · {arriving} chegam
+                </small>
+              </div>
+            ) : (
+              <div className="troop-flow-center">
+                <span className="troop-flow-transfer-value">{value}</span>
+                <span className="troop-flow-direction">━━▶</span>
+                <small>{troopLabel(value)}</small>
+              </div>
+            )}
             <div className="troop-flow-side troop-flow-side--target">
               <span className="troop-flow-name">{targetName}</span>
               <strong>{targetBefore}</strong>
@@ -223,6 +243,7 @@ function QuantityDialog({
     mode === "maneuver" && maneuverTraversal?.kind === "barrier"
       ? maneuverTraversal.troopLoss
       : 0;
+  const arriving = count - maneuverLoss;
   const title =
     mode === "reinforce"
       ? "Mobilizar reforços"
@@ -235,14 +256,19 @@ function QuantityDialog({
       : mode === "conquest"
         ? "Conquista confirmada"
         : "Manobra estratégica";
-  const cta = `${mode === "reinforce" ? "POSICIONAR" : "MOVER"} ${count} ${troopLabel(count).toUpperCase()}`;
+  const cta =
+    mode === "reinforce"
+      ? `POSICIONAR ${count} ${troopLabel(count).toUpperCase()}`
+      : mode === "maneuver" && maneuverTraversal?.kind === "barrier"
+        ? `MOVER ${count} · ${arriving} CHEGAM`
+        : `MOVER ${count} ${troopLabel(count).toUpperCase()}`;
   const targetBefore = target?.troops ?? 0;
   const targetAfter =
     mode === "reinforce"
       ? targetBefore + count
       : mode === "conquest"
         ? count
-        : targetBefore + count - maneuverLoss;
+        : targetBefore + arriving;
   const sourceBefore = source?.troops;
   const sourceAfter =
     sourceBefore === undefined ? undefined : sourceBefore - count;
@@ -252,6 +278,10 @@ function QuantityDialog({
       : mode === "conquest"
         ? `de 1 a ${safeMax} · 1 tropa precisa permanecer na origem`
         : `de ${minimum} a ${safeMax} · já movidas: ${source?.movedInTurn ?? 0}`;
+  const invalidMessage =
+    mode === "maneuver" && maneuverTraversal?.kind === "barrier"
+      ? "A situação da partida mudou e não existem mais tropas suficientes para atravessar esta barreira."
+      : "O estado da partida mudou e não há mais tropas disponíveis para esta ação.";
 
   async function submit() {
     if (!valid || submitting) return;
@@ -264,56 +294,67 @@ function QuantityDialog({
   }
 
   return (
-    <div className="game-modal-backdrop fixed inset-0 z-30 grid place-items-center p-4">
-      <div className="game-modal-surface game-action-modal w-full max-w-md p-6">
-        <p className="game-modal-eyebrow">{eyebrow}</p>
-        <h3 className="text-xl font-semibold">{title}</h3>
-
-        {valid ? (
-          <TroopQuantitySelector
-            mode={mode}
-            value={count}
-            min={minimum}
-            max={safeMax}
-            onChange={setRequestedCount}
-            sourceName={
-              mode === "reinforce" ? undefined : territoryName(source?.territoryId)
-            }
-            targetName={territoryName(target?.territoryId)}
-            sourceBefore={sourceBefore}
-            sourceAfter={sourceAfter}
-            targetBefore={targetBefore}
-            targetAfter={targetAfter}
-            availableLabel={availableLabel}
-          />
-        ) : (
-          <p className="game-modal-state-warning">
-            O estado da partida mudou e não há mais tropas disponíveis para esta
-            ação.
+    <GameModal
+      eyebrow={eyebrow}
+      title={title}
+      onClose={onCancel}
+      className="game-action-modal w-full max-w-md p-6"
+    >
+      {mode === "maneuver" && maneuverTraversal?.kind === "barrier" ? (
+        <div className="maneuver-barrier-summary mt-4" role="note">
+          <p className="font-semibold text-[#f1ca68]">
+            ▣ Travessia: {maneuverTraversal.barrierName ?? "barreira natural"}
           </p>
-        )}
+          <p className="mt-1 text-sm text-[#c8d9d1]">
+            Uma tropa será perdida durante a travessia. Mova pelo menos 2 tropas.
+          </p>
+        </div>
+      ) : null}
 
-        <div className="game-modal-actions mt-6">
+      {valid ? (
+        <TroopQuantitySelector
+          mode={mode}
+          value={count}
+          min={minimum}
+          max={safeMax}
+          onChange={setRequestedCount}
+          sourceName={
+            mode === "reinforce" ? undefined : territoryName(source?.territoryId)
+          }
+          targetName={territoryName(target?.territoryId)}
+          sourceBefore={sourceBefore}
+          sourceAfter={sourceAfter}
+          targetBefore={targetBefore}
+          targetAfter={targetAfter}
+          availableLabel={availableLabel}
+          maneuverTraversal={maneuverTraversal}
+        />
+      ) : (
+        <p className="game-modal-state-warning" role="status" aria-live="polite">
+          {invalidMessage}
+        </p>
+      )}
+
+      <div className="game-modal-actions mt-6">
+        <button
+          type="button"
+          disabled={!valid || submitting}
+          onClick={() => void submit()}
+          className="game-primary-action w-full rounded-xl px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] disabled:opacity-40"
+        >
+          {submitting ? "PROCESSANDO…" : cta}
+        </button>
+        {onCancel ? (
           <button
             type="button"
-            disabled={!valid || submitting}
-            onClick={() => void submit()}
-            className="game-primary-action w-full rounded-xl px-4 py-3 text-xs font-bold uppercase tracking-[0.12em] disabled:opacity-40"
+            onClick={onCancel}
+            className="game-cancel-action mt-3 w-full text-xs font-bold uppercase tracking-[0.12em]"
           >
-            {submitting ? "PROCESSANDO…" : cta}
+            Cancelar
           </button>
-          {onCancel ? (
-            <button
-              type="button"
-              onClick={onCancel}
-              className="game-cancel-action mt-3 w-full text-xs font-bold uppercase tracking-[0.12em]"
-            >
-              Cancelar
-            </button>
-          ) : null}
-        </div>
+        ) : null}
       </div>
-    </div>
+    </GameModal>
   );
 }
 
@@ -529,65 +570,69 @@ export function GameTurnPanel({
       </div>
 
       {cardsOpen ? (
-        <div className="game-modal-backdrop fixed inset-0 z-30 grid place-items-center p-4">
-          <div className="game-modal-surface game-card-modal w-full max-w-lg p-6">
-            <p className="game-modal-eyebrow">Troca de cartas</p>
-            <h3 className="text-xl font-semibold">Pedir reforços</h3>
-            <p className="mt-2 text-sm text-[#64756f]">
-              Selecione três cartas na sua mão. {selectedCards.length}/3
-              selecionadas.
-            </p>
+        <GameModal
+          eyebrow="Troca de cartas"
+          title="Pedir reforços"
+          className="game-card-modal w-full max-w-lg p-6"
+          onClose={() => {
+            setSelectedCards([]);
+            setCardsOpen(false);
+          }}
+        >
+          <p className="mt-2 text-sm text-[#64756f]">
+            Selecione três cartas na sua mão. {selectedCards.length}/3
+            selecionadas.
+          </p>
 
-            <div className="mt-5 grid max-h-[55vh] grid-cols-2 gap-3 overflow-y-auto p-1 sm:grid-cols-3">
-              {snapshot.myCards.map((card) => (
-                <TerritoryCard
-                  key={card.id}
-                  territoryId={card.territoryId}
-                  symbol={card.symbol}
-                  selected={selectedCards.includes(card.id)}
-                  onClick={() =>
-                    setSelectedCards((cards) =>
-                      cards.includes(card.id)
-                        ? cards.filter((id) => id !== card.id)
-                        : cards.length < 3
-                          ? [...cards, card.id]
-                          : cards,
-                    )
-                  }
-                />
-              ))}
-            </div>
-
-            <div className="game-modal-actions mt-5 flex gap-3">
-              <button
-                type="button"
-                disabled={selectedCards.length !== 3}
-                onClick={() => {
-                  void action("cards/trade", { cardIds: selectedCards }).then(
-                    (success) => {
-                      if (!success) return;
-                      setSelectedCards([]);
-                      setCardsOpen(false);
-                    },
-                  );
-                }}
-                className="game-primary-action rounded-xl bg-[#e4b94f] px-4 py-3 text-xs font-bold uppercase tracking-wider text-[#12392f] disabled:opacity-40"
-              >
-                Confirmar troca
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedCards([]);
-                  setCardsOpen(false);
-                }}
-                className="game-secondary-action rounded-xl px-4 py-3 text-xs font-bold uppercase tracking-wider"
-              >
-                Cancelar
-              </button>
-            </div>
+          <div className="mt-5 grid max-h-[55vh] grid-cols-2 gap-3 overflow-y-auto p-1 sm:grid-cols-3">
+            {snapshot.myCards.map((card) => (
+              <TerritoryCard
+                key={card.id}
+                territoryId={card.territoryId}
+                symbol={card.symbol}
+                selected={selectedCards.includes(card.id)}
+                onClick={() =>
+                  setSelectedCards((cards) =>
+                    cards.includes(card.id)
+                      ? cards.filter((id) => id !== card.id)
+                      : cards.length < 3
+                        ? [...cards, card.id]
+                        : cards,
+                  )
+                }
+              />
+            ))}
           </div>
-        </div>
+
+          <div className="game-modal-actions mt-5 flex gap-3">
+            <button
+              type="button"
+              disabled={selectedCards.length !== 3}
+              onClick={() => {
+                void action("cards/trade", { cardIds: selectedCards }).then(
+                  (success) => {
+                    if (!success) return;
+                    setSelectedCards([]);
+                    setCardsOpen(false);
+                  },
+                );
+              }}
+              className="game-primary-action rounded-xl bg-[#e4b94f] px-4 py-3 text-xs font-bold uppercase tracking-wider text-[#12392f] disabled:opacity-40"
+            >
+              Confirmar troca
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedCards([]);
+                setCardsOpen(false);
+              }}
+              className="game-secondary-action rounded-xl px-4 py-3 text-xs font-bold uppercase tracking-wider"
+            >
+              Cancelar
+            </button>
+          </div>
+        </GameModal>
       ) : null}
 
       {localDialog?.kind === "reinforce" && localTarget ? (
@@ -661,7 +706,13 @@ export function GameTurnPanel({
       ) : null}
 
       {visibleMessage ? (
-        <p className="mt-4 text-sm text-[#a33c33]">{visibleMessage}</p>
+        <p
+          className="mt-4 text-sm text-[#a33c33]"
+          role="status"
+          aria-live="polite"
+        >
+          {visibleMessage}
+        </p>
       ) : null}
     </section>
   );
