@@ -11,10 +11,23 @@ test("schema de eventos mantém catálogo, grafo e histórico por rodada separad
     assert.match(source, /CREATE TABLE IF NOT EXISTS event_connections/);
     assert.match(source, /CREATE TABLE IF NOT EXISTS game_round_events/);
     assert.match(source, /PRIMARY KEY \(room_id, round_number\)/);
-    assert.match(source, /CHECK \(to_event <> 0\)/);
-    assert.match(source, /weight INTEGER NOT NULL CHECK \(weight > 0\)/);
+    assert.match(source, /to_event <> 0/);
+    assert.match(source, /from_event <> to_event/);
+    assert.match(source, /weight > 0/);
     assert.match(source, /jsonb_typeof\(resolved_effects\) = 'array'/);
   }
+});
+
+test("migration de eventos é não destrutiva e compatível com catálogo já existente", () => {
+  const migration = readFileSync("src/lib/db/migrations/007-events.sql", "utf8");
+
+  assert.match(migration, /ADD COLUMN IF NOT EXISTS name TEXT/);
+  assert.match(migration, /ADD COLUMN IF NOT EXISTS description TEXT/);
+  assert.match(migration, /ADD COLUMN IF NOT EXISTS effects JSONB/);
+  assert.match(migration, /pg_constraint/);
+  assert.match(migration, /event_connections_no_initial_destination_check/);
+  assert.match(migration, /event_connections_no_self_loop_check/);
+  assert.doesNotMatch(migration, /DROP TABLE|TRUNCATE|DELETE FROM events|DELETE FROM event_connections/);
 });
 
 test("repository recebe PoolClient e não abre transações ou pools próprios", () => {
@@ -44,6 +57,21 @@ test("serviço mantém aleatoriedade na borda e domínio livre de Math.random", 
   assert.match(service, /selectWeightedEvent/);
   assert.doesNotMatch(service, /Promise\.all/);
   assert.doesNotMatch(selector, /Math\.random|node:crypto|server-only|PoolClient/);
+});
+
+test("contrato estrutural do catálogo é domínio puro e pode validar o banco na borda", () => {
+  const catalog = readFileSync("src/lib/events/event-catalog.ts", "utf8");
+  const catalogService = readFileSync("src/lib/events/event-catalog-service.ts", "utf8");
+  const repository = readFileSync("src/lib/events/event-repository.ts", "utf8");
+
+  assert.match(catalog, /EVENT_COUNT = EVENT_ID_MAX - EVENT_ID_MIN \+ 1/);
+  assert.match(catalog, /EVENT_CONNECTION_COUNT = 195/);
+  assert.match(catalog, /INITIAL_EVENT_OUTGOING_COUNT = 10/);
+  assert.match(catalog, /STANDARD_EVENT_OUTGOING_COUNT = 5/);
+  assert.match(catalogService, /assertEventCatalogShape/);
+  assert.match(catalogService, /getEventCatalogSnapshot/);
+  assert.match(repository, /SELECT id[\s\S]*FROM events[\s\S]*ORDER BY id/);
+  assert.match(repository, /FROM event_connections[\s\S]*ORDER BY from_event,to_event/);
 });
 
 test("evento atual é derivado do histórico persistido em vez de duplicado em game_rooms", () => {
