@@ -1,5 +1,5 @@
 import type { GameSnapshot } from "./game-contract";
-import { effectiveTerritoryConnections } from "./territory-connections";
+import { effectiveGameConnections } from "./game-effective-connections";
 
 export type GameSnapshotPayload = Omit<GameSnapshot, "connections"> & {
   connections?: GameSnapshot["connections"];
@@ -13,8 +13,9 @@ export function hydrateGameSnapshot(
 ): GameSnapshot {
   return {
     ...payload,
-    connections: effectiveTerritoryConnections(
+    connections: effectiveGameConnections(
       baseConnections,
+      payload.room.activeEvent?.resolvedEffects ?? [],
       payload.room.jurassicTunnelDestinationId,
     ),
   };
