@@ -63,7 +63,7 @@ test("histórico é lido da tabela de rodadas em ordem decrescente e com janela 
   assert.match(source, /LIMIT \$2/);
 });
 
-test("serviço mantém aleatoriedade na borda e domínio livre de Math.random", () => {
+test("seleção mantém aleatoriedade na borda e domínio livre de Math.random", () => {
   const service = readFileSync("src/lib/events/event-selection-service.ts", "utf8");
   const selector = readFileSync("src/lib/events/event-selector.ts", "utf8");
 
@@ -73,6 +73,21 @@ test("serviço mantém aleatoriedade na borda e domínio livre de Math.random", 
   assert.match(service, /selectWeightedEvent/);
   assert.doesNotMatch(service, /Promise\.all/);
   assert.doesNotMatch(selector, /Math\.random|node:crypto|server-only|PoolClient/);
+});
+
+test("resolução mantém crypto na borda e protege a conexão jurássica", () => {
+  const service = readFileSync(
+    "src/lib/events/event-resolution-service.ts",
+    "utf8",
+  );
+  const resolver = readFileSync("src/lib/events/event-resolver.ts", "utf8");
+
+  assert.match(service, /randomInt\(exclusiveMax\)/);
+  assert.match(service, /getBaseTerritoryConnections/);
+  assert.match(service, /JURASSIC_TUNNEL_SOURCE_ID = 3/);
+  assert.match(service, /protectedConnections/);
+  assert.match(service, /resolveEventEffects/);
+  assert.doesNotMatch(resolver, /Math\.random|node:crypto|server-only|PoolClient/);
 });
 
 test("contrato estrutural do catálogo é domínio puro e pode validar o banco na borda", () => {
