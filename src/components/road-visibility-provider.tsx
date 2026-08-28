@@ -4,14 +4,23 @@ import {
   createContext,
   useContext,
   useEffect,
+  useMemo,
   useState,
   type ReactNode,
 } from "react";
 
 const ROAD_VISIBILITY_KEY = "war-brasil:roads-visible";
 const TROOP_VISIBILITY_KEY = "war-brasil:troops-visible";
-const RoadVisibilityContext = createContext(false);
-const TroopVisibilityContext = createContext(false);
+
+type GameMapVisibilityContextValue = {
+  roadsVisible: boolean;
+  troopsVisible: boolean;
+  toggleRoads: () => void;
+  toggleTroops: () => void;
+};
+
+const GameMapVisibilityContext =
+  createContext<GameMapVisibilityContextValue | null>(null);
 
 export function RoadVisibilityProvider({ children }: { children: ReactNode }) {
   const [roadsVisible, setRoadsVisible] = useState(false);
@@ -69,41 +78,32 @@ export function RoadVisibilityProvider({ children }: { children: ReactNode }) {
     });
   }
 
+  const value = useMemo(
+    () => ({ roadsVisible, troopsVisible, toggleRoads, toggleTroops }),
+    [roadsVisible, troopsVisible],
+  );
+
   return (
-    <RoadVisibilityContext.Provider value={roadsVisible}>
-      <TroopVisibilityContext.Provider value={troopsVisible}>
-        <button
-          type="button"
-          className="game-road-toggle"
-          aria-pressed={roadsVisible}
-          onClick={toggleRoads}
-          title={roadsVisible ? "Ocultar estradas" : "Mostrar estradas"}
-        >
-          <span aria-hidden="true">🛣️</span>
-          <span>Estradas</span>
-          <strong>{roadsVisible ? "ON" : "OFF"}</strong>
-        </button>
-        <button
-          type="button"
-          className="game-troop-toggle"
-          aria-pressed={troopsVisible}
-          onClick={toggleTroops}
-          title={troopsVisible ? "Ocultar número de tropas" : "Mostrar número de tropas"}
-        >
-          <span aria-hidden="true">♟️</span>
-          <span>Tropas</span>
-          <strong>{troopsVisible ? "ON" : "OFF"}</strong>
-        </button>
-        {children}
-      </TroopVisibilityContext.Provider>
-    </RoadVisibilityContext.Provider>
+    <GameMapVisibilityContext.Provider value={value}>
+      {children}
+    </GameMapVisibilityContext.Provider>
   );
 }
 
+export function useGameMapVisibility() {
+  const context = useContext(GameMapVisibilityContext);
+  if (!context) {
+    throw new Error(
+      "useGameMapVisibility precisa ser usado dentro de RoadVisibilityProvider.",
+    );
+  }
+  return context;
+}
+
 export function useRoadVisibility() {
-  return useContext(RoadVisibilityContext);
+  return useGameMapVisibility().roadsVisible;
 }
 
 export function useTroopVisibility() {
-  return useContext(TroopVisibilityContext);
+  return useGameMapVisibility().troopsVisible;
 }
