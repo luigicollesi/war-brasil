@@ -95,14 +95,15 @@ test("servidor renova o Túnel Jurássico ao virar a rodada", () => {
   assert.match(source, /round_number=round_number\+1,jurassic_tunnel_territory_id=\$2/);
 });
 
-test("ataque usa a fronteira existente para classificar combate normal ou de barreira", () => {
+test("ataque classifica combate usando a topologia efetiva da rodada", () => {
   const source = readFileSync("src/lib/game-combat-command-service.ts", "utf8");
-  assert.match(source, /isJurassicTunnelConnection/);
-  assert.match(source, /if \(!tunnelActive && !connection\.exists\)/);
-  assert.match(source, /attackModeForConnection/);
+  assert.match(source, /getEffectiveGameTopology/);
+  assert.match(source, /isAttackOriginBlocked/);
+  assert.match(source, /findTerritoryConnection\(topology\.connections/);
+  assert.match(source, /connection\.passable \? "normal" : "barrier"/);
   assert.match(source, /attackProfile/);
-  assert.doesNotMatch(source, /if \(!tunnelActive && !connection\.passable\)/);
-  assert.match(source, /getBaseTerritoryConnection/);
+  assert.doesNotMatch(source, /getBaseTerritoryConnection/);
+  assert.doesNotMatch(source, /isJurassicTunnelConnection/);
 });
 
 test("manobra alcança territórios próprios por cadeia de conexões", () => {
@@ -132,14 +133,16 @@ test("Túnel Jurássico participa da cadeia de manobra", () => {
   );
 });
 
-test("backend da manobra recalcula a melhor rota usando a topologia completa", () => {
+test("backend da manobra recalcula a melhor rota usando a topologia efetiva", () => {
   const source = readFileSync("src/lib/game-maneuver-command-service.ts", "utf8");
   assert.match(source, /bestTerritoryRoute/);
   assert.match(source, /maneuverTraversalProfile/);
-  assert.match(source, /effectiveTerritoryConnections/);
-  assert.match(source, /getBaseTerritoryConnections/);
+  assert.match(source, /getEffectiveGameTopology/);
+  assert.match(source, /topology\.connections/);
   assert.doesNotMatch(source, /reachableTerritoryIds/);
   assert.doesNotMatch(source, /getPassableTerritoryConnections/);
+  assert.doesNotMatch(source, /getBaseTerritoryConnections/);
+  assert.doesNotMatch(source, /effectiveTerritoryConnections/);
   assert.doesNotMatch(source, /FROM territory_connections/);
 });
 
