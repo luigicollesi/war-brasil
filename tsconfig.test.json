@@ -17,6 +17,7 @@
     "src/lib/game-barrier-presentation.ts",
     "src/lib/game-battle-display.ts",
     "src/lib/game-battle-presentation.ts",
+    "src/lib/game-map-viewport.ts",
     "src/lib/territory-connections.ts",
     "src/lib/territory-routing.ts",
     "src/lib/territory-geometry.ts",

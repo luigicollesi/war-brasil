@@ -1,0 +1,31 @@
+/* Zoom gestual do tabuleiro. Apenas o mapa se move; HUDs e command deck ficam
+   fora desta transformação. O tamanho atual continua sendo o zoom mínimo. */
+
+.game-map-object {
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+@media (max-width: 767px) {
+  .game-map-surface {
+    touch-action: none;
+    overscroll-behavior: contain;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  .game-map-surface[data-map-zoomed="true"] {
+    overflow: hidden;
+  }
+
+  .game-map-object {
+    touch-action: none;
+    backface-visibility: hidden;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-map-object {
+    transition: none !important;
+  }
+}

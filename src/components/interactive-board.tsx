@@ -18,6 +18,12 @@ import {
 } from "@/src/lib/game-barrier-presentation";
 import { TERRITORY_METADATA } from "@/src/lib/game-config";
 import type { MapTargetHint } from "@/src/lib/game-interaction";
+import {
+  DEFAULT_MAP_VIEWPORT,
+  MAP_VIEWPORT_EVENT,
+  projectMapPoint,
+  type MapViewportTransform,
+} from "@/src/lib/game-map-viewport";
 import { PLAYER_COLORS, type PlayerColor } from "@/src/lib/lobby";
 import {
   findTerritoryConnection,
@@ -104,19 +110,22 @@ function MobileTroopCanvas({
   specialMarkerIds: ReadonlySet<number>;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const viewportRef = useRef<MapViewportTransform>({ ...DEFAULT_MAP_VIEWPORT });
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const drawingCanvas: HTMLCanvasElement = canvas;
+    const surface = drawingCanvas.parentElement;
 
     function draw() {
-      const rect = drawingCanvas.getBoundingClientRect();
-      if (rect.width <= 0 || rect.height <= 0) return;
+      const width = drawingCanvas.clientWidth;
+      const height = drawingCanvas.clientHeight;
+      if (width <= 0 || height <= 0) return;
 
       const dpr = Math.min(window.devicePixelRatio || 1, 3);
-      const pixelWidth = Math.round(rect.width * dpr);
-      const pixelHeight = Math.round(rect.height * dpr);
+      const pixelWidth = Math.round(width * dpr);
+      const pixelHeight = Math.round(height * dpr);
 
       if (
         drawingCanvas.width !== pixelWidth ||
@@ -130,7 +139,7 @@ function MobileTroopCanvas({
       if (!context) return;
 
       context.setTransform(dpr, 0, 0, dpr, 0, 0);
-      context.clearRect(0, 0, rect.width, rect.height);
+      context.clearRect(0, 0, width, height);
 
       for (const territory of territories) {
         if (specialMarkerIds.has(territory.territoryId)) continue;
@@ -140,11 +149,15 @@ function MobileTroopCanvas({
         const digits = String(Math.max(0, territory.troops)).length;
         const radius = digits <= 1 ? 12 : digits === 2 ? 13.5 : 15;
         const fontSize = digits <= 1 ? 18 : digits === 2 ? 16 : 13;
-        const x = (geometry.x / 1254) * rect.width;
-        const y = (geometry.y / 1254) * rect.height;
+        const point = projectMapPoint(
+          { x: geometry.x, y: geometry.y },
+          width,
+          height,
+          viewportRef.current,
+        );
 
         context.beginPath();
-        context.arc(x, y, radius, 0, Math.PI * 2);
+        context.arc(point.x, point.y, radius, 0, Math.PI * 2);
         context.fillStyle = "#ffffff";
         context.fill();
         context.lineWidth = 2;
@@ -155,15 +168,26 @@ function MobileTroopCanvas({
         context.font = `900 ${fontSize}px Inter, Arial, sans-serif`;
         context.textAlign = "center";
         context.textBaseline = "middle";
-        context.fillText(String(territory.troops), x, y + 0.5);
+        context.fillText(String(territory.troops), point.x, point.y + 0.5);
       }
     }
 
+    const onViewportChange = (event: Event) => {
+      const viewportEvent = event as CustomEvent<MapViewportTransform>;
+      if (!viewportEvent.detail) return;
+      viewportRef.current = viewportEvent.detail;
+      draw();
+    };
+
     const observer = new ResizeObserver(draw);
     observer.observe(drawingCanvas);
+    surface?.addEventListener(MAP_VIEWPORT_EVENT, onViewportChange);
     draw();
 
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      surface?.removeEventListener(MAP_VIEWPORT_EVENT, onViewportChange);
+    };
   }, [geometries, specialMarkerIds, territories]);
 
   return (
