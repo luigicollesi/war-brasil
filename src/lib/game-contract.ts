@@ -7,7 +7,7 @@ import type {
 import type { PlayerColor } from "./lobby";
 import type { TerritoryConnection } from "./territory-connections";
 
-export type GameStatus = "order_roll" | "playing" | "finished";
+export type GameStatus = "waiting" | "order_roll" | "playing" | "finished";
 
 export type GamePhase =
   | "cards"
@@ -76,6 +76,12 @@ export type ActiveGameEvent = {
   appliedTroopChanges: AppliedEventTroopChange[];
 };
 
+export type GameRematchState = {
+  voteCount: number;
+  requiredCount: number;
+  hasVoted: boolean;
+};
+
 export type GameSnapshot = {
   room: {
     id: string;
@@ -92,6 +98,7 @@ export type GameSnapshot = {
     activeEvent: ActiveGameEvent | null;
     reinforcementsRemaining: number;
     winnerPlayerId: string | null;
+    rematch: GameRematchState | null;
     pendingConquest: {
       fromTerritoryId: number;
       toTerritoryId: number;
