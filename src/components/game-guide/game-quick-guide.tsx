@@ -1,5 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { GameDie } from "@/src/components/game-die";
 import {
   AnomalyIcon,
@@ -8,8 +9,8 @@ import {
 } from "@/src/components/game-utility-icons";
 import { TemporalAnomalyEffectList } from "@/src/components/temporal-anomaly-effect-list";
 import { TerritoryCardArtwork } from "@/src/components/territory-card-artwork";
-import { buildGameGuidePresentation } from "@/src/lib/game-guide-presentation";
 import type { TemporalAnomalyPresentation } from "@/src/lib/events/event-presentation";
+import { buildGameGuidePresentation } from "@/src/lib/game-guide-presentation";
 
 const anomalyExample: TemporalAnomalyPresentation["effects"] = [
   {
@@ -36,7 +37,7 @@ function GuideHeading({
 }: {
   number: string;
   title: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <div className="wb-guide-heading">
@@ -55,9 +56,9 @@ function UtilityDemo({
   children,
   anomaly = false,
 }: {
-  icon: React.ReactNode;
+  icon: ReactNode;
   label: string;
-  children: React.ReactNode;
+  children: ReactNode;
   anomaly?: boolean;
 }) {
   return (
