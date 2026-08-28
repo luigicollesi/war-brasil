@@ -37,16 +37,21 @@ export function GameDie({
   size = "lg",
   className = "",
 }: {
-  value: GameDieValue;
+  value: number;
   color?: PlayerColor;
   rolling?: boolean;
   size?: keyof typeof sizeClass;
   className?: string;
 }) {
+  const safeValue =
+    Number.isInteger(value) && value >= 1 && value <= 6
+      ? (value as GameDieValue)
+      : 1;
+
   return (
     <div
       className={`game-die relative aspect-square overflow-hidden ${sizeClass[size]} ${rolling ? "dice-roll-animation" : ""} ${className}`}
-      aria-label={`Dado mostrando ${value}`}
+      aria-label={`Dado mostrando ${safeValue}`}
     >
       <Image
         src="/dado-brasil-hq.svg"
@@ -55,7 +60,7 @@ export function GameDie({
         sizes={size === "lg" ? "128px" : size === "md" ? "96px" : "64px"}
         className="object-cover"
       />
-      {pipPositions[value].map(([x, y], index) => (
+      {pipPositions[safeValue].map(([x, y], index) => (
         <span
           key={index}
           className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/50 shadow-md ${pipClass[size]}`}
