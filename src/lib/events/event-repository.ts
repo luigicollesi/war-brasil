@@ -39,6 +39,14 @@ function mapEvent(row: EventRow): GameEvent {
   };
 }
 
+function mapConnection(row: EventConnectionRow): EventConnection {
+  return {
+    fromEvent: row.from_event,
+    toEvent: row.to_event,
+    weight: row.weight,
+  };
+}
+
 function mapRoundEvent(row: GameRoundEventRow): GameRoundEvent {
   if (!Array.isArray(row.resolved_effects)) {
     throw new EventConfigurationError(
@@ -71,6 +79,32 @@ export async function getEvent(
   return row ? mapEvent(row) : null;
 }
 
+export async function getEventCatalogSnapshot(client: PoolClient): Promise<{
+  eventIds: number[];
+  connections: EventConnection[];
+}> {
+  const eventRows = (
+    await client.query<{ id: number }>(
+      `SELECT id
+       FROM events
+       ORDER BY id`,
+    )
+  ).rows;
+
+  const connectionRows = (
+    await client.query<EventConnectionRow>(
+      `SELECT from_event,to_event,weight
+       FROM event_connections
+       ORDER BY from_event,to_event`,
+    )
+  ).rows;
+
+  return {
+    eventIds: eventRows.map((row) => row.id),
+    connections: connectionRows.map(mapConnection),
+  };
+}
+
 export async function getOutgoingEventConnections(
   client: PoolClient,
   eventId: number,
@@ -85,11 +119,7 @@ export async function getOutgoingEventConnections(
     )
   ).rows;
 
-  return rows.map((row) => ({
-    fromEvent: row.from_event,
-    toEvent: row.to_event,
-    weight: row.weight,
-  }));
+  return rows.map(mapConnection);
 }
 
 export async function getRecentRoomEventIds(
