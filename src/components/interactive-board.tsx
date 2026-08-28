@@ -94,6 +94,83 @@ function troopMarkerRadius(troops: number) {
   return 26;
 }
 
+function MobileTroopCanvas({
+  territories,
+  geometries,
+  specialMarkerIds,
+}: {
+  territories: readonly BoardTerritory[];
+  geometries: ReadonlyMap<number, TerritoryGeometry>;
+  specialMarkerIds: ReadonlySet<number>;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    function draw() {
+      const rect = canvas.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0) return;
+
+      const dpr = Math.min(window.devicePixelRatio || 1, 3);
+      const pixelWidth = Math.round(rect.width * dpr);
+      const pixelHeight = Math.round(rect.height * dpr);
+
+      if (canvas.width !== pixelWidth || canvas.height !== pixelHeight) {
+        canvas.width = pixelWidth;
+        canvas.height = pixelHeight;
+      }
+
+      const context = canvas.getContext("2d");
+      if (!context) return;
+
+      context.setTransform(dpr, 0, 0, dpr, 0, 0);
+      context.clearRect(0, 0, rect.width, rect.height);
+
+      for (const territory of territories) {
+        if (specialMarkerIds.has(territory.territoryId)) continue;
+        const geometry = geometries.get(territory.territoryId);
+        if (!geometry) continue;
+
+        const digits = String(Math.max(0, territory.troops)).length;
+        const radius = digits <= 1 ? 16 : digits === 2 ? 18 : 20;
+        const fontSize = digits >= 3 ? 14 : 17;
+        const x = (geometry.x / 1254) * rect.width;
+        const y = (geometry.y / 1254) * rect.height;
+
+        context.beginPath();
+        context.arc(x, y, radius, 0, Math.PI * 2);
+        context.fillStyle = "#ffffff";
+        context.fill();
+        context.lineWidth = 3;
+        context.strokeStyle = colorHex(territory.ownerColor);
+        context.stroke();
+
+        context.fillStyle = "#000000";
+        context.font = `900 ${fontSize}px Inter, Arial, sans-serif`;
+        context.textAlign = "center";
+        context.textBaseline = "middle";
+        context.fillText(String(territory.troops), x, y + 0.5);
+      }
+    }
+
+    const observer = new ResizeObserver(draw);
+    observer.observe(canvas);
+    draw();
+
+    return () => observer.disconnect();
+  }, [geometries, specialMarkerIds, territories]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 hidden h-full w-full max-[767px]:block"
+    />
+  );
+}
+
 function readTerritory(path: SVGPathElement): TerritoryDetails {
   return {
     id: Number(path.dataset.id),
@@ -408,48 +485,55 @@ export function InteractiveBoard({
           />
         ) : null}
         {troopsVisible ? (
-          <svg
-            aria-hidden="true"
-            className="game-troop-layer pointer-events-none absolute inset-0 h-full w-full overflow-visible"
-            viewBox="0 0 1254 1254"
-          >
-            {territories.map((territory) => {
-              if (specialMarkerIds.has(territory.territoryId)) return null;
+          <>
+            <svg
+              aria-hidden="true"
+              className="game-troop-layer pointer-events-none absolute inset-0 hidden h-full w-full overflow-visible md:block"
+              viewBox="0 0 1254 1254"
+            >
+              {territories.map((territory) => {
+                if (specialMarkerIds.has(territory.territoryId)) return null;
 
-              const geometry = geometries.get(territory.territoryId);
-              if (!geometry) return null;
-              const radius = troopMarkerRadius(territory.troops);
+                const geometry = geometries.get(territory.territoryId);
+                if (!geometry) return null;
+                const radius = troopMarkerRadius(territory.troops);
 
-              return (
-                <g
-                  key={territory.territoryId}
-                  transform={`translate(${geometry.x} ${geometry.y})`}
-                >
-                  <circle
-                    r={radius}
-                    fill="rgba(4, 22, 17, 0.88)"
-                    stroke={colorHex(territory.ownerColor)}
-                    strokeWidth="5"
-                    vectorEffect="non-scaling-stroke"
-                  />
-                  <text
-                    x="0"
-                    y="1"
-                    fill="#fffdf5"
-                    fontSize="21"
-                    fontWeight="800"
-                    textAnchor="middle"
-                    dominantBaseline="central"
-                    paintOrder="stroke"
-                    stroke="rgba(0,0,0,.34)"
-                    strokeWidth="2"
+                return (
+                  <g
+                    key={territory.territoryId}
+                    transform={`translate(${geometry.x} ${geometry.y})`}
                   >
-                    {territory.troops}
-                  </text>
-                </g>
-              );
-            })}
-          </svg>
+                    <circle
+                      r={radius}
+                      fill="rgba(4, 22, 17, 0.88)"
+                      stroke={colorHex(territory.ownerColor)}
+                      strokeWidth="5"
+                      vectorEffect="non-scaling-stroke"
+                    />
+                    <text
+                      x="0"
+                      y="1"
+                      fill="#fffdf5"
+                      fontSize="21"
+                      fontWeight="800"
+                      textAnchor="middle"
+                      dominantBaseline="central"
+                      paintOrder="stroke"
+                      stroke="rgba(0,0,0,.34)"
+                      strokeWidth="2"
+                    >
+                      {territory.troops}
+                    </text>
+                  </g>
+                );
+              })}
+            </svg>
+            <MobileTroopCanvas
+              territories={territories}
+              geometries={geometries}
+              specialMarkerIds={specialMarkerIds}
+            />
+          </>
         ) : null}
         {tunnelFrom && tunnelTo && tunnelTargetName ? (
           <JurassicTunnelConnection
