@@ -59,6 +59,16 @@ ALTER TABLE game_rooms
   ADD CONSTRAINT game_rooms_winner_player_fkey
   FOREIGN KEY (winner_player_id) REFERENCES room_players(id) ON DELETE SET NULL;
 
+CREATE TABLE IF NOT EXISTS game_rematch_votes (
+  room_id BIGINT NOT NULL REFERENCES game_rooms(id) ON DELETE CASCADE,
+  player_id BIGINT NOT NULL REFERENCES room_players(id) ON DELETE CASCADE,
+  voted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (room_id, player_id)
+);
+
+CREATE INDEX IF NOT EXISTS game_rematch_votes_room_id_idx
+  ON game_rematch_votes(room_id);
+
 CREATE TABLE IF NOT EXISTS game_territories (
   room_id BIGINT NOT NULL REFERENCES game_rooms(id) ON DELETE CASCADE,
   territory_id SMALLINT NOT NULL CHECK (territory_id BETWEEN 1 AND 42),
