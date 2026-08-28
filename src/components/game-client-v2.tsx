@@ -2,15 +2,16 @@
 
 import Image from "next/image";
 import { useMemo, useState } from "react";
+import { BattleOverlay } from "@/src/components/battle-overlay";
+import { GameTurnPanel } from "@/src/components/game-turn-panel";
 import {
   InteractiveBoard,
   type BoardTerritory,
 } from "@/src/components/interactive-board";
-import { GameTurnPanel } from "@/src/components/game-turn-panel";
 import { useGameInteraction } from "@/src/hooks/use-game-interaction";
 import { useGameSync } from "@/src/hooks/use-game-sync";
-import type { GameSnapshot } from "@/src/lib/game-contract";
 import { runGameCommand } from "@/src/lib/game-command-client";
+import type { GameSnapshot } from "@/src/lib/game-contract";
 import { buildGameViewModel } from "@/src/lib/game-view-model";
 import { PLAYER_COLORS, type PlayerColor } from "@/src/lib/lobby";
 
@@ -46,7 +47,10 @@ export function GameClient({ roomId }: GameClientProps) {
 
   if (!snapshot) {
     return (
-      <div className="rounded-3xl border border-[#a33c33]/20 bg-[#fff8f5] p-8 text-sm text-[#a33c33]">
+      <div
+        className="rounded-3xl border border-[#a33c33]/20 bg-[#fff8f5] p-8 text-sm text-[#a33c33]"
+        role="alert"
+      >
         {error || "Não foi possível carregar esta partida."}
       </div>
     );
@@ -197,7 +201,7 @@ function GameReadyClient({
         onSelect={interaction.onTerritoryClick}
         selectedTerritoryId={interaction.selectedTerritoryId}
         availableTerritoryIds={interaction.mapHints.available}
-        targetTerritoryIds={interaction.mapHints.targets}
+        targetHints={interaction.mapHints.targets}
         arrow={battleArrow ?? interaction.arrow}
       />
 
@@ -220,7 +224,10 @@ function GameReadyClient({
       ) : null}
 
       {error ? (
-        <p className="rounded-xl bg-[#fff0eb] px-4 py-3 text-sm text-[#a33c33]">
+        <p
+          className="rounded-xl bg-[#fff0eb] px-4 py-3 text-sm text-[#a33c33]"
+          role="alert"
+        >
           {error}
         </p>
       ) : null}
@@ -346,7 +353,11 @@ function OrderRollPanel({
             );
           })}
         </ul>
-        {error ? <p className="mt-4 text-sm text-[#ffd2c9]">{error}</p> : null}
+        {error ? (
+          <p className="mt-4 text-sm text-[#ffd2c9]" role="alert">
+            {error}
+          </p>
+        ) : null}
       </div>
     </section>
   );
@@ -466,144 +477,5 @@ function TurnOrderStrip({
         })}
       </ol>
     </section>
-  );
-}
-
-function BattleOverlay({
-  roomId,
-  battle,
-  players,
-  meId,
-  onRefresh,
-}: {
-  roomId: string;
-  battle: NonNullable<GameSnapshot["room"]["battle"]>;
-  players: GameSnapshot["players"];
-  meId: string | undefined;
-  onRefresh: (minimumRevision?: number) => Promise<void>;
-}) {
-  const [error, setError] = useState("");
-  const [rolling, setRolling] = useState(false);
-  const attacker = players.find((player) => player.id === battle.attackerPlayerId);
-  const defender = players.find((player) => player.id === battle.defenderPlayerId);
-  const canRoll =
-    (battle.stage === "awaiting_attacker_roll" && meId === battle.attackerPlayerId) ||
-    (battle.stage === "awaiting_defender_roll" && meId === battle.defenderPlayerId);
-  const label =
-    battle.stage === "awaiting_attacker_roll"
-      ? "Aguardando o atacante..."
-      : battle.stage === "show_attacker_result"
-        ? "Resultado do atacante"
-        : battle.stage === "awaiting_defender_roll"
-          ? "Aguardando o defensor..."
-          : battle.stage === "show_defender_result"
-            ? "Resultado do defensor"
-            : battle.stage === "show_comparison"
-              ? "Comparando os dados"
-              : battle.conquered
-                ? "Território conquistado"
-                : "Resultado da batalha";
-
-  async function roll() {
-    setError("");
-    setRolling(true);
-    try {
-      const result = await runGameCommand(
-        roomId,
-        "attack/roll",
-        undefined,
-        "Não foi possível rolar os dados.",
-      );
-      await onRefresh(result.revision ?? undefined);
-    } catch (requestError) {
-      setError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Não foi possível rolar os dados.",
-      );
-    } finally {
-      window.setTimeout(() => setRolling(false), 850);
-    }
-  }
-
-  const pairs = Array.from(
-    { length: Math.min(battle.attacker.length, battle.defender.length) },
-    (_, index) => ({
-      attack: battle.attacker[index],
-      defense: battle.defender[index],
-    }),
-  );
-
-  return (
-    <div className="pointer-events-none fixed inset-0 z-40 grid place-items-center bg-[#14241f]/35 p-4">
-      <section className="pointer-events-auto w-full max-w-xl rounded-3xl bg-[#12392f] p-6 text-white shadow-2xl">
-        <p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#9eb8ae]">
-          Combate sincronizado
-        </p>
-        <h2 className="mt-2 text-2xl font-semibold">{label}</h2>
-        <p className="mt-1 text-sm text-[#c8d9d1]">
-          {attacker?.factionName ?? "Atacante"} × {defender?.factionName ?? "Defensor"}
-        </p>
-        <div className="mt-6 flex justify-center gap-8">
-          {battle.attacker.length ? (
-            <div className="text-center">
-              <p className="mb-2 text-xs text-[#b9ccc4]">Ataque</p>
-              <div className="flex justify-center gap-2">
-                {battle.attacker.map((value, index) => (
-                  <BrazilDie
-                    key={`${value}-${index}-${battle.stage}`}
-                    value={value}
-                    color={attacker?.color ?? "forest"}
-                    isRolling={rolling || battle.stage === "show_attacker_result"}
-                  />
-                ))}
-              </div>
-            </div>
-          ) : null}
-          {battle.defender.length ? (
-            <div className="text-center">
-              <p className="mb-2 text-xs text-[#b9ccc4]">Defesa</p>
-              <div className="flex justify-center gap-2">
-                {battle.defender.map((value, index) => (
-                  <BrazilDie
-                    key={`${value}-${index}-${battle.stage}`}
-                    value={value}
-                    color={defender?.color ?? "ruby"}
-                    isRolling={rolling || battle.stage === "show_defender_result"}
-                  />
-                ))}
-              </div>
-            </div>
-          ) : null}
-        </div>
-        {battle.stage === "show_comparison" || battle.stage === "show_battle_result" ? (
-          <div className="mt-6 space-y-1 rounded-2xl bg-white/8 p-4 text-sm">
-            {pairs.map((pair, index) => (
-              <p key={index}>
-                Ataque {pair.attack} × Defesa {pair.defense} →{" "}
-                {pair.attack > pair.defense ? "defesa perde 1" : "ataque perde 1"}
-              </p>
-            ))}
-          </div>
-        ) : null}
-        {battle.stage === "show_battle_result" ? (
-          <p className="mt-5 text-sm font-semibold text-[#e8c35e]">
-            Perdas: atacante {battle.attackerLosses} · defesa {battle.defenderLosses}
-            {battle.conquered ? " · conquista aguardando transferência" : ""}
-          </p>
-        ) : null}
-        {canRoll ? (
-          <button
-            type="button"
-            onClick={() => void roll()}
-            disabled={rolling}
-            className="mt-6 h-12 w-full rounded-xl bg-[#e4b94f] text-xs font-bold uppercase tracking-[.14em] text-[#12392f] disabled:opacity-50"
-          >
-            {rolling ? "Rolando…" : "Rolar dados"}
-          </button>
-        ) : null}
-        {error ? <p className="mt-3 text-sm text-[#ffd2c9]">{error}</p> : null}
-      </section>
-    </div>
   );
 }
