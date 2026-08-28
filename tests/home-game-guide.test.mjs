@@ -12,7 +12,13 @@ test("guia rápido deriva números das regras reais", () => {
   assert.equal(guide.reinforcement.baseExample, 6);
   assert.equal(guide.attack.barrierMinimumTroops, 4);
   assert.equal(guide.attack.barrierLossPerComparison, 3);
+  assert.deepEqual(guide.attack.barrierDiceBands, [
+    { minimumTroops: 4, maximumTroops: 6, diceCount: 1 },
+    { minimumTroops: 7, maximumTroops: 9, diceCount: 2 },
+    { minimumTroops: 10, maximumTroops: null, diceCount: 3 },
+  ]);
   assert.equal(guide.maneuver.barrierLoss, 1);
+  assert.equal(guide.maneuver.barrierMinimumTroops, 2);
   assert.equal(guide.maneuver.blockedBarrierCount, 2);
   assert.equal(guide.cards.firstTradeValue, 4);
 });
@@ -38,10 +44,13 @@ test("manual cobre o fluxo e os elementos essenciais da partida", () => {
     "Reforçar",
     "Atacar",
     "Manobrar",
+    "Barreiras Geográficas",
+    "Desvantagem Geográfica",
+    "Travessia Geográfica",
+    "Leia o mapa",
     "Estradas",
     "Tropas",
     "Anomalia",
-    "Barreiras",
     "Coringa",
     "Túnel Jurássico",
     "objetivo secreto",
@@ -49,10 +58,51 @@ test("manual cobre o fluxo e os elementos essenciais da partida", () => {
     assert.match(source, new RegExp(term, "i"));
   }
 
+  assert.match(source, /number="03" title="Barreiras Geográficas"/);
+  assert.match(source, /number="04" title="Leia o mapa"/);
+  assert.match(source, /number="05" title="Use suas cartas"/);
+  assert.match(source, /number="06" title="Sobreviva às Anomalias"/);
+  assert.match(source, /07 · Vitória/);
+  assert.match(source, /caveira-vermelha\.svg/);
+  assert.match(source, /alcapao-saida\.svg/);
+  assert.match(source, /GeographicBarrierMapExample/);
+  assert.match(source, /MapReadingExample/);
   assert.match(source, /TerritoryCardArtwork/);
   assert.match(source, /TemporalAnomalyEffectList/);
   assert.match(source, /GameDie/);
   assert.doesNotMatch(source, /<button/);
+
+  const anomalyStart = source.indexOf(
+    'number="06" title="Sobreviva às Anomalias"',
+  );
+  const anomalyEnd = source.indexOf("07 · Vitória");
+  assert.ok(anomalyStart >= 0 && anomalyEnd > anomalyStart);
+  assert.doesNotMatch(source.slice(anomalyStart, anomalyEnd), /Túnel Jurássico/);
+});
+
+test("exemplo geográfico copia os paths reais do Pará e reutiliza a curva das estradas", () => {
+  const source = readFileSync(
+    "src/components/game-guide/guide-map-examples.tsx",
+    "utf8",
+  );
+
+  assert.match(source, /createRoadCurve/);
+  assert.match(source, /Pará Oeste/);
+  assert.match(source, /Pará Sudeste/);
+  assert.match(source, /Pará Atlântico/);
+  assert.match(source, /id: 6/);
+  assert.match(source, /id: 9/);
+  assert.match(source, /id: 11/);
+
+  // Inícios dos mesmos paths presentes em war-brasil-42.production.svg.
+  assert.match(source, /M 639\.0 462\.5 L 623\.0 459\.5/);
+  assert.match(source, /M 723\.0 467\.5 L 703\.0 466\.5/);
+  assert.match(source, /M 784\.0 313\.5 L 779\.0 309\.5/);
+  assert.match(source, /GEOGRAPHIC_BARRIER_BOUNDARY/);
+  assert.match(source, /wb-guide-map-road-shadow/);
+  assert.match(source, /wb-guide-map-road-surface/);
+  assert.match(source, /wb-guide-map-road-center/);
+  assert.match(source, /Túnel Jurássico/);
 });
 
 test("manual reutiliza arte e ícones reais em vez de duplicar componentes", () => {
