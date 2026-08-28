@@ -68,23 +68,26 @@ export function MobileCardHandDrawer({
     if (!layer) return;
     const screen = layer.closest<HTMLElement>(".game-screen");
     if (!screen) return;
+    const gameScreen: HTMLElement = screen;
     const media = window.matchMedia(MOBILE_QUERY);
 
     function measure() {
       if (!media.matches) {
-        screen.style.removeProperty("--game-hand-visible-height");
-        screen.style.removeProperty("--game-command-closed-height");
+        gameScreen.style.removeProperty("--game-hand-visible-height");
+        gameScreen.style.removeProperty("--game-command-closed-height");
         return;
       }
 
-      const commandDeck = screen.querySelector<HTMLElement>(".game-map-canvas + section");
+      const commandDeck = gameScreen.querySelector<HTMLElement>(
+        ".game-map-canvas + section",
+      );
       const trackHeight = hasCards
         ? Math.ceil(trackRef.current?.getBoundingClientRect().height ?? CLOSED_PEEK_PX)
         : 0;
       openHeightRef.current = Math.max(CLOSED_PEEK_PX, trackHeight);
 
       const deckHeight = Math.ceil(commandDeck?.getBoundingClientRect().height ?? 0);
-      screen.style.setProperty(
+      gameScreen.style.setProperty(
         "--game-command-closed-height",
         `${deckHeight + (hasCards ? CLOSED_PEEK_PX : 0)}px`,
       );
@@ -98,7 +101,9 @@ export function MobileCardHandDrawer({
     }
 
     const observer = new ResizeObserver(() => window.requestAnimationFrame(measure));
-    const commandDeck = screen.querySelector<HTMLElement>(".game-map-canvas + section");
+    const commandDeck = gameScreen.querySelector<HTMLElement>(
+      ".game-map-canvas + section",
+    );
     if (commandDeck) observer.observe(commandDeck);
     if (trackRef.current) observer.observe(trackRef.current);
     media.addEventListener("change", measure);
@@ -108,9 +113,9 @@ export function MobileCardHandDrawer({
       observer.disconnect();
       media.removeEventListener("change", measure);
       window.cancelAnimationFrame(frame);
-      screen.style.removeProperty("--game-hand-visible-height");
-      screen.style.removeProperty("--game-command-closed-height");
-      delete screen.dataset.mobileHandDragging;
+      gameScreen.style.removeProperty("--game-hand-visible-height");
+      gameScreen.style.removeProperty("--game-command-closed-height");
+      delete gameScreen.dataset.mobileHandDragging;
     };
   }, [expanded, hasCards, cards.length, setVisibleHeight]);
 
