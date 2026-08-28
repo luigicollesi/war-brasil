@@ -6,6 +6,7 @@ import type {
   GameTerritory,
 } from "./game-contract";
 import type {
+  AppliedEventTroopChange,
   ResolvedBarrierMove,
   ResolvedEventEffect,
   TerritoryConnectionPair,
@@ -97,6 +98,19 @@ function sameResolvedEventEffect(
   }
 }
 
+function sameAppliedTroopChange(
+  left: AppliedEventTroopChange,
+  right: AppliedEventTroopChange,
+) {
+  return (
+    left.type === right.type &&
+    left.territoryId === right.territoryId &&
+    left.beforeTroops === right.beforeTroops &&
+    left.afterTroops === right.afterTroops &&
+    left.delta === right.delta
+  );
+}
+
 function sameActiveEvent(
   left: GameSnapshot["room"]["activeEvent"],
   right: GameSnapshot["room"]["activeEvent"],
@@ -105,10 +119,17 @@ function sameActiveEvent(
   if (!left || !right) return false;
   return (
     left.eventId === right.eventId &&
+    left.name === right.name &&
+    left.description === right.description &&
     sameArray(
       left.resolvedEffects,
       right.resolvedEffects,
       sameResolvedEventEffect,
+    ) &&
+    sameArray(
+      left.appliedTroopChanges,
+      right.appliedTroopChanges,
+      sameAppliedTroopChange,
     )
   );
 }
