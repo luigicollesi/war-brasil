@@ -138,8 +138,8 @@ function MobileTroopCanvas({
         if (!geometry) continue;
 
         const digits = String(Math.max(0, territory.troops)).length;
-        const radius = digits <= 1 ? 16 : digits === 2 ? 18 : 20;
-        const fontSize = digits >= 3 ? 14 : 17;
+        const radius = digits <= 1 ? 12 : digits === 2 ? 13.5 : 15;
+        const fontSize = digits <= 1 ? 18 : digits === 2 ? 16 : 13;
         const x = (geometry.x / 1254) * rect.width;
         const y = (geometry.y / 1254) * rect.height;
 
@@ -147,7 +147,7 @@ function MobileTroopCanvas({
         context.arc(x, y, radius, 0, Math.PI * 2);
         context.fillStyle = "#ffffff";
         context.fill();
-        context.lineWidth = 3;
+        context.lineWidth = 2;
         context.strokeStyle = colorHex(territory.ownerColor);
         context.stroke();
 
