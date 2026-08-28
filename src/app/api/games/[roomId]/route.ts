@@ -51,10 +51,6 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
       return noStoreEmpty({ status: 204, headers });
     }
 
-    if ((result.snapshot.room.status as string) === "waiting") {
-      throw new RoomError("Partida não encontrada.", 404);
-    }
-
     if (knownTopology === GAME_TOPOLOGY_VERSION) {
       const dynamicSnapshot: Partial<typeof result.snapshot> = {
         ...result.snapshot,
