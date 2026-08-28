@@ -12,6 +12,7 @@ import {
   type TerritoryArrowKind,
 } from "@/src/components/territory-arrow";
 import { TerritorySpecialMarkers } from "@/src/components/territory-special-markers";
+import { BARRIER_ATTACK_DICE_BANDS } from "@/src/lib/game-barrier-rules";
 import { TERRITORY_METADATA } from "@/src/lib/game-config";
 import type { MapTargetHint } from "@/src/lib/game-interaction";
 import { PLAYER_COLORS, type PlayerColor } from "@/src/lib/lobby";
@@ -54,13 +55,9 @@ type InteractiveBoardProps = {
   onSelect?: (territoryId: number) => void;
   selectedTerritoryId?: number | null;
   availableTerritoryIds?: number[];
-  targetHints?: readonly MapTargetHint[];
-  // Compatibilidade temporária enquanto GameClient usa o nome antigo da prop.
-  targetTerritoryIds?: readonly MapTargetHint[];
+  targetHints: readonly MapTargetHint[];
   arrow?: MapArrow;
 };
-
-const EMPTY_TARGET_HINTS: readonly MapTargetHint[] = [];
 
 const regionLabels: Record<string, string> = {
   norte: "Norte",
@@ -118,13 +115,8 @@ export function InteractiveBoard({
   selectedTerritoryId,
   availableTerritoryIds = [],
   targetHints,
-  targetTerritoryIds,
   arrow = null,
 }: InteractiveBoardProps) {
-  const resolvedTargetHints = useMemo(
-    () => targetHints ?? targetTerritoryIds ?? EMPTY_TARGET_HINTS,
-    [targetHints, targetTerritoryIds],
-  );
   const boardRef = useRef<HTMLObjectElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -147,24 +139,21 @@ export function InteractiveBoard({
     [territories],
   );
   const targetById = useMemo(
-    () =>
-      new Map(
-        resolvedTargetHints.map((target) => [target.territoryId, target]),
-      ),
-    [resolvedTargetHints],
+    () => new Map(targetHints.map((target) => [target.territoryId, target])),
+    [targetHints],
   );
   const roadTargetTerritoryIds = useMemo(
-    () => resolvedTargetHints.map((target) => target.territoryId),
-    [resolvedTargetHints],
+    () => targetHints.map((target) => target.territoryId),
+    [targetHints],
   );
   const specialMarkerIds = useMemo(
     () =>
       new Set(
-        resolvedTargetHints
+        targetHints
           .filter((target) => target.kind !== "normal")
           .map((target) => target.territoryId),
       ),
-    [resolvedTargetHints],
+    [targetHints],
   );
 
   useEffect(() => {
@@ -451,10 +440,7 @@ export function InteractiveBoard({
             targetName={tunnelTargetName}
           />
         ) : null}
-        <TerritorySpecialMarkers
-          targets={resolvedTargetHints}
-          geometries={geometries}
-        />
+        <TerritorySpecialMarkers targets={targetHints} geometries={geometries} />
         {from && to && arrow ? (
           <TerritoryArrow from={from} to={to} kind={arrow.kind} />
         ) : null}
@@ -473,15 +459,43 @@ export function InteractiveBoard({
               {hoveredState.troops} tropas
             </p>
             {hoveredTargetHint?.kind === "barrier-attack" ? (
-              <p className="mt-2 border-t border-white/15 pt-2 text-[#ffd6a1]">
-                ☠ {hoveredTargetHint.barrierName ?? "Ataque por barreira"}
-                {!hoveredTargetHint.selectable ? " · tropas insuficientes" : ""}
-              </p>
+              <div className="mt-2 border-t border-white/15 pt-2 text-[#ffd6a1]">
+                <p className="font-semibold">
+                  ☠ {hoveredTargetHint.barrierName ?? "Ataque por barreira"}
+                </p>
+                <p className="mt-1 text-xs">Ataque por barreira</p>
+                <div className="mt-1 space-y-0.5 text-xs">
+                  {BARRIER_ATTACK_DICE_BANDS.map((band) => (
+                    <p key={band.minimumTroops}>
+                      {band.maximumTroops === null
+                        ? `${band.minimumTroops}+`
+                        : `${band.minimumTroops}–${band.maximumTroops}`} tropas → {band.diceCount} {band.diceCount === 1 ? "dado" : "dados"}
+                    </p>
+                  ))}
+                  <p>Comparação perdida → -3 tropas</p>
+                </div>
+                {!hoveredTargetHint.selectable ? (
+                  <p className="mt-1 text-xs font-semibold">
+                    Necessárias pelo menos {hoveredTargetHint.minimumTroops} tropas.
+                  </p>
+                ) : null}
+              </div>
             ) : hoveredTargetHint?.kind === "barrier-maneuver" ? (
-              <p className="mt-2 border-t border-white/15 pt-2 text-[#b9d7ff]">
-                Travessia por {hoveredTargetHint.barrierName ?? "barreira"} · 1 tropa perdida
-                {!hoveredTargetHint.selectable ? " · tropas insuficientes" : ""}
-              </p>
+              <div className="mt-2 border-t border-white/15 pt-2 text-[#b9d7ff]">
+                <p className="font-semibold">
+                  ▣ {hoveredTargetHint.barrierName ?? "Travessia de barreira"}
+                </p>
+                <p className="mt-1 text-xs">Travessia de barreira</p>
+                <p className="mt-1 text-xs">1 tropa será perdida.</p>
+                <p className="text-xs">
+                  Mínimo: {hoveredTargetHint.minimumTroops} tropas movimentáveis.
+                </p>
+                {!hoveredTargetHint.selectable ? (
+                  <p className="mt-1 text-xs font-semibold">
+                    Tropas movimentáveis insuficientes.
+                  </p>
+                ) : null}
+              </div>
             ) : relevantConnection?.exists ? (
               <p className="mt-2 border-t border-white/15 pt-2 text-[#ffd6a1]">
                 {relevantConnection.barrierName === "Túnel Jurássico"
