@@ -40,7 +40,7 @@ type PresentableEvent = {
 };
 
 function territoryName(territoryId: number) {
-  return TERRITORY_METADATA[territoryId]?.name ?? `Território ${territoryId}`;
+  return TERRITORY_METADATA[territoryId]?.name ?? "Território desconhecido";
 }
 
 function troopWord(amount: number) {
