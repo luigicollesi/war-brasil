@@ -11,16 +11,23 @@ test("nome da carta ajusta tipografia pelo número de caracteres e permanece em 
   assert.match(source, /whiteSpace: "nowrap"/);
 });
 
-test("visibilidade de tropas é persistente e independente das estradas", () => {
-  const source = readFileSync(
+test("visibilidade de tropas é persistente e o controle vive na utility bar", () => {
+  const provider = readFileSync(
     "src/components/road-visibility-provider.tsx",
     "utf8",
   );
+  const utility = readFileSync(
+    "src/components/game-utility-bar.tsx",
+    "utf8",
+  );
 
-  assert.match(source, /war-brasil:troops-visible/);
-  assert.match(source, /TroopVisibilityContext/);
-  assert.match(source, /useTroopVisibility/);
-  assert.match(source, /className="game-troop-toggle"/);
+  assert.match(provider, /war-brasil:troops-visible/);
+  assert.match(provider, /GameMapVisibilityContext/);
+  assert.match(provider, /toggleTroops/);
+  assert.match(provider, /useTroopVisibility/);
+  assert.doesNotMatch(provider, /<button/);
+  assert.match(utility, /aria-pressed=\{troopsVisible\}/);
+  assert.match(utility, />Tropas</);
 });
 
 test("números e símbolos especiais usam a geometria interna extraída do SVG", () => {
