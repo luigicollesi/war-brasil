@@ -57,16 +57,18 @@ test("startPlaying usa a rodada inicial antes de tornar a sala playing", () => {
 test("virada escolhe evento da rodada exata e protege o novo Túnel antes da resolução", () => {
   const round = source("src/lib/game-round-service.ts");
   const selector = source("src/lib/events/event-selection-service.ts");
+  const advanceStart = round.indexOf("export async function advanceGameRound");
+  const advanceBody = round.slice(advanceStart);
 
   assert.match(selector, /getRoomRoundEvent\([\s\S]*currentRoundNumber/);
   assert.doesNotMatch(selector, /getLatestRoomEvent/);
 
-  const tunnelIndex = round.indexOf("const jurassicTunnelDestinationId = nextTunnel(");
-  const selectIndex = round.indexOf("const selection = await chooseNextRoomEvent(");
-  const resolveIndex = round.indexOf("const resolvedEffects = await resolveGameEventEffects(");
-  const recordIndex = round.indexOf("await recordRoundEvent(client, {");
-  const applyIndex = round.indexOf("const territoryUpdates = await applyPermanentEventEffects(");
-  const updateRoomIndex = round.lastIndexOf("UPDATE game_rooms");
+  const tunnelIndex = advanceBody.indexOf("const jurassicTunnelDestinationId = nextTunnel(");
+  const selectIndex = advanceBody.indexOf("const selection = await chooseNextRoomEvent(");
+  const resolveIndex = advanceBody.indexOf("const resolvedEffects = await resolveGameEventEffects(");
+  const recordIndex = advanceBody.indexOf("await recordRoundEvent(client, {");
+  const applyIndex = advanceBody.indexOf("const territoryUpdates = await applyPermanentEventEffects(");
+  const updateRoomIndex = advanceBody.indexOf("UPDATE game_rooms");
 
   assert.ok(tunnelIndex >= 0);
   assert.ok(selectIndex > tunnelIndex);
@@ -75,7 +77,7 @@ test("virada escolhe evento da rodada exata e protege o novo Túnel antes da res
   assert.ok(applyIndex > recordIndex);
   assert.ok(updateRoomIndex > applyIndex);
   assert.match(
-    round.slice(resolveIndex, recordIndex),
+    advanceBody.slice(resolveIndex, recordIndex),
     /jurassicTunnelDestinationId/,
   );
 });
