@@ -30,20 +30,17 @@
   stroke-linejoin: round;
 }
 
-/* Acostamento/sombra: cria volume e separa a estrada da cor do território. */
 .road-route-shadow {
   stroke: rgba(36, 32, 25, 0.88);
   stroke-width: 12;
   filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.28));
 }
 
-/* Pavimento principal. */
 .road-route-surface {
   stroke: #756f63;
   stroke-width: 8;
 }
 
-/* Faixa central de rodovia. */
 .road-route-center {
   stroke: #dcc67e;
   stroke-width: 1.75;
@@ -67,116 +64,130 @@
   user-select: none;
 }
 
-/* Controles visuais do mapa ficam no HUD superior, fora da superfície clicável. */
-.game-road-toggle,
-.game-troop-toggle {
+/* Utilidades persistentes do mapa: visualização + inspeção da anomalia atual. */
+.game-utility-bar {
   position: fixed;
-  z-index: 69;
+  z-index: var(--z-game-hud, 40);
   top: 10px;
+  right: 184px;
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  min-height: 34px;
-  padding: 7px 11px;
-  border: 0;
-  border-radius: 999px;
-  pointer-events: auto;
-  cursor: pointer;
-  background:
-    radial-gradient(circle at 20% 0%, rgba(217, 182, 80, 0.12), transparent 48%),
-    rgba(5, 27, 21, 0.76);
-  color: #dce8e2;
+  gap: 4px;
+  min-height: 42px;
+  padding: 4px;
+  border: 1px solid rgba(217, 182, 80, 0.16);
+  border-radius: 14px;
+  background: rgba(5, 27, 21, 0.76);
   box-shadow:
     0 10px 28px rgba(0, 0, 0, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.07);
-  backdrop-filter: blur(12px) saturate(1.05);
-  font-size: 0.7rem;
-  font-weight: 750;
+    inset 0 1px 0 rgba(255, 255, 255, 0.055);
+  backdrop-filter: blur(14px) saturate(1.05);
+}
+
+.game-utility-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 42px;
+  min-height: 34px;
+  padding: 7px 9px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: #aebfb7;
+  cursor: pointer;
+  font-size: 0.65rem;
+  font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  transition: background 150ms ease, transform 150ms ease, color 150ms ease;
+  transition: background 140ms ease, color 140ms ease, transform 140ms ease;
 }
 
-.game-road-toggle {
-  right: 220px;
+.game-utility-button svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
-.game-troop-toggle {
-  right: 344px;
+.game-utility-button:hover {
+  background: rgba(255, 255, 255, 0.055);
+  color: #f4ead0;
 }
 
-.game-road-toggle:hover,
-.game-troop-toggle:hover {
-  transform: translateY(-1px);
-  background:
-    radial-gradient(circle at 20% 0%, rgba(217, 182, 80, 0.18), transparent 48%),
-    rgba(7, 39, 30, 0.86);
-}
-
-.game-road-toggle:focus-visible,
-.game-troop-toggle:focus-visible {
+.game-utility-button:focus-visible {
   outline: 2px solid rgba(232, 195, 94, 0.72);
-  outline-offset: 3px;
+  outline-offset: 2px;
 }
 
-.game-road-toggle strong,
-.game-troop-toggle strong {
-  min-width: 2.1rem;
-  color: #8ba99b;
-  font-size: 0.62rem;
-  letter-spacing: 0.1em;
-  text-align: center;
+.game-utility-button[aria-pressed="true"] {
+  background: rgba(217, 182, 80, 0.12);
+  color: #f1cf70;
+  box-shadow: inset 0 0 0 1px rgba(217, 182, 80, 0.16);
 }
 
-.game-road-toggle[aria-pressed="true"],
-.game-troop-toggle[aria-pressed="true"] {
-  color: #fff7db;
-  background:
-    radial-gradient(circle at 20% 0%, rgba(232, 195, 94, 0.23), transparent 50%),
-    rgba(11, 54, 41, 0.90);
+.game-utility-button--anomaly {
+  color: #e5c76b;
 }
 
-.game-road-toggle[aria-pressed="true"] strong,
-.game-troop-toggle[aria-pressed="true"] strong {
-  color: #e8c35e;
+.game-utility-button--anomaly:hover {
+  background: rgba(217, 182, 80, 0.09);
+  color: #ffe59a;
 }
 
-/* Tablet e touch layouts ganham uma zona própria abaixo do HUD. Os controles
-   deixam de competir com o indicador de conexão no canto superior direito. */
+.game-utility-divider {
+  width: 1px;
+  height: 22px;
+  margin: 0 2px;
+  background: rgba(217, 182, 80, 0.18);
+}
+
 @media (max-width: 1199px) {
-  .game-road-toggle,
-  .game-troop-toggle {
-    z-index: 75;
-    right: max(12px, env(safe-area-inset-right, 0px));
+  .game-utility-bar {
+    top: calc(8px + env(safe-area-inset-top, 0px));
+    right: 72px;
     min-height: 44px;
-    padding: 8px 12px;
+  }
+
+  .game-utility-button {
+    min-width: 40px;
+    min-height: 36px;
+    padding: 7px;
     touch-action: manipulation;
   }
 
-  .game-road-toggle {
-    top: calc(108px + env(safe-area-inset-top, 0px));
-  }
-
-  .game-troop-toggle {
-    top: calc(160px + env(safe-area-inset-top, 0px));
+  .game-utility-label {
+    display: none;
   }
 }
 
 @media (max-width: 767px) {
-  .game-road-toggle,
-  .game-troop-toggle {
-    right: max(10px, env(safe-area-inset-right, 0px));
-    min-height: 44px;
-    padding: 8px 11px;
-    font-size: 0.66rem;
+  .game-utility-bar {
+    top: calc(7px + env(safe-area-inset-top, 0px));
+    right: 62px;
+    gap: 2px;
+    padding: 3px;
+    border-radius: 12px;
   }
 
-  .game-road-toggle {
-    top: calc(112px + env(safe-area-inset-top, 0px));
+  .game-utility-button {
+    min-width: 38px;
+    min-height: 36px;
+    padding: 6px;
   }
 
-  .game-troop-toggle {
-    top: calc(164px + env(safe-area-inset-top, 0px));
+  .game-utility-button svg {
+    width: 17px;
+    height: 17px;
+  }
+
+  .game-utility-divider {
+    height: 20px;
+    margin: 0 1px;
   }
 
   .road-route-shadow {
