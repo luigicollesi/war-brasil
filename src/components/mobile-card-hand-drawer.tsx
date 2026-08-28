@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -49,12 +50,12 @@ export function MobileCardHandDrawer({
     return layerRef.current?.closest<HTMLElement>(".game-screen") ?? null;
   }
 
-  function setVisibleHeight(value: number) {
-    const screen = screenElement();
+  const setVisibleHeight = useCallback((value: number) => {
+    const screen = layerRef.current?.closest<HTMLElement>(".game-screen") ?? null;
     if (!screen) return;
     currentHeightRef.current = value;
     screen.style.setProperty("--game-hand-visible-height", `${value}px`);
-  }
+  }, []);
 
   function settle(nextExpanded: boolean) {
     const nextHeight = nextExpanded ? openHeightRef.current : hasCards ? CLOSED_PEEK_PX : 0;
@@ -111,7 +112,7 @@ export function MobileCardHandDrawer({
       screen.style.removeProperty("--game-command-closed-height");
       delete screen.dataset.mobileHandDragging;
     };
-  }, [expanded, hasCards, cards.length]);
+  }, [expanded, hasCards, cards.length, setVisibleHeight]);
 
   useEffect(() => {
     if (hasCards) return;
@@ -119,7 +120,7 @@ export function MobileCardHandDrawer({
   }, [hasCards]);
 
   function onPointerDown(event: ReactPointerEvent<HTMLButtonElement>) {
-    if (!hasCards || event.pointerType === "mouse" && event.button !== 0) return;
+    if (!hasCards || (event.pointerType === "mouse" && event.button !== 0)) return;
     event.currentTarget.setPointerCapture(event.pointerId);
     dragRef.current = {
       pointerId: event.pointerId,
@@ -167,7 +168,6 @@ export function MobileCardHandDrawer({
     const velocity = delta / elapsed;
     const decisiveDistance = Math.abs(delta) >= DRAG_DISTANCE_THRESHOLD_PX;
     const decisiveVelocity = Math.abs(velocity) >= DRAG_VELOCITY_THRESHOLD;
-
     const nextExpanded =
       decisiveDistance || decisiveVelocity
         ? delta > 0
