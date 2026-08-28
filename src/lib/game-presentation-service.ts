@@ -1,14 +1,13 @@
 import "server-only";
 
-import { randomInt } from "node:crypto";
 import type { PoolClient } from "pg";
 import {
   advanceBattlePresentation,
   type BattleRoomState,
 } from "@/src/lib/game-battle-service";
 import { gameConditionalCommand } from "@/src/lib/game-command";
-import { TERRITORY_METADATA } from "@/src/lib/game-config";
 import { type GameRevision } from "@/src/lib/game-revision";
+import { initializeFirstGameRound } from "@/src/lib/game-round-service";
 import { isOrderRollPresentationDue } from "@/src/lib/game-transitions";
 import { RoomError } from "@/src/lib/rooms";
 
@@ -85,24 +84,11 @@ function compareRollHistory(a: number[], b: number[]) {
   return 0;
 }
 
-function chooseJurassicTunnelDestination(previous: number | null) {
-  const candidates = Object.keys(TERRITORY_METADATA)
-    .map(Number)
-    .filter(
-      (territoryId) =>
-        territoryId !== 1 && territoryId !== 3 && territoryId !== previous,
-    );
-
-  return candidates[randomInt(0, candidates.length)];
-}
-
 async function startPlaying(
   client: PoolClient,
   room: PresentationRoom,
   order: OrderPlayer[],
 ) {
-  const tunnelDestination = chooseJurassicTunnelDestination(null);
-
   for (const [index, player] of order.entries()) {
     await client.query(
       "UPDATE room_players SET turn_position=$1 WHERE id=$2",
@@ -110,14 +96,21 @@ async function startPlaying(
     );
   }
 
+  const firstRound = await initializeFirstGameRound(client, room.id);
+
   await client.query(
     `UPDATE game_rooms
      SET status='playing',started_at=NOW(),phase='cards',
-         current_player_id=$2,turn_number=1,round_number=1,
-         jurassic_tunnel_territory_id=$3,reinforcements_remaining=0,
+         current_player_id=$2,turn_number=1,round_number=$3,
+         jurassic_tunnel_territory_id=$4,reinforcements_remaining=0,
          conquered_this_turn=FALSE
      WHERE id=$1`,
-    [room.id, order[0].id, tunnelDestination],
+    [
+      room.id,
+      order[0].id,
+      firstRound.roundNumber,
+      firstRound.jurassicTunnelDestinationId,
+    ],
   );
 }
 
