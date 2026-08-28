@@ -73,7 +73,7 @@ export function useGameInteraction({
 
       if (snapshot.room.phase === "attack") {
         if (state.sourceId === null) {
-          if (territory.ownerPlayerId === meId && territory.troops > 1) {
+          if (mapHints.available.includes(territoryId)) {
             dispatch({ type: "select-source", scopeKey, territoryId });
           }
           return;
@@ -171,6 +171,7 @@ export function useGameInteraction({
     [
       clearSelection,
       game,
+      mapHints.available,
       mapHints.targets,
       refresh,
       roomId,
