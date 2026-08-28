@@ -51,16 +51,17 @@ test("comparação visual de barreira mostra perda de três tropas", () => {
   );
 });
 
-test("overlay de combate explica barreira e usa metadados persistidos", () => {
+test("combate por barreira usa resumo contextual sem repetir tabela de regras", () => {
   const overlay = source("src/components/battle-overlay.tsx");
 
-  assert.match(overlay, /BARRIER_ATTACK_DICE_BANDS/);
+  assert.match(overlay, /GameModal/);
+  assert.match(overlay, /barrierAttackSummary/);
   assert.match(overlay, /battle\.barrierName/);
   assert.match(overlay, /attackerLossPerComparison/);
-  assert.match(overlay, /ataque perde \$\{row\.troopLoss\}/);
-  assert.match(overlay, /role="dialog"/);
-  assert.match(overlay, /aria-modal="true"/);
-  assert.match(overlay, /comparação perdida/);
+  assert.match(overlay, /`Ataque −\$\{row\.troopLoss\}`/);
+  assert.match(overlay, /battle-barrier-summary/);
+  assert.doesNotMatch(overlay, /BARRIER_ATTACK_DICE_BANDS/);
+  assert.doesNotMatch(overlay, /role="dialog"|aria-modal="true"/);
 });
 
 test("modais de jogo prendem foco e permitem Escape somente quando canceláveis", () => {
@@ -68,21 +69,24 @@ test("modais de jogo prendem foco e permitem Escape somente quando canceláveis"
 
   assert.match(modal, /role="dialog"/);
   assert.match(modal, /aria-modal="true"/);
+  assert.match(modal, /createPortal/);
   assert.match(modal, /event\.key === "Escape"/);
   assert.match(modal, /event\.key !== "Tab"/);
   assert.match(modal, /previousFocus/);
   assert.match(modal, /onCloseRef\.current/);
 });
 
-test("manobra por barreira comunica saída, perda, chegada e CTA final", () => {
+test("manobra por barreira comunica saída, perda, chegada e CTA final sem duplicar aviso visual", () => {
   const panel = source("src/components/game-turn-panel.tsx");
+  const css = source("src/app/game/[roomId]/game-ui-refresh.css");
 
   assert.match(panel, /\{value\} saem/);
   assert.match(panel, /\{arriving\} chegam/);
-  assert.match(panel, /Uma tropa será perdida durante a travessia/);
   assert.match(panel, /MOVER \$\{count\} · \$\{arriving\} CHEGAM/);
   assert.match(panel, /<GameModal/);
   assert.match(panel, /role="status"/);
+  assert.match(css, /\.maneuver-barrier-summary\s*\{[\s\S]*?display:\s*none\s*!important/);
+  assert.match(css, /\.troop-flow-center--barrier/);
 });
 
 test("mapa e cliente usam apenas o contrato enriquecido targetHints", () => {
