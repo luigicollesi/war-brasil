@@ -7,6 +7,7 @@ on:
   push:
     branches:
       - main
+      - feat/mobile-map-pinch-zoom
 
 jobs:
   test:
@@ -20,3 +21,6 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm test
+      - run: npm run build
+        env:
+          DATABASE_URL: postgresql://war:war@127.0.0.1:5432/war
