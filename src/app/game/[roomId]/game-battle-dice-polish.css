@@ -1,0 +1,117 @@
+/* Dados de combate: layout adaptativo e rolagens independentes. */
+
+.battle-modal {
+  max-height: calc(100dvh - 32px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.battle-dice-grid {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: center;
+  column-gap: clamp(18px, 4vw, 38px);
+  row-gap: 22px;
+  width: 100%;
+  margin-top: 24px;
+}
+
+.battle-side {
+  flex: 0 0 auto;
+  width: max-content;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.battle-dice-row {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  max-width: 100%;
+}
+
+.battle-die-slot {
+  display: grid;
+  width: clamp(76px, 8.5vw, 116px);
+  aspect-ratio: 1;
+  flex: 0 0 auto;
+  place-items: center;
+  padding: 5px;
+}
+
+.battle-die-slot .battle-die {
+  width: 100% !important;
+  max-width: 100%;
+  transform-origin: center;
+  will-change: transform;
+}
+
+@keyframes battle-die-independent-roll {
+  0% {
+    transform: rotate(0deg) scale(.9) translateY(1px);
+  }
+
+  58% {
+    scale: 1.025;
+  }
+
+  100% {
+    transform: rotate(var(--die-roll-angle)) scale(1) translateY(0);
+  }
+}
+
+.battle-die-roll-animation {
+  animation-name: battle-die-independent-roll;
+  animation-duration: var(--die-roll-duration, 700ms);
+  animation-delay: var(--die-roll-delay, 0ms);
+  animation-timing-function: cubic-bezier(.18, .72, .28, 1);
+  animation-fill-mode: both;
+}
+
+/* A classe semântica substitui os seletores estruturais antigos para as artes. */
+.battle-side--attack .battle-die {
+  background: url("/dado-ataque-vermelho-hq.svg") center / contain no-repeat !important;
+  filter: drop-shadow(0 12px 16px rgba(67, 8, 6, .28));
+}
+
+.battle-side--defense .battle-die {
+  background: url("/dado-defesa-azul-hq.svg") center / contain no-repeat !important;
+  filter: drop-shadow(0 12px 16px rgba(3, 34, 73, .28));
+}
+
+.battle-side .battle-die img {
+  opacity: 0 !important;
+}
+
+@media (max-width: 767px) {
+  .battle-modal {
+    max-height: calc(100dvh - 16px);
+  }
+
+  .battle-dice-grid {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: center;
+    row-gap: 20px;
+  }
+
+  .battle-side {
+    width: 100%;
+  }
+
+  .battle-die-slot {
+    width: clamp(62px, 20vw, 82px);
+    padding: 4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .battle-die-roll-animation {
+    animation: none !important;
+    transform: none !important;
+  }
+}
