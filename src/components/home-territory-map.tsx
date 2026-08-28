@@ -11,10 +11,12 @@ type TerritoryLabel = {
 
 const TOUCH_LABEL_DURATION_MS = 5_000;
 const DESKTOP_POINTER_QUERY = "(hover: hover) and (pointer: fine)";
+const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 
 function findTerritory(target: EventTarget | null) {
-  if (!(target instanceof Element)) return null;
-  return target.closest<SVGPathElement>(".territory[data-name]");
+  const element = target as Element | null;
+  if (!element || typeof element.closest !== "function") return null;
+  return element.closest<SVGPathElement>(".territory[data-name]");
 }
 
 export function HomeTerritoryMap() {
@@ -39,8 +41,15 @@ export function HomeTerritoryMap() {
       detachSvg();
 
       const root = object.contentDocument?.documentElement;
-      if (!(root instanceof SVGSVGElement)) return;
+      if (
+        !root ||
+        root.namespaceURI !== SVG_NAMESPACE ||
+        root.tagName.toLowerCase() !== "svg"
+      ) {
+        return;
+      }
 
+      const svg = root as unknown as SVGSVGElement;
       const isDesktopPointer = () => window.matchMedia(DESKTOP_POINTER_QUERY).matches;
 
       const showHoverLabel = (event: PointerEvent) => {
@@ -82,14 +91,14 @@ export function HomeTerritoryMap() {
         }, TOUCH_LABEL_DURATION_MS);
       };
 
-      root.addEventListener("pointermove", showHoverLabel);
-      root.addEventListener("pointerleave", hideHoverLabel);
-      root.addEventListener("click", showTouchLabel);
+      svg.addEventListener("pointermove", showHoverLabel);
+      svg.addEventListener("pointerleave", hideHoverLabel);
+      svg.addEventListener("click", showTouchLabel);
 
       detachSvg = () => {
-        root.removeEventListener("pointermove", showHoverLabel);
-        root.removeEventListener("pointerleave", hideHoverLabel);
-        root.removeEventListener("click", showTouchLabel);
+        svg.removeEventListener("pointermove", showHoverLabel);
+        svg.removeEventListener("pointerleave", hideHoverLabel);
+        svg.removeEventListener("click", showTouchLabel);
       };
     };
 
