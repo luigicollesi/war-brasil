@@ -12,7 +12,10 @@ import {
   type TerritoryArrowKind,
 } from "@/src/components/territory-arrow";
 import { TerritorySpecialMarkers } from "@/src/components/territory-special-markers";
-import { BARRIER_ATTACK_DICE_BANDS } from "@/src/lib/game-barrier-rules";
+import {
+  barrierAttackSummary,
+  barrierManeuverSummary,
+} from "@/src/lib/game-barrier-presentation";
 import { TERRITORY_METADATA } from "@/src/lib/game-config";
 import type { MapTargetHint } from "@/src/lib/game-interaction";
 import { PLAYER_COLORS, type PlayerColor } from "@/src/lib/lobby";
@@ -337,6 +340,21 @@ export function InteractiveBoard({
       : territoryById.get(hoveredTerritoryId);
   const hoveredTargetHint =
     hoveredTerritoryId === null ? undefined : targetById.get(hoveredTerritoryId);
+  const hoveredBarrierSummary =
+    hoveredTargetHint?.kind === "barrier-attack"
+      ? barrierAttackSummary({
+          barrierName: hoveredTargetHint.barrierName,
+          selectable: hoveredTargetHint.selectable,
+          minimumTroops: hoveredTargetHint.minimumTroops,
+        })
+      : hoveredTargetHint?.kind === "barrier-maneuver"
+        ? barrierManeuverSummary({
+            barrierName: hoveredTargetHint.barrierName,
+            selectable: hoveredTargetHint.selectable,
+            minimumTroops: hoveredTargetHint.minimumTroops,
+            troopLoss: hoveredTargetHint.troopLoss,
+          })
+        : null;
   const relevantConnection =
     hoveredTerritoryId !== null &&
     selectedTerritoryId !== null &&
@@ -458,48 +476,18 @@ export function InteractiveBoard({
             <p className="mt-1 font-semibold text-[#e8c35e]">
               {hoveredState.troops} tropas
             </p>
-            {hoveredTargetHint?.kind === "barrier-attack" ? (
-              <div className="mt-2 border-t border-white/15 pt-2 text-[#ffd6a1]">
-                <p className="font-semibold">
-                  ☠ {hoveredTargetHint.barrierName ?? "Ataque por barreira"}
-                </p>
-                <p className="mt-1 text-xs">Ataque por barreira</p>
-                <div className="mt-1 space-y-0.5 text-xs">
-                  {BARRIER_ATTACK_DICE_BANDS.map((band) => (
-                    <p key={band.minimumTroops}>
-                      {band.maximumTroops === null
-                        ? `${band.minimumTroops}+`
-                        : `${band.minimumTroops}–${band.maximumTroops}`} tropas → {band.diceCount} {band.diceCount === 1 ? "dado" : "dados"}
-                    </p>
-                  ))}
-                  <p>Comparação perdida → -3 tropas</p>
-                </div>
-                {!hoveredTargetHint.selectable ? (
-                  <p className="mt-1 text-xs font-semibold">
-                    Necessárias pelo menos {hoveredTargetHint.minimumTroops} tropas.
-                  </p>
-                ) : null}
-              </div>
-            ) : hoveredTargetHint?.kind === "barrier-maneuver" ? (
-              <div className="mt-2 border-t border-white/15 pt-2 text-[#b9d7ff]">
-                <p className="font-semibold">
-                  ▣ {hoveredTargetHint.barrierName ?? "Travessia de barreira"}
-                </p>
-                <p className="mt-1 text-xs">Travessia de barreira</p>
-                <p className="mt-1 text-xs">1 tropa será perdida.</p>
-                <p className="text-xs">
-                  Mínimo: {hoveredTargetHint.minimumTroops} tropas movimentáveis.
-                </p>
-                {!hoveredTargetHint.selectable ? (
-                  <p className="mt-1 text-xs font-semibold">
-                    Tropas movimentáveis insuficientes.
-                  </p>
-                ) : null}
+            {hoveredBarrierSummary ? (
+              <div
+                className="game-tooltip-barrier mt-2 border-t border-white/15 pt-2"
+                data-blocked={hoveredBarrierSummary.blocked}
+              >
+                <p className="font-semibold">▣ {hoveredBarrierSummary.name}</p>
+                <p className="mt-1 text-xs">{hoveredBarrierSummary.detail}</p>
               </div>
             ) : relevantConnection?.exists ? (
               <p className="mt-2 border-t border-white/15 pt-2 text-[#ffd6a1]">
                 {relevantConnection.barrierName === "Túnel Jurássico"
-                  ? "🦖 Túnel Jurássico"
+                  ? "Túnel Jurássico"
                   : relevantConnection.passable
                     ? "Fronteira militar disponível"
                     : relevantConnection.barrierName ?? "Fronteira bloqueada"}
