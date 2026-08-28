@@ -3,12 +3,20 @@ import "server-only";
 import { randomInt } from "node:crypto";
 import type { PoolClient } from "pg";
 import { INITIAL_EVENT_ID } from "@/src/lib/events/event-catalog";
-import { applyPermanentEventEffects, type EventTerritoryUpdate } from "@/src/lib/events/event-effects-service";
-import { recordRoundEvent, getEvent } from "@/src/lib/events/event-repository";
+import {
+  applyPermanentEventEffectsWithChanges,
+  type EventTerritoryUpdate,
+} from "@/src/lib/events/event-effects-service";
+import {
+  getEvent,
+  recordRoundEvent,
+  setRoundEventAppliedTroopChanges,
+} from "@/src/lib/events/event-repository";
 import { resolveGameEventEffects } from "@/src/lib/events/event-resolution-service";
 import { chooseNextRoomEvent } from "@/src/lib/events/event-selection-service";
 import {
   EventConfigurationError,
+  type AppliedEventTroopChange,
   type ResolvedEventEffect,
 } from "@/src/lib/events/event-types";
 import { TERRITORY_METADATA } from "@/src/lib/game-config";
@@ -19,6 +27,7 @@ export type RoundActivation = {
   jurassicTunnelDestinationId: number;
   eventId: number;
   resolvedEffects: ResolvedEventEffect[];
+  appliedTroopChanges: AppliedEventTroopChange[];
   territoryUpdates: EventTerritoryUpdate[];
 };
 
@@ -54,6 +63,7 @@ export async function initializeFirstGameRound(
     // O evento 0 é exclusivamente narrativo: a distribuição inicial de uma
     // tropa por território já é feita pela inicialização normal da partida.
     resolvedEffects: [],
+    appliedTroopChanges: [],
   });
 
   return {
@@ -61,6 +71,7 @@ export async function initializeFirstGameRound(
     jurassicTunnelDestinationId,
     eventId: roundEvent.eventId,
     resolvedEffects: [],
+    appliedTroopChanges: [],
     territoryUpdates: [],
   };
 }
@@ -99,18 +110,28 @@ export async function advanceGameRound(
     jurassicTunnelDestinationId,
   });
 
+  // O INSERT continua antes dos efeitos permanentes: uma tentativa duplicada
+  // da mesma rodada falha antes de tocar nas tropas. O resultado factual é
+  // preenchido depois, ainda dentro da mesma transação externa do gameCommand.
   await recordRoundEvent(client, {
     roomId: input.roomId,
     roundNumber: nextRoundNumber,
     eventId: selection.event.id,
     resolvedEffects,
+    appliedTroopChanges: [],
   });
 
-  const territoryUpdates = await applyPermanentEventEffects(
+  const application = await applyPermanentEventEffectsWithChanges(
     client,
     input.roomId,
     resolvedEffects,
   );
+
+  await setRoundEventAppliedTroopChanges(client, {
+    roomId: input.roomId,
+    roundNumber: nextRoundNumber,
+    appliedTroopChanges: application.appliedTroopChanges,
+  });
 
   await client.query(
     `UPDATE game_rooms
@@ -124,6 +145,7 @@ export async function advanceGameRound(
     jurassicTunnelDestinationId,
     eventId: selection.event.id,
     resolvedEffects,
-    territoryUpdates,
+    appliedTroopChanges: application.appliedTroopChanges,
+    territoryUpdates: application.territoryUpdates,
   };
 }
