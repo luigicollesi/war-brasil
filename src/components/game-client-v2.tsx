@@ -7,6 +7,7 @@ import { BattleOverlay } from "@/src/components/battle-overlay";
 import { GameTurnPanel } from "@/src/components/game-turn-panel";
 import { GameUtilityBar } from "@/src/components/game-utility-bar";
 import { GameVictoryModal } from "@/src/components/game-victory-modal";
+import { MobileCardHandDrawer } from "@/src/components/mobile-card-hand-drawer";
 import {
   InteractiveBoard,
   type BoardTerritory,
@@ -282,6 +283,10 @@ function GameReadyClient({
         interaction={interaction}
         onRefresh={refresh}
       />
+
+      {snapshot.room.status === "playing" ? (
+        <MobileCardHandDrawer cards={snapshot.myCards} />
+      ) : null}
 
       {snapshot.room.status !== "finished" && snapshot.room.battle ? (
         <BattleOverlay
