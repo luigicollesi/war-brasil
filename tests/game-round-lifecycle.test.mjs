@@ -36,9 +36,10 @@ test("rodada inicial registra evento 0 sem resolver ou aplicar seus efeitos", ()
   assert.match(initializeBody, /roundNumber: 1/);
   assert.match(initializeBody, /eventId: INITIAL_EVENT_ID/);
   assert.match(initializeBody, /resolvedEffects: \[\]/);
+  assert.match(initializeBody, /appliedTroopChanges: \[\]/);
   assert.match(initializeBody, /territoryUpdates: \[\]/);
   assert.doesNotMatch(initializeBody, /resolveGameEventEffects\(/);
-  assert.doesNotMatch(initializeBody, /applyPermanentEventEffects\(/);
+  assert.doesNotMatch(initializeBody, /applyPermanentEventEffectsWithChanges\(/);
 });
 
 test("startPlaying usa a rodada inicial antes de tornar a sala playing", () => {
@@ -54,7 +55,7 @@ test("startPlaying usa a rodada inicial antes de tornar a sala playing", () => {
   assert.doesNotMatch(presentation, /TERRITORY_METADATA/);
 });
 
-test("virada escolhe evento da rodada exata e protege o novo Túnel antes da resolução", () => {
+test("virada escolhe evento da rodada exata, resolve e persiste resultado factual", () => {
   const round = source("src/lib/game-round-service.ts");
   const selector = source("src/lib/events/event-selection-service.ts");
   const advanceStart = round.indexOf("export async function advanceGameRound");
@@ -67,7 +68,12 @@ test("virada escolhe evento da rodada exata e protege o novo Túnel antes da res
   const selectIndex = advanceBody.indexOf("const selection = await chooseNextRoomEvent(");
   const resolveIndex = advanceBody.indexOf("const resolvedEffects = await resolveGameEventEffects(");
   const recordIndex = advanceBody.indexOf("await recordRoundEvent(client, {");
-  const applyIndex = advanceBody.indexOf("const territoryUpdates = await applyPermanentEventEffects(");
+  const applyIndex = advanceBody.indexOf(
+    "const application = await applyPermanentEventEffectsWithChanges(",
+  );
+  const outcomeIndex = advanceBody.indexOf(
+    "await setRoundEventAppliedTroopChanges(client, {",
+  );
   const updateRoomIndex = advanceBody.indexOf("UPDATE game_rooms");
 
   assert.ok(tunnelIndex >= 0);
@@ -75,7 +81,8 @@ test("virada escolhe evento da rodada exata e protege o novo Túnel antes da res
   assert.ok(resolveIndex > selectIndex);
   assert.ok(recordIndex > resolveIndex);
   assert.ok(applyIndex > recordIndex);
-  assert.ok(updateRoomIndex > applyIndex);
+  assert.ok(outcomeIndex > applyIndex);
+  assert.ok(updateRoomIndex > outcomeIndex);
   assert.match(
     advanceBody.slice(resolveIndex, recordIndex),
     /jurassicTunnelDestinationId/,
@@ -131,12 +138,14 @@ test("gameplay não faz mais self-healing de Túnel ou evento ausente", () => {
   assert.doesNotMatch(topology, /roundEvent\?\.resolvedEffects \?\? \[\]/);
 });
 
-test("snapshot já deriva activeEvent exatamente da rodada atual", () => {
+test("snapshot deriva detalhes do evento exatamente da rodada atual", () => {
   const snapshot = source("src/lib/game-snapshot-service.ts");
 
   assert.match(
     snapshot,
-    /getRoomRoundEvent\([\s\S]*room\.id,[\s\S]*room\.round_number/,
+    /getRoomRoundEventDetails\([\s\S]*room\.id,[\s\S]*room\.round_number/,
   );
   assert.match(snapshot, /activeEvent: roundEvent/);
+  assert.match(snapshot, /name: roundEvent\.name/);
+  assert.match(snapshot, /appliedTroopChanges: roundEvent\.appliedTroopChanges/);
 });
