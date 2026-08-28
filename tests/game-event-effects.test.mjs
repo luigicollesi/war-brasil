@@ -5,6 +5,7 @@ import { resolveEventEffects } from "../.test-build/events/event-resolver.js";
 import { applyEventConnectionEffects } from "../.test-build/events/event-topology.js";
 import {
   EventConfigurationError,
+  parseAppliedEventTroopChanges,
   parseResolvedEventEffects,
 } from "../.test-build/events/event-types.js";
 import { effectiveGameConnections } from "../.test-build/game-effective-connections.js";
@@ -260,6 +261,71 @@ test("parser de efeitos resolvidos valida identidade e exclusividade das barreir
               description: null,
             },
           ],
+        },
+      ]),
+    EventConfigurationError,
+  );
+});
+
+test("parser de resultados factuais valida before/after/delta e o sentido do efeito", () => {
+  assert.deepEqual(
+    parseAppliedEventTroopChanges([
+      {
+        type: "ADD_TROOPS",
+        territoryId: 20,
+        beforeTroops: 2,
+        afterTroops: 4,
+        delta: 2,
+      },
+      {
+        type: "REMOVE_TROOPS",
+        territoryId: 22,
+        beforeTroops: 1,
+        afterTroops: 1,
+        delta: 0,
+      },
+    ]),
+    [
+      {
+        type: "ADD_TROOPS",
+        territoryId: 20,
+        beforeTroops: 2,
+        afterTroops: 4,
+        delta: 2,
+      },
+      {
+        type: "REMOVE_TROOPS",
+        territoryId: 22,
+        beforeTroops: 1,
+        afterTroops: 1,
+        delta: 0,
+      },
+    ],
+  );
+
+  assert.throws(
+    () =>
+      parseAppliedEventTroopChanges([
+        {
+          type: "REMOVE_TROOPS",
+          territoryId: 22,
+          beforeTroops: 3,
+          afterTroops: 1,
+          delta: -3,
+        },
+      ]),
+    EventConfigurationError,
+  );
+
+  assert.throws(
+    () =>
+      parseAppliedEventTroopChanges([
+        {
+          type: "ADD_TROOPS",
+          territoryId: 20,
+          beforeTroops: 2,
+          afterTroops: 2,
+          delta: 0,
         },
       ]),
     EventConfigurationError,
