@@ -2,7 +2,11 @@ import {
   REGION_REINFORCEMENT_BONUSES,
   TERRITORY_METADATA,
 } from "./game-config";
-import { attackProfile, maneuverTraversalProfile } from "./game-barrier-rules";
+import {
+  attackProfile,
+  BARRIER_ATTACK_DICE_BANDS,
+  maneuverTraversalProfile,
+} from "./game-barrier-rules";
 import { reinforcementBase, tradeValue } from "./game-rules";
 
 export type GameGuidePresentation = ReturnType<typeof buildGameGuidePresentation>;
@@ -44,6 +48,11 @@ export function buildGameGuidePresentation() {
       barrierMinimumTroops: barrierUnavailable.minimumTroops,
       barrierDiceAtSevenTroops: barrierAttack.diceCount,
       barrierLossPerComparison: barrierAttack.attackerLossPerComparison,
+      barrierDiceBands: BARRIER_ATTACK_DICE_BANDS.map((band) => ({
+        minimumTroops: band.minimumTroops,
+        maximumTroops: band.maximumTroops,
+        diceCount: band.diceCount,
+      })),
     },
     maneuver: {
       barrierLoss: oneBarrier.troopLoss,
