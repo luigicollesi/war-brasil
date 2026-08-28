@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PLAYER_COLORS, type LobbyPlayer } from "@/src/lib/lobby";
@@ -26,6 +27,7 @@ export function LobbyClient({ code }: LobbyClientProps) {
   const { snapshot, error: syncError, isLoading, refresh } = useLobbySync(code);
   const [actionError, setActionError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (snapshot && snapshot.room.status !== "waiting") {
@@ -67,6 +69,16 @@ export function LobbyClient({ code }: LobbyClientProps) {
     }
   }
 
+  async function copyRoomCode() {
+    try {
+      await navigator.clipboard.writeText(code.toUpperCase());
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      setActionError("Não foi possível copiar o código da sala.");
+    }
+  }
+
   function saveFaction(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
@@ -75,184 +87,271 @@ export function LobbyClient({ code }: LobbyClientProps) {
 
   if (isLoading && !snapshot) {
     return (
-      <div className="rounded-3xl border border-[#17372d]/10 bg-[#faf8f2] p-8 text-sm text-[#64756f] shadow-[0_18px_50px_rgba(42,55,50,0.07)]">
-        Conectando à sala…
+      <div className="py-20 text-center">
+        <p className="wb-kicker">Sala de comando</p>
+        <p className="mt-3 text-sm text-[var(--wb-text-muted)]">Conectando à sala…</p>
       </div>
     );
   }
 
   if (!snapshot) {
     return (
-      <div className="rounded-3xl border border-[#a33c33]/20 bg-[#fff8f5] p-8 text-sm text-[#a33c33]">
-        {syncError || "Não foi possível encontrar esta sala."}
+      <div className="py-20 text-center">
+        <p className="wb-kicker">Sala indisponível</p>
+        <p className="wb-error mt-3">{syncError || "Não foi possível encontrar esta sala."}</p>
       </div>
     );
   }
 
   const { me, players, room } = snapshot;
   const readyPlayers = players.filter((player) => player.isReady).length;
+  const allReady = players.length >= 2 && readyPlayers === players.length;
+  const emptySlots = Array.from({ length: Math.max(0, 6 - players.length) });
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_23rem]">
-      <section className="rounded-3xl border border-[#17372d]/10 bg-[#faf8f2] p-6 shadow-[0_18px_50px_rgba(42,55,50,0.07)] sm:p-8">
-        <div className="flex flex-col gap-4 border-b border-[#17372d]/10 pb-6 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#9b7a27]">
-              Lobby sincronizada
-            </p>
-            <h1 className="mt-2 text-3xl font-semibold tracking-[-0.04em] sm:text-4xl">
-              Sala {room.code}
-            </h1>
-            <p className="mt-2 text-sm leading-6 text-[#687871]">
-              A partida começa quando ao menos 2 jogadores estiverem prontos.
-            </p>
-          </div>
-          <span className="inline-flex w-fit items-center gap-2 rounded-full bg-[#e3eee6] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#326347]">
-            <span className="h-2 w-2 animate-pulse rounded-full bg-[#3f8b68]" />
-            Atualiza a cada 1 s
-          </span>
+    <>
+      <section className="wb-lobby-heading">
+        <div>
+          <p className="wb-kicker">Sala de comando</p>
+          <h1 className="mt-2 wb-display text-4xl leading-none sm:text-5xl">
+            Preparar operação
+          </h1>
+          <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--wb-text-muted)]">
+            Defina sua facção, acompanhe os demais jogadores e marque-se como
+            pronto quando estiver preparado para iniciar.
+          </p>
         </div>
 
-        <div className="mt-7">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold uppercase tracking-[0.14em] text-[#52645e]">
-              Jogadores ({players.length}/6)
+        <div className="flex flex-col items-start gap-3 sm:items-end">
+          <div className="wb-lobby-code">
+            <span className="wb-code-value">{room.code.toUpperCase()}</span>
+            <button
+              type="button"
+              onClick={() => void copyRoomCode()}
+              className="wb-button wb-button--ghost"
+              aria-label={`Copiar código da sala ${room.code.toUpperCase()}`}
+            >
+              {copied ? "Copiado" : "Copiar"}
+            </button>
+          </div>
+          <div className="flex items-center gap-4">
+            {copied ? <span className="wb-copy-feedback">Código copiado</span> : null}
+            <span className="wb-status">
+              <span className="wb-status-dot" aria-hidden="true" />
+              Sala sincronizada
+            </span>
+          </div>
+        </div>
+      </section>
+
+      {syncError ? (
+        <p className="wb-error mt-4" role="alert">
+          {syncError}
+        </p>
+      ) : null}
+
+      <div className="wb-lobby-grid">
+        <section className="wb-lobby-region" aria-labelledby="lobby-players-title">
+          <div className="flex items-center justify-between gap-3">
+            <h2 id="lobby-players-title" className="wb-section-title">
+              Jogadores
             </h2>
-            <span className="text-xs font-semibold text-[#74847d]">
-              {readyPlayers} prontos
+            <span className="text-[10px] font-bold tracking-[0.08em] text-[var(--wb-text-muted)]">
+              {players.length}/6
             </span>
           </div>
 
-          <ul className="mt-4 space-y-3">
-            {players.map((player) => (
-              <PlayerCard key={player.id} player={player} />
+          <ul className="wb-player-list">
+            {players.map((player, index) => (
+              <PlayerRow key={player.id} player={player} index={index + 1} />
+            ))}
+            {emptySlots.map((_, index) => (
+              <li key={`empty-${index}`} className="wb-player-row wb-empty-player">
+                <span className="wb-player-state">{String(players.length + index + 1).padStart(2, "0")}</span>
+                <div>
+                  <p className="wb-player-name">Aguardando jogador</p>
+                  <p className="wb-player-meta">Vaga disponível</p>
+                </div>
+                <span className="wb-player-state">○</span>
+              </li>
             ))}
           </ul>
-        </div>
+        </section>
 
-        {syncError ? (
-          <p className="mt-5 rounded-xl bg-[#fff0eb] px-4 py-3 text-sm text-[#a33c33]">
-            {syncError}
-          </p>
-        ) : null}
-      </section>
-
-      <aside className="rounded-3xl bg-[#12392f] p-6 text-white shadow-[0_18px_50px_rgba(19,57,47,0.16)] sm:p-7">
-        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#9eb8ae]">
-          Suas escolhas
-        </p>
-
-        <form onSubmit={saveFaction} className="mt-5">
-          <label htmlFor="faction-name" className="text-sm font-semibold">
-            Nome da facção
-          </label>
-          <div className="mt-2 flex gap-2">
-            <input
-              id="faction-name"
-              name="factionName"
-              key={me.factionName}
-              defaultValue={me.factionName}
-              maxLength={32}
-              disabled={isSaving}
-              className="h-11 min-w-0 flex-1 rounded-xl border border-white/15 bg-white/8 px-3 text-sm text-white outline-none placeholder:text-[#9eb8ae] focus:border-[#e4b94f] focus:ring-2 focus:ring-[#e4b94f]/30 disabled:opacity-60"
+        <section className="wb-lobby-region" aria-labelledby="lobby-map-title">
+          <div className="wb-lobby-map">
+            <p className="wb-section-title">Campo da operação</p>
+            <h2 id="lobby-map-title" className="mt-2 wb-display text-3xl">
+              Brasil
+            </h2>
+            <Image
+              src="/war-brasil-42.production.svg"
+              alt="Mapa da partida com 42 territórios"
+              width={1254}
+              height={1254}
+              priority
             />
-            <button
-              type="submit"
-              disabled={isSaving}
-              className="rounded-xl bg-white px-3 text-xs font-bold uppercase tracking-wider text-[#12392f] transition hover:bg-[#f2eddf] disabled:opacity-60"
-            >
-              Salvar
-            </button>
+            <div className="wb-lobby-map-facts">
+              <span>42 territórios</span>
+              <span className="wb-diamond" aria-hidden="true" />
+              <span>5 regiões</span>
+            </div>
           </div>
-        </form>
+        </section>
 
-        <div className="mt-7">
-          <p className="text-sm font-semibold">Cor da facção</p>
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            {PLAYER_COLORS.map((color) => {
-              const takenByAnotherPlayer = players.some(
-                (player) => !player.isMe && player.color === color.value,
-              );
-              const isCurrentColor = me.color === color.value;
+        <aside className="wb-lobby-region" aria-labelledby="my-faction-title">
+          <h2 id="my-faction-title" className="wb-section-title">
+            Sua facção
+          </h2>
 
-              return (
-                <button
-                  key={color.value}
-                  type="button"
-                  title={takenByAnotherPlayer ? `${color.label} indisponível` : color.label}
-                  disabled={isSaving || takenByAnotherPlayer || isCurrentColor}
-                  onClick={() => void updateMe({ color: color.value })}
-                  className={`flex h-12 items-center justify-center gap-2 rounded-xl border text-xs font-bold transition ${
-                    isCurrentColor
-                      ? "border-[#e4b94f] bg-white/12 text-white"
-                      : "border-white/12 bg-white/5 text-[#d7e4de] hover:bg-white/12"
-                  } disabled:cursor-not-allowed disabled:opacity-35`}
-                >
-                  <span
-                    className="h-3 w-3 rounded-full ring-2 ring-white/20"
-                    style={{ backgroundColor: color.hex }}
-                  />
-                  {color.label}
-                </button>
-              );
-            })}
+          <form onSubmit={saveFaction} className="wb-faction-editor">
+            <label htmlFor="faction-name" className="wb-label">
+              Nome
+            </label>
+            <div className="flex gap-2">
+              <input
+                id="faction-name"
+                name="factionName"
+                key={me.factionName}
+                defaultValue={me.factionName}
+                maxLength={32}
+                disabled={isSaving}
+                className="wb-field min-w-0 flex-1"
+              />
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="wb-button wb-button--ghost px-2"
+                aria-label="Salvar nome da facção"
+              >
+                Salvar
+              </button>
+            </div>
+          </form>
+
+          <div className="wb-faction-editor">
+            <p className="wb-label">Cor da facção</p>
+            <div className="wb-color-grid">
+              {PLAYER_COLORS.map((color) => {
+                const takenByAnotherPlayer = players.some(
+                  (player) => !player.isMe && player.color === color.value,
+                );
+                const isCurrentColor = me.color === color.value;
+
+                return (
+                  <button
+                    key={color.value}
+                    type="button"
+                    title={
+                      takenByAnotherPlayer
+                        ? `${color.label} indisponível`
+                        : isCurrentColor
+                          ? `${color.label} selecionado`
+                          : color.label
+                    }
+                    aria-label={
+                      takenByAnotherPlayer
+                        ? `${color.label}, indisponível`
+                        : `${color.label}${isCurrentColor ? ", selecionado" : ""}`
+                    }
+                    disabled={isSaving || takenByAnotherPlayer || isCurrentColor}
+                    onClick={() => void updateMe({ color: color.value })}
+                    className="wb-color-choice"
+                    data-selected={isCurrentColor ? "true" : "false"}
+                  >
+                    <span
+                      className="wb-color-swatch"
+                      style={{ backgroundColor: color.hex }}
+                      aria-hidden="true"
+                    />
+                    {isCurrentColor ? (
+                      <span className="absolute -right-1 -top-1 grid h-4 w-4 place-items-center rounded-full bg-[var(--wb-gold)] text-[9px] font-black text-[var(--wb-text-dark)]">
+                        ✓
+                      </span>
+                    ) : takenByAnotherPlayer ? (
+                      <span className="absolute -right-1 -top-1 grid h-4 w-4 place-items-center rounded-full bg-black/55 text-[9px] text-white">
+                        ×
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-3 text-xs leading-5 text-[var(--wb-text-muted)]">
+              Alterar nome ou cor remove seu status de pronto.
+            </p>
           </div>
-          <p className="mt-3 text-xs leading-5 text-[#9eb8ae]">
-            Alterar a facção ou a cor remove o status de pronto.
-          </p>
+
+          {actionError ? (
+            <p className="wb-error mt-5" role="alert">
+              {actionError}
+            </p>
+          ) : null}
+        </aside>
+      </div>
+
+      <section className="wb-ready-rail" aria-label="Preparação da partida">
+        <div className="wb-shell-inner wb-ready-inner">
+          <div className="wb-ready-progress">
+            <div>
+              <p className="wb-section-title">
+                {allReady ? "Todos prontos" : `${readyPlayers} de ${players.length} prontos`}
+              </p>
+              <div className="wb-ready-progress-dots mt-2" aria-hidden="true">
+                {players.map((player) => (
+                  <span key={player.id} data-ready={player.isReady ? "true" : "false"} />
+                ))}
+              </div>
+            </div>
+            {allReady ? (
+              <span className="wb-status ml-auto sm:ml-2">
+                <span className="wb-diamond" aria-hidden="true" />
+                Preparando tabuleiro
+              </span>
+            ) : null}
+          </div>
+
+          <button
+            type="button"
+            disabled={isSaving || allReady}
+            onClick={() => void updateMe({ isReady: !me.isReady })}
+            className={`wb-button ${me.isReady ? "wb-button--secondary" : "wb-button--primary"}`}
+          >
+            {!me.isReady ? <span className="wb-diamond" aria-hidden="true" /> : null}
+            {allReady
+              ? "Preparando…"
+              : me.isReady
+                ? "Cancelar pronto"
+                : "Pronto para batalha"}
+          </button>
         </div>
-
-        <button
-          type="button"
-          disabled={isSaving}
-          onClick={() => void updateMe({ isReady: !me.isReady })}
-          className={`mt-7 flex h-13 w-full items-center justify-center rounded-xl text-xs font-bold uppercase tracking-[0.14em] transition disabled:opacity-60 ${
-            me.isReady
-              ? "bg-[#e4b94f] text-[#12392f] hover:bg-[#f1ca68]"
-              : "border border-white/18 bg-white text-[#12392f] hover:bg-[#f2eddf]"
-          }`}
-        >
-          {me.isReady ? "Pronto" : "Marcar como pronto"}
-        </button>
-
-        {actionError ? (
-          <p className="mt-4 rounded-xl bg-[#842f32]/35 px-3 py-2 text-sm text-[#ffd2c9]">
-            {actionError}
-          </p>
-        ) : null}
-      </aside>
-    </div>
+      </section>
+    </>
   );
 }
 
-function PlayerCard({ player }: { player: LobbyPlayer }) {
+function PlayerRow({ player, index }: { player: LobbyPlayer; index: number }) {
   const color = colorByValue(player.color);
 
   return (
-    <li className="flex items-center gap-3 rounded-2xl border border-[#17372d]/8 bg-white p-4">
-      <span
-        className="h-10 w-10 shrink-0 rounded-xl ring-4 ring-[#17372d]/5"
-        style={{ backgroundColor: color?.hex }}
-      />
-      <div className="min-w-0 flex-1">
+    <li className="wb-player-row" data-me={player.isMe ? "true" : "false"}>
+      <span className="wb-player-state">{String(index).padStart(2, "0")}</span>
+      <div className="min-w-0">
         <div className="flex items-center gap-2">
-          <p className="truncate font-semibold">{player.factionName}</p>
-          {player.isMe ? (
-            <span className="rounded-full bg-[#e6eee8] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-[#47725a]">
-              Você
-            </span>
-          ) : null}
+          <span
+            className="wb-player-color"
+            style={{ backgroundColor: color?.hex }}
+            aria-hidden="true"
+          />
+          <p className="wb-player-name">
+            {player.factionName}
+            {player.isMe ? " · você" : ""}
+          </p>
         </div>
-        <p className="mt-0.5 text-xs text-[#74847d]">{color?.label}</p>
+        <p className="wb-player-meta">{color?.label ?? "Facção"}</p>
       </div>
-      <span
-        className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${
-          player.isReady
-            ? "bg-[#e2f0e4] text-[#326347]"
-            : "bg-[#f2e9d7] text-[#8a6a27]"
-        }`}
-      >
-        {player.isReady ? "Pronto" : "Aguardando"}
+      <span className="wb-player-state" data-ready={player.isReady ? "true" : "false"}>
+        {player.isReady ? "✓ Pronto" : "• Preparando"}
       </span>
     </li>
   );
