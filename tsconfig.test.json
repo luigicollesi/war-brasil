@@ -11,6 +11,7 @@
   "include": [
     "src/lib/game-config.ts",
     "src/lib/game-rules.ts",
+    "src/lib/game-guide-presentation.ts",
     "src/lib/game-round-rules.ts",
     "src/lib/game-barrier-rules.ts",
     "src/lib/game-barrier-presentation.ts",
