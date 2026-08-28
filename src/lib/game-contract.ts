@@ -1,6 +1,9 @@
 import type { AttackMode } from "./game-barrier-rules";
 import type { CardSymbol } from "./game-config";
-import type { ResolvedEventEffect } from "./events/event-types";
+import type {
+  AppliedEventTroopChange,
+  ResolvedEventEffect,
+} from "./events/event-types";
 import type { PlayerColor } from "./lobby";
 import type { TerritoryConnection } from "./territory-connections";
 
@@ -67,7 +70,10 @@ export type GameCard = {
 
 export type ActiveGameEvent = {
   eventId: number;
+  name: string;
+  description: string;
   resolvedEffects: ResolvedEventEffect[];
+  appliedTroopChanges: AppliedEventTroopChange[];
 };
 
 export type GameSnapshot = {
