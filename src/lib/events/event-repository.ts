@@ -2,11 +2,12 @@ import "server-only";
 
 import type { PoolClient } from "pg";
 import {
-  EventConfigurationError,
   parseEventEffects,
+  parseResolvedEventEffects,
   type EventConnection,
   type GameEvent,
   type GameRoundEvent,
+  type ResolvedEventEffect,
 } from "./event-types";
 
 type EventRow = {
@@ -48,17 +49,11 @@ function mapConnection(row: EventConnectionRow): EventConnection {
 }
 
 function mapRoundEvent(row: GameRoundEventRow): GameRoundEvent {
-  if (!Array.isArray(row.resolved_effects)) {
-    throw new EventConfigurationError(
-      `Efeitos resolvidos inválidos na rodada ${row.round_number}.`,
-    );
-  }
-
   return {
     roomId: row.room_id,
     roundNumber: row.round_number,
     eventId: row.event_id,
-    resolvedEffects: row.resolved_effects,
+    resolvedEffects: parseResolvedEventEffects(row.resolved_effects),
     activatedAt: row.activated_at,
   };
 }
@@ -145,6 +140,27 @@ export async function getRecentRoomEventIds(
   return rows.map((row) => row.event_id);
 }
 
+export async function getRoomRoundEvent(
+  client: PoolClient,
+  roomId: string,
+  roundNumber: number,
+): Promise<GameRoundEvent | null> {
+  if (!Number.isInteger(roundNumber) || roundNumber < 1) {
+    throw new RangeError("A rodada do evento precisa ser um inteiro positivo.");
+  }
+
+  const row = (
+    await client.query<GameRoundEventRow>(
+      `SELECT room_id,round_number,event_id,resolved_effects,activated_at
+       FROM game_round_events
+       WHERE room_id=$1 AND round_number=$2`,
+      [roomId, roundNumber],
+    )
+  ).rows[0];
+
+  return row ? mapRoundEvent(row) : null;
+}
+
 export async function getLatestRoomEvent(
   client: PoolClient,
   roomId: string,
@@ -169,7 +185,7 @@ export async function recordRoundEvent(
     roomId: string;
     roundNumber: number;
     eventId: number;
-    resolvedEffects?: unknown[];
+    resolvedEffects?: ResolvedEventEffect[];
   },
 ): Promise<GameRoundEvent> {
   if (!Number.isInteger(input.roundNumber) || input.roundNumber < 1) {
