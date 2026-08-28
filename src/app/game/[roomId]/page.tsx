@@ -8,6 +8,7 @@ import "./game-interaction-fix.css";
 import "./game-safe-layout.css";
 import "./game-roads.css";
 import "./game-performance.css";
+import "./game-ui-refresh.css";
 
 type GamePageProps = {
   params: Promise<{ roomId: string }>;
@@ -22,7 +23,6 @@ export default async function GamePage({ params }: GamePageProps) {
 
   return (
     <main className="game-screen" aria-label="Partida War Brasil">
-      <style>{`.game-runtime > div > section:first-of-type span[class*="rounded-full"] { visibility: hidden; }`}</style>
       <div className="game-runtime">
         <RoadVisibilityProvider>
           <GameClient roomId={roomId} />
