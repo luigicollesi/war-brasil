@@ -215,6 +215,19 @@ function sameObjective(
   );
 }
 
+function sameRematch(
+  left: GameSnapshot["room"]["rematch"],
+  right: GameSnapshot["room"]["rematch"],
+) {
+  if (left === right) return true;
+  if (!left || !right) return false;
+  return (
+    left.voteCount === right.voteCount &&
+    left.requiredCount === right.requiredCount &&
+    left.hasVoted === right.hasVoted
+  );
+}
+
 function sameRoom(left: GameSnapshot["room"], right: GameSnapshot["room"]) {
   const leftPending = left.pendingConquest;
   const rightPending = right.pendingConquest;
@@ -240,6 +253,7 @@ function sameRoom(left: GameSnapshot["room"], right: GameSnapshot["room"]) {
     sameActiveEvent(left.activeEvent, right.activeEvent) &&
     left.reinforcementsRemaining === right.reinforcementsRemaining &&
     left.winnerPlayerId === right.winnerPlayerId &&
+    sameRematch(left.rematch, right.rematch) &&
     pendingEqual &&
     sameBattle(left.battle, right.battle)
   );
