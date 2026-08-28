@@ -9,7 +9,7 @@ function present(activeEvent, roundNumber = 4) {
   });
 }
 
-test("evento inicial é narrativo e não repete estado do mapa", () => {
+test("evento inicial apresenta a tropa inicial como benefício sem efeito mecânico factual", () => {
   const presentation = present(
     {
       eventId: 0,
@@ -25,7 +25,13 @@ test("evento inicial é narrativo e não repete estado do mapa", () => {
   assert.equal(presentation?.roundNumber, 1);
   assert.equal(presentation?.eyebrow, "ANOMALIA TEMPORAL");
   assert.equal(presentation?.title, "País em Prosperidade — Tudo Sob Controle");
-  assert.deepEqual(presentation?.effects, []);
+  assert.deepEqual(presentation?.effects, [
+    {
+      kind: "troops-added",
+      label: "+1 tropa",
+      primary: "Todos os territórios",
+    },
+  ]);
   assert.equal("tunnelMessage" in (presentation ?? {}), false);
   assert.equal("contextMessage" in (presentation ?? {}), false);
 });
