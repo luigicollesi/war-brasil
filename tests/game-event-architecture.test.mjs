@@ -30,6 +30,22 @@ test("migration de eventos é não destrutiva e compatível com catálogo já ex
   assert.doesNotMatch(migration, /DROP TABLE|TRUNCATE|DELETE FROM events|DELETE FROM event_connections/);
 });
 
+test("migration de validação reconhece o contrato canônico 38/195 sem exigir seed em banco vazio", () => {
+  const migration = readFileSync(
+    "src/lib/db/migrations/008-event-catalog-validation.sql",
+    "utf8",
+  );
+
+  assert.match(migration, /IF event_count = 0 THEN[\s\S]*RETURN/);
+  assert.match(migration, /event_count <> 38/);
+  assert.match(migration, /connection_count <> 195/);
+  assert.match(migration, /from_event = 0\) <> 10/);
+  assert.match(migration, /weight <> 1/);
+  assert.match(migration, /event_row\.id BETWEEN 1 AND 37/);
+  assert.match(migration, /\) <> 5/);
+  assert.match(migration, /weight NOT IN \(1, 2, 4\)/);
+});
+
 test("repository recebe PoolClient e não abre transações ou pools próprios", () => {
   const source = readFileSync("src/lib/events/event-repository.ts", "utf8");
 
