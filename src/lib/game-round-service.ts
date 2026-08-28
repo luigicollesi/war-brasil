@@ -77,6 +77,12 @@ export async function advanceGameRound(
     throw new RangeError("A rodada atual precisa ser um inteiro positivo.");
   }
 
+  if (input.previousJurassicTunnelDestinationId === null) {
+    throw new EventConfigurationError(
+      `A rodada ${input.currentRoundNumber} não possui Túnel Jurássico ativo.`,
+    );
+  }
+
   const nextRoundNumber = input.currentRoundNumber + 1;
   const jurassicTunnelDestinationId = nextTunnel(
     input.previousJurassicTunnelDestinationId,
