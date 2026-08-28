@@ -74,14 +74,14 @@ test("pips dos dados de combate preservam a cor da facção", () => {
   assert.match(polish, /A cor dos pips vem do jogador/);
 });
 
-test("rolagem de defesa mantém os dados de ataque estáticos", () => {
+test("rolagem de defesa mantém os dados de ataque estáticos por estado explícito", () => {
   const overlay = readFileSync("src/components/battle-overlay.tsx", "utf8");
-  const polish = readFileSync("src/app/game/[roomId]/game-polish.css", "utf8");
+  const die = readFileSync("src/components/game-die.tsx", "utf8");
 
-  assert.match(overlay, /battle\.stage === "show_defender_result"/);
-  assert.match(polish, /section:has\(> button\)/);
-  assert.match(polish, /:has\(> div:nth-child\(2\)\)/);
-  assert.match(polish, /> div:first-child \.dice-roll-animation/);
-  assert.match(polish, /animation: none !important/);
-  assert.match(polish, /transform: none !important/);
+  assert.match(overlay, /type BattleDisplaySide/);
+  assert.match(overlay, /rollingSide === "attack"/);
+  assert.match(overlay, /rollingSide === "defense"/);
+  assert.match(overlay, /rolling=\{attackRolling\}/);
+  assert.match(overlay, /rolling=\{defenseRolling\}/);
+  assert.match(die, /battle-die-roll-animation/);
 });
