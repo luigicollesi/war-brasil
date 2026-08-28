@@ -119,7 +119,21 @@ function resolvedEffectPresentations(
   }
 }
 
+function initialEventEffects(): TemporalAnomalyEffectPresentation[] {
+  return [
+    {
+      kind: "troops-added",
+      label: "+1 tropa",
+      primary: "Todos os territórios",
+    },
+  ];
+}
+
 function eventEffects(event: PresentableEvent) {
+  // O evento inicial apresenta a tropa com que cada território já nasce como
+  // benefício narrativo. A mecânica continua sem aplicar reforço adicional.
+  if (event.eventId === 0) return initialEventEffects();
+
   return [
     ...event.appliedTroopChanges.map(troopChange),
     ...event.resolvedEffects.flatMap(resolvedEffectPresentations),
