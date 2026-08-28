@@ -117,7 +117,8 @@ CREATE TABLE IF NOT EXISTS event_connections (
   to_event INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
   weight INTEGER NOT NULL CHECK (weight > 0),
   PRIMARY KEY (from_event, to_event),
-  CHECK (to_event <> 0)
+  CHECK (to_event <> 0),
+  CHECK (from_event <> to_event)
 );
 
 CREATE TABLE IF NOT EXISTS game_round_events (
