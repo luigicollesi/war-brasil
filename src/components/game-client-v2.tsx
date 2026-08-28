@@ -1,10 +1,12 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 import { BattleOverlay } from "@/src/components/battle-overlay";
 import { GameTurnPanel } from "@/src/components/game-turn-panel";
 import { GameUtilityBar } from "@/src/components/game-utility-bar";
+import { GameVictoryModal } from "@/src/components/game-victory-modal";
 import {
   InteractiveBoard,
   type BoardTerritory,
@@ -36,9 +38,16 @@ function colorHex(color: PlayerColor) {
 }
 
 export function GameClient({ roomId }: GameClientProps) {
+  const router = useRouter();
   const { snapshot, error, isLoading, refresh } = useGameSync(roomId);
   const [rollError, setRollError] = useState("");
   const [isRolling, setIsRolling] = useState(false);
+
+  useEffect(() => {
+    if (snapshot?.room.status === "waiting") {
+      router.replace(`/lobby/${snapshot.room.code}`);
+    }
+  }, [router, snapshot?.room.code, snapshot?.room.status]);
 
   if (isLoading && !snapshot) {
     return (
@@ -55,6 +64,14 @@ export function GameClient({ roomId }: GameClientProps) {
         role="alert"
       >
         {error || "Não foi possível carregar esta partida."}
+      </div>
+    );
+  }
+
+  if (snapshot.room.status === "waiting") {
+    return (
+      <div className="rounded-3xl border border-[#17372d]/10 bg-[#faf8f2] p-8 text-sm text-[#64756f]">
+        Voltando todos ao lobby…
       </div>
     );
   }
@@ -92,9 +109,13 @@ function GameReadyClient({
   isRolling: boolean;
   setIsRolling: (value: boolean) => void;
 }) {
+  const router = useRouter();
   const game = useMemo(() => buildGameViewModel(snapshot), [snapshot]);
   const interaction = useGameInteraction({ roomId, snapshot, game, refresh });
   const anomaly = useTemporalAnomaly(snapshot);
+  const [finishError, setFinishError] = useState("");
+  const [isVotingRematch, setIsVotingRematch] = useState(false);
+  const [isReturningToLobby, setIsReturningToLobby] = useState(false);
   const boardTerritories = useMemo<BoardTerritory[]>(
     () =>
       snapshot.territories.flatMap((territory) => {
@@ -150,6 +171,51 @@ function GameReadyClient({
       );
     } finally {
       window.setTimeout(() => setIsRolling(false), 850);
+    }
+  }
+
+  async function voteRematch() {
+    setFinishError("");
+    setIsVotingRematch(true);
+
+    try {
+      const result = await runGameCommand(
+        roomId,
+        "rematch",
+        undefined,
+        "Não foi possível registrar seu voto.",
+      );
+      await refresh(result.revision ?? undefined);
+    } catch (requestError) {
+      setFinishError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Não foi possível registrar seu voto.",
+      );
+    } finally {
+      setIsVotingRematch(false);
+    }
+  }
+
+  async function returnToLobby() {
+    setFinishError("");
+    setIsReturningToLobby(true);
+
+    try {
+      await runGameCommand(
+        roomId,
+        "return-lobby",
+        undefined,
+        "Não foi possível voltar ao lobby.",
+      );
+      router.replace(`/lobby/${snapshot.room.code}`);
+    } catch (requestError) {
+      setFinishError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Não foi possível voltar ao lobby.",
+      );
+      setIsReturningToLobby(false);
     }
   }
 
@@ -217,7 +283,7 @@ function GameReadyClient({
         onRefresh={refresh}
       />
 
-      {snapshot.room.battle ? (
+      {snapshot.room.status !== "finished" && snapshot.room.battle ? (
         <BattleOverlay
           roomId={roomId}
           battle={snapshot.room.battle}
@@ -231,6 +297,17 @@ function GameReadyClient({
         <TemporalAnomalyModal
           presentation={anomaly.presentation}
           onClose={anomaly.close}
+        />
+      ) : null}
+
+      {snapshot.room.status === "finished" ? (
+        <GameVictoryModal
+          snapshot={snapshot}
+          isVoting={isVotingRematch}
+          isReturningToLobby={isReturningToLobby}
+          error={finishError}
+          onVoteRematch={() => void voteRematch()}
+          onReturnToLobby={() => void returnToLobby()}
         />
       ) : null}
 
