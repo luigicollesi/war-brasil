@@ -15,7 +15,7 @@ import {
 } from "./event-selector";
 import {
   getEvent,
-  getLatestRoomEvent,
+  getRoomRoundEvent,
   getOutgoingEventConnections,
   getRecentRoomEventIds,
 } from "./event-repository";
@@ -31,11 +31,16 @@ export type NextRoomEventSelection = {
 export async function chooseNextRoomEvent(
   client: PoolClient,
   roomId: string,
+  currentRoundNumber: number,
 ): Promise<NextRoomEventSelection> {
-  const current = await getLatestRoomEvent(client, roomId);
+  const current = await getRoomRoundEvent(
+    client,
+    roomId,
+    currentRoundNumber,
+  );
   if (!current) {
     throw new EventConfigurationError(
-      "A partida ainda não possui um evento atual registrado.",
+      `A rodada ${currentRoundNumber} não possui evento atual registrado.`,
     );
   }
 
