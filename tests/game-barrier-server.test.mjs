@@ -30,13 +30,19 @@ test("structural sharing considera modo e nome da barreira como parte da batalha
   assert.match(sharing, /left\.barrierName === right\.barrierName/);
 });
 
-test("fronteira existente bloqueada vira ataque de barreira em vez de ser rejeitada", () => {
+test("fronteira efetiva bloqueada vira ataque de barreira em vez de ser rejeitada", () => {
   const combat = source("src/lib/game-combat-command-service.ts");
 
-  assert.match(combat, /if \(!tunnelActive && !connection\.exists\)/);
-  assert.match(combat, /attackModeForConnection\(tunnelActive, connection\.passable\)/);
-  assert.match(combat, /return tunnelActive \|\| passable \? "normal" : "barrier"/);
-  assert.doesNotMatch(combat, /if \(!tunnelActive && !connection\.passable\)/);
+  assert.match(combat, /getEffectiveGameTopology/);
+  assert.match(
+    combat,
+    /findTerritoryConnection\(\s*topology\.connections,\s*from,\s*to,?\s*\)/,
+  );
+  assert.match(combat, /if \(!connection\.exists\)/);
+  assert.match(combat, /connection\.passable \? "normal" : "barrier"/);
+  assert.doesNotMatch(combat, /getBaseTerritoryConnection/);
+  assert.doesNotMatch(combat, /isJurassicTunnelConnection/);
+  assert.doesNotMatch(combat, /if \(!connection\.passable\)/);
 });
 
 test("servidor usa attackProfile tanto para validar quanto para rolar dados", () => {
@@ -64,20 +70,32 @@ test("perdas do atacante multiplicam as comparações pelo perfil da barreira", 
 
 test("Túnel Jurássico continua sendo passagem normal mesmo sobre fronteira bloqueada", () => {
   const combat = source("src/lib/game-combat-command-service.ts");
+  const effective = source("src/lib/game-effective-connections.ts");
+  const connections = source("src/lib/territory-connections.ts");
 
-  assert.match(combat, /isJurassicTunnelConnection/);
-  assert.match(combat, /return tunnelActive \|\| passable \? "normal" : "barrier"/);
+  assert.match(combat, /getEffectiveGameTopology/);
+  assert.match(combat, /connection\.passable \? "normal" : "barrier"/);
+  assert.match(effective, /applyEventConnectionEffects/);
+  assert.match(effective, /effectiveTerritoryConnections\(/);
+  assert.ok(
+    effective.indexOf("applyEventConnectionEffects") <
+      effective.lastIndexOf("effectiveTerritoryConnections"),
+  );
+  assert.match(connections, /find\(\(connection\) => connection\.passable\)/);
 });
 
-test("manobra usa topologia completa e recalcula a melhor rota no servidor", () => {
+test("manobra usa topologia efetiva completa e recalcula a melhor rota no servidor", () => {
   const maneuver = source("src/lib/game-maneuver-command-service.ts");
 
-  assert.match(maneuver, /getBaseTerritoryConnections/);
-  assert.match(maneuver, /effectiveTerritoryConnections/);
+  assert.match(maneuver, /getEffectiveGameTopology/);
   assert.match(maneuver, /bestTerritoryRoute/);
+  assert.match(maneuver, /topology\.connections/);
   assert.match(maneuver, /maneuverTraversalProfile\(route\.barrierCount\)/);
+  assert.doesNotMatch(maneuver, /getBaseTerritoryConnections/);
+  assert.doesNotMatch(maneuver, /effectiveTerritoryConnections/);
   assert.doesNotMatch(maneuver, /getPassableTerritoryConnections/);
   assert.doesNotMatch(maneuver, /reachableTerritoryIds/);
+  assert.doesNotMatch(maneuver, /FROM territory_connections/);
 });
 
 test("manobra rejeita duas barreiras e exige duas tropas para uma travessia", () => {

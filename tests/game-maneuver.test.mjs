@@ -173,19 +173,22 @@ test("fluxo de manobra limpa a seleção depois de uma ação bem-sucedida", () 
   );
 });
 
-test("backend recalcula topologia completa e melhor rota própria antes de mover tropas", () => {
+test("backend recalcula topologia efetiva e melhor rota própria antes de mover tropas", () => {
   const source = readFileSync(
     "src/lib/game-maneuver-command-service.ts",
     "utf8",
   );
 
-  assert.match(source, /getBaseTerritoryConnections/);
-  assert.match(source, /effectiveTerritoryConnections\(/);
+  assert.match(source, /getEffectiveGameTopology/);
+  assert.match(source, /topology\.connections/);
   assert.match(source, /bestTerritoryRoute\(/);
   assert.match(source, /owned\.map\(\(territory\) => territory\.territory_id\)/);
   assert.match(source, /maneuverTraversalProfile\(route\.barrierCount\)/);
   assert.match(source, /maneuverMovableTroops\(/);
   assert.match(source, /const troopsArriving = troops - traversal\.troopLoss/);
+  assert.doesNotMatch(source, /getBaseTerritoryConnections/);
+  assert.doesNotMatch(source, /effectiveTerritoryConnections\(/);
   assert.doesNotMatch(source, /getPassableTerritoryConnections/);
   assert.doesNotMatch(source, /reachableTerritoryIds/);
+  assert.doesNotMatch(source, /FROM territory_connections/);
 });

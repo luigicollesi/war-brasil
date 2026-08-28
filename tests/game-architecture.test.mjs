@@ -172,21 +172,50 @@ test("indicador de conexão reutiliza o polling do jogo sem health check própri
   assert.match(sync, /recordFailure/);
 });
 
-test("topologia militar base é cacheada e reutilizada por snapshot e combate", () => {
+test("topologia base permanece cacheada e gameplay usa uma única topologia efetiva", () => {
   const topology = readFileSync("src/lib/game-topology-service.ts", "utf8");
-  const snapshot = readFileSync("src/lib/game-snapshot-service.ts", "utf8");
+  const effective = readFileSync(
+    "src/lib/game-effective-topology-service.ts",
+    "utf8",
+  );
   const combat = readFileSync("src/lib/game-combat-command-service.ts", "utf8");
+  const maneuver = readFileSync("src/lib/game-maneuver-command-service.ts", "utf8");
 
   assert.match(topology, /cachedTopology/);
   assert.match(topology, /loadingTopology/);
-  assert.match(topology, /getBaseTerritoryConnections/);
-  assert.match(topology, /getPassableTerritoryConnections/);
-  assert.match(topology, /getBaseTerritoryConnection/);
   assert.match(topology, /FROM territory_connections/);
-  assert.match(snapshot, /getBaseTerritoryConnections/);
-  assert.match(combat, /getBaseTerritoryConnection/);
-  assert.doesNotMatch(snapshot, /FROM territory_connections/);
+  assert.match(effective, /getBaseTerritoryConnections/);
+  assert.match(effective, /getRoomRoundEvent/);
+  assert.match(effective, /effectiveGameConnections/);
+  assert.match(combat, /getEffectiveGameTopology/);
+  assert.match(maneuver, /getEffectiveGameTopology/);
+  assert.doesNotMatch(combat, /getBaseTerritoryConnection|isJurassicTunnelConnection/);
+  assert.doesNotMatch(maneuver, /getBaseTerritoryConnections|effectiveTerritoryConnections/);
   assert.doesNotMatch(combat, /FROM territory_connections/);
+  assert.doesNotMatch(maneuver, /FROM territory_connections/);
+});
+
+test("efeitos permanentes só alteram tropas e nunca a topologia base", () => {
+  const source = readFileSync(
+    "src/lib/events/event-effects-service.ts",
+    "utf8",
+  );
+
+  assert.match(source, /UPDATE game_territories/);
+  assert.match(source, /GREATEST\(1,troops-\$3\)/);
+  assert.match(source, /LEAST\(moved_in_turn,GREATEST\(1,troops-\$3\)\)/);
+  assert.doesNotMatch(source, /UPDATE territory_connections/);
+});
+
+test("evento de gameplay é lido pela rodada exata e resolved_effects é validado", () => {
+  const repository = readFileSync(
+    "src/lib/events/event-repository.ts",
+    "utf8",
+  );
+
+  assert.match(repository, /export async function getRoomRoundEvent/);
+  assert.match(repository, /WHERE room_id=\$1 AND round_number=\$2/);
+  assert.match(repository, /parseResolvedEventEffects\(row\.resolved_effects\)/);
 });
 
 test("artefatos legados do fluxo de jogo não permanecem no projeto", () => {

@@ -41,6 +41,7 @@ function snapshot({
   currentPlayerId = "me",
   battle = null,
   turnNumber = 1,
+  activeEvent = null,
 } = {}) {
   return {
     room: {
@@ -55,6 +56,7 @@ function snapshot({
       turnNumber,
       roundNumber: 1,
       jurassicTunnelDestinationId: null,
+      activeEvent,
       reinforcementsRemaining: 0,
       winnerPlayerId: null,
       pendingConquest: null,
@@ -220,6 +222,21 @@ test("ataque mostra caveira em fronteira bloqueada e libera somente com quatro t
     minimumTroops: 4,
   });
   assert.equal(hintsFor(withFour, 1).targets[0].selectable, true);
+});
+
+test("BLOCK_ATTACK remove a origem do mapa e não oferece alvos", () => {
+  const gameSnapshot = snapshot({
+    phase: "attack",
+    territories: [territory(1, "me", 6), territory(2, "enemy", 4)],
+    connections: [connection(1, 2)],
+    activeEvent: {
+      eventId: 12,
+      resolvedEffects: [{ type: "BLOCK_ATTACK", territories: [1] }],
+    },
+  });
+
+  assert.deepEqual(hintsFor(gameSnapshot).available, []);
+  assert.deepEqual(hintsFor(gameSnapshot, 1).targets, []);
 });
 
 test("passagem normal paralela vence fronteira bloqueada no ataque", () => {

@@ -3,6 +3,8 @@ import "server-only";
 import type { PlayerColor } from "@/src/lib/lobby";
 import type { GameSnapshot } from "@/src/lib/game-contract";
 import { isBattle } from "@/src/lib/game-battle-service";
+import { getRoomRoundEventDetails } from "@/src/lib/events/event-repository";
+import { EventConfigurationError } from "@/src/lib/events/event-types";
 import { gameQuery } from "@/src/lib/game-query";
 import { getBaseTerritoryConnections } from "@/src/lib/game-topology-service";
 import { RoomError } from "@/src/lib/rooms";
@@ -223,6 +225,17 @@ export async function getGameSnapshotQuery(
         .filter((roll) => roll.roll_round === room.order_roll_round)
         .at(-1)?.player_id ?? null;
 
+    const roundEvent =
+      room.status === "order_roll"
+        ? null
+        : await getRoomRoundEventDetails(client, room.id, room.round_number);
+
+    if (room.status === "playing" && !roundEvent) {
+      throw new EventConfigurationError(
+        `Partida ${room.id} está ativa sem evento registrado na rodada ${room.round_number}.`,
+      );
+    }
+
     const connections = [...(await getBaseTerritoryConnections(client))];
 
     const snapshot: GameSnapshot = {
@@ -238,6 +251,15 @@ export async function getGameSnapshotQuery(
         turnNumber: room.turn_number,
         roundNumber: room.round_number,
         jurassicTunnelDestinationId: room.jurassic_tunnel_territory_id,
+        activeEvent: roundEvent
+          ? {
+              eventId: roundEvent.eventId,
+              name: roundEvent.name,
+              description: roundEvent.description,
+              resolvedEffects: roundEvent.resolvedEffects,
+              appliedTroopChanges: roundEvent.appliedTroopChanges,
+            }
+          : null,
         reinforcementsRemaining: room.reinforcements_remaining,
         winnerPlayerId: room.winner_player_id,
         pendingConquest:

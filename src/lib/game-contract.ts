@@ -1,5 +1,9 @@
 import type { AttackMode } from "./game-barrier-rules";
 import type { CardSymbol } from "./game-config";
+import type {
+  AppliedEventTroopChange,
+  ResolvedEventEffect,
+} from "./events/event-types";
 import type { PlayerColor } from "./lobby";
 import type { TerritoryConnection } from "./territory-connections";
 
@@ -64,6 +68,14 @@ export type GameCard = {
   symbol: CardSymbol | "wild";
 };
 
+export type ActiveGameEvent = {
+  eventId: number;
+  name: string;
+  description: string;
+  resolvedEffects: ResolvedEventEffect[];
+  appliedTroopChanges: AppliedEventTroopChange[];
+};
+
 export type GameSnapshot = {
   room: {
     id: string;
@@ -77,6 +89,7 @@ export type GameSnapshot = {
     turnNumber: number;
     roundNumber: number;
     jurassicTunnelDestinationId: number | null;
+    activeEvent: ActiveGameEvent | null;
     reinforcementsRemaining: number;
     winnerPlayerId: string | null;
     pendingConquest: {

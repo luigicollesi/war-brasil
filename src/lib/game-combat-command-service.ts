@@ -12,16 +12,17 @@ import {
 } from "@/src/lib/game-battle-service";
 import { attackProfile, type AttackMode } from "@/src/lib/game-barrier-rules";
 import { gameCommand } from "@/src/lib/game-command";
-import { TERRITORY_METADATA } from "@/src/lib/game-config";
+import { isAttackOriginBlocked } from "@/src/lib/events/event-attack-rules";
+import { getEffectiveGameTopology } from "@/src/lib/game-effective-topology-service";
 import { resolveBattle } from "@/src/lib/game-rules";
-import { getBaseTerritoryConnection } from "@/src/lib/game-topology-service";
-import { isJurassicTunnelConnection } from "@/src/lib/territory-connections";
+import { findTerritoryConnection } from "@/src/lib/territory-connections";
 import { RoomError } from "@/src/lib/rooms";
 
 type CombatRoom = BattleRoomState & {
   status: "order_roll" | "playing" | "finished";
   phase: string;
   current_player_id: string | null;
+  round_number: number;
   jurassic_tunnel_territory_id: number | null;
 };
 
@@ -51,8 +52,9 @@ function positiveInteger(value: unknown, message: string) {
 
 async function loadRoom(client: PoolClient, roomId: string) {
   const result = await client.query<CombatRoom>(
-    `SELECT id,status,phase,current_player_id,jurassic_tunnel_territory_id,
-            pending_from_territory_id,pending_to_territory_id,last_battle
+    `SELECT id,status,phase,current_player_id,round_number,
+            jurassic_tunnel_territory_id,pending_from_territory_id,
+            pending_to_territory_id,last_battle
      FROM game_rooms
      WHERE id=$1`,
     [roomId],
@@ -99,35 +101,6 @@ function assertAttackTurn(room: CombatRoom, player: CombatPlayer) {
   }
 }
 
-function chooseJurassicTunnelDestination(previous: number | null) {
-  const candidates = Object.keys(TERRITORY_METADATA)
-    .map(Number)
-    .filter(
-      (territoryId) =>
-        territoryId !== 1 && territoryId !== 3 && territoryId !== previous,
-    );
-
-  return candidates[randomInt(0, candidates.length)];
-}
-
-async function ensureJurassicTunnel(client: PoolClient, room: CombatRoom) {
-  if (room.status !== "playing" || room.jurassic_tunnel_territory_id) return;
-
-  const destination = chooseJurassicTunnelDestination(null);
-  await client.query(
-    "UPDATE game_rooms SET jurassic_tunnel_territory_id=$2 WHERE id=$1",
-    [room.id, destination],
-  );
-  room.jurassic_tunnel_territory_id = destination;
-}
-
-function attackModeForConnection(
-  tunnelActive: boolean,
-  passable: boolean,
-): AttackMode {
-  return tunnelActive || passable ? "normal" : "barrier";
-}
-
 export async function attackCommand(
   value: string,
   session: string,
@@ -149,7 +122,6 @@ export async function attackCommand(
     assertAttackTurn(room, player);
 
     await advanceBattlePresentation(client, room);
-    await ensureJurassicTunnel(client, room);
 
     if (isBattle(room.last_battle)) {
       throw new RoomError("Aguarde a resolução do combate atual.", 409, {
@@ -168,14 +140,22 @@ export async function attackCommand(
       );
     }
 
-    const tunnelActive = isJurassicTunnelConnection(
-      room.jurassic_tunnel_territory_id,
-      from,
-      to,
-    );
-    const connection = await getBaseTerritoryConnection(client, from, to);
+    const topology = await getEffectiveGameTopology(client, {
+      roomId: room.id,
+      roundNumber: room.round_number,
+      jurassicTunnelDestinationId: room.jurassic_tunnel_territory_id,
+    });
 
-    if (!tunnelActive && !connection.exists) {
+    if (isAttackOriginBlocked(topology.resolvedEventEffects, from)) {
+      throw new RoomError(
+        "Este território não pode iniciar ataques durante a anomalia atual.",
+        409,
+        { fromTerritoryId: from, eventId: topology.eventId },
+      );
+    }
+
+    const connection = findTerritoryConnection(topology.connections, from, to);
+    if (!connection.exists) {
       throw new RoomError(
         "Os territórios não possuem fronteira militar.",
         422,
@@ -183,7 +163,7 @@ export async function attackCommand(
       );
     }
 
-    const attackMode = attackModeForConnection(tunnelActive, connection.passable);
+    const attackMode: AttackMode = connection.passable ? "normal" : "barrier";
 
     const rows = (
       await client.query<LockedTerritory>(

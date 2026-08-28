@@ -1,17 +1,18 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import { effectiveGameConnections } from "../.test-build/game-effective-connections.js";
 import {
   effectiveTerritoryConnections,
 } from "../.test-build/territory-connections.js";
 
-function connection(territoryA, territoryB) {
+function connection(territoryA, territoryB, passable = true, barrierName = null) {
   return {
     territoryA,
     territoryB,
     exists: true,
-    passable: true,
-    barrierName: null,
+    passable,
+    barrierName,
     description: null,
   };
 }
@@ -71,16 +72,45 @@ test("sem destino jurássico a topologia efetiva contém somente a base", () => 
   assert.notEqual(effectiveConnections, baseConnections);
 });
 
-test("snapshot transporta somente a topologia base", () => {
+test("evento altera cópia da topologia cacheada antes de adicionar o túnel", () => {
+  const baseConnections = [
+    connection(3, 20, true),
+    connection(20, 21, false, "Serra"),
+  ];
+  const originalBase = structuredClone(baseConnections);
+  const effective = effectiveGameConnections(
+    baseConnections,
+    [
+      { type: "BLOCK_CONNECTIONS", connections: [[3, 20]] },
+      { type: "OPEN_CONNECTIONS", connections: [[20, 21]] },
+    ],
+    20,
+  );
+
+  assert.deepEqual(baseConnections, originalBase);
+  assert.equal(
+    effective.some(
+      (item) =>
+        item.territoryA === 20 && item.territoryB === 21 && item.passable,
+    ),
+    true,
+  );
+  assert.equal(hasTunnelTo(effective, 20), true);
+});
+
+test("snapshot transporta somente a topologia base e os efeitos resolvidos separadamente", () => {
   const source = readFileSync("src/lib/game-snapshot-service.ts", "utf8");
 
   assert.match(source, /getBaseTerritoryConnections/);
+  assert.match(source, /getRoomRoundEvent/);
+  assert.match(source, /activeEvent: roundEvent/);
+  assert.match(source, /resolvedEffects: roundEvent\.resolvedEffects/);
   assert.match(source, /jurassicTunnelDestinationId: room\.jurassic_tunnel_territory_id/);
   assert.doesNotMatch(source, /jurassicTunnelConnection/);
-  assert.doesNotMatch(source, /connections\.push\(tunnelConnection\)/);
+  assert.doesNotMatch(source, /effectiveGameConnections/);
 });
 
-test("cliente cacheia base e hidrata o túnel a partir do snapshot atual", () => {
+test("cliente cacheia base e hidrata evento mais túnel a partir do snapshot atual", () => {
   const sync = readFileSync("src/hooks/use-game-sync.ts", "utf8");
   const hydration = readFileSync(
     "src/lib/game-snapshot-hydration.ts",
@@ -94,7 +124,8 @@ test("cliente cacheia base e hidrata o túnel a partir do snapshot atual", () =>
   );
   assert.match(sync, /hydrateGameSnapshot\(payload, baseConnections\)/);
   assert.doesNotMatch(sync, /topologyConnectionsRef/);
-  assert.match(hydration, /effectiveTerritoryConnections\(/);
+  assert.match(hydration, /effectiveGameConnections\(/);
+  assert.match(hydration, /payload\.room\.activeEvent\?\.resolvedEffects/);
   assert.match(hydration, /payload\.room\.jurassicTunnelDestinationId/);
 });
 

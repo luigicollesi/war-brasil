@@ -5,6 +5,12 @@ import type {
   GameSnapshot,
   GameTerritory,
 } from "./game-contract";
+import type {
+  AppliedEventTroopChange,
+  ResolvedBarrierMove,
+  ResolvedEventEffect,
+  TerritoryConnectionPair,
+} from "./events/event-types";
 import type { TerritoryConnection } from "./territory-connections";
 
 function sameArray<T>(
@@ -24,6 +30,108 @@ function sameNumbers(left: readonly number[], right: readonly number[]) {
 
 function sameStrings(left: readonly string[], right: readonly string[]) {
   return sameArray(left, right, (a, b) => a === b);
+}
+
+function samePair(left: TerritoryConnectionPair, right: TerritoryConnectionPair) {
+  return left[0] === right[0] && left[1] === right[1];
+}
+
+function sameBarrierMove(left: ResolvedBarrierMove, right: ResolvedBarrierMove) {
+  return (
+    left.anchorTerritoryId === right.anchorTerritoryId &&
+    samePair(left.from, right.from) &&
+    samePair(left.to, right.to) &&
+    left.barrierName === right.barrierName &&
+    left.description === right.description
+  );
+}
+
+function sameResolvedEventEffect(
+  left: ResolvedEventEffect,
+  right: ResolvedEventEffect,
+) {
+  if (left.type !== right.type) return false;
+
+  switch (left.type) {
+    case "ADD_TROOPS":
+      return (
+        right.type === "ADD_TROOPS" &&
+        left.amount === right.amount &&
+        sameNumbers(left.territories, right.territories)
+      );
+    case "REMOVE_TROOPS":
+      return (
+        right.type === "REMOVE_TROOPS" &&
+        left.amount === right.amount &&
+        sameNumbers(left.territories, right.territories)
+      );
+    case "BLOCK_ATTACK":
+      return (
+        right.type === "BLOCK_ATTACK" &&
+        sameNumbers(left.territories, right.territories)
+      );
+    case "OPEN_CONNECTIONS":
+      return (
+        right.type === "OPEN_CONNECTIONS" &&
+        sameArray(left.connections, right.connections, samePair)
+      );
+    case "BLOCK_CONNECTIONS":
+      return (
+        right.type === "BLOCK_CONNECTIONS" &&
+        sameArray(left.connections, right.connections, samePair)
+      );
+    case "RANDOM_OPEN_CONNECTIONS":
+      return (
+        right.type === "RANDOM_OPEN_CONNECTIONS" &&
+        sameArray(left.connections, right.connections, samePair)
+      );
+    case "RANDOM_BLOCK_CONNECTIONS":
+      return (
+        right.type === "RANDOM_BLOCK_CONNECTIONS" &&
+        sameArray(left.connections, right.connections, samePair)
+      );
+    case "RANDOM_TOGGLE_CONNECTIONS":
+      return (
+        right.type === "RANDOM_TOGGLE_CONNECTIONS" &&
+        sameArray(left.moves, right.moves, sameBarrierMove)
+      );
+  }
+}
+
+function sameAppliedTroopChange(
+  left: AppliedEventTroopChange,
+  right: AppliedEventTroopChange,
+) {
+  return (
+    left.type === right.type &&
+    left.territoryId === right.territoryId &&
+    left.beforeTroops === right.beforeTroops &&
+    left.afterTroops === right.afterTroops &&
+    left.delta === right.delta
+  );
+}
+
+function sameActiveEvent(
+  left: GameSnapshot["room"]["activeEvent"],
+  right: GameSnapshot["room"]["activeEvent"],
+) {
+  if (left === right) return true;
+  if (!left || !right) return false;
+  return (
+    left.eventId === right.eventId &&
+    left.name === right.name &&
+    left.description === right.description &&
+    sameArray(
+      left.resolvedEffects,
+      right.resolvedEffects,
+      sameResolvedEventEffect,
+    ) &&
+    sameArray(
+      left.appliedTroopChanges,
+      right.appliedTroopChanges,
+      sameAppliedTroopChange,
+    )
+  );
 }
 
 function sameBattle(left: GameBattle | null, right: GameBattle | null) {
@@ -129,6 +237,7 @@ function sameRoom(left: GameSnapshot["room"], right: GameSnapshot["room"]) {
     left.turnNumber === right.turnNumber &&
     left.roundNumber === right.roundNumber &&
     left.jurassicTunnelDestinationId === right.jurassicTunnelDestinationId &&
+    sameActiveEvent(left.activeEvent, right.activeEvent) &&
     left.reinforcementsRemaining === right.reinforcementsRemaining &&
     left.winnerPlayerId === right.winnerPlayerId &&
     pendingEqual &&

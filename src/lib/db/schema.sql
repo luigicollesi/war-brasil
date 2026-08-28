@@ -103,3 +103,35 @@ CREATE TABLE IF NOT EXISTS game_cards (
          (NOT is_wild AND territory_id IS NOT NULL AND symbol IS NOT NULL)),
   UNIQUE (room_id, territory_id)
 );
+
+CREATE TABLE IF NOT EXISTS events (
+  id INTEGER PRIMARY KEY CHECK (id >= 0),
+  name TEXT NOT NULL,
+  description TEXT NOT NULL,
+  effects JSONB NOT NULL DEFAULT '[]'::jsonb
+    CHECK (jsonb_typeof(effects) = 'array')
+);
+
+CREATE TABLE IF NOT EXISTS event_connections (
+  from_event INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  to_event INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+  weight INTEGER NOT NULL CHECK (weight > 0),
+  PRIMARY KEY (from_event, to_event),
+  CHECK (to_event <> 0),
+  CHECK (from_event <> to_event)
+);
+
+CREATE TABLE IF NOT EXISTS game_round_events (
+  room_id BIGINT NOT NULL REFERENCES game_rooms(id) ON DELETE CASCADE,
+  round_number INTEGER NOT NULL CHECK (round_number >= 1),
+  event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE RESTRICT,
+  resolved_effects JSONB NOT NULL DEFAULT '[]'::jsonb
+    CHECK (jsonb_typeof(resolved_effects) = 'array'),
+  applied_troop_changes JSONB NOT NULL DEFAULT '[]'::jsonb
+    CHECK (jsonb_typeof(applied_troop_changes) = 'array'),
+  activated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (room_id, round_number)
+);
+
+CREATE INDEX IF NOT EXISTS game_round_events_event_id_idx
+  ON game_round_events(event_id);
