@@ -3,6 +3,7 @@ import "server-only";
 import { randomInt } from "node:crypto";
 import type { PoolClient } from "pg";
 import { getBaseTerritoryConnections } from "../game-topology-service";
+import { JURASSIC_TUNNEL_SOURCE_ID } from "../game-round-rules";
 import {
   canonicalTerritoryConnectionPair,
   type EventEffect,
@@ -10,8 +11,6 @@ import {
   type TerritoryConnectionPair,
 } from "./event-types";
 import { resolveEventEffects } from "./event-resolver";
-
-const JURASSIC_TUNNEL_SOURCE_ID = 3;
 
 function protectedJurassicConnection(
   destinationTerritoryId: number | null,
