@@ -96,8 +96,15 @@ export function MapZoomController() {
       const bindSvg = () => {
         detachSvg();
 
-        const svg = board.contentDocument?.documentElement as SVGSVGElement | null;
-        if (!svg || svg.tagName.toLowerCase() !== "svg") return;
+        const root = board.contentDocument?.documentElement;
+        if (
+          !root ||
+          root.tagName.toLowerCase() !== "svg" ||
+          root.namespaceURI !== "http://www.w3.org/2000/svg"
+        ) {
+          return;
+        }
+        const svg = root as unknown as SVGSVGElement;
 
         svg.style.touchAction = "none";
         svg.style.userSelect = "none";
