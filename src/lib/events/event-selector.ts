@@ -29,6 +29,11 @@ function assertConnectionSet(connections: readonly EventConnection[]) {
         "O selector recebeu conexões de eventos de origem diferentes.",
       );
     }
+    if (connection.fromEvent === connection.toEvent) {
+      throw new EventConfigurationError(
+        `Evento ${connection.fromEvent} não pode apontar para si próprio.`,
+      );
+    }
     if (!Number.isSafeInteger(connection.weight) || connection.weight <= 0) {
       throw new EventConfigurationError(
         "Peso de conexão de evento precisa ser um inteiro positivo.",
