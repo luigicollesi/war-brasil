@@ -1,73 +1,62 @@
 import type { Metadata } from "next";
 import { CreateRoomButton } from "@/src/components/create-room-button";
 import { JoinRoomForm } from "@/src/components/join-room-form";
-import { SiteHeader } from "@/src/components/site-header";
+import { WarShell } from "@/src/components/war-shell";
 
 export const metadata: Metadata = {
-  title: "Encontrar partida",
+  title: "Central de Operações",
 };
 
 export default function MatchmakingPage() {
   return (
-    <div className="min-h-screen bg-[#f3f0e8] text-[#14241f]">
-      <SiteHeader />
-
-      <main className="mx-auto max-w-6xl px-6 py-14 lg:px-10 lg:py-20">
-        <div className="max-w-2xl">
-          <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#a67c18]">
-            Preparar partida
-          </p>
-          <h1 className="mt-4 text-4xl font-semibold tracking-[-0.04em] sm:text-5xl">
-            Escolha como entrar no mapa.
-          </h1>
-          <p className="mt-4 max-w-xl leading-7 text-[#64756f]">
-            Crie uma sala para convidar seus amigos ou use um código existente.
-            Nesta versão inicial, os dados da partida são demonstrativos.
+    <WarShell
+      backHref="/"
+      backLabel="Início"
+      title="Central de Operações"
+    >
+      <main className="wb-shell-inner wb-page">
+        <div>
+          <p className="wb-kicker">Preparar partida</p>
+          <h1 className="wb-page-title">Como você quer entrar na disputa?</h1>
+          <p className="wb-page-lead">
+            Crie uma nova sala para reunir seus aliados ou entre diretamente com
+            o código compartilhado pelo anfitrião.
           </p>
         </div>
 
-        <div className="mt-12 grid gap-6 lg:grid-cols-2">
-          <section className="group relative overflow-hidden rounded-3xl bg-[#12392f] p-7 text-white shadow-[0_18px_50px_rgba(19,57,47,0.16)] sm:p-9">
-            <div className="absolute -right-16 -top-16 h-52 w-52 rounded-full border-[36px] border-white/5" />
-            <div className="relative">
-              <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#e4b94f] text-xl text-[#12392f]">
-                +
-              </span>
-              <p className="mt-10 text-xs font-bold uppercase tracking-[0.2em] text-[#9eb8ae]">
-                Nova sala
+        <div className="wb-matchmaking-grid">
+          <section className="wb-matchmaking-action" aria-labelledby="create-room-title">
+            <div>
+              <p className="wb-kicker">Nova partida</p>
+              <h2 id="create-room-title">Criar uma sala</h2>
+              <p>
+                Abra uma nova operação e prepare uma partida para até seis
+                jogadores.
               </p>
-              <h2 className="mt-3 text-3xl font-semibold tracking-[-0.03em]">
-                Criar uma partida
-              </h2>
-              <p className="mt-3 max-w-md leading-7 text-[#b9ccc4]">
-                Abra uma sala de demonstração e veja o tabuleiro interativo.
-              </p>
-              <CreateRoomButton />
+              <div className="mt-5 flex items-center gap-3 text-[10px] font-extrabold uppercase tracking-[0.12em] text-[var(--wb-text-muted)]">
+                <span>2–6 jogadores</span>
+                <span className="wb-diamond" aria-hidden="true" />
+                <span>Mapa completo</span>
+              </div>
             </div>
+            <CreateRoomButton />
           </section>
 
-          <section className="rounded-3xl border border-[#17372d]/10 bg-[#faf8f2] p-7 shadow-[0_18px_50px_rgba(42,55,50,0.07)] sm:p-9">
-            <span className="grid h-12 w-12 place-items-center rounded-2xl bg-[#e5dfd0] text-lg text-[#173f34]">
-              #
-            </span>
-            <p className="mt-10 text-xs font-bold uppercase tracking-[0.2em] text-[#8b7a4a]">
-              Sala existente
-            </p>
-            <h2 className="mt-3 text-3xl font-semibold tracking-[-0.03em]">
-              Entrar com código
-            </h2>
-            <p className="mt-3 leading-7 text-[#64756f]">
-              Digite o identificador compartilhado pelo criador da sala.
-            </p>
+          <div className="wb-matchmaking-separator" aria-hidden="true" />
+
+          <section className="wb-matchmaking-action" aria-labelledby="join-room-title">
+            <div>
+              <p className="wb-kicker">Sala existente</p>
+              <h2 id="join-room-title">Entrar com código</h2>
+              <p>
+                Use o identificador da sala para entrar imediatamente na mesma
+                preparação de partida dos outros jogadores.
+              </p>
+            </div>
             <JoinRoomForm />
           </section>
         </div>
-
-        <p className="mt-8 flex items-center gap-2 text-sm text-[#7b8984]">
-          <span className="h-2 w-2 rounded-full bg-[#d5a937]" />
-          Matchmaking, autenticação e tempo real serão conectados em etapas futuras.
-        </p>
       </main>
-    </div>
+    </WarShell>
   );
 }
