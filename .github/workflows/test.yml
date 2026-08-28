@@ -3,14 +3,10 @@ name: Test
 on:
   pull_request:
     branches:
-      - feat/event-system-phase-1
-      - feat/event-system-phase-2
-      - feat/event-system-phase-3
+      - main
   push:
     branches:
-      - feat/event-system-phase-2
-      - feat/event-system-phase-3
-      - feat/event-system-phase-4
+      - main
 
 jobs:
   test:
