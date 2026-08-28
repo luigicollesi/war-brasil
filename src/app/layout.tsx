@@ -1,10 +1,17 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Barlow_Condensed, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
+import "./war-identity.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const interfaceFont = Inter({
+  variable: "--font-wb-ui",
   subsets: ["latin"],
+});
+
+const displayFont = Barlow_Condensed({
+  variable: "--font-wb-display",
+  subsets: ["latin"],
+  weight: ["600", "700", "800"],
 });
 
 const geistMono = Geist_Mono({
@@ -25,9 +32,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="pt-BR"
       data-scroll-behavior="smooth"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${interfaceFont.variable} ${displayFont.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full">{children}</body>
+      <body className="min-h-full font-[var(--font-wb-ui)]">{children}</body>
     </html>
   );
 }
