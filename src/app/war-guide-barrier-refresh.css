@@ -1,0 +1,213 @@
+.wb-guide-barrier-visual {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  max-width: 680px;
+  margin-inline: auto;
+}
+
+.wb-guide-barrier-visual > .wb-guide-label {
+  grid-column: 1 / -1;
+  margin: 0 0 16px;
+}
+
+.wb-guide-barrier-row {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+  padding: 16px 22px 8px 0;
+  border: 0;
+}
+
+.wb-guide-barrier-row--danger {
+  padding-right: 0;
+  padding-left: 22px;
+  border-left: 1px solid var(--wb-border-neutral);
+}
+
+.wb-guide-barrier-row--warning {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: 92px minmax(150px, 1fr) minmax(170px, .8fr);
+  align-items: center;
+  gap: 16px;
+  margin-top: 22px;
+  padding: 24px 0 0;
+  border-top: 1px solid var(--wb-border-neutral);
+}
+
+.wb-guide-barrier-row > strong {
+  color: var(--wb-text-soft);
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: .96rem;
+  font-weight: 750;
+  letter-spacing: .08em;
+}
+
+.wb-guide-barrier-row:first-of-type > strong {
+  font-size: 0;
+}
+
+.wb-guide-barrier-row:first-of-type > strong::after {
+  content: "Sem barreira";
+  font-size: .96rem;
+}
+
+.wb-guide-barrier-row--danger > strong {
+  font-size: 0;
+}
+
+.wb-guide-barrier-row--danger > strong::after {
+  content: "Com barreira";
+  font-size: .96rem;
+}
+
+.wb-guide-barrier-row small {
+  grid-column: auto;
+  max-width: 27ch;
+  color: var(--wb-text-muted);
+  font-size: .82rem;
+  line-height: 1.42;
+}
+
+.wb-guide-barrier-row--danger small {
+  color: #f0a89c;
+}
+
+.wb-guide-barrier-row--warning small {
+  color: #e2bd75;
+}
+
+.wb-guide-barrier-line {
+  display: flex;
+  width: 100%;
+  max-width: 250px;
+  align-items: center;
+}
+
+.wb-guide-barrier-row--warning .wb-guide-barrier-line {
+  max-width: none;
+}
+
+.wb-guide-barrier-line > span {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border: 2px solid rgba(203, 224, 214, .72);
+  border-radius: 50%;
+  background: #0b493a;
+  box-shadow: inset 0 0 0 4px rgba(4, 17, 13, .42);
+}
+
+.wb-guide-barrier-line > i {
+  position: relative;
+  display: grid;
+  height: 2px;
+  flex: 1;
+  place-items: center;
+  background: linear-gradient(90deg, rgba(214, 169, 62, .42), var(--wb-gold), rgba(214, 169, 62, .42));
+}
+
+.wb-guide-barrier-line b {
+  position: relative;
+  display: grid;
+  width: 25px;
+  height: 25px;
+  place-items: center;
+  border: 0;
+  background: var(--wb-bg);
+  color: transparent;
+  font-size: 0;
+  font-style: normal;
+}
+
+.wb-guide-barrier-line b::before {
+  content: "";
+  width: 11px;
+  height: 11px;
+  border: 2px solid var(--wb-warning);
+  background: rgba(216, 154, 58, .15);
+  transform: rotate(45deg);
+  box-shadow: 0 0 0 4px var(--wb-bg);
+}
+
+.wb-guide-barrier-row:first-of-type .wb-guide-barrier-line::after,
+.wb-guide-barrier-row--danger .wb-guide-barrier-line::after {
+  position: absolute;
+  top: 38px;
+  right: 0;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: .66rem;
+  font-weight: 850;
+  letter-spacing: .06em;
+}
+
+.wb-guide-barrier-row:first-of-type .wb-guide-barrier-line::after {
+  content: "−1";
+  background: rgba(255, 255, 255, .06);
+  color: var(--wb-text-soft);
+}
+
+.wb-guide-barrier-row--danger .wb-guide-barrier-line::after {
+  content: "−3";
+  background: rgba(216, 92, 74, .12);
+  color: #f0a89c;
+}
+
+.wb-guide-barrier-row:first-of-type,
+.wb-guide-barrier-row--danger {
+  padding-bottom: 34px;
+}
+
+.wb-guide-barrier-row:first-of-type small,
+.wb-guide-barrier-row--danger small {
+  margin-top: 2px;
+}
+
+.wb-guide-barrier-row--warning > strong::after {
+  content: " · movimento";
+  color: var(--wb-text-muted);
+  font-family: var(--font-wb-ui), sans-serif;
+  font-size: .68rem;
+  font-weight: 700;
+  letter-spacing: .02em;
+  text-transform: none;
+}
+
+@media (max-width: 700px) {
+  .wb-guide-barrier-visual {
+    grid-template-columns: 1fr;
+  }
+
+  .wb-guide-barrier-row,
+  .wb-guide-barrier-row--danger {
+    padding: 14px 0 30px;
+  }
+
+  .wb-guide-barrier-row--danger {
+    border-top: 1px solid var(--wb-border-neutral);
+    border-left: 0;
+    padding-top: 22px;
+  }
+
+  .wb-guide-barrier-row--warning {
+    grid-column: 1;
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-top: 4px;
+    padding-top: 22px;
+  }
+
+  .wb-guide-barrier-line,
+  .wb-guide-barrier-row--warning .wb-guide-barrier-line {
+    max-width: 310px;
+  }
+
+  .wb-guide-barrier-row small {
+    max-width: 34ch;
+  }
+}
