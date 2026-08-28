@@ -16,12 +16,15 @@ test("modal recebe modelo de apresentação e não interpreta efeitos mecânicos
   );
 });
 
-test("controller visual identifica anomalia por rodada e evento e não persiste acknowledgment", () => {
+test("controller visual deriva abertura pela chave atual sem setState em effect", () => {
   const source = readFileSync("src/hooks/use-temporal-anomaly.ts", "utf8");
 
-  assert.match(source, /lastPresentedKey/);
   assert.match(source, /presentation\.key/);
-  assert.match(source, /setOpenKey\(presentation\.key\)/);
+  assert.match(source, /dismissedKey/);
+  assert.match(source, /dismissedKey !== activeKey/);
+  assert.match(source, /setDismissedKey\(activeKey\)/);
+  assert.match(source, /setDismissedKey\(null\)/);
+  assert.doesNotMatch(source, /useEffect|lastPresentedKey|setOpenKey/);
   assert.doesNotMatch(source, /localStorage|sessionStorage|document\.cookie/);
 });
 
