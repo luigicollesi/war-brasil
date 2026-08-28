@@ -3,7 +3,7 @@ import "server-only";
 import { randomInt } from "node:crypto";
 import type { PoolClient } from "pg";
 import { gameCommand } from "@/src/lib/game-command";
-import { TERRITORY_METADATA } from "@/src/lib/game-config";
+import { advanceGameRound } from "@/src/lib/game-round-service";
 import { reinforcementFor } from "@/src/lib/game-rules";
 import { RoomError } from "@/src/lib/rooms";
 
@@ -13,6 +13,7 @@ type CommandRoom = {
   order_roll_round: number;
   phase: string;
   current_player_id: string | null;
+  round_number: number;
   jurassic_tunnel_territory_id: number | null;
   conquered_this_turn: boolean;
   pending_from_territory_id: number | null;
@@ -43,7 +44,7 @@ function normalizeRoomId(value: string) {
 
 async function loadRoom(client: PoolClient, roomId: string) {
   const result = await client.query<CommandRoom>(
-    `SELECT id,status,order_roll_round,phase,current_player_id,
+    `SELECT id,status,order_roll_round,phase,current_player_id,round_number,
             jurassic_tunnel_territory_id,conquered_this_turn,
             pending_from_territory_id,last_battle
      FROM game_rooms
@@ -94,33 +95,6 @@ function assertTurn(
       requestPlayerId: player.id,
     });
   }
-}
-
-function chooseJurassicTunnelDestination(previous: number | null) {
-  const candidates = Object.keys(TERRITORY_METADATA)
-    .map(Number)
-    .filter(
-      (territoryId) =>
-        territoryId !== 1 && territoryId !== 3 && territoryId !== previous,
-    );
-
-  return candidates[randomInt(0, candidates.length)];
-}
-
-async function advanceJurassicTunnelRound(
-  client: PoolClient,
-  room: CommandRoom,
-) {
-  const destination = chooseJurassicTunnelDestination(
-    room.jurassic_tunnel_territory_id,
-  );
-
-  await client.query(
-    `UPDATE game_rooms
-     SET round_number=round_number+1,jurassic_tunnel_territory_id=$2
-     WHERE id=$1`,
-    [room.id, destination],
-  );
 }
 
 async function beginReinforcement(
@@ -379,14 +353,22 @@ export async function phaseCommand(
       throw new RoomError("Não há próximo jogador ativo.", 409);
     }
 
-    if ((next.turn_position ?? 0) <= (player.turn_position ?? 0)) {
-      await advanceJurassicTunnelRound(client, room);
-    }
-
     await client.query(
       "UPDATE game_territories SET moved_in_turn=0 WHERE room_id=$1",
       [room.id],
     );
+
+    const wrapsRound =
+      (next.turn_position ?? 0) <= (player.turn_position ?? 0);
+    if (wrapsRound) {
+      await advanceGameRound(client, {
+        roomId: room.id,
+        currentRoundNumber: room.round_number,
+        previousJurassicTunnelDestinationId:
+          room.jurassic_tunnel_territory_id,
+      });
+    }
+
     await client.query(
       `UPDATE game_rooms
        SET phase='cards',current_player_id=$2,turn_number=turn_number+1,
