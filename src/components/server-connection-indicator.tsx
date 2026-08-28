@@ -1,6 +1,6 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import {
   gameSyncMetricsStore,
   type GameSyncMetrics,
@@ -62,6 +62,7 @@ const stateTone: Record<ConnectionState, string> = {
 };
 
 export function ServerConnectionIndicator() {
+  const indicatorRef = useRef<HTMLDivElement>(null);
   const metrics = useSyncExternalStore(
     gameSyncMetricsStore.subscribe,
     gameSyncMetricsStore.getSnapshot,
@@ -76,8 +77,35 @@ export function ServerConnectionIndicator() {
     ? `${labels[state]} · ${latencyLabel}`
     : labels[state];
 
+  useEffect(() => {
+    const indicator = indicatorRef.current;
+    if (!indicator) return;
+
+    const root = document.documentElement;
+    const updateReservedSpace = () => {
+      const rect = indicator.getBoundingClientRect();
+      const reservedFromRight = Math.max(0, window.innerWidth - rect.left + 8);
+      root.style.setProperty(
+        "--game-connection-reserved-right",
+        `${Math.ceil(reservedFromRight)}px`,
+      );
+    };
+
+    const observer = new ResizeObserver(updateReservedSpace);
+    observer.observe(indicator);
+    window.addEventListener("resize", updateReservedSpace);
+    updateReservedSpace();
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateReservedSpace);
+      root.style.removeProperty("--game-connection-reserved-right");
+    };
+  }, []);
+
   return (
     <div
+      ref={indicatorRef}
       className={`fixed right-3 top-2 z-[70] flex h-11 items-end gap-2 rounded-xl border bg-[rgba(6,27,21,0.92)] px-3 py-2 shadow-[0_10px_30px_rgba(0,0,0,.28)] backdrop-blur-xl sm:right-4 sm:top-2.5 ${stateTone[state]}`}
       data-state={state}
       title={title}
