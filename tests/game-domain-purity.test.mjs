@@ -10,6 +10,8 @@ const PURE_MODULES = [
   "src/lib/game-command-patch.ts",
   "src/lib/game-snapshot-sharing.ts",
   "src/lib/game-view-model.ts",
+  "src/lib/events/event-types.ts",
+  "src/lib/events/event-selector.ts",
 ];
 
 test("módulos puros de domínio não dependem de browser, React, banco ou server-only", () => {
