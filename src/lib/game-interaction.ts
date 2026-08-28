@@ -3,6 +3,7 @@ import {
   attackProfile,
   maneuverTraversalProfile,
 } from "./game-barrier-rules";
+import { isAttackOriginBlocked } from "./events/event-attack-rules";
 import { maneuverMovableTroops } from "./game-rules";
 import type { GameViewModel } from "./game-view-model";
 import { bestTerritoryRoutes } from "./territory-routing";
@@ -88,6 +89,7 @@ export function gameInteractionScopeKey(snapshot: GameSnapshot) {
   return [
     snapshot.room.turnNumber,
     snapshot.room.roundNumber,
+    snapshot.room.activeEvent?.eventId ?? "-",
     snapshot.room.jurassicTunnelDestinationId ?? "-",
     snapshot.room.phase,
     snapshot.room.currentPlayerId ?? "-",
@@ -157,12 +159,21 @@ export function gameInteractionReducer(
 }
 
 export function attackTargetHints(
+  snapshot: GameSnapshot,
   game: GameViewModel,
   sourceId: number,
 ): MapTargetHint[] {
   const source = game.territoriesById.get(sourceId);
   const meId = game.me?.id;
   if (!source || !meId || source.ownerPlayerId !== meId) return [];
+  if (
+    isAttackOriginBlocked(
+      snapshot.room.activeEvent?.resolvedEffects ?? [],
+      sourceId,
+    )
+  ) {
+    return [];
+  }
 
   const byTerritory = new Map<number, MapTargetHint>();
 
@@ -295,16 +306,21 @@ export function deriveMapHints(
   }
 
   if (snapshot.room.phase === "attack") {
+    const resolvedEffects = snapshot.room.activeEvent?.resolvedEffects ?? [];
     return state.sourceId === null
       ? {
           available: game.myTerritories
-            .filter((territory) => territory.troops > 1)
+            .filter(
+              (territory) =>
+                territory.troops > 1 &&
+                !isAttackOriginBlocked(resolvedEffects, territory.territoryId),
+            )
             .map((territory) => territory.territoryId),
           targets: [],
         }
       : {
           available: [],
-          targets: attackTargetHints(game, state.sourceId),
+          targets: attackTargetHints(snapshot, game, state.sourceId),
         };
   }
 
