@@ -81,6 +81,7 @@
 }
 
 .wb-guide-barrier-line {
+  position: relative;
   display: flex;
   width: 100%;
   max-width: 250px;
