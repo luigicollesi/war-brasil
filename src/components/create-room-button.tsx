@@ -51,16 +51,21 @@ export function CreateRoomButton() {
   }
 
   return (
-    <div className="mt-9">
+    <div className="mt-8">
       <button
         type="button"
         onClick={createRoom}
         disabled={isCreating}
-        className="inline-flex h-12 items-center justify-center gap-3 rounded-full bg-white px-6 text-xs font-bold uppercase tracking-[0.13em] text-[#12392f] transition hover:-translate-y-0.5 disabled:cursor-wait disabled:opacity-70"
+        className="wb-button wb-button--primary"
       >
-        {isCreating ? "Criando…" : "Criar sala"} <span aria-hidden="true">→</span>
+        <span className="wb-diamond" aria-hidden="true" />
+        {isCreating ? "Criando…" : "Criar sala"}
       </button>
-      {error ? <p className="mt-3 text-sm text-[#f3c6bf]">{error}</p> : null}
+      {error ? (
+        <p className="wb-error" role="alert">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }
