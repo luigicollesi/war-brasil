@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import { useState } from "react";
+import { GameDie } from "@/src/components/game-die";
 import { GameModal } from "@/src/components/game-modal";
 import { barrierAttackSummary } from "@/src/lib/game-barrier-presentation";
 import { attackerLossPerComparison } from "@/src/lib/game-barrier-rules";
@@ -11,59 +11,6 @@ import {
 } from "@/src/lib/game-battle-presentation";
 import { runGameCommand } from "@/src/lib/game-command-client";
 import type { GameSnapshot } from "@/src/lib/game-contract";
-import { PLAYER_COLORS, type PlayerColor } from "@/src/lib/lobby";
-
-const pipPositions: Record<number, Array<[number, number]>> = {
-  1: [[50, 50]],
-  2: [[30, 30], [70, 70]],
-  3: [[30, 30], [50, 50], [70, 70]],
-  4: [[30, 30], [70, 30], [30, 70], [70, 70]],
-  5: [[30, 30], [70, 30], [50, 50], [30, 70], [70, 70]],
-  6: [[30, 26], [70, 26], [30, 50], [70, 50], [30, 74], [70, 74]],
-};
-
-function colorHex(color: PlayerColor) {
-  return PLAYER_COLORS.find((item) => item.value === color)?.hex ?? "#17372d";
-}
-
-function BattleDie({
-  value,
-  color,
-  isRolling,
-}: {
-  value: number;
-  color: PlayerColor;
-  isRolling: boolean;
-}) {
-  return (
-    <div
-      className={
-        "battle-die relative aspect-square w-32 overflow-hidden rounded-3xl " +
-        (isRolling ? "dice-roll-animation" : "")
-      }
-      aria-label={`Dado mostrando ${value}`}
-    >
-      <Image
-        src="/dado-brasil-hq.svg"
-        alt=""
-        fill
-        sizes="128px"
-        className="object-cover"
-      />
-      {pipPositions[value].map(([x, y], index) => (
-        <span
-          key={index}
-          className="absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/50 shadow-md"
-          style={{
-            left: `${x}%`,
-            top: `${y}%`,
-            backgroundColor: colorHex(color),
-          }}
-        />
-      ))}
-    </div>
-  );
-}
 
 export function BattleOverlay({
   roomId,
@@ -95,8 +42,10 @@ export function BattleOverlay({
       })
     : null;
   const canRoll =
-    (battle.stage === "awaiting_attacker_roll" && meId === battle.attackerPlayerId) ||
-    (battle.stage === "awaiting_defender_roll" && meId === battle.defenderPlayerId);
+    (battle.stage === "awaiting_attacker_roll" &&
+      meId === battle.attackerPlayerId) ||
+    (battle.stage === "awaiting_defender_roll" &&
+      meId === battle.defenderPlayerId);
   const label =
     battle.stage === "awaiting_attacker_roll"
       ? "Aguardando o atacante"
@@ -160,11 +109,11 @@ export function BattleOverlay({
             <p>Ataque</p>
             <div>
               {battle.attacker.map((value, index) => (
-                <BattleDie
+                <GameDie
                   key={`${value}-${index}-${battle.stage}`}
                   value={value}
                   color={attacker?.color ?? "forest"}
-                  isRolling={rolling || battle.stage === "show_attacker_result"}
+                  rolling={rolling || battle.stage === "show_attacker_result"}
                 />
               ))}
             </div>
@@ -176,11 +125,11 @@ export function BattleOverlay({
             <p>Defesa</p>
             <div>
               {battle.defender.map((value, index) => (
-                <BattleDie
+                <GameDie
                   key={`${value}-${index}-${battle.stage}`}
                   value={value}
                   color={defender?.color ?? "ruby"}
-                  isRolling={rolling || battle.stage === "show_defender_result"}
+                  rolling={rolling || battle.stage === "show_defender_result"}
                 />
               ))}
             </div>
@@ -188,7 +137,8 @@ export function BattleOverlay({
         ) : null}
       </div>
 
-      {battle.stage === "show_comparison" || battle.stage === "show_battle_result" ? (
+      {battle.stage === "show_comparison" ||
+      battle.stage === "show_battle_result" ? (
         <div className="battle-comparisons" aria-live="polite">
           {comparisonRows.map((row, index) => (
             <div key={index}>
@@ -207,8 +157,12 @@ export function BattleOverlay({
 
       {battle.stage === "show_battle_result" ? (
         <div className="battle-result" aria-live="polite">
-          <span>Atacante <strong>−{battle.attackerLosses}</strong></span>
-          <span>Defensor <strong>−{battle.defenderLosses}</strong></span>
+          <span>
+            Atacante <strong>−{battle.attackerLosses}</strong>
+          </span>
+          <span>
+            Defensor <strong>−{battle.defenderLosses}</strong>
+          </span>
           {battle.conquered ? <em>Conquista confirmada</em> : null}
         </div>
       ) : null}
