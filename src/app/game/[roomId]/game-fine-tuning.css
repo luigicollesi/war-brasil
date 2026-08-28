@@ -1,0 +1,124 @@
+/* Ajustes finos posteriores ao refresh visual. */
+
+/* Sempre respeita a largura/posição real do indicador de conexão, inclusive
+   sobre regras anteriores específicas de tablet. */
+.game-utility-bar {
+  right: var(--game-connection-reserved-right, 184px) !important;
+}
+
+.victory-modal {
+  position: relative;
+  overflow: hidden;
+  text-align: center;
+}
+
+.victory-modal::after {
+  content: "";
+  position: absolute;
+  inset: auto 10% -70px;
+  height: 120px;
+  pointer-events: none;
+  background: radial-gradient(circle, rgba(217, 182, 80, 0.14), transparent 68%);
+}
+
+.victory-modal h3 {
+  color: #fffdf5 !important;
+  font-size: clamp(1.7rem, 4vw, 2.35rem);
+  letter-spacing: -0.04em;
+}
+
+.victory-emblem {
+  display: grid;
+  width: 54px;
+  height: 54px;
+  margin: 18px auto 0;
+  place-items: center;
+  border: 1px solid rgba(232, 195, 94, 0.28);
+  border-radius: 18px;
+  background: rgba(217, 182, 80, 0.10);
+  color: #f1cf70;
+  font-size: 1.4rem;
+  box-shadow:
+    0 12px 30px rgba(0, 0, 0, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.victory-message {
+  max-width: 46ch;
+  margin: 14px auto 0;
+  color: #c8d8d0 !important;
+  font-size: 0.86rem;
+  line-height: 1.65;
+}
+
+.victory-rematch-status {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px 12px;
+  margin-top: 24px;
+  text-align: left;
+}
+
+.victory-rematch-status > span {
+  color: #afc2b9;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.victory-rematch-status > strong {
+  color: #e8c965 !important;
+  font-size: 0.76rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.victory-rematch-status > div {
+  grid-column: 1 / -1;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.victory-rematch-status > div > span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #b99536, #edcc68);
+  transition: width 220ms ease;
+}
+
+.victory-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 22px;
+}
+
+.victory-lobby-note {
+  margin: 12px auto 0;
+  color: rgba(197, 214, 205, 0.64) !important;
+  font-size: 0.65rem;
+  line-height: 1.5;
+}
+
+.victory-error {
+  margin-top: 12px;
+  padding: 9px 11px;
+  border-radius: 10px;
+  background: rgba(132, 47, 50, 0.30);
+  color: #ffd2c9 !important;
+  font-size: 0.75rem;
+}
+
+@media (max-width: 767px) {
+  .victory-modal {
+    max-height: calc(100dvh - 12px);
+    overflow-y: auto;
+  }
+
+  .victory-actions {
+    grid-template-columns: 1fr;
+  }
+}
