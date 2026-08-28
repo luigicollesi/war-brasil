@@ -12,7 +12,7 @@ import { RoomError } from "@/src/lib/rooms";
 type SnapshotRoom = {
   id: string;
   code: string;
-  status: "order_roll" | "playing" | "finished";
+  status: "waiting" | "order_roll" | "playing" | "finished";
   revision: number;
   order_roll_round: number;
   phase: GameSnapshot["room"]["phase"];
@@ -196,6 +196,18 @@ export async function getGameSnapshotQuery(
       )
     ).rows[0];
 
+    const rematchVotes =
+      room.status === "finished"
+        ? (
+            await client.query<{ player_id: string }>(
+              `SELECT player_id
+               FROM game_rematch_votes
+               WHERE room_id=$1`,
+              [room.id],
+            )
+          ).rows
+        : [];
+
     const byPlayer = new Map<
       string,
       Array<{ round: number; value: number }>
@@ -226,9 +238,9 @@ export async function getGameSnapshotQuery(
         .at(-1)?.player_id ?? null;
 
     const roundEvent =
-      room.status === "order_roll"
-        ? null
-        : await getRoomRoundEventDetails(client, room.id, room.round_number);
+      room.status === "playing" || room.status === "finished"
+        ? await getRoomRoundEventDetails(client, room.id, room.round_number)
+        : null;
 
     if (room.status === "playing" && !roundEvent) {
       throw new EventConfigurationError(
@@ -262,6 +274,14 @@ export async function getGameSnapshotQuery(
           : null,
         reinforcementsRemaining: room.reinforcements_remaining,
         winnerPlayerId: room.winner_player_id,
+        rematch:
+          room.status === "finished"
+            ? {
+                voteCount: rematchVotes.length,
+                requiredCount: players.length,
+                hasVoted: rematchVotes.some((vote) => vote.player_id === me.id),
+              }
+            : null,
         pendingConquest:
           room.pending_from_territory_id !== null &&
           room.pending_to_territory_id !== null
