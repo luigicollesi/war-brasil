@@ -68,15 +68,20 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function positiveInteger(value: unknown) {
+function positiveInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isInteger(value) && value > 0;
 }
 
-function territoryId(value: unknown) {
-  return typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 42;
+function territoryId(value: unknown): value is number {
+  return (
+    typeof value === "number" &&
+    Number.isInteger(value) &&
+    value >= 1 &&
+    value <= 42
+  );
 }
 
-function parseTerritories(value: unknown, effectType: string) {
+function parseTerritories(value: unknown, effectType: string): number[] {
   if (!Array.isArray(value) || !value.every(territoryId)) {
     throw new EventConfigurationError(
       `${effectType} possui uma lista de territórios inválida.`,
@@ -85,7 +90,10 @@ function parseTerritories(value: unknown, effectType: string) {
   return [...value];
 }
 
-function parseConnections(value: unknown, effectType: string) {
+function parseConnections(
+  value: unknown,
+  effectType: string,
+): TerritoryConnectionPair[] {
   if (!Array.isArray(value)) {
     throw new EventConfigurationError(
       `${effectType} possui uma lista de conexões inválida.`,
@@ -104,7 +112,7 @@ function parseConnections(value: unknown, effectType: string) {
         `${effectType} possui uma conexão territorial inválida.`,
       );
     }
-    return [pair[0], pair[1]] as TerritoryConnectionPair;
+    return [pair[0], pair[1]];
   });
 }
 
