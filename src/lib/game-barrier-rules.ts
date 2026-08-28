@@ -37,6 +37,10 @@ function minimumAttackTroops(mode: AttackMode) {
   return mode === "barrier" ? 4 : 2;
 }
 
+export function attackerLossPerComparison(mode: AttackMode): 1 | 3 {
+  return mode === "barrier" ? 3 : 1;
+}
+
 export function attackProfile(troops: number, mode: AttackMode): AttackProfile {
   const minimumTroops = minimumAttackTroops(mode);
 
@@ -51,7 +55,7 @@ export function attackProfile(troops: number, mode: AttackMode): AttackProfile {
       mode,
       minimumTroops,
       diceCount,
-      attackerLossPerComparison: 3,
+      attackerLossPerComparison: attackerLossPerComparison(mode),
     };
   }
 
@@ -61,7 +65,7 @@ export function attackProfile(troops: number, mode: AttackMode): AttackProfile {
     mode,
     minimumTroops,
     diceCount,
-    attackerLossPerComparison: 1,
+    attackerLossPerComparison: attackerLossPerComparison(mode),
   };
 }
 
