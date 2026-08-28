@@ -2,13 +2,16 @@ import "server-only";
 
 import type { PoolClient } from "pg";
 import { getRoomRoundEvent } from "./events/event-repository";
-import type { ResolvedEventEffect } from "./events/event-types";
+import {
+  EventConfigurationError,
+  type ResolvedEventEffect,
+} from "./events/event-types";
 import { effectiveGameConnections } from "./game-effective-connections";
 import { getBaseTerritoryConnections } from "./game-topology-service";
 
 export type EffectiveGameTopology = {
   connections: ReturnType<typeof effectiveGameConnections>;
-  eventId: number | null;
+  eventId: number;
   resolvedEventEffects: ResolvedEventEffect[];
 };
 
@@ -20,21 +23,32 @@ export async function getEffectiveGameTopology(
     jurassicTunnelDestinationId: number | null;
   },
 ): Promise<EffectiveGameTopology> {
-  const baseConnections = await getBaseTerritoryConnections(client);
+  if (input.jurassicTunnelDestinationId === null) {
+    throw new EventConfigurationError(
+      `A rodada ${input.roundNumber} não possui Túnel Jurássico ativo.`,
+    );
+  }
+
   const roundEvent = await getRoomRoundEvent(
     client,
     input.roomId,
     input.roundNumber,
   );
-  const resolvedEventEffects = roundEvent?.resolvedEffects ?? [];
+  if (!roundEvent) {
+    throw new EventConfigurationError(
+      `A rodada ${input.roundNumber} não possui evento ativo registrado.`,
+    );
+  }
+
+  const baseConnections = await getBaseTerritoryConnections(client);
 
   return {
     connections: effectiveGameConnections(
       baseConnections,
-      resolvedEventEffects,
+      roundEvent.resolvedEffects,
       input.jurassicTunnelDestinationId,
     ),
-    eventId: roundEvent?.eventId ?? null,
-    resolvedEventEffects,
+    eventId: roundEvent.eventId,
+    resolvedEventEffects: roundEvent.resolvedEffects,
   };
 }
