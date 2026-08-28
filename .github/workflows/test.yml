@@ -1,12 +1,10 @@
 name: Test
 
 on:
-  pull_request:
-    branches:
-      - main
   push:
     branches:
-      - main
+      - feat/game-guide-geographic-barriers
+  workflow_dispatch:
 
 jobs:
   test:
