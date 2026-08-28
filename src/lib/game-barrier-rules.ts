@@ -1,5 +1,11 @@
 export type AttackMode = "normal" | "barrier";
 
+export const BARRIER_ATTACK_DICE_BANDS = [
+  { minimumTroops: 4, maximumTroops: 6, diceCount: 1 },
+  { minimumTroops: 7, maximumTroops: 9, diceCount: 2 },
+  { minimumTroops: 10, maximumTroops: null, diceCount: 3 },
+] as const;
+
 export type AttackProfile =
   | {
       kind: "unavailable";
@@ -37,6 +43,19 @@ function minimumAttackTroops(mode: AttackMode) {
   return mode === "barrier" ? 4 : 2;
 }
 
+function barrierAttackDiceCount(troops: number): 1 | 2 | 3 {
+  for (const band of BARRIER_ATTACK_DICE_BANDS) {
+    if (
+      troops >= band.minimumTroops &&
+      (band.maximumTroops === null || troops <= band.maximumTroops)
+    ) {
+      return band.diceCount;
+    }
+  }
+
+  return 1;
+}
+
 export function attackerLossPerComparison(mode: AttackMode): 1 | 3 {
   return mode === "barrier" ? 3 : 1;
 }
@@ -49,12 +68,11 @@ export function attackProfile(troops: number, mode: AttackMode): AttackProfile {
   }
 
   if (mode === "barrier") {
-    const diceCount = Math.min(3, Math.floor((troops - 1) / 3)) as 1 | 2 | 3;
     return {
       kind: "available",
       mode,
       minimumTroops,
-      diceCount,
+      diceCount: barrierAttackDiceCount(troops),
       attackerLossPerComparison: attackerLossPerComparison(mode),
     };
   }
