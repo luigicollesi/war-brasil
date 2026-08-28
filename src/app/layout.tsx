@@ -5,6 +5,7 @@ import "./globals.css";
 import "./war-identity.css";
 import "./war-guide.css";
 import "./war-guide-barrier-refresh.css";
+import "./war-guide-geographic.css";
 
 const interfaceFont = Inter({
   variable: "--font-wb-ui",
