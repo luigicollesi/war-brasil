@@ -9,15 +9,9 @@ export function useTemporalAnomaly(snapshot: GameSnapshot) {
     () =>
       buildTemporalAnomalyPresentation({
         roundNumber: snapshot.room.roundNumber,
-        jurassicTunnelDestinationId:
-          snapshot.room.jurassicTunnelDestinationId,
         activeEvent: snapshot.room.activeEvent,
       }),
-    [
-      snapshot.room.activeEvent,
-      snapshot.room.jurassicTunnelDestinationId,
-      snapshot.room.roundNumber,
-    ],
+    [snapshot.room.activeEvent, snapshot.room.roundNumber],
   );
   const [dismissedKey, setDismissedKey] = useState<string | null>(null);
   const activeKey =
