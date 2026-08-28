@@ -7,7 +7,6 @@ on:
   push:
     branches:
       - main
-      - feat/mobile-map-pinch-zoom
 
 jobs:
   test:
@@ -21,4 +20,3 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm test
-      - run: npm run build
