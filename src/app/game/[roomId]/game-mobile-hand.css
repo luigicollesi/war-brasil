@@ -28,14 +28,14 @@
   }
 
   .game-troop-layer text {
-    fill: #ffffff !important;
+    fill: #050505 !important;
     font-family: var(--font-wb-ui), Inter, Arial, sans-serif;
     font-size: 48px !important;
     font-weight: 900 !important;
     font-variant-numeric: tabular-nums;
     letter-spacing: -.035em;
     paint-order: stroke fill;
-    stroke: rgba(1, 10, 8, .96) !important;
+    stroke: rgba(255, 255, 255, .92) !important;
     stroke-linejoin: round;
     stroke-width: 4.5px !important;
     text-rendering: geometricPrecision;
