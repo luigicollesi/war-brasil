@@ -4,9 +4,8 @@ import type { PoolClient } from "pg";
 import { maneuverTraversalProfile } from "@/src/lib/game-barrier-rules";
 import { gameCommand } from "@/src/lib/game-command";
 import type { GameCommandPatch } from "@/src/lib/game-command-patch";
+import { getEffectiveGameTopology } from "@/src/lib/game-effective-topology-service";
 import { maneuverMovableTroops } from "@/src/lib/game-rules";
-import { getBaseTerritoryConnections } from "@/src/lib/game-topology-service";
-import { effectiveTerritoryConnections } from "@/src/lib/territory-connections";
 import { bestTerritoryRoute } from "@/src/lib/territory-routing";
 import { RoomError } from "@/src/lib/rooms";
 
@@ -15,6 +14,7 @@ type ManeuverRoom = {
   status: "order_roll" | "playing" | "finished";
   phase: string;
   current_player_id: string | null;
+  round_number: number;
   jurassic_tunnel_territory_id: number | null;
 };
 
@@ -45,7 +45,8 @@ function positiveInteger(value: unknown, message: string) {
 async function loadRoom(client: PoolClient, roomId: string) {
   const room = (
     await client.query<ManeuverRoom>(
-      `SELECT id,status,phase,current_player_id,jurassic_tunnel_territory_id
+      `SELECT id,status,phase,current_player_id,round_number,
+              jurassic_tunnel_territory_id
        FROM game_rooms
        WHERE id=$1`,
       [roomId],
@@ -149,12 +150,13 @@ export async function maneuverCommand(
       );
     }
 
-    const connections = effectiveTerritoryConnections(
-      await getBaseTerritoryConnections(client),
-      room.jurassic_tunnel_territory_id,
-    );
+    const topology = await getEffectiveGameTopology(client, {
+      roomId: room.id,
+      roundNumber: room.round_number,
+      jurassicTunnelDestinationId: room.jurassic_tunnel_territory_id,
+    });
     const route = bestTerritoryRoute(
-      connections,
+      topology.connections,
       from,
       to,
       owned.map((territory) => territory.territory_id),
