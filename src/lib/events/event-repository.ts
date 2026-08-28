@@ -2,11 +2,14 @@ import "server-only";
 
 import type { PoolClient } from "pg";
 import {
+  parseAppliedEventTroopChanges,
   parseEventEffects,
   parseResolvedEventEffects,
+  type AppliedEventTroopChange,
   type EventConnection,
   type GameEvent,
   type GameRoundEvent,
+  type GameRoundEventDetails,
   type ResolvedEventEffect,
 } from "./event-types";
 
@@ -28,7 +31,13 @@ type GameRoundEventRow = {
   round_number: number;
   event_id: number;
   resolved_effects: unknown;
+  applied_troop_changes: unknown;
   activated_at: Date;
+};
+
+type GameRoundEventDetailsRow = GameRoundEventRow & {
+  name: string;
+  description: string;
 };
 
 function mapEvent(row: EventRow): GameEvent {
@@ -54,7 +63,20 @@ function mapRoundEvent(row: GameRoundEventRow): GameRoundEvent {
     roundNumber: row.round_number,
     eventId: row.event_id,
     resolvedEffects: parseResolvedEventEffects(row.resolved_effects),
+    appliedTroopChanges: parseAppliedEventTroopChanges(
+      row.applied_troop_changes,
+    ),
     activatedAt: row.activated_at,
+  };
+}
+
+function mapRoundEventDetails(
+  row: GameRoundEventDetailsRow,
+): GameRoundEventDetails {
+  return {
+    ...mapRoundEvent(row),
+    name: row.name,
+    description: row.description,
   };
 }
 
@@ -151,7 +173,8 @@ export async function getRoomRoundEvent(
 
   const row = (
     await client.query<GameRoundEventRow>(
-      `SELECT room_id,round_number,event_id,resolved_effects,activated_at
+      `SELECT room_id,round_number,event_id,resolved_effects,
+              applied_troop_changes,activated_at
        FROM game_round_events
        WHERE room_id=$1 AND round_number=$2`,
       [roomId, roundNumber],
@@ -161,13 +184,37 @@ export async function getRoomRoundEvent(
   return row ? mapRoundEvent(row) : null;
 }
 
+export async function getRoomRoundEventDetails(
+  client: PoolClient,
+  roomId: string,
+  roundNumber: number,
+): Promise<GameRoundEventDetails | null> {
+  if (!Number.isInteger(roundNumber) || roundNumber < 1) {
+    throw new RangeError("A rodada do evento precisa ser um inteiro positivo.");
+  }
+
+  const row = (
+    await client.query<GameRoundEventDetailsRow>(
+      `SELECT gre.room_id,gre.round_number,gre.event_id,gre.resolved_effects,
+              gre.applied_troop_changes,gre.activated_at,e.name,e.description
+       FROM game_round_events gre
+       JOIN events e ON e.id=gre.event_id
+       WHERE gre.room_id=$1 AND gre.round_number=$2`,
+      [roomId, roundNumber],
+    )
+  ).rows[0];
+
+  return row ? mapRoundEventDetails(row) : null;
+}
+
 export async function getLatestRoomEvent(
   client: PoolClient,
   roomId: string,
 ): Promise<GameRoundEvent | null> {
   const row = (
     await client.query<GameRoundEventRow>(
-      `SELECT room_id,round_number,event_id,resolved_effects,activated_at
+      `SELECT room_id,round_number,event_id,resolved_effects,
+              applied_troop_changes,activated_at
        FROM game_round_events
        WHERE room_id=$1
        ORDER BY round_number DESC
@@ -186,6 +233,7 @@ export async function recordRoundEvent(
     roundNumber: number;
     eventId: number;
     resolvedEffects?: ResolvedEventEffect[];
+    appliedTroopChanges?: AppliedEventTroopChange[];
   },
 ): Promise<GameRoundEvent> {
   if (!Number.isInteger(input.roundNumber) || input.roundNumber < 1) {
@@ -195,14 +243,16 @@ export async function recordRoundEvent(
   const row = (
     await client.query<GameRoundEventRow>(
       `INSERT INTO game_round_events
-         (room_id,round_number,event_id,resolved_effects)
-       VALUES ($1,$2,$3,$4::jsonb)
-       RETURNING room_id,round_number,event_id,resolved_effects,activated_at`,
+         (room_id,round_number,event_id,resolved_effects,applied_troop_changes)
+       VALUES ($1,$2,$3,$4::jsonb,$5::jsonb)
+       RETURNING room_id,round_number,event_id,resolved_effects,
+                 applied_troop_changes,activated_at`,
       [
         input.roomId,
         input.roundNumber,
         input.eventId,
         JSON.stringify(input.resolvedEffects ?? []),
+        JSON.stringify(input.appliedTroopChanges ?? []),
       ],
     )
   ).rows[0];
@@ -210,5 +260,37 @@ export async function recordRoundEvent(
   if (!row) {
     throw new Error("Não foi possível registrar o evento da rodada.");
   }
+  return mapRoundEvent(row);
+}
+
+export async function setRoundEventAppliedTroopChanges(
+  client: PoolClient,
+  input: {
+    roomId: string;
+    roundNumber: number;
+    appliedTroopChanges: AppliedEventTroopChange[];
+  },
+): Promise<GameRoundEvent> {
+  const row = (
+    await client.query<GameRoundEventRow>(
+      `UPDATE game_round_events
+       SET applied_troop_changes=$3::jsonb
+       WHERE room_id=$1 AND round_number=$2
+       RETURNING room_id,round_number,event_id,resolved_effects,
+                 applied_troop_changes,activated_at`,
+      [
+        input.roomId,
+        input.roundNumber,
+        JSON.stringify(input.appliedTroopChanges),
+      ],
+    )
+  ).rows[0];
+
+  if (!row) {
+    throw new Event(
+      `Evento da rodada ${input.roundNumber} não foi encontrado para atualização.`,
+    );
+  }
+
   return mapRoundEvent(row);
 }
