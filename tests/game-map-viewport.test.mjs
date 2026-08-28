@@ -1,14 +1,13 @@
-const test = require("node:test");
-const assert = require("node:assert/strict");
-
-const {
+import assert from "node:assert/strict";
+import test from "node:test";
+import {
   DEFAULT_MAP_VIEWPORT,
   MAP_MAX_SCALE,
   clampMapViewport,
   mapViewportToViewBox,
   projectMapPoint,
   zoomMapViewportAtPoint,
-} = require("../.test-build/game-map-viewport.js");
+} from "../.test-build/game-map-viewport.js";
 
 test("map viewport never zooms out past the current board size", () => {
   assert.deepEqual(
