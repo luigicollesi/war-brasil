@@ -35,7 +35,7 @@
     font-variant-numeric: tabular-nums;
     letter-spacing: -.035em;
     paint-order: stroke fill;
-    stroke: rgba(255, 255, 255, .92) !important;
+    stroke: #000000 !important;
     stroke-linejoin: round;
     stroke-width: 4.5px !important;
     text-rendering: geometricPrecision;
