@@ -47,7 +47,14 @@ export type ResolvedBarrierMove = {
 export type ResolvedEventEffect =
   | Extract<
       EventEffect,
-      { type: "ADD_TROOPS" | "REMOVE_TROOPS" | "BLOCK_ATTACK" | "OPEN_CONNECTIONS" | "BLOCK_CONNECTIONS" }
+      {
+        type:
+          | "ADD_TROOPS"
+          | "REMOVE_TROOPS"
+          | "BLOCK_ATTACK"
+          | "OPEN_CONNECTIONS"
+          | "BLOCK_CONNECTIONS";
+      }
     >
   | {
       type: "RANDOM_OPEN_CONNECTIONS";
@@ -61,6 +68,14 @@ export type ResolvedEventEffect =
       type: "RANDOM_TOGGLE_CONNECTIONS";
       moves: ResolvedBarrierMove[];
     };
+
+export type AppliedEventTroopChange = {
+  type: "ADD_TROOPS" | "REMOVE_TROOPS";
+  territoryId: number;
+  beforeTroops: number;
+  afterTroops: number;
+  delta: number;
+};
 
 export type GameEvent = {
   id: number;
@@ -80,7 +95,13 @@ export type GameRoundEvent = {
   roundNumber: number;
   eventId: number;
   resolvedEffects: ResolvedEventEffect[];
+  appliedTroopChanges: AppliedEventTroopChange[];
   activatedAt: Date;
+};
+
+export type GameRoundEventDetails = GameRoundEvent & {
+  name: string;
+  description: string;
 };
 
 export class EventConfigurationError extends Error {
@@ -96,6 +117,10 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function positiveInteger(value: unknown): value is number {
   return typeof value === "number" && Number.isSafeInteger(value) && value > 0;
+}
+
+function integer(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value);
 }
 
 function territoryId(value: unknown): value is number {
@@ -336,6 +361,42 @@ function parseResolvedEffect(value: unknown): ResolvedEventEffect {
   }
 }
 
+function parseAppliedTroopChange(value: unknown): AppliedEventTroopChange {
+  if (
+    !isRecord(value) ||
+    (value.type !== "ADD_TROOPS" && value.type !== "REMOVE_TROOPS") ||
+    !territoryId(value.territoryId) ||
+    !positiveInteger(value.beforeTroops) ||
+    !positiveInteger(value.afterTroops) ||
+    !integer(value.delta) ||
+    value.delta !== value.afterTroops - value.beforeTroops
+  ) {
+    throw new EventConfigurationError(
+      "Alteração factual de tropas do evento é inválida.",
+    );
+  }
+
+  if (value.type === "ADD_TROOPS" && value.delta <= 0) {
+    throw new EventConfigurationError(
+      "ADD_TROOPS precisa resultar em aumento factual de tropas.",
+    );
+  }
+
+  if (value.type === "REMOVE_TROOPS" && value.delta > 0) {
+    throw new EventConfigurationError(
+      "REMOVE_TROOPS não pode resultar em aumento de tropas.",
+    );
+  }
+
+  return {
+    type: value.type,
+    territoryId: value.territoryId,
+    beforeTroops: value.beforeTroops,
+    afterTroops: value.afterTroops,
+    delta: value.delta,
+  };
+}
+
 export function parseEventEffects(value: unknown): EventEffect[] {
   if (!Array.isArray(value)) {
     throw new EventConfigurationError("effects precisa ser um array JSON.");
@@ -350,4 +411,15 @@ export function parseResolvedEventEffects(value: unknown): ResolvedEventEffect[]
     );
   }
   return value.map(parseResolvedEffect);
+}
+
+export function parseAppliedEventTroopChanges(
+  value: unknown,
+): AppliedEventTroopChange[] {
+  if (!Array.isArray(value)) {
+    throw new EventConfigurationError(
+      "applied_troop_changes precisa ser um array JSON.",
+    );
+  }
+  return value.map(parseAppliedTroopChange);
 }
