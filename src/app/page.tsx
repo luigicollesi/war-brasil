@@ -10,7 +10,9 @@ const HOME_DESCRIPTION =
   "Jogue WAR Brasil online: dispute 42 territórios, atravesse barreiras e conduza sua facção em partidas estratégicas para 2 a 6 jogadores.";
 
 export const metadata: Metadata = {
-  title: HOME_TITLE,
+  title: {
+    absolute: HOME_TITLE,
+  },
   description: HOME_DESCRIPTION,
   keywords: [
     "WAR Brasil",
