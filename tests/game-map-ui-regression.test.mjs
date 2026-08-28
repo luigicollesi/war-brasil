@@ -2,21 +2,26 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-test("toggle de estradas permanece visível e tocável em tablet e celular", () => {
+test("utility bar permanece visível e tocável em tablet e celular", () => {
   const css = readFileSync(
     "src/app/game/[roomId]/game-roads.css",
     "utf8",
   );
+  const utility = readFileSync(
+    "src/components/game-utility-bar.tsx",
+    "utf8",
+  );
 
+  assert.match(css, /\.game-utility-bar\s*\{/);
+  assert.match(css, /position:\s*fixed/);
   assert.match(css, /@media \(max-width: 1199px\)/);
   assert.match(css, /min-height:\s*44px/);
   assert.match(css, /touch-action:\s*manipulation/);
   assert.match(css, /env\(safe-area-inset-top/);
-  assert.match(css, /env\(safe-area-inset-right/);
-  assert.doesNotMatch(
-    css,
-    /\.game-road-toggle[^}]*display:\s*none/s,
-  );
+  assert.match(css, /\.game-utility-label\s*\{[\s\S]*?display:\s*none/);
+  assert.match(utility, /aria-pressed=\{roadsVisible\}/);
+  assert.match(utility, /aria-pressed=\{troopsVisible\}/);
+  assert.match(utility, /onOpenAnomaly/);
 });
 
 test("âncora territorial procura um ponto interno em vez de confiar só no bounding box", () => {
