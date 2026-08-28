@@ -52,17 +52,19 @@ test("números e símbolos especiais usam a geometria interna extraída do SVG",
 });
 
 test("pips dos dados de combate preservam a cor da facção", () => {
-  const client = readFileSync("src/components/game-client-v2.tsx", "utf8");
+  const overlay = readFileSync("src/components/battle-overlay.tsx", "utf8");
   const polish = readFileSync("src/app/game/[roomId]/game-polish.css", "utf8");
 
-  assert.match(client, /backgroundColor: colorHex\(color\)/);
+  assert.match(overlay, /backgroundColor: colorHex\(color\)/);
   assert.doesNotMatch(polish, /background-color:\s*#f8f0dc\s*!important/);
   assert.match(polish, /A cor dos pips vem do jogador/);
 });
 
 test("rolagem de defesa mantém os dados de ataque estáticos", () => {
+  const overlay = readFileSync("src/components/battle-overlay.tsx", "utf8");
   const polish = readFileSync("src/app/game/[roomId]/game-polish.css", "utf8");
 
+  assert.match(overlay, /battle\.stage === "show_defender_result"/);
   assert.match(polish, /section:has\(> button\)/);
   assert.match(polish, /:has\(> div:nth-child\(2\)\)/);
   assert.match(polish, /> div:first-child \.dice-roll-animation/);
