@@ -11,6 +11,7 @@ import "./game-performance.css";
 import "./game-ui-refresh.css";
 import "./game-fine-tuning.css";
 import "./game-battle-dice-polish.css";
+import "./game-mobile-hand.css";
 
 type GamePageProps = {
   params: Promise<{ roomId: string }>;
