@@ -19,7 +19,7 @@ test("modal recebe modelo de apresentação e não interpreta efeitos mecânicos
 test("controller visual deriva abertura pela chave atual sem setState em effect", () => {
   const source = readFileSync("src/hooks/use-temporal-anomaly.ts", "utf8");
 
-  assert.match(source, /presentation\.key/);
+  assert.match(source, /presentation\?\.key/);
   assert.match(source, /dismissedKey/);
   assert.match(source, /dismissedKey !== activeKey/);
   assert.match(source, /setDismissedKey\(activeKey\)/);
