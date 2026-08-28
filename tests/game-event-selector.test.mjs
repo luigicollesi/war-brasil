@@ -191,4 +191,25 @@ test("efeitos JSONB são validados na fronteira do domínio", () => {
     () => parseEventEffects([{ type: "ADD_TROOPS", territories: [43], amount: 1 }]),
     EventConfigurationError,
   );
+  assert.throws(
+    () => parseEventEffects([{ type: "ADD_TROOPS", territories: [], amount: 1 }]),
+    EventConfigurationError,
+  );
+  assert.throws(
+    () => parseEventEffects([{ type: "ADD_TROOPS", territories: [1, 1], amount: 1 }]),
+    EventConfigurationError,
+  );
+  assert.throws(
+    () =>
+      parseEventEffects([
+        {
+          type: "OPEN_CONNECTIONS",
+          connections: [
+            [1, 2],
+            [2, 1],
+          ],
+        },
+      ]),
+    EventConfigurationError,
+  );
 });
