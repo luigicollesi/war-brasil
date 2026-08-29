@@ -159,11 +159,6 @@ export function GameQuickGuide() {
             <strong>Domine antes dos rivais.</strong>
             <small>Só você conhece sua condição de vitória.</small>
           </div>
-          <div className="wb-guide-order-roll" aria-label="Exemplo de sorteio da ordem">
-            <div><GameDie value={6} color="forest" size="sm" /><span>1º</span></div>
-            <div><GameDie value={4} color="ocean" size="sm" /><span>2º</span></div>
-            <div><GameDie value={2} color="ruby" size="sm" /><span>3º</span></div>
-          </div>
         </div>
       </article>
 
