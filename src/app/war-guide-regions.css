@@ -1,0 +1,169 @@
+.wb-guide-regional-domain {
+  margin-top: clamp(46px, 6vw, 72px);
+  border-top: 1px solid var(--wb-border-neutral);
+  padding-top: clamp(32px, 4vw, 46px);
+}
+
+.wb-guide-regional-heading {
+  display: grid;
+  grid-template-columns: minmax(0, .9fr) minmax(280px, 1.1fr);
+  align-items: end;
+  gap: clamp(28px, 5vw, 64px);
+}
+
+.wb-guide-regional-heading h3 {
+  margin-top: 8px;
+  color: var(--wb-text);
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: clamp(1.75rem, 3vw, 2.65rem);
+  font-weight: 750;
+  line-height: 1;
+  letter-spacing: -.018em;
+}
+
+.wb-guide-regional-heading > p {
+  max-width: 620px;
+  margin: 0;
+  color: var(--wb-text-muted);
+  line-height: 1.65;
+}
+
+.wb-guide-regional-heading > p strong,
+.wb-guide-regional-note strong {
+  color: var(--wb-text);
+}
+
+.wb-guide-region-table-wrap {
+  margin-top: 24px;
+  overflow-x: auto;
+  border-top: 1px solid var(--wb-border-neutral);
+  border-bottom: 1px solid var(--wb-border-neutral);
+  scrollbar-width: thin;
+}
+
+.wb-guide-region-table {
+  width: 100%;
+  min-width: 760px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.wb-guide-region-table th,
+.wb-guide-region-table td {
+  padding: 17px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, .065);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.wb-guide-region-table thead th {
+  color: var(--wb-text-muted);
+  font-size: .64rem;
+  font-weight: 850;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+
+.wb-guide-region-table thead th:nth-child(1) { width: 21%; }
+.wb-guide-region-table thead th:nth-child(2) { width: 14%; }
+.wb-guide-region-table thead th:nth-child(3) { width: 11%; }
+.wb-guide-region-table thead th:nth-child(4) { width: 54%; }
+
+.wb-guide-region-table tbody tr:last-child th,
+.wb-guide-region-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.wb-guide-region-table tbody th {
+  color: var(--wb-text);
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: 1.12rem;
+  font-weight: 750;
+  letter-spacing: .025em;
+}
+
+.wb-guide-region-table tbody th > span:last-child {
+  vertical-align: middle;
+}
+
+.wb-guide-region-table tbody td {
+  color: var(--wb-text-muted);
+  font-size: .82rem;
+  line-height: 1.48;
+}
+
+.wb-guide-region-table tbody td:nth-child(2) strong {
+  color: var(--wb-text);
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: 1.45rem;
+  font-weight: 800;
+}
+
+.wb-guide-region-table tbody td:nth-child(2) small {
+  color: var(--wb-text-muted);
+  font-size: .68rem;
+}
+
+.wb-guide-region-table .wb-guide-region-bonus {
+  color: var(--wb-gold-bright);
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: 1.8rem;
+  font-weight: 800;
+  letter-spacing: -.01em;
+}
+
+.wb-guide-region-mark {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 10px;
+  border-radius: 50%;
+  background: var(--guide-region-color, var(--wb-gold));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--guide-region-color, var(--wb-gold)) 18%, transparent);
+  vertical-align: middle;
+}
+
+.wb-guide-region-table tr[data-region="nordeste"] { --guide-region-color: #5d9fe8; }
+.wb-guide-region-table tr[data-region="norte"] { --guide-region-color: #83b96c; }
+.wb-guide-region-table tr[data-region="sudeste"] { --guide-region-color: #d86f64; }
+.wb-guide-region-table tr[data-region="centro-oeste"] { --guide-region-color: #e4bd4d; }
+.wb-guide-region-table tr[data-region="sul"] { --guide-region-color: #9a7ac4; }
+
+.wb-guide-regional-note {
+  max-width: 820px;
+  margin: 18px 0 0;
+  border-left: 1px solid var(--wb-border-strong);
+  padding-left: 16px;
+  color: var(--wb-text-muted);
+  font-size: .86rem;
+  line-height: 1.58;
+}
+
+@media (max-width: 900px) {
+  .wb-guide-regional-heading {
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 700px) {
+  .wb-guide-regional-domain {
+    margin-top: 42px;
+    padding-top: 30px;
+  }
+
+  .wb-guide-region-table-wrap {
+    margin-right: -16px;
+    padding-right: 16px;
+  }
+
+  .wb-guide-region-table {
+    min-width: 700px;
+  }
+
+  .wb-guide-region-table th,
+  .wb-guide-region-table td {
+    padding: 14px 12px;
+  }
+}

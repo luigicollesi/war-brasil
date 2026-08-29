@@ -1,6 +1,7 @@
 import {
   REGION_REINFORCEMENT_BONUSES,
   TERRITORY_METADATA,
+  type Region,
 } from "./game-config";
 import {
   attackProfile,
@@ -8,6 +9,22 @@ import {
   maneuverTraversalProfile,
 } from "./game-barrier-rules";
 import { reinforcementBase, tradeValue } from "./game-rules";
+
+const REGION_GUIDE_ORDER: readonly Region[] = [
+  "nordeste",
+  "norte",
+  "sudeste",
+  "centro-oeste",
+  "sul",
+];
+
+const REGION_GUIDE_LABELS: Record<Region, string> = {
+  norte: "Norte",
+  nordeste: "Nordeste",
+  "centro-oeste": "Centro-Oeste",
+  sudeste: "Sudeste",
+  sul: "Sul",
+};
 
 export type GameGuidePresentation = ReturnType<typeof buildGameGuidePresentation>;
 
@@ -20,6 +37,14 @@ export function buildGameGuidePresentation() {
   const barrierUnavailable = attackProfile(3, "barrier");
   const oneBarrier = maneuverTraversalProfile(1);
   const twoBarriers = maneuverTraversalProfile(2);
+  const regions = REGION_GUIDE_ORDER.map((region) => ({
+    key: region,
+    label: REGION_GUIDE_LABELS[region],
+    territoryCount: Object.values(TERRITORY_METADATA).filter(
+      (territory) => territory.region === region,
+    ).length,
+    bonus: REGION_REINFORCEMENT_BONUSES[region],
+  }));
 
   if (
     normalAttack.kind !== "available" ||
@@ -34,6 +59,7 @@ export function buildGameGuidePresentation() {
   return {
     territoryCount,
     regionCount,
+    regions,
     setup: {
       initialTroopsPerTerritory: 1,
     },

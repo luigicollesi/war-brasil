@@ -8,6 +8,13 @@ test("guia rápido deriva números das regras reais", () => {
 
   assert.equal(guide.territoryCount, 42);
   assert.equal(guide.regionCount, 5);
+  assert.deepEqual(guide.regions, [
+    { key: "nordeste", label: "Nordeste", territoryCount: 13, bonus: 7 },
+    { key: "norte", label: "Norte", territoryCount: 10, bonus: 5 },
+    { key: "sudeste", label: "Sudeste", territoryCount: 8, bonus: 4 },
+    { key: "centro-oeste", label: "Centro-Oeste", territoryCount: 5, bonus: 4 },
+    { key: "sul", label: "Sul", territoryCount: 6, bonus: 2 },
+  ]);
   assert.equal(guide.reinforcement.minimum, 3);
   assert.equal(guide.reinforcement.baseExample, 6);
   assert.equal(guide.attack.barrierMinimumTroops, 4);
@@ -44,6 +51,8 @@ test("manual cobre o fluxo e os elementos essenciais da partida", () => {
     "Reforçar",
     "Atacar",
     "Manobrar",
+    "Domínio regional",
+    "Leitura estratégica",
     "Barreiras Geográficas",
     "Desvantagem Geográfica",
     "Travessia Geográfica",
@@ -58,6 +67,10 @@ test("manual cobre o fluxo e os elementos essenciais da partida", () => {
     assert.match(source, new RegExp(term, "i"));
   }
 
+  assert.match(source, /guide\.regions\.map/);
+  assert.match(source, /regionalStrategy\[region\.key\]/);
+  assert.match(source, /O bônus é adicional ao reforço normal/);
+  assert.match(source, /O tamanho não é o único fator/);
   assert.match(source, /number="03" title="Barreiras Geográficas"/);
   assert.match(source, /number="04" title="Leia o mapa"/);
   assert.match(source, /number="05" title="Use suas cartas"/);

@@ -3,10 +3,10 @@ export type Region = "norte" | "nordeste" | "centro-oeste" | "sudeste" | "sul";
 export type CardSymbol = "leaf" | "gold" | "water";
 
 export const REGION_REINFORCEMENT_BONUSES: Record<Region, number> = {
-  norte: 3,
-  nordeste: 2,
-  "centro-oeste": 2,
-  sudeste: 3,
+  norte: 5,
+  nordeste: 7,
+  "centro-oeste": 4,
+  sudeste: 4,
   sul: 2,
 };
 

@@ -40,6 +40,19 @@ const anomalyExample: TemporalAnomalyPresentation["effects"] = [
   },
 ];
 
+const regionalStrategy = {
+  nordeste:
+    "Maior região do mapa: exige uma expansão ampla e é difícil manter todos os territórios.",
+  norte:
+    "Extensa, mas o domínio inclui o Acre e a vantagem estratégica do Túnel Jurássico.",
+  sudeste:
+    "Oito territórios muito disputados, com uma recompensa forte sem superar as grandes regiões.",
+  "centro-oeste":
+    "Poucos territórios, porém posição central e maior exposição tornam o domínio difícil de sustentar.",
+  sul:
+    "Compacta e periférica, tende a ser mais simples de consolidar e defender.",
+} as const;
+
 function GuideHeading({
   number,
   title,
@@ -205,6 +218,60 @@ export function GameQuickGuide() {
             </p>
           </section>
         </div>
+
+        <section
+          className="wb-guide-regional-domain"
+          aria-labelledby="guide-regional-domain-title"
+        >
+          <div className="wb-guide-regional-heading">
+            <div>
+              <p className="wb-guide-label">Domínio regional</p>
+              <h3 id="guide-regional-domain-title">
+                Regiões completas aceleram seus reforços.
+              </h3>
+            </div>
+            <p>
+              <strong>O bônus é adicional ao reforço normal.</strong> Você o recebe
+              em toda fase de reforço enquanto controlar todos os territórios da
+              região.
+            </p>
+          </div>
+
+          <div className="wb-guide-region-table-wrap">
+            <table className="wb-guide-region-table">
+              <thead>
+                <tr>
+                  <th scope="col">Região</th>
+                  <th scope="col">Territórios</th>
+                  <th scope="col">Bônus</th>
+                  <th scope="col">Leitura estratégica</th>
+                </tr>
+              </thead>
+              <tbody>
+                {guide.regions.map((region) => (
+                  <tr key={region.key} data-region={region.key}>
+                    <th scope="row">
+                      <span className="wb-guide-region-mark" aria-hidden="true" />
+                      <span>{region.label}</span>
+                    </th>
+                    <td>
+                      <strong>{region.territoryCount}</strong>
+                      <small> territórios</small>
+                    </td>
+                    <td className="wb-guide-region-bonus">+{region.bonus}</td>
+                    <td>{regionalStrategy[region.key]}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <p className="wb-guide-regional-note">
+            <strong>O tamanho não é o único fator.</strong> Posição no mapa,
+            exposição a ataques e vantagens especiais também pesam no valor de
+            cada região.
+          </p>
+        </section>
       </article>
 
       <article className="wb-guide-chapter wb-guide-geographic-chapter">
