@@ -254,7 +254,7 @@ export function GameQuickGuide() {
             </div>
             <p>
               Ao selecionar um território para atacar, a <strong>caveira</strong> 
-              aparece sobre um inimigo alcançável somente através de uma Barreira
+               aparece sobre um inimigo alcançável somente através de uma Barreira
               Geográfica.
             </p>
 
