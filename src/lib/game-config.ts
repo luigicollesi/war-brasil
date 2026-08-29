@@ -4,7 +4,7 @@ export type CardSymbol = "leaf" | "gold" | "water";
 
 export const REGION_REINFORCEMENT_BONUSES: Record<Region, number> = {
   norte: 5,
-  nordeste: 7,
+  nordeste: 6,
   "centro-oeste": 4,
   sudeste: 4,
   sul: 2,

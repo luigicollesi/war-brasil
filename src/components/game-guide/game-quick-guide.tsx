@@ -42,7 +42,7 @@ const anomalyExample: TemporalAnomalyPresentation["effects"] = [
 
 const regionalStrategy = {
   nordeste:
-    "Maior região do mapa: exige uma expansão ampla e é difícil manter todos os territórios.",
+    "Maior região do mapa, mas com poucos pontos de entrada; exige grande expansão para conquistar, porém é relativamente mais defensável depois de consolidada.",
   norte:
     "Extensa, mas o domínio inclui o Acre e a vantagem estratégica do Túnel Jurássico.",
   sudeste:
@@ -268,8 +268,8 @@ export function GameQuickGuide() {
 
           <p className="wb-guide-regional-note">
             <strong>O tamanho não é o único fator.</strong> Posição no mapa,
-            exposição a ataques e vantagens especiais também pesam no valor de
-            cada região.
+            quantidade de pontos de entrada, exposição a ataques e vantagens
+            especiais também pesam no valor de cada região.
           </p>
         </section>
       </article>

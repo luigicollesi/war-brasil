@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { isValidTrade, reinforcementBase, resolveBattle, tradeValue } from "../.test-build/game-rules.js";
+import { isValidTrade, reinforcementBase, reinforcementFor, resolveBattle, tradeValue } from "../.test-build/game-rules.js";
 import {
   findTerritoryConnection,
   isJurassicTunnelConnection,
@@ -13,6 +13,13 @@ test("reforços usam mínimo de três e metade dos territórios", () => {
   assert.equal(reinforcementBase(1), 3);
   assert.equal(reinforcementBase(7), 3);
   assert.equal(reinforcementBase(12), 6);
+});
+
+test("domínio do Nordeste soma seis tropas ao reforço base", () => {
+  const nordeste = [12, 14, 15, 16, 17, 23, 30, 31, 32, 33, 34, 38, 39];
+  assert.equal(nordeste.length, 13);
+  assert.equal(reinforcementBase(nordeste.length), 6);
+  assert.equal(reinforcementFor(nordeste), 12);
 });
 
 test("dados são comparados do maior para o menor", () => {

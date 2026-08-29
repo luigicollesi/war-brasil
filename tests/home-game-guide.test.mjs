@@ -9,7 +9,7 @@ test("guia rápido deriva números das regras reais", () => {
   assert.equal(guide.territoryCount, 42);
   assert.equal(guide.regionCount, 5);
   assert.deepEqual(guide.regions, [
-    { key: "nordeste", label: "Nordeste", territoryCount: 13, bonus: 7 },
+    { key: "nordeste", label: "Nordeste", territoryCount: 13, bonus: 6 },
     { key: "norte", label: "Norte", territoryCount: 10, bonus: 5 },
     { key: "sudeste", label: "Sudeste", territoryCount: 8, bonus: 4 },
     { key: "centro-oeste", label: "Centro-Oeste", territoryCount: 5, bonus: 4 },
@@ -69,6 +69,8 @@ test("manual cobre o fluxo e os elementos essenciais da partida", () => {
 
   assert.match(source, /guide\.regions\.map/);
   assert.match(source, /regionalStrategy\[region\.key\]/);
+  assert.match(source, /poucos pontos de entrada/);
+  assert.match(source, /quantidade de pontos de entrada/);
   assert.match(source, /O bônus é adicional ao reforço normal/);
   assert.match(source, /O tamanho não é o único fator/);
   assert.match(source, /number="03" title="Barreiras Geográficas"/);
