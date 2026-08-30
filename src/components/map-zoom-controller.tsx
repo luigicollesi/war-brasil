@@ -8,6 +8,7 @@ import {
   MAP_PAN_THRESHOLD,
   MAP_VIEWPORT_EVENT,
   clampMapViewport,
+  mapStrokeWidthForScale,
   mapViewportToViewBox,
   type MapViewportPoint,
   type MapViewportTransform,
@@ -32,6 +33,7 @@ type PinchGesture = {
 };
 
 const CLICK_SUPPRESSION_MS = 450;
+const STROKE_EPSILON = 0.001;
 
 function midpoint(a: PointerSample, b: PointerSample) {
   return {
@@ -58,6 +60,7 @@ export function MapZoomController() {
 
       let viewport: MapViewportTransform = { ...DEFAULT_MAP_VIEWPORT };
       let detachSvg = () => {};
+      let applyTerritoryStrokeScale = () => {};
 
       const dimensions = () => ({
         width: surface.clientWidth || surface.getBoundingClientRect().width,
@@ -74,6 +77,7 @@ export function MapZoomController() {
         surface.dataset.mapZoomed =
           viewport.scale > MAP_MIN_SCALE + 0.001 ? "true" : "false";
         surface.style.setProperty("--game-map-scale", String(viewport.scale));
+        applyTerritoryStrokeScale();
 
         const viewBox = mapViewportToViewBox(viewport, width, height).value;
         for (const overlay of surface.querySelectorAll<SVGSVGElement>("svg[viewBox]")) {
@@ -105,10 +109,59 @@ export function MapZoomController() {
           return;
         }
         const svg = root as unknown as SVGSVGElement;
+        const territoryRoot = svg.querySelector("#territories");
 
         svg.style.touchAction = "none";
         svg.style.userSelect = "none";
         svg.style.webkitUserSelect = "none";
+
+        const baseStrokeByPath = new WeakMap<SVGPathElement, number>();
+        const lastAppliedStrokeByPath = new WeakMap<SVGPathElement, number>();
+
+        applyTerritoryStrokeScale = () => {
+          if (!territoryRoot) return;
+          const mobile = window.matchMedia("(max-width: 767px)").matches;
+
+          for (const path of territoryRoot.querySelectorAll<SVGPathElement>(
+            "path.territory",
+          )) {
+            const currentStroke = Number.parseFloat(path.style.strokeWidth);
+            const lastApplied = lastAppliedStrokeByPath.get(path);
+
+            if (
+              Number.isFinite(currentStroke) &&
+              (lastApplied === undefined ||
+                Math.abs(currentStroke - lastApplied) > STROKE_EPSILON)
+            ) {
+              baseStrokeByPath.set(path, currentStroke);
+            }
+
+            const baseStroke = baseStrokeByPath.get(path);
+            if (baseStroke === undefined) continue;
+
+            const nextStroke = mobile
+              ? mapStrokeWidthForScale(baseStroke, viewport.scale)
+              : baseStroke;
+
+            lastAppliedStrokeByPath.set(path, nextStroke);
+            if (
+              !Number.isFinite(currentStroke) ||
+              Math.abs(currentStroke - nextStroke) > STROKE_EPSILON
+            ) {
+              path.style.strokeWidth = String(nextStroke);
+            }
+          }
+        };
+
+        const strokeObserver = territoryRoot
+          ? new MutationObserver(() => applyTerritoryStrokeScale())
+          : null;
+        strokeObserver?.observe(territoryRoot as Element, {
+          attributes: true,
+          subtree: true,
+          attributeFilter: ["style"],
+        });
+        applyTerritoryStrokeScale();
 
         const pointers = new Map<number, PointerSample>();
         let single: SingleGesture | null = null;
@@ -272,6 +325,8 @@ export function MapZoomController() {
         svg.addEventListener("click", onClickCapture, true);
 
         detachSvg = () => {
+          strokeObserver?.disconnect();
+          applyTerritoryStrokeScale = () => {};
           svg.removeEventListener("pointerdown", onPointerDown);
           svg.removeEventListener("pointermove", onPointerMove);
           svg.removeEventListener("pointerup", finishPointer);
