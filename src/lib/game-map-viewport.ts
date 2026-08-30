@@ -117,7 +117,11 @@ export function fitMapViewportToBounds({
   const safePaddingRatio = Math.max(0, paddingRatio);
   const paddedWidth = bounds.width * (1 + safePaddingRatio * 2);
   const paddedHeight = bounds.height * (1 + safePaddingRatio * 2);
-  const scale = Math.min(worldSize / paddedWidth, worldSize / paddedHeight);
+  const requestedScale = Math.min(
+    worldSize / paddedWidth,
+    worldSize / paddedHeight,
+  );
+  const scale = clamp(requestedScale, MAP_MIN_SCALE, MAP_MAX_SCALE);
   const centerX = bounds.x + bounds.width / 2;
   const centerY = bounds.y + bounds.height / 2;
 
