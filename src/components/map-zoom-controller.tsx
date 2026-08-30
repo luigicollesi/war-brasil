@@ -80,9 +80,21 @@ export function MapZoomController() {
       let applyTerritoryStrokeScale = () => {};
       let lastFocusKey: string | null = null;
       let autoFocusActive = false;
+      let manualViewportOverride = false;
       let lastMobile = window.matchMedia(MOBILE_MAP_QUERY).matches;
       let autoFocusFrame: number | null = null;
       const territoryBoundsById = new Map<number, MapWorldBounds>();
+
+      const resetButton = document.createElement("button");
+      resetButton.type = "button";
+      resetButton.className = "game-map-reset-control";
+      resetButton.setAttribute("aria-label", "Mostrar mapa inteiro");
+      resetButton.title = "Mostrar mapa inteiro";
+      const resetIcon = document.createElement("span");
+      resetIcon.className = "game-map-reset-icon";
+      resetIcon.setAttribute("aria-hidden", "true");
+      resetButton.append(resetIcon);
+      surface.append(resetButton);
 
       const dimensions = () => ({
         width: surface.clientWidth || surface.getBoundingClientRect().width,
@@ -161,6 +173,24 @@ export function MapZoomController() {
         autoFocusFrame = window.requestAnimationFrame(step);
       };
 
+      const resetMapViewport = () => {
+        manualViewportOverride = true;
+        animateViewportTo({ ...DEFAULT_MAP_VIEWPORT }, { animated: true });
+      };
+
+      const onResetPointerDown = (event: PointerEvent) => {
+        event.stopPropagation();
+      };
+
+      const onResetClick = (event: MouseEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
+        resetMapViewport();
+      };
+
+      resetButton.addEventListener("pointerdown", onResetPointerDown);
+      resetButton.addEventListener("click", onResetClick);
+
       const cacheTerritoryBounds = (territoryRoot: Element | null) => {
         territoryBoundsById.clear();
         if (!territoryRoot) return;
@@ -210,18 +240,26 @@ export function MapZoomController() {
         const territoryIds = readFocusTerritoryIds(surface);
         const focusKey = territoryIds.join(",");
         const mobile = window.matchMedia(MOBILE_MAP_QUERY).matches;
+        const focusChanged = focusKey !== lastFocusKey;
 
         if (!mobile) {
           const shouldReset = autoFocusActive;
           lastFocusKey = focusKey;
           autoFocusActive = false;
+          manualViewportOverride = false;
           if (shouldReset) {
             animateViewportTo({ ...DEFAULT_MAP_VIEWPORT }, { animated: false });
           }
           return shouldReset;
         }
 
-        if (!force && focusKey === lastFocusKey) return false;
+        if (focusChanged) {
+          manualViewportOverride = false;
+        } else if (manualViewportOverride) {
+          return false;
+        }
+
+        if (!force && !focusChanged) return false;
 
         if (!territoryIds.length) {
           const shouldReset = autoFocusActive;
@@ -345,6 +383,7 @@ export function MapZoomController() {
             return;
           }
 
+          manualViewportOverride = true;
           pinch = {
             distance: distance(samples[0], samples[1]),
             focus: relativePoint(midpoint(samples[0], samples[1])),
@@ -430,6 +469,7 @@ export function MapZoomController() {
 
           if (viewport.scale <= MAP_MIN_SCALE + 0.001) return;
 
+          manualViewportOverride = true;
           const dx = event.clientX - single.lastX;
           const dy = event.clientY - single.lastY;
           single.lastX = event.clientX;
@@ -524,7 +564,10 @@ export function MapZoomController() {
         const breakpointChanged = mobile !== lastMobile;
         lastMobile = mobile;
 
-        if (breakpointChanged || (mobile && autoFocusActive)) {
+        if (
+          breakpointChanged ||
+          (mobile && autoFocusActive && !manualViewportOverride)
+        ) {
           cancelAutoFocusAnimation();
           if (applyFocusFromSurface({ force: true, animated: false })) return;
         }
@@ -549,6 +592,9 @@ export function MapZoomController() {
         focusObserver.disconnect();
         resizeObserver.disconnect();
         overlayObserver.disconnect();
+        resetButton.removeEventListener("pointerdown", onResetPointerDown);
+        resetButton.removeEventListener("click", onResetClick);
+        resetButton.remove();
       };
     };
 
