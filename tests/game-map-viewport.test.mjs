@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   DEFAULT_MAP_VIEWPORT,
   MAP_AUTO_FOCUS_DURATION_MS,
+  MAP_FOCUS_EDGE_INSET_PX,
   MAP_MAX_SCALE,
   clampMapViewport,
   easeOutCubic,
@@ -14,6 +15,30 @@ import {
   unionMapBounds,
   zoomMapViewportAtPoint,
 } from "../.test-build/game-map-viewport.js";
+
+function projectedBounds(bounds, width, height, viewport) {
+  const topLeft = projectMapPoint(
+    { x: bounds.x, y: bounds.y },
+    width,
+    height,
+    viewport,
+  );
+  const bottomRight = projectMapPoint(
+    { x: bounds.x + bounds.width, y: bounds.y + bounds.height },
+    width,
+    height,
+    viewport,
+  );
+
+  return {
+    left: topLeft.x,
+    top: topLeft.y,
+    right: bottomRight.x,
+    bottom: bottomRight.y,
+    width: bottomRight.x - topLeft.x,
+    height: bottomRight.y - topLeft.y,
+  };
+}
 
 test("map viewport never zooms out past the current board size", () => {
   assert.deepEqual(
@@ -97,12 +122,41 @@ test("map fit centers compact bounds and respects maximum zoom", () => {
     bounds: { x: 527, y: 527, width: 200, height: 200 },
     width: 400,
     height: 400,
-    paddingRatio: 0,
   });
 
   assert.equal(viewport.scale, MAP_MAX_SCALE);
   assert.equal(viewport.panX, -400);
   assert.equal(viewport.panY, -400);
+});
+
+test("map fit uses the maximum horizontal zoom without cropping the group", () => {
+  const width = 400;
+  const height = 400;
+  const bounds = { x: 227, y: 527, width: 800, height: 200 };
+  const viewport = fitMapViewportToBounds({ bounds, width, height });
+  const projected = projectedBounds(bounds, width, height, viewport);
+
+  assert.ok(Math.abs(projected.left - MAP_FOCUS_EDGE_INSET_PX) < 1e-6);
+  assert.ok(
+    Math.abs(projected.right - (width - MAP_FOCUS_EDGE_INSET_PX)) < 1e-6,
+  );
+  assert.ok(projected.top >= MAP_FOCUS_EDGE_INSET_PX);
+  assert.ok(projected.bottom <= height - MAP_FOCUS_EDGE_INSET_PX);
+});
+
+test("map fit uses the maximum vertical zoom without cropping the group", () => {
+  const width = 400;
+  const height = 400;
+  const bounds = { x: 527, y: 227, width: 200, height: 800 };
+  const viewport = fitMapViewportToBounds({ bounds, width, height });
+  const projected = projectedBounds(bounds, width, height, viewport);
+
+  assert.ok(Math.abs(projected.top - MAP_FOCUS_EDGE_INSET_PX) < 1e-6);
+  assert.ok(
+    Math.abs(projected.bottom - (height - MAP_FOCUS_EDGE_INSET_PX)) < 1e-6,
+  );
+  assert.ok(projected.left >= MAP_FOCUS_EDGE_INSET_PX);
+  assert.ok(projected.right <= width - MAP_FOCUS_EDGE_INSET_PX);
 });
 
 test("map fit returns the default viewport for the complete board", () => {
@@ -111,7 +165,6 @@ test("map fit returns the default viewport for the complete board", () => {
       bounds: { x: 0, y: 0, width: 1254, height: 1254 },
       width: 390,
       height: 390,
-      paddingRatio: 0,
     }),
     DEFAULT_MAP_VIEWPORT,
   );
@@ -122,7 +175,6 @@ test("map fit clamps groups near the world edge without exposing empty space", (
     bounds: { x: 0, y: 0, width: 300, height: 300 },
     width: 400,
     height: 400,
-    paddingRatio: 0,
   });
 
   assert.equal(viewport.scale, MAP_MAX_SCALE);
