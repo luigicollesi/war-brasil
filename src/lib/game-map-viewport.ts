@@ -3,6 +3,9 @@ export const MAP_MIN_SCALE = 1;
 export const MAP_MAX_SCALE = 3;
 export const MAP_PAN_THRESHOLD = 6;
 export const MAP_VIEWPORT_EVENT = "game-map-viewport-change";
+export const MAP_SELECTION_PADDING_RATIO = 0.2;
+export const MAP_STROKE_ZOOM_EXPONENT = 1.25;
+export const MAP_MIN_TERRITORY_STROKE = 1.25;
 
 export type MapViewportTransform = {
   scale: number;
@@ -15,6 +18,13 @@ export type MapViewportPoint = {
   y: number;
 };
 
+export type MapWorldBounds = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
 export const DEFAULT_MAP_VIEWPORT: MapViewportTransform = {
   scale: MAP_MIN_SCALE,
   panX: 0,
@@ -23,6 +33,43 @@ export const DEFAULT_MAP_VIEWPORT: MapViewportTransform = {
 
 function clamp(value: number, minimum: number, maximum: number) {
   return Math.min(maximum, Math.max(minimum, value));
+}
+
+function validMapBounds(bounds: MapWorldBounds) {
+  return (
+    Number.isFinite(bounds.x) &&
+    Number.isFinite(bounds.y) &&
+    Number.isFinite(bounds.width) &&
+    Number.isFinite(bounds.height) &&
+    bounds.width >= 0 &&
+    bounds.height >= 0
+  );
+}
+
+export function unionMapBounds(
+  bounds: readonly MapWorldBounds[],
+): MapWorldBounds | null {
+  const validBounds = bounds.filter(validMapBounds);
+  if (!validBounds.length) return null;
+
+  let minX = Number.POSITIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+  let maxX = Number.NEGATIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+
+  for (const box of validBounds) {
+    minX = Math.min(minX, box.x);
+    minY = Math.min(minY, box.y);
+    maxX = Math.max(maxX, box.x + box.width);
+    maxY = Math.max(maxY, box.y + box.height);
+  }
+
+  return {
+    x: minX,
+    y: minY,
+    width: maxX - minX,
+    height: maxY - minY,
+  };
 }
 
 export function clampMapViewport(
@@ -40,6 +87,59 @@ export function clampMapViewport(
     panX: clamp(viewport.panX, width * (1 - scale), 0),
     panY: clamp(viewport.panY, height * (1 - scale), 0),
   };
+}
+
+export function fitMapViewportToBounds({
+  bounds,
+  width,
+  height,
+  paddingRatio = MAP_SELECTION_PADDING_RATIO,
+  worldSize = MAP_WORLD_SIZE,
+}: {
+  bounds: MapWorldBounds;
+  width: number;
+  height: number;
+  paddingRatio?: number;
+  worldSize?: number;
+}): MapViewportTransform {
+  if (
+    !validMapBounds(bounds) ||
+    bounds.width <= 0 ||
+    bounds.height <= 0 ||
+    width <= 0 ||
+    height <= 0 ||
+    worldSize <= 0
+  ) {
+    return { ...DEFAULT_MAP_VIEWPORT };
+  }
+
+  const safePaddingRatio = Math.max(0, paddingRatio);
+  const paddedWidth = bounds.width * (1 + safePaddingRatio * 2);
+  const paddedHeight = bounds.height * (1 + safePaddingRatio * 2);
+  const scale = Math.min(worldSize / paddedWidth, worldSize / paddedHeight);
+  const centerX = bounds.x + bounds.width / 2;
+  const centerY = bounds.y + bounds.height / 2;
+
+  return clampMapViewport(
+    {
+      scale,
+      panX: width / 2 - (centerX / worldSize) * width * scale,
+      panY: height / 2 - (centerY / worldSize) * height * scale,
+    },
+    width,
+    height,
+  );
+}
+
+export function mapStrokeWidthForScale(baseWidth: number, scale: number) {
+  if (!Number.isFinite(baseWidth) || baseWidth <= 0) return 0;
+
+  const safeScale = Math.max(MAP_MIN_SCALE, scale);
+  const minimum = Math.min(baseWidth, MAP_MIN_TERRITORY_STROKE);
+  return Math.max(
+    minimum,
+    baseWidth / Math.pow(safeScale, MAP_STROKE_ZOOM_EXPONENT),
+  );
 }
 
 export function zoomMapViewportAtPoint({
