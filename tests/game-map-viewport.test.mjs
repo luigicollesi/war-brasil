@@ -4,8 +4,11 @@ import {
   DEFAULT_MAP_VIEWPORT,
   MAP_MAX_SCALE,
   clampMapViewport,
+  fitMapViewportToBounds,
+  mapStrokeWidthForScale,
   mapViewportToViewBox,
   projectMapPoint,
+  unionMapBounds,
   zoomMapViewportAtPoint,
 } from "../.test-build/game-map-viewport.js";
 
@@ -73,4 +76,87 @@ test("troop overlay projection moves positions without changing marker dimension
 
   assert.deepEqual(normal, { x: 200, y: 200 });
   assert.deepEqual(zoomed, { x: 300, y: 320 });
+});
+
+test("map bounds union contains every territory rectangle", () => {
+  assert.deepEqual(
+    unionMapBounds([
+      { x: 100, y: 200, width: 50, height: 80 },
+      { x: 140, y: 150, width: 100, height: 40 },
+    ]),
+    { x: 100, y: 150, width: 140, height: 130 },
+  );
+  assert.equal(unionMapBounds([]), null);
+});
+
+test("map fit centers compact bounds and respects maximum zoom", () => {
+  const viewport = fitMapViewportToBounds({
+    bounds: { x: 527, y: 527, width: 200, height: 200 },
+    width: 400,
+    height: 400,
+    paddingRatio: 0,
+  });
+
+  assert.equal(viewport.scale, MAP_MAX_SCALE);
+  assert.equal(viewport.panX, -400);
+  assert.equal(viewport.panY, -400);
+});
+
+test("map fit returns the default viewport for the complete board", () => {
+  assert.deepEqual(
+    fitMapViewportToBounds({
+      bounds: { x: 0, y: 0, width: 1254, height: 1254 },
+      width: 390,
+      height: 390,
+      paddingRatio: 0,
+    }),
+    DEFAULT_MAP_VIEWPORT,
+  );
+});
+
+test("map fit clamps groups near the world edge without exposing empty space", () => {
+  const viewport = fitMapViewportToBounds({
+    bounds: { x: 0, y: 0, width: 300, height: 300 },
+    width: 400,
+    height: 400,
+    paddingRatio: 0,
+  });
+
+  assert.equal(viewport.scale, MAP_MAX_SCALE);
+  assert.equal(viewport.panX, 0);
+  assert.equal(viewport.panY, 0);
+});
+
+test("territory borders get thinner as map zoom increases", () => {
+  const baseStroke = 4;
+  const scale1 = mapStrokeWidthForScale(baseStroke, 1);
+  const scale2 = mapStrokeWidthForScale(baseStroke, 2);
+  const scale3 = mapStrokeWidthForScale(baseStroke, 3);
+
+  assert.equal(scale1, baseStroke);
+  assert.ok(scale1 > scale2);
+  assert.ok(scale2 > scale3);
+
+  const perceived1 = scale1 * 1;
+  const perceived2 = scale2 * 2;
+  const perceived3 = scale3 * 3;
+  assert.ok(perceived1 > perceived2);
+  assert.ok(perceived2 > perceived3);
+});
+
+test("territory stroke hierarchy remains stable at every supported zoom", () => {
+  for (const scale of [1, 1.5, 2, 3]) {
+    assert.ok(
+      mapStrokeWidthForScale(8, scale) > mapStrokeWidthForScale(7, scale),
+    );
+    assert.ok(
+      mapStrokeWidthForScale(7, scale) > mapStrokeWidthForScale(6, scale),
+    );
+    assert.ok(
+      mapStrokeWidthForScale(6, scale) > mapStrokeWidthForScale(5, scale),
+    );
+    assert.ok(
+      mapStrokeWidthForScale(5, scale) > mapStrokeWidthForScale(4, scale),
+    );
+  }
 });
