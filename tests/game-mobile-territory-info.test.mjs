@@ -24,29 +24,39 @@ test("game page mounts the mobile territory info controller and stylesheet", () 
   assert.match(pageSource, /game-mobile-territory-info\.css/);
 });
 
-test("mobile territory info anchors directly to the measured turn order strip", () => {
+test("mobile territory info keeps the current vertical anchor under the turn order", () => {
   assert.match(controllerSource, /ORDER_LABEL = "Ordem de jogo"/);
   assert.match(controllerSource, /getBoundingClientRect\(\)/);
-  assert.match(controllerSource, /overlay\.style\.top = `\$\{Math\.round\(rect\.bottom\)\}px`/);
-  assert.match(controllerSource, /overlay\.style\.left/);
-  assert.match(controllerSource, /overlay\.style\.width/);
-  assert.match(controllerSource, /ResizeObserver\(schedulePosition\)/);
-});
-
-test("mobile territory info copies existing tooltip content and keeps the last touch-visible information", () => {
-  assert.match(controllerSource, /\.game-territory-tooltip/);
-  assert.match(controllerSource, /overlay\.innerHTML = source\.innerHTML/);
-  assert.match(controllerSource, /hasMobileInfo = true/);
   assert.match(
     controllerSource,
-    /overlay\.dataset\.visible = hasMobileInfo \? "true" : "false"/,
+    /overlay\.style\.top = `\$\{Math\.round\(rect\.bottom\)\}px`/,
   );
+  assert.match(controllerSource, /ResizeObserver\(schedulePosition\)/);
+  assert.doesNotMatch(controllerSource, /overlay\.style\.width/);
+  assert.doesNotMatch(controllerSource, /overlay\.style\.left/);
 });
 
-test("floating territory info is fixed above the map and completely transparent to touch", () => {
-  assert.match(cssSource, /\.mobile-territory-info-layer \{[\s\S]*?position: fixed;/);
-  assert.match(cssSource, /z-index: 45;/);
-  assert.match(cssSource, /\.game-turn-order-strip-anchor \{[\s\S]*?z-index: 46/);
+test("mobile territory info mirrors hover lifetime instead of retaining the last territory", () => {
+  assert.match(controllerSource, /\.game-territory-tooltip/);
+  assert.match(controllerSource, /overlay\.innerHTML = source\.innerHTML/);
+  assert.match(controllerSource, /const hideOverlay = \(\) =>/);
+  assert.match(
+    controllerSource,
+    /if \(!source\) \{\s*hideOverlay\(\);\s*return;/,
+  );
+  assert.doesNotMatch(controllerSource, /hasMobileInfo/);
+});
+
+test("mobile territory info is compact, centered and transparent to touch", () => {
+  assert.match(
+    cssSource,
+    /\.mobile-territory-info-layer \{[\s\S]*?position: fixed;[\s\S]*?left: 50%;/,
+  );
+  assert.match(cssSource, /width: max-content;/);
+  assert.match(cssSource, /min-width: 180px;/);
+  assert.match(cssSource, /max-width: min\(260px, calc\(100vw - 24px\)\);/);
+  assert.match(cssSource, /border-radius: 13px;/);
+  assert.match(cssSource, /translateX\(-50%\)/);
   assert.match(cssSource, /pointer-events: none !important;/);
   assert.match(
     cssSource,
@@ -65,5 +75,6 @@ test("desktop cursor-follow tooltip implementation remains present", () => {
   assert.match(boardSource, /scheduleTooltipPosition/);
   assert.match(boardSource, /translate3d\(\$\{x\}px, \$\{y\}px, 0\)/);
   assert.match(boardSource, /className="game-territory-tooltip"/);
+  assert.match(boardSource, /setHoveredTerritory\(null\)/);
   assert.match(cssSource, /@media \(max-width: 767px\)/);
 });

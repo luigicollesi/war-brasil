@@ -38,7 +38,11 @@ export function MobileTerritoryInfoController() {
     let surfaceObserver: MutationObserver | null = null;
     let orderObserver: ResizeObserver | null = null;
     let layoutFrame: number | null = null;
-    let hasMobileInfo = false;
+
+    const hideOverlay = () => {
+      overlay.dataset.visible = "false";
+      overlay.replaceChildren();
+    };
 
     const positionOverlay = () => {
       layoutFrame = null;
@@ -46,8 +50,6 @@ export function MobileTerritoryInfoController() {
 
       const rect = currentOrderStrip.getBoundingClientRect();
       overlay.style.top = `${Math.round(rect.bottom)}px`;
-      overlay.style.left = `${Math.round(rect.left)}px`;
-      overlay.style.width = `${Math.round(rect.width)}px`;
     };
 
     const schedulePosition = () => {
@@ -56,18 +58,20 @@ export function MobileTerritoryInfoController() {
     };
 
     const syncTerritoryInfo = () => {
-      if (!media.matches || !currentSurface || !currentOrderStrip) return;
+      if (!media.matches || !currentSurface || !currentOrderStrip) {
+        hideOverlay();
+        return;
+      }
 
       const source = currentSurface.querySelector<HTMLElement>(
         ".game-territory-tooltip",
       );
       if (!source) {
-        overlay.dataset.visible = hasMobileInfo ? "true" : "false";
+        hideOverlay();
         return;
       }
 
       overlay.innerHTML = source.innerHTML;
-      hasMobileInfo = true;
       overlay.dataset.visible = "true";
       schedulePosition();
     };
@@ -78,7 +82,11 @@ export function MobileTerritoryInfoController() {
       surfaceObserver = null;
       currentSurface = surface;
 
-      if (!surface) return;
+      if (!surface) {
+        hideOverlay();
+        return;
+      }
+
       surfaceObserver = new MutationObserver(syncTerritoryInfo);
       surfaceObserver.observe(surface, {
         childList: true,
@@ -97,7 +105,7 @@ export function MobileTerritoryInfoController() {
       currentOrderStrip = strip;
 
       if (!strip) {
-        overlay.dataset.visible = "false";
+        hideOverlay();
         return;
       }
 
@@ -118,9 +126,7 @@ export function MobileTerritoryInfoController() {
 
     const onMediaChange = () => {
       if (!media.matches) {
-        hasMobileInfo = false;
-        overlay.dataset.visible = "false";
-        overlay.replaceChildren();
+        hideOverlay();
         return;
       }
       locate();

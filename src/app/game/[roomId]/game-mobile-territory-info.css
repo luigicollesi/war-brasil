@@ -1,13 +1,14 @@
-/* Informações de território no mobile: uma camada puramente visual colada à
-   ordem de jogada. Não reserva espaço e todo toque atravessa para o mapa. */
+/* Informações de território no mobile: camada puramente visual sobre o mapa.
+   Só aparece enquanto o tooltip original existe (hover/touch ativo) e todo
+   toque atravessa para o mapa atrás. */
 
 .mobile-territory-info-layer {
   display: none;
 }
 
 @media (max-width: 767px) {
-  /* A versão original continua sendo a fonte de conteúdo para o controller,
-     mas não é desenhada no mobile nem interfere com o hit testing. */
+  /* O tooltip original continua sendo a fonte de conteúdo para o controller,
+     mas não é desenhado no mobile nem interfere com o hit testing. */
   .game-territory-tooltip {
     display: none !important;
   }
@@ -19,34 +20,38 @@
 
   .mobile-territory-info-layer {
     position: fixed;
+    left: 50%;
     z-index: 45;
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    column-gap: 12px;
-    row-gap: 1px;
+    display: block;
     box-sizing: border-box;
-    max-height: 88px;
-    padding: 7px 11px 8px;
+    width: max-content;
+    min-width: 180px;
+    max-width: min(260px, calc(100vw - 24px));
+    padding: 10px 12px;
     overflow: hidden;
-    border: 1px solid rgba(217, 182, 80, .18);
-    border-top: 0;
-    border-radius: 0 0 13px 13px;
+    border: 1px solid rgba(217, 182, 80, .20);
+    border-radius: 13px;
     background:
-      linear-gradient(to bottom, rgba(8, 35, 27, .96), rgba(5, 24, 19, .93));
+      radial-gradient(circle at 18% 0%, rgba(217, 182, 80, .08), transparent 42%),
+      linear-gradient(145deg, rgba(12, 46, 37, .97), rgba(5, 24, 19, .95));
     color: #f7f1df;
     box-shadow:
-      0 10px 26px rgba(0, 0, 0, .22),
-      inset 0 1px 0 rgba(255, 255, 255, .035);
+      0 14px 34px rgba(0, 0, 0, .28),
+      inset 0 1px 0 rgba(255, 255, 255, .05);
     opacity: 0;
     visibility: hidden;
     pointer-events: none !important;
-    transition: opacity 120ms ease;
+    transform: translateX(-50%) translateY(4px);
+    transition:
+      opacity 100ms ease,
+      transform 100ms ease;
     backdrop-filter: blur(12px) saturate(.96);
   }
 
   .mobile-territory-info-layer[data-visible="true"] {
     opacity: 1;
     visibility: visible;
+    transform: translateX(-50%) translateY(0);
   }
 
   .mobile-territory-info-layer,
@@ -58,68 +63,48 @@
 
   .mobile-territory-info-layer > p {
     margin: 0 !important;
-    min-width: 0;
   }
 
   .mobile-territory-info-layer > p:first-child {
-    grid-column: 1;
-    grid-row: 1;
-    overflow: hidden;
     color: #fffdf5;
-    font-size: .78rem;
+    font-size: .8rem;
     font-weight: 800;
-    line-height: 1.15;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    line-height: 1.2;
   }
 
   .mobile-territory-info-layer > p:nth-child(2) {
-    grid-column: 1;
-    grid-row: 2;
-    overflow: hidden;
-    color: #aebfb7 !important;
-    font-size: .65rem;
-    line-height: 1.2;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    margin-top: 4px !important;
+    color: #c8d9d1 !important;
+    font-size: .68rem;
+    line-height: 1.25;
   }
 
   .mobile-territory-info-layer > p:nth-child(3) {
-    grid-column: 2;
-    grid-row: 1 / span 2;
-    align-self: center;
+    margin-top: 4px !important;
     color: #e8c35e !important;
     font-size: .72rem;
-    font-weight: 850 !important;
-    line-height: 1;
-    white-space: nowrap;
+    font-weight: 800 !important;
+    line-height: 1.2;
   }
 
   .mobile-territory-info-layer > .game-tooltip-barrier,
   .mobile-territory-info-layer > p:nth-child(n + 4) {
-    grid-column: 1 / -1;
-    margin: 5px 0 0 !important;
-    padding: 5px 0 0 !important;
-    overflow: hidden;
-    border-top: 1px solid rgba(255, 255, 255, .10) !important;
+    margin: 7px 0 0 !important;
+    padding: 7px 0 0 !important;
+    border-top: 1px solid rgba(255, 255, 255, .12) !important;
     color: #d9c98e !important;
-    font-size: .61rem;
-    line-height: 1.15;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    font-size: .64rem;
+    line-height: 1.25;
   }
 
   .mobile-territory-info-layer > .game-tooltip-barrier p {
     margin: 0 !important;
-    overflow: hidden;
-    font-size: .61rem !important;
-    line-height: 1.15;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    font-size: .64rem !important;
+    line-height: 1.25;
   }
 
   .mobile-territory-info-layer > .game-tooltip-barrier p + p {
-    margin-top: 2px !important;
+    margin-top: 3px !important;
     color: #b7c7c0 !important;
   }
 }
