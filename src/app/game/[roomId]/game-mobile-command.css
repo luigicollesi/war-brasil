@@ -13,7 +13,7 @@
     --game-map-safe-bottom: clamp(
       84px,
       calc(var(--game-command-visible-height) + 12px),
-      310px
+      calc(42dvh + 12px)
     );
   }
 
@@ -25,7 +25,6 @@
     z-index: 35;
     width: 100%;
     height: var(--game-command-visible-height) !important;
-    max-height: none !important;
     margin: 0 !important;
     overflow: hidden;
     border-radius: 24px 24px 0 0 !important;
@@ -33,6 +32,13 @@
       height 220ms cubic-bezier(.2, .8, .25, 1),
       bottom 220ms cubic-bezier(.2, .8, .25, 1);
     overscroll-behavior: contain;
+  }
+
+  /* game-mobile-hand.css possui um seletor estrutural mais específico com
+     max-height. O drawer é controlado pela variável acima, então removemos
+     esse segundo teto para não cortar a abertura após mudanças de conteúdo. */
+  .game-map-canvas + section.game-command-hub {
+    max-height: none !important;
   }
 
   .game-command-hub[data-open="true"] {

@@ -4,7 +4,6 @@ import { useEffect } from "react";
 
 const MOBILE_QUERY = "(max-width: 767px)";
 const COLLAPSED_HEIGHT_PX = 72;
-const MAX_EXPANDED_HEIGHT_PX = 298;
 const MAX_EXPANDED_VIEWPORT_RATIO = 0.42;
 const DRAG_DISTANCE_THRESHOLD_PX = 36;
 const DRAG_VELOCITY_THRESHOLD = 0.35;
@@ -54,6 +53,32 @@ export function MobileCommandHubController() {
       handle.innerHTML = '<span aria-hidden="true"></span>';
       screen.append(handle);
 
+      const expandedHeightLimit = () =>
+        Math.max(
+          COLLAPSED_HEIGHT_PX,
+          Math.floor(window.innerHeight * MAX_EXPANDED_VIEWPORT_RATIO),
+        );
+
+      const measureExpandedHeight = () => {
+        const previousOpenState = hub.dataset.open ?? "true";
+        const needsExpandedMeasurement = previousOpenState !== "true";
+
+        // O estado recolhido compacta tipografia/padding e oculta parte do
+        // cabeçalho. Medir scrollHeight nesse estado reduz artificialmente o
+        // teto de abertura. A medição é feita com o estilo aberto e restaurada
+        // no mesmo frame, sem mudar o estado lógico do drawer.
+        if (needsExpandedMeasurement) hub.dataset.open = "true";
+
+        expandedHeight = clamp(
+          Math.ceil(hub.scrollHeight),
+          COLLAPSED_HEIGHT_PX,
+          expandedHeightLimit(),
+        );
+
+        if (needsExpandedMeasurement) hub.dataset.open = previousOpenState;
+        return expandedHeight;
+      };
+
       const setVisibleHeight = (value: number) => {
         currentHeight = clamp(value, COLLAPSED_HEIGHT_PX, expandedHeight);
         screen.style.setProperty(
@@ -63,6 +88,8 @@ export function MobileCommandHubController() {
       };
 
       const settle = (nextExpanded: boolean) => {
+        if (nextExpanded) measureExpandedHeight();
+
         expanded = nextExpanded;
         hub.dataset.open = expanded ? "true" : "false";
         handle.setAttribute("aria-expanded", expanded ? "true" : "false");
@@ -71,6 +98,10 @@ export function MobileCommandHubController() {
           expanded ? "Recolher painel de ações" : "Mostrar painel de ações",
         );
         setVisibleHeight(expanded ? expandedHeight : COLLAPSED_HEIGHT_PX);
+
+        // Após aplicar o estilo aberto, mede novamente no próximo frame para
+        // capturar conteúdo que tenha acabado de aparecer/mudar de quebra.
+        if (expanded) scheduleMeasure();
       };
 
       const measure = () => {
@@ -80,18 +111,7 @@ export function MobileCommandHubController() {
           return;
         }
 
-        const viewportLimit = Math.floor(
-          window.innerHeight * MAX_EXPANDED_VIEWPORT_RATIO,
-        );
-        const maximumHeight = Math.max(
-          COLLAPSED_HEIGHT_PX,
-          Math.min(MAX_EXPANDED_HEIGHT_PX, viewportLimit),
-        );
-        expandedHeight = clamp(
-          Math.ceil(hub.scrollHeight),
-          COLLAPSED_HEIGHT_PX,
-          maximumHeight,
-        );
+        measureExpandedHeight();
 
         if (!dragging) {
           setVisibleHeight(expanded ? expandedHeight : COLLAPSED_HEIGHT_PX);
@@ -106,6 +126,10 @@ export function MobileCommandHubController() {
       const startDrag = (event: PointerEvent) => {
         if (event.pointerType === "mouse" && event.button !== 0) return;
         if (!media.matches) return;
+
+        // Recalcula o teto imediatamente antes do gesto. Isso impede que um
+        // conteúdo atualizado enquanto fechado deixe o drag preso em 72px.
+        if (!expanded) measureExpandedHeight();
 
         handle.setPointerCapture(event.pointerId);
         drag = {
@@ -186,6 +210,8 @@ export function MobileCommandHubController() {
         childList: true,
         subtree: true,
         characterData: true,
+        attributes: true,
+        attributeFilter: ["class", "style"],
       });
 
       handle.addEventListener("pointerdown", startDrag);
