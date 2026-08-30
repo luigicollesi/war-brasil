@@ -14,6 +14,10 @@ const zoomSource = readFileSync(
   new URL("../src/components/map-zoom-controller.tsx", import.meta.url),
   "utf8",
 );
+const zoomCssSource = readFileSync(
+  new URL("../src/app/game/[roomId]/game-map-zoom.css", import.meta.url),
+  "utf8",
+);
 
 test("board publishes stable focus ids derived from the current interaction context", () => {
   assert.match(boardSource, /deriveMapFocusTerritoryIds/);
@@ -40,6 +44,40 @@ test("autofocus animates through the existing viewport and yields immediately to
   assert.match(
     zoomSource,
     /const onPointerDown[\s\S]*?cancelAutoFocusAnimation\(\)/,
+  );
+});
+
+test("mobile reset control returns to the full map without letting the same focus steal the camera back", () => {
+  assert.match(zoomSource, /game-map-reset-control/);
+  assert.match(zoomSource, /aria-label", "Mostrar mapa inteiro"/);
+  assert.match(
+    zoomSource,
+    /const resetMapViewport[\s\S]*?manualViewportOverride = true;[\s\S]*?DEFAULT_MAP_VIEWPORT/,
+  );
+  assert.match(
+    zoomSource,
+    /if \(focusChanged\) \{[\s\S]*?manualViewportOverride = false;[\s\S]*?\} else if \(manualViewportOverride\)/,
+  );
+  assert.match(
+    zoomSource,
+    /mobile && autoFocusActive && !manualViewportOverride/,
+  );
+  assert.match(
+    zoomCssSource,
+    /data-map-zoomed="true"\] > \.game-map-reset-control/,
+  );
+  assert.match(zoomCssSource, /width: 44px;/);
+  assert.match(zoomCssSource, /height: 44px;/);
+});
+
+test("manual pinch and pan take ownership of the viewport until focus changes", () => {
+  assert.match(
+    zoomSource,
+    /const startPinch[\s\S]*?manualViewportOverride = true;/,
+  );
+  assert.match(
+    zoomSource,
+    /if \(viewport\.scale <= MAP_MIN_SCALE \+ 0\.001\) return;[\s\S]*?manualViewportOverride = true;/,
   );
 });
 
