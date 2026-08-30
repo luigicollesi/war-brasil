@@ -2,9 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   DEFAULT_MAP_VIEWPORT,
+  MAP_AUTO_FOCUS_DURATION_MS,
   MAP_MAX_SCALE,
   clampMapViewport,
+  easeOutCubic,
   fitMapViewportToBounds,
+  interpolateMapViewport,
   mapStrokeWidthForScale,
   mapViewportToViewBox,
   projectMapPoint,
@@ -159,4 +162,29 @@ test("territory stroke hierarchy remains stable at every supported zoom", () => 
       mapStrokeWidthForScale(5, scale) > mapStrokeWidthForScale(4, scale),
     );
   }
+});
+
+test("map viewport interpolation reaches exact endpoints and clamps progress", () => {
+  const from = { scale: 1, panX: 0, panY: 0 };
+  const to = { scale: 3, panX: -600, panY: -300 };
+
+  assert.deepEqual(interpolateMapViewport(from, to, -1), from);
+  assert.deepEqual(interpolateMapViewport(from, to, 0.5), {
+    scale: 2,
+    panX: -300,
+    panY: -150,
+  });
+  assert.deepEqual(interpolateMapViewport(from, to, 2), to);
+});
+
+test("autofocus easing is fast at the start and exact at both endpoints", () => {
+  assert.equal(easeOutCubic(0), 0);
+  assert.equal(easeOutCubic(1), 1);
+  assert.ok(easeOutCubic(0.5) > 0.5);
+  assert.ok(easeOutCubic(0.75) > easeOutCubic(0.5));
+});
+
+test("autofocus duration stays intentionally short", () => {
+  assert.ok(MAP_AUTO_FOCUS_DURATION_MS >= 200);
+  assert.ok(MAP_AUTO_FOCUS_DURATION_MS <= 300);
 });

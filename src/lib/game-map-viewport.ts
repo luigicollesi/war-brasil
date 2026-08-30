@@ -4,6 +4,7 @@ export const MAP_MAX_SCALE = 3;
 export const MAP_PAN_THRESHOLD = 6;
 export const MAP_VIEWPORT_EVENT = "game-map-viewport-change";
 export const MAP_SELECTION_PADDING_RATIO = 0.2;
+export const MAP_AUTO_FOCUS_DURATION_MS = 240;
 export const MAP_STROKE_ZOOM_EXPONENT = 1.25;
 export const MAP_MIN_TERRITORY_STROKE = 0.75;
 
@@ -140,6 +141,24 @@ export function mapStrokeWidthForScale(baseWidth: number, scale: number) {
     minimum,
     baseWidth / Math.pow(safeScale, MAP_STROKE_ZOOM_EXPONENT),
   );
+}
+
+export function easeOutCubic(progress: number) {
+  const normalized = clamp(progress, 0, 1);
+  return 1 - Math.pow(1 - normalized, 3);
+}
+
+export function interpolateMapViewport(
+  from: MapViewportTransform,
+  to: MapViewportTransform,
+  progress: number,
+): MapViewportTransform {
+  const normalized = clamp(progress, 0, 1);
+  return {
+    scale: from.scale + (to.scale - from.scale) * normalized,
+    panX: from.panX + (to.panX - from.panX) * normalized,
+    panY: from.panY + (to.panY - from.panY) * normalized,
+  };
 }
 
 export function zoomMapViewportAtPoint({

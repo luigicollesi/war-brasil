@@ -3,12 +3,15 @@
 import { useEffect } from "react";
 import {
   DEFAULT_MAP_VIEWPORT,
+  MAP_AUTO_FOCUS_DURATION_MS,
   MAP_MAX_SCALE,
   MAP_MIN_SCALE,
   MAP_PAN_THRESHOLD,
   MAP_VIEWPORT_EVENT,
   clampMapViewport,
+  easeOutCubic,
   fitMapViewportToBounds,
+  interpolateMapViewport,
   mapStrokeWidthForScale,
   mapViewportToViewBox,
   type MapViewportPoint,
@@ -38,6 +41,7 @@ type PinchGesture = {
 const CLICK_SUPPRESSION_MS = 450;
 const STROKE_EPSILON = 0.001;
 const MOBILE_MAP_QUERY = "(max-width: 767px)";
+const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 
 function midpoint(a: PointerSample, b: PointerSample) {
   return {
@@ -77,6 +81,8 @@ export function MapZoomController() {
       let lastFocusKey: string | null = null;
       let autoFocusActive = false;
       let lastMobile = window.matchMedia(MOBILE_MAP_QUERY).matches;
+      let autoFocusFrame: number | null = null;
+      const territoryBoundsById = new Map<number, MapWorldBounds>();
 
       const dimensions = () => ({
         width: surface.clientWidth || surface.getBoundingClientRect().width,
@@ -107,37 +113,100 @@ export function MapZoomController() {
         );
       };
 
-      const focusBoundsForTerritories = (
-        territoryIds: readonly number[],
-      ): MapWorldBounds | null => {
-        const territoryRoot = board.contentDocument?.querySelector("#territories");
-        if (!territoryRoot || !territoryIds.length) return null;
+      const cancelAutoFocusAnimation = () => {
+        if (autoFocusFrame === null) return;
+        window.cancelAnimationFrame(autoFocusFrame);
+        autoFocusFrame = null;
+      };
 
-        const boxes: MapWorldBounds[] = [];
-        for (const territoryId of territoryIds) {
-          const path = territoryRoot.querySelector<SVGPathElement>(
-            `path.territory[data-id="${territoryId}"]`,
+      const animateViewportTo = (
+        target: MapViewportTransform,
+        { animated = true }: { animated?: boolean } = {},
+      ) => {
+        cancelAutoFocusAnimation();
+
+        if (
+          !animated ||
+          window.matchMedia(REDUCED_MOTION_QUERY).matches ||
+          MAP_AUTO_FOCUS_DURATION_MS <= 0
+        ) {
+          applyViewport(target);
+          return;
+        }
+
+        const startViewport = { ...viewport };
+        const startedAt = performance.now();
+
+        const step = (now: number) => {
+          const progress = Math.min(
+            1,
+            Math.max(0, (now - startedAt) / MAP_AUTO_FOCUS_DURATION_MS),
           );
-          if (!path) return null;
+          applyViewport(
+            interpolateMapViewport(
+              startViewport,
+              target,
+              easeOutCubic(progress),
+            ),
+          );
+
+          if (progress >= 1) {
+            autoFocusFrame = null;
+            return;
+          }
+
+          autoFocusFrame = window.requestAnimationFrame(step);
+        };
+
+        autoFocusFrame = window.requestAnimationFrame(step);
+      };
+
+      const cacheTerritoryBounds = (territoryRoot: Element | null) => {
+        territoryBoundsById.clear();
+        if (!territoryRoot) return;
+
+        for (const path of territoryRoot.querySelectorAll<SVGPathElement>(
+          "path.territory",
+        )) {
+          const territoryId = Number(path.dataset.id);
+          if (!Number.isInteger(territoryId) || territoryId <= 0) continue;
 
           try {
             const box = path.getBBox();
-            if (box.width <= 0 || box.height <= 0) return null;
-            boxes.push({
+            if (box.width <= 0 || box.height <= 0) continue;
+            territoryBoundsById.set(territoryId, {
               x: box.x,
               y: box.y,
               width: box.width,
               height: box.height,
             });
           } catch {
-            return null;
+            // Ignore a path whose geometry is not ready yet; a later SVG load can retry.
           }
+        }
+      };
+
+      const focusBoundsForTerritories = (
+        territoryIds: readonly number[],
+      ): MapWorldBounds | null => {
+        if (!territoryIds.length) return null;
+
+        const boxes: MapWorldBounds[] = [];
+        for (const territoryId of territoryIds) {
+          const box = territoryBoundsById.get(territoryId);
+          if (!box) return null;
+          boxes.push(box);
         }
 
         return unionMapBounds(boxes);
       };
 
-      const applyFocusFromSurface = ({ force = false } = {}) => {
+      const applyFocusFromSurface = (
+        {
+          force = false,
+          animated = true,
+        }: { force?: boolean; animated?: boolean } = {},
+      ) => {
         const territoryIds = readFocusTerritoryIds(surface);
         const focusKey = territoryIds.join(",");
         const mobile = window.matchMedia(MOBILE_MAP_QUERY).matches;
@@ -146,7 +215,9 @@ export function MapZoomController() {
           const shouldReset = autoFocusActive;
           lastFocusKey = focusKey;
           autoFocusActive = false;
-          if (shouldReset) applyViewport({ ...DEFAULT_MAP_VIEWPORT });
+          if (shouldReset) {
+            animateViewportTo({ ...DEFAULT_MAP_VIEWPORT }, { animated: false });
+          }
           return shouldReset;
         }
 
@@ -156,7 +227,9 @@ export function MapZoomController() {
           const shouldReset = autoFocusActive;
           lastFocusKey = focusKey;
           autoFocusActive = false;
-          if (shouldReset) applyViewport({ ...DEFAULT_MAP_VIEWPORT });
+          if (shouldReset) {
+            animateViewportTo({ ...DEFAULT_MAP_VIEWPORT }, { animated });
+          }
           return shouldReset;
         }
 
@@ -168,12 +241,13 @@ export function MapZoomController() {
 
         lastFocusKey = focusKey;
         autoFocusActive = true;
-        applyViewport(
+        animateViewportTo(
           fitMapViewportToBounds({
             bounds,
             width,
             height,
           }),
+          { animated },
         );
         return true;
       };
@@ -186,6 +260,7 @@ export function MapZoomController() {
 
       const bindSvg = () => {
         detachSvg();
+        territoryBoundsById.clear();
 
         const root = board.contentDocument?.documentElement;
         if (
@@ -197,6 +272,7 @@ export function MapZoomController() {
         }
         const svg = root as unknown as SVGSVGElement;
         const territoryRoot = svg.querySelector("#territories");
+        cacheTerritoryBounds(territoryRoot);
 
         svg.style.touchAction = "none";
         svg.style.userSelect = "none";
@@ -280,6 +356,7 @@ export function MapZoomController() {
 
         const onPointerDown = (event: PointerEvent) => {
           if (event.pointerType !== "touch") return;
+          cancelAutoFocusAnimation();
 
           pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
           const captureTarget = event.target as Element & {
@@ -414,6 +491,7 @@ export function MapZoomController() {
         detachSvg = () => {
           strokeObserver?.disconnect();
           applyTerritoryStrokeScale = () => {};
+          territoryBoundsById.clear();
           svg.removeEventListener("pointerdown", onPointerDown);
           svg.removeEventListener("pointermove", onPointerMove);
           svg.removeEventListener("pointerup", finishPointer);
@@ -423,8 +501,9 @@ export function MapZoomController() {
       };
 
       const onBoardLoad = () => {
+        cancelAutoFocusAnimation();
         bindSvg();
-        if (!applyFocusFromSurface({ force: true })) {
+        if (!applyFocusFromSurface({ force: true, animated: false })) {
           applyViewport(viewport);
         }
       };
@@ -433,7 +512,7 @@ export function MapZoomController() {
       bindSvg();
 
       const focusObserver = new MutationObserver(() => {
-        applyFocusFromSurface();
+        applyFocusFromSurface({ animated: true });
       });
       focusObserver.observe(surface, {
         attributes: true,
@@ -446,7 +525,8 @@ export function MapZoomController() {
         lastMobile = mobile;
 
         if (breakpointChanged || (mobile && autoFocusActive)) {
-          if (applyFocusFromSurface({ force: true })) return;
+          cancelAutoFocusAnimation();
+          if (applyFocusFromSurface({ force: true, animated: false })) return;
         }
 
         applyViewport(viewport);
@@ -458,11 +538,12 @@ export function MapZoomController() {
       });
       overlayObserver.observe(surface, { childList: true, subtree: true });
 
-      if (!applyFocusFromSurface({ force: true })) {
+      if (!applyFocusFromSurface({ force: true, animated: false })) {
         applyViewport(viewport);
       }
 
       detachSurface = () => {
+        cancelAutoFocusAnimation();
         board.removeEventListener("load", onBoardLoad);
         detachSvg();
         focusObserver.disconnect();
