@@ -17,7 +17,9 @@ import {
   barrierManeuverSummary,
 } from "@/src/lib/game-barrier-presentation";
 import { TERRITORY_METADATA } from "@/src/lib/game-config";
+import type { GamePhase } from "@/src/lib/game-contract";
 import type { MapTargetHint } from "@/src/lib/game-interaction";
+import { deriveMapFocusTerritoryIds } from "@/src/lib/game-map-focus";
 import {
   DEFAULT_MAP_VIEWPORT,
   MAP_VIEWPORT_EVENT,
@@ -65,6 +67,7 @@ type InteractiveBoardProps = {
   selectedTerritoryId?: number | null;
   availableTerritoryIds?: number[];
   targetHints: readonly MapTargetHint[];
+  interactionMode: GamePhase;
   arrow?: MapArrow;
 };
 
@@ -223,6 +226,7 @@ export function InteractiveBoard({
   selectedTerritoryId,
   availableTerritoryIds = [],
   targetHints,
+  interactionMode,
   arrow = null,
 }: InteractiveBoardProps) {
   const boardRef = useRef<HTMLObjectElement>(null);
@@ -262,6 +266,16 @@ export function InteractiveBoard({
           .map((target) => target.territoryId),
       ),
     [targetHints],
+  );
+  const focusTerritoryIds = useMemo(
+    () =>
+      deriveMapFocusTerritoryIds({
+        phase: interactionMode,
+        selectedTerritoryId,
+        targetHints,
+        arrow,
+      }),
+    [arrow, interactionMode, selectedTerritoryId, targetHints],
   );
 
   useEffect(() => {
@@ -491,7 +505,11 @@ export function InteractiveBoard({
 
   return (
     <div className="game-map-canvas" aria-label="Tabuleiro do Brasil">
-      <div ref={containerRef} className="game-map-surface">
+      <div
+        ref={containerRef}
+        className="game-map-surface"
+        data-map-focus-ids={focusTerritoryIds.join(",")}
+      >
         <object
           ref={boardRef}
           data="/war-brasil-42.production.svg"

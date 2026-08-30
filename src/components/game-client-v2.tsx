@@ -273,6 +273,7 @@ function GameReadyClient({
         selectedTerritoryId={interaction.selectedTerritoryId}
         availableTerritoryIds={interaction.mapHints.available}
         targetHints={interaction.mapHints.targets}
+        interactionMode={snapshot.room.phase}
         arrow={battleArrow ?? interaction.arrow}
       />
 

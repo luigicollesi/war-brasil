@@ -8,10 +8,13 @@ import {
   MAP_PAN_THRESHOLD,
   MAP_VIEWPORT_EVENT,
   clampMapViewport,
+  fitMapViewportToBounds,
   mapStrokeWidthForScale,
   mapViewportToViewBox,
   type MapViewportPoint,
   type MapViewportTransform,
+  type MapWorldBounds,
+  unionMapBounds,
   zoomMapViewportAtPoint,
 } from "@/src/lib/game-map-viewport";
 
@@ -34,6 +37,7 @@ type PinchGesture = {
 
 const CLICK_SUPPRESSION_MS = 450;
 const STROKE_EPSILON = 0.001;
+const MOBILE_MAP_QUERY = "(max-width: 767px)";
 
 function midpoint(a: PointerSample, b: PointerSample) {
   return {
@@ -44,6 +48,15 @@ function midpoint(a: PointerSample, b: PointerSample) {
 
 function distance(a: PointerSample, b: PointerSample) {
   return Math.max(1, Math.hypot(a.x - b.x, a.y - b.y));
+}
+
+function readFocusTerritoryIds(surface: HTMLElement) {
+  const ids = (surface.dataset.mapFocusIds ?? "")
+    .split(",")
+    .map((value) => Number(value.trim()))
+    .filter((value) => Number.isInteger(value) && value > 0);
+
+  return [...new Set(ids)].sort((a, b) => a - b);
 }
 
 export function MapZoomController() {
@@ -61,6 +74,9 @@ export function MapZoomController() {
       let viewport: MapViewportTransform = { ...DEFAULT_MAP_VIEWPORT };
       let detachSvg = () => {};
       let applyTerritoryStrokeScale = () => {};
+      let lastFocusKey: string | null = null;
+      let autoFocusActive = false;
+      let lastMobile = window.matchMedia(MOBILE_MAP_QUERY).matches;
 
       const dimensions = () => ({
         width: surface.clientWidth || surface.getBoundingClientRect().width,
@@ -89,6 +105,77 @@ export function MapZoomController() {
             detail: { ...viewport },
           }),
         );
+      };
+
+      const focusBoundsForTerritories = (
+        territoryIds: readonly number[],
+      ): MapWorldBounds | null => {
+        const territoryRoot = board.contentDocument?.querySelector("#territories");
+        if (!territoryRoot || !territoryIds.length) return null;
+
+        const boxes: MapWorldBounds[] = [];
+        for (const territoryId of territoryIds) {
+          const path = territoryRoot.querySelector<SVGPathElement>(
+            `path.territory[data-id="${territoryId}"]`,
+          );
+          if (!path) return null;
+
+          try {
+            const box = path.getBBox();
+            if (box.width <= 0 || box.height <= 0) return null;
+            boxes.push({
+              x: box.x,
+              y: box.y,
+              width: box.width,
+              height: box.height,
+            });
+          } catch {
+            return null;
+          }
+        }
+
+        return unionMapBounds(boxes);
+      };
+
+      const applyFocusFromSurface = ({ force = false } = {}) => {
+        const territoryIds = readFocusTerritoryIds(surface);
+        const focusKey = territoryIds.join(",");
+        const mobile = window.matchMedia(MOBILE_MAP_QUERY).matches;
+
+        if (!mobile) {
+          const shouldReset = autoFocusActive;
+          lastFocusKey = focusKey;
+          autoFocusActive = false;
+          if (shouldReset) applyViewport({ ...DEFAULT_MAP_VIEWPORT });
+          return shouldReset;
+        }
+
+        if (!force && focusKey === lastFocusKey) return false;
+
+        if (!territoryIds.length) {
+          const shouldReset = autoFocusActive;
+          lastFocusKey = focusKey;
+          autoFocusActive = false;
+          if (shouldReset) applyViewport({ ...DEFAULT_MAP_VIEWPORT });
+          return shouldReset;
+        }
+
+        const bounds = focusBoundsForTerritories(territoryIds);
+        if (!bounds) return false;
+
+        const { width, height } = dimensions();
+        if (width <= 0 || height <= 0) return false;
+
+        lastFocusKey = focusKey;
+        autoFocusActive = true;
+        applyViewport(
+          fitMapViewportToBounds({
+            bounds,
+            width,
+            height,
+          }),
+        );
+        return true;
       };
 
       const suppressSelection = () => {
@@ -120,7 +207,7 @@ export function MapZoomController() {
 
         applyTerritoryStrokeScale = () => {
           if (!territoryRoot) return;
-          const mobile = window.matchMedia("(max-width: 767px)").matches;
+          const mobile = window.matchMedia(MOBILE_MAP_QUERY).matches;
 
           for (const path of territoryRoot.querySelectorAll<SVGPathElement>(
             "path.territory",
@@ -337,13 +424,31 @@ export function MapZoomController() {
 
       const onBoardLoad = () => {
         bindSvg();
-        applyViewport(viewport);
+        if (!applyFocusFromSurface({ force: true })) {
+          applyViewport(viewport);
+        }
       };
 
       board.addEventListener("load", onBoardLoad);
       bindSvg();
 
+      const focusObserver = new MutationObserver(() => {
+        applyFocusFromSurface();
+      });
+      focusObserver.observe(surface, {
+        attributes: true,
+        attributeFilter: ["data-map-focus-ids"],
+      });
+
       const resizeObserver = new ResizeObserver(() => {
+        const mobile = window.matchMedia(MOBILE_MAP_QUERY).matches;
+        const breakpointChanged = mobile !== lastMobile;
+        lastMobile = mobile;
+
+        if (breakpointChanged || (mobile && autoFocusActive)) {
+          if (applyFocusFromSurface({ force: true })) return;
+        }
+
         applyViewport(viewport);
       });
       resizeObserver.observe(surface);
@@ -353,11 +458,14 @@ export function MapZoomController() {
       });
       overlayObserver.observe(surface, { childList: true, subtree: true });
 
-      applyViewport(viewport);
+      if (!applyFocusFromSurface({ force: true })) {
+        applyViewport(viewport);
+      }
 
       detachSurface = () => {
         board.removeEventListener("load", onBoardLoad);
         detachSvg();
+        focusObserver.disconnect();
         resizeObserver.disconnect();
         overlayObserver.disconnect();
       };
