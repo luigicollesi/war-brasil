@@ -85,3 +85,26 @@ test("rolagem de defesa mantém os dados de ataque estáticos por estado explíc
   assert.match(overlay, /rolling=\{defenseRolling\}/);
   assert.match(die, /battle-die-roll-animation/);
 });
+
+test("modal de combate reutiliza território carregado e nome do SVG sem nova requisição", () => {
+  const overlay = readFileSync("src/components/battle-overlay.tsx", "utf8");
+  const client = readFileSync("src/components/game-client-v2.tsx", "utf8");
+  const refresh = readFileSync(
+    "src/app/game/[roomId]/game-ui-refresh.css",
+    "utf8",
+  );
+
+  assert.match(client, /territories=\{snapshot\.territories\}/);
+  assert.match(overlay, /territories: GameSnapshot\["territories"\]/);
+  assert.match(overlay, /\.game-map-object/);
+  assert.match(overlay, /contentDocument/);
+  assert.match(overlay, /path\.territory\[data-id=/);
+  assert.match(overlay, /territory\.territoryId === battle\.attackerTerritoryId/);
+  assert.match(overlay, /territory\.territoryId === battle\.defenderTerritoryId/);
+  assert.match(overlay, /attackerTerritory\?\.troops/);
+  assert.match(overlay, /defenderTerritory\?\.troops/);
+  assert.doesNotMatch(overlay, /fetch\(/);
+  assert.match(refresh, /\.battle-context/);
+  assert.match(refresh, /\.battle-participant--defense/);
+  assert.match(refresh, /width: clamp\(32px, 10vw, 44px\) !important/);
+});
