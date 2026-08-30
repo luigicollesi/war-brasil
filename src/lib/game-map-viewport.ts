@@ -5,7 +5,7 @@ export const MAP_PAN_THRESHOLD = 6;
 export const MAP_VIEWPORT_EVENT = "game-map-viewport-change";
 export const MAP_SELECTION_PADDING_RATIO = 0.2;
 export const MAP_STROKE_ZOOM_EXPONENT = 1.25;
-export const MAP_MIN_TERRITORY_STROKE = 1.25;
+export const MAP_MIN_TERRITORY_STROKE = 0.75;
 
 export type MapViewportTransform = {
   scale: number;
