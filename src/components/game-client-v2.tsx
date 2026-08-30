@@ -293,6 +293,7 @@ function GameReadyClient({
           roomId={roomId}
           battle={snapshot.room.battle}
           players={snapshot.players}
+          territories={snapshot.territories}
           meId={me?.id}
           onRefresh={refresh}
         />
