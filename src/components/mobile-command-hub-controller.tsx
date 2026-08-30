@@ -4,6 +4,7 @@ import { useEffect } from "react";
 
 const MOBILE_QUERY = "(max-width: 767px)";
 const COLLAPSED_HEIGHT_PX = 72;
+const MAX_EXPANDED_HEIGHT_PX = 298;
 const MAX_EXPANDED_VIEWPORT_RATIO = 0.42;
 const DRAG_DISTANCE_THRESHOLD_PX = 36;
 const DRAG_VELOCITY_THRESHOLD = 0.35;
@@ -79,9 +80,12 @@ export function MobileCommandHubController() {
           return;
         }
 
+        const viewportLimit = Math.floor(
+          window.innerHeight * MAX_EXPANDED_VIEWPORT_RATIO,
+        );
         const maximumHeight = Math.max(
           COLLAPSED_HEIGHT_PX,
-          Math.floor(window.innerHeight * MAX_EXPANDED_VIEWPORT_RATIO),
+          Math.min(MAX_EXPANDED_HEIGHT_PX, viewportLimit),
         );
         expandedHeight = clamp(
           Math.ceil(hub.scrollHeight),
@@ -157,6 +161,8 @@ export function MobileCommandHubController() {
         settle(nextExpanded);
       };
 
+      const cancelDrag = (event: PointerEvent) => finishDrag(event, true);
+
       const onClick = (event: MouseEvent) => {
         if (!media.matches) return;
         if (performance.now() < suppressClickUntil) {
@@ -185,7 +191,7 @@ export function MobileCommandHubController() {
       handle.addEventListener("pointerdown", startDrag);
       handle.addEventListener("pointermove", moveDrag);
       handle.addEventListener("pointerup", finishDrag);
-      handle.addEventListener("pointercancel", (event) => finishDrag(event, true));
+      handle.addEventListener("pointercancel", cancelDrag);
       handle.addEventListener("click", onClick);
       media.addEventListener("change", onMediaChange);
       window.addEventListener("resize", scheduleMeasure);
@@ -197,6 +203,7 @@ export function MobileCommandHubController() {
         handle.removeEventListener("pointerdown", startDrag);
         handle.removeEventListener("pointermove", moveDrag);
         handle.removeEventListener("pointerup", finishDrag);
+        handle.removeEventListener("pointercancel", cancelDrag);
         handle.removeEventListener("click", onClick);
         media.removeEventListener("change", onMediaChange);
         window.removeEventListener("resize", scheduleMeasure);
