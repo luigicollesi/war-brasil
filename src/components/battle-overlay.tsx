@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { GameDie } from "@/src/components/game-die";
 import { GameModal } from "@/src/components/game-modal";
 import { barrierAttackSummary } from "@/src/lib/game-barrier-presentation";
@@ -9,27 +9,89 @@ import {
   battleAttackMode,
   battleComparisonRows,
 } from "@/src/lib/game-battle-presentation";
-import { buildBattleDisplayDice, type BattleDisplaySide } from "@/src/lib/game-battle-display";
+import {
+  buildBattleDisplayDice,
+  type BattleDisplaySide,
+} from "@/src/lib/game-battle-display";
 import { runGameCommand } from "@/src/lib/game-command-client";
 import type { GameSnapshot } from "@/src/lib/game-contract";
+
+type BattleParticipantProps = {
+  side: "attack" | "defense";
+  playerName: string;
+  territoryName: string;
+  troops: number | undefined;
+};
+
+function fallbackTerritoryName(territoryId: number) {
+  return `Território ${territoryId}`;
+}
+
+function readTerritoryNameFromBoard(territoryId: number) {
+  if (typeof document === "undefined") {
+    return fallbackTerritoryName(territoryId);
+  }
+
+  try {
+    const boardObject = document.querySelector<HTMLObjectElement>(
+      ".game-map-object",
+    );
+    const path = boardObject?.contentDocument?.querySelector<SVGPathElement>(
+      `path.territory[data-id="${territoryId}"]`,
+    );
+    return path?.dataset.name?.trim() || fallbackTerritoryName(territoryId);
+  } catch {
+    return fallbackTerritoryName(territoryId);
+  }
+}
+
+function BattleParticipant({
+  side,
+  playerName,
+  territoryName,
+  troops,
+}: BattleParticipantProps) {
+  return (
+    <div className={`battle-participant battle-participant--${side}`}>
+      <p className="battle-player-name">{playerName}</p>
+      <strong className="battle-territory-name">{territoryName}</strong>
+      <p className="battle-troop-count">
+        <strong>{troops ?? "—"}</strong>
+        <span>{troops === 1 ? "tropa" : "tropas"}</span>
+      </p>
+    </div>
+  );
+}
 
 export function BattleOverlay({
   roomId,
   battle,
   players,
+  territories,
   meId,
   onRefresh,
 }: {
   roomId: string;
   battle: NonNullable<GameSnapshot["room"]["battle"]>;
   players: GameSnapshot["players"];
+  territories: GameSnapshot["territories"];
   meId: string | undefined;
   onRefresh: (minimumRevision?: number) => Promise<void>;
 }) {
   const [error, setError] = useState("");
   const [rollingSide, setRollingSide] = useState<BattleDisplaySide | null>(null);
+  const [territoryNames, setTerritoryNames] = useState(() => ({
+    attacker: fallbackTerritoryName(battle.attackerTerritoryId),
+    defender: fallbackTerritoryName(battle.defenderTerritoryId),
+  }));
   const attacker = players.find((player) => player.id === battle.attackerPlayerId);
   const defender = players.find((player) => player.id === battle.defenderPlayerId);
+  const attackerTerritory = territories.find(
+    (territory) => territory.territoryId === battle.attackerTerritoryId,
+  );
+  const defenderTerritory = territories.find(
+    (territory) => territory.territoryId === battle.defenderTerritoryId,
+  );
   const attackMode = battleAttackMode(battle);
   const isBarrierAttack = attackMode === "barrier";
   const comparisonRows = battleComparisonRows(battle);
@@ -72,6 +134,25 @@ export function BattleOverlay({
                 ? "Território conquistado"
                 : "Resultado da batalha";
 
+  useEffect(() => {
+    const boardObject = document.querySelector<HTMLObjectElement>(
+      ".game-map-object",
+    );
+
+    const syncTerritoryNames = () => {
+      setTerritoryNames({
+        attacker: readTerritoryNameFromBoard(battle.attackerTerritoryId),
+        defender: readTerritoryNameFromBoard(battle.defenderTerritoryId),
+      });
+    };
+
+    syncTerritoryNames();
+    boardObject?.addEventListener("load", syncTerritoryNames);
+    return () => {
+      boardObject?.removeEventListener("load", syncTerritoryNames);
+    };
+  }, [battle.attackerTerritoryId, battle.defenderTerritoryId]);
+
   async function roll() {
     const side: BattleDisplaySide =
       battle.stage === "awaiting_defender_roll" ? "defense" : "attack";
@@ -100,19 +181,32 @@ export function BattleOverlay({
     rollingSide === "attack" || battle.stage === "show_attacker_result";
   const defenseRolling =
     rollingSide === "defense" || battle.stage === "show_defender_result";
+  const hasDice = attackDisplayDice.length > 0 || defenseDisplayDice.length > 0;
 
   return (
     <GameModal
       eyebrow={isBarrierAttack ? "COMBATE · BARREIRA" : "COMBATE"}
       title={label}
       tone={isBarrierAttack ? "barrier" : "default"}
-      className="battle-modal w-full max-w-xl p-6 text-white"
+      className="battle-modal w-full max-w-xl p-4 text-white sm:p-6"
     >
-      <p className="battle-matchup">
-        {attacker?.factionName ?? "Atacante"}
-        <span aria-hidden="true">×</span>
-        {defender?.factionName ?? "Defensor"}
-      </p>
+      <div className="battle-context" aria-label="Territórios em combate">
+        <BattleParticipant
+          side="attack"
+          playerName={attacker?.factionName ?? "Atacante"}
+          territoryName={territoryNames.attacker}
+          troops={attackerTerritory?.troops}
+        />
+        <span className="battle-context-arrow" aria-hidden="true">
+          →
+        </span>
+        <BattleParticipant
+          side="defense"
+          playerName={defender?.factionName ?? "Defensor"}
+          territoryName={territoryNames.defender}
+          troops={defenderTerritory?.troops}
+        />
+      </div>
 
       {barrierSummary ? (
         <div className="battle-barrier-summary" role="note">
@@ -121,51 +215,53 @@ export function BattleOverlay({
         </div>
       ) : null}
 
-      <div className="battle-dice-grid">
-        {attackDisplayDice.length ? (
-          <div className="battle-side battle-side--attack">
-            <p>Ataque</p>
-            <div className="battle-dice-row">
-              {attackDisplayDice.map((die) => (
-                <div
-                  className="battle-die-slot"
-                  key={`attack-${die.sourceIndex}-${die.value}`}
-                >
-                  <GameDie
-                    value={die.value}
-                    color={attacker?.color ?? "forest"}
-                    rolling={attackRolling}
-                    rollAnimation={die.animation}
-                    className="battle-die"
-                  />
-                </div>
-              ))}
+      {hasDice ? (
+        <div className="battle-dice-grid">
+          {attackDisplayDice.length ? (
+            <div className="battle-side battle-side--attack">
+              <p>Ataque</p>
+              <div className="battle-dice-row">
+                {attackDisplayDice.map((die) => (
+                  <div
+                    className="battle-die-slot"
+                    key={`attack-${die.sourceIndex}-${die.value}`}
+                  >
+                    <GameDie
+                      value={die.value}
+                      color={attacker?.color ?? "forest"}
+                      rolling={attackRolling}
+                      rollAnimation={die.animation}
+                      className="battle-die"
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        ) : null}
+          ) : null}
 
-        {defenseDisplayDice.length ? (
-          <div className="battle-side battle-side--defense">
-            <p>Defesa</p>
-            <div className="battle-dice-row">
-              {defenseDisplayDice.map((die) => (
-                <div
-                  className="battle-die-slot"
-                  key={`defense-${die.sourceIndex}-${die.value}`}
-                >
-                  <GameDie
-                    value={die.value}
-                    color={defender?.color ?? "ruby"}
-                    rolling={defenseRolling}
-                    rollAnimation={die.animation}
-                    className="battle-die"
-                  />
-                </div>
-              ))}
+          {defenseDisplayDice.length ? (
+            <div className="battle-side battle-side--defense">
+              <p>Defesa</p>
+              <div className="battle-dice-row">
+                {defenseDisplayDice.map((die) => (
+                  <div
+                    className="battle-die-slot"
+                    key={`defense-${die.sourceIndex}-${die.value}`}
+                  >
+                    <GameDie
+                      value={die.value}
+                      color={defender?.color ?? "ruby"}
+                      rolling={defenseRolling}
+                      rollAnimation={die.animation}
+                      className="battle-die"
+                    />
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
-        ) : null}
-      </div>
+          ) : null}
+        </div>
+      ) : null}
 
       {battle.stage === "show_comparison" ||
       battle.stage === "show_battle_result" ? (
