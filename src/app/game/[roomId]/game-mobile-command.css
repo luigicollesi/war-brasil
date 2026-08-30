@@ -63,7 +63,6 @@
 
   .mobile-command-hub-handle {
     position: fixed;
-    right: 0;
     bottom: calc(
       var(--game-hand-visible-height)
       + var(--game-command-visible-height)
@@ -98,7 +97,7 @@
       background-color 160ms ease;
   }
 
-  .game-command-hub[data-open="false"] ~ .mobile-command-hub-handle > span,
+  .mobile-command-hub-handle[aria-expanded="false"] > span,
   .game-screen[data-mobile-command-dragging="true"] .mobile-command-hub-handle > span {
     width: 50px;
     background: rgba(232, 201, 101, .72);
