@@ -1,0 +1,133 @@
+/* Hub de comandos mobile: drawer vertical independente da mão de cartas.
+   A altura visível alimenta a zona segura inferior do mapa para que o box
+   realmente cresça e diminua junto com o gesto. */
+
+.mobile-command-hub-handle {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .game-screen {
+    --game-command-visible-height: 190px;
+    --game-command-collapsed-height: 72px;
+    --game-map-safe-bottom: clamp(
+      84px,
+      calc(var(--game-command-visible-height) + 12px),
+      310px
+    );
+  }
+
+  .game-command-hub {
+    position: fixed !important;
+    right: 0;
+    bottom: var(--game-hand-visible-height) !important;
+    left: 0;
+    z-index: 35;
+    width: 100%;
+    height: var(--game-command-visible-height) !important;
+    max-height: none !important;
+    margin: 0 !important;
+    overflow: hidden;
+    border-radius: 24px 24px 0 0 !important;
+    transition:
+      height 220ms cubic-bezier(.2, .8, .25, 1),
+      bottom 220ms cubic-bezier(.2, .8, .25, 1);
+    overscroll-behavior: contain;
+  }
+
+  .game-command-hub[data-open="true"] {
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
+  .game-command-hub[data-open="false"] {
+    padding-top: 18px !important;
+    padding-bottom: 8px !important;
+  }
+
+  .game-command-hub[data-open="false"] > div:first-of-type > div:first-child > p {
+    display: none;
+  }
+
+  .game-command-hub[data-open="false"] > div:first-of-type h2 {
+    margin-top: 0 !important;
+    font-size: .82rem !important;
+    line-height: 1.15 !important;
+  }
+
+  .game-command-hub[data-open="false"] > div:first-of-type > span {
+    padding: 4px 8px !important;
+    font-size: .62rem !important;
+    white-space: nowrap;
+  }
+
+  .mobile-command-hub-handle {
+    position: fixed;
+    right: 0;
+    bottom: calc(
+      var(--game-hand-visible-height)
+      + var(--game-command-visible-height)
+      - 23px
+    );
+    left: 50%;
+    z-index: 37;
+    display: grid;
+    width: 88px;
+    height: 46px;
+    padding: 0;
+    transform: translateX(-50%);
+    place-items: center;
+    border: 0;
+    background: transparent;
+    box-shadow: none !important;
+    cursor: ns-resize;
+    touch-action: none;
+    -webkit-tap-highlight-color: transparent;
+    transition: bottom 220ms cubic-bezier(.2, .8, .25, 1);
+  }
+
+  .mobile-command-hub-handle > span {
+    display: block;
+    width: 42px;
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(242, 236, 216, .44);
+    box-shadow: 0 1px 0 rgba(0, 0, 0, .20);
+    transition:
+      width 160ms ease,
+      background-color 160ms ease;
+  }
+
+  .game-command-hub[data-open="false"] ~ .mobile-command-hub-handle > span,
+  .game-screen[data-mobile-command-dragging="true"] .mobile-command-hub-handle > span {
+    width: 50px;
+    background: rgba(232, 201, 101, .72);
+  }
+
+  .game-map-canvas {
+    transition: padding-bottom 220ms cubic-bezier(.2, .8, .25, 1);
+  }
+
+  .game-map-surface {
+    transition:
+      width 220ms cubic-bezier(.2, .8, .25, 1),
+      max-height 220ms cubic-bezier(.2, .8, .25, 1);
+  }
+
+  .game-screen[data-mobile-command-dragging="true"] .game-command-hub,
+  .game-screen[data-mobile-command-dragging="true"] .mobile-command-hub-handle,
+  .game-screen[data-mobile-command-dragging="true"] .game-map-canvas,
+  .game-screen[data-mobile-command-dragging="true"] .game-map-surface {
+    transition: none !important;
+  }
+}
+
+@media (max-width: 767px) and (prefers-reduced-motion: reduce) {
+  .game-command-hub,
+  .mobile-command-hub-handle,
+  .mobile-command-hub-handle > span,
+  .game-map-canvas,
+  .game-map-surface {
+    transition: none !important;
+  }
+}
