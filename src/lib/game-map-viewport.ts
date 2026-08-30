@@ -3,7 +3,7 @@ export const MAP_MIN_SCALE = 1;
 export const MAP_MAX_SCALE = 3;
 export const MAP_PAN_THRESHOLD = 6;
 export const MAP_VIEWPORT_EVENT = "game-map-viewport-change";
-export const MAP_SELECTION_PADDING_RATIO = 0.2;
+export const MAP_FOCUS_EDGE_INSET_PX = 2;
 export const MAP_AUTO_FOCUS_DURATION_MS = 240;
 export const MAP_STROKE_ZOOM_EXPONENT = 1.25;
 export const MAP_MIN_TERRITORY_STROKE = 0.75;
@@ -94,13 +94,13 @@ export function fitMapViewportToBounds({
   bounds,
   width,
   height,
-  paddingRatio = MAP_SELECTION_PADDING_RATIO,
+  edgeInsetPx = MAP_FOCUS_EDGE_INSET_PX,
   worldSize = MAP_WORLD_SIZE,
 }: {
   bounds: MapWorldBounds;
   width: number;
   height: number;
-  paddingRatio?: number;
+  edgeInsetPx?: number;
   worldSize?: number;
 }): MapViewportTransform {
   if (
@@ -114,14 +114,16 @@ export function fitMapViewportToBounds({
     return { ...DEFAULT_MAP_VIEWPORT };
   }
 
-  const safePaddingRatio = Math.max(0, paddingRatio);
-  const paddedWidth = bounds.width * (1 + safePaddingRatio * 2);
-  const paddedHeight = bounds.height * (1 + safePaddingRatio * 2);
-  const requestedScale = Math.min(
-    worldSize / paddedWidth,
-    worldSize / paddedHeight,
+  const safeInsetPx = Math.max(0, edgeInsetPx);
+  const availableWidth = Math.max(1, width - safeInsetPx * 2);
+  const availableHeight = Math.max(1, height - safeInsetPx * 2);
+  const boundsPixelWidth = (bounds.width / worldSize) * width;
+  const boundsPixelHeight = (bounds.height / worldSize) * height;
+  const rawScale = Math.min(
+    availableWidth / boundsPixelWidth,
+    availableHeight / boundsPixelHeight,
   );
-  const scale = clamp(requestedScale, MAP_MIN_SCALE, MAP_MAX_SCALE);
+  const scale = clamp(rawScale, MAP_MIN_SCALE, MAP_MAX_SCALE);
   const centerX = bounds.x + bounds.width / 2;
   const centerY = bounds.y + bounds.height / 2;
 
