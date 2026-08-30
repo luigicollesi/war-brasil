@@ -3,6 +3,7 @@ import { GameClient } from "@/src/components/game-client-v2";
 import { MapZoomController } from "@/src/components/map-zoom-controller";
 import { MobileCommandHubController } from "@/src/components/mobile-command-hub-controller";
 import { MobileTerritoryInfoController } from "@/src/components/mobile-territory-info-controller";
+import { PhaseTransitionConfirmationController } from "@/src/components/phase-transition-confirmation-controller";
 import { RoadVisibilityProvider } from "@/src/components/road-visibility-provider";
 import { ServerConnectionIndicator } from "@/src/components/server-connection-indicator";
 import "./game-polish.css";
@@ -37,6 +38,7 @@ export default async function GamePage({ params }: GamePageProps) {
           <GameClient roomId={roomId} />
           <MobileCommandHubController />
           <MobileTerritoryInfoController />
+          <PhaseTransitionConfirmationController />
           <MapZoomController />
         </RoadVisibilityProvider>
       </div>
