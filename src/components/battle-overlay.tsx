@@ -80,6 +80,7 @@ export function BattleOverlay({
 }) {
   const [error, setError] = useState("");
   const [rollingSide, setRollingSide] = useState<BattleDisplaySide | null>(null);
+  const [cancelling, setCancelling] = useState(false);
   const [territoryNames, setTerritoryNames] = useState(() => ({
     attacker: fallbackTerritoryName(battle.attackerTerritoryId),
     defender: fallbackTerritoryName(battle.defenderTerritoryId),
@@ -119,6 +120,11 @@ export function BattleOverlay({
       meId === battle.attackerPlayerId) ||
     (battle.stage === "awaiting_defender_roll" &&
       meId === battle.defenderPlayerId);
+  const canCancelAttack =
+    battle.stage === "awaiting_attacker_roll" &&
+    meId === battle.attackerPlayerId &&
+    battle.attacker.length === 0 &&
+    battle.defender.length === 0;
   const label =
     battle.stage === "awaiting_attacker_roll"
       ? "Aguardando o atacante"
@@ -154,6 +160,7 @@ export function BattleOverlay({
   }, [battle.attackerTerritoryId, battle.defenderTerritoryId]);
 
   async function roll() {
+    if (cancelling) return;
     const side: BattleDisplaySide =
       battle.stage === "awaiting_defender_roll" ? "defense" : "attack";
     setError("");
@@ -174,6 +181,29 @@ export function BattleOverlay({
       );
     } finally {
       window.setTimeout(() => setRollingSide(null), 950);
+    }
+  }
+
+  async function cancelAttack() {
+    if (!canCancelAttack || cancelling || rollingSide !== null) return;
+    setError("");
+    setCancelling(true);
+    try {
+      const result = await runGameCommand(
+        roomId,
+        "attack/cancel",
+        undefined,
+        "Não foi possível cancelar o ataque.",
+      );
+      await onRefresh(result.revision ?? undefined);
+    } catch (requestError) {
+      setError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Não foi possível cancelar o ataque.",
+      );
+    } finally {
+      setCancelling(false);
     }
   }
 
@@ -297,10 +327,21 @@ export function BattleOverlay({
         <button
           type="button"
           onClick={() => void roll()}
-          disabled={rollingSide !== null}
+          disabled={rollingSide !== null || cancelling}
           className="game-primary-action mt-6 h-12 w-full rounded-xl text-xs font-bold uppercase tracking-[.14em] disabled:opacity-50"
         >
           {rollingSide ? "Rolando…" : "Rolar dados"}
+        </button>
+      ) : null}
+
+      {canCancelAttack ? (
+        <button
+          type="button"
+          onClick={() => void cancelAttack()}
+          disabled={rollingSide !== null || cancelling}
+          className="mx-auto mt-2 block rounded-lg px-3 py-2 text-[11px] font-bold uppercase tracking-[.1em] text-[#d8c9b2] transition hover:bg-white/5 hover:text-white disabled:opacity-40"
+        >
+          {cancelling ? "Cancelando…" : "Cancelar ataque"}
         </button>
       ) : null}
 

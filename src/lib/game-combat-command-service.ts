@@ -244,6 +244,40 @@ export async function attackCommand(
   });
 }
 
+export async function cancelBattleCommand(value: string, session: string) {
+  const roomId = normalizeRoomId(value);
+
+  return gameCommand(roomId, async (client) => {
+    const room = await loadRoom(client, roomId);
+    const player = await playerFor(client, room.id, session);
+    assertAttackTurn(room, player);
+
+    const battle = room.last_battle;
+    if (!isBattle(battle)) {
+      throw new RoomError("Não há ataque para cancelar.", 409);
+    }
+
+    if (battle.attackerPlayerId !== player.id) {
+      throw new RoomError("Apenas o atacante pode cancelar este ataque.", 403);
+    }
+
+    if (
+      battle.stage !== "awaiting_attacker_roll" ||
+      battle.attacker.length > 0 ||
+      battle.defender.length > 0
+    ) {
+      throw new RoomError(
+        "O ataque não pode mais ser cancelado depois da primeira rolagem.",
+        409,
+        { stage: battle.stage },
+      );
+    }
+
+    await saveBattle(client, room, null);
+    return { cancelled: true };
+  });
+}
+
 export async function rollBattleDiceCommand(value: string, session: string) {
   const roomId = normalizeRoomId(value);
 
