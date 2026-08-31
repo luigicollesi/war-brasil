@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { GameModal } from "@/src/components/game-modal";
 import { TerritoryCard } from "@/src/components/territory-card";
 import { runGameCommand } from "@/src/lib/game-command-client";
@@ -30,19 +30,6 @@ export function MandatoryCardTradeModal({
       snapshot.room.currentPlayerId === me.id &&
       snapshot.myCards.length >= 5,
   );
-
-  useEffect(() => {
-    if (!active) {
-      setSelectedCards([]);
-      setError("");
-      return;
-    }
-
-    const availableIds = new Set(snapshot.myCards.map((card) => card.id));
-    setSelectedCards((cards) =>
-      cards.filter((cardId) => availableIds.has(cardId)).slice(0, 3),
-    );
-  }, [active, snapshot.myCards]);
 
   const selected = useMemo(
     () => snapshot.myCards.filter((card) => selectedCards.includes(card.id)),
