@@ -119,7 +119,7 @@ test("ataque classifica combate usando a topologia efetiva da rodada", () => {
   const source = readFileSync("src/lib/game-combat-command-service.ts", "utf8");
   assert.match(source, /getEffectiveGameTopology/);
   assert.match(source, /isAttackOriginBlocked/);
-  assert.match(source, /findTerritoryConnection\(topology\.connections/);
+  assert.match(source, /findTerritoryConnection\(\s*topology\.connections/);
   assert.match(source, /connection\.passable \? "normal" : "barrier"/);
   assert.match(source, /attackProfile/);
   assert.doesNotMatch(source, /getBaseTerritoryConnection/);
@@ -183,8 +183,20 @@ test("combate sincronizado persiste etapas e rolagens separadas", () => {
 
 test("rolagem de combate valida atacante e defensor pelo estágio, sem turno global", () => {
   const source = readFileSync("src/lib/game-combat-command-service.ts", "utf8");
-  const rollBattleDice = source.slice(source.indexOf("export async function rollBattleDiceCommand"));
-  assert.ok(rollBattleDice.length > 0);
+  const executeRollBattleDiceStart = source.indexOf(
+    "export async function executeRollBattleDice",
+  );
+  const executeRollBattleDiceEnd = source.indexOf(
+    "export async function attackCommand",
+    executeRollBattleDiceStart,
+  );
+  assert.ok(executeRollBattleDiceStart >= 0);
+  assert.ok(executeRollBattleDiceEnd > executeRollBattleDiceStart);
+
+  const rollBattleDice = source.slice(
+    executeRollBattleDiceStart,
+    executeRollBattleDiceEnd,
+  );
   assert.doesNotMatch(rollBattleDice, /assertAttackTurn\(/);
   assert.match(rollBattleDice, /battle\.stage === "awaiting_attacker_roll"/);
   assert.match(rollBattleDice, /player\.id !== battle\.attackerPlayerId/);

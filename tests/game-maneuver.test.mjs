@@ -185,7 +185,10 @@ test("backend recalcula topologia efetiva e melhor rota própria antes de mover 
   assert.match(source, /owned\.map\(\(territory\) => territory\.territory_id\)/);
   assert.match(source, /maneuverTraversalProfile\(route\.barrierCount\)/);
   assert.match(source, /maneuverMovableTroops\(/);
-  assert.match(source, /const troopsArriving = troops - traversal\.troopLoss/);
+  assert.match(
+    source,
+    /const troopsArriving = input\.troops - traversal\.troopLoss/,
+  );
   assert.doesNotMatch(source, /getBaseTerritoryConnections/);
   assert.doesNotMatch(source, /effectiveTerritoryConnections\(/);
   assert.doesNotMatch(source, /getPassableTerritoryConnections/);

@@ -6,6 +6,10 @@ import { advanceGamePresentation } from "@/src/lib/game-presentation-service";
 import type { GameRevision } from "@/src/lib/game-revision";
 import { RoomError } from "@/src/lib/rooms";
 
+type GameAutomationResult = {
+  kind: "presentation" | "none" | "scheduled" | "acted";
+};
+
 function normalizeRoomId(value: string) {
   if (!/^\d+$/.test(value)) {
     throw new RoomError("Partida não encontrada.", 404);
@@ -20,7 +24,7 @@ export async function advanceGameAutomationCommand(
 ) {
   const roomId = normalizeRoomId(value);
 
-  return gameConditionalCommand(
+  return gameConditionalCommand<GameAutomationResult>(
     roomId,
     expectedRevision,
     async (client) => {
