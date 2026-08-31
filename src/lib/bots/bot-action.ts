@@ -1,6 +1,7 @@
 export type BotAction =
   | { type: "roll_order" }
   | { type: "finish_cards" }
+  | { type: "trade_cards"; cardIds: string[] }
   | { type: "reinforce"; territoryId: number; troops: number }
   | { type: "finish_attack" }
   | { type: "roll_battle" }
