@@ -32,6 +32,8 @@ type ReinforcementInput = {
   troops: number;
 };
 
+const MANDATORY_TRADE_HAND_SIZE = 5;
+
 function normalizeRoomId(value: string) {
   if (!/^\d+$/.test(value)) {
     throw new RoomError("Partida não encontrada.", 404);
@@ -61,6 +63,23 @@ async function loadRoom(client: PoolClient, roomId: string) {
   return room;
 }
 
+async function handCardCount(
+  client: PoolClient,
+  roomId: string,
+  playerId: string,
+) {
+  const row = (
+    await client.query<{ count: number }>(
+      `SELECT COUNT(*)::int count
+       FROM game_cards
+       WHERE room_id=$1 AND owner_player_id=$2 AND zone='hand'`,
+      [roomId, playerId],
+    )
+  ).rows[0];
+
+  return row?.count ?? 0;
+}
+
 function assertReinforcementTurn(room: TroopRoom, player: CommandPlayer) {
   if (
     room.status !== "playing" ||
@@ -85,6 +104,16 @@ export async function executeReinforcement(
 ): Promise<GameCommandPatch> {
   const room = await loadRoom(client, roomId);
   assertReinforcementTurn(room, player);
+
+  if (
+    (await handCardCount(client, room.id, player.id)) >=
+    MANDATORY_TRADE_HAND_SIZE
+  ) {
+    throw new RoomError(
+      "Troca de cartas obrigatória antes de posicionar reforços.",
+      409,
+    );
+  }
 
   if (input.troops > room.reinforcements_remaining) {
     throw new RoomError("Você não possui reforços suficientes.", 409);
