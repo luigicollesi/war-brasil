@@ -51,6 +51,7 @@ export type GamePlayer = {
   color: PlayerColor;
   turnPosition: number | null;
   isMe: boolean;
+  isBot: boolean;
   rolls: Array<{ round: number; value: number }>;
 };
 

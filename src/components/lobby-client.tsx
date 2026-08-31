@@ -18,6 +18,10 @@ type RoomUpdateResponse = {
   error?: string;
 };
 
+type BotActionResponse = {
+  error?: string;
+};
+
 function colorByValue(value: string) {
   return PLAYER_COLORS.find((color) => color.value === value);
 }
@@ -27,6 +31,7 @@ export function LobbyClient({ code }: LobbyClientProps) {
   const { snapshot, error: syncError, isLoading, refresh } = useLobbySync(code);
   const [actionError, setActionError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [pendingBotAction, setPendingBotAction] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -69,6 +74,63 @@ export function LobbyClient({ code }: LobbyClientProps) {
     }
   }
 
+  async function addBot() {
+    setActionError("");
+    setPendingBotAction("add");
+
+    try {
+      const response = await fetch(`/api/rooms/${encodeURIComponent(code)}/bots`, {
+        method: "POST",
+        cache: "no-store",
+      });
+      const data = (await response.json()) as BotActionResponse;
+
+      if (!response.ok) {
+        throw new Error(data.error ?? "Não foi possível adicionar o bot.");
+      }
+
+      await refresh();
+    } catch (requestError) {
+      setActionError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Não foi possível adicionar o bot.",
+      );
+    } finally {
+      setPendingBotAction(null);
+    }
+  }
+
+  async function removeBot(botId: string) {
+    setActionError("");
+    setPendingBotAction(botId);
+
+    try {
+      const response = await fetch(
+        `/api/rooms/${encodeURIComponent(code)}/bots/${encodeURIComponent(botId)}`,
+        {
+          method: "DELETE",
+          cache: "no-store",
+        },
+      );
+      const data = (await response.json()) as BotActionResponse;
+
+      if (!response.ok) {
+        throw new Error(data.error ?? "Não foi possível remover o bot.");
+      }
+
+      await refresh();
+    } catch (requestError) {
+      setActionError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Não foi possível remover o bot.",
+      );
+    } finally {
+      setPendingBotAction(null);
+    }
+  }
+
   async function copyRoomCode() {
     try {
       await navigator.clipboard.writeText(code.toUpperCase());
@@ -103,10 +165,11 @@ export function LobbyClient({ code }: LobbyClientProps) {
     );
   }
 
-  const { me, players, room } = snapshot;
+  const { me, players, room, canManageBots } = snapshot;
   const readyPlayers = players.filter((player) => player.isReady).length;
   const allReady = players.length >= 2 && readyPlayers === players.length;
   const emptySlots = Array.from({ length: Math.max(0, 6 - players.length) });
+  const botActionPending = pendingBotAction !== null;
 
   return (
     <>
@@ -163,7 +226,15 @@ export function LobbyClient({ code }: LobbyClientProps) {
 
           <ul className="wb-player-list">
             {players.map((player, index) => (
-              <PlayerRow key={player.id} player={player} index={index + 1} />
+              <PlayerRow
+                key={player.id}
+                player={player}
+                index={index + 1}
+                canManageBots={canManageBots}
+                isRemoving={pendingBotAction === player.id}
+                botActionPending={botActionPending}
+                onRemoveBot={removeBot}
+              />
             ))}
             {emptySlots.map((_, index) => (
               <li key={`empty-${index}`} className="wb-player-row wb-empty-player">
@@ -172,7 +243,19 @@ export function LobbyClient({ code }: LobbyClientProps) {
                   <p className="wb-player-name">Aguardando jogador</p>
                   <p className="wb-player-meta">Vaga disponível</p>
                 </div>
-                <span className="wb-player-state">○</span>
+                {canManageBots ? (
+                  <button
+                    type="button"
+                    disabled={botActionPending}
+                    onClick={() => void addBot()}
+                    className="wb-button wb-button--ghost px-2 py-1 text-[10px]"
+                    aria-label="Adicionar bot nesta vaga"
+                  >
+                    {pendingBotAction === "add" ? "Adicionando…" : "+ Bot"}
+                  </button>
+                ) : (
+                  <span className="wb-player-state">○</span>
+                )}
               </li>
             ))}
           </ul>
@@ -330,7 +413,21 @@ export function LobbyClient({ code }: LobbyClientProps) {
   );
 }
 
-function PlayerRow({ player, index }: { player: LobbyPlayer; index: number }) {
+function PlayerRow({
+  player,
+  index,
+  canManageBots,
+  isRemoving,
+  botActionPending,
+  onRemoveBot,
+}: {
+  player: LobbyPlayer;
+  index: number;
+  canManageBots: boolean;
+  isRemoving: boolean;
+  botActionPending: boolean;
+  onRemoveBot: (botId: string) => Promise<void>;
+}) {
   const color = colorByValue(player.color);
 
   return (
@@ -348,11 +445,26 @@ function PlayerRow({ player, index }: { player: LobbyPlayer; index: number }) {
             {player.isMe ? " · você" : ""}
           </p>
         </div>
-        <p className="wb-player-meta">{color?.label ?? "Facção"}</p>
+        <p className="wb-player-meta">
+          {color?.label ?? "Facção"}{player.isBot ? " · BOT" : ""}
+        </p>
       </div>
-      <span className="wb-player-state" data-ready={player.isReady ? "true" : "false"}>
-        {player.isReady ? "✓ Pronto" : "• Preparando"}
-      </span>
+      <div className="flex items-center justify-end gap-2">
+        <span className="wb-player-state" data-ready={player.isReady ? "true" : "false"}>
+          {player.isReady ? "✓ Pronto" : "• Preparando"}
+        </span>
+        {player.isBot && canManageBots ? (
+          <button
+            type="button"
+            disabled={botActionPending}
+            onClick={() => void onRemoveBot(player.id)}
+            className="wb-button wb-button--ghost px-2 py-1 text-[10px]"
+            aria-label={`Remover bot ${player.factionName}`}
+          >
+            {isRemoving ? "Removendo…" : "Remover"}
+          </button>
+        ) : null}
+      </div>
     </li>
   );
 }

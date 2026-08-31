@@ -33,6 +33,7 @@ type SnapshotPlayer = {
   color: PlayerColor;
   turn_position: number | null;
   is_me: boolean;
+  is_bot: boolean;
 };
 
 type SnapshotTerritory = {
@@ -139,7 +140,8 @@ export async function getGameSnapshotQuery(
 
     const players = (
       await client.query<SnapshotPlayer>(
-        `SELECT id,faction_name,color,turn_position,player_session=$2 is_me
+        `SELECT id,faction_name,color,turn_position,is_bot,
+                player_session=$2 is_me
          FROM room_players
          WHERE room_id=$1
          ORDER BY turn_position NULLS LAST,joined_at`,
@@ -298,6 +300,7 @@ export async function getGameSnapshotQuery(
         color: player.color,
         turnPosition: player.turn_position,
         isMe: Boolean(player.is_me),
+        isBot: player.is_bot,
         rolls: byPlayer.get(player.id) ?? [],
       })),
       territories: territories.map((territory) => ({
