@@ -28,6 +28,7 @@ type CombatRoom = BattleRoomState & {
 
 type CombatPlayer = {
   id: string;
+  faction_name: string;
 };
 
 type LockedTerritory = {
@@ -48,6 +49,10 @@ function positiveInteger(value: unknown, message: string) {
     throw new RoomError(message, 422);
   }
   return value;
+}
+
+function rollCombatDie(player: CombatPlayer) {
+  return randomInt(1, player.faction_name === "Lari" ? 4 : 7);
 }
 
 async function loadRoom(client: PoolClient, roomId: string) {
@@ -71,7 +76,7 @@ async function playerFor(
   session: string,
 ) {
   const result = await client.query<CombatPlayer>(
-    `SELECT id
+    `SELECT id,faction_name
      FROM room_players
      WHERE room_id=$1 AND player_session=$2
      FOR UPDATE`,
@@ -353,7 +358,7 @@ export async function rollBattleDiceCommand(value: string, session: string) {
 
       battle.attacker = Array.from(
         { length: profile.diceCount },
-        () => randomInt(1, 7),
+        () => rollCombatDie(player),
       ).sort((a, b) => b - a);
       battle.stage = "show_attacker_result";
       battle.stageStartedAt = new Date().toISOString();
@@ -368,7 +373,7 @@ export async function rollBattleDiceCommand(value: string, session: string) {
 
       battle.defender = Array.from(
         { length: Math.min(3, defender.troops) },
-        () => randomInt(1, 7),
+        () => rollCombatDie(player),
       ).sort((a, b) => b - a);
 
       const resolved = resolveBattle(battle.attacker, battle.defender);
