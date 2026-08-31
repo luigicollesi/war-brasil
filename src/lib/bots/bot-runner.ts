@@ -9,12 +9,18 @@ import {
 import type { CommandPlayer } from "@/src/lib/game-command-player";
 import { executeRollBattleDice } from "@/src/lib/game-combat-command-service";
 import { executeCompleteConquest } from "@/src/lib/game-conquest-command-service";
+import type { CardSymbol } from "@/src/lib/game-config";
 import {
   nextOrderRollPlayerId,
   type OrderPlayer,
   type OrderRoll,
 } from "@/src/lib/game-order-rules";
-import { executeReinforcement } from "@/src/lib/game-troop-command-service";
+import { isValidTrade } from "@/src/lib/game-rules";
+import {
+  executeReinforcement,
+  executeTradeCards,
+} from "@/src/lib/game-troop-command-service";
+import { RoomError } from "@/src/lib/rooms";
 import type { BotAction } from "./bot-action";
 import { pickBotDelayMs } from "./bot-delay";
 import { requiredActorId } from "./bot-required-actor";
@@ -34,6 +40,12 @@ type AutomationRoom = {
 type AutomationPlayer = CommandPlayer & {
   is_bot: boolean;
   bot_next_action_at: Date | null;
+};
+
+type BotTradeCard = {
+  id: string;
+  symbol: CardSymbol | null;
+  is_wild: boolean;
 };
 
 export type BotAutomationResult = {
@@ -90,6 +102,44 @@ async function orderRollPlayerId(
   );
 }
 
+async function mandatoryTradeCardIds(
+  client: PoolClient,
+  roomId: string,
+  playerId: string,
+) {
+  const cards = (
+    await client.query<BotTradeCard>(
+      `SELECT id::text id,symbol,is_wild
+       FROM game_cards
+       WHERE room_id=$1 AND owner_player_id=$2 AND zone='hand'
+       ORDER BY id`,
+      [roomId, playerId],
+    )
+  ).rows;
+
+  if (cards.length < 5) return null;
+
+  for (let first = 0; first < cards.length - 2; first += 1) {
+    for (let second = first + 1; second < cards.length - 1; second += 1) {
+      for (let third = second + 1; third < cards.length; third += 1) {
+        const selected = [cards[first], cards[second], cards[third]];
+        const symbols = selected.map((card) =>
+          card.is_wild ? "wild" : card.symbol!,
+        ) as Array<CardSymbol | "wild">;
+
+        if (isValidTrade(symbols)) {
+          return selected.map((card) => card.id);
+        }
+      }
+    }
+  }
+
+  throw new RoomError(
+    "Não foi possível formar a troca obrigatória do bot.",
+    500,
+  );
+}
+
 async function chooseBasicBotAction(
   client: PoolClient,
   room: AutomationRoom,
@@ -116,6 +166,15 @@ async function chooseBasicBotAction(
   if (room.phase === "cards") return { type: "finish_cards" };
 
   if (room.phase === "reinforcement") {
+    const mandatoryTrade = await mandatoryTradeCardIds(
+      client,
+      room.id,
+      player.id,
+    );
+    if (mandatoryTrade) {
+      return { type: "trade_cards", cardIds: mandatoryTrade };
+    }
+
     if (room.reinforcements_remaining < 1) return null;
     const territory = (
       await client.query<{ territory_id: number }>(
@@ -156,6 +215,9 @@ async function executeBotAction(
       await executePhaseAction(client, roomId, player, {
         action: "finishCards",
       });
+      return;
+    case "trade_cards":
+      await executeTradeCards(client, roomId, player, action.cardIds);
       return;
     case "reinforce":
       await executeReinforcement(client, roomId, player, action);
