@@ -7,6 +7,7 @@ import { BattleOverlay } from "@/src/components/battle-overlay";
 import { GameTurnPanel } from "@/src/components/game-turn-panel";
 import { GameUtilityBar } from "@/src/components/game-utility-bar";
 import { GameVictoryModal } from "@/src/components/game-victory-modal";
+import { MandatoryCardTradeModal } from "@/src/components/mandatory-card-trade-modal";
 import { MobileCardHandDrawer } from "@/src/components/mobile-card-hand-drawer";
 import {
   InteractiveBoard,
@@ -282,6 +283,12 @@ function GameReadyClient({
         snapshot={snapshot}
         game={game}
         interaction={interaction}
+        onRefresh={refresh}
+      />
+
+      <MandatoryCardTradeModal
+        roomId={roomId}
+        snapshot={snapshot}
         onRefresh={refresh}
       />
 
