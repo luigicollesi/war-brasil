@@ -9,6 +9,10 @@ import {
   type BattleRoomState,
 } from "@/src/lib/game-battle-service";
 import { gameCommand } from "@/src/lib/game-command";
+import {
+  resolveCommandPlayerBySession,
+  type CommandPlayer,
+} from "@/src/lib/game-command-player";
 import { objectiveWon } from "@/src/lib/game-objective-service";
 import { RoomError } from "@/src/lib/rooms";
 
@@ -17,10 +21,6 @@ type ConquestRoom = BattleRoomState & {
   phase: string;
   current_player_id: string | null;
   last_battle: Battle | null;
-};
-
-type ConquestPlayer = {
-  id: string;
 };
 
 type LockedTerritory = {
@@ -58,28 +58,7 @@ async function loadRoom(client: PoolClient, roomId: string) {
   return room;
 }
 
-async function loadPlayer(
-  client: PoolClient,
-  roomId: string,
-  session: string,
-) {
-  const player = (
-    await client.query<ConquestPlayer>(
-      `SELECT id
-       FROM room_players
-       WHERE room_id=$1 AND player_session=$2
-       FOR UPDATE`,
-      [roomId, session],
-    )
-  ).rows[0];
-
-  if (!player) {
-    throw new RoomError("Você não pertence a esta partida.", 403);
-  }
-  return player;
-}
-
-function assertAttackTurn(room: ConquestRoom, player: ConquestPlayer) {
+function assertAttackTurn(room: ConquestRoom, player: CommandPlayer) {
   if (
     room.status !== "playing" ||
     room.phase !== "attack" ||
@@ -95,6 +74,81 @@ function assertAttackTurn(room: ConquestRoom, player: ConquestPlayer) {
   }
 }
 
+export async function executeCompleteConquest(
+  client: PoolClient,
+  roomId: string,
+  player: CommandPlayer,
+  troops: number,
+) {
+  const room = await loadRoom(client, roomId);
+  assertAttackTurn(room, player);
+
+  await advanceBattlePresentation(client, room);
+
+  const from = room.pending_from_territory_id;
+  const to = room.pending_to_territory_id;
+  if (!from || !to) {
+    throw new RoomError("Não há conquista pendente.", 409);
+  }
+
+  if (isBattle(room.last_battle)) {
+    throw new RoomError(
+      "Aguarde o resultado da batalha antes de transferir tropas.",
+      409,
+      { stage: room.last_battle.stage },
+    );
+  }
+
+  const rows = (
+    await client.query<LockedTerritory>(
+      `SELECT territory_id,owner_player_id,troops
+       FROM game_territories
+       WHERE room_id=$1 AND territory_id=ANY($2::smallint[])
+       FOR UPDATE`,
+      [room.id, [from, to]],
+    )
+  ).rows;
+
+  const source = rows.find((row) => row.territory_id === from);
+  const target = rows.find((row) => row.territory_id === to);
+
+  if (
+    !source ||
+    !target ||
+    source.owner_player_id !== player.id ||
+    target.owner_player_id !== player.id ||
+    troops > source.troops - 1
+  ) {
+    throw new RoomError("Deslocamento de conquista inválido.", 409);
+  }
+
+  await client.query(
+    `UPDATE game_territories
+     SET troops=troops-$3
+     WHERE room_id=$1 AND territory_id=$2`,
+    [room.id, from, troops],
+  );
+  await client.query(
+    `UPDATE game_territories
+     SET troops=$3,moved_in_turn=0
+     WHERE room_id=$1 AND territory_id=$2`,
+    [room.id, to, troops],
+  );
+  await client.query(
+    `UPDATE game_rooms
+     SET pending_from_territory_id=NULL,pending_to_territory_id=NULL
+     WHERE id=$1`,
+    [room.id],
+  );
+
+  room.pending_from_territory_id = null;
+  room.pending_to_territory_id = null;
+  await saveBattle(client, room, null);
+
+  await objectiveWon(client, room.id, player.id, "troops_changed");
+  return null;
+}
+
 export async function completeConquestCommand(
   value: string,
   session: string,
@@ -107,78 +161,7 @@ export async function completeConquestCommand(
   );
 
   return gameCommand(roomId, async (client) => {
-    const room = await loadRoom(client, roomId);
-    const player = await loadPlayer(client, room.id, session);
-    assertAttackTurn(room, player);
-
-    await advanceBattlePresentation(client, room);
-
-    const from = room.pending_from_territory_id;
-    const to = room.pending_to_territory_id;
-    if (!from || !to) {
-      throw new RoomError("Não há conquista pendente.", 409);
-    }
-
-    if (isBattle(room.last_battle)) {
-      throw new RoomError(
-        "Aguarde o resultado da batalha antes de transferir tropas.",
-        409,
-        { stage: room.last_battle.stage },
-      );
-    }
-
-    const rows = (
-      await client.query<LockedTerritory>(
-        `SELECT territory_id,owner_player_id,troops
-         FROM game_territories
-         WHERE room_id=$1 AND territory_id=ANY($2::smallint[])
-         FOR UPDATE`,
-        [room.id, [from, to]],
-      )
-    ).rows;
-
-    const source = rows.find((row) => row.territory_id === from);
-    const target = rows.find((row) => row.territory_id === to);
-
-    if (
-      !source ||
-      !target ||
-      source.owner_player_id !== player.id ||
-      target.owner_player_id !== player.id ||
-      troops > source.troops - 1
-    ) {
-      throw new RoomError("Deslocamento de conquista inválido.", 409);
-    }
-
-    await client.query(
-      `UPDATE game_territories
-       SET troops=troops-$3
-       WHERE room_id=$1 AND territory_id=$2`,
-      [room.id, from, troops],
-    );
-    await client.query(
-      `UPDATE game_territories
-       SET troops=$3,moved_in_turn=0
-       WHERE room_id=$1 AND territory_id=$2`,
-      [room.id, to, troops],
-    );
-    await client.query(
-      `UPDATE game_rooms
-       SET pending_from_territory_id=NULL,pending_to_territory_id=NULL
-       WHERE id=$1`,
-      [room.id],
-    );
-
-    room.pending_from_territory_id = null;
-    room.pending_to_territory_id = null;
-    await saveBattle(client, room, null);
-
-    // A transferência obrigatória da conquista ainda acontece na fase de ataque.
-    // moved_in_turn rastreia apenas tropas recebidas durante a fase de manobra.
-    // A conquista em si já foi avaliada quando o controle territorial mudou.
-    // Aqui apenas a distribuição de tropas pode desbloquear um objetivo novo.
-    await objectiveWon(client, room.id, player.id, "troops_changed");
-
-    return null;
+    const player = await resolveCommandPlayerBySession(client, roomId, session);
+    return executeCompleteConquest(client, roomId, player, troops);
   });
 }
