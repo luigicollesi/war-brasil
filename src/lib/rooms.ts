@@ -30,6 +30,7 @@ type PlayerRow = {
   faction_name: string;
   color: PlayerColor;
   is_ready: boolean;
+  is_bot: boolean;
   is_me?: boolean;
 };
 
@@ -55,6 +56,11 @@ function normalizeRoomCode(value: unknown) {
 
   const code = value.trim().toUpperCase();
   return /^[A-Z0-9]{6}$/.test(code) ? code : null;
+}
+
+function normalizePlayerId(value: unknown) {
+  if (typeof value !== "string") return null;
+  return /^\d+$/.test(value) ? value : null;
 }
 
 function createRoomCode() {
@@ -84,12 +90,15 @@ function toSnapshot(room: RoomRow, players: PlayerRow[]): LobbySnapshot {
     color: player.color,
     isReady: player.is_ready,
     isMe: Boolean(player.is_me),
+    isBot: player.is_bot,
   }));
   const me = mappedPlayers.find((player) => player.isMe);
 
   if (!me) {
     throw new RoomError("Você não pertence a esta sala.", 403);
   }
+
+  const botManager = mappedPlayers.find((player) => !player.isBot);
 
   return {
     room: {
@@ -101,6 +110,7 @@ function toSnapshot(room: RoomRow, players: PlayerRow[]): LobbySnapshot {
     },
     players: mappedPlayers,
     me,
+    canManageBots: Boolean(botManager?.isMe),
   };
 }
 
@@ -145,16 +155,72 @@ async function findRoomForUpdate(client: PoolClient, code: string) {
   return room;
 }
 
-async function findAvailableColor(client: PoolClient, roomId: string) {
+async function availableColors(client: PoolClient, roomId: string) {
   const result = await client.query<{ color: PlayerColor }>(
     "SELECT color FROM room_players WHERE room_id = $1",
     [roomId],
   );
   const occupiedColors = new Set(result.rows.map((player) => player.color));
-  const color = DEFAULT_COLORS.find((candidate) => !occupiedColors.has(candidate));
+  return DEFAULT_COLORS.filter((candidate) => !occupiedColors.has(candidate));
+}
+
+async function findAvailableColor(client: PoolClient, roomId: string) {
+  const colors = await availableColors(client, roomId);
+  const color = colors[0];
 
   if (!color) throw new RoomError("Esta sala já está cheia.", 409);
   return color;
+}
+
+async function assertRoomBotManager(
+  client: PoolClient,
+  roomId: string,
+  playerSession: string,
+) {
+  const manager = (
+    await client.query<{ player_session: string }>(
+      `SELECT player_session
+       FROM room_players
+       WHERE room_id = $1 AND is_bot = FALSE
+       ORDER BY joined_at ASC, id ASC
+       LIMIT 1`,
+      [roomId],
+    )
+  ).rows[0];
+
+  if (!manager || manager.player_session !== playerSession) {
+    throw new RoomError("Apenas o criador da sala pode gerenciar bots.", 403);
+  }
+}
+
+async function resetHumanReadiness(client: PoolClient, roomId: string) {
+  await client.query(
+    `UPDATE room_players
+     SET is_ready = FALSE
+     WHERE room_id = $1 AND is_bot = FALSE`,
+    [roomId],
+  );
+}
+
+async function randomBotName(client: PoolClient, color: PlayerColor) {
+  const names = (
+    await client.query<{ name: string }>(
+      `SELECT name
+       FROM bot_names
+       WHERE color = $1
+       ORDER BY id`,
+      [color],
+    )
+  ).rows;
+
+  if (!names.length) {
+    throw new RoomError(
+      "O catálogo de facções de bots está incompleto para esta cor.",
+      503,
+    );
+  }
+
+  return names[randomInt(0, names.length)].name;
 }
 
 async function initializeGame(client: PoolClient, room: RoomRow) {
@@ -319,6 +385,78 @@ export async function joinRoom(codeValue: unknown, playerSession: string) {
   });
 }
 
+export async function addBotToRoom(codeValue: unknown, playerSession: string) {
+  const code = normalizeRoomCode(codeValue);
+  if (!code) throw new RoomError("Código de sala inválido.", 422);
+
+  return withTransaction(async (client) => {
+    const room = await findRoomForUpdate(client, code);
+    if (room.status !== "waiting") {
+      throw new RoomError("Esta partida já começou.", 409);
+    }
+
+    await assertRoomBotManager(client, room.id, playerSession);
+
+    const colors = await availableColors(client, room.id);
+    if (!colors.length) {
+      throw new RoomError("Esta sala já está cheia.", 409);
+    }
+
+    const color = colors[randomInt(0, colors.length)];
+    const factionName = await randomBotName(client, color);
+    const botSession = randomUUID();
+    const bot = (
+      await client.query<{ id: string }>(
+        `INSERT INTO room_players (
+           room_id, player_session, faction_name, color, is_ready, is_bot
+         )
+         VALUES ($1, $2, $3, $4, TRUE, TRUE)
+         RETURNING id`,
+        [room.id, botSession, factionName, color],
+      )
+    ).rows[0];
+
+    await resetHumanReadiness(client, room.id);
+
+    return { id: bot.id };
+  });
+}
+
+export async function removeBotFromRoom(
+  codeValue: unknown,
+  botIdValue: unknown,
+  playerSession: string,
+) {
+  const code = normalizeRoomCode(codeValue);
+  if (!code) throw new RoomError("Código de sala inválido.", 422);
+  const botId = normalizePlayerId(botIdValue);
+  if (!botId) throw new RoomError("Bot inválido.", 422);
+
+  return withTransaction(async (client) => {
+    const room = await findRoomForUpdate(client, code);
+    if (room.status !== "waiting") {
+      throw new RoomError("Esta partida já começou.", 409);
+    }
+
+    await assertRoomBotManager(client, room.id, playerSession);
+
+    const removed = await client.query<{ id: string }>(
+      `DELETE FROM room_players
+       WHERE room_id = $1 AND id = $2 AND is_bot = TRUE
+       RETURNING id`,
+      [room.id, botId],
+    );
+
+    if (!removed.rowCount) {
+      throw new RoomError("Bot não encontrado nesta sala.", 404);
+    }
+
+    await resetHumanReadiness(client, room.id);
+
+    return { id: removed.rows[0].id };
+  });
+}
+
 export async function getLobbySnapshot(codeValue: unknown, playerSession: string) {
   const code = normalizeRoomCode(codeValue);
   if (!code) throw new RoomError("Código de sala inválido.", 422);
@@ -333,10 +471,11 @@ export async function getLobbySnapshot(codeValue: unknown, playerSession: string
   if (!room) throw new RoomError("Sala não encontrada.", 404);
 
   const playerResult = await pool.query<PlayerRow>(
-    `SELECT id, faction_name, color, is_ready, player_session = $2 AS is_me
+    `SELECT id, faction_name, color, is_ready, is_bot,
+            player_session = $2 AS is_me
      FROM room_players
      WHERE room_id = $1
-     ORDER BY joined_at ASC`,
+     ORDER BY joined_at ASC, id ASC`,
     [room.id, playerSession],
   );
 
@@ -365,7 +504,7 @@ export async function updateLobbyPlayer(
     }
 
     const playerResult = await client.query<PlayerRow>(
-      `SELECT id, faction_name, color, is_ready
+      `SELECT id, faction_name, color, is_ready, is_bot
        FROM room_players
        WHERE room_id = $1 AND player_session = $2
        FOR UPDATE`,
