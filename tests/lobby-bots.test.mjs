@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const migration = readFileSync(
@@ -18,16 +18,14 @@ const lobbyClient = readFileSync("src/components/lobby-client.tsx", "utf8");
 
 test("schema e migration identificam bots e versionam o catálogo de facções", () => {
   for (const source of [migration, schema]) {
-    assert.match(
-      source,
-      /is_bot BOOLEAN NOT NULL DEFAULT FALSE/,
-    );
+    assert.match(source, /is_bot BOOLEAN NOT NULL DEFAULT FALSE/);
     assert.match(source, /CREATE TABLE IF NOT EXISTS bot_names/);
     assert.match(source, /UNIQUE \(color, name\)/);
     assert.match(source, /ON CONFLICT \(color, name\) DO NOTHING/);
   }
 
-  const seededNames = migration.match(/\('(forest|ocean|sun|ruby|violet|orange)', '[^']+'\)/g) ?? [];
+  const seededNames =
+    migration.match(/\('(forest|ocean|sun|ruby|violet|orange)', '[^']+'\)/g) ?? [];
   assert.equal(seededNames.length, 24);
 });
 
@@ -120,7 +118,12 @@ test("lobby oferece controles de bot somente quando o servidor autoriza", () => 
   assert.match(lobbyClient, /method: "DELETE"/);
 });
 
-test("fase 1 não antecipa motor automático de bots", () => {
-  assert.equal(existsSync("src/lib/bots/bot-runner.ts"), false);
+test("migration da fase 1 permanece independente do scheduler da fase 2", () => {
+  const automationMigration = readFileSync(
+    "src/lib/db/migrations/012-bot-automation.sql",
+    "utf8",
+  );
+
   assert.doesNotMatch(migration, /bot_next_action_at/);
+  assert.match(automationMigration, /bot_next_action_at/);
 });

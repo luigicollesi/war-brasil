@@ -83,9 +83,13 @@ test("rotas mutáveis principais usam command services versionados", () => {
   }
 });
 
-test("avanço temporal usa expectedRevision e command condicional", () => {
+test("avanço automático usa expectedRevision e um command condicional", () => {
   const route = readFileSync(
     "src/app/api/games/[roomId]/advance/route.ts",
+    "utf8",
+  );
+  const automation = readFileSync(
+    "src/lib/game-automation-service.ts",
     "utf8",
   );
   const presentation = readFileSync(
@@ -94,8 +98,10 @@ test("avanço temporal usa expectedRevision e command condicional", () => {
   );
 
   assert.match(route, /expectedRevision/);
-  assert.match(route, /advanceGamePresentationCommand/);
-  assert.match(presentation, /gameConditionalCommand/);
+  assert.match(route, /advanceGameAutomationCommand/);
+  assert.match(automation, /gameConditionalCommand/);
+  assert.match(automation, /advanceGamePresentation/);
+  assert.match(automation, /advanceBotAutomation/);
   assert.match(presentation, /advanceOrderRollPresentation/);
   assert.match(presentation, /advanceBattlePresentation/);
 });

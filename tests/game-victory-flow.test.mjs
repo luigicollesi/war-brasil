@@ -19,14 +19,15 @@ test("indicador de conexão publica sua reserva real e utility bar consome a med
   assert.match(tuning, /var\(--game-connection-reserved-right/);
 });
 
-test("votos de revanche são persistidos por jogador e exigem unanimidade", () => {
+test("votos de revanche são persistidos por humano e bots não bloqueiam reinício", () => {
   const migration = source("src/lib/db/migrations/010-game-rematch-votes.sql");
   const service = source("src/lib/game-finish-command-service.ts");
 
   assert.match(migration, /CREATE TABLE IF NOT EXISTS game_rematch_votes/);
   assert.match(migration, /PRIMARY KEY \(room_id, player_id\)/);
   assert.match(service, /ON CONFLICT \(room_id,player_id\) DO NOTHING/);
-  assert.match(service, /voteCount === playerCount/);
+  assert.match(service, /voteCount === humanCount/);
+  assert.match(service, /requiredCount: humanCount/);
   assert.match(service, /resetRoomToWaiting/);
   assert.match(service, /initializeFreshGame/);
 });
@@ -44,14 +45,17 @@ test("reinício recria uma partida limpa mantendo uma tropa inicial por territó
   assert.match(service, /status='order_roll'/);
 });
 
-test("qualquer jogador pode devolver a sala finalizada ao mesmo lobby", () => {
+test("qualquer jogador humano pode devolver a sala finalizada ao mesmo lobby", () => {
   const service = source("src/lib/game-finish-command-service.ts");
   const client = source("src/components/game-client-v2.tsx");
   const gameRoute = source("src/app/api/games/[roomId]/route.ts");
 
   assert.match(service, /returnEveryoneToLobbyCommand/);
   assert.match(service, /status='waiting'/);
-  assert.match(service, /SET is_ready=FALSE,turn_position=NULL/);
+  assert.match(
+    service,
+    /SET is_ready=is_bot,turn_position=NULL,bot_next_action_at=NULL/,
+  );
   assert.match(client, /snapshot\?\.room\.status === "waiting"/);
   assert.match(client, /router\.replace\(`\/lobby\/\$\{snapshot\.room\.code\}`\)/);
   assert.doesNotMatch(gameRoute, /status as string\) === "waiting"/);
