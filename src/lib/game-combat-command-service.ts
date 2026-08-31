@@ -52,7 +52,7 @@ function positiveInteger(value: unknown, message: string) {
 }
 
 function rollCombatDie(player: CombatPlayer) {
-  return randomInt(1, player.faction_name === "Lari" ? 4 : 7);
+  return randomInt(1, player.faction_name === "Lari" ? 5 : 7);
 }
 
 async function loadRoom(client: PoolClient, roomId: string) {
