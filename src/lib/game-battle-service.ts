@@ -100,6 +100,27 @@ async function resolveFallbacks(
   );
 }
 
+async function eliminatePlayer(
+  client: PoolClient,
+  roomId: string,
+  eliminatedPlayerId: string,
+  conquerorPlayerId: string,
+) {
+  await client.query(
+    `UPDATE room_players
+     SET turn_position=NULL,bot_next_action_at=NULL
+     WHERE room_id=$1 AND id=$2`,
+    [roomId, eliminatedPlayerId],
+  );
+
+  await client.query(
+    `UPDATE game_cards
+     SET owner_player_id=$3
+     WHERE room_id=$1 AND owner_player_id=$2 AND zone='hand'`,
+    [roomId, eliminatedPlayerId, conquerorPlayerId],
+  );
+}
+
 async function applyBattleOutcome(
   client: PoolClient,
   room: BattleRoomState,
@@ -197,11 +218,11 @@ async function applyBattleOutcome(
   );
 
   if (!defenderStillHasTerritory.rowCount) {
-    await client.query(
-      `UPDATE game_cards
-       SET owner_player_id=$3
-       WHERE room_id=$1 AND owner_player_id=$2 AND zone='hand'`,
-      [room.id, battle.defenderPlayerId, battle.attackerPlayerId],
+    await eliminatePlayer(
+      client,
+      room.id,
+      battle.defenderPlayerId,
+      battle.attackerPlayerId,
     );
 
     if (
