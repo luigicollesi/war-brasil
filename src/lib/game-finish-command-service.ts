@@ -47,7 +47,7 @@ async function playerFor(
     await client.query<FinishPlayer>(
       `SELECT id
        FROM room_players
-       WHERE room_id=$1 AND player_session=$2
+       WHERE room_id=$1 AND player_session=$2 AND is_bot=FALSE
        FOR UPDATE`,
       [roomId, session],
     )
@@ -80,7 +80,7 @@ async function resetRoomToWaiting(client: PoolClient, roomId: string) {
 
   await client.query(
     `UPDATE room_players
-     SET is_ready=FALSE,turn_position=NULL
+     SET is_ready=is_bot,turn_position=NULL,bot_next_action_at=NULL
      WHERE room_id=$1`,
     [roomId],
   );
@@ -100,7 +100,7 @@ async function resetRoomToWaiting(client: PoolClient, roomId: string) {
 async function initializeFreshGame(client: PoolClient, roomId: string) {
   const players = (
     await client.query<FinishPlayer>(
-      "SELECT id FROM room_players WHERE room_id=$1 ORDER BY joined_at",
+      "SELECT id FROM room_players WHERE room_id=$1 ORDER BY joined_at,id",
       [roomId],
     )
   ).rows;
@@ -155,8 +155,7 @@ async function initializeFreshGame(client: PoolClient, roomId: string) {
   for (let index = objectives.length - 1; index > 0; index -= 1) {
     const swapIndex = randomInt(0, index + 1);
     [objectives[index], objectives[swapIndex]] = [
-      objectives[swapIndex],
-      objectives[index],
+      objectives[swapIndex], objectives[index],
     ];
   }
 
@@ -180,8 +179,7 @@ async function initializeFreshGame(client: PoolClient, roomId: string) {
   for (let index = deckOrders.length - 1; index > 0; index -= 1) {
     const swapIndex = randomInt(0, index + 1);
     [deckOrders[index], deckOrders[swapIndex]] = [
-      deckOrders[swapIndex],
-      deckOrders[index],
+      deckOrders[swapIndex], deckOrders[index],
     ];
   }
 
@@ -236,9 +234,14 @@ export async function voteRematchCommand(value: string, session: string) {
     );
 
     const counts = (
-      await client.query<{ player_count: number; vote_count: number }>(
+      await client.query<{
+        player_count: number;
+        human_count: number;
+        vote_count: number;
+      }>(
         `SELECT COUNT(*)::int player_count,
-                COUNT(v.player_id)::int vote_count
+                COUNT(*) FILTER (WHERE p.is_bot=FALSE)::int human_count,
+                COUNT(v.player_id) FILTER (WHERE p.is_bot=FALSE)::int vote_count
          FROM room_players p
          LEFT JOIN game_rematch_votes v
            ON v.room_id=p.room_id AND v.player_id=p.id
@@ -248,9 +251,12 @@ export async function voteRematchCommand(value: string, session: string) {
     ).rows[0];
 
     const playerCount = counts?.player_count ?? 0;
+    const humanCount = counts?.human_count ?? 0;
     const voteCount = counts?.vote_count ?? 0;
     const restarted =
-      playerCount >= MINIMUM_PLAYERS_TO_START && voteCount === playerCount;
+      playerCount >= MINIMUM_PLAYERS_TO_START &&
+      humanCount >= 1 &&
+      voteCount === humanCount;
 
     if (restarted) {
       await resetRoomToWaiting(client, room.id);
@@ -260,7 +266,7 @@ export async function voteRematchCommand(value: string, session: string) {
     return {
       restarted,
       voteCount,
-      requiredCount: playerCount,
+      requiredCount: humanCount,
     };
   });
 }

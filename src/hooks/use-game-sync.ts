@@ -20,24 +20,8 @@ import {
   parseGameRevision,
 } from "@/src/lib/game-sync-contract";
 
-const ADVANCEABLE_BATTLE_STAGES = new Set([
-  "show_attacker_result",
-  "show_defender_result",
-  "show_comparison",
-  "show_battle_result",
-]);
-
 function shouldAdvancePresentation(snapshot: GameSnapshot) {
-  if (
-    snapshot.room.status === "order_roll" &&
-    snapshot.room.orderRollPlayerId === null &&
-    snapshot.eligiblePlayerIds.length > 0
-  ) {
-    return true;
-  }
-
-  const battle = snapshot.room.battle;
-  return Boolean(battle && ADVANCEABLE_BATTLE_STAGES.has(battle.stage));
+  return snapshot.room.automaticAdvancePending;
 }
 
 function responseMessage(data: unknown, fallback: string) {
@@ -75,7 +59,6 @@ export function useGameSync(roomId: string) {
     let inFlight: Promise<void> | null = null;
     let consecutiveFailures = 0;
 
-    // Estado de sincronização é específico da sala; a topologia base não é.
     snapshotRef.current = null;
     revisionRef.current = null;
     requiredRevisionRef.current = null;
@@ -250,7 +233,7 @@ export function useGameSync(roomId: string) {
           throw new Error(
             responseMessage(
               data,
-              "Não foi possível avançar a apresentação da partida.",
+              "Não foi possível avançar automaticamente a partida.",
             ),
           );
         }
@@ -280,7 +263,7 @@ export function useGameSync(roomId: string) {
           setError(
             advanceError instanceof Error
               ? advanceError.message
-              : "Não foi possível avançar a apresentação da partida.",
+              : "Não foi possível avançar automaticamente a partida.",
           );
         }
         return false;

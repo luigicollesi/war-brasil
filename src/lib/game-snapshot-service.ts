@@ -173,9 +173,10 @@ export async function getGameSnapshotQuery(
       room.status === "finished"
         ? (
             await client.query<{ player_id: string }>(
-              `SELECT player_id
-               FROM game_rematch_votes
-               WHERE room_id=$1`,
+              `SELECT v.player_id
+               FROM game_rematch_votes v
+               JOIN room_players p ON p.id=v.player_id AND p.room_id=v.room_id
+               WHERE v.room_id=$1 AND p.is_bot=FALSE`,
               [room.id],
             )
           ).rows
@@ -241,6 +242,7 @@ export async function getGameSnapshotQuery(
     }
 
     const connections = [...(await getBaseTerritoryConnections(client))];
+    const humanPlayerCount = players.filter((player) => !player.is_bot).length;
 
     const snapshot: GameSnapshot = {
       room: {
@@ -271,7 +273,7 @@ export async function getGameSnapshotQuery(
           room.status === "finished"
             ? {
                 voteCount: rematchVotes.length,
-                requiredCount: players.length,
+                requiredCount: humanPlayerCount,
                 hasVoted: rematchVotes.some((vote) => vote.player_id === me.id),
               }
             : null,
