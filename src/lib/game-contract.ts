@@ -37,8 +37,6 @@ export type GameBattle = {
   defenderPlayerId: string;
   stage: BattleStage;
   stageStartedAt: string;
-  // Optional for snapshots that may still contain a battle created before the
-  // barrier-combat metadata was introduced. Missing means a normal attack.
   attackMode?: AttackMode;
   barrierName?: string | null;
   attackerTroopsAfter?: number;
@@ -99,6 +97,7 @@ export type GameSnapshot = {
     activeEvent: ActiveGameEvent | null;
     reinforcementsRemaining: number;
     winnerPlayerId: string | null;
+    automaticAdvancePending: boolean;
     rematch: GameRematchState | null;
     pendingConquest: {
       fromTerritoryId: number;

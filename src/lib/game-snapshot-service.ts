@@ -1,8 +1,17 @@
 import "server-only";
 
 import type { PlayerColor } from "@/src/lib/lobby";
+import {
+  isPresentationAdvancePending,
+  requiredActorId,
+} from "@/src/lib/bots/bot-required-actor";
 import type { GameSnapshot } from "@/src/lib/game-contract";
 import { isBattle } from "@/src/lib/game-battle-service";
+import {
+  eligibleOrderPlayerIds,
+  nextOrderRollPlayerId,
+  type OrderRoll,
+} from "@/src/lib/game-order-rules";
 import { getRoomRoundEventDetails } from "@/src/lib/events/event-repository";
 import { EventConfigurationError } from "@/src/lib/events/event-types";
 import { gameQuery } from "@/src/lib/game-query";
@@ -44,12 +53,6 @@ type SnapshotTerritory = {
   moved_in_turn: number;
 };
 
-type SnapshotRoll = {
-  player_id: string;
-  roll_round: number;
-  value: number;
-};
-
 type SnapshotCard = {
   id: string;
   territory_id: number | null;
@@ -69,38 +72,6 @@ function normalizeRoomId(value: string) {
     throw new RoomError("Partida não encontrada.", 404);
   }
   return value;
-}
-
-function histories(players: SnapshotPlayer[], rolls: SnapshotRoll[]) {
-  const values = new Map(players.map((player) => [player.id, [] as number[]]));
-  for (const roll of rolls) values.get(roll.player_id)?.push(roll.value);
-  return values;
-}
-
-function unresolved(values: Map<string, number[]>) {
-  const groups = new Map<string, string[]>();
-
-  for (const [id, history] of values) {
-    const key = history.join(",");
-    groups.set(key, [...(groups.get(key) ?? []), id]);
-  }
-
-  return Array.from(groups.values())
-    .filter((group) => group.length > 1)
-    .flat();
-}
-
-function eligible(
-  players: SnapshotPlayer[],
-  rolls: SnapshotRoll[],
-  round: number,
-) {
-  return unresolved(
-    histories(
-      players,
-      rolls.filter((roll) => roll.roll_round < round),
-    ),
-  );
 }
 
 export async function getGameSnapshotQuery(
@@ -144,7 +115,7 @@ export async function getGameSnapshotQuery(
                 player_session=$2 is_me
          FROM room_players
          WHERE room_id=$1
-         ORDER BY turn_position NULLS LAST,joined_at`,
+         ORDER BY turn_position NULLS LAST,joined_at,id`,
         [room.id, session],
       )
     ).rows;
@@ -167,7 +138,7 @@ export async function getGameSnapshotQuery(
     const rolls =
       room.status === "order_roll"
         ? (
-            await client.query<SnapshotRoll>(
+            await client.query<OrderRoll>(
               `SELECT player_id,roll_round,value
                FROM game_order_rolls
                WHERE room_id=$1
@@ -223,21 +194,40 @@ export async function getGameSnapshotQuery(
 
     const eligiblePlayerIds =
       room.status === "order_roll"
-        ? eligible(players, rolls, room.order_roll_round)
+        ? eligibleOrderPlayerIds(players, rolls, room.order_roll_round)
         : [];
     const orderRollPlayerId =
-      eligiblePlayerIds.find(
-        (playerId) =>
-          !rolls.some(
-            (roll) =>
-              roll.player_id === playerId &&
-              roll.roll_round === room.order_roll_round,
-          ),
-      ) ?? null;
+      room.status === "order_roll"
+        ? nextOrderRollPlayerId(players, rolls, room.order_roll_round)
+        : null;
     const lastOrderRollPlayerId =
       rolls
         .filter((roll) => roll.roll_round === room.order_roll_round)
         .at(-1)?.player_id ?? null;
+    const battle = isBattle(room.last_battle) ? room.last_battle : null;
+    const presentationPending = isPresentationAdvancePending({
+      status: room.status,
+      orderRollPlayerId,
+      eligiblePlayerCount: eligiblePlayerIds.length,
+      battle,
+    });
+    const actorId = presentationPending
+      ? null
+      : requiredActorId({
+          status: room.status,
+          orderRollPlayerId,
+          currentPlayerId: room.current_player_id,
+          battle,
+          pendingConquest:
+            room.pending_from_territory_id !== null &&
+            room.pending_to_territory_id !== null,
+        });
+    const automaticAdvancePending =
+      presentationPending ||
+      Boolean(
+        actorId &&
+          players.some((player) => player.id === actorId && player.is_bot),
+      );
 
     const roundEvent =
       room.status === "playing" || room.status === "finished"
@@ -276,6 +266,7 @@ export async function getGameSnapshotQuery(
           : null,
         reinforcementsRemaining: room.reinforcements_remaining,
         winnerPlayerId: room.winner_player_id,
+        automaticAdvancePending,
         rematch:
           room.status === "finished"
             ? {
@@ -292,7 +283,7 @@ export async function getGameSnapshotQuery(
                 toTerritoryId: room.pending_to_territory_id,
               }
             : null,
-        battle: isBattle(room.last_battle) ? room.last_battle : null,
+        battle,
       },
       players: players.map((player) => ({
         id: player.id,
