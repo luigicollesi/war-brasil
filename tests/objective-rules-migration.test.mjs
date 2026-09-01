@@ -114,14 +114,15 @@ test("avaliação e snapshot usam parâmetros resolvidos sem quebrar atribuiçõ
   assert.match(presentation, /Elimine \{targetPlayer\}/);
 });
 
-test("eliminação resolve fallback pelo mesmo domínio de regras balanceadas", () => {
+test("fallback converte apenas quem perdeu o alvo para outro eliminador", () => {
   const assignment = source(
     "src/lib/objectives/objective-assignment-service.ts",
   );
   const battle = source("src/lib/game-battle-service.ts");
 
-  assert.match(assignment, /resolveObjectiveFallbacks/);
+  assert.match(assignment, /a\.player_id<>\$3/);
+  assert.match(assignment, /AND is_active=TRUE/);
   assert.match(assignment, /objective_rule_id=\$4/);
   assert.match(assignment, /resolved_params=\$5::jsonb/);
-  assert.match(battle, /resolveObjectiveFallbacks\(client, roomId, targetPlayerId\)/);
+  assert.match(battle, /battle\.defenderPlayerId,[\s\S]*battle\.attackerPlayerId/);
 });
