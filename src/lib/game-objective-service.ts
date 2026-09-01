@@ -5,6 +5,7 @@ import {
   TERRITORY_METADATA,
   type Region,
 } from "@/src/lib/game-config";
+import { withObjectiveSchemaCompatibility } from "@/src/lib/objectives/objective-schema-compatibility";
 
 type ObjectiveEvent =
   | "any"
@@ -53,6 +54,42 @@ function eventCanAffectObjective(type: string, event: ObjectiveEvent) {
   // Reforços e bônus de cartas alteram apenas quantidade de tropas.
   // Entre os objetivos legados, somente fortificação pode ser concluída assim.
   return type === "fortification";
+}
+
+async function loadObjective(
+  client: PoolClient,
+  roomId: string,
+  playerId: string,
+) {
+  return withObjectiveSchemaCompatibility(
+    client,
+    async () =>
+      (
+        await client.query<Objective>(
+          `SELECT o.id,o.type,o.name,o.description,
+                  COALESCE(
+                    CASE WHEN r.objective_id=a.objective_id THEN a.resolved_params END,
+                    o.params
+                  ) params,
+                  a.target_player_id
+           FROM game_player_objectives a
+           JOIN objectives o ON o.id=a.objective_id
+           LEFT JOIN objective_rules r ON r.id=a.objective_rule_id
+           WHERE a.room_id=$1 AND a.player_id=$2`,
+          [roomId, playerId],
+        )
+      ).rows[0] ?? null,
+    async () =>
+      (
+        await client.query<Objective>(
+          `SELECT o.id,o.type,o.name,o.description,o.params,a.target_player_id
+           FROM game_player_objectives a
+           JOIN objectives o ON o.id=a.objective_id
+           WHERE a.room_id=$1 AND a.player_id=$2`,
+          [roomId, playerId],
+        )
+      ).rows[0] ?? null,
+  );
 }
 
 async function ownedTerritoryCount(
@@ -130,21 +167,7 @@ export async function objectiveWon(
   playerId: string,
   event: ObjectiveEvent = "any",
 ) {
-  const objective = (
-    await client.query<Objective>(
-      `SELECT o.id,o.type,o.name,o.description,
-              COALESCE(
-                CASE WHEN r.objective_id=a.objective_id THEN a.resolved_params END,
-                o.params
-              ) params,
-              a.target_player_id
-       FROM game_player_objectives a
-       JOIN objectives o ON o.id=a.objective_id
-       LEFT JOIN objective_rules r ON r.id=a.objective_rule_id
-       WHERE a.room_id=$1 AND a.player_id=$2`,
-      [roomId, playerId],
-    )
-  ).rows[0];
+  const objective = await loadObjective(client, roomId, playerId);
 
   if (!objective || !eventCanAffectObjective(objective.type, event)) {
     return false;
