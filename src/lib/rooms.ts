@@ -4,6 +4,10 @@ import { randomInt, randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import { pool } from "@/src/lib/db/pool";
 import { isPlayerColor, type LobbySnapshot, type PlayerColor } from "@/src/lib/lobby";
+import {
+  assignObjectives,
+  ObjectiveConfigurationError,
+} from "@/src/lib/objectives/objective-assignment-service";
 
 const ROOM_CODE_LENGTH = 6;
 const MINIMUM_PLAYERS_TO_START = 2;
@@ -258,35 +262,13 @@ async function initializeGame(client: PoolClient, room: RoomRow) {
     parameters,
   );
 
-  const objectiveResult = await client.query<{
-    id: string;
-    target_selector: "random_other_player" | null;
-  }>(
-    `SELECT id, target_selector
-     FROM objectives
-     WHERE is_active = TRUE
-     ORDER BY id`,
-  );
-  if (objectiveResult.rows.length < players.length) {
-    throw new RoomError("Não há objetivos suficientes para iniciar a partida.", 503);
-  }
-  const objectives = [...objectiveResult.rows];
-  for (let index = objectives.length - 1; index > 0; index -= 1) {
-    const swapIndex = randomInt(0, index + 1);
-    [objectives[index], objectives[swapIndex]] = [objectives[swapIndex], objectives[index]];
-  }
-  for (const [index, player] of players.entries()) {
-    const objective = objectives[index];
-    const otherPlayers = players.filter((candidate) => candidate.id !== player.id);
-    const targetPlayerId =
-      objective.target_selector === "random_other_player"
-        ? otherPlayers[randomInt(0, otherPlayers.length)].id
-        : null;
-    await client.query(
-      `INSERT INTO game_player_objectives (room_id, player_id, objective_id, target_player_id)
-       VALUES ($1, $2, $3, $4)`,
-      [room.id, player.id, objective.id, targetPlayerId],
-    );
+  try {
+    await assignObjectives(client, room.id, players);
+  } catch (error) {
+    if (error instanceof ObjectiveConfigurationError) {
+      throw new RoomError(error.message, 503);
+    }
+    throw error;
   }
 
   const deckOrders = Array.from({ length: 44 }, (_, index) => index + 1);
