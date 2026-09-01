@@ -7,6 +7,10 @@ import {
   nextBattlePresentationTransition,
   type BattleStage,
 } from "@/src/lib/game-transitions";
+import {
+  ObjectiveConfigurationError,
+  resolveObjectiveFallbacks,
+} from "@/src/lib/objectives/objective-assignment-service";
 import { RoomError } from "@/src/lib/rooms";
 
 type BattleResult = {
@@ -88,16 +92,14 @@ async function resolveFallbacks(
   roomId: string,
   targetPlayerId: string,
 ) {
-  await client.query(
-    `UPDATE game_player_objectives a
-     SET objective_id=o.fallback_objective_id,target_player_id=NULL
-     FROM objectives o
-     WHERE a.objective_id=o.id
-       AND a.room_id=$1
-       AND a.target_player_id=$2
-       AND o.fallback_objective_id IS NOT NULL`,
-    [roomId, targetPlayerId],
-  );
+  try {
+    await resolveObjectiveFallbacks(client, roomId, targetPlayerId);
+  } catch (error) {
+    if (error instanceof ObjectiveConfigurationError) {
+      throw new RoomError(error.message, 503);
+    }
+    throw error;
+  }
 }
 
 async function eliminatePlayer(
