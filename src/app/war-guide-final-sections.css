@@ -61,6 +61,14 @@
   font-size: 1rem;
 }
 
+.wb-guide-card-combination-note {
+  display: block;
+  margin-top: 10px;
+  color: var(--wb-text-muted);
+  font-size: .72rem;
+  line-height: 1.45;
+}
+
 .wb-guide-card-symbol-wild {
   position: relative;
   width: 38px;
