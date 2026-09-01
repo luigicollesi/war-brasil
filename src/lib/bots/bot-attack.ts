@@ -3,9 +3,15 @@ import { isAttackOriginBlocked } from "../events/event-attack-rules";
 import type { BotAction } from "./bot-action";
 import { forecastConquest, type CombatForecast } from "./bot-combat-odds";
 import { availableForOffense, defenseTarget } from "./bot-defense";
-import type { BotObjectivePlan, ObjectiveProgress } from "./bot-objective-plan";
+import type {
+  BotObjectivePlan,
+  ObjectiveProgress,
+} from "./bot-objective-plan";
 import { bestStrategicRoute } from "./bot-routing";
-import type { BotStrategicState, BotStrategicTerritory } from "./bot-state";
+import type {
+  BotStrategicState,
+  BotStrategicTerritory,
+} from "./bot-state";
 import type { TerritoryStrategicValue } from "./bot-territory-value";
 import { BOT_STRATEGY } from "./bot-strategy-config";
 
@@ -18,7 +24,15 @@ export type AttackCandidate = {
 };
 
 function territoryById(state: BotStrategicState) {
-  return new Map(state.territories.map((territory) => [territory.territoryId, territory]));
+  return new Map(
+    state.territories.map((territory) => [territory.territoryId, territory]),
+  );
+}
+
+function strategicRouteTargets(progress: ObjectiveProgress) {
+  return progress.primaryTargets.length > 0
+    ? progress.primaryTargets
+    : progress.routeTargets;
 }
 
 function candidateFor(
@@ -31,7 +45,12 @@ function candidateFor(
   passable: boolean,
   routeStep: number | null,
 ): AttackCandidate | null {
-  if (isAttackOriginBlocked(state.topology.resolvedEventEffects, source.territoryId)) {
+  if (
+    isAttackOriginBlocked(
+      state.topology.resolvedEventEffects,
+      source.territoryId,
+    )
+  ) {
     return null;
   }
 
@@ -50,6 +69,7 @@ function candidateFor(
 
   const forecast = forecastConquest(source.troops, target.troops, mode);
   const primary = progress.primaryTargets.includes(target.territoryId);
+  const secondary = progress.routeTargets.includes(target.territoryId);
   const targetValue = values.get(target.territoryId);
   const expectedRemaining = source.troops - forecast.expectedAttackerLosses;
   const defenseDamage = Math.max(0, sourceDefense - expectedRemaining);
@@ -58,16 +78,20 @@ function candidateFor(
 
   const objectiveGain =
     (primary ? BOT_STRATEGY.attack.objectiveWeight : 0) +
+    (secondary ? BOT_STRATEGY.attack.routeWeight * 0.5 : 0) +
     (eliminationTarget ? BOT_STRATEGY.attack.objectiveWeight * 0.45 : 0);
   const routeGain =
     routeStep === target.territoryId ? BOT_STRATEGY.attack.routeWeight : 0;
-  const regionGain = (targetValue?.region ?? 0) * 2;
+  const regionGain = targetValue?.region
+    ? BOT_STRATEGY.attack.regionWeight
+    : 0;
   const positionalGain = Math.min(
     BOT_STRATEGY.attack.positionalWeight * 2,
     (targetValue?.total ?? 0) * 1.5,
   );
   const probabilityGain =
-    forecast.conquestProbability * BOT_STRATEGY.attack.conquestProbabilityWeight;
+    forecast.conquestProbability *
+    BOT_STRATEGY.attack.conquestProbabilityWeight;
   const lossCost =
     forecast.expectedAttackerLosses * BOT_STRATEGY.attack.expectedLossWeight;
   const defenseCost = defenseDamage * BOT_STRATEGY.attack.defenseDamageWeight;
@@ -97,15 +121,27 @@ export function enumerateAttackCandidates(
   values: ReadonlyMap<number, TerritoryStrategicValue>,
 ) {
   const territories = territoryById(state);
+  const legalRouteStarts = state.territories
+    .filter(
+      (territory) =>
+        territory.ownerPlayerId === state.bot.id &&
+        !isAttackOriginBlocked(
+          state.topology.resolvedEventEffects,
+          territory.territoryId,
+        ),
+    )
+    .map((territory) => territory.territoryId);
   const route = bestStrategicRoute({
     connections: state.topology.connections,
     territories: state.territories,
     playerId: state.bot.id,
-    targetTerritoryIds: progress.primaryTargets,
+    targetTerritoryIds: strategicRouteTargets(progress),
+    startTerritoryIds: legalRouteStarts,
   });
-  const routeStep = route?.kind === "reachable" && route.path.length >= 2
-    ? route.path[1]
-    : null;
+  const routeStep =
+    route?.kind === "reachable" && route.path.length >= 2
+      ? route.path[1]
+      : null;
   const candidates: AttackCandidate[] = [];
 
   for (const connection of state.topology.connections) {
@@ -116,7 +152,10 @@ export function enumerateAttackCandidates(
 
     let source: BotStrategicTerritory | null = null;
     let target: BotStrategicTerritory | null = null;
-    if (first.ownerPlayerId === state.bot.id && second.ownerPlayerId !== state.bot.id) {
+    if (
+      first.ownerPlayerId === state.bot.id &&
+      second.ownerPlayerId !== state.bot.id
+    ) {
       source = first;
       target = second;
     } else if (
