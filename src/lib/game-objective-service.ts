@@ -224,7 +224,11 @@ export async function objectiveWon(
         fullRegions.filter((region) => !required.includes(region)).length >= extra;
     }
 
-    if (objective.type === "presence" || objective.type === "network") {
+    if (
+      objective.type === "region_plus" ||
+      objective.type === "presence" ||
+      objective.type === "network"
+    ) {
       won &&= ownedIds.size >= (numericParam(objective, "territories") || 1);
     }
   }
