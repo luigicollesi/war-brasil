@@ -1,17 +1,10 @@
 import { existsSync, readFileSync } from "node:fs";
-import { parseEnv } from "node:util";
+import { loadEnvFile } from "node:process";
 import { Client } from "pg";
 
-const inheritedEnvironment = new Set(Object.keys(process.env));
-
 for (const envFile of [".env", ".env.local"]) {
-  if (!existsSync(envFile)) continue;
-
-  const parsed = parseEnv(readFileSync(envFile, "utf8"));
-  for (const [key, value] of Object.entries(parsed)) {
-    if (!inheritedEnvironment.has(key)) {
-      process.env[key] = value;
-    }
+  if (existsSync(envFile)) {
+    loadEnvFile(envFile);
   }
 }
 
