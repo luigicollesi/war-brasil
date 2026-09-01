@@ -76,8 +76,8 @@ export function GuideAnomalySection({
           <p>
             Uma Anomalia pode adicionar ou remover tropas, impedir territórios de
             iniciar ataques, abrir ou fechar conexões e reposicionar Barreiras
-            Geográficas. Os efeitos mostrados na interface valem para a rodada em
-            que foram ativados.
+            Geográficas. Mudanças de tropas são aplicadas ao estado do território;
+            bloqueios e conexões formam a topologia efetiva da rodada atual.
           </p>
 
           <GuideStateChange
