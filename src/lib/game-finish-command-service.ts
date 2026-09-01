@@ -84,7 +84,8 @@ async function resetRoomToWaiting(client: PoolClient, roomId: string) {
 
   await client.query(
     `UPDATE room_players
-     SET is_ready=is_bot,turn_position=NULL,bot_next_action_at=NULL
+     SET is_ready=is_bot,turn_position=NULL,bot_next_action_at=NULL,
+         card_trade_count=0
      WHERE room_id=$1`,
     [roomId],
   );
