@@ -1,4 +1,4 @@
-import { TERRITORY_METADATA, type Region } from "@/src/lib/game-config";
+import { TERRITORY_METADATA, type Region } from "../game-config";
 import type { BotStrategicState } from "./bot-state";
 
 export type BotObjectivePlan =
