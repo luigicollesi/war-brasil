@@ -19,11 +19,23 @@ test("entrada na fase de manobra começa sem bloqueios herdados do ataque", () =
     "src/lib/game-command-service.ts",
     "utf8",
   );
-  const finishAttack = phaseService.match(
-    /if \(input\.action === "finishAttack"\) \{[\s\S]*?return null;\n    \}/,
-  )?.[0];
+  const executePhaseActionStart = phaseService.indexOf(
+    "export async function executePhaseAction",
+  );
+  const finishAttackStart = phaseService.indexOf(
+    'if (input.action === "finishAttack")',
+    executePhaseActionStart,
+  );
+  const finishAttackEnd = phaseService.indexOf(
+    'if (input.action !== "endTurn")',
+    finishAttackStart,
+  );
 
-  assert.ok(finishAttack);
+  assert.ok(executePhaseActionStart >= 0);
+  assert.ok(finishAttackStart >= 0);
+  assert.ok(finishAttackEnd > finishAttackStart);
+
+  const finishAttack = phaseService.slice(finishAttackStart, finishAttackEnd);
   assert.match(finishAttack, /SET moved_in_turn=0/);
   assert.match(finishAttack, /owner_player_id=\$2/);
   assert.match(finishAttack, /phase='maneuver'/);

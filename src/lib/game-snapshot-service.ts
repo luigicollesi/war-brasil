@@ -1,12 +1,24 @@
 import "server-only";
 
+import type { PoolClient } from "pg";
 import type { PlayerColor } from "@/src/lib/lobby";
+import {
+  isPresentationAdvancePending,
+  requiredActorId,
+} from "@/src/lib/bots/bot-required-actor";
 import type { GameSnapshot } from "@/src/lib/game-contract";
 import { isBattle } from "@/src/lib/game-battle-service";
+import {
+  eligibleOrderPlayerIds,
+  nextOrderRollPlayerId,
+  type OrderRoll,
+} from "@/src/lib/game-order-rules";
 import { getRoomRoundEventDetails } from "@/src/lib/events/event-repository";
 import { EventConfigurationError } from "@/src/lib/events/event-types";
 import { gameQuery } from "@/src/lib/game-query";
 import { getBaseTerritoryConnections } from "@/src/lib/game-topology-service";
+import { objectiveDescription } from "@/src/lib/objectives/objective-presentation";
+import { withObjectiveSchemaCompatibility } from "@/src/lib/objectives/objective-schema-compatibility";
 import { RoomError } from "@/src/lib/rooms";
 
 type SnapshotRoom = {
@@ -33,6 +45,7 @@ type SnapshotPlayer = {
   color: PlayerColor;
   turn_position: number | null;
   is_me: boolean;
+  is_bot: boolean;
 };
 
 type SnapshotTerritory = {
@@ -41,12 +54,6 @@ type SnapshotTerritory = {
   color: PlayerColor;
   troops: number;
   moved_in_turn: number;
-};
-
-type SnapshotRoll = {
-  player_id: string;
-  roll_round: number;
-  value: number;
 };
 
 type SnapshotCard = {
@@ -58,8 +65,10 @@ type SnapshotCard = {
 
 type SnapshotObjective = {
   id: string;
+  type: string;
   name: string;
   description: string;
+  params: Record<string, unknown>;
   target_name: string | null;
 };
 
@@ -70,35 +79,42 @@ function normalizeRoomId(value: string) {
   return value;
 }
 
-function histories(players: SnapshotPlayer[], rolls: SnapshotRoll[]) {
-  const values = new Map(players.map((player) => [player.id, [] as number[]]));
-  for (const roll of rolls) values.get(roll.player_id)?.push(roll.value);
-  return values;
-}
-
-function unresolved(values: Map<string, number[]>) {
-  const groups = new Map<string, string[]>();
-
-  for (const [id, history] of values) {
-    const key = history.join(",");
-    groups.set(key, [...(groups.get(key) ?? []), id]);
-  }
-
-  return Array.from(groups.values())
-    .filter((group) => group.length > 1)
-    .flat();
-}
-
-function eligible(
-  players: SnapshotPlayer[],
-  rolls: SnapshotRoll[],
-  round: number,
+async function loadSnapshotObjective(
+  client: PoolClient,
+  roomId: string,
+  playerId: string,
 ) {
-  return unresolved(
-    histories(
-      players,
-      rolls.filter((roll) => roll.roll_round < round),
-    ),
+  return withObjectiveSchemaCompatibility(
+    client,
+    async () =>
+      (
+        await client.query<SnapshotObjective>(
+          `SELECT o.id,o.type,o.name,o.description,
+                  COALESCE(
+                    CASE WHEN r.objective_id=a.objective_id THEN a.resolved_params END,
+                    o.params
+                  ) params,
+                  t.faction_name target_name
+           FROM game_player_objectives a
+           JOIN objectives o ON o.id=a.objective_id
+           LEFT JOIN objective_rules r ON r.id=a.objective_rule_id
+           LEFT JOIN room_players t ON t.id=a.target_player_id
+           WHERE a.room_id=$1 AND a.player_id=$2`,
+          [roomId, playerId],
+        )
+      ).rows[0] ?? null,
+    async () =>
+      (
+        await client.query<SnapshotObjective>(
+          `SELECT o.id,o.type,o.name,o.description,o.params,
+                  t.faction_name target_name
+           FROM game_player_objectives a
+           JOIN objectives o ON o.id=a.objective_id
+           LEFT JOIN room_players t ON t.id=a.target_player_id
+           WHERE a.room_id=$1 AND a.player_id=$2`,
+          [roomId, playerId],
+        )
+      ).rows[0] ?? null,
   );
 }
 
@@ -139,10 +155,11 @@ export async function getGameSnapshotQuery(
 
     const players = (
       await client.query<SnapshotPlayer>(
-        `SELECT id,faction_name,color,turn_position,player_session=$2 is_me
+        `SELECT id,faction_name,color,turn_position,is_bot,
+                player_session=$2 is_me
          FROM room_players
          WHERE room_id=$1
-         ORDER BY turn_position NULLS LAST,joined_at`,
+         ORDER BY turn_position NULLS LAST,joined_at,id`,
         [room.id, session],
       )
     ).rows;
@@ -165,7 +182,7 @@ export async function getGameSnapshotQuery(
     const rolls =
       room.status === "order_roll"
         ? (
-            await client.query<SnapshotRoll>(
+            await client.query<OrderRoll>(
               `SELECT player_id,roll_round,value
                FROM game_order_rolls
                WHERE room_id=$1
@@ -185,24 +202,16 @@ export async function getGameSnapshotQuery(
       )
     ).rows;
 
-    const objective = (
-      await client.query<SnapshotObjective>(
-        `SELECT o.id,o.name,o.description,t.faction_name target_name
-         FROM game_player_objectives a
-         JOIN objectives o ON o.id=a.objective_id
-         LEFT JOIN room_players t ON t.id=a.target_player_id
-         WHERE a.room_id=$1 AND a.player_id=$2`,
-        [room.id, me.id],
-      )
-    ).rows[0];
+    const objective = await loadSnapshotObjective(client, room.id, me.id);
 
     const rematchVotes =
       room.status === "finished"
         ? (
             await client.query<{ player_id: string }>(
-              `SELECT player_id
-               FROM game_rematch_votes
-               WHERE room_id=$1`,
+              `SELECT v.player_id
+               FROM game_rematch_votes v
+               JOIN room_players p ON p.id=v.player_id AND p.room_id=v.room_id
+               WHERE v.room_id=$1 AND p.is_bot=FALSE`,
               [room.id],
             )
           ).rows
@@ -221,21 +230,40 @@ export async function getGameSnapshotQuery(
 
     const eligiblePlayerIds =
       room.status === "order_roll"
-        ? eligible(players, rolls, room.order_roll_round)
+        ? eligibleOrderPlayerIds(players, rolls, room.order_roll_round)
         : [];
     const orderRollPlayerId =
-      eligiblePlayerIds.find(
-        (playerId) =>
-          !rolls.some(
-            (roll) =>
-              roll.player_id === playerId &&
-              roll.roll_round === room.order_roll_round,
-          ),
-      ) ?? null;
+      room.status === "order_roll"
+        ? nextOrderRollPlayerId(players, rolls, room.order_roll_round)
+        : null;
     const lastOrderRollPlayerId =
       rolls
         .filter((roll) => roll.roll_round === room.order_roll_round)
         .at(-1)?.player_id ?? null;
+    const battle = isBattle(room.last_battle) ? room.last_battle : null;
+    const presentationPending = isPresentationAdvancePending({
+      status: room.status,
+      orderRollPlayerId,
+      eligiblePlayerCount: eligiblePlayerIds.length,
+      battle,
+    });
+    const actorId = presentationPending
+      ? null
+      : requiredActorId({
+          status: room.status,
+          orderRollPlayerId,
+          currentPlayerId: room.current_player_id,
+          battle,
+          pendingConquest:
+            room.pending_from_territory_id !== null &&
+            room.pending_to_territory_id !== null,
+        });
+    const automaticAdvancePending =
+      presentationPending ||
+      Boolean(
+        actorId &&
+          players.some((player) => player.id === actorId && player.is_bot),
+      );
 
     const roundEvent =
       room.status === "playing" || room.status === "finished"
@@ -249,6 +277,7 @@ export async function getGameSnapshotQuery(
     }
 
     const connections = [...(await getBaseTerritoryConnections(client))];
+    const humanPlayerCount = players.filter((player) => !player.is_bot).length;
 
     const snapshot: GameSnapshot = {
       room: {
@@ -274,11 +303,12 @@ export async function getGameSnapshotQuery(
           : null,
         reinforcementsRemaining: room.reinforcements_remaining,
         winnerPlayerId: room.winner_player_id,
+        automaticAdvancePending,
         rematch:
           room.status === "finished"
             ? {
                 voteCount: rematchVotes.length,
-                requiredCount: players.length,
+                requiredCount: humanPlayerCount,
                 hasVoted: rematchVotes.some((vote) => vote.player_id === me.id),
               }
             : null,
@@ -290,7 +320,7 @@ export async function getGameSnapshotQuery(
                 toTerritoryId: room.pending_to_territory_id,
               }
             : null,
-        battle: isBattle(room.last_battle) ? room.last_battle : null,
+        battle,
       },
       players: players.map((player) => ({
         id: player.id,
@@ -298,6 +328,7 @@ export async function getGameSnapshotQuery(
         color: player.color,
         turnPosition: player.turn_position,
         isMe: Boolean(player.is_me),
+        isBot: player.is_bot,
         rolls: byPlayer.get(player.id) ?? [],
       })),
       territories: territories.map((territory) => ({
@@ -318,7 +349,11 @@ export async function getGameSnapshotQuery(
         ? {
             id: objective.id,
             name: objective.name,
-            description: objective.description,
+            description: objectiveDescription({
+              type: objective.type,
+              fallbackDescription: objective.description,
+              params: objective.params,
+            }),
             targetFactionName: objective.target_name,
           }
         : null,

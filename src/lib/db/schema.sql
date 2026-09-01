@@ -42,6 +42,10 @@ CREATE TABLE IF NOT EXISTS room_players (
   color VARCHAR(16) NOT NULL
     CHECK (color IN ('forest', 'ocean', 'sun', 'ruby', 'violet', 'orange')),
   is_ready BOOLEAN NOT NULL DEFAULT FALSE,
+  is_bot BOOLEAN NOT NULL DEFAULT FALSE,
+  card_trade_count INTEGER NOT NULL DEFAULT 0
+    CHECK (card_trade_count >= 0),
+  bot_next_action_at TIMESTAMPTZ,
   turn_position SMALLINT,
   joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE (room_id, color),
@@ -50,6 +54,41 @@ CREATE TABLE IF NOT EXISTS room_players (
 );
 
 CREATE INDEX IF NOT EXISTS room_players_room_id_idx ON room_players(room_id);
+
+CREATE TABLE IF NOT EXISTS bot_names (
+  id BIGSERIAL PRIMARY KEY,
+  color VARCHAR(16) NOT NULL
+    CHECK (color IN ('forest', 'ocean', 'sun', 'ruby', 'violet', 'orange')),
+  name VARCHAR(32) NOT NULL,
+  UNIQUE (color, name)
+);
+
+INSERT INTO bot_names (color, name) VALUES
+  ('forest', 'Integralistas'),
+  ('forest', 'Cabanos'),
+  ('forest', 'Conselheiristas'),
+  ('forest', 'Federalistas'),
+  ('ocean', 'Luzias'),
+  ('ocean', 'Praieiros'),
+  ('ocean', 'Exaltados'),
+  ('ocean', 'Armada'),
+  ('sun', 'Emboabas'),
+  ('sun', 'Mascates'),
+  ('sun', 'Balaios'),
+  ('sun', 'Constitucionalistas'),
+  ('ruby', 'Maragatos'),
+  ('ruby', 'Farroupilhas'),
+  ('ruby', 'Malês'),
+  ('ruby', 'Tenentistas'),
+  ('violet', 'Saquaremas'),
+  ('violet', 'Caramurus'),
+  ('violet', 'Restauradores'),
+  ('violet', 'Áulicos'),
+  ('orange', 'Chimangos'),
+  ('orange', 'Pica-Paus'),
+  ('orange', 'Sabinistas'),
+  ('orange', 'Castilhistas')
+ON CONFLICT (color, name) DO NOTHING;
 
 ALTER TABLE game_rooms
   ADD CONSTRAINT game_rooms_current_player_fkey
@@ -90,14 +129,74 @@ CREATE TABLE IF NOT EXISTS game_order_rolls (
   PRIMARY KEY (room_id, player_id, roll_round)
 );
 
+CREATE TABLE IF NOT EXISTS objectives (
+  id TEXT PRIMARY KEY,
+  type TEXT NOT NULL CHECK (
+    type IN (
+      'regions',
+      'region_plus',
+      'territories',
+      'fortification',
+      'presence',
+      'network',
+      'elimination',
+      'elimination_plus'
+    )
+  ),
+  name TEXT NOT NULL,
+  description TEXT NOT NULL,
+  difficulty TEXT NOT NULL CHECK (
+    difficulty IN ('easy', 'medium', 'hard', 'very_hard')
+  ),
+  params JSONB NOT NULL DEFAULT '{}'::jsonb
+    CHECK (jsonb_typeof(params) = 'object'),
+  target_selector TEXT CHECK (
+    target_selector IS NULL OR target_selector = 'random_other_player'
+  ),
+  fallback_objective_id TEXT REFERENCES objectives(id),
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS objective_rules (
+  id BIGSERIAL PRIMARY KEY,
+  objective_id TEXT NOT NULL REFERENCES objectives(id) ON DELETE CASCADE,
+  player_count SMALLINT NOT NULL CHECK (player_count BETWEEN 2 AND 6),
+  revision INTEGER NOT NULL DEFAULT 1 CHECK (revision >= 1),
+  params JSONB NOT NULL DEFAULT '{}'::jsonb
+    CHECK (jsonb_typeof(params) = 'object'),
+  difficulty TEXT NOT NULL CHECK (
+    difficulty IN ('easy', 'medium', 'hard', 'very_hard')
+  ),
+  is_active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (objective_id, player_count, revision)
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS objective_rules_active_objective_player_count_idx
+  ON objective_rules(objective_id, player_count)
+  WHERE is_active = TRUE;
+
+CREATE INDEX IF NOT EXISTS objective_rules_player_count_idx
+  ON objective_rules(player_count, is_active);
+
 CREATE TABLE IF NOT EXISTS game_player_objectives (
   room_id BIGINT NOT NULL REFERENCES game_rooms(id) ON DELETE CASCADE,
   player_id BIGINT NOT NULL REFERENCES room_players(id) ON DELETE CASCADE,
   objective_id TEXT NOT NULL REFERENCES objectives(id),
+  objective_rule_id BIGINT REFERENCES objective_rules(id) ON DELETE RESTRICT,
   target_player_id BIGINT REFERENCES room_players(id) ON DELETE SET NULL,
+  resolved_params JSONB
+    CHECK (resolved_params IS NULL OR jsonb_typeof(resolved_params) = 'object'),
   assigned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (room_id, player_id)
 );
+
+CREATE INDEX IF NOT EXISTS game_player_objectives_target_idx
+  ON game_player_objectives(room_id, target_player_id);
+
+CREATE INDEX IF NOT EXISTS game_player_objectives_rule_idx
+  ON game_player_objectives(objective_rule_id);
 
 CREATE TABLE IF NOT EXISTS game_cards (
   id BIGSERIAL PRIMARY KEY,

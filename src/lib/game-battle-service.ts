@@ -3,6 +3,7 @@ import "server-only";
 import type { PoolClient } from "pg";
 import type { AttackMode } from "@/src/lib/game-barrier-rules";
 import { objectiveWon } from "@/src/lib/game-objective-service";
+import { MIN_TERRITORY_TROOPS } from "@/src/lib/game-rules";
 import {
   nextBattlePresentationTransition,
   type BattleStage,
@@ -83,20 +84,63 @@ export async function saveBattle(
   room.last_battle = battle;
 }
 
-async function resolveFallbacks(
+async function evaluateEliminationObjectiveOwners(
   client: PoolClient,
   roomId: string,
   targetPlayerId: string,
+  conquerorPlayerId: string,
+) {
+  const candidates = (
+    await client.query<{ player_id: string }>(
+      `SELECT a.player_id
+       FROM game_player_objectives a
+       JOIN objectives o ON o.id=a.objective_id
+       JOIN room_players p
+         ON p.room_id=a.room_id AND p.id=a.player_id
+       WHERE a.room_id=$1
+         AND a.target_player_id=$2
+         AND a.player_id<>$3
+         AND o.type IN ('elimination','elimination_plus')
+         AND p.turn_position IS NOT NULL
+       ORDER BY p.turn_position,p.id`,
+      [roomId, targetPlayerId, conquerorPlayerId],
+    )
+  ).rows;
+
+  for (const candidate of candidates) {
+    if (
+      await objectiveWon(
+        client,
+        roomId,
+        candidate.player_id,
+        "territory_control_changed",
+      )
+    ) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+async function eliminatePlayer(
+  client: PoolClient,
+  roomId: string,
+  eliminatedPlayerId: string,
+  conquerorPlayerId: string,
 ) {
   await client.query(
-    `UPDATE game_player_objectives a
-     SET objective_id=o.fallback_objective_id,target_player_id=NULL
-     FROM objectives o
-     WHERE a.objective_id=o.id
-       AND a.room_id=$1
-       AND a.target_player_id=$2
-       AND o.fallback_objective_id IS NOT NULL`,
-    [roomId, targetPlayerId],
+    `UPDATE room_players
+     SET turn_position=NULL,bot_next_action_at=NULL
+     WHERE room_id=$1 AND id=$2`,
+    [roomId, eliminatedPlayerId],
+  );
+
+  await client.query(
+    `UPDATE game_cards
+     SET owner_player_id=$3
+     WHERE room_id=$1 AND owner_player_id=$2 AND zone='hand'`,
+    [roomId, eliminatedPlayerId, conquerorPlayerId],
   );
 }
 
@@ -138,7 +182,7 @@ async function applyBattleOutcome(
   const attackerTroops = attacker.troops - battle.attackerLosses;
   const defenderTroops = defender.troops - battle.defenderLosses;
 
-  if (attackerTroops < 1) {
+  if (attackerTroops < MIN_TERRITORY_TROOPS) {
     throw new RoomError(
       "O resultado do combate removeria a última tropa atacante.",
       500,
@@ -172,9 +216,14 @@ async function applyBattleOutcome(
 
   await client.query(
     `UPDATE game_territories
-     SET owner_player_id=$3,troops=1,moved_in_turn=0
+     SET owner_player_id=$3,troops=$4,moved_in_turn=0
      WHERE room_id=$1 AND territory_id=$2`,
-    [room.id, defender.territory_id, battle.attackerPlayerId],
+    [
+      room.id,
+      defender.territory_id,
+      battle.attackerPlayerId,
+      MIN_TERRITORY_TROOPS,
+    ],
   );
   await client.query(
     `UPDATE game_rooms
@@ -197,22 +246,27 @@ async function applyBattleOutcome(
   );
 
   if (!defenderStillHasTerritory.rowCount) {
-    await client.query(
-      `UPDATE game_cards
-       SET owner_player_id=$3
-       WHERE room_id=$1 AND owner_player_id=$2 AND zone='hand'`,
-      [room.id, battle.defenderPlayerId, battle.attackerPlayerId],
+    await eliminatePlayer(
+      client,
+      room.id,
+      battle.defenderPlayerId,
+      battle.attackerPlayerId,
     );
 
-    if (
-      !(await objectiveWon(
+    const conquerorWon = await objectiveWon(
+      client,
+      room.id,
+      battle.attackerPlayerId,
+      "territory_control_changed",
+    );
+
+    if (!conquerorWon) {
+      await evaluateEliminationObjectiveOwners(
         client,
         room.id,
+        battle.defenderPlayerId,
         battle.attackerPlayerId,
-        "territory_control_changed",
-      ))
-    ) {
-      await resolveFallbacks(client, room.id, battle.defenderPlayerId);
+      );
     }
   } else {
     await objectiveWon(

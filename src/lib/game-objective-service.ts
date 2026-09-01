@@ -5,6 +5,7 @@ import {
   TERRITORY_METADATA,
   type Region,
 } from "@/src/lib/game-config";
+import { withObjectiveSchemaCompatibility } from "@/src/lib/objectives/objective-schema-compatibility";
 
 type ObjectiveEvent =
   | "any"
@@ -37,22 +38,67 @@ function numericParam(objective: Objective, key: string) {
   return typeof value === "number" ? value : 0;
 }
 
-function requiredRegions(objective: Objective): Region[] {
-  const value = objective.params.regions;
-  if (!Array.isArray(value)) return [];
+function positiveIntegerParam(objective: Objective, key: string) {
+  const value = objective.params[key];
+  return typeof value === "number" && Number.isInteger(value) && value > 0
+    ? value
+    : null;
+}
 
-  return value.filter(
+function requiredRegions(objective: Objective): Region[] | null {
+  const value = objective.params.regions;
+  if (!Array.isArray(value) || value.length === 0) return null;
+
+  const regions = value.filter(
     (region): region is Region =>
       typeof region === "string" && region in REGION_TERRITORY_IDS,
   );
+
+  return regions.length === value.length ? regions : null;
 }
 
 function eventCanAffectObjective(type: string, event: ObjectiveEvent) {
   if (event === "any" || event === "territory_control_changed") return true;
 
   // Reforços e bônus de cartas alteram apenas quantidade de tropas.
-  // Entre os objetivos atuais, somente fortificação pode ser concluída assim.
+  // Entre os objetivos legados, somente fortificação pode ser concluída assim.
   return type === "fortification";
+}
+
+async function loadObjective(
+  client: PoolClient,
+  roomId: string,
+  playerId: string,
+) {
+  return withObjectiveSchemaCompatibility(
+    client,
+    async () =>
+      (
+        await client.query<Objective>(
+          `SELECT o.id,o.type,o.name,o.description,
+                  COALESCE(
+                    CASE WHEN r.objective_id=a.objective_id THEN a.resolved_params END,
+                    o.params
+                  ) params,
+                  a.target_player_id
+           FROM game_player_objectives a
+           JOIN objectives o ON o.id=a.objective_id
+           LEFT JOIN objective_rules r ON r.id=a.objective_rule_id
+           WHERE a.room_id=$1 AND a.player_id=$2`,
+          [roomId, playerId],
+        )
+      ).rows[0] ?? null,
+    async () =>
+      (
+        await client.query<Objective>(
+          `SELECT o.id,o.type,o.name,o.description,o.params,a.target_player_id
+           FROM game_player_objectives a
+           JOIN objectives o ON o.id=a.objective_id
+           WHERE a.room_id=$1 AND a.player_id=$2`,
+          [roomId, playerId],
+        )
+      ).rows[0] ?? null,
+  );
 }
 
 async function ownedTerritoryCount(
@@ -130,15 +176,7 @@ export async function objectiveWon(
   playerId: string,
   event: ObjectiveEvent = "any",
 ) {
-  const objective = (
-    await client.query<Objective>(
-      `SELECT o.id,o.type,o.name,o.description,o.params,a.target_player_id
-       FROM game_player_objectives a
-       JOIN objectives o ON o.id=a.objective_id
-       WHERE a.room_id=$1 AND a.player_id=$2`,
-      [roomId, playerId],
-    )
-  ).rows[0];
+  const objective = await loadObjective(client, roomId, playerId);
 
   if (!objective || !eventCanAffectObjective(objective.type, event)) {
     return false;
@@ -147,17 +185,23 @@ export async function objectiveWon(
   let won = false;
 
   if (objective.type === "territories") {
+    const requiredTerritories = positiveIntegerParam(objective, "territories");
     won =
+      requiredTerritories !== null &&
       (await ownedTerritoryCount(client, roomId, playerId)) >=
-      numericParam(objective, "territories");
+        requiredTerritories;
   } else if (objective.type === "fortification") {
+    const requiredTerritories = positiveIntegerParam(objective, "territories");
+    const minimumTroops = positiveIntegerParam(objective, "minTroops");
     won =
+      requiredTerritories !== null &&
+      minimumTroops !== null &&
       (await fortificationTerritoryCount(
         client,
         roomId,
         playerId,
-        numericParam(objective, "minTroops"),
-      )) >= numericParam(objective, "territories");
+        minimumTroops,
+      )) >= requiredTerritories;
   } else if (
     objective.type === "elimination" ||
     objective.type === "elimination_plus"
@@ -170,10 +214,15 @@ export async function objectiveWon(
         objective.target_player_id!,
       ));
 
-    if (won && objective.type === "elimination_plus") {
+    const hasTerritoryFloor =
+      Object.prototype.hasOwnProperty.call(objective.params, "territories") ||
+      objective.type === "elimination_plus";
+    if (won && hasTerritoryFloor) {
+      const minimumTerritories = positiveIntegerParam(objective, "territories");
       won =
+        minimumTerritories !== null &&
         (await ownedTerritoryCount(client, roomId, playerId)) >=
-        (numericParam(objective, "territories") || 1);
+          minimumTerritories;
     }
   } else {
     const ownedIds = new Set(
@@ -186,16 +235,38 @@ export async function objectiveWon(
         ),
     );
     const required = requiredRegions(objective);
-    won = required.every((region) => fullRegions.includes(region));
 
-    const extra = numericParam(objective, "additionalAnyRegion");
-    if (extra) {
-      won &&=
-        fullRegions.filter((region) => !required.includes(region)).length >= extra;
-    }
+    if (
+      (objective.type === "regions" || objective.type === "region_plus") &&
+      required === null
+    ) {
+      won = false;
+    } else {
+      const requiredForEvaluation = required ?? [];
+      won = requiredForEvaluation.every((region) =>
+        fullRegions.includes(region),
+      );
 
-    if (objective.type === "presence" || objective.type === "network") {
-      won &&= ownedIds.size >= (numericParam(objective, "territories") || 1);
+      const extra = numericParam(objective, "additionalAnyRegion");
+      if (extra) {
+        won &&=
+          fullRegions.filter((region) => !requiredForEvaluation.includes(region))
+            .length >= extra;
+      }
+
+      if (objective.type === "region_plus") {
+        const minimumTerritories = positiveIntegerParam(
+          objective,
+          "territories",
+        );
+        won &&=
+          minimumTerritories !== null && ownedIds.size >= minimumTerritories;
+      } else if (
+        objective.type === "presence" ||
+        objective.type === "network"
+      ) {
+        won &&= ownedIds.size >= (numericParam(objective, "territories") || 1);
+      }
     }
   }
 

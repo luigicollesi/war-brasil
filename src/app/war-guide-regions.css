@@ -139,6 +139,14 @@
   line-height: 1.58;
 }
 
+.wb-guide-region-table.wb-guide-region-table--rules {
+  min-width: 520px;
+}
+
+.wb-guide-region-table--rules thead th:nth-child(1) { width: 56%; }
+.wb-guide-region-table--rules thead th:nth-child(2) { width: 24%; }
+.wb-guide-region-table--rules thead th:nth-child(3) { width: 20%; }
+
 @media (max-width: 900px) {
   .wb-guide-regional-heading {
     grid-template-columns: 1fr;
@@ -160,6 +168,10 @@
 
   .wb-guide-region-table {
     min-width: 700px;
+  }
+
+  .wb-guide-region-table.wb-guide-region-table--rules {
+    min-width: 480px;
   }
 
   .wb-guide-region-table th,

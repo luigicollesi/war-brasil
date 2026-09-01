@@ -7,6 +7,7 @@ import { BattleOverlay } from "@/src/components/battle-overlay";
 import { GameTurnPanel } from "@/src/components/game-turn-panel";
 import { GameUtilityBar } from "@/src/components/game-utility-bar";
 import { GameVictoryModal } from "@/src/components/game-victory-modal";
+import { MandatoryCardTradeModal } from "@/src/components/mandatory-card-trade-modal";
 import { MobileCardHandDrawer } from "@/src/components/mobile-card-hand-drawer";
 import {
   InteractiveBoard,
@@ -285,6 +286,12 @@ function GameReadyClient({
         onRefresh={refresh}
       />
 
+      <MandatoryCardTradeModal
+        roomId={roomId}
+        snapshot={snapshot}
+        onRefresh={refresh}
+      />
+
       {snapshot.room.status === "playing" ? (
         <MobileCardHandDrawer cards={snapshot.myCards} />
       ) : null}
@@ -499,13 +506,15 @@ function BrazilDie({
 }
 
 function FinalOrder({ players }: { players: GameSnapshot["players"] }) {
+  const activePlayers = players.filter((player) => player.turnPosition !== null);
+
   return (
     <section className="rounded-3xl bg-[#12392f] p-6 text-white shadow-[0_18px_50px_rgba(19,57,47,0.16)]">
       <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#9eb8ae]">
         Ordem de jogo
       </p>
       <ol className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {players.map((player) => (
+        {activePlayers.map((player) => (
           <li
             key={player.id}
             className="flex items-center gap-3 rounded-2xl bg-white/7 p-4"
@@ -535,13 +544,15 @@ function TurnOrderStrip({
   players: GameSnapshot["players"];
   currentPlayerId: string | null;
 }) {
+  const activePlayers = players.filter((player) => player.turnPosition !== null);
+
   return (
     <section className="rounded-2xl border border-[#17372d]/10 bg-[#faf8f2] p-3 shadow-sm">
       <p className="px-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[#9b7a27]">
         Ordem de jogo
       </p>
       <ol className="mt-2 grid gap-2 sm:grid-cols-3">
-        {players.map((player) => {
+        {activePlayers.map((player) => {
           const active = player.id === currentPlayerId;
           return (
             <li

@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "node scripts/prepare-dev-db.mjs && next dev",
+    "db:prepare:dev": "node scripts/prepare-dev-db.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

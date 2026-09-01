@@ -1,0 +1,503 @@
+.wb-guide-section--setup .wb-guide-inline-note,
+.wb-guide-section--objective .wb-guide-inline-note {
+  margin-top: 28px;
+}
+
+.wb-guide-setup-stage {
+  display: grid;
+  min-width: 0;
+  gap: 24px;
+}
+
+.wb-guide-setup-stage .wb-guide-map-mini {
+  grid-row: auto;
+  width: min(100%, 440px);
+  margin-inline: auto;
+}
+
+.wb-guide-setup-flow {
+  margin-top: 0;
+}
+
+.wb-guide-order-example {
+  display: grid;
+  gap: 22px;
+}
+
+.wb-guide-order-dice {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--wb-border-neutral);
+}
+
+.wb-guide-order-dice > div {
+  display: grid;
+  min-width: 0;
+  justify-items: center;
+  gap: 10px;
+}
+
+.wb-guide-order-dice span {
+  overflow: hidden;
+  max-width: 100%;
+  color: var(--wb-text-muted);
+  font-size: .68rem;
+  font-weight: 850;
+  letter-spacing: .08em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.wb-guide-order-flow {
+  margin-top: 0;
+}
+
+.wb-guide-mission-card {
+  overflow: hidden;
+  border: 1px solid rgba(214, 169, 62, .3);
+  border-radius: var(--wb-radius-lg);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(214, 169, 62, .13), transparent 42%),
+    rgba(7, 30, 24, .72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04);
+}
+
+.wb-guide-mission-head {
+  padding: clamp(24px, 4vw, 34px);
+  border-bottom: 1px solid rgba(214, 169, 62, .18);
+}
+
+.wb-guide-mission-head > span {
+  display: block;
+  color: var(--wb-gold);
+  font-size: .68rem;
+  font-weight: 850;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+}
+
+.wb-guide-mission-head > strong {
+  display: block;
+  margin-top: 9px;
+  color: var(--wb-text);
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: clamp(1.6rem, 3vw, 2.25rem);
+  line-height: .98;
+}
+
+.wb-guide-mission-families {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.wb-guide-mission-families > div {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+  padding: 18px clamp(18px, 3vw, 26px);
+}
+
+.wb-guide-mission-families > div:nth-child(even) {
+  border-left: 1px solid var(--wb-border-neutral);
+}
+
+.wb-guide-mission-families > div:nth-child(n + 3) {
+  border-top: 1px solid var(--wb-border-neutral);
+}
+
+.wb-guide-mission-families > div > span {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 1px solid rgba(214, 169, 62, .28);
+  border-radius: 9px;
+  color: var(--wb-gold-bright);
+  font-weight: 900;
+}
+
+.wb-guide-mission-families strong,
+.wb-guide-mission-families small {
+  display: block;
+}
+
+.wb-guide-mission-families strong {
+  color: var(--wb-text);
+  font-size: .82rem;
+  letter-spacing: .03em;
+}
+
+.wb-guide-mission-families small {
+  margin-top: 3px;
+  color: var(--wb-text-muted);
+  font-size: .72rem;
+  line-height: 1.35;
+}
+
+.wb-guide-main-turn-flow {
+  margin-top: clamp(32px, 5vw, 48px);
+}
+
+.wb-guide-turn-end {
+  width: fit-content;
+  margin: 20px 0 0 auto;
+  border-right: 1px solid var(--wb-gold);
+  padding-right: 14px;
+  color: var(--wb-text-muted);
+  font-size: .8rem;
+  line-height: 1.5;
+  text-align: right;
+}
+
+.wb-guide-core-split {
+  display: grid;
+  grid-template-columns: minmax(0, .92fr) minmax(340px, 1.08fr);
+  align-items: center;
+  gap: clamp(38px, 6vw, 82px);
+}
+
+.wb-guide-reinforcement-rules .wb-guide-rule-scale {
+  margin-top: 0;
+}
+
+.wb-guide-reinforcement-example {
+  margin-top: clamp(34px, 5vw, 52px);
+}
+
+.wb-guide-territory-group,
+.wb-guide-territory-pair {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.wb-guide-territory-pair > span {
+  color: var(--wb-gold);
+  font-weight: 900;
+}
+
+.wb-guide-region-table--rules th:nth-child(2),
+.wb-guide-region-table--rules td:nth-child(2),
+.wb-guide-region-table--rules th:nth-child(3),
+.wb-guide-region-table--rules td:nth-child(3) {
+  width: 22%;
+}
+
+.wb-guide-section--attack .wb-guide-notes {
+  margin-top: 28px;
+}
+
+.wb-guide-attack-example {
+  display: grid;
+  gap: 22px;
+}
+
+.wb-guide-attack-example .wb-guide-connection {
+  margin-top: 0;
+}
+
+.wb-guide-combat-flow {
+  margin-top: clamp(30px, 5vw, 44px);
+}
+
+.wb-guide-combat-scales {
+  display: grid;
+  margin-top: clamp(38px, 6vw, 58px);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(28px, 5vw, 58px);
+}
+
+.wb-guide-combat-scales > section + section {
+  border-left: 1px solid var(--wb-border-neutral);
+  padding-left: clamp(28px, 5vw, 58px);
+}
+
+.wb-guide-combat-scales > section > small {
+  display: block;
+  margin-top: 12px;
+  color: var(--wb-text-muted);
+  font-size: .76rem;
+  line-height: 1.5;
+}
+
+.wb-guide-combat-example {
+  display: grid;
+  margin-top: clamp(42px, 6vw, 64px);
+  grid-template-columns: minmax(0, .72fr) minmax(420px, 1.28fr);
+  align-items: center;
+  gap: clamp(34px, 6vw, 72px);
+  border-top: 1px solid var(--wb-border-neutral);
+  padding-top: clamp(30px, 5vw, 46px);
+}
+
+.wb-guide-combat-example h3 {
+  margin-top: 8px;
+  color: var(--wb-text);
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: clamp(1.8rem, 3vw, 2.5rem);
+  line-height: 1;
+}
+
+.wb-guide-barrier-comparison {
+  display: grid;
+  margin-top: clamp(38px, 6vw, 60px);
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(22px, 4vw, 42px);
+}
+
+.wb-guide-barrier-versus {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  place-items: center;
+  border: 1px solid var(--wb-border-neutral);
+  border-radius: 50%;
+  color: var(--wb-gold);
+  font-weight: 900;
+}
+
+.wb-guide-barrier-loss {
+  display: flex;
+  margin-top: 14px;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 18px;
+  border-top: 1px solid var(--wb-border-neutral);
+  padding-top: 14px;
+}
+
+.wb-guide-barrier-loss small {
+  color: var(--wb-text-muted);
+  font-size: .7rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.wb-guide-barrier-loss strong {
+  color: var(--wb-text);
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: 1.45rem;
+}
+
+.wb-guide-barrier-loss--danger strong {
+  color: #efaa9e;
+}
+
+.wb-guide-barrier-signals {
+  display: grid;
+  margin-top: clamp(34px, 5vw, 50px);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid var(--wb-border-neutral);
+  border-bottom: 1px solid var(--wb-border-neutral);
+}
+
+.wb-guide-barrier-signals > div {
+  display: grid;
+  grid-template-columns: 58px minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 20px 0;
+}
+
+.wb-guide-barrier-signals > div + div {
+  border-left: 1px solid var(--wb-border-neutral);
+  padding-left: 28px;
+}
+
+.wb-guide-barrier-signals img {
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+}
+
+.wb-guide-barrier-signals p {
+  color: var(--wb-text-muted);
+  font-size: .82rem;
+  line-height: 1.55;
+}
+
+.wb-guide-barrier-signals strong {
+  color: var(--wb-text);
+}
+
+.wb-guide-conquest-example {
+  margin-top: 0;
+}
+
+.wb-guide-elimination-visual {
+  display: grid;
+  gap: 26px;
+}
+
+.wb-guide-elimination-flow {
+  margin-top: 0;
+}
+
+.wb-guide-elimination-transfer {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(130px, .7fr);
+  align-items: center;
+  gap: 18px;
+  border-top: 1px solid var(--wb-border-neutral);
+  padding-top: 22px;
+}
+
+.wb-guide-elimination-transfer small {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--wb-text-muted);
+  font-size: .66rem;
+  font-weight: 850;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.wb-guide-elimination-transfer > span {
+  color: var(--wb-gold);
+  font-size: 1.5rem;
+  font-weight: 900;
+}
+
+.wb-guide-elimination-transfer > strong {
+  color: var(--wb-text);
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: 1.3rem;
+  line-height: 1;
+}
+
+.wb-guide-elimination-cards {
+  display: flex;
+  align-items: center;
+}
+
+.wb-guide-elimination-cards > [aria-hidden="true"] {
+  width: 72px;
+  filter: drop-shadow(0 12px 14px rgba(0, 0, 0, .2));
+}
+
+.wb-guide-elimination-cards > [aria-hidden="true"] + [aria-hidden="true"] {
+  margin-left: -26px;
+}
+
+@media (max-width: 980px) {
+  .wb-guide-order-example,
+  .wb-guide-mission-card,
+  .wb-guide-setup-stage,
+  .wb-guide-attack-example,
+  .wb-guide-elimination-visual {
+    max-width: 720px;
+  }
+
+  .wb-guide-core-split,
+  .wb-guide-combat-example {
+    grid-template-columns: 1fr;
+    gap: 34px;
+  }
+
+  .wb-guide-reinforcement-rules {
+    max-width: 720px;
+  }
+
+  .wb-guide-combat-scales {
+    grid-template-columns: 1fr;
+  }
+
+  .wb-guide-combat-scales > section + section {
+    border-top: 1px solid var(--wb-border-neutral);
+    border-left: 0;
+    padding: 28px 0 0;
+  }
+
+  .wb-guide-barrier-comparison {
+    grid-template-columns: 1fr;
+  }
+
+  .wb-guide-barrier-versus {
+    margin-inline: auto;
+  }
+}
+
+@media (max-width: 700px) {
+  .wb-guide-section--setup .wb-guide-inline-note,
+  .wb-guide-section--objective .wb-guide-inline-note,
+  .wb-guide-section--reinforcement .wb-guide-inline-note {
+    margin-left: 44px;
+  }
+
+  .wb-guide-setup-stage {
+    gap: 18px;
+  }
+
+  .wb-guide-setup-stage .wb-guide-map-mini {
+    width: min(100%, 390px);
+  }
+
+  .wb-guide-order-dice {
+    gap: 8px;
+  }
+
+  .wb-guide-order-dice span {
+    font-size: .6rem;
+    letter-spacing: .04em;
+  }
+
+  .wb-guide-mission-families,
+  .wb-guide-barrier-signals {
+    grid-template-columns: 1fr;
+  }
+
+  .wb-guide-mission-families > div:nth-child(even) {
+    border-left: 0;
+  }
+
+  .wb-guide-mission-families > div + div {
+    border-top: 1px solid var(--wb-border-neutral);
+  }
+
+  .wb-guide-turn-end {
+    margin-left: 44px;
+    margin-right: 0;
+    border-right: 0;
+    border-left: 1px solid var(--wb-gold);
+    padding-right: 0;
+    padding-left: 14px;
+    text-align: left;
+  }
+
+  .wb-guide-territory-group {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .wb-guide-reinforcement-example .wb-guide-territory-group .wb-guide-territory {
+    width: 100%;
+  }
+
+  .wb-guide-combat-example {
+    margin-top: 36px;
+  }
+
+  .wb-guide-barrier-signals > div + div {
+    border-top: 1px solid var(--wb-border-neutral);
+    border-left: 0;
+    padding-left: 0;
+  }
+
+  .wb-guide-elimination-transfer {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+
+  .wb-guide-elimination-transfer > span {
+    transform: rotate(90deg);
+  }
+}

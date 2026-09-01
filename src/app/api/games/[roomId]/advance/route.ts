@@ -4,7 +4,7 @@ import {
   readJsonObject,
   roomErrorResponse,
 } from "@/src/lib/api-response";
-import { advanceGamePresentationCommand } from "@/src/lib/game-presentation-service";
+import { advanceGameAutomationCommand } from "@/src/lib/game-automation-service";
 import { gameQuery } from "@/src/lib/game-query";
 import { readPlayerGameRevision } from "@/src/lib/game-revision";
 import {
@@ -58,7 +58,7 @@ export async function POST(
       );
     }
 
-    const result = await advanceGamePresentationCommand(
+    const result = await advanceGameAutomationCommand(
       roomId,
       expectedRevision,
     );
@@ -73,7 +73,7 @@ export async function POST(
     );
   } catch (error) {
     return roomErrorResponse(error, {
-      operation: "advance_game_presentation",
+      operation: "advance_game_automation",
       route: request.nextUrl.pathname,
       resource: { roomId },
       input: body,

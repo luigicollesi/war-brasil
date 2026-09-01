@@ -6,7 +6,15 @@ import {
   type BattleRoomState,
 } from "@/src/lib/game-battle-service";
 import { gameConditionalCommand } from "@/src/lib/game-command";
-import { type GameRevision } from "@/src/lib/game-revision";
+import {
+  compareOrderRollHistories,
+  eligibleOrderPlayerIds,
+  orderRollHistories,
+  unresolvedOrderPlayerIds,
+  type OrderPlayer,
+  type OrderRoll,
+} from "@/src/lib/game-order-rules";
+import type { GameRevision } from "@/src/lib/game-revision";
 import { initializeFirstGameRound } from "@/src/lib/game-round-service";
 import { isOrderRollPresentationDue } from "@/src/lib/game-transitions";
 import { RoomError } from "@/src/lib/rooms";
@@ -16,14 +24,7 @@ type PresentationRoom = BattleRoomState & {
   order_roll_round: number;
 };
 
-type OrderPlayer = {
-  id: string;
-};
-
-type OrderRoll = {
-  player_id: string;
-  roll_round: number;
-  value: number;
+type PresentationOrderRoll = OrderRoll & {
   rolled_at: Date;
 };
 
@@ -48,42 +49,6 @@ async function loadRoom(client: PoolClient, roomId: string) {
   return room;
 }
 
-function histories(players: OrderPlayer[], rolls: OrderRoll[]) {
-  const values = new Map(players.map((player) => [player.id, [] as number[]]));
-  for (const roll of rolls) values.get(roll.player_id)?.push(roll.value);
-  return values;
-}
-
-function unresolved(values: Map<string, number[]>) {
-  const groups = new Map<string, string[]>();
-
-  for (const [id, history] of values) {
-    const key = history.join(",");
-    groups.set(key, [...(groups.get(key) ?? []), id]);
-  }
-
-  return Array.from(groups.values())
-    .filter((group) => group.length > 1)
-    .flat();
-}
-
-function eligible(players: OrderPlayer[], rolls: OrderRoll[], round: number) {
-  return unresolved(
-    histories(
-      players,
-      rolls.filter((roll) => roll.roll_round < round),
-    ),
-  );
-}
-
-function compareRollHistory(a: number[], b: number[]) {
-  for (let index = 0; index < Math.max(a.length, b.length); index += 1) {
-    const difference = (b[index] ?? -1) - (a[index] ?? -1);
-    if (difference) return difference;
-  }
-  return 0;
-}
-
 async function startPlaying(
   client: PoolClient,
   room: PresentationRoom,
@@ -95,6 +60,11 @@ async function startPlaying(
       [index + 1, player.id],
     );
   }
+
+  await client.query(
+    "UPDATE room_players SET bot_next_action_at=NULL WHERE room_id=$1",
+    [room.id],
+  );
 
   const firstRound = await initializeFirstGameRound(client, room.id);
 
@@ -126,12 +96,12 @@ async function advanceOrderRollPresentation(
       `SELECT id
        FROM room_players
        WHERE room_id=$1
-       ORDER BY joined_at`,
+       ORDER BY joined_at,id`,
       [room.id],
     )
   ).rows;
   const rolls = (
-    await client.query<OrderRoll>(
+    await client.query<PresentationOrderRoll>(
       `SELECT player_id,roll_round,value,rolled_at
        FROM game_order_rolls
        WHERE room_id=$1
@@ -140,7 +110,11 @@ async function advanceOrderRollPresentation(
     )
   ).rows;
 
-  const current = eligible(players, rolls, room.order_roll_round);
+  const current = eligibleOrderPlayerIds(
+    players,
+    rolls,
+    room.order_roll_round,
+  );
   if (!current.length) return false;
 
   const currentRolls = rolls.filter(
@@ -163,8 +137,8 @@ async function advanceOrderRollPresentation(
     return false;
   }
 
-  const historiesByPlayer = histories(players, rolls);
-  if (unresolved(historiesByPlayer).length) {
+  const historiesByPlayer = orderRollHistories(players, rolls);
+  if (unresolvedOrderPlayerIds(historiesByPlayer).length) {
     await client.query(
       `UPDATE game_rooms
        SET order_roll_round=order_roll_round+1
@@ -175,7 +149,7 @@ async function advanceOrderRollPresentation(
   }
 
   const order = [...players].sort((a, b) =>
-    compareRollHistory(
+    compareOrderRollHistories(
       historiesByPlayer.get(a.id) ?? [],
       historiesByPlayer.get(b.id) ?? [],
     ),
@@ -189,6 +163,22 @@ async function advanceOrderRollPresentation(
   return true;
 }
 
+export async function advanceGamePresentation(
+  client: PoolClient,
+  roomId: string,
+  nowMs = Date.now(),
+) {
+  const room = await loadRoom(client, roomId);
+
+  if (room.status === "order_roll") {
+    return advanceOrderRollPresentation(client, room, nowMs);
+  }
+  if (room.status === "playing") {
+    return advanceBattlePresentation(client, room, nowMs);
+  }
+  return false;
+}
+
 export async function advanceGamePresentationCommand(
   value: string,
   expectedRevision: GameRevision,
@@ -199,17 +189,9 @@ export async function advanceGamePresentationCommand(
   return gameConditionalCommand(
     roomId,
     expectedRevision,
-    async (client) => {
-      const room = await loadRoom(client, roomId);
-
-      const changed =
-        room.status === "order_roll"
-          ? await advanceOrderRollPresentation(client, room, nowMs)
-          : room.status === "playing"
-            ? await advanceBattlePresentation(client, room, nowMs)
-            : false;
-
-      return { value: null, changed };
-    },
+    async (client) => ({
+      value: null,
+      changed: await advanceGamePresentation(client, roomId, nowMs),
+    }),
   );
 }

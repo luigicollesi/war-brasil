@@ -36,7 +36,7 @@ test("fronteira efetiva bloqueada vira ataque de barreira em vez de ser rejeitad
   assert.match(combat, /getEffectiveGameTopology/);
   assert.match(
     combat,
-    /findTerritoryConnection\(\s*topology\.connections,\s*from,\s*to,?\s*\)/,
+    /findTerritoryConnection\(\s*topology\.connections,\s*input\.fromTerritoryId,\s*input\.toTerritoryId,?\s*\)/,
   );
   assert.match(combat, /if \(!connection\.exists\)/);
   assert.match(combat, /connection\.passable \? "normal" : "barrier"/);
@@ -65,7 +65,7 @@ test("perdas do atacante multiplicam as comparações pelo perfil da barreira", 
   assert.match(combat, /battle\.attackerLosses = attackerLosses/);
   assert.match(combat, /battle\.defenderLosses = resolved\.defenderLosses/);
   assert.match(combat, /if \(attackerLosses >= attacker\.troops\)/);
-  assert.match(battle, /if \(attackerTroops < 1\)/);
+  assert.match(battle, /if \(attackerTroops < MIN_TERRITORY_TROOPS\)/);
 });
 
 test("Túnel Jurássico continua sendo passagem normal mesmo sobre fronteira bloqueada", () => {
@@ -109,9 +109,12 @@ test("manobra rejeita duas barreiras e exige duas tropas para uma travessia", ()
 test("penalidade de manobra remove N da origem mas entrega apenas N menos a perda", () => {
   const maneuver = source("src/lib/game-maneuver-command-service.ts");
 
-  assert.match(maneuver, /const troopsArriving = troops - traversal\.troopLoss/);
-  assert.match(maneuver, /\[room\.id, from, troops\]/);
-  assert.match(maneuver, /\[room\.id, to, troopsArriving\]/);
+  assert.match(
+    maneuver,
+    /const troopsArriving = input\.troops - traversal\.troopLoss/,
+  );
+  assert.match(maneuver, /\[room\.id, input\.fromTerritoryId, input\.troops\]/);
+  assert.match(maneuver, /\[room\.id, input\.toTerritoryId, troopsArriving\]/);
   assert.match(
     maneuver,
     /SET troops=troops\+\$3,moved_in_turn=moved_in_turn\+\$3/,

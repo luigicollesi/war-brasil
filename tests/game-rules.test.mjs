@@ -41,8 +41,33 @@ test("trocas aceitam trincas, mistura e coringa", () => {
   assert.equal(isValidTrade(["leaf", "gold", "gold"]), false);
 });
 
-test("valor global das trocas cresce conforme a sequência", () => {
-  assert.deepEqual([0, 1, 2, 3, 4, 5, 6, 7].map(tradeValue), [4, 6, 8, 10, 12, 15, 20, 25]);
+test("valor individual das trocas cresce uma tropa por troca", () => {
+  assert.deepEqual([0, 1, 2, 3, 4, 5, 6, 7].map(tradeValue), [4, 5, 6, 7, 8, 9, 10, 11]);
+});
+
+test("trocas usam progressão individual e preservam bônus territorial separado", () => {
+  const source = readFileSync("src/lib/game-troop-command-service.ts", "utf8");
+
+  assert.match(source, /card_trade_count=card_trade_count\+1/);
+  assert.match(source, /RETURNING card_trade_count-1 trade_count_before/);
+  assert.match(source, /tradeValue\(tradeProgress\.trade_count_before\)/);
+  assert.match(source, /SET troops=troops\+\$3/);
+  assert.match(source, /OWNED_TERRITORY_CARD_BONUS/);
+  assert.match(source, /reinforcements_remaining=reinforcements_remaining\+\$2/);
+  assert.doesNotMatch(source, /tradeValue\(room\.trade_count\)/);
+});
+
+test("contador individual de trocas existe no schema e é zerado em nova partida", () => {
+  const migration = readFileSync(
+    "src/lib/db/migrations/015-player-card-trade-count.sql",
+    "utf8",
+  );
+  const schema = readFileSync("src/lib/db/schema.sql", "utf8");
+  const finish = readFileSync("src/lib/game-finish-command-service.ts", "utf8");
+
+  assert.match(migration, /ADD COLUMN IF NOT EXISTS card_trade_count/);
+  assert.match(schema, /card_trade_count INTEGER NOT NULL DEFAULT 0/);
+  assert.match(finish, /card_trade_count=0/);
 });
 
 test("resoluções críticas independentes têm apenas um vencedor", () => {
@@ -119,7 +144,7 @@ test("ataque classifica combate usando a topologia efetiva da rodada", () => {
   const source = readFileSync("src/lib/game-combat-command-service.ts", "utf8");
   assert.match(source, /getEffectiveGameTopology/);
   assert.match(source, /isAttackOriginBlocked/);
-  assert.match(source, /findTerritoryConnection\(topology\.connections/);
+  assert.match(source, /findTerritoryConnection\(\s*topology\.connections/);
   assert.match(source, /connection\.passable \? "normal" : "barrier"/);
   assert.match(source, /attackProfile/);
   assert.doesNotMatch(source, /getBaseTerritoryConnection/);
@@ -183,8 +208,20 @@ test("combate sincronizado persiste etapas e rolagens separadas", () => {
 
 test("rolagem de combate valida atacante e defensor pelo estágio, sem turno global", () => {
   const source = readFileSync("src/lib/game-combat-command-service.ts", "utf8");
-  const rollBattleDice = source.slice(source.indexOf("export async function rollBattleDiceCommand"));
-  assert.ok(rollBattleDice.length > 0);
+  const executeRollBattleDiceStart = source.indexOf(
+    "export async function executeRollBattleDice",
+  );
+  const executeRollBattleDiceEnd = source.indexOf(
+    "export async function attackCommand",
+    executeRollBattleDiceStart,
+  );
+  assert.ok(executeRollBattleDiceStart >= 0);
+  assert.ok(executeRollBattleDiceEnd > executeRollBattleDiceStart);
+
+  const rollBattleDice = source.slice(
+    executeRollBattleDiceStart,
+    executeRollBattleDiceEnd,
+  );
   assert.doesNotMatch(rollBattleDice, /assertAttackTurn\(/);
   assert.match(rollBattleDice, /battle\.stage === "awaiting_attacker_roll"/);
   assert.match(rollBattleDice, /player\.id !== battle\.attackerPlayerId/);

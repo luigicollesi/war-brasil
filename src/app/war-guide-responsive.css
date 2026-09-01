@@ -1,0 +1,311 @@
+.wb-guide,
+.wb-guide-copy,
+.wb-guide-visual,
+.wb-guide-flow li,
+.wb-guide-rule-scale dd,
+.wb-guide-state-change-stage,
+.wb-guide-connection-endpoint {
+  min-width: 0;
+}
+
+.wb-guide h2,
+.wb-guide h3,
+.wb-guide p,
+.wb-guide small,
+.wb-guide figcaption {
+  overflow-wrap: break-word;
+}
+
+.wb-guide-section--order,
+.wb-guide-section--turn,
+.wb-guide-section--elimination,
+.wb-guide-section--victory {
+  contain-intrinsic-size: 560px;
+}
+
+.wb-guide-section--reinforcement,
+.wb-guide-section--combat,
+.wb-guide-section--barrier,
+.wb-guide-section--cards,
+.wb-guide-section--anomaly {
+  contain-intrinsic-size: 980px;
+}
+
+.wb-guide a:focus-visible {
+  outline: 2px solid var(--wb-gold-bright);
+  outline-offset: 4px;
+}
+
+@media (max-width: 1120px) {
+  .wb-guide-map-legend {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .wb-guide-map-legend > .wb-guide-connection:last-child {
+    grid-column: 1 / -1;
+    width: min(100%, 540px);
+  }
+}
+
+@media (max-width: 980px) {
+  .wb-guide-map-legend {
+    grid-template-columns: 1fr;
+  }
+
+  .wb-guide-map-legend > .wb-guide-connection:last-child {
+    grid-column: auto;
+    width: 100%;
+  }
+
+  .wb-guide-cards-layout,
+  .wb-guide-anomaly-layout,
+  .wb-guide-core-split,
+  .wb-guide-combat-example {
+    min-width: 0;
+  }
+
+  .wb-guide-card-progress,
+  .wb-guide-anomaly-layout > * {
+    min-width: 0;
+  }
+}
+
+@media (max-width: 700px) {
+  .wb-guide-chapter {
+    padding-block: 46px;
+  }
+
+  .wb-guide-heading p,
+  .wb-guide-notes p,
+  .wb-guide-inline-note,
+  .wb-guide-anomaly-copy > p {
+    line-height: 1.58;
+  }
+
+  .wb-guide-flow li {
+    padding: 17px 15px;
+  }
+
+  .wb-guide-flow--compact li {
+    padding-block: 14px;
+  }
+
+  .wb-guide-rule-scale > div {
+    padding-block: 13px;
+  }
+
+  .wb-guide-state-change-stage {
+    padding: 14px;
+  }
+
+  .wb-guide-territory strong {
+    overflow: visible;
+    text-overflow: clip;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .wb-guide-card-combination-list > div > div {
+    flex-wrap: wrap;
+  }
+
+  .wb-guide-map-legend,
+  .wb-guide-anomaly-layout,
+  .wb-guide-maneuver-route,
+  .wb-guide-reinforcement-rules,
+  .wb-guide-attack-example,
+  .wb-guide-elimination-visual {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .wb-guide-anomaly {
+    padding: 22px;
+  }
+
+  .wb-guide-victory .wb-button {
+    min-height: 48px;
+  }
+}
+
+@media (max-width: 520px) {
+  .wb-guide-region-table-wrap {
+    margin-right: 0;
+    overflow-x: visible;
+    padding-right: 0;
+  }
+
+  .wb-guide-region-table.wb-guide-region-table--rules {
+    min-width: 0;
+    table-layout: auto;
+  }
+
+  .wb-guide-region-table--rules thead th:nth-child(1) { width: 50%; }
+  .wb-guide-region-table--rules thead th:nth-child(2) { width: 30%; }
+  .wb-guide-region-table--rules thead th:nth-child(3) { width: 20%; }
+
+  .wb-guide-region-table--rules th,
+  .wb-guide-region-table--rules td {
+    padding: 12px 8px;
+  }
+
+  .wb-guide-region-table--rules tbody th {
+    font-size: 1rem;
+  }
+
+  .wb-guide-region-table--rules tbody td {
+    font-size: .76rem;
+  }
+
+  .wb-guide-region-table--rules .wb-guide-region-bonus {
+    font-size: 1.5rem;
+  }
+
+  .wb-guide-region-mark {
+    margin-right: 7px;
+  }
+
+  .wb-guide-connection-track {
+    grid-template-columns: minmax(74px, auto) minmax(40px, 1fr) minmax(74px, auto);
+    gap: 6px;
+  }
+
+  .wb-guide-connection-line > span {
+    width: 24px;
+    height: 24px;
+  }
+
+  .wb-guide-dice-comparison-head,
+  .wb-guide-dice-comparison-row {
+    grid-template-columns: 46px 22px 46px minmax(74px, 1fr);
+    gap: 5px;
+  }
+
+  .wb-guide-dice-comparison .game-die {
+    width: 46px;
+  }
+
+  .wb-guide-dice-empty {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+@media (max-width: 420px) {
+  .wb-guide-intro {
+    padding-top: 54px;
+  }
+
+  .wb-guide-intro h2 {
+    font-size: 2.4rem;
+  }
+
+  .wb-guide-heading {
+    grid-template-columns: 30px minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .wb-guide-heading h2 {
+    font-size: 2rem;
+  }
+
+  .wb-guide-heading > span {
+    font-size: 1rem;
+  }
+
+  .wb-guide-notes,
+  .wb-guide-controls,
+  .wb-guide-inline-note,
+  .wb-guide-section--setup .wb-guide-inline-note,
+  .wb-guide-section--objective .wb-guide-inline-note,
+  .wb-guide-section--reinforcement .wb-guide-inline-note,
+  .wb-guide-card-mandatory-note,
+  .wb-guide-tunnel-note,
+  .wb-guide-section--anomaly > .wb-guide-inline-note,
+  .wb-guide-turn-end {
+    margin-left: 0;
+  }
+
+  .wb-guide-turn-end {
+    width: 100%;
+  }
+
+  .wb-guide-order-dice {
+    gap: 5px;
+  }
+
+  .wb-guide-order-dice span {
+    font-size: .56rem;
+    letter-spacing: .02em;
+  }
+
+  .wb-guide-flow strong {
+    font-size: 1.3rem;
+  }
+
+  .wb-guide-card-bonus-row {
+    grid-template-columns: 1fr;
+  }
+
+  .wb-guide-card-bonus-art > [aria-hidden="true"] {
+    width: 62px;
+  }
+
+  .wb-guide-card-bonus-row strong {
+    font-size: 1.28rem;
+  }
+
+  .wb-guide-connection-track {
+    grid-template-columns: minmax(68px, auto) minmax(34px, 1fr) minmax(68px, auto);
+  }
+
+  .wb-guide-connection .wb-guide-territory--compact {
+    padding: 8px;
+  }
+
+  .wb-guide-dice-comparison-head,
+  .wb-guide-dice-comparison-row {
+    grid-template-columns: 42px 18px 42px minmax(66px, 1fr);
+    gap: 4px;
+  }
+
+  .wb-guide-dice-comparison .game-die {
+    width: 42px;
+  }
+
+  .wb-guide-dice-result {
+    font-size: .68rem;
+  }
+
+  .wb-guide-elimination-cards > [aria-hidden="true"] {
+    width: 64px;
+  }
+
+  .wb-guide-elimination-cards > [aria-hidden="true"] + [aria-hidden="true"] {
+    margin-left: -24px;
+  }
+
+  .wb-guide-anomaly {
+    padding: 18px;
+  }
+
+  .wb-guide-anomaly-head {
+    align-items: flex-start;
+  }
+
+  .wb-guide-victory .wb-button {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wb-guide *,
+  .wb-guide *::before,
+  .wb-guide *::after {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}

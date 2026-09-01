@@ -15,6 +15,7 @@ export type LobbyPlayer = {
   color: PlayerColor;
   isReady: boolean;
   isMe: boolean;
+  isBot: boolean;
 };
 
 export type LobbySnapshot = {
@@ -27,6 +28,7 @@ export type LobbySnapshot = {
   };
   players: LobbyPlayer[];
   me: LobbyPlayer;
+  canManageBots: boolean;
 };
 
 export function isPlayerColor(value: unknown): value is PlayerColor {

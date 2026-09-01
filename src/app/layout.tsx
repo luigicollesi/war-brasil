@@ -4,9 +4,12 @@ import { getSiteUrl } from "@/src/lib/site-url";
 import "./globals.css";
 import "./war-identity.css";
 import "./war-guide.css";
-import "./war-guide-barrier-refresh.css";
+import "./war-guide-primitives.css";
 import "./war-guide-geographic.css";
 import "./war-guide-regions.css";
+import "./war-guide-sections.css";
+import "./war-guide-final-sections.css";
+import "./war-guide-responsive.css";
 
 const interfaceFont = Inter({
   variable: "--font-wb-ui",

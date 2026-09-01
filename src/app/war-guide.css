@@ -69,20 +69,19 @@
 
 .wb-guide-heading p,
 .wb-guide-notes p,
-.wb-guide-rule-grid p,
-.wb-guide-card-rules p,
 .wb-guide-inline-note,
 .wb-guide-victory p {
   color: var(--wb-text-muted);
   line-height: 1.68;
 }
 
-.wb-guide-heading p { margin-top: 14px; max-width: 650px; }
+.wb-guide-heading p {
+  max-width: 650px;
+  margin-top: 14px;
+}
 
 .wb-guide-heading strong,
 .wb-guide-notes strong,
-.wb-guide-rule-grid strong,
-.wb-guide-card-rules strong,
 .wb-guide-inline-note strong {
   color: var(--wb-text);
 }
@@ -104,18 +103,8 @@
   min-width: 0;
 }
 
-.wb-guide-setup-visual {
-  display: grid;
-  min-height: 500px;
-  grid-template-columns: 1fr .78fr;
-  grid-template-rows: auto auto;
-  align-items: center;
-  gap: 20px 24px;
-}
-
 .wb-guide-map-mini {
   position: relative;
-  grid-row: 1 / 3;
   min-width: 0;
 }
 
@@ -163,13 +152,6 @@
   font-size: .68rem;
 }
 
-.wb-guide-objective {
-  align-self: end;
-  border-left: 2px solid var(--wb-gold);
-  padding: 14px 0 14px 18px;
-}
-
-.wb-guide-objective span,
 .wb-guide-label,
 .wb-guide-anomaly-head small {
   color: var(--wb-gold);
@@ -177,152 +159,6 @@
   font-weight: 850;
   letter-spacing: .15em;
   text-transform: uppercase;
-}
-
-.wb-guide-objective strong {
-  display: block;
-  margin-top: 7px;
-  color: var(--wb-text);
-  font-family: var(--font-wb-display), sans-serif;
-  font-size: 1.55rem;
-  line-height: 1;
-}
-
-.wb-guide-objective small {
-  display: block;
-  margin-top: 8px;
-  color: var(--wb-text-muted);
-  line-height: 1.45;
-}
-
-.wb-guide-order-roll {
-  display: flex;
-  align-self: start;
-  align-items: end;
-  gap: 10px;
-}
-
-.wb-guide-order-roll > div {
-  display: grid;
-  justify-items: center;
-  gap: 6px;
-}
-
-.wb-guide-order-roll span {
-  color: var(--wb-text-muted);
-  font-size: .65rem;
-  font-weight: 850;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-}
-
-.wb-guide-turn-flow {
-  display: grid;
-  margin: clamp(34px, 5vw, 52px) 0 0;
-  grid-template-columns: repeat(4, 1fr);
-  border-top: 1px solid var(--wb-border);
-  border-bottom: 1px solid var(--wb-border);
-  list-style: none;
-}
-
-.wb-guide-turn-flow li {
-  position: relative;
-  min-width: 0;
-  padding: 24px 22px;
-}
-
-.wb-guide-turn-flow li + li { border-left: 1px solid var(--wb-border-neutral); }
-
-.wb-guide-turn-flow li:not(:last-child)::after {
-  content: "→";
-  position: absolute;
-  top: 50%;
-  right: -10px;
-  z-index: 2;
-  width: 20px;
-  transform: translateY(-50%);
-  background: var(--wb-bg);
-  color: var(--wb-gold);
-  text-align: center;
-}
-
-.wb-guide-turn-flow span,
-.wb-guide-turn-flow small,
-.wb-guide-card-rules > div > span {
-  display: block;
-  color: var(--wb-text-muted);
-  font-size: .65rem;
-  font-weight: 800;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-}
-
-.wb-guide-turn-flow strong {
-  display: block;
-  margin: 6px 0 3px;
-  color: var(--wb-text);
-  font-family: var(--font-wb-display), sans-serif;
-  font-size: 1.75rem;
-  line-height: 1;
-  text-transform: uppercase;
-}
-
-.wb-guide-rule-grid {
-  display: grid;
-  margin-top: 42px;
-  grid-template-columns: repeat(3, 1fr);
-  gap: clamp(26px, 4vw, 48px);
-}
-
-.wb-guide-rule-grid section + section {
-  border-left: 1px solid var(--wb-border-neutral);
-  padding-left: clamp(26px, 4vw, 48px);
-}
-
-.wb-guide-rule-number {
-  display: block;
-  margin: 12px 0;
-  color: var(--wb-text) !important;
-  font-family: var(--font-wb-display), sans-serif;
-  font-size: 2rem;
-}
-
-.wb-guide-dice-versus {
-  display: flex;
-  margin: 13px 0 16px;
-  align-items: center;
-  gap: 10px;
-}
-
-.wb-guide-dice-versus > div { display: flex; gap: 6px; }
-.wb-guide-dice-versus > span { color: var(--wb-gold); font-weight: 900; }
-
-.wb-guide-route-chain,
-.wb-guide-tunnel {
-  display: flex;
-  margin: 17px 0;
-  align-items: center;
-}
-
-.wb-guide-route-chain span,
-.wb-guide-tunnel span {
-  display: grid;
-  width: 38px;
-  height: 38px;
-  flex: 0 0 auto;
-  place-items: center;
-  border: 1px solid var(--wb-border-strong);
-  border-radius: 50%;
-  background: rgba(255, 255, 255, .05);
-  color: var(--wb-text);
-  font-weight: 800;
-}
-
-.wb-guide-route-chain i,
-.wb-guide-tunnel i {
-  height: 1px;
-  flex: 1;
-  background: linear-gradient(90deg, var(--wb-gold), rgba(214, 169, 62, .3));
 }
 
 .wb-guide-controls {
@@ -374,85 +210,6 @@
   line-height: 1.5;
 }
 
-.wb-guide-barrier-visual {
-  display: grid;
-  gap: 22px;
-}
-
-.wb-guide-barrier-row {
-  display: grid;
-  grid-template-columns: 82px minmax(120px, 1fr);
-  align-items: center;
-  gap: 6px 18px;
-  padding: 18px 0;
-  border-bottom: 1px solid var(--wb-border-neutral);
-}
-
-.wb-guide-barrier-row strong {
-  color: var(--wb-text);
-  font-size: .78rem;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-}
-
-.wb-guide-barrier-row small {
-  grid-column: 2;
-  color: var(--wb-text-muted);
-}
-
-.wb-guide-barrier-row--danger small { color: #efaa9e; }
-.wb-guide-barrier-row--warning small { color: #deb56c; }
-
-.wb-guide-barrier-line {
-  display: flex;
-  align-items: center;
-}
-
-.wb-guide-barrier-line > span {
-  width: 24px;
-  height: 24px;
-  flex: 0 0 auto;
-  border: 2px solid rgba(245, 241, 230, .68);
-  border-radius: 50%;
-  background: var(--wb-surface-raised);
-}
-
-.wb-guide-barrier-line > i {
-  position: relative;
-  display: grid;
-  height: 2px;
-  flex: 1;
-  place-items: center;
-  background: rgba(214, 169, 62, .62);
-}
-
-.wb-guide-barrier-line b {
-  display: grid;
-  width: 28px;
-  height: 28px;
-  place-items: center;
-  border: 1px solid rgba(216, 154, 58, .4);
-  border-radius: 7px;
-  background: var(--wb-bg);
-  color: var(--wb-warning);
-  font-style: normal;
-}
-
-.wb-guide-card-rules {
-  display: grid;
-  margin: 32px 0 0 60px;
-  gap: 18px;
-}
-
-.wb-guide-card-rules > div > div {
-  display: flex;
-  margin-top: 8px;
-  align-items: center;
-  gap: 7px;
-}
-
-.wb-guide-card-rules b { margin-left: 4px; color: var(--wb-success); }
-
 .wb-guide-symbol {
   display: grid;
   width: 38px;
@@ -463,36 +220,9 @@
   background: rgba(255, 255, 255, .045);
 }
 
-.wb-guide-card-preview {
-  display: flex;
-  justify-content: center;
-  align-items: end;
-  gap: clamp(20px, 4vw, 44px);
+.wb-guide-inline-note {
+  margin: 24px 0 0 60px;
 }
-
-.wb-guide-card-preview figure {
-  display: grid;
-  justify-items: center;
-  gap: 12px;
-}
-
-.wb-guide-card-preview figure:nth-child(2) { transform: translateY(28px) rotate(3deg); }
-.wb-guide-card-preview figure:first-child { transform: rotate(-3deg); }
-
-.wb-guide-card-preview [aria-hidden="true"] {
-  width: clamp(116px, 14vw, 150px);
-  filter: drop-shadow(0 24px 26px rgba(0, 0, 0, .26));
-}
-
-.wb-guide-card-preview figcaption {
-  color: var(--wb-text-muted);
-  font-size: .7rem;
-  font-weight: 800;
-  letter-spacing: .1em;
-  text-transform: uppercase;
-}
-
-.wb-guide-inline-note { margin: 24px 0 0 60px; }
 
 .wb-guide-anomaly {
   padding: 26px;
@@ -522,7 +252,10 @@
   font-size: 1.45rem;
 }
 
-.wb-guide-anomaly-effects { margin-top: 22px; }
+.wb-guide-anomaly-effects {
+  margin-top: 22px;
+}
+
 .wb-guide-anomaly-effects .temporal-anomaly-effects-heading {
   margin-bottom: 10px;
   color: var(--wb-text-muted);
@@ -585,27 +318,6 @@
   font-size: .72rem;
 }
 
-.wb-guide-tunnel {
-  margin-top: 24px;
-}
-
-.wb-guide-tunnel span {
-  width: auto;
-  min-width: 66px;
-  padding-inline: 10px;
-  border-radius: 999px;
-  font-size: .7rem;
-}
-
-.wb-guide-tunnel i {
-  background: repeating-linear-gradient(90deg, var(--wb-gold) 0 10px, transparent 10px 16px);
-}
-
-.wb-guide-tunnel b {
-  padding-inline: 9px;
-  color: var(--wb-gold-bright);
-}
-
 .wb-guide-victory {
   display: flex;
   align-items: end;
@@ -632,57 +344,51 @@
   }
 
   .wb-guide-chapter--reverse .wb-guide-copy,
-  .wb-guide-chapter--reverse .wb-guide-visual { order: initial; }
+  .wb-guide-chapter--reverse .wb-guide-visual {
+    order: initial;
+  }
 
-  .wb-guide-visual { max-width: 720px; }
-  .wb-guide-rule-grid { grid-template-columns: 1fr 1fr; }
-  .wb-guide-rule-grid section:nth-child(3) {
-    grid-column: 1 / -1;
-    border-top: 1px solid var(--wb-border-neutral);
-    border-left: 0;
-    padding: 28px 0 0;
+  .wb-guide-visual {
+    max-width: 720px;
   }
 }
 
 @media (max-width: 700px) {
-  .wb-guide-intro { padding-top: 64px; }
-  .wb-guide-chapter { contain-intrinsic-size: 840px; padding: 48px 0; }
-  .wb-guide-heading { grid-template-columns: 34px minmax(0, 1fr); gap: 10px; }
-  .wb-guide-heading h2 { font-size: 2.25rem; }
+  .wb-guide-intro {
+    padding-top: 64px;
+  }
+
+  .wb-guide-chapter {
+    contain-intrinsic-size: 840px;
+    padding: 48px 0;
+  }
+
+  .wb-guide-heading {
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .wb-guide-heading h2 {
+    font-size: 2.25rem;
+  }
+
   .wb-guide-notes,
   .wb-guide-controls,
-  .wb-guide-card-rules,
-  .wb-guide-inline-note { margin-left: 44px; }
+  .wb-guide-inline-note {
+    margin-left: 44px;
+  }
 
-  .wb-guide-setup-visual {
-    min-height: auto;
+  .wb-guide-map-mini {
+    width: min(100%, 430px);
+  }
+
+  .wb-guide-control-demo {
     grid-template-columns: 1fr;
-    grid-template-rows: auto;
+    gap: 8px;
   }
 
-  .wb-guide-map-mini { grid-row: auto; width: min(100%, 430px); }
-  .wb-guide-order-roll { order: 2; }
-
-  .wb-guide-turn-flow { grid-template-columns: 1fr 1fr; }
-  .wb-guide-turn-flow li:nth-child(3) { border-left: 0; border-top: 1px solid var(--wb-border-neutral); }
-  .wb-guide-turn-flow li:nth-child(4) { border-top: 1px solid var(--wb-border-neutral); }
-  .wb-guide-turn-flow li::after { display: none; }
-
-  .wb-guide-rule-grid { grid-template-columns: 1fr; }
-  .wb-guide-rule-grid section + section,
-  .wb-guide-rule-grid section:nth-child(3) {
-    grid-column: auto;
-    border-top: 1px solid var(--wb-border-neutral);
-    border-left: 0;
-    padding: 24px 0 0;
+  .wb-guide-victory {
+    align-items: flex-start;
+    flex-direction: column;
   }
-
-  .wb-guide-control-demo { grid-template-columns: 1fr; gap: 8px; }
-  .wb-guide-barrier-row { grid-template-columns: 70px 1fr; }
-  .wb-guide-card-preview { justify-content: flex-start; padding-left: 44px; }
-  .wb-guide-victory { align-items: flex-start; flex-direction: column; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .wb-guide-card-preview figure { transform: none !important; }
 }
