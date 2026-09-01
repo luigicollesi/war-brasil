@@ -15,35 +15,102 @@ if (!connectionString) {
   process.exit(1);
 }
 
-const migrationFiles = [
-  "src/lib/db/migrations/011-bot-players.sql",
-  "src/lib/db/migrations/012-bot-automation.sql",
-  "src/lib/db/migrations/013-objective-rules.sql",
-  "src/lib/db/migrations/014-balanced-objective-catalog.sql",
-  "src/lib/db/migrations/015-player-card-trade-count.sql",
-  "src/lib/db/migrations/016-disable-elimination-fallback.sql",
-];
-
 const client = new Client({ connectionString });
+
+async function tableExists(tableName) {
+  const result = await client.query(
+    "SELECT to_regclass($1) IS NOT NULL AS exists",
+    [`public.${tableName}`],
+  );
+  return Boolean(result.rows[0]?.exists);
+}
+
+async function columnExists(tableName, columnName) {
+  const result = await client.query(
+    `SELECT EXISTS (
+       SELECT 1
+       FROM information_schema.columns
+       WHERE table_schema='public'
+         AND table_name=$1
+         AND column_name=$2
+     ) AS exists`,
+    [tableName, columnName],
+  );
+  return Boolean(result.rows[0]?.exists);
+}
+
+async function queryHasRows(sql) {
+  const result = await client.query(sql);
+  return (result.rowCount ?? 0) > 0;
+}
+
+async function applyMigration(file) {
+  await client.query(readFileSync(`src/lib/db/migrations/${file}`, "utf8"));
+  console.log(`[war-brasil] migration aplicada: ${file}`);
+}
 
 try {
   await client.connect();
   await client.query("BEGIN");
   await client.query("SELECT pg_advisory_xact_lock(20260901, 3)");
 
-  const baseSchemaExists = await client.query(
-    "SELECT to_regclass('public.room_players') AS room_players, to_regclass('public.objectives') AS objectives",
-  );
-  const base = baseSchemaExists.rows[0];
-
-  if (!base?.room_players || !base?.objectives) {
+  if (!(await tableExists("room_players")) || !(await tableExists("objectives"))) {
     throw new Error(
       "Schema base não encontrado. Inicialize o banco com src/lib/db/schema.sql antes de usar o ambiente de desenvolvimento.",
     );
   }
 
-  for (const file of migrationFiles) {
-    await client.query(readFileSync(file, "utf8"));
+  if (
+    !(await columnExists("room_players", "is_bot")) ||
+    !(await tableExists("bot_names"))
+  ) {
+    await applyMigration("011-bot-players.sql");
+  }
+
+  if (!(await columnExists("room_players", "bot_next_action_at"))) {
+    await applyMigration("012-bot-automation.sql");
+  }
+
+  if (
+    !(await tableExists("objective_rules")) ||
+    !(await columnExists("game_player_objectives", "objective_rule_id")) ||
+    !(await columnExists("game_player_objectives", "resolved_params"))
+  ) {
+    await applyMigration("013-objective-rules.sql");
+  }
+
+  const balancedCatalogReady = await queryHasRows(
+    `SELECT 1
+     FROM objectives objective
+     WHERE objective.id='balanced_territory_control'
+       AND objective.is_active=TRUE
+       AND EXISTS (
+         SELECT 1
+         FROM objective_rules rule
+         WHERE rule.objective_id=objective.id
+           AND rule.is_active=TRUE
+       )
+     LIMIT 1`,
+  );
+
+  if (!balancedCatalogReady) {
+    await applyMigration("014-balanced-objective-catalog.sql");
+  }
+
+  if (!(await columnExists("room_players", "card_trade_count"))) {
+    await applyMigration("015-player-card-trade-count.sql");
+  }
+
+  const eliminationFallbackExists = await queryHasRows(
+    `SELECT 1
+     FROM objectives
+     WHERE type IN ('elimination', 'elimination_plus')
+       AND fallback_objective_id IS NOT NULL
+     LIMIT 1`,
+  );
+
+  if (eliminationFallbackExists) {
+    await applyMigration("016-disable-elimination-fallback.sql");
   }
 
   await client.query("COMMIT");
