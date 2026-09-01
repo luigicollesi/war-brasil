@@ -9,6 +9,7 @@ import {
 } from "@/src/lib/game-command-player";
 import type { GameCommandPatch } from "@/src/lib/game-command-patch";
 import { getEffectiveGameTopology } from "@/src/lib/game-effective-topology-service";
+import { objectiveWon } from "@/src/lib/game-objective-service";
 import { maneuverMovableTroops } from "@/src/lib/game-rules";
 import { bestTerritoryRoute } from "@/src/lib/territory-routing";
 import { RoomError } from "@/src/lib/rooms";
@@ -205,7 +206,18 @@ export async function executeManeuver(
     )
   ).rows[0];
 
+  const won = await objectiveWon(client, room.id, player.id, "troops_changed");
+
   return {
+    ...(won
+      ? {
+          room: {
+            status: "finished" as const,
+            phase: "finished" as const,
+            winnerPlayerId: player.id,
+          },
+        }
+      : {}),
     territories: [
       {
         territoryId: input.fromTerritoryId,
