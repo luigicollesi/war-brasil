@@ -187,7 +187,7 @@ export async function executeTradeCards(
   if (
     room.status !== "playing" ||
     room.current_player_id !== player.id ||
-    !["cards", "reinforcement"].includes(room.phase)
+    room.phase !== "reinforcement"
   ) {
     throw new RoomError("A troca não está disponível neste momento.", 409);
   }
