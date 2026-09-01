@@ -7,6 +7,7 @@ import {
   resolveCommandPlayerBySession,
   type CommandPlayer,
 } from "@/src/lib/game-command-player";
+import { objectiveWon } from "@/src/lib/game-objective-service";
 import {
   nextOrderRollPlayerId,
   type OrderPlayer,
@@ -159,6 +160,29 @@ async function drawCard(
   }
 }
 
+async function evaluateRoundTroopObjectiveWinners(
+  client: PoolClient,
+  roomId: string,
+) {
+  const players = (
+    await client.query<{ id: string }>(
+      `SELECT id
+       FROM room_players
+       WHERE room_id=$1 AND turn_position IS NOT NULL
+       ORDER BY turn_position,id`,
+      [roomId],
+    )
+  ).rows;
+
+  for (const candidate of players) {
+    if (await objectiveWon(client, roomId, candidate.id, "troops_changed")) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
 export async function executeRollOrderDie(
   client: PoolClient,
   roomId: string,
@@ -298,12 +322,19 @@ export async function executePhaseAction(
 
   const wrapsRound = (next.turn_position ?? 0) <= (player.turn_position ?? 0);
   if (wrapsRound) {
-    await advanceGameRound(client, {
+    const roundActivation = await advanceGameRound(client, {
       roomId: room.id,
       currentRoundNumber: room.round_number,
       previousJurassicTunnelDestinationId:
         room.jurassic_tunnel_territory_id,
     });
+
+    if (
+      roundActivation.appliedTroopChanges.some((change) => change.delta > 0) &&
+      (await evaluateRoundTroopObjectiveWinners(client, room.id))
+    ) {
+      return null;
+    }
   }
 
   await client.query(
