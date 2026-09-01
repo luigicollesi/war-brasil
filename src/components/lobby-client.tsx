@@ -243,13 +243,13 @@ export function LobbyClient({ code }: LobbyClientProps) {
                   <p className="wb-player-name">Aguardando jogador</p>
                   <p className="wb-player-meta">Vaga disponível</p>
                 </div>
-                {canManageBots ? (
+                {canManageBots && index === 0 ? (
                   <button
                     type="button"
                     disabled={botActionPending}
                     onClick={() => void addBot()}
                     className="wb-button wb-button--ghost px-2 py-1 text-[10px]"
-                    aria-label="Adicionar bot nesta vaga"
+                    aria-label="Adicionar bot na próxima vaga"
                   >
                     {pendingBotAction === "add" ? "Adicionando…" : "+ Bot"}
                   </button>
