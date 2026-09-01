@@ -14,21 +14,21 @@ export function GuideMapSection() {
     <article className="wb-guide-chapter wb-guide-section--map">
       <div className="wb-guide-core-split wb-guide-core-split--reverse">
         <div className="wb-guide-copy">
-          <GuideHeading number="13" title="Leia as conexões do mapa">
-            Ataques e manobras seguem as conexões militares do tabuleiro. Dois
-            territórios encostarem no desenho não significa, por si só, que existe
-            passagem entre eles.
+          <GuideHeading number="13" title="Leia o mapa">
+            As conexões definem por onde ataques e manobras podem acontecer.
+            Territórios que apenas se tocam no desenho não são necessariamente
+            conectados.
           </GuideHeading>
 
           <div className="wb-guide-controls">
             <UtilityDemo icon={<RoadsIcon />} label="Estradas">
-              Mostra ou esconde as conexões normais entre os territórios.
+              Mostra ou esconde as conexões normais.
             </UtilityDemo>
             <UtilityDemo icon={<TroopsIcon />} label="Tropas">
-              Mostra ou esconde a quantidade de tropas em cada território.
+              Mostra ou esconde a quantidade de tropas.
             </UtilityDemo>
             <UtilityDemo icon={<AnomalyIcon />} label="Anomalia" anomaly>
-              Reabre o evento da rodada para consultar seus efeitos atuais.
+              Reabre os efeitos da rodada atual.
             </UtilityDemo>
           </div>
         </div>
@@ -44,28 +44,27 @@ export function GuideMapSection() {
           variant="normal"
           from={<GuideTerritoryNode name="A" troops={3} tone="ally" compact />}
           to={<GuideTerritoryNode name="B" troops={2} tone="enemy" compact />}
-          caption="Conexão normal: válida para ataque e para rotas permitidas de manobra."
+          caption="Normal: ataque e manobra."
         />
         <GuideConnection
           ariaLabel="Exemplo de conexão com Barreira Geográfica"
           variant="barrier"
           from={<GuideTerritoryNode name="A" troops={6} tone="ally" compact />}
           to={<GuideTerritoryNode name="B" troops={2} tone="enemy" compact />}
-          caption="Barreira: existe fronteira militar, mas o atacante ou a manobra sofre as regras de travessia."
+          caption="Barreira: travessia com penalidade."
         />
         <GuideConnection
           ariaLabel="Exemplo do Túnel Jurássico entre Acre e outro território"
           variant="tunnel"
           from={<GuideTerritoryNode name="Acre" troops={2} tone="accent" compact />}
           to={<GuideTerritoryNode name="Destino" troops={3} tone="neutral" compact />}
-          caption="Túnel Jurássico: conexão temporária e livre de Barreira durante a rodada atual."
+          caption="Túnel: conexão temporária da rodada."
         />
       </div>
 
       <p className="wb-guide-inline-note wb-guide-tunnel-note">
-        <strong>Túnel Jurássico.</strong> O Acre recebe um novo destino temporário a
-        cada rodada. Enquanto a ligação estiver ativa, ela entra na mesma topologia
-        usada para validar ataques e caminhos de manobra.
+        <strong>Túnel Jurássico.</strong> O Acre recebe um novo destino a cada rodada.
+        Enquanto ativo, o Túnel conta como conexão normal.
       </p>
     </article>
   );
