@@ -5,7 +5,6 @@ import "./globals.css";
 import "./war-identity.css";
 import "./war-guide.css";
 import "./war-guide-primitives.css";
-import "./war-guide-barrier-refresh.css";
 import "./war-guide-geographic.css";
 import "./war-guide-regions.css";
 import "./war-guide-sections.css";
