@@ -1,0 +1,248 @@
+.wb-guide-section--setup .wb-guide-inline-note,
+.wb-guide-section--objective .wb-guide-inline-note {
+  margin-top: 28px;
+}
+
+.wb-guide-setup-stage {
+  display: grid;
+  min-width: 0;
+  gap: 24px;
+}
+
+.wb-guide-setup-stage .wb-guide-map-mini {
+  grid-row: auto;
+  width: min(100%, 440px);
+  margin-inline: auto;
+}
+
+.wb-guide-setup-flow {
+  margin-top: 0;
+}
+
+.wb-guide-order-example {
+  display: grid;
+  gap: 22px;
+}
+
+.wb-guide-order-dice {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid var(--wb-border-neutral);
+}
+
+.wb-guide-order-dice > div {
+  display: grid;
+  min-width: 0;
+  justify-items: center;
+  gap: 10px;
+}
+
+.wb-guide-order-dice span {
+  overflow: hidden;
+  max-width: 100%;
+  color: var(--wb-text-muted);
+  font-size: .68rem;
+  font-weight: 850;
+  letter-spacing: .08em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.wb-guide-order-flow {
+  margin-top: 0;
+}
+
+.wb-guide-order-caption {
+  margin: -4px 0 0;
+  border-left: 1px solid var(--wb-gold);
+  padding-left: 14px;
+  color: var(--wb-text-muted);
+  font-size: .8rem;
+  line-height: 1.5;
+}
+
+.wb-guide-mission-card {
+  overflow: hidden;
+  border: 1px solid rgba(214, 169, 62, .3);
+  border-radius: var(--wb-radius-lg);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(214, 169, 62, .13), transparent 42%),
+    rgba(7, 30, 24, .72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .04);
+}
+
+.wb-guide-mission-head {
+  padding: clamp(24px, 4vw, 34px);
+  border-bottom: 1px solid rgba(214, 169, 62, .18);
+}
+
+.wb-guide-mission-head > span {
+  display: block;
+  color: var(--wb-gold);
+  font-size: .68rem;
+  font-weight: 850;
+  letter-spacing: .15em;
+  text-transform: uppercase;
+}
+
+.wb-guide-mission-head > strong {
+  display: block;
+  margin-top: 9px;
+  color: var(--wb-text);
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: clamp(1.6rem, 3vw, 2.25rem);
+  line-height: .98;
+}
+
+.wb-guide-mission-head > small {
+  display: block;
+  max-width: 420px;
+  margin-top: 10px;
+  color: var(--wb-text-muted);
+  line-height: 1.5;
+}
+
+.wb-guide-mission-families {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.wb-guide-mission-families > div {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+  padding: 18px clamp(18px, 3vw, 26px);
+}
+
+.wb-guide-mission-families > div:nth-child(even) {
+  border-left: 1px solid var(--wb-border-neutral);
+}
+
+.wb-guide-mission-families > div:nth-child(n + 3) {
+  border-top: 1px solid var(--wb-border-neutral);
+}
+
+.wb-guide-mission-families > div > span {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 1px solid rgba(214, 169, 62, .28);
+  border-radius: 9px;
+  color: var(--wb-gold-bright);
+  font-weight: 900;
+}
+
+.wb-guide-mission-families strong,
+.wb-guide-mission-families small {
+  display: block;
+}
+
+.wb-guide-mission-families strong {
+  color: var(--wb-text);
+  font-size: .82rem;
+  letter-spacing: .03em;
+}
+
+.wb-guide-mission-families small {
+  margin-top: 3px;
+  color: var(--wb-text-muted);
+  font-size: .72rem;
+  line-height: 1.35;
+}
+
+.wb-guide-main-turn-flow {
+  margin-top: clamp(32px, 5vw, 48px);
+}
+
+.wb-guide-turn-end {
+  width: fit-content;
+  margin: 20px 0 0 auto;
+  border-right: 1px solid var(--wb-gold);
+  padding-right: 14px;
+  color: var(--wb-text-muted);
+  font-size: .8rem;
+  line-height: 1.5;
+  text-align: right;
+}
+
+.wb-guide-turn-end strong {
+  color: var(--wb-text);
+}
+
+.wb-guide-turn-reference {
+  margin-top: clamp(38px, 6vw, 58px);
+  border-top: 1px solid var(--wb-border-neutral);
+  padding-top: 28px;
+}
+
+.wb-guide-turn-reference > .wb-guide-label {
+  margin-left: 0;
+}
+
+.wb-guide-turn-reference .wb-guide-rule-grid {
+  margin-top: 22px;
+}
+
+@media (max-width: 980px) {
+  .wb-guide-order-example,
+  .wb-guide-mission-card,
+  .wb-guide-setup-stage {
+    max-width: 720px;
+  }
+}
+
+@media (max-width: 700px) {
+  .wb-guide-section--setup .wb-guide-inline-note,
+  .wb-guide-section--objective .wb-guide-inline-note {
+    margin-left: 44px;
+  }
+
+  .wb-guide-setup-stage {
+    gap: 18px;
+  }
+
+  .wb-guide-setup-stage .wb-guide-map-mini {
+    width: min(100%, 390px);
+  }
+
+  .wb-guide-order-dice {
+    gap: 8px;
+  }
+
+  .wb-guide-order-dice span {
+    font-size: .6rem;
+    letter-spacing: .04em;
+  }
+
+  .wb-guide-mission-families {
+    grid-template-columns: 1fr;
+  }
+
+  .wb-guide-mission-families > div:nth-child(even) {
+    border-left: 0;
+  }
+
+  .wb-guide-mission-families > div + div {
+    border-top: 1px solid var(--wb-border-neutral);
+  }
+
+  .wb-guide-turn-end {
+    margin-left: 44px;
+    margin-right: 0;
+    border-right: 0;
+    border-left: 1px solid var(--wb-gold);
+    padding-right: 0;
+    padding-left: 14px;
+    text-align: left;
+  }
+
+  .wb-guide-turn-reference {
+    margin-top: 36px;
+  }
+}
