@@ -30,22 +30,15 @@ export function GuideConquestSection({
     <article className="wb-guide-chapter wb-guide-chapter--split wb-guide-section--conquest">
       <div className="wb-guide-copy">
         <GuideHeading number="09" title="Tome o território">
-          Quando a última tropa defensora é derrotada, o território muda de dono.
-          Antes de atacar novamente, você precisa mover tropas da origem para
-          ocupar a conquista.
+          Derrote a última tropa defensora para conquistar. Depois, mova tropas da
+          origem para ocupar o território.
         </GuideHeading>
 
-        <div className="wb-guide-notes">
-          <p>
-            <strong>Quanto mover.</strong> Escolha de
-            {` ${guide.conquest.minimumMove} tropa`} até todas as tropas disponíveis,
-            deixando pelo menos {guide.conquest.minimumTroopsLeftAtOrigin} na origem.
-          </p>
-          <p>
-            <strong>Ocupação obrigatória.</strong> Nenhum novo ataque pode começar
-            enquanto essa transferência estiver pendente.
-          </p>
-        </div>
+        <p className="wb-guide-inline-note">
+          <strong>Ocupação obrigatória.</strong> A origem conserva pelo menos
+          {` ${guide.conquest.minimumTroopsLeftAtOrigin} tropa`} e nenhum novo ataque
+          começa antes da transferência terminar.
+        </p>
       </div>
 
       <div className="wb-guide-visual">
@@ -55,7 +48,7 @@ export function GuideConquestSection({
           before={<TerritoryPair originTroops={5} targetTroops={1} targetTone="enemy" />}
           action="conquistar + mover 2"
           after={<TerritoryPair originTroops={3} targetTroops={2} targetTone="ally" />}
-          caption="A quantidade transferida é uma escolha sua dentro do limite disponível na origem."
+          caption={`Mova de ${guide.conquest.minimumMove} tropa até o limite disponível na origem.`}
         />
       </div>
     </article>
