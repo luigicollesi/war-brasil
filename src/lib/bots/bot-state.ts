@@ -34,6 +34,7 @@ export type BotStrategicState = {
     phase: string;
     roundNumber: number;
     reinforcementsRemaining: number;
+    conqueredThisTurn: boolean;
   };
   bot: {
     id: string;
