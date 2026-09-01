@@ -51,7 +51,7 @@ function eventCanAffectObjective(type: string, event: ObjectiveEvent) {
   if (event === "any" || event === "territory_control_changed") return true;
 
   // Reforços e bônus de cartas alteram apenas quantidade de tropas.
-  // Entre os objetivos atuais, somente fortificação pode ser concluída assim.
+  // Entre os objetivos legados, somente fortificação pode ser concluída assim.
   return type === "fortification";
 }
 
@@ -176,10 +176,11 @@ export async function objectiveWon(
         objective.target_player_id!,
       ));
 
-    if (won && objective.type === "elimination_plus") {
+    const minimumTerritories = numericParam(objective, "territories");
+    if (won && (minimumTerritories > 0 || objective.type === "elimination_plus")) {
       won =
         (await ownedTerritoryCount(client, roomId, playerId)) >=
-        (numericParam(objective, "territories") || 1);
+        (minimumTerritories || 1);
     }
   } else {
     const ownedIds = new Set(
