@@ -9,7 +9,8 @@ function source(path) {
 test("reforço é bloqueado enquanto o jogador possui cinco ou mais cartas", () => {
   const troops = source("src/lib/game-troop-command-service.ts");
 
-  assert.match(troops, /MANDATORY_TRADE_HAND_SIZE = 5/);
+  assert.match(troops, /MANDATORY_TRADE_HAND_SIZE,/);
+  assert.doesNotMatch(troops, /const MANDATORY_TRADE_HAND_SIZE/);
   assert.match(troops, /handCardCount/);
   assert.match(troops, />=\s*MANDATORY_TRADE_HAND_SIZE/);
   assert.match(troops, /Troca de cartas obrigatória antes de posicionar reforços/);
