@@ -105,6 +105,28 @@ test("conquista preserva reserva na origem e move tropas para o novo território
   assert.ok(action.troops >= 1 && action.troops <= 6);
 });
 
+test("conquista mantém stack quando o novo território abre corredor até o objetivo", () => {
+  const strategicState = state({
+    objective: { type: "regions", params: { regions: ["sudeste"] }, targetPlayerId: null },
+    territories: [
+      { territoryId: 1, ownerPlayerId: "10", troops: 8, movedInTurn: 0 },
+      { territoryId: 2, ownerPlayerId: "10", troops: 1, movedInTurn: 0 },
+      { territoryId: 3, ownerPlayerId: "20", troops: 1, movedInTurn: 0 },
+      { territoryId: 20, ownerPlayerId: "20", troops: 1, movedInTurn: 0 },
+    ],
+    topology: {
+      connections: [connection(1, 2), connection(2, 3), connection(3, 20)],
+      eventId: 0,
+      resolvedEventEffects: [],
+    },
+  });
+  const { plan, progress, values } = analysis(strategicState);
+  assert.deepEqual(
+    chooseConquestTransfer(strategicState, plan, progress, values, 1, 2),
+    { type: "complete_conquest", troops: 4 },
+  );
+});
+
 test("manobra move excedente para território com déficit e encerra após uma manobra", () => {
   const strategicState = state({
     room: { id: "1", phase: "maneuver", roundNumber: 1, reinforcementsRemaining: 0 },
