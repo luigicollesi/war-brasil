@@ -138,3 +138,78 @@ test("manual reutiliza arte e ícones reais em vez de duplicar componentes", () 
   assert.match(anomaly, /TemporalAnomalyEffectList/);
   assert.doesNotMatch(anomaly, /effectMarker/);
 });
+
+test("primitivas visuais do manual têm contratos semânticos e responsivos", () => {
+  const flow = readFileSync("src/components/game-guide/guide-flow.tsx", "utf8");
+  const scale = readFileSync("src/components/game-guide/guide-rule-scale.tsx", "utf8");
+  const stateChange = readFileSync(
+    "src/components/game-guide/guide-state-change.tsx",
+    "utf8",
+  );
+  const territory = readFileSync(
+    "src/components/game-guide/guide-territory-node.tsx",
+    "utf8",
+  );
+  const connection = readFileSync(
+    "src/components/game-guide/guide-connection.tsx",
+    "utf8",
+  );
+  const dice = readFileSync(
+    "src/components/game-guide/guide-dice-comparison.tsx",
+    "utf8",
+  );
+  const styles = readFileSync("src/app/war-guide-primitives.css", "utf8");
+  const layout = readFileSync("src/app/layout.tsx", "utf8");
+
+  assert.match(flow, /<ol/);
+  assert.match(flow, /aria-label=\{ariaLabel\}/);
+  assert.match(flow, /--wb-guide-flow-count/);
+
+  assert.match(scale, /<dl/);
+  assert.match(scale, /<dt>/);
+  assert.match(scale, /<dd>/);
+
+  assert.match(stateChange, /<figure/);
+  assert.match(stateChange, /Antes/);
+  assert.match(stateChange, /Depois/);
+  assert.match(stateChange, /<figcaption>/);
+
+  assert.match(territory, /Math\.min\(safeTroops, 5\)/);
+  assert.match(territory, /aria-label=\{`\$\{name\}: \$\{troopLabel\(safeTroops\)\}`\}/);
+  assert.match(territory, /data-tone=\{tone\}/);
+
+  for (const variant of ["normal", "barrier", "tunnel", "blocked"]) {
+    assert.match(connection, new RegExp(`\\| \\"${variant}\\"|${variant}:`));
+  }
+  assert.match(connection, /role="img"/);
+  assert.match(connection, /aria-label=\{ariaLabel\}/);
+
+  assert.match(dice, /GameDie/);
+  assert.match(dice, /attackColor = "ruby"/);
+  assert.match(dice, /defenseColor = "ocean"/);
+  assert.match(dice, /Sem comparação/);
+  assert.doesNotMatch(dice, /pipPositions|dado-brasil-hq\.svg/);
+
+  for (const selector of [
+    "wb-guide-flow",
+    "wb-guide-rule-scale",
+    "wb-guide-state-change",
+    "wb-guide-territory",
+    "wb-guide-connection",
+    "wb-guide-dice-comparison",
+  ]) {
+    assert.match(styles, new RegExp(`\\.${selector}`));
+  }
+
+  assert.match(styles, /@media \(max-width: 700px\)/);
+  assert.match(styles, /\.wb-guide-flow \{ grid-template-columns: 1fr; \}/);
+  assert.match(styles, /\.wb-guide-state-change \{\s*grid-template-columns: 1fr;/);
+  assert.match(layout, /import "\.\/war-guide-primitives\.css";/);
+
+  for (const source of [flow, scale, stateChange, territory, connection, dice]) {
+    assert.doesNotMatch(
+      source,
+      /game-rules|game-barrier-rules|reinforcementBase|attackProfile|tradeValue|resolveBattle/,
+    );
+  }
+});
