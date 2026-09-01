@@ -35,10 +35,37 @@ test("atribuição usa regras balanceadas por quantidade de jogadores e persiste
   assert.match(rematch, /await assignObjectives\(client, roomId, players\)/);
 });
 
+test("rollout mantém o sorteio legado enquanto a migration ainda não existe no banco", () => {
+  const assignment = source(
+    "src/lib/objectives/objective-assignment-service.ts",
+  );
+
+  assert.match(assignment, /SAVEPOINT objective_rules_compatibility/);
+  assert.match(assignment, /error\.code === "42P01"/);
+  assert.match(assignment, /error\.code === "42703"/);
+  assert.match(assignment, /assignLegacyObjectives/);
+  assert.match(
+    assignment,
+    /INSERT INTO game_player_objectives[\s\S]*\(room_id,player_id,objective_id,target_player_id\)/,
+  );
+});
+
 test("avaliação usa snapshot apenas enquanto regra e objetivo continuam coerentes", () => {
   const service = source("src/lib/game-objective-service.ts");
 
   assert.match(service, /LEFT JOIN objective_rules r ON r\.id=a\.objective_rule_id/);
   assert.match(service, /CASE WHEN r\.objective_id=a\.objective_id THEN a\.resolved_params END/);
   assert.match(service, /JOIN objectives o ON o\.id=a\.objective_id/);
+});
+
+test("eliminação resolve fallback pelo mesmo domínio de regras balanceadas", () => {
+  const assignment = source(
+    "src/lib/objectives/objective-assignment-service.ts",
+  );
+  const battle = source("src/lib/game-battle-service.ts");
+
+  assert.match(assignment, /resolveObjectiveFallbacks/);
+  assert.match(assignment, /objective_rule_id=\$4/);
+  assert.match(assignment, /resolved_params=\$5::jsonb/);
+  assert.match(battle, /resolveObjectiveFallbacks\(client, roomId, targetPlayerId\)/);
 });
