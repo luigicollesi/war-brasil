@@ -17,6 +17,7 @@ import {
 } from "../.test-build/game-barrier-rules.js";
 import { buildGameGuidePresentation } from "../.test-build/game-guide-presentation.js";
 import { TERRITORY_METADATA } from "../.test-build/game-config.js";
+import { PLAYER_COLORS } from "../.test-build/lobby.js";
 import {
   eligibleOrderPlayerIds,
 } from "../.test-build/game-order-rules.js";
@@ -44,6 +45,7 @@ function connection(territoryA, territoryB, passable, barrierName = null) {
 test("limites compartilhados do manual são as mesmas constantes do domínio", () => {
   const guide = buildGameGuidePresentation();
 
+  assert.equal(PLAYER_COLORS.length, 6);
   assert.equal(guide.setup.initialTroopsPerTerritory, MIN_TERRITORY_TROOPS);
   assert.equal(guide.conquest.minimumMove, MIN_TERRITORY_TROOPS);
   assert.equal(guide.conquest.minimumTroopsLeftAtOrigin, MIN_TERRITORY_TROOPS);
