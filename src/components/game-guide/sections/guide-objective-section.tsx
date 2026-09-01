@@ -31,16 +31,13 @@ export function GuideObjectiveSection() {
   return (
     <article className="wb-guide-chapter wb-guide-chapter--split wb-guide-section--objective">
       <div className="wb-guide-copy">
-        <GuideHeading number="03" title="Leia sua missão">
-          Seu objetivo é secreto e define exatamente o que você precisa fazer para
-          vencer. As missões combinam domínio, expansão, fortificação ou eliminação.
+        <GuideHeading number="03" title="Leia seu objetivo">
+          Seu objetivo é secreto. Cumpra todas as condições para vencer.
         </GuideHeading>
 
         <p className="wb-guide-inline-note">
-          <strong>Alvo eliminado por outro jogador?</strong> Missões de eliminação
-          são reavaliadas quando o alvo perde seu último território. Se os demais
-          requisitos da missão estiverem cumpridos, a vitória pode ser reconhecida
-          mesmo sem você realizar a conquista final.
+          <strong>Eliminação por terceiro.</strong> Se outro jogador eliminar seu alvo,
+          sua missão é reavaliada conforme os requisitos restantes.
         </p>
       </div>
 
@@ -48,8 +45,7 @@ export function GuideObjectiveSection() {
         <div className="wb-guide-mission-card" aria-label="Tipos de objetivo secreto">
           <div className="wb-guide-mission-head">
             <span>◆ Objetivo secreto</span>
-            <strong>Cumpra a condição da sua missão.</strong>
-            <small>Só você conhece o caminho que precisa completar.</small>
+            <strong>Cumpra todas as condições.</strong>
           </div>
 
           <div className="wb-guide-mission-families">
