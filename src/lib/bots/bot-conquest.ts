@@ -1,8 +1,19 @@
+import { isAttackOriginBlocked } from "../events/event-attack-rules";
 import type { BotAction } from "./bot-action";
 import { defenseTarget } from "./bot-defense";
-import type { BotObjectivePlan, ObjectiveProgress } from "./bot-objective-plan";
+import type {
+  BotObjectivePlan,
+  ObjectiveProgress,
+} from "./bot-objective-plan";
+import { bestStrategicRoute } from "./bot-routing";
 import type { BotStrategicState } from "./bot-state";
 import type { TerritoryStrategicValue } from "./bot-territory-value";
+
+function strategicRouteTargets(progress: ObjectiveProgress) {
+  return progress.primaryTargets.length > 0
+    ? progress.primaryTargets
+    : progress.routeTargets;
+}
 
 export function chooseConquestTransfer(
   state: BotStrategicState,
@@ -43,23 +54,33 @@ export function chooseConquestTransfer(
     value: values.get(target.territoryId),
   });
 
-  const targetCanContinueObjective = state.topology.connections.some((connection) => {
-    if (!connection.exists) return false;
-    const neighborId =
-      connection.territoryA === target.territoryId
-        ? connection.territoryB
-        : connection.territoryB === target.territoryId
-          ? connection.territoryA
-          : null;
-    return neighborId !== null && progress.primaryTargets.includes(neighborId);
-  });
+  const routeTargets = strategicRouteTargets(progress);
+  const targetCanAttack = !isAttackOriginBlocked(
+    state.topology.resolvedEventEffects,
+    target.territoryId,
+  );
+  const continuationRoute = targetCanAttack
+    ? bestStrategicRoute({
+        connections: state.topology.connections,
+        territories: state.territories,
+        playerId: state.bot.id,
+        targetTerritoryIds: routeTargets,
+        startTerritoryIds: [target.territoryId],
+      })
+    : null;
+  const targetCanContinueObjective =
+    continuationRoute?.kind === "reachable" &&
+    continuationRoute.path.length >= 2;
 
   const desiredAtTarget = Math.max(
     targetDefense,
     targetCanContinueObjective ? 4 : 1,
   );
   const maximumMovable = source.troops - 1;
-  const safeMovable = Math.max(0, source.troops - Math.max(1, sourceDefense));
+  const safeMovable = Math.max(
+    0,
+    source.troops - Math.max(1, sourceDefense),
+  );
   const preferredMovable = Math.max(1, safeMovable);
   const troops = Math.max(
     1,
