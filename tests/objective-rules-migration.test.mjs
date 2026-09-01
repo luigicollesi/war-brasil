@@ -20,7 +20,7 @@ test("migração de regras de objetivo é expansiva e cobre partidas de 2 a 6 jo
   assert.doesNotMatch(migration, /DROP TABLE/);
 });
 
-test("catálogo balanceado usa metas territoriais proporcionais de 2 a 6 jogadores", () => {
+test("catálogo usa uma única faixa de balanceamento e metas territoriais proporcionais", () => {
   const migration = source(
     "src/lib/db/migrations/014-balanced-objective-catalog.sql",
   );
@@ -30,6 +30,24 @@ test("catálogo balanceado usa metas territoriais proporcionais de 2 a 6 jogador
   assert.match(migration, /'balanced_territory_control', 4, 1, '\{"territories":23\}'/);
   assert.match(migration, /'balanced_territory_control', 5, 1, '\{"territories":21\}'/);
   assert.match(migration, /'balanced_territory_control', 6, 1, '\{"territories":20\}'/);
+  assert.doesNotMatch(migration, /'(easy|hard|very_hard)'/);
+});
+
+test("fortificação escala por número de jogadores com três tropas por território", () => {
+  const migration = source(
+    "src/lib/db/migrations/014-balanced-objective-catalog.sql",
+  );
+  const presentation = source(
+    "src/lib/objectives/objective-presentation.ts",
+  );
+
+  assert.match(migration, /'balanced_fortification'/);
+  assert.match(migration, /'balanced_fortification', 2, 1, '\{"territories":15,"minTroops":3\}'/);
+  assert.match(migration, /'balanced_fortification', 3, 1, '\{"territories":10,"minTroops":3\}'/);
+  assert.match(migration, /'balanced_fortification', 4, 1, '\{"territories":8,"minTroops":3\}'/);
+  assert.match(migration, /'balanced_fortification', 5, 1, '\{"territories":6,"minTroops":3\}'/);
+  assert.match(migration, /'balanced_fortification', 6, 1, '\{"territories":5,"minTroops":3\}'/);
+  assert.match(presentation, /Mantenha pelo menos \$\{minTroops\} tropas em \$\{territories\} territórios/);
 });
 
 test("eliminação só possui regras para quatro a seis jogadores e exige presença territorial", () => {
@@ -46,22 +64,51 @@ test("eliminação só possui regras para quatro a seis jogadores e exige presen
   assert.match(service, /minimumTerritories > 0/);
 });
 
-test("catálogo regional evita pares baratos em partidas cheias e mantém alternativas suficientes", () => {
+test("dois jogadores não recebem combinações regionais curtas", () => {
   const migration = source(
     "src/lib/db/migrations/014-balanced-objective-catalog.sql",
   );
 
-  assert.match(migration, /'balanced_regions_sul_sudeste', 2,/);
-  assert.match(migration, /'balanced_regions_norte_centro_oeste', 2,/);
   assert.match(migration, /'balanced_regions_nordeste_centro_oeste', 2,/);
-  assert.match(migration, /'balanced_regions_norte_sul', 3,/);
-  assert.match(migration, /'balanced_regions_sudeste_centro_oeste', 4,/);
-  assert.match(migration, /'balanced_regions_sul_sudeste', 5,/);
-  assert.match(migration, /'balanced_regions_nordeste_sul', 6,/);
-  assert.doesNotMatch(
-    migration,
-    /'balanced_regions_centro_oeste_sul', 6,/,
+  assert.match(migration, /'balanced_regions_norte_sudeste', 2,/);
+  assert.match(migration, /'balanced_regions_nordeste_sul', 2,/);
+  assert.doesNotMatch(migration, /'balanced_regions_sul_sudeste_plus', 2,/);
+  assert.doesNotMatch(migration, /'balanced_regions_norte_sul', 2,/);
+});
+
+test("combinações regionais acompanham a meta territorial de cada tamanho de mesa", () => {
+  const migration = source(
+    "src/lib/db/migrations/014-balanced-objective-catalog.sql",
   );
+
+  for (const playerCount of [3, 4]) {
+    assert.match(
+      migration,
+      new RegExp(`'balanced_regions_norte_centro_oeste', ${playerCount},`),
+    );
+    assert.match(
+      migration,
+      new RegExp(`'balanced_regions_norte_sul', ${playerCount},`),
+    );
+    assert.match(
+      migration,
+      new RegExp(`'balanced_regions_nordeste_centro_oeste', ${playerCount},`),
+    );
+  }
+
+  assert.match(migration, /'balanced_regions_sul_sudeste_plus', 5, 1, '\{"regions":\["sul","sudeste"\],"territories":20\}'/);
+  assert.match(migration, /'balanced_regions_sul_sudeste_plus', 6, 1, '\{"regions":\["sul","sudeste"\],"territories":19\}'/);
+});
+
+test("region_plus exige regiões e também o piso territorial configurado", () => {
+  const service = source("src/lib/game-objective-service.ts");
+  const presentation = source(
+    "src/lib/objectives/objective-presentation.ts",
+  );
+
+  assert.match(service, /objective\.type === "region_plus"/);
+  assert.match(service, /ownedIds\.size >= \(numericParam\(objective, "territories"\) \|\| 1\)/);
+  assert.match(presentation, /input\.type === "region_plus"/);
 });
 
 test("atribuição usa regras balanceadas por quantidade de jogadores e persiste snapshot", () => {
