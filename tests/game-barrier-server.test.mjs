@@ -65,7 +65,7 @@ test("perdas do atacante multiplicam as comparações pelo perfil da barreira", 
   assert.match(combat, /battle\.attackerLosses = attackerLosses/);
   assert.match(combat, /battle\.defenderLosses = resolved\.defenderLosses/);
   assert.match(combat, /if \(attackerLosses >= attacker\.troops\)/);
-  assert.match(battle, /if \(attackerTroops < 1\)/);
+  assert.match(battle, /if \(attackerTroops < MIN_TERRITORY_TROOPS\)/);
 });
 
 test("Túnel Jurássico continua sendo passagem normal mesmo sobre fronteira bloqueada", () => {
