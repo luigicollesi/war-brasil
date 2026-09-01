@@ -1,5 +1,9 @@
 import { REGION_REINFORCEMENT_BONUSES, TERRITORY_METADATA, type CardSymbol } from "./game-config";
 
+export const MIN_TERRITORY_TROOPS = 1;
+export const MANDATORY_TRADE_HAND_SIZE = 5;
+export const OWNED_TERRITORY_CARD_BONUS = 2;
+
 export function reinforcementBase(territoryCount: number) {
   return Math.max(3, Math.floor(territoryCount / 2));
 }
@@ -21,7 +25,7 @@ export function reinforcementFor(territoryIds: number[]) {
 // Tropas recebidas durante a fase de manobra não podem ser deslocadas novamente.
 // Uma tropa também deve permanecer no território de origem.
 export function maneuverMovableTroops(troops: number, movedInTurn: number) {
-  return Math.max(0, troops - movedInTurn - 1);
+  return Math.max(0, troops - movedInTurn - MIN_TERRITORY_TROOPS);
 }
 
 export function resolveBattle(attacker: number[], defender: number[]) {
