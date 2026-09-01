@@ -8,7 +8,12 @@ import {
   BARRIER_ATTACK_DICE_BANDS,
   maneuverTraversalProfile,
 } from "./game-barrier-rules";
-import { reinforcementBase, resolveBattle, tradeValue } from "./game-rules";
+import {
+  maneuverMovableTroops,
+  reinforcementBase,
+  resolveBattle,
+  tradeValue,
+} from "./game-rules";
 
 const REGION_GUIDE_ORDER: readonly Region[] = [
   "nordeste",
@@ -25,6 +30,10 @@ const REGION_GUIDE_LABELS: Record<Region, string> = {
   sudeste: "Sudeste",
   sul: "Sul",
 };
+
+const MANDATORY_TRADE_HAND_SIZE = 5;
+const OWNED_TERRITORY_CARD_BONUS = 2;
+const CARD_REWARD_PER_CONQUERING_TURN = 1;
 
 function availableNormalAttack(troops: number) {
   const profile = attackProfile(troops, "normal");
@@ -51,6 +60,7 @@ export function buildGameGuidePresentation() {
   const normalAttack = availableNormalAttack(4);
   const barrierAttack = attackProfile(7, "barrier");
   const barrierUnavailable = attackProfile(3, "barrier");
+  const noBarrier = maneuverTraversalProfile(0);
   const oneBarrier = maneuverTraversalProfile(1);
   const twoBarriers = maneuverTraversalProfile(2);
   const combatExample = resolveBattle([6, 4, 2], [5, 4]);
@@ -76,10 +86,16 @@ export function buildGameGuidePresentation() {
     { minimumTroops: 2, maximumTroops: 2, diceCount: defenderDiceCount(2) },
     { minimumTroops: 3, maximumTroops: null, diceCount: defenderDiceCount(3) },
   ] as const;
+  const tradeValues = Array.from({ length: 6 }, (_, index) => tradeValue(index));
+  const maneuverExample = {
+    sourceTroops: 5,
+    alreadyMoved: 2,
+  };
 
   if (
     barrierAttack.kind !== "available" ||
     barrierUnavailable.kind !== "unavailable" ||
+    noBarrier.kind !== "normal" ||
     oneBarrier.kind !== "barrier" ||
     twoBarriers.kind !== "blocked"
   ) {
@@ -143,12 +159,35 @@ export function buildGameGuidePresentation() {
       minimumTroopsLeftAtOrigin: 1,
     },
     maneuver: {
+      minimumTroopsLeftAtOrigin:
+        maneuverExample.sourceTroops -
+        maneuverMovableTroops(maneuverExample.sourceTroops, 0),
       barrierLoss: oneBarrier.troopLoss,
       barrierMinimumTroops: oneBarrier.minimumTroops,
       blockedBarrierCount: twoBarriers.minimumBarrierCount,
+      normalLoss: noBarrier.troopLoss,
+      example: {
+        ...maneuverExample,
+        movableBeforeReceiving: maneuverMovableTroops(
+          maneuverExample.sourceTroops,
+          0,
+        ),
+        movableAfterReceiving: maneuverMovableTroops(
+          maneuverExample.sourceTroops,
+          maneuverExample.alreadyMoved,
+        ),
+      },
     },
     cards: {
-      firstTradeValue: tradeValue(0),
+      cardsPerConqueringTurn: CARD_REWARD_PER_CONQUERING_TURN,
+      mandatoryTradeHandSize: MANDATORY_TRADE_HAND_SIZE,
+      ownedTerritoryBonus: OWNED_TERRITORY_CARD_BONUS,
+      firstTradeValue: tradeValues[0],
+      tradeValues,
+      incrementPerPersonalTrade: tradeValue(1) - tradeValue(0),
+    },
+    anomalies: {
+      minimumTroopsAfterRemoval: 1,
     },
   };
 }
