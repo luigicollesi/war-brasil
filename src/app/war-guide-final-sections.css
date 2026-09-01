@@ -1,0 +1,310 @@
+.wb-guide-card-reward-flow,
+.wb-guide-round-flow {
+  margin-top: clamp(30px, 5vw, 46px);
+}
+
+.wb-guide-cards-layout {
+  display: grid;
+  margin-top: clamp(40px, 6vw, 62px);
+  grid-template-columns: minmax(0, 1fr) minmax(320px, .9fr);
+  gap: clamp(36px, 6vw, 72px);
+  align-items: start;
+}
+
+.wb-guide-card-combinations h3,
+.wb-guide-maneuver-barriers h3 {
+  margin-top: 8px;
+  color: var(--wb-text);
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: clamp(1.75rem, 3vw, 2.5rem);
+  line-height: 1;
+}
+
+.wb-guide-card-combination-list {
+  display: grid;
+  margin-top: 24px;
+  border-top: 1px solid var(--wb-border-neutral);
+  border-bottom: 1px solid var(--wb-border-neutral);
+}
+
+.wb-guide-card-combination-list > div {
+  display: grid;
+  grid-template-columns: minmax(130px, .8fr) minmax(0, 1.2fr);
+  align-items: center;
+  gap: 16px;
+  min-height: 72px;
+  padding: 12px 0;
+}
+
+.wb-guide-card-combination-list > div + div {
+  border-top: 1px solid var(--wb-border-neutral);
+}
+
+.wb-guide-card-combination-list > div > span {
+  color: var(--wb-text-muted);
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+}
+
+.wb-guide-card-combination-list > div > div {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 7px;
+}
+
+.wb-guide-card-combination-list b {
+  margin-left: 4px;
+  color: var(--wb-success);
+  font-size: 1rem;
+}
+
+.wb-guide-card-symbol-wild {
+  position: relative;
+  width: 38px;
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+  border: 1px solid var(--wb-border-neutral);
+  border-radius: 7px;
+  background: #f9f4df;
+}
+
+.wb-guide-card-progress > p:last-child {
+  margin-top: 14px;
+  color: var(--wb-text-muted);
+  font-size: .82rem;
+  line-height: 1.55;
+}
+
+.wb-guide-card-progress > p:last-child strong {
+  color: var(--wb-text);
+}
+
+.wb-guide-card-bonus-row {
+  display: grid;
+  margin-top: clamp(36px, 5vw, 54px);
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: clamp(22px, 4vw, 36px);
+  border-top: 1px solid var(--wb-border-neutral);
+  border-bottom: 1px solid var(--wb-border-neutral);
+  padding: 22px 0;
+}
+
+.wb-guide-card-bonus-art > [aria-hidden="true"] {
+  width: 92px;
+  filter: drop-shadow(0 14px 16px rgba(0, 0, 0, .22));
+}
+
+.wb-guide-card-bonus-row strong,
+.wb-guide-card-bonus-row small {
+  display: block;
+}
+
+.wb-guide-card-bonus-row strong {
+  margin-top: 7px;
+  color: var(--wb-text);
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: clamp(1.3rem, 2.4vw, 1.85rem);
+  line-height: 1.05;
+}
+
+.wb-guide-card-bonus-row small {
+  max-width: 680px;
+  margin-top: 7px;
+  color: var(--wb-text-muted);
+  font-size: .76rem;
+  line-height: 1.5;
+}
+
+.wb-guide-card-mandatory-note {
+  margin-top: 28px;
+}
+
+.wb-guide-core-split--reverse .wb-guide-copy {
+  order: 2;
+}
+
+.wb-guide-core-split--reverse .wb-guide-visual {
+  order: 1;
+}
+
+.wb-guide-maneuver-route {
+  display: grid;
+  gap: 14px;
+}
+
+.wb-guide-maneuver-route .wb-guide-connection {
+  margin-top: 0;
+}
+
+.wb-guide-maneuver-route p {
+  margin: 2px 0 0;
+  border-left: 1px solid var(--wb-gold);
+  padding-left: 14px;
+  color: var(--wb-text-muted);
+  font-size: .8rem;
+  line-height: 1.5;
+}
+
+.wb-guide-maneuver-moved-example {
+  margin-top: clamp(38px, 6vw, 58px);
+}
+
+.wb-guide-maneuver-availability {
+  display: grid;
+  gap: 10px;
+}
+
+.wb-guide-maneuver-availability > strong {
+  color: var(--wb-warning);
+  font-size: .76rem;
+  line-height: 1.4;
+}
+
+.wb-guide-maneuver-barriers {
+  display: grid;
+  margin-top: clamp(42px, 6vw, 64px);
+  grid-template-columns: minmax(0, .72fr) minmax(360px, 1.28fr);
+  align-items: start;
+  gap: clamp(34px, 6vw, 72px);
+  border-top: 1px solid var(--wb-border-neutral);
+  padding-top: clamp(30px, 5vw, 44px);
+}
+
+.wb-guide-maneuver-barriers .wb-guide-rule-scale {
+  margin-top: 0;
+}
+
+.wb-guide-section--map .wb-guide-controls {
+  margin-top: 30px;
+}
+
+.wb-guide-map-legend {
+  display: grid;
+  margin-top: clamp(42px, 6vw, 64px);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(20px, 3vw, 32px);
+  border-top: 1px solid var(--wb-border-neutral);
+  padding-top: clamp(28px, 4vw, 40px);
+}
+
+.wb-guide-map-legend .wb-guide-connection {
+  margin-top: 0;
+}
+
+.wb-guide-map-legend .wb-guide-connection-track {
+  min-height: 82px;
+}
+
+.wb-guide-map-legend figcaption {
+  margin-top: 10px;
+}
+
+.wb-guide-tunnel-note {
+  margin-top: 30px;
+}
+
+.wb-guide-anomaly-layout {
+  display: grid;
+  margin-top: clamp(38px, 6vw, 58px);
+  grid-template-columns: minmax(340px, .9fr) minmax(0, 1.1fr);
+  align-items: start;
+  gap: clamp(34px, 6vw, 70px);
+}
+
+.wb-guide-anomaly-copy > p {
+  color: var(--wb-text-muted);
+  line-height: 1.65;
+}
+
+.wb-guide-anomaly-floor {
+  margin-top: 24px;
+}
+
+.wb-guide-section--anomaly > .wb-guide-inline-note {
+  margin-top: 28px;
+}
+
+.wb-guide-section--victory {
+  align-items: center;
+}
+
+.wb-guide-victory-flow {
+  max-width: 680px;
+  margin-top: 26px;
+}
+
+@media (max-width: 980px) {
+  .wb-guide-cards-layout,
+  .wb-guide-maneuver-barriers,
+  .wb-guide-anomaly-layout {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  .wb-guide-core-split--reverse .wb-guide-copy,
+  .wb-guide-core-split--reverse .wb-guide-visual {
+    order: initial;
+  }
+
+  .wb-guide-map-legend {
+    grid-template-columns: 1fr;
+    max-width: 720px;
+  }
+
+  .wb-guide-map-legend .wb-guide-connection-track {
+    min-height: auto;
+  }
+
+  .wb-guide-anomaly-layout,
+  .wb-guide-maneuver-route {
+    max-width: 720px;
+  }
+}
+
+@media (max-width: 700px) {
+  .wb-guide-card-combination-list > div {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .wb-guide-card-bonus-row {
+    grid-template-columns: 72px minmax(0, 1fr);
+    gap: 16px;
+  }
+
+  .wb-guide-card-bonus-art > [aria-hidden="true"] {
+    width: 68px;
+  }
+
+  .wb-guide-card-mandatory-note,
+  .wb-guide-tunnel-note,
+  .wb-guide-section--anomaly > .wb-guide-inline-note {
+    margin-left: 44px;
+  }
+
+  .wb-guide-maneuver-route {
+    gap: 10px;
+  }
+
+  .wb-guide-maneuver-barriers {
+    margin-top: 38px;
+    padding-top: 28px;
+  }
+
+  .wb-guide-map-legend {
+    margin-top: 38px;
+    padding-top: 28px;
+  }
+
+  .wb-guide-anomaly-layout {
+    margin-top: 34px;
+  }
+
+  .wb-guide-victory-flow {
+    width: 100%;
+  }
+}
