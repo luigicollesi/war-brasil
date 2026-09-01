@@ -149,17 +149,19 @@ ON CONFLICT (objective_id, player_count, revision) DO UPDATE SET
   is_active = TRUE;
 
 -- Fortificação.
--- Todos começam com 1 tropa por território. Exigir 3 tropas espalhadas por
--- aproximadamente 70-75% da posse inicial custa perto de três fases normais de
--- reforço em qualquer tamanho de mesa e continua vulnerável a contra-ataques.
+-- A versão anterior podia ser concluída cedo demais apenas acumulando reforços.
+-- A meta agora cobre cerca de 85% da posse inicial média e mantém 3 tropas como
+-- limiar: o custo sobe sem concentrar exércitos demais. Espalhar a defesa por
+-- tantos territórios também dá aos adversários oportunidades reais de quebrar
+-- temporariamente a condição de vitória.
 INSERT INTO objective_rules (
   objective_id, player_count, revision, params, difficulty, is_active
 ) VALUES
-  ('balanced_fortification', 2, 1, '{"territories":15,"minTroops":3}'::jsonb, 'medium', TRUE),
-  ('balanced_fortification', 3, 1, '{"territories":10,"minTroops":3}'::jsonb, 'medium', TRUE),
-  ('balanced_fortification', 4, 1, '{"territories":8,"minTroops":3}'::jsonb, 'medium', TRUE),
-  ('balanced_fortification', 5, 1, '{"territories":6,"minTroops":3}'::jsonb, 'medium', TRUE),
-  ('balanced_fortification', 6, 1, '{"territories":5,"minTroops":3}'::jsonb, 'medium', TRUE)
+  ('balanced_fortification', 2, 1, '{"territories":18,"minTroops":3}'::jsonb, 'medium', TRUE),
+  ('balanced_fortification', 3, 1, '{"territories":12,"minTroops":3}'::jsonb, 'medium', TRUE),
+  ('balanced_fortification', 4, 1, '{"territories":9,"minTroops":3}'::jsonb, 'medium', TRUE),
+  ('balanced_fortification', 5, 1, '{"territories":7,"minTroops":3}'::jsonb, 'medium', TRUE),
+  ('balanced_fortification', 6, 1, '{"territories":6,"minTroops":3}'::jsonb, 'medium', TRUE)
 ON CONFLICT (objective_id, player_count, revision) DO UPDATE SET
   params = EXCLUDED.params,
   difficulty = EXCLUDED.difficulty,
@@ -242,15 +244,17 @@ ON CONFLICT (objective_id, player_count, revision) DO UPDATE SET
   difficulty = EXCLUDED.difficulty,
   is_active = TRUE;
 
--- Eliminação só entra a partir de quatro jogadores. A presença territorial
--- adicional reduz vitórias por último golpe e mantém o esforço próximo das
--- outras famílias de objetivo.
+-- Eliminação só entra a partir de quatro jogadores. Eliminar um rival específico
+-- já é a parte difícil da missão; o piso territorial serve apenas para impedir
+-- vitória por último golpe em um alvo enfraquecido por terceiros. Ele fica bem
+-- abaixo do objetivo de expansão e tende a ser atingido naturalmente por quem
+-- participou de forma relevante da eliminação.
 INSERT INTO objective_rules (
   objective_id, player_count, revision, params, difficulty, is_active
 ) VALUES
-  ('balanced_elimination', 4, 1, '{"territories":17}'::jsonb, 'medium', TRUE),
-  ('balanced_elimination', 5, 1, '{"territories":15}'::jsonb, 'medium', TRUE),
-  ('balanced_elimination', 6, 1, '{"territories":14}'::jsonb, 'medium', TRUE)
+  ('balanced_elimination', 4, 1, '{"territories":14}'::jsonb, 'medium', TRUE),
+  ('balanced_elimination', 5, 1, '{"territories":12}'::jsonb, 'medium', TRUE),
+  ('balanced_elimination', 6, 1, '{"territories":10}'::jsonb, 'medium', TRUE)
 ON CONFLICT (objective_id, player_count, revision) DO UPDATE SET
   params = EXCLUDED.params,
   difficulty = EXCLUDED.difficulty,
