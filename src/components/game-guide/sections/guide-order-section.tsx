@@ -13,20 +13,12 @@ export function GuideOrderSection() {
     <article className="wb-guide-chapter wb-guide-chapter--split wb-guide-chapter--reverse wb-guide-section--order">
       <div className="wb-guide-copy">
         <GuideHeading number="02" title="Defina a ordem">
-          Cada jogador rola um dado. O maior resultado joga primeiro; empates são
-          resolvidos com novas rolagens apenas entre os jogadores empatados.
+          Todos rolam um dado. O maior resultado joga primeiro.
         </GuideHeading>
 
-        <div className="wb-guide-notes">
-          <p>
-            <strong>Turno.</strong> É a vez individual de um jogador realizar suas
-            ações.
-          </p>
-          <p>
-            <strong>Rodada.</strong> Termina quando todos os jogadores ativos
-            completam um turno.
-          </p>
-        </div>
+        <p className="wb-guide-inline-note">
+          <strong>Empate.</strong> Apenas os jogadores empatados rolam novamente.
+        </p>
       </div>
 
       <div className="wb-guide-visual wb-guide-order-example">
@@ -49,10 +41,6 @@ export function GuideOrderSection() {
             { key: "third", eyebrow: "3º", label: "Jogador B", detail: "rolou 2" },
           ]}
         />
-
-        <p className="wb-guide-order-caption">
-          Quando o último jogador termina seu turno, começa uma nova rodada.
-        </p>
       </div>
     </article>
   );
