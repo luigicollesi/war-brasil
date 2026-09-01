@@ -39,18 +39,38 @@ test("home usa brasão e leva ao Manual de Campo", () => {
   assert.match(source, /<GameQuickGuide \/>/);
 });
 
-test("manual cobre o fluxo e os elementos essenciais da partida", () => {
-  const source = readFileSync(
+test("manual compõe as quatro etapas iniciais e preserva as regras existentes", () => {
+  const main = readFileSync(
     "src/components/game-guide/game-quick-guide.tsx",
     "utf8",
   );
+  const setup = readFileSync(
+    "src/components/game-guide/sections/guide-setup-section.tsx",
+    "utf8",
+  );
+  const order = readFileSync(
+    "src/components/game-guide/sections/guide-order-section.tsx",
+    "utf8",
+  );
+  const objective = readFileSync(
+    "src/components/game-guide/sections/guide-objective-section.tsx",
+    "utf8",
+  );
+  const turn = readFileSync(
+    "src/components/game-guide/sections/guide-turn-section.tsx",
+    "utf8",
+  );
+  const source = [main, setup, order, objective, turn].join("\n");
 
   for (const term of [
     "Prepare o Brasil",
+    "Defina a ordem",
+    "Leia sua missão",
+    "Siga seu turno",
     "Cartas",
-    "Reforçar",
-    "Atacar",
-    "Manobrar",
+    "Reforços",
+    "Ataques",
+    "Manobra",
     "Domínio regional",
     "Leitura estratégica",
     "Barreiras Geográficas",
@@ -67,32 +87,102 @@ test("manual cobre o fluxo e os elementos essenciais da partida", () => {
     assert.match(source, new RegExp(term, "i"));
   }
 
-  assert.match(source, /guide\.regions\.map/);
-  assert.match(source, /regionalStrategy\[region\.key\]/);
-  assert.match(source, /poucos pontos de entrada/);
-  assert.match(source, /quantidade de pontos de entrada/);
-  assert.match(source, /O bônus é adicional ao reforço normal/);
-  assert.match(source, /O tamanho não é o único fator/);
-  assert.match(source, /number="03" title="Barreiras Geográficas"/);
-  assert.match(source, /number="04" title="Leia o mapa"/);
-  assert.match(source, /number="05" title="Use suas cartas"/);
-  assert.match(source, /number="06" title="Sobreviva às Anomalias"/);
-  assert.match(source, /07 · Vitória/);
-  assert.match(source, /caveira-vermelha\.svg/);
-  assert.match(source, /alcapao-saida\.svg/);
-  assert.match(source, /GeographicBarrierMapExample/);
-  assert.match(source, /MapReadingExample/);
-  assert.match(source, /TerritoryCardArtwork/);
-  assert.match(source, /TemporalAnomalyEffectList/);
-  assert.match(source, /GameDie/);
+  assert.match(main, /<GuideSetupSection guide=\{guide\} \/>/);
+  assert.match(main, /<GuideOrderSection \/>/);
+  assert.match(main, /<GuideObjectiveSection \/>/);
+  assert.match(main, /<GuideTurnSection guide=\{guide\} \/>/);
+
+  assert.match(setup, /number="01" title="Prepare o Brasil"/);
+  assert.match(order, /number="02" title="Defina a ordem"/);
+  assert.match(objective, /number="03" title="Leia sua missão"/);
+  assert.match(turn, /number="04" title="Siga seu turno"/);
+  assert.match(main, /number="05" title="Barreiras Geográficas"/);
+  assert.match(main, /number="06" title="Leia o mapa"/);
+  assert.match(main, /number="07" title="Use suas cartas"/);
+  assert.match(main, /number="08" title="Sobreviva às Anomalias"/);
+  assert.match(main, /09 · Vitória/);
+
+  assert.match(turn, /guide\.regions\.map/);
+  assert.match(turn, /regionalStrategy\[region\.key\]/);
+  assert.match(turn, /poucos pontos de entrada/);
+  assert.match(turn, /quantidade de pontos de entrada/);
+  assert.match(turn, /O bônus é adicional ao reforço normal/);
+  assert.match(turn, /O tamanho não é o único fator/);
+
+  assert.match(main, /caveira-vermelha\.svg/);
+  assert.match(main, /alcapao-saida\.svg/);
+  assert.match(main, /GeographicBarrierMapExample/);
+  assert.match(main, /MapReadingExample/);
+  assert.match(main, /TerritoryCardArtwork/);
+  assert.match(main, /TemporalAnomalyEffectList/);
+  assert.match(main, /GameDie/);
   assert.doesNotMatch(source, /<button/);
 
-  const anomalyStart = source.indexOf(
-    'number="06" title="Sobreviva às Anomalias"',
+  const anomalyStart = main.indexOf(
+    'number="08" title="Sobreviva às Anomalias"',
   );
-  const anomalyEnd = source.indexOf("07 · Vitória");
+  const anomalyEnd = main.indexOf("09 · Vitória");
   assert.ok(anomalyStart >= 0 && anomalyEnd > anomalyStart);
-  assert.doesNotMatch(source.slice(anomalyStart, anomalyEnd), /Túnel Jurássico/);
+  assert.doesNotMatch(main.slice(anomalyStart, anomalyEnd), /Túnel Jurássico/);
+});
+
+test("quatro etapas iniciais usam auxílio visual com função educativa", () => {
+  const setup = readFileSync(
+    "src/components/game-guide/sections/guide-setup-section.tsx",
+    "utf8",
+  );
+  const order = readFileSync(
+    "src/components/game-guide/sections/guide-order-section.tsx",
+    "utf8",
+  );
+  const objective = readFileSync(
+    "src/components/game-guide/sections/guide-objective-section.tsx",
+    "utf8",
+  );
+  const turn = readFileSync(
+    "src/components/game-guide/sections/guide-turn-section.tsx",
+    "utf8",
+  );
+  const styles = readFileSync("src/app/war-guide-sections.css", "utf8");
+  const layout = readFileSync("src/app/layout.tsx", "utf8");
+
+  assert.match(setup, /war-brasil-42\.production\.svg/);
+  assert.match(setup, /GuideFlow/);
+  assert.match(setup, /Preparação dos territórios/);
+  assert.match(setup, /distribuídos/);
+
+  assert.match(order, /GameDie/);
+  assert.match(order, /GuideFlow/);
+  assert.match(order, /Turno\./);
+  assert.match(order, /Rodada\./);
+  assert.match(order, /empatados/);
+
+  assert.match(objective, /objectiveFamilies/);
+  assert.match(objective, /Domínio/);
+  assert.match(objective, /Expansão/);
+  assert.match(objective, /Fortificação/);
+  assert.match(objective, /Eliminação/);
+  assert.match(objective, /condição alternativa/);
+
+  assert.match(turn, /GuideFlow/);
+  assert.ok(turn.indexOf('key: "cards"') < turn.indexOf('key: "reinforcement"'));
+  assert.ok(turn.indexOf('key: "reinforcement"') < turn.indexOf('key: "attack"'));
+  assert.ok(turn.indexOf('key: "attack"') < turn.indexOf('key: "maneuver"'));
+  assert.match(turn, /wb-guide-turn-reference/);
+
+  for (const selector of [
+    "wb-guide-setup-stage",
+    "wb-guide-order-dice",
+    "wb-guide-mission-card",
+    "wb-guide-main-turn-flow",
+    "wb-guide-turn-reference",
+  ]) {
+    assert.match(styles, new RegExp(`\\.${selector}`));
+  }
+
+  assert.match(styles, /@media \(max-width: 700px\)/);
+  assert.match(styles, /\.wb-guide-mission-families \{\s*grid-template-columns: 1fr;/);
+  assert.match(layout, /import "\.\/war-guide-sections\.css";/);
 });
 
 test("exemplo geográfico copia os paths reais do Pará e reutiliza a curva das estradas", () => {
