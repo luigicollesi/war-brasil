@@ -29,24 +29,10 @@ export function GuideBarrierSection({
     <article className="wb-guide-chapter wb-guide-geographic-chapter wb-guide-section--barrier">
       <div className="wb-guide-geographic-intro">
         <div className="wb-guide-copy">
-          <GuideHeading number="08" title="Cruze Barreiras Geográficas">
-            Uma Barreira Geográfica mantém a comparação normal dos dados, mas
-            aumenta o custo do ataque para quem atravessa. A defesa continua usando
-            suas regras normais.
+          <GuideHeading number="08" title="Cruze Barreiras">
+            Barreiras exigem mais tropas e tornam cada derrota mais cara para o
+            atacante. A defesa e a comparação dos dados não mudam.
           </GuideHeading>
-
-          <div className="wb-guide-notes">
-            <p>
-              <strong>Fronteira não é conexão normal.</strong> Uma Barreira pode
-              existir entre territórios que se encostam no mapa e exige uma força
-              maior para o ataque.
-            </p>
-            <p>
-              <strong>A comparação não muda.</strong> Maior contra maior; empate
-              continua favorecendo a defesa. O que muda é a quantidade de dados e
-              a perda do atacante.
-            </p>
-          </div>
         </div>
 
         <div className="wb-guide-visual">
@@ -95,18 +81,16 @@ export function GuideBarrierSection({
         <div>
           <Image src="/caveira-vermelha.svg" alt="" width={52} height={52} />
           <p>
-            <strong>Caveira no ataque.</strong> Indica um alvo alcançável apenas
-            atravessando Barreira Geográfica.
+            <strong>Caveira.</strong> O ataque cruza uma Barreira Geográfica.
           </p>
         </div>
         <div>
           <Image src="/alcapao-saida.svg" alt="" width={52} height={52} />
           <p>
-            <strong>Alçapão na manobra.</strong> Uma Barreira custa
-            {` ${guide.maneuver.barrierLoss} tropa`} e exige pelo menos
+            <strong>Alçapão.</strong> Na manobra, 1 Barreira custa
+            {` ${guide.maneuver.barrierLoss} tropa`} e exige
             {` ${guide.maneuver.barrierMinimumTroops} tropas`}; com
-            {` ${guide.maneuver.blockedBarrierCount}+ Barreiras`}, a rota fica
-            bloqueada.
+            {` ${guide.maneuver.blockedBarrierCount}+`}, a rota fica bloqueada.
           </p>
         </div>
       </div>
