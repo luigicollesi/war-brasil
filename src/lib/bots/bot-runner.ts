@@ -143,17 +143,40 @@ async function chooseDueAction(
 
   if (room.phase === "cards") return { type: "finish_cards" };
 
+  const pendingConquest =
+    room.pending_from_territory_id !== null &&
+    room.pending_to_territory_id !== null
+      ? {
+          fromTerritoryId: room.pending_from_territory_id,
+          toTerritoryId: room.pending_to_territory_id,
+        }
+      : null;
   const state = await loadBotStrategicState(client, room.id, player.id);
-  return chooseStrategicBotAction(state, {
-    pendingConquest:
-      room.pending_from_territory_id !== null &&
-      room.pending_to_territory_id !== null
-        ? {
-            fromTerritoryId: room.pending_from_territory_id,
-            toTerritoryId: room.pending_to_territory_id,
-          }
-        : null,
-  });
+  const strategic = chooseStrategicBotAction(state, { pendingConquest });
+  if (strategic) return strategic;
+
+  // Fallbacks de liveness preservam o comportamento mínimo da Fase 2 caso uma
+  // heurística futura não consiga pontuar um estado que ainda exige ação.
+  if (pendingConquest) {
+    return { type: "complete_conquest", troops: 1 };
+  }
+
+  if (room.phase === "reinforcement" && room.reinforcements_remaining > 0) {
+    const firstOwned = state.territories
+      .filter((territory) => territory.ownerPlayerId === player.id)
+      .sort((a, b) => a.territoryId - b.territoryId)[0];
+    return firstOwned
+      ? {
+          type: "reinforce",
+          territoryId: firstOwned.territoryId,
+          troops: room.reinforcements_remaining,
+        }
+      : null;
+  }
+
+  if (room.phase === "attack") return { type: "finish_attack" };
+  if (room.phase === "maneuver") return { type: "end_turn" };
+  return null;
 }
 
 async function executeBotAction(
