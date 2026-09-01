@@ -6,12 +6,8 @@ export function GuideVictorySection() {
     <article className="wb-guide-chapter wb-guide-victory wb-guide-section--victory">
       <div>
         <p className="wb-kicker">15 · Vitória</p>
-        <h2>Cumpra sua missão antes dos rivais.</h2>
-        <p>
-          O jogo verifica seu objetivo sempre que uma mudança relevante altera
-          tropas, territórios ou elimina um jogador. Assim que a condição é
-          satisfeita, a partida termina.
-        </p>
+        <h2>Cumpra seu objetivo.</h2>
+        <p>Assim que todas as condições forem cumpridas, a partida termina.</p>
 
         <GuideFlow
           compact
