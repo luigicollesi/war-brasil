@@ -132,7 +132,9 @@ export async function objectiveWon(
 ) {
   const objective = (
     await client.query<Objective>(
-      `SELECT o.id,o.type,o.name,o.description,o.params,a.target_player_id
+      `SELECT o.id,o.type,o.name,o.description,
+              COALESCE(a.resolved_params,o.params) params,
+              a.target_player_id
        FROM game_player_objectives a
        JOIN objectives o ON o.id=a.objective_id
        WHERE a.room_id=$1 AND a.player_id=$2`,
