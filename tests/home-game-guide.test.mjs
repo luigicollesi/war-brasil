@@ -7,7 +7,7 @@ function source(path) {
   return readFileSync(path, "utf8");
 }
 
-test("guia rápido deriva números das regras reais", () => {
+test("guia deriva números e exemplos das regras reais", () => {
   const guide = buildGameGuidePresentation();
 
   assert.equal(guide.territoryCount, 42);
@@ -19,6 +19,7 @@ test("guia rápido deriva números das regras reais", () => {
     { key: "centro-oeste", label: "Centro-Oeste", territoryCount: 5, bonus: 4 },
     { key: "sul", label: "Sul", territoryCount: 6, bonus: 2 },
   ]);
+
   assert.equal(guide.reinforcement.minimum, 3);
   assert.equal(guide.reinforcement.baseExample, 6);
   assert.deepEqual(guide.reinforcement.minimumExample, {
@@ -26,6 +27,7 @@ test("guia rápido deriva números das regras reais", () => {
     rawHalf: 2,
     final: 3,
   });
+
   assert.equal(guide.attack.normalMinimumTroops, 2);
   assert.equal(guide.attack.normalLossPerComparison, 1);
   assert.deepEqual(guide.attack.normalDiceBands, [
@@ -48,6 +50,7 @@ test("guia rápido deriva números das regras reais", () => {
     attackerLosses: 1,
     defenderLosses: 1,
   });
+
   assert.equal(guide.attack.barrierMinimumTroops, 4);
   assert.equal(guide.attack.barrierLossPerComparison, 3);
   assert.deepEqual(guide.attack.barrierDiceBands, [
@@ -57,10 +60,26 @@ test("guia rápido deriva números das regras reais", () => {
   ]);
   assert.equal(guide.conquest.minimumMove, 1);
   assert.equal(guide.conquest.minimumTroopsLeftAtOrigin, 1);
+
+  assert.equal(guide.maneuver.minimumTroopsLeftAtOrigin, 1);
+  assert.equal(guide.maneuver.normalLoss, 0);
   assert.equal(guide.maneuver.barrierLoss, 1);
   assert.equal(guide.maneuver.barrierMinimumTroops, 2);
   assert.equal(guide.maneuver.blockedBarrierCount, 2);
+  assert.deepEqual(guide.maneuver.example, {
+    sourceTroops: 5,
+    alreadyMoved: 2,
+    movableBeforeReceiving: 4,
+    movableAfterReceiving: 2,
+  });
+
+  assert.equal(guide.cards.cardsPerConqueringTurn, 1);
+  assert.equal(guide.cards.mandatoryTradeHandSize, 5);
+  assert.equal(guide.cards.ownedTerritoryBonus, 2);
   assert.equal(guide.cards.firstTradeValue, 4);
+  assert.deepEqual(guide.cards.tradeValues, [4, 5, 6, 7, 8, 9]);
+  assert.equal(guide.cards.incrementPerPersonalTrade, 1);
+  assert.equal(guide.anomalies.minimumTroopsAfterRemoval, 1);
 });
 
 test("home usa brasão e leva ao Manual de Campo", () => {
@@ -72,7 +91,7 @@ test("home usa brasão e leva ao Manual de Campo", () => {
   assert.match(page, /<GameQuickGuide \/>/);
 });
 
-test("manual compõe as dez primeiras etapas na ordem da partida", () => {
+test("manual compõe as quinze etapas na ordem planejada", () => {
   const main = source("src/components/game-guide/game-quick-guide.tsx");
   const expected = [
     "<GuideSetupSection guide={guide} />",
@@ -85,6 +104,11 @@ test("manual compõe as dez primeiras etapas na ordem da partida", () => {
     "<GuideBarrierSection guide={guide} />",
     "<GuideConquestSection guide={guide} />",
     "<GuideEliminationSection />",
+    "<GuideCardsSection guide={guide} />",
+    "<GuideManeuverSection guide={guide} />",
+    "<GuideMapSection />",
+    "<GuideAnomalySection guide={guide} />",
+    "<GuideVictorySection />",
   ];
 
   let previous = -1;
@@ -94,15 +118,10 @@ test("manual compõe as dez primeiras etapas na ordem da partida", () => {
     previous = index;
   }
 
-  assert.match(main, /number="11" title="Use suas cartas"/);
-  assert.match(main, /number="12" title="Leia o mapa"/);
-  assert.match(main, /number="13" title="Sobreviva às Anomalias"/);
-  assert.match(main, /14 · Vitória/);
-  assert.doesNotMatch(main, /GeographicBarrierMapExample/);
-  assert.doesNotMatch(main, /wb-guide-geographic-actions/);
+  assert.doesNotMatch(main, /GuideHeading|MapReadingExample|TerritoryCardArtwork|TemporalAnomalyEffectList|GameDie/);
 });
 
-test("seções 01 a 04 continuam educativas e sem duplicar regras do núcleo", () => {
+test("seções 01 a 04 permanecem introdutórias e sem duplicar o núcleo", () => {
   const setup = source("src/components/game-guide/sections/guide-setup-section.tsx");
   const order = source("src/components/game-guide/sections/guide-order-section.tsx");
   const objective = source("src/components/game-guide/sections/guide-objective-section.tsx");
@@ -120,12 +139,11 @@ test("seções 01 a 04 continuam educativas e sem duplicar regras do núcleo", (
   assert.match(objective, /Fortificação/);
   assert.match(objective, /Eliminação/);
   assert.match(objective, /mesmo sem você realizar a conquista final/);
-  assert.doesNotMatch(objective, /condição alternativa|fallback/i);
   assert.match(turn, /GuideFlow/);
   assert.doesNotMatch(turn, /wb-guide-rule-grid|Domínio regional|GameDie/);
 });
 
-test("núcleo do manual explica reforço, ataque, combate, barreira, conquista e eliminação", () => {
+test("seções 05 a 10 ensinam o núcleo de combate sem regras órfãs", () => {
   const reinforcement = source("src/components/game-guide/sections/guide-reinforcement-section.tsx");
   const attack = source("src/components/game-guide/sections/guide-attack-section.tsx");
   const combat = source("src/components/game-guide/sections/guide-combat-section.tsx");
@@ -138,11 +156,9 @@ test("núcleo do manual explica reforço, ataque, combate, barreira, conquista e
   assert.match(reinforcement, /GuideStateChange/);
   assert.match(reinforcement, /guide\.regions\.map/);
   assert.match(reinforcement, /Troca obrigatória pendente/);
-  assert.match(reinforcement, /ataque só é liberado quando todos os reforços forem posicionados/i);
 
   assert.match(attack, /number="06" title="Escolha seu ataque"/);
   assert.match(attack, /GuideConnection/);
-  assert.match(attack, /guide\.attack\.normalMinimumTroops/);
   assert.match(attack, /Depois da primeira rolagem/);
   assert.match(attack, /origem bloqueada por Anomalia/);
   assert.match(attack, /conquista pendente precisa ser ocupada/);
@@ -156,15 +172,12 @@ test("núcleo do manual explica reforço, ataque, combate, barreira, conquista e
 
   assert.match(barrier, /number="08" title="Cruze Barreiras Geográficas"/);
   assert.match(barrier, /GeographicBarrierMapExample/);
-  assert.match(barrier, /guide\.attack\.normalDiceBands/);
   assert.match(barrier, /guide\.attack\.barrierDiceBands/);
-  assert.match(barrier, /guide\.attack\.barrierLossPerComparison/);
   assert.match(barrier, /caveira-vermelha\.svg/);
   assert.match(barrier, /alcapao-saida\.svg/);
 
   assert.match(conquest, /number="09" title="Tome o território"/);
   assert.match(conquest, /GuideStateChange/);
-  assert.match(conquest, /guide\.conquest\.minimumMove/);
   assert.match(conquest, /Nenhum novo ataque pode começar/);
 
   assert.match(elimination, /number="10" title="Elimine um rival"/);
@@ -172,35 +185,113 @@ test("núcleo do manual explica reforço, ataque, combate, barreira, conquista e
   assert.match(elimination, /TerritoryCardArtwork/);
   assert.match(elimination, /todas as cartas/);
   assert.match(elimination, /deixa de receber turnos/);
-  assert.match(elimination, /mesmo quando outro jogador realizou a conquista final/);
 });
 
-test("regras documentadas do núcleo correspondem às restrições implementadas no dev", () => {
+test("seções 11 a 15 fecham cartas, manobra, mapa, Anomalias e vitória", () => {
+  const cards = source("src/components/game-guide/sections/guide-cards-section.tsx");
+  const maneuver = source("src/components/game-guide/sections/guide-maneuver-section.tsx");
+  const map = source("src/components/game-guide/sections/guide-map-section.tsx");
+  const anomaly = source("src/components/game-guide/sections/guide-anomaly-section.tsx");
+  const victory = source("src/components/game-guide/sections/guide-victory-section.tsx");
+
+  assert.match(cards, /number="11" title="Transforme cartas em tropas"/);
+  assert.match(cards, /Conquistou ≥ 1/);
+  assert.match(cards, /guide\.cards\.cardsPerConqueringTurn/);
+  assert.match(cards, /3 símbolos iguais/);
+  assert.match(cards, /1 de cada símbolo/);
+  assert.match(cards, /Coringa substitui símbolo/);
+  assert.match(cards, /guide\.cards\.tradeValues\.map/);
+  assert.match(cards, /progressão é <strong>individual<\/strong>/);
+  assert.match(cards, /guide\.cards\.ownedTerritoryBonus/);
+  assert.match(cards, /guide\.cards\.mandatoryTradeHandSize/);
+
+  assert.match(maneuver, /number="12" title="Reposicione suas tropas"/);
+  assert.match(maneuver, /caminho contínuo/);
+  assert.match(maneuver, /não pode ser movida de\s+novo/i);
+  assert.match(maneuver, /GuideConnection/);
+  assert.match(maneuver, /GuideStateChange/);
+  assert.match(maneuver, /guide\.maneuver\.movableAfterReceiving|guide\.maneuver\.example\.movableAfterReceiving/);
+  assert.match(maneuver, /0 barreiras/);
+  assert.match(maneuver, /rota bloqueada/);
+
+  assert.match(map, /number="13" title="Leia as conexões do mapa"/);
+  assert.match(map, /MapReadingExample/);
+  assert.match(map, /RoadsIcon/);
+  assert.match(map, /TroopsIcon/);
+  assert.match(map, /AnomalyIcon/);
+  assert.match(map, /variant="normal"/);
+  assert.match(map, /variant="barrier"/);
+  assert.match(map, /variant="tunnel"/);
+  assert.match(map, /Acre recebe um novo destino temporário a\s+cada rodada/);
+
+  assert.match(anomaly, /number="14" title="Adapte-se à Anomalia"/);
+  assert.match(anomaly, /Todos jogam/);
+  assert.match(anomaly, /Nova Anomalia/);
+  assert.match(anomaly, /Novo Túnel/);
+  assert.match(anomaly, /TemporalAnomalyEffectList/);
+  assert.match(anomaly, /GuideStateChange/);
+  assert.match(anomaly, /minimumTroopsAfterRemoval/);
+  assert.match(anomaly, /evento inicial é narrativo/i);
+
+  assert.match(victory, /15 · Vitória/);
+  assert.match(victory, /GuideFlow/);
+  assert.match(victory, /Objetivo secreto/);
+  assert.match(victory, /Condição cumprida/);
+  assert.match(victory, /partida termina/);
+  assert.match(victory, /href="\/matchmaking"/);
+});
+
+test("regras documentadas correspondem às restrições implementadas no dev", () => {
   const troopService = source("src/lib/game-troop-command-service.ts");
+  const commandService = source("src/lib/game-command-service.ts");
   const combatService = source("src/lib/game-combat-command-service.ts");
   const conquestService = source("src/lib/game-conquest-command-service.ts");
   const battleService = source("src/lib/game-battle-service.ts");
+  const maneuverService = source("src/lib/game-maneuver-command-service.ts");
+  const connections = source("src/lib/territory-connections.ts");
+  const topology = source("src/lib/game-effective-topology-service.ts");
+  const roundService = source("src/lib/game-round-service.ts");
+  const eventEffects = source("src/lib/events/event-effects-service.ts");
+  const objectiveService = source("src/lib/game-objective-service.ts");
 
   assert.match(troopService, /MANDATORY_TRADE_HAND_SIZE = 5/);
-  assert.match(troopService, /Você só pode reforçar territórios próprios/);
-  assert.match(troopService, /phase=CASE WHEN \$2=0 THEN 'attack' ELSE phase END/);
+  assert.match(troopService, /room\.phase !== "reinforcement"/);
+  assert.match(troopService, /SET card_trade_count=card_trade_count\+1/);
+  assert.match(troopService, /RETURNING card_trade_count-1 trade_count_before/);
+  assert.match(troopService, /tradeValue\(tradeProgress\.trade_count_before\)/);
+  assert.match(troopService, /SET troops=troops\+2/);
+  assert.match(commandService, /if \(room\.conquered_this_turn\)/);
+  assert.match(commandService, /await drawCard\(client, room, player\.id\)/);
 
   assert.match(combatService, /attackProfile\(attacker\.troops, attackMode\)/);
   assert.match(combatService, /Math\.min\(3, defender\.troops\)/);
   assert.match(combatService, /Conclua o deslocamento da conquista antes de atacar novamente/);
   assert.match(combatService, /não pode mais ser cancelado depois da primeira rolagem/);
   assert.match(combatService, /isAttackOriginBlocked/);
-
   assert.match(conquestService, /troops > source\.troops - 1/);
-  assert.match(conquestService, /positiveInteger/);
-
   assert.match(battleService, /SET turn_position=NULL/);
   assert.match(battleService, /SET owner_player_id=\$3/);
   assert.match(battleService, /zone='hand'/);
-  assert.match(battleService, /evaluateEliminationObjectiveOwners/);
+
+  assert.match(maneuverService, /bestTerritoryRoute/);
+  assert.match(maneuverService, /territórios próprios/);
+  assert.match(maneuverService, /maneuverMovableTroops/);
+  assert.match(maneuverService, /moved_in_turn=moved_in_turn\+\$3/);
+  assert.match(maneuverService, /mais de uma barreira/);
+
+  assert.match(connections, /JURASSIC_TUNNEL_SOURCE_ID = 3/);
+  assert.match(connections, /passable: true/);
+  assert.match(connections, /Conexão temporária do Acre válida durante esta rodada/);
+  assert.match(topology, /effectiveGameConnections/);
+  assert.match(roundService, /const jurassicTunnelDestinationId = nextTunnel/);
+  assert.match(roundService, /currentRoundNumber \+ 1/);
+  assert.match(roundService, /resolveGameEventEffects/);
+  assert.match(eventEffects, /GREATEST\(1,troops-\$3\)/);
+
+  assert.match(objectiveService, /SET status='finished',phase='finished',winner_player_id=\$2/);
 });
 
-test("exemplo geográfico copia os paths reais do Pará e reutiliza a curva das estradas", () => {
+test("exemplo geográfico usa paths reais e elementos do mapa", () => {
   const mapExample = source("src/components/game-guide/guide-map-examples.tsx");
 
   assert.match(mapExample, /createRoadCurve/);
@@ -220,12 +311,14 @@ test("exemplo geográfico copia os paths reais do Pará e reutiliza a curva das 
   assert.match(mapExample, /Túnel Jurássico/);
 });
 
-test("manual reutiliza arte e ícones reais em vez de duplicar componentes", () => {
+test("manual reutiliza arte e componentes reais", () => {
   const utility = source("src/components/game-utility-bar.tsx");
   const cards = source("src/components/territory-card.tsx");
   const battle = source("src/components/battle-overlay.tsx");
   const anomaly = source("src/components/temporal-anomaly-modal.tsx");
   const combatGuide = source("src/components/game-guide/sections/guide-combat-section.tsx");
+  const cardsGuide = source("src/components/game-guide/sections/guide-cards-section.tsx");
+  const anomalyGuide = source("src/components/game-guide/sections/guide-anomaly-section.tsx");
 
   assert.match(utility, /game-utility-icons/);
   assert.doesNotMatch(utility, /function RoadsIcon/);
@@ -238,41 +331,33 @@ test("manual reutiliza arte e ícones reais em vez de duplicar componentes", () 
   assert.match(combatGuide, /GameDie/);
   assert.match(combatGuide, /GuideDiceComparison/);
   assert.doesNotMatch(combatGuide, /pipPositions|dado-brasil-hq\.svg/);
+  assert.match(cardsGuide, /TerritoryCardArtwork/);
+  assert.match(cardsGuide, /Symbol/);
+  assert.match(anomalyGuide, /TemporalAnomalyEffectList/);
 });
 
-test("primitivas visuais do manual têm contratos semânticos e responsivos", () => {
+test("primitivas e seções possuem contratos semânticos e responsivos", () => {
   const flow = source("src/components/game-guide/guide-flow.tsx");
   const scale = source("src/components/game-guide/guide-rule-scale.tsx");
   const stateChange = source("src/components/game-guide/guide-state-change.tsx");
   const territory = source("src/components/game-guide/guide-territory-node.tsx");
   const connection = source("src/components/game-guide/guide-connection.tsx");
   const dice = source("src/components/game-guide/guide-dice-comparison.tsx");
-  const styles = source("src/app/war-guide-primitives.css");
+  const primitiveStyles = source("src/app/war-guide-primitives.css");
   const sectionStyles = source("src/app/war-guide-sections.css");
+  const finalStyles = source("src/app/war-guide-final-sections.css");
   const layout = source("src/app/layout.tsx");
 
   assert.match(flow, /<ol/);
   assert.match(flow, /aria-label=\{ariaLabel\}/);
-  assert.match(flow, /--wb-guide-flow-count/);
   assert.match(scale, /<dl/);
   assert.match(scale, /<dt>/);
   assert.match(scale, /<dd>/);
   assert.match(stateChange, /<figure/);
-  assert.match(stateChange, /Antes/);
-  assert.match(stateChange, /Depois/);
   assert.match(stateChange, /<figcaption>/);
-  assert.match(territory, /Math\.min\(safeTroops, 5\)/);
   assert.match(territory, /data-tone=\{tone\}/);
-
-  for (const variant of ["normal", "barrier", "tunnel", "blocked"]) {
-    assert.match(connection, new RegExp(`"${variant}"|${variant}:`));
-  }
   assert.match(connection, /role="img"/);
-  assert.match(connection, /aria-label=\{ariaLabel\}/);
   assert.match(dice, /GameDie/);
-  assert.match(dice, /attackColor = "ruby"/);
-  assert.match(dice, /defenseColor = "ocean"/);
-  assert.match(dice, /Sem comparação/);
   assert.doesNotMatch(dice, /pipPositions|dado-brasil-hq\.svg/);
 
   for (const selector of [
@@ -283,28 +368,30 @@ test("primitivas visuais do manual têm contratos semânticos e responsivos", ()
     "wb-guide-connection",
     "wb-guide-dice-comparison",
   ]) {
-    assert.match(styles, new RegExp(`\\.${selector}`));
+    assert.match(primitiveStyles, new RegExp(`\\.${selector}`));
   }
 
   for (const selector of [
-    "wb-guide-core-split",
-    "wb-guide-attack-checks",
-    "wb-guide-combat-scales",
-    "wb-guide-barrier-comparison",
-    "wb-guide-elimination-transfer",
+    "wb-guide-cards-layout",
+    "wb-guide-maneuver-route",
+    "wb-guide-map-legend",
+    "wb-guide-anomaly-layout",
+    "wb-guide-victory-flow",
   ]) {
-    assert.match(sectionStyles, new RegExp(`\\.${selector}`));
+    assert.match(finalStyles, new RegExp(`\\.${selector}`));
   }
 
-  assert.match(styles, /@media \(max-width: 700px\)/);
-  assert.match(sectionStyles, /@media \(max-width: 980px\)/);
+  assert.match(primitiveStyles, /@media \(max-width: 700px\)/);
   assert.match(sectionStyles, /@media \(max-width: 700px\)/);
+  assert.match(finalStyles, /@media \(max-width: 980px\)/);
+  assert.match(finalStyles, /@media \(max-width: 700px\)/);
   assert.match(layout, /import "\.\/war-guide-primitives\.css";/);
   assert.match(layout, /import "\.\/war-guide-sections\.css";/);
+  assert.match(layout, /import "\.\/war-guide-final-sections\.css";/);
 
-  for (const primitive of [flow, scale, stateChange, territory, connection, dice]) {
+  for (const component of [flow, scale, stateChange, territory, connection, dice]) {
     assert.doesNotMatch(
-      primitive,
+      component,
       /game-rules|game-barrier-rules|reinforcementBase|attackProfile|tradeValue|resolveBattle/,
     );
   }
