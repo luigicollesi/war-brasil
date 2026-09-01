@@ -37,9 +37,10 @@ export function GuideObjectiveSection() {
         </GuideHeading>
 
         <p className="wb-guide-inline-note">
-          <strong>Alvo eliminado por outro jogador?</strong> Algumas missões de
-          eliminação possuem uma condição alternativa, aplicada automaticamente
-          quando o alvo deixa a partida antes que você o elimine.
+          <strong>Alvo eliminado por outro jogador?</strong> Missões de eliminação
+          são reavaliadas quando o alvo perde seu último território. Se os demais
+          requisitos da missão estiverem cumpridos, a vitória pode ser reconhecida
+          mesmo sem você realizar a conquista final.
         </p>
       </div>
 
