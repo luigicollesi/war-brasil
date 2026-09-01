@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { buildObjectivePlan, evaluateObjectiveProgress } from "../.test-build/bots/bot-objective-plan.js";
 import { territoryStrategicValues } from "../.test-build/bots/bot-territory-value.js";
+import { bestCardConquestCandidate } from "../.test-build/bots/bot-card-conquest.js";
 import { chooseCardTrade } from "../.test-build/bots/bot-cards.js";
 import { chooseReinforcement } from "../.test-build/bots/bot-reinforcement.js";
 
@@ -11,7 +12,13 @@ function connection(territoryA, territoryB, passable = true) {
 
 function state(overrides = {}) {
   return {
-    room: { id: "1", phase: "reinforcement", roundNumber: 1, reinforcementsRemaining: 3 },
+    room: {
+      id: "1",
+      phase: "reinforcement",
+      roundNumber: 1,
+      reinforcementsRemaining: 3,
+      conqueredThisTurn: false,
+    },
     bot: { id: "10", cardTradeCount: 0 },
     objective: { type: "territories", params: { territories: 3 }, targetPlayerId: null },
     cards: [],
@@ -66,10 +73,16 @@ test("troca preserva coringa quando combinação equivalente sem coringa existe"
   assert.ok(!action.cardIds.includes("4"));
 });
 
-test("fortification reforça primeiro o território mais barato para qualificar", () => {
+test("fortification reforça primeiro o território mais barato quando pode vencer imediatamente", () => {
   const strategicState = state({
     objective: { type: "fortification", params: { territories: 2, minTroops: 4 }, targetPlayerId: null },
-    room: { id: "1", phase: "reinforcement", roundNumber: 1, reinforcementsRemaining: 3 },
+    room: {
+      id: "1",
+      phase: "reinforcement",
+      roundNumber: 1,
+      reinforcementsRemaining: 3,
+      conqueredThisTurn: false,
+    },
     territories: [
       { territoryId: 1, ownerPlayerId: "10", troops: 4, movedInTurn: 0 },
       { territoryId: 2, ownerPlayerId: "10", troops: 3, movedInTurn: 0 },
@@ -84,7 +97,7 @@ test("fortification reforça primeiro o território mais barato para qualificar"
   });
 });
 
-test("expansão concentra reforço na origem da melhor rota ao objetivo", () => {
+test("expansão concentra reforço na origem da conquista para garantir carta", () => {
   const strategicState = state({
     territories: [
       { territoryId: 1, ownerPlayerId: "10", troops: 5, movedInTurn: 0 },
@@ -93,6 +106,23 @@ test("expansão concentra reforço na origem da melhor rota ao objetivo", () => 
       { territoryId: 4, ownerPlayerId: "20", troops: 7, movedInTurn: 0 },
     ],
     topology: { connections: [connection(1, 3), connection(2, 4)], eventId: 0, resolvedEventEffects: [] },
+  });
+  const { plan, progress, values } = analysis(strategicState);
+  assert.deepEqual(chooseReinforcement(strategicState, plan, progress, values), {
+    type: "reinforce",
+    territoryId: 1,
+    troops: 3,
+  });
+});
+
+test("reforço cria superioridade quando a conquista só fica viável após alocar tropas", () => {
+  const strategicState = state({
+    territories: [
+      { territoryId: 1, ownerPlayerId: "10", troops: 3, movedInTurn: 0 },
+      { territoryId: 2, ownerPlayerId: "10", troops: 1, movedInTurn: 0 },
+      { territoryId: 3, ownerPlayerId: "20", troops: 5, movedInTurn: 0 },
+    ],
+    topology: { connections: [connection(1, 3)], eventId: 0, resolvedEventEffects: [] },
   });
   const { plan, progress, values } = analysis(strategicState);
   assert.deepEqual(chooseReinforcement(strategicState, plan, progress, values), {
@@ -122,4 +152,28 @@ test("reforço ofensivo ignora origem bloqueada por evento", () => {
     territoryId: 2,
     troops: 3,
   });
+});
+
+test("barreira só entra no plano da carta quando os reforços permitem três dados", () => {
+  const strategicState = state({
+    territories: [
+      { territoryId: 1, ownerPlayerId: "10", troops: 7, movedInTurn: 0 },
+      { territoryId: 2, ownerPlayerId: "20", troops: 3, movedInTurn: 0 },
+    ],
+    topology: { connections: [connection(1, 2, false)], eventId: 0, resolvedEventEffects: [] },
+  });
+  const { plan, progress, values } = analysis(strategicState);
+  assert.equal(
+    bestCardConquestCandidate(strategicState, plan, progress, values, 2),
+    null,
+  );
+  const candidate = bestCardConquestCandidate(
+    strategicState,
+    plan,
+    progress,
+    values,
+    3,
+  );
+  assert.equal(candidate?.mode, "barrier");
+  assert.equal(candidate?.projectedAttackerTroops, 10);
 });
