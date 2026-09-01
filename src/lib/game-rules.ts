@@ -10,7 +10,7 @@ function regionBonus(territoryIds: number[]) {
     const regionTerritories = Object.entries(TERRITORY_METADATA)
       .filter(([, territory]) => territory.region === region)
       .map(([id]) => Number(id));
-    return regionTerritories.every((id) => controlled.has(id)) ? total + bonus : total;
+    return regionTerritories.every((id) => controlled.has(id) ? true : false) ? total + bonus : total;
   }, 0);
 }
 
@@ -37,8 +37,7 @@ export function resolveBattle(attacker: number[], defender: number[]) {
 }
 
 export function tradeValue(tradeCountBefore: number) {
-  const values = [4, 6, 8, 10, 12, 15];
-  return values[tradeCountBefore] ?? 20 + (tradeCountBefore - 6) * 5;
+  return 4 + tradeCountBefore;
 }
 
 export function isValidTrade(symbols: Array<CardSymbol | "wild">) {
