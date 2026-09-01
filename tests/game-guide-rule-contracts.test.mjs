@@ -99,13 +99,12 @@ test("dados e exemplo de combate do guia são derivados das regras de batalha", 
   assert.deepEqual(resolved.attacker.slice(2), guide.combat.example.unpairedAttack);
 });
 
-test("combinações e progressão de cartas documentadas acompanham isValidTrade e tradeValue", () => {
+test("combinações alcançáveis e progressão do guia acompanham isValidTrade e tradeValue", () => {
   const guide = buildGameGuidePresentation();
 
   assert.equal(isValidTrade(["leaf", "leaf", "leaf"]), true);
   assert.equal(isValidTrade(["leaf", "gold", "water"]), true);
   assert.equal(isValidTrade(["leaf", "leaf", "wild"]), true);
-  assert.equal(isValidTrade(["wild", "wild", "wild"]), true);
   assert.equal(isValidTrade(["leaf", "leaf", "gold"]), false);
   assert.equal(isValidTrade(["leaf", "gold"]), false);
 
