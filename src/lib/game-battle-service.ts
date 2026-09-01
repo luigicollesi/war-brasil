@@ -7,10 +7,6 @@ import {
   nextBattlePresentationTransition,
   type BattleStage,
 } from "@/src/lib/game-transitions";
-import {
-  ObjectiveConfigurationError,
-  resolveObjectiveFallbacks,
-} from "@/src/lib/objectives/objective-assignment-service";
 import { RoomError } from "@/src/lib/rooms";
 
 type BattleResult = {
@@ -87,41 +83,38 @@ export async function saveBattle(
   room.last_battle = battle;
 }
 
-async function resolveFallbacks(
+async function evaluateEliminationObjectiveOwners(
   client: PoolClient,
   roomId: string,
   targetPlayerId: string,
-  eliminatorPlayerId: string,
+  conquerorPlayerId: string,
 ) {
-  const fallbackPlayers = (
+  const candidates = (
     await client.query<{ player_id: string }>(
-      `SELECT player_id
-       FROM game_player_objectives
-       WHERE room_id=$1
-         AND target_player_id=$2
-         AND player_id<>$3
-         AND objective_id='balanced_elimination'
-       ORDER BY player_id`,
-      [roomId, targetPlayerId, eliminatorPlayerId],
+      `SELECT a.player_id
+       FROM game_player_objectives a
+       JOIN objectives o ON o.id=a.objective_id
+       JOIN room_players p
+         ON p.room_id=a.room_id AND p.id=a.player_id
+       WHERE a.room_id=$1
+         AND a.target_player_id=$2
+         AND a.player_id<>$3
+         AND o.type IN ('elimination','elimination_plus')
+         AND p.turn_position IS NOT NULL
+       ORDER BY p.turn_position,p.id`,
+      [roomId, targetPlayerId, conquerorPlayerId],
     )
   ).rows;
 
-  try {
-    await resolveObjectiveFallbacks(
-      client,
-      roomId,
-      targetPlayerId,
-      eliminatorPlayerId,
-    );
-  } catch (error) {
-    if (error instanceof ObjectiveConfigurationError) {
-      throw new RoomError(error.message, 503);
-    }
-    throw error;
-  }
-
-  for (const fallbackPlayer of fallbackPlayers) {
-    if (await objectiveWon(client, roomId, fallbackPlayer.player_id, "any")) {
+  for (const candidate of candidates) {
+    if (
+      await objectiveWon(
+        client,
+        roomId,
+        candidate.player_id,
+        "territory_control_changed",
+      )
+    ) {
       return true;
     }
   }
@@ -254,15 +247,15 @@ async function applyBattleOutcome(
       battle.attackerPlayerId,
     );
 
-    if (
-      !(await objectiveWon(
-        client,
-        room.id,
-        battle.attackerPlayerId,
-        "territory_control_changed",
-      ))
-    ) {
-      await resolveFallbacks(
+    const conquerorWon = await objectiveWon(
+      client,
+      room.id,
+      battle.attackerPlayerId,
+      "territory_control_changed",
+    );
+
+    if (!conquerorWon) {
+      await evaluateEliminationObjectiveOwners(
         client,
         room.id,
         battle.defenderPlayerId,
