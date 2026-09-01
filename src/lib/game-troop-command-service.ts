@@ -18,7 +18,6 @@ type TroopRoom = {
   phase: string;
   current_player_id: string | null;
   reinforcements_remaining: number;
-  trade_count: number;
 };
 
 type TradeCard = {
@@ -51,8 +50,7 @@ function positiveInteger(value: unknown, message: string) {
 async function loadRoom(client: PoolClient, roomId: string) {
   const room = (
     await client.query<TroopRoom>(
-      `SELECT id,status,phase,current_player_id,
-              reinforcements_remaining,trade_count
+      `SELECT id,status,phase,current_player_id,reinforcements_remaining
        FROM game_rooms
        WHERE id=$1`,
       [roomId],
@@ -248,12 +246,25 @@ export async function executeTradeCards(
     }
   }
 
+  const tradeProgress = (
+    await client.query<{ trade_count_before: number }>(
+      `UPDATE room_players
+       SET card_trade_count=card_trade_count+1
+       WHERE room_id=$1 AND id=$2
+       RETURNING card_trade_count-1 trade_count_before`,
+      [room.id, player.id],
+    )
+  ).rows[0];
+
+  if (!tradeProgress) {
+    throw new RoomError("Jogador não encontrado nesta partida.", 409);
+  }
+
   await client.query(
     `UPDATE game_rooms
-     SET reinforcements_remaining=reinforcements_remaining+$2,
-         trade_count=trade_count+1
+     SET reinforcements_remaining=reinforcements_remaining+$2
      WHERE id=$1`,
-    [room.id, tradeValue(room.trade_count)],
+    [room.id, tradeValue(tradeProgress.trade_count_before)],
   );
 
   if (changedTroops) {
