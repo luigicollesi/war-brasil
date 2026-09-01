@@ -136,20 +136,25 @@ async function resolveAssignmentParams(
     return { ...params, territories };
   }
 
-  const territoriesOutsideInitialControl = totalTerritories - initialTerritories;
-  const territories = Math.min(
-    totalTerritories,
-    initialTerritories +
-      Math.round(
-        (territoriesOutsideInitialControl * unownedTerritoryPercent) / 100,
-      ),
-  );
-  const {
-    unownedTerritoryPercent: _percent,
-    territories: _fallbackTerritories,
-    ...params
-  } = rule.params;
-  return { ...params, territories };
+  if (resolvesTerritoryControl) {
+    const territoriesOutsideInitialControl =
+      totalTerritories - initialTerritories;
+    const territories = Math.min(
+      totalTerritories,
+      initialTerritories +
+        Math.round(
+          (territoriesOutsideInitialControl * unownedTerritoryPercent) / 100,
+        ),
+    );
+    const {
+      unownedTerritoryPercent: _percent,
+      territories: _fallbackTerritories,
+      ...params
+    } = rule.params;
+    return { ...params, territories };
+  }
+
+  return rule.params;
 }
 
 async function assignBalancedObjectives(
