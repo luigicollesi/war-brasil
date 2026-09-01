@@ -14,6 +14,11 @@ type ObjectiveRuleRow = {
   target_selector: "random_other_player" | null;
 };
 
+type LegacyObjectiveRow = {
+  id: string;
+  target_selector: "random_other_player" | null;
+};
+
 type FallbackAssignmentRow = {
   player_id: string;
   fallback_objective_id: string;
@@ -46,14 +51,51 @@ function assertSupportedPlayerCount(playerCount: number) {
   }
 }
 
-export async function assignObjectives(
+function isSchemaCompatibilityError(error: unknown) {
+  if (typeof error !== "object" || error === null || !("code" in error)) {
+    return false;
+  }
+
+  // PostgreSQL: undefined_table / undefined_column.
+  return error.code === "42P01" || error.code === "42703";
+}
+
+async function withSchemaCompatibilityFallback<T>(
+  client: PoolClient,
+  primary: () => Promise<T>,
+  fallback: () => Promise<T>,
+) {
+  await client.query("SAVEPOINT objective_rules_compatibility");
+
+  try {
+    const result = await primary();
+    await client.query("RELEASE SAVEPOINT objective_rules_compatibility");
+    return result;
+  } catch (error) {
+    await client.query("ROLLBACK TO SAVEPOINT objective_rules_compatibility");
+    await client.query("RELEASE SAVEPOINT objective_rules_compatibility");
+
+    if (!isSchemaCompatibilityError(error)) throw error;
+    return fallback();
+  }
+}
+
+function targetPlayerFor(
+  selector: "random_other_player" | null,
+  player: ObjectivePlayer,
+  players: readonly ObjectivePlayer[],
+) {
+  if (selector !== "random_other_player") return null;
+
+  const otherPlayers = players.filter((candidate) => candidate.id !== player.id);
+  return otherPlayers[randomInt(0, otherPlayers.length)].id;
+}
+
+async function assignBalancedObjectives(
   client: PoolClient,
   roomId: string,
   players: readonly ObjectivePlayer[],
 ) {
-  const playerCount = players.length;
-  assertSupportedPlayerCount(playerCount);
-
   const rules = (
     await client.query<ObjectiveRuleRow>(
       `SELECT r.id objective_rule_id,r.objective_id,r.params,o.target_selector
@@ -63,13 +105,13 @@ export async function assignObjectives(
          AND r.is_active=TRUE
          AND o.is_active=TRUE
        ORDER BY r.objective_id,r.revision DESC`,
-      [playerCount],
+      [players.length],
     )
   ).rows;
 
-  if (rules.length < playerCount) {
+  if (rules.length < players.length) {
     throw new ObjectiveConfigurationError(
-      `Não há objetivos balanceados suficientes para ${playerCount} jogadores.`,
+      `Não há objetivos balanceados suficientes para ${players.length} jogadores.`,
     );
   }
 
@@ -78,11 +120,11 @@ export async function assignObjectives(
 
   for (const [index, player] of players.entries()) {
     const rule = shuffledRules[index];
-    const otherPlayers = players.filter((candidate) => candidate.id !== player.id);
-    const targetPlayerId =
-      rule.target_selector === "random_other_player"
-        ? otherPlayers[randomInt(0, otherPlayers.length)].id
-        : null;
+    const targetPlayerId = targetPlayerFor(
+      rule.target_selector,
+      player,
+      players,
+    );
 
     await client.query(
       `INSERT INTO game_player_objectives
@@ -100,23 +142,66 @@ export async function assignObjectives(
   }
 }
 
-export async function resolveObjectiveFallbacks(
+async function assignLegacyObjectives(
+  client: PoolClient,
+  roomId: string,
+  players: readonly ObjectivePlayer[],
+) {
+  const objectives = (
+    await client.query<LegacyObjectiveRow>(
+      `SELECT id,target_selector
+       FROM objectives
+       WHERE is_active=TRUE
+       ORDER BY id`,
+    )
+  ).rows;
+
+  if (objectives.length < players.length) {
+    throw new ObjectiveConfigurationError(
+      "Não há objetivos suficientes para iniciar a partida.",
+    );
+  }
+
+  const shuffledObjectives = [...objectives];
+  shuffleInPlace(shuffledObjectives);
+
+  for (const [index, player] of players.entries()) {
+    const objective = shuffledObjectives[index];
+    const targetPlayerId = targetPlayerFor(
+      objective.target_selector,
+      player,
+      players,
+    );
+
+    await client.query(
+      `INSERT INTO game_player_objectives
+         (room_id,player_id,objective_id,target_player_id)
+       VALUES ($1,$2,$3,$4)`,
+      [roomId, player.id, objective.id, targetPlayerId],
+    );
+  }
+}
+
+export async function assignObjectives(
+  client: PoolClient,
+  roomId: string,
+  players: readonly ObjectivePlayer[],
+) {
+  assertSupportedPlayerCount(players.length);
+
+  return withSchemaCompatibilityFallback(
+    client,
+    () => assignBalancedObjectives(client, roomId, players),
+    () => assignLegacyObjectives(client, roomId, players),
+  );
+}
+
+async function resolveBalancedFallbacks(
   client: PoolClient,
   roomId: string,
   targetPlayerId: string,
+  playerCount: number,
 ) {
-  const playerCount = Number(
-    (
-      await client.query<{ count: number }>(
-        `SELECT COUNT(*)::int count
-         FROM room_players
-         WHERE room_id=$1`,
-        [roomId],
-      )
-    ).rows[0]?.count ?? 0,
-  );
-  assertSupportedPlayerCount(playerCount);
-
   const assignments = (
     await client.query<FallbackAssignmentRow>(
       `SELECT a.player_id,o.fallback_objective_id
@@ -165,4 +250,47 @@ export async function resolveObjectiveFallbacks(
   }
 
   return assignments.length;
+}
+
+async function resolveLegacyFallbacks(
+  client: PoolClient,
+  roomId: string,
+  targetPlayerId: string,
+) {
+  const result = await client.query(
+    `UPDATE game_player_objectives a
+     SET objective_id=o.fallback_objective_id,target_player_id=NULL
+     FROM objectives o
+     WHERE a.objective_id=o.id
+       AND a.room_id=$1
+       AND a.target_player_id=$2
+       AND o.fallback_objective_id IS NOT NULL`,
+    [roomId, targetPlayerId],
+  );
+
+  return result.rowCount ?? 0;
+}
+
+export async function resolveObjectiveFallbacks(
+  client: PoolClient,
+  roomId: string,
+  targetPlayerId: string,
+) {
+  const playerCount = Number(
+    (
+      await client.query<{ count: number }>(
+        `SELECT COUNT(*)::int count
+         FROM room_players
+         WHERE room_id=$1`,
+        [roomId],
+      )
+    ).rows[0]?.count ?? 0,
+  );
+  assertSupportedPlayerCount(playerCount);
+
+  return withSchemaCompatibilityFallback(
+    client,
+    () => resolveBalancedFallbacks(client, roomId, targetPlayerId, playerCount),
+    () => resolveLegacyFallbacks(client, roomId, targetPlayerId),
+  );
 }
