@@ -1,6 +1,6 @@
-import type { CardSymbol, Region } from "@/src/lib/game-config";
-import type { TerritoryConnection } from "@/src/lib/territory-connections";
-import type { ResolvedEventEffect } from "@/src/lib/events/event-types";
+import type { CardSymbol, Region } from "../game-config";
+import type { TerritoryConnection } from "../territory-connections";
+import type { ResolvedEventEffect } from "../events/event-types";
 
 export type BotStrategicPlayer = {
   id: string;
