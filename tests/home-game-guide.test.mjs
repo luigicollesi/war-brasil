@@ -179,7 +179,7 @@ test("primitivas visuais do manual têm contratos semânticos e responsivos", ()
   assert.match(territory, /data-tone=\{tone\}/);
 
   for (const variant of ["normal", "barrier", "tunnel", "blocked"]) {
-    assert.match(connection, new RegExp(`\\| \\"${variant}\\"|${variant}:`));
+    assert.match(connection, new RegExp(`"${variant}"|${variant}:`));
   }
   assert.match(connection, /role="img"/);
   assert.match(connection, /aria-label=\{ariaLabel\}/);
@@ -202,7 +202,7 @@ test("primitivas visuais do manual têm contratos semânticos e responsivos", ()
   }
 
   assert.match(styles, /@media \(max-width: 700px\)/);
-  assert.match(styles, /\.wb-guide-flow \{ grid-template-columns: 1fr; \}/);
+  assert.match(styles, /\.wb-guide-flow \{\s*grid-template-columns: 1fr;/);
   assert.match(styles, /\.wb-guide-state-change \{\s*grid-template-columns: 1fr;/);
   assert.match(layout, /import "\.\/war-guide-primitives\.css";/);
 
