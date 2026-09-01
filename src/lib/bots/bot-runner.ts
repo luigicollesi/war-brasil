@@ -22,10 +22,12 @@ import {
   executeReinforcement,
   executeTradeCards,
 } from "@/src/lib/game-troop-command-service";
+import { RoomError } from "@/src/lib/rooms";
 import type { BotAction, BotActionType } from "./bot-action";
 import { pickBotDelayMs } from "./bot-delay";
 import { requiredActorId } from "./bot-required-actor";
 import { loadBotStrategicState } from "./bot-state-service";
+import type { BotStrategicState } from "./bot-state";
 import { chooseStrategicBotAction } from "./bot-strategy";
 
 type AutomationRoom = {
@@ -49,6 +51,8 @@ export type BotAutomationResult = {
   changed: boolean;
   kind: "none" | "scheduled" | "acted";
 };
+
+const STRATEGIC_SAVEPOINT = "bot_strategic_action";
 
 async function loadRoom(client: PoolClient, roomId: string) {
   return (
@@ -223,6 +227,95 @@ async function executeBotAction(
   }
 }
 
+function canUseStrategicFallback(error: unknown, action: BotAction) {
+  if (!(error instanceof RoomError) || ![409, 422].includes(error.status)) {
+    return false;
+  }
+
+  return ["reinforce", "attack", "complete_conquest", "maneuver"].includes(
+    action.type,
+  );
+}
+
+function safeFallbackAction(
+  room: AutomationRoom,
+  state: BotStrategicState,
+  playerId: string,
+  rejected: BotAction,
+): BotAction | null {
+  if (rejected.type === "attack") {
+    return { type: "finish_attack" };
+  }
+
+  if (rejected.type === "maneuver") {
+    return { type: "end_turn" };
+  }
+
+  if (rejected.type === "complete_conquest") {
+    return { type: "complete_conquest", troops: 1 };
+  }
+
+  if (rejected.type === "reinforce" && room.reinforcements_remaining > 0) {
+    if (state.cards.length >= 5) return null;
+    const firstOwned = state.territories
+      .filter((territory) => territory.ownerPlayerId === playerId)
+      .sort((a, b) => a.territoryId - b.territoryId)[0];
+    return firstOwned
+      ? {
+          type: "reinforce",
+          territoryId: firstOwned.territoryId,
+          troops: room.reinforcements_remaining,
+        }
+      : null;
+  }
+
+  return null;
+}
+
+async function executeBotActionWithFallback(
+  client: PoolClient,
+  room: AutomationRoom,
+  player: AutomationPlayer,
+  action: BotAction,
+) {
+  await client.query(`SAVEPOINT ${STRATEGIC_SAVEPOINT}`);
+
+  try {
+    await executeBotAction(client, room.id, player, action);
+    await client.query(`RELEASE SAVEPOINT ${STRATEGIC_SAVEPOINT}`);
+    return;
+  } catch (error) {
+    await client.query(`ROLLBACK TO SAVEPOINT ${STRATEGIC_SAVEPOINT}`);
+
+    if (!canUseStrategicFallback(error, action)) {
+      await client.query(`RELEASE SAVEPOINT ${STRATEGIC_SAVEPOINT}`);
+      throw error;
+    }
+
+    const state = await loadBotStrategicState(client, room.id, player.id);
+    const fallback = safeFallbackAction(room, state, player.id, action);
+    if (!fallback) {
+      await client.query(`RELEASE SAVEPOINT ${STRATEGIC_SAVEPOINT}`);
+      throw error;
+    }
+
+    try {
+      await executeBotAction(client, room.id, player, fallback);
+      await client.query(`RELEASE SAVEPOINT ${STRATEGIC_SAVEPOINT}`);
+    } catch (fallbackError) {
+      await client.query(`ROLLBACK TO SAVEPOINT ${STRATEGIC_SAVEPOINT}`);
+      await client.query(`RELEASE SAVEPOINT ${STRATEGIC_SAVEPOINT}`);
+      throw fallbackError;
+    }
+  }
+}
+
+function actionUsesStrategicFallback(action: BotAction) {
+  return ["reinforce", "attack", "complete_conquest", "maneuver"].includes(
+    action.type,
+  );
+}
+
 export async function advanceBotAutomation(
   client: PoolClient,
   roomId: string,
@@ -279,7 +372,12 @@ export async function advanceBotAutomation(
     return { changed: true, kind: "acted" };
   }
 
-  await executeBotAction(client, roomId, actor, action);
+  if (actionUsesStrategicFallback(action)) {
+    await executeBotActionWithFallback(client, room, actor, action);
+  } else {
+    await executeBotAction(client, roomId, actor, action);
+  }
+
   await client.query(
     `UPDATE room_players
      SET bot_next_action_at=NULL
