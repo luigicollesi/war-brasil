@@ -9,7 +9,10 @@ import {
   maneuverTraversalProfile,
 } from "./game-barrier-rules";
 import {
+  MANDATORY_TRADE_HAND_SIZE,
   maneuverMovableTroops,
+  MIN_TERRITORY_TROOPS,
+  OWNED_TERRITORY_CARD_BONUS,
   reinforcementBase,
   resolveBattle,
   tradeValue,
@@ -31,8 +34,6 @@ const REGION_GUIDE_LABELS: Record<Region, string> = {
   sul: "Sul",
 };
 
-const MANDATORY_TRADE_HAND_SIZE = 5;
-const OWNED_TERRITORY_CARD_BONUS = 2;
 const CARD_REWARD_PER_CONQUERING_TURN = 1;
 
 function availableNormalAttack(troops: number) {
@@ -44,7 +45,7 @@ function availableNormalAttack(troops: number) {
 }
 
 function defenderDiceCount(troops: number): 1 | 2 | 3 {
-  if (!Number.isInteger(troops) || troops < 1) {
+  if (!Number.isInteger(troops) || troops < MIN_TERRITORY_TROOPS) {
     throw new RangeError("O exemplo de defesa precisa ter ao menos uma tropa.");
   }
   return Math.min(3, troops) as 1 | 2 | 3;
@@ -107,7 +108,7 @@ export function buildGameGuidePresentation() {
     regionCount,
     regions,
     setup: {
-      initialTroopsPerTerritory: 1,
+      initialTroopsPerTerritory: MIN_TERRITORY_TROOPS,
     },
     reinforcement: {
       territoryExample: reinforcementTerritoryExample,
@@ -155,8 +156,8 @@ export function buildGameGuidePresentation() {
       },
     },
     conquest: {
-      minimumMove: 1,
-      minimumTroopsLeftAtOrigin: 1,
+      minimumMove: MIN_TERRITORY_TROOPS,
+      minimumTroopsLeftAtOrigin: MIN_TERRITORY_TROOPS,
     },
     maneuver: {
       minimumTroopsLeftAtOrigin:
@@ -187,7 +188,7 @@ export function buildGameGuidePresentation() {
       incrementPerPersonalTrade: tradeValue(1) - tradeValue(0),
     },
     anomalies: {
-      minimumTroopsAfterRemoval: 1,
+      minimumTroopsAfterRemoval: MIN_TERRITORY_TROOPS,
     },
   };
 }
