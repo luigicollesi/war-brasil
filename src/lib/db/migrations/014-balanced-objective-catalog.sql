@@ -133,16 +133,27 @@ ON CONFLICT (id) DO UPDATE SET
   is_active = TRUE;
 
 -- Domínio territorial.
--- A meta diminui com mais jogadores para manter aproximadamente o mesmo volume
--- de expansão além da distribuição inicial: cerca de 9 a 13 conquistas.
+-- Em vez de uma meta absoluta arbitrária, cada jogador precisa conquistar 40%
+-- dos territórios que começaram fora do seu controle. O resolvedor transforma
+-- esse percentual em uma meta total usando a posse inicial real e arredondamento
+-- para o inteiro mais próximo.
+--
+-- Com a distribuição atual, isso resulta em 29, 25, 23, 22 e 21 territórios
+-- para mesas de 2 a 6 jogadores. Em mesas não divisíveis, o cálculo individual
+-- também neutraliza a diferença inicial: 10 ou 11 territórios viram meta 23;
+-- 8 ou 9 territórios viram meta 22.
+--
+-- O campo territories permanece como fallback determinístico para conversões de
+-- objetivo que ocorram depois do início da partida; novas atribuições resolvem
+-- sempre unownedTerritoryPercent usando a posse inicial real.
 INSERT INTO objective_rules (
   objective_id, player_count, revision, params, difficulty, is_active
 ) VALUES
-  ('balanced_territory_control', 2, 1, '{"territories":30}'::jsonb, 'medium', TRUE),
-  ('balanced_territory_control', 3, 1, '{"territories":25}'::jsonb, 'medium', TRUE),
-  ('balanced_territory_control', 4, 1, '{"territories":23}'::jsonb, 'medium', TRUE),
-  ('balanced_territory_control', 5, 1, '{"territories":21}'::jsonb, 'medium', TRUE),
-  ('balanced_territory_control', 6, 1, '{"territories":20}'::jsonb, 'medium', TRUE)
+  ('balanced_territory_control', 2, 1, '{"unownedTerritoryPercent":40,"territories":29}'::jsonb, 'medium', TRUE),
+  ('balanced_territory_control', 3, 1, '{"unownedTerritoryPercent":40,"territories":25}'::jsonb, 'medium', TRUE),
+  ('balanced_territory_control', 4, 1, '{"unownedTerritoryPercent":40,"territories":23}'::jsonb, 'medium', TRUE),
+  ('balanced_territory_control', 5, 1, '{"unownedTerritoryPercent":40,"territories":22}'::jsonb, 'medium', TRUE),
+  ('balanced_territory_control', 6, 1, '{"unownedTerritoryPercent":40,"territories":21}'::jsonb, 'medium', TRUE)
 ON CONFLICT (objective_id, player_count, revision) DO UPDATE SET
   params = EXCLUDED.params,
   difficulty = EXCLUDED.difficulty,
@@ -173,10 +184,8 @@ ON CONFLICT (objective_id, player_count, revision) DO UPDATE SET
   is_active = TRUE;
 
 -- 2 jogadores: cada um começa com 21 territórios.
--- Sul + Sudeste (14) foi removido daqui: ao completar esse par um jogador tende
--- a terminar perto de 28 territórios, abaixo da meta territorial de 30.
--- Os pares abaixo somam 18, 18 e 19 territórios e levam a cerca de 30 territórios
--- totais se o jogador preservar sua posse inicial fora das regiões-alvo.
+-- Sul + Sudeste (14) continua fora: os pares abaixo somam 18, 18 e 19 territórios
+-- e terminam próximos da referência territorial de 29 sem criar vitória curta.
 INSERT INTO objective_rules (
   objective_id, player_count, revision, params, difficulty, is_active
 ) VALUES
@@ -188,7 +197,7 @@ ON CONFLICT (objective_id, player_count, revision) DO UPDATE SET
   difficulty = EXCLUDED.difficulty,
   is_active = TRUE;
 
--- 3 jogadores: a referência territorial é 25.
+-- 3 jogadores: a referência territorial permanece 25.
 -- Norte + Centro-Oeste tende a terminar perto de 24 territórios; Norte + Sul,
 -- perto de 25; Nordeste + Centro-Oeste, perto de 26. A variação geográfica
 -- compensa a pequena diferença: Centro-Oeste é exposto, Sul é periférico e
@@ -204,7 +213,7 @@ ON CONFLICT (objective_id, player_count, revision) DO UPDATE SET
   difficulty = EXCLUDED.difficulty,
   is_active = TRUE;
 
--- 4 jogadores: a referência territorial é 23.
+-- 4 jogadores: a referência territorial permanece 23.
 -- Os mesmos três eixos produzem aproximadamente 22, 23 e 24 territórios ao
 -- serem completados sem perdas externas relevantes, mantendo rotas e pressões
 -- estratégicas diferentes sem criar um objetivo deliberadamente superior.
@@ -219,10 +228,9 @@ ON CONFLICT (objective_id, player_count, revision) DO UPDATE SET
   difficulty = EXCLUDED.difficulty,
   is_active = TRUE;
 
--- 5 jogadores: a referência territorial é 21.
--- Norte + Centro-Oeste e Norte + Sul terminam naturalmente próximos dessa
--- marca. Sul + Sudeste sozinho seria curto, então vira region_plus: além das
--- duas regiões, o jogador precisa manter 20 territórios no total.
+-- 5 jogadores: a nova referência territorial é 22.
+-- Norte + Centro-Oeste e Norte + Sul continuam próximos dessa marca. Sul +
+-- Sudeste permanece como region_plus para compensar a combinação regional menor.
 INSERT INTO objective_rules (
   objective_id, player_count, revision, params, difficulty, is_active
 ) VALUES
@@ -234,10 +242,9 @@ ON CONFLICT (objective_id, player_count, revision) DO UPDATE SET
   difficulty = EXCLUDED.difficulty,
   is_active = TRUE;
 
--- 6 jogadores: a referência territorial é 20.
+-- 6 jogadores: a nova referência territorial é 21.
 -- Os dois eixos de 15-16 territórios permanecem proporcionais. Sul + Sudeste
--- só entra com requisito total de 19 territórios, compensando a combinação
--- regional menor sem torná-la uma cópia exata do objetivo territorial.
+-- continua exigindo presença territorial adicional para compensar seu tamanho.
 INSERT INTO objective_rules (
   objective_id, player_count, revision, params, difficulty, is_active
 ) VALUES
