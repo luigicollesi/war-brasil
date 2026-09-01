@@ -101,3 +101,25 @@ test("expansão concentra reforço na origem da melhor rota ao objetivo", () => 
     troops: 3,
   });
 });
+
+test("reforço ofensivo ignora origem bloqueada por evento", () => {
+  const strategicState = state({
+    territories: [
+      { territoryId: 1, ownerPlayerId: "10", troops: 5, movedInTurn: 0 },
+      { territoryId: 2, ownerPlayerId: "10", troops: 5, movedInTurn: 0 },
+      { territoryId: 3, ownerPlayerId: "20", troops: 1, movedInTurn: 0 },
+      { territoryId: 4, ownerPlayerId: "20", troops: 1, movedInTurn: 0 },
+    ],
+    topology: {
+      connections: [connection(1, 3), connection(2, 4)],
+      eventId: 9,
+      resolvedEventEffects: [{ type: "BLOCK_ATTACK", territories: [1] }],
+    },
+  });
+  const { plan, progress, values } = analysis(strategicState);
+  assert.deepEqual(chooseReinforcement(strategicState, plan, progress, values), {
+    type: "reinforce",
+    territoryId: 2,
+    troops: 3,
+  });
+});
