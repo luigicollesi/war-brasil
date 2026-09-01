@@ -22,6 +22,18 @@ type BotActionResponse = {
   error?: string;
 };
 
+type LobbyPendingAction =
+  | "profile"
+  | "ready"
+  | "add-bot"
+  | `remove-bot:${string}`
+  | null;
+
+type LobbyActionError = {
+  scope: "profile" | "bot";
+  message: string;
+} | null;
+
 function colorByValue(value: string) {
   return PLAYER_COLORS.find((color) => color.value === value);
 }
@@ -29,9 +41,8 @@ function colorByValue(value: string) {
 export function LobbyClient({ code }: LobbyClientProps) {
   const router = useRouter();
   const { snapshot, error: syncError, isLoading, refresh } = useLobbySync(code);
-  const [actionError, setActionError] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
-  const [pendingBotAction, setPendingBotAction] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<LobbyActionError>(null);
+  const [pendingAction, setPendingAction] = useState<LobbyPendingAction>(null);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -40,9 +51,13 @@ export function LobbyClient({ code }: LobbyClientProps) {
     }
   }, [router, snapshot]);
 
-  async function updateMe(patch: Record<string, unknown>) {
-    setActionError("");
-    setIsSaving(true);
+  async function updateMe(
+    patch: Record<string, unknown>,
+    action: "profile" | "ready" = "profile",
+  ) {
+    if (pendingAction !== null) return;
+    setActionError(null);
+    setPendingAction(action);
 
     try {
       const response = await fetch(`/api/rooms/${encodeURIComponent(code)}/me`, {
@@ -64,19 +79,22 @@ export function LobbyClient({ code }: LobbyClientProps) {
 
       await refresh();
     } catch (requestError) {
-      setActionError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Não foi possível salvar suas escolhas.",
-      );
+      setActionError({
+        scope: "profile",
+        message:
+          requestError instanceof Error
+            ? requestError.message
+            : "Não foi possível salvar suas escolhas.",
+      });
     } finally {
-      setIsSaving(false);
+      setPendingAction(null);
     }
   }
 
   async function addBot() {
-    setActionError("");
-    setPendingBotAction("add");
+    if (pendingAction !== null) return;
+    setActionError(null);
+    setPendingAction("add-bot");
 
     try {
       const response = await fetch(`/api/rooms/${encodeURIComponent(code)}/bots`, {
@@ -91,19 +109,22 @@ export function LobbyClient({ code }: LobbyClientProps) {
 
       await refresh();
     } catch (requestError) {
-      setActionError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Não foi possível adicionar o bot.",
-      );
+      setActionError({
+        scope: "bot",
+        message:
+          requestError instanceof Error
+            ? requestError.message
+            : "Não foi possível adicionar o bot.",
+      });
     } finally {
-      setPendingBotAction(null);
+      setPendingAction(null);
     }
   }
 
   async function removeBot(botId: string) {
-    setActionError("");
-    setPendingBotAction(botId);
+    if (pendingAction !== null) return;
+    setActionError(null);
+    setPendingAction(`remove-bot:${botId}`);
 
     try {
       const response = await fetch(
@@ -121,13 +142,15 @@ export function LobbyClient({ code }: LobbyClientProps) {
 
       await refresh();
     } catch (requestError) {
-      setActionError(
-        requestError instanceof Error
-          ? requestError.message
-          : "Não foi possível remover o bot.",
-      );
+      setActionError({
+        scope: "bot",
+        message:
+          requestError instanceof Error
+            ? requestError.message
+            : "Não foi possível remover o bot.",
+      });
     } finally {
-      setPendingBotAction(null);
+      setPendingAction(null);
     }
   }
 
@@ -137,7 +160,10 @@ export function LobbyClient({ code }: LobbyClientProps) {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1600);
     } catch {
-      setActionError("Não foi possível copiar o código da sala.");
+      setActionError({
+        scope: "profile",
+        message: "Não foi possível copiar o código da sala.",
+      });
     }
   }
 
@@ -169,7 +195,7 @@ export function LobbyClient({ code }: LobbyClientProps) {
   const readyPlayers = players.filter((player) => player.isReady).length;
   const allReady = players.length >= 2 && readyPlayers === players.length;
   const emptySlots = Array.from({ length: Math.max(0, 6 - players.length) });
-  const botActionPending = pendingBotAction !== null;
+  const actionPending = pendingAction !== null;
 
   return (
     <>
@@ -231,34 +257,48 @@ export function LobbyClient({ code }: LobbyClientProps) {
                 player={player}
                 index={index + 1}
                 canManageBots={canManageBots}
-                isRemoving={pendingBotAction === player.id}
-                botActionPending={botActionPending}
+                isRemoving={pendingAction === `remove-bot:${player.id}`}
+                actionPending={actionPending}
                 onRemoveBot={removeBot}
               />
             ))}
-            {emptySlots.map((_, index) => (
-              <li key={`empty-${index}`} className="wb-player-row wb-empty-player">
-                <span className="wb-player-state">{String(players.length + index + 1).padStart(2, "0")}</span>
-                <div>
-                  <p className="wb-player-name">Aguardando jogador</p>
-                  <p className="wb-player-meta">Vaga disponível</p>
-                </div>
-                {canManageBots && index === 0 ? (
-                  <button
-                    type="button"
-                    disabled={botActionPending}
-                    onClick={() => void addBot()}
-                    className="wb-button wb-button--ghost px-2 py-1 text-[10px]"
-                    aria-label="Adicionar bot na próxima vaga"
-                  >
-                    {pendingBotAction === "add" ? "Adicionando…" : "+ Bot"}
-                  </button>
-                ) : (
-                  <span className="wb-player-state">○</span>
-                )}
-              </li>
-            ))}
+            {emptySlots.map((_, index) => {
+              const isNextBotSlot = canManageBots && index === 0;
+              return (
+                <li
+                  key={`empty-${index}`}
+                  className={`wb-player-row${isNextBotSlot ? "" : " wb-empty-player"}`}
+                >
+                  <span className="wb-player-state">
+                    {String(players.length + index + 1).padStart(2, "0")}
+                  </span>
+                  <div>
+                    <p className="wb-player-name">Aguardando jogador</p>
+                    <p className="wb-player-meta">Vaga disponível</p>
+                  </div>
+                  {isNextBotSlot ? (
+                    <button
+                      type="button"
+                      disabled={actionPending}
+                      onClick={() => void addBot()}
+                      className="wb-button wb-button--ghost px-2 py-1 text-[10px]"
+                      aria-label="Adicionar bot na próxima vaga"
+                    >
+                      {pendingAction === "add-bot" ? "Adicionando…" : "+ Bot"}
+                    </button>
+                  ) : (
+                    <span className="wb-player-state">○</span>
+                  )}
+                </li>
+              );
+            })}
           </ul>
+
+          {actionError?.scope === "bot" ? (
+            <p className="wb-error mt-3" role="alert">
+              {actionError.message}
+            </p>
+          ) : null}
         </section>
 
         <section className="wb-lobby-region" aria-labelledby="lobby-map-title">
@@ -298,12 +338,12 @@ export function LobbyClient({ code }: LobbyClientProps) {
                 key={me.factionName}
                 defaultValue={me.factionName}
                 maxLength={32}
-                disabled={isSaving}
+                disabled={actionPending}
                 className="wb-field min-w-0 flex-1"
               />
               <button
                 type="submit"
-                disabled={isSaving}
+                disabled={actionPending}
                 className="wb-button wb-button--ghost px-2"
                 aria-label="Salvar nome da facção"
               >
@@ -337,7 +377,7 @@ export function LobbyClient({ code }: LobbyClientProps) {
                         ? `${color.label}, indisponível`
                         : `${color.label}${isCurrentColor ? ", selecionado" : ""}`
                     }
-                    disabled={isSaving || takenByAnotherPlayer || isCurrentColor}
+                    disabled={actionPending || takenByAnotherPlayer || isCurrentColor}
                     onClick={() => void updateMe({ color: color.value })}
                     className="wb-color-choice"
                     data-selected={isCurrentColor ? "true" : "false"}
@@ -365,9 +405,9 @@ export function LobbyClient({ code }: LobbyClientProps) {
             </p>
           </div>
 
-          {actionError ? (
+          {actionError?.scope === "profile" ? (
             <p className="wb-error mt-5" role="alert">
-              {actionError}
+              {actionError.message}
             </p>
           ) : null}
         </aside>
@@ -396,8 +436,8 @@ export function LobbyClient({ code }: LobbyClientProps) {
 
           <button
             type="button"
-            disabled={isSaving || allReady}
-            onClick={() => void updateMe({ isReady: !me.isReady })}
+            disabled={actionPending || allReady}
+            onClick={() => void updateMe({ isReady: !me.isReady }, "ready")}
             className={`wb-button ${me.isReady ? "wb-button--secondary" : "wb-button--primary"}`}
           >
             {!me.isReady ? <span className="wb-diamond" aria-hidden="true" /> : null}
@@ -418,14 +458,14 @@ function PlayerRow({
   index,
   canManageBots,
   isRemoving,
-  botActionPending,
+  actionPending,
   onRemoveBot,
 }: {
   player: LobbyPlayer;
   index: number;
   canManageBots: boolean;
   isRemoving: boolean;
-  botActionPending: boolean;
+  actionPending: boolean;
   onRemoveBot: (botId: string) => Promise<void>;
 }) {
   const color = colorByValue(player.color);
@@ -456,7 +496,7 @@ function PlayerRow({
         {player.isBot && canManageBots ? (
           <button
             type="button"
-            disabled={botActionPending}
+            disabled={actionPending}
             onClick={() => void onRemoveBot(player.id)}
             className="wb-button wb-button--ghost px-2 py-1 text-[10px]"
             aria-label={`Remover bot ${player.factionName}`}
