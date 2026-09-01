@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { PoolClient } from "pg";
 import type { PlayerColor } from "@/src/lib/lobby";
 import {
   isPresentationAdvancePending,
@@ -16,6 +17,8 @@ import { getRoomRoundEventDetails } from "@/src/lib/events/event-repository";
 import { EventConfigurationError } from "@/src/lib/events/event-types";
 import { gameQuery } from "@/src/lib/game-query";
 import { getBaseTerritoryConnections } from "@/src/lib/game-topology-service";
+import { objectiveDescription } from "@/src/lib/objectives/objective-presentation";
+import { withObjectiveSchemaCompatibility } from "@/src/lib/objectives/objective-schema-compatibility";
 import { RoomError } from "@/src/lib/rooms";
 
 type SnapshotRoom = {
@@ -62,8 +65,10 @@ type SnapshotCard = {
 
 type SnapshotObjective = {
   id: string;
+  type: string;
   name: string;
   description: string;
+  params: Record<string, unknown>;
   target_name: string | null;
 };
 
@@ -72,6 +77,45 @@ function normalizeRoomId(value: string) {
     throw new RoomError("Partida não encontrada.", 404);
   }
   return value;
+}
+
+async function loadSnapshotObjective(
+  client: PoolClient,
+  roomId: string,
+  playerId: string,
+) {
+  return withObjectiveSchemaCompatibility(
+    client,
+    async () =>
+      (
+        await client.query<SnapshotObjective>(
+          `SELECT o.id,o.type,o.name,o.description,
+                  COALESCE(
+                    CASE WHEN r.objective_id=a.objective_id THEN a.resolved_params END,
+                    o.params
+                  ) params,
+                  t.faction_name target_name
+           FROM game_player_objectives a
+           JOIN objectives o ON o.id=a.objective_id
+           LEFT JOIN objective_rules r ON r.id=a.objective_rule_id
+           LEFT JOIN room_players t ON t.id=a.target_player_id
+           WHERE a.room_id=$1 AND a.player_id=$2`,
+          [roomId, playerId],
+        )
+      ).rows[0] ?? null,
+    async () =>
+      (
+        await client.query<SnapshotObjective>(
+          `SELECT o.id,o.type,o.name,o.description,o.params,
+                  t.faction_name target_name
+           FROM game_player_objectives a
+           JOIN objectives o ON o.id=a.objective_id
+           LEFT JOIN room_players t ON t.id=a.target_player_id
+           WHERE a.room_id=$1 AND a.player_id=$2`,
+          [roomId, playerId],
+        )
+      ).rows[0] ?? null,
+  );
 }
 
 export async function getGameSnapshotQuery(
@@ -158,16 +202,7 @@ export async function getGameSnapshotQuery(
       )
     ).rows;
 
-    const objective = (
-      await client.query<SnapshotObjective>(
-        `SELECT o.id,o.name,o.description,t.faction_name target_name
-         FROM game_player_objectives a
-         JOIN objectives o ON o.id=a.objective_id
-         LEFT JOIN room_players t ON t.id=a.target_player_id
-         WHERE a.room_id=$1 AND a.player_id=$2`,
-        [room.id, me.id],
-      )
-    ).rows[0];
+    const objective = await loadSnapshotObjective(client, room.id, me.id);
 
     const rematchVotes =
       room.status === "finished"
@@ -314,7 +349,11 @@ export async function getGameSnapshotQuery(
         ? {
             id: objective.id,
             name: objective.name,
-            description: objective.description,
+            description: objectiveDescription({
+              type: objective.type,
+              fallbackDescription: objective.description,
+              params: objective.params,
+            }),
             targetFactionName: objective.target_name,
           }
         : null,
