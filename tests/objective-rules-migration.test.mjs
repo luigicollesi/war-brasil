@@ -202,26 +202,18 @@ test("atribuição usa regras balanceadas por quantidade de jogadores e persiste
   assert.match(rematch, /await assignObjectives\(client, roomId, players\)/);
 });
 
-test("rollout mantém o sorteio legado enquanto a migration ainda não existe no banco", () => {
-  const assignment = source(
-    "src/lib/objectives/objective-assignment-service.ts",
-  );
+test("schema migrado é obrigatório e erros de tabela ou coluna não caem no catálogo legado", () => {
   const compatibility = source(
     "src/lib/objectives/objective-schema-compatibility.ts",
   );
 
-  assert.match(compatibility, /SAVEPOINT objective_rules_compatibility/);
-  assert.match(compatibility, /error\.code === "42P01"/);
-  assert.match(compatibility, /error\.code === "42703"/);
-  assert.match(assignment, /withObjectiveSchemaCompatibility/);
-  assert.match(assignment, /assignLegacyObjectives/);
-  assert.match(
-    assignment,
-    /INSERT INTO game_player_objectives[\s\S]*\(room_id,player_id,objective_id,target_player_id\)/,
-  );
+  assert.match(compatibility, /return primary\(\)/);
+  assert.doesNotMatch(compatibility, /SAVEPOINT objective_rules_compatibility/);
+  assert.doesNotMatch(compatibility, /42P01/);
+  assert.doesNotMatch(compatibility, /42703/);
 });
 
-test("avaliação e snapshot usam parâmetros resolvidos sem quebrar atribuições legadas", () => {
+test("avaliação e snapshot usam os parâmetros resolvidos do schema atual", () => {
   const service = source("src/lib/game-objective-service.ts");
   const snapshot = source("src/lib/game-snapshot-service.ts");
   const presentation = source(
@@ -237,7 +229,7 @@ test("avaliação e snapshot usam parâmetros resolvidos sem quebrar atribuiçõ
   assert.match(presentation, /Elimine \{targetPlayer\}/);
 });
 
-test("fallback de eliminação grava apenas a meta territorial concreta", () => {
+test("fallback de eliminação grava a meta concreta e verifica vitória imediatamente", () => {
   const migration = source(
     "src/lib/db/migrations/014-balanced-objective-catalog.sql",
   );
@@ -258,5 +250,29 @@ test("fallback de eliminação grava apenas a meta territorial concreta", () => 
   assert.match(assignment, /AND is_active=TRUE/);
   assert.match(assignment, /objective_rule_id=\$4/);
   assert.match(assignment, /resolved_params=\$5::jsonb/);
-  assert.match(battle, /battle\.defenderPlayerId,[\s\S]*battle\.attackerPlayerId/);
+  assert.match(battle, /objective_id='balanced_elimination'/);
+  assert.match(
+    battle,
+    /objectiveWon\(client, roomId, fallbackPlayer\.player_id, "any"\)/,
+  );
+});
+
+test("fortificação é reavaliada após manobra e bônus positivo de evento", () => {
+  const maneuver = source("src/lib/game-maneuver-command-service.ts");
+  const command = source("src/lib/game-command-service.ts");
+
+  assert.match(
+    maneuver,
+    /objectiveWon\(client, room\.id, player\.id, "troops_changed"\)/,
+  );
+  assert.match(maneuver, /winnerPlayerId: player\.id/);
+  assert.match(command, /function evaluateRoundTroopObjectiveWinners/);
+  assert.match(
+    command,
+    /roundActivation\.appliedTroopChanges\.some\(\(change\) => change\.delta > 0\)/,
+  );
+  assert.match(
+    command,
+    /objectiveWon\(client, roomId, candidate\.id, "troops_changed"\)/,
+  );
 });
