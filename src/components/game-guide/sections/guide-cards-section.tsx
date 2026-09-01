@@ -74,9 +74,6 @@ export function GuideCardsSection({
               </div>
             </div>
           </div>
-          <small className="wb-guide-card-combination-note">
-            Três Coringas também formam uma combinação válida.
-          </small>
         </section>
 
         <section className="wb-guide-card-progress">
