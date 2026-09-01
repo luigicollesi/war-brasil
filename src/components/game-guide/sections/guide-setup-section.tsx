@@ -18,8 +18,8 @@ export function GuideSetupSection({
         </GuideHeading>
 
         <p className="wb-guide-inline-note">
-          A distribuição inicial é automática: você começa a partida com parte do
-          mapa já sob seu controle.
+          <strong>2 a 6 jogadores.</strong> A distribuição inicial é automática: você
+          começa a partida com parte do mapa já sob seu controle.
         </p>
       </div>
 
