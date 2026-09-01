@@ -11,6 +11,10 @@ import {
   GeographicBarrierMapExample,
   MapReadingExample,
 } from "@/src/components/game-guide/guide-map-examples";
+import { GuideObjectiveSection } from "@/src/components/game-guide/sections/guide-objective-section";
+import { GuideOrderSection } from "@/src/components/game-guide/sections/guide-order-section";
+import { GuideSetupSection } from "@/src/components/game-guide/sections/guide-setup-section";
+import { GuideTurnSection } from "@/src/components/game-guide/sections/guide-turn-section";
 import { Symbol } from "@/src/components/game-guide/guide-symbol";
 import { UtilityDemo } from "@/src/components/game-guide/guide-utility-demo";
 import { TemporalAnomalyEffectList } from "@/src/components/temporal-anomaly-effect-list";
@@ -42,19 +46,6 @@ const anomalyExample: TemporalAnomalyPresentation["effects"] = [
   },
 ];
 
-const regionalStrategy = {
-  nordeste:
-    "Maior região do mapa, mas com poucos pontos de entrada; exige grande expansão para conquistar, porém é relativamente mais defensável depois de consolidada.",
-  norte:
-    "Extensa, mas o domínio inclui o Acre e a vantagem estratégica do Túnel Jurássico.",
-  sudeste:
-    "Oito territórios muito disputados, com uma recompensa forte sem superar as grandes regiões.",
-  "centro-oeste":
-    "Poucos territórios, porém posição central e maior exposição tornam o domínio difícil de sustentar.",
-  sul:
-    "Compacta e periférica, tende a ser mais simples de consolidar e defender.",
-} as const;
-
 export function GameQuickGuide() {
   const guide = buildGameGuidePresentation();
 
@@ -64,164 +55,20 @@ export function GameQuickGuide() {
         <p className="wb-kicker">Manual de campo</p>
         <h2 id="manual-title">Entenda uma partida em poucos minutos.</h2>
         <p>
-          O essencial para começar: preparação, turno, barreiras geográficas,
-          leitura do mapa, cartas, anomalias e vitória. O próprio jogo mostra os
-          detalhes quando eles se tornam necessários.
+          Aprenda a partida na ordem em que ela acontece. Cada seção explica uma
+          decisão do jogo e usa o próprio mapa, dados e cartas para mostrar a regra.
         </p>
       </header>
 
-      <article className="wb-guide-chapter wb-guide-chapter--split">
-        <div className="wb-guide-copy">
-          <GuideHeading number="01" title="Prepare o Brasil">
-            Os {guide.territoryCount} territórios são embaralhados e distribuídos
-            da forma mais equilibrada possível. Cada território começa com
-            {` ${guide.setup.initialTroopsPerTerritory} tropa`} e cada jogador recebe
-            um objetivo secreto.
-          </GuideHeading>
-
-          <div className="wb-guide-notes">
-            <p>
-              <strong>Objetivo secreto.</strong> Conquiste, fortifique, domine
-              regiões ou elimine um rival. A sua missão define como você vence.
-            </p>
-            <p>
-              <strong>Ordem de jogo.</strong> Cada jogador rola o dado. Os maiores
-              resultados jogam primeiro; empates são decididos com novas rolagens.
-            </p>
-          </div>
-        </div>
-
-        <div className="wb-guide-visual wb-guide-setup-visual">
-          <div className="wb-guide-map-mini">
-            <Image
-              src="/war-brasil-42.production.svg"
-              alt="Mapa do Brasil dividido em territórios"
-              width={440}
-              height={440}
-              loading="lazy"
-            />
-            <span>{guide.territoryCount} territórios</span>
-            <small>{guide.regionCount} regiões</small>
-          </div>
-          <div className="wb-guide-objective" aria-label="Exemplo de objetivo secreto">
-            <span>◆ Objetivo secreto</span>
-            <strong>Domine antes dos rivais.</strong>
-            <small>Só você conhece sua condição de vitória.</small>
-          </div>
-        </div>
-      </article>
-
-      <article className="wb-guide-chapter">
-        <GuideHeading number="02" title="Jogue seu turno">
-          O turno segue sempre a mesma leitura. Troque cartas quando quiser,
-          posicione todos os reforços, ataque e então reorganize seu exército.
-        </GuideHeading>
-
-        <ol className="wb-guide-turn-flow" aria-label="Etapas do turno">
-          <li><span>01</span><strong>Cartas</strong><small>opcional</small></li>
-          <li><span>02</span><strong>Reforçar</strong><small>obrigatório</small></li>
-          <li><span>03</span><strong>Atacar</strong><small>se quiser</small></li>
-          <li><span>04</span><strong>Manobrar</strong><small>reposicione</small></li>
-        </ol>
-
-        <div className="wb-guide-rule-grid">
-          <section>
-            <p className="wb-guide-label">Reforços</p>
-            <strong className="wb-guide-rule-number">
-              {guide.reinforcement.territoryExample} territórios → +{guide.reinforcement.baseExample}
-            </strong>
-            <p>
-              Você recebe metade dos territórios que controla, com mínimo de
-              {` ${guide.reinforcement.minimum} tropas`}, além de bônus por regiões
-              completas.
-            </p>
-          </section>
-
-          <section>
-            <p className="wb-guide-label">Combate</p>
-            <div className="wb-guide-dice-versus" aria-label="Exemplo de comparação de dados">
-              <div><GameDie value={6} color="ruby" size="sm" /><GameDie value={4} color="ruby" size="sm" /></div>
-              <span>×</span>
-              <div><GameDie value={5} color="ocean" size="sm" /><GameDie value={4} color="ocean" size="sm" /></div>
-            </div>
-            <p>
-              Ataque um inimigo conectado. Os maiores dados são comparados entre
-              si e <strong>empates favorecem a defesa</strong>. Pelo menos 1 tropa
-              permanece na origem.
-            </p>
-          </section>
-
-          <section>
-            <p className="wb-guide-label">Manobra</p>
-            <div className="wb-guide-route-chain" aria-label="Rota por territórios próprios">
-              <span>A</span><i /><span>B</span><i /><span>C</span>
-            </div>
-            <p>
-              Mova tropas entre territórios seus conectados. Uma cadeia própria
-              permite mover de A até C usando B como passagem.
-            </p>
-          </section>
-        </div>
-
-        <section
-          className="wb-guide-regional-domain"
-          aria-labelledby="guide-regional-domain-title"
-        >
-          <div className="wb-guide-regional-heading">
-            <div>
-              <p className="wb-guide-label">Domínio regional</p>
-              <h3 id="guide-regional-domain-title">
-                Regiões completas aceleram seus reforços.
-              </h3>
-            </div>
-            <p>
-              <strong>O bônus é adicional ao reforço normal.</strong> Você o recebe
-              em toda fase de reforço enquanto controlar todos os territórios da
-              região.
-            </p>
-          </div>
-
-          <div className="wb-guide-region-table-wrap">
-            <table className="wb-guide-region-table">
-              <thead>
-                <tr>
-                  <th scope="col">Região</th>
-                  <th scope="col">Territórios</th>
-                  <th scope="col">Bônus</th>
-                  <th scope="col">Leitura estratégica</th>
-                </tr>
-              </thead>
-              <tbody>
-                {guide.regions.map((region) => (
-                  <tr key={region.key} data-region={region.key}>
-                    <th scope="row">
-                      <span className="wb-guide-region-mark" aria-hidden="true" />
-                      <span>{region.label}</span>
-                    </th>
-                    <td>
-                      <strong>{region.territoryCount}</strong>
-                      <small> territórios</small>
-                    </td>
-                    <td className="wb-guide-region-bonus">+{region.bonus}</td>
-                    <td>{regionalStrategy[region.key]}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <p className="wb-guide-regional-note">
-            <strong>O tamanho não é o único fator.</strong> Posição no mapa,
-            quantidade de pontos de entrada, exposição a ataques e vantagens
-            especiais também pesam no valor de cada região.
-          </p>
-        </section>
-      </article>
+      <GuideSetupSection guide={guide} />
+      <GuideOrderSection />
+      <GuideObjectiveSection />
+      <GuideTurnSection guide={guide} />
 
       <article className="wb-guide-chapter wb-guide-geographic-chapter">
         <div className="wb-guide-geographic-intro">
           <div className="wb-guide-copy">
-            <GuideHeading number="03" title="Barreiras Geográficas">
+            <GuideHeading number="05" title="Barreiras Geográficas">
               Nem toda fronteira entre dois territórios é uma conexão normal.
               Rios, serras, florestas e outros obstáculos podem transformar uma
               fronteira em uma Barreira Geográfica.
@@ -264,8 +111,8 @@ export function GameQuickGuide() {
               </div>
             </div>
             <p>
-              Ao selecionar um território para atacar, a <strong>caveira</strong> 
-               aparece sobre um inimigo alcançável somente através de uma Barreira
+              Ao selecionar um território para atacar, a <strong>caveira</strong>{" "}
+              aparece sobre um inimigo alcançável somente através de uma Barreira
               Geográfica.
             </p>
 
@@ -339,7 +186,7 @@ export function GameQuickGuide() {
 
       <article className="wb-guide-chapter wb-guide-chapter--split wb-guide-chapter--reverse">
         <div className="wb-guide-copy">
-          <GuideHeading number="04" title="Leia o mapa">
+          <GuideHeading number="06" title="Leia o mapa">
             Estradas, contadores e destaques mostram como o tabuleiro pode ser usado
             naquele momento. Os controles permitem exibir apenas a informação que
             você quer consultar.
@@ -371,7 +218,7 @@ export function GameQuickGuide() {
 
       <article className="wb-guide-chapter wb-guide-chapter--split">
         <div className="wb-guide-copy">
-          <GuideHeading number="05" title="Use suas cartas">
+          <GuideHeading number="07" title="Use suas cartas">
             Se você conquistar ao menos um território no turno, recebe uma carta ao
             final dele. Cartas podem ser trocadas por reforços cada vez maiores.
           </GuideHeading>
@@ -410,7 +257,7 @@ export function GameQuickGuide() {
 
       <article className="wb-guide-chapter wb-guide-chapter--split wb-guide-chapter--reverse">
         <div className="wb-guide-copy">
-          <GuideHeading number="06" title="Sobreviva às Anomalias">
+          <GuideHeading number="08" title="Sobreviva às Anomalias">
             Quando todos jogam e uma nova rodada começa, uma Anomalia Temporal pode
             alterar as condições do tabuleiro: tropas, ataques, conexões e Barreiras
             Geográficas podem mudar.
@@ -443,7 +290,7 @@ export function GameQuickGuide() {
 
       <article className="wb-guide-chapter wb-guide-victory">
         <div>
-          <p className="wb-kicker">07 · Vitória</p>
+          <p className="wb-kicker">09 · Vitória</p>
           <h2>Cumpra seu objetivo antes dos rivais.</h2>
           <p>
             Assim que um jogador conclui seu objetivo secreto, a partida termina e
