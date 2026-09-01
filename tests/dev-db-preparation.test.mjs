@@ -6,8 +6,14 @@ const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
 const prepare = readFileSync("scripts/prepare-dev-db.mjs", "utf8");
 
 test("ambiente dev prepara migrations necessárias antes de subir o Next", () => {
-  assert.equal(packageJson.scripts.predev, "node scripts/prepare-dev-db.mjs");
-  assert.equal(packageJson.scripts["db:prepare:dev"], "node scripts/prepare-dev-db.mjs");
+  assert.equal(
+    packageJson.scripts.dev,
+    "node scripts/prepare-dev-db.mjs && next dev",
+  );
+  assert.equal(
+    packageJson.scripts["db:prepare:dev"],
+    "node scripts/prepare-dev-db.mjs",
+  );
 
   for (const migration of [
     "011-bot-players.sql",
@@ -21,9 +27,12 @@ test("ambiente dev prepara migrations necessárias antes de subir o Next", () =>
   }
 });
 
-test("preparação do banco é transacional e não inicia o servidor", () => {
+test("preparação do banco é transacional, convergente e não inicia o servidor", () => {
   assert.match(prepare, /BEGIN/);
   assert.match(prepare, /pg_advisory_xact_lock/);
+  assert.match(prepare, /columnExists/);
+  assert.match(prepare, /tableExists/);
+  assert.match(prepare, /balancedCatalogReady/);
   assert.match(prepare, /COMMIT/);
   assert.match(prepare, /ROLLBACK/);
   assert.doesNotMatch(prepare, /next dev|next start|setInterval|setTimeout/);
