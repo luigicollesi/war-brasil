@@ -30,10 +30,18 @@ function territoryMap(territories: readonly BotStrategicTerritory[]) {
   return new Map(territories.map((territory) => [territory.territoryId, territory]));
 }
 
-function stepCost(territory: BotStrategicTerritory | undefined, playerId: string, connection: TerritoryConnection) {
+function stepCost(
+  territory: BotStrategicTerritory | undefined,
+  playerId: string,
+  connection: TerritoryConnection,
+) {
   const own = territory?.ownerPlayerId === playerId;
-  const enemyCost = own ? 0 : (territory?.troops ?? 1) * BOT_STRATEGY.routing.enemyTroopCost;
-  const barrierCost = connection.passable ? 0 : BOT_STRATEGY.routing.barrierCost;
+  const enemyCost = own
+    ? 0
+    : (territory?.troops ?? 1) * BOT_STRATEGY.routing.enemyTroopCost;
+  const barrierCost = connection.passable
+    ? 0
+    : BOT_STRATEGY.routing.barrierCost;
   return BOT_STRATEGY.routing.baseStepCost + enemyCost + barrierCost;
 }
 
@@ -42,15 +50,29 @@ export function bestStrategicRoute(input: {
   territories: readonly BotStrategicTerritory[];
   playerId: string;
   targetTerritoryIds: readonly number[];
+  startTerritoryIds?: readonly number[];
 }): StrategicRoute | null {
   const targets = new Set(input.targetTerritoryIds);
   if (targets.size === 0) return null;
   const territories = territoryMap(input.territories);
-  const starts = input.territories.filter((territory) => territory.ownerPlayerId === input.playerId).map((territory) => territory.territoryId).sort((a, b) => a - b);
+  const allowedStarts = input.startTerritoryIds
+    ? new Set(input.startTerritoryIds)
+    : null;
+  const starts = input.territories
+    .filter(
+      (territory) =>
+        territory.ownerPlayerId === input.playerId &&
+        (!allowedStarts || allowedStarts.has(territory.territoryId)),
+    )
+    .map((territory) => territory.territoryId)
+    .sort((a, b) => a - b);
   if (starts.length === 0) return null;
   const graph = adjacency(input.connections);
   const distance = new Map<number, number>();
-  const previous = new Map<number, { from: number; connection: TerritoryConnection }>();
+  const previous = new Map<
+    number,
+    { from: number; connection: TerritoryConnection }
+  >();
   const unvisited = new Set<number>();
   for (const territory of input.territories) {
     distance.set(territory.territoryId, Number.POSITIVE_INFINITY);
@@ -62,7 +84,12 @@ export function bestStrategicRoute(input: {
     let currentDistance = Number.POSITIVE_INFINITY;
     for (const territoryId of unvisited) {
       const candidate = distance.get(territoryId) ?? Number.POSITIVE_INFINITY;
-      if (candidate < currentDistance || (candidate === currentDistance && current !== null && territoryId < current)) {
+      if (
+        candidate < currentDistance ||
+        (candidate === currentDistance &&
+          current !== null &&
+          territoryId < current)
+      ) {
         current = territoryId;
         currentDistance = candidate;
       }
@@ -71,7 +98,17 @@ export function bestStrategicRoute(input: {
     unvisited.delete(current);
     for (const edge of graph.get(current) ?? []) {
       if (!unvisited.has(edge.to)) continue;
-      const candidate = currentDistance + stepCost(territories.get(edge.to), input.playerId, edge.connection);
+      const currentTerritory = territories.get(current);
+      const nextTerritory = territories.get(edge.to);
+      if (
+        currentTerritory?.ownerPlayerId === input.playerId &&
+        nextTerritory?.ownerPlayerId === input.playerId
+      ) {
+        continue;
+      }
+      const candidate =
+        currentDistance +
+        stepCost(nextTerritory, input.playerId, edge.connection);
       const known = distance.get(edge.to) ?? Number.POSITIVE_INFINITY;
       if (candidate < known) {
         distance.set(edge.to, candidate);
@@ -83,13 +120,24 @@ export function bestStrategicRoute(input: {
   let targetCost = Number.POSITIVE_INFINITY;
   for (const candidate of targets) {
     const cost = distance.get(candidate) ?? Number.POSITIVE_INFINITY;
-    if (cost < targetCost || (cost === targetCost && target !== null && candidate < target)) {
+    if (
+      cost < targetCost ||
+      (cost === targetCost && target !== null && candidate < target)
+    ) {
       target = candidate;
       targetCost = cost;
     }
   }
   if (target === null) return null;
-  if (!Number.isFinite(targetCost)) return { kind: "unreachable", targetTerritoryId: target, path: [], cost: Number.POSITIVE_INFINITY, barrierCount: 0 };
+  if (!Number.isFinite(targetCost)) {
+    return {
+      kind: "unreachable",
+      targetTerritoryId: target,
+      path: [],
+      cost: Number.POSITIVE_INFINITY,
+      barrierCount: 0,
+    };
+  }
   const path = [target];
   let barrierCount = 0;
   let current = target;
@@ -102,16 +150,30 @@ export function bestStrategicRoute(input: {
     path.push(current);
     if (path.length > input.territories.length + 1) break;
   }
-  return { kind: "reachable", targetTerritoryId: target, path: path.reverse(), cost: targetCost, barrierCount };
+  return {
+    kind: "reachable",
+    targetTerritoryId: target,
+    path: path.reverse(),
+    cost: targetCost,
+    barrierCount,
+  };
 }
 
-export function articulationPoints(connections: readonly TerritoryConnection[], ownedTerritoryIds: readonly number[]) {
+export function articulationPoints(
+  connections: readonly TerritoryConnection[],
+  ownedTerritoryIds: readonly number[],
+) {
   const allowed = new Set(ownedTerritoryIds);
   const graph = new Map<number, number[]>();
   for (const territoryId of allowed) graph.set(territoryId, []);
   for (const connection of connections) {
     if (!connection.exists) continue;
-    if (!allowed.has(connection.territoryA) || !allowed.has(connection.territoryB)) continue;
+    if (
+      !allowed.has(connection.territoryA) ||
+      !allowed.has(connection.territoryB)
+    ) {
+      continue;
+    }
     graph.get(connection.territoryA)?.push(connection.territoryB);
     graph.get(connection.territoryB)?.push(connection.territoryA);
   }
@@ -132,7 +194,12 @@ export function articulationPoints(connections: readonly TerritoryConnection[], 
         visit(neighbor);
         low.set(node, Math.min(low.get(node)!, low.get(neighbor)!));
         if (parent.get(node) == null && children > 1) points.add(node);
-        if (parent.get(node) != null && low.get(neighbor)! >= discovery.get(node)!) points.add(node);
+        if (
+          parent.get(node) != null &&
+          low.get(neighbor)! >= discovery.get(node)!
+        ) {
+          points.add(node);
+        }
       } else if (neighbor !== parent.get(node)) {
         low.set(node, Math.min(low.get(node)!, discovery.get(neighbor)!));
       }
