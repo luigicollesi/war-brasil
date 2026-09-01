@@ -5,8 +5,7 @@ export function GuideTurnSection() {
   return (
     <article className="wb-guide-chapter wb-guide-section--turn">
       <GuideHeading number="04" title="Siga seu turno">
-        Seu turno segue sempre a mesma ordem. Fases opcionais podem ser encerradas
-        sem ação, mas a sequência não pode ser invertida.
+        Seu turno segue sempre esta ordem.
       </GuideHeading>
 
       <GuideFlow
@@ -27,8 +26,7 @@ export function GuideTurnSection() {
       />
 
       <p className="wb-guide-turn-end">
-        <strong>Fim do turno.</strong> Depois da manobra, a vez passa para o próximo
-        jogador ativo.
+        Depois da manobra, a vez passa para o próximo jogador ativo.
       </p>
     </article>
   );
