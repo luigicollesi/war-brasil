@@ -3,6 +3,7 @@ import "server-only";
 import type { PoolClient } from "pg";
 import type { AttackMode } from "@/src/lib/game-barrier-rules";
 import { objectiveWon } from "@/src/lib/game-objective-service";
+import { MIN_TERRITORY_TROOPS } from "@/src/lib/game-rules";
 import {
   nextBattlePresentationTransition,
   type BattleStage,
@@ -181,7 +182,7 @@ async function applyBattleOutcome(
   const attackerTroops = attacker.troops - battle.attackerLosses;
   const defenderTroops = defender.troops - battle.defenderLosses;
 
-  if (attackerTroops < 1) {
+  if (attackerTroops < MIN_TERRITORY_TROOPS) {
     throw new RoomError(
       "O resultado do combate removeria a última tropa atacante.",
       500,
@@ -215,9 +216,14 @@ async function applyBattleOutcome(
 
   await client.query(
     `UPDATE game_territories
-     SET owner_player_id=$3,troops=1,moved_in_turn=0
+     SET owner_player_id=$3,troops=$4,moved_in_turn=0
      WHERE room_id=$1 AND territory_id=$2`,
-    [room.id, defender.territory_id, battle.attackerPlayerId],
+    [
+      room.id,
+      defender.territory_id,
+      battle.attackerPlayerId,
+      MIN_TERRITORY_TROOPS,
+    ],
   );
   await client.query(
     `UPDATE game_rooms
