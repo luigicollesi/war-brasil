@@ -44,6 +44,13 @@ export function objectiveDescription(input: ObjectivePresentationInput) {
     return `Controle pelo menos ${territories} territórios.`;
   }
 
+  if (input.type === "fortification" && territories) {
+    const minTroops = positiveInteger(input.params.minTroops);
+    if (minTroops) {
+      return `Mantenha pelo menos ${minTroops} tropas em ${territories} territórios.`;
+    }
+  }
+
   const regions = regionList(input.params.regions);
   if (input.type === "regions" && regions) {
     return `Domine completamente as regiões ${joinRegionLabels(regions)}.`;
