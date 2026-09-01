@@ -149,19 +149,24 @@ ON CONFLICT (objective_id, player_count, revision) DO UPDATE SET
   is_active = TRUE;
 
 -- Fortificação.
--- A versão anterior podia ser concluída cedo demais apenas acumulando reforços.
--- A meta agora cobre cerca de 85% da posse inicial média e mantém 3 tropas como
--- limiar: o custo sobe sem concentrar exércitos demais. Espalhar a defesa por
--- tantos territórios também dá aos adversários oportunidades reais de quebrar
--- temporariamente a condição de vitória.
+-- A quantidade exigida é resolvida individualmente no início da partida a partir
+-- da posse inicial real do jogador. O catálogo usa 110% como teto e o resolvedor
+-- arredonda para baixo, portanto a meta final permanece sempre entre 100% e 110%
+-- da posse inicial. Isso evita favorecer quem recebe um território a mais nas
+-- distribuições não divisíveis por 4 ou 5 jogadores.
+--
+-- Além disso, cada território precisa ter pelo menos 4 tropas. A troca de cartas
+-- deixa de transformar a missão em vitória quase automática: mesmo quando o
+-- arredondamento inteiro não exige expansão (casos pequenos), o jogador precisa
+-- sustentar uma rede ampla e cara, vulnerável a ataques adversários.
 INSERT INTO objective_rules (
   objective_id, player_count, revision, params, difficulty, is_active
 ) VALUES
-  ('balanced_fortification', 2, 1, '{"territories":18,"minTroops":3}'::jsonb, 'medium', TRUE),
-  ('balanced_fortification', 3, 1, '{"territories":12,"minTroops":3}'::jsonb, 'medium', TRUE),
-  ('balanced_fortification', 4, 1, '{"territories":9,"minTroops":3}'::jsonb, 'medium', TRUE),
-  ('balanced_fortification', 5, 1, '{"territories":7,"minTroops":3}'::jsonb, 'medium', TRUE),
-  ('balanced_fortification', 6, 1, '{"territories":6,"minTroops":3}'::jsonb, 'medium', TRUE)
+  ('balanced_fortification', 2, 1, '{"initialTerritoryPercent":110,"minTroops":4}'::jsonb, 'medium', TRUE),
+  ('balanced_fortification', 3, 1, '{"initialTerritoryPercent":110,"minTroops":4}'::jsonb, 'medium', TRUE),
+  ('balanced_fortification', 4, 1, '{"initialTerritoryPercent":110,"minTroops":4}'::jsonb, 'medium', TRUE),
+  ('balanced_fortification', 5, 1, '{"initialTerritoryPercent":110,"minTroops":4}'::jsonb, 'medium', TRUE),
+  ('balanced_fortification', 6, 1, '{"initialTerritoryPercent":110,"minTroops":4}'::jsonb, 'medium', TRUE)
 ON CONFLICT (objective_id, player_count, revision) DO UPDATE SET
   params = EXCLUDED.params,
   difficulty = EXCLUDED.difficulty,
