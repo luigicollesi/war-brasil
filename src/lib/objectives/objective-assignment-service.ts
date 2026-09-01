@@ -57,6 +57,10 @@ function assertSupportedPlayerCount(playerCount: number) {
   }
 }
 
+function positiveInteger(value: unknown): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value > 0;
+}
+
 function targetPlayerFor(
   selector: "random_other_player" | null,
   player: ObjectivePlayer,
@@ -100,43 +104,53 @@ async function resolveAssignmentParams(
   player: ObjectivePlayer,
   rule: ObjectiveRuleRow,
 ) {
-  const initialTerritoryPercent = rule.params.initialTerritoryPercent;
-  const unownedTerritoryPercent = rule.params.unownedTerritoryPercent;
+  if (rule.objective_id === "balanced_fortification") {
+    const initialTerritoryPercent = rule.params.initialTerritoryPercent;
+    const minTroops = rule.params.minTroops;
+    if (
+      typeof initialTerritoryPercent !== "number" ||
+      !Number.isFinite(initialTerritoryPercent) ||
+      initialTerritoryPercent < 100 ||
+      initialTerritoryPercent > 110 ||
+      !positiveInteger(minTroops)
+    ) {
+      throw new ObjectiveConfigurationError(
+        "A regra de fortificação balanceada possui parâmetros inválidos.",
+      );
+    }
 
-  const resolvesFortification =
-    rule.objective_id === "balanced_fortification" &&
-    typeof initialTerritoryPercent === "number" &&
-    Number.isFinite(initialTerritoryPercent) &&
-    initialTerritoryPercent >= 100 &&
-    initialTerritoryPercent <= 110;
-
-  const resolvesTerritoryControl =
-    rule.objective_id === "balanced_territory_control" &&
-    typeof unownedTerritoryPercent === "number" &&
-    Number.isFinite(unownedTerritoryPercent) &&
-    unownedTerritoryPercent > 0 &&
-    unownedTerritoryPercent <= 100;
-
-  if (!resolvesFortification && !resolvesTerritoryControl) {
-    return rule.params;
-  }
-
-  const { initialTerritories, totalTerritories } = await initialTerritoryState(
-    client,
-    roomId,
-    player.id,
-  );
-
-  if (resolvesFortification) {
+    const { initialTerritories } = await initialTerritoryState(
+      client,
+      roomId,
+      player.id,
+    );
     const territories = Math.max(
       initialTerritories,
       Math.floor((initialTerritories * initialTerritoryPercent) / 100),
     );
-    const { initialTerritoryPercent: _percent, ...params } = rule.params;
-    return { ...params, territories };
+    return { territories, minTroops };
   }
 
-  if (resolvesTerritoryControl) {
+  if (rule.objective_id === "balanced_territory_control") {
+    const unownedTerritoryPercent = rule.params.unownedTerritoryPercent;
+    const fallbackTerritories = rule.params.territories;
+    if (
+      typeof unownedTerritoryPercent !== "number" ||
+      !Number.isFinite(unownedTerritoryPercent) ||
+      unownedTerritoryPercent <= 0 ||
+      unownedTerritoryPercent > 100 ||
+      !positiveInteger(fallbackTerritories)
+    ) {
+      throw new ObjectiveConfigurationError(
+        "A regra de domínio territorial balanceado possui parâmetros inválidos.",
+      );
+    }
+
+    const { initialTerritories, totalTerritories } = await initialTerritoryState(
+      client,
+      roomId,
+      player.id,
+    );
     const territoriesOutsideInitialControl =
       totalTerritories - initialTerritories;
     const territories = Math.min(
@@ -146,15 +160,26 @@ async function resolveAssignmentParams(
           (territoriesOutsideInitialControl * unownedTerritoryPercent) / 100,
         ),
     );
-    const {
-      unownedTerritoryPercent: _percent,
-      territories: _fallbackTerritories,
-      ...params
-    } = rule.params;
-    return { ...params, territories };
+    return { territories };
   }
 
   return rule.params;
+}
+
+function resolveFallbackParams(
+  objectiveId: string,
+  params: Record<string, unknown>,
+) {
+  if (objectiveId !== "balanced_territory_control") return params;
+
+  const territories = params.territories;
+  if (!positiveInteger(territories)) {
+    throw new ObjectiveConfigurationError(
+      "O fallback de domínio territorial não possui uma meta concreta válida.",
+    );
+  }
+
+  return { territories };
 }
 
 async function assignBalancedObjectives(
@@ -308,6 +333,11 @@ async function resolveBalancedFallbacks(
       );
     }
 
+    const resolvedParams = resolveFallbackParams(
+      assignment.fallback_objective_id,
+      rule.params,
+    );
+
     await client.query(
       `UPDATE game_player_objectives
        SET objective_id=$3,
@@ -320,7 +350,7 @@ async function resolveBalancedFallbacks(
         assignment.player_id,
         assignment.fallback_objective_id,
         rule.id,
-        JSON.stringify(rule.params),
+        JSON.stringify(resolvedParams),
       ],
     );
   }
