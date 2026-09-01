@@ -207,9 +207,13 @@ test("efeitos permanentes só alteram tropas e nunca a topologia base", () => {
     "utf8",
   );
 
+  assert.match(source, /MIN_TERRITORY_TROOPS/);
   assert.match(source, /UPDATE game_territories/);
-  assert.match(source, /GREATEST\(1,troops-\$3\)/);
-  assert.match(source, /LEAST\(moved_in_turn,GREATEST\(1,troops-\$3\)\)/);
+  assert.match(source, /GREATEST\(\$\{MIN_TERRITORY_TROOPS\},troops-\$3\)/);
+  assert.match(
+    source,
+    /LEAST\(moved_in_turn,GREATEST\(\$\{MIN_TERRITORY_TROOPS\},troops-\$3\)\)/,
+  );
   assert.doesNotMatch(source, /UPDATE territory_connections/);
 });
 
