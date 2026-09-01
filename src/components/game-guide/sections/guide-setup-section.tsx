@@ -12,14 +12,12 @@ export function GuideSetupSection({
     <article className="wb-guide-chapter wb-guide-chapter--split wb-guide-section--setup">
       <div className="wb-guide-copy">
         <GuideHeading number="01" title="Prepare o Brasil">
-          Os {guide.territoryCount} territórios são embaralhados e distribuídos
-          da forma mais equilibrada possível. Cada um começa com
-          {` ${guide.setup.initialTroopsPerTerritory} tropa`}.
+          A partida começa com o Brasil já dividido entre 2 a 6 jogadores.
         </GuideHeading>
 
         <p className="wb-guide-inline-note">
-          <strong>2 a 6 jogadores.</strong> A distribuição inicial é automática: você
-          começa a partida com parte do mapa já sob seu controle.
+          <strong>Objetivo secreto.</strong> Cada jogador recebe uma condição própria
+          de vitória.
         </p>
       </div>
 
