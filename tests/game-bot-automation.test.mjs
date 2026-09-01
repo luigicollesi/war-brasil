@@ -109,14 +109,17 @@ test("sorteio sem próximo ator fica reservado para apresentação", () => {
   );
 });
 
-test("delays de bot são curtos, positivos e centralizados", () => {
+test("delays de bot são curtos, positivos e centralizados para todas as ações", () => {
   for (const action of [
     "roll_order",
     "finish_cards",
+    "trade_cards",
     "reinforce",
+    "attack",
     "finish_attack",
     "roll_battle",
     "complete_conquest",
+    "maneuver",
     "end_turn",
   ]) {
     const range = botDelayRange(action);
@@ -133,6 +136,8 @@ test("runner é request-driven, executa regra compartilhada e não cria loop ser
   assert.match(runner, /await executeBotAction\(client, roomId, actor, action\)/);
   assert.match(runner, /executeReinforcement/);
   assert.match(runner, /executeRollBattleDice/);
+  assert.match(runner, /executeAttack/);
+  assert.match(runner, /executeManeuver/);
   assert.doesNotMatch(runner, /\bwhile\s*\(|setTimeout|setInterval|\bsleep\s*\(/);
   assert.doesNotMatch(
     runner,
