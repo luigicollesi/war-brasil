@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { PoolClient } from "pg";
+import { MIN_TERRITORY_TROOPS } from "@/src/lib/game-rules";
 import {
   EventConfigurationError,
   type AppliedEventTroopChange,
@@ -67,8 +68,8 @@ async function applyTroopEffect(
          WHERE room_id=$1 AND territory_id=ANY($2::smallint[])
          RETURNING territory_id,troops,moved_in_turn`
       : `UPDATE game_territories
-         SET troops=GREATEST(1,troops-$3),
-             moved_in_turn=LEAST(moved_in_turn,GREATEST(1,troops-$3))
+         SET troops=GREATEST(${MIN_TERRITORY_TROOPS},troops-$3),
+             moved_in_turn=LEAST(moved_in_turn,GREATEST(${MIN_TERRITORY_TROOPS},troops-$3))
          WHERE room_id=$1 AND territory_id=ANY($2::smallint[])
          RETURNING territory_id,troops,moved_in_turn`;
 
