@@ -8,7 +8,7 @@ import {
   BARRIER_ATTACK_DICE_BANDS,
   maneuverTraversalProfile,
 } from "./game-barrier-rules";
-import { reinforcementBase, tradeValue } from "./game-rules";
+import { reinforcementBase, resolveBattle, tradeValue } from "./game-rules";
 
 const REGION_GUIDE_ORDER: readonly Region[] = [
   "nordeste",
@@ -26,17 +26,38 @@ const REGION_GUIDE_LABELS: Record<Region, string> = {
   sul: "Sul",
 };
 
+function availableNormalAttack(troops: number) {
+  const profile = attackProfile(troops, "normal");
+  if (profile.kind !== "available") {
+    throw new Error("O exemplo de ataque normal do guia ficou indisponível.");
+  }
+  return profile;
+}
+
+function defenderDiceCount(troops: number): 1 | 2 | 3 {
+  if (!Number.isInteger(troops) || troops < 1) {
+    throw new RangeError("O exemplo de defesa precisa ter ao menos uma tropa.");
+  }
+  return Math.min(3, troops) as 1 | 2 | 3;
+}
+
 export type GameGuidePresentation = ReturnType<typeof buildGameGuidePresentation>;
 
 export function buildGameGuidePresentation() {
   const territoryCount = Object.keys(TERRITORY_METADATA).length;
   const regionCount = Object.keys(REGION_REINFORCEMENT_BONUSES).length;
   const reinforcementTerritoryExample = 12;
-  const normalAttack = attackProfile(4, "normal");
+  const reinforcementMinimumExampleTerritories = 5;
+  const normalAttack = availableNormalAttack(4);
   const barrierAttack = attackProfile(7, "barrier");
   const barrierUnavailable = attackProfile(3, "barrier");
   const oneBarrier = maneuverTraversalProfile(1);
   const twoBarriers = maneuverTraversalProfile(2);
+  const combatExample = resolveBattle([6, 4, 2], [5, 4]);
+  const comparisonCount = Math.min(
+    combatExample.attacker.length,
+    combatExample.defender.length,
+  );
   const regions = REGION_GUIDE_ORDER.map((region) => ({
     key: region,
     label: REGION_GUIDE_LABELS[region],
@@ -45,9 +66,18 @@ export function buildGameGuidePresentation() {
     ).length,
     bonus: REGION_REINFORCEMENT_BONUSES[region],
   }));
+  const normalDiceBands = [
+    { minimumTroops: 2, maximumTroops: 2, diceCount: availableNormalAttack(2).diceCount },
+    { minimumTroops: 3, maximumTroops: 3, diceCount: availableNormalAttack(3).diceCount },
+    { minimumTroops: 4, maximumTroops: null, diceCount: normalAttack.diceCount },
+  ] as const;
+  const defenseDiceBands = [
+    { minimumTroops: 1, maximumTroops: 1, diceCount: defenderDiceCount(1) },
+    { minimumTroops: 2, maximumTroops: 2, diceCount: defenderDiceCount(2) },
+    { minimumTroops: 3, maximumTroops: null, diceCount: defenderDiceCount(3) },
+  ] as const;
 
   if (
-    normalAttack.kind !== "available" ||
     barrierAttack.kind !== "available" ||
     barrierUnavailable.kind !== "unavailable" ||
     oneBarrier.kind !== "barrier" ||
@@ -67,10 +97,17 @@ export function buildGameGuidePresentation() {
       territoryExample: reinforcementTerritoryExample,
       baseExample: reinforcementBase(reinforcementTerritoryExample),
       minimum: reinforcementBase(1),
+      minimumExample: {
+        territoryCount: reinforcementMinimumExampleTerritories,
+        rawHalf: Math.floor(reinforcementMinimumExampleTerritories / 2),
+        final: reinforcementBase(reinforcementMinimumExampleTerritories),
+      },
     },
     attack: {
-      normalMinimumTroops: 2,
+      normalMinimumTroops: normalAttack.minimumTroops,
+      normalLossPerComparison: normalAttack.attackerLossPerComparison,
       normalDiceAtFourTroops: normalAttack.diceCount,
+      normalDiceBands,
       barrierMinimumTroops: barrierUnavailable.minimumTroops,
       barrierDiceAtSevenTroops: barrierAttack.diceCount,
       barrierLossPerComparison: barrierAttack.attackerLossPerComparison,
@@ -79,6 +116,31 @@ export function buildGameGuidePresentation() {
         maximumTroops: band.maximumTroops,
         diceCount: band.diceCount,
       })),
+    },
+    defense: {
+      diceBands: defenseDiceBands,
+    },
+    combat: {
+      example: {
+        comparisons: Array.from({ length: comparisonCount }, (_, index) => {
+          const attack = combatExample.attacker[index];
+          const defense = combatExample.defender[index];
+          return {
+            key: `comparison-${index}`,
+            attack,
+            defense,
+            loser: attack > defense ? ("defender" as const) : ("attacker" as const),
+          };
+        }),
+        unpairedAttack: combatExample.attacker.slice(comparisonCount),
+        unpairedDefense: combatExample.defender.slice(comparisonCount),
+        attackerLosses: combatExample.attackerLosses,
+        defenderLosses: combatExample.defenderLosses,
+      },
+    },
+    conquest: {
+      minimumMove: 1,
+      minimumTroopsLeftAtOrigin: 1,
     },
     maneuver: {
       barrierLoss: oneBarrier.troopLoss,
