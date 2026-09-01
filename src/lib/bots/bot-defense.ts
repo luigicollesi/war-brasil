@@ -17,7 +17,9 @@ function enemyNeighbors(state: BotStrategicState, territoryId: number) {
     const territory = state.territories.find(
       (candidate) => candidate.territoryId === neighborId,
     );
-    if (territory && territory.ownerPlayerId !== state.bot.id) neighbors.push(territory);
+    if (territory && territory.ownerPlayerId !== state.bot.id) {
+      neighbors.push(territory);
+    }
   }
   return neighbors;
 }
@@ -33,9 +35,14 @@ export function defenseTarget(input: {
   if (territory.ownerPlayerId !== state.bot.id) return 0;
 
   const enemies = enemyNeighbors(state, territory.territoryId);
+  const protectedByObjective = progress.protectedTerritories.includes(
+    territory.territoryId,
+  );
   let target = 1;
 
-  if (enemies.length > 0) target = BOT_STRATEGY.defense.secondaryFrontierTarget;
+  if (enemies.length > 0) {
+    target = BOT_STRATEGY.defense.secondaryFrontierTarget;
+  }
   if ((value?.total ?? 0) >= 10 || enemies.length >= 2) {
     target = Math.max(target, BOT_STRATEGY.defense.keyFrontierTarget);
   }
@@ -51,15 +58,15 @@ export function defenseTarget(input: {
     target = Math.max(target, BOT_STRATEGY.defense.criticalGatewayTarget);
   }
 
-  if (
-    plan.kind === "fortification" &&
-    progress.protectedTerritories.includes(territory.territoryId)
-  ) {
+  if (plan.kind === "fortification" && protectedByObjective) {
     target = Math.max(target, plan.minimumTroops);
-  }
-
-  if (progress.protectedTerritories.includes(territory.territoryId)) {
-    target = Math.max(target, BOT_STRATEGY.defense.keyFrontierTarget);
+  } else if (protectedByObjective) {
+    target = Math.max(
+      target,
+      enemies.length > 0
+        ? BOT_STRATEGY.defense.keyFrontierTarget
+        : BOT_STRATEGY.defense.secondaryFrontierTarget,
+    );
   }
 
   return target;
