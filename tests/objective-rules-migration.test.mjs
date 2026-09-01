@@ -229,32 +229,20 @@ test("avaliação e snapshot usam os parâmetros resolvidos do schema atual", ()
   assert.match(presentation, /Elimine \{targetPlayer\}/);
 });
 
-test("fallback de eliminação grava a meta concreta e verifica vitória imediatamente", () => {
+test("eliminação por terceiro mantém a missão e avalia seu dono", () => {
   const migration = source(
-    "src/lib/db/migrations/014-balanced-objective-catalog.sql",
-  );
-  const assignment = source(
-    "src/lib/objectives/objective-assignment-service.ts",
+    "src/lib/db/migrations/016-disable-elimination-fallback.sql",
   );
   const battle = source("src/lib/game-battle-service.ts");
 
-  assert.match(migration, /unownedTerritoryPercent":40,"territories":/);
-  assert.match(assignment, /function resolveFallbackParams/);
-  assert.match(
-    assignment,
-    /objectiveId !== "balanced_territory_control"/,
-  );
-  assert.match(assignment, /return \{ territories \}/);
-  assert.match(assignment, /const resolvedParams = resolveFallbackParams/);
-  assert.match(assignment, /a\.player_id<>\$3/);
-  assert.match(assignment, /AND is_active=TRUE/);
-  assert.match(assignment, /objective_rule_id=\$4/);
-  assert.match(assignment, /resolved_params=\$5::jsonb/);
-  assert.match(battle, /objective_id='balanced_elimination'/);
-  assert.match(
-    battle,
-    /objectiveWon\(client, roomId, fallbackPlayer\.player_id, "any"\)/,
-  );
+  assert.match(migration, /SET fallback_objective_id = NULL/);
+  assert.match(migration, /type IN \('elimination', 'elimination_plus'\)/);
+  assert.match(battle, /function evaluateEliminationObjectiveOwners/);
+  assert.match(battle, /a\.target_player_id=\$2/);
+  assert.match(battle, /o\.type IN \('elimination','elimination_plus'\)/);
+  assert.match(battle, /candidate\.player_id/);
+  assert.match(battle, /"territory_control_changed"/);
+  assert.doesNotMatch(battle, /resolveObjectiveFallbacks/);
 });
 
 test("fortificação é reavaliada após manobra e bônus positivo de evento", () => {
