@@ -40,14 +40,18 @@ test("eliminação remove jogador da ordem sem removê-lo da sala e transfere su
   assert.match(battle, /eliminatePlayer/);
 });
 
-test("bot resolve troca obrigatória antes de distribuir reforços", () => {
+test("bot resolve troca obrigatória estratégica antes de distribuir reforços", () => {
   const action = source("src/lib/bots/bot-action.ts");
   const runner = source("src/lib/bots/bot-runner.ts");
+  const strategy = source("src/lib/bots/bot-strategy.ts");
+  const cards = source("src/lib/bots/bot-cards.ts");
   const delay = source("src/lib/bots/bot-delay.ts");
 
   assert.match(action, /type: "trade_cards"/);
-  assert.match(runner, /mandatoryTradeCardIds/);
-  assert.match(runner, /cards\.length < 5/);
+  assert.match(runner, /loadBotStrategicState/);
   assert.match(runner, /executeTradeCards/);
+  assert.match(strategy, /chooseCardTrade[\s\S]*chooseReinforcement/);
+  assert.match(cards, /state\.cards\.length >= 5/);
+  assert.match(cards, /enumerateTradeCandidates/);
   assert.match(delay, /trade_cards:/);
 });
