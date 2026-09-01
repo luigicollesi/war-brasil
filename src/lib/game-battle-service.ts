@@ -93,6 +93,19 @@ async function resolveFallbacks(
   targetPlayerId: string,
   eliminatorPlayerId: string,
 ) {
+  const fallbackPlayers = (
+    await client.query<{ player_id: string }>(
+      `SELECT player_id
+       FROM game_player_objectives
+       WHERE room_id=$1
+         AND target_player_id=$2
+         AND player_id<>$3
+         AND objective_id='balanced_elimination'
+       ORDER BY player_id`,
+      [roomId, targetPlayerId, eliminatorPlayerId],
+    )
+  ).rows;
+
   try {
     await resolveObjectiveFallbacks(
       client,
@@ -106,6 +119,14 @@ async function resolveFallbacks(
     }
     throw error;
   }
+
+  for (const fallbackPlayer of fallbackPlayers) {
+    if (await objectiveWon(client, roomId, fallbackPlayer.player_id, "any")) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 async function eliminatePlayer(
