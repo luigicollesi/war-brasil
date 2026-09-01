@@ -118,6 +118,12 @@ test("lobby oferece controles de bot somente quando o servidor autoriza", () => 
   assert.match(lobbyClient, /method: "DELETE"/);
 });
 
+test("lobby mostra adicionar bot somente na primeira vaga vazia", () => {
+  assert.match(lobbyClient, /emptySlots\.map\(\(_, index\) =>/);
+  assert.match(lobbyClient, /canManageBots && index === 0/);
+  assert.match(lobbyClient, /aria-label="Adicionar bot na próxima vaga"/);
+});
+
 test("migration da fase 1 permanece independente do scheduler da fase 2", () => {
   const automationMigration = readFileSync(
     "src/lib/db/migrations/012-bot-automation.sql",
