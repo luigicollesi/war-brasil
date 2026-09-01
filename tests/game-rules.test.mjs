@@ -51,7 +51,8 @@ test("trocas usam progressão individual e preservam bônus territorial separado
   assert.match(source, /card_trade_count=card_trade_count\+1/);
   assert.match(source, /RETURNING card_trade_count-1 trade_count_before/);
   assert.match(source, /tradeValue\(tradeProgress\.trade_count_before\)/);
-  assert.match(source, /SET troops=troops\+2/);
+  assert.match(source, /SET troops=troops\+\$3/);
+  assert.match(source, /OWNED_TERRITORY_CARD_BONUS/);
   assert.match(source, /reinforcements_remaining=reinforcements_remaining\+\$2/);
   assert.doesNotMatch(source, /tradeValue\(room\.trade_count\)/);
 });
