@@ -12,7 +12,13 @@ function connection(territoryA, territoryB, passable = true, barrierName = null)
 
 function state(overrides = {}) {
   return {
-    room: { id: "1", phase: "attack", roundNumber: 1, reinforcementsRemaining: 0 },
+    room: {
+      id: "1",
+      phase: "attack",
+      roundNumber: 1,
+      reinforcementsRemaining: 0,
+      conqueredThisTurn: false,
+    },
     bot: { id: "10", cardTradeCount: 0 },
     objective: { type: "territories", params: { territories: 3 }, targetPlayerId: null },
     cards: [],
@@ -51,6 +57,45 @@ test("ataque escolhe conquista barata e evita alvo muito mais caro", () => {
   });
 });
 
+test("antes da carta, superioridade local basta para iniciar ataque", () => {
+  const strategicState = state({
+    territories: [
+      { territoryId: 1, ownerPlayerId: "10", troops: 4, movedInTurn: 0 },
+      { territoryId: 2, ownerPlayerId: "20", troops: 3, movedInTurn: 0 },
+    ],
+    topology: {
+      connections: [connection(1, 2)],
+      eventId: 0,
+      resolvedEventEffects: [],
+    },
+  });
+  const { plan, progress, values } = analysis(strategicState);
+  assert.deepEqual(chooseAttack(strategicState, plan, progress, values), {
+    type: "attack",
+    fromTerritoryId: 1,
+    toTerritoryId: 2,
+  });
+});
+
+test("sem conquista, bot pode passar quando todas as fronteiras normais são mais fortes", () => {
+  const strategicState = state({
+    territories: [
+      { territoryId: 1, ownerPlayerId: "10", troops: 3, movedInTurn: 0 },
+      { territoryId: 2, ownerPlayerId: "20", troops: 4, movedInTurn: 0 },
+      { territoryId: 3, ownerPlayerId: "20", troops: 6, movedInTurn: 0 },
+    ],
+    topology: {
+      connections: [connection(1, 2), connection(1, 3)],
+      eventId: 0,
+      resolvedEventEffects: [],
+    },
+  });
+  const { plan, progress, values } = analysis(strategicState);
+  assert.deepEqual(chooseAttack(strategicState, plan, progress, values), {
+    type: "finish_attack",
+  });
+});
+
 test("origem bloqueada por evento nunca inicia ataque", () => {
   const strategicState = state({
     topology: {
@@ -83,6 +128,69 @@ test("ataque normal vence alternativa equivalente por barreira", () => {
     type: "attack",
     fromTerritoryId: 1,
     toTerritoryId: 2,
+  });
+});
+
+test("barreira sem tropas para três dados não é usada para buscar carta", () => {
+  const strategicState = state({
+    territories: [
+      { territoryId: 1, ownerPlayerId: "10", troops: 9, movedInTurn: 0 },
+      { territoryId: 2, ownerPlayerId: "20", troops: 1, movedInTurn: 0 },
+    ],
+    topology: {
+      connections: [connection(1, 2, false, "Serra")],
+      eventId: 0,
+      resolvedEventEffects: [],
+    },
+  });
+  const { plan, progress, values } = analysis(strategicState);
+  assert.deepEqual(chooseAttack(strategicState, plan, progress, values), {
+    type: "finish_attack",
+  });
+});
+
+test("barreira com três dados pode ser usada quando é a única conquista viável", () => {
+  const strategicState = state({
+    territories: [
+      { territoryId: 1, ownerPlayerId: "10", troops: 10, movedInTurn: 0 },
+      { territoryId: 2, ownerPlayerId: "20", troops: 3, movedInTurn: 0 },
+    ],
+    topology: {
+      connections: [connection(1, 2, false, "Serra")],
+      eventId: 0,
+      resolvedEventEffects: [],
+    },
+  });
+  const { plan, progress, values } = analysis(strategicState);
+  assert.deepEqual(chooseAttack(strategicState, plan, progress, values), {
+    type: "attack",
+    fromTerritoryId: 1,
+    toTerritoryId: 2,
+  });
+});
+
+test("depois da primeira conquista, volta aos filtros normais de risco", () => {
+  const strategicState = state({
+    room: {
+      id: "1",
+      phase: "attack",
+      roundNumber: 1,
+      reinforcementsRemaining: 0,
+      conqueredThisTurn: true,
+    },
+    territories: [
+      { territoryId: 1, ownerPlayerId: "10", troops: 2, movedInTurn: 0 },
+      { territoryId: 2, ownerPlayerId: "20", troops: 1, movedInTurn: 0 },
+    ],
+    topology: {
+      connections: [connection(1, 2)],
+      eventId: 0,
+      resolvedEventEffects: [],
+    },
+  });
+  const { plan, progress, values } = analysis(strategicState);
+  assert.deepEqual(chooseAttack(strategicState, plan, progress, values), {
+    type: "finish_attack",
   });
 });
 
@@ -129,7 +237,13 @@ test("conquista mantém stack quando o novo território abre corredor até o obj
 
 test("manobra move excedente para território com déficit e encerra após uma manobra", () => {
   const strategicState = state({
-    room: { id: "1", phase: "maneuver", roundNumber: 1, reinforcementsRemaining: 0 },
+    room: {
+      id: "1",
+      phase: "maneuver",
+      roundNumber: 1,
+      reinforcementsRemaining: 0,
+      conqueredThisTurn: true,
+    },
     territories: [
       { territoryId: 1, ownerPlayerId: "10", troops: 8, movedInTurn: 0 },
       { territoryId: 2, ownerPlayerId: "10", troops: 1, movedInTurn: 0 },
