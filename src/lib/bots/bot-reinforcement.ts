@@ -1,9 +1,19 @@
+import { isAttackOriginBlocked } from "../events/event-attack-rules";
 import type { BotAction } from "./bot-action";
 import { defenseTarget } from "./bot-defense";
-import type { BotObjectivePlan, ObjectiveProgress } from "./bot-objective-plan";
+import type {
+  BotObjectivePlan,
+  ObjectiveProgress,
+} from "./bot-objective-plan";
 import { bestStrategicRoute } from "./bot-routing";
 import type { BotStrategicState } from "./bot-state";
 import type { TerritoryStrategicValue } from "./bot-territory-value";
+
+function strategicRouteTargets(progress: ObjectiveProgress) {
+  return progress.primaryTargets.length > 0
+    ? progress.primaryTargets
+    : progress.routeTargets;
+}
 
 export function chooseReinforcement(
   state: BotStrategicState,
@@ -36,7 +46,8 @@ export function chooseReinforcement(
     const neededQualified = Math.max(
       0,
       plan.territoryCount -
-        owned.filter((territory) => territory.troops >= plan.minimumTroops).length,
+        owned.filter((territory) => territory.troops >= plan.minimumTroops)
+          .length,
     );
     const candidate = candidates[0];
     if (candidate && neededQualified > 0) {
@@ -79,11 +90,21 @@ export function chooseReinforcement(
     };
   }
 
+  const offensiveStarts = owned
+    .filter(
+      (territory) =>
+        !isAttackOriginBlocked(
+          state.topology.resolvedEventEffects,
+          territory.territoryId,
+        ),
+    )
+    .map((territory) => territory.territoryId);
   const route = bestStrategicRoute({
     connections: state.topology.connections,
     territories: state.territories,
     playerId: state.bot.id,
-    targetTerritoryIds: progress.primaryTargets,
+    targetTerritoryIds: strategicRouteTargets(progress),
+    startTerritoryIds: offensiveStarts,
   });
   if (route?.kind === "reachable" && route.path.length >= 2) {
     return {
