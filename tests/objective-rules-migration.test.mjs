@@ -20,16 +20,38 @@ test("migração de regras de objetivo é expansiva e cobre partidas de 2 a 6 jo
   assert.doesNotMatch(migration, /DROP TABLE/);
 });
 
-test("catálogo usa uma única faixa de balanceamento e metas territoriais proporcionais", () => {
+test("domínio territorial deriva a meta de 40% dos territórios inicialmente externos", () => {
   const migration = source(
     "src/lib/db/migrations/014-balanced-objective-catalog.sql",
   );
+  const assignment = source(
+    "src/lib/objectives/objective-assignment-service.ts",
+  );
 
-  assert.match(migration, /'balanced_territory_control', 2, 1, '\{"territories":30\}'/);
-  assert.match(migration, /'balanced_territory_control', 3, 1, '\{"territories":25\}'/);
-  assert.match(migration, /'balanced_territory_control', 4, 1, '\{"territories":23\}'/);
-  assert.match(migration, /'balanced_territory_control', 5, 1, '\{"territories":21\}'/);
-  assert.match(migration, /'balanced_territory_control', 6, 1, '\{"territories":20\}'/);
+  const fallbackTargets = new Map([
+    [2, 29],
+    [3, 25],
+    [4, 23],
+    [5, 22],
+    [6, 21],
+  ]);
+  for (const [playerCount, territories] of fallbackTargets) {
+    assert.match(
+      migration,
+      new RegExp(
+        `'balanced_territory_control', ${playerCount}, 1, '\\\{"unownedTerritoryPercent":40,"territories":${territories}\\\}'`,
+      ),
+    );
+  }
+
+  assert.match(assignment, /rule\.objective_id === "balanced_territory_control"/);
+  assert.match(assignment, /unownedTerritoryPercent > 0/);
+  assert.match(assignment, /unownedTerritoryPercent <= 100/);
+  assert.match(assignment, /territoriesOutsideInitialControl = totalTerritories - initialTerritories/);
+  assert.match(
+    assignment,
+    /Math\.round\([\s\S]*territoriesOutsideInitialControl \* unownedTerritoryPercent[\s\S]*\/ 100/,
+  );
   assert.doesNotMatch(migration, /'(easy|hard|very_hard)'/);
 });
 
@@ -53,12 +75,14 @@ test("fortificação usa 100-110% da posse inicial real e exige quatro tropas", 
       ),
     );
   }
-  assert.match(assignment, /rule\.objective_id !== "balanced_fortification"/);
-  assert.match(assignment, /initialTerritoryPercent < 100/);
-  assert.match(assignment, /initialTerritoryPercent > 110/);
-  assert.match(assignment, /FROM game_territories/);
-  assert.match(assignment, /Math\.floor\(\(initialTerritories \* initialTerritoryPercent\) \/ 100\)/);
-  assert.match(assignment, /return \{ \.\.\.params, territories \}/);
+  assert.match(assignment, /rule\.objective_id === "balanced_fortification"/);
+  assert.match(assignment, /initialTerritoryPercent >= 100/);
+  assert.match(assignment, /initialTerritoryPercent <= 110/);
+  assert.match(assignment, /COUNT\(\*\) FILTER \(WHERE owner_player_id=\$2\)/);
+  assert.match(
+    assignment,
+    /Math\.floor\(\(initialTerritories \* initialTerritoryPercent\) \/ 100\)/,
+  );
   assert.match(presentation, /Mantenha pelo menos \$\{minTroops\} tropas em \$\{territories\} territórios/);
 });
 
@@ -89,7 +113,7 @@ test("dois jogadores não recebem combinações regionais curtas", () => {
   assert.doesNotMatch(migration, /'balanced_regions_norte_sul', 2,/);
 });
 
-test("combinações regionais acompanham a meta territorial de cada tamanho de mesa", () => {
+test("combinações regionais acompanham a referência territorial de cada mesa", () => {
   const migration = source(
     "src/lib/db/migrations/014-balanced-objective-catalog.sql",
   );
@@ -175,12 +199,16 @@ test("avaliação e snapshot usam parâmetros resolvidos sem quebrar atribuiçõ
   assert.match(presentation, /Elimine \{targetPlayer\}/);
 });
 
-test("fallback converte apenas quem perdeu o alvo para outro eliminador", () => {
+test("fallback de eliminação mantém uma meta territorial concreta", () => {
+  const migration = source(
+    "src/lib/db/migrations/014-balanced-objective-catalog.sql",
+  );
   const assignment = source(
     "src/lib/objectives/objective-assignment-service.ts",
   );
   const battle = source("src/lib/game-battle-service.ts");
 
+  assert.match(migration, /unownedTerritoryPercent":40,"territories":/);
   assert.match(assignment, /a\.player_id<>\$3/);
   assert.match(assignment, /AND is_active=TRUE/);
   assert.match(assignment, /objective_rule_id=\$4/);
