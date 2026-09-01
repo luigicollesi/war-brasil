@@ -22,6 +22,7 @@ type LegacyObjectiveRow = {
 
 type FallbackAssignmentRow = {
   player_id: string;
+  objective_id: string;
   fallback_objective_id: string;
 };
 
@@ -302,7 +303,7 @@ async function resolveBalancedFallbacks(
 ) {
   const assignments = (
     await client.query<FallbackAssignmentRow>(
-      `SELECT a.player_id,o.fallback_objective_id
+      `SELECT a.player_id,a.objective_id,o.fallback_objective_id
        FROM game_player_objectives a
        JOIN objectives o ON o.id=a.objective_id
        WHERE a.room_id=$1
@@ -314,6 +315,19 @@ async function resolveBalancedFallbacks(
   ).rows;
 
   for (const assignment of assignments) {
+    if (assignment.objective_id !== "balanced_elimination") {
+      await client.query(
+        `UPDATE game_player_objectives
+         SET objective_id=$3,
+             objective_rule_id=NULL,
+             target_player_id=NULL,
+             resolved_params=NULL
+         WHERE room_id=$1 AND player_id=$2`,
+        [roomId, assignment.player_id, assignment.fallback_objective_id],
+      );
+      continue;
+    }
+
     const rule = (
       await client.query<ObjectiveRuleSnapshotRow>(
         `SELECT id,params
