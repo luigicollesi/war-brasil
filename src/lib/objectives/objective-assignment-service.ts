@@ -63,6 +63,48 @@ function targetPlayerFor(
   return otherPlayers[randomInt(0, otherPlayers.length)].id;
 }
 
+async function resolveAssignmentParams(
+  client: PoolClient,
+  roomId: string,
+  player: ObjectivePlayer,
+  rule: ObjectiveRuleRow,
+) {
+  const initialTerritoryPercent = rule.params.initialTerritoryPercent;
+  if (
+    rule.objective_id !== "balanced_fortification" ||
+    typeof initialTerritoryPercent !== "number" ||
+    !Number.isFinite(initialTerritoryPercent) ||
+    initialTerritoryPercent < 100 ||
+    initialTerritoryPercent > 110
+  ) {
+    return rule.params;
+  }
+
+  const initialTerritories = Number(
+    (
+      await client.query<{ count: number }>(
+        `SELECT COUNT(*)::int count
+         FROM game_territories
+         WHERE room_id=$1 AND owner_player_id=$2`,
+        [roomId, player.id],
+      )
+    ).rows[0]?.count ?? 0,
+  );
+
+  if (initialTerritories < 1) {
+    throw new ObjectiveConfigurationError(
+      `Não foi possível resolver a posse inicial do jogador ${player.id}.`,
+    );
+  }
+
+  const territories = Math.max(
+    initialTerritories,
+    Math.floor((initialTerritories * initialTerritoryPercent) / 100),
+  );
+  const { initialTerritoryPercent: _percent, ...params } = rule.params;
+  return { ...params, territories };
+}
+
 async function assignBalancedObjectives(
   client: PoolClient,
   roomId: string,
@@ -97,6 +139,12 @@ async function assignBalancedObjectives(
       player,
       players,
     );
+    const resolvedParams = await resolveAssignmentParams(
+      client,
+      roomId,
+      player,
+      rule,
+    );
 
     await client.query(
       `INSERT INTO game_player_objectives
@@ -108,7 +156,7 @@ async function assignBalancedObjectives(
         rule.objective_id,
         rule.objective_rule_id,
         targetPlayerId,
-        JSON.stringify(rule.params),
+        JSON.stringify(resolvedParams),
       ],
     );
   }
