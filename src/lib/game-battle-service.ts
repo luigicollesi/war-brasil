@@ -91,9 +91,15 @@ async function resolveFallbacks(
   client: PoolClient,
   roomId: string,
   targetPlayerId: string,
+  eliminatorPlayerId: string,
 ) {
   try {
-    await resolveObjectiveFallbacks(client, roomId, targetPlayerId);
+    await resolveObjectiveFallbacks(
+      client,
+      roomId,
+      targetPlayerId,
+      eliminatorPlayerId,
+    );
   } catch (error) {
     if (error instanceof ObjectiveConfigurationError) {
       throw new RoomError(error.message, 503);
@@ -235,7 +241,12 @@ async function applyBattleOutcome(
         "territory_control_changed",
       ))
     ) {
-      await resolveFallbacks(client, room.id, battle.defenderPlayerId);
+      await resolveFallbacks(
+        client,
+        room.id,
+        battle.defenderPlayerId,
+        battle.attackerPlayerId,
+      );
     }
   } else {
     await objectiveWon(
