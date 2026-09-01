@@ -33,7 +33,7 @@ test("catálogo usa uma única faixa de balanceamento e metas territoriais propo
   assert.doesNotMatch(migration, /'(easy|hard|very_hard)'/);
 });
 
-test("fortificação escala por número de jogadores com três tropas por território", () => {
+test("fortificação exige uma rede ampla com três tropas por território", () => {
   const migration = source(
     "src/lib/db/migrations/014-balanced-objective-catalog.sql",
   );
@@ -42,24 +42,26 @@ test("fortificação escala por número de jogadores com três tropas por territ
   );
 
   assert.match(migration, /'balanced_fortification'/);
-  assert.match(migration, /'balanced_fortification', 2, 1, '\{"territories":15,"minTroops":3\}'/);
-  assert.match(migration, /'balanced_fortification', 3, 1, '\{"territories":10,"minTroops":3\}'/);
-  assert.match(migration, /'balanced_fortification', 4, 1, '\{"territories":8,"minTroops":3\}'/);
-  assert.match(migration, /'balanced_fortification', 5, 1, '\{"territories":6,"minTroops":3\}'/);
-  assert.match(migration, /'balanced_fortification', 6, 1, '\{"territories":5,"minTroops":3\}'/);
+  assert.match(migration, /'balanced_fortification', 2, 1, '\{"territories":18,"minTroops":3\}'/);
+  assert.match(migration, /'balanced_fortification', 3, 1, '\{"territories":12,"minTroops":3\}'/);
+  assert.match(migration, /'balanced_fortification', 4, 1, '\{"territories":9,"minTroops":3\}'/);
+  assert.match(migration, /'balanced_fortification', 5, 1, '\{"territories":7,"minTroops":3\}'/);
+  assert.match(migration, /'balanced_fortification', 6, 1, '\{"territories":6,"minTroops":3\}'/);
+  assert.match(migration, /cerca de 85% da posse inicial média/);
   assert.match(presentation, /Mantenha pelo menos \$\{minTroops\} tropas em \$\{territories\} territórios/);
 });
 
-test("eliminação só possui regras para quatro a seis jogadores e exige presença territorial", () => {
+test("eliminação só entra de quatro a seis jogadores e usa piso territorial auxiliar", () => {
   const migration = source(
     "src/lib/db/migrations/014-balanced-objective-catalog.sql",
   );
   const service = source("src/lib/game-objective-service.ts");
 
   assert.doesNotMatch(migration, /'balanced_elimination', [23],/);
-  assert.match(migration, /'balanced_elimination', 4, 1, '\{"territories":17\}'/);
-  assert.match(migration, /'balanced_elimination', 5, 1, '\{"territories":15\}'/);
-  assert.match(migration, /'balanced_elimination', 6, 1, '\{"territories":14\}'/);
+  assert.match(migration, /'balanced_elimination', 4, 1, '\{"territories":14\}'/);
+  assert.match(migration, /'balanced_elimination', 5, 1, '\{"territories":12\}'/);
+  assert.match(migration, /'balanced_elimination', 6, 1, '\{"territories":10\}'/);
+  assert.match(migration, /piso territorial serve apenas para impedir/);
   assert.match(service, /const minimumTerritories = numericParam\(objective, "territories"\)/);
   assert.match(service, /minimumTerritories > 0/);
 });
