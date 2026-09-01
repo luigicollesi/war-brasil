@@ -37,10 +37,8 @@ export function GuideAnomalySection({
 }) {
   return (
     <article className="wb-guide-chapter wb-guide-section--anomaly">
-      <GuideHeading number="14" title="Adapte-se à Anomalia">
-        Quando todos os jogadores ativos completam seus turnos, uma nova rodada
-        começa. O jogo define a Anomalia da rodada e também muda o destino do Túnel
-        Jurássico.
+      <GuideHeading number="14" title="Adapte-se às Anomalias">
+        No fim de cada rodada, o tabuleiro pode mudar.
       </GuideHeading>
 
       <GuideFlow
@@ -61,7 +59,7 @@ export function GuideAnomalySection({
             <span>◆</span>
             <div>
               <small>Anomalia temporal</small>
-              <strong>O estado do tabuleiro pode mudar.</strong>
+              <strong>Tropas, ataques e conexões podem mudar.</strong>
             </div>
           </div>
           <TemporalAnomalyEffectList
@@ -74,10 +72,8 @@ export function GuideAnomalySection({
 
         <div className="wb-guide-anomaly-copy">
           <p>
-            Uma Anomalia pode adicionar ou remover tropas, impedir territórios de
-            iniciar ataques, abrir ou fechar conexões e reposicionar Barreiras
-            Geográficas. Mudanças de tropas são aplicadas ao estado do território;
-            bloqueios e conexões formam a topologia efetiva da rodada atual.
+            Anomalias podem alterar tropas, bloquear ataques, abrir ou fechar
+            conexões e reposicionar Barreiras.
           </p>
 
           <GuideStateChange
@@ -92,14 +88,14 @@ export function GuideAnomalySection({
                 tone="ally"
               />
             }
-            caption={`Uma remoção nunca deixa o território abaixo de ${guide.anomalies.minimumTroopsAfterRemoval} tropa.`}
+            caption={`Remoções nunca deixam um território abaixo de ${guide.anomalies.minimumTroopsAfterRemoval} tropa.`}
           />
         </div>
       </div>
 
       <p className="wb-guide-inline-note">
-        <strong>Rodada inicial.</strong> O evento inicial é narrativo: a tropa com que
-        cada território começa já foi aplicada durante a preparação da partida.
+        <strong>Rodada inicial.</strong> A tropa inicial já faz parte da preparação;
+        o evento de abertura não adiciona outra.
       </p>
     </article>
   );
