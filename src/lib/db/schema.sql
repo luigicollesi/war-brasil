@@ -43,6 +43,8 @@ CREATE TABLE IF NOT EXISTS room_players (
     CHECK (color IN ('forest', 'ocean', 'sun', 'ruby', 'violet', 'orange')),
   is_ready BOOLEAN NOT NULL DEFAULT FALSE,
   is_bot BOOLEAN NOT NULL DEFAULT FALSE,
+  card_trade_count INTEGER NOT NULL DEFAULT 0
+    CHECK (card_trade_count >= 0),
   bot_next_action_at TIMESTAMPTZ,
   turn_position SMALLINT,
   joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
