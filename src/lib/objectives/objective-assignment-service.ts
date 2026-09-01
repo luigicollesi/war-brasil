@@ -172,6 +172,7 @@ async function resolveBalancedFallbacks(
   client: PoolClient,
   roomId: string,
   targetPlayerId: string,
+  eliminatorPlayerId: string,
   playerCount: number,
 ) {
   const assignments = (
@@ -181,8 +182,9 @@ async function resolveBalancedFallbacks(
        JOIN objectives o ON o.id=a.objective_id
        WHERE a.room_id=$1
          AND a.target_player_id=$2
+         AND a.player_id<>$3
          AND o.fallback_objective_id IS NOT NULL`,
-      [roomId, targetPlayerId],
+      [roomId, targetPlayerId, eliminatorPlayerId],
     )
   ).rows;
 
@@ -191,7 +193,9 @@ async function resolveBalancedFallbacks(
       await client.query<ObjectiveRuleSnapshotRow>(
         `SELECT id,params
          FROM objective_rules
-         WHERE objective_id=$1 AND player_count=$2
+         WHERE objective_id=$1
+           AND player_count=$2
+           AND is_active=TRUE
          ORDER BY revision DESC
          LIMIT 1`,
         [assignment.fallback_objective_id, playerCount],
@@ -200,7 +204,7 @@ async function resolveBalancedFallbacks(
 
     if (!rule) {
       throw new ObjectiveConfigurationError(
-        `Objetivo fallback ${assignment.fallback_objective_id} não possui regra para ${playerCount} jogadores.`,
+        `Objetivo fallback ${assignment.fallback_objective_id} não possui regra ativa para ${playerCount} jogadores.`,
       );
     }
 
@@ -228,6 +232,7 @@ async function resolveLegacyFallbacks(
   client: PoolClient,
   roomId: string,
   targetPlayerId: string,
+  eliminatorPlayerId: string,
 ) {
   const result = await client.query(
     `UPDATE game_player_objectives a
@@ -236,8 +241,9 @@ async function resolveLegacyFallbacks(
      WHERE a.objective_id=o.id
        AND a.room_id=$1
        AND a.target_player_id=$2
+       AND a.player_id<>$3
        AND o.fallback_objective_id IS NOT NULL`,
-    [roomId, targetPlayerId],
+    [roomId, targetPlayerId, eliminatorPlayerId],
   );
 
   return result.rowCount ?? 0;
@@ -247,6 +253,7 @@ export async function resolveObjectiveFallbacks(
   client: PoolClient,
   roomId: string,
   targetPlayerId: string,
+  eliminatorPlayerId: string,
 ) {
   const playerCount = Number(
     (
@@ -262,7 +269,20 @@ export async function resolveObjectiveFallbacks(
 
   return withObjectiveSchemaCompatibility(
     client,
-    () => resolveBalancedFallbacks(client, roomId, targetPlayerId, playerCount),
-    () => resolveLegacyFallbacks(client, roomId, targetPlayerId),
+    () =>
+      resolveBalancedFallbacks(
+        client,
+        roomId,
+        targetPlayerId,
+        eliminatorPlayerId,
+        playerCount,
+      ),
+    () =>
+      resolveLegacyFallbacks(
+        client,
+        roomId,
+        targetPlayerId,
+        eliminatorPlayerId,
+      ),
   );
 }
