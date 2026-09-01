@@ -2,6 +2,7 @@ import "server-only";
 
 import { randomInt } from "node:crypto";
 import type { PoolClient } from "pg";
+import { withObjectiveSchemaCompatibility } from "./objective-schema-compatibility";
 
 type ObjectivePlayer = {
   id: string;
@@ -48,35 +49,6 @@ function assertSupportedPlayerCount(playerCount: number) {
     throw new ObjectiveConfigurationError(
       `Objetivos só possuem regras para partidas de 2 a 6 jogadores; recebido ${playerCount}.`,
     );
-  }
-}
-
-function isSchemaCompatibilityError(error: unknown) {
-  if (typeof error !== "object" || error === null || !("code" in error)) {
-    return false;
-  }
-
-  // PostgreSQL: undefined_table / undefined_column.
-  return error.code === "42P01" || error.code === "42703";
-}
-
-async function withSchemaCompatibilityFallback<T>(
-  client: PoolClient,
-  primary: () => Promise<T>,
-  fallback: () => Promise<T>,
-) {
-  await client.query("SAVEPOINT objective_rules_compatibility");
-
-  try {
-    const result = await primary();
-    await client.query("RELEASE SAVEPOINT objective_rules_compatibility");
-    return result;
-  } catch (error) {
-    await client.query("ROLLBACK TO SAVEPOINT objective_rules_compatibility");
-    await client.query("RELEASE SAVEPOINT objective_rules_compatibility");
-
-    if (!isSchemaCompatibilityError(error)) throw error;
-    return fallback();
   }
 }
 
@@ -189,7 +161,7 @@ export async function assignObjectives(
 ) {
   assertSupportedPlayerCount(players.length);
 
-  return withSchemaCompatibilityFallback(
+  return withObjectiveSchemaCompatibility(
     client,
     () => assignBalancedObjectives(client, roomId, players),
     () => assignLegacyObjectives(client, roomId, players),
@@ -288,7 +260,7 @@ export async function resolveObjectiveFallbacks(
   );
   assertSupportedPlayerCount(playerCount);
 
-  return withSchemaCompatibilityFallback(
+  return withObjectiveSchemaCompatibility(
     client,
     () => resolveBalancedFallbacks(client, roomId, targetPlayerId, playerCount),
     () => resolveLegacyFallbacks(client, roomId, targetPlayerId),
