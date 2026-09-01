@@ -74,6 +74,9 @@ export function GuideCardsSection({
               </div>
             </div>
           </div>
+          <small className="wb-guide-card-combination-note">
+            Três Coringas também formam uma combinação válida.
+          </small>
         </section>
 
         <section className="wb-guide-card-progress">
@@ -110,9 +113,9 @@ export function GuideCardsSection({
       </div>
 
       <p className="wb-guide-inline-note wb-guide-card-mandatory-note">
-        <strong>{guide.cards.mandatoryTradeHandSize} cartas na mão.</strong> A troca
-        passa a ser obrigatória: você precisa formar uma combinação válida antes de
-        posicionar reforços. Cartas recebidas de um jogador eliminado também entram
+        <strong>{guide.cards.mandatoryTradeHandSize} ou mais cartas na mão.</strong> A
+        troca passa a ser obrigatória: você precisa formar uma combinação válida antes
+        de posicionar reforços. Cartas recebidas de um jogador eliminado também entram
         na sua mão.
       </p>
     </article>
