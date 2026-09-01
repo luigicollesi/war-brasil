@@ -1,7 +1,7 @@
 import {
   REGION_REINFORCEMENT_BONUSES,
   TERRITORY_METADATA,
-} from "@/src/lib/game-config";
+} from "../game-config";
 import type { BotStrategicState } from "./bot-state";
 import type { BotObjectivePlan, ObjectiveProgress } from "./bot-objective-plan";
 import { articulationPoints } from "./bot-routing";
@@ -69,7 +69,6 @@ export function territoryStrategicValues(
   const articulation = articulationPoints(state.topology.connections, ownedIds);
   const primary = new Set(progress.primaryTargets);
   const protectedIds = new Set(progress.protectedTerritories);
-
   const values = new Map<number, TerritoryStrategicValue>();
   for (const territory of state.territories) {
     const neighborIds = neighbors(state, territory.territoryId);
@@ -80,33 +79,16 @@ export function territoryStrategicValues(
           candidate.ownerPlayerId !== territory.ownerPlayerId,
       ),
     );
-
     let objective = primary.has(territory.territoryId) ? 12 : 0;
     if (protectedIds.has(territory.territoryId)) objective += 8;
-    if (
-      plan.kind === "elimination" &&
-      territory.ownerPlayerId === plan.targetPlayerId
-    ) {
-      objective += 10;
-    }
-
-    const defensive =
-      territory.ownerPlayerId === state.bot.id ? Math.min(8, enemyNeighbors.length * 2) : 0;
+    if (plan.kind === "elimination" && territory.ownerPlayerId === plan.targetPlayerId) objective += 10;
+    const defensive = territory.ownerPlayerId === state.bot.id ? Math.min(8, enemyNeighbors.length * 2) : 0;
     const routing = neighborIds.length >= 4 ? 3 : neighborIds.length >= 3 ? 2 : 0;
     const gateway = articulation.has(territory.territoryId) ? 8 : 0;
     const region = regionCompletionValue(state, territory.territoryId);
     const denial = denialValue(state, territory.territoryId);
     const total = objective + defensive + routing + gateway + region + denial;
-
-    values.set(territory.territoryId, {
-      objective,
-      defensive,
-      routing,
-      region,
-      gateway,
-      denial,
-      total,
-    });
+    values.set(territory.territoryId, { objective, defensive, routing, region, gateway, denial, total });
   }
   return values;
 }
