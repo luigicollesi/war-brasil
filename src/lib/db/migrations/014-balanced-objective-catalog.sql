@@ -1,6 +1,8 @@
 -- Catálogo balanceado de objetivos por quantidade de jogadores.
 -- Mantém objetivos históricos intactos para partidas já iniciadas e ativa
--- somente as missões abaixo para novos sorteios.
+-- somente missões desenhadas para esforço semelhante e variedade estratégica.
+-- Todos os objetivos ativos pertencem à mesma faixa de balanceamento: não há
+-- sorteio de missões deliberadamente fáceis ou difíceis.
 
 UPDATE objective_rules
 SET is_active = FALSE
@@ -33,21 +35,10 @@ INSERT INTO objectives (
     TRUE
   ),
   (
-    'balanced_regions_sul_sudeste',
-    'regions',
-    'Eixo Sul-Sudeste',
-    'Domine completamente as regiões Sul e Sudeste.',
-    'medium',
-    '{}'::jsonb,
-    NULL,
-    NULL,
-    TRUE
-  ),
-  (
-    'balanced_regions_norte_centro_oeste',
-    'regions',
-    'Eixo Norte-Centro-Oeste',
-    'Domine completamente as regiões Norte e Centro-Oeste.',
+    'balanced_fortification',
+    'fortification',
+    'Rede Fortificada',
+    'Mantenha a quantidade exigida de territórios fortificados.',
     'medium',
     '{}'::jsonb,
     NULL,
@@ -66,21 +57,10 @@ INSERT INTO objectives (
     TRUE
   ),
   (
-    'balanced_regions_norte_sul',
+    'balanced_regions_norte_sudeste',
     'regions',
-    'Eixo Norte-Sul',
-    'Domine completamente as regiões Norte e Sul.',
-    'medium',
-    '{}'::jsonb,
-    NULL,
-    NULL,
-    TRUE
-  ),
-  (
-    'balanced_regions_sudeste_centro_oeste',
-    'regions',
-    'Eixo Sudeste-Centro-Oeste',
-    'Domine completamente as regiões Sudeste e Centro-Oeste.',
+    'Eixo Norte-Sudeste',
+    'Domine completamente as regiões Norte e Sudeste.',
     'medium',
     '{}'::jsonb,
     NULL,
@@ -97,6 +77,50 @@ INSERT INTO objectives (
     NULL,
     NULL,
     TRUE
+  ),
+  (
+    'balanced_regions_norte_centro_oeste',
+    'regions',
+    'Eixo Norte-Centro-Oeste',
+    'Domine completamente as regiões Norte e Centro-Oeste.',
+    'medium',
+    '{}'::jsonb,
+    NULL,
+    NULL,
+    TRUE
+  ),
+  (
+    'balanced_regions_norte_sul',
+    'regions',
+    'Eixo Norte-Sul',
+    'Domine completamente as regiões Norte e Sul.',
+    'medium',
+    '{}'::jsonb,
+    NULL,
+    NULL,
+    TRUE
+  ),
+  (
+    'balanced_regions_sul_sudeste_plus',
+    'region_plus',
+    'Eixo Sul-Sudeste Ampliado',
+    'Domine Sul e Sudeste e mantenha presença territorial adicional.',
+    'medium',
+    '{}'::jsonb,
+    NULL,
+    NULL,
+    TRUE
+  ),
+  (
+    'balanced_elimination',
+    'elimination',
+    'Eliminar Rival',
+    'Elimine {targetPlayer} e mantenha presença territorial suficiente.',
+    'medium',
+    '{}'::jsonb,
+    'random_other_player',
+    'balanced_territory_control',
+    TRUE
   )
 ON CONFLICT (id) DO UPDATE SET
   type = EXCLUDED.type,
@@ -108,39 +132,9 @@ ON CONFLICT (id) DO UPDATE SET
   fallback_objective_id = EXCLUDED.fallback_objective_id,
   is_active = TRUE;
 
-INSERT INTO objectives (
-  id,
-  type,
-  name,
-  description,
-  difficulty,
-  params,
-  target_selector,
-  fallback_objective_id,
-  is_active
-) VALUES (
-  'balanced_elimination',
-  'elimination',
-  'Eliminar Rival',
-  'Elimine {targetPlayer} e mantenha presença territorial suficiente.',
-  'medium',
-  '{}'::jsonb,
-  'random_other_player',
-  'balanced_territory_control',
-  TRUE
-)
-ON CONFLICT (id) DO UPDATE SET
-  type = EXCLUDED.type,
-  name = EXCLUDED.name,
-  description = EXCLUDED.description,
-  difficulty = EXCLUDED.difficulty,
-  params = EXCLUDED.params,
-  target_selector = EXCLUDED.target_selector,
-  fallback_objective_id = EXCLUDED.fallback_objective_id,
-  is_active = TRUE;
-
--- Domínio territorial: a parcela final do mapa diminui conforme cresce o número
--- de jogadores, mas o esforço adicional permanece próximo de 9 a 13 conquistas.
+-- Domínio territorial.
+-- A meta diminui com mais jogadores para manter aproximadamente o mesmo volume
+-- de expansão além da distribuição inicial: cerca de 9 a 13 conquistas.
 INSERT INTO objective_rules (
   objective_id, player_count, revision, params, difficulty, is_active
 ) VALUES
@@ -154,69 +148,103 @@ ON CONFLICT (objective_id, player_count, revision) DO UPDATE SET
   difficulty = EXCLUDED.difficulty,
   is_active = TRUE;
 
--- 2 jogadores: cada jogador começa com 21 territórios. Uma única região seria
--- curta demais; os pares abaixo exigem expansão focalizada comparável a +9
--- territórios, compensando Sul periférico com Sudeste disputado e regiões
--- centrais/expostas com Norte/Nordeste maiores.
+-- Fortificação.
+-- Todos começam com 1 tropa por território. Exigir 3 tropas espalhadas por
+-- aproximadamente 70-75% da posse inicial custa perto de três fases normais de
+-- reforço em qualquer tamanho de mesa e continua vulnerável a contra-ataques.
 INSERT INTO objective_rules (
   objective_id, player_count, revision, params, difficulty, is_active
 ) VALUES
-  ('balanced_regions_sul_sudeste', 2, 1, '{"regions":["sul","sudeste"]}'::jsonb, 'medium', TRUE),
-  ('balanced_regions_norte_centro_oeste', 2, 1, '{"regions":["norte","centro-oeste"]}'::jsonb, 'medium', TRUE),
-  ('balanced_regions_nordeste_centro_oeste', 2, 1, '{"regions":["nordeste","centro-oeste"]}'::jsonb, 'medium', TRUE)
+  ('balanced_fortification', 2, 1, '{"territories":15,"minTroops":3}'::jsonb, 'medium', TRUE),
+  ('balanced_fortification', 3, 1, '{"territories":10,"minTroops":3}'::jsonb, 'medium', TRUE),
+  ('balanced_fortification', 4, 1, '{"territories":8,"minTroops":3}'::jsonb, 'medium', TRUE),
+  ('balanced_fortification', 5, 1, '{"territories":6,"minTroops":3}'::jsonb, 'medium', TRUE),
+  ('balanced_fortification', 6, 1, '{"territories":5,"minTroops":3}'::jsonb, 'medium', TRUE)
 ON CONFLICT (objective_id, player_count, revision) DO UPDATE SET
   params = EXCLUDED.params,
   difficulty = EXCLUDED.difficulty,
   is_active = TRUE;
 
--- 3 e 4 jogadores: os pares ficam próximos do esforço de 10 a 13 conquistas
--- esperadas. Nordeste ganha Sul (fácil de sustentar), enquanto Centro-Oeste
--- compensa seu tamanho pequeno pela alta exposição estratégica.
+-- 2 jogadores: cada um começa com 21 territórios.
+-- Sul + Sudeste (14) foi removido daqui: ao completar esse par um jogador tende
+-- a terminar perto de 28 territórios, abaixo da meta territorial de 30.
+-- Os pares abaixo somam 18, 18 e 19 territórios e levam a cerca de 30 territórios
+-- totais se o jogador preservar sua posse inicial fora das regiões-alvo.
 INSERT INTO objective_rules (
   objective_id, player_count, revision, params, difficulty, is_active
 ) VALUES
+  ('balanced_regions_nordeste_centro_oeste', 2, 1, '{"regions":["nordeste","centro-oeste"]}'::jsonb, 'medium', TRUE),
+  ('balanced_regions_norte_sudeste', 2, 1, '{"regions":["norte","sudeste"]}'::jsonb, 'medium', TRUE),
+  ('balanced_regions_nordeste_sul', 2, 1, '{"regions":["nordeste","sul"]}'::jsonb, 'medium', TRUE)
+ON CONFLICT (objective_id, player_count, revision) DO UPDATE SET
+  params = EXCLUDED.params,
+  difficulty = EXCLUDED.difficulty,
+  is_active = TRUE;
+
+-- 3 jogadores: a referência territorial é 25.
+-- Norte + Centro-Oeste tende a terminar perto de 24 territórios; Norte + Sul,
+-- perto de 25; Nordeste + Centro-Oeste, perto de 26. A variação geográfica
+-- compensa a pequena diferença: Centro-Oeste é exposto, Sul é periférico e
+-- Nordeste é maior porém mais consolidável.
+INSERT INTO objective_rules (
+  objective_id, player_count, revision, params, difficulty, is_active
+) VALUES
+  ('balanced_regions_norte_centro_oeste', 3, 1, '{"regions":["norte","centro-oeste"]}'::jsonb, 'medium', TRUE),
   ('balanced_regions_norte_sul', 3, 1, '{"regions":["norte","sul"]}'::jsonb, 'medium', TRUE),
-  ('balanced_regions_sudeste_centro_oeste', 3, 1, '{"regions":["sudeste","centro-oeste"]}'::jsonb, 'medium', TRUE),
-  ('balanced_regions_nordeste_sul', 3, 1, '{"regions":["nordeste","sul"]}'::jsonb, 'medium', TRUE),
-  ('balanced_regions_norte_sul', 4, 1, '{"regions":["norte","sul"]}'::jsonb, 'medium', TRUE),
-  ('balanced_regions_sudeste_centro_oeste', 4, 1, '{"regions":["sudeste","centro-oeste"]}'::jsonb, 'medium', TRUE),
-  ('balanced_regions_nordeste_sul', 4, 1, '{"regions":["nordeste","sul"]}'::jsonb, 'medium', TRUE)
+  ('balanced_regions_nordeste_centro_oeste', 3, 1, '{"regions":["nordeste","centro-oeste"]}'::jsonb, 'medium', TRUE)
 ON CONFLICT (objective_id, player_count, revision) DO UPDATE SET
   params = EXCLUDED.params,
   difficulty = EXCLUDED.difficulty,
   is_active = TRUE;
 
--- 5 jogadores: quatro alternativas regionais evitam que a missão dependa de
--- uma única região grande. Todos os pares combinam tamanho com exposição.
+-- 4 jogadores: a referência territorial é 23.
+-- Os mesmos três eixos produzem aproximadamente 22, 23 e 24 territórios ao
+-- serem completados sem perdas externas relevantes, mantendo rotas e pressões
+-- estratégicas diferentes sem criar um objetivo deliberadamente superior.
 INSERT INTO objective_rules (
   objective_id, player_count, revision, params, difficulty, is_active
 ) VALUES
-  ('balanced_regions_sul_sudeste', 5, 1, '{"regions":["sul","sudeste"]}'::jsonb, 'medium', TRUE),
+  ('balanced_regions_norte_centro_oeste', 4, 1, '{"regions":["norte","centro-oeste"]}'::jsonb, 'medium', TRUE),
+  ('balanced_regions_norte_sul', 4, 1, '{"regions":["norte","sul"]}'::jsonb, 'medium', TRUE),
+  ('balanced_regions_nordeste_centro_oeste', 4, 1, '{"regions":["nordeste","centro-oeste"]}'::jsonb, 'medium', TRUE)
+ON CONFLICT (objective_id, player_count, revision) DO UPDATE SET
+  params = EXCLUDED.params,
+  difficulty = EXCLUDED.difficulty,
+  is_active = TRUE;
+
+-- 5 jogadores: a referência territorial é 21.
+-- Norte + Centro-Oeste e Norte + Sul terminam naturalmente próximos dessa
+-- marca. Sul + Sudeste sozinho seria curto, então vira region_plus: além das
+-- duas regiões, o jogador precisa manter 20 territórios no total.
+INSERT INTO objective_rules (
+  objective_id, player_count, revision, params, difficulty, is_active
+) VALUES
   ('balanced_regions_norte_centro_oeste', 5, 1, '{"regions":["norte","centro-oeste"]}'::jsonb, 'medium', TRUE),
   ('balanced_regions_norte_sul', 5, 1, '{"regions":["norte","sul"]}'::jsonb, 'medium', TRUE),
-  ('balanced_regions_sudeste_centro_oeste', 5, 1, '{"regions":["sudeste","centro-oeste"]}'::jsonb, 'medium', TRUE)
+  ('balanced_regions_sul_sudeste_plus', 5, 1, '{"regions":["sul","sudeste"],"territories":20}'::jsonb, 'medium', TRUE)
 ON CONFLICT (objective_id, player_count, revision) DO UPDATE SET
   params = EXCLUDED.params,
   difficulty = EXCLUDED.difficulty,
   is_active = TRUE;
 
--- 6 jogadores: cinco alternativas regionais mantêm diversidade suficiente para
--- o sorteio sem usar pares excessivamente baratos, como Centro-Oeste + Sul.
+-- 6 jogadores: a referência territorial é 20.
+-- Os dois eixos de 15-16 territórios permanecem proporcionais. Sul + Sudeste
+-- só entra com requisito total de 19 territórios, compensando a combinação
+-- regional menor sem torná-la uma cópia exata do objetivo territorial.
 INSERT INTO objective_rules (
   objective_id, player_count, revision, params, difficulty, is_active
 ) VALUES
-  ('balanced_regions_sul_sudeste', 6, 1, '{"regions":["sul","sudeste"]}'::jsonb, 'medium', TRUE),
   ('balanced_regions_norte_centro_oeste', 6, 1, '{"regions":["norte","centro-oeste"]}'::jsonb, 'medium', TRUE),
   ('balanced_regions_norte_sul', 6, 1, '{"regions":["norte","sul"]}'::jsonb, 'medium', TRUE),
-  ('balanced_regions_sudeste_centro_oeste', 6, 1, '{"regions":["sudeste","centro-oeste"]}'::jsonb, 'medium', TRUE),
-  ('balanced_regions_nordeste_sul', 6, 1, '{"regions":["nordeste","sul"]}'::jsonb, 'medium', TRUE)
+  ('balanced_regions_sul_sudeste_plus', 6, 1, '{"regions":["sul","sudeste"],"territories":19}'::jsonb, 'medium', TRUE)
 ON CONFLICT (objective_id, player_count, revision) DO UPDATE SET
   params = EXCLUDED.params,
   difficulty = EXCLUDED.difficulty,
   is_active = TRUE;
 
--- Eliminação só entra a partir de quatro jogadores. A exigência territorial
--- reduz vitórias por "último golpe" após outros jogadores enfraquecerem o alvo.
+-- Eliminação só entra a partir de quatro jogadores. A presença territorial
+-- adicional reduz vitórias por último golpe e mantém o esforço próximo das
+-- outras famílias de objetivo.
 INSERT INTO objective_rules (
   objective_id, player_count, revision, params, difficulty, is_active
 ) VALUES
