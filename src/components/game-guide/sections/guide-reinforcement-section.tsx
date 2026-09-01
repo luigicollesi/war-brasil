@@ -22,14 +22,14 @@ export function GuideReinforcementSection({
       <div className="wb-guide-core-split">
         <div className="wb-guide-copy">
           <GuideHeading number="05" title="Reforce seus territórios">
-            Você recebe tropas pela quantidade de territórios que controla e pelas
-            regiões completas. Distribua todo o saldo em territórios que já são
-            seus antes de começar a atacar.
+            Receba metade dos territórios que controla, arredondada para baixo, com
+            mínimo de {guide.reinforcement.minimum} tropas. Regiões completas e cartas
+            aumentam esse reforço.
           </GuideHeading>
 
           <p className="wb-guide-inline-note">
-            <strong>Troca obrigatória pendente?</strong> Resolva a troca de cartas
-            antes de posicionar qualquer reforço.
+            <strong>Antes de reforçar.</strong> Se houver uma troca obrigatória, troque
+            as cartas primeiro.
           </p>
         </div>
 
@@ -71,7 +71,7 @@ export function GuideReinforcementSection({
             <GuideTerritoryNode name="Bahia" troops={5} tone="ally" />
           </div>
         }
-        caption="Você escolhe como dividir o saldo. O ataque só é liberado quando todos os reforços forem posicionados."
+        caption="Distribua todo o saldo entre seus territórios. O ataque só é liberado quando o saldo chega a zero."
       />
 
       <section
@@ -82,13 +82,10 @@ export function GuideReinforcementSection({
           <div>
             <p className="wb-guide-label">Domínio regional</p>
             <h3 id="guide-regional-domain-title">
-              Regiões completas aumentam o reforço do turno.
+              Controle a região inteira para receber o bônus.
             </h3>
           </div>
-          <p>
-            O bônus é somado ao reforço base em toda fase de reforço enquanto você
-            controlar todos os territórios da região.
-          </p>
+          <p>Enquanto controlar toda a região, some o bônus ao reforço base.</p>
         </div>
 
         <div className="wb-guide-region-table-wrap">
