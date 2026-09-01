@@ -9,7 +9,12 @@ import {
 import type { GameCommandPatch } from "@/src/lib/game-command-patch";
 import type { CardSymbol } from "@/src/lib/game-config";
 import { objectiveWon } from "@/src/lib/game-objective-service";
-import { isValidTrade, tradeValue } from "@/src/lib/game-rules";
+import {
+  isValidTrade,
+  MANDATORY_TRADE_HAND_SIZE,
+  OWNED_TERRITORY_CARD_BONUS,
+  tradeValue,
+} from "@/src/lib/game-rules";
 import { RoomError } from "@/src/lib/rooms";
 
 type TroopRoom = {
@@ -30,8 +35,6 @@ type ReinforcementInput = {
   territoryId: number;
   troops: number;
 };
-
-const MANDATORY_TRADE_HAND_SIZE = 5;
 
 function normalizeRoomId(value: string) {
   if (!/^\d+$/.test(value)) {
@@ -239,9 +242,9 @@ export async function executeTradeCards(
       changedTroops = true;
       await client.query(
         `UPDATE game_territories
-         SET troops=troops+2
+         SET troops=troops+$3
          WHERE room_id=$1 AND territory_id=$2`,
-        [room.id, card.territory_id],
+        [room.id, card.territory_id, OWNED_TERRITORY_CARD_BONUS],
       );
     }
   }
