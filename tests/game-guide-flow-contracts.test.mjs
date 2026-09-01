@@ -55,7 +55,9 @@ test("troca obrigatória e bônus territorial usam limites compartilhados", () =
   const cards = source("src/components/game-guide/sections/guide-cards-section.tsx");
   const troops = source("src/lib/game-troop-command-service.ts");
 
-  assert.match(cards, /ou mais cartas na mão/);
+  assert.match(cards, /guide\.cards\.mandatoryTradeHandSize/);
+  assert.match(cards, /ou mais cartas/);
+  assert.match(cards, /Troque\s+antes de reforçar/);
   assert.match(troops, />=\s*MANDATORY_TRADE_HAND_SIZE/);
   assert.match(troops, /room\.phase !== "reinforcement"/);
   assert.match(troops, /OWNED_TERRITORY_CARD_BONUS/);
@@ -105,7 +107,7 @@ test("evento inicial é narrativo e remoções preservam a última tropa", () =>
   assert.match(round, /resolvedEffects: \[\]/);
   assert.match(round, /appliedTroopChanges: \[\]/);
   assert.match(effects, /GREATEST\(\$\{MIN_TERRITORY_TROOPS\},troops-\$3\)/);
-  assert.match(anomaly, /evento inicial é narrativo/i);
+  assert.match(anomaly, /evento de abertura não adiciona outra/i);
   assert.match(anomaly, /minimumTroopsAfterRemoval/);
 });
 
