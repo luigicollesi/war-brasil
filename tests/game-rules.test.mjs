@@ -41,8 +41,32 @@ test("trocas aceitam trincas, mistura e coringa", () => {
   assert.equal(isValidTrade(["leaf", "gold", "gold"]), false);
 });
 
-test("valor global das trocas cresce conforme a sequência", () => {
-  assert.deepEqual([0, 1, 2, 3, 4, 5, 6, 7].map(tradeValue), [4, 6, 8, 10, 12, 15, 20, 25]);
+test("valor individual das trocas cresce uma tropa por troca", () => {
+  assert.deepEqual([0, 1, 2, 3, 4, 5, 6, 7].map(tradeValue), [4, 5, 6, 7, 8, 9, 10, 11]);
+});
+
+test("trocas usam progressão individual e preservam bônus territorial separado", () => {
+  const source = readFileSync("src/lib/game-troop-command-service.ts", "utf8");
+
+  assert.match(source, /card_trade_count=card_trade_count\+1/);
+  assert.match(source, /RETURNING card_trade_count-1 trade_count_before/);
+  assert.match(source, /tradeValue\(tradeProgress\.trade_count_before\)/);
+  assert.match(source, /SET troops=troops\+2/);
+  assert.match(source, /reinforcements_remaining=reinforcements_remaining\+\$2/);
+  assert.doesNotMatch(source, /tradeValue\(room\.trade_count\)/);
+});
+
+test("contador individual de trocas existe no schema e é zerado em nova partida", () => {
+  const migration = readFileSync(
+    "src/lib/db/migrations/015-player-card-trade-count.sql",
+    "utf8",
+  );
+  const schema = readFileSync("src/lib/db/schema.sql", "utf8");
+  const finish = readFileSync("src/lib/game-finish-command-service.ts", "utf8");
+
+  assert.match(migration, /ADD COLUMN IF NOT EXISTS card_trade_count/);
+  assert.match(schema, /card_trade_count INTEGER NOT NULL DEFAULT 0/);
+  assert.match(finish, /card_trade_count=0/);
 });
 
 test("resoluções críticas independentes têm apenas um vencedor", () => {
