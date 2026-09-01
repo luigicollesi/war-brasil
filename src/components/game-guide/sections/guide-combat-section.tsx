@@ -27,9 +27,8 @@ export function GuideCombatSection({
 
   return (
     <article className="wb-guide-chapter wb-guide-section--combat">
-      <GuideHeading number="07" title="Role e compare">
-        O atacante rola primeiro e o defensor responde. Os dados são ordenados do
-        maior para o menor e comparados em pares; dados sem adversário são ignorados.
+      <GuideHeading number="07" title="Role os dados">
+        Compare os maiores dados em pares. Empates favorecem a defesa.
       </GuideHeading>
 
       <GuideFlow
@@ -55,7 +54,7 @@ export function GuideCombatSection({
               value: dice(band.diceCount, "ruby"),
             }))}
           />
-          <small>Uma tropa fica fora do combate para proteger a origem.</small>
+          <small>Uma tropa fica na origem.</small>
         </section>
 
         <section>
@@ -68,18 +67,14 @@ export function GuideCombatSection({
               value: dice(band.diceCount, "ocean"),
             }))}
           />
-          <small>A defesa pode usar sua última tropa, até o limite de três dados.</small>
+          <small>A defesa pode usar sua última tropa.</small>
         </section>
       </div>
 
       <div className="wb-guide-combat-example">
         <div>
-          <p className="wb-guide-label">Exemplo completo</p>
-          <h3>Compare maior contra maior.</h3>
-          <p>
-            Se o ataque for maior, a defesa perde uma tropa. Se a defesa empatar ou
-            superar o ataque, o atacante perde uma tropa no combate normal.
-          </p>
+          <p className="wb-guide-label">Exemplo</p>
+          <h3>Maior contra maior.</h3>
         </div>
 
         <GuideDiceComparison
@@ -99,14 +94,9 @@ export function GuideCombatSection({
           }))}
           unpairedAttack={example.unpairedAttack}
           unpairedDefense={example.unpairedDefense}
-          caption={`Resultado do exemplo: ataque −${example.attackerLosses}, defesa −${example.defenderLosses}.`}
+          caption={`Resultado: ataque −${example.attackerLosses}, defesa −${example.defenderLosses}. Dados sem par não causam perda.`}
         />
       </div>
-
-      <p className="wb-guide-combat-rule">
-        <strong>Empate favorece a defesa.</strong> Essa regra vale em toda comparação
-        de dados, inclusive quando o ataque atravessa uma Barreira Geográfica.
-      </p>
     </article>
   );
 }
