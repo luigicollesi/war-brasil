@@ -1,18 +1,19 @@
-import Image from "next/image";
 import Link from "next/link";
-import { GameDie } from "@/src/components/game-die";
 import {
   AnomalyIcon,
   RoadsIcon,
   TroopsIcon,
 } from "@/src/components/game-utility-icons";
 import { GuideHeading } from "@/src/components/game-guide/guide-heading";
-import {
-  GeographicBarrierMapExample,
-  MapReadingExample,
-} from "@/src/components/game-guide/guide-map-examples";
+import { MapReadingExample } from "@/src/components/game-guide/guide-map-examples";
+import { GuideAttackSection } from "@/src/components/game-guide/sections/guide-attack-section";
+import { GuideBarrierSection } from "@/src/components/game-guide/sections/guide-barrier-section";
+import { GuideCombatSection } from "@/src/components/game-guide/sections/guide-combat-section";
+import { GuideConquestSection } from "@/src/components/game-guide/sections/guide-conquest-section";
+import { GuideEliminationSection } from "@/src/components/game-guide/sections/guide-elimination-section";
 import { GuideObjectiveSection } from "@/src/components/game-guide/sections/guide-objective-section";
 import { GuideOrderSection } from "@/src/components/game-guide/sections/guide-order-section";
+import { GuideReinforcementSection } from "@/src/components/game-guide/sections/guide-reinforcement-section";
 import { GuideSetupSection } from "@/src/components/game-guide/sections/guide-setup-section";
 import { GuideTurnSection } from "@/src/components/game-guide/sections/guide-turn-section";
 import { Symbol } from "@/src/components/game-guide/guide-symbol";
@@ -63,162 +64,17 @@ export function GameQuickGuide() {
       <GuideSetupSection guide={guide} />
       <GuideOrderSection />
       <GuideObjectiveSection />
-      <GuideTurnSection guide={guide} />
-
-      <article className="wb-guide-chapter wb-guide-geographic-chapter">
-        <div className="wb-guide-geographic-intro">
-          <div className="wb-guide-copy">
-            <GuideHeading number="05" title="Barreiras Geográficas">
-              Nem toda fronteira entre dois territórios é uma conexão normal.
-              Rios, serras, florestas e outros obstáculos podem transformar uma
-              fronteira em uma Barreira Geográfica.
-            </GuideHeading>
-
-            <div className="wb-guide-notes">
-              <p>
-                <strong>Fronteira não é estrada.</strong> No exemplo real do Pará,
-                Pará Oeste e Pará Sudeste dividem uma fronteira, mas ela está
-                marcada como Barreira Geográfica. Já Pará Atlântico e Pará Sudeste
-                possuem uma estrada e, portanto, uma conexão normal.
-              </p>
-              <p>
-                <strong>Vantagem de quem defende.</strong> A barreira não dá dados
-                extras à defesa. Ela coloca o atacante em Desvantagem Geográfica e
-                torna a travessia de tropas mais custosa.
-              </p>
-            </div>
-          </div>
-
-          <div className="wb-guide-visual">
-            <GeographicBarrierMapExample />
-          </div>
-        </div>
-
-        <div className="wb-guide-geographic-actions">
-          <section className="wb-guide-geographic-action wb-guide-geographic-action--attack">
-            <div className="wb-guide-geographic-action-head">
-              <span className="wb-guide-geographic-icon">
-                <Image
-                  src="/caveira-vermelha.svg"
-                  alt="Caveira vermelha usada no mapa"
-                  width={72}
-                  height={72}
-                />
-              </span>
-              <div>
-                <p className="wb-guide-label">Ataque</p>
-                <h3>Desvantagem Geográfica</h3>
-              </div>
-            </div>
-            <p>
-              Ao selecionar um território para atacar, a <strong>caveira</strong>{" "}
-              aparece sobre um inimigo alcançável somente através de uma Barreira
-              Geográfica.
-            </p>
-
-            <div className="wb-guide-geographic-stats">
-              <div><small>Para atacar</small><strong>mín. {guide.attack.barrierMinimumTroops} tropas</strong></div>
-              <div><small>Comparação perdida</small><strong>−{guide.attack.barrierLossPerComparison} tropas</strong></div>
-            </div>
-
-            <div className="wb-guide-barrier-dice-bands" aria-label="Dados do ataque em Desvantagem Geográfica">
-              {guide.attack.barrierDiceBands.map((band) => (
-                <div key={band.minimumTroops}>
-                  <span>
-                    {band.maximumTroops === null
-                      ? `${band.minimumTroops}+ tropas`
-                      : `${band.minimumTroops}–${band.maximumTroops} tropas`}
-                  </span>
-                  <div>
-                    {Array.from({ length: band.diceCount }, (_, index) => (
-                      <GameDie key={index} value={5} color="ruby" size="sm" />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <small className="wb-guide-geographic-footnote">
-              A defesa continua com suas regras normais; a penalidade está no atacante.
-            </small>
-          </section>
-
-          <section className="wb-guide-geographic-action wb-guide-geographic-action--maneuver">
-            <div className="wb-guide-geographic-action-head">
-              <span className="wb-guide-geographic-icon">
-                <Image
-                  src="/alcapao-saida.svg"
-                  alt="Alçapão usado no mapa"
-                  width={72}
-                  height={72}
-                />
-              </span>
-              <div>
-                <p className="wb-guide-label">Manobra</p>
-                <h3>Travessia Geográfica</h3>
-              </div>
-            </div>
-            <p>
-              Durante a manobra, o <strong>alçapão</strong> aparece sobre um
-              território seu que pode ser alcançado atravessando uma Barreira
-              Geográfica.
-            </p>
-
-            <div className="wb-guide-geographic-stats">
-              <div><small>1 barreira</small><strong>−{guide.maneuver.barrierLoss} tropa</strong></div>
-              <div><small>{guide.maneuver.blockedBarrierCount}+ barreiras</small><strong>rota bloqueada</strong></div>
-            </div>
-
-            <div className="wb-guide-geographic-route" aria-label="Exemplo de travessia de uma Barreira Geográfica">
-              <span>A</span>
-              <i />
-              <Image src="/alcapao-saida.svg" alt="" width={42} height={42} />
-              <i />
-              <span>B</span>
-            </div>
-
-            <small className="wb-guide-geographic-footnote">
-              Para atravessar uma barreira, pelo menos {guide.maneuver.barrierMinimumTroops} tropas precisam iniciar a movimentação.
-            </small>
-          </section>
-        </div>
-      </article>
-
-      <article className="wb-guide-chapter wb-guide-chapter--split wb-guide-chapter--reverse">
-        <div className="wb-guide-copy">
-          <GuideHeading number="06" title="Leia o mapa">
-            Estradas, contadores e destaques mostram como o tabuleiro pode ser usado
-            naquele momento. Os controles permitem exibir apenas a informação que
-            você quer consultar.
-          </GuideHeading>
-
-          <div className="wb-guide-controls">
-            <UtilityDemo icon={<RoadsIcon />} label="Estradas">
-              Mostra ou esconde as conexões normais entre os territórios.
-            </UtilityDemo>
-            <UtilityDemo icon={<TroopsIcon />} label="Tropas">
-              Mostra ou esconde a quantidade de tropas em cada território.
-            </UtilityDemo>
-            <UtilityDemo icon={<AnomalyIcon />} label="Anomalia" anomaly>
-              Reabre o evento da rodada para consultar seus efeitos.
-            </UtilityDemo>
-          </div>
-
-          <p className="wb-guide-inline-note">
-            <strong>Túnel Jurássico.</strong> A cada rodada, o Acre recebe uma
-            conexão temporária com outro território. A ligação tracejada no mapa
-            indica o destino atual e funciona como uma conexão enquanto estiver ativa.
-          </p>
-        </div>
-
-        <div className="wb-guide-visual">
-          <MapReadingExample />
-        </div>
-      </article>
+      <GuideTurnSection />
+      <GuideReinforcementSection guide={guide} />
+      <GuideAttackSection guide={guide} />
+      <GuideCombatSection guide={guide} />
+      <GuideBarrierSection guide={guide} />
+      <GuideConquestSection guide={guide} />
+      <GuideEliminationSection />
 
       <article className="wb-guide-chapter wb-guide-chapter--split">
         <div className="wb-guide-copy">
-          <GuideHeading number="07" title="Use suas cartas">
+          <GuideHeading number="11" title="Use suas cartas">
             Se você conquistar ao menos um território no turno, recebe uma carta ao
             final dele. Cartas podem ser trocadas por reforços cada vez maiores.
           </GuideHeading>
@@ -257,7 +113,39 @@ export function GameQuickGuide() {
 
       <article className="wb-guide-chapter wb-guide-chapter--split wb-guide-chapter--reverse">
         <div className="wb-guide-copy">
-          <GuideHeading number="08" title="Sobreviva às Anomalias">
+          <GuideHeading number="12" title="Leia o mapa">
+            Estradas, contadores e destaques mostram como o tabuleiro pode ser usado
+            naquele momento. Os controles permitem exibir apenas a informação que
+            você quer consultar.
+          </GuideHeading>
+
+          <div className="wb-guide-controls">
+            <UtilityDemo icon={<RoadsIcon />} label="Estradas">
+              Mostra ou esconde as conexões normais entre os territórios.
+            </UtilityDemo>
+            <UtilityDemo icon={<TroopsIcon />} label="Tropas">
+              Mostra ou esconde a quantidade de tropas em cada território.
+            </UtilityDemo>
+            <UtilityDemo icon={<AnomalyIcon />} label="Anomalia" anomaly>
+              Reabre o evento da rodada para consultar seus efeitos.
+            </UtilityDemo>
+          </div>
+
+          <p className="wb-guide-inline-note">
+            <strong>Túnel Jurássico.</strong> A cada rodada, o Acre recebe uma
+            conexão temporária com outro território. A ligação tracejada no mapa
+            indica o destino atual e funciona como uma conexão enquanto estiver ativa.
+          </p>
+        </div>
+
+        <div className="wb-guide-visual">
+          <MapReadingExample />
+        </div>
+      </article>
+
+      <article className="wb-guide-chapter wb-guide-chapter--split wb-guide-chapter--reverse">
+        <div className="wb-guide-copy">
+          <GuideHeading number="13" title="Sobreviva às Anomalias">
             Quando todos jogam e uma nova rodada começa, uma Anomalia Temporal pode
             alterar as condições do tabuleiro: tropas, ataques, conexões e Barreiras
             Geográficas podem mudar.
@@ -290,7 +178,7 @@ export function GameQuickGuide() {
 
       <article className="wb-guide-chapter wb-guide-victory">
         <div>
-          <p className="wb-kicker">09 · Vitória</p>
+          <p className="wb-kicker">14 · Vitória</p>
           <h2>Cumpra seu objetivo antes dos rivais.</h2>
           <p>
             Assim que um jogador conclui seu objetivo secreto, a partida termina e
