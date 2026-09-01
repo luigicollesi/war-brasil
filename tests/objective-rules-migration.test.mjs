@@ -33,21 +33,32 @@ test("catálogo usa uma única faixa de balanceamento e metas territoriais propo
   assert.doesNotMatch(migration, /'(easy|hard|very_hard)'/);
 });
 
-test("fortificação exige uma rede ampla com três tropas por território", () => {
+test("fortificação usa 100-110% da posse inicial real e exige quatro tropas", () => {
   const migration = source(
     "src/lib/db/migrations/014-balanced-objective-catalog.sql",
+  );
+  const assignment = source(
+    "src/lib/objectives/objective-assignment-service.ts",
   );
   const presentation = source(
     "src/lib/objectives/objective-presentation.ts",
   );
 
   assert.match(migration, /'balanced_fortification'/);
-  assert.match(migration, /'balanced_fortification', 2, 1, '\{"territories":18,"minTroops":3\}'/);
-  assert.match(migration, /'balanced_fortification', 3, 1, '\{"territories":12,"minTroops":3\}'/);
-  assert.match(migration, /'balanced_fortification', 4, 1, '\{"territories":9,"minTroops":3\}'/);
-  assert.match(migration, /'balanced_fortification', 5, 1, '\{"territories":7,"minTroops":3\}'/);
-  assert.match(migration, /'balanced_fortification', 6, 1, '\{"territories":6,"minTroops":3\}'/);
-  assert.match(migration, /cerca de 85% da posse inicial média/);
+  for (const playerCount of [2, 3, 4, 5, 6]) {
+    assert.match(
+      migration,
+      new RegExp(
+        `'balanced_fortification', ${playerCount}, 1, '\\\{"initialTerritoryPercent":110,"minTroops":4\\\}'`,
+      ),
+    );
+  }
+  assert.match(assignment, /rule\.objective_id !== "balanced_fortification"/);
+  assert.match(assignment, /initialTerritoryPercent < 100/);
+  assert.match(assignment, /initialTerritoryPercent > 110/);
+  assert.match(assignment, /FROM game_territories/);
+  assert.match(assignment, /Math\.floor\(\(initialTerritories \* initialTerritoryPercent\) \/ 100\)/);
+  assert.match(assignment, /return \{ \.\.\.params, territories \}/);
   assert.match(presentation, /Mantenha pelo menos \$\{minTroops\} tropas em \$\{territories\} territórios/);
 });
 
@@ -113,7 +124,7 @@ test("region_plus exige regiões e também o piso territorial configurado", () =
   assert.match(presentation, /input\.type === "region_plus"/);
 });
 
-test("atribuição usa regras balanceadas por quantidade de jogadores e persiste snapshot", () => {
+test("atribuição usa regras balanceadas por quantidade de jogadores e persiste snapshot resolvido", () => {
   const assignment = source(
     "src/lib/objectives/objective-assignment-service.ts",
   );
@@ -123,7 +134,8 @@ test("atribuição usa regras balanceadas por quantidade de jogadores e persiste
   assert.match(assignment, /WHERE r\.player_count=\$1/);
   assert.match(assignment, /AND r\.is_active=TRUE/);
   assert.match(assignment, /objective_rule_id,target_player_id,resolved_params/);
-  assert.match(assignment, /JSON\.stringify\(rule\.params\)/);
+  assert.match(assignment, /const resolvedParams = await resolveAssignmentParams/);
+  assert.match(assignment, /JSON\.stringify\(resolvedParams\)/);
   assert.match(rooms, /await assignObjectives\(client, room\.id, players\)/);
   assert.match(rematch, /await assignObjectives\(client, roomId, players\)/);
 });
