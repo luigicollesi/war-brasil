@@ -1,6 +1,7 @@
 import { attackProfile, type AttackMode } from "../game-barrier-rules";
 import { isAttackOriginBlocked } from "../events/event-attack-rules";
 import type { BotAction } from "./bot-action";
+import { bestCardConquestCandidate } from "./bot-card-conquest";
 import { forecastConquest, type CombatForecast } from "./bot-combat-odds";
 import { availableForOffense, defenseTarget } from "./bot-defense";
 import type {
@@ -90,8 +91,7 @@ function candidateFor(
     (targetValue?.total ?? 0) * 1.5,
   );
   const probabilityGain =
-    forecast.conquestProbability *
-    BOT_STRATEGY.attack.conquestProbabilityWeight;
+    forecast.conquestProbability * BOT_STRATEGY.attack.conquestProbabilityWeight;
   const lossCost =
     forecast.expectedAttackerLosses * BOT_STRATEGY.attack.expectedLossWeight;
   const defenseCost = defenseDamage * BOT_STRATEGY.attack.defenseDamageWeight;
@@ -189,28 +189,48 @@ export function enumerateAttackCandidates(
   });
 }
 
+function acceptedNormalStrategyCandidate(
+  candidate: AttackCandidate,
+  progress: ObjectiveProgress,
+) {
+  const primary = progress.primaryTargets.includes(candidate.toTerritoryId);
+  const probabilityThreshold =
+    primary && progress.immediateWinPossible
+      ? BOT_STRATEGY.attack.objectivePushProbability
+      : BOT_STRATEGY.attack.minimumConquestProbability;
+
+  return (
+    candidate.forecast.conquestProbability >= probabilityThreshold &&
+    candidate.score >= BOT_STRATEGY.attack.attackThreshold
+  );
+}
+
 export function chooseAttack(
   state: BotStrategicState,
   plan: BotObjectivePlan,
   progress: ObjectiveProgress,
   values: ReadonlyMap<number, TerritoryStrategicValue>,
 ): BotAction {
-  const candidates = enumerateAttackCandidates(state, plan, progress, values);
-  const best = candidates[0];
-  if (!best) return { type: "finish_attack" };
-
-  const primary = progress.primaryTargets.includes(best.toTerritoryId);
-  const probabilityThreshold =
-    primary && progress.immediateWinPossible
-      ? BOT_STRATEGY.attack.objectivePushProbability
-      : BOT_STRATEGY.attack.minimumConquestProbability;
-
-  if (
-    best.forecast.conquestProbability < probabilityThreshold ||
-    best.score < BOT_STRATEGY.attack.attackThreshold
-  ) {
-    return { type: "finish_attack" };
+  if (!state.room.conqueredThisTurn) {
+    const cardConquest = bestCardConquestCandidate(
+      state,
+      plan,
+      progress,
+      values,
+      0,
+    );
+    if (!cardConquest) return { type: "finish_attack" };
+    return {
+      type: "attack",
+      fromTerritoryId: cardConquest.fromTerritoryId,
+      toTerritoryId: cardConquest.toTerritoryId,
+    };
   }
+
+  const best = enumerateAttackCandidates(state, plan, progress, values).find(
+    (candidate) => acceptedNormalStrategyCandidate(candidate, progress),
+  );
+  if (!best) return { type: "finish_attack" };
 
   return {
     type: "attack",
