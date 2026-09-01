@@ -30,6 +30,11 @@ type ObjectiveRuleSnapshotRow = {
   params: Record<string, unknown>;
 };
 
+type InitialTerritoryState = {
+  initial_territories: number;
+  total_territories: number;
+};
+
 export class ObjectiveConfigurationError extends Error {
   constructor(message: string) {
     super(message);
@@ -63,6 +68,32 @@ function targetPlayerFor(
   return otherPlayers[randomInt(0, otherPlayers.length)].id;
 }
 
+async function initialTerritoryState(
+  client: PoolClient,
+  roomId: string,
+  playerId: string,
+) {
+  const row = (
+    await client.query<InitialTerritoryState>(
+      `SELECT COUNT(*) FILTER (WHERE owner_player_id=$2)::int initial_territories,
+              COUNT(*)::int total_territories
+       FROM game_territories
+       WHERE room_id=$1`,
+      [roomId, playerId],
+    )
+  ).rows[0];
+
+  const initialTerritories = Number(row?.initial_territories ?? 0);
+  const totalTerritories = Number(row?.total_territories ?? 0);
+  if (initialTerritories < 1 || totalTerritories < initialTerritories) {
+    throw new ObjectiveConfigurationError(
+      `Não foi possível resolver a posse inicial do jogador ${playerId}.`,
+    );
+  }
+
+  return { initialTerritories, totalTerritories };
+}
+
 async function resolveAssignmentParams(
   client: PoolClient,
   roomId: string,
@@ -70,38 +101,54 @@ async function resolveAssignmentParams(
   rule: ObjectiveRuleRow,
 ) {
   const initialTerritoryPercent = rule.params.initialTerritoryPercent;
-  if (
-    rule.objective_id !== "balanced_fortification" ||
-    typeof initialTerritoryPercent !== "number" ||
-    !Number.isFinite(initialTerritoryPercent) ||
-    initialTerritoryPercent < 100 ||
-    initialTerritoryPercent > 110
-  ) {
+  const unownedTerritoryPercent = rule.params.unownedTerritoryPercent;
+
+  const resolvesFortification =
+    rule.objective_id === "balanced_fortification" &&
+    typeof initialTerritoryPercent === "number" &&
+    Number.isFinite(initialTerritoryPercent) &&
+    initialTerritoryPercent >= 100 &&
+    initialTerritoryPercent <= 110;
+
+  const resolvesTerritoryControl =
+    rule.objective_id === "balanced_territory_control" &&
+    typeof unownedTerritoryPercent === "number" &&
+    Number.isFinite(unownedTerritoryPercent) &&
+    unownedTerritoryPercent > 0 &&
+    unownedTerritoryPercent <= 100;
+
+  if (!resolvesFortification && !resolvesTerritoryControl) {
     return rule.params;
   }
 
-  const initialTerritories = Number(
-    (
-      await client.query<{ count: number }>(
-        `SELECT COUNT(*)::int count
-         FROM game_territories
-         WHERE room_id=$1 AND owner_player_id=$2`,
-        [roomId, player.id],
-      )
-    ).rows[0]?.count ?? 0,
+  const { initialTerritories, totalTerritories } = await initialTerritoryState(
+    client,
+    roomId,
+    player.id,
   );
 
-  if (initialTerritories < 1) {
-    throw new ObjectiveConfigurationError(
-      `Não foi possível resolver a posse inicial do jogador ${player.id}.`,
+  if (resolvesFortification) {
+    const territories = Math.max(
+      initialTerritories,
+      Math.floor((initialTerritories * initialTerritoryPercent) / 100),
     );
+    const { initialTerritoryPercent: _percent, ...params } = rule.params;
+    return { ...params, territories };
   }
 
-  const territories = Math.max(
-    initialTerritories,
-    Math.floor((initialTerritories * initialTerritoryPercent) / 100),
+  const territoriesOutsideInitialControl = totalTerritories - initialTerritories;
+  const territories = Math.min(
+    totalTerritories,
+    initialTerritories +
+      Math.round(
+        (territoriesOutsideInitialControl * unownedTerritoryPercent) / 100,
+      ),
   );
-  const { initialTerritoryPercent: _percent, ...params } = rule.params;
+  const {
+    unownedTerritoryPercent: _percent,
+    territories: _fallbackTerritories,
+    ...params
+  } = rule.params;
   return { ...params, territories };
 }
 
