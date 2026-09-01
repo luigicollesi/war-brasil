@@ -58,7 +58,6 @@
   }
 
   .wb-guide-cards-layout,
-  .wb-guide-maneuver-barriers,
   .wb-guide-anomaly-layout,
   .wb-guide-core-split,
   .wb-guide-combat-example {
@@ -66,7 +65,6 @@
   }
 
   .wb-guide-card-progress,
-  .wb-guide-maneuver-barriers > *,
   .wb-guide-anomaly-layout > * {
     min-width: 0;
   }
@@ -217,7 +215,6 @@
 
   .wb-guide-notes,
   .wb-guide-controls,
-  .wb-guide-card-rules,
   .wb-guide-inline-note,
   .wb-guide-section--setup .wb-guide-inline-note,
   .wb-guide-section--objective .wb-guide-inline-note,
@@ -225,13 +222,11 @@
   .wb-guide-card-mandatory-note,
   .wb-guide-tunnel-note,
   .wb-guide-section--anomaly > .wb-guide-inline-note,
-  .wb-guide-turn-end,
-  .wb-guide-combat-rule {
+  .wb-guide-turn-end {
     margin-left: 0;
   }
 
-  .wb-guide-turn-end,
-  .wb-guide-combat-rule {
+  .wb-guide-turn-end {
     width: 100%;
   }
 
