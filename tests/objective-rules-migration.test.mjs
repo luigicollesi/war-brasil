@@ -45,13 +45,17 @@ test("domínio territorial deriva a meta de 40% dos territórios inicialmente ex
   }
 
   assert.match(assignment, /rule\.objective_id === "balanced_territory_control"/);
-  assert.match(assignment, /unownedTerritoryPercent > 0/);
-  assert.match(assignment, /unownedTerritoryPercent <= 100/);
-  assert.match(assignment, /territoriesOutsideInitialControl = totalTerritories - initialTerritories/);
+  assert.match(assignment, /unownedTerritoryPercent <= 0/);
+  assert.match(assignment, /unownedTerritoryPercent > 100/);
+  assert.match(
+    assignment,
+    /territoriesOutsideInitialControl =\s*totalTerritories - initialTerritories/,
+  );
   assert.match(
     assignment,
     /Math\.round\([\s\S]*territoriesOutsideInitialControl \* unownedTerritoryPercent[\s\S]*\/ 100/,
   );
+  assert.match(assignment, /return \{ territories \}/);
   assert.doesNotMatch(migration, /'(easy|hard|very_hard)'/);
 });
 
@@ -76,14 +80,32 @@ test("fortificação usa 100-110% da posse inicial real e exige quatro tropas", 
     );
   }
   assert.match(assignment, /rule\.objective_id === "balanced_fortification"/);
-  assert.match(assignment, /initialTerritoryPercent >= 100/);
-  assert.match(assignment, /initialTerritoryPercent <= 110/);
+  assert.match(assignment, /initialTerritoryPercent < 100/);
+  assert.match(assignment, /initialTerritoryPercent > 110/);
+  assert.match(assignment, /!positiveInteger\(minTroops\)/);
   assert.match(assignment, /COUNT\(\*\) FILTER \(WHERE owner_player_id=\$2\)/);
   assert.match(
     assignment,
     /Math\.floor\(\(initialTerritories \* initialTerritoryPercent\) \/ 100\)/,
   );
+  assert.match(assignment, /return \{ territories, minTroops \}/);
   assert.match(presentation, /Mantenha pelo menos \$\{minTroops\} tropas em \$\{territories\} territórios/);
+});
+
+test("regras balanceadas inválidas interrompem atribuição em vez de persistir snapshot inseguro", () => {
+  const assignment = source(
+    "src/lib/objectives/objective-assignment-service.ts",
+  );
+
+  assert.match(
+    assignment,
+    /A regra de fortificação balanceada possui parâmetros inválidos/,
+  );
+  assert.match(
+    assignment,
+    /A regra de domínio territorial balanceado possui parâmetros inválidos/,
+  );
+  assert.match(assignment, /throw new ObjectiveConfigurationError/);
 });
 
 test("eliminação só entra de quatro a seis jogadores e usa piso territorial auxiliar", () => {
@@ -97,8 +119,8 @@ test("eliminação só entra de quatro a seis jogadores e usa piso territorial a
   assert.match(migration, /'balanced_elimination', 5, 1, '\{"territories":12\}'/);
   assert.match(migration, /'balanced_elimination', 6, 1, '\{"territories":10\}'/);
   assert.match(migration, /piso territorial serve apenas para impedir/);
-  assert.match(service, /const minimumTerritories = numericParam\(objective, "territories"\)/);
-  assert.match(service, /minimumTerritories > 0/);
+  assert.match(service, /hasTerritoryFloor/);
+  assert.match(service, /positiveIntegerParam\(objective, "territories"\)/);
 });
 
 test("dois jogadores não recebem combinações regionais curtas", () => {
@@ -137,14 +159,30 @@ test("combinações regionais acompanham a referência territorial de cada mesa"
   assert.match(migration, /'balanced_regions_sul_sudeste_plus', 6, 1, '\{"regions":\["sul","sudeste"\],"territories":19\}'/);
 });
 
-test("region_plus exige regiões e também o piso territorial configurado", () => {
+test("avaliação falha fechada quando resolved_params está ausente ou inválido", () => {
+  const service = source("src/lib/game-objective-service.ts");
+
+  assert.match(service, /function positiveIntegerParam/);
+  assert.match(service, /requiredTerritories !== null/);
+  assert.match(service, /minimumTroops !== null/);
+  assert.match(
+    service,
+    /\(objective\.type === "regions" \|\| objective\.type === "region_plus"\)[\s\S]*required === null/,
+  );
+  assert.match(service, /minimumTerritories !== null/);
+});
+
+test("region_plus exige regiões válidas e também o piso territorial configurado", () => {
   const service = source("src/lib/game-objective-service.ts");
   const presentation = source(
     "src/lib/objectives/objective-presentation.ts",
   );
 
   assert.match(service, /objective\.type === "region_plus"/);
-  assert.match(service, /ownedIds\.size >= \(numericParam\(objective, "territories"\) \|\| 1\)/);
+  assert.match(
+    service,
+    /minimumTerritories !== null && ownedIds\.size >= minimumTerritories/,
+  );
   assert.match(presentation, /input\.type === "region_plus"/);
 });
 
@@ -199,7 +237,7 @@ test("avaliação e snapshot usam parâmetros resolvidos sem quebrar atribuiçõ
   assert.match(presentation, /Elimine \{targetPlayer\}/);
 });
 
-test("fallback de eliminação mantém uma meta territorial concreta", () => {
+test("fallback de eliminação grava apenas a meta territorial concreta", () => {
   const migration = source(
     "src/lib/db/migrations/014-balanced-objective-catalog.sql",
   );
@@ -209,6 +247,13 @@ test("fallback de eliminação mantém uma meta territorial concreta", () => {
   const battle = source("src/lib/game-battle-service.ts");
 
   assert.match(migration, /unownedTerritoryPercent":40,"territories":/);
+  assert.match(assignment, /function resolveFallbackParams/);
+  assert.match(
+    assignment,
+    /objectiveId !== "balanced_territory_control"/,
+  );
+  assert.match(assignment, /return \{ territories \}/);
+  assert.match(assignment, /const resolvedParams = resolveFallbackParams/);
   assert.match(assignment, /a\.player_id<>\$3/);
   assert.match(assignment, /AND is_active=TRUE/);
   assert.match(assignment, /objective_rule_id=\$4/);
