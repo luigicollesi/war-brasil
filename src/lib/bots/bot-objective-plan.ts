@@ -48,7 +48,8 @@ function regionsParam(value: unknown): Region[] | null {
   if (!Array.isArray(value) || value.length === 0) return null;
   const regions = value.filter(
     (region): region is Region =>
-      typeof region === "string" && (REGIONS as readonly string[]).includes(region),
+      typeof region === "string" &&
+      (REGIONS as readonly string[]).includes(region),
   );
   return regions.length === value.length ? regions : null;
 }
@@ -73,7 +74,9 @@ export function buildObjectivePlan(state: BotStrategicState): BotObjectivePlan {
 
   if (type === "regions") {
     const regions = regionsParam(params.regions);
-    return regions ? { kind: "region", regions } : { kind: "generic_expansion" };
+    return regions
+      ? { kind: "region", regions }
+      : { kind: "generic_expansion" };
   }
 
   if (type === "region_plus") {
@@ -84,7 +87,10 @@ export function buildObjectivePlan(state: BotStrategicState): BotObjectivePlan {
       : { kind: "generic_expansion" };
   }
 
-  if ((type === "elimination" || type === "elimination_plus") && targetPlayerId) {
+  if (
+    (type === "elimination" || type === "elimination_plus") &&
+    targetPlayerId
+  ) {
     return {
       kind: "elimination",
       targetPlayerId,
@@ -103,7 +109,10 @@ export function territoryIdsForRegions(regions: readonly Region[]) {
     .sort((a, b) => a - b);
 }
 
-function frontierEnemyTerritories(state: BotStrategicState, ownedIds: Set<number>) {
+function frontierEnemyTerritories(
+  state: BotStrategicState,
+  ownedIds: Set<number>,
+) {
   const targets = new Set<number>();
   for (const connection of state.topology.connections) {
     if (!connection.exists) continue;
@@ -146,14 +155,21 @@ export function evaluateObjectiveProgress(
       (territory) => territory.troops >= plan.minimumTroops,
     );
     const missingOwned = Math.max(0, plan.territoryCount - owned.length);
-    const missingQualified = Math.max(0, plan.territoryCount - qualified.length);
+    const missingQualified = Math.max(
+      0,
+      plan.territoryCount - qualified.length,
+    );
     return {
       ratio: ratio(qualified.length, plan.territoryCount),
       immediateWinPossible:
-        missingOwned === 0 && missingQualified === 1 && state.room.reinforcementsRemaining > 0,
+        missingOwned === 0 &&
+        missingQualified === 1 &&
+        state.room.reinforcementsRemaining > 0,
       primaryTargets: missingOwned > 0 ? genericTargets : [],
       routeTargets: [],
-      protectedTerritories: qualified.map((territory) => territory.territoryId),
+      protectedTerritories: qualified.map(
+        (territory) => territory.territoryId,
+      ),
       missingTerritories: missingOwned,
     };
   }
@@ -161,7 +177,9 @@ export function evaluateObjectiveProgress(
   if (plan.kind === "region" || plan.kind === "region_territories") {
     const regionTerritories = territoryIdsForRegions(plan.regions);
     const missingRegion = regionTerritories.filter((id) => !ownedIds.has(id));
-    const protectedTerritories = regionTerritories.filter((id) => ownedIds.has(id));
+    const protectedTerritories = regionTerritories.filter((id) =>
+      ownedIds.has(id),
+    );
     const regionRatio = ratio(
       regionTerritories.length - missingRegion.length,
       regionTerritories.length,
@@ -180,14 +198,21 @@ export function evaluateObjectiveProgress(
 
     const missingTotal = Math.max(0, plan.territoryCount - owned.length);
     const territorialRatio = ratio(owned.length, plan.territoryCount);
+    const primaryTargets =
+      missingRegion.length > 0 ? missingRegion : genericTargets;
+    const routeTargets =
+      missingRegion.length > 0 && missingTotal > 0
+        ? genericTargets.filter((id) => !missingRegion.includes(id))
+        : [];
+
     return {
       ratio: Math.min(regionRatio, territorialRatio),
       immediateWinPossible:
-        missingRegion.length <= 1 && missingTotal <= 1 && (missingRegion.length + missingTotal > 0),
-      primaryTargets: Array.from(new Set([...missingRegion, ...genericTargets])).sort(
-        (a, b) => a - b,
-      ),
-      routeTargets: [],
+        missingRegion.length <= 1 &&
+        missingTotal <= 1 &&
+        missingRegion.length + missingTotal > 0,
+      primaryTargets,
+      routeTargets,
       protectedTerritories,
       missingTerritories: Math.max(missingRegion.length, missingTotal),
     };
@@ -197,12 +222,23 @@ export function evaluateObjectiveProgress(
     const targetTerritories = state.territories.filter(
       (territory) => territory.ownerPlayerId === plan.targetPlayerId,
     );
-    const floorMissing = Math.max(0, (plan.territoryFloor ?? 0) - owned.length);
+    const floorMissing = Math.max(
+      0,
+      (plan.territoryFloor ?? 0) - owned.length,
+    );
     const targetAlive = targetTerritories.length > 0;
-    const targetIds = targetTerritories.map((territory) => territory.territoryId).sort((a, b) => a - b);
+    const targetIds = targetTerritories
+      .map((territory) => territory.territoryId)
+      .sort((a, b) => a - b);
     return {
       ratio: targetAlive
-        ? Math.min(0.99, 1 / (1 + targetTerritories.length) + (plan.territoryFloor ? ratio(owned.length, plan.territoryFloor) * 0.25 : 0))
+        ? Math.min(
+            0.99,
+            1 / (1 + targetTerritories.length) +
+              (plan.territoryFloor
+                ? ratio(owned.length, plan.territoryFloor) * 0.25
+                : 0),
+          )
         : plan.territoryFloor
           ? ratio(owned.length, plan.territoryFloor)
           : 1,
@@ -212,7 +248,9 @@ export function evaluateObjectiveProgress(
       primaryTargets: targetAlive ? targetIds : genericTargets,
       routeTargets: [],
       protectedTerritories: [],
-      missingTerritories: targetAlive ? targetTerritories.length : floorMissing,
+      missingTerritories: targetAlive
+        ? targetTerritories.length
+        : floorMissing,
     };
   }
 
