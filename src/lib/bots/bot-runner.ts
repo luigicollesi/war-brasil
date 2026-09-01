@@ -7,23 +7,26 @@ import {
   executeRollOrderDie,
 } from "@/src/lib/game-command-service";
 import type { CommandPlayer } from "@/src/lib/game-command-player";
-import { executeRollBattleDice } from "@/src/lib/game-combat-command-service";
+import {
+  executeAttack,
+  executeRollBattleDice,
+} from "@/src/lib/game-combat-command-service";
 import { executeCompleteConquest } from "@/src/lib/game-conquest-command-service";
-import type { CardSymbol } from "@/src/lib/game-config";
+import { executeManeuver } from "@/src/lib/game-maneuver-command-service";
 import {
   nextOrderRollPlayerId,
   type OrderPlayer,
   type OrderRoll,
 } from "@/src/lib/game-order-rules";
-import { isValidTrade } from "@/src/lib/game-rules";
 import {
   executeReinforcement,
   executeTradeCards,
 } from "@/src/lib/game-troop-command-service";
-import { RoomError } from "@/src/lib/rooms";
-import type { BotAction } from "./bot-action";
+import type { BotAction, BotActionType } from "./bot-action";
 import { pickBotDelayMs } from "./bot-delay";
 import { requiredActorId } from "./bot-required-actor";
+import { loadBotStrategicState } from "./bot-state-service";
+import { chooseStrategicBotAction } from "./bot-strategy";
 
 type AutomationRoom = {
   id: string;
@@ -40,12 +43,6 @@ type AutomationRoom = {
 type AutomationPlayer = CommandPlayer & {
   is_bot: boolean;
   bot_next_action_at: Date | null;
-};
-
-type BotTradeCard = {
-  id: string;
-  symbol: CardSymbol | null;
-  is_wild: boolean;
 };
 
 export type BotAutomationResult = {
@@ -102,45 +99,33 @@ async function orderRollPlayerId(
   );
 }
 
-async function mandatoryTradeCardIds(
-  client: PoolClient,
-  roomId: string,
-  playerId: string,
-) {
-  const cards = (
-    await client.query<BotTradeCard>(
-      `SELECT id::text id,symbol,is_wild
-       FROM game_cards
-       WHERE room_id=$1 AND owner_player_id=$2 AND zone='hand'
-       ORDER BY id`,
-      [roomId, playerId],
-    )
-  ).rows;
+function scheduledActionType(room: AutomationRoom): BotActionType | null {
+  if (room.status === "order_roll") return "roll_order";
+  if (room.status !== "playing") return null;
 
-  if (cards.length < 5) return null;
-
-  for (let first = 0; first < cards.length - 2; first += 1) {
-    for (let second = first + 1; second < cards.length - 1; second += 1) {
-      for (let third = second + 1; third < cards.length; third += 1) {
-        const selected = [cards[first], cards[second], cards[third]];
-        const symbols = selected.map((card) =>
-          card.is_wild ? "wild" : card.symbol!,
-        ) as Array<CardSymbol | "wild">;
-
-        if (isValidTrade(symbols)) {
-          return selected.map((card) => card.id);
-        }
-      }
-    }
+  const battle = isBattle(room.last_battle) ? room.last_battle : null;
+  if (
+    battle?.stage === "awaiting_attacker_roll" ||
+    battle?.stage === "awaiting_defender_roll"
+  ) {
+    return "roll_battle";
   }
 
-  throw new RoomError(
-    "Não foi possível formar a troca obrigatória do bot.",
-    500,
-  );
+  if (
+    room.pending_from_territory_id !== null &&
+    room.pending_to_territory_id !== null
+  ) {
+    return "complete_conquest";
+  }
+
+  if (room.phase === "cards") return "finish_cards";
+  if (room.phase === "reinforcement") return "reinforce";
+  if (room.phase === "attack") return "attack";
+  if (room.phase === "maneuver") return "maneuver";
+  return null;
 }
 
-async function chooseBasicBotAction(
+async function chooseDueAction(
   client: PoolClient,
   room: AutomationRoom,
   player: AutomationPlayer,
@@ -156,49 +141,19 @@ async function chooseBasicBotAction(
     return { type: "roll_battle" };
   }
 
-  if (
-    room.pending_from_territory_id !== null &&
-    room.pending_to_territory_id !== null
-  ) {
-    return { type: "complete_conquest", troops: 1 };
-  }
-
   if (room.phase === "cards") return { type: "finish_cards" };
 
-  if (room.phase === "reinforcement") {
-    const mandatoryTrade = await mandatoryTradeCardIds(
-      client,
-      room.id,
-      player.id,
-    );
-    if (mandatoryTrade) {
-      return { type: "trade_cards", cardIds: mandatoryTrade };
-    }
-
-    if (room.reinforcements_remaining < 1) return null;
-    const territory = (
-      await client.query<{ territory_id: number }>(
-        `SELECT territory_id
-         FROM game_territories
-         WHERE room_id=$1 AND owner_player_id=$2
-         ORDER BY territory_id
-         LIMIT 1`,
-        [room.id, player.id],
-      )
-    ).rows[0];
-
-    return territory
-      ? {
-          type: "reinforce",
-          territoryId: territory.territory_id,
-          troops: room.reinforcements_remaining,
-        }
-      : null;
-  }
-
-  if (room.phase === "attack") return { type: "finish_attack" };
-  if (room.phase === "maneuver") return { type: "end_turn" };
-  return null;
+  const state = await loadBotStrategicState(client, room.id, player.id);
+  return chooseStrategicBotAction(state, {
+    pendingConquest:
+      room.pending_from_territory_id !== null &&
+      room.pending_to_territory_id !== null
+        ? {
+            fromTerritoryId: room.pending_from_territory_id,
+            toTerritoryId: room.pending_to_territory_id,
+          }
+        : null,
+  });
 }
 
 async function executeBotAction(
@@ -222,6 +177,9 @@ async function executeBotAction(
     case "reinforce":
       await executeReinforcement(client, roomId, player, action);
       return;
+    case "attack":
+      await executeAttack(client, roomId, player, action);
+      return;
     case "finish_attack":
       await executePhaseAction(client, roomId, player, {
         action: "finishAttack",
@@ -232,6 +190,9 @@ async function executeBotAction(
       return;
     case "complete_conquest":
       await executeCompleteConquest(client, roomId, player, action.troops);
+      return;
+    case "maneuver":
+      await executeManeuver(client, roomId, player, action);
       return;
     case "end_turn":
       await executePhaseAction(client, roomId, player, { action: "endTurn" });
@@ -263,15 +224,14 @@ export async function advanceBotAutomation(
   });
 
   if (!actorId) return { changed: false, kind: "none" };
-
   const actor = players.find((player) => player.id === actorId);
   if (!actor?.is_bot) return { changed: false, kind: "none" };
 
-  const action = await chooseBasicBotAction(client, room, actor);
-  if (!action) return { changed: false, kind: "none" };
+  const delayAction = scheduledActionType(room);
+  if (!delayAction) return { changed: false, kind: "none" };
 
   if (actor.bot_next_action_at === null) {
-    const dueAt = new Date(nowMs + pickBotDelayMs(action.type));
+    const dueAt = new Date(nowMs + pickBotDelayMs(delayAction));
     await client.query(
       `UPDATE room_players
        SET bot_next_action_at=$3
@@ -283,6 +243,17 @@ export async function advanceBotAutomation(
 
   if (actor.bot_next_action_at.getTime() > nowMs) {
     return { changed: false, kind: "none" };
+  }
+
+  const action = await chooseDueAction(client, room, actor);
+  if (!action) {
+    await client.query(
+      `UPDATE room_players
+       SET bot_next_action_at=NULL
+       WHERE room_id=$1 AND id=$2 AND is_bot=TRUE`,
+      [roomId, actor.id],
+    );
+    return { changed: true, kind: "acted" };
   }
 
   await executeBotAction(client, roomId, actor, action);
