@@ -14,6 +14,7 @@ import {
   type CommandPlayer,
 } from "@/src/lib/game-command-player";
 import { objectiveWon } from "@/src/lib/game-objective-service";
+import { MIN_TERRITORY_TROOPS } from "@/src/lib/game-rules";
 import { RoomError } from "@/src/lib/rooms";
 
 type ConquestRoom = BattleRoomState & {
@@ -117,7 +118,7 @@ export async function executeCompleteConquest(
     !target ||
     source.owner_player_id !== player.id ||
     target.owner_player_id !== player.id ||
-    troops > source.troops - 1
+    troops > source.troops - MIN_TERRITORY_TROOPS
   ) {
     throw new RoomError("Deslocamento de conquista inválido.", 409);
   }
