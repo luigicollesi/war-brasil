@@ -43,6 +43,8 @@
     "src/lib/bots/bot-territory-value.ts",
     "src/lib/bots/bot-defense.ts",
     "src/lib/bots/bot-strategy-config.ts",
+    "src/lib/bots/bot-cards.ts",
+    "src/lib/bots/bot-reinforcement.ts",
     "src/lib/events/event-types.ts",
     "src/lib/events/event-selector.ts",
     "src/lib/events/event-catalog.ts",
