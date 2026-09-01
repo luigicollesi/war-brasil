@@ -1,5 +1,6 @@
 import { isAttackOriginBlocked } from "../events/event-attack-rules";
 import type { BotAction } from "./bot-action";
+import { bestCardConquestCandidate } from "./bot-card-conquest";
 import { defenseTarget } from "./bot-defense";
 import type {
   BotObjectivePlan,
@@ -13,6 +14,34 @@ function strategicRouteTargets(progress: ObjectiveProgress) {
   return progress.primaryTargets.length > 0
     ? progress.primaryTargets
     : progress.routeTargets;
+}
+
+function fortificationCandidate(
+  state: BotStrategicState,
+  plan: Extract<BotObjectivePlan, { kind: "fortification" }>,
+  values: ReadonlyMap<number, TerritoryStrategicValue>,
+) {
+  const owned = state.territories.filter(
+    (territory) => territory.ownerPlayerId === state.bot.id,
+  );
+  const candidates = owned
+    .filter((territory) => territory.troops < plan.minimumTroops)
+    .map((territory) => ({
+      territory,
+      gap: plan.minimumTroops - territory.troops,
+      value: values.get(territory.territoryId)?.total ?? 0,
+    }))
+    .sort((left, right) => {
+      if (left.gap !== right.gap) return left.gap - right.gap;
+      if (right.value !== left.value) return right.value - left.value;
+      return left.territory.territoryId - right.territory.territoryId;
+    });
+  const neededQualified = Math.max(
+    0,
+    plan.territoryCount -
+      owned.filter((territory) => territory.troops >= plan.minimumTroops).length,
+  );
+  return neededQualified > 0 ? candidates[0] ?? null : null;
 }
 
 export function chooseReinforcement(
@@ -29,28 +58,37 @@ export function chooseReinforcement(
     .sort((a, b) => a.territoryId - b.territoryId);
   if (owned.length === 0) return null;
 
-  if (plan.kind === "fortification") {
-    const candidates = owned
-      .filter((territory) => territory.troops < plan.minimumTroops)
-      .map((territory) => ({
-        territory,
-        gap: plan.minimumTroops - territory.troops,
-        value: values.get(territory.territoryId)?.total ?? 0,
-      }))
-      .sort((left, right) => {
-        if (left.gap !== right.gap) return left.gap - right.gap;
-        if (right.value !== left.value) return right.value - left.value;
-        return left.territory.territoryId - right.territory.territoryId;
-      });
+  if (plan.kind === "fortification" && progress.immediateWinPossible) {
+    const candidate = fortificationCandidate(state, plan, values);
+    if (candidate) {
+      return {
+        type: "reinforce",
+        territoryId: candidate.territory.territoryId,
+        troops: Math.min(remaining, candidate.gap),
+      };
+    }
+  }
 
-    const neededQualified = Math.max(
-      0,
-      plan.territoryCount -
-        owned.filter((territory) => territory.troops >= plan.minimumTroops)
-          .length,
+  if (!state.room.conqueredThisTurn) {
+    const cardConquest = bestCardConquestCandidate(
+      state,
+      plan,
+      progress,
+      values,
+      remaining,
     );
-    const candidate = candidates[0];
-    if (candidate && neededQualified > 0) {
+    if (cardConquest) {
+      return {
+        type: "reinforce",
+        territoryId: cardConquest.fromTerritoryId,
+        troops: remaining,
+      };
+    }
+  }
+
+  if (plan.kind === "fortification") {
+    const candidate = fortificationCandidate(state, plan, values);
+    if (candidate) {
       return {
         type: "reinforce",
         territoryId: candidate.territory.territoryId,
