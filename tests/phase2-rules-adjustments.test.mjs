@@ -9,6 +9,8 @@ function source(path) {
 test("troca de cartas só é aceita durante reinforcement", () => {
   const troopService = source("src/lib/game-troop-command-service.ts");
   const runner = source("src/lib/bots/bot-runner.ts");
+  const strategy = source("src/lib/bots/bot-strategy.ts");
+  const cards = source("src/lib/bots/bot-cards.ts");
 
   assert.match(troopService, /room\.phase !== "reinforcement"/);
   assert.doesNotMatch(
@@ -16,8 +18,10 @@ test("troca de cartas só é aceita durante reinforcement", () => {
     /\["cards",\s*"reinforcement"\]\.includes\(room\.phase\)/,
   );
   assert.match(runner, /if \(room\.phase === "cards"\) return \{ type: "finish_cards" \}/);
-  assert.match(runner, /if \(room\.phase === "reinforcement"\) \{/);
-  assert.match(runner, /mandatoryTradeCardIds/);
+  assert.match(strategy, /state\.room\.phase === "reinforcement"/);
+  assert.match(strategy, /chooseCardTrade/);
+  assert.match(cards, /state\.cards\.length >= 5/);
+  assert.match(cards, /mandatory/);
 });
 
 test("eliminação avalia primeiro o conquistador e depois donos da missão", () => {
