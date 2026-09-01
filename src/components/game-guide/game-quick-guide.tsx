@@ -1,16 +1,18 @@
 import Image from "next/image";
 import Link from "next/link";
-import type { ReactNode } from "react";
 import { GameDie } from "@/src/components/game-die";
 import {
   AnomalyIcon,
   RoadsIcon,
   TroopsIcon,
 } from "@/src/components/game-utility-icons";
+import { GuideHeading } from "@/src/components/game-guide/guide-heading";
 import {
   GeographicBarrierMapExample,
   MapReadingExample,
 } from "@/src/components/game-guide/guide-map-examples";
+import { Symbol } from "@/src/components/game-guide/guide-symbol";
+import { UtilityDemo } from "@/src/components/game-guide/guide-utility-demo";
 import { TemporalAnomalyEffectList } from "@/src/components/temporal-anomaly-effect-list";
 import { TerritoryCardArtwork } from "@/src/components/territory-card-artwork";
 import type { TemporalAnomalyPresentation } from "@/src/lib/events/event-presentation";
@@ -52,59 +54,6 @@ const regionalStrategy = {
   sul:
     "Compacta e periférica, tende a ser mais simples de consolidar e defender.",
 } as const;
-
-function GuideHeading({
-  number,
-  title,
-  children,
-}: {
-  number: string;
-  title: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="wb-guide-heading">
-      <span>{number}</span>
-      <div>
-        <h2>{title}</h2>
-        <p>{children}</p>
-      </div>
-    </div>
-  );
-}
-
-function UtilityDemo({
-  icon,
-  label,
-  children,
-  anomaly = false,
-}: {
-  icon: ReactNode;
-  label: string;
-  children: ReactNode;
-  anomaly?: boolean;
-}) {
-  return (
-    <figure className="wb-guide-control-demo">
-      <div
-        aria-hidden="true"
-        className={`wb-guide-control ${anomaly ? "wb-guide-control--anomaly" : ""}`}
-      >
-        {icon}
-        <span>{label}</span>
-      </div>
-      <figcaption>{children}</figcaption>
-    </figure>
-  );
-}
-
-function Symbol({ src, alt }: { src: string; alt: string }) {
-  return (
-    <span className="wb-guide-symbol">
-      <Image src={src} alt={alt} width={28} height={28} />
-    </span>
-  );
-}
 
 export function GameQuickGuide() {
   const guide = buildGameGuidePresentation();
