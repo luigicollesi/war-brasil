@@ -74,7 +74,8 @@ test("ataque, conquista e eliminação respeitam os bloqueios descritos", () => 
   assert.match(conquest, /pending_from_territory_id=NULL,pending_to_territory_id=NULL/);
 
   assert.match(battle, /SET turn_position=NULL,bot_next_action_at=NULL/);
-  assert.match(battle, /SET owner_player_id=\$3[\s\S]*zone='hand'/);
+  assert.match(battle, /SET owner_player_id=\$3/);
+  assert.match(battle, /owner_player_id=\$2 AND zone='hand'/);
   assert.match(battle, /pending_from_territory_id=\$2/);
   assert.match(battle, /evaluateEliminationObjectiveOwners/);
 });
