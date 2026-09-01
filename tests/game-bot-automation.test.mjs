@@ -133,7 +133,7 @@ test("runner é request-driven, executa regra compartilhada e não cria loop ser
   const runner = readFileSync("src/lib/bots/bot-runner.ts", "utf8");
 
   assert.match(runner, /bot_next_action_at/);
-  assert.match(runner, /await executeBotAction\(client, roomId, actor, action\)/);
+  assert.match(runner, /executeBotAction/);
   assert.match(runner, /executeReinforcement/);
   assert.match(runner, /executeRollBattleDice/);
   assert.match(runner, /executeAttack/);
@@ -143,6 +143,20 @@ test("runner é request-driven, executa regra compartilhada e não cria loop ser
     runner,
     /reinforceCommand|attackCommand|maneuverCommand|rollBattleDiceCommand|phaseCommand/,
   );
+});
+
+test("runner isola ação estratégica rejeitada e usa somente um fallback seguro", () => {
+  const runner = readFileSync("src/lib/bots/bot-runner.ts", "utf8");
+
+  assert.match(runner, /SAVEPOINT \$\{STRATEGIC_SAVEPOINT\}/);
+  assert.match(runner, /ROLLBACK TO SAVEPOINT \$\{STRATEGIC_SAVEPOINT\}/);
+  assert.match(runner, /error instanceof RoomError/);
+  assert.match(runner, /\[409, 422\]\.includes\(error\.status\)/);
+  assert.match(runner, /rejected\.type === "attack"[\s\S]*finish_attack/);
+  assert.match(runner, /rejected\.type === "maneuver"[\s\S]*end_turn/);
+  assert.match(runner, /rejected\.type === "complete_conquest"[\s\S]*troops: 1/);
+  assert.match(runner, /rejected\.type === "reinforce"[\s\S]*firstOwned/);
+  assert.doesNotMatch(runner, /catch\s*\([^)]*\)\s*\{\s*return\s*;/);
 });
 
 test("automação serializa apresentação e bot em um único command condicional", () => {
