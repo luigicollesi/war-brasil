@@ -55,15 +55,6 @@
   margin-top: 0;
 }
 
-.wb-guide-order-caption {
-  margin: -4px 0 0;
-  border-left: 1px solid var(--wb-gold);
-  padding-left: 14px;
-  color: var(--wb-text-muted);
-  font-size: .8rem;
-  line-height: 1.5;
-}
-
 .wb-guide-mission-card {
   overflow: hidden;
   border: 1px solid rgba(214, 169, 62, .3);
@@ -95,14 +86,6 @@
   font-family: var(--font-wb-display), sans-serif;
   font-size: clamp(1.6rem, 3vw, 2.25rem);
   line-height: .98;
-}
-
-.wb-guide-mission-head > small {
-  display: block;
-  max-width: 420px;
-  margin-top: 10px;
-  color: var(--wb-text-muted);
-  line-height: 1.5;
 }
 
 .wb-guide-mission-families {
@@ -171,10 +154,6 @@
   text-align: right;
 }
 
-.wb-guide-turn-end strong {
-  color: var(--wb-text);
-}
-
 .wb-guide-core-split {
   display: grid;
   grid-template-columns: minmax(0, .92fr) minmax(340px, 1.08fr);
@@ -211,9 +190,7 @@
   width: 22%;
 }
 
-.wb-guide-section--attack .wb-guide-notes,
-.wb-guide-section--conquest .wb-guide-notes,
-.wb-guide-section--elimination .wb-guide-notes {
+.wb-guide-section--attack .wb-guide-notes {
   margin-top: 28px;
 }
 
@@ -224,54 +201,6 @@
 
 .wb-guide-attack-example .wb-guide-connection {
   margin-top: 0;
-}
-
-.wb-guide-attack-checks {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  border-top: 1px solid var(--wb-border-neutral);
-  border-bottom: 1px solid var(--wb-border-neutral);
-}
-
-.wb-guide-attack-checks > div {
-  display: grid;
-  grid-template-columns: 24px minmax(0, 1fr);
-  align-items: center;
-  gap: 8px;
-  padding: 12px 10px;
-}
-
-.wb-guide-attack-checks > div:nth-child(even) {
-  border-left: 1px solid var(--wb-border-neutral);
-}
-
-.wb-guide-attack-checks > div:nth-child(n + 3) {
-  border-top: 1px solid var(--wb-border-neutral);
-}
-
-.wb-guide-attack-checks span {
-  color: var(--wb-success);
-  font-weight: 900;
-}
-
-.wb-guide-attack-checks strong {
-  color: var(--wb-text);
-  font-size: .76rem;
-}
-
-.wb-guide-attack-blockers {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.wb-guide-attack-blockers span {
-  border: 1px solid rgba(225, 107, 89, .2);
-  border-radius: 999px;
-  padding: 6px 9px;
-  color: #efaa9e;
-  font-size: .68rem;
-  font-weight: 750;
 }
 
 .wb-guide-combat-flow {
@@ -314,26 +243,6 @@
   font-family: var(--font-wb-display), sans-serif;
   font-size: clamp(1.8rem, 3vw, 2.5rem);
   line-height: 1;
-}
-
-.wb-guide-combat-example > div:first-child > p:last-child {
-  margin-top: 12px;
-  color: var(--wb-text-muted);
-  line-height: 1.6;
-}
-
-.wb-guide-combat-rule {
-  width: fit-content;
-  margin: 28px 0 0 auto;
-  border-right: 2px solid var(--wb-gold);
-  padding: 10px 16px 10px 0;
-  color: var(--wb-text-muted);
-  line-height: 1.55;
-  text-align: right;
-}
-
-.wb-guide-combat-rule strong {
-  color: var(--wb-text);
 }
 
 .wb-guide-barrier-comparison {
@@ -542,23 +451,19 @@
   }
 
   .wb-guide-mission-families,
-  .wb-guide-attack-checks,
   .wb-guide-barrier-signals {
     grid-template-columns: 1fr;
   }
 
-  .wb-guide-mission-families > div:nth-child(even),
-  .wb-guide-attack-checks > div:nth-child(even) {
+  .wb-guide-mission-families > div:nth-child(even) {
     border-left: 0;
   }
 
-  .wb-guide-mission-families > div + div,
-  .wb-guide-attack-checks > div + div {
+  .wb-guide-mission-families > div + div {
     border-top: 1px solid var(--wb-border-neutral);
   }
 
-  .wb-guide-turn-end,
-  .wb-guide-combat-rule {
+  .wb-guide-turn-end {
     margin-left: 44px;
     margin-right: 0;
     border-right: 0;
