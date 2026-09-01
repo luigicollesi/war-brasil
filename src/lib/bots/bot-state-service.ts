@@ -16,6 +16,7 @@ type StateRoom = {
   phase: string;
   round_number: number;
   reinforcements_remaining: number;
+  conquered_this_turn: boolean;
   jurassic_tunnel_territory_id: number | null;
 };
 
@@ -38,7 +39,7 @@ export async function loadBotStrategicState(
   const room = (
     await client.query<StateRoom>(
       `SELECT id,phase,round_number,reinforcements_remaining,
-              jurassic_tunnel_territory_id
+              conquered_this_turn,jurassic_tunnel_territory_id
        FROM game_rooms
        WHERE id=$1`,
       [roomId],
@@ -163,6 +164,7 @@ export async function loadBotStrategicState(
       phase: room.phase,
       roundNumber: room.round_number,
       reinforcementsRemaining: room.reinforcements_remaining,
+      conqueredThisTurn: room.conquered_this_turn,
     },
     bot: {
       id: bot.id,
