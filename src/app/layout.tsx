@@ -4,6 +4,7 @@ import { getSiteUrl } from "@/src/lib/site-url";
 import "./globals.css";
 import "./war-identity.css";
 import "./war-guide.css";
+import "./war-guide-primitives.css";
 import "./war-guide-barrier-refresh.css";
 import "./war-guide-geographic.css";
 import "./war-guide-regions.css";
