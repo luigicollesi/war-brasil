@@ -67,6 +67,7 @@ function candidateFor(
   const mode: AttackMode = passable ? "normal" : "barrier";
   const profile = attackProfile(source.troops, mode);
   if (profile.kind === "unavailable") return null;
+  if (mode === "barrier" && profile.diceCount !== 3) return null;
 
   const forecast = forecastConquest(source.troops, target.troops, mode);
   const primary = progress.primaryTargets.includes(target.territoryId);
