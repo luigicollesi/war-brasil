@@ -13,8 +13,7 @@ export function GuideCardsSection({
   return (
     <article className="wb-guide-chapter wb-guide-section--cards">
       <GuideHeading number="11" title="Transforme cartas em tropas">
-        Conquistar ao menos um território no turno rende uma carta no encerramento.
-        Durante o reforço, combine três cartas válidas para aumentar seu saldo de
+        Durante o reforço, forme uma combinação de 3 cartas para trocá-las por
         tropas.
       </GuideHeading>
 
@@ -35,10 +34,7 @@ export function GuideCardsSection({
 
       <div className="wb-guide-cards-layout">
         <section className="wb-guide-card-combinations">
-          <div>
-            <p className="wb-guide-label">Combinações válidas</p>
-            <h3>Selecione exatamente três cartas.</h3>
-          </div>
+          <p className="wb-guide-label">Combinações válidas</p>
 
           <div className="wb-guide-card-combination-list">
             <div>
@@ -88,9 +84,9 @@ export function GuideCardsSection({
             }))}
           />
           <p>
-            Depois disso, cada nova troca sua vale
+            Cada troca sua vale
             {` +${guide.cards.incrementPerPersonalTrade} tropa`} a mais que a anterior.
-            A progressão é <strong>individual</strong>, não compartilhada com os rivais.
+            A progressão é <strong>individual</strong>.
           </p>
         </section>
       </div>
@@ -102,18 +98,12 @@ export function GuideCardsSection({
         <div>
           <p className="wb-guide-label">Território correspondente</p>
           <strong>Controle o território da carta → +{guide.cards.ownedTerritoryBonus} tropas nele</strong>
-          <small>
-            O bônus é aplicado para cada carta territorial da troca que corresponda
-            a um território sob seu controle.
-          </small>
         </div>
       </div>
 
       <p className="wb-guide-inline-note wb-guide-card-mandatory-note">
-        <strong>{guide.cards.mandatoryTradeHandSize} ou mais cartas na mão.</strong> A
-        troca passa a ser obrigatória: você precisa formar uma combinação válida antes
-        de posicionar reforços. Cartas recebidas de um jogador eliminado também entram
-        na sua mão.
+        <strong>{guide.cards.mandatoryTradeHandSize} ou mais cartas.</strong> Troque
+        antes de reforçar. Cartas de um jogador eliminado entram na sua mão.
       </p>
     </article>
   );
