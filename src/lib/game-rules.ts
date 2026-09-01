@@ -10,7 +10,7 @@ function regionBonus(territoryIds: number[]) {
     const regionTerritories = Object.entries(TERRITORY_METADATA)
       .filter(([, territory]) => territory.region === region)
       .map(([id]) => Number(id));
-    return regionTerritories.every((id) => controlled.has(id) ? true : false) ? total + bonus : total;
+    return regionTerritories.every((id) => controlled.has(id)) ? total + bonus : total;
   }, 0);
 }
 
