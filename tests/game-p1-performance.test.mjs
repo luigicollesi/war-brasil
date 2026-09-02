@@ -8,14 +8,14 @@ test("manobra reutiliza topologia base cacheada através do serviço efetivo sem
     "utf8",
   );
   const maneuver = readFileSync(
-    "src/lib/game-maneuver-command-service.ts",
+    "src/lib/server/game-maneuver-command-service.ts",
     "utf8",
   );
   const effectiveTopology = readFileSync(
-    "src/lib/game-effective-topology-service.ts",
+    "src/lib/server/game-effective-topology-service.ts",
     "utf8",
   );
-  const topology = readFileSync("src/lib/game-topology-service.ts", "utf8");
+  const topology = readFileSync("src/lib/server/game-topology-service.ts", "utf8");
 
   assert.match(route, /game-maneuver-command-service/);
   assert.match(maneuver, /getEffectiveGameTopology/);
