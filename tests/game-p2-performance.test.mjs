@@ -109,7 +109,7 @@ test("mobile usa budget de GPU reduzido sem alterar acabamento desktop", () => {
 });
 
 test("objetivos usam agregações específicas em vez de materializar o tabuleiro inteiro", () => {
-  const source = readFileSync("src/lib/game-objective-service.ts", "utf8");
+  const source = readFileSync("src/lib/server/game-objective-service.ts", "utf8");
 
   assert.match(source, /COUNT\(\*\)::int count/);
   assert.match(source, /SELECT EXISTS\(/);
@@ -121,7 +121,7 @@ test("objetivos usam agregações específicas em vez de materializar o tabuleir
 
 test("mudanças apenas de tropas não reavaliam objetivos de domínio", () => {
   const service = readFileSync(
-    "src/lib/game-troop-command-service.ts",
+    "src/lib/server/game-troop-command-service.ts",
     "utf8",
   );
   const reinforcementRoute = readFileSync(
@@ -140,7 +140,7 @@ test("mudanças apenas de tropas não reavaliam objetivos de domínio", () => {
 });
 
 test("combate avalia objetivo somente quando controle territorial muda", () => {
-  const source = readFileSync("src/lib/game-battle-service.ts", "utf8");
+  const source = readFileSync("src/lib/server/game-battle-service.ts", "utf8");
   const survivingDefense = source.match(
     /if \(defenderTroops > 0\) \{[\s\S]*?\n  \}/,
   )?.[0];
@@ -156,7 +156,7 @@ test("transferência pós-conquista reavalia somente objetivos afetados por trop
     "utf8",
   );
   const service = readFileSync(
-    "src/lib/game-conquest-command-service.ts",
+    "src/lib/server/game-conquest-command-service.ts",
     "utf8",
   );
 
@@ -200,7 +200,7 @@ test("reforço e manobra retornam patches autoritativos ligados à revisão base
     "utf8",
   );
   const maneuverService = readFileSync(
-    "src/lib/game-maneuver-command-service.ts",
+    "src/lib/server/game-maneuver-command-service.ts",
     "utf8",
   );
 
