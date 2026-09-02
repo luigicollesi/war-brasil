@@ -65,7 +65,7 @@ test("GameModal controla portal, foco e camada de todos os modais", () => {
 
 test("snapshot usa read model do evento com catálogo e falha rápido em playing sem evento", () => {
   const source = readFileSync("src/lib/server/game-snapshot-service.ts", "utf8");
-  const repository = readFileSync("src/lib/events/event-repository.ts", "utf8");
+  const repository = readFileSync("src/lib/server/events/event-repository.ts", "utf8");
 
   assert.match(source, /getRoomRoundEventDetails/);
   assert.match(source, /room\.status === "playing" && !roundEvent/);
@@ -82,7 +82,7 @@ test("resultado factual é persistido sem alterar resolved_effects", () => {
   );
   const roundService = readFileSync("src/lib/server/game-round-service.ts", "utf8");
   const effectsService = readFileSync(
-    "src/lib/events/event-effects-service.ts",
+    "src/lib/server/events/event-effects-service.ts",
     "utf8",
   );
 
