@@ -3,18 +3,14 @@
 import Image from "next/image";
 import type { CSSProperties } from "react";
 import type { DieRollAnimation } from "@/src/lib/game-battle-display";
+import {
+  DICE_PIP_LAYOUT_PERCENT,
+  normalizeDiceValue,
+} from "@/src/lib/client/dice/pip-layout";
+import type { DiceValue } from "@/src/lib/client/dice/types";
 import { PLAYER_COLORS, type PlayerColor } from "@/src/lib/lobby";
 
-export type GameDieValue = 1 | 2 | 3 | 4 | 5 | 6;
-
-const pipPositions: Record<GameDieValue, Array<[number, number]>> = {
-  1: [[50, 50]],
-  2: [[30, 30], [70, 70]],
-  3: [[30, 30], [50, 50], [70, 70]],
-  4: [[30, 30], [70, 30], [30, 70], [70, 70]],
-  5: [[30, 30], [70, 30], [50, 50], [30, 70], [70, 70]],
-  6: [[30, 26], [70, 26], [30, 50], [70, 50], [30, 74], [70, 74]],
-};
+export type GameDieValue = DiceValue;
 
 const sizeClass = {
   sm: "w-16 rounded-2xl",
@@ -47,10 +43,7 @@ export function GameDie({
   size?: keyof typeof sizeClass;
   className?: string;
 }) {
-  const safeValue =
-    Number.isInteger(value) && value >= 1 && value <= 6
-      ? (value as GameDieValue)
-      : 1;
+  const safeValue = normalizeDiceValue(value);
   const animationClass = rolling
     ? rollAnimation
       ? "battle-die-roll-animation"
@@ -78,7 +71,7 @@ export function GameDie({
         sizes={size === "lg" ? "128px" : size === "md" ? "96px" : "64px"}
         className="object-cover"
       />
-      {pipPositions[safeValue].map(([x, y], index) => (
+      {DICE_PIP_LAYOUT_PERCENT[safeValue].map(([x, y], index) => (
         <span
           key={index}
           className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/50 shadow-md ${pipClass[size]}`}
