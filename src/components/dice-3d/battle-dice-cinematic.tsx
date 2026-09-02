@@ -9,6 +9,7 @@ import type { DiceValue } from "@/src/lib/client/dice/types";
 import { playerColorHex } from "@/src/lib/client/player-color";
 import type { GameBattle } from "@/src/lib/game-contract";
 import type { PlayerColor } from "@/src/lib/lobby";
+import styles from "./battle-dice-cinematic.module.css";
 import { DiceTraySurface } from "./dice-tray-surface";
 import { PredeterminedDiceRoll } from "./predetermined-dice-roll";
 import {
@@ -149,16 +150,16 @@ export function BattleDiceCinematic({
 
   return createPortal(
     <div
-      className="battle-dice-cinematic"
+      className={styles.root}
       aria-hidden="true"
       onContextMenu={(event) => event.preventDefault()}
       onPointerDown={(event) => event.preventDefault()}
     >
-      <div className="battle-dice-cinematic-backdrop" />
-      <div className="battle-dice-cinematic-label">
+      <div className={styles.backdrop} />
+      <div className={styles.label}>
         {side === "attack" ? "ATAQUE" : "DEFESA"}
       </div>
-      <div className="battle-dice-cinematic-canvas">
+      <div className={styles.canvas}>
         <Canvas
           shadows={{ type: PCFShadowMap }}
           frameloop="demand"
