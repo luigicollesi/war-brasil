@@ -8,11 +8,9 @@ import {
   Vector3,
   type BufferGeometry,
 } from "three";
-import { diceFaceDefinition } from "@/src/lib/client/dice/geometry/dice-faces";
+import { createCameraFacingDockQuaternion } from "@/src/lib/client/dice/animation/camera-facing-dock";
 import type {
   DiceFaceTextureSet,
-  DiceQuaternion,
-  DiceValue,
   DiceVector3,
   PredeterminedDiceRoll,
 } from "@/src/lib/client/dice/types";
@@ -22,30 +20,6 @@ import { DieVisual } from "./die-visual";
 function smoothStep(value: number) {
   const t = Math.min(1, Math.max(0, value));
   return t * t * (3 - 2 * t);
-}
-
-function cameraFacingDockRotation(
-  finalRotation: DiceQuaternion,
-  physicalTopValue: DiceValue,
-  dockPosition: DiceVector3,
-  cameraPosition: Vector3,
-) {
-  const finalQuaternion = new Quaternion(...finalRotation).normalize();
-  const faceNormal = new Vector3(
-    ...diceFaceDefinition(physicalTopValue).normal,
-  )
-    .applyQuaternion(finalQuaternion)
-    .normalize();
-  const cameraDirection = cameraPosition
-    .clone()
-    .sub(new Vector3(...dockPosition))
-    .normalize();
-  const adjustment = new Quaternion().setFromUnitVectors(
-    faceNormal,
-    cameraDirection,
-  );
-
-  return adjustment.multiply(finalQuaternion).normalize();
 }
 
 export function DiceTrajectoryReplay({
@@ -98,18 +72,21 @@ export function DiceTrajectoryReplay({
   const dockDurationSeconds = Math.max(0, dockDurationMs / 1000);
   const canDock =
     dockPositions !== undefined && dockPositions.length === roll.values.length;
-  const dockRotations = useMemo(() => {
-    if (!canDock) return [];
-
-    return roll.visualRemaps.map((remap) =>
-      cameraFacingDockRotation(
-        finalFrame.dice[remap.index].rotation,
-        remap.physicalTopValue,
-        dockPositions![remap.index],
-        camera.position,
-      ),
-    );
-  }, [camera.position, canDock, dockPositions, finalFrame, roll.visualRemaps]);
+  const cameraPosition: DiceVector3 = [
+    camera.position.x,
+    camera.position.y,
+    camera.position.z,
+  ];
+  const dockRotations = canDock
+    ? roll.visualRemaps.map((remap) =>
+        createCameraFacingDockQuaternion(
+          finalFrame.dice[remap.index].rotation,
+          remap.physicalTopValue,
+          dockPositions![remap.index],
+          cameraPosition,
+        ),
+      )
+    : [];
 
   useEffect(() => {
     if (!skipInitially || completed.current) return;
@@ -184,7 +161,7 @@ export function DiceTrajectoryReplay({
           progress,
         );
         scratch.fromRotation.set(...finalFrame.dice[dieIndex].rotation);
-        scratch.toRotation.copy(dockRotations[dieIndex]);
+        scratch.toRotation.set(...dockRotations[dieIndex]);
         group.quaternion.slerpQuaternions(
           scratch.fromRotation,
           scratch.toRotation,
@@ -203,7 +180,7 @@ export function DiceTrajectoryReplay({
         const group = groupRefs.current[dieIndex];
         if (!group) continue;
         group.position.set(...dockPositions![dieIndex]);
-        group.quaternion.copy(dockRotations[dieIndex]);
+        group.quaternion.set(...dockRotations[dieIndex]);
         group.scale.setScalar(dockScale);
       }
     }
@@ -221,9 +198,7 @@ export function DiceTrajectoryReplay({
         const initialPosition =
           skipInitially && canDock ? dockPositions![remap.index] : initial.position;
         const initialQuaternion =
-          skipInitially && canDock
-            ? dockRotations[remap.index]
-            : new Quaternion(...initial.rotation);
+          skipInitially && canDock ? dockRotations[remap.index] : initial.rotation;
         const initialScale = skipInitially && canDock ? dockScale : 1;
 
         return (
