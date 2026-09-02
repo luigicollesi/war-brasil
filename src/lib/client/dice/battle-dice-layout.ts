@@ -23,5 +23,7 @@ export function battleDiceDockPositions(
   const xMagnitudes =
     count === 1 ? [1.85] : count === 2 ? [2.1, 1.28] : [2.35, 1.65, 0.95];
 
-  return xMagnitudes.map((magnitude) => [sign * magnitude, 0.08, 0.15]);
+  return xMagnitudes.map(
+    (magnitude): DiceVector3 => [sign * magnitude, 0.08, 0.15],
+  );
 }
