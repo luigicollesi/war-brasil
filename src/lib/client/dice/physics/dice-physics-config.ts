@@ -7,6 +7,7 @@ export type DicePhysicsConfig = {
   dieRadius: number;
   dieSegments: number;
   colliderHalfExtent: number;
+  colliderBorderRadius: number;
   friction: number;
   restitution: number;
   contactSkin: number;
@@ -29,6 +30,7 @@ export const DICE_PHYSICS: DicePhysicsConfig = {
   dieRadius: 0.1,
   dieSegments: 8,
   colliderHalfExtent: 0.455,
+  colliderBorderRadius: 0.07,
   friction: 0.72,
   restitution: 0.3,
   contactSkin: 0.0025,
@@ -43,3 +45,13 @@ export const DICE_PHYSICS: DicePhysicsConfig = {
   wallHalfHeight: 2.2,
   maxSimulationSteps: 480,
 };
+
+export const DICE_COLLIDER_INNER_HALF_EXTENT =
+  DICE_PHYSICS.colliderHalfExtent - DICE_PHYSICS.colliderBorderRadius;
+
+if (
+  DICE_PHYSICS.colliderBorderRadius <= 0 ||
+  DICE_COLLIDER_INNER_HALF_EXTENT <= 0
+) {
+  throw new Error("O collider arredondado dos dados precisa ter dimensões positivas.");
+}
