@@ -7,7 +7,7 @@ function source(path) {
 }
 
 test("reforço é bloqueado enquanto o jogador possui cinco ou mais cartas", () => {
-  const troops = source("src/lib/game-troop-command-service.ts");
+  const troops = source("src/lib/server/game-troop-command-service.ts");
 
   assert.match(troops, /MANDATORY_TRADE_HAND_SIZE,/);
   assert.doesNotMatch(troops, /const MANDATORY_TRADE_HAND_SIZE/);
@@ -29,7 +29,7 @@ test("modal obrigatório aparece na fase de reforço e não possui ação de fec
 });
 
 test("eliminação remove jogador da ordem sem removê-lo da sala e transfere sua mão", () => {
-  const battle = source("src/lib/game-battle-service.ts");
+  const battle = source("src/lib/server/game-battle-service.ts");
 
   assert.match(battle, /SET turn_position=NULL,bot_next_action_at=NULL/);
   assert.doesNotMatch(battle, /DELETE FROM room_players/);
