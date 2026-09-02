@@ -72,7 +72,7 @@ test("game sync usa scheduler adaptativo e sincroniza imediatamente ao voltar", 
 });
 
 test("snapshot preserva referências de slices inalterados", () => {
-  const sharing = readFileSync("src/lib/game-snapshot-sharing.ts", "utf8");
+  const sharing = readFileSync("src/lib/shared/game-snapshot-sharing.ts", "utf8");
   const sync = readFileSync("src/hooks/use-game-sync.ts", "utf8");
 
   assert.match(sharing, /shareGameSnapshot/);
