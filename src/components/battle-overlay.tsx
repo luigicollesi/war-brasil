@@ -1,7 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { BattleDiceArena } from "@/src/components/dice-3d/battle-dice-arena";
+import { useCallback, useEffect, useState } from "react";
+import { BattleStaticDiceResults } from "@/src/components/battle-static-dice-results";
+import {
+  BATTLE_DICE_CINEMATIC_TOTAL_MS,
+  BattleDiceCinematic,
+  type BattleDiceCinematicSide,
+} from "@/src/components/dice-3d/battle-dice-cinematic";
 import { GameModal } from "@/src/components/game-modal";
 import { barrierAttackSummary } from "@/src/lib/game-barrier-presentation";
 import { attackerLossPerComparison } from "@/src/lib/game-barrier-rules";
@@ -20,6 +25,12 @@ type BattleParticipantProps = {
 };
 
 type RollingSide = "attack" | "defense";
+
+type CinematicPresentation = {
+  id: string;
+  side: BattleDiceCinematicSide;
+  elapsedMs: number;
+};
 
 function fallbackTerritoryName(territoryId: number) {
   return `Território ${territoryId}`;
@@ -41,6 +52,30 @@ function readTerritoryNameFromBoard(territoryId: number) {
   } catch {
     return fallbackTerritoryName(territoryId);
   }
+}
+
+function battleCinematicSide(
+  battle: NonNullable<GameSnapshot["room"]["battle"]>,
+): BattleDiceCinematicSide | null {
+  if (battle.stage === "show_attacker_result") return "attack";
+  if (battle.stage === "show_defender_result") return "defense";
+  return null;
+}
+
+function battleCinematicPresentationId(
+  battle: NonNullable<GameSnapshot["room"]["battle"]>,
+  side: BattleDiceCinematicSide,
+) {
+  const values = side === "attack" ? battle.attacker : battle.defender;
+  return [
+    battle.attackerPlayerId,
+    battle.attackerTerritoryId,
+    battle.defenderPlayerId,
+    battle.defenderTerritoryId,
+    side,
+    battle.stageStartedAt,
+    values.join("-"),
+  ].join(":");
 }
 
 function BattleParticipant({
@@ -79,6 +114,11 @@ export function BattleOverlay({
   const [error, setError] = useState("");
   const [rollingSide, setRollingSide] = useState<RollingSide | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [completedPresentationId, setCompletedPresentationId] = useState<string | null>(
+    null,
+  );
+  const [cinematicPresentation, setCinematicPresentation] =
+    useState<CinematicPresentation | null>(null);
   const [territoryNames, setTerritoryNames] = useState(() => ({
     attacker: fallbackTerritoryName(battle.attackerTerritoryId),
     defender: fallbackTerritoryName(battle.defenderTerritoryId),
@@ -147,6 +187,67 @@ export function BattleOverlay({
     };
   }, [battle.attackerTerritoryId, battle.defenderTerritoryId]);
 
+  useEffect(() => {
+    const side = battleCinematicSide(battle);
+    if (!side) {
+      setCinematicPresentation(null);
+      return;
+    }
+
+    const id = battleCinematicPresentationId(battle, side);
+    if (completedPresentationId === id) {
+      setCinematicPresentation(null);
+      return;
+    }
+
+    const startedAtMs = Date.parse(battle.stageStartedAt);
+    const elapsedMs = Number.isFinite(startedAtMs)
+      ? Math.max(0, Date.now() - startedAtMs)
+      : BATTLE_DICE_CINEMATIC_TOTAL_MS;
+
+    if (elapsedMs >= BATTLE_DICE_CINEMATIC_TOTAL_MS) {
+      setCompletedPresentationId(id);
+      setCinematicPresentation(null);
+      return;
+    }
+
+    setCinematicPresentation({ id, side, elapsedMs });
+    const timeoutId = window.setTimeout(() => {
+      setCompletedPresentationId(id);
+      setCinematicPresentation((current) =>
+        current?.id === id ? null : current,
+      );
+    }, BATTLE_DICE_CINEMATIC_TOTAL_MS - elapsedMs);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    battle,
+    battle.stage,
+    battle.stageStartedAt,
+    completedPresentationId,
+  ]);
+
+  useEffect(() => {
+    if (!cinematicPresentation) return;
+
+    const gameRoot = document.querySelector<HTMLElement>(".game-runtime > div");
+    if (!gameRoot) return;
+
+    const alreadyInert = gameRoot.hasAttribute("inert");
+    if (!alreadyInert) gameRoot.setAttribute("inert", "");
+
+    return () => {
+      if (!alreadyInert) gameRoot.removeAttribute("inert");
+    };
+  }, [cinematicPresentation]);
+
+  const finishCinematic = useCallback((id: string) => {
+    setCompletedPresentationId(id);
+    setCinematicPresentation((current) =>
+      current?.id === id ? null : current,
+    );
+  }, []);
+
   async function roll() {
     if (cancelling) return;
     const side: RollingSide =
@@ -195,7 +296,22 @@ export function BattleOverlay({
     }
   }
 
-  const hasDice = battle.attacker.length > 0 || battle.defender.length > 0;
+  if (cinematicPresentation) {
+    const cinematicColor =
+      cinematicPresentation.side === "attack"
+        ? (attacker?.color ?? "forest")
+        : (defender?.color ?? "ruby");
+
+    return (
+      <BattleDiceCinematic
+        battle={battle}
+        side={cinematicPresentation.side}
+        color={cinematicColor}
+        elapsedMs={cinematicPresentation.elapsedMs}
+        onComplete={() => finishCinematic(cinematicPresentation.id)}
+      />
+    );
+  }
 
   return (
     <GameModal
@@ -229,13 +345,11 @@ export function BattleOverlay({
         </div>
       ) : null}
 
-      {hasDice ? (
-        <BattleDiceArena
-          battle={battle}
-          attackerColor={attacker?.color ?? "forest"}
-          defenderColor={defender?.color ?? "ruby"}
-        />
-      ) : null}
+      <BattleStaticDiceResults
+        battle={battle}
+        attackerColor={attacker?.color ?? "forest"}
+        defenderColor={defender?.color ?? "ruby"}
+      />
 
       {battle.stage === "show_comparison" ||
       battle.stage === "show_battle_result" ? (
