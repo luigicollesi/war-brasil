@@ -160,7 +160,7 @@ test("runner isola ação estratégica rejeitada e usa somente um fallback segur
 });
 
 test("automação serializa apresentação e bot em um único command condicional", () => {
-  const automation = readFileSync("src/lib/game-automation-service.ts", "utf8");
+  const automation = readFileSync("src/lib/server/game-automation-service.ts", "utf8");
   const route = readFileSync(
     "src/app/api/games/[roomId]/advance/route.ts",
     "utf8",
@@ -188,7 +188,7 @@ test("schema da fase 2 persiste apenas o horário da próxima ação", () => {
 });
 
 test("snapshot aciona o mesmo polling para apresentação e ator bot", () => {
-  const snapshot = readFileSync("src/lib/game-snapshot-service.ts", "utf8");
+  const snapshot = readFileSync("src/lib/server/game-snapshot-service.ts", "utf8");
   const sync = readFileSync("src/hooks/use-game-sync.ts", "utf8");
 
   assert.match(snapshot, /automaticAdvancePending/);
