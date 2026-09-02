@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { GameDie } from "@/src/components/game-die";
+import { BattleDiceArena } from "@/src/components/dice-3d/battle-dice-arena";
 import { GameModal } from "@/src/components/game-modal";
 import { barrierAttackSummary } from "@/src/lib/game-barrier-presentation";
 import { attackerLossPerComparison } from "@/src/lib/game-barrier-rules";
@@ -9,10 +9,6 @@ import {
   battleAttackMode,
   battleComparisonRows,
 } from "@/src/lib/game-battle-presentation";
-import {
-  buildBattleDisplayDice,
-  type BattleDisplaySide,
-} from "@/src/lib/game-battle-display";
 import { runGameCommand } from "@/src/lib/game-command-client";
 import type { GameSnapshot } from "@/src/lib/game-contract";
 
@@ -22,6 +18,8 @@ type BattleParticipantProps = {
   territoryName: string;
   troops: number | undefined;
 };
+
+type RollingSide = "attack" | "defense";
 
 function fallbackTerritoryName(territoryId: number) {
   return `Território ${territoryId}`;
@@ -79,7 +77,7 @@ export function BattleOverlay({
   onRefresh: (minimumRevision?: number) => Promise<void>;
 }) {
   const [error, setError] = useState("");
-  const [rollingSide, setRollingSide] = useState<BattleDisplaySide | null>(null);
+  const [rollingSide, setRollingSide] = useState<RollingSide | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [territoryNames, setTerritoryNames] = useState(() => ({
     attacker: fallbackTerritoryName(battle.attackerTerritoryId),
@@ -96,16 +94,6 @@ export function BattleOverlay({
   const attackMode = battleAttackMode(battle);
   const isBarrierAttack = attackMode === "barrier";
   const comparisonRows = battleComparisonRows(battle);
-  const attackDisplayDice = buildBattleDisplayDice({
-    values: battle.attacker,
-    side: "attack",
-    seed: `${battle.attackerTerritoryId}:${battle.defenderTerritoryId}:${battle.attacker.join(",")}`,
-  });
-  const defenseDisplayDice = buildBattleDisplayDice({
-    values: battle.defender,
-    side: "defense",
-    seed: `${battle.attackerTerritoryId}:${battle.defenderTerritoryId}:${battle.defender.join(",")}`,
-  });
   const lossPerComparison = attackerLossPerComparison(attackMode);
   const barrierSummary = isBarrierAttack
     ? barrierAttackSummary({
@@ -161,7 +149,7 @@ export function BattleOverlay({
 
   async function roll() {
     if (cancelling) return;
-    const side: BattleDisplaySide =
+    const side: RollingSide =
       battle.stage === "awaiting_defender_roll" ? "defense" : "attack";
     setError("");
     setRollingSide(side);
@@ -207,11 +195,7 @@ export function BattleOverlay({
     }
   }
 
-  const attackRolling =
-    rollingSide === "attack" || battle.stage === "show_attacker_result";
-  const defenseRolling =
-    rollingSide === "defense" || battle.stage === "show_defender_result";
-  const hasDice = attackDisplayDice.length > 0 || defenseDisplayDice.length > 0;
+  const hasDice = battle.attacker.length > 0 || battle.defender.length > 0;
 
   return (
     <GameModal
@@ -246,51 +230,11 @@ export function BattleOverlay({
       ) : null}
 
       {hasDice ? (
-        <div className="battle-dice-grid">
-          {attackDisplayDice.length ? (
-            <div className="battle-side battle-side--attack">
-              <p>Ataque</p>
-              <div className="battle-dice-row">
-                {attackDisplayDice.map((die) => (
-                  <div
-                    className="battle-die-slot"
-                    key={`attack-${die.sourceIndex}-${die.value}`}
-                  >
-                    <GameDie
-                      value={die.value}
-                      color={attacker?.color ?? "forest"}
-                      rolling={attackRolling}
-                      rollAnimation={die.animation}
-                      className="battle-die"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : null}
-
-          {defenseDisplayDice.length ? (
-            <div className="battle-side battle-side--defense">
-              <p>Defesa</p>
-              <div className="battle-dice-row">
-                {defenseDisplayDice.map((die) => (
-                  <div
-                    className="battle-die-slot"
-                    key={`defense-${die.sourceIndex}-${die.value}`}
-                  >
-                    <GameDie
-                      value={die.value}
-                      color={defender?.color ?? "ruby"}
-                      rolling={defenseRolling}
-                      rollAnimation={die.animation}
-                      className="battle-die"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          ) : null}
-        </div>
+        <BattleDiceArena
+          battle={battle}
+          attackerColor={attacker?.color ?? "forest"}
+          defenderColor={defender?.color ?? "ruby"}
+        />
       ) : null}
 
       {battle.stage === "show_comparison" ||
