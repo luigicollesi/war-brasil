@@ -8,7 +8,10 @@ import {
   DICE_VALUES,
 } from "../.test-build/client/dice/pip-layout.js";
 import { validateDiceValues } from "../.test-build/client/dice/dice-values.js";
-import { DICE_PHYSICS } from "../.test-build/client/dice/physics/dice-physics-config.js";
+import {
+  DICE_COLLIDER_INNER_HALF_EXTENT,
+  DICE_PHYSICS,
+} from "../.test-build/client/dice/physics/dice-physics-config.js";
 import {
   createDiceLaunchPlan,
   validateDicePhysicsCount,
@@ -158,6 +161,16 @@ test("plano físico é determinístico, finito e mantém até três dados separa
   }
 });
 
+test("collider arredondado preserva o mesmo envelope externo do cubo anterior", () => {
+  assert.ok(DICE_PHYSICS.colliderBorderRadius > 0);
+  assert.ok(DICE_COLLIDER_INNER_HALF_EXTENT > 0);
+  approximatelyEqual(
+    DICE_COLLIDER_INNER_HALF_EXTENT + DICE_PHYSICS.colliderBorderRadius,
+    DICE_PHYSICS.colliderHalfExtent,
+  );
+  assert.ok(DICE_PHYSICS.colliderHalfExtent < DICE_PHYSICS.dieSize / 2);
+});
+
 test("física rejeita contagens e seeds inválidos antes de montar o mundo", () => {
   assert.equal(validateDicePhysicsCount(1), 1);
   assert.equal(validateDicePhysicsCount(3), 3);
@@ -207,10 +220,11 @@ test("fundação 3D é client-side, procedural e mantém fallback 2D", () => {
   assert.match(skins, /\/dado-defesa-azul-hq\.svg/);
 });
 
-test("fase 2 usa um único mundo Rapier com passo fixo, colliders simples e repouso agregado", () => {
+test("fase 2 usa um único mundo Rapier com passo fixo, collider arredondado e repouso agregado", () => {
   const packageJson = JSON.parse(source("package.json"));
   const stage = source("src/components/dice-3d/dice-physics-stage.tsx");
   const physicsDie = source("src/components/dice-3d/physics-die.tsx");
+  const preSimulation = source("src/components/dice-3d/dice-pre-simulation.tsx");
   const tray = source("src/components/dice-3d/dice-tray.tsx");
   const launchPlan = source(
     "src/lib/client/dice/physics/create-dice-launch-plan.ts",
@@ -226,10 +240,16 @@ test("fase 2 usa um único mundo Rapier com passo fixo, colliders simples e repo
 
   assert.match(physicsDie, /RigidBody/);
   assert.match(physicsDie, /colliders=\{false\}/);
-  assert.match(physicsDie, /CuboidCollider/);
+  assert.match(physicsDie, /RoundCuboidCollider/);
+  assert.match(physicsDie, /DICE_COLLIDER_INNER_HALF_EXTENT/);
+  assert.doesNotMatch(physicsDie, /<CuboidCollider/);
   assert.match(physicsDie, /onSleep=\{onSleep\}/);
   assert.match(physicsDie, /onWake=\{onWake\}/);
   assert.match(physicsDie, /\bccd\b/);
+
+  assert.match(preSimulation, /RoundCuboidCollider/);
+  assert.match(preSimulation, /DICE_COLLIDER_INNER_HALF_EXTENT/);
+  assert.doesNotMatch(preSimulation, /<CuboidCollider/);
 
   assert.equal((tray.match(/<CuboidCollider\b/g) ?? []).length, 5);
   assert.doesNotMatch(launchPlan, /Math\.random/);
