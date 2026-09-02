@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const combatSource = readFileSync(
-  "src/lib/game-combat-command-service.ts",
+  "src/lib/server/game-combat-command-service.ts",
   "utf8",
 );
 const cancelRouteSource = readFileSync(
