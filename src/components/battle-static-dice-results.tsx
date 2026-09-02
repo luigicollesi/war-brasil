@@ -50,21 +50,22 @@ export function BattleStaticDiceResults({
   defenderColor?: PlayerColor;
 }) {
   useEffect(() => {
-    void Promise.all([
-      preloadDiceAssets({
-        texture: {
-          skin: "attack",
-          pipColor: playerColorHex(attackerColor),
-        },
-      }),
-      preloadDiceAssets({
-        texture: {
-          skin: "defense",
-          pipColor: playerColorHex(defenderColor),
-        },
-      }),
-    ]).catch(() => undefined);
-  }, [attackerColor, defenderColor]);
+    const texture =
+      battle.stage === "awaiting_attacker_roll"
+        ? {
+            skin: "attack" as const,
+            pipColor: playerColorHex(attackerColor),
+          }
+        : battle.stage === "awaiting_defender_roll"
+          ? {
+              skin: "defense" as const,
+              pipColor: playerColorHex(defenderColor),
+            }
+          : null;
+
+    if (!texture) return;
+    void preloadDiceAssets({ texture }).catch(() => undefined);
+  }, [attackerColor, battle.stage, defenderColor]);
 
   const hasDice = battle.attacker.length > 0 || battle.defender.length > 0;
   if (!hasDice) return null;
