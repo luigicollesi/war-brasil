@@ -87,7 +87,7 @@ test("combate separa cinematic 3D do resultado SVG estático", () => {
   assert.match(die, /backgroundColor: playerColorHex\(color\)/);
 });
 
-test("cinematic de combate é fullscreen, bloqueia interação e respeita o relógio do servidor", () => {
+test("cinematic de combate deriva apresentação do stage e bloqueia toda interação", () => {
   const overlay = readFileSync("src/components/battle-overlay.tsx", "utf8");
   const cinematic = readFileSync(
     "src/components/dice-3d/battle-dice-cinematic.tsx",
@@ -98,19 +98,47 @@ test("cinematic de combate é fullscreen, bloqueia interação e respeita o rel�
     "utf8",
   );
 
-  assert.match(overlay, /Date\.parse\(battle\.stageStartedAt\)/);
-  assert.match(overlay, /BATTLE_DICE_CINEMATIC_TOTAL_MS - elapsedMs/);
+  assert.match(overlay, /battleCinematicSide\(battle\)/);
+  assert.match(overlay, /cinematicPresentationId !== completedPresentationId/);
+  assert.doesNotMatch(overlay, /setCinematicPresentation/);
   assert.match(overlay, /setAttribute\("inert", ""\)/);
   assert.match(overlay, /removeAttribute\("inert"\)/);
   assert.match(cinematic, /frameloop="demand"/);
-  assert.match(cinematic, /camera=\{\{ position: \[0, 6\.5, 2\.1\], fov: 34 \}\}/);
-  assert.match(cinematic, /BATTLE_DICE_CINEMATIC_SETTLE_HOLD_MS/);
+  assert.match(cinematic, /BATTLE_DICE_CINEMATIC_TOTAL_MS - initialElapsedMs/);
+  assert.match(cinematic, /MIN_PRESENTATION_REMAINING_MS/);
   assert.doesNotMatch(cinematic, /dockPositions=/);
   assert.doesNotMatch(cinematic, /dockScale=/);
   assert.match(styles, /position: fixed/);
   assert.match(styles, /inset: 0/);
-  assert.match(styles, /background: rgba\(0, 0, 0, 0\.12\)/);
+  assert.match(styles, /background: rgba\(0, 0, 0, 0\.1\)/);
   assert.match(styles, /touch-action: none/);
+});
+
+test("cinematic sincroniza frame inicial e adapta enquadramento para portrait", () => {
+  const cinematic = readFileSync(
+    "src/components/dice-3d/battle-dice-cinematic.tsx",
+    "utf8",
+  );
+  const predetermined = readFileSync(
+    "src/components/dice-3d/predetermined-dice-roll.tsx",
+    "utf8",
+  );
+  const replay = readFileSync(
+    "src/components/dice-3d/dice-trajectory-replay.tsx",
+    "utf8",
+  );
+
+  assert.match(cinematic, /Date\.now\(\) - startedAtMs/);
+  assert.match(cinematic, /initialElapsedMs=\{Math\.min/);
+  assert.match(cinematic, /PerspectiveCamera/);
+  assert.match(cinematic, /PORTRAIT_ASPECT_THRESHOLD/);
+  assert.match(cinematic, /portrait \? Math\.PI \/ 2 : 0/);
+  assert.match(cinematic, /camera\.updateProjectionMatrix\(\)/);
+  assert.match(cinematic, /planeGeometry args=\{\[6\.4, 6\.4\]\}/);
+  assert.match(predetermined, /initialElapsedMs=\{initialElapsedMs\}/);
+  assert.match(replay, /initialElapsedMs = 0/);
+  assert.match(replay, /sampleTrajectoryState/);
+  assert.match(replay, /elapsedSeconds = useRef\(initialReplaySeconds\)/);
 });
 
 test("modal de combate reutiliza território carregado e nome do SVG sem nova requisição", () => {
