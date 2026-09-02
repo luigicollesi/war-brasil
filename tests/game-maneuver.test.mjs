@@ -175,7 +175,7 @@ test("fluxo de manobra limpa a seleção depois de uma ação bem-sucedida", () 
 
 test("backend recalcula topologia efetiva e melhor rota própria antes de mover tropas", () => {
   const source = readFileSync(
-    "src/lib/game-maneuver-command-service.ts",
+    "src/lib/server/game-maneuver-command-service.ts",
     "utf8",
   );
 
