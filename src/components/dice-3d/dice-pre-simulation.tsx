@@ -16,6 +16,7 @@ import type {
   DiceQuaternion,
   DiceTrajectoryBodyState,
   DiceTrajectoryFrame,
+  DiceVector3,
 } from "@/src/lib/client/dice/types";
 import { DiceTray } from "./dice-tray";
 
@@ -152,17 +153,19 @@ function PreSimulationController({
 export function DicePreSimulation({
   count,
   seed,
+  launchOffset = [0, 0, 0],
   onComplete,
   onError,
 }: {
   count: number;
   seed: string;
+  launchOffset?: DiceVector3;
   onComplete: (trajectory: DicePhysicsTrajectory) => void;
   onError: (error: Error) => void;
 }) {
   const launchPlan = useMemo(
-    () => createDiceLaunchPlan(count, seed),
-    [count, seed],
+    () => createDiceLaunchPlan(count, seed, launchOffset),
+    [count, launchOffset, seed],
   );
   const bodyRefs = useRef<(RapierRigidBody | null)[]>([]);
 
