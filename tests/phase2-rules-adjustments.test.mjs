@@ -7,7 +7,7 @@ function source(path) {
 }
 
 test("troca de cartas só é aceita durante reinforcement", () => {
-  const troopService = source("src/lib/game-troop-command-service.ts");
+  const troopService = source("src/lib/server/game-troop-command-service.ts");
   const runner = source("src/lib/bots/bot-runner.ts");
   const strategy = source("src/lib/bots/bot-strategy.ts");
   const cards = source("src/lib/bots/bot-cards.ts");
@@ -25,7 +25,7 @@ test("troca de cartas só é aceita durante reinforcement", () => {
 });
 
 test("eliminação avalia primeiro o conquistador e depois donos da missão", () => {
-  const battle = source("src/lib/game-battle-service.ts");
+  const battle = source("src/lib/server/game-battle-service.ts");
 
   const conquerorCheck = battle.indexOf("const conquerorWon = await objectiveWon(");
   const indirectCheck = battle.indexOf("await evaluateEliminationObjectiveOwners(");
@@ -37,7 +37,7 @@ test("eliminação avalia primeiro o conquistador e depois donos da missão", ()
 });
 
 test("eliminação continua removendo o jogador da ordem e transferindo a mão", () => {
-  const battle = source("src/lib/game-battle-service.ts");
+  const battle = source("src/lib/server/game-battle-service.ts");
 
   assert.match(battle, /SET turn_position=NULL,bot_next_action_at=NULL/);
   assert.match(
