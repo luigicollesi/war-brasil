@@ -100,7 +100,7 @@ test("mapa e cliente usam apenas o contrato enriquecido targetHints", () => {
 });
 
 test("scope da interação invalida seleção quando rodada ou túnel mudam", () => {
-  const interaction = source("src/lib/game-interaction.ts");
+  const interaction = source("src/lib/shared/game-interaction.ts");
 
   assert.match(interaction, /snapshot\.room\.roundNumber/);
   assert.match(interaction, /snapshot\.room\.jurassicTunnelDestinationId/);
