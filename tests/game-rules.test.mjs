@@ -89,7 +89,7 @@ test("snapshot consulta objetivo e cartas somente do jogador da sessão", () => 
 });
 
 test("mutações críticas bloqueiam a sala antes de alterar o estado", () => {
-  const source = readFileSync("src/lib/game-command.ts", "utf8");
+  const source = readFileSync("src/lib/server/game-command.ts", "utf8");
   assert.match(source, /SELECT id,revision FROM game_rooms WHERE id=\$1 FOR UPDATE/);
   assert.match(source, /await client\.query\("BEGIN"\)/);
 });
@@ -177,7 +177,6 @@ test("Túnel Jurássico participa da cadeia de manobra", () => {
     new Set([3, 20, 21]),
   );
 });
-
 test("backend da manobra recalcula a melhor rota usando a topologia efetiva", () => {
   const source = readFileSync("src/lib/game-maneuver-command-service.ts", "utf8");
   assert.match(source, /bestTerritoryRoute/);
