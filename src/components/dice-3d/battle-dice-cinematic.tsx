@@ -1,10 +1,16 @@
 "use client";
 
-import { PerspectiveCamera as DreiPerspectiveCamera } from "@react-three/drei";
 import { Canvas, useThree } from "@react-three/fiber";
 import { createPortal } from "react-dom";
-import { PCFShadowMap } from "three";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { PCFShadowMap, type PerspectiveCamera } from "three";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { validateDiceValues } from "@/src/lib/client/dice/dice-values";
 import { DICE_PHYSICS } from "@/src/lib/client/dice/physics/dice-physics-config";
 import type { DiceValue } from "@/src/lib/client/dice/types";
@@ -54,24 +60,42 @@ function cinematicSeed(
 
 function CinematicCameraRig() {
   const size = useThree((state) => state.size);
+  const set = useThree((state) => state.set);
+  const get = useThree((state) => state.get);
+  const cameraRef = useRef<PerspectiveCamera>(null);
   const aspect = size.height > 0 ? size.width / size.height : 16 / 9;
   const portrait = aspect < PORTRAIT_ASPECT_THRESHOLD;
   const compact = !portrait && aspect < 1.2;
+  const mode = portrait ? "portrait" : compact ? "compact" : "landscape";
   const position: [number, number, number] = portrait
     ? [0, 8.65, 3.05]
     : compact
       ? [0, 7.45, 2.55]
       : [0, 6.55, 2.2];
   const fov = portrait ? 36 : compact ? 35 : 34;
+  const pitch = -Math.atan2(position[1] + 0.32, position[2]);
+
+  useLayoutEffect(() => {
+    const camera = cameraRef.current;
+    if (!camera) return;
+
+    const previousCamera = get().camera;
+    set({ camera });
+
+    return () => {
+      if (get().camera === camera) set({ camera: previousCamera });
+    };
+  }, [get, mode, set]);
 
   return (
-    <DreiPerspectiveCamera
-      makeDefault
+    <perspectiveCamera
+      key={mode}
+      ref={cameraRef}
       position={position}
+      rotation={[pitch, 0, 0]}
       fov={fov}
       near={0.1}
       far={40}
-      onUpdate={(camera) => camera.lookAt(0, -0.32, 0)}
     />
   );
 }
