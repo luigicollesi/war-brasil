@@ -10,10 +10,12 @@ import {
   BATTLE_DICE_REPLAY_MS,
   battleDiceDockPositions,
   battleDiceDockScale,
+  battleDiceLaunchOffset,
   type BattleDiceDockSide,
 } from "@/src/lib/client/dice/battle-dice-layout";
 import { validateDiceValues } from "@/src/lib/client/dice/dice-values";
 import type { DiceFaceTextureSet, DiceValue } from "@/src/lib/client/dice/types";
+import { playerColorHex } from "@/src/lib/client/player-color";
 import type { GameBattle } from "@/src/lib/game-contract";
 import { DiceTraySurface } from "./dice-tray-surface";
 import { PredeterminedDiceRoll } from "./predetermined-dice-roll";
@@ -112,6 +114,7 @@ function BattleDiceSidePresentation({
       textures={textures}
       preparingFallback={null}
       failureFallback={null}
+      launchOffset={battleDiceLaunchOffset(side)}
       playbackDurationMs={BATTLE_DICE_REPLAY_MS}
       dockDurationMs={BATTLE_DICE_DOCK_MS}
       dockPositions={battleDiceDockPositions(side, values.length)}
@@ -190,8 +193,14 @@ export function BattleDiceArena({
   );
   const webglSupported = useDiceWebGLSupport();
   const reducedMotion = useReducedDiceMotion();
-  const attackTextureState = useDiceFaceTextures({ skin: "attack" });
-  const defenseTextureState = useDiceFaceTextures({ skin: "defense" });
+  const attackTextureState = useDiceFaceTextures({
+    skin: "attack",
+    pipColor: playerColorHex(attackerColor),
+  });
+  const defenseTextureState = useDiceFaceTextures({
+    skin: "defense",
+    pipColor: playerColorHex(defenderColor),
+  });
   const [physicsFailed, setPhysicsFailed] = useState(false);
   const handlePhysicsError = useCallback(() => setPhysicsFailed(true), []);
   const presentationIdentity = `${battle.attackerPlayerId}:${battle.attackerTerritoryId}:${battle.defenderPlayerId}:${battle.defenderTerritoryId}`;
