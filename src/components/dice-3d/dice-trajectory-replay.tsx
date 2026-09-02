@@ -75,6 +75,7 @@ export function DiceTrajectoryReplay({
   textures,
   playbackDurationMs,
   initialElapsedMs = 0,
+  visualScale = 1,
   dockPositions,
   dockScale = 1,
   dockDurationMs = 0,
@@ -86,6 +87,7 @@ export function DiceTrajectoryReplay({
   textures: DiceFaceTextureSet;
   playbackDurationMs?: number;
   initialElapsedMs?: number;
+  visualScale?: number;
   dockPositions?: readonly DiceVector3[];
   dockScale?: number;
   dockDurationMs?: number;
@@ -283,7 +285,7 @@ export function DiceTrajectoryReplay({
             quaternion={initialQuaternion}
             scale={initialScale}
           >
-            <group quaternion={remap.rotation}>
+            <group quaternion={remap.rotation} scale={visualScale}>
               <DieVisual
                 geometry={geometry}
                 textures={textures}
