@@ -65,7 +65,7 @@ test("histórico é lido da tabela de rodadas em ordem decrescente e com janela 
 
 test("seleção mantém aleatoriedade na borda e domínio livre de Math.random", () => {
   const service = readFileSync("src/lib/events/event-selection-service.ts", "utf8");
-  const selector = readFileSync("src/lib/events/event-selector.ts", "utf8");
+  const selector = readFileSync("src/lib/shared/events/event-selector.ts", "utf8");
 
   assert.match(service, /randomInt\(totalWeight\)/);
   assert.match(service, /EVENT_HISTORY_SIZE/);
@@ -80,8 +80,8 @@ test("resolução mantém crypto na borda e protege a conexão jurássica", () =
     "src/lib/events/event-resolution-service.ts",
     "utf8",
   );
-  const roundRules = readFileSync("src/lib/game-round-rules.ts", "utf8");
-  const resolver = readFileSync("src/lib/events/event-resolver.ts", "utf8");
+  const roundRules = readFileSync("src/lib/shared/game-round-rules.ts", "utf8");
+  const resolver = readFileSync("src/lib/shared/events/event-resolver.ts", "utf8");
 
   assert.match(service, /randomInt\(exclusiveMax\)/);
   assert.match(service, /getBaseTerritoryConnections/);
@@ -93,7 +93,7 @@ test("resolução mantém crypto na borda e protege a conexão jurássica", () =
 });
 
 test("contrato estrutural do catálogo é domínio puro e pode validar o banco na borda", () => {
-  const catalog = readFileSync("src/lib/events/event-catalog.ts", "utf8");
+  const catalog = readFileSync("src/lib/shared/events/event-catalog.ts", "utf8");
   const catalogService = readFileSync("src/lib/events/event-catalog-service.ts", "utf8");
   const repository = readFileSync("src/lib/events/event-repository.ts", "utf8");
 
