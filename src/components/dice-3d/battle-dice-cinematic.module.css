@@ -1,23 +1,32 @@
+@keyframes cinematic-enter {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 .root {
   position: fixed;
   inset: 0;
   z-index: 120;
+  isolation: isolate;
   overflow: hidden;
   touch-action: none;
   user-select: none;
   overscroll-behavior: none;
   pointer-events: auto;
+  animation: cinematic-enter 90ms ease-out both;
 }
 
 .backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.12);
+  background: rgba(0, 0, 0, 0.1);
+  pointer-events: none;
 }
 
 .canvas {
   position: absolute;
   inset: 0;
+  pointer-events: none;
 }
 
 .canvas canvas {
@@ -32,21 +41,22 @@
   top: max(18px, env(safe-area-inset-top));
   left: 50%;
   transform: translateX(-50%);
-  padding: 0.32rem 0.68rem;
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  padding: 0.3rem 0.66rem;
+  border: 1px solid rgba(255, 255, 255, 0.13);
   border-radius: 999px;
-  background: rgba(5, 22, 17, 0.36);
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 0.64rem;
+  background: rgba(5, 22, 17, 0.3);
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 0.62rem;
   font-weight: 800;
   letter-spacing: 0.18em;
   line-height: 1;
+  text-shadow: 0 1px 5px rgba(0, 0, 0, 0.36);
   pointer-events: none;
 }
 
 @media (max-width: 767px) {
   .label {
     top: max(12px, env(safe-area-inset-top));
-    font-size: 0.58rem;
+    font-size: 0.56rem;
   }
 }
