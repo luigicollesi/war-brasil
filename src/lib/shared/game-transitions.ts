@@ -1,5 +1,7 @@
 export const ORDER_ROLL_PRESENTATION_MS = 2_000;
-export const BATTLE_PRESENTATION_MS = 2_000;
+export const BATTLE_DICE_PRESENTATION_MS = 2_400;
+export const BATTLE_COMPARISON_PRESENTATION_MS = 2_000;
+export const BATTLE_RESULT_PRESENTATION_MS = 2_000;
 
 export type BattleStage =
   | "awaiting_attacker_roll"
@@ -26,12 +28,26 @@ function elapsedAtLeast(
   return isFinite(startedAtMs) && nowMs - startedAtMs >= durationMs;
 }
 
+function battleStagePresentationDuration(stage: BattleStage) {
+  if (stage === "show_attacker_result" || stage === "show_defender_result") {
+    return BATTLE_DICE_PRESENTATION_MS;
+  }
+  if (stage === "show_comparison") {
+    return BATTLE_COMPARISON_PRESENTATION_MS;
+  }
+  if (stage === "show_battle_result") {
+    return BATTLE_RESULT_PRESENTATION_MS;
+  }
+  return null;
+}
+
 export function nextBattlePresentationTransition(
   stage: BattleStage,
   stageStartedAt: string | Date,
   nowMs = Date.now(),
 ): BattlePresentationTransition | null {
-  if (!elapsedAtLeast(stageStartedAt, BATTLE_PRESENTATION_MS, nowMs)) {
+  const durationMs = battleStagePresentationDuration(stage);
+  if (durationMs === null || !elapsedAtLeast(stageStartedAt, durationMs, nowMs)) {
     return null;
   }
 
