@@ -130,7 +130,7 @@ test("cliente cacheia base e hidrata evento mais túnel a partir do snapshot atu
 });
 
 test("contrato de topologia v2 invalida caches do formato anterior", () => {
-  const contract = readFileSync("src/lib/game-sync-contract.ts", "utf8");
+  const contract = readFileSync("src/lib/shared/game-sync-contract.ts", "utf8");
   const route = readFileSync(
     "src/app/api/games/[roomId]/route.ts",
     "utf8",
