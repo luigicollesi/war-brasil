@@ -4,21 +4,21 @@ import test from "node:test";
 
 const PURE_MODULES = [
   "src/lib/shared/game-rules.ts",
-  "src/lib/game-round-rules.ts",
+  "src/lib/shared/game-round-rules.ts",
   "src/lib/shared/territory-connections.ts",
   "src/lib/game-interaction.ts",
   "src/lib/game-snapshot-hydration.ts",
   "src/lib/shared/game-command-patch.ts",
-  "src/lib/game-effective-connections.ts",
+  "src/lib/shared/game-effective-connections.ts",
   "src/lib/game-snapshot-sharing.ts",
   "src/lib/game-view-model.ts",
   "src/lib/shared/events/event-types.ts",
-  "src/lib/events/event-selector.ts",
-  "src/lib/events/event-catalog.ts",
-  "src/lib/events/event-resolver.ts",
-  "src/lib/events/event-topology.ts",
-  "src/lib/events/event-attack-rules.ts",
-  "src/lib/events/event-presentation.ts",
+  "src/lib/shared/events/event-selector.ts",
+  "src/lib/shared/events/event-catalog.ts",
+  "src/lib/shared/events/event-resolver.ts",
+  "src/lib/shared/events/event-topology.ts",
+  "src/lib/shared/events/event-attack-rules.ts",
+  "src/lib/shared/events/event-presentation.ts",
 ];
 
 test("módulos puros de domínio não dependem de browser, React, banco ou server-only", () => {
