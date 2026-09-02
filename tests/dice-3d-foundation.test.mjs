@@ -8,6 +8,12 @@ import {
   DICE_VALUES,
 } from "../.test-build/client/dice/pip-layout.js";
 import { validateDiceValues } from "../.test-build/client/dice/dice-values.js";
+import { DICE_PHYSICS } from "../.test-build/client/dice/physics/dice-physics-config.js";
+import {
+  createDiceLaunchPlan,
+  validateDicePhysicsCount,
+} from "../.test-build/client/dice/physics/create-dice-launch-plan.js";
+import { detectPhysicalTopFace } from "../.test-build/client/dice/physics/detect-top-face.js";
 
 function source(path) {
   return readFileSync(path, "utf8");
@@ -46,8 +52,8 @@ test("faces canônicas são únicas e preservam pares opostos de um D6", () => {
       (candidate) => candidate.value === face.opposite,
     );
     assert.ok(opposite);
-    for (let index = 0; index < face.normal.length; index += 1) {
-      approximatelyEqual(opposite.normal[index], -face.normal[index]);
+    for (let axis = 0; axis < 3; axis += 1) {
+      approximatelyEqual(opposite.normal[axis], -face.normal[axis]);
     }
   }
 });
@@ -122,10 +128,64 @@ test("geometria rejeita parâmetros que produziriam um dado degenerado", () => {
   );
 });
 
+test("plano físico é determinístico, finito e mantém até três dados separados", () => {
+  const first = createDiceLaunchPlan(3, "phase-2-quality");
+  const repeat = createDiceLaunchPlan(3, "phase-2-quality");
+  const other = createDiceLaunchPlan(3, "phase-2-other");
+
+  assert.deepEqual(first, repeat);
+  assert.notDeepEqual(first, other);
+  assert.equal(first.dice.length, 3);
+
+  for (const die of first.dice) {
+    for (const component of [
+      ...die.position,
+      ...die.rotation,
+      ...die.linearVelocity,
+      ...die.angularVelocity,
+    ]) {
+      assert.equal(Number.isFinite(component), true);
+    }
+    approximatelyEqual(Math.hypot(...die.rotation), 1, 1e-8);
+    assert.ok(die.position[1] > DICE_PHYSICS.floorTopY + DICE_PHYSICS.dieSize);
+    assert.ok(Math.abs(die.position[0]) < DICE_PHYSICS.trayHalfWidth - 0.5);
+  }
+
+  for (let index = 1; index < first.dice.length; index += 1) {
+    const previous = first.dice[index - 1].position[0];
+    const current = first.dice[index].position[0];
+    assert.ok(current - previous > DICE_PHYSICS.colliderHalfExtent * 2);
+  }
+});
+
+test("física rejeita contagens e seeds inválidos antes de montar o mundo", () => {
+  assert.equal(validateDicePhysicsCount(1), 1);
+  assert.equal(validateDicePhysicsCount(3), 3);
+  assert.throws(() => validateDicePhysicsCount(0), /entre 1 e 3/);
+  assert.throws(() => validateDicePhysicsCount(4), /entre 1 e 3/);
+  assert.throws(() => validateDicePhysicsCount(1.5), /entre 1 e 3/);
+  assert.throws(() => createDiceLaunchPlan(1, "   "), /não pode ser vazio/);
+});
+
+test("detecção de repouso identifica faces físicas canônicas a partir do quaternion", () => {
+  const halfSqrt = Math.SQRT1_2;
+  assert.equal(detectPhysicalTopFace([0, 0, 0, 1]), 1);
+  assert.equal(detectPhysicalTopFace([0, 0, halfSqrt, halfSqrt]), 2);
+  assert.equal(detectPhysicalTopFace([0, 0, -halfSqrt, halfSqrt]), 5);
+  assert.equal(detectPhysicalTopFace([-halfSqrt, 0, 0, halfSqrt]), 3);
+  assert.equal(detectPhysicalTopFace([halfSqrt, 0, 0, halfSqrt]), 4);
+  assert.equal(detectPhysicalTopFace([0, 0, 0, -3]), 1);
+  assert.throws(
+    () => detectPhysicalTopFace([0, 0, 0, 0]),
+    /Quaternion inválido/,
+  );
+});
+
 test("fundação 3D é client-side, procedural e mantém fallback 2D", () => {
   const gameDie = source("src/components/game-die.tsx");
   const scene = source("src/components/dice-3d/dice-scene.tsx");
   const die = source("src/components/dice-3d/die-3d.tsx");
+  const visual = source("src/components/dice-3d/die-visual.tsx");
   const skins = source("src/lib/client/dice/textures/dice-skins.ts");
 
   assert.match(gameDie, /DICE_PIP_LAYOUT_PERCENT/);
@@ -137,11 +197,40 @@ test("fundação 3D é client-side, procedural e mantém fallback 2D", () => {
   assert.doesNotMatch(scene, /runGameCommand/);
   assert.doesNotMatch(scene, /Math\.random/);
 
-  assert.match(die, /planeGeometry/);
-  assert.match(die, /DICE_FACE_DEFINITIONS/);
+  assert.match(die, /DieVisual/);
   assert.doesNotMatch(die, /useGLTF|\.glb/);
+  assert.match(visual, /planeGeometry/);
+  assert.match(visual, /DICE_FACE_DEFINITIONS/);
 
   assert.match(skins, /\/dado-brasil-hq\.svg/);
   assert.match(skins, /\/dado-ataque-vermelho-hq\.svg/);
   assert.match(skins, /\/dado-defesa-azul-hq\.svg/);
+});
+
+test("fase 2 usa um único mundo Rapier com passo fixo, colliders simples e repouso agregado", () => {
+  const packageJson = JSON.parse(source("package.json"));
+  const stage = source("src/components/dice-3d/dice-physics-stage.tsx");
+  const physicsDie = source("src/components/dice-3d/physics-die.tsx");
+  const tray = source("src/components/dice-3d/dice-tray.tsx");
+  const launchPlan = source(
+    "src/lib/client/dice/physics/create-dice-launch-plan.ts",
+  );
+
+  assert.equal(packageJson.dependencies["@react-three/rapier"], "2.2.0");
+  assert.equal((stage.match(/<Physics\b/g) ?? []).length, 1);
+  assert.match(stage, /timeStep=\{DICE_PHYSICS\.timeStep\}/);
+  assert.match(stage, /updateLoop="independent"/);
+  assert.match(stage, /sleepingBodies/);
+  assert.match(stage, /detectPhysicalTopFace/);
+  assert.doesNotMatch(stage, /runGameCommand|fetch\(|Math\.random/);
+
+  assert.match(physicsDie, /RigidBody/);
+  assert.match(physicsDie, /colliders=\{false\}/);
+  assert.match(physicsDie, /CuboidCollider/);
+  assert.match(physicsDie, /onSleep=\{onSleep\}/);
+  assert.match(physicsDie, /onWake=\{onWake\}/);
+  assert.match(physicsDie, /\bccd\b/);
+
+  assert.equal((tray.match(/<CuboidCollider\b/g) ?? []).length, 5);
+  assert.doesNotMatch(launchPlan, /Math\.random/);
 });
