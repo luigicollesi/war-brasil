@@ -1,7 +1,10 @@
 "use client";
 
+import { useEffect } from "react";
 import { GameDie } from "@/src/components/game-die";
+import { preloadDiceAssets } from "@/src/lib/client/dice/dice-assets-manager";
 import { validateDiceValues } from "@/src/lib/client/dice/dice-values";
+import { playerColorHex } from "@/src/lib/client/player-color";
 import type { PlayerColor } from "@/src/lib/lobby";
 import type { GameBattle } from "@/src/lib/game-contract";
 
@@ -29,11 +32,7 @@ function StaticDiceSide({
             className="battle-die-slot"
             key={`${side}-static-${index}-${value}`}
           >
-            <GameDie
-              value={value}
-              color={color}
-              className="battle-die"
-            />
+            <GameDie value={value} color={color} className="battle-die" />
           </div>
         ))}
       </div>
@@ -50,6 +49,23 @@ export function BattleStaticDiceResults({
   attackerColor?: PlayerColor;
   defenderColor?: PlayerColor;
 }) {
+  useEffect(() => {
+    void Promise.all([
+      preloadDiceAssets({
+        texture: {
+          skin: "attack",
+          pipColor: playerColorHex(attackerColor),
+        },
+      }),
+      preloadDiceAssets({
+        texture: {
+          skin: "defense",
+          pipColor: playerColorHex(defenderColor),
+        },
+      }),
+    ]).catch(() => undefined);
+  }, [attackerColor, defenderColor]);
+
   const hasDice = battle.attacker.length > 0 || battle.defender.length > 0;
   if (!hasDice) return null;
 
