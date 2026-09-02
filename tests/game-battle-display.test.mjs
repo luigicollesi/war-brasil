@@ -8,7 +8,7 @@ function source(path) {
   return readFileSync(path, "utf8");
 }
 
-test("ordem visual embaralha dados sem alterar valores nem a entrada", () => {
+test("ordem visual legado embaralha dados sem alterar valores nem a entrada", () => {
   const input = [6, 4, 2];
   const before = [...input];
   const display = buildBattleDisplayDice({
@@ -23,51 +23,9 @@ test("ordem visual embaralha dados sem alterar valores nem a entrada", () => {
     before,
   );
   assert.notDeepEqual(display.map((die) => die.value), before);
-  assert.deepEqual(
-    [...display.map((die) => die.sourceIndex)].sort((a, b) => a - b),
-    [0, 1, 2],
-  );
 });
 
-test("mesmo resultado mantém ordem visual e perfis estáveis", () => {
-  const args = {
-    values: [6, 4, 2],
-    side: "defense",
-    seed: "20:35:6,4,2",
-  };
-
-  assert.deepEqual(buildBattleDisplayDice(args), buildBattleDisplayDice(args));
-});
-
-test("dados recebem velocidades controladas e sentidos variados", () => {
-  const display = buildBattleDisplayDice({
-    values: [6, 4, 2],
-    side: "attack",
-    seed: "animation-profile",
-  });
-  const directions = new Set(display.map((die) => die.animation.direction));
-
-  assert.equal(directions.has(1), true);
-  assert.equal(directions.has(-1), true);
-
-  for (const die of display) {
-    assert.ok(die.animation.durationMs >= 520);
-    assert.ok(die.animation.durationMs <= 850);
-    assert.ok(die.animation.rotations >= 2);
-    assert.ok(die.animation.rotations <= 4);
-    assert.ok(die.animation.delayMs >= 0);
-    assert.ok(die.animation.delayMs <= 70);
-  }
-});
-
-test("comparação lógica continua maior contra maior apesar da ordem visual", () => {
-  const displayAttack = buildBattleDisplayDice({
-    values: [6, 4, 2],
-    side: "attack",
-    seed: "comparison",
-  });
-  assert.notDeepEqual(displayAttack.map((die) => die.value), [6, 4, 2]);
-
+test("comparação lógica continua maior contra maior independentemente da apresentação", () => {
   assert.deepEqual(
     battleComparisonRows({
       attacker: [6, 4, 2],
@@ -78,25 +36,35 @@ test("comparação lógica continua maior contra maior apesar da ordem visual", 
   );
 });
 
-test("overlay separa lado em rolagem e mantém dados em slots estáveis", () => {
+test("overlay usa arena 3D única e não renderiza mais slots 2D de combate", () => {
   const overlay = source("src/components/battle-overlay.tsx");
+  const arena = source("src/components/dice-3d/battle-dice-arena.tsx");
 
-  assert.match(overlay, /useState<BattleDisplaySide \| null>/);
-  assert.match(overlay, /rollingSide === "attack"/);
-  assert.match(overlay, /rollingSide === "defense"/);
-  assert.match(overlay, /className="battle-die-slot"/);
-  assert.match(overlay, /className="battle-die"/);
-  assert.match(overlay, /rollAnimation=\{die\.animation\}/);
+  assert.match(overlay, /BattleDiceArena/);
+  assert.match(overlay, /battle=\{battle\}/);
+  assert.doesNotMatch(overlay, /buildBattleDisplayDice/);
+  assert.doesNotMatch(overlay, /className="battle-die-slot"/);
+  assert.doesNotMatch(overlay, /rollAnimation=/);
   assert.doesNotMatch(overlay, /Math\.random/);
+
+  assert.equal((arena.match(/<Canvas\b/g) ?? []).length, 1);
+  assert.match(arena, /skin: "attack"/);
+  assert.match(arena, /skin: "defense"/);
+  assert.match(arena, /stageStartedAt/);
+  assert.match(arena, /battleDiceDockPositions/);
+  assert.match(arena, /skipAnimation/);
+  assert.doesNotMatch(arena, /runGameCommand|Math\.random/);
 });
 
-test("layout quebra grupos no desktop e empilha ataque e defesa no celular", () => {
+test("arena reserva palco responsivo e mantém resultados nas bordas inclusive no fallback", () => {
   const css = source("src/app/game/[roomId]/game-battle-dice-polish.css");
 
-  assert.match(css, /\.battle-dice-grid\s*\{[\s\S]*?flex-wrap:\s*wrap/);
-  assert.match(css, /\.battle-modal\s*\{[\s\S]*?overflow-x:\s*hidden/);
-  assert.match(css, /@media \(max-width: 767px\)[\s\S]*?\.battle-dice-grid\s*\{[\s\S]*?flex-direction:\s*column/);
+  assert.match(css, /\.battle-dice-arena\s*\{[\s\S]*?position:\s*relative/);
+  assert.match(css, /\.battle-dice-arena\s*\{[\s\S]*?overflow:\s*hidden/);
+  assert.match(css, /\.battle-dice-edge-label--attack\s*\{[\s\S]*?left:/);
+  assert.match(css, /\.battle-dice-edge-label--defense\s*\{[\s\S]*?right:/);
+  assert.match(css, /\.battle-dice-arena--fallback\s*\{[\s\S]*?grid-template-columns/);
+  assert.match(css, /@media \(max-width: 767px\)[\s\S]*?\.battle-dice-arena\s*\{/);
   assert.match(css, /prefers-reduced-motion:\s*reduce/);
-  assert.match(css, /--die-roll-duration/);
-  assert.match(css, /--die-roll-delay/);
+  assert.doesNotMatch(css, /battle-die-independent-roll/);
 });
