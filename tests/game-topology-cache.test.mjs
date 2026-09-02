@@ -99,7 +99,7 @@ test("evento altera cópia da topologia cacheada antes de adicionar o túnel", (
 });
 
 test("snapshot transporta somente a topologia base e os efeitos resolvidos separadamente", () => {
-  const source = readFileSync("src/lib/game-snapshot-service.ts", "utf8");
+  const source = readFileSync("src/lib/server/game-snapshot-service.ts", "utf8");
 
   assert.match(source, /getBaseTerritoryConnections/);
   assert.match(source, /getRoomRoundEvent/);
