@@ -36,35 +36,47 @@ test("comparação lógica continua maior contra maior independentemente da apre
   );
 });
 
-test("overlay usa arena 3D única e não renderiza mais slots 2D de combate", () => {
+test("overlay separa lançamento 3D fullscreen do resultado 2D estático", () => {
   const overlay = source("src/components/battle-overlay.tsx");
-  const arena = source("src/components/dice-3d/battle-dice-arena.tsx");
+  const cinematic = source(
+    "src/components/dice-3d/battle-dice-cinematic.tsx",
+  );
+  const staticResults = source("src/components/battle-static-dice-results.tsx");
 
-  assert.match(overlay, /BattleDiceArena/);
-  assert.match(overlay, /battle=\{battle\}/);
+  assert.match(overlay, /BattleDiceCinematic/);
+  assert.match(overlay, /BattleStaticDiceResults/);
+  assert.doesNotMatch(overlay, /BattleDiceArena/);
   assert.doesNotMatch(overlay, /buildBattleDisplayDice/);
   assert.doesNotMatch(overlay, /className="battle-die-slot"/);
   assert.doesNotMatch(overlay, /rollAnimation=/);
   assert.doesNotMatch(overlay, /Math\.random/);
 
-  assert.equal((arena.match(/<Canvas\b/g) ?? []).length, 1);
-  assert.match(arena, /skin: "attack"/);
-  assert.match(arena, /skin: "defense"/);
-  assert.match(arena, /stageStartedAt/);
-  assert.match(arena, /battleDiceDockPositions/);
-  assert.match(arena, /skipAnimation/);
-  assert.doesNotMatch(arena, /runGameCommand|Math\.random/);
+  assert.equal((cinematic.match(/<Canvas\b/g) ?? []).length, 1);
+  assert.match(cinematic, /createPortal/);
+  assert.match(cinematic, /stageStartedAt/);
+  assert.match(cinematic, /initialElapsedMs/);
+  assert.doesNotMatch(cinematic, /battleDiceDockPositions|skipAnimation/);
+  assert.doesNotMatch(cinematic, /runGameCommand|Math\.random/);
+
+  assert.match(staticResults, /<GameDie/);
+  assert.doesNotMatch(staticResults, /rolling=|rollAnimation=/);
 });
 
-test("arena reserva palco responsivo e mantém resultados nas bordas inclusive no fallback", () => {
-  const css = source("src/app/game/[roomId]/game-battle-dice-polish.css");
+test("cinematic fullscreen mantém palco leve, responsivo e sem interação", () => {
+  const css = source(
+    "src/components/dice-3d/battle-dice-cinematic.module.css",
+  );
+  const cinematic = source(
+    "src/components/dice-3d/battle-dice-cinematic.tsx",
+  );
 
-  assert.match(css, /\.battle-dice-arena\s*\{[\s\S]*?position:\s*relative/);
-  assert.match(css, /\.battle-dice-arena\s*\{[\s\S]*?overflow:\s*hidden/);
-  assert.match(css, /\.battle-dice-edge-label--attack\s*\{[\s\S]*?left:/);
-  assert.match(css, /\.battle-dice-edge-label--defense\s*\{[\s\S]*?right:/);
-  assert.match(css, /\.battle-dice-arena--fallback\s*\{[\s\S]*?grid-template-columns/);
-  assert.match(css, /@media \(max-width: 767px\)[\s\S]*?\.battle-dice-arena\s*\{/);
-  assert.match(css, /prefers-reduced-motion:\s*reduce/);
-  assert.doesNotMatch(css, /battle-die-independent-roll/);
+  assert.match(css, /\.root\s*\{[\s\S]*?position:\s*fixed/);
+  assert.match(css, /\.root\s*\{[\s\S]*?inset:\s*0/);
+  assert.match(css, /\.root\s*\{[\s\S]*?touch-action:\s*none/);
+  assert.match(css, /\.backdrop\s*\{[\s\S]*?rgba\(0, 0, 0, 0\.1\)/);
+  assert.match(css, /env\(safe-area-inset-top\)/);
+  assert.match(cinematic, /PORTRAIT_ASPECT_THRESHOLD/);
+  assert.match(cinematic, /DreiPerspectiveCamera/);
+  assert.match(cinematic, /portrait \? Math\.PI \/ 2 : 0/);
+  assert.match(cinematic, /frameloop="demand"/);
 });
