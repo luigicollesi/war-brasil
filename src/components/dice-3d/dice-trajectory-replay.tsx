@@ -9,6 +9,10 @@ import {
   type BufferGeometry,
 } from "three";
 import { createCameraFacingDockQuaternion } from "@/src/lib/client/dice/animation/camera-facing-dock";
+import {
+  analyzeDiceTrajectoryTiming,
+  mapDiceReplayProgress,
+} from "@/src/lib/client/dice/animation/trajectory-time-map";
 import type {
   DiceFaceTextureSet,
   DiceQuaternion,
@@ -92,6 +96,10 @@ export function DiceTrajectoryReplay({
   const frames = roll.trajectory.frames;
   const finalFrame = frames[frames.length - 1];
   const finalStep = finalFrame.step;
+  const trajectoryTiming = useMemo(
+    () => analyzeDiceTrajectoryTiming(frames),
+    [frames],
+  );
   const physicalDurationSeconds = finalStep * roll.trajectory.timeStep;
   const replayDurationSeconds = Math.max(
     0.001,
@@ -151,8 +159,12 @@ export function DiceTrajectoryReplay({
         replayDurationSeconds,
       );
 
-      const progress = elapsedSeconds.current / replayDurationSeconds;
-      const exactStep = progress * finalStep;
+      const replayProgress = elapsedSeconds.current / replayDurationSeconds;
+      const trajectoryProgress = mapDiceReplayProgress(
+        replayProgress,
+        trajectoryTiming,
+      );
+      const exactStep = trajectoryProgress * finalStep;
       const fromIndex = Math.min(Math.floor(exactStep), frames.length - 1);
       const toIndex = Math.min(fromIndex + 1, frames.length - 1);
       const alpha = clamp01(exactStep - fromIndex);
@@ -238,9 +250,13 @@ export function DiceTrajectoryReplay({
     state.invalidate();
   });
 
-  const initialProgress = skipInitially
+  const initialReplayProgress = skipInitially
     ? 1
     : initialReplaySeconds / replayDurationSeconds;
+  const initialTrajectoryProgress = mapDiceReplayProgress(
+    initialReplayProgress,
+    trajectoryTiming,
+  );
 
   return (
     <>
@@ -248,7 +264,7 @@ export function DiceTrajectoryReplay({
         const sampled = sampleTrajectoryState(
           frames,
           finalStep,
-          initialProgress,
+          initialTrajectoryProgress,
           remap.index,
         );
         const initialPosition =
