@@ -1,8 +1,9 @@
 "use client";
 
+import { PerspectiveCamera as DreiPerspectiveCamera } from "@react-three/drei";
 import { Canvas, useThree } from "@react-three/fiber";
 import { createPortal } from "react-dom";
-import { PCFShadowMap, PerspectiveCamera } from "three";
+import { PCFShadowMap } from "three";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { validateDiceValues } from "@/src/lib/client/dice/dice-values";
 import { DICE_PHYSICS } from "@/src/lib/client/dice/physics/dice-physics-config";
@@ -52,34 +53,27 @@ function cinematicSeed(
 }
 
 function CinematicCameraRig() {
-  const camera = useThree((state) => state.camera);
   const size = useThree((state) => state.size);
-  const invalidate = useThree((state) => state.invalidate);
+  const aspect = size.height > 0 ? size.width / size.height : 16 / 9;
+  const portrait = aspect < PORTRAIT_ASPECT_THRESHOLD;
+  const compact = !portrait && aspect < 1.2;
+  const position: [number, number, number] = portrait
+    ? [0, 8.65, 3.05]
+    : compact
+      ? [0, 7.45, 2.55]
+      : [0, 6.55, 2.2];
+  const fov = portrait ? 36 : compact ? 35 : 34;
 
-  useEffect(() => {
-    if (!(camera instanceof PerspectiveCamera) || size.height <= 0) return;
-
-    const aspect = size.width / size.height;
-    const portrait = aspect < PORTRAIT_ASPECT_THRESHOLD;
-    const compact = !portrait && aspect < 1.2;
-
-    if (portrait) {
-      camera.position.set(0, 8.65, 3.05);
-      camera.fov = 36;
-    } else if (compact) {
-      camera.position.set(0, 7.45, 2.55);
-      camera.fov = 35;
-    } else {
-      camera.position.set(0, 6.55, 2.2);
-      camera.fov = 34;
-    }
-
-    camera.lookAt(0, -0.32, 0);
-    camera.updateProjectionMatrix();
-    invalidate();
-  }, [camera, invalidate, size.height, size.width]);
-
-  return null;
+  return (
+    <DreiPerspectiveCamera
+      makeDefault
+      position={position}
+      fov={fov}
+      near={0.1}
+      far={40}
+      onUpdate={(camera) => camera.lookAt(0, -0.32, 0)}
+    />
+  );
 }
 
 function CinematicShadowSurface() {
