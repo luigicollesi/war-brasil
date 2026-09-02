@@ -1,9 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { BattleOverlay } from "@/src/components/battle-overlay";
+import { OrderDiceCinematic } from "@/src/components/dice-3d/order-dice-cinematic";
+import { GameDie } from "@/src/components/game-die";
 import { GameTurnPanel } from "@/src/components/game-turn-panel";
 import { GameUtilityBar } from "@/src/components/game-utility-bar";
 import { GameVictoryModal } from "@/src/components/game-victory-modal";
@@ -24,15 +25,6 @@ import { PLAYER_COLORS, type PlayerColor } from "@/src/lib/lobby";
 
 type GameClientProps = {
   roomId: string;
-};
-
-const pipPositions: Record<number, Array<[number, number]>> = {
-  1: [[50, 50]],
-  2: [[30, 30], [70, 70]],
-  3: [[30, 30], [50, 50], [70, 70]],
-  4: [[30, 30], [70, 30], [30, 70], [70, 70]],
-  5: [[30, 30], [70, 30], [50, 50], [30, 70], [70, 70]],
-  6: [[30, 26], [70, 26], [30, 50], [70, 50], [30, 74], [70, 74]],
 };
 
 function colorHex(color: PlayerColor) {
@@ -118,6 +110,8 @@ function GameReadyClient({
   const [finishError, setFinishError] = useState("");
   const [isVotingRematch, setIsVotingRematch] = useState(false);
   const [isReturningToLobby, setIsReturningToLobby] = useState(false);
+  const [completedOrderPresentationId, setCompletedOrderPresentationId] =
+    useState<string | null>(null);
   const boardTerritories = useMemo<BoardTerritory[]>(
     () =>
       snapshot.territories.flatMap((territory) => {
@@ -144,6 +138,27 @@ function GameReadyClient({
       me &&
       snapshot.room.orderRollPlayerId === me.id &&
       !myCurrentRoll,
+  );
+  const lastOrderRollPlayer =
+    snapshot.room.status === "order_roll"
+      ? snapshot.players.find(
+          (player) => player.id === snapshot.room.lastOrderRollPlayerId,
+        )
+      : undefined;
+  const lastOrderRoll = lastOrderRollPlayer?.rolls.find(
+    (roll) => roll.round === currentRound,
+  );
+  const orderPresentationId =
+    lastOrderRollPlayer && lastOrderRoll
+      ? [
+          currentRound,
+          lastOrderRollPlayer.id,
+          lastOrderRoll.rolledAt,
+          lastOrderRoll.value,
+        ].join(":")
+      : null;
+  const orderCinematicActive = Boolean(
+    orderPresentationId && orderPresentationId !== completedOrderPresentationId,
   );
   const battleArrow = snapshot.room.battle
     ? {
@@ -307,6 +322,22 @@ function GameReadyClient({
         />
       ) : null}
 
+      {orderCinematicActive &&
+      orderPresentationId &&
+      lastOrderRollPlayer &&
+      lastOrderRoll ? (
+        <OrderDiceCinematic
+          key={orderPresentationId}
+          roomId={roomId}
+          round={currentRound}
+          playerId={lastOrderRollPlayer.id}
+          value={lastOrderRoll.value}
+          rolledAt={lastOrderRoll.rolledAt}
+          color={lastOrderRollPlayer.color}
+          onComplete={() => setCompletedOrderPresentationId(orderPresentationId)}
+        />
+      ) : null}
+
       {anomaly.isOpen && anomaly.presentation ? (
         <TemporalAnomalyModal
           presentation={anomaly.presentation}
@@ -343,7 +374,7 @@ type OrderRollPanelProps = {
     factionName: string;
     color: PlayerColor;
     isMe: boolean;
-    rolls: Array<{ round: number; value: number }>;
+    rolls: Array<{ round: number; value: number; rolledAt: string }>;
   }>;
   eligiblePlayerIds: string[];
   currentRound: number;
@@ -379,16 +410,11 @@ function OrderRollPanel({
   return (
     <section className="grid gap-5 rounded-3xl bg-[#12392f] p-5 text-white shadow-[0_18px_50px_rgba(19,57,47,0.16)] lg:grid-cols-[14rem_1fr] sm:p-7">
       <div className="flex flex-col items-center justify-center">
-        <BrazilDie
+        <GameDie
           key={`${currentRound}-${shownPlayer?.id ?? "pending"}-${shownValue}`}
           value={shownValue}
           color={shownPlayer?.color ?? currentColor ?? "forest"}
-          isRolling={
-            isRolling ||
-            Boolean(
-              shownPlayer?.rolls.find((roll) => roll.round === currentRound),
-            )
-          }
+          size="lg"
         />
         <button
           type="button"
@@ -462,46 +488,6 @@ function OrderRollPanel({
         ) : null}
       </div>
     </section>
-  );
-}
-
-function BrazilDie({
-  value,
-  color,
-  isRolling,
-}: {
-  value: number;
-  color: PlayerColor;
-  isRolling: boolean;
-}) {
-  return (
-    <div
-      className={
-        "relative aspect-square w-32 overflow-hidden rounded-3xl " +
-        (isRolling ? "dice-roll-animation" : "")
-      }
-      aria-label={`Dado mostrando ${value}`}
-    >
-      <Image
-        src="/dado-brasil-hq.svg"
-        alt=""
-        fill
-        sizes="128px"
-        className="object-cover"
-        priority
-      />
-      {pipPositions[value].map(([x, y], index) => (
-        <span
-          key={index}
-          className="absolute h-4 w-4 -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/50 shadow-md"
-          style={{
-            left: `${x}%`,
-            top: `${y}%`,
-            backgroundColor: colorHex(color),
-          }}
-        />
-      ))}
-    </div>
   );
 }
 
