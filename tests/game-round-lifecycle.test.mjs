@@ -26,7 +26,7 @@ test("sorteio do Túnel recebe aleatoriedade injetada e valida o índice", () =>
 });
 
 test("rodada inicial registra evento 0 sem resolver ou aplicar seus efeitos", () => {
-  const round = source("src/lib/game-round-service.ts");
+  const round = source("src/lib/server/game-round-service.ts");
 
   const initializeStart = round.indexOf("export async function initializeFirstGameRound");
   const advanceStart = round.indexOf("export async function advanceGameRound");
@@ -43,7 +43,7 @@ test("rodada inicial registra evento 0 sem resolver ou aplicar seus efeitos", ()
 });
 
 test("startPlaying usa a rodada inicial antes de tornar a sala playing", () => {
-  const presentation = source("src/lib/game-presentation-service.ts");
+  const presentation = source("src/lib/server/game-presentation-service.ts");
   const initializeIndex = presentation.indexOf("initializeFirstGameRound(client, room.id)");
   const playingUpdateIndex = presentation.indexOf("SET status='playing'");
 
@@ -56,7 +56,7 @@ test("startPlaying usa a rodada inicial antes de tornar a sala playing", () => {
 });
 
 test("virada escolhe evento da rodada exata, resolve e persiste resultado factual", () => {
-  const round = source("src/lib/game-round-service.ts");
+  const round = source("src/lib/server/game-round-service.ts");
   const selector = source("src/lib/events/event-selection-service.ts");
   const advanceStart = round.indexOf("export async function advanceGameRound");
   const advanceBody = round.slice(advanceStart);
@@ -90,7 +90,7 @@ test("virada escolhe evento da rodada exata, resolve e persiste resultado factua
 });
 
 test("endTurn só avança rodada no wrap e zera movimentações antes da nova anomalia", () => {
-  const command = source("src/lib/game-command-service.ts");
+  const command = source("src/lib/server/game-command-service.ts");
 
   const resetIndex = command.lastIndexOf(
     'UPDATE game_territories SET moved_in_turn=0 WHERE room_id=$1',
@@ -114,9 +114,9 @@ test("endTurn só avança rodada no wrap e zera movimentações antes da nova an
 });
 
 test("lifecycle inteiro reutiliza o PoolClient da transação externa", () => {
-  const round = source("src/lib/game-round-service.ts");
-  const command = source("src/lib/game-command-service.ts");
-  const presentation = source("src/lib/game-presentation-service.ts");
+  const round = source("src/lib/server/game-round-service.ts");
+  const command = source("src/lib/server/game-command-service.ts");
+  const presentation = source("src/lib/server/game-presentation-service.ts");
   const transaction = source("src/lib/server/game-command.ts");
 
   assert.match(round, /type \{ PoolClient \} from "pg"/);
@@ -128,8 +128,8 @@ test("lifecycle inteiro reutiliza o PoolClient da transação externa", () => {
 });
 
 test("gameplay não faz mais self-healing de Túnel ou evento ausente", () => {
-  const combat = source("src/lib/game-combat-command-service.ts");
-  const topology = source("src/lib/game-effective-topology-service.ts");
+  const combat = source("src/lib/server/game-combat-command-service.ts");
+  const topology = source("src/lib/server/game-effective-topology-service.ts");
 
   assert.doesNotMatch(combat, /ensureJurassicTunnel/);
   assert.doesNotMatch(combat, /UPDATE game_rooms SET jurassic_tunnel_territory_id/);
@@ -139,7 +139,7 @@ test("gameplay não faz mais self-healing de Túnel ou evento ausente", () => {
 });
 
 test("snapshot deriva detalhes do evento exatamente da rodada atual", () => {
-  const snapshot = source("src/lib/game-snapshot-service.ts");
+  const snapshot = source("src/lib/server/game-snapshot-service.ts");
 
   assert.match(
     snapshot,
