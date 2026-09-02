@@ -117,7 +117,7 @@ test("lifecycle inteiro reutiliza o PoolClient da transação externa", () => {
   const round = source("src/lib/game-round-service.ts");
   const command = source("src/lib/game-command-service.ts");
   const presentation = source("src/lib/game-presentation-service.ts");
-  const transaction = source("src/lib/game-command.ts");
+  const transaction = source("src/lib/server/game-command.ts");
 
   assert.match(round, /type \{ PoolClient \} from "pg"/);
   assert.doesNotMatch(round, /pool\.connect|BEGIN|COMMIT|ROLLBACK/);
