@@ -57,7 +57,7 @@ test("startPlaying usa a rodada inicial antes de tornar a sala playing", () => {
 
 test("virada escolhe evento da rodada exata, resolve e persiste resultado factual", () => {
   const round = source("src/lib/server/game-round-service.ts");
-  const selector = source("src/lib/events/event-selection-service.ts");
+  const selector = source("src/lib/server/events/event-selection-service.ts");
   const advanceStart = round.indexOf("export async function advanceGameRound");
   const advanceBody = round.slice(advanceStart);
 
