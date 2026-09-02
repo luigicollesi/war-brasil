@@ -21,7 +21,7 @@ test("indicador de conexão publica sua reserva real e utility bar consome a med
 
 test("votos de revanche são persistidos por humano e bots não bloqueiam reinício", () => {
   const migration = source("src/lib/db/migrations/010-game-rematch-votes.sql");
-  const service = source("src/lib/game-finish-command-service.ts");
+  const service = source("src/lib/server/game-finish-command-service.ts");
 
   assert.match(migration, /CREATE TABLE IF NOT EXISTS game_rematch_votes/);
   assert.match(migration, /PRIMARY KEY \(room_id, player_id\)/);
@@ -33,7 +33,7 @@ test("votos de revanche são persistidos por humano e bots não bloqueiam reiní
 });
 
 test("reinício recria uma partida limpa mantendo uma tropa inicial por território", () => {
-  const service = source("src/lib/game-finish-command-service.ts");
+  const service = source("src/lib/server/game-finish-command-service.ts");
 
   assert.match(service, /DELETE FROM game_round_events/);
   assert.match(service, /DELETE FROM game_order_rolls/);
@@ -46,7 +46,7 @@ test("reinício recria uma partida limpa mantendo uma tropa inicial por territó
 });
 
 test("qualquer jogador humano pode devolver a sala finalizada ao mesmo lobby", () => {
-  const service = source("src/lib/game-finish-command-service.ts");
+  const service = source("src/lib/server/game-finish-command-service.ts");
   const client = source("src/components/game-client-v2.tsx");
   const gameRoute = source("src/app/api/games/[roomId]/route.ts");
 
@@ -64,7 +64,7 @@ test("qualquer jogador humano pode devolver a sala finalizada ao mesmo lobby", (
 test("vitória monta modal terminal com votação e retorno coletivo", () => {
   const client = source("src/components/game-client-v2.tsx");
   const modal = source("src/components/game-victory-modal.tsx");
-  const snapshot = source("src/lib/game-snapshot-service.ts");
+  const snapshot = source("src/lib/server/game-snapshot-service.ts");
 
   assert.match(client, /snapshot\.room\.status === "finished"/);
   assert.match(client, /<GameVictoryModal/);
