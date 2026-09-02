@@ -1,6 +1,6 @@
 "use client";
 
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Group,
@@ -8,8 +8,11 @@ import {
   Vector3,
   type BufferGeometry,
 } from "three";
+import { diceFaceDefinition } from "@/src/lib/client/dice/geometry/dice-faces";
 import type {
   DiceFaceTextureSet,
+  DiceQuaternion,
+  DiceValue,
   DiceVector3,
   PredeterminedDiceRoll,
 } from "@/src/lib/client/dice/types";
@@ -19,6 +22,30 @@ import { DieVisual } from "./die-visual";
 function smoothStep(value: number) {
   const t = Math.min(1, Math.max(0, value));
   return t * t * (3 - 2 * t);
+}
+
+function cameraFacingDockRotation(
+  finalRotation: DiceQuaternion,
+  physicalTopValue: DiceValue,
+  dockPosition: DiceVector3,
+  cameraPosition: Vector3,
+) {
+  const finalQuaternion = new Quaternion(...finalRotation).normalize();
+  const faceNormal = new Vector3(
+    ...diceFaceDefinition(physicalTopValue).normal,
+  )
+    .applyQuaternion(finalQuaternion)
+    .normalize();
+  const cameraDirection = cameraPosition
+    .clone()
+    .sub(new Vector3(...dockPosition))
+    .normalize();
+  const adjustment = new Quaternion().setFromUnitVectors(
+    faceNormal,
+    cameraDirection,
+  );
+
+  return adjustment.multiply(finalQuaternion).normalize();
 }
 
 export function DiceTrajectoryReplay({
@@ -42,6 +69,7 @@ export function DiceTrajectoryReplay({
   skipAnimation?: boolean;
   onComplete?: () => void;
 }) {
+  const camera = useThree((state) => state.camera);
   const groupRefs = useRef<(Group | null)[]>([]);
   const elapsedSeconds = useRef(0);
   const dockElapsedSeconds = useRef(0);
@@ -70,6 +98,18 @@ export function DiceTrajectoryReplay({
   const dockDurationSeconds = Math.max(0, dockDurationMs / 1000);
   const canDock =
     dockPositions !== undefined && dockPositions.length === roll.values.length;
+  const dockRotations = useMemo(() => {
+    if (!canDock) return [];
+
+    return roll.visualRemaps.map((remap) =>
+      cameraFacingDockRotation(
+        finalFrame.dice[remap.index].rotation,
+        remap.physicalTopValue,
+        dockPositions![remap.index],
+        camera.position,
+      ),
+    );
+  }, [camera.position, canDock, dockPositions, finalFrame, roll.visualRemaps]);
 
   useEffect(() => {
     if (!skipInitially || completed.current) return;
@@ -121,7 +161,11 @@ export function DiceTrajectoryReplay({
       return;
     }
 
-    if (canDock && dockDurationSeconds > 0 && dockElapsedSeconds.current < dockDurationSeconds) {
+    if (
+      canDock &&
+      dockDurationSeconds > 0 &&
+      dockElapsedSeconds.current < dockDurationSeconds
+    ) {
       dockElapsedSeconds.current = Math.min(
         dockElapsedSeconds.current + Math.min(delta, 0.1),
         dockDurationSeconds,
@@ -139,6 +183,13 @@ export function DiceTrajectoryReplay({
           scratch.toPosition,
           progress,
         );
+        scratch.fromRotation.set(...finalFrame.dice[dieIndex].rotation);
+        scratch.toRotation.copy(dockRotations[dieIndex]);
+        group.quaternion.slerpQuaternions(
+          scratch.fromRotation,
+          scratch.toRotation,
+          progress,
+        );
         const scale = 1 + (dockScale - 1) * progress;
         group.scale.setScalar(scale);
       }
@@ -152,6 +203,7 @@ export function DiceTrajectoryReplay({
         const group = groupRefs.current[dieIndex];
         if (!group) continue;
         group.position.set(...dockPositions![dieIndex]);
+        group.quaternion.copy(dockRotations[dieIndex]);
         group.scale.setScalar(dockScale);
       }
     }
@@ -168,6 +220,10 @@ export function DiceTrajectoryReplay({
         const initial = initialFrame.dice[remap.index];
         const initialPosition =
           skipInitially && canDock ? dockPositions![remap.index] : initial.position;
+        const initialQuaternion =
+          skipInitially && canDock
+            ? dockRotations[remap.index]
+            : new Quaternion(...initial.rotation);
         const initialScale = skipInitially && canDock ? dockScale : 1;
 
         return (
@@ -177,7 +233,7 @@ export function DiceTrajectoryReplay({
               groupRefs.current[remap.index] = group;
             }}
             position={initialPosition}
-            quaternion={initial.rotation}
+            quaternion={initialQuaternion}
             scale={initialScale}
           >
             <group quaternion={remap.rotation}>
