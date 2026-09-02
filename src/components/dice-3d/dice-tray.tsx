@@ -2,6 +2,7 @@
 
 import { CuboidCollider } from "@react-three/rapier";
 import { DICE_PHYSICS } from "@/src/lib/client/dice/physics/dice-physics-config";
+import { DiceTraySurface } from "./dice-tray-surface";
 
 const floorCenterY =
   DICE_PHYSICS.floorTopY - DICE_PHYSICS.floorHalfThickness;
@@ -13,7 +14,7 @@ const colliderMaterial = {
   restitution: DICE_PHYSICS.restitution,
 };
 
-export function DiceTray() {
+export function DiceTray({ showSurface = true }: { showSurface?: boolean }) {
   return (
     <>
       <CuboidCollider
@@ -66,20 +67,7 @@ export function DiceTray() {
         ]}
         {...colliderMaterial}
       />
-
-      <mesh
-        position={[0, DICE_PHYSICS.floorTopY + 0.001, 0]}
-        rotation={[-Math.PI / 2, 0, 0]}
-        receiveShadow
-      >
-        <planeGeometry
-          args={[
-            DICE_PHYSICS.trayHalfWidth * 2,
-            DICE_PHYSICS.trayHalfDepth * 2,
-          ]}
-        />
-        <shadowMaterial transparent opacity={0.2} />
-      </mesh>
+      {showSurface ? <DiceTraySurface /> : null}
     </>
   );
 }

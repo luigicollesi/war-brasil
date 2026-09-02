@@ -42,6 +42,8 @@
     "src/lib/client/dice/physics/dice-physics-config.ts",
     "src/lib/client/dice/physics/create-dice-launch-plan.ts",
     "src/lib/client/dice/physics/detect-top-face.ts",
+    "src/lib/client/dice/physics/visual-face-remap.ts",
+    "src/lib/client/dice/physics/build-predetermined-roll.ts",
     "src/lib/bots/bot-action.ts",
     "src/lib/bots/bot-delay.ts",
     "src/lib/bots/bot-required-actor.ts",

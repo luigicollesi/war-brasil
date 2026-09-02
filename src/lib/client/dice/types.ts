@@ -46,3 +46,36 @@ export type DiceSettledBodyState = {
 export type DicePhysicsSettledHandler = (
   states: readonly DiceSettledBodyState[],
 ) => void;
+
+export type DiceTrajectoryBodyState = {
+  index: number;
+  position: DiceVector3;
+  rotation: DiceQuaternion;
+};
+
+export type DiceTrajectoryFrame = {
+  step: number;
+  dice: readonly DiceTrajectoryBodyState[];
+};
+
+export type DicePhysicsTrajectory = {
+  seed: string;
+  timeStep: number;
+  frames: readonly DiceTrajectoryFrame[];
+  settled: readonly DiceSettledBodyState[];
+};
+
+export type DiceVisualRemap = {
+  index: number;
+  targetValue: DiceValue;
+  physicalTopValue: DiceValue;
+  rotation: DiceQuaternion;
+};
+
+export type PredeterminedDiceRoll = {
+  key: string;
+  seed: string;
+  values: readonly DiceValue[];
+  trajectory: DicePhysicsTrajectory;
+  visualRemaps: readonly DiceVisualRemap[];
+};

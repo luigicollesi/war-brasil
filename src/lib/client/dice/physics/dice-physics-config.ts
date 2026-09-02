@@ -19,6 +19,7 @@ export type DicePhysicsConfig = {
   floorHalfThickness: number;
   wallHalfThickness: number;
   wallHalfHeight: number;
+  maxSimulationSteps: number;
 };
 
 export const DICE_PHYSICS: DicePhysicsConfig = {
@@ -40,4 +41,5 @@ export const DICE_PHYSICS: DicePhysicsConfig = {
   floorHalfThickness: 0.08,
   wallHalfThickness: 0.08,
   wallHalfHeight: 2.2,
+  maxSimulationSteps: 480,
 };

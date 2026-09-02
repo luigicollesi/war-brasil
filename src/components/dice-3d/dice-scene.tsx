@@ -5,6 +5,7 @@ import { useMemo, useSyncExternalStore } from "react";
 import type { PlayerColor } from "@/src/lib/lobby";
 import { getSharedRoundedDieGeometry } from "@/src/lib/client/dice/dice-assets-manager";
 import { validateDiceValues } from "@/src/lib/client/dice/dice-values";
+import { DICE_PHYSICS } from "@/src/lib/client/dice/physics/dice-physics-config";
 import type {
   DiceFaceTextureSet,
   DiceSkin,
@@ -14,11 +15,9 @@ import type {
 import { supportsDiceWebGL } from "@/src/lib/client/dice/webgl-support";
 import { Dice2DFallback } from "./dice-2d-fallback";
 import { Die3D } from "./die-3d";
+import { PredeterminedDiceStage } from "./predetermined-dice-stage";
 import { useDiceFaceTextures } from "./use-dice-face-textures";
 
-const DIE_SIZE = 1;
-const DIE_RADIUS = 0.1;
-const DIE_SEGMENTS = 8;
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 
 function layoutForDice(count: number): DiceVector3[] {
@@ -72,9 +71,9 @@ function StaticDiceStage({
   const geometry = useMemo(
     () =>
       getSharedRoundedDieGeometry({
-        size: DIE_SIZE,
-        radius: DIE_RADIUS,
-        segments: DIE_SEGMENTS,
+        size: DICE_PHYSICS.dieSize,
+        radius: DICE_PHYSICS.dieRadius,
+        segments: DICE_PHYSICS.dieSegments,
       }),
     [],
   );
@@ -96,14 +95,23 @@ function StaticDiceStage({
           textures={textures}
           topValue={value}
           position={positions[index]}
-          size={DIE_SIZE}
-          radius={DIE_RADIUS}
+          size={DICE_PHYSICS.dieSize}
+          radius={DICE_PHYSICS.dieRadius}
           yaw={0.22 + index * 0.18}
         />
       ))}
 
-      <mesh position={[0, -0.58, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[5.5, 3.3]} />
+      <mesh
+        position={[0, DICE_PHYSICS.floorTopY, 0]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        receiveShadow
+      >
+        <planeGeometry
+          args={[
+            DICE_PHYSICS.trayHalfWidth * 2,
+            DICE_PHYSICS.trayHalfDepth * 2,
+          ]}
+        />
         <shadowMaterial transparent opacity={0.2} />
       </mesh>
     </>
@@ -115,18 +123,22 @@ export function DiceScene({
   skin = "neutral",
   pipColor,
   fallbackColor = "forest",
+  animationSeed,
   className = "",
 }: {
   values: readonly number[];
   skin?: DiceSkin;
   pipColor?: string;
   fallbackColor?: PlayerColor;
+  animationSeed?: string;
   className?: string;
 }) {
   const safeValues = useMemo(() => validateDiceValues(values), [values]);
   const webglSupported = useWebGLSupport();
   const reducedMotion = useReducedMotion();
   const { textures, error } = useDiceFaceTextures({ skin, pipColor });
+  const resolvedSeed =
+    animationSeed?.trim() || `dice-scene:${skin}:${safeValues.join("-")}`;
 
   if (!webglSupported || reducedMotion || error || !textures) {
     return (
@@ -137,6 +149,10 @@ export function DiceScene({
       />
     );
   }
+
+  const staticFallback = (
+    <StaticDiceStage values={safeValues} textures={textures} />
+  );
 
   return (
     <div
@@ -158,7 +174,13 @@ export function DiceScene({
           powerPreference: "high-performance",
         }}
       >
-        <StaticDiceStage values={safeValues} textures={textures} />
+        <PredeterminedDiceStage
+          key={`${resolvedSeed}:${safeValues.join("-")}`}
+          values={safeValues}
+          seed={resolvedSeed}
+          textures={textures}
+          fallback={staticFallback}
+        />
       </Canvas>
     </div>
   );
