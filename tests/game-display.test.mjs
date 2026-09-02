@@ -63,27 +63,41 @@ test("números e símbolos especiais usam a geometria interna extraída do SVG",
   assert.match(geometry, /safeRadius/);
 });
 
-test("pips dos dados de combate preservam a cor da facção", () => {
+test("dados de combate usam skins próprias e fallback preserva a cor da facção", () => {
   const overlay = readFileSync("src/components/battle-overlay.tsx", "utf8");
+  const arena = readFileSync(
+    "src/components/dice-3d/battle-dice-arena.tsx",
+    "utf8",
+  );
   const die = readFileSync("src/components/game-die.tsx", "utf8");
   const polish = readFileSync("src/app/game/[roomId]/game-polish.css", "utf8");
 
-  assert.match(overlay, /GameDie/);
+  assert.match(overlay, /BattleDiceArena/);
+  assert.match(arena, /skin: "attack"/);
+  assert.match(arena, /skin: "defense"/);
+  assert.match(arena, /<GameDie/);
+  assert.match(arena, /color=\{attackerColor\}/);
+  assert.match(arena, /color=\{defenderColor\}/);
   assert.match(die, /backgroundColor: colorHex\(color\)/);
   assert.doesNotMatch(polish, /background-color:\s*#f8f0dc\s*!important/);
-  assert.match(polish, /A cor dos pips vem do jogador/);
 });
 
-test("rolagem de defesa mantém os dados de ataque estáticos por estado explícito", () => {
-  const overlay = readFileSync("src/components/battle-overlay.tsx", "utf8");
-  const die = readFileSync("src/components/game-die.tsx", "utf8");
+test("rolagem de defesa mantém o ataque dockado por estado explícito da arena", () => {
+  const arena = readFileSync(
+    "src/components/dice-3d/battle-dice-arena.tsx",
+    "utf8",
+  );
+  const replay = readFileSync(
+    "src/components/dice-3d/dice-trajectory-replay.tsx",
+    "utf8",
+  );
 
-  assert.match(overlay, /type BattleDisplaySide/);
-  assert.match(overlay, /rollingSide === "attack"/);
-  assert.match(overlay, /rollingSide === "defense"/);
-  assert.match(overlay, /rolling=\{attackRolling\}/);
-  assert.match(overlay, /rolling=\{defenseRolling\}/);
-  assert.match(die, /battle-die-roll-animation/);
+  assert.match(arena, /type BattleDiceDockSide/);
+  assert.match(arena, /side === "attack" \? "show_attacker_result" : "show_defender_result"/);
+  assert.match(arena, /skipAnimation=\{battle\.stage !== activeStage\}/);
+  assert.match(arena, /battleDiceDockPositions\(side, values\.length\)/);
+  assert.match(replay, /skipInitially && canDock \? dockPositions!/);
+  assert.match(replay, /group\.scale\.setScalar\(dockScale\)/);
 });
 
 test("modal de combate reutiliza território carregado e nome do SVG sem nova requisição", () => {
