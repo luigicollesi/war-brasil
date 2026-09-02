@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 test("command boundary serializa a sala e incrementa revisão antes do commit", () => {
-  const source = readFileSync("src/lib/game-command.ts", "utf8");
+  const source = readFileSync("src/lib/server/game-command.ts", "utf8");
 
   assert.match(source, /SELECT id,revision FROM game_rooms WHERE id=\$1 FOR UPDATE/);
   assert.match(source, /const value = await execute\(client\)/);
@@ -16,7 +16,7 @@ test("command boundary serializa a sala e incrementa revisão antes do commit", 
 });
 
 test("command condicional não incrementa revisão em no-op ou revisão obsoleta", () => {
-  const source = readFileSync("src/lib/game-command.ts", "utf8");
+  const source = readFileSync("src/lib/server/game-command.ts", "utf8");
 
   assert.match(source, /currentRevision !== expectedRevision/);
   assert.match(source, /changed: false/);
@@ -24,7 +24,7 @@ test("command condicional não incrementa revisão em no-op ou revisão obsoleta
 });
 
 test("query boundary usa snapshot read-only sem row lock", () => {
-  const source = readFileSync("src/lib/game-query.ts", "utf8");
+  const source = readFileSync("src/lib/server/game-query.ts", "utf8");
 
   assert.match(
     source,
@@ -55,7 +55,7 @@ test("advance valida acesso do jogador dentro de transação read-only", () => {
     "src/app/api/games/[roomId]/advance/route.ts",
     "utf8",
   );
-  const revision = readFileSync("src/lib/game-revision.ts", "utf8");
+  const revision = readFileSync("src/lib/server/game-revision.ts", "utf8");
 
   assert.match(route, /gameQuery/);
   assert.match(route, /readPlayerGameRevision/);
