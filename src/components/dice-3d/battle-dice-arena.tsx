@@ -1,7 +1,7 @@
 "use client";
 
 import { Canvas } from "@react-three/fiber";
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { GameDie } from "@/src/components/game-die";
 import type { PlayerColor } from "@/src/lib/lobby";
 import {
@@ -192,6 +192,7 @@ export function BattleDiceArena({
   const attackTextureState = useDiceFaceTextures({ skin: "attack" });
   const defenseTextureState = useDiceFaceTextures({ skin: "defense" });
   const [physicsFailed, setPhysicsFailed] = useState(false);
+  const handlePhysicsError = useCallback(() => setPhysicsFailed(true), []);
   const presentationIdentity = `${battle.attackerPlayerId}:${battle.attackerTerritoryId}:${battle.defenderPlayerId}:${battle.defenderTerritoryId}`;
 
   const shouldFallback =
@@ -238,6 +239,7 @@ export function BattleDiceArena({
           frameloop="demand"
           dpr={[1, 1.5]}
           camera={{ position: [0, 2.9, 6.3], fov: 32 }}
+          onCreated={({ camera }) => camera.lookAt(0, 0, 0)}
           gl={{
             alpha: true,
             antialias: true,
@@ -251,7 +253,7 @@ export function BattleDiceArena({
             defenseValues={defenseValues}
             attackTextures={attackTextureState.textures}
             defenseTextures={defenseTextureState.textures}
-            onPhysicsError={() => setPhysicsFailed(true)}
+            onPhysicsError={handlePhysicsError}
           />
         </Canvas>
       </div>
