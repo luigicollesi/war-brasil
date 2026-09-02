@@ -56,6 +56,10 @@ type SnapshotTerritory = {
   moved_in_turn: number;
 };
 
+type SnapshotOrderRoll = OrderRoll & {
+  rolled_at: Date;
+};
+
 type SnapshotCard = {
   id: string;
   territory_id: number | null;
@@ -182,8 +186,8 @@ export async function getGameSnapshotQuery(
     const rolls =
       room.status === "order_roll"
         ? (
-            await client.query<OrderRoll>(
-              `SELECT player_id,roll_round,value
+            await client.query<SnapshotOrderRoll>(
+              `SELECT player_id,roll_round,value,rolled_at
                FROM game_order_rolls
                WHERE room_id=$1
                ORDER BY roll_round,rolled_at`,
@@ -219,12 +223,16 @@ export async function getGameSnapshotQuery(
 
     const byPlayer = new Map<
       string,
-      Array<{ round: number; value: number }>
+      Array<{ round: number; value: number; rolledAt: string }>
     >();
     for (const roll of rolls) {
       byPlayer.set(roll.player_id, [
         ...(byPlayer.get(roll.player_id) ?? []),
-        { round: roll.roll_round, value: roll.value },
+        {
+          round: roll.roll_round,
+          value: roll.value,
+          rolledAt: roll.rolled_at.toISOString(),
+        },
       ]);
     }
 
