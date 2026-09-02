@@ -22,6 +22,7 @@ export type BattleDiceCinematicSide = "attack" | "defense";
 
 export const BATTLE_DICE_CINEMATIC_TOTAL_MS = 1_800;
 export const BATTLE_DICE_CINEMATIC_REPLAY_MS = 1_250;
+const BATTLE_DICE_CINEMATIC_SETTLE_HOLD_MS = 420;
 const MIN_LATE_REPLAY_MS = 360;
 
 function cinematicSeed(
@@ -119,6 +120,7 @@ export function BattleDiceCinematic({
   const webglSupported = useDiceWebGLSupport();
   const reducedMotion = useReducedDiceMotion();
   const [failed, setFailed] = useState(false);
+  const [settled, setSettled] = useState(false);
   const values = useMemo(
     () =>
       validateDiceValues(
@@ -137,6 +139,15 @@ export function BattleDiceCinematic({
       finish();
     }
   }, [finish, reducedMotion, values.length, webglSupported]);
+
+  useEffect(() => {
+    if (!settled) return;
+    const timeoutId = window.setTimeout(
+      finish,
+      BATTLE_DICE_CINEMATIC_SETTLE_HOLD_MS,
+    );
+    return () => window.clearTimeout(timeoutId);
+  }, [finish, settled]);
 
   if (
     typeof document === "undefined" ||
@@ -178,7 +189,7 @@ export function BattleDiceCinematic({
             values={values}
             color={color}
             elapsedMs={elapsedMs}
-            onComplete={finish}
+            onComplete={() => setSettled(true)}
             onError={fail}
           />
         </Canvas>
