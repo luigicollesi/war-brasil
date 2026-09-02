@@ -11,6 +11,8 @@ import {
 import { createCameraFacingDockQuaternion } from "@/src/lib/client/dice/animation/camera-facing-dock";
 import type {
   DiceFaceTextureSet,
+  DiceQuaternion,
+  DiceTrajectoryFrame,
   DiceVector3,
   PredeterminedDiceRoll,
 } from "@/src/lib/client/dice/types";
@@ -22,11 +24,53 @@ function smoothStep(value: number) {
   return t * t * (3 - 2 * t);
 }
 
+function clamp01(value: number) {
+  return Math.min(1, Math.max(0, value));
+}
+
+function sampleTrajectoryState(
+  frames: readonly DiceTrajectoryFrame[],
+  finalStep: number,
+  progress: number,
+  dieIndex: number,
+): { position: DiceVector3; rotation: DiceQuaternion } {
+  const exactStep = clamp01(progress) * finalStep;
+  const fromIndex = Math.min(Math.floor(exactStep), frames.length - 1);
+  const toIndex = Math.min(fromIndex + 1, frames.length - 1);
+  const alpha = clamp01(exactStep - fromIndex);
+  const from = frames[fromIndex].dice[dieIndex];
+  const to = frames[toIndex].dice[dieIndex];
+
+  const position: DiceVector3 = [
+    from.position[0] + (to.position[0] - from.position[0]) * alpha,
+    from.position[1] + (to.position[1] - from.position[1]) * alpha,
+    from.position[2] + (to.position[2] - from.position[2]) * alpha,
+  ];
+
+  if (alpha <= 0 || fromIndex === toIndex) {
+    return { position, rotation: [...from.rotation] };
+  }
+
+  const quaternion = new Quaternion(...from.rotation).slerp(
+    new Quaternion(...to.rotation),
+    alpha,
+  );
+  const rotation: DiceQuaternion = [
+    quaternion.x,
+    quaternion.y,
+    quaternion.z,
+    quaternion.w,
+  ];
+
+  return { position, rotation };
+}
+
 export function DiceTrajectoryReplay({
   roll,
   geometry,
   textures,
   playbackDurationMs,
+  initialElapsedMs = 0,
   dockPositions,
   dockScale = 1,
   dockDurationMs = 0,
@@ -37,6 +81,7 @@ export function DiceTrajectoryReplay({
   geometry: BufferGeometry;
   textures: DiceFaceTextureSet;
   playbackDurationMs?: number;
+  initialElapsedMs?: number;
   dockPositions?: readonly DiceVector3[];
   dockScale?: number;
   dockDurationMs?: number;
@@ -44,22 +89,7 @@ export function DiceTrajectoryReplay({
   onComplete?: () => void;
 }) {
   const camera = useThree((state) => state.camera);
-  const groupRefs = useRef<(Group | null)[]>([]);
-  const elapsedSeconds = useRef(0);
-  const dockElapsedSeconds = useRef(0);
-  const completed = useRef(false);
-  const [skipInitially] = useState(skipAnimation);
-  const scratch = useMemo(
-    () => ({
-      fromPosition: new Vector3(),
-      toPosition: new Vector3(),
-      fromRotation: new Quaternion(),
-      toRotation: new Quaternion(),
-    }),
-    [],
-  );
   const frames = roll.trajectory.frames;
-  const firstFrame = frames[0];
   const finalFrame = frames[frames.length - 1];
   const finalStep = finalFrame.step;
   const physicalDurationSeconds = finalStep * roll.trajectory.timeStep;
@@ -68,6 +98,10 @@ export function DiceTrajectoryReplay({
     playbackDurationMs === undefined
       ? physicalDurationSeconds
       : playbackDurationMs / 1000,
+  );
+  const initialReplaySeconds = Math.min(
+    replayDurationSeconds,
+    Math.max(0, initialElapsedMs / 1000),
   );
   const dockDurationSeconds = Math.max(0, dockDurationMs / 1000);
   const canDock =
@@ -87,6 +121,20 @@ export function DiceTrajectoryReplay({
         ),
       )
     : [];
+  const groupRefs = useRef<(Group | null)[]>([]);
+  const elapsedSeconds = useRef(initialReplaySeconds);
+  const dockElapsedSeconds = useRef(0);
+  const completed = useRef(false);
+  const [skipInitially] = useState(skipAnimation);
+  const scratch = useMemo(
+    () => ({
+      fromPosition: new Vector3(),
+      toPosition: new Vector3(),
+      fromRotation: new Quaternion(),
+      toRotation: new Quaternion(),
+    }),
+    [],
+  );
 
   useEffect(() => {
     if (!skipInitially || completed.current) return;
@@ -107,7 +155,7 @@ export function DiceTrajectoryReplay({
       const exactStep = progress * finalStep;
       const fromIndex = Math.min(Math.floor(exactStep), frames.length - 1);
       const toIndex = Math.min(fromIndex + 1, frames.length - 1);
-      const alpha = Math.min(1, Math.max(0, exactStep - fromIndex));
+      const alpha = clamp01(exactStep - fromIndex);
       const fromFrame = frames[fromIndex];
       const toFrame = frames[toIndex];
 
@@ -190,15 +238,23 @@ export function DiceTrajectoryReplay({
     state.invalidate();
   });
 
+  const initialProgress = skipInitially
+    ? 1
+    : initialReplaySeconds / replayDurationSeconds;
+
   return (
     <>
       {roll.visualRemaps.map((remap) => {
-        const initialFrame = skipInitially ? finalFrame : firstFrame;
-        const initial = initialFrame.dice[remap.index];
+        const sampled = sampleTrajectoryState(
+          frames,
+          finalStep,
+          initialProgress,
+          remap.index,
+        );
         const initialPosition =
-          skipInitially && canDock ? dockPositions![remap.index] : initial.position;
+          skipInitially && canDock ? dockPositions![remap.index] : sampled.position;
         const initialQuaternion =
-          skipInitially && canDock ? dockRotations[remap.index] : initial.rotation;
+          skipInitially && canDock ? dockRotations[remap.index] : sampled.rotation;
         const initialScale = skipInitially && canDock ? dockScale : 1;
 
         return (
