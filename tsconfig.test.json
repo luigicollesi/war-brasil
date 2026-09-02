@@ -37,6 +37,7 @@
     "src/lib/client/dice/types.ts",
     "src/lib/client/dice/pip-layout.ts",
     "src/lib/client/dice/dice-values.ts",
+    "src/lib/client/dice/battle-dice-layout.ts",
     "src/lib/client/dice/geometry/dice-faces.ts",
     "src/lib/client/dice/geometry/create-rounded-die-geometry.ts",
     "src/lib/client/dice/physics/dice-physics-config.ts",
