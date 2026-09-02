@@ -3,16 +3,16 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const PURE_MODULES = [
-  "src/lib/game-rules.ts",
+  "src/lib/shared/game-rules.ts",
   "src/lib/game-round-rules.ts",
-  "src/lib/territory-connections.ts",
+  "src/lib/shared/territory-connections.ts",
   "src/lib/game-interaction.ts",
   "src/lib/game-snapshot-hydration.ts",
-  "src/lib/game-command-patch.ts",
+  "src/lib/shared/game-command-patch.ts",
   "src/lib/game-effective-connections.ts",
   "src/lib/game-snapshot-sharing.ts",
   "src/lib/game-view-model.ts",
-  "src/lib/events/event-types.ts",
+  "src/lib/shared/events/event-types.ts",
   "src/lib/events/event-selector.ts",
   "src/lib/events/event-catalog.ts",
   "src/lib/events/event-resolver.ts",
