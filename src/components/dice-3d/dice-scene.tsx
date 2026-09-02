@@ -1,7 +1,7 @@
 "use client";
 
 import { Canvas } from "@react-three/fiber";
-import { useMemo, useSyncExternalStore } from "react";
+import { useMemo } from "react";
 import type { PlayerColor } from "@/src/lib/lobby";
 import { getSharedRoundedDieGeometry } from "@/src/lib/client/dice/dice-assets-manager";
 import { validateDiceValues } from "@/src/lib/client/dice/dice-values";
@@ -12,52 +12,19 @@ import type {
   DiceValue,
   DiceVector3,
 } from "@/src/lib/client/dice/types";
-import { supportsDiceWebGL } from "@/src/lib/client/dice/webgl-support";
 import { Dice2DFallback } from "./dice-2d-fallback";
 import { Die3D } from "./die-3d";
 import { PredeterminedDiceStage } from "./predetermined-dice-stage";
+import {
+  useDiceWebGLSupport,
+  useReducedDiceMotion,
+} from "./use-dice-presentation-capabilities";
 import { useDiceFaceTextures } from "./use-dice-face-textures";
-
-const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 
 function layoutForDice(count: number): DiceVector3[] {
   if (count === 1) return [[0, 0, 0]];
   if (count === 2) return [[-0.72, 0, 0], [0.72, 0, 0]];
   return [[-1.12, 0, 0.08], [0, 0, -0.08], [1.12, 0, 0.08]];
-}
-
-function subscribeNoop() {
-  return () => {};
-}
-
-function subscribeReducedMotion(onStoreChange: () => void) {
-  const query = window.matchMedia(REDUCED_MOTION_QUERY);
-  query.addEventListener("change", onStoreChange);
-  return () => query.removeEventListener("change", onStoreChange);
-}
-
-function reducedMotionSnapshot() {
-  return window.matchMedia(REDUCED_MOTION_QUERY).matches;
-}
-
-function serverFalseSnapshot() {
-  return false;
-}
-
-function useReducedMotion() {
-  return useSyncExternalStore(
-    subscribeReducedMotion,
-    reducedMotionSnapshot,
-    serverFalseSnapshot,
-  );
-}
-
-function useWebGLSupport() {
-  return useSyncExternalStore(
-    subscribeNoop,
-    supportsDiceWebGL,
-    serverFalseSnapshot,
-  );
 }
 
 function StaticDiceStage({
@@ -134,8 +101,8 @@ export function DiceScene({
   className?: string;
 }) {
   const safeValues = useMemo(() => validateDiceValues(values), [values]);
-  const webglSupported = useWebGLSupport();
-  const reducedMotion = useReducedMotion();
+  const webglSupported = useDiceWebGLSupport();
+  const reducedMotion = useReducedDiceMotion();
   const { textures, error } = useDiceFaceTextures({ skin, pipColor });
   const resolvedSeed =
     animationSeed?.trim() || `dice-scene:${skin}:${safeValues.join("-")}`;
