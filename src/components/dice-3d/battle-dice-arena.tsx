@@ -9,6 +9,7 @@ import {
   BATTLE_DICE_REPLAY_MS,
   battleDiceDockPositions,
   battleDiceDockScale,
+  type BattleDiceDockSide,
 } from "@/src/lib/client/dice/battle-dice-layout";
 import { validateDiceValues } from "@/src/lib/client/dice/dice-values";
 import type { DiceFaceTextureSet, DiceValue } from "@/src/lib/client/dice/types";
@@ -21,15 +22,21 @@ import {
 } from "./use-dice-presentation-capabilities";
 import { useDiceFaceTextures } from "./use-dice-face-textures";
 
-function fallbackSeed(
+function rollSeed(
   battle: GameBattle,
-  side: "attack" | "defense",
+  side: BattleDiceDockSide,
   values: readonly DiceValue[],
 ) {
-  const identity =
-    battle.presentationId?.trim() ||
-    `${battle.attackerPlayerId}:${battle.attackerTerritoryId}:${battle.defenderPlayerId}:${battle.defenderTerritoryId}`;
-  return `${identity}:${side}:${values.join("-")}`;
+  return [
+    "battle-dice",
+    battle.attackerPlayerId,
+    battle.attackerTerritoryId,
+    battle.defenderPlayerId,
+    battle.defenderTerritoryId,
+    side,
+    battle.stageStartedAt,
+    values.join("-"),
+  ].join(":");
 }
 
 function BattleDiceFallback({
@@ -80,6 +87,40 @@ function BattleDiceFallback({
   );
 }
 
+function BattleDiceSidePresentation({
+  battle,
+  side,
+  values,
+  textures,
+  onPhysicsError,
+}: {
+  battle: GameBattle;
+  side: BattleDiceDockSide;
+  values: readonly DiceValue[];
+  textures: DiceFaceTextureSet;
+  onPhysicsError: () => void;
+}) {
+  const [seed] = useState(() => rollSeed(battle, side, values));
+  const activeStage =
+    side === "attack" ? "show_attacker_result" : "show_defender_result";
+
+  return (
+    <PredeterminedDiceRoll
+      values={values}
+      seed={seed}
+      textures={textures}
+      preparingFallback={null}
+      failureFallback={null}
+      playbackDurationMs={BATTLE_DICE_REPLAY_MS}
+      dockDurationMs={BATTLE_DICE_DOCK_MS}
+      dockPositions={battleDiceDockPositions(side, values.length)}
+      dockScale={battleDiceDockScale(values.length)}
+      skipAnimation={battle.stage !== activeStage}
+      onError={onPhysicsError}
+    />
+  );
+}
+
 function BattleDiceCanvasStage({
   battle,
   attackValues,
@@ -95,13 +136,6 @@ function BattleDiceCanvasStage({
   defenseTextures: DiceFaceTextureSet;
   onPhysicsError: () => void;
 }) {
-  const attackSeed =
-    battle.attackerAnimationSeed?.trim() ||
-    fallbackSeed(battle, "attack", attackValues);
-  const defenseSeed =
-    battle.defenderAnimationSeed?.trim() ||
-    fallbackSeed(battle, "defense", defenseValues);
-
   return (
     <>
       <ambientLight intensity={1.35} />
@@ -114,36 +148,22 @@ function BattleDiceCanvasStage({
       <DiceTraySurface />
 
       {attackValues.length ? (
-        <PredeterminedDiceRoll
-          key={`attack:${attackSeed}`}
+        <BattleDiceSidePresentation
+          side="attack"
+          battle={battle}
           values={attackValues}
-          seed={attackSeed}
           textures={attackTextures}
-          preparingFallback={null}
-          failureFallback={null}
-          playbackDurationMs={BATTLE_DICE_REPLAY_MS}
-          dockDurationMs={BATTLE_DICE_DOCK_MS}
-          dockPositions={battleDiceDockPositions("attack", attackValues.length)}
-          dockScale={battleDiceDockScale(attackValues.length)}
-          skipAnimation={battle.stage !== "show_attacker_result"}
-          onError={onPhysicsError}
+          onPhysicsError={onPhysicsError}
         />
       ) : null}
 
       {defenseValues.length ? (
-        <PredeterminedDiceRoll
-          key={`defense:${defenseSeed}`}
+        <BattleDiceSidePresentation
+          side="defense"
+          battle={battle}
           values={defenseValues}
-          seed={defenseSeed}
           textures={defenseTextures}
-          preparingFallback={null}
-          failureFallback={null}
-          playbackDurationMs={BATTLE_DICE_REPLAY_MS}
-          dockDurationMs={BATTLE_DICE_DOCK_MS}
-          dockPositions={battleDiceDockPositions("defense", defenseValues.length)}
-          dockScale={battleDiceDockScale(defenseValues.length)}
-          skipAnimation={battle.stage !== "show_defender_result"}
-          onError={onPhysicsError}
+          onPhysicsError={onPhysicsError}
         />
       ) : null}
     </>
@@ -172,9 +192,7 @@ export function BattleDiceArena({
   const attackTextureState = useDiceFaceTextures({ skin: "attack" });
   const defenseTextureState = useDiceFaceTextures({ skin: "defense" });
   const [physicsFailed, setPhysicsFailed] = useState(false);
-  const presentationIdentity =
-    battle.presentationId?.trim() ||
-    `${battle.attackerPlayerId}:${battle.attackerTerritoryId}:${battle.defenderPlayerId}:${battle.defenderTerritoryId}`;
+  const presentationIdentity = `${battle.attackerPlayerId}:${battle.attackerTerritoryId}:${battle.defenderPlayerId}:${battle.defenderTerritoryId}`;
 
   const shouldFallback =
     !webglSupported ||
