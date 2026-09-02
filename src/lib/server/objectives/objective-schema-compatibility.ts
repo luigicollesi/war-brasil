@@ -7,5 +7,6 @@ export async function withObjectiveSchemaCompatibility<T>(
   primary: () => Promise<T>,
   _fallback: () => Promise<T>,
 ) {
+  void _fallback;
   return primary();
 }
