@@ -12,6 +12,7 @@ import {
   useState,
 } from "react";
 import { validateDiceValues } from "@/src/lib/client/dice/dice-values";
+import { installDice3DDependencyWarningFilter } from "@/src/lib/client/dice/install-3d-dependency-warning-filter";
 import { DICE_PHYSICS } from "@/src/lib/client/dice/physics/dice-physics-config";
 import type { DiceValue } from "@/src/lib/client/dice/types";
 import { playerColorHex } from "@/src/lib/client/player-color";
@@ -24,6 +25,8 @@ import {
   useReducedDiceMotion,
 } from "./use-dice-presentation-capabilities";
 import { useDiceFaceTextures } from "./use-dice-face-textures";
+
+installDice3DDependencyWarningFilter();
 
 export type BattleDiceCinematicSide = "attack" | "defense";
 
