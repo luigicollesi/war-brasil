@@ -130,7 +130,7 @@ test("delays de bot são curtos, positivos e centralizados para todas as ações
 });
 
 test("runner é request-driven, executa regra compartilhada e não cria loop servidor", () => {
-  const runner = readFileSync("src/lib/bots/bot-runner.ts", "utf8");
+  const runner = readFileSync("src/lib/server/bots/bot-runner.ts", "utf8");
 
   assert.match(runner, /bot_next_action_at/);
   assert.match(runner, /executeBotAction/);
@@ -146,7 +146,7 @@ test("runner é request-driven, executa regra compartilhada e não cria loop ser
 });
 
 test("runner isola ação estratégica rejeitada e usa somente um fallback seguro", () => {
-  const runner = readFileSync("src/lib/bots/bot-runner.ts", "utf8");
+  const runner = readFileSync("src/lib/server/bots/bot-runner.ts", "utf8");
 
   assert.match(runner, /SAVEPOINT \$\{STRATEGIC_SAVEPOINT\}/);
   assert.match(runner, /ROLLBACK TO SAVEPOINT \$\{STRATEGIC_SAVEPOINT\}/);
