@@ -63,45 +63,54 @@ test("números e símbolos especiais usam a geometria interna extraída do SVG",
   assert.match(geometry, /safeRadius/);
 });
 
-test("dados de combate usam skins próprias e pips preservam a cor da facção", () => {
+test("combate separa cinematic 3D do resultado SVG estático", () => {
   const overlay = readFileSync("src/components/battle-overlay.tsx", "utf8");
-  const arena = readFileSync(
-    "src/components/dice-3d/battle-dice-arena.tsx",
+  const cinematic = readFileSync(
+    "src/components/dice-3d/battle-dice-cinematic.tsx",
+    "utf8",
+  );
+  const staticResults = readFileSync(
+    "src/components/battle-static-dice-results.tsx",
     "utf8",
   );
   const die = readFileSync("src/components/game-die.tsx", "utf8");
-  const polish = readFileSync("src/app/game/[roomId]/game-polish.css", "utf8");
 
-  assert.match(overlay, /BattleDiceArena/);
-  assert.match(arena, /skin: "attack"/);
-  assert.match(arena, /skin: "defense"/);
-  assert.match(arena, /pipColor: playerColorHex\(attackerColor\)/);
-  assert.match(arena, /pipColor: playerColorHex\(defenderColor\)/);
-  assert.match(arena, /<GameDie/);
-  assert.match(arena, /color=\{attackerColor\}/);
-  assert.match(arena, /color=\{defenderColor\}/);
+  assert.match(overlay, /BattleDiceCinematic/);
+  assert.match(overlay, /BattleStaticDiceResults/);
+  assert.doesNotMatch(overlay, /BattleDiceArena/);
+  assert.match(cinematic, /createPortal/);
+  assert.match(cinematic, /skin: side/);
+  assert.match(cinematic, /pipColor: playerColorHex\(color\)/);
+  assert.match(staticResults, /<GameDie/);
+  assert.doesNotMatch(staticResults, /rolling=/);
+  assert.doesNotMatch(staticResults, /rollAnimation=/);
   assert.match(die, /backgroundColor: playerColorHex\(color\)/);
-  assert.doesNotMatch(polish, /background-color:\s*#f8f0dc\s*!important/);
 });
 
-test("rolagem de defesa mantém o ataque dockado e usa zona física separada", () => {
-  const arena = readFileSync(
-    "src/components/dice-3d/battle-dice-arena.tsx",
+test("cinematic de combate é fullscreen, bloqueia interação e respeita o relógio do servidor", () => {
+  const overlay = readFileSync("src/components/battle-overlay.tsx", "utf8");
+  const cinematic = readFileSync(
+    "src/components/dice-3d/battle-dice-cinematic.tsx",
     "utf8",
   );
-  const replay = readFileSync(
-    "src/components/dice-3d/dice-trajectory-replay.tsx",
+  const styles = readFileSync(
+    "src/components/dice-3d/battle-dice-cinematic.module.css",
     "utf8",
   );
 
-  assert.match(arena, /type BattleDiceDockSide/);
-  assert.match(arena, /side === "attack" \? "show_attacker_result" : "show_defender_result"/);
-  assert.match(arena, /skipAnimation=\{battle\.stage !== activeStage\}/);
-  assert.match(arena, /battleDiceLaunchOffset\(side\)/);
-  assert.match(arena, /battleDiceDockPositions\(side, values\.length\)/);
-  assert.match(replay, /skipInitially && canDock \? dockPositions!/);
-  assert.match(replay, /createCameraFacingDockQuaternion/);
-  assert.match(replay, /group\.scale\.setScalar\(dockScale\)/);
+  assert.match(overlay, /Date\.parse\(battle\.stageStartedAt\)/);
+  assert.match(overlay, /BATTLE_DICE_CINEMATIC_TOTAL_MS - elapsedMs/);
+  assert.match(overlay, /setAttribute\("inert", ""\)/);
+  assert.match(overlay, /removeAttribute\("inert"\)/);
+  assert.match(cinematic, /frameloop="demand"/);
+  assert.match(cinematic, /camera=\{\{ position: \[0, 6\.5, 2\.1\], fov: 34 \}\}/);
+  assert.match(cinematic, /BATTLE_DICE_CINEMATIC_SETTLE_HOLD_MS/);
+  assert.doesNotMatch(cinematic, /dockPositions=/);
+  assert.doesNotMatch(cinematic, /dockScale=/);
+  assert.match(styles, /position: fixed/);
+  assert.match(styles, /inset: 0/);
+  assert.match(styles, /background: rgba\(0, 0, 0, 0\.12\)/);
+  assert.match(styles, /touch-action: none/);
 });
 
 test("modal de combate reutiliza território carregado e nome do SVG sem nova requisição", () => {
