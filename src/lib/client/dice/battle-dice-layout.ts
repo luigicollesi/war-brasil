@@ -6,6 +6,10 @@ export type BattleDiceDockSide = "attack" | "defense";
 export const BATTLE_DICE_REPLAY_MS = 1_200;
 export const BATTLE_DICE_DOCK_MS = 360;
 
+export function battleDiceLaunchOffset(side: BattleDiceDockSide): DiceVector3 {
+  return side === "attack" ? [-0.9, 0, 0.12] : [0.9, 0, -0.12];
+}
+
 export function battleDiceDockScale(count: number) {
   validateDicePhysicsCount(count);
   if (count === 1) return 1.28;
