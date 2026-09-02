@@ -7,33 +7,53 @@ import type {
   DiceTextureOptions,
 } from "@/src/lib/client/dice/types";
 
+type DiceTextureLoadState = {
+  key: string;
+  textures: DiceFaceTextureSet | null;
+  error: Error | null;
+};
+
+function optionsKey({ skin, pipColor, resolution }: DiceTextureOptions) {
+  return `${skin}:${pipColor ?? "default"}:${resolution ?? "default"}`;
+}
+
 export function useDiceFaceTextures(options: DiceTextureOptions) {
-  const [textures, setTextures] = useState<DiceFaceTextureSet | null>(null);
-  const [error, setError] = useState<Error | null>(null);
   const { skin, pipColor, resolution } = options;
+  const key = optionsKey({ skin, pipColor, resolution });
+  const [state, setState] = useState<DiceTextureLoadState>({
+    key: "",
+    textures: null,
+    error: null,
+  });
 
   useEffect(() => {
     let active = true;
-    setTextures(null);
-    setError(null);
 
     void getDiceFaceTextures({ skin, pipColor, resolution })
-      .then((nextTextures) => {
-        if (active) setTextures(nextTextures);
+      .then((textures) => {
+        if (!active) return;
+        setState({ key, textures, error: null });
       })
       .catch((loadError: unknown) => {
         if (!active) return;
-        setError(
-          loadError instanceof Error
-            ? loadError
-            : new Error("Não foi possível preparar as texturas dos dados."),
-        );
+        setState({
+          key,
+          textures: null,
+          error:
+            loadError instanceof Error
+              ? loadError
+              : new Error("Não foi possível preparar as texturas dos dados."),
+        });
       });
 
     return () => {
       active = false;
     };
-  }, [skin, pipColor, resolution]);
+  }, [key, skin, pipColor, resolution]);
 
-  return { textures, error };
+  if (state.key !== key) {
+    return { textures: null, error: null };
+  }
+
+  return { textures: state.textures, error: state.error };
 }
