@@ -1,4 +1,4 @@
-/* Dados de combate: layout adaptativo e rolagens independentes. */
+/* Dados de combate: arena 3D única com resultado ancorado nas bordas. */
 
 .battle-modal {
   max-height: calc(100dvh - 32px);
@@ -7,83 +7,112 @@
   overscroll-behavior: contain;
 }
 
-.battle-dice-grid {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: center;
-  column-gap: clamp(18px, 4vw, 38px);
-  row-gap: 22px;
+.battle-dice-arena {
+  position: relative;
   width: 100%;
-  margin-top: 24px;
+  height: clamp(214px, 29dvh, 286px);
+  min-height: 214px;
+  margin-top: 20px;
+  overflow: hidden;
+  border-block: 1px solid rgba(255, 255, 255, 0.055);
+  background:
+    radial-gradient(circle at 50% 46%, rgba(255, 255, 255, 0.045), transparent 42%),
+    linear-gradient(to bottom, rgba(0, 0, 0, 0.08), transparent 22%, transparent 76%, rgba(0, 0, 0, 0.12));
+  isolation: isolate;
 }
 
-.battle-side {
-  flex: 0 0 auto;
-  width: max-content;
-  max-width: 100%;
+.battle-dice-arena-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+.battle-dice-arena-canvas canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.battle-dice-edge-label {
+  position: absolute;
+  z-index: 3;
+  top: 8px;
+  pointer-events: none;
+  color: rgba(239, 234, 218, 0.72);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.17em;
+  line-height: 1;
+  text-transform: uppercase;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+.battle-dice-edge-label--attack {
+  left: 10px;
+  color: rgba(255, 196, 183, 0.84);
+}
+
+.battle-dice-edge-label--defense {
+  right: 10px;
+  color: rgba(185, 215, 255, 0.86);
+}
+
+.battle-dice-arena--fallback {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 16px;
+  padding: 30px 8px 12px;
+}
+
+.battle-dice-fallback-side {
   min-width: 0;
 }
 
-.battle-dice-row {
+.battle-dice-fallback-side > span {
+  display: block;
+  margin-bottom: 8px;
+  color: rgba(239, 234, 218, 0.7);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.battle-dice-fallback-side--defense > span {
+  text-align: right;
+}
+
+.battle-dice-fallback-side > div {
   display: flex;
-  flex-wrap: nowrap;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
-  max-width: 100%;
+  gap: 5px;
 }
 
-.battle-die-slot {
-  display: grid;
-  width: clamp(76px, 8.5vw, 116px);
-  aspect-ratio: 1;
-  flex: 0 0 auto;
-  place-items: center;
-  padding: 5px;
+.battle-dice-fallback-side--attack > div {
+  justify-content: flex-start;
 }
 
-.battle-die-slot .battle-die {
-  width: 100% !important;
-  max-width: 100%;
-  transform-origin: center;
-  will-change: transform;
+.battle-dice-fallback-side--defense > div {
+  justify-content: flex-end;
 }
 
-@keyframes battle-die-independent-roll {
-  0% {
-    transform: rotate(0deg) scale(.9) translateY(1px);
-  }
-
-  58% {
-    scale: 1.025;
-  }
-
-  100% {
-    transform: rotate(var(--die-roll-angle)) scale(1) translateY(0);
-  }
+.battle-dice-fallback-side .battle-die {
+  width: clamp(58px, 7vw, 84px) !important;
+  flex: 0 1 auto;
 }
 
-.battle-die-roll-animation {
-  animation-name: battle-die-independent-roll;
-  animation-duration: var(--die-roll-duration, 700ms);
-  animation-delay: var(--die-roll-delay, 0ms);
-  animation-timing-function: cubic-bezier(.18, .72, .28, 1);
-  animation-fill-mode: both;
-}
-
-/* A classe semântica substitui os seletores estruturais antigos para as artes. */
-.battle-side--attack .battle-die {
+.battle-dice-fallback-side--attack .battle-die {
   background: url("/dado-ataque-vermelho-hq.svg") center / contain no-repeat !important;
-  filter: drop-shadow(0 12px 16px rgba(67, 8, 6, .28));
+  filter: drop-shadow(0 12px 16px rgba(67, 8, 6, 0.28));
 }
 
-.battle-side--defense .battle-die {
+.battle-dice-fallback-side--defense .battle-die {
   background: url("/dado-defesa-azul-hq.svg") center / contain no-repeat !important;
-  filter: drop-shadow(0 12px 16px rgba(3, 34, 73, .28));
+  filter: drop-shadow(0 12px 16px rgba(3, 34, 73, 0.28));
 }
 
-.battle-side .battle-die img {
+.battle-dice-fallback-side .battle-die img {
   opacity: 0 !important;
 }
 
@@ -92,26 +121,41 @@
     max-height: calc(100dvh - 16px);
   }
 
-  .battle-dice-grid {
-    flex-direction: column;
-    flex-wrap: nowrap;
-    align-items: center;
-    row-gap: 20px;
+  .battle-dice-arena {
+    height: clamp(190px, 30dvh, 236px);
+    min-height: 190px;
+    margin-top: 16px;
   }
 
-  .battle-side {
-    width: 100%;
+  .battle-dice-edge-label {
+    top: 7px;
+    font-size: 8px;
   }
 
-  .battle-die-slot {
-    width: clamp(62px, 20vw, 82px);
-    padding: 4px;
+  .battle-dice-edge-label--attack {
+    left: 6px;
+  }
+
+  .battle-dice-edge-label--defense {
+    right: 6px;
+  }
+
+  .battle-dice-arena--fallback {
+    gap: 8px;
+    padding-inline: 4px;
+  }
+
+  .battle-dice-fallback-side > div {
+    gap: 2px;
+  }
+
+  .battle-dice-fallback-side .battle-die {
+    width: clamp(46px, 13vw, 66px) !important;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .battle-die-roll-animation {
-    animation: none !important;
-    transform: none !important;
+  .battle-dice-arena {
+    scroll-behavior: auto;
   }
 }
