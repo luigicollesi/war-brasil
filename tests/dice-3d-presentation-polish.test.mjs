@@ -104,8 +104,11 @@ test("apresentação usa cor oficial da facção e acabamento físico no corpo d
   assert.match(cinematic, /texture\.needsUpdate = true/);
 
   assert.match(staticResults, /preloadDiceAssets/);
+  assert.match(staticResults, /battle\.stage === "awaiting_attacker_roll"/);
+  assert.match(staticResults, /battle\.stage === "awaiting_defender_roll"/);
   assert.match(staticResults, /skin: "attack"/);
   assert.match(staticResults, /skin: "defense"/);
   assert.match(staticResults, /pipColor: playerColorHex\(attackerColor\)/);
   assert.match(staticResults, /pipColor: playerColorHex\(defenderColor\)/);
+  assert.doesNotMatch(staticResults, /Promise\.all/);
 });
