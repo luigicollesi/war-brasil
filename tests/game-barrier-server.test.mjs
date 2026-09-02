@@ -7,9 +7,9 @@ function source(path) {
 }
 
 test("combate persiste o modo de ataque e mantém compatibilidade com batalhas antigas", () => {
-  const battle = source("src/lib/game-battle-service.ts");
+  const battle = source("src/lib/server/game-battle-service.ts");
   const contract = source("src/lib/shared/game-contract.ts");
-  const combat = source("src/lib/game-combat-command-service.ts");
+  const combat = source("src/lib/server/game-combat-command-service.ts");
 
   assert.match(battle, /attackMode\?: AttackMode/);
   assert.match(battle, /barrierName\?: string \| null/);
@@ -31,7 +31,7 @@ test("structural sharing considera modo e nome da barreira como parte da batalha
 });
 
 test("fronteira efetiva bloqueada vira ataque de barreira em vez de ser rejeitada", () => {
-  const combat = source("src/lib/game-combat-command-service.ts");
+  const combat = source("src/lib/server/game-combat-command-service.ts");
 
   assert.match(combat, /getEffectiveGameTopology/);
   assert.match(
@@ -46,7 +46,7 @@ test("fronteira efetiva bloqueada vira ataque de barreira em vez de ser rejeitad
 });
 
 test("servidor usa attackProfile tanto para validar quanto para rolar dados", () => {
-  const combat = source("src/lib/game-combat-command-service.ts");
+  const combat = source("src/lib/server/game-combat-command-service.ts");
 
   assert.match(combat, /attackProfile\(attacker\.troops, attackMode\)/);
   assert.match(combat, /attackProfile\(attacker\.troops, battleAttackMode\(battle\)\)/);
@@ -55,8 +55,8 @@ test("servidor usa attackProfile tanto para validar quanto para rolar dados", ()
 });
 
 test("perdas do atacante multiplicam as comparações pelo perfil da barreira", () => {
-  const combat = source("src/lib/game-combat-command-service.ts");
-  const battle = source("src/lib/game-battle-service.ts");
+  const combat = source("src/lib/server/game-combat-command-service.ts");
+  const battle = source("src/lib/server/game-battle-service.ts");
 
   assert.match(
     combat,
@@ -69,8 +69,8 @@ test("perdas do atacante multiplicam as comparações pelo perfil da barreira", 
 });
 
 test("Túnel Jurássico continua sendo passagem normal mesmo sobre fronteira bloqueada", () => {
-  const combat = source("src/lib/game-combat-command-service.ts");
-  const effective = source("src/lib/game-effective-connections.ts");
+  const combat = source("src/lib/server/game-combat-command-service.ts");
+  const effective = source("src/lib/shared/game-effective-connections.ts");
   const connections = source("src/lib/shared/territory-connections.ts");
 
   assert.match(combat, /getEffectiveGameTopology/);
@@ -85,7 +85,7 @@ test("Túnel Jurássico continua sendo passagem normal mesmo sobre fronteira blo
 });
 
 test("manobra usa topologia efetiva completa e recalcula a melhor rota no servidor", () => {
-  const maneuver = source("src/lib/game-maneuver-command-service.ts");
+  const maneuver = source("src/lib/server/game-maneuver-command-service.ts");
 
   assert.match(maneuver, /getEffectiveGameTopology/);
   assert.match(maneuver, /bestTerritoryRoute/);
@@ -99,7 +99,7 @@ test("manobra usa topologia efetiva completa e recalcula a melhor rota no servid
 });
 
 test("manobra rejeita duas barreiras e exige duas tropas para uma travessia", () => {
-  const maneuver = source("src/lib/game-maneuver-command-service.ts");
+  const maneuver = source("src/lib/server/game-maneuver-command-service.ts");
 
   assert.match(maneuver, /traversal\.kind === "blocked"/);
   assert.match(maneuver, /minimumBarrierCount: route\.barrierCount/);
@@ -107,7 +107,7 @@ test("manobra rejeita duas barreiras e exige duas tropas para uma travessia", ()
 });
 
 test("penalidade de manobra remove N da origem mas entrega apenas N menos a perda", () => {
-  const maneuver = source("src/lib/game-maneuver-command-service.ts");
+  const maneuver = source("src/lib/server/game-maneuver-command-service.ts");
 
   assert.match(
     maneuver,
@@ -122,7 +122,7 @@ test("penalidade de manobra remove N da origem mas entrega apenas N menos a perd
 });
 
 test("cliente não informa ao servidor se a manobra atravessa barreira", () => {
-  const maneuver = source("src/lib/game-maneuver-command-service.ts");
+  const maneuver = source("src/lib/server/game-maneuver-command-service.ts");
 
   assert.doesNotMatch(maneuver, /input\.barrier/);
   assert.doesNotMatch(maneuver, /input\.crossesBarrier/);
