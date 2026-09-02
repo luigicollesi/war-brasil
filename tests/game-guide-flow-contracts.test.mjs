@@ -9,7 +9,7 @@ function source(path) {
 test("preparação documentada acompanha limites e distribuição da sala", () => {
   const setup = source("src/components/game-guide/sections/guide-setup-section.tsx");
   const rooms = source("src/lib/rooms.ts");
-  const lobby = source("src/lib/lobby.ts");
+  const lobby = source("src/lib/shared/lobby.ts");
 
   assert.match(setup, /2 a 6 jogadores/);
   assert.match(rooms, /MINIMUM_PLAYERS_TO_START = 2/);
