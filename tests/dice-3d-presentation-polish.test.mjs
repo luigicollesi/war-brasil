@@ -82,6 +82,10 @@ test("apresentação usa cor oficial da facção e acabamento físico no corpo d
     "src/components/dice-3d/battle-dice-cinematic.tsx",
     "utf8",
   );
+  const staticResults = readFileSync(
+    "src/components/battle-static-dice-results.tsx",
+    "utf8",
+  );
   const visual = readFileSync("src/components/dice-3d/die-visual.tsx", "utf8");
   const palette = readFileSync("src/lib/client/player-color.ts", "utf8");
 
@@ -98,4 +102,10 @@ test("apresentação usa cor oficial da facção e acabamento físico no corpo d
   assert.match(cinematic, /gl\.capabilities\.getMaxAnisotropy\(\)/);
   assert.match(cinematic, /texture\.anisotropy = anisotropy/);
   assert.match(cinematic, /texture\.needsUpdate = true/);
+
+  assert.match(staticResults, /preloadDiceAssets/);
+  assert.match(staticResults, /skin: "attack"/);
+  assert.match(staticResults, /skin: "defense"/);
+  assert.match(staticResults, /pipColor: playerColorHex\(attackerColor\)/);
+  assert.match(staticResults, /pipColor: playerColorHex\(defenderColor\)/);
 });
