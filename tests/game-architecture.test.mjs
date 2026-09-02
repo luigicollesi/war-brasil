@@ -138,7 +138,7 @@ test("interação do mapa não reconstrói cliques por selectionVersion ou mapHi
 });
 
 test("estado visual do tabuleiro é derivado da state machine", () => {
-  const source = readFileSync("src/lib/game-interaction.ts", "utf8");
+  const source = readFileSync("src/lib/shared/game-interaction.ts", "utf8");
 
   assert.match(source, /gameInteractionReducer/);
   assert.match(source, /deriveMapHints/);
@@ -203,7 +203,7 @@ test("topologia base permanece cacheada e gameplay usa uma única topologia efet
 
 test("efeitos permanentes só alteram tropas e nunca a topologia base", () => {
   const source = readFileSync(
-    "src/lib/events/event-effects-service.ts",
+    "src/lib/server/events/event-effects-service.ts",
     "utf8",
   );
 
@@ -219,7 +219,7 @@ test("efeitos permanentes só alteram tropas e nunca a topologia base", () => {
 
 test("evento de gameplay é lido pela rodada exata e resolved_effects é validado", () => {
   const repository = readFileSync(
-    "src/lib/events/event-repository.ts",
+    "src/lib/server/events/event-repository.ts",
     "utf8",
   );
 
