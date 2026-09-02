@@ -2,8 +2,8 @@ import "server-only";
 
 import { randomInt } from "node:crypto";
 import type { PoolClient } from "pg";
+import { JURASSIC_TUNNEL_SOURCE_ID } from "../../shared/game-round-rules";
 import { getBaseTerritoryConnections } from "../game-topology-service";
-import { JURASSIC_TUNNEL_SOURCE_ID } from "../game-round-rules";
 import {
   canonicalTerritoryConnectionPair,
   type EventEffect,
