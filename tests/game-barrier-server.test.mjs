@@ -8,7 +8,7 @@ function source(path) {
 
 test("combate persiste o modo de ataque e mantém compatibilidade com batalhas antigas", () => {
   const battle = source("src/lib/game-battle-service.ts");
-  const contract = source("src/lib/game-contract.ts");
+  const contract = source("src/lib/shared/game-contract.ts");
   const combat = source("src/lib/game-combat-command-service.ts");
 
   assert.match(battle, /attackMode\?: AttackMode/);
@@ -71,7 +71,7 @@ test("perdas do atacante multiplicam as comparações pelo perfil da barreira", 
 test("Túnel Jurássico continua sendo passagem normal mesmo sobre fronteira bloqueada", () => {
   const combat = source("src/lib/game-combat-command-service.ts");
   const effective = source("src/lib/game-effective-connections.ts");
-  const connections = source("src/lib/territory-connections.ts");
+  const connections = source("src/lib/shared/territory-connections.ts");
 
   assert.match(combat, /getEffectiveGameTopology/);
   assert.match(combat, /connection\.passable \? "normal" : "barrier"/);
