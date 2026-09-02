@@ -46,7 +46,7 @@ test("valor individual das trocas cresce uma tropa por troca", () => {
 });
 
 test("trocas usam progressão individual e preservam bônus territorial separado", () => {
-  const source = readFileSync("src/lib/game-troop-command-service.ts", "utf8");
+  const source = readFileSync("src/lib/server/game-troop-command-service.ts", "utf8");
 
   assert.match(source, /card_trade_count=card_trade_count\+1/);
   assert.match(source, /RETURNING card_trade_count-1 trade_count_before/);
@@ -63,7 +63,7 @@ test("contador individual de trocas existe no schema e é zerado em nova partida
     "utf8",
   );
   const schema = readFileSync("src/lib/db/schema.sql", "utf8");
-  const finish = readFileSync("src/lib/game-finish-command-service.ts", "utf8");
+  const finish = readFileSync("src/lib/server/game-finish-command-service.ts", "utf8");
 
   assert.match(migration, /ADD COLUMN IF NOT EXISTS card_trade_count/);
   assert.match(schema, /card_trade_count INTEGER NOT NULL DEFAULT 0/);
@@ -83,7 +83,7 @@ test("conquista só ocorre quando a defesa perde a última tropa", () => {
 });
 
 test("snapshot consulta objetivo e cartas somente do jogador da sessão", () => {
-  const source = readFileSync("src/lib/game-snapshot-service.ts", "utf8");
+  const source = readFileSync("src/lib/server/game-snapshot-service.ts", "utf8");
   assert.match(source, /owner_player_id=\$2 AND zone='hand'/);
   assert.match(source, /a\.room_id=\$1 AND a\.player_id=\$2/);
 });
@@ -120,9 +120,9 @@ test("Túnel Jurássico é bidirecional e prefere a conexão especial passável"
 });
 
 test("servidor renova o Túnel Jurássico ao virar a rodada", () => {
-  const command = readFileSync("src/lib/game-command-service.ts", "utf8");
-  const roundService = readFileSync("src/lib/game-round-service.ts", "utf8");
-  const roundRules = readFileSync("src/lib/game-round-rules.ts", "utf8");
+  const command = readFileSync("src/lib/server/game-command-service.ts", "utf8");
+  const roundService = readFileSync("src/lib/server/game-round-service.ts", "utf8");
+  const roundRules = readFileSync("src/lib/shared/game-round-rules.ts", "utf8");
 
   assert.match(command, /advanceGameRound/);
   assert.match(command, /previousJurassicTunnelDestinationId/);
@@ -141,7 +141,7 @@ test("servidor renova o Túnel Jurássico ao virar a rodada", () => {
 });
 
 test("ataque classifica combate usando a topologia efetiva da rodada", () => {
-  const source = readFileSync("src/lib/game-combat-command-service.ts", "utf8");
+  const source = readFileSync("src/lib/server/game-combat-command-service.ts", "utf8");
   assert.match(source, /getEffectiveGameTopology/);
   assert.match(source, /isAttackOriginBlocked/);
   assert.match(source, /findTerritoryConnection\(\s*topology\.connections/);
@@ -178,7 +178,7 @@ test("Túnel Jurássico participa da cadeia de manobra", () => {
   );
 });
 test("backend da manobra recalcula a melhor rota usando a topologia efetiva", () => {
-  const source = readFileSync("src/lib/game-maneuver-command-service.ts", "utf8");
+  const source = readFileSync("src/lib/server/game-maneuver-command-service.ts", "utf8");
   assert.match(source, /bestTerritoryRoute/);
   assert.match(source, /maneuverTraversalProfile/);
   assert.match(source, /getEffectiveGameTopology/);
@@ -196,8 +196,8 @@ test("modal de troca renderiza as cartas da mão", () => {
 });
 
 test("combate sincronizado persiste etapas e rolagens separadas", () => {
-  const battle = readFileSync("src/lib/game-battle-service.ts", "utf8");
-  const commands = readFileSync("src/lib/game-combat-command-service.ts", "utf8");
+  const battle = readFileSync("src/lib/server/game-battle-service.ts", "utf8");
+  const commands = readFileSync("src/lib/server/game-combat-command-service.ts", "utf8");
   assert.match(commands, /"awaiting_attacker_roll"/);
   assert.match(commands, /"awaiting_defender_roll"/);
   assert.match(commands, /export async function rollBattleDiceCommand/);
@@ -206,7 +206,7 @@ test("combate sincronizado persiste etapas e rolagens separadas", () => {
 });
 
 test("rolagem de combate valida atacante e defensor pelo estágio, sem turno global", () => {
-  const source = readFileSync("src/lib/game-combat-command-service.ts", "utf8");
+  const source = readFileSync("src/lib/server/game-combat-command-service.ts", "utf8");
   const executeRollBattleDiceStart = source.indexOf(
     "export async function executeRollBattleDice",
   );
@@ -229,9 +229,9 @@ test("rolagem de combate valida atacante e defensor pelo estágio, sem turno glo
 });
 
 test("último dado do sorteio permanece visível antes de avançar", () => {
-  const transitions = readFileSync("src/lib/game-transitions.ts", "utf8");
-  const presentation = readFileSync("src/lib/game-presentation-service.ts", "utf8");
-  const commands = readFileSync("src/lib/game-command-service.ts", "utf8");
+  const transitions = readFileSync("src/lib/shared/game-transitions.ts", "utf8");
+  const presentation = readFileSync("src/lib/server/game-presentation-service.ts", "utf8");
+  const commands = readFileSync("src/lib/server/game-command-service.ts", "utf8");
 
   assert.match(transitions, /ORDER_ROLL_PRESENTATION_MS\s*=\s*2_000/);
   assert.match(presentation, /isOrderRollPresentationDue/);
@@ -274,14 +274,14 @@ test("Túnel Jurássico usa curva derivada das geometrias calculadas do SVG", ()
 });
 
 test("conquista libera o resultado antes da transferência", () => {
-  const battle = readFileSync("src/lib/game-battle-service.ts", "utf8");
-  const conquest = readFileSync("src/lib/game-conquest-command-service.ts", "utf8");
+  const battle = readFileSync("src/lib/server/game-battle-service.ts", "utf8");
+  const conquest = readFileSync("src/lib/server/game-conquest-command-service.ts", "utf8");
   assert.match(battle, /saveBattle\(client, room, null\)/);
   assert.match(conquest, /await advanceBattlePresentation\(client, room\)/);
 });
 
 test("snapshot não executa queries concorrentes no mesmo PoolClient", () => {
-  const source = readFileSync("src/lib/game-snapshot-service.ts", "utf8");
+  const source = readFileSync("src/lib/server/game-snapshot-service.ts", "utf8");
   assert.doesNotMatch(source, /Promise\.all/);
 });
 
