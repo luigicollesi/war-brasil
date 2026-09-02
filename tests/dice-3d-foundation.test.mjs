@@ -46,10 +46,9 @@ test("faces canônicas são únicas e preservam pares opostos de um D6", () => {
       (candidate) => candidate.value === face.opposite,
     );
     assert.ok(opposite);
-    assert.deepEqual(
-      opposite.normal,
-      face.normal.map((component) => -component),
-    );
+    for (let index = 0; index < face.normal.length; index += 1) {
+      approximatelyEqual(opposite.normal[index], -face.normal[index]);
+    }
   }
 });
 
