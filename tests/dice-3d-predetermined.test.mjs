@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
+import {
+  BATTLE_DICE_DOCK_MS,
+  BATTLE_DICE_REPLAY_MS,
+  battleDiceDockPositions,
+  battleDiceDockScale,
+} from "../.test-build/client/dice/battle-dice-layout.js";
 import { DICE_FACE_DEFINITIONS } from "../.test-build/client/dice/geometry/dice-faces.js";
 import { buildPredeterminedDiceRoll } from "../.test-build/client/dice/physics/build-predetermined-roll.js";
 import { detectPhysicalTopFace } from "../.test-build/client/dice/physics/detect-top-face.js";
@@ -161,8 +167,34 @@ test("plano predeterminado rejeita trajetórias incompletas ou inconsistentes", 
   );
 });
 
+test("dock de batalha é espelhado, responsivo à quantidade e cabe no tray", () => {
+  assert.equal(BATTLE_DICE_REPLAY_MS, 1_200);
+  assert.equal(BATTLE_DICE_DOCK_MS, 360);
+
+  for (const count of [1, 2, 3]) {
+    const attack = battleDiceDockPositions("attack", count);
+    const defense = battleDiceDockPositions("defense", count);
+    const scale = battleDiceDockScale(count);
+
+    assert.equal(attack.length, count);
+    assert.equal(defense.length, count);
+    assert.ok(scale > 0 && scale < 1.5);
+
+    for (let index = 0; index < count; index += 1) {
+      approximatelyEqual(attack[index][0], -defense[index][0]);
+      approximatelyEqual(attack[index][1], defense[index][1]);
+      approximatelyEqual(attack[index][2], defense[index][2]);
+      assert.ok(Math.abs(attack[index][0]) < DICE_PHYSICS.trayHalfWidth);
+    }
+  }
+
+  assert.ok(battleDiceDockScale(1) > battleDiceDockScale(2));
+  assert.ok(battleDiceDockScale(2) > battleDiceDockScale(3));
+});
+
 test("fase 3 pré-simula conjuntamente sem receber os resultados desejados", () => {
   const preSimulation = source("src/components/dice-3d/dice-pre-simulation.tsx");
+  const roll = source("src/components/dice-3d/predetermined-dice-roll.tsx");
   const stage = source("src/components/dice-3d/predetermined-dice-stage.tsx");
 
   assert.match(preSimulation, /<Physics/);
@@ -175,21 +207,25 @@ test("fase 3 pré-simula conjuntamente sem receber os resultados desejados", () 
   assert.doesNotMatch(preSimulation, /Math\.random|runGameCommand|fetch\(/);
   assert.doesNotMatch(preSimulation, /targetValue|targetValues/);
 
-  assert.match(stage, /buildPredeterminedDiceRoll\(values, trajectory\)/);
-  assert.match(stage, /<DicePreSimulation/);
-  assert.match(stage, /count=\{values\.length\}/);
-  assert.doesNotMatch(stage, /runGameCommand|fetch\(|Math\.random/);
+  assert.match(roll, /buildPredeterminedDiceRoll\(values, trajectory\)/);
+  assert.match(roll, /<DicePreSimulation/);
+  assert.match(roll, /count=\{values\.length\}/);
+  assert.match(stage, /<PredeterminedDiceRoll/);
+  assert.doesNotMatch(roll, /runGameCommand|fetch\(|Math\.random/);
 });
 
-test("replay usa a trajetória gravada e mantém remapeamento no filho visual desde o início", () => {
+test("replay mantém remapeamento, controla duração e faz dock sem alterar quaternion", () => {
   const replay = source("src/components/dice-3d/dice-trajectory-replay.tsx");
   const scene = source("src/components/dice-3d/dice-scene.tsx");
 
   assert.match(replay, /useFrame/);
   assert.match(replay, /slerpQuaternions/);
   assert.match(replay, /lerpVectors/);
+  assert.match(replay, /playbackDurationMs/);
+  assert.match(replay, /dockPositions/);
+  assert.match(replay, /dockScale/);
+  assert.match(replay, /smoothStep/);
   assert.match(replay, /<group quaternion=\{remap\.rotation\}>/);
-  assert.doesNotMatch(replay, /useState/);
   assert.doesNotMatch(replay, /RigidBody|Physics|setRotation|setTranslation/);
 
   assert.match(scene, /PredeterminedDiceStage/);
