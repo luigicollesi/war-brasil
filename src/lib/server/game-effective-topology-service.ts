@@ -1,12 +1,12 @@
 import "server-only";
 
 import type { PoolClient } from "pg";
-import { getRoomRoundEvent } from "./events/event-repository";
+import { getRoomRoundEvent } from "@/src/lib/events/event-repository";
 import {
   EventConfigurationError,
   type ResolvedEventEffect,
-} from "./events/event-types";
-import { effectiveGameConnections } from "./game-effective-connections";
+} from "@/shared/events/event-types";
+import { effectiveGameConnections } from "@/shared/game-effective-connections";
 import { getBaseTerritoryConnections } from "./game-topology-service";
 
 export type EffectiveGameTopology = {
