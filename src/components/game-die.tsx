@@ -8,7 +8,8 @@ import {
   normalizeDiceValue,
 } from "@/src/lib/client/dice/pip-layout";
 import type { DiceValue } from "@/src/lib/client/dice/types";
-import { PLAYER_COLORS, type PlayerColor } from "@/src/lib/lobby";
+import { playerColorHex } from "@/src/lib/client/player-color";
+import type { PlayerColor } from "@/src/lib/lobby";
 
 export type GameDieValue = DiceValue;
 
@@ -23,10 +24,6 @@ const pipClass = {
   md: "h-3.5 w-3.5",
   lg: "h-4 w-4",
 } as const;
-
-function colorHex(color: PlayerColor) {
-  return PLAYER_COLORS.find((item) => item.value === color)?.hex ?? "#17372d";
-}
 
 export function GameDie({
   value,
@@ -78,7 +75,7 @@ export function GameDie({
           style={{
             left: `${x}%`,
             top: `${y}%`,
-            backgroundColor: colorHex(color),
+            backgroundColor: playerColorHex(color),
           }}
         />
       ))}
