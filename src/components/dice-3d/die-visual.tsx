@@ -4,6 +4,8 @@ import type { BufferGeometry } from "three";
 import { DICE_FACE_DEFINITIONS } from "@/src/lib/client/dice/geometry/dice-faces";
 import type { DiceFaceTextureSet } from "@/src/lib/client/dice/types";
 
+const DICE_BODY_GOLD = "#d0ad5a";
+
 export function DieVisual({
   geometry,
   textures,
@@ -22,9 +24,9 @@ export function DieVisual({
     <>
       <mesh geometry={geometry} castShadow receiveShadow>
         <meshStandardMaterial
-          color="#e8e3d8"
-          metalness={0.02}
-          roughness={0.42}
+          color={DICE_BODY_GOLD}
+          metalness={0.14}
+          roughness={0.38}
         />
       </mesh>
 
