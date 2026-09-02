@@ -130,8 +130,8 @@ test("cinematic sincroniza frame inicial e adapta enquadramento para portrait", 
 
   assert.match(cinematic, /Date\.now\(\) - startedAtMs/);
   assert.match(cinematic, /initialElapsedMs=\{Math\.min/);
-  assert.match(cinematic, /DreiPerspectiveCamera/);
-  assert.match(cinematic, /makeDefault/);
+  assert.match(cinematic, /<perspectiveCamera/);
+  assert.match(cinematic, /set\(\{ camera \}\)/);
   assert.match(cinematic, /PORTRAIT_ASPECT_THRESHOLD/);
   assert.match(cinematic, /portrait \? Math\.PI \/ 2 : 0/);
   assert.match(cinematic, /position=\{position\}/);
