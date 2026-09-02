@@ -113,7 +113,7 @@ test("snapshot transporta somente a topologia base e os efeitos resolvidos separ
 test("cliente cacheia base e hidrata evento mais túnel a partir do snapshot atual", () => {
   const sync = readFileSync("src/hooks/use-game-sync.ts", "utf8");
   const hydration = readFileSync(
-    "src/lib/game-snapshot-hydration.ts",
+    "src/lib/shared/game-snapshot-hydration.ts",
     "utf8",
   );
 
