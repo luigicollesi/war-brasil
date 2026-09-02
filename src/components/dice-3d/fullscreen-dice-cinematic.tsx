@@ -213,6 +213,20 @@ export function FullscreenDiceCinematic({
     remainingMs < MIN_PRESENTATION_REMAINING_MS;
 
   useEffect(() => {
+    if (shouldSkip) return;
+
+    const gameRoot = document.querySelector<HTMLElement>(".game-runtime > div");
+    if (!gameRoot) return;
+
+    const alreadyInert = gameRoot.hasAttribute("inert");
+    if (!alreadyInert) gameRoot.setAttribute("inert", "");
+
+    return () => {
+      if (!alreadyInert) gameRoot.removeAttribute("inert");
+    };
+  }, [shouldSkip]);
+
+  useEffect(() => {
     if (shouldSkip) {
       const timeoutId = window.setTimeout(finish, 0);
       return () => window.clearTimeout(timeoutId);
