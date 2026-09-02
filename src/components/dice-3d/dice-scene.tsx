@@ -6,6 +6,7 @@ import { useMemo } from "react";
 import type { PlayerColor } from "@/src/lib/lobby";
 import { getSharedRoundedDieGeometry } from "@/src/lib/client/dice/dice-assets-manager";
 import { validateDiceValues } from "@/src/lib/client/dice/dice-values";
+import { installDice3DDependencyWarningFilter } from "@/src/lib/client/dice/install-3d-dependency-warning-filter";
 import { DICE_PHYSICS } from "@/src/lib/client/dice/physics/dice-physics-config";
 import type {
   DiceFaceTextureSet,
@@ -21,6 +22,8 @@ import {
   useReducedDiceMotion,
 } from "./use-dice-presentation-capabilities";
 import { useDiceFaceTextures } from "./use-dice-face-textures";
+
+installDice3DDependencyWarningFilter();
 
 function layoutForDice(count: number): DiceVector3[] {
   if (count === 1) return [[0, 0, 0]];
