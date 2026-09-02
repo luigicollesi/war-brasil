@@ -25,7 +25,7 @@ test("domínio territorial deriva a meta de 40% dos territórios inicialmente ex
     "src/lib/db/migrations/014-balanced-objective-catalog.sql",
   );
   const assignment = source(
-    "src/lib/objectives/objective-assignment-service.ts",
+    "src/lib/server/objectives/objective-assignment-service.ts",
   );
 
   const fallbackTargets = new Map([
@@ -64,10 +64,10 @@ test("fortificação usa 100-110% da posse inicial real e exige quatro tropas", 
     "src/lib/db/migrations/014-balanced-objective-catalog.sql",
   );
   const assignment = source(
-    "src/lib/objectives/objective-assignment-service.ts",
+    "src/lib/server/objectives/objective-assignment-service.ts",
   );
   const presentation = source(
-    "src/lib/objectives/objective-presentation.ts",
+    "src/lib/shared/objectives/objective-presentation.ts",
   );
 
   assert.match(migration, /'balanced_fortification'/);
@@ -94,7 +94,7 @@ test("fortificação usa 100-110% da posse inicial real e exige quatro tropas", 
 
 test("regras balanceadas inválidas interrompem atribuição em vez de persistir snapshot inseguro", () => {
   const assignment = source(
-    "src/lib/objectives/objective-assignment-service.ts",
+    "src/lib/server/objectives/objective-assignment-service.ts",
   );
 
   assert.match(
@@ -175,7 +175,7 @@ test("avaliação falha fechada quando resolved_params está ausente ou inválid
 test("region_plus exige regiões válidas e também o piso territorial configurado", () => {
   const service = source("src/lib/server/game-objective-service.ts");
   const presentation = source(
-    "src/lib/objectives/objective-presentation.ts",
+    "src/lib/shared/objectives/objective-presentation.ts",
   );
 
   assert.match(service, /objective\.type === "region_plus"/);
@@ -188,7 +188,7 @@ test("region_plus exige regiões válidas e também o piso territorial configura
 
 test("atribuição usa regras balanceadas por quantidade de jogadores e persiste snapshot resolvido", () => {
   const assignment = source(
-    "src/lib/objectives/objective-assignment-service.ts",
+    "src/lib/server/objectives/objective-assignment-service.ts",
   );
   const rooms = source("src/lib/server/rooms.ts");
   const rematch = source("src/lib/server/game-finish-command-service.ts");
@@ -204,7 +204,7 @@ test("atribuição usa regras balanceadas por quantidade de jogadores e persiste
 
 test("schema migrado é obrigatório e erros de tabela ou coluna não caem no catálogo legado", () => {
   const compatibility = source(
-    "src/lib/objectives/objective-schema-compatibility.ts",
+    "src/lib/server/objectives/objective-schema-compatibility.ts",
   );
 
   assert.match(compatibility, /return primary\(\)/);
@@ -217,7 +217,7 @@ test("avaliação e snapshot usam os parâmetros resolvidos do schema atual", ()
   const service = source("src/lib/server/game-objective-service.ts");
   const snapshot = source("src/lib/server/game-snapshot-service.ts");
   const presentation = source(
-    "src/lib/objectives/objective-presentation.ts",
+    "src/lib/shared/objectives/objective-presentation.ts",
   );
 
   assert.match(service, /LEFT JOIN objective_rules r ON r\.id=a\.objective_rule_id/);
