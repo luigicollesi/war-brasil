@@ -7,7 +7,7 @@ function source(path) {
 }
 
 test("estado estratégico lê somente objetivo e cartas privadas do próprio bot", () => {
-  const stateService = source("src/lib/bots/bot-state-service.ts");
+  const stateService = source("src/lib/server/bots/bot-state-service.ts");
   assert.match(stateService, /WHERE a\.room_id=\$1 AND a\.player_id=\$2/);
   assert.match(stateService, /owner_player_id=\$2 AND zone='hand'/);
   assert.doesNotMatch(stateService, /SELECT[\s\S]*game_player_objectives[\s\S]*WHERE a\.room_id=\$1\s*(?:ORDER|$)/);
@@ -16,17 +16,17 @@ test("estado estratégico lê somente objetivo e cartas privadas do próprio bot
 
 test("estratégia permanece pura e não abre transação nem chama HTTP", () => {
   const files = [
-    "src/lib/bots/bot-objective-plan.ts",
-    "src/lib/bots/bot-combat-odds.ts",
-    "src/lib/bots/bot-routing.ts",
-    "src/lib/bots/bot-territory-value.ts",
-    "src/lib/bots/bot-defense.ts",
-    "src/lib/bots/bot-cards.ts",
-    "src/lib/bots/bot-reinforcement.ts",
-    "src/lib/bots/bot-attack.ts",
-    "src/lib/bots/bot-conquest.ts",
-    "src/lib/bots/bot-maneuver.ts",
-    "src/lib/bots/bot-strategy.ts",
+    "src/lib/shared/bots/bot-objective-plan.ts",
+    "src/lib/shared/bots/bot-combat-odds.ts",
+    "src/lib/shared/bots/bot-routing.ts",
+    "src/lib/shared/bots/bot-territory-value.ts",
+    "src/lib/shared/bots/bot-defense.ts",
+    "src/lib/shared/bots/bot-cards.ts",
+    "src/lib/shared/bots/bot-reinforcement.ts",
+    "src/lib/shared/bots/bot-attack.ts",
+    "src/lib/shared/bots/bot-conquest.ts",
+    "src/lib/shared/bots/bot-maneuver.ts",
+    "src/lib/shared/bots/bot-strategy.ts",
   ];
 
   for (const path of files) {
@@ -36,7 +36,7 @@ test("estratégia permanece pura e não abre transação nem chama HTTP", () => 
 });
 
 test("runner decide somente após o delay vencer e usa executores compartilhados", () => {
-  const runner = source("src/lib/bots/bot-runner.ts");
+  const runner = source("src/lib/server/bots/bot-runner.ts");
   const delayCheck = runner.indexOf("actor.bot_next_action_at.getTime() > nowMs");
   const loadState = runner.indexOf("loadBotStrategicState");
   const dueChoice = runner.lastIndexOf("chooseDueAction(client, room, actor)");
