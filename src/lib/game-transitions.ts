@@ -1,1 +1,1 @@
-export * from "@/shared/game-transitions";
+export * from "./shared/game-transitions";

@@ -1,2 +1,2 @@
 import "server-only";
-export * from "@/server/game-command-player";
+export * from "./server/game-command-player";

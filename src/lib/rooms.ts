@@ -1,2 +1,2 @@
 import "server-only";
-export * from "@/server/rooms";
+export * from "./server/rooms";

@@ -1,1 +1,1 @@
-export * from "@/shared/events/event-catalog";
+export * from "../shared/events/event-catalog";

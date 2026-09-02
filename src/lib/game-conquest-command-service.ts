@@ -1,2 +1,2 @@
 import "server-only";
-export * from "@/server/game-conquest-command-service";
+export * from "./server/game-conquest-command-service";

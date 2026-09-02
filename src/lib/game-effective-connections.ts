@@ -1,1 +1,1 @@
-export * from "@/shared/game-effective-connections";
+export * from "./shared/game-effective-connections";

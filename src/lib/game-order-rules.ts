@@ -1,1 +1,1 @@
-export * from "@/shared/game-order-rules";
+export * from "./shared/game-order-rules";

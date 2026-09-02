@@ -1,2 +1,2 @@
 import "server-only";
-export * from "@/server/game-automation-service";
+export * from "./server/game-automation-service";

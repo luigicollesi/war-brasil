@@ -1,1 +1,1 @@
-export * from "@/shared/events/event-attack-rules";
+export * from "../shared/events/event-attack-rules";

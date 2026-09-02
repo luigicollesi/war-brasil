@@ -1,2 +1,2 @@
 import "server-only";
-export * from "@/server/game-effective-topology-service";
+export * from "./server/game-effective-topology-service";

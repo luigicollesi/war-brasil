@@ -1,1 +1,1 @@
-export * from "@/client/game-barrier-presentation";
+export * from "./client/game-barrier-presentation";

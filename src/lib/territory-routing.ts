@@ -1,1 +1,1 @@
-export * from "@/shared/territory-routing";
+export * from "./shared/territory-routing";

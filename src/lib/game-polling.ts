@@ -1,1 +1,1 @@
-export * from "@/client/game-polling";
+export * from "./client/game-polling";

@@ -1,1 +1,1 @@
-export * from "@/shared/events/event-resolver";
+export * from "../shared/events/event-resolver";
