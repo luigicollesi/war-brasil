@@ -7,7 +7,7 @@ function source(path) {
 }
 
 test("interação deriva alvos especiais das regras puras e do roteador", () => {
-  const interaction = source("src/lib/game-interaction.ts");
+  const interaction = source("src/lib/shared/game-interaction.ts");
 
   assert.match(interaction, /attackProfile/);
   assert.match(interaction, /bestTerritoryRoutes/);
