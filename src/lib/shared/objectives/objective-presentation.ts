@@ -1,4 +1,4 @@
-import type { Region } from "@/src/lib/game-config";
+import type { Region } from "../game-config";
 
 const REGION_LABELS: Record<Region, string> = {
   norte: "Norte",
