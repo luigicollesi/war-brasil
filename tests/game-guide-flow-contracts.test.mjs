@@ -8,7 +8,7 @@ function source(path) {
 
 test("preparação documentada acompanha limites e distribuição da sala", () => {
   const setup = source("src/components/game-guide/sections/guide-setup-section.tsx");
-  const rooms = source("src/lib/rooms.ts");
+  const rooms = source("src/lib/server/rooms.ts");
   const lobby = source("src/lib/shared/lobby.ts");
 
   assert.match(setup, /2 a 6 jogadores/);
@@ -21,8 +21,8 @@ test("preparação documentada acompanha limites e distribuição da sala", () =
 
 test("turno percorre cartas, reforço, ataque e manobra na ordem ensinada", () => {
   const turn = source("src/components/game-guide/sections/guide-turn-section.tsx");
-  const command = source("src/lib/game-command-service.ts");
-  const troops = source("src/lib/game-troop-command-service.ts");
+  const command = source("src/lib/server/game-command-service.ts");
+  const troops = source("src/lib/server/game-troop-command-service.ts");
 
   const labels = ["Cartas", "Reforços", "Ataques", "Manobra"];
   let previous = -1;
@@ -43,7 +43,7 @@ test("turno percorre cartas, reforço, ataque e manobra na ordem ensinada", () =
 
 test("fim do turno concede no máximo uma carta quando houve conquista", () => {
   const cards = source("src/components/game-guide/sections/guide-cards-section.tsx");
-  const command = source("src/lib/game-command-service.ts");
+  const command = source("src/lib/server/game-command-service.ts");
 
   assert.match(cards, /Conquistou ≥ 1/);
   assert.match(cards, /Fim do turno/);
@@ -53,7 +53,7 @@ test("fim do turno concede no máximo uma carta quando houve conquista", () => {
 
 test("troca obrigatória e bônus territorial usam limites compartilhados", () => {
   const cards = source("src/components/game-guide/sections/guide-cards-section.tsx");
-  const troops = source("src/lib/game-troop-command-service.ts");
+  const troops = source("src/lib/server/game-troop-command-service.ts");
 
   assert.match(cards, /guide\.cards\.mandatoryTradeHandSize/);
   assert.match(cards, /ou mais cartas/);
@@ -65,9 +65,9 @@ test("troca obrigatória e bônus territorial usam limites compartilhados", () =
 });
 
 test("ataque, conquista e eliminação respeitam os bloqueios descritos", () => {
-  const attack = source("src/lib/game-combat-command-service.ts");
-  const conquest = source("src/lib/game-conquest-command-service.ts");
-  const battle = source("src/lib/game-battle-service.ts");
+  const attack = source("src/lib/server/game-combat-command-service.ts");
+  const conquest = source("src/lib/server/game-conquest-command-service.ts");
+  const battle = source("src/lib/server/game-battle-service.ts");
 
   assert.match(attack, /isAttackOriginBlocked/);
   assert.match(attack, /Conclua o deslocamento da conquista antes de atacar novamente/);
@@ -83,8 +83,8 @@ test("ataque, conquista e eliminação respeitam os bloqueios descritos", () => 
 });
 
 test("fim da ordem ativa nova rodada, Anomalia e novo Túnel", () => {
-  const command = source("src/lib/game-command-service.ts");
-  const round = source("src/lib/game-round-service.ts");
+  const command = source("src/lib/server/game-command-service.ts");
+  const round = source("src/lib/server/game-round-service.ts");
   const anomaly = source("src/components/game-guide/sections/guide-anomaly-section.tsx");
 
   assert.match(command, /const wrapsRound =/);
@@ -99,7 +99,7 @@ test("fim da ordem ativa nova rodada, Anomalia e novo Túnel", () => {
 });
 
 test("evento inicial é narrativo e remoções preservam a última tropa", () => {
-  const round = source("src/lib/game-round-service.ts");
+  const round = source("src/lib/server/game-round-service.ts");
   const effects = source("src/lib/events/event-effects-service.ts");
   const anomaly = source("src/components/game-guide/sections/guide-anomaly-section.tsx");
 
@@ -112,11 +112,11 @@ test("evento inicial é narrativo e remoções preservam a última tropa", () =>
 });
 
 test("objetivos encerram a partida imediatamente nas mudanças relevantes", () => {
-  const objective = source("src/lib/game-objective-service.ts");
-  const troops = source("src/lib/game-troop-command-service.ts");
-  const maneuver = source("src/lib/game-maneuver-command-service.ts");
-  const battle = source("src/lib/game-battle-service.ts");
-  const command = source("src/lib/game-command-service.ts");
+  const objective = source("src/lib/server/game-objective-service.ts");
+  const troops = source("src/lib/server/game-troop-command-service.ts");
+  const maneuver = source("src/lib/server/game-maneuver-command-service.ts");
+  const battle = source("src/lib/server/game-battle-service.ts");
+  const command = source("src/lib/server/game-command-service.ts");
 
   assert.match(objective, /SET status='finished',phase='finished',winner_player_id=\$2/);
   assert.match(troops, /objectiveWon\([\s\S]*"troops_changed"/);
