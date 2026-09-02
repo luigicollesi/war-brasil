@@ -8,8 +8,8 @@ const migration = readFileSync(
 );
 const schema = readFileSync("src/lib/db/schema.sql", "utf8");
 const rooms = readFileSync("src/lib/rooms.ts", "utf8");
-const lobby = readFileSync("src/lib/lobby.ts", "utf8");
-const gameContract = readFileSync("src/lib/game-contract.ts", "utf8");
+const lobby = readFileSync("src/lib/shared/lobby.ts", "utf8");
+const gameContract = readFileSync("src/lib/shared/game-contract.ts", "utf8");
 const gameSnapshot = readFileSync(
   "src/lib/game-snapshot-service.ts",
   "utf8",
