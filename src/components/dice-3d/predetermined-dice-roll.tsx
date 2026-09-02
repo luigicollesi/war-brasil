@@ -28,6 +28,7 @@ export function PredeterminedDiceRoll({
   failureFallback = null,
   launchOffset,
   playbackDurationMs,
+  initialElapsedMs,
   dockPositions,
   dockScale,
   dockDurationMs,
@@ -42,6 +43,7 @@ export function PredeterminedDiceRoll({
   failureFallback?: ReactNode;
   launchOffset?: DiceVector3;
   playbackDurationMs?: number;
+  initialElapsedMs?: number;
   dockPositions?: readonly DiceVector3[];
   dockScale?: number;
   dockDurationMs?: number;
@@ -99,6 +101,7 @@ export function PredeterminedDiceRoll({
       geometry={geometry}
       textures={textures}
       playbackDurationMs={playbackDurationMs}
+      initialElapsedMs={initialElapsedMs}
       dockPositions={dockPositions}
       dockScale={dockScale}
       dockDurationMs={dockDurationMs}
