@@ -1,6 +1,7 @@
 "use client";
 
 import { Canvas } from "@react-three/fiber";
+import { PCFShadowMap } from "three";
 import { useMemo } from "react";
 import type { PlayerColor } from "@/src/lib/lobby";
 import { getSharedRoundedDieGeometry } from "@/src/lib/client/dice/dice-assets-manager";
@@ -128,7 +129,7 @@ export function DiceScene({
     >
       <Canvas
         aria-hidden="true"
-        shadows
+        shadows={{ type: PCFShadowMap }}
         frameloop="demand"
         dpr={[1, 1.5]}
         camera={{
