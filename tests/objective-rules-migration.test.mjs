@@ -112,7 +112,7 @@ test("eliminação só entra de quatro a seis jogadores e usa piso territorial a
   const migration = source(
     "src/lib/db/migrations/014-balanced-objective-catalog.sql",
   );
-  const service = source("src/lib/game-objective-service.ts");
+  const service = source("src/lib/server/game-objective-service.ts");
 
   assert.doesNotMatch(migration, /'balanced_elimination', [23],/);
   assert.match(migration, /'balanced_elimination', 4, 1, '\{"territories":14\}'/);
@@ -160,7 +160,7 @@ test("combinações regionais acompanham a referência territorial de cada mesa"
 });
 
 test("avaliação falha fechada quando resolved_params está ausente ou inválido", () => {
-  const service = source("src/lib/game-objective-service.ts");
+  const service = source("src/lib/server/game-objective-service.ts");
 
   assert.match(service, /function positiveIntegerParam/);
   assert.match(service, /requiredTerritories !== null/);
@@ -173,7 +173,7 @@ test("avaliação falha fechada quando resolved_params está ausente ou inválid
 });
 
 test("region_plus exige regiões válidas e também o piso territorial configurado", () => {
-  const service = source("src/lib/game-objective-service.ts");
+  const service = source("src/lib/server/game-objective-service.ts");
   const presentation = source(
     "src/lib/objectives/objective-presentation.ts",
   );
@@ -190,8 +190,8 @@ test("atribuição usa regras balanceadas por quantidade de jogadores e persiste
   const assignment = source(
     "src/lib/objectives/objective-assignment-service.ts",
   );
-  const rooms = source("src/lib/rooms.ts");
-  const rematch = source("src/lib/game-finish-command-service.ts");
+  const rooms = source("src/lib/server/rooms.ts");
+  const rematch = source("src/lib/server/game-finish-command-service.ts");
 
   assert.match(assignment, /WHERE r\.player_count=\$1/);
   assert.match(assignment, /AND r\.is_active=TRUE/);
@@ -214,8 +214,8 @@ test("schema migrado é obrigatório e erros de tabela ou coluna não caem no ca
 });
 
 test("avaliação e snapshot usam os parâmetros resolvidos do schema atual", () => {
-  const service = source("src/lib/game-objective-service.ts");
-  const snapshot = source("src/lib/game-snapshot-service.ts");
+  const service = source("src/lib/server/game-objective-service.ts");
+  const snapshot = source("src/lib/server/game-snapshot-service.ts");
   const presentation = source(
     "src/lib/objectives/objective-presentation.ts",
   );
@@ -233,7 +233,7 @@ test("eliminação por terceiro mantém a missão e avalia seu dono", () => {
   const migration = source(
     "src/lib/db/migrations/016-disable-elimination-fallback.sql",
   );
-  const battle = source("src/lib/game-battle-service.ts");
+  const battle = source("src/lib/server/game-battle-service.ts");
 
   assert.match(migration, /SET fallback_objective_id = NULL/);
   assert.match(migration, /type IN \('elimination', 'elimination_plus'\)/);
@@ -246,8 +246,8 @@ test("eliminação por terceiro mantém a missão e avalia seu dono", () => {
 });
 
 test("fortificação é reavaliada após manobra e bônus positivo de evento", () => {
-  const maneuver = source("src/lib/game-maneuver-command-service.ts");
-  const command = source("src/lib/game-command-service.ts");
+  const maneuver = source("src/lib/server/game-maneuver-command-service.ts");
+  const command = source("src/lib/server/game-command-service.ts");
 
   assert.match(
     maneuver,
