@@ -26,6 +26,7 @@ export function PredeterminedDiceRoll({
   textures,
   preparingFallback = null,
   failureFallback = null,
+  launchOffset,
   playbackDurationMs,
   dockPositions,
   dockScale,
@@ -39,6 +40,7 @@ export function PredeterminedDiceRoll({
   textures: DiceFaceTextureSet;
   preparingFallback?: ReactNode;
   failureFallback?: ReactNode;
+  launchOffset?: DiceVector3;
   playbackDurationMs?: number;
   dockPositions?: readonly DiceVector3[];
   dockScale?: number;
@@ -83,6 +85,7 @@ export function PredeterminedDiceRoll({
         <DicePreSimulation
           count={values.length}
           seed={seed}
+          launchOffset={launchOffset}
           onComplete={handleComplete}
           onError={fail}
         />
