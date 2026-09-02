@@ -50,7 +50,7 @@ export type GamePlayer = {
   turnPosition: number | null;
   isMe: boolean;
   isBot: boolean;
-  rolls: Array<{ round: number; value: number }>;
+  rolls: Array<{ round: number; value: number; rolledAt: string }>;
 };
 
 export type GameTerritory = {
