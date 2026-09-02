@@ -1,7 +1,7 @@
 "use client";
 
 import { useFrame } from "@react-three/fiber";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Group,
   Quaternion,
@@ -46,7 +46,7 @@ export function DiceTrajectoryReplay({
   const elapsedSeconds = useRef(0);
   const dockElapsedSeconds = useRef(0);
   const completed = useRef(false);
-  const skipInitially = useRef(skipAnimation).current;
+  const [skipInitially] = useState(skipAnimation);
   const scratch = useMemo(
     () => ({
       fromPosition: new Vector3(),
