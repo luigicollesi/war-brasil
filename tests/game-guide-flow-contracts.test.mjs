@@ -100,7 +100,7 @@ test("fim da ordem ativa nova rodada, Anomalia e novo Túnel", () => {
 
 test("evento inicial é narrativo e remoções preservam a última tropa", () => {
   const round = source("src/lib/server/game-round-service.ts");
-  const effects = source("src/lib/events/event-effects-service.ts");
+  const effects = source("src/lib/server/events/event-effects-service.ts");
   const anomaly = source("src/components/game-guide/sections/guide-anomaly-section.tsx");
 
   assert.match(round, /evento 0 é exclusivamente narrativo/i);
