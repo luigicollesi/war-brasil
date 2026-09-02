@@ -7,10 +7,15 @@ import type {
 const UINT32_RANGE = 0x1_0000_0000;
 const FALLBACK_SEED = 0x6d2b79f5;
 
-function hashSeed(seed: string) {
+function validateDicePhysicsSeed(seed: string) {
   if (!seed.trim()) {
     throw new Error("seed dos dados não pode ser vazio");
   }
+  return seed;
+}
+
+function hashSeed(seed: string) {
+  validateDicePhysicsSeed(seed);
 
   let hash = 0x811c9dc5;
   for (let index = 0; index < seed.length; index += 1) {
@@ -70,7 +75,10 @@ export function validateDicePhysicsCount(count: number) {
 
 export function createDiceLaunchPlan(count: number, seed: string): DiceLaunchPlan {
   validateDicePhysicsCount(count);
-  const next = createUnitRandom(`${seed}:${count}`);
+  validateDicePhysicsSeed(seed);
+
+  const composedSeed = `${seed}:${count}`;
+  const next = createUnitRandom(composedSeed);
   const positions = baseXPositions(count);
 
   const dice = positions.map((baseX, index) => {
@@ -101,7 +109,7 @@ export function createDiceLaunchPlan(count: number, seed: string): DiceLaunchPla
   });
 
   return {
-    key: `${count}:${hashSeed(`${seed}:${count}`).toString(16)}`,
+    key: `${count}:${hashSeed(composedSeed).toString(16)}`,
     seed,
     count,
     dice,
