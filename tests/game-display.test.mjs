@@ -63,7 +63,7 @@ test("números e símbolos especiais usam a geometria interna extraída do SVG",
   assert.match(geometry, /safeRadius/);
 });
 
-test("dados de combate usam skins próprias e fallback preserva a cor da facção", () => {
+test("dados de combate usam skins próprias e pips preservam a cor da facção", () => {
   const overlay = readFileSync("src/components/battle-overlay.tsx", "utf8");
   const arena = readFileSync(
     "src/components/dice-3d/battle-dice-arena.tsx",
@@ -75,14 +75,16 @@ test("dados de combate usam skins próprias e fallback preserva a cor da facçã
   assert.match(overlay, /BattleDiceArena/);
   assert.match(arena, /skin: "attack"/);
   assert.match(arena, /skin: "defense"/);
+  assert.match(arena, /pipColor: playerColorHex\(attackerColor\)/);
+  assert.match(arena, /pipColor: playerColorHex\(defenderColor\)/);
   assert.match(arena, /<GameDie/);
   assert.match(arena, /color=\{attackerColor\}/);
   assert.match(arena, /color=\{defenderColor\}/);
-  assert.match(die, /backgroundColor: colorHex\(color\)/);
+  assert.match(die, /backgroundColor: playerColorHex\(color\)/);
   assert.doesNotMatch(polish, /background-color:\s*#f8f0dc\s*!important/);
 });
 
-test("rolagem de defesa mantém o ataque dockado por estado explícito da arena", () => {
+test("rolagem de defesa mantém o ataque dockado e usa zona física separada", () => {
   const arena = readFileSync(
     "src/components/dice-3d/battle-dice-arena.tsx",
     "utf8",
@@ -95,8 +97,10 @@ test("rolagem de defesa mantém o ataque dockado por estado explícito da arena"
   assert.match(arena, /type BattleDiceDockSide/);
   assert.match(arena, /side === "attack" \? "show_attacker_result" : "show_defender_result"/);
   assert.match(arena, /skipAnimation=\{battle\.stage !== activeStage\}/);
+  assert.match(arena, /battleDiceLaunchOffset\(side\)/);
   assert.match(arena, /battleDiceDockPositions\(side, values\.length\)/);
   assert.match(replay, /skipInitially && canDock \? dockPositions!/);
+  assert.match(replay, /createCameraFacingDockQuaternion/);
   assert.match(replay, /group\.scale\.setScalar\(dockScale\)/);
 });
 
