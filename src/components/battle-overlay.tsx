@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { BattleStaticDiceResults } from "@/src/components/battle-static-dice-results";
 import {
-  BATTLE_DICE_CINEMATIC_TOTAL_MS,
   BattleDiceCinematic,
   type BattleDiceCinematicSide,
 } from "@/src/components/dice-3d/battle-dice-cinematic";
@@ -25,12 +24,6 @@ type BattleParticipantProps = {
 };
 
 type RollingSide = "attack" | "defense";
-
-type CinematicPresentation = {
-  id: string;
-  side: BattleDiceCinematicSide;
-  elapsedMs: number;
-};
 
 function fallbackTerritoryName(territoryId: number) {
   return `Território ${territoryId}`;
@@ -117,8 +110,6 @@ export function BattleOverlay({
   const [completedPresentationId, setCompletedPresentationId] = useState<string | null>(
     null,
   );
-  const [cinematicPresentation, setCinematicPresentation] =
-    useState<CinematicPresentation | null>(null);
   const [territoryNames, setTerritoryNames] = useState(() => ({
     attacker: fallbackTerritoryName(battle.attackerTerritoryId),
     defender: fallbackTerritoryName(battle.defenderTerritoryId),
@@ -153,6 +144,15 @@ export function BattleOverlay({
     meId === battle.attackerPlayerId &&
     battle.attacker.length === 0 &&
     battle.defender.length === 0;
+  const cinematicSide = battleCinematicSide(battle);
+  const cinematicPresentationId = cinematicSide
+    ? battleCinematicPresentationId(battle, cinematicSide)
+    : null;
+  const cinematicActive = Boolean(
+    cinematicSide &&
+      cinematicPresentationId &&
+      cinematicPresentationId !== completedPresentationId,
+  );
   const label =
     battle.stage === "awaiting_attacker_roll"
       ? "Aguardando o atacante"
@@ -188,47 +188,7 @@ export function BattleOverlay({
   }, [battle.attackerTerritoryId, battle.defenderTerritoryId]);
 
   useEffect(() => {
-    const side = battleCinematicSide(battle);
-    if (!side) {
-      setCinematicPresentation(null);
-      return;
-    }
-
-    const id = battleCinematicPresentationId(battle, side);
-    if (completedPresentationId === id) {
-      setCinematicPresentation(null);
-      return;
-    }
-
-    const startedAtMs = Date.parse(battle.stageStartedAt);
-    const elapsedMs = Number.isFinite(startedAtMs)
-      ? Math.max(0, Date.now() - startedAtMs)
-      : BATTLE_DICE_CINEMATIC_TOTAL_MS;
-
-    if (elapsedMs >= BATTLE_DICE_CINEMATIC_TOTAL_MS) {
-      setCompletedPresentationId(id);
-      setCinematicPresentation(null);
-      return;
-    }
-
-    setCinematicPresentation({ id, side, elapsedMs });
-    const timeoutId = window.setTimeout(() => {
-      setCompletedPresentationId(id);
-      setCinematicPresentation((current) =>
-        current?.id === id ? null : current,
-      );
-    }, BATTLE_DICE_CINEMATIC_TOTAL_MS - elapsedMs);
-
-    return () => window.clearTimeout(timeoutId);
-  }, [
-    battle,
-    battle.stage,
-    battle.stageStartedAt,
-    completedPresentationId,
-  ]);
-
-  useEffect(() => {
-    if (!cinematicPresentation) return;
+    if (!cinematicActive) return;
 
     const gameRoot = document.querySelector<HTMLElement>(".game-runtime > div");
     if (!gameRoot) return;
@@ -239,13 +199,10 @@ export function BattleOverlay({
     return () => {
       if (!alreadyInert) gameRoot.removeAttribute("inert");
     };
-  }, [cinematicPresentation]);
+  }, [cinematicActive]);
 
   const finishCinematic = useCallback((id: string) => {
     setCompletedPresentationId(id);
-    setCinematicPresentation((current) =>
-      current?.id === id ? null : current,
-    );
   }, []);
 
   async function roll() {
@@ -296,19 +253,19 @@ export function BattleOverlay({
     }
   }
 
-  if (cinematicPresentation) {
+  if (cinematicActive && cinematicSide && cinematicPresentationId) {
     const cinematicColor =
-      cinematicPresentation.side === "attack"
+      cinematicSide === "attack"
         ? (attacker?.color ?? "forest")
         : (defender?.color ?? "ruby");
 
     return (
       <BattleDiceCinematic
+        key={cinematicPresentationId}
         battle={battle}
-        side={cinematicPresentation.side}
+        side={cinematicSide}
         color={cinematicColor}
-        elapsedMs={cinematicPresentation.elapsedMs}
-        onComplete={() => finishCinematic(cinematicPresentation.id)}
+        onComplete={() => finishCinematic(cinematicPresentationId)}
       />
     );
   }
