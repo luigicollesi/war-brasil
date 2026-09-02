@@ -29,6 +29,7 @@ export function PredeterminedDiceRoll({
   launchOffset,
   playbackDurationMs,
   initialElapsedMs,
+  visualScale = 1,
   dockPositions,
   dockScale,
   dockDurationMs,
@@ -44,6 +45,7 @@ export function PredeterminedDiceRoll({
   launchOffset?: DiceVector3;
   playbackDurationMs?: number;
   initialElapsedMs?: number;
+  visualScale?: number;
   dockPositions?: readonly DiceVector3[];
   dockScale?: number;
   dockDurationMs?: number;
@@ -102,6 +104,7 @@ export function PredeterminedDiceRoll({
       textures={textures}
       playbackDurationMs={playbackDurationMs}
       initialElapsedMs={initialElapsedMs}
+      visualScale={visualScale}
       dockPositions={dockPositions}
       dockScale={dockScale}
       dockDurationMs={dockDurationMs}
