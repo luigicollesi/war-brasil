@@ -42,7 +42,7 @@ export const DICE_PHYSICS: DicePhysicsConfig = {
   floorTopY: -0.58,
   floorHalfThickness: 0.08,
   wallHalfThickness: 0.08,
-  wallHalfHeight: 2.2,
+  wallHalfHeight: 3,
   maxSimulationSteps: 480,
 };
 
