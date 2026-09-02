@@ -7,6 +7,10 @@ import {
   battleDiceDockPositions,
   battleDiceDockScale,
 } from "../.test-build/client/dice/battle-dice-layout.js";
+import {
+  analyzeDiceTrajectoryTiming,
+  mapDiceReplayProgress,
+} from "../.test-build/client/dice/animation/trajectory-time-map.js";
 import { DICE_FACE_DEFINITIONS } from "../.test-build/client/dice/geometry/dice-faces.js";
 import { buildPredeterminedDiceRoll } from "../.test-build/client/dice/physics/build-predetermined-roll.js";
 import { detectPhysicalTopFace } from "../.test-build/client/dice/physics/detect-top-face.js";
@@ -192,6 +196,40 @@ test("dock de batalha é espelhado, responsivo à quantidade e cabe no tray", ()
   assert.ok(battleDiceDockScale(2) > battleDiceDockScale(3));
 });
 
+test("replay preserva queda e impactos e comprime apenas a cauda quase parada", () => {
+  const frames = Array.from({ length: 16 }, (_, step) => ({
+    step,
+    dice: [
+      {
+        index: 0,
+        position: [0, step <= 3 ? 2 - step * 0.5 : 0.5, 0],
+        rotation: [0, 0, 0, 1],
+      },
+    ],
+  }));
+  const timing = analyzeDiceTrajectoryTiming(frames);
+
+  approximatelyEqual(timing.activeEndProgress, 0.6);
+  approximatelyEqual(timing.activeReplayShare, 0.84);
+  approximatelyEqual(mapDiceReplayProgress(0, timing), 0);
+  approximatelyEqual(mapDiceReplayProgress(0.42, timing), 0.3);
+  approximatelyEqual(mapDiceReplayProgress(0.84, timing), 0.6);
+  approximatelyEqual(mapDiceReplayProgress(1, timing), 1);
+
+  const continuouslyMoving = Array.from({ length: 10 }, (_, step) => ({
+    step,
+    dice: [
+      {
+        index: 0,
+        position: [step * 0.05, 1, 0],
+        rotation: [0, 0, 0, 1],
+      },
+    ],
+  }));
+  const identityTiming = analyzeDiceTrajectoryTiming(continuouslyMoving);
+  approximatelyEqual(mapDiceReplayProgress(0.5, identityTiming), 0.5);
+});
+
 test("fase 3 pré-simula conjuntamente sem receber os resultados desejados", () => {
   const preSimulation = source("src/components/dice-3d/dice-pre-simulation.tsx");
   const roll = source("src/components/dice-3d/predetermined-dice-roll.tsx");
@@ -222,6 +260,8 @@ test("replay mantém remapeamento, controla duração e faz dock sem alterar qua
   assert.match(replay, /slerpQuaternions/);
   assert.match(replay, /lerpVectors/);
   assert.match(replay, /playbackDurationMs/);
+  assert.match(replay, /analyzeDiceTrajectoryTiming/);
+  assert.match(replay, /mapDiceReplayProgress/);
   assert.match(replay, /dockPositions/);
   assert.match(replay, /dockScale/);
   assert.match(replay, /smoothStep/);

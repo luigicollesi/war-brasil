@@ -23,10 +23,12 @@ export function DieVisual({
   return (
     <>
       <mesh geometry={geometry} castShadow receiveShadow>
-        <meshStandardMaterial
+        <meshPhysicalMaterial
           color={DICE_BODY_GOLD}
-          metalness={0.14}
-          roughness={0.38}
+          metalness={0.08}
+          roughness={0.34}
+          clearcoat={0.38}
+          clearcoatRoughness={0.3}
         />
       </mesh>
 
@@ -46,7 +48,7 @@ export function DieVisual({
             map={textures[face.value]}
             transparent
             alphaTest={0.01}
-            roughness={0.48}
+            roughness={0.46}
             metalness={0.01}
             polygonOffset
             polygonOffsetFactor={-1}

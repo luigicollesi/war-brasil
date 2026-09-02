@@ -73,9 +73,17 @@ test("dock orienta qualquer face física do resultado diretamente para a câmera
   }
 });
 
-test("apresentação usa cor oficial da facção nos pips e corpo dourado", () => {
+test("apresentação usa cor oficial da facção e acabamento físico no corpo dourado", () => {
   const arena = readFileSync(
     "src/components/dice-3d/battle-dice-arena.tsx",
+    "utf8",
+  );
+  const cinematic = readFileSync(
+    "src/components/dice-3d/battle-dice-cinematic.tsx",
+    "utf8",
+  );
+  const staticResults = readFileSync(
+    "src/components/battle-static-dice-results.tsx",
     "utf8",
   );
   const visual = readFileSync("src/components/dice-3d/die-visual.tsx", "utf8");
@@ -85,5 +93,22 @@ test("apresentação usa cor oficial da facção nos pips e corpo dourado", () =
   assert.match(arena, /pipColor: playerColorHex\(defenderColor\)/);
   assert.match(palette, /PLAYER_COLORS\.map/);
   assert.match(visual, /DICE_BODY_GOLD = "#d0ad5a"/);
+  assert.match(visual, /meshPhysicalMaterial/);
+  assert.match(visual, /clearcoat=\{0\.38\}/);
+  assert.match(visual, /clearcoatRoughness=\{0\.3\}/);
   assert.doesNotMatch(visual, /color="#e8e3d8"/);
+
+  assert.match(cinematic, /MAX_DICE_TEXTURE_ANISOTROPY = 8/);
+  assert.match(cinematic, /gl\.capabilities\.getMaxAnisotropy\(\)/);
+  assert.match(cinematic, /texture\.anisotropy = anisotropy/);
+  assert.match(cinematic, /texture\.needsUpdate = true/);
+
+  assert.match(staticResults, /preloadDiceAssets/);
+  assert.match(staticResults, /battle\.stage === "awaiting_attacker_roll"/);
+  assert.match(staticResults, /battle\.stage === "awaiting_defender_roll"/);
+  assert.match(staticResults, /skin: "attack"/);
+  assert.match(staticResults, /skin: "defense"/);
+  assert.match(staticResults, /pipColor: playerColorHex\(attackerColor\)/);
+  assert.match(staticResults, /pipColor: playerColorHex\(defenderColor\)/);
+  assert.doesNotMatch(staticResults, /Promise\.all/);
 });

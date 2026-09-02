@@ -1,16 +1,19 @@
 "use client";
 
 import {
-  CuboidCollider,
   Physics,
   RigidBody,
+  RoundCuboidCollider,
   type RapierRigidBody,
   useRapier,
 } from "@react-three/rapier";
 import { useEffect, useMemo, useRef } from "react";
 import { createDiceLaunchPlan } from "@/src/lib/client/dice/physics/create-dice-launch-plan";
 import { detectPhysicalTopFace } from "@/src/lib/client/dice/physics/detect-top-face";
-import { DICE_PHYSICS } from "@/src/lib/client/dice/physics/dice-physics-config";
+import {
+  DICE_COLLIDER_INNER_HALF_EXTENT,
+  DICE_PHYSICS,
+} from "@/src/lib/client/dice/physics/dice-physics-config";
 import type {
   DicePhysicsTrajectory,
   DiceQuaternion,
@@ -42,11 +45,12 @@ function PreSimulationDie({
       canSleep
       ccd
     >
-      <CuboidCollider
+      <RoundCuboidCollider
         args={[
-          DICE_PHYSICS.colliderHalfExtent,
-          DICE_PHYSICS.colliderHalfExtent,
-          DICE_PHYSICS.colliderHalfExtent,
+          DICE_COLLIDER_INNER_HALF_EXTENT,
+          DICE_COLLIDER_INNER_HALF_EXTENT,
+          DICE_COLLIDER_INNER_HALF_EXTENT,
+          DICE_PHYSICS.colliderBorderRadius,
         ]}
         friction={DICE_PHYSICS.friction}
         restitution={DICE_PHYSICS.restitution}
