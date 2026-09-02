@@ -42,11 +42,11 @@ test("eliminação remove jogador da ordem sem removê-lo da sala e transfere su
 });
 
 test("bot resolve troca obrigatória estratégica antes de distribuir reforços", () => {
-  const action = source("src/lib/bots/bot-action.ts");
-  const runner = source("src/lib/bots/bot-runner.ts");
-  const strategy = source("src/lib/bots/bot-strategy.ts");
-  const cards = source("src/lib/bots/bot-cards.ts");
-  const delay = source("src/lib/bots/bot-delay.ts");
+  const action = source("src/lib/shared/bots/bot-action.ts");
+  const runner = source("src/lib/server/bots/bot-runner.ts");
+  const strategy = source("src/lib/shared/bots/bot-strategy.ts");
+  const cards = source("src/lib/shared/bots/bot-cards.ts");
+  const delay = source("src/lib/server/bots/bot-delay.ts");
 
   assert.match(action, /type: "trade_cards"/);
   assert.match(runner, /loadBotStrategicState/);
