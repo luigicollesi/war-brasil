@@ -31,6 +31,7 @@ export const BATTLE_DICE_CINEMATIC_TOTAL_MS = 1_800;
 export const BATTLE_DICE_CINEMATIC_REPLAY_MS = 1_250;
 const MIN_PRESENTATION_REMAINING_MS = 280;
 const PORTRAIT_ASPECT_THRESHOLD = 0.82;
+const MAX_DICE_TEXTURE_ANISOTROPY = 8;
 
 function presentationElapsedMs(stageStartedAt: string) {
   const startedAtMs = Date.parse(stageStartedAt);
@@ -129,6 +130,7 @@ function CinematicScene({
   onError: () => void;
 }) {
   const size = useThree((state) => state.size);
+  const gl = useThree((state) => state.gl);
   const textureState = useDiceFaceTextures({
     skin: side,
     pipColor: playerColorHex(color),
@@ -143,6 +145,24 @@ function CinematicScene({
   useEffect(() => {
     if (textureState.error) onError();
   }, [onError, textureState.error]);
+
+  useEffect(() => {
+    if (!textureState.textures) return;
+
+    const anisotropy = Math.max(
+      1,
+      Math.min(
+        MAX_DICE_TEXTURE_ANISOTROPY,
+        gl.capabilities.getMaxAnisotropy(),
+      ),
+    );
+
+    for (const texture of Object.values(textureState.textures)) {
+      if (texture.anisotropy === anisotropy) continue;
+      texture.anisotropy = anisotropy;
+      texture.needsUpdate = true;
+    }
+  }, [gl, textureState.textures]);
 
   if (!textureState.textures || textureState.error) return null;
 
