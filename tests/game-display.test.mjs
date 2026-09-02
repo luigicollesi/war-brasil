@@ -69,6 +69,10 @@ test("combate separa cinematic 3D do resultado SVG estático", () => {
     "src/components/dice-3d/battle-dice-cinematic.tsx",
     "utf8",
   );
+  const fullscreen = readFileSync(
+    "src/components/dice-3d/fullscreen-dice-cinematic.tsx",
+    "utf8",
+  );
   const staticResults = readFileSync(
     "src/components/battle-static-dice-results.tsx",
     "utf8",
@@ -78,9 +82,10 @@ test("combate separa cinematic 3D do resultado SVG estático", () => {
   assert.match(overlay, /BattleDiceCinematic/);
   assert.match(overlay, /BattleStaticDiceResults/);
   assert.doesNotMatch(overlay, /BattleDiceArena/);
-  assert.match(cinematic, /createPortal/);
-  assert.match(cinematic, /skin: side/);
-  assert.match(cinematic, /pipColor: playerColorHex\(color\)/);
+  assert.match(cinematic, /<FullscreenDiceCinematic/);
+  assert.match(fullscreen, /createPortal/);
+  assert.match(cinematic, /skin=\{side\}/);
+  assert.match(cinematic, /pipColor=\{playerColorHex\(color\)\}/);
   assert.match(staticResults, /<GameDie/);
   assert.doesNotMatch(staticResults, /rolling=/);
   assert.doesNotMatch(staticResults, /rollAnimation=/);
@@ -93,6 +98,10 @@ test("cinematic de combate deriva apresentação do stage e bloqueia toda intera
     "src/components/dice-3d/battle-dice-cinematic.tsx",
     "utf8",
   );
+  const fullscreen = readFileSync(
+    "src/components/dice-3d/fullscreen-dice-cinematic.tsx",
+    "utf8",
+  );
   const styles = readFileSync(
     "src/components/dice-3d/battle-dice-cinematic.module.css",
     "utf8",
@@ -103,9 +112,10 @@ test("cinematic de combate deriva apresentação do stage e bloqueia toda intera
   assert.doesNotMatch(overlay, /setCinematicPresentation/);
   assert.match(overlay, /setAttribute\("inert", ""\)/);
   assert.match(overlay, /removeAttribute\("inert"\)/);
-  assert.match(cinematic, /frameloop="demand"/);
-  assert.match(cinematic, /BATTLE_DICE_CINEMATIC_TOTAL_MS - initialElapsedMs/);
-  assert.match(cinematic, /MIN_PRESENTATION_REMAINING_MS/);
+  assert.match(cinematic, /totalDurationMs=\{BATTLE_DICE_CINEMATIC_TOTAL_MS\}/);
+  assert.match(fullscreen, /frameloop="demand"/);
+  assert.match(fullscreen, /totalDurationMs - initialElapsedMs/);
+  assert.match(fullscreen, /MIN_PRESENTATION_REMAINING_MS/);
   assert.doesNotMatch(cinematic, /dockPositions=/);
   assert.doesNotMatch(cinematic, /dockScale=/);
   assert.match(styles, /position: fixed/);
@@ -114,9 +124,9 @@ test("cinematic de combate deriva apresentação do stage e bloqueia toda intera
   assert.match(styles, /touch-action: none/);
 });
 
-test("cinematic sincroniza frame inicial e adapta enquadramento para portrait", () => {
-  const cinematic = readFileSync(
-    "src/components/dice-3d/battle-dice-cinematic.tsx",
+test("cinematic sincroniza frame inicial e usa câmera ortográfica 100% superior", () => {
+  const fullscreen = readFileSync(
+    "src/components/dice-3d/fullscreen-dice-cinematic.tsx",
     "utf8",
   );
   const predetermined = readFileSync(
@@ -128,14 +138,15 @@ test("cinematic sincroniza frame inicial e adapta enquadramento para portrait", 
     "utf8",
   );
 
-  assert.match(cinematic, /Date\.now\(\) - startedAtMs/);
-  assert.match(cinematic, /initialElapsedMs=\{Math\.min/);
-  assert.match(cinematic, /<perspectiveCamera/);
-  assert.match(cinematic, /set\(\{ camera \}\)/);
-  assert.match(cinematic, /PORTRAIT_ASPECT_THRESHOLD/);
-  assert.match(cinematic, /portrait \? Math\.PI \/ 2 : 0/);
-  assert.match(cinematic, /position=\{position\}/);
-  assert.match(cinematic, /planeGeometry args=\{\[6\.4, 6\.4\]\}/);
+  assert.match(fullscreen, /Date\.now\(\) - startedAtMs/);
+  assert.match(fullscreen, /initialElapsedMs=\{Math\.min/);
+  assert.match(fullscreen, /<orthographicCamera/);
+  assert.match(fullscreen, /set\(\{ camera \}\)/);
+  assert.match(fullscreen, /PORTRAIT_ASPECT_THRESHOLD/);
+  assert.match(fullscreen, /portrait \? Math\.PI \/ 2 : 0/);
+  assert.match(fullscreen, /position=\{\[0, CAMERA_HEIGHT, 0\]\}/);
+  assert.match(fullscreen, /rotation=\{\[-Math\.PI \/ 2, 0, 0\]\}/);
+  assert.match(fullscreen, /planeGeometry args=\{\[6\.8, 6\.8\]\}/);
   assert.match(predetermined, /initialElapsedMs=\{initialElapsedMs\}/);
   assert.match(replay, /initialElapsedMs = 0/);
   assert.match(replay, /sampleTrajectoryState/);

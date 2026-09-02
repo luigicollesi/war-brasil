@@ -82,6 +82,10 @@ test("apresentação usa cor oficial da facção e acabamento físico no corpo d
     "src/components/dice-3d/battle-dice-cinematic.tsx",
     "utf8",
   );
+  const fullscreen = readFileSync(
+    "src/components/dice-3d/fullscreen-dice-cinematic.tsx",
+    "utf8",
+  );
   const staticResults = readFileSync(
     "src/components/battle-static-dice-results.tsx",
     "utf8",
@@ -98,10 +102,11 @@ test("apresentação usa cor oficial da facção e acabamento físico no corpo d
   assert.match(visual, /clearcoatRoughness=\{0\.3\}/);
   assert.doesNotMatch(visual, /color="#e8e3d8"/);
 
-  assert.match(cinematic, /MAX_DICE_TEXTURE_ANISOTROPY = 8/);
-  assert.match(cinematic, /gl\.capabilities\.getMaxAnisotropy\(\)/);
-  assert.match(cinematic, /texture\.anisotropy = anisotropy/);
-  assert.match(cinematic, /texture\.needsUpdate = true/);
+  assert.match(cinematic, /<FullscreenDiceCinematic/);
+  assert.match(fullscreen, /MAX_DICE_TEXTURE_ANISOTROPY = 8/);
+  assert.match(fullscreen, /gl\.capabilities\.getMaxAnisotropy\(\)/);
+  assert.match(fullscreen, /texture\.anisotropy = anisotropy/);
+  assert.match(fullscreen, /texture\.needsUpdate = true/);
 
   assert.match(staticResults, /preloadDiceAssets/);
   assert.match(staticResults, /battle\.stage === "awaiting_attacker_roll"/);

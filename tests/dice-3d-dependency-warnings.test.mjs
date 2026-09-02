@@ -29,12 +29,12 @@ test("filtro 3D suprime somente depreciações conhecidas das dependências", ()
 });
 
 test("todos os Canvas de dados instalam o filtro antes da apresentação", () => {
-  const cinematic = source(
-    "src/components/dice-3d/battle-dice-cinematic.tsx",
+  const fullscreen = source(
+    "src/components/dice-3d/fullscreen-dice-cinematic.tsx",
   );
   const scene = source("src/components/dice-3d/dice-scene.tsx");
 
-  for (const component of [cinematic, scene]) {
+  for (const component of [fullscreen, scene]) {
     assert.match(component, /installDice3DDependencyWarningFilter/);
     assert.match(component, /installDice3DDependencyWarningFilter\(\);/);
   }

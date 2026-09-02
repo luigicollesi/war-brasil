@@ -265,7 +265,8 @@ test("replay mantém remapeamento, controla duração e faz dock sem alterar qua
   assert.match(replay, /dockPositions/);
   assert.match(replay, /dockScale/);
   assert.match(replay, /smoothStep/);
-  assert.match(replay, /<group quaternion=\{remap\.rotation\}>/);
+  assert.match(replay, /quaternion=\{remap\.rotation\}/);
+  assert.match(replay, /scale=\{visualScale\}/);
   assert.doesNotMatch(replay, /RigidBody|Physics|setRotation|setTranslation/);
 
   assert.match(scene, /PredeterminedDiceStage/);

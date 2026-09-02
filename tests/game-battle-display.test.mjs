@@ -41,6 +41,9 @@ test("overlay separa lançamento 3D fullscreen do resultado 2D estático", () =>
   const cinematic = source(
     "src/components/dice-3d/battle-dice-cinematic.tsx",
   );
+  const fullscreen = source(
+    "src/components/dice-3d/fullscreen-dice-cinematic.tsx",
+  );
   const staticResults = source("src/components/battle-static-dice-results.tsx");
 
   assert.match(overlay, /BattleDiceCinematic/);
@@ -51,10 +54,11 @@ test("overlay separa lançamento 3D fullscreen do resultado 2D estático", () =>
   assert.doesNotMatch(overlay, /rollAnimation=/);
   assert.doesNotMatch(overlay, /Math\.random/);
 
-  assert.equal((cinematic.match(/<Canvas\b/g) ?? []).length, 1);
-  assert.match(cinematic, /createPortal/);
+  assert.match(cinematic, /<FullscreenDiceCinematic/);
+  assert.equal((fullscreen.match(/<Canvas\b/g) ?? []).length, 1);
+  assert.match(fullscreen, /createPortal/);
   assert.match(cinematic, /stageStartedAt/);
-  assert.match(cinematic, /initialElapsedMs/);
+  assert.match(fullscreen, /initialElapsedMs/);
   assert.doesNotMatch(cinematic, /battleDiceDockPositions|skipAnimation/);
   assert.doesNotMatch(cinematic, /runGameCommand|Math\.random/);
 
@@ -69,16 +73,20 @@ test("cinematic fullscreen mantém palco leve, responsivo e sem interação", ()
   const cinematic = source(
     "src/components/dice-3d/battle-dice-cinematic.tsx",
   );
+  const fullscreen = source(
+    "src/components/dice-3d/fullscreen-dice-cinematic.tsx",
+  );
 
   assert.match(css, /\.root\s*\{[\s\S]*?position:\s*fixed/);
   assert.match(css, /\.root\s*\{[\s\S]*?inset:\s*0/);
   assert.match(css, /\.root\s*\{[\s\S]*?touch-action:\s*none/);
   assert.match(css, /\.backdrop\s*\{[\s\S]*?rgba\(0, 0, 0, 0\.1\)/);
   assert.match(css, /env\(safe-area-inset-top\)/);
-  assert.match(cinematic, /PORTRAIT_ASPECT_THRESHOLD/);
-  assert.match(cinematic, /<perspectiveCamera/);
-  assert.match(cinematic, /set\(\{ camera \}\)/);
-  assert.doesNotMatch(cinematic, /@react-three\/drei/);
-  assert.match(cinematic, /portrait \? Math\.PI \/ 2 : 0/);
-  assert.match(cinematic, /frameloop="demand"/);
+  assert.match(cinematic, /<FullscreenDiceCinematic/);
+  assert.match(fullscreen, /PORTRAIT_ASPECT_THRESHOLD/);
+  assert.match(fullscreen, /<orthographicCamera/);
+  assert.match(fullscreen, /set\(\{ camera \}\)/);
+  assert.doesNotMatch(fullscreen, /@react-three\/drei/);
+  assert.match(fullscreen, /portrait \? Math\.PI \/ 2 : 0/);
+  assert.match(fullscreen, /frameloop="demand"/);
 });
