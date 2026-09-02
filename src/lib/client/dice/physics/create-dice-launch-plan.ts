@@ -6,12 +6,20 @@ import type {
 
 const UINT32_RANGE = 0x1_0000_0000;
 const FALLBACK_SEED = 0x6d2b79f5;
+const ZERO_OFFSET: DiceVector3 = [0, 0, 0];
 
 function validateDicePhysicsSeed(seed: string) {
   if (!seed.trim()) {
     throw new Error("seed dos dados não pode ser vazio");
   }
   return seed;
+}
+
+function validateLaunchOffset(offset: DiceVector3) {
+  if (offset.some((component) => !Number.isFinite(component))) {
+    throw new Error("A origem física dos dados precisa conter valores finitos.");
+  }
+  return offset;
 }
 
 function hashSeed(seed: string) {
@@ -73,9 +81,14 @@ export function validateDicePhysicsCount(count: number) {
   return count;
 }
 
-export function createDiceLaunchPlan(count: number, seed: string): DiceLaunchPlan {
+export function createDiceLaunchPlan(
+  count: number,
+  seed: string,
+  launchOffset: DiceVector3 = ZERO_OFFSET,
+): DiceLaunchPlan {
   validateDicePhysicsCount(count);
   validateDicePhysicsSeed(seed);
+  validateLaunchOffset(launchOffset);
 
   const composedSeed = `${seed}:${count}`;
   const next = createUnitRandom(composedSeed);
@@ -83,9 +96,9 @@ export function createDiceLaunchPlan(count: number, seed: string): DiceLaunchPla
 
   const dice = positions.map((baseX, index) => {
     const position: DiceVector3 = [
-      baseX + signed(next, 0.055),
-      1.95 + index * 0.12 + next() * 0.34,
-      signed(next, 0.28),
+      baseX + signed(next, 0.055) + launchOffset[0],
+      1.95 + index * 0.12 + next() * 0.34 + launchOffset[1],
+      signed(next, 0.28) + launchOffset[2],
     ];
     const linearVelocity: DiceVector3 = [
       -baseX * 0.42 + signed(next, 0.24),
@@ -109,7 +122,7 @@ export function createDiceLaunchPlan(count: number, seed: string): DiceLaunchPla
   });
 
   return {
-    key: `${count}:${hashSeed(composedSeed).toString(16)}`,
+    key: `${count}:${hashSeed(composedSeed).toString(16)}:${launchOffset.join(",")}`,
     seed,
     count,
     dice,
