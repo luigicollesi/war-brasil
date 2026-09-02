@@ -1,6 +1,7 @@
 "use client";
 
 import { Canvas } from "@react-three/fiber";
+import { PCFShadowMap } from "three";
 import { useCallback, useMemo, useState } from "react";
 import { GameDie } from "@/src/components/game-die";
 import type { PlayerColor } from "@/src/lib/lobby";
@@ -235,7 +236,7 @@ export function BattleDiceArena({
 
       <div className="battle-dice-arena-canvas" aria-hidden="true">
         <Canvas
-          shadows
+          shadows={{ type: PCFShadowMap }}
           frameloop="demand"
           dpr={[1, 1.5]}
           camera={{ position: [0, 2.9, 6.3], fov: 32 }}
