@@ -10,11 +10,20 @@ React, TypeScript e Tailwind CSS.
 - `/lobby/[code]` — configuração sincronizada de jogadores antes da partida;
 - `/game/[roomId]` — tabuleiro interativo com 42 territórios.
 
+## Arquitetura
+
+`src/lib` possui fronteiras explícitas entre `client/`, `server/` e `shared/`.
+O Next.js continua responsável pela aplicação web e pelos Route Handlers em
+`src/app/api`, que atuam como adaptadores HTTP para o código server-side.
+Consulte `src/lib/README.md` para as regras de dependência e a estratégia de
+compatibilidade durante a migração.
+
 ## Banco de dados
 
 Copie `.env.example` para um arquivo de ambiente local e configure `DATABASE_URL`.
-O pool PostgreSQL reutilizável fica em `src/lib/db/pool.ts` e só pode ser importado
-por código executado no servidor.
+O pool PostgreSQL reutilizável fica em `src/lib/server/db/pool.ts` e só pode ser
+importado por código executado no servidor. O caminho histórico
+`src/lib/db/pool.ts` permanece temporariamente como reexport de compatibilidade.
 
 O schema de `game_rooms` e `room_players` está em `src/lib/db/schema.sql` e
 não é executado automaticamente pela aplicação. A lobby usa polling de um
