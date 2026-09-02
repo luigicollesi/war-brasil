@@ -1,12 +1,15 @@
 "use client";
 
 import {
-  CuboidCollider,
   RigidBody,
+  RoundCuboidCollider,
   type RapierRigidBody,
 } from "@react-three/rapier";
 import type { BufferGeometry } from "three";
-import { DICE_PHYSICS } from "@/src/lib/client/dice/physics/dice-physics-config";
+import {
+  DICE_COLLIDER_INNER_HALF_EXTENT,
+  DICE_PHYSICS,
+} from "@/src/lib/client/dice/physics/dice-physics-config";
 import type {
   DiceFaceTextureSet,
   DiceLaunchState,
@@ -45,11 +48,12 @@ export function PhysicsDie({
       onSleep={onSleep}
       onWake={onWake}
     >
-      <CuboidCollider
+      <RoundCuboidCollider
         args={[
-          DICE_PHYSICS.colliderHalfExtent,
-          DICE_PHYSICS.colliderHalfExtent,
-          DICE_PHYSICS.colliderHalfExtent,
+          DICE_COLLIDER_INNER_HALF_EXTENT,
+          DICE_COLLIDER_INNER_HALF_EXTENT,
+          DICE_COLLIDER_INNER_HALF_EXTENT,
+          DICE_PHYSICS.colliderBorderRadius,
         ]}
         friction={DICE_PHYSICS.friction}
         restitution={DICE_PHYSICS.restitution}
