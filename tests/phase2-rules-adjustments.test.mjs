@@ -8,9 +8,9 @@ function source(path) {
 
 test("troca de cartas só é aceita durante reinforcement", () => {
   const troopService = source("src/lib/server/game-troop-command-service.ts");
-  const runner = source("src/lib/bots/bot-runner.ts");
-  const strategy = source("src/lib/bots/bot-strategy.ts");
-  const cards = source("src/lib/bots/bot-cards.ts");
+  const runner = source("src/lib/server/bots/bot-runner.ts");
+  const strategy = source("src/lib/shared/bots/bot-strategy.ts");
+  const cards = source("src/lib/shared/bots/bot-cards.ts");
 
   assert.match(troopService, /room\.phase !== "reinforcement"/);
   assert.doesNotMatch(
