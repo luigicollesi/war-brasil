@@ -1,7 +1,7 @@
 "use client";
 
 import { Canvas } from "@react-three/fiber";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 import type { PlayerColor } from "@/src/lib/lobby";
 import { getSharedRoundedDieGeometry } from "@/src/lib/client/dice/dice-assets-manager";
 import { validateDiceValues } from "@/src/lib/client/dice/dice-values";
@@ -19,6 +19,7 @@ import { useDiceFaceTextures } from "./use-dice-face-textures";
 const DIE_SIZE = 1;
 const DIE_RADIUS = 0.1;
 const DIE_SEGMENTS = 8;
+const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
 
 function layoutForDice(count: number): DiceVector3[] {
   if (count === 1) return [[0, 0, 0]];
@@ -26,18 +27,38 @@ function layoutForDice(count: number): DiceVector3[] {
   return [[-1.12, 0, 0.08], [0, 0, -0.08], [1.12, 0, 0.08]];
 }
 
+function subscribeNoop() {
+  return () => {};
+}
+
+function subscribeReducedMotion(onStoreChange: () => void) {
+  const query = window.matchMedia(REDUCED_MOTION_QUERY);
+  query.addEventListener("change", onStoreChange);
+  return () => query.removeEventListener("change", onStoreChange);
+}
+
+function reducedMotionSnapshot() {
+  return window.matchMedia(REDUCED_MOTION_QUERY).matches;
+}
+
+function serverFalseSnapshot() {
+  return false;
+}
+
 function useReducedMotion() {
-  const [reduced, setReduced] = useState(false);
+  return useSyncExternalStore(
+    subscribeReducedMotion,
+    reducedMotionSnapshot,
+    serverFalseSnapshot,
+  );
+}
 
-  useEffect(() => {
-    const query = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => setReduced(query.matches);
-    update();
-    query.addEventListener("change", update);
-    return () => query.removeEventListener("change", update);
-  }, []);
-
-  return reduced;
+function useWebGLSupport() {
+  return useSyncExternalStore(
+    subscribeNoop,
+    supportsDiceWebGL,
+    serverFalseSnapshot,
+  );
 }
 
 function StaticDiceStage({
@@ -103,15 +124,11 @@ export function DiceScene({
   className?: string;
 }) {
   const safeValues = useMemo(() => validateDiceValues(values), [values]);
-  const [webglSupported, setWebglSupported] = useState<boolean | null>(null);
+  const webglSupported = useWebGLSupport();
   const reducedMotion = useReducedMotion();
   const { textures, error } = useDiceFaceTextures({ skin, pipColor });
 
-  useEffect(() => {
-    setWebglSupported(supportsDiceWebGL());
-  }, []);
-
-  if (webglSupported !== true || reducedMotion || error || !textures) {
+  if (!webglSupported || reducedMotion || error || !textures) {
     return (
       <Dice2DFallback
         values={safeValues}
