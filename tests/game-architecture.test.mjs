@@ -38,7 +38,7 @@ test("snapshot principal é read-only e retorna fast-path por revisão", () => {
     "src/app/api/games/[roomId]/route.ts",
     "utf8",
   );
-  const snapshot = readFileSync("src/lib/game-snapshot-service.ts", "utf8");
+  const snapshot = readFileSync("src/lib/server/game-snapshot-service.ts", "utf8");
 
   assert.match(route, /getGameSnapshotQuery/);
   assert.doesNotMatch(route, /from "@\/src\/lib\/game"/);
@@ -89,11 +89,11 @@ test("avanço automático usa expectedRevision e um command condicional", () => 
     "utf8",
   );
   const automation = readFileSync(
-    "src/lib/game-automation-service.ts",
+    "src/lib/server/game-automation-service.ts",
     "utf8",
   );
   const presentation = readFileSync(
-    "src/lib/game-presentation-service.ts",
+    "src/lib/server/game-presentation-service.ts",
     "utf8",
   );
 
@@ -179,13 +179,13 @@ test("indicador de conexão reutiliza o polling do jogo sem health check própri
 });
 
 test("topologia base permanece cacheada e gameplay usa uma única topologia efetiva", () => {
-  const topology = readFileSync("src/lib/game-topology-service.ts", "utf8");
+  const topology = readFileSync("src/lib/server/game-topology-service.ts", "utf8");
   const effective = readFileSync(
-    "src/lib/game-effective-topology-service.ts",
+    "src/lib/server/game-effective-topology-service.ts",
     "utf8",
   );
-  const combat = readFileSync("src/lib/game-combat-command-service.ts", "utf8");
-  const maneuver = readFileSync("src/lib/game-maneuver-command-service.ts", "utf8");
+  const combat = readFileSync("src/lib/server/game-combat-command-service.ts", "utf8");
+  const maneuver = readFileSync("src/lib/server/game-maneuver-command-service.ts", "utf8");
 
   assert.match(topology, /cachedTopology/);
   assert.match(topology, /loadingTopology/);
