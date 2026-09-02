@@ -47,7 +47,7 @@ test("migration de validação reconhece o contrato canônico 38/195 sem exigir 
 });
 
 test("repository recebe PoolClient e não abre transações ou pools próprios", () => {
-  const source = readFileSync("src/lib/events/event-repository.ts", "utf8");
+  const source = readFileSync("src/lib/server/events/event-repository.ts", "utf8");
 
   assert.match(source, /type \{ PoolClient \} from "pg"/);
   assert.doesNotMatch(source, /from ["']@\/src\/lib\/db\/pool["']/);
@@ -56,7 +56,7 @@ test("repository recebe PoolClient e não abre transações ou pools próprios",
 });
 
 test("histórico é lido da tabela de rodadas em ordem decrescente e com janela limitada", () => {
-  const source = readFileSync("src/lib/events/event-repository.ts", "utf8");
+  const source = readFileSync("src/lib/server/events/event-repository.ts", "utf8");
 
   assert.match(source, /FROM game_round_events/);
   assert.match(source, /ORDER BY round_number DESC/);
@@ -64,7 +64,7 @@ test("histórico é lido da tabela de rodadas em ordem decrescente e com janela 
 });
 
 test("seleção mantém aleatoriedade na borda e domínio livre de Math.random", () => {
-  const service = readFileSync("src/lib/events/event-selection-service.ts", "utf8");
+  const service = readFileSync("src/lib/server/events/event-selection-service.ts", "utf8");
   const selector = readFileSync("src/lib/shared/events/event-selector.ts", "utf8");
 
   assert.match(service, /randomInt\(totalWeight\)/);
@@ -77,7 +77,7 @@ test("seleção mantém aleatoriedade na borda e domínio livre de Math.random",
 
 test("resolução mantém crypto na borda e protege a conexão jurássica", () => {
   const service = readFileSync(
-    "src/lib/events/event-resolution-service.ts",
+    "src/lib/server/events/event-resolution-service.ts",
     "utf8",
   );
   const roundRules = readFileSync("src/lib/shared/game-round-rules.ts", "utf8");
@@ -94,8 +94,8 @@ test("resolução mantém crypto na borda e protege a conexão jurássica", () =
 
 test("contrato estrutural do catálogo é domínio puro e pode validar o banco na borda", () => {
   const catalog = readFileSync("src/lib/shared/events/event-catalog.ts", "utf8");
-  const catalogService = readFileSync("src/lib/events/event-catalog-service.ts", "utf8");
-  const repository = readFileSync("src/lib/events/event-repository.ts", "utf8");
+  const catalogService = readFileSync("src/lib/server/events/event-catalog-service.ts", "utf8");
+  const repository = readFileSync("src/lib/server/events/event-repository.ts", "utf8");
 
   assert.match(catalog, /EVENT_COUNT = EVENT_ID_MAX - EVENT_ID_MIN \+ 1/);
   assert.match(catalog, /EVENT_CONNECTION_COUNT = 195/);
@@ -108,7 +108,7 @@ test("contrato estrutural do catálogo é domínio puro e pode validar o banco n
 });
 
 test("evento atual é derivado da rodada exata em vez de duplicado em game_rooms", () => {
-  const service = readFileSync("src/lib/events/event-selection-service.ts", "utf8");
+  const service = readFileSync("src/lib/server/events/event-selection-service.ts", "utf8");
   const schema = readFileSync("src/lib/db/schema.sql", "utf8");
 
   assert.match(service, /getRoomRoundEvent\([\s\S]*currentRoundNumber/);
