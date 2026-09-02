@@ -167,7 +167,7 @@ test("transferência pós-conquista reavalia somente objetivos afetados por trop
 });
 
 test("topologia fixa atravessa a rede apenas quando a versão muda", () => {
-  const contract = readFileSync("src/lib/game-sync-contract.ts", "utf8");
+  const contract = readFileSync("src/lib/shared/game-sync-contract.ts", "utf8");
   const route = readFileSync(
     "src/app/api/games/[roomId]/route.ts",
     "utf8",
@@ -190,7 +190,7 @@ test("topologia fixa atravessa a rede apenas quando a versão muda", () => {
 });
 
 test("reforço e manobra retornam patches autoritativos ligados à revisão base", () => {
-  const command = readFileSync("src/lib/game-command.ts", "utf8");
+  const command = readFileSync("src/lib/server/game-command.ts", "utf8");
   const reinforce = readFileSync(
     "src/app/api/games/[roomId]/reinforce/route.ts",
     "utf8",
@@ -214,10 +214,10 @@ test("reforço e manobra retornam patches autoritativos ligados à revisão base
 });
 
 test("command patch só é aplicado sobre a revisão base e refresh vira no-op quando já observado", () => {
-  const client = readFileSync("src/lib/game-command-client.ts", "utf8");
-  const bus = readFileSync("src/lib/game-command-patch-bus.ts", "utf8");
+  const client = readFileSync("src/lib/client/game-command-client.ts", "utf8");
+  const bus = readFileSync("src/lib/client/game-command-patch-bus.ts", "utf8");
   const sync = readFileSync("src/hooks/use-game-sync.ts", "utf8");
-  const patch = readFileSync("src/lib/game-command-patch.ts", "utf8");
+  const patch = readFileSync("src/lib/shared/game-command-patch.ts", "utf8");
 
   assert.match(client, /dispatchGameCommandPatch/);
   assert.match(bus, /registerGameCommandPatchHandler/);
