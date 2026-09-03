@@ -32,7 +32,7 @@ test("votos de revanche são persistidos por humano e bots não bloqueiam reiní
   assert.match(service, /initializeFreshGame/);
 });
 
-test("reinício recria uma partida limpa mantendo uma tropa inicial por território", () => {
+test("reinício recria uma partida limpa e reapresenta a distribuição inicial", () => {
   const service = source("src/lib/server/game-finish-command-service.ts");
 
   assert.match(service, /DELETE FROM game_round_events/);
@@ -40,8 +40,11 @@ test("reinício recria uma partida limpa mantendo uma tropa inicial por territó
   assert.match(service, /DELETE FROM game_cards/);
   assert.match(service, /DELETE FROM game_player_objectives/);
   assert.match(service, /DELETE FROM game_territories/);
-  assert.match(service, /owner_player_id,troops\)[\s\S]*territoryValues/);
-  assert.match(service, /\$\{offset \+ 3\}, 1\)/);
+  assert.match(service, /owner_player_id,troops,initial_draw_order/);
+  assert.match(service, /\$\{offset \+ 3\}, 1, \$\$\{offset \+ 4\}/);
+  assert.match(service, /index \+ 1/);
+  assert.match(service, /initial_territory_presentation_started_at/);
+  assert.match(service, /INITIAL_TERRITORY_SYNC_DELAY_MS/);
   assert.match(service, /status='order_roll'/);
 });
 
