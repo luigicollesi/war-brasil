@@ -3,6 +3,7 @@ import "server-only";
 import { randomInt } from "node:crypto";
 import type { PoolClient } from "pg";
 import { gameCommand } from "@/src/lib/game-command";
+import { INITIAL_TERRITORY_SYNC_DELAY_MS } from "@/src/lib/game-transitions";
 import {
   assignObjectives,
   ObjectiveConfigurationError,
@@ -92,7 +93,8 @@ async function resetRoomToWaiting(client: PoolClient, roomId: string) {
 
   await client.query(
     `UPDATE game_rooms
-     SET status='waiting',started_at=NULL,order_roll_round=1,phase='cards',
+     SET status='waiting',started_at=NULL,order_roll_round=1,
+         initial_territory_presentation_started_at=NULL,phase='cards',
          current_player_id=NULL,turn_number=1,round_number=1,
          jurassic_tunnel_territory_id=NULL,reinforcements_remaining=0,
          conquered_this_turn=FALSE,trade_count=0,winner_player_id=NULL,
@@ -128,17 +130,20 @@ async function initializeFreshGame(client: PoolClient, roomId: string) {
   for (const [index, territoryId] of territoryIds.entries()) {
     const offset = territoryParameters.length;
     territoryValues.push(
-      `($${offset + 1}, $${offset + 2}, $${offset + 3}, 1)`,
+      `($${offset + 1}, $${offset + 2}, $${offset + 3}, 1, $${offset + 4})`,
     );
     territoryParameters.push(
       roomId,
       territoryId,
       players[index % players.length].id,
+      index + 1,
     );
   }
 
   await client.query(
-    `INSERT INTO game_territories (room_id,territory_id,owner_player_id,troops)
+    `INSERT INTO game_territories (
+       room_id,territory_id,owner_player_id,troops,initial_draw_order
+     )
      VALUES ${territoryValues.join(", ")}`,
     territoryParameters,
   );
@@ -185,13 +190,15 @@ async function initializeFreshGame(client: PoolClient, roomId: string) {
 
   await client.query(
     `UPDATE game_rooms
-     SET status='order_roll',order_roll_round=1,started_at=NULL,phase='cards',
-         current_player_id=NULL,turn_number=1,round_number=1,
+     SET status='order_roll',order_roll_round=1,started_at=NULL,
+         initial_territory_presentation_started_at=
+           NOW() + ($2::int * INTERVAL '1 millisecond'),
+         phase='cards',current_player_id=NULL,turn_number=1,round_number=1,
          jurassic_tunnel_territory_id=NULL,reinforcements_remaining=0,
          conquered_this_turn=FALSE,trade_count=0,winner_player_id=NULL,
          pending_from_territory_id=NULL,pending_to_territory_id=NULL,last_battle=NULL
      WHERE id=$1 AND status='waiting'`,
-    [roomId],
+    [roomId, INITIAL_TERRITORY_SYNC_DELAY_MS],
   );
 }
 
