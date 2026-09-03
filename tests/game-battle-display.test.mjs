@@ -84,7 +84,10 @@ test("cinematic fullscreen mantém palco leve, responsivo e sem interação", ()
   assert.match(css, /env\(safe-area-inset-top\)/);
   assert.match(cinematic, /<FullscreenDiceCinematic/);
   assert.match(fullscreen, /PORTRAIT_ASPECT_THRESHOLD/);
-  assert.match(fullscreen, /<orthographicCamera/);
+  assert.match(fullscreen, /<perspectiveCamera/);
+  assert.match(fullscreen, /CAMERA_HEIGHT = 22/);
+  assert.match(fullscreen, /CAMERA_FOV = 50/);
+  assert.match(fullscreen, /rotation=\{\[-Math\.PI \/ 2, 0, 0\]\}/);
   assert.match(fullscreen, /set\(\{ camera \}\)/);
   assert.doesNotMatch(fullscreen, /@react-three\/drei/);
   assert.match(fullscreen, /portrait \? Math\.PI \/ 2 : 0/);
