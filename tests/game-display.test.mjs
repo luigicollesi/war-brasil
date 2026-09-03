@@ -124,9 +124,13 @@ test("cinematic de combate deriva apresentação do stage e bloqueia toda intera
   assert.match(styles, /touch-action: none/);
 });
 
-test("cinematic sincroniza frame inicial e usa câmera ortográfica 100% superior", () => {
+test("cinematic sincroniza frame inicial e usa perspectiva 100% superior com queda profunda", () => {
   const fullscreen = readFileSync(
     "src/components/dice-3d/fullscreen-dice-cinematic.tsx",
+    "utf8",
+  );
+  const launchPlan = readFileSync(
+    "src/lib/client/dice/physics/create-dice-launch-plan.ts",
     "utf8",
   );
   const predetermined = readFileSync(
@@ -140,13 +144,16 @@ test("cinematic sincroniza frame inicial e usa câmera ortográfica 100% superio
 
   assert.match(fullscreen, /Date\.now\(\) - startedAtMs/);
   assert.match(fullscreen, /initialElapsedMs=\{Math\.min/);
-  assert.match(fullscreen, /<orthographicCamera/);
+  assert.match(fullscreen, /<perspectiveCamera/);
+  assert.match(fullscreen, /CAMERA_HEIGHT = 22/);
+  assert.match(fullscreen, /CAMERA_FOV = 50/);
   assert.match(fullscreen, /set\(\{ camera \}\)/);
   assert.match(fullscreen, /PORTRAIT_ASPECT_THRESHOLD/);
   assert.match(fullscreen, /portrait \? Math\.PI \/ 2 : 0/);
   assert.match(fullscreen, /position=\{\[0, CAMERA_HEIGHT, 0\]\}/);
   assert.match(fullscreen, /rotation=\{\[-Math\.PI \/ 2, 0, 0\]\}/);
   assert.match(fullscreen, /planeGeometry args=\{\[6\.8, 6\.8\]\}/);
+  assert.match(launchPlan, /5\.8 \+ index \* 0\.2 \+ next\(\) \* 0\.55/);
   assert.match(predetermined, /initialElapsedMs=\{initialElapsedMs\}/);
   assert.match(replay, /initialElapsedMs = 0/);
   assert.match(replay, /sampleTrajectoryState/);
