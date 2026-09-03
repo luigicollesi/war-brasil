@@ -2,7 +2,7 @@
 
 import { Canvas, useThree } from "@react-three/fiber";
 import { createPortal } from "react-dom";
-import { PCFShadowMap, type OrthographicCamera } from "three";
+import { PCFShadowMap, type PerspectiveCamera } from "three";
 import {
   useCallback,
   useEffect,
@@ -28,7 +28,9 @@ installDice3DDependencyWarningFilter();
 const MIN_PRESENTATION_REMAINING_MS = 280;
 const PORTRAIT_ASPECT_THRESHOLD = 0.82;
 const MAX_DICE_TEXTURE_ANISOTROPY = 8;
-const CAMERA_HEIGHT = 10;
+const CAMERA_HEIGHT = 22;
+const CAMERA_FOV = 50;
+const PORTRAIT_CAMERA_FOV = 54;
 
 function presentationElapsedMs(startedAt: string, totalDurationMs: number) {
   const startedAtMs = Date.parse(startedAt);
@@ -40,14 +42,11 @@ function TopDownCameraRig() {
   const size = useThree((state) => state.size);
   const set = useThree((state) => state.set);
   const get = useThree((state) => state.get);
-  const cameraRef = useRef<OrthographicCamera>(null);
+  const cameraRef = useRef<PerspectiveCamera>(null);
   const aspect = size.height > 0 ? size.width / size.height : 16 / 9;
   const portrait = aspect < PORTRAIT_ASPECT_THRESHOLD;
-  const compact = !portrait && aspect < 1.2;
-  const viewHeight = portrait ? 10.2 : compact ? 8.8 : 8.2;
-  const halfHeight = viewHeight / 2;
-  const halfWidth = halfHeight * aspect;
-  const mode = `${portrait ? "portrait" : compact ? "compact" : "landscape"}:${aspect.toFixed(3)}`;
+  const fov = portrait ? PORTRAIT_CAMERA_FOV : CAMERA_FOV;
+  const mode = `${portrait ? "portrait" : "landscape"}:${aspect.toFixed(3)}`;
 
   useLayoutEffect(() => {
     const camera = cameraRef.current;
@@ -62,17 +61,15 @@ function TopDownCameraRig() {
   }, [get, mode, set]);
 
   return (
-    <orthographicCamera
+    <perspectiveCamera
       key={mode}
       ref={cameraRef}
       position={[0, CAMERA_HEIGHT, 0]}
       rotation={[-Math.PI / 2, 0, 0]}
-      left={-halfWidth}
-      right={halfWidth}
-      top={halfHeight}
-      bottom={-halfHeight}
+      fov={fov}
+      aspect={aspect}
       near={0.1}
-      far={30}
+      far={60}
     />
   );
 }
@@ -249,11 +246,15 @@ export function FullscreenDiceCinematic({
       <div className={styles.label}>{label}</div>
       <div className={styles.canvas}>
         <Canvas
-          orthographic
           shadows={{ type: PCFShadowMap }}
           frameloop="demand"
           dpr={[1, 1.5]}
-          camera={{ position: [0, CAMERA_HEIGHT, 0], zoom: 100 }}
+          camera={{
+            position: [0, CAMERA_HEIGHT, 0],
+            fov: CAMERA_FOV,
+            near: 0.1,
+            far: 60,
+          }}
           gl={{
             alpha: true,
             antialias: true,
