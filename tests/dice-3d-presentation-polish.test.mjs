@@ -73,7 +73,7 @@ test("dock orienta qualquer face física do resultado diretamente para a câmera
   }
 });
 
-test("apresentação usa cor oficial da facção e acabamento físico no corpo dourado", () => {
+test("apresentação usa cor oficial da facção e acabamento físico com contorno escuro", () => {
   const arena = readFileSync(
     "src/components/dice-3d/battle-dice-arena.tsx",
     "utf8",
@@ -97,9 +97,13 @@ test("apresentação usa cor oficial da facção e acabamento físico no corpo d
   assert.match(arena, /pipColor: playerColorHex\(defenderColor\)/);
   assert.match(palette, /PLAYER_COLORS\.map/);
   assert.match(visual, /DICE_BODY_GOLD = "#d0ad5a"/);
+  assert.match(visual, /DICE_EDGE_COLOR = "#111111"/);
   assert.match(visual, /meshPhysicalMaterial/);
   assert.match(visual, /clearcoat=\{0\.38\}/);
   assert.match(visual, /clearcoatRoughness=\{0\.3\}/);
+  assert.match(visual, /<lineSegments/);
+  assert.match(visual, /<edgesGeometry args=\{\[geometry, 28\]\}/);
+  assert.match(visual, /opacity=\{0\.82\}/);
   assert.doesNotMatch(visual, /color="#e8e3d8"/);
 
   assert.match(cinematic, /<FullscreenDiceCinematic/);
