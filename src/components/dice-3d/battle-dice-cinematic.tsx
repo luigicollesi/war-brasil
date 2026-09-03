@@ -10,8 +10,8 @@ import { FullscreenDiceCinematic } from "./fullscreen-dice-cinematic";
 
 export type BattleDiceCinematicSide = "attack" | "defense";
 
-export const BATTLE_DICE_CINEMATIC_TOTAL_MS = 3_000;
-export const BATTLE_DICE_CINEMATIC_REPLAY_MS = 2_500;
+export const BATTLE_DICE_CINEMATIC_REPLAY_MS = 2_600;
+export const BATTLE_DICE_CINEMATIC_RESULT_HOLD_MS = 600;
 export const BATTLE_DICE_CINEMATIC_VISUAL_SCALE = 0.86;
 
 function cinematicSeed(
@@ -61,8 +61,8 @@ export function BattleDiceCinematic({
       skin={side}
       pipColor={playerColorHex(color)}
       label={side === "attack" ? "ATAQUE" : "DEFESA"}
-      totalDurationMs={BATTLE_DICE_CINEMATIC_TOTAL_MS}
       replayDurationMs={BATTLE_DICE_CINEMATIC_REPLAY_MS}
+      resultHoldMs={BATTLE_DICE_CINEMATIC_RESULT_HOLD_MS}
       visualScale={BATTLE_DICE_CINEMATIC_VISUAL_SCALE}
       onComplete={onComplete}
     />

@@ -4,8 +4,8 @@ import { playerColorHex } from "@/src/lib/client/player-color";
 import type { PlayerColor } from "@/src/lib/lobby";
 import { FullscreenDiceCinematic } from "./fullscreen-dice-cinematic";
 
-export const ORDER_DICE_CINEMATIC_TOTAL_MS = 3_000;
-export const ORDER_DICE_CINEMATIC_REPLAY_MS = 2_500;
+export const ORDER_DICE_CINEMATIC_REPLAY_MS = 2_600;
+export const ORDER_DICE_CINEMATIC_RESULT_HOLD_MS = 600;
 export const ORDER_DICE_CINEMATIC_VISUAL_SCALE = 0.86;
 
 export function OrderDiceCinematic({
@@ -41,8 +41,8 @@ export function OrderDiceCinematic({
       skin="neutral"
       pipColor={playerColorHex(color)}
       label="ORDEM DE JOGO"
-      totalDurationMs={ORDER_DICE_CINEMATIC_TOTAL_MS}
       replayDurationMs={ORDER_DICE_CINEMATIC_REPLAY_MS}
+      resultHoldMs={ORDER_DICE_CINEMATIC_RESULT_HOLD_MS}
       visualScale={ORDER_DICE_CINEMATIC_VISUAL_SCALE}
       onComplete={onComplete}
     />

@@ -25,7 +25,7 @@ import { useDiceFaceTextures } from "./use-dice-face-textures";
 
 installDice3DDependencyWarningFilter();
 
-const CINEMATIC_PRE_ROLL_MS = 250;
+const CINEMATIC_PRE_ROLL_MS = 200;
 const PORTRAIT_ASPECT_THRESHOLD = 0.82;
 const MAX_DICE_TEXTURE_ANISOTROPY = 8;
 const CAMERA_HEIGHT = 20;
@@ -88,6 +88,7 @@ function CinematicScene({
   pipColor,
   replayDurationMs,
   visualScale,
+  onComplete,
   onError,
 }: {
   values: readonly DiceValue[];
@@ -96,6 +97,7 @@ function CinematicScene({
   pipColor?: string;
   replayDurationMs: number;
   visualScale: number;
+  onComplete: () => void;
   onError: () => void;
 }) {
   const size = useThree((state) => state.size);
@@ -152,6 +154,7 @@ function CinematicScene({
           playbackDurationMs={replayDurationMs}
           initialElapsedMs={0}
           visualScale={visualScale}
+          onComplete={onComplete}
           onError={onError}
         />
       </group>
@@ -165,8 +168,8 @@ export function FullscreenDiceCinematic({
   skin,
   pipColor,
   label,
-  totalDurationMs,
   replayDurationMs,
+  resultHoldMs,
   visualScale = 0.86,
   onComplete,
 }: {
@@ -175,8 +178,8 @@ export function FullscreenDiceCinematic({
   skin: DiceSkin;
   pipColor?: string;
   label: string;
-  totalDurationMs: number;
   replayDurationMs: number;
+  resultHoldMs: number;
   visualScale?: number;
   onComplete: () => void;
 }) {
@@ -184,6 +187,9 @@ export function FullscreenDiceCinematic({
   const reducedMotion = useReducedDiceMotion();
   const completedRef = useRef(false);
   const [readySeed, setReadySeed] = useState<string | null>(null);
+  const [completedReplaySeed, setCompletedReplaySeed] = useState<string | null>(
+    null,
+  );
   const safeValues = useMemo(() => validateDiceValues(values), [values]);
   const finish = useCallback(() => {
     if (completedRef.current) return;
@@ -196,6 +202,8 @@ export function FullscreenDiceCinematic({
 
   useEffect(() => {
     completedRef.current = false;
+    setReadySeed(null);
+    setCompletedReplaySeed(null);
   }, [seed]);
 
   useEffect(() => {
@@ -228,9 +236,15 @@ export function FullscreenDiceCinematic({
       return () => window.clearTimeout(timeoutId);
     }
 
-    const timeoutId = window.setTimeout(finish, totalDurationMs);
+    if (completedReplaySeed !== seed) return;
+
+    const timeoutId = window.setTimeout(finish, Math.max(0, resultHoldMs));
     return () => window.clearTimeout(timeoutId);
-  }, [finish, seed, shouldSkip, totalDurationMs]);
+  }, [completedReplaySeed, finish, resultHoldMs, seed, shouldSkip]);
+
+  const handleReplayComplete = useCallback(() => {
+    setCompletedReplaySeed(seed);
+  }, [seed]);
 
   if (typeof document === "undefined" || shouldSkip) return null;
 
@@ -268,6 +282,7 @@ export function FullscreenDiceCinematic({
               pipColor={pipColor}
               replayDurationMs={replayDurationMs}
               visualScale={visualScale}
+              onComplete={handleReplayComplete}
               onError={finish}
             />
           ) : null}
