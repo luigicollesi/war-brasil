@@ -8,6 +8,7 @@ import { GameDie } from "@/src/components/game-die";
 import { GameTurnPanel } from "@/src/components/game-turn-panel";
 import { GameUtilityBar } from "@/src/components/game-utility-bar";
 import { GameVictoryModal } from "@/src/components/game-victory-modal";
+import { InitialTerritoryDrawPresentation } from "@/src/components/initial-territory-draw-presentation";
 import { MandatoryCardTradeModal } from "@/src/components/mandatory-card-trade-modal";
 import { MobileCardHandDrawer } from "@/src/components/mobile-card-hand-drawer";
 import {
@@ -129,7 +130,6 @@ function GameReadyClient({
   useEffect(() => {
     if (!initialPresentationStartedAt) return;
 
-    setPresentationClockMs(Date.now());
     const intervalId = window.setInterval(
       () => setPresentationClockMs(Date.now()),
       50,
@@ -358,18 +358,17 @@ function GameReadyClient({
         targetHints={interaction.mapHints.targets}
         interactionMode={snapshot.room.phase}
         arrow={battleArrow ?? interaction.arrow}
-        interactionLocked={initialPresentationActive}
-        initialPresentation={
-          initialPresentationActive
-            ? {
-                active: true,
-                revealedTerritoryIds,
-                highlightPlayerId: me?.id ?? null,
-                highlightOn,
-              }
-            : undefined
-        }
       />
+
+      {initialPresentationActive ? (
+        <InitialTerritoryDrawPresentation
+          territories={boardTerritories}
+          revealedTerritoryIds={revealedTerritoryIds}
+          highlightPlayerId={me?.id ?? null}
+          highlightOn={highlightOn}
+          tick={presentationClockMs}
+        />
+      ) : null}
 
       <GameTurnPanel
         roomId={roomId}
