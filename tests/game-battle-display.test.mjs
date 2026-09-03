@@ -66,6 +66,26 @@ test("overlay separa lançamento 3D fullscreen do resultado 2D estático", () =>
   assert.doesNotMatch(staticResults, /rolling=|rollAnimation=/);
 });
 
+test("resultado estático recupera no celular o layout legível do main", () => {
+  const css = source("src/app/game/[roomId]/game-battle-dice-polish.css");
+
+  assert.match(css, /@media \(max-width: 767px\)/);
+  assert.match(
+    css,
+    /\.battle-dice-grid\s*\{[\s\S]*?flex-direction:\s*column[\s\S]*?align-items:\s*center/,
+  );
+  assert.match(css, /\.battle-side\s*\{[\s\S]*?width:\s*100%/);
+  assert.match(
+    css,
+    /\.battle-dice-row\s*\{[\s\S]*?flex-wrap:\s*nowrap[\s\S]*?justify-content:\s*center/,
+  );
+  assert.match(css, /width:\s*clamp\(62px, 20vw, 82px\)/);
+  assert.match(
+    css,
+    /\.battle-die-slot \.battle-die\s*\{[\s\S]*?width:\s*100% !important/,
+  );
+});
+
 test("cinematic fullscreen mantém palco leve, responsivo e sem interação", () => {
   const css = source(
     "src/components/dice-3d/battle-dice-cinematic.module.css",
@@ -84,8 +104,15 @@ test("cinematic fullscreen mantém palco leve, responsivo e sem interação", ()
   assert.match(css, /env\(safe-area-inset-top\)/);
   assert.match(cinematic, /<FullscreenDiceCinematic/);
   assert.match(fullscreen, /PORTRAIT_ASPECT_THRESHOLD/);
+  assert.match(fullscreen, /MOBILE_VIEWPORT_MAX_WIDTH = 767/);
   assert.match(fullscreen, /<perspectiveCamera/);
   assert.match(fullscreen, /CAMERA_HEIGHT = 20/);
+  assert.match(fullscreen, /MOBILE_CAMERA_HEIGHT = 10/);
+  assert.match(
+    fullscreen,
+    /const cameraHeight = mobile \? MOBILE_CAMERA_HEIGHT : CAMERA_HEIGHT/,
+  );
+  assert.match(fullscreen, /position=\{\[0, cameraHeight, 0\]\}/);
   assert.match(fullscreen, /CAMERA_FOV = 50/);
   assert.match(fullscreen, /rotation=\{\[-Math\.PI \/ 2, 0, 0\]\}/);
   assert.match(fullscreen, /set\(\{ camera \}\)/);

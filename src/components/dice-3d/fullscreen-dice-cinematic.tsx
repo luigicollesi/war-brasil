@@ -27,8 +27,10 @@ installDice3DDependencyWarningFilter();
 
 const CINEMATIC_PRE_ROLL_MS = 200;
 const PORTRAIT_ASPECT_THRESHOLD = 0.82;
+const MOBILE_VIEWPORT_MAX_WIDTH = 767;
 const MAX_DICE_TEXTURE_ANISOTROPY = 8;
 const CAMERA_HEIGHT = 20;
+const MOBILE_CAMERA_HEIGHT = 10;
 const CAMERA_FOV = 50;
 const PORTRAIT_CAMERA_FOV = 54;
 
@@ -39,8 +41,10 @@ function TopDownCameraRig() {
   const cameraRef = useRef<PerspectiveCamera>(null);
   const aspect = size.height > 0 ? size.width / size.height : 16 / 9;
   const portrait = aspect < PORTRAIT_ASPECT_THRESHOLD;
+  const mobile = size.width > 0 && size.width <= MOBILE_VIEWPORT_MAX_WIDTH;
+  const cameraHeight = mobile ? MOBILE_CAMERA_HEIGHT : CAMERA_HEIGHT;
   const fov = portrait ? PORTRAIT_CAMERA_FOV : CAMERA_FOV;
-  const mode = `${portrait ? "portrait" : "landscape"}:${aspect.toFixed(3)}`;
+  const mode = `${mobile ? "mobile" : "desktop"}:${portrait ? "portrait" : "landscape"}:${aspect.toFixed(3)}`;
 
   useLayoutEffect(() => {
     const camera = cameraRef.current;
@@ -58,7 +62,7 @@ function TopDownCameraRig() {
     <perspectiveCamera
       key={mode}
       ref={cameraRef}
-      position={[0, CAMERA_HEIGHT, 0]}
+      position={[0, cameraHeight, 0]}
       rotation={[-Math.PI / 2, 0, 0]}
       fov={fov}
       aspect={aspect}

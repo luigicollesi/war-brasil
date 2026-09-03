@@ -152,6 +152,46 @@
   .battle-dice-fallback-side .battle-die {
     width: clamp(46px, 13vw, 66px) !important;
   }
+
+  /* Resultado estático: restaura no mobile a composição legível do main. */
+  .battle-dice-grid {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: center;
+    row-gap: 20px;
+    width: 100%;
+    margin-top: 16px;
+  }
+
+  .battle-side {
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+  }
+
+  .battle-dice-row {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    max-width: 100%;
+  }
+
+  .battle-die-slot {
+    display: grid;
+    width: clamp(62px, 20vw, 82px);
+    aspect-ratio: 1;
+    flex: 0 0 auto;
+    place-items: center;
+    padding: 4px;
+  }
+
+  .battle-die-slot .battle-die {
+    width: 100% !important;
+    max-width: 100%;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

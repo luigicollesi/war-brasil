@@ -134,7 +134,7 @@ test("cinematic de combate deriva resultado do stage e bloqueia toda interação
   assert.match(styles, /touch-action: none/);
 });
 
-test("cinematic inicia replay local do zero e usa perspectiva superior com queda curta", () => {
+test("cinematic inicia replay local do zero, mantém a trajetória e aproxima a câmera apenas no celular", () => {
   const fullscreen = readFileSync(
     "src/components/dice-3d/fullscreen-dice-cinematic.tsx",
     "utf8",
@@ -157,29 +157,40 @@ test("cinematic inicia replay local do zero e usa perspectiva superior com queda
   assert.match(fullscreen, /CINEMATIC_PRE_ROLL_MS/);
   assert.match(fullscreen, /initialElapsedMs=\{0\}/);
   assert.match(fullscreen, /<perspectiveCamera/);
+  assert.match(fullscreen, /MOBILE_VIEWPORT_MAX_WIDTH = 767/);
   assert.match(fullscreen, /CAMERA_HEIGHT = 20/);
+  assert.match(fullscreen, /MOBILE_CAMERA_HEIGHT = 10/);
+  assert.match(
+    fullscreen,
+    /const cameraHeight = mobile \? MOBILE_CAMERA_HEIGHT : CAMERA_HEIGHT/,
+  );
   assert.match(fullscreen, /CAMERA_FOV = 50/);
   assert.match(fullscreen, /set\(\{ camera \}\)/);
   assert.match(fullscreen, /PORTRAIT_ASPECT_THRESHOLD/);
   assert.match(fullscreen, /portrait \? Math\.PI \/ 2 : 0/);
-  assert.match(fullscreen, /position=\{\[0, CAMERA_HEIGHT, 0\]\}/);
+  assert.match(fullscreen, /position=\{\[0, cameraHeight, 0\]\}/);
   assert.match(fullscreen, /rotation=\{\[-Math\.PI \/ 2, 0, 0\]\}/);
   assert.match(fullscreen, /planeGeometry args=\{\[6\.8, 6\.8\]\}/);
   assert.match(launchPlan, /DICE_LAUNCH_HEIGHT = 10/);
   assert.match(launchPlan, /DICE_LAUNCH_HEIGHT - index \* 0\.16 - next\(\) \* 0\.28/);
   assert.match(launchPlan, /signed\(next, 0\.72\)/);
   assert.match(launchPlan, /signed\(next, 10\)/);
+  assert.doesNotMatch(launchPlan, /mobile|viewport|screen|portrait/i);
   assert.match(predetermined, /initialElapsedMs=\{initialElapsedMs\}/);
   assert.match(replay, /initialElapsedMs = 0/);
   assert.match(replay, /sampleTrajectoryState/);
   assert.match(replay, /elapsedSeconds = useRef\(initialReplaySeconds\)/);
 });
 
-test("modal de combate reutiliza território carregado e nome do SVG sem nova requisição", () => {
+test("modal de combate reutiliza território carregado, nome do SVG e resultado mobile legível", () => {
   const overlay = readFileSync("src/components/battle-overlay.tsx", "utf8");
   const client = readFileSync("src/components/game-client-v2.tsx", "utf8");
   const refresh = readFileSync(
     "src/app/game/[roomId]/game-ui-refresh.css",
+    "utf8",
+  );
+  const polish = readFileSync(
+    "src/app/game/[roomId]/game-battle-dice-polish.css",
     "utf8",
   );
 
@@ -196,4 +207,9 @@ test("modal de combate reutiliza território carregado e nome do SVG sem nova re
   assert.match(refresh, /\.battle-context/);
   assert.match(refresh, /\.battle-participant--defense/);
   assert.match(refresh, /width: clamp\(32px, 10vw, 44px\) !important/);
+  assert.match(
+    polish,
+    /\.battle-dice-grid\s*\{[\s\S]*?flex-direction:\s*column/,
+  );
+  assert.match(polish, /width: clamp\(62px, 20vw, 82px\)/);
 });
