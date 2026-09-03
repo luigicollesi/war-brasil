@@ -10,11 +10,13 @@ import { useGameMapVisibility } from "@/src/components/road-visibility-provider"
 type GameUtilityBarProps = {
   anomalyTitle?: string;
   onOpenAnomaly?: () => void;
+  disabled?: boolean;
 };
 
 export function GameUtilityBar({
   anomalyTitle,
   onOpenAnomaly,
+  disabled = false,
 }: GameUtilityBarProps) {
   const {
     roadsVisible,
@@ -27,10 +29,17 @@ export function GameUtilityBar({
     <div className="game-utility-bar" aria-label="Controles de visualização do mapa">
       <button
         type="button"
-        className="game-utility-button"
+        className="game-utility-button disabled:cursor-not-allowed disabled:opacity-40"
         aria-pressed={roadsVisible}
+        disabled={disabled}
         onClick={toggleRoads}
-        title={roadsVisible ? "Ocultar estradas" : "Mostrar estradas"}
+        title={
+          disabled
+            ? "Estradas indisponíveis durante o sorteio de territórios"
+            : roadsVisible
+              ? "Ocultar estradas"
+              : "Mostrar estradas"
+        }
       >
         <RoadsIcon />
         <span className="game-utility-label">Estradas</span>
@@ -38,10 +47,17 @@ export function GameUtilityBar({
 
       <button
         type="button"
-        className="game-utility-button"
+        className="game-utility-button disabled:cursor-not-allowed disabled:opacity-40"
         aria-pressed={troopsVisible}
+        disabled={disabled}
         onClick={toggleTroops}
-        title={troopsVisible ? "Ocultar tropas" : "Mostrar tropas"}
+        title={
+          disabled
+            ? "Tropas indisponíveis durante o sorteio de territórios"
+            : troopsVisible
+              ? "Ocultar tropas"
+              : "Mostrar tropas"
+        }
       >
         <TroopsIcon />
         <span className="game-utility-label">Tropas</span>
