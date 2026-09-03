@@ -145,7 +145,7 @@ test("cinematic sincroniza frame inicial e usa perspectiva 100% superior com que
   assert.match(fullscreen, /Date\.now\(\) - startedAtMs/);
   assert.match(fullscreen, /initialElapsedMs=\{Math\.min/);
   assert.match(fullscreen, /<perspectiveCamera/);
-  assert.match(fullscreen, /CAMERA_HEIGHT = 22/);
+  assert.match(fullscreen, /CAMERA_HEIGHT = 20/);
   assert.match(fullscreen, /CAMERA_FOV = 50/);
   assert.match(fullscreen, /set\(\{ camera \}\)/);
   assert.match(fullscreen, /PORTRAIT_ASPECT_THRESHOLD/);
