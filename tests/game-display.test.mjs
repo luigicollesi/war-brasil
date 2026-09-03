@@ -112,13 +112,16 @@ test("cinematic de combate deriva resultado do stage e bloqueia toda interação
   assert.doesNotMatch(overlay, /setCinematicPresentation/);
   assert.match(overlay, /setAttribute\("inert", ""\)/);
   assert.match(overlay, /removeAttribute\("inert"\)/);
-  assert.match(cinematic, /BATTLE_DICE_CINEMATIC_TOTAL_MS = 3_000/);
-  assert.match(cinematic, /BATTLE_DICE_CINEMATIC_REPLAY_MS = 2_500/);
-  assert.match(cinematic, /totalDurationMs=\{BATTLE_DICE_CINEMATIC_TOTAL_MS\}/);
+  assert.match(cinematic, /BATTLE_DICE_CINEMATIC_REPLAY_MS = 2_600/);
+  assert.match(cinematic, /BATTLE_DICE_CINEMATIC_RESULT_HOLD_MS = 600/);
+  assert.match(cinematic, /replayDurationMs=\{BATTLE_DICE_CINEMATIC_REPLAY_MS\}/);
+  assert.match(cinematic, /resultHoldMs=\{BATTLE_DICE_CINEMATIC_RESULT_HOLD_MS\}/);
   assert.doesNotMatch(cinematic, /startedAt=/);
   assert.match(fullscreen, /frameloop="demand"/);
-  assert.match(fullscreen, /CINEMATIC_PRE_ROLL_MS = 250/);
-  assert.match(fullscreen, /window\.setTimeout\(finish, totalDurationMs\)/);
+  assert.match(fullscreen, /CINEMATIC_PRE_ROLL_MS = 200/);
+  assert.match(fullscreen, /completedReplaySeed !== seed/);
+  assert.match(fullscreen, /window\.setTimeout\(finish, Math\.max\(0, resultHoldMs\)\)/);
+  assert.match(fullscreen, /onComplete=\{handleReplayComplete\}/);
   assert.doesNotMatch(
     fullscreen,
     /presentationElapsedMs|Date\.now\(\)|MIN_PRESENTATION_REMAINING_MS/,
@@ -131,7 +134,7 @@ test("cinematic de combate deriva resultado do stage e bloqueia toda interação
   assert.match(styles, /touch-action: none/);
 });
 
-test("cinematic inicia replay local do zero e usa perspectiva superior com queda desde a câmera", () => {
+test("cinematic inicia replay local do zero e usa perspectiva superior com queda curta", () => {
   const fullscreen = readFileSync(
     "src/components/dice-3d/fullscreen-dice-cinematic.tsx",
     "utf8",
@@ -162,12 +165,10 @@ test("cinematic inicia replay local do zero e usa perspectiva superior com queda
   assert.match(fullscreen, /position=\{\[0, CAMERA_HEIGHT, 0\]\}/);
   assert.match(fullscreen, /rotation=\{\[-Math\.PI \/ 2, 0, 0\]\}/);
   assert.match(fullscreen, /planeGeometry args=\{\[6\.8, 6\.8\]\}/);
-  assert.match(launchPlan, /DICE_LAUNCH_HEIGHT = 20/);
-  assert.match(launchPlan, /DICE_CAMERA_CLEARANCE = 0\.7/);
-  assert.match(
-    launchPlan,
-    /DICE_LAUNCH_HEIGHT -[\s\S]*?DICE_CAMERA_CLEARANCE -[\s\S]*?launchOffset\[1\]/,
-  );
+  assert.match(launchPlan, /DICE_LAUNCH_HEIGHT = 10/);
+  assert.match(launchPlan, /DICE_LAUNCH_HEIGHT - index \* 0\.16 - next\(\) \* 0\.28/);
+  assert.match(launchPlan, /signed\(next, 0\.72\)/);
+  assert.match(launchPlan, /signed\(next, 10\)/);
   assert.match(predetermined, /initialElapsedMs=\{initialElapsedMs\}/);
   assert.match(replay, /initialElapsedMs = 0/);
   assert.match(replay, /sampleTrajectoryState/);
