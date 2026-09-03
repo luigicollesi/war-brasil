@@ -16,7 +16,11 @@ test("preparação documentada acompanha limites e distribuição da sala", () =
   assert.equal((lobby.match(/\{ value:/g) ?? []).length, 6);
   assert.match(rooms, /Array\.from\(\{ length: 42 \}/);
   assert.match(rooms, /players\[index % players\.length\]\.id/);
-  assert.match(rooms, /owner_player_id, troops\)[\s\S]*VALUES \$\{values\.join/);
+  assert.match(
+    rooms,
+    /owner_player_id, troops, initial_draw_order[\s\S]*VALUES \$\{values\.join/,
+  );
+  assert.match(rooms, /index \+ 1/);
 });
 
 test("turno percorre cartas, reforço, ataque e manobra na ordem ensinada", () => {
