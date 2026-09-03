@@ -97,7 +97,7 @@ export function createDiceLaunchPlan(
   const dice = positions.map((baseX, index) => {
     const position: DiceVector3 = [
       baseX + signed(next, 0.055) + launchOffset[0],
-      3.75 + index * 0.16 + next() * 0.45 + launchOffset[1],
+      5.8 + index * 0.2 + next() * 0.55 + launchOffset[1],
       signed(next, 0.28) + launchOffset[2],
     ];
     const linearVelocity: DiceVector3 = [
