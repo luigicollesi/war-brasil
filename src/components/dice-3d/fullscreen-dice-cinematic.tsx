@@ -44,7 +44,7 @@ function TopDownCameraRig() {
   const aspect = size.height > 0 ? size.width / size.height : 16 / 9;
   const portrait = aspect < PORTRAIT_ASPECT_THRESHOLD;
   const compact = !portrait && aspect < 1.2;
-  const viewHeight = portrait ? 6.4 : compact ? 5.2 : 4.5;
+  const viewHeight = portrait ? 10.2 : compact ? 8.8 : 8.2;
   const halfHeight = viewHeight / 2;
   const halfWidth = halfHeight * aspect;
   const mode = `${portrait ? "portrait" : compact ? "compact" : "landscape"}:${aspect.toFixed(3)}`;
