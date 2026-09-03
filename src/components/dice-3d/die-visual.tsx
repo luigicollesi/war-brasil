@@ -5,6 +5,7 @@ import { DICE_FACE_DEFINITIONS } from "@/src/lib/client/dice/geometry/dice-faces
 import type { DiceFaceTextureSet } from "@/src/lib/client/dice/types";
 
 const DICE_BODY_GOLD = "#d0ad5a";
+const DICE_EDGE_COLOR = "#111111";
 
 export function DieVisual({
   geometry,
@@ -31,6 +32,16 @@ export function DieVisual({
           clearcoatRoughness={0.3}
         />
       </mesh>
+
+      <lineSegments geometry={geometry} scale={1.006} renderOrder={3}>
+        <edgesGeometry args={[geometry, 28]} />
+        <lineBasicMaterial
+          color={DICE_EDGE_COLOR}
+          transparent
+          opacity={0.82}
+          depthWrite={false}
+        />
+      </lineSegments>
 
       {DICE_FACE_DEFINITIONS.map((face) => (
         <mesh
