@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS game_rooms (
   revision INTEGER NOT NULL DEFAULT 1 CHECK (revision >= 1),
   order_roll_round INTEGER NOT NULL DEFAULT 1
     CHECK (order_roll_round >= 1),
+  initial_territory_presentation_started_at TIMESTAMPTZ,
   phase VARCHAR(20) NOT NULL DEFAULT 'cards'
     CHECK (phase IN ('cards', 'reinforcement', 'attack', 'maneuver', 'end_turn', 'finished')),
   current_player_id BIGINT,
@@ -114,11 +115,16 @@ CREATE TABLE IF NOT EXISTS game_territories (
   owner_player_id BIGINT NOT NULL REFERENCES room_players(id) ON DELETE RESTRICT,
   troops SMALLINT NOT NULL DEFAULT 1 CHECK (troops >= 1),
   moved_in_turn SMALLINT NOT NULL DEFAULT 0 CHECK (moved_in_turn >= 0 AND moved_in_turn <= troops),
+  initial_draw_order SMALLINT CHECK (initial_draw_order BETWEEN 1 AND 42),
   PRIMARY KEY (room_id, territory_id)
 );
 
 CREATE INDEX IF NOT EXISTS game_territories_room_owner_idx
   ON game_territories(room_id, owner_player_id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS game_territories_room_initial_draw_order_idx
+  ON game_territories(room_id, initial_draw_order)
+  WHERE initial_draw_order IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS game_order_rolls (
   room_id BIGINT NOT NULL REFERENCES game_rooms(id) ON DELETE CASCADE,
