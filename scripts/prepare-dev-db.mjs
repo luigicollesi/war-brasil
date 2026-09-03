@@ -113,8 +113,15 @@ try {
     await applyMigration("016-disable-elimination-fallback.sql");
   }
 
+  if (
+    !(await columnExists("game_rooms", "initial_territory_presentation_started_at")) ||
+    !(await columnExists("game_territories", "initial_draw_order"))
+  ) {
+    await applyMigration("017-initial-territory-presentation.sql");
+  }
+
   await client.query("COMMIT");
-  console.log("[war-brasil] banco local preparado para bots e objetivos.");
+  console.log("[war-brasil] banco local preparado para bots, objetivos e apresentação inicial.");
 } catch (error) {
   await client.query("ROLLBACK").catch(() => undefined);
   console.error(

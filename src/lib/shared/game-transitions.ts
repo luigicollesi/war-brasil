@@ -1,3 +1,13 @@
+export const INITIAL_TERRITORY_SYNC_DELAY_MS = 2_000;
+export const INITIAL_TERRITORY_REVEAL_STEP_MS = 100;
+export const INITIAL_TERRITORY_REVEAL_COUNT = 42;
+export const INITIAL_TERRITORY_HIGHLIGHT_STEP_MS = 500;
+export const INITIAL_TERRITORY_HIGHLIGHT_DURATION_MS = 2_000;
+export const INITIAL_TERRITORY_REVEAL_DURATION_MS =
+  INITIAL_TERRITORY_REVEAL_STEP_MS * INITIAL_TERRITORY_REVEAL_COUNT;
+export const INITIAL_TERRITORY_PRESENTATION_MS =
+  INITIAL_TERRITORY_REVEAL_DURATION_MS +
+  INITIAL_TERRITORY_HIGHLIGHT_DURATION_MS;
 export const ORDER_ROLL_PRESENTATION_MS = 2_000;
 export const BATTLE_DICE_PRESENTATION_MS = 3_000;
 export const BATTLE_COMPARISON_PRESENTATION_MS = 2_000;
@@ -26,6 +36,13 @@ function elapsedAtLeast(
     startedAt instanceof Date ? startedAt.getTime() : Date.parse(startedAt);
 
   return isFinite(startedAtMs) && nowMs - startedAtMs >= durationMs;
+}
+
+export function isInitialTerritoryPresentationDue(
+  startedAt: string | Date,
+  nowMs = Date.now(),
+) {
+  return elapsedAtLeast(startedAt, INITIAL_TERRITORY_PRESENTATION_MS, nowMs);
 }
 
 function battleStagePresentationDuration(stage: BattleStage) {

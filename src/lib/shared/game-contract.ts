@@ -81,6 +81,12 @@ export type GameRematchState = {
   hasVoted: boolean;
 };
 
+export type GamePresentation = {
+  kind: "initial_territory_draw";
+  startedAt: string;
+  territoryIds: number[];
+};
+
 export type GameSnapshot = {
   room: {
     id: string;
@@ -89,6 +95,7 @@ export type GameSnapshot = {
     orderRollRound: number;
     orderRollPlayerId: string | null;
     lastOrderRollPlayerId: string | null;
+    presentation: GamePresentation | null;
     phase: GamePhase;
     currentPlayerId: string | null;
     turnNumber: number;

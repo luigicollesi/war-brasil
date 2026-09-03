@@ -4,7 +4,14 @@ import {
   BATTLE_COMPARISON_PRESENTATION_MS,
   BATTLE_DICE_PRESENTATION_MS,
   BATTLE_RESULT_PRESENTATION_MS,
+  INITIAL_TERRITORY_HIGHLIGHT_DURATION_MS,
+  INITIAL_TERRITORY_PRESENTATION_MS,
+  INITIAL_TERRITORY_REVEAL_COUNT,
+  INITIAL_TERRITORY_REVEAL_DURATION_MS,
+  INITIAL_TERRITORY_REVEAL_STEP_MS,
+  INITIAL_TERRITORY_SYNC_DELAY_MS,
   ORDER_ROLL_PRESENTATION_MS,
+  isInitialTerritoryPresentationDue,
   isOrderRollPresentationDue,
   nextBattlePresentationTransition,
 } from "../.test-build/game-transitions.js";
@@ -69,6 +76,35 @@ test("comparação e resultado mantêm janelas próprias", () => {
       startMs + BATTLE_RESULT_PRESENTATION_MS,
     ),
     "clear_battle",
+  );
+});
+
+test("apresentação inicial reserva margem de sincronização antes da animação", () => {
+  assert.equal(INITIAL_TERRITORY_SYNC_DELAY_MS, 2_000);
+  assert.equal(INITIAL_TERRITORY_REVEAL_STEP_MS, 100);
+  assert.equal(INITIAL_TERRITORY_REVEAL_COUNT, 42);
+  assert.equal(INITIAL_TERRITORY_REVEAL_DURATION_MS, 4_200);
+  assert.equal(INITIAL_TERRITORY_HIGHLIGHT_DURATION_MS, 2_000);
+  assert.equal(INITIAL_TERRITORY_PRESENTATION_MS, 6_200);
+});
+
+test("apresentação inicial só termina após revelação e destaque", () => {
+  const startedAt = "2026-08-26T12:00:02.000Z";
+  const startMs = Date.parse(startedAt);
+
+  assert.equal(
+    isInitialTerritoryPresentationDue(
+      startedAt,
+      startMs + INITIAL_TERRITORY_PRESENTATION_MS - 1,
+    ),
+    false,
+  );
+  assert.equal(
+    isInitialTerritoryPresentationDue(
+      startedAt,
+      startMs + INITIAL_TERRITORY_PRESENTATION_MS,
+    ),
+    true,
   );
 });
 
