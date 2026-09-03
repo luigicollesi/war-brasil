@@ -20,6 +20,12 @@ import { useGameSync } from "@/src/hooks/use-game-sync";
 import { useTemporalAnomaly } from "@/src/hooks/use-temporal-anomaly";
 import { runGameCommand } from "@/src/lib/game-command-client";
 import type { GameSnapshot } from "@/src/lib/game-contract";
+import {
+  INITIAL_TERRITORY_HIGHLIGHT_DURATION_MS,
+  INITIAL_TERRITORY_HIGHLIGHT_STEP_MS,
+  INITIAL_TERRITORY_REVEAL_DURATION_MS,
+  INITIAL_TERRITORY_REVEAL_STEP_MS,
+} from "@/src/lib/game-transitions";
 import { buildGameViewModel } from "@/src/lib/game-view-model";
 import { PLAYER_COLORS, type PlayerColor } from "@/src/lib/lobby";
 
@@ -112,6 +118,25 @@ function GameReadyClient({
   const [isReturningToLobby, setIsReturningToLobby] = useState(false);
   const [completedOrderPresentationId, setCompletedOrderPresentationId] =
     useState<string | null>(null);
+  const [presentationClockMs, setPresentationClockMs] = useState(() => Date.now());
+  const initialTerritoryPresentation =
+    snapshot.room.presentation?.kind === "initial_territory_draw"
+      ? snapshot.room.presentation
+      : null;
+  const initialPresentationStartedAt =
+    initialTerritoryPresentation?.startedAt ?? null;
+
+  useEffect(() => {
+    if (!initialPresentationStartedAt) return;
+
+    setPresentationClockMs(Date.now());
+    const intervalId = window.setInterval(
+      () => setPresentationClockMs(Date.now()),
+      50,
+    );
+    return () => window.clearInterval(intervalId);
+  }, [initialPresentationStartedAt]);
+
   const boardTerritories = useMemo<BoardTerritory[]>(
     () =>
       snapshot.territories.flatMap((territory) => {
@@ -131,10 +156,47 @@ function GameReadyClient({
     [game.playersById, snapshot.territories],
   );
   const me = game.me;
+  const initialPresentationActive = Boolean(initialTerritoryPresentation);
+  const initialPresentationStartedAtMs = initialPresentationStartedAt
+    ? Date.parse(initialPresentationStartedAt)
+    : Number.NaN;
+  const initialPresentationElapsedMs = Number.isFinite(
+    initialPresentationStartedAtMs,
+  )
+    ? Math.max(0, presentationClockMs - initialPresentationStartedAtMs)
+    : 0;
+  const revealedTerritoryCount = initialTerritoryPresentation
+    ? Math.min(
+        initialTerritoryPresentation.territoryIds.length,
+        Math.floor(
+          initialPresentationElapsedMs / INITIAL_TERRITORY_REVEAL_STEP_MS,
+        ),
+      )
+    : 0;
+  const revealedTerritoryIds = useMemo(
+    () =>
+      new Set(
+        initialTerritoryPresentation?.territoryIds.slice(
+          0,
+          revealedTerritoryCount,
+        ) ?? [],
+      ),
+    [initialTerritoryPresentation, revealedTerritoryCount],
+  );
+  const highlightElapsedMs =
+    initialPresentationElapsedMs - INITIAL_TERRITORY_REVEAL_DURATION_MS;
+  const highlightOn = Boolean(
+    initialTerritoryPresentation &&
+      highlightElapsedMs >= 0 &&
+      highlightElapsedMs < INITIAL_TERRITORY_HIGHLIGHT_DURATION_MS &&
+      Math.floor(highlightElapsedMs / INITIAL_TERRITORY_HIGHLIGHT_STEP_MS) % 2 ===
+        0,
+  );
   const currentRound = snapshot.room.orderRollRound;
   const myCurrentRoll = me?.rolls.find((roll) => roll.round === currentRound);
   const canRoll = Boolean(
     snapshot.room.status === "order_roll" &&
+      !initialPresentationActive &&
       me &&
       snapshot.room.orderRollPlayerId === me.id &&
       !myCurrentRoll,
@@ -242,9 +304,11 @@ function GameReadyClient({
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#9b7a27]">
-              {snapshot.room.status === "order_roll"
-                ? "Sorteio de ordem · rodada " + currentRound
-                : "Ordem de jogo definida"}
+              {initialPresentationActive
+                ? "Sorteio de territórios"
+                : snapshot.room.status === "order_roll"
+                  ? "Sorteio de ordem · rodada " + currentRound
+                  : "Ordem de jogo definida"}
             </p>
             <h1 className="mt-1 text-2xl font-semibold tracking-[-0.035em]">
               Sala {snapshot.room.code}
@@ -253,6 +317,7 @@ function GameReadyClient({
           <GameUtilityBar
             anomalyTitle={anomaly.presentation?.title}
             onOpenAnomaly={anomaly.presentation ? anomaly.open : undefined}
+            disabled={initialPresentationActive}
           />
         </div>
       </section>
@@ -264,7 +329,9 @@ function GameReadyClient({
         />
       ) : null}
 
-      {snapshot.room.status === "order_roll" && !orderCinematicActive ? (
+      {snapshot.room.status === "order_roll" &&
+      !initialPresentationActive &&
+      !orderCinematicActive ? (
         <OrderRollPanel
           players={snapshot.players}
           eligiblePlayerIds={snapshot.eligiblePlayerIds}
@@ -291,6 +358,17 @@ function GameReadyClient({
         targetHints={interaction.mapHints.targets}
         interactionMode={snapshot.room.phase}
         arrow={battleArrow ?? interaction.arrow}
+        interactionLocked={initialPresentationActive}
+        initialPresentation={
+          initialPresentationActive
+            ? {
+                active: true,
+                revealedTerritoryIds,
+                highlightPlayerId: me?.id ?? null,
+                highlightOn,
+              }
+            : undefined
+        }
       />
 
       <GameTurnPanel
