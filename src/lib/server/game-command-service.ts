@@ -21,6 +21,7 @@ type CommandRoom = {
   id: string;
   status: "order_roll" | "playing" | "finished";
   order_roll_round: number;
+  initial_territory_presentation_started_at: Date | null;
   phase: string;
   current_player_id: string | null;
   round_number: number;
@@ -39,7 +40,8 @@ function normalizeRoomId(value: string) {
 
 async function loadRoom(client: PoolClient, roomId: string) {
   const result = await client.query<CommandRoom>(
-    `SELECT id,status,order_roll_round,phase,current_player_id,round_number,
+    `SELECT id,status,order_roll_round,initial_territory_presentation_started_at,
+            phase,current_player_id,round_number,
             jurassic_tunnel_territory_id,conquered_this_turn,
             pending_from_territory_id,last_battle
      FROM game_rooms
@@ -191,6 +193,12 @@ export async function executeRollOrderDie(
   const room = await loadRoom(client, roomId);
   if (room.status !== "order_roll") {
     throw new RoomError("O sorteio de ordem não está disponível.", 409);
+  }
+  if (room.initial_territory_presentation_started_at) {
+    throw new RoomError(
+      "A apresentação inicial dos territórios ainda está em andamento.",
+      409,
+    );
   }
 
   const players = (

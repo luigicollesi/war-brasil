@@ -16,12 +16,16 @@ import {
 } from "@/src/lib/game-order-rules";
 import type { GameRevision } from "@/src/lib/game-revision";
 import { initializeFirstGameRound } from "@/src/lib/game-round-service";
-import { isOrderRollPresentationDue } from "@/src/lib/game-transitions";
+import {
+  isInitialTerritoryPresentationDue,
+  isOrderRollPresentationDue,
+} from "@/src/lib/game-transitions";
 import { RoomError } from "@/src/lib/rooms";
 
 type PresentationRoom = BattleRoomState & {
   status: "order_roll" | "playing" | "finished";
   order_roll_round: number;
+  initial_territory_presentation_started_at: Date | null;
 };
 
 type PresentationOrderRoll = OrderRoll & {
@@ -37,8 +41,8 @@ function normalizeRoomId(value: string) {
 
 async function loadRoom(client: PoolClient, roomId: string) {
   const result = await client.query<PresentationRoom>(
-    `SELECT id,status,order_roll_round,pending_from_territory_id,
-            pending_to_territory_id,last_battle
+    `SELECT id,status,order_roll_round,initial_territory_presentation_started_at,
+            pending_from_territory_id,pending_to_territory_id,last_battle
      FROM game_rooms
      WHERE id=$1`,
     [roomId],
@@ -82,6 +86,25 @@ async function startPlaying(
       firstRound.jurassicTunnelDestinationId,
     ],
   );
+}
+
+async function advanceInitialTerritoryPresentation(
+  client: PoolClient,
+  room: PresentationRoom,
+  nowMs: number,
+) {
+  const startedAt = room.initial_territory_presentation_started_at;
+  if (!startedAt || !isInitialTerritoryPresentationDue(startedAt, nowMs)) {
+    return false;
+  }
+
+  await client.query(
+    `UPDATE game_rooms
+     SET initial_territory_presentation_started_at=NULL
+     WHERE id=$1 AND initial_territory_presentation_started_at IS NOT NULL`,
+    [room.id],
+  );
+  return true;
 }
 
 async function advanceOrderRollPresentation(
@@ -171,6 +194,9 @@ export async function advanceGamePresentation(
   const room = await loadRoom(client, roomId);
 
   if (room.status === "order_roll") {
+    if (room.initial_territory_presentation_started_at) {
+      return advanceInitialTerritoryPresentation(client, room, nowMs);
+    }
     return advanceOrderRollPresentation(client, room, nowMs);
   }
   if (room.status === "playing") {

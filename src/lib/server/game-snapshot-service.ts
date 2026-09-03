@@ -27,6 +27,7 @@ type SnapshotRoom = {
   status: "waiting" | "order_roll" | "playing" | "finished";
   revision: number;
   order_roll_round: number;
+  initial_territory_presentation_started_at: Date | null;
   phase: GameSnapshot["room"]["phase"];
   current_player_id: string | null;
   turn_number: number;
@@ -54,6 +55,7 @@ type SnapshotTerritory = {
   color: PlayerColor;
   troops: number;
   moved_in_turn: number;
+  initial_draw_order: number | null;
 };
 
 type SnapshotOrderRoll = OrderRoll & {
@@ -133,6 +135,7 @@ export async function getGameSnapshotQuery(
     const room = (
       await client.query<SnapshotRoom>(
         `SELECT gr.id,gr.code,gr.status,gr.revision,gr.order_roll_round,
+                gr.initial_territory_presentation_started_at,
                 gr.phase,gr.current_player_id,gr.turn_number,gr.round_number,
                 gr.jurassic_tunnel_territory_id,gr.reinforcements_remaining,
                 gr.winner_player_id,gr.pending_from_territory_id,
@@ -174,7 +177,8 @@ export async function getGameSnapshotQuery(
 
     const territories = (
       await client.query<SnapshotTerritory>(
-        `SELECT t.territory_id,t.owner_player_id,p.color,t.troops,t.moved_in_turn
+        `SELECT t.territory_id,t.owner_player_id,p.color,t.troops,t.moved_in_turn,
+                t.initial_draw_order
          FROM game_territories t
          JOIN room_players p ON p.id=t.owner_player_id
          WHERE t.room_id=$1
@@ -236,12 +240,37 @@ export async function getGameSnapshotQuery(
       ]);
     }
 
+    const initialTerritoryPresentationActive = Boolean(
+      room.status === "order_roll" &&
+        room.initial_territory_presentation_started_at,
+    );
+    const territoryDrawOrder = initialTerritoryPresentationActive
+      ? territories
+          .filter((territory) => territory.initial_draw_order !== null)
+          .sort(
+            (left, right) =>
+              (left.initial_draw_order ?? Number.MAX_SAFE_INTEGER) -
+              (right.initial_draw_order ?? Number.MAX_SAFE_INTEGER),
+          )
+          .map((territory) => territory.territory_id)
+      : [];
+
+    if (
+      initialTerritoryPresentationActive &&
+      territoryDrawOrder.length !== territories.length
+    ) {
+      throw new RoomError(
+        "A ordem inicial dos territórios está incompleta.",
+        503,
+      );
+    }
+
     const eligiblePlayerIds =
       room.status === "order_roll"
         ? eligibleOrderPlayerIds(players, rolls, room.order_roll_round)
         : [];
     const orderRollPlayerId =
-      room.status === "order_roll"
+      room.status === "order_roll" && !initialTerritoryPresentationActive
         ? nextOrderRollPlayerId(players, rolls, room.order_roll_round)
         : null;
     const lastOrderRollPlayerId =
@@ -249,12 +278,14 @@ export async function getGameSnapshotQuery(
         .filter((roll) => roll.roll_round === room.order_roll_round)
         .at(-1)?.player_id ?? null;
     const battle = isBattle(room.last_battle) ? room.last_battle : null;
-    const presentationPending = isPresentationAdvancePending({
-      status: room.status,
-      orderRollPlayerId,
-      eligiblePlayerCount: eligiblePlayerIds.length,
-      battle,
-    });
+    const presentationPending =
+      initialTerritoryPresentationActive ||
+      isPresentationAdvancePending({
+        status: room.status,
+        orderRollPlayerId,
+        eligiblePlayerCount: eligiblePlayerIds.length,
+        battle,
+      });
     const actorId = presentationPending
       ? null
       : requiredActorId({
@@ -295,6 +326,16 @@ export async function getGameSnapshotQuery(
         orderRollRound: room.order_roll_round,
         orderRollPlayerId,
         lastOrderRollPlayerId,
+        presentation:
+          initialTerritoryPresentationActive &&
+          room.initial_territory_presentation_started_at
+            ? {
+                kind: "initial_territory_draw",
+                startedAt:
+                  room.initial_territory_presentation_started_at.toISOString(),
+                territoryIds: territoryDrawOrder,
+              }
+            : null,
         phase: room.phase,
         currentPlayerId: room.current_player_id,
         turnNumber: room.turn_number,
