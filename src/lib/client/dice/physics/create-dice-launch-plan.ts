@@ -7,6 +7,8 @@ import type {
 const UINT32_RANGE = 0x1_0000_0000;
 const FALLBACK_SEED = 0x6d2b79f5;
 const ZERO_OFFSET: DiceVector3 = [0, 0, 0];
+const DICE_LAUNCH_HEIGHT = 20;
+const DICE_CAMERA_CLEARANCE = 0.7;
 
 function validateDicePhysicsSeed(seed: string) {
   if (!seed.trim()) {
@@ -97,7 +99,11 @@ export function createDiceLaunchPlan(
   const dice = positions.map((baseX, index) => {
     const position: DiceVector3 = [
       baseX + signed(next, 0.055) + launchOffset[0],
-      5.8 + index * 0.2 + next() * 0.55 + launchOffset[1],
+      DICE_LAUNCH_HEIGHT -
+        DICE_CAMERA_CLEARANCE -
+        index * 0.2 -
+        next() * 0.35 +
+        launchOffset[1],
       signed(next, 0.28) + launchOffset[2],
     ];
     const linearVelocity: DiceVector3 = [

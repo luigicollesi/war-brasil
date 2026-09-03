@@ -25,18 +25,12 @@ import { useDiceFaceTextures } from "./use-dice-face-textures";
 
 installDice3DDependencyWarningFilter();
 
-const MIN_PRESENTATION_REMAINING_MS = 280;
+const CINEMATIC_PRE_ROLL_MS = 250;
 const PORTRAIT_ASPECT_THRESHOLD = 0.82;
 const MAX_DICE_TEXTURE_ANISOTROPY = 8;
 const CAMERA_HEIGHT = 20;
 const CAMERA_FOV = 50;
 const PORTRAIT_CAMERA_FOV = 54;
-
-function presentationElapsedMs(startedAt: string, totalDurationMs: number) {
-  const startedAtMs = Date.parse(startedAt);
-  if (!Number.isFinite(startedAtMs)) return totalDurationMs;
-  return Math.min(totalDurationMs, Math.max(0, Date.now() - startedAtMs));
-}
 
 function TopDownCameraRig() {
   const size = useThree((state) => state.size);
@@ -93,7 +87,6 @@ function CinematicScene({
   skin,
   pipColor,
   replayDurationMs,
-  initialElapsedMs,
   visualScale,
   onError,
 }: {
@@ -102,7 +95,6 @@ function CinematicScene({
   skin: DiceSkin;
   pipColor?: string;
   replayDurationMs: number;
-  initialElapsedMs: number;
   visualScale: number;
   onError: () => void;
 }) {
@@ -158,7 +150,7 @@ function CinematicScene({
           preparingFallback={null}
           failureFallback={null}
           playbackDurationMs={replayDurationMs}
-          initialElapsedMs={Math.min(initialElapsedMs, replayDurationMs)}
+          initialElapsedMs={0}
           visualScale={visualScale}
           onError={onError}
         />
@@ -173,7 +165,6 @@ export function FullscreenDiceCinematic({
   skin,
   pipColor,
   label,
-  startedAt,
   totalDurationMs,
   replayDurationMs,
   visualScale = 0.86,
@@ -184,7 +175,6 @@ export function FullscreenDiceCinematic({
   skin: DiceSkin;
   pipColor?: string;
   label: string;
-  startedAt: string;
   totalDurationMs: number;
   replayDurationMs: number;
   visualScale?: number;
@@ -193,21 +183,30 @@ export function FullscreenDiceCinematic({
   const webglSupported = useDiceWebGLSupport();
   const reducedMotion = useReducedDiceMotion();
   const completedRef = useRef(false);
-  const [initialElapsedMs] = useState(() =>
-    presentationElapsedMs(startedAt, totalDurationMs),
-  );
+  const [readySeed, setReadySeed] = useState<string | null>(null);
   const safeValues = useMemo(() => validateDiceValues(values), [values]);
   const finish = useCallback(() => {
     if (completedRef.current) return;
     completedRef.current = true;
     onComplete();
   }, [onComplete]);
-  const remainingMs = Math.max(0, totalDurationMs - initialElapsedMs);
   const shouldSkip =
-    !webglSupported ||
-    reducedMotion ||
-    safeValues.length === 0 ||
-    remainingMs < MIN_PRESENTATION_REMAINING_MS;
+    !webglSupported || reducedMotion || safeValues.length === 0;
+  const playbackReady = readySeed === seed;
+
+  useEffect(() => {
+    completedRef.current = false;
+  }, [seed]);
+
+  useEffect(() => {
+    if (shouldSkip) return;
+
+    const timeoutId = window.setTimeout(
+      () => setReadySeed(seed),
+      CINEMATIC_PRE_ROLL_MS,
+    );
+    return () => window.clearTimeout(timeoutId);
+  }, [seed, shouldSkip]);
 
   useEffect(() => {
     if (shouldSkip) return;
@@ -229,9 +228,9 @@ export function FullscreenDiceCinematic({
       return () => window.clearTimeout(timeoutId);
     }
 
-    const timeoutId = window.setTimeout(finish, remainingMs);
+    const timeoutId = window.setTimeout(finish, totalDurationMs);
     return () => window.clearTimeout(timeoutId);
-  }, [finish, remainingMs, shouldSkip]);
+  }, [finish, seed, shouldSkip, totalDurationMs]);
 
   if (typeof document === "undefined" || shouldSkip) return null;
 
@@ -261,16 +260,17 @@ export function FullscreenDiceCinematic({
             powerPreference: "high-performance",
           }}
         >
-          <CinematicScene
-            values={safeValues}
-            seed={seed}
-            skin={skin}
-            pipColor={pipColor}
-            replayDurationMs={replayDurationMs}
-            initialElapsedMs={initialElapsedMs}
-            visualScale={visualScale}
-            onError={finish}
-          />
+          {playbackReady ? (
+            <CinematicScene
+              values={safeValues}
+              seed={seed}
+              skin={skin}
+              pipColor={pipColor}
+              replayDurationMs={replayDurationMs}
+              visualScale={visualScale}
+              onError={finish}
+            />
+          ) : null}
         </Canvas>
       </div>
     </div>,

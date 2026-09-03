@@ -92,7 +92,7 @@ test("combate separa cinematic 3D do resultado SVG estático", () => {
   assert.match(die, /backgroundColor: playerColorHex\(color\)/);
 });
 
-test("cinematic de combate deriva apresentação do stage e bloqueia toda interação", () => {
+test("cinematic de combate deriva resultado do stage e bloqueia toda interação", () => {
   const overlay = readFileSync("src/components/battle-overlay.tsx", "utf8");
   const cinematic = readFileSync(
     "src/components/dice-3d/battle-dice-cinematic.tsx",
@@ -112,10 +112,17 @@ test("cinematic de combate deriva apresentação do stage e bloqueia toda intera
   assert.doesNotMatch(overlay, /setCinematicPresentation/);
   assert.match(overlay, /setAttribute\("inert", ""\)/);
   assert.match(overlay, /removeAttribute\("inert"\)/);
+  assert.match(cinematic, /BATTLE_DICE_CINEMATIC_TOTAL_MS = 3_000/);
+  assert.match(cinematic, /BATTLE_DICE_CINEMATIC_REPLAY_MS = 2_500/);
   assert.match(cinematic, /totalDurationMs=\{BATTLE_DICE_CINEMATIC_TOTAL_MS\}/);
+  assert.doesNotMatch(cinematic, /startedAt=/);
   assert.match(fullscreen, /frameloop="demand"/);
-  assert.match(fullscreen, /totalDurationMs - initialElapsedMs/);
-  assert.match(fullscreen, /MIN_PRESENTATION_REMAINING_MS/);
+  assert.match(fullscreen, /CINEMATIC_PRE_ROLL_MS = 250/);
+  assert.match(fullscreen, /window\.setTimeout\(finish, totalDurationMs\)/);
+  assert.doesNotMatch(
+    fullscreen,
+    /presentationElapsedMs|Date\.now\(\)|MIN_PRESENTATION_REMAINING_MS/,
+  );
   assert.doesNotMatch(cinematic, /dockPositions=/);
   assert.doesNotMatch(cinematic, /dockScale=/);
   assert.match(styles, /position: fixed/);
@@ -124,7 +131,7 @@ test("cinematic de combate deriva apresentação do stage e bloqueia toda intera
   assert.match(styles, /touch-action: none/);
 });
 
-test("cinematic sincroniza frame inicial e usa perspectiva 100% superior com queda profunda", () => {
+test("cinematic inicia replay local do zero e usa perspectiva superior com queda desde a câmera", () => {
   const fullscreen = readFileSync(
     "src/components/dice-3d/fullscreen-dice-cinematic.tsx",
     "utf8",
@@ -142,8 +149,10 @@ test("cinematic sincroniza frame inicial e usa perspectiva 100% superior com que
     "utf8",
   );
 
-  assert.match(fullscreen, /Date\.now\(\) - startedAtMs/);
-  assert.match(fullscreen, /initialElapsedMs=\{Math\.min/);
+  assert.doesNotMatch(fullscreen, /Date\.now\(\) - startedAtMs/);
+  assert.match(fullscreen, /setReadySeed\(seed\)/);
+  assert.match(fullscreen, /CINEMATIC_PRE_ROLL_MS/);
+  assert.match(fullscreen, /initialElapsedMs=\{0\}/);
   assert.match(fullscreen, /<perspectiveCamera/);
   assert.match(fullscreen, /CAMERA_HEIGHT = 20/);
   assert.match(fullscreen, /CAMERA_FOV = 50/);
@@ -153,7 +162,12 @@ test("cinematic sincroniza frame inicial e usa perspectiva 100% superior com que
   assert.match(fullscreen, /position=\{\[0, CAMERA_HEIGHT, 0\]\}/);
   assert.match(fullscreen, /rotation=\{\[-Math\.PI \/ 2, 0, 0\]\}/);
   assert.match(fullscreen, /planeGeometry args=\{\[6\.8, 6\.8\]\}/);
-  assert.match(launchPlan, /5\.8 \+ index \* 0\.2 \+ next\(\) \* 0\.55/);
+  assert.match(launchPlan, /DICE_LAUNCH_HEIGHT = 20/);
+  assert.match(launchPlan, /DICE_CAMERA_CLEARANCE = 0\.7/);
+  assert.match(
+    launchPlan,
+    /DICE_LAUNCH_HEIGHT -[\s\S]*?DICE_CAMERA_CLEARANCE -[\s\S]*?launchOffset\[1\]/,
+  );
   assert.match(predetermined, /initialElapsedMs=\{initialElapsedMs\}/);
   assert.match(replay, /initialElapsedMs = 0/);
   assert.match(replay, /sampleTrajectoryState/);
