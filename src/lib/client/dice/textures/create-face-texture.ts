@@ -60,11 +60,11 @@ function drawPips(
   const radius = resolution * 0.055;
   context.save();
   context.fillStyle = pipColor;
-  context.strokeStyle = "rgba(255, 255, 255, 0.48)";
-  context.lineWidth = Math.max(1, resolution * 0.006);
-  context.shadowColor = "rgba(0, 0, 0, 0.28)";
-  context.shadowBlur = resolution * 0.025;
-  context.shadowOffsetY = resolution * 0.012;
+  context.strokeStyle = "rgba(0, 0, 0, 0.9)";
+  context.lineWidth = Math.max(1.5, resolution * 0.009);
+  context.shadowColor = "rgba(0, 0, 0, 0.34)";
+  context.shadowBlur = resolution * 0.022;
+  context.shadowOffsetY = resolution * 0.01;
 
   for (const [xPercent, yPercent] of DICE_PIP_LAYOUT_PERCENT[value]) {
     const x = (xPercent / 100) * resolution;
