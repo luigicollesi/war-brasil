@@ -264,7 +264,7 @@ function GameReadyClient({
         />
       ) : null}
 
-      {snapshot.room.status === "order_roll" ? (
+      {snapshot.room.status === "order_roll" && !orderCinematicActive ? (
         <OrderRollPanel
           players={snapshot.players}
           eligiblePlayerIds={snapshot.eligiblePlayerIds}
