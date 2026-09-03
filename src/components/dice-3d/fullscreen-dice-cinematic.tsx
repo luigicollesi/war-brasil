@@ -185,26 +185,20 @@ export function FullscreenDiceCinematic({
 }) {
   const webglSupported = useDiceWebGLSupport();
   const reducedMotion = useReducedDiceMotion();
-  const completedRef = useRef(false);
+  const completedSeedRef = useRef<string | null>(null);
   const [readySeed, setReadySeed] = useState<string | null>(null);
   const [completedReplaySeed, setCompletedReplaySeed] = useState<string | null>(
     null,
   );
   const safeValues = useMemo(() => validateDiceValues(values), [values]);
   const finish = useCallback(() => {
-    if (completedRef.current) return;
-    completedRef.current = true;
+    if (completedSeedRef.current === seed) return;
+    completedSeedRef.current = seed;
     onComplete();
-  }, [onComplete]);
+  }, [onComplete, seed]);
   const shouldSkip =
     !webglSupported || reducedMotion || safeValues.length === 0;
   const playbackReady = readySeed === seed;
-
-  useEffect(() => {
-    completedRef.current = false;
-    setReadySeed(null);
-    setCompletedReplaySeed(null);
-  }, [seed]);
 
   useEffect(() => {
     if (shouldSkip) return;
