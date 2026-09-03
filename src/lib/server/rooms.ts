@@ -3,6 +3,7 @@ import "server-only";
 import { randomInt, randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import { pool } from "@/src/lib/db/pool";
+import { INITIAL_TERRITORY_SYNC_DELAY_MS } from "@/src/lib/game-transitions";
 import { isPlayerColor, type LobbySnapshot, type PlayerColor } from "@/src/lib/lobby";
 import {
   assignObjectives,
@@ -251,13 +252,20 @@ async function initializeGame(client: PoolClient, room: RoomRow) {
   for (const [index, territoryId] of territoryIds.entries()) {
     const parameterOffset = parameters.length;
     values.push(
-      `($${parameterOffset + 1}, $${parameterOffset + 2}, $${parameterOffset + 3}, 1)`,
+      `($${parameterOffset + 1}, $${parameterOffset + 2}, $${parameterOffset + 3}, 1, $${parameterOffset + 4})`,
     );
-    parameters.push(room.id, territoryId, players[index % players.length].id);
+    parameters.push(
+      room.id,
+      territoryId,
+      players[index % players.length].id,
+      index + 1,
+    );
   }
 
   await client.query(
-    `INSERT INTO game_territories (room_id, territory_id, owner_player_id, troops)
+    `INSERT INTO game_territories (
+       room_id, territory_id, owner_player_id, troops, initial_draw_order
+     )
      VALUES ${values.join(", ")}`,
     parameters,
   );
@@ -299,10 +307,12 @@ async function initializeGame(client: PoolClient, room: RoomRow) {
   await client.query(
     `UPDATE game_rooms
      SET status = 'order_roll', order_roll_round = 1, started_at = NULL,
+         initial_territory_presentation_started_at =
+           NOW() + ($2::int * INTERVAL '1 millisecond'),
          phase = 'cards', current_player_id = NULL, turn_number = 1,
          reinforcements_remaining = 0, conquered_this_turn = FALSE, trade_count = 0
      WHERE id = $1 AND status = 'waiting'`,
-    [room.id],
+    [room.id, INITIAL_TERRITORY_SYNC_DELAY_MS],
   );
   room.status = "order_roll";
 }
