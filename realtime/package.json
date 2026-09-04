@@ -5,10 +5,12 @@
   "type": "module",
   "scripts": {
     "start": "node server.mjs",
-    "check": "node --check server.mjs && node --check listener.mjs && node --check registry.mjs && node --check auth.mjs && node --check protocol.mjs",
+    "relay": "node redis-relay.mjs",
+    "check": "node --check server.mjs && node --check listener.mjs && node --check redis-room-subscriber.mjs && node --check redis-relay.mjs && node --check registry.mjs && node --check auth.mjs && node --check protocol.mjs",
     "test": "npm run check && node --test test/*.test.mjs"
   },
   "dependencies": {
+    "@redis/client": "6.2.1",
     "ws": "8.20.1"
   }
 }
