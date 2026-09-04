@@ -2,8 +2,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   automationWorkerBatchSize,
+  automationWorkerInternalBaseUrl,
   automationWorkerMode,
   automationWorkerPollMs,
+  automationWorkerToken,
 } from "../config.mjs";
 
 test("worker começa desligado e reserva shadow/active", () => {
@@ -41,5 +43,27 @@ test("worker aplica limites seguros para intervalo e batch", () => {
   assert.equal(
     automationWorkerBatchSize({ GAME_AUTOMATION_WORKER_BATCH_SIZE: "1000" }),
     50,
+  );
+});
+
+test("modo active aceita somente endpoint HTTP(S) e token explícitos", () => {
+  assert.equal(automationWorkerInternalBaseUrl({}), null);
+  assert.equal(automationWorkerToken({}), null);
+  assert.equal(
+    automationWorkerInternalBaseUrl({
+      GAME_AUTOMATION_INTERNAL_BASE_URL: "https://war.example.com/",
+    }),
+    "https://war.example.com",
+  );
+  assert.equal(
+    automationWorkerToken({ GAME_AUTOMATION_WORKER_TOKEN: " secret " }),
+    "secret",
+  );
+  assert.throws(
+    () =>
+      automationWorkerInternalBaseUrl({
+        GAME_AUTOMATION_INTERNAL_BASE_URL: "ftp://war.example.com",
+      }),
+    /HTTP ou HTTPS/,
   );
 });
