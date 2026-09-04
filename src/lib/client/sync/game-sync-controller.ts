@@ -6,7 +6,11 @@ import type { GameSnapshot } from "@/src/lib/game-contract";
 import type { GameRealtimeEvent } from "@/src/lib/game-realtime-contract";
 import { GameSnapshotCoordinator } from "./game-snapshot-coordinator";
 import { RevisionCoordinator } from "./revision-coordinator";
-import type { GameRealtimeTransport } from "../transport/game-realtime-transport";
+import type { GameRealtimeMode } from "../transport/game-realtime-mode";
+import type {
+  GameRealtimeStateListener,
+  GameRealtimeTransport,
+} from "../transport/game-realtime-transport";
 import { NullGameRealtimeTransport } from "../transport/null-game-realtime-transport";
 import type { GameSnapshotTransport } from "../transport/game-snapshot-transport";
 import { HttpGameSnapshotTransport } from "../transport/http-game-snapshot-transport";
@@ -23,6 +27,7 @@ export type GameSyncResult = {
 type GameSyncControllerDependencies = {
   snapshotTransport?: GameSnapshotTransport;
   realtimeTransport?: GameRealtimeTransport;
+  realtimeMode?: GameRealtimeMode;
 };
 
 export class GameSyncController {
@@ -30,6 +35,7 @@ export class GameSyncController {
   private readonly snapshots = new GameSnapshotCoordinator();
   private readonly snapshotTransport: GameSnapshotTransport;
   private readonly realtimeTransport: GameRealtimeTransport;
+  private readonly realtimeMode: GameRealtimeMode;
   private unsubscribeRealtime: (() => void) | null = null;
 
   constructor(
@@ -40,6 +46,7 @@ export class GameSyncController {
       dependencies.snapshotTransport ?? new HttpGameSnapshotTransport();
     this.realtimeTransport =
       dependencies.realtimeTransport ?? new NullGameRealtimeTransport();
+    this.realtimeMode = dependencies.realtimeMode ?? "off";
   }
 
   reset() {
@@ -65,6 +72,18 @@ export class GameSyncController {
 
   needsRequiredRevision() {
     return this.revisions.needsRequiredRevision();
+  }
+
+  realtimeState() {
+    return this.realtimeTransport.state();
+  }
+
+  realtimeClock() {
+    return this.realtimeTransport.clock();
+  }
+
+  subscribeRealtimeState(listener: GameRealtimeStateListener) {
+    return this.realtimeTransport.subscribeState(listener);
   }
 
   async sync(signal?: AbortSignal): Promise<GameSyncResult> {
@@ -121,7 +140,10 @@ export class GameSyncController {
     this.unsubscribeRealtime?.();
     this.unsubscribeRealtime = this.realtimeTransport.subscribe((event) => {
       if (event.roomId !== this.roomId) return;
-      if (event.type === "game.invalidate") {
+      if (
+        this.realtimeMode === "hybrid" &&
+        (event.type === "game.invalidate" || event.type === "realtime.ready")
+      ) {
         this.revisions.require(event.payload.revision);
       }
       onEvent?.(event);

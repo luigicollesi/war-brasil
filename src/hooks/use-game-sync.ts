@@ -4,11 +4,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ApplicableGameCommandResult } from "@/src/lib/game-command-patch";
 import { registerGameCommandPatchHandler } from "@/src/lib/game-command-patch-bus";
 import type { GameSnapshot } from "@/src/lib/game-contract";
+import type { GameRealtimeEvent } from "@/src/lib/game-realtime-contract";
 import { GamePollScheduler } from "@/src/lib/client/sync/game-poll-scheduler";
 import {
   GameSyncController,
   type GameSyncResult,
 } from "@/src/lib/client/sync/game-sync-controller";
+import { createGameRealtimeTransport } from "@/src/lib/client/transport/create-game-realtime-transport";
+import { gameRealtimeMode } from "@/src/lib/client/transport/game-realtime-mode";
 import { gameSyncMetricsStore } from "@/src/lib/game-sync-metrics-store";
 import {
   GAME_REVISION_HEADER,
@@ -30,6 +33,10 @@ function responseMessage(data: unknown, fallback: string) {
   );
 }
 
+function revisionEvent(event: GameRealtimeEvent) {
+  return event.type === "game.invalidate" || event.type === "realtime.ready";
+}
+
 export function useGameSync(roomId: string) {
   const [snapshot, setSnapshot] = useState<GameSnapshot | null>(null);
   const [error, setError] = useState("");
@@ -47,8 +54,13 @@ export function useGameSync(roomId: string) {
     let advanceController: AbortController | null = null;
     let timeoutId = 0;
     let inFlight: Promise<void> | null = null;
-    const syncController = new GameSyncController(roomId);
+    const realtimeMode = gameRealtimeMode();
+    const syncController = new GameSyncController(roomId, {
+      realtimeMode,
+      realtimeTransport: createGameRealtimeTransport(realtimeMode),
+    });
     const pollScheduler = new GamePollScheduler();
+    let realtimeState = syncController.realtimeState();
 
     syncController.reset();
     pollScheduler.reset();
@@ -58,6 +70,7 @@ export function useGameSync(roomId: string) {
       gameSyncMetricsStore.recordSuccess(performance.now() - startedAt, {
         unchanged: result.unchanged,
         responseBytes: result.responseBytes,
+        revision: result.revision,
       });
     }
 
@@ -197,7 +210,15 @@ export function useGameSync(roomId: string) {
         presentationPending: Boolean(
           currentSnapshot && shouldAdvancePresentation(currentSnapshot),
         ),
+        realtimeMode,
+        realtimeState,
       });
+    }
+
+    function scheduleNextPoll() {
+      if (!isActive) return;
+      window.clearTimeout(timeoutId);
+      timeoutId = window.setTimeout(() => void poll(), currentPollDelay());
     }
 
     async function poll() {
@@ -207,9 +228,12 @@ export function useGameSync(roomId: string) {
         await syncUntilRequiredRevision();
       }
 
-      if (isActive) {
-        timeoutId = window.setTimeout(() => void poll(), currentPollDelay());
-      }
+      scheduleNextPoll();
+    }
+
+    async function wakeForRealtime() {
+      await syncUntilRequiredRevision();
+      scheduleNextPoll();
     }
 
     refreshRef.current = async (minimumRevision?: number) => {
@@ -242,15 +266,31 @@ export function useGameSync(roomId: string) {
       (result) => applyCommandResultRef.current(result),
     );
 
+    const unsubscribeRealtimeState = syncController.subscribeRealtimeState((state) => {
+      const previous = realtimeState;
+      realtimeState = state;
+      gameSyncMetricsStore.recordRealtimeState(state);
+
+      if (!isActive || realtimeMode !== "hybrid" || previous === state) return;
+      if (
+        state === "connected" ||
+        state === "reconnecting" ||
+        state === "degraded" ||
+        state === "closed"
+      ) {
+        void syncUntilRequiredRevision().finally(scheduleNextPoll);
+      }
+    });
+
     const handleOffline = () => gameSyncMetricsStore.recordOffline();
     const handleOnline = () => {
       gameSyncMetricsStore.recordOnline();
       pollScheduler.reset();
-      void syncUntilRequiredRevision();
+      void syncUntilRequiredRevision().finally(scheduleNextPoll);
     };
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
-        void syncUntilRequiredRevision();
+        void syncUntilRequiredRevision().finally(scheduleNextPoll);
       }
     };
 
@@ -258,7 +298,18 @@ export function useGameSync(roomId: string) {
     window.addEventListener("online", handleOnline);
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
-    void syncController.startRealtime();
+    void syncController.startRealtime((event) => {
+      gameSyncMetricsStore.recordRealtimeEvent(
+        event,
+        syncController.currentRevision(),
+      );
+      if (event.type === "realtime.pong") {
+        gameSyncMetricsStore.recordRealtimeClock(syncController.realtimeClock());
+      }
+      if (realtimeMode === "hybrid" && revisionEvent(event)) {
+        void wakeForRealtime();
+      }
+    });
     void poll();
 
     return () => {
@@ -266,6 +317,7 @@ export function useGameSync(roomId: string) {
       window.clearTimeout(timeoutId);
       requestController?.abort();
       advanceController?.abort();
+      unsubscribeRealtimeState();
       syncController.stopRealtime();
       unregisterCommandPatchHandler();
       window.removeEventListener("offline", handleOffline);
