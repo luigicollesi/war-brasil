@@ -77,6 +77,7 @@ async function clearGameArtifacts(client: PoolClient, roomId: string) {
   await client.query("DELETE FROM game_rematch_votes WHERE room_id=$1", [roomId]);
   await client.query("DELETE FROM game_round_events WHERE room_id=$1", [roomId]);
   await client.query("DELETE FROM game_order_rolls WHERE room_id=$1", [roomId]);
+  await client.query("DELETE FROM game_player_trade_offers WHERE room_id=$1", [roomId]);
   await client.query("DELETE FROM game_cards WHERE room_id=$1", [roomId]);
   await client.query("DELETE FROM game_player_objectives WHERE room_id=$1", [roomId]);
   await client.query("DELETE FROM game_territories WHERE room_id=$1", [roomId]);
@@ -88,7 +89,7 @@ async function resetRoomToWaiting(client: PoolClient, roomId: string) {
   await client.query(
     `UPDATE room_players
      SET is_ready=is_bot,turn_position=NULL,bot_next_action_at=NULL,
-         card_trade_count=0
+         card_trade_count=0,trade_signals_used=0
      WHERE room_id=$1`,
     [roomId],
   );
@@ -96,11 +97,12 @@ async function resetRoomToWaiting(client: PoolClient, roomId: string) {
   await client.query(
     `UPDATE game_rooms
      SET status='waiting',started_at=NULL,order_roll_round=1,
-         initial_territory_presentation_started_at=NULL,phase='cards',
+         initial_territory_presentation_started_at=NULL,phase='trade',
          current_player_id=NULL,turn_number=1,round_number=1,
          jurassic_tunnel_territory_id=NULL,reinforcements_remaining=0,
-         conquered_this_turn=FALSE,trade_count=0,winner_player_id=NULL,
-         pending_from_territory_id=NULL,pending_to_territory_id=NULL,last_battle=NULL
+         conquered_this_turn=FALSE,trade_count=0,trade_offers_used=0,
+         winner_player_id=NULL,pending_from_territory_id=NULL,
+         pending_to_territory_id=NULL,last_battle=NULL
      WHERE id=$1`,
     [roomId],
   );
@@ -163,7 +165,8 @@ async function initializeFreshGame(client: PoolClient, roomId: string) {
   for (let index = deckOrders.length - 1; index > 0; index -= 1) {
     const swapIndex = randomInt(0, index + 1);
     [deckOrders[index], deckOrders[swapIndex]] = [
-      deckOrders[swapIndex], deckOrders[index],
+      deckOrders[swapIndex],
+      deckOrders[index],
     ];
   }
 
@@ -195,10 +198,11 @@ async function initializeFreshGame(client: PoolClient, roomId: string) {
      SET status='order_roll',order_roll_round=1,started_at=NULL,
          initial_territory_presentation_started_at=
            NOW() + ($2::int * INTERVAL '1 millisecond'),
-         phase='cards',current_player_id=NULL,turn_number=1,round_number=1,
+         phase='trade',current_player_id=NULL,turn_number=1,round_number=1,
          jurassic_tunnel_territory_id=NULL,reinforcements_remaining=0,
-         conquered_this_turn=FALSE,trade_count=0,winner_player_id=NULL,
-         pending_from_territory_id=NULL,pending_to_territory_id=NULL,last_battle=NULL
+         conquered_this_turn=FALSE,trade_count=0,trade_offers_used=0,
+         winner_player_id=NULL,pending_from_territory_id=NULL,
+         pending_to_territory_id=NULL,last_battle=NULL
      WHERE id=$1 AND status='waiting'`,
     [roomId, INITIAL_TERRITORY_SYNC_DELAY_MS],
   );
