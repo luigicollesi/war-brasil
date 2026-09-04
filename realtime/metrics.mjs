@@ -9,7 +9,11 @@ const counters = {
   disconnects: 0,
   authRejected: 0,
   broadcasts: 0,
+  privateBroadcasts: 0,
   coalesced: 0,
+  patchBroadcasts: 0,
+  patchFallbacks: 0,
+  patchCoalesced: 0,
   protocolErrors: 0,
   listenerReconnects: 0,
 };
