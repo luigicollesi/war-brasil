@@ -115,7 +115,7 @@ test("hybrid reduz polling somente com realtime saudável e sem automação pend
   );
 });
 
-test("publisher realtime é best-effort e acontece depois do commit autoritativo", () => {
+test("publisher realtime é best-effort, opcional e acontece depois do commit autoritativo", () => {
   const command = readFileSync("src/lib/server/game-command.ts", "utf8");
   const publisher = readFileSync(
     "src/lib/server/game-realtime-publisher.ts",
@@ -125,6 +125,8 @@ test("publisher realtime é best-effort e acontece depois do commit autoritativo
   assert.match(command, /await client\.query\("COMMIT"\)[\s\S]*await publishGameInvalidation/);
   assert.match(command, /if \(result\.changed\) \{[\s\S]*publishGameInvalidation/);
   assert.match(command, /rollbackIfNeeded\(client, transactionOpen\)/);
+  assert.match(publisher, /process\.env\.GAME_REALTIME_ENABLED === "true"/);
+  assert.match(publisher, /if \(!gameRealtimeEnabled\(\)\) return/);
   assert.match(publisher, /SELECT pg_notify\(\$1,\$2\)/);
   assert.match(publisher, /catch \(error\)/);
   assert.doesNotMatch(publisher, /throw error/);
