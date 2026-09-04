@@ -10,7 +10,10 @@
     "lint": "eslint",
     "test:compile": "tsc -p tsconfig.test.json",
     "test:run": "node --test",
-    "test": "npm run test:compile && npm run test:run"
+    "test": "npm run test:compile && npm run test:run",
+    "realtime:install": "npm --prefix realtime ci",
+    "realtime:start": "npm --prefix realtime start",
+    "realtime:test": "npm --prefix realtime test"
   },
   "dependencies": {
     "@react-three/fiber": "9.7.0",

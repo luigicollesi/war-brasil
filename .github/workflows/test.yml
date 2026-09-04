@@ -19,8 +19,10 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - run: npm --prefix realtime ci
       - run: npm run lint
       - run: npm test
+      - run: npm run realtime:test
       - run: npm run build
         env:
           DATABASE_URL: postgresql://war:war@127.0.0.1:5432/war_ci
