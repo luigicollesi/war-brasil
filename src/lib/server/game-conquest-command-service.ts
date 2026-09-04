@@ -8,11 +8,12 @@ import {
   type Battle,
   type BattleRoomState,
 } from "@/src/lib/game-battle-service";
-import { gameCommand } from "@/src/lib/game-command";
+import { playerGameCommand } from "@/src/lib/game-command";
 import {
   resolveCommandPlayerBySession,
   type CommandPlayer,
 } from "@/src/lib/game-command-player";
+import type { GameCommandRequestMetadata } from "@/src/lib/game-command-request";
 import { objectiveWon } from "@/src/lib/game-objective-service";
 import { MIN_TERRITORY_TROOPS } from "@/src/lib/game-rules";
 import { RoomError } from "@/src/lib/rooms";
@@ -154,6 +155,7 @@ export async function completeConquestCommand(
   value: string,
   session: string,
   input: Record<string, unknown>,
+  metadata?: GameCommandRequestMetadata | null,
 ) {
   const roomId = normalizeRoomId(value);
   const troops = positiveInteger(
@@ -161,8 +163,15 @@ export async function completeConquestCommand(
     "Quantidade de tropas inválida.",
   );
 
-  return gameCommand(roomId, async (client) => {
-    const player = await resolveCommandPlayerBySession(client, roomId, session);
-    return executeCompleteConquest(client, roomId, player, troops);
-  });
+  return playerGameCommand(
+    roomId,
+    session,
+    metadata,
+    "conquest.complete",
+    { troops },
+    async (client) => {
+      const player = await resolveCommandPlayerBySession(client, roomId, session);
+      return executeCompleteConquest(client, roomId, player, troops);
+    },
+  );
 }
