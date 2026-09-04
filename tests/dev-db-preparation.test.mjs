@@ -4,6 +4,10 @@ import test from "node:test";
 
 const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
 const prepare = readFileSync("scripts/prepare-dev-db.mjs", "utf8");
+const orderRollPhaseMigration = readFileSync(
+  "src/lib/db/migrations/024-order-roll-phase-compatibility.sql",
+  "utf8",
+);
 
 test("ambiente dev prepara migrations necessárias antes de subir o Next", () => {
   assert.equal(
@@ -25,6 +29,7 @@ test("ambiente dev prepara migrations necessárias antes de subir o Next", () =>
     "021-player-trade-phase.sql",
     "022-complete-player-trade-negotiation.sql",
     "023-trade-negotiation-invariants.sql",
+    "024-order-roll-phase-compatibility.sql",
   ]) {
     assert.match(prepare, new RegExp(migration.replaceAll(".", "\\.")));
   }
@@ -37,7 +42,24 @@ test("preparação do banco é transacional, convergente e não inicia o servido
   assert.match(prepare, /constraintExists/);
   assert.match(prepare, /tableExists/);
   assert.match(prepare, /balancedCatalogReady/);
+  assert.match(prepare, /orderRollPhaseCompatibilityReady/);
+  assert.match(prepare, /pg_get_constraintdef/);
   assert.match(prepare, /COMMIT/);
   assert.match(prepare, /ROLLBACK/);
   assert.doesNotMatch(prepare, /next dev|next start|setInterval|setTimeout/);
+});
+
+test("compatibilidade de fase permite cards somente durante order_roll", () => {
+  assert.match(
+    orderRollPhaseMigration,
+    /phase IN \('trade', 'reinforcement', 'attack', 'maneuver', 'end_turn', 'finished'\)/,
+  );
+  assert.match(
+    orderRollPhaseMigration,
+    /phase = 'cards' AND status = 'order_roll'/,
+  );
+  assert.doesNotMatch(
+    orderRollPhaseMigration,
+    /phase IN \([^)]*'cards'/,
+  );
 });
