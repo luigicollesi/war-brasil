@@ -5,6 +5,7 @@ import {
   roomErrorResponse,
 } from "@/src/lib/api-response";
 import { completeConquestCommand } from "@/src/lib/game-conquest-command-service";
+import { readGameCommandRequestMetadata } from "@/src/lib/server/game-command-request";
 import { GAME_REVISION_HEADER } from "@/src/lib/game-sync-contract";
 import { getPlayerSession } from "@/src/lib/player-session";
 import { RoomError } from "@/src/lib/rooms";
@@ -22,9 +23,10 @@ export async function POST(
       throw new RoomError("Entre em uma sala antes de jogar.", 401);
     }
 
+    const metadata = readGameCommandRequestMetadata(request);
     ({ roomId } = await params);
     body = await readJsonObject(request);
-    const result = await completeConquestCommand(roomId, session, body);
+    const result = await completeConquestCommand(roomId, session, body, metadata);
 
     return noStoreJson(
       { revision: result.revision },
