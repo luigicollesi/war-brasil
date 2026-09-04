@@ -141,6 +141,50 @@ test("protocol rejeita patch com escopo privado", () => {
   );
 });
 
+test("protocol aceita resolução efêmera de negociação e rejeita outcome inválido", () => {
+  const event = parseNotificationPayload(
+    JSON.stringify({
+      kind: "ephemeral",
+      scope: "room",
+      roomId: "12",
+      eventId: "resolution-1",
+      eventType: "trade.resolution",
+      payload: {
+        offerId: "9",
+        turnNumber: 3,
+        recipientPlayerId: "4",
+        actorPlayerId: "7",
+        outcome: "declined",
+      },
+    }),
+  );
+
+  assert.equal(event.kind, "ephemeral");
+  assert.equal(event.eventType, "trade.resolution");
+  assert.equal(event.payload.offerId, "9");
+  assert.equal(event.payload.recipientPlayerId, "4");
+
+  assert.equal(
+    parseNotificationPayload(
+      JSON.stringify({
+        kind: "ephemeral",
+        scope: "room",
+        roomId: "12",
+        eventId: "resolution-2",
+        eventType: "trade.resolution",
+        payload: {
+          offerId: "9",
+          turnNumber: 3,
+          recipientPlayerId: "4",
+          actorPlayerId: "7",
+          outcome: "ignored",
+        },
+      }),
+    ),
+    null,
+  );
+});
+
 test("protocol aceita apenas ping da própria sala", () => {
   const message = JSON.stringify({
     protocolVersion: 1,
