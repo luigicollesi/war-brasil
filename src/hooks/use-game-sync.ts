@@ -5,7 +5,10 @@ import type { ApplicableGameCommandResult } from "@/src/lib/game-command-patch";
 import { registerGameCommandPatchHandler } from "@/src/lib/game-command-patch-bus";
 import type { GameSnapshot } from "@/src/lib/game-contract";
 import { GamePollScheduler } from "@/src/lib/client/sync/game-poll-scheduler";
-import { GameSyncController } from "@/src/lib/client/sync/game-sync-controller";
+import {
+  GameSyncController,
+  type GameSyncResult,
+} from "@/src/lib/client/sync/game-sync-controller";
 import { gameSyncMetricsStore } from "@/src/lib/game-sync-metrics-store";
 import {
   GAME_REVISION_HEADER,
@@ -50,9 +53,12 @@ export function useGameSync(roomId: string) {
     syncController.reset();
     pollScheduler.reset();
 
-    function recordSyncSuccess(startedAt: number) {
+    function recordSyncSuccess(startedAt: number, result: GameSyncResult) {
       pollScheduler.recordSuccess();
-      gameSyncMetricsStore.recordSuccess(performance.now() - startedAt);
+      gameSyncMetricsStore.recordSuccess(performance.now() - startedAt, {
+        unchanged: result.unchanged,
+        responseBytes: result.responseBytes,
+      });
     }
 
     function sync() {
@@ -65,7 +71,7 @@ export function useGameSync(roomId: string) {
 
         try {
           const result = await syncController.sync(controller.signal);
-          recordSyncSuccess(startedAt);
+          recordSyncSuccess(startedAt, result);
 
           if (isActive) {
             if (result.changed && result.snapshot) {
