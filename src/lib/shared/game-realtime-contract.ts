@@ -2,6 +2,10 @@ import {
   isGameCommandPatch,
   type GameCommandPatch,
 } from "./game-command-patch";
+import {
+  isTradeCardDescriptor,
+  type TradeCardDescriptor,
+} from "./game-trade-rules";
 
 export const GAME_PROTOCOL_VERSION = 1 as const;
 export const GAME_REALTIME_SUBPROTOCOL =
@@ -37,6 +41,15 @@ export type GamePatchEvent = GameRealtimeEnvelope<
   }
 >;
 
+export type GameTradeSignalEvent = GameRealtimeEnvelope<
+  "trade.signal",
+  {
+    playerId: string;
+    turnNumber: number;
+    card: TradeCardDescriptor;
+  }
+>;
+
 export type GameRealtimeReadyEvent = GameRealtimeEnvelope<
   "realtime.ready",
   { revision: number }
@@ -51,6 +64,7 @@ export type GameRealtimeEvent =
   | GameInvalidatedEvent
   | GamePrivateInvalidatedEvent
   | GamePatchEvent
+  | GameTradeSignalEvent
   | GameRealtimeReadyEvent
   | GameRealtimePongEvent;
 
@@ -73,7 +87,7 @@ type ValidatedRealtimeEnvelope = {
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === "object" && value !== null;
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
 function validRevision(value: unknown) {
@@ -125,6 +139,17 @@ export function isGameRealtimeEvent(value: unknown): value is GameRealtimeEvent 
       validRevision(payload.revision) &&
       Number(payload.revision) > Number(payload.baseRevision) &&
       isGameCommandPatch(payload.patch)
+    );
+  }
+
+  if (envelope.type === "trade.signal") {
+    return (
+      typeof payload.playerId === "string" &&
+      /^\d+$/.test(payload.playerId) &&
+      typeof payload.turnNumber === "number" &&
+      Number.isSafeInteger(payload.turnNumber) &&
+      payload.turnNumber >= 1 &&
+      isTradeCardDescriptor(payload.card)
     );
   }
 
