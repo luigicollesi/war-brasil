@@ -18,6 +18,9 @@ export type GameSyncMetrics = {
   realtimeEvents?: number;
   realtimeInvalidations?: number;
   realtimeReadyEvents?: number;
+  realtimePatches?: number;
+  realtimePatchesApplied?: number;
+  realtimePatchFallbacks?: number;
   realtimeStaleEvents?: number;
   realtimeDuplicateEvents?: number;
   realtimePotentialMisses?: number;
@@ -49,6 +52,9 @@ let snapshot: GameSyncMetrics = {
   realtimeEvents: 0,
   realtimeInvalidations: 0,
   realtimeReadyEvents: 0,
+  realtimePatches: 0,
+  realtimePatchesApplied: 0,
+  realtimePatchFallbacks: 0,
   realtimeStaleEvents: 0,
   realtimeDuplicateEvents: 0,
   realtimePotentialMisses: 0,
@@ -162,6 +168,7 @@ export const gameSyncMetricsStore = {
     let revision: number | null = null;
     let invalidations = snapshot.realtimeInvalidations ?? 0;
     let readyEvents = snapshot.realtimeReadyEvents ?? 0;
+    let patches = snapshot.realtimePatches ?? 0;
 
     if (event.type === "game.invalidate") {
       revision = event.payload.revision;
@@ -169,6 +176,9 @@ export const gameSyncMetricsStore = {
     } else if (event.type === "realtime.ready") {
       revision = event.payload.revision;
       readyEvents += 1;
+    } else if (event.type === "game.patch") {
+      revision = event.payload.revision;
+      patches += 1;
     }
 
     if (revision !== null && (lastRealtimeRevision === null || revision > lastRealtimeRevision)) {
@@ -181,6 +191,7 @@ export const gameSyncMetricsStore = {
       realtimeEvents: (snapshot.realtimeEvents ?? 0) + 1,
       realtimeInvalidations: invalidations,
       realtimeReadyEvents: readyEvents,
+      realtimePatches: patches,
       realtimeStaleEvents:
         (snapshot.realtimeStaleEvents ?? 0) +
         (revision !== null && currentRevision !== null && revision < currentRevision
@@ -191,6 +202,21 @@ export const gameSyncMetricsStore = {
         (revision !== null && currentRevision !== null && revision === currentRevision
           ? 1
           : 0),
+    });
+  },
+
+  recordRealtimePatchResult(result: { applied: boolean; stale: boolean }) {
+    if (result.stale) return;
+    publish({
+      ...snapshot,
+      realtimePatchesApplied:
+        (snapshot.realtimePatchesApplied ?? 0) + (result.applied ? 1 : 0),
+      realtimePatchFallbacks:
+        (snapshot.realtimePatchFallbacks ?? 0) + (result.applied ? 0 : 1),
+      revisionGaps:
+        (snapshot.revisionGaps ?? 0) + (result.applied ? 0 : 1),
+      snapshotRecoveries:
+        (snapshot.snapshotRecoveries ?? 0) + (result.applied ? 0 : 1),
     });
   },
 
