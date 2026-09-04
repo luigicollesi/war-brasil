@@ -1,17 +1,13 @@
 "use client";
 
-import type {
-  GameEphemeralEvent,
-  GameEphemeralListener,
-  GameEphemeralTransport,
-} from "./game-ephemeral-transport";
+import type { GameEphemeralTransport } from "./game-ephemeral-transport";
 
 export class NullGameEphemeralTransport implements GameEphemeralTransport {
-  async connect(_roomId: string) {}
+  async connect() {}
 
-  send(_event: GameEphemeralEvent) {}
+  send() {}
 
-  subscribe(_listener: GameEphemeralListener) {
+  subscribe() {
     return () => undefined;
   }
 
