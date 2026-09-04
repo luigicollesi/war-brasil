@@ -9,8 +9,8 @@ CREATE TABLE IF NOT EXISTS game_rooms (
   order_roll_round INTEGER NOT NULL DEFAULT 1
     CHECK (order_roll_round >= 1),
   initial_territory_presentation_started_at TIMESTAMPTZ,
-  phase VARCHAR(20) NOT NULL DEFAULT 'cards'
-    CHECK (phase IN ('cards', 'reinforcement', 'attack', 'maneuver', 'end_turn', 'finished')),
+  phase VARCHAR(20) NOT NULL DEFAULT 'trade'
+    CHECK (phase IN ('trade', 'reinforcement', 'attack', 'maneuver', 'end_turn', 'finished')),
   current_player_id BIGINT,
   turn_number INTEGER NOT NULL DEFAULT 1 CHECK (turn_number >= 1),
   round_number INTEGER NOT NULL DEFAULT 1 CHECK (round_number >= 1),
@@ -25,6 +25,8 @@ CREATE TABLE IF NOT EXISTS game_rooms (
   reinforcements_remaining INTEGER NOT NULL DEFAULT 0 CHECK (reinforcements_remaining >= 0),
   conquered_this_turn BOOLEAN NOT NULL DEFAULT FALSE,
   trade_count INTEGER NOT NULL DEFAULT 0 CHECK (trade_count >= 0),
+  trade_offers_used SMALLINT NOT NULL DEFAULT 0
+    CHECK (trade_offers_used BETWEEN 0 AND 3),
   winner_player_id BIGINT,
   pending_from_territory_id SMALLINT CHECK (pending_from_territory_id BETWEEN 1 AND 42),
   pending_to_territory_id SMALLINT CHECK (pending_to_territory_id BETWEEN 1 AND 42),
@@ -59,6 +61,8 @@ CREATE TABLE IF NOT EXISTS room_players (
   is_bot BOOLEAN NOT NULL DEFAULT FALSE,
   card_trade_count INTEGER NOT NULL DEFAULT 0
     CHECK (card_trade_count >= 0),
+  trade_signals_used SMALLINT NOT NULL DEFAULT 0
+    CHECK (trade_signals_used BETWEEN 0 AND 2),
   bot_next_action_at TIMESTAMPTZ,
   turn_position SMALLINT,
   joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -251,6 +255,43 @@ CREATE TABLE IF NOT EXISTS game_cards (
          (NOT is_wild AND territory_id IS NOT NULL AND symbol IS NOT NULL)),
   UNIQUE (room_id, territory_id)
 );
+
+CREATE TABLE IF NOT EXISTS game_player_trade_offers (
+  id BIGSERIAL PRIMARY KEY,
+  room_id BIGINT NOT NULL REFERENCES game_rooms(id) ON DELETE CASCADE,
+  turn_number INTEGER NOT NULL CHECK (turn_number >= 1),
+  proposer_player_id BIGINT NOT NULL REFERENCES room_players(id) ON DELETE CASCADE,
+  target_player_id BIGINT REFERENCES room_players(id) ON DELETE CASCADE,
+  offered_card_id BIGINT NOT NULL REFERENCES game_cards(id) ON DELETE RESTRICT,
+  requested_kind TEXT NOT NULL
+    CHECK (requested_kind IN ('territory', 'symbol', 'wild')),
+  requested_territory_id SMALLINT CHECK (requested_territory_id BETWEEN 1 AND 42),
+  requested_symbol TEXT CHECK (requested_symbol IN ('leaf', 'gold', 'water')),
+  status TEXT NOT NULL DEFAULT 'open'
+    CHECK (status IN ('open', 'countered', 'accepted', 'declined', 'cancelled')),
+  responder_player_id BIGINT REFERENCES room_players(id) ON DELETE SET NULL,
+  counter_card_id BIGINT REFERENCES game_cards(id) ON DELETE RESTRICT,
+  accepted_card_id BIGINT REFERENCES game_cards(id) ON DELETE RESTRICT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  resolved_at TIMESTAMPTZ,
+  CHECK (target_player_id IS NULL OR target_player_id <> proposer_player_id),
+  CHECK (
+    (requested_kind='territory' AND requested_territory_id IS NOT NULL AND requested_symbol IS NULL)
+    OR (requested_kind='symbol' AND requested_territory_id IS NULL AND requested_symbol IS NOT NULL)
+    OR (requested_kind='wild' AND requested_territory_id IS NULL AND requested_symbol IS NULL)
+  ),
+  CHECK (
+    status <> 'countered'
+    OR (responder_player_id IS NOT NULL AND counter_card_id IS NOT NULL)
+  )
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS game_player_trade_offers_one_active_idx
+  ON game_player_trade_offers(room_id)
+  WHERE status IN ('open', 'countered');
+
+CREATE INDEX IF NOT EXISTS game_player_trade_offers_room_turn_idx
+  ON game_player_trade_offers(room_id, turn_number, id DESC);
 
 CREATE TABLE IF NOT EXISTS events (
   id INTEGER PRIMARY KEY CHECK (id >= 0),
