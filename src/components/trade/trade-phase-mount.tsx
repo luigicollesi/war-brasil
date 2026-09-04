@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import type { GameSnapshot } from "@/src/lib/shared/game-contract";
 import { TradePhasePanel } from "./trade-phase-panel";
+import { TradeSignalAction } from "./trade-signal-action";
 import { TradeSignalToast } from "./trade-signal-toast";
 
 export function TradePhaseMount({
@@ -38,6 +39,7 @@ export function TradePhaseMount({
             target,
           )
         : null}
+      <TradeSignalAction key={`signal:${scopeKey}`} roomId={roomId} snapshot={snapshot} />
       <TradeSignalToast key={scopeKey} roomId={roomId} snapshot={snapshot} />
     </>
   );
