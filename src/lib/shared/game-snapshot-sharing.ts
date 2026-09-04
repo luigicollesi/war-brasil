@@ -244,6 +244,28 @@ function sameTradeDescriptor(
   return left.kind === "wild" && right.kind === "wild";
 }
 
+function sameTradeTerms(
+  left: GameSnapshot["trade"] extends infer T
+    ? T extends { activeOffer: infer O }
+      ? O extends { original: infer Terms }
+        ? Terms
+        : never
+      : never
+    : never,
+  right: GameSnapshot["trade"] extends infer T
+    ? T extends { activeOffer: infer O }
+      ? O extends { original: infer Terms }
+        ? Terms
+        : never
+      : never
+    : never,
+) {
+  return (
+    sameTradeDescriptor(left.offered, right.offered) &&
+    sameTradeDescriptor(left.requested, right.requested)
+  );
+}
+
 function sameTrade(
   left: GameSnapshot["trade"],
   right: GameSnapshot["trade"],
@@ -259,6 +281,18 @@ function sameTrade(
     return false;
   }
 
+  const leftPending = left.myPendingSelection;
+  const rightPending = right.myPendingSelection;
+  const pendingEqual =
+    leftPending === rightPending ||
+    Boolean(
+      leftPending &&
+        rightPending &&
+        leftPending.offerId === rightPending.offerId &&
+        sameTradeDescriptor(leftPending.descriptor, rightPending.descriptor),
+    );
+  if (!pendingEqual) return false;
+
   const leftOffer = left.activeOffer;
   const rightOffer = right.activeOffer;
   if (leftOffer === rightOffer) return true;
@@ -268,8 +302,7 @@ function sameTrade(
     leftOffer.proposerPlayerId !== rightOffer.proposerPlayerId ||
     leftOffer.targetPlayerId !== rightOffer.targetPlayerId ||
     leftOffer.status !== rightOffer.status ||
-    !sameTradeDescriptor(leftOffer.offered, rightOffer.offered) ||
-    !sameTradeDescriptor(leftOffer.requested, rightOffer.requested)
+    !sameTradeTerms(leftOffer.original, rightOffer.original)
   ) {
     return false;
   }
@@ -280,8 +313,8 @@ function sameTrade(
   return Boolean(
     leftCounter &&
       rightCounter &&
-      leftCounter.playerId === rightCounter.playerId &&
-      sameTradeDescriptor(leftCounter.card, rightCounter.card),
+      leftCounter.proposerPlayerId === rightCounter.proposerPlayerId &&
+      sameTradeTerms(leftCounter.terms, rightCounter.terms),
   );
 }
 
