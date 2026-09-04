@@ -1,6 +1,8 @@
 import "server-only";
 
 import type { PoolClient } from "pg";
+import type { GameCommandPatch } from "@/src/lib/game-command-patch";
+import { RoomError } from "@/src/lib/rooms";
 import { reconcileGameAutomationSchedule } from "./automation/game-automation-schedule";
 import { databasePoolStats, pool } from "./db/pool";
 import {
@@ -8,14 +10,20 @@ import {
   type GameCommandResult,
   type GameRevision,
 } from "./game-revision";
-import { publishGameInvalidation } from "./game-realtime-publisher";
+import {
+  publishGameChange,
+  publishGameInvalidation,
+} from "./game-realtime-publisher";
 import { startGameOperationMetric } from "./observability/game-operation-metrics";
-import { RoomError } from "@/src/lib/rooms";
 
 type GameConditionalCommandResult<T> = {
   value: T | null;
   revision: GameRevision;
   changed: boolean;
+};
+
+type GameCommandOptions<T> = {
+  realtimePatch?: (value: T) => GameCommandPatch | null | undefined;
 };
 
 async function lockRoomRevision(client: PoolClient, roomId: string) {
@@ -40,6 +48,7 @@ async function rollbackIfNeeded(client: PoolClient, transactionOpen: boolean) {
 export async function gameCommand<T>(
   roomId: string,
   execute: (client: PoolClient) => Promise<T>,
+  options: GameCommandOptions<T> = {},
 ): Promise<GameCommandResult<T>> {
   const client = await pool.connect();
   const finishMetric = startGameOperationMetric("game.command");
@@ -52,6 +61,7 @@ export async function gameCommand<T>(
     const baseRevision = await lockRoomRevision(client, roomId);
 
     const value = await execute(client);
+    const realtimePatch = options.realtimePatch?.(value) ?? null;
     await reconcileGameAutomationSchedule(client, roomId);
     const revision = await bumpGameRevision(client, roomId);
 
@@ -59,7 +69,12 @@ export async function gameCommand<T>(
     transactionOpen = false;
     outcome = "success";
 
-    await publishGameInvalidation(client, roomId, revision);
+    await publishGameChange(client, {
+      roomId,
+      baseRevision,
+      revision,
+      patch: realtimePatch,
+    });
 
     return { value, baseRevision, revision };
   } catch (error) {
