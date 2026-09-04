@@ -186,6 +186,24 @@ try {
     await applyMigration("023-trade-negotiation-invariants.sql");
   }
 
+  const orderRollPhaseCompatibilityReady = await queryHasRows(
+    `SELECT 1
+     FROM pg_constraint c
+     JOIN pg_class t ON t.oid=c.conrelid
+     JOIN pg_namespace n ON n.oid=t.relnamespace
+     WHERE n.nspname='public'
+       AND t.relname='game_rooms'
+       AND c.conname='game_rooms_phase_check'
+       AND pg_get_constraintdef(c.oid) ILIKE '%order_roll%'
+       AND pg_get_constraintdef(c.oid) ILIKE '%cards%'
+       AND pg_get_constraintdef(c.oid) ILIKE '%trade%'
+     LIMIT 1`,
+  );
+
+  if (!orderRollPhaseCompatibilityReady) {
+    await applyMigration("024-order-roll-phase-compatibility.sql");
+  }
+
   await client.query("COMMIT");
   console.log(
     "[war-brasil] banco local preparado para bots, objetivos, apresentação inicial, automação, receipts e negociações de cartas.",
