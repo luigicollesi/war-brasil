@@ -17,10 +17,8 @@ import {
 import { advanceGameRound } from "@/src/lib/game-round-service";
 import { isOrderRollActorAvailable } from "@/src/lib/game-transitions";
 import { RoomError } from "@/src/lib/rooms";
-import {
-  beginPlayerTurnPhase,
-  beginReinforcementForPlayer,
-} from "./game-turn-service";
+import { executePlayerTradeAction } from "./game-player-trade-service";
+import { beginPlayerTurnPhase } from "./game-turn-service";
 
 type CommandRoom = {
   id: string;
@@ -244,13 +242,7 @@ export async function executePhaseAction(
 
   if (input.action === "finishTrade" || input.action === "finishCards") {
     assertTurn(room, player, "trade");
-    await client.query(
-      `UPDATE game_player_trade_offers
-       SET status='cancelled',resolved_at=NOW()
-       WHERE room_id=$1 AND status IN ('open','countered')`,
-      [room.id],
-    );
-    await beginReinforcementForPlayer(client, room.id, player.id);
+    await executePlayerTradeAction(client, roomId, player.id, { action: "finish" });
     return null;
   }
 
