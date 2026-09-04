@@ -25,7 +25,9 @@ export class GameRealtimeRegistry {
       playerId: identity.playerId,
       isAlive: true,
       lastRevisionSent: 0,
+      lastPrivateRevisionSent: 0,
       pendingRevision: null,
+      pendingPrivateRevision: null,
       flushTimer: null,
     };
 
@@ -83,8 +85,12 @@ export class GameRealtimeRegistry {
     if (!room) return;
 
     for (const context of room) {
-      if (playerId !== null && context.playerId !== playerId) continue;
-      this.sendRevision(context, revision, playerId !== null);
+      if (playerId !== null) {
+        if (context.playerId !== playerId) continue;
+        this.sendPrivateRevision(context, revision);
+        continue;
+      }
+      this.sendRevision(context, revision);
     }
   }
 
@@ -107,6 +113,7 @@ export class GameRealtimeRegistry {
 
     if (
       context.pendingRevision !== null ||
+      context.pendingPrivateRevision !== null ||
       context.socket.bufferedAmount > maxBufferedBytes()
     ) {
       context.pendingRevision = Math.max(
@@ -150,7 +157,7 @@ export class GameRealtimeRegistry {
     }
   }
 
-  sendRevision(context, revision, privateScope = false) {
+  sendRevision(context, revision) {
     if (
       context.socket.readyState !== WebSocket.OPEN ||
       revision <= context.lastRevisionSent
@@ -173,9 +180,45 @@ export class GameRealtimeRegistry {
         serverEvent("game.invalidate", context.roomId, { revision }),
       );
       context.lastRevisionSent = revision;
-      recordRealtimeMetric(privateScope ? "privateBroadcasts" : "broadcasts", {
+      recordRealtimeMetric("broadcasts", {
         roomId: context.roomId,
-        playerId: privateScope ? context.playerId : undefined,
+        revision,
+      });
+    } catch {
+      context.socket.terminate();
+    }
+  }
+
+  sendPrivateRevision(context, revision) {
+    if (
+      context.socket.readyState !== WebSocket.OPEN ||
+      revision <= context.lastPrivateRevisionSent
+    ) {
+      return;
+    }
+
+    if (context.socket.bufferedAmount > maxBufferedBytes()) {
+      context.pendingPrivateRevision = Math.max(
+        context.pendingPrivateRevision ?? 0,
+        revision,
+      );
+      recordRealtimeMetric("privateCoalesced", {
+        roomId: context.roomId,
+        playerId: context.playerId,
+        revision,
+      });
+      this.scheduleFlush(context);
+      return;
+    }
+
+    try {
+      context.socket.send(
+        serverEvent("game.private.invalidate", context.roomId, { revision }),
+      );
+      context.lastPrivateRevisionSent = revision;
+      recordRealtimeMetric("privateBroadcasts", {
+        roomId: context.roomId,
+        playerId: context.playerId,
         revision,
       });
     } catch {
@@ -193,8 +236,6 @@ export class GameRealtimeRegistry {
   }
 
   flushPending(context) {
-    const revision = context.pendingRevision;
-    if (revision === null) return;
     if (context.socket.readyState !== WebSocket.OPEN) return;
 
     if (context.socket.bufferedAmount > maxBufferedBytes()) {
@@ -202,8 +243,17 @@ export class GameRealtimeRegistry {
       return;
     }
 
+    const privateRevision = context.pendingPrivateRevision;
+    context.pendingPrivateRevision = null;
+    if (privateRevision !== null) {
+      this.sendPrivateRevision(context, privateRevision);
+    }
+
+    const revision = context.pendingRevision;
     context.pendingRevision = null;
-    this.sendRevision(context, revision);
+    if (revision !== null) {
+      this.sendRevision(context, revision);
+    }
   }
 
   heartbeat() {
