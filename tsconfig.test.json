@@ -52,6 +52,7 @@
     "src/lib/client/dice/physics/build-predetermined-roll.ts",
     "src/lib/bots/bot-action.ts",
     "src/lib/bots/bot-delay.ts",
+    "src/lib/bots/bot-schedule.ts",
     "src/lib/bots/bot-required-actor.ts",
     "src/lib/bots/bot-state.ts",
     "src/lib/bots/bot-objective-plan.ts",
