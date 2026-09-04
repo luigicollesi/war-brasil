@@ -8,6 +8,8 @@ const PURE_MODULES = [
   "src/lib/shared/territory-connections.ts",
   "src/lib/shared/game-interaction.ts",
   "src/lib/shared/game-snapshot-hydration.ts",
+  "src/lib/shared/game-command-canonical.ts",
+  "src/lib/shared/game-command-request.ts",
   "src/lib/shared/game-command-patch.ts",
   "src/lib/shared/game-effective-connections.ts",
   "src/lib/shared/game-snapshot-sharing.ts",
