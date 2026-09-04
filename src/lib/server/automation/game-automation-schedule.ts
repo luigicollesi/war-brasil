@@ -98,18 +98,18 @@ function currentRoundRolls(room: ScheduleRoom, rolls: ScheduleOrderRoll[]) {
   return rolls.filter((roll) => roll.roll_round === room.order_roll_round);
 }
 
-function botActionBaseTimeMs(
+function botOrderRollReleaseTimeMs(
   room: ScheduleRoom,
   rolls: ScheduleOrderRoll[],
   actionType: ReturnType<typeof scheduledBotActionType>,
-  nowMs: number,
 ) {
-  if (actionType !== "roll_order") return nowMs;
+  if (actionType !== "roll_order") return null;
 
-  const availableAt = orderRollActorAvailableAt(
-    latestRollAt(currentRoundRolls(room, rolls)),
+  return (
+    orderRollActorAvailableAt(
+      latestRollAt(currentRoundRolls(room, rolls)),
+    )?.getTime() ?? null
   );
-  return Math.max(nowMs, availableAt?.getTime() ?? nowMs);
 }
 
 async function clearOtherBotSchedules(
@@ -273,9 +273,13 @@ export async function reconcileGameAutomationSchedule(
     return persistRoomSchedule(client, room.id, { kind: null, dueAt: null });
   }
 
-  const actionBaseTimeMs = botActionBaseTimeMs(room, rolls, actionType, nowMs);
+  const releaseTimeMs = botOrderRollReleaseTimeMs(room, rolls, actionType);
   let dueAt = actor.bot_next_action_at;
-  if (!dueAt || dueAt.getTime() < actionBaseTimeMs) {
+  if (
+    !dueAt ||
+    (releaseTimeMs !== null && dueAt.getTime() < releaseTimeMs)
+  ) {
+    const actionBaseTimeMs = Math.max(nowMs, releaseTimeMs ?? nowMs);
     dueAt = new Date(actionBaseTimeMs + pickBotDelayMs(actionType));
     await client.query(
       `UPDATE room_players
