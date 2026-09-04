@@ -17,11 +17,11 @@ test("agenda reutiliza exatamente os relógios de apresentação existentes", ()
   const start = new Date("2026-09-04T00:00:00.000Z");
   assert.equal(
     initialTerritoryPresentationDueAt(start)?.toISOString(),
-    "2026-09-04T00:00:06.200Z",
+    "2026-09-04T00:00:12.400Z",
   );
   assert.equal(
     orderRollPresentationDueAt(true, start)?.toISOString(),
-    "2026-09-04T00:00:02.000Z",
+    "2026-09-04T00:00:03.200Z",
   );
   assert.equal(orderRollPresentationDueAt(false, start), null);
   assert.equal(
