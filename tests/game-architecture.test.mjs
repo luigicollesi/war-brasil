@@ -10,9 +10,13 @@ test("command boundary serializa a sala e incrementa revisão antes do commit", 
   assert.match(source, /const revision = await bumpGameRevision\(client, roomId\)/);
   assert.match(source, /await client\.query\("COMMIT"\)/);
 
-  assert.ok(
-    source.indexOf("await bumpGameRevision") < source.indexOf('client.query("COMMIT")'),
-  );
+  const executeIndex = source.indexOf("const value = await execute(client)");
+  const bumpIndex = source.indexOf("await bumpGameRevision", executeIndex);
+  const mutationCommitIndex = source.indexOf('client.query("COMMIT")', executeIndex);
+
+  assert.ok(executeIndex >= 0);
+  assert.ok(bumpIndex > executeIndex);
+  assert.ok(mutationCommitIndex > bumpIndex);
 });
 
 test("command condicional não incrementa revisão em no-op ou revisão obsoleta", () => {
