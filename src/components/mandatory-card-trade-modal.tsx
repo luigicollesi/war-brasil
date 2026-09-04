@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { GameModal } from "@/src/components/game-modal";
 import { TerritoryCard } from "@/src/components/territory-card";
 import { TradePhaseMount } from "@/src/components/trade/trade-phase-mount";
+import { TradeResolutionModal } from "@/src/components/trade/trade-resolution-modal";
 import { TradeResponseModal } from "@/src/components/trade/trade-response-modal";
 import { runGameCommand } from "@/src/lib/game-command-client";
 import type { GameSnapshot } from "@/src/lib/game-contract";
@@ -25,7 +26,12 @@ export function MandatoryCardTradeModal({
   const [error, setError] = useState("");
 
   const me = snapshot.players.find((player) => player.isMe);
-  const active = Boolean(
+  const tradeActive = Boolean(
+    snapshot.room.status === "playing" &&
+      snapshot.room.phase === "trade" &&
+      snapshot.trade,
+  );
+  const mandatoryTradeActive = Boolean(
     snapshot.room.status === "playing" &&
       snapshot.room.phase === "reinforcement" &&
       me &&
@@ -39,29 +45,6 @@ export function MandatoryCardTradeModal({
   );
   const valid =
     selected.length === 3 && isValidTrade(selected.map((card) => card.symbol));
-
-  if (
-    snapshot.room.status === "playing" &&
-    snapshot.room.phase === "trade" &&
-    snapshot.trade
-  ) {
-    return (
-      <>
-        <TradePhaseMount
-          roomId={roomId}
-          snapshot={snapshot}
-          onRefresh={onRefresh}
-        />
-        <TradeResponseModal
-          roomId={roomId}
-          snapshot={snapshot}
-          onRefresh={onRefresh}
-        />
-      </>
-    );
-  }
-
-  if (!active) return null;
 
   async function submit() {
     if (!valid || submitting) return;
@@ -86,49 +69,70 @@ export function MandatoryCardTradeModal({
   }
 
   return (
-    <GameModal
-      eyebrow="Troca obrigatória"
-      title="Troca de cartas"
-      className="game-card-modal w-full max-w-lg p-6"
-    >
-      <p className="mt-2 text-sm text-[#64756f]">
-        Troca de cartas por reforço obrigatória: limite de mais de quatro cartas.
-      </p>
+    <>
+      <TradeResolutionModal roomId={roomId} snapshot={snapshot} />
 
-      <div className="mt-5 grid max-h-[55vh] grid-cols-2 gap-3 overflow-y-auto p-1 sm:grid-cols-3">
-        {snapshot.myCards.map((card) => (
-          <TerritoryCard
-            key={card.id}
-            territoryId={card.territoryId}
-            symbol={card.symbol}
-            selected={selectedCards.includes(card.id)}
-            onClick={() =>
-              setSelectedCards((cards) =>
-                cards.includes(card.id)
-                  ? cards.filter((id) => id !== card.id)
-                  : cards.length < 3
-                    ? [...cards, card.id]
-                    : cards,
-              )
-            }
+      {tradeActive ? (
+        <>
+          <TradePhaseMount
+            roomId={roomId}
+            snapshot={snapshot}
+            onRefresh={onRefresh}
           />
-        ))}
-      </div>
-
-      <button
-        type="button"
-        disabled={!valid || submitting}
-        onClick={() => void submit()}
-        className="game-primary-action mt-5 w-full rounded-xl bg-[#e4b94f] px-4 py-3 text-xs font-bold uppercase tracking-wider text-[#12392f] disabled:opacity-40"
-      >
-        {submitting ? "PROCESSANDO…" : "Confirmar troca"}
-      </button>
-
-      {error ? (
-        <p className="mt-3 text-sm text-[#a33c33]" role="alert">
-          {error}
-        </p>
+          <TradeResponseModal
+            roomId={roomId}
+            snapshot={snapshot}
+            onRefresh={onRefresh}
+          />
+        </>
       ) : null}
-    </GameModal>
+
+      {mandatoryTradeActive ? (
+        <GameModal
+          eyebrow="Troca obrigatória"
+          title="Troca de cartas"
+          className="game-card-modal w-full max-w-lg p-6"
+        >
+          <p className="mt-2 text-sm text-[#64756f]">
+            Troca de cartas por reforço obrigatória: limite de mais de quatro cartas.
+          </p>
+
+          <div className="mt-5 grid max-h-[55vh] grid-cols-2 gap-3 overflow-y-auto p-1 sm:grid-cols-3">
+            {snapshot.myCards.map((card) => (
+              <TerritoryCard
+                key={card.id}
+                territoryId={card.territoryId}
+                symbol={card.symbol}
+                selected={selectedCards.includes(card.id)}
+                onClick={() =>
+                  setSelectedCards((cards) =>
+                    cards.includes(card.id)
+                      ? cards.filter((id) => id !== card.id)
+                      : cards.length < 3
+                        ? [...cards, card.id]
+                        : cards,
+                  )
+                }
+              />
+            ))}
+          </div>
+
+          <button
+            type="button"
+            disabled={!valid || submitting}
+            onClick={() => void submit()}
+            className="game-primary-action mt-5 w-full rounded-xl bg-[#e4b94f] px-4 py-3 text-xs font-bold uppercase tracking-wider text-[#12392f] disabled:opacity-40"
+          >
+            {submitting ? "PROCESSANDO…" : "Confirmar troca"}
+          </button>
+
+          {error ? (
+            <p className="mt-3 text-sm text-[#a33c33]" role="alert">
+              {error}
+            </p>
+          ) : null}
+        </GameModal>
+      ) : null}
+    </>
   );
 }
