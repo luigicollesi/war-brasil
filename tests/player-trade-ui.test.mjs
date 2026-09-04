@@ -13,6 +13,21 @@ test("cliente recebe trade sem remapear para cards", () => {
   assert.doesNotMatch(hydration, /phase:\s*payload\.room\.phase === "trade"/);
   assert.match(runtime, /snapshot\.room\.phase === "trade"/);
   assert.match(runtime, /<TradePhaseMount/);
+  assert.match(runtime, /<TradeResponseModal/);
+});
+
+test("destinatário recebe oferta aberta em modal de resposta", () => {
+  const response = source("src/components/trade/trade-response-modal.tsx");
+
+  assert.match(response, /offer\.status === "open"/);
+  assert.match(response, /offer\.targetPlayerId === me\.id/);
+  assert.match(response, /cardsMatchingTradeDescriptor/);
+  assert.match(response, /eyebrow="Oferta recebida"/);
+  assert.match(response, />\s*Aceitar\s*</);
+  assert.match(response, />\s*Contraofertar\s*</);
+  assert.match(response, />\s*Recusar\s*</);
+  assert.match(response, /mode="counter"/);
+  assert.doesNotMatch(response, /não possui|nao possui/i);
 });
 
 test("painel cobre oferta, contraoferta, aceite e seleção vinculante", () => {
