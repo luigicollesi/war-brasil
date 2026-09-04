@@ -119,7 +119,7 @@ test("scheduler persiste somente apresentação ou bot e limpa timers obsoletos"
   assert.match(schedule, /battlePresentationDueAt/);
   assert.match(schedule, /requiredActorId/);
   assert.match(schedule, /pickBotDelayMs/);
-  assert.match(schedule, /automation_due_at=\$2,automation_kind=\$3/);
+  assert.match(schedule, /automation_due_at=\$2,\s*automation_kind=\$3/);
   assert.match(schedule, /bot_next_action_at=NULL/);
   assert.doesNotMatch(schedule, /setTimeout|setInterval/);
 });
