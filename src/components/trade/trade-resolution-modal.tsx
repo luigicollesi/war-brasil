@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { GameModal } from "@/src/components/game-modal";
 import { subscribeTradeResolution } from "@/src/lib/client/game-realtime-ephemeral-bus";
 import type { GameSnapshot } from "@/src/lib/shared/game-contract";
@@ -14,17 +14,22 @@ export function TradeResolutionModal({
   roomId: string;
   snapshot: GameSnapshot;
 }) {
-  const me = snapshot.players.find((player) => player.isMe);
+  const meId = snapshot.players.find((player) => player.isMe)?.id ?? null;
+  const turnNumber = snapshot.room.turnNumber;
+  const seenEvents = useRef(new Set<string>());
   const [event, setEvent] = useState<GameTradeResolutionEvent | null>(null);
 
   useEffect(() => {
-    if (!me) return;
+    if (!meId) return;
     return subscribeTradeResolution(roomId, (nextEvent) => {
-      if (nextEvent.payload.recipientPlayerId !== me.id) return;
-      if (nextEvent.payload.turnNumber !== snapshot.room.turnNumber) return;
+      if (nextEvent.payload.recipientPlayerId !== meId) return;
+      if (nextEvent.payload.turnNumber !== turnNumber) return;
+      const key = `${nextEvent.payload.offerId}:${nextEvent.payload.outcome}`;
+      if (seenEvents.current.has(key)) return;
+      seenEvents.current.add(key);
       setEvent(nextEvent);
     });
-  }, [me, roomId, snapshot.room.turnNumber]);
+  }, [meId, roomId, turnNumber]);
 
   if (!event) return null;
 
