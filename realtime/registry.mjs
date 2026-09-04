@@ -104,6 +104,36 @@ export class GameRealtimeRegistry {
     }
   }
 
+  broadcastEphemeral(event) {
+    const room = this.rooms.get(event.roomId);
+    if (!room) return;
+
+    for (const context of room) {
+      if (
+        context.socket.readyState !== WebSocket.OPEN ||
+        context.socket.bufferedAmount > maxBufferedBytes()
+      ) {
+        recordRealtimeMetric("ephemeralDropped", {
+          roomId: event.roomId,
+          eventType: event.eventType,
+        });
+        continue;
+      }
+
+      try {
+        context.socket.send(
+          serverEvent(event.eventType, event.roomId, event.payload),
+        );
+        recordRealtimeMetric("ephemeralBroadcasts", {
+          roomId: event.roomId,
+          eventType: event.eventType,
+        });
+      } catch {
+        context.socket.terminate();
+      }
+    }
+  }
+
   sendPatch(context, event) {
     if (
       context.socket.readyState !== WebSocket.OPEN ||
