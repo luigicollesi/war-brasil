@@ -144,7 +144,10 @@ test("shadow não exige revision e hybrid usa evento realtime apenas para acorda
     /this\.realtimeMode === "hybrid"[\s\S]*this\.revisions\.require/,
   );
   assert.match(hook, /createGameRealtimeTransport\(realtimeMode\)/);
-  assert.match(hook, /realtimeMode === "hybrid" && revisionEvent\(event\)/);
+  assert.match(
+    hook,
+    /realtimeMode === "hybrid"\s*&&\s*revisionEvent\(event\)/,
+  );
   assert.match(hook, /void wakeForRealtime\(\)/);
   assert.match(hook, /realtimeMode,[\s\S]*realtimeState/);
   assert.doesNotMatch(hook, /game\.patch.*WebSocket|WebSocket.*game\.patch/);
