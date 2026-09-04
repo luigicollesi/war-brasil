@@ -1,7 +1,10 @@
 import http from "node:http";
 import { Pool } from "pg";
 import WebSocket, { WebSocketServer } from "ws";
-import { readRealtimeIdentity } from "./auth.mjs";
+import {
+  readRealtimeIdentity,
+  readRealtimeIdentityByPlayer,
+} from "./auth.mjs";
 import { PostgresRealtimeListener } from "./listener.mjs";
 import { realtimeMetricsSnapshot, recordRealtimeMetric } from "./metrics.mjs";
 import {
@@ -13,6 +16,10 @@ import {
 } from "./protocol.mjs";
 import { RedisRoomSubscriber } from "./redis-room-subscriber.mjs";
 import { GameRealtimeRegistry } from "./registry.mjs";
+import {
+  realtimeTicketConfigured,
+  verifyRealtimeTicket,
+} from "./ticket.mjs";
 
 if (process.env.GAME_REALTIME_ENABLED !== "true") {
   console.log("War-Brasil realtime gateway desabilitado (GAME_REALTIME_ENABLED != true).");
@@ -33,6 +40,18 @@ const eventSourceMode = process.env.GAME_REALTIME_EVENT_SOURCE?.trim() || "postg
 if (!new Set(["postgres", "redis"]).has(eventSourceMode)) {
   throw new Error(
     `GAME_REALTIME_EVENT_SOURCE inválido: ${eventSourceMode}. Use postgres ou redis.`,
+  );
+}
+
+const authMode = process.env.GAME_REALTIME_AUTH_MODE?.trim() || "cookie";
+if (!new Set(["cookie", "ticket", "either"]).has(authMode)) {
+  throw new Error(
+    `GAME_REALTIME_AUTH_MODE inválido: ${authMode}. Use cookie, ticket ou either.`,
+  );
+}
+if (authMode !== "cookie" && !realtimeTicketConfigured()) {
+  throw new Error(
+    "GAME_REALTIME_TICKET_SECRET com pelo menos 32 caracteres é obrigatório para autenticação por ticket.",
   );
 }
 
@@ -132,6 +151,48 @@ async function releaseRoomSource(roomId) {
   await eventSource.releaseRoom(roomId);
 }
 
+async function freshRealtimeIdentity(identity) {
+  if (identity.authKind === "ticket") {
+    return readRealtimeIdentityByPlayer(pool, identity.roomId, identity.playerId);
+  }
+  return readRealtimeIdentity(pool, identity.roomId, identity.cookieHeader);
+}
+
+async function authenticateUpgrade(roomId, url, cookieHeader) {
+  if (authMode !== "cookie") {
+    const ticket = url.searchParams.get("ticket");
+    if (ticket) {
+      const payload = verifyRealtimeTicket(ticket, roomId);
+      if (payload) {
+        const identity = await readRealtimeIdentityByPlayer(
+          pool,
+          roomId,
+          payload.playerId,
+        );
+        if (identity) {
+          return {
+            ...identity,
+            authKind: "ticket",
+            roomId,
+            cookieHeader: null,
+          };
+        }
+      }
+    }
+    if (authMode === "ticket") return null;
+  }
+
+  const identity = await readRealtimeIdentity(pool, roomId, cookieHeader);
+  return identity
+    ? {
+        ...identity,
+        authKind: "cookie",
+        roomId,
+        cookieHeader,
+      }
+    : null;
+}
+
 const wss = new WebSocketServer({
   noServer: true,
   maxPayload: GAME_REALTIME_MAX_PAYLOAD_BYTES,
@@ -203,11 +264,7 @@ async function setupConnection(socket, identity) {
     );
   });
 
-  const freshIdentity = await readRealtimeIdentity(
-    pool,
-    identity.roomId,
-    identity.cookieHeader,
-  ).catch(() => null);
+  const freshIdentity = await freshRealtimeIdentity(identity).catch(() => null);
 
   if (
     !freshIdentity ||
@@ -228,6 +285,7 @@ function statusBody() {
     acceptingUpgrades,
     eventSourceMode,
     eventSourceHealthy,
+    authMode,
     connections: registry.size(),
     rooms: registry.roomCount(),
     sourceRooms:
@@ -298,23 +356,19 @@ server.on("upgrade", async (request, socket, head) => {
       return;
     }
 
-    const identity = await readRealtimeIdentity(
-      pool,
+    const identity = await authenticateUpgrade(
       roomId,
+      url,
       request.headers.cookie,
     );
     if (!identity) {
-      recordRealtimeMetric("authRejected", { reason: "session", roomId });
-      rejectUpgrade(socket, 401, "Sessão sem acesso à partida");
+      recordRealtimeMetric("authRejected", { reason: "session_or_ticket", roomId });
+      rejectUpgrade(socket, 401, "Credencial realtime inválida");
       return;
     }
 
     wss.handleUpgrade(request, socket, head, (ws) => {
-      void setupConnection(ws, {
-        roomId,
-        playerId: identity.playerId,
-        cookieHeader: request.headers.cookie,
-      });
+      void setupConnection(ws, identity);
     });
   } catch {
     recordRealtimeMetric("authRejected", { reason: "internal" });
@@ -329,7 +383,7 @@ await eventSource.start();
 server.listen(port, "0.0.0.0", () => {
   acceptingUpgrades = true;
   console.log(
-    `War-Brasil realtime gateway ouvindo na porta ${port} (${eventSourceMode}).`,
+    `War-Brasil realtime gateway ouvindo na porta ${port} (${eventSourceMode}/${authMode}).`,
   );
 });
 
