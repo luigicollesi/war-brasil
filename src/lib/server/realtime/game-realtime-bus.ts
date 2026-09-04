@@ -41,11 +41,27 @@ export type GameRealtimeTradeSignalEvent = {
   };
 };
 
+export type GameRealtimeTradeResolutionEvent = {
+  kind: "ephemeral";
+  scope: "room";
+  roomId: string;
+  eventId: string;
+  eventType: "trade.resolution";
+  payload: {
+    offerId: string;
+    turnNumber: number;
+    recipientPlayerId: string;
+    actorPlayerId: string;
+    outcome: "declined" | "counter_declined";
+  };
+};
+
 export type GameRealtimeBusEvent =
   | GameRealtimeRoomInvalidationEvent
   | GameRealtimePlayerInvalidationEvent
   | GameRealtimePatchEvent
-  | GameRealtimeTradeSignalEvent;
+  | GameRealtimeTradeSignalEvent
+  | GameRealtimeTradeResolutionEvent;
 
 export type GameRealtimeBusPublishContext = {
   postgresClient: PoolClient;
