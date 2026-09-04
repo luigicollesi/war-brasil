@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { GameModal } from "@/src/components/game-modal";
 import { TerritoryCard } from "@/src/components/territory-card";
 import { TradePhaseMount } from "@/src/components/trade/trade-phase-mount";
+import { TradeResponseModal } from "@/src/components/trade/trade-response-modal";
 import { runGameCommand } from "@/src/lib/game-command-client";
 import type { GameSnapshot } from "@/src/lib/game-contract";
 import { isValidTrade } from "@/src/lib/game-rules";
@@ -45,11 +46,18 @@ export function MandatoryCardTradeModal({
     snapshot.trade
   ) {
     return (
-      <TradePhaseMount
-        roomId={roomId}
-        snapshot={snapshot}
-        onRefresh={onRefresh}
-      />
+      <>
+        <TradePhaseMount
+          roomId={roomId}
+          snapshot={snapshot}
+          onRefresh={onRefresh}
+        />
+        <TradeResponseModal
+          roomId={roomId}
+          snapshot={snapshot}
+          onRefresh={onRefresh}
+        />
+      </>
     );
   }
 
