@@ -14,6 +14,7 @@ import {
 import {
   battlePresentationDueAt,
   initialTerritoryPresentationDueAt,
+  orderRollActorAvailableAt,
   orderRollPresentationDueAt,
 } from "@/src/lib/game-transitions";
 
@@ -91,6 +92,24 @@ function latestRollAt(rolls: ScheduleOrderRoll[]) {
         : latest,
     null,
   );
+}
+
+function currentRoundRolls(room: ScheduleRoom, rolls: ScheduleOrderRoll[]) {
+  return rolls.filter((roll) => roll.roll_round === room.order_roll_round);
+}
+
+function botActionBaseTimeMs(
+  room: ScheduleRoom,
+  rolls: ScheduleOrderRoll[],
+  actionType: ReturnType<typeof scheduledBotActionType>,
+  nowMs: number,
+) {
+  if (actionType !== "roll_order") return nowMs;
+
+  const availableAt = orderRollActorAvailableAt(
+    latestRollAt(currentRoundRolls(room, rolls)),
+  );
+  return Math.max(nowMs, availableAt?.getTime() ?? nowMs);
 }
 
 async function clearOtherBotSchedules(
@@ -254,9 +273,10 @@ export async function reconcileGameAutomationSchedule(
     return persistRoomSchedule(client, room.id, { kind: null, dueAt: null });
   }
 
+  const actionBaseTimeMs = botActionBaseTimeMs(room, rolls, actionType, nowMs);
   let dueAt = actor.bot_next_action_at;
-  if (!dueAt) {
-    dueAt = new Date(nowMs + pickBotDelayMs(actionType));
+  if (!dueAt || dueAt.getTime() < actionBaseTimeMs) {
+    dueAt = new Date(actionBaseTimeMs + pickBotDelayMs(actionType));
     await client.query(
       `UPDATE room_players
        SET bot_next_action_at=$3
