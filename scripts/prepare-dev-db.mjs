@@ -131,9 +131,16 @@ try {
     await applyMigration("019-game-command-receipts.sql");
   }
 
+  if (
+    !(await columnExists("game_rooms", "automation_claimed_by")) ||
+    !(await columnExists("game_rooms", "automation_claimed_until"))
+  ) {
+    await applyMigration("020-automation-worker-claims.sql");
+  }
+
   await client.query("COMMIT");
   console.log(
-    "[war-brasil] banco local preparado para bots, objetivos, apresentação inicial, agenda de automação e receipts de comandos.",
+    "[war-brasil] banco local preparado para bots, objetivos, apresentação inicial, agenda/claims de automação e receipts de comandos.",
   );
 } catch (error) {
   await client.query("ROLLBACK").catch(() => undefined);
