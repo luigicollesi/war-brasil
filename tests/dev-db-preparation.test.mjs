@@ -3,21 +3,27 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
+const dev = readFileSync("scripts/dev.mjs", "utf8");
 const prepare = readFileSync("scripts/prepare-dev-db.mjs", "utf8");
 const orderRollPhaseMigration = readFileSync(
   "src/lib/db/migrations/024-order-roll-phase-compatibility.sql",
   "utf8",
 );
 
-test("ambiente dev prepara migrations necessárias antes de subir o Next", () => {
-  assert.equal(
-    packageJson.scripts.dev,
-    "node scripts/prepare-dev-db.mjs && next dev",
-  );
+test("ambiente dev prepara migrations antes de subir Next e realtime", () => {
+  assert.equal(packageJson.scripts.dev, "node scripts/dev.mjs");
   assert.equal(
     packageJson.scripts["db:prepare:dev"],
     "node scripts/prepare-dev-db.mjs",
   );
+  assert.match(dev, /scripts\/prepare-dev-db\.mjs/);
+  assert.match(dev, /node_modules\/next\/dist\/bin\/next/);
+  assert.match(dev, /realtime\/server\.mjs/);
+  assert.match(dev, /env\.GAME_REALTIME_ENABLED = "true"/);
+  assert.match(dev, /env\.NEXT_PUBLIC_GAME_REALTIME_MODE = "hybrid"/);
+  assert.match(dev, /NEXT_PUBLIC_GAME_REALTIME_URL/);
+  assert.match(dev, /realtime\/node_modules\/ws\/package\.json/);
+  assert.match(dev, /\["--prefix", "realtime", "ci"\]/);
 
   for (const migration of [
     "011-bot-players.sql",
@@ -33,6 +39,16 @@ test("ambiente dev prepara migrations necessárias antes de subir o Next", () =>
   ]) {
     assert.match(prepare, new RegExp(migration.replaceAll(".", "\\.")));
   }
+});
+
+test("orquestrador dev mantém processos separados e encerra ambos em conjunto", () => {
+  assert.match(dev, /spawn\(process\.execPath/);
+  assert.match(dev, /start\("Next\.js"/);
+  assert.match(dev, /start\("realtime gateway"/);
+  assert.match(dev, /process\.on\("SIGINT"/);
+  assert.match(dev, /process\.on\("SIGTERM"/);
+  assert.match(dev, /child\.kill\(signal\)/);
+  assert.doesNotMatch(dev, /GAME_REALTIME_ENABLED\s*=\s*"false"/);
 });
 
 test("preparação do banco é transacional, convergente e não inicia o servidor", () => {
