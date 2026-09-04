@@ -1,22 +1,14 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  applyGameCommandPatch,
-  type ApplicableGameCommandResult,
-} from "@/src/lib/game-command-patch";
+import type { ApplicableGameCommandResult } from "@/src/lib/game-command-patch";
 import { registerGameCommandPatchHandler } from "@/src/lib/game-command-patch-bus";
 import type { GameSnapshot } from "@/src/lib/game-contract";
-import { nextGamePollDelay } from "@/src/lib/game-polling";
-import {
-  hydrateGameSnapshot,
-  type GameSnapshotPayload,
-} from "@/src/lib/game-snapshot-hydration";
-import { shareGameSnapshot } from "@/src/lib/game-snapshot-sharing";
+import { GamePollScheduler } from "@/src/lib/client/sync/game-poll-scheduler";
+import { GameSyncController } from "@/src/lib/client/sync/game-sync-controller";
 import { gameSyncMetricsStore } from "@/src/lib/game-sync-metrics-store";
 import {
   GAME_REVISION_HEADER,
-  GAME_TOPOLOGY_HEADER,
   parseGameRevision,
 } from "@/src/lib/game-sync-contract";
 
@@ -45,11 +37,6 @@ export function useGameSync(roomId: string) {
   const applyCommandResultRef = useRef<
     (result: ApplicableGameCommandResult) => boolean
   >(() => false);
-  const snapshotRef = useRef<GameSnapshot | null>(null);
-  const revisionRef = useRef<number | null>(null);
-  const requiredRevisionRef = useRef<number | null>(null);
-  const topologyVersionRef = useRef<string | null>(null);
-  const baseTopologyConnectionsRef = useRef<GameSnapshot["connections"] | null>(null);
 
   useEffect(() => {
     let isActive = true;
@@ -57,27 +44,14 @@ export function useGameSync(roomId: string) {
     let advanceController: AbortController | null = null;
     let timeoutId = 0;
     let inFlight: Promise<void> | null = null;
-    let consecutiveFailures = 0;
+    const syncController = new GameSyncController(roomId);
+    const pollScheduler = new GamePollScheduler();
 
-    snapshotRef.current = null;
-    revisionRef.current = null;
-    requiredRevisionRef.current = null;
-
-    function recordRevision(revision: number | null) {
-      if (revision === null) return;
-      if (revisionRef.current === null || revision >= revisionRef.current) {
-        revisionRef.current = revision;
-      }
-      if (
-        requiredRevisionRef.current !== null &&
-        revision >= requiredRevisionRef.current
-      ) {
-        requiredRevisionRef.current = null;
-      }
-    }
+    syncController.reset();
+    pollScheduler.reset();
 
     function recordSyncSuccess(startedAt: number) {
-      consecutiveFailures = 0;
+      pollScheduler.recordSuccess();
       gameSyncMetricsStore.recordSuccess(performance.now() - startedAt);
     }
 
@@ -90,81 +64,13 @@ export function useGameSync(roomId: string) {
         const startedAt = performance.now();
 
         try {
-          const headers = new Headers();
-          if (revisionRef.current !== null) {
-            headers.set(GAME_REVISION_HEADER, String(revisionRef.current));
-          }
-          if (
-            topologyVersionRef.current !== null &&
-            baseTopologyConnectionsRef.current !== null
-          ) {
-            headers.set(GAME_TOPOLOGY_HEADER, topologyVersionRef.current);
-          }
-
-          const response = await fetch(
-            `/api/games/${encodeURIComponent(roomId)}`,
-            {
-              cache: "no-store",
-              headers,
-              signal: controller.signal,
-            },
-          );
-          const responseRevision = parseGameRevision(
-            response.headers.get(GAME_REVISION_HEADER),
-          );
-          const responseTopologyVersion = response.headers.get(
-            GAME_TOPOLOGY_HEADER,
-          );
-
-          if (response.status === 204) {
-            recordRevision(responseRevision);
-            recordSyncSuccess(startedAt);
-            if (isActive) setError("");
-            return;
-          }
-
-          const data: unknown = await response.json();
-          if (!response.ok) {
-            throw new Error(
-              responseMessage(data, "Não foi possível atualizar a partida."),
-            );
-          }
-
-          if (
-            responseRevision !== null &&
-            revisionRef.current !== null &&
-            responseRevision < revisionRef.current
-          ) {
-            recordSyncSuccess(startedAt);
-            return;
-          }
-
-          const payload = data as GameSnapshotPayload;
-          const baseConnections =
-            payload.connections ?? baseTopologyConnectionsRef.current;
-          if (!baseConnections) {
-            throw new Error("A topologia da partida não foi recebida.");
-          }
-
-          if (payload.connections) {
-            baseTopologyConnectionsRef.current = payload.connections;
-            if (responseTopologyVersion) {
-              topologyVersionRef.current = responseTopologyVersion;
-            }
-          }
-
-          const hydratedSnapshot = hydrateGameSnapshot(payload, baseConnections);
-
-          recordRevision(responseRevision);
+          const result = await syncController.sync(controller.signal);
           recordSyncSuccess(startedAt);
 
           if (isActive) {
-            const nextSnapshot = shareGameSnapshot(
-              snapshotRef.current,
-              hydratedSnapshot,
-            );
-            snapshotRef.current = nextSnapshot;
-            setSnapshot(nextSnapshot);
+            if (result.changed && result.snapshot) {
+              setSnapshot(result.snapshot);
+            }
             setError("");
           }
         } catch (requestError) {
@@ -172,7 +78,7 @@ export function useGameSync(roomId: string) {
             requestError instanceof DOMException && requestError.name === "AbortError";
 
           if (!aborted) {
-            consecutiveFailures += 1;
+            pollScheduler.recordFailure();
             if (typeof navigator !== "undefined" && !navigator.onLine) {
               gameSyncMetricsStore.recordOffline();
             } else {
@@ -202,8 +108,8 @@ export function useGameSync(roomId: string) {
     }
 
     async function advancePresentation() {
-      const currentSnapshot = snapshotRef.current;
-      const expectedRevision = revisionRef.current;
+      const currentSnapshot = syncController.currentSnapshot();
+      const expectedRevision = syncController.currentRevision();
 
       if (
         !currentSnapshot ||
@@ -248,10 +154,7 @@ export function useGameSync(roomId: string) {
           data.changed === true;
 
         if (returnedRevision !== null && returnedRevision !== expectedRevision) {
-          requiredRevisionRef.current = Math.max(
-            requiredRevisionRef.current ?? 0,
-            returnedRevision,
-          );
+          syncController.requireRevision(returnedRevision);
         }
 
         return changed || returnedRevision !== expectedRevision;
@@ -275,21 +178,16 @@ export function useGameSync(roomId: string) {
     async function syncUntilRequiredRevision() {
       await sync();
 
-      if (
-        isActive &&
-        requiredRevisionRef.current !== null &&
-        (revisionRef.current ?? 0) < requiredRevisionRef.current
-      ) {
+      if (isActive && syncController.needsRequiredRevision()) {
         await sync();
       }
     }
 
     function currentPollDelay() {
-      const currentSnapshot = snapshotRef.current;
-      return nextGamePollDelay({
+      const currentSnapshot = syncController.currentSnapshot();
+      return pollScheduler.nextDelay({
         visible: document.visibilityState === "visible",
         online: navigator.onLine,
-        failures: consecutiveFailures,
         presentationPending: Boolean(
           currentSnapshot && shouldAdvancePresentation(currentSnapshot),
         ),
@@ -311,40 +209,23 @@ export function useGameSync(roomId: string) {
     refreshRef.current = async (minimumRevision?: number) => {
       if (
         minimumRevision !== undefined &&
-        revisionRef.current !== null &&
-        revisionRef.current >= minimumRevision
+        syncController.hasObservedRevision(minimumRevision)
       ) {
         return;
       }
 
       if (minimumRevision !== undefined) {
-        requiredRevisionRef.current = Math.max(
-          requiredRevisionRef.current ?? 0,
-          minimumRevision,
-        );
+        syncController.requireRevision(minimumRevision);
       }
       await syncUntilRequiredRevision();
     };
 
     applyCommandResultRef.current = (result) => {
-      const currentSnapshot = snapshotRef.current;
-      if (
-        !isActive ||
-        !currentSnapshot ||
-        !result.patch ||
-        result.baseRevision === null ||
-        result.revision === null ||
-        revisionRef.current !== result.baseRevision ||
-        result.revision <= result.baseRevision
-      ) {
-        return false;
-      }
+      if (!isActive) return false;
 
-      const nextSnapshot = applyGameCommandPatch(currentSnapshot, result.patch);
+      const nextSnapshot = syncController.applyCommandResult(result);
       if (!nextSnapshot) return false;
 
-      recordRevision(result.revision);
-      snapshotRef.current = nextSnapshot;
       setSnapshot(nextSnapshot);
       setError("");
       return true;
@@ -358,7 +239,7 @@ export function useGameSync(roomId: string) {
     const handleOffline = () => gameSyncMetricsStore.recordOffline();
     const handleOnline = () => {
       gameSyncMetricsStore.recordOnline();
-      consecutiveFailures = 0;
+      pollScheduler.reset();
       void syncUntilRequiredRevision();
     };
     const handleVisibilityChange = () => {
@@ -371,6 +252,7 @@ export function useGameSync(roomId: string) {
     window.addEventListener("online", handleOnline);
     document.addEventListener("visibilitychange", handleVisibilityChange);
 
+    void syncController.startRealtime();
     void poll();
 
     return () => {
@@ -378,6 +260,7 @@ export function useGameSync(roomId: string) {
       window.clearTimeout(timeoutId);
       requestController?.abort();
       advanceController?.abort();
+      syncController.stopRealtime();
       unregisterCommandPatchHandler();
       window.removeEventListener("offline", handleOffline);
       window.removeEventListener("online", handleOnline);
