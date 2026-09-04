@@ -12,7 +12,7 @@ export function GuideTurnSection() {
         ariaLabel="Etapas do turno"
         className="wb-guide-main-turn-flow"
         steps={[
-          { key: "cards", eyebrow: "01", label: "Cartas", detail: "opcional" },
+          { key: "trade", eyebrow: "01", label: "Troca", detail: "opcional" },
           {
             key: "reinforcement",
             eyebrow: "02",
@@ -26,7 +26,9 @@ export function GuideTurnSection() {
       />
 
       <p className="wb-guide-turn-end">
-        Depois da manobra, a vez passa para o próximo jogador ativo.
+        A fase de troca só aparece quando o jogador da vez possui cartas e pode ser
+        pulada a qualquer momento antes de uma negociação pendente. Depois da
+        manobra, a vez passa para o próximo jogador ativo.
       </p>
     </article>
   );
