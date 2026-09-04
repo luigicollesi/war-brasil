@@ -66,13 +66,14 @@ export class GameRealtimeRegistry {
     const context = this.contexts.get(socket);
     if (!context || socket.readyState !== WebSocket.OPEN) return false;
 
+    const readyRevision = Math.max(context.lastRevisionSent, revision);
     try {
       socket.send(
         serverEvent("realtime.ready", context.roomId, {
-          revision,
+          revision: readyRevision,
         }),
       );
-      context.lastRevisionSent = Math.max(context.lastRevisionSent, revision);
+      context.lastRevisionSent = readyRevision;
       return true;
     } catch {
       socket.terminate();
@@ -286,5 +287,9 @@ export class GameRealtimeRegistry {
 
   size() {
     return this.contexts.size;
+  }
+
+  roomCount() {
+    return this.rooms.size;
   }
 }
