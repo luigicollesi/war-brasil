@@ -5,13 +5,17 @@ import {
   BATTLE_DICE_PRESENTATION_MS,
   BATTLE_RESULT_PRESENTATION_MS,
   INITIAL_TERRITORY_HIGHLIGHT_DURATION_MS,
+  INITIAL_TERRITORY_POST_DELAY_MS,
   INITIAL_TERRITORY_PRESENTATION_MS,
   INITIAL_TERRITORY_REVEAL_COUNT,
   INITIAL_TERRITORY_REVEAL_DURATION_MS,
   INITIAL_TERRITORY_REVEAL_STEP_MS,
   INITIAL_TERRITORY_SYNC_DELAY_MS,
+  ORDER_ROLL_DICE_ANIMATION_MS,
   ORDER_ROLL_PRESENTATION_MS,
+  ORDER_ROLL_RESULT_HOLD_MS,
   isInitialTerritoryPresentationDue,
+  isOrderRollActorAvailable,
   isOrderRollPresentationDue,
   nextBattlePresentationTransition,
 } from "../.test-build/game-transitions.js";
@@ -79,17 +83,18 @@ test("comparação e resultado mantêm janelas próprias", () => {
   );
 });
 
-test("apresentação inicial reserva margem de sincronização antes da animação", () => {
-  assert.equal(INITIAL_TERRITORY_SYNC_DELAY_MS, 2_000);
-  assert.equal(INITIAL_TERRITORY_REVEAL_STEP_MS, 100);
+test("apresentação inicial reserva cinco segundos e usa a nova cadência visual", () => {
+  assert.equal(INITIAL_TERRITORY_SYNC_DELAY_MS, 5_000);
+  assert.equal(INITIAL_TERRITORY_REVEAL_STEP_MS, 200);
   assert.equal(INITIAL_TERRITORY_REVEAL_COUNT, 42);
-  assert.equal(INITIAL_TERRITORY_REVEAL_DURATION_MS, 4_200);
-  assert.equal(INITIAL_TERRITORY_HIGHLIGHT_DURATION_MS, 2_000);
-  assert.equal(INITIAL_TERRITORY_PRESENTATION_MS, 6_200);
+  assert.equal(INITIAL_TERRITORY_REVEAL_DURATION_MS, 8_400);
+  assert.equal(INITIAL_TERRITORY_HIGHLIGHT_DURATION_MS, 3_000);
+  assert.equal(INITIAL_TERRITORY_POST_DELAY_MS, 1_000);
+  assert.equal(INITIAL_TERRITORY_PRESENTATION_MS, 12_400);
 });
 
-test("apresentação inicial só termina após revelação e destaque", () => {
-  const startedAt = "2026-08-26T12:00:02.000Z";
+test("apresentação inicial só termina após revelação, três piscadas e pausa final", () => {
+  const startedAt = "2026-08-26T12:00:05.000Z";
   const startMs = Date.parse(startedAt);
 
   assert.equal(
@@ -108,11 +113,18 @@ test("apresentação inicial só termina após revelação e destaque", () => {
   );
 });
 
-test("sorteio só avança quando todos rolaram e dois segundos passaram", () => {
+test("sorteio de ordem respeita animação 3D e display do resultado", () => {
+  assert.equal(ORDER_ROLL_DICE_ANIMATION_MS, 2_600);
+  assert.equal(ORDER_ROLL_RESULT_HOLD_MS, 600);
+  assert.equal(ORDER_ROLL_PRESENTATION_MS, 3_200);
+
   const lastRollAt = new Date("2026-08-26T12:00:00.000Z");
   const before = lastRollAt.getTime() + ORDER_ROLL_PRESENTATION_MS - 1;
   const atLimit = lastRollAt.getTime() + ORDER_ROLL_PRESENTATION_MS;
 
+  assert.equal(isOrderRollActorAvailable(null, before), true);
+  assert.equal(isOrderRollActorAvailable(lastRollAt, before), false);
+  assert.equal(isOrderRollActorAvailable(lastRollAt, atLimit), true);
   assert.equal(isOrderRollPresentationDue(false, lastRollAt, atLimit), false);
   assert.equal(isOrderRollPresentationDue(true, null, atLimit), false);
   assert.equal(isOrderRollPresentationDue(true, lastRollAt, before), false);
