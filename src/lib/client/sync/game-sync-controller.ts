@@ -83,7 +83,9 @@ export class GameSyncController {
   }
 
   hasObservedRevision(revision: number) {
-    return this.revisions.hasObserved(revision);
+    return (
+      !this.forceSnapshotOnNextSync && this.revisions.hasObserved(revision)
+    );
   }
 
   needsRequiredRevision() {
@@ -189,15 +191,19 @@ export class GameSyncController {
     this.unsubscribeRealtime?.();
     this.unsubscribeRealtime = this.realtimeTransport.subscribe((event) => {
       if (event.roomId !== this.roomId) return;
-      if (this.realtimeMode === "hybrid") {
-        if (event.type === "game.private.invalidate") {
-          this.forceSnapshot(event.payload.revision);
-        } else if (
-          event.type === "game.invalidate" ||
-          event.type === "realtime.ready"
-        ) {
-          this.revisions.require(event.payload.revision);
-        }
+      if (
+        this.realtimeMode === "hybrid" &&
+        event.type === "game.private.invalidate"
+      ) {
+        this.forceSnapshot(event.payload.revision);
+        onEvent?.({ ...event, type: "game.invalidate" });
+        return;
+      }
+      if (
+        this.realtimeMode === "hybrid" &&
+        (event.type === "game.invalidate" || event.type === "realtime.ready")
+      ) {
+        this.revisions.require(event.payload.revision);
       }
       onEvent?.(event);
     });
