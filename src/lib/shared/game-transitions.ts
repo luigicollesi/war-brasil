@@ -27,15 +27,28 @@ type BattlePresentationTransition =
   | "resolve_battle"
   | "clear_battle";
 
+function startedAtMs(startedAt: string | Date) {
+  const value =
+    startedAt instanceof Date ? startedAt.getTime() : Date.parse(startedAt);
+  return Number.isFinite(value) ? value : null;
+}
+
+function dueAt(startedAt: string | Date, durationMs: number) {
+  const started = startedAtMs(startedAt);
+  return started === null ? null : new Date(started + durationMs);
+}
+
 function elapsedAtLeast(
   startedAt: string | Date,
   durationMs: number,
   nowMs: number,
 ) {
-  const startedAtMs =
-    startedAt instanceof Date ? startedAt.getTime() : Date.parse(startedAt);
+  const due = dueAt(startedAt, durationMs);
+  return due !== null && nowMs >= due.getTime();
+}
 
-  return isFinite(startedAtMs) && nowMs - startedAtMs >= durationMs;
+export function initialTerritoryPresentationDueAt(startedAt: string | Date) {
+  return dueAt(startedAt, INITIAL_TERRITORY_PRESENTATION_MS);
 }
 
 export function isInitialTerritoryPresentationDue(
@@ -58,6 +71,14 @@ function battleStagePresentationDuration(stage: BattleStage) {
   return null;
 }
 
+export function battlePresentationDueAt(
+  stage: BattleStage,
+  stageStartedAt: string | Date,
+) {
+  const durationMs = battleStagePresentationDuration(stage);
+  return durationMs === null ? null : dueAt(stageStartedAt, durationMs);
+}
+
 export function nextBattlePresentationTransition(
   stage: BattleStage,
   stageStartedAt: string | Date,
@@ -76,16 +97,19 @@ export function nextBattlePresentationTransition(
   return null;
 }
 
+export function orderRollPresentationDueAt(
+  allEligiblePlayersRolled: boolean,
+  lastRollAt: Date | null,
+) {
+  if (!allEligiblePlayersRolled || !lastRollAt) return null;
+  return dueAt(lastRollAt, ORDER_ROLL_PRESENTATION_MS);
+}
+
 export function isOrderRollPresentationDue(
   allEligiblePlayersRolled: boolean,
   lastRollAt: Date | null,
   nowMs = Date.now(),
 ) {
-  if (!allEligiblePlayersRolled || !lastRollAt) return false;
-
-  return elapsedAtLeast(
-    lastRollAt,
-    ORDER_ROLL_PRESENTATION_MS,
-    nowMs,
-  );
+  const due = orderRollPresentationDueAt(allEligiblePlayersRolled, lastRollAt);
+  return due !== null && nowMs >= due.getTime();
 }
