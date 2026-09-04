@@ -6,6 +6,7 @@ import { registerGameCommandPatchHandler } from "@/src/lib/game-command-patch-bu
 import type { GameSnapshot } from "@/src/lib/game-contract";
 import type { GameRealtimeEvent } from "@/src/lib/game-realtime-contract";
 import { gameAutomationDriver } from "@/src/lib/client/game-automation-driver";
+import { registerGameCommandSyncContext } from "@/src/lib/client/game-command-sync-context";
 import { GamePollScheduler } from "@/src/lib/client/sync/game-poll-scheduler";
 import {
   GameSyncController,
@@ -274,6 +275,15 @@ export function useGameSync(roomId: string) {
       return true;
     };
 
+    const unregisterCommandSyncContext = registerGameCommandSyncContext(roomId, {
+      currentRevision: () => syncController.currentRevision(),
+      recoverRevision: async (revision) => {
+        if (!isActive) return;
+        syncController.requireRevision(revision);
+        await syncUntilRequiredRevision();
+        scheduleNextPoll();
+      },
+    });
     const unregisterCommandPatchHandler = registerGameCommandPatchHandler(
       roomId,
       (result) => applyCommandResultRef.current(result),
@@ -363,6 +373,7 @@ export function useGameSync(roomId: string) {
       advanceController?.abort();
       unsubscribeRealtimeState();
       syncController.stopRealtime();
+      unregisterCommandSyncContext();
       unregisterCommandPatchHandler();
       window.removeEventListener("offline", handleOffline);
       window.removeEventListener("online", handleOnline);
