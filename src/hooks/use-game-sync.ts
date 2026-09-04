@@ -5,6 +5,7 @@ import type { ApplicableGameCommandResult } from "@/src/lib/game-command-patch";
 import { registerGameCommandPatchHandler } from "@/src/lib/game-command-patch-bus";
 import type { GameSnapshot } from "@/src/lib/game-contract";
 import type { GameRealtimeEvent } from "@/src/lib/game-realtime-contract";
+import { gameAutomationDriver } from "@/src/lib/client/game-automation-driver";
 import { GamePollScheduler } from "@/src/lib/client/sync/game-poll-scheduler";
 import {
   GameSyncController,
@@ -60,6 +61,7 @@ export function useGameSync(roomId: string) {
     let timeoutId = 0;
     let inFlight: Promise<void> | null = null;
     const realtimeMode = gameRealtimeMode();
+    const automationDriver = gameAutomationDriver();
     const syncController = new GameSyncController(roomId, {
       realtimeMode,
       realtimeTransport: createGameRealtimeTransport(realtimeMode),
@@ -213,7 +215,9 @@ export function useGameSync(roomId: string) {
         visible: document.visibilityState === "visible",
         online: navigator.onLine,
         presentationPending: Boolean(
-          currentSnapshot && shouldAdvancePresentation(currentSnapshot),
+          automationDriver === "browser" &&
+            currentSnapshot &&
+            shouldAdvancePresentation(currentSnapshot),
         ),
         realtimeMode,
         realtimeState,
@@ -229,7 +233,11 @@ export function useGameSync(roomId: string) {
     async function poll() {
       await syncUntilRequiredRevision();
 
-      if (isActive && (await advancePresentation())) {
+      if (
+        automationDriver === "browser" &&
+        isActive &&
+        (await advancePresentation())
+      ) {
         await syncUntilRequiredRevision();
       }
 
