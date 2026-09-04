@@ -23,6 +23,7 @@ export function TradeResponseModal({
   const trade = snapshot.trade;
   const me = snapshot.players.find((player) => player.isMe);
   const offer = trade?.activeOffer ?? null;
+  const counter = offer?.counter ?? null;
   const [counterOpen, setCounterOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -35,12 +36,26 @@ export function TradeResponseModal({
       offer.status === "open" &&
       offer.targetPlayerId === me.id,
   );
+  const incomingCounter = Boolean(
+    snapshot.room.status === "playing" &&
+      snapshot.room.phase === "trade" &&
+      me &&
+      offer &&
+      counter &&
+      offer.status === "countered" &&
+      offer.proposerPlayerId === me.id,
+  );
 
-  if (!incomingOffer || !offer) return null;
+  if ((!incomingOffer && !incomingCounter) || !offer || !me) return null;
 
-  const canAccept =
+  const canAcceptOriginal =
     cardsMatchingTradeDescriptor(snapshot.myCards, offer.original.requested)
       .length > 0;
+  const canAcceptCounter = Boolean(
+    counter &&
+      cardsMatchingTradeDescriptor(snapshot.myCards, counter.terms.requested)
+        .length > 0,
+  );
 
   async function command(body: Record<string, unknown>) {
     if (busy) return false;
@@ -55,7 +70,7 @@ export function TradeResponseModal({
       setError(
         requestError instanceof Error
           ? requestError.message
-          : "Não foi possível responder à oferta.",
+          : "Não foi possível responder à negociação.",
       );
       return false;
     } finally {
@@ -63,7 +78,7 @@ export function TradeResponseModal({
     }
   }
 
-  if (counterOpen) {
+  if (incomingOffer && counterOpen) {
     return (
       <TradeBuilderModal
         mode="counter"
@@ -72,6 +87,56 @@ export function TradeResponseModal({
         onClose={() => setCounterOpen(false)}
         onSubmit={command}
       />
+    );
+  }
+
+  if (incomingCounter && counter) {
+    return (
+      <GameModal
+        eyebrow="Contraoferta recebida"
+        title={`${tradePlayerName(snapshot, counter.proposerPlayerId)} enviou novos termos`}
+        className="trade-modal w-full max-w-lg p-5 sm:p-6"
+      >
+        <p className="mt-2 text-sm text-[#b9cbc3]">
+          Você pode aceitar estes termos ou encerrar esta negociação.
+        </p>
+
+        <div className="mt-5 space-y-3">
+          <TradeNegotiationSummary label="Sua oferta original" terms={offer.original} />
+          <TradeNegotiationSummary label="Contraoferta recebida" terms={counter.terms} />
+        </div>
+
+        <div className="mt-6 grid gap-3 sm:grid-cols-2">
+          {canAcceptCounter ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() =>
+                void command({ action: "acceptCounter", offerId: offer.id })
+              }
+              className="rounded-xl bg-[#e4b94f] px-4 py-3 text-xs font-bold uppercase tracking-wider text-[#12392f] disabled:opacity-40"
+            >
+              Aceitar contraoferta
+            </button>
+          ) : null}
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() =>
+              void command({ action: "decline", offerId: offer.id })
+            }
+            className="rounded-xl border border-[#b65a4c]/30 px-4 py-3 text-xs font-bold uppercase tracking-wider text-[#f2a99d] disabled:opacity-40"
+          >
+            Recusar
+          </button>
+        </div>
+
+        {error ? (
+          <p className="mt-4 text-sm text-[#f0a090]" role="alert">
+            {error}
+          </p>
+        ) : null}
+      </GameModal>
     );
   }
 
@@ -90,7 +155,7 @@ export function TradeResponseModal({
       </div>
 
       <div className="mt-6 grid gap-3 sm:grid-cols-3">
-        {canAccept ? (
+        {canAcceptOriginal ? (
           <button
             type="button"
             disabled={busy}
