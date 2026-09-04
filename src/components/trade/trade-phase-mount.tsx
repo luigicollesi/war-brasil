@@ -36,7 +36,11 @@ export function TradePhaseMount({
             target,
           )
         : null}
-      <TradeSignalToast roomId={roomId} snapshot={snapshot} />
+      <TradeSignalToast
+        key={`${snapshot.room.turnNumber}:${snapshot.room.currentPlayerId ?? "-"}`}
+        roomId={roomId}
+        snapshot={snapshot}
+      />
     </>
   );
 }
