@@ -43,6 +43,14 @@ export type GameRealtimePingMessage = {
 
 export type GameRealtimeClientMessage = GameRealtimePingMessage;
 
+type ValidatedRealtimeEnvelope = {
+  protocolVersion: typeof GAME_PROTOCOL_VERSION;
+  type: string;
+  roomId: string;
+  serverTime: number;
+  payload: Record<string, unknown>;
+};
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -51,8 +59,10 @@ function validRevision(value: unknown) {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 1;
 }
 
-function validEnvelope(value: unknown) {
+function validEnvelope(value: unknown): ValidatedRealtimeEnvelope | null {
   if (!isRecord(value)) return null;
+
+  const payload = value.payload;
   if (
     value.protocolVersion !== GAME_PROTOCOL_VERSION ||
     typeof value.type !== "string" ||
@@ -60,28 +70,37 @@ function validEnvelope(value: unknown) {
     value.roomId.length < 1 ||
     typeof value.serverTime !== "number" ||
     !Number.isFinite(value.serverTime) ||
-    !isRecord(value.payload)
+    !isRecord(payload)
   ) {
     return null;
   }
-  return value;
+
+  return {
+    protocolVersion: GAME_PROTOCOL_VERSION,
+    type: value.type,
+    roomId: value.roomId,
+    serverTime: value.serverTime,
+    payload,
+  };
 }
 
 export function isGameRealtimeEvent(value: unknown): value is GameRealtimeEvent {
   const envelope = validEnvelope(value);
   if (!envelope) return false;
 
+  const payload = envelope.payload;
+
   if (envelope.type === "game.invalidate" || envelope.type === "realtime.ready") {
-    return validRevision(envelope.payload.revision);
+    return validRevision(payload.revision);
   }
 
   if (envelope.type === "realtime.pong") {
     return (
-      typeof envelope.payload.clientTime === "number" &&
-      Number.isFinite(envelope.payload.clientTime) &&
-      typeof envelope.payload.nonce === "string" &&
-      envelope.payload.nonce.length >= 1 &&
-      envelope.payload.nonce.length <= 64
+      typeof payload.clientTime === "number" &&
+      Number.isFinite(payload.clientTime) &&
+      typeof payload.nonce === "string" &&
+      payload.nonce.length >= 1 &&
+      payload.nonce.length <= 64
     );
   }
 
