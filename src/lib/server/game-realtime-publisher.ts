@@ -5,9 +5,12 @@ import {
   isGameCommandPatch,
   type GameCommandPatch,
 } from "@/src/lib/game-command-patch";
+import type { GameRealtimeBusEvent } from "./realtime/game-realtime-bus";
+import { publishGameRealtimeBusEvent } from "./realtime/game-realtime-bus-runtime";
 import { publishGameRealtimeMetric } from "./observability/game-realtime-metrics";
 
-export const DEFAULT_GAME_REALTIME_CHANNEL = "war_game_revision";
+export { DEFAULT_GAME_REALTIME_CHANNEL } from "./realtime/postgres-game-realtime-bus";
+
 const GAME_REALTIME_NOTIFY_MAX_BYTES = 7_000;
 
 function gameRealtimeEnabled() {
@@ -18,60 +21,62 @@ function gameRealtimePatchesEnabled() {
   return process.env.GAME_REALTIME_PATCHES_ENABLED === "true";
 }
 
-function gameRealtimeChannel() {
-  const configured = process.env.GAME_REALTIME_CHANNEL?.trim();
-  return configured || DEFAULT_GAME_REALTIME_CHANNEL;
-}
-
-function invalidationPayload(
+function invalidationEvent(
   roomId: string,
   revision: number,
   playerId?: string,
-) {
-  return JSON.stringify({
+): GameRealtimeBusEvent {
+  if (playerId) {
+    return {
+      kind: "invalidate",
+      scope: "player",
+      roomId,
+      playerId,
+      revision,
+    };
+  }
+
+  return {
     kind: "invalidate",
-    scope: playerId ? "player" : "room",
+    scope: "room",
     roomId,
     revision,
-    ...(playerId ? { playerId } : {}),
-  });
+  };
 }
 
-function patchPayload(
+function patchEvent(
   roomId: string,
   baseRevision: number,
   revision: number,
   patch: GameCommandPatch,
-) {
-  return JSON.stringify({
+): GameRealtimeBusEvent {
+  return {
     kind: "patch",
     scope: "room",
     roomId,
     baseRevision,
     revision,
     patch,
-  });
+  };
 }
 
-async function publishPayload(
+async function publishEvent(
   client: PoolClient,
-  roomId: string,
-  revision: number,
-  payload: string,
+  event: GameRealtimeBusEvent,
   metricName: "notify.publish" | "notify.private" | "notify.patch",
 ) {
   try {
-    await client.query("SELECT pg_notify($1,$2)", [gameRealtimeChannel(), payload]);
+    await publishGameRealtimeBusEvent(client, event);
     publishGameRealtimeMetric({
       name: metricName,
-      roomId,
-      revision,
+      roomId: event.roomId,
+      revision: event.revision,
     });
   } catch (error) {
     publishGameRealtimeMetric({
       name: "notify.failure",
-      roomId,
-      revision,
+      roomId: event.roomId,
+      revision: event.revision,
       error: error instanceof Error ? error.message : String(error),
     });
   }
@@ -83,11 +88,9 @@ export async function publishGameInvalidation(
   revision: number,
 ) {
   if (!gameRealtimeEnabled()) return;
-  await publishPayload(
+  await publishEvent(
     client,
-    roomId,
-    revision,
-    invalidationPayload(roomId, revision),
+    invalidationEvent(roomId, revision),
     "notify.publish",
   );
 }
@@ -101,11 +104,9 @@ export async function publishPlayerGameInvalidation(
   if (!gameRealtimeEnabled()) return;
   if (!/^\d+$/.test(playerId)) return;
 
-  await publishPayload(
+  await publishEvent(
     client,
-    roomId,
-    revision,
-    invalidationPayload(roomId, revision, playerId),
+    invalidationEvent(roomId, revision, playerId),
     "notify.private",
   );
 }
@@ -126,20 +127,15 @@ export async function publishGameChange(
     input.patch &&
     isGameCommandPatch(input.patch)
   ) {
-    const payload = patchPayload(
+    const event = patchEvent(
       input.roomId,
       input.baseRevision,
       input.revision,
       input.patch,
     );
-    if (Buffer.byteLength(payload, "utf8") <= GAME_REALTIME_NOTIFY_MAX_BYTES) {
-      await publishPayload(
-        client,
-        input.roomId,
-        input.revision,
-        payload,
-        "notify.patch",
-      );
+    const payloadBytes = Buffer.byteLength(JSON.stringify(event), "utf8");
+    if (payloadBytes <= GAME_REALTIME_NOTIFY_MAX_BYTES) {
+      await publishEvent(client, event, "notify.patch");
       return;
     }
 
@@ -147,7 +143,7 @@ export async function publishGameChange(
       name: "notify.patch_fallback",
       roomId: input.roomId,
       revision: input.revision,
-      payloadBytes: Buffer.byteLength(payload, "utf8"),
+      payloadBytes,
     });
   }
 
