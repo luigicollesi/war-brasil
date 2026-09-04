@@ -1,6 +1,7 @@
 import { existsSync } from "node:fs";
 import { loadEnvFile } from "node:process";
 import pg from "pg";
+import { advanceDueAutomation } from "./advance-client.mjs";
 import {
   automationWorkerBatchSize,
   automationWorkerInternalBaseUrl,
@@ -60,54 +61,27 @@ function dueAtValue(row) {
     : row.automation_due_at;
 }
 
-async function executeDueAutomation(row) {
+async function executeActiveRow(row) {
   const startedAt = Date.now();
-  const response = await fetch(
-    `${internalBaseUrl}/api/internal/automation/advance`,
+  const result = await advanceDueAutomation({
+    row,
+    baseUrl: internalBaseUrl,
+    token: workerToken,
+  });
+
+  recordAutomationWorkerMetric(
+    result.changed ? "active.executed" : "active.noop",
     {
-      method: "POST",
-      cache: "no-store",
-      headers: {
-        Authorization: `Bearer ${workerToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        roomId: row.room_id,
-        expectedRevision: row.revision,
-      }),
-      signal: AbortSignal.timeout(10_000),
+      roomId: row.room_id,
+      expectedRevision: row.revision,
+      revision: result.revision,
+      actionKind: result.kind,
+      kind: row.automation_kind,
+      dueAt: dueAtValue(row),
+      dueLagMs: Number(row.due_lag_ms) || 0,
+      durationMs: Date.now() - startedAt,
     },
   );
-
-  const data = await response.json().catch(() => null);
-  if (!response.ok) {
-    const detail =
-      data && typeof data === "object" && typeof data.error === "string"
-        ? data.error
-        : `HTTP ${response.status}`;
-    throw new Error(detail);
-  }
-
-  const changed = Boolean(
-    data && typeof data === "object" && data.changed === true,
-  );
-  const revision =
-    data &&
-    typeof data === "object" &&
-    Number.isSafeInteger(data.revision) &&
-    data.revision >= 1
-      ? data.revision
-      : null;
-
-  recordAutomationWorkerMetric(changed ? "active.executed" : "active.noop", {
-    roomId: row.room_id,
-    expectedRevision: row.revision,
-    revision,
-    kind: row.automation_kind,
-    dueAt: dueAtValue(row),
-    dueLagMs: Number(row.due_lag_ms) || 0,
-    durationMs: Date.now() - startedAt,
-  });
 }
 
 async function scan() {
@@ -136,7 +110,7 @@ async function scan() {
     }
 
     try {
-      await executeDueAutomation(row);
+      await executeActiveRow(row);
     } catch (error) {
       recordAutomationWorkerMetric("active.failure", {
         roomId: row.room_id,
