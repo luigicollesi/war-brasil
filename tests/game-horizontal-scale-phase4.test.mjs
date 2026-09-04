@@ -24,6 +24,24 @@ const migration = readFileSync(
   "utf8",
 );
 const prepareDevDb = readFileSync("scripts/prepare-dev-db.mjs", "utf8");
+const gateway = readFileSync("realtime/server.mjs", "utf8");
+const redisSubscriber = readFileSync("realtime/redis-room-subscriber.mjs", "utf8");
+const ticketIssuer = readFileSync(
+  "src/lib/server/realtime/game-realtime-ticket.ts",
+  "utf8",
+);
+const websocketTransport = readFileSync(
+  "src/lib/client/transport/websocket-game-realtime-transport.ts",
+  "utf8",
+);
+const ephemeral = readFileSync(
+  "src/lib/client/transport/game-ephemeral-transport.ts",
+  "utf8",
+);
+const ephemeralFactory = readFileSync(
+  "src/lib/client/transport/create-game-ephemeral-transport.ts",
+  "utf8",
+);
 
 test("phase 4 starts with a transport-independent realtime bus contract", () => {
   assert.match(bus, /interface GameRealtimeBus/);
@@ -34,9 +52,8 @@ test("phase 4 starts with a transport-independent realtime bus contract", () => 
   assert.match(bus, /postgresClient: PoolClient/);
 });
 
-test("postgres remains the only active bus before redis rollout", () => {
+test("postgres remains the authoritative publication source during redis relay rollout", () => {
   assert.match(runtime, /postgresGameRealtimeBus\.publish/);
-  assert.doesNotMatch(runtime, /redis/i);
   assert.match(postgres, /SELECT pg_notify\(\$1,\$2\)/);
   assert.match(postgres, /JSON\.stringify\(event\)/);
   assert.match(postgres, /war_game_revision/);
@@ -60,4 +77,34 @@ test("automation claims are durable operational metadata, not game revisions", (
   assert.match(worker, /runWithConcurrency/);
   assert.match(worker, /claim\.recovered/);
   assert.doesNotMatch(migration, /revision/);
+});
+
+test("redis gateway subscriptions are scoped to rooms with local sockets", () => {
+  assert.match(gateway, /GAME_REALTIME_EVENT_SOURCE/);
+  assert.match(gateway, /acquireRoomSource\(identity\.roomId\)/);
+  assert.match(gateway, /releaseRoomSource\(context\.roomId\)/);
+  assert.match(redisSubscriber, /war:game:\$\{roomId\}:v1/);
+  assert.match(redisSubscriber, /existing\.count \+= 1/);
+  assert.match(redisSubscriber, /entry\.count -= 1/);
+});
+
+test("short-lived realtime tickets never include the long-lived player session", () => {
+  assert.match(ticketIssuer, /createHmac\("sha256"/);
+  assert.match(ticketIssuer, /DEFAULT_TICKET_TTL_SECONDS = 45/);
+  assert.match(ticketIssuer, /roomId/);
+  assert.match(ticketIssuer, /playerId/);
+  assert.match(ticketIssuer, /nonce: randomUUID\(\)/);
+  assert.doesNotMatch(ticketIssuer, /player_session.*payload/);
+  assert.match(gateway, /GAME_REALTIME_AUTH_MODE/);
+  assert.match(gateway, /verifyRealtimeTicket/);
+  assert.match(gateway, /readRealtimeIdentityByPlayer/);
+  assert.match(websocketTransport, /fetchRealtimeTicket/);
+  assert.match(websocketTransport, /url\.searchParams\.set\("ticket", ticket\)/);
+});
+
+test("ephemeral transport is isolated and disabled by default", () => {
+  assert.match(ephemeral, /interface GameEphemeralTransport/);
+  assert.match(ephemeral, /send\(event: GameEphemeralEvent\)/);
+  assert.match(ephemeralFactory, /NullGameEphemeralTransport/);
+  assert.doesNotMatch(ephemeral, /GameRealtimeEvent|GameCommandPatch|revision/);
 });
