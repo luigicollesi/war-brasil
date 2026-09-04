@@ -114,13 +114,22 @@ test("scheduler persiste somente apresentação ou bot e limpa timers obsoletos"
   assert.doesNotMatch(schedule, /setTimeout|setInterval/);
 });
 
-test("worker inicia somente em shadow e não executa mutações autoritativas", () => {
+test("worker shadow observa e active delega mutação ao command boundary versionado", () => {
   const worker = source("worker/server.mjs");
+  const client = source("worker/advance-client.mjs");
   const query = source("worker/queries.mjs");
-  assert.match(worker, /mode === "active"/);
-  assert.match(worker, /ainda não está habilitado/);
+  const route = source("src/app/api/internal/automation/advance/route.ts");
+  const auth = source("src/lib/server/automation/game-automation-worker-auth.ts");
+
+  assert.match(worker, /mode === "shadow"/);
   assert.match(worker, /shadow\.due/);
-  assert.match(worker, /shadow\.scan/);
-  assert.doesNotMatch(worker, /\/advance|UPDATE game_rooms|DELETE FROM/);
+  assert.match(worker, /executeActiveRow/);
+  assert.match(worker, /active\.executed/);
+  assert.match(client, /expectedRevision: row\.revision/);
+  assert.match(client, /Authorization: `Bearer \$\{token\}`/);
+  assert.match(route, /advanceGameAutomationCommand/);
+  assert.match(route, /expectedRevision/);
+  assert.match(auth, /timingSafeEqual/);
+  assert.doesNotMatch(worker, /UPDATE game_rooms|DELETE FROM/);
   assert.doesNotMatch(query, /UPDATE|DELETE|FOR UPDATE/i);
 });
