@@ -70,6 +70,12 @@ const origins = allowedOrigins();
 const pool = new Pool({ connectionString, max: 5 });
 const registry = new GameRealtimeRegistry();
 let listenerHealthy = false;
+let acceptingUpgrades = false;
+let shuttingDown = false;
+
+function gatewayReady() {
+  return acceptingUpgrades && listenerHealthy && !shuttingDown;
+}
 
 const listener = new PostgresRealtimeListener({
   connectionString,
@@ -111,7 +117,7 @@ async function setupConnection(socket, identity) {
 
   socket.on("pong", () => registry.markAlive(socket));
   socket.on("close", () => registry.remove(socket));
-  socket.on("error", () => {});
+  socket.on("error", () => undefined);
   socket.on("message", (data, isBinary) => {
     if (isBinary) {
       recordRealtimeMetric("protocolErrors", { roomId: context.roomId });
@@ -150,7 +156,7 @@ async function setupConnection(socket, identity) {
   if (
     !freshIdentity ||
     freshIdentity.playerId !== identity.playerId ||
-    !listenerHealthy
+    !gatewayReady()
   ) {
     socket.close(1012, "Não foi possível confirmar o estado realtime");
     return;
@@ -159,14 +165,34 @@ async function setupConnection(socket, identity) {
   registry.sendReady(socket, freshIdentity.revision);
 }
 
+function statusBody() {
+  return {
+    ready: gatewayReady(),
+    live: !shuttingDown,
+    acceptingUpgrades,
+    listenerHealthy,
+    connections: registry.size(),
+    rooms: registry.roomCount(),
+    metrics: realtimeMetricsSnapshot(),
+  };
+}
+
 const server = http.createServer((request, response) => {
-  if (request.method === "GET" && request.url === "/health") {
-    const body = JSON.stringify({
-      healthy: listenerHealthy,
-      connections: registry.size(),
-      metrics: realtimeMetricsSnapshot(),
+  if (request.method === "GET" && request.url === "/health/live") {
+    response.writeHead(200, {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
     });
-    response.writeHead(listenerHealthy ? 200 : 503, {
+    response.end(JSON.stringify({ live: !shuttingDown, shuttingDown }));
+    return;
+  }
+
+  if (
+    request.method === "GET" &&
+    (request.url === "/health" || request.url === "/health/ready")
+  ) {
+    const body = JSON.stringify(statusBody());
+    response.writeHead(gatewayReady() ? 200 : 503, {
       "Content-Type": "application/json; charset=utf-8",
       "Cache-Control": "no-store",
     });
@@ -180,7 +206,7 @@ const server = http.createServer((request, response) => {
 
 server.on("upgrade", async (request, socket, head) => {
   try {
-    if (!listenerHealthy) {
+    if (!gatewayReady()) {
       rejectUpgrade(socket, 503, "Realtime indisponível");
       return;
     }
@@ -240,15 +266,20 @@ heartbeat.unref?.();
 
 await listener.start();
 server.listen(port, "0.0.0.0", () => {
+  acceptingUpgrades = true;
   console.log(`War-Brasil realtime gateway ouvindo na porta ${port}.`);
 });
 
-let shuttingDown = false;
 async function shutdown() {
   if (shuttingDown) return;
   shuttingDown = true;
+  acceptingUpgrades = false;
+  recordRealtimeMetric("draining", {
+    connections: registry.size(),
+    rooms: registry.roomCount(),
+  });
   clearInterval(heartbeat);
-  registry.closeAll(1001, "Servidor reiniciando");
+  registry.closeAll(1012, "Servidor reiniciando");
   await listener.stop();
   await new Promise((resolve) => server.close(resolve));
   await pool.end();
