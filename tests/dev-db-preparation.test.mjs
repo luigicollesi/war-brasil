@@ -24,6 +24,7 @@ test("ambiente dev prepara migrations necessárias antes de subir o Next", () =>
     "016-disable-elimination-fallback.sql",
     "021-player-trade-phase.sql",
     "022-complete-player-trade-negotiation.sql",
+    "023-trade-negotiation-invariants.sql",
   ]) {
     assert.match(prepare, new RegExp(migration.replaceAll(".", "\\.")));
   }
@@ -33,6 +34,7 @@ test("preparação do banco é transacional, convergente e não inicia o servido
   assert.match(prepare, /BEGIN/);
   assert.match(prepare, /pg_advisory_xact_lock/);
   assert.match(prepare, /columnExists/);
+  assert.match(prepare, /constraintExists/);
   assert.match(prepare, /tableExists/);
   assert.match(prepare, /balancedCatalogReady/);
   assert.match(prepare, /COMMIT/);
