@@ -46,9 +46,11 @@ test("startPlaying usa a rodada inicial antes de tornar a sala playing", () => {
   const presentation = source("src/lib/server/game-presentation-service.ts");
   const initializeIndex = presentation.indexOf("initializeFirstGameRound(client, room.id)");
   const playingUpdateIndex = presentation.indexOf("SET status='playing'");
+  const turnPhaseIndex = presentation.indexOf("beginPlayerTurnPhase(client, room.id, order[0].id)");
 
   assert.ok(initializeIndex >= 0);
   assert.ok(playingUpdateIndex > initializeIndex);
+  assert.ok(turnPhaseIndex > playingUpdateIndex);
   assert.match(presentation, /round_number=\$3/);
   assert.match(presentation, /jurassic_tunnel_territory_id=\$4/);
   assert.doesNotMatch(presentation, /chooseJurassicTunnelDestination/);
@@ -89,7 +91,7 @@ test("virada escolhe evento da rodada exata, resolve e persiste resultado factua
   );
 });
 
-test("endTurn só avança rodada no wrap e zera movimentações antes da nova anomalia", () => {
+test("endTurn só avança rodada no wrap e prepara a fase do próximo jogador depois da anomalia", () => {
   const command = source("src/lib/server/game-command-service.ts");
 
   const resetIndex = command.lastIndexOf(
@@ -97,12 +99,14 @@ test("endTurn só avança rodada no wrap e zera movimentações antes da nova an
   );
   const wrapIndex = command.indexOf("const wrapsRound =");
   const advanceIndex = command.indexOf("await advanceGameRound(client, {");
-  const nextPlayerUpdateIndex = command.lastIndexOf("SET phase='cards',current_player_id=$2");
+  const nextPlayerUpdateIndex = command.lastIndexOf("SET current_player_id=$2,turn_number=turn_number+1");
+  const phaseRoutingIndex = command.lastIndexOf("await beginPlayerTurnPhase(client, room.id, next.id)");
 
   assert.ok(resetIndex >= 0);
   assert.ok(wrapIndex > resetIndex);
   assert.ok(advanceIndex > wrapIndex);
   assert.ok(nextPlayerUpdateIndex > advanceIndex);
+  assert.ok(phaseRoutingIndex > nextPlayerUpdateIndex);
   assert.match(command, /if \(wrapsRound\) \{[\s\S]*advanceGameRound/);
   assert.match(command, /currentRoundNumber: room\.round_number/);
   assert.match(
