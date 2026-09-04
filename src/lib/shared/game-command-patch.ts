@@ -27,6 +27,7 @@ const GAME_STATUSES = new Set<GameStatus>([
   "finished",
 ]);
 const GAME_PHASES = new Set<GamePhase>([
+  "cards",
   "trade",
   "reinforcement",
   "attack",
