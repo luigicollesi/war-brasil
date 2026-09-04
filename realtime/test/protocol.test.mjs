@@ -11,13 +11,13 @@ test("protocol mantém subprotocolo v1 e valida notification mínima", () => {
   assert.equal(GAME_REALTIME_SUBPROTOCOL, "war-brasil.v1");
   assert.deepEqual(
     parseNotificationPayload(JSON.stringify({ roomId: "12", revision: 4 })),
-    { kind: "invalidate", roomId: "12", revision: 4 },
+    { kind: "invalidate", scope: "room", roomId: "12", revision: 4 },
   );
   assert.deepEqual(
     parseNotificationPayload(
       JSON.stringify({ kind: "invalidate", roomId: "12", revision: 5 }),
     ),
-    { kind: "invalidate", roomId: "12", revision: 5 },
+    { kind: "invalidate", scope: "room", roomId: "12", revision: 5 },
   );
   assert.equal(
     parseNotificationPayload(JSON.stringify({ roomId: "x", revision: 4 })),
@@ -29,10 +29,57 @@ test("protocol mantém subprotocolo v1 e valida notification mínima", () => {
   );
 });
 
+test("protocol valida escopo privado e exige playerId", () => {
+  assert.deepEqual(
+    parseNotificationPayload(
+      JSON.stringify({
+        kind: "invalidate",
+        scope: "player",
+        roomId: "12",
+        playerId: "7",
+        revision: 5,
+      }),
+    ),
+    {
+      kind: "invalidate",
+      scope: "player",
+      roomId: "12",
+      playerId: "7",
+      revision: 5,
+    },
+  );
+
+  assert.equal(
+    parseNotificationPayload(
+      JSON.stringify({
+        kind: "invalidate",
+        scope: "player",
+        roomId: "12",
+        revision: 5,
+      }),
+    ),
+    null,
+  );
+
+  assert.equal(
+    parseNotificationPayload(
+      JSON.stringify({
+        kind: "invalidate",
+        scope: "room",
+        roomId: "12",
+        playerId: "7",
+        revision: 5,
+      }),
+    ),
+    null,
+  );
+});
+
 test("protocol aceita patch público estrito e rejeita campos privados", () => {
   const patch = parseNotificationPayload(
     JSON.stringify({
       kind: "patch",
+      scope: "room",
       roomId: "12",
       baseRevision: 4,
       revision: 5,
@@ -44,6 +91,7 @@ test("protocol aceita patch público estrito e rejeita campos privados", () => {
   );
 
   assert.equal(patch.kind, "patch");
+  assert.equal(patch.scope, "room");
   assert.equal(patch.baseRevision, 4);
   assert.equal(patch.revision, 5);
   assert.equal(patch.patch.territories[0].troops, 4);
@@ -52,6 +100,7 @@ test("protocol aceita patch público estrito e rejeita campos privados", () => {
     parseNotificationPayload(
       JSON.stringify({
         kind: "patch",
+        scope: "room",
         roomId: "12",
         baseRevision: 4,
         revision: 5,
@@ -64,8 +113,26 @@ test("protocol aceita patch público estrito e rejeita campos privados", () => {
     parseNotificationPayload(
       JSON.stringify({
         kind: "patch",
+        scope: "room",
         roomId: "12",
         baseRevision: 5,
+        revision: 5,
+        patch: { territories: [{ territoryId: 7, troops: 4 }] },
+      }),
+    ),
+    null,
+  );
+});
+
+test("protocol rejeita patch com escopo privado", () => {
+  assert.equal(
+    parseNotificationPayload(
+      JSON.stringify({
+        kind: "patch",
+        scope: "player",
+        playerId: "7",
+        roomId: "12",
+        baseRevision: 4,
         revision: 5,
         patch: { territories: [{ territoryId: 7, troops: 4 }] },
       }),
