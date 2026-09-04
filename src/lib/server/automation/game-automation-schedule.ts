@@ -116,7 +116,10 @@ async function persistRoomSchedule(
 ) {
   await client.query(
     `UPDATE game_rooms
-     SET automation_due_at=$2,automation_kind=$3
+     SET automation_due_at=$2,
+         automation_kind=$3,
+         automation_claimed_by=NULL,
+         automation_claimed_until=NULL
      WHERE id=$1
        AND (
          automation_due_at IS DISTINCT FROM $2::timestamptz
