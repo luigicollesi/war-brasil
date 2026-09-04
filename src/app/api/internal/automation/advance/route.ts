@@ -5,7 +5,7 @@ import {
   roomErrorResponse,
 } from "@/src/lib/api-response";
 import { advanceGameAutomationCommand } from "@/src/lib/game-automation-service";
-import { assertGameAutomationWorkerRequest } from "@/src/lib/automation/game-automation-worker-auth";
+import { assertGameAutomationWorkerRequest } from "@/src/lib/server/automation/game-automation-worker-auth";
 import { GAME_REVISION_HEADER } from "@/src/lib/game-sync-contract";
 import { RoomError } from "@/src/lib/rooms";
 
