@@ -87,18 +87,27 @@ test("migration cria agenda durável indexada sem transformar job em entidade de
   assert.match(migration, /WHERE automation_due_at IS NOT NULL/);
 });
 
-test("command boundary reconcilia agenda dentro do lock antes da revision e do commit", () => {
+test("command boundary reconcilia agenda dentro do lock antes da revision e do commit de mutação", () => {
   const command = source("src/lib/server/game-command.ts");
   const execute = command.indexOf("const value = await execute(client)");
-  const reconcile = command.indexOf("await reconcileGameAutomationSchedule(client, roomId)");
-  const revision = command.indexOf("await bumpGameRevision(client, roomId)");
-  const commit = command.indexOf('await client.query("COMMIT")');
+  const reconcile = command.indexOf(
+    "await reconcileGameAutomationSchedule(client, roomId)",
+    execute,
+  );
+  const revision = command.indexOf(
+    "await bumpGameRevision(client, roomId)",
+    reconcile,
+  );
+  const commit = command.indexOf('await client.query("COMMIT")', revision);
 
   assert.ok(execute >= 0);
   assert.ok(reconcile > execute);
   assert.ok(revision > reconcile);
   assert.ok(commit > revision);
-  assert.match(command, /result = await execute\(client\)[\s\S]*reconcileGameAutomationSchedule/);
+  assert.match(
+    command,
+    /const value = await execute\(client\)[\s\S]*reconcileGameAutomationSchedule/,
+  );
 });
 
 test("scheduler persiste somente apresentação ou bot e limpa timers obsoletos", () => {
