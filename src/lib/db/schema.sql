@@ -32,6 +32,8 @@ CREATE TABLE IF NOT EXISTS game_rooms (
   automation_due_at TIMESTAMPTZ,
   automation_kind VARCHAR(20)
     CHECK (automation_kind IS NULL OR automation_kind IN ('presentation', 'bot')),
+  automation_claimed_by TEXT,
+  automation_claimed_until TIMESTAMPTZ,
   CHECK (
     (pending_from_territory_id IS NULL AND pending_to_territory_id IS NULL)
     OR (pending_from_territory_id IS NOT NULL AND pending_to_territory_id IS NOT NULL)
@@ -40,6 +42,10 @@ CREATE TABLE IF NOT EXISTS game_rooms (
 
 CREATE INDEX IF NOT EXISTS game_rooms_automation_due_idx
   ON game_rooms (automation_due_at, id)
+  WHERE automation_due_at IS NOT NULL;
+
+CREATE INDEX IF NOT EXISTS game_rooms_automation_claim_idx
+  ON game_rooms (automation_due_at, automation_claimed_until, id)
   WHERE automation_due_at IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS room_players (
