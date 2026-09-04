@@ -2,11 +2,12 @@ import "server-only";
 
 import { randomInt } from "node:crypto";
 import type { PoolClient } from "pg";
-import { gameCommand } from "@/src/lib/game-command";
+import { playerGameCommand } from "@/src/lib/game-command";
 import {
   resolveCommandPlayerBySession,
   type CommandPlayer,
 } from "@/src/lib/game-command-player";
+import type { GameCommandRequestMetadata } from "@/src/lib/game-command-request";
 import { objectiveWon } from "@/src/lib/game-objective-service";
 import {
   nextOrderRollPlayerId,
@@ -356,24 +357,43 @@ export async function executePhaseAction(
   return null;
 }
 
-export async function rollOrderDieCommand(value: string, session: string) {
+export async function rollOrderDieCommand(
+  value: string,
+  session: string,
+  metadata?: GameCommandRequestMetadata | null,
+) {
   const roomId = normalizeRoomId(value);
 
-  return gameCommand(roomId, async (client) => {
-    const player = await resolveCommandPlayerBySession(client, roomId, session);
-    return executeRollOrderDie(client, roomId, player);
-  });
+  return playerGameCommand(
+    roomId,
+    session,
+    metadata,
+    "roll_order",
+    null,
+    async (client) => {
+      const player = await resolveCommandPlayerBySession(client, roomId, session);
+      return executeRollOrderDie(client, roomId, player);
+    },
+  );
 }
 
 export async function phaseCommand(
   value: string,
   session: string,
   input: Record<string, unknown>,
+  metadata?: GameCommandRequestMetadata | null,
 ) {
   const roomId = normalizeRoomId(value);
 
-  return gameCommand(roomId, async (client) => {
-    const player = await resolveCommandPlayerBySession(client, roomId, session);
-    return executePhaseAction(client, roomId, player, input);
-  });
+  return playerGameCommand(
+    roomId,
+    session,
+    metadata,
+    "phase",
+    input,
+    async (client) => {
+      const player = await resolveCommandPlayerBySession(client, roomId, session);
+      return executePhaseAction(client, roomId, player, input);
+    },
+  );
 }
