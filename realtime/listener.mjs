@@ -6,9 +6,9 @@ const MAX_RECONNECT_DELAY_MS = 15_000;
 const CONNECTION_TIMEOUT_MS = 5_000;
 
 export class PostgresRealtimeListener {
-  constructor({ connectionString, onInvalidation, onHealthChange }) {
+  constructor({ connectionString, onEvent, onHealthChange }) {
     this.connectionString = connectionString;
-    this.onInvalidation = onInvalidation;
+    this.onEvent = onEvent;
     this.onHealthChange = onHealthChange;
     this.client = null;
     this.reconnectTimer = null;
@@ -34,7 +34,7 @@ export class PostgresRealtimeListener {
     client.on("notification", (message) => {
       if (message.channel !== gameRealtimeChannel() || !message.payload) return;
       const payload = parseNotificationPayload(message.payload);
-      if (payload) this.onInvalidation(payload);
+      if (payload) this.onEvent(payload);
     });
 
     client.on("error", () => {
