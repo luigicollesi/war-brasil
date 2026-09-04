@@ -73,8 +73,12 @@ let listenerHealthy = false;
 
 const listener = new PostgresRealtimeListener({
   connectionString,
-  onInvalidation: ({ roomId, revision }) => {
-    registry.broadcastInvalidation(roomId, revision);
+  onEvent: (event) => {
+    if (event.kind === "patch") {
+      registry.broadcastPatch(event);
+      return;
+    }
+    registry.broadcastInvalidation(event.roomId, event.revision);
   },
   onHealthChange: (healthy) => {
     listenerHealthy = healthy;
