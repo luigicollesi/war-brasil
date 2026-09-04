@@ -78,7 +78,11 @@ const listener = new PostgresRealtimeListener({
       registry.broadcastPatch(event);
       return;
     }
-    registry.broadcastInvalidation(event.roomId, event.revision);
+    registry.broadcastInvalidation(
+      event.roomId,
+      event.revision,
+      event.scope === "player" ? event.playerId : null,
+    );
   },
   onHealthChange: (healthy) => {
     listenerHealthy = healthy;
