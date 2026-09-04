@@ -292,6 +292,7 @@ CREATE TABLE IF NOT EXISTS game_player_trade_offers (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   resolved_at TIMESTAMPTZ,
   CHECK (target_player_id <> proposer_player_id),
+  CHECK (responder_player_id IS NULL OR responder_player_id=target_player_id),
   CHECK (
     (offered_kind='territory' AND offered_territory_id IS NOT NULL AND offered_symbol IS NULL)
     OR (offered_kind='symbol' AND offered_territory_id IS NULL AND offered_symbol IS NOT NULL)
@@ -316,6 +317,58 @@ CREATE TABLE IF NOT EXISTS game_player_trade_offers (
         OR (counter_requested_kind='symbol' AND counter_requested_territory_id IS NULL AND counter_requested_symbol IS NOT NULL)
         OR (counter_requested_kind='wild' AND counter_requested_territory_id IS NULL AND counter_requested_symbol IS NULL)
       )
+    )
+  ),
+  CHECK (
+    (
+      status='open'
+      AND responder_player_id IS NULL
+      AND counter_offered_kind IS NULL
+      AND counter_requested_kind IS NULL
+      AND accepted_terms IS NULL
+      AND proposer_selected_card_id IS NULL
+      AND responder_selected_card_id IS NULL
+      AND resolved_at IS NULL
+    )
+    OR (
+      status='countered'
+      AND responder_player_id IS NOT NULL
+      AND counter_offered_kind IS NOT NULL
+      AND counter_requested_kind IS NOT NULL
+      AND accepted_terms IS NULL
+      AND proposer_selected_card_id IS NULL
+      AND responder_selected_card_id IS NULL
+      AND resolved_at IS NULL
+    )
+    OR (
+      status='accepted_pending_selection'
+      AND responder_player_id IS NOT NULL
+      AND accepted_terms IS NOT NULL
+      AND (
+        (accepted_terms='original' AND counter_offered_kind IS NULL AND counter_requested_kind IS NULL)
+        OR (accepted_terms='counter' AND counter_offered_kind IS NOT NULL AND counter_requested_kind IS NOT NULL)
+      )
+      AND (proposer_selected_card_id IS NULL OR responder_selected_card_id IS NULL)
+      AND resolved_at IS NULL
+    )
+    OR (
+      status='accepted'
+      AND responder_player_id IS NOT NULL
+      AND accepted_terms IS NOT NULL
+      AND (
+        (accepted_terms='original' AND counter_offered_kind IS NULL AND counter_requested_kind IS NULL)
+        OR (accepted_terms='counter' AND counter_offered_kind IS NOT NULL AND counter_requested_kind IS NOT NULL)
+      )
+      AND proposer_selected_card_id IS NOT NULL
+      AND responder_selected_card_id IS NOT NULL
+      AND resolved_at IS NOT NULL
+    )
+    OR (
+      status IN ('declined','cancelled')
+      AND accepted_terms IS NULL
+      AND proposer_selected_card_id IS NULL
+      AND responder_selected_card_id IS NULL
+      AND resolved_at IS NOT NULL
     )
   )
 );
