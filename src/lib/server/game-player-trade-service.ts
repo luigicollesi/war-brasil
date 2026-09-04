@@ -27,6 +27,7 @@ type TradeRoom = {
 type TradePlayer = {
   id: string;
   is_bot: boolean;
+  turn_position: number | null;
   trade_signals_used: number;
 };
 
@@ -88,7 +89,7 @@ async function loadPlayer(
 ) {
   return (
     await client.query<TradePlayer>(
-      `SELECT id,is_bot,trade_signals_used
+      `SELECT id,is_bot,turn_position,trade_signals_used
        FROM room_players
        WHERE room_id=$1 AND id=$2${lock ? " FOR UPDATE" : ""}`,
       [roomId, playerId],
@@ -103,7 +104,7 @@ async function playerBySession(
 ) {
   return (
     await client.query<TradePlayer>(
-      `SELECT id,is_bot,trade_signals_used
+      `SELECT id,is_bot,turn_position,trade_signals_used
        FROM room_players
        WHERE room_id=$1 AND player_session=$2
        FOR UPDATE`,
@@ -122,6 +123,12 @@ function assertTradePhase(room: TradeRoom) {
   }
 }
 
+function assertNegotiatingHuman(player: TradePlayer | null) {
+  if (!player || player.is_bot || player.turn_position === null) {
+    throw new RoomError("A negociação exige um jogador humano ainda ativo.", 409);
+  }
+}
+
 async function assertActiveHuman(
   client: PoolClient,
   room: TradeRoom,
@@ -132,9 +139,7 @@ async function assertActiveHuman(
     throw new RoomError("Apenas o jogador do turno pode iniciar esta ação.", 409);
   }
   const player = await loadPlayer(client, room.id, playerId);
-  if (!player || player.is_bot) {
-    throw new RoomError("Bots não participam de negociações de cartas.", 409);
-  }
+  assertNegotiatingHuman(player);
 }
 
 async function assertResponder(
@@ -151,9 +156,7 @@ async function assertResponder(
     throw new RoomError("Esta oferta foi direcionada a outro jogador.", 409);
   }
   const player = await loadPlayer(client, room.id, playerId);
-  if (!player || player.is_bot) {
-    throw new RoomError("Bots não participam de negociações de cartas.", 409);
-  }
+  assertNegotiatingHuman(player);
 }
 
 async function loadHandCard(
@@ -302,7 +305,7 @@ async function createOffer(
       throw new RoomError("Você não pode direcionar uma oferta para si mesmo.", 422);
     }
     const target = await loadPlayer(client, room.id, targetPlayerId);
-    if (!target || target.is_bot) {
+    if (!target || target.is_bot || target.turn_position === null) {
       throw new RoomError("A oferta deve ser direcionada a um jogador humano ativo.", 422);
     }
   }
@@ -451,6 +454,12 @@ async function closeOffer(
   if (status === "cancelled") {
     await assertActiveHuman(client, room, playerId);
   } else if (offer.status === "open") {
+    if (!offer.target_player_id) {
+      throw new RoomError(
+        "Uma oferta aberta não pode ser encerrada pela recusa de apenas um jogador.",
+        409,
+      );
+    }
     await assertResponder(client, room, offer, playerId);
   } else if (
     playerId !== offer.proposer_player_id &&
@@ -555,8 +564,12 @@ export async function signalPlayerTradeCard(
     if (!player) {
       throw new RoomError("Você não pertence a esta partida.", 403);
     }
-    if (player.is_bot || player.id === room.current_player_id) {
-      throw new RoomError("A sinalização é exclusiva dos outros jogadores humanos.", 409);
+    if (
+      player.is_bot ||
+      player.turn_position === null ||
+      player.id === room.current_player_id
+    ) {
+      throw new RoomError("A sinalização é exclusiva dos outros jogadores humanos ativos.", 409);
     }
     if (player.trade_signals_used >= PLAYER_TRADE_SIGNAL_LIMIT) {
       throw new RoomError("O limite de sinalizações deste turno já foi usado.", 409);
