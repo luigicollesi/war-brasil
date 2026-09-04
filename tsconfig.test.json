@@ -35,6 +35,7 @@
     "src/lib/game-snapshot-hydration.ts",
     "src/lib/game-snapshot-sharing.ts",
     "src/lib/shared/game-realtime-contract.ts",
+    "src/lib/client/game-automation-driver.ts",
     "src/lib/client/sync/revision-coordinator.ts",
     "src/lib/client/sync/game-poll-scheduler.ts",
     "src/lib/client/dice/types.ts",
