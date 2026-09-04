@@ -31,8 +31,7 @@ BEGIN
 END $$;
 
 ALTER TABLE game_player_trade_offers
-  ALTER COLUMN target_player_id SET NOT NULL,
-  ALTER COLUMN offered_card_id DROP NOT NULL;
+  ALTER COLUMN target_player_id SET NOT NULL;
 
 ALTER TABLE game_player_trade_offers
   ADD COLUMN IF NOT EXISTS offered_kind TEXT NOT NULL
@@ -59,6 +58,11 @@ ALTER TABLE game_player_trade_offers
     REFERENCES game_cards(id) ON DELETE RESTRICT,
   ADD COLUMN IF NOT EXISTS responder_selected_card_id BIGINT
     REFERENCES game_cards(id) ON DELETE RESTRICT;
+
+ALTER TABLE game_player_trade_offers
+  DROP COLUMN IF EXISTS offered_card_id,
+  DROP COLUMN IF EXISTS counter_card_id,
+  DROP COLUMN IF EXISTS accepted_card_id;
 
 ALTER TABLE game_player_trade_offers
   ADD CONSTRAINT game_player_trade_offers_status_check
