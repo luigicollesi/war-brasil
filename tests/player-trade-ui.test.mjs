@@ -17,29 +17,35 @@ test("cliente recebe trade sem remapear para cards", () => {
 
 test("painel cobre oferta, contraoferta, aceite e seleção vinculante", () => {
   const panel = source("src/components/trade/trade-phase-panel.tsx");
+  const builder = source("src/components/trade/trade-builder-modal.tsx");
+  const selection = source("src/components/trade/trade-card-selection-modal.tsx");
 
-  assert.match(panel, /action: "offer"/);
-  assert.match(panel, /action: "counter"/);
+  assert.match(builder, /action: "offer"/);
+  assert.match(builder, /action: "counter"/);
   assert.match(panel, /action: "accept"/);
   assert.match(panel, /action: "acceptCounter"/);
   assert.match(panel, /action: "decline"/);
   assert.match(panel, /action: "cancel"/);
   assert.match(panel, /action: "finish"/);
-  assert.match(panel, /action: "selectCard"/);
-  assert.match(panel, /cardsMatchingTradeDescriptor/);
-  assert.match(panel, /myPendingSelection/);
-  assert.match(panel, /<GameModal[\s\S]*Troca aceita/);
+  assert.match(selection, /action: "selectCard"/);
+  assert.match(selection, /cardsMatchingTradeDescriptor/);
+  assert.match(selection, /myPendingSelection/);
+  assert.match(selection, /<GameModal[\s\S]*Troca aceita/);
+  assert.match(panel, /<TradeCardSelectionModal/);
 });
 
 test("oferta mostra só posse própria e pedido continua aberto ao catálogo", () => {
-  const panel = source("src/components/trade/trade-phase-panel.tsx");
+  const builder = source("src/components/trade/trade-builder-modal.tsx");
+  const picker = source("src/components/trade/trade-descriptor-picker.tsx");
 
-  assert.match(panel, /mode: "owned" \| "request"/);
-  assert.match(panel, /snapshot\.myCards/);
-  assert.match(panel, /Object\.keys\(TERRITORY_METADATA\)/);
-  assert.match(panel, /Buscar território/);
-  assert.match(panel, /Seus territórios/);
-  assert.match(panel, /você possui/);
+  assert.match(picker, /mode: "owned" \| "request"/);
+  assert.match(builder, /<TradeDescriptorPicker[\s\S]*mode="owned"/);
+  assert.match(builder, /<TradeDescriptorPicker[\s\S]*mode="request"/);
+  assert.match(picker, /snapshot\.myCards/);
+  assert.match(picker, /Object\.keys\(TERRITORY_METADATA\)/);
+  assert.match(picker, /Buscar território/);
+  assert.match(picker, /Seus territórios/);
+  assert.match(picker, /você possui/);
 });
 
 test("sinalização não usa command revisionado nem retry", () => {
