@@ -214,7 +214,7 @@ test("shadow permanece observacional e hybrid aplica patch contínuo ou acorda s
   assert.match(hook, /realtimeMode,[\s\S]*realtimeState/);
 });
 
-test("gateway autentica antes do upgrade, valida origem e degrada quando o bus cai", () => {
+test("gateway autentica antes do upgrade, valida origem e degrada quando o event source cai", () => {
   const gateway = readFileSync("realtime/server.mjs", "utf8");
   const listener = readFileSync("realtime/listener.mjs", "utf8");
   const registry = readFileSync("realtime/registry.mjs", "utf8");
@@ -228,10 +228,12 @@ test("gateway autentica antes do upgrade, valida origem e degrada quando o bus c
   assert.match(gateway, /readRealtimeIdentity/);
   assert.match(gateway, /GAME_REALTIME_SUBPROTOCOL/);
   assert.match(gateway, /function gatewayReady\(\)/);
-  assert.match(gateway, /acceptingUpgrades && listenerHealthy && !shuttingDown/);
+  assert.match(gateway, /acceptingUpgrades && eventSourceHealthy && !shuttingDown/);
   assert.match(gateway, /registry\.closeAll\(1012/);
   assert.match(gateway, /registry\.broadcastPatch\(event\)/);
   assert.match(gateway, /event\.scope === "player" \? event\.playerId : null/);
+  assert.match(gateway, /GAME_REALTIME_EVENT_SOURCE/);
+  assert.match(gateway, /acquireRoomSource\(identity\.roomId\)/);
   assert.match(gateway, /\/health\/live/);
   assert.match(gateway, /\/health\/ready/);
   assert.match(gateway, /recordRealtimeMetric\("draining"/);
