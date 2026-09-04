@@ -9,6 +9,27 @@ DROP INDEX IF EXISTS game_player_trade_offers_one_active_idx;
 ALTER TABLE game_player_trade_offers
   DROP CONSTRAINT IF EXISTS game_player_trade_offers_status_check;
 
+-- A 021 criou um CHECK anônimo exigindo counter_card_id sempre que status era
+-- countered. O modelo definitivo não escolhe carta concreta na contraoferta,
+-- então removemos qualquer CHECK legado que ainda referencie essa coluna.
+DO $$
+DECLARE
+  legacy_constraint TEXT;
+BEGIN
+  FOR legacy_constraint IN
+    SELECT conname
+    FROM pg_constraint
+    WHERE conrelid='game_player_trade_offers'::regclass
+      AND contype='c'
+      AND pg_get_constraintdef(oid) ILIKE '%counter_card_id%'
+  LOOP
+    EXECUTE format(
+      'ALTER TABLE game_player_trade_offers DROP CONSTRAINT %I',
+      legacy_constraint
+    );
+  END LOOP;
+END $$;
+
 ALTER TABLE game_player_trade_offers
   ALTER COLUMN target_player_id SET NOT NULL,
   ALTER COLUMN offered_card_id DROP NOT NULL;
