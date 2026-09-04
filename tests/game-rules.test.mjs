@@ -233,9 +233,15 @@ test("último dado do sorteio permanece visível antes de avançar", () => {
   const presentation = readFileSync("src/lib/server/game-presentation-service.ts", "utf8");
   const commands = readFileSync("src/lib/server/game-command-service.ts", "utf8");
 
-  assert.match(transitions, /ORDER_ROLL_PRESENTATION_MS\s*=\s*2_000/);
+  assert.match(transitions, /ORDER_ROLL_DICE_ANIMATION_MS\s*=\s*2_600/);
+  assert.match(transitions, /ORDER_ROLL_RESULT_HOLD_MS\s*=\s*600/);
+  assert.match(
+    transitions,
+    /ORDER_ROLL_PRESENTATION_MS\s*=\s*[\s\S]*ORDER_ROLL_DICE_ANIMATION_MS \+ ORDER_ROLL_RESULT_HOLD_MS/,
+  );
   assert.match(presentation, /isOrderRollPresentationDue/);
   assert.match(presentation, /rolled_at\.getTime\(\)/);
+  assert.match(commands, /isOrderRollActorAvailable\(lastRollAt\)/);
 
   const rollOrderDie = commands.slice(
     commands.indexOf("export async function rollOrderDieCommand"),
