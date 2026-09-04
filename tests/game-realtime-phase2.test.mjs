@@ -147,10 +147,22 @@ test("hybrid reduz polling somente com realtime saudável e sem automação pend
   );
 });
 
-test("publisher realtime é best-effort, opcional e acontece depois do commit autoritativo", () => {
+test("publisher realtime é best-effort, opcional, pós-commit e independente do transporte", () => {
   const command = readFileSync("src/lib/server/game-command.ts", "utf8");
   const publisher = readFileSync(
     "src/lib/server/game-realtime-publisher.ts",
+    "utf8",
+  );
+  const bus = readFileSync(
+    "src/lib/server/realtime/game-realtime-bus.ts",
+    "utf8",
+  );
+  const runtime = readFileSync(
+    "src/lib/server/realtime/game-realtime-bus-runtime.ts",
+    "utf8",
+  );
+  const postgresAdapter = readFileSync(
+    "src/lib/server/realtime/postgres-game-realtime-bus.ts",
     "utf8",
   );
 
@@ -160,13 +172,18 @@ test("publisher realtime é best-effort, opcional e acontece depois do commit au
   assert.match(publisher, /process\.env\.GAME_REALTIME_ENABLED === "true"/);
   assert.match(publisher, /GAME_REALTIME_PATCHES_ENABLED === "true"/);
   assert.match(publisher, /if \(!gameRealtimeEnabled\(\)\) return/);
-  assert.match(publisher, /SELECT pg_notify\(\$1,\$2\)/);
+  assert.match(publisher, /publishGameRealtimeBusEvent/);
+  assert.doesNotMatch(publisher, /pg_notify/);
   assert.match(publisher, /GAME_REALTIME_NOTIFY_MAX_BYTES/);
   assert.match(publisher, /publishGameInvalidation/);
   assert.match(publisher, /publishPlayerGameInvalidation/);
-  assert.match(publisher, /scope: playerId \? "player" : "room"/);
+  assert.match(publisher, /scope: "player"/);
+  assert.match(publisher, /scope: "room"/);
   assert.match(publisher, /catch \(error\)/);
   assert.doesNotMatch(publisher, /throw error/);
+  assert.match(bus, /interface GameRealtimeBus/);
+  assert.match(runtime, /postgresGameRealtimeBus\.publish/);
+  assert.match(postgresAdapter, /SELECT pg_notify\(\$1,\$2\)/);
 });
 
 test("shadow permanece observacional e hybrid aplica patch contínuo ou acorda snapshot HTTP", () => {
@@ -201,8 +218,8 @@ test("gateway autentica antes do upgrade, valida origem e degrada quando LISTEN 
   const gateway = readFileSync("realtime/server.mjs", "utf8");
   const listener = readFileSync("realtime/listener.mjs", "utf8");
   const registry = readFileSync("realtime/registry.mjs", "utf8");
-  const publisher = readFileSync(
-    "src/lib/server/game-realtime-publisher.ts",
+  const postgresAdapter = readFileSync(
+    "src/lib/server/realtime/postgres-game-realtime-bus.ts",
     "utf8",
   );
   const protocol = readFileSync("realtime/protocol.mjs", "utf8");
@@ -220,6 +237,6 @@ test("gateway autentica antes do upgrade, valida origem e degrada quando LISTEN 
   assert.match(registry, /pendingPrivateRevision/);
   assert.match(registry, /game\.private\.invalidate/);
   assert.match(registry, /patchFallbacks/);
-  assert.match(publisher, /war_game_revision/);
+  assert.match(postgresAdapter, /war_game_revision/);
   assert.match(protocol, /war_game_revision/);
 });
