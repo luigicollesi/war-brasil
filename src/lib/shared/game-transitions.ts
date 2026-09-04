@@ -1,14 +1,19 @@
-export const INITIAL_TERRITORY_SYNC_DELAY_MS = 2_000;
-export const INITIAL_TERRITORY_REVEAL_STEP_MS = 100;
+export const INITIAL_TERRITORY_SYNC_DELAY_MS = 5_000;
+export const INITIAL_TERRITORY_REVEAL_STEP_MS = 200;
 export const INITIAL_TERRITORY_REVEAL_COUNT = 42;
 export const INITIAL_TERRITORY_HIGHLIGHT_STEP_MS = 500;
-export const INITIAL_TERRITORY_HIGHLIGHT_DURATION_MS = 2_000;
+export const INITIAL_TERRITORY_HIGHLIGHT_DURATION_MS = 3_000;
+export const INITIAL_TERRITORY_POST_DELAY_MS = 1_000;
 export const INITIAL_TERRITORY_REVEAL_DURATION_MS =
   INITIAL_TERRITORY_REVEAL_STEP_MS * INITIAL_TERRITORY_REVEAL_COUNT;
 export const INITIAL_TERRITORY_PRESENTATION_MS =
   INITIAL_TERRITORY_REVEAL_DURATION_MS +
-  INITIAL_TERRITORY_HIGHLIGHT_DURATION_MS;
-export const ORDER_ROLL_PRESENTATION_MS = 2_000;
+  INITIAL_TERRITORY_HIGHLIGHT_DURATION_MS +
+  INITIAL_TERRITORY_POST_DELAY_MS;
+export const ORDER_ROLL_DICE_ANIMATION_MS = 2_600;
+export const ORDER_ROLL_RESULT_HOLD_MS = 600;
+export const ORDER_ROLL_PRESENTATION_MS =
+  ORDER_ROLL_DICE_ANIMATION_MS + ORDER_ROLL_RESULT_HOLD_MS;
 export const BATTLE_DICE_PRESENTATION_MS = 3_000;
 export const BATTLE_COMPARISON_PRESENTATION_MS = 2_000;
 export const BATTLE_RESULT_PRESENTATION_MS = 2_000;
@@ -97,12 +102,25 @@ export function nextBattlePresentationTransition(
   return null;
 }
 
+export function orderRollActorAvailableAt(lastRollAt: string | Date | null) {
+  if (!lastRollAt) return null;
+  return dueAt(lastRollAt, ORDER_ROLL_PRESENTATION_MS);
+}
+
+export function isOrderRollActorAvailable(
+  lastRollAt: string | Date | null,
+  nowMs = Date.now(),
+) {
+  const availableAt = orderRollActorAvailableAt(lastRollAt);
+  return availableAt === null || nowMs >= availableAt.getTime();
+}
+
 export function orderRollPresentationDueAt(
   allEligiblePlayersRolled: boolean,
   lastRollAt: Date | null,
 ) {
   if (!allEligiblePlayersRolled || !lastRollAt) return null;
-  return dueAt(lastRollAt, ORDER_ROLL_PRESENTATION_MS);
+  return orderRollActorAvailableAt(lastRollAt);
 }
 
 export function isOrderRollPresentationDue(
