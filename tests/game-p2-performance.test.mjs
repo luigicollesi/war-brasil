@@ -62,10 +62,15 @@ test("polling adapta intervalo a visibilidade, falhas e estado offline", () => {
 
 test("game sync usa scheduler adaptativo e sincroniza imediatamente ao voltar", () => {
   const source = readFileSync("src/hooks/use-game-sync.ts", "utf8");
+  const scheduler = readFileSync(
+    "src/lib/client/sync/game-poll-scheduler.ts",
+    "utf8",
+  );
 
-  assert.match(source, /nextGamePollDelay/);
+  assert.match(source, /GamePollScheduler/);
+  assert.match(scheduler, /nextGamePollDelay/);
+  assert.match(scheduler, /consecutiveFailures/);
   assert.match(source, /document\.visibilityState/);
-  assert.match(source, /consecutiveFailures/);
   assert.match(source, /visibilitychange/);
   assert.match(source, /handleOnline/);
   assert.doesNotMatch(source, /const POLLING_INTERVAL_MS/);
@@ -73,14 +78,17 @@ test("game sync usa scheduler adaptativo e sincroniza imediatamente ao voltar", 
 
 test("snapshot preserva referências de slices inalterados", () => {
   const sharing = readFileSync("src/lib/shared/game-snapshot-sharing.ts", "utf8");
-  const sync = readFileSync("src/hooks/use-game-sync.ts", "utf8");
+  const coordinator = readFileSync(
+    "src/lib/client/sync/game-snapshot-coordinator.ts",
+    "utf8",
+  );
 
   assert.match(sharing, /shareGameSnapshot/);
   assert.match(sharing, /previous\.territories/);
   assert.match(sharing, /previous\.players/);
   assert.match(sharing, /previous\.connections/);
   assert.match(sharing, /return previous;/);
-  assert.match(sync, /shareGameSnapshot\(/);
+  assert.match(coordinator, /shareGameSnapshot\(/);
 });
 
 test("rede viária agrupa rotas base e individualiza somente destaques", () => {
@@ -172,21 +180,28 @@ test("topologia fixa atravessa a rede apenas quando a versão muda", () => {
     "src/app/api/games/[roomId]/route.ts",
     "utf8",
   );
-  const sync = readFileSync("src/hooks/use-game-sync.ts", "utf8");
+  const transport = readFileSync(
+    "src/lib/client/transport/http-game-snapshot-transport.ts",
+    "utf8",
+  );
+  const coordinator = readFileSync(
+    "src/lib/client/sync/game-snapshot-coordinator.ts",
+    "utf8",
+  );
 
   assert.match(contract, /GAME_TOPOLOGY_HEADER/);
   assert.match(contract, /GAME_TOPOLOGY_VERSION/);
   assert.match(route, /knownTopology === GAME_TOPOLOGY_VERSION/);
   assert.match(route, /revisionForFastPath/);
   assert.match(route, /delete dynamicSnapshot\.connections/);
-  assert.match(sync, /topologyVersionRef/);
-  assert.match(sync, /baseTopologyConnectionsRef/);
-  assert.match(sync, /GAME_TOPOLOGY_HEADER/);
+  assert.match(transport, /GAME_TOPOLOGY_HEADER/);
+  assert.match(coordinator, /topologyVersion/);
+  assert.match(coordinator, /baseConnections/);
   assert.match(
-    sync,
-    /payload\.connections \?\? baseTopologyConnectionsRef\.current/,
+    coordinator,
+    /result\.payload\.connections \?\? this\.baseConnections/,
   );
-  assert.match(sync, /hydrateGameSnapshot\(payload, baseConnections\)/);
+  assert.match(coordinator, /hydrateGameSnapshot\(result\.payload, baseConnections\)/);
 });
 
 test("reforço e manobra retornam patches autoritativos ligados à revisão base", () => {
@@ -217,12 +232,21 @@ test("command patch só é aplicado sobre a revisão base e refresh vira no-op q
   const client = readFileSync("src/lib/client/game-command-client.ts", "utf8");
   const bus = readFileSync("src/lib/client/game-command-patch-bus.ts", "utf8");
   const sync = readFileSync("src/hooks/use-game-sync.ts", "utf8");
+  const controller = readFileSync(
+    "src/lib/client/sync/game-sync-controller.ts",
+    "utf8",
+  );
+  const revisions = readFileSync(
+    "src/lib/client/sync/revision-coordinator.ts",
+    "utf8",
+  );
   const patch = readFileSync("src/lib/shared/game-command-patch.ts", "utf8");
 
   assert.match(client, /dispatchGameCommandPatch/);
   assert.match(bus, /registerGameCommandPatchHandler/);
-  assert.match(sync, /revisionRef\.current !== result\.baseRevision/);
-  assert.match(sync, /applyGameCommandPatch/);
-  assert.match(sync, /revisionRef\.current >= minimumRevision/);
+  assert.match(controller, /canApplyPatch\(result\.baseRevision, result\.revision\)/);
+  assert.match(controller, /applyGameCommandPatch/);
+  assert.match(revisions, /this\.currentRevision === baseRevision/);
+  assert.match(sync, /hasObservedRevision\(minimumRevision\)/);
   assert.match(patch, /matched !== updates\.size/);
 });
