@@ -1,7 +1,7 @@
 import "server-only";
 
-import { createHash } from "node:crypto";
 import type { PoolClient } from "pg";
+import { gameCommandRequestFingerprint } from "@/src/lib/shared/game-command-fingerprint";
 import type { GameCommandRequestMetadata } from "@/src/lib/game-command-request";
 import type { GameCommandResult } from "@/src/lib/game-revision";
 import { RoomError } from "@/src/lib/rooms";
@@ -26,46 +26,6 @@ export type PreparedGameCommandReceipt = {
   fingerprint: string;
   replay: GameCommandResult<unknown> | null;
 };
-
-function stableJson(value: unknown): string {
-  if (value === null) return "null";
-
-  if (typeof value === "string" || typeof value === "boolean") {
-    return JSON.stringify(value);
-  }
-
-  if (typeof value === "number") {
-    if (!Number.isFinite(value)) {
-      throw new TypeError("Payload de comando contém número não finito.");
-    }
-    return JSON.stringify(value);
-  }
-
-  if (Array.isArray(value)) {
-    return `[${value
-      .map((item) => (item === undefined ? "null" : stableJson(item)))
-      .join(",")}]`;
-  }
-
-  if (typeof value === "object") {
-    const record = value as Record<string, unknown>;
-    const entries = Object.keys(record)
-      .filter((key) => record[key] !== undefined)
-      .sort()
-      .map((key) => `${JSON.stringify(key)}:${stableJson(record[key])}`);
-    return `{${entries.join(",")}}`;
-  }
-
-  throw new TypeError("Payload de comando não é serializável em JSON.");
-}
-
-export function gameCommandRequestFingerprint(
-  commandName: string,
-  payload: unknown,
-) {
-  const canonical = `${commandName}\n${stableJson(payload ?? null)}`;
-  return createHash("sha256").update(canonical).digest("hex");
-}
 
 async function resolveReceiptPlayerId(
   client: PoolClient,
