@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node server.mjs",
     "relay": "node redis-relay.mjs",
-    "check": "node --check server.mjs && node --check listener.mjs && node --check redis-room-subscriber.mjs && node --check redis-publisher.mjs && node --check redis-relay.mjs && node --check registry.mjs && node --check auth.mjs && node --check protocol.mjs",
+    "check": "node --check server.mjs && node --check listener.mjs && node --check redis-room-subscriber.mjs && node --check redis-publisher.mjs && node --check redis-relay.mjs && node --check ticket.mjs && node --check registry.mjs && node --check auth.mjs && node --check protocol.mjs",
     "test": "npm run check && node --test test/*.test.mjs"
   },
   "dependencies": {
