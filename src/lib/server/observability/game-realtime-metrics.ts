@@ -6,6 +6,8 @@ export const GAME_REALTIME_METRICS_CHANNEL = "war-brasil.game.realtime";
 
 type GameRealtimeMetricName =
   | "notify.publish"
+  | "notify.patch"
+  | "notify.patch_fallback"
   | "notify.failure";
 
 type GameRealtimeMetric = {
@@ -13,6 +15,7 @@ type GameRealtimeMetric = {
   roomId: string;
   revision: number;
   error?: string;
+  payloadBytes?: number;
 };
 
 const metricsChannel = channel(GAME_REALTIME_METRICS_CHANNEL);
