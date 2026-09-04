@@ -78,12 +78,13 @@ export class GameRealtimeRegistry {
     }
   }
 
-  broadcastInvalidation(roomId, revision) {
+  broadcastInvalidation(roomId, revision, playerId = null) {
     const room = this.rooms.get(roomId);
     if (!room) return;
 
     for (const context of room) {
-      this.sendRevision(context, revision);
+      if (playerId !== null && context.playerId !== playerId) continue;
+      this.sendRevision(context, revision, playerId !== null);
     }
   }
 
@@ -149,7 +150,7 @@ export class GameRealtimeRegistry {
     }
   }
 
-  sendRevision(context, revision) {
+  sendRevision(context, revision, privateScope = false) {
     if (
       context.socket.readyState !== WebSocket.OPEN ||
       revision <= context.lastRevisionSent
@@ -172,8 +173,9 @@ export class GameRealtimeRegistry {
         serverEvent("game.invalidate", context.roomId, { revision }),
       );
       context.lastRevisionSent = revision;
-      recordRealtimeMetric("broadcasts", {
+      recordRealtimeMetric(privateScope ? "privateBroadcasts" : "broadcasts", {
         roomId: context.roomId,
+        playerId: privateScope ? context.playerId : undefined,
         revision,
       });
     } catch {
