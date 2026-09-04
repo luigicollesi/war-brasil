@@ -1,12 +1,13 @@
 import "server-only";
 
 import type { PoolClient } from "pg";
-import { gameCommand } from "@/src/lib/game-command";
+import { playerGameCommand } from "@/src/lib/game-command";
 import {
   resolveCommandPlayerBySession,
   type CommandPlayer,
 } from "@/src/lib/game-command-player";
 import type { GameCommandPatch } from "@/src/lib/game-command-patch";
+import type { GameCommandRequestMetadata } from "@/src/lib/game-command-request";
 import type { CardSymbol } from "@/src/lib/game-config";
 import { objectiveWon } from "@/src/lib/game-objective-service";
 import {
@@ -280,6 +281,7 @@ export async function reinforceCommand(
   value: string,
   session: string,
   input: Record<string, unknown>,
+  metadata?: GameCommandRequestMetadata | null,
 ) {
   const roomId = normalizeRoomId(value);
   const territoryId = positiveInteger(
@@ -287,17 +289,26 @@ export async function reinforceCommand(
     "Território inválido.",
   );
   const troops = positiveInteger(input.troops, "Quantidade de tropas inválida.");
+  const normalizedInput = { territoryId, troops };
 
-  return gameCommand<GameCommandPatch>(roomId, async (client) => {
-    const player = await resolveCommandPlayerBySession(client, roomId, session);
-    return executeReinforcement(client, roomId, player, { territoryId, troops });
-  });
+  return playerGameCommand<GameCommandPatch>(
+    roomId,
+    session,
+    metadata,
+    "reinforce",
+    normalizedInput,
+    async (client) => {
+      const player = await resolveCommandPlayerBySession(client, roomId, session);
+      return executeReinforcement(client, roomId, player, normalizedInput);
+    },
+  );
 }
 
 export async function tradeCardsCommand(
   value: string,
   session: string,
   input: Record<string, unknown>,
+  metadata?: GameCommandRequestMetadata | null,
 ) {
   const roomId = normalizeRoomId(value);
   const ids = Array.isArray(input.cardIds)
@@ -308,8 +319,15 @@ export async function tradeCardsCommand(
     throw new RoomError("Selecione exatamente três cartas diferentes.", 422);
   }
 
-  return gameCommand(roomId, async (client) => {
-    const player = await resolveCommandPlayerBySession(client, roomId, session);
-    return executeTradeCards(client, roomId, player, ids);
-  });
+  return playerGameCommand(
+    roomId,
+    session,
+    metadata,
+    "cards.trade",
+    { cardIds: [...ids].sort() },
+    async (client) => {
+      const player = await resolveCommandPlayerBySession(client, roomId, session);
+      return executeTradeCards(client, roomId, player, ids);
+    },
+  );
 }
