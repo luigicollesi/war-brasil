@@ -6,9 +6,10 @@ function source(path) {
   return readFileSync(path, "utf8");
 }
 
-test("troca de cartas só é aceita durante reinforcement", () => {
+test("troca clássica de cartas continua restrita ao reinforcement", () => {
   const troopService = source("src/lib/server/game-troop-command-service.ts");
-  const runner = source("src/lib/server/bots/bot-runner.ts");
+  const turnService = source("src/lib/server/game-turn-service.ts");
+  const schedule = source("src/lib/shared/bots/bot-schedule.ts");
   const strategy = source("src/lib/shared/bots/bot-strategy.ts");
   const cards = source("src/lib/shared/bots/bot-cards.ts");
 
@@ -17,7 +18,11 @@ test("troca de cartas só é aceita durante reinforcement", () => {
     troopService,
     /\["cards",\s*"reinforcement"\]\.includes\(room\.phase\)/,
   );
-  assert.match(runner, /if \(room\.phase === "cards"\) return \{ type: "finish_cards" \}/);
+  assert.match(turnService, /!player\.is_bot && player\.card_count > 0/);
+  assert.match(turnService, /SET phase='trade'/);
+  assert.match(turnService, /beginReinforcementForPlayer/);
+  assert.match(schedule, /room\.phase === "trade"/);
+  assert.match(schedule, /return "finish_cards"/);
   assert.match(strategy, /state\.room\.phase === "reinforcement"/);
   assert.match(strategy, /chooseCardTrade/);
   assert.match(cards, /state\.cards\.length >= 5/);
