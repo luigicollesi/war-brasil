@@ -1,7 +1,8 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
 import type { PoolClient } from "pg";
-import { gameCommandRequestFingerprint } from "@/src/lib/shared/game-command-fingerprint";
+import { canonicalGameCommandRequest } from "@/src/lib/shared/game-command-canonical";
 import type { GameCommandRequestMetadata } from "@/src/lib/game-command-request";
 import type { GameCommandResult } from "@/src/lib/game-revision";
 import { RoomError } from "@/src/lib/rooms";
@@ -26,6 +27,12 @@ export type PreparedGameCommandReceipt = {
   fingerprint: string;
   replay: GameCommandResult<unknown> | null;
 };
+
+function gameCommandRequestFingerprint(commandName: string, payload: unknown) {
+  return createHash("sha256")
+    .update(canonicalGameCommandRequest(commandName, payload))
+    .digest("hex");
+}
 
 async function resolveReceiptPlayerId(
   client: PoolClient,
