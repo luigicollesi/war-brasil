@@ -1,4 +1,3 @@
-import type { GameCard } from "./game-contract";
 import type { CardSymbol } from "./game-config";
 
 export const PLAYER_TRADE_OFFER_LIMIT = 3;
@@ -8,6 +7,11 @@ export type TradeCardDescriptor =
   | { kind: "territory"; territoryId: number }
   | { kind: "symbol"; symbol: CardSymbol }
   | { kind: "wild" };
+
+type TradeMatchableCard = {
+  territoryId: number | null;
+  symbol: CardSymbol | "wild";
+};
 
 export function isTradeCardDescriptor(
   value: unknown,
@@ -42,7 +46,7 @@ export function isTradeCardDescriptor(
 }
 
 export function cardMatchesTradeDescriptor(
-  card: Pick<GameCard, "territoryId" | "symbol">,
+  card: TradeMatchableCard,
   descriptor: TradeCardDescriptor,
 ) {
   if (descriptor.kind === "wild") return card.symbol === "wild";
@@ -52,8 +56,8 @@ export function cardMatchesTradeDescriptor(
   return card.symbol === descriptor.symbol;
 }
 
-export function cardsMatchingTradeDescriptor(
-  cards: readonly GameCard[],
+export function cardsMatchingTradeDescriptor<T extends TradeMatchableCard>(
+  cards: readonly T[],
   descriptor: TradeCardDescriptor,
 ) {
   return cards.filter((card) => cardMatchesTradeDescriptor(card, descriptor));
