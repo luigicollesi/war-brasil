@@ -1,6 +1,7 @@
 import "server-only";
 
 import { Pool } from "pg";
+import type { DatabasePoolStats } from "../observability/game-operation-metrics";
 
 const globalForPostgres = globalThis as typeof globalThis & {
   postgresPool?: Pool;
@@ -20,6 +21,14 @@ function createPool() {
 }
 
 export const pool = globalForPostgres.postgresPool ?? createPool();
+
+export function databasePoolStats(): DatabasePoolStats {
+  return {
+    total: pool.totalCount,
+    idle: pool.idleCount,
+    waiting: pool.waitingCount,
+  };
+}
 
 if (process.env.NODE_ENV !== "production") {
   globalForPostgres.postgresPool = pool;
