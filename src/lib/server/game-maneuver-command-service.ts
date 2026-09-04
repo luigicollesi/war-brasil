@@ -2,12 +2,13 @@ import "server-only";
 
 import type { PoolClient } from "pg";
 import { maneuverTraversalProfile } from "@/src/lib/game-barrier-rules";
-import { gameCommand } from "@/src/lib/game-command";
+import { playerGameCommand } from "@/src/lib/game-command";
 import {
   resolveCommandPlayerBySession,
   type CommandPlayer,
 } from "@/src/lib/game-command-player";
 import type { GameCommandPatch } from "@/src/lib/game-command-patch";
+import type { GameCommandRequestMetadata } from "@/src/lib/game-command-request";
 import { getEffectiveGameTopology } from "@/src/lib/game-effective-topology-service";
 import { objectiveWon } from "@/src/lib/game-objective-service";
 import { maneuverMovableTroops } from "@/src/lib/game-rules";
@@ -237,6 +238,7 @@ export async function maneuverCommand(
   value: string,
   session: string,
   input: Record<string, unknown>,
+  metadata?: GameCommandRequestMetadata | null,
 ) {
   const roomId = normalizeRoomId(value);
   const fromTerritoryId = positiveInteger(
@@ -251,13 +253,17 @@ export async function maneuverCommand(
     input.troops,
     "Quantidade de tropas inválida.",
   );
+  const normalizedInput = { fromTerritoryId, toTerritoryId, troops };
 
-  return gameCommand<GameCommandPatch>(roomId, async (client) => {
-    const player = await resolveCommandPlayerBySession(client, roomId, session);
-    return executeManeuver(client, roomId, player, {
-      fromTerritoryId,
-      toTerritoryId,
-      troops,
-    });
-  });
+  return playerGameCommand<GameCommandPatch>(
+    roomId,
+    session,
+    metadata,
+    "maneuver",
+    normalizedInput,
+    async (client) => {
+      const player = await resolveCommandPlayerBySession(client, roomId, session);
+      return executeManeuver(client, roomId, player, normalizedInput);
+    },
+  );
 }
