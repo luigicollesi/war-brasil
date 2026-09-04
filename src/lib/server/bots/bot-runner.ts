@@ -18,6 +18,7 @@ import {
   type OrderPlayer,
   type OrderRoll,
 } from "@/src/lib/game-order-rules";
+import { orderRollActorAvailableAt } from "@/src/lib/game-transitions";
 import {
   executeReinforcement,
   executeTradeCards,
@@ -45,6 +46,10 @@ type AutomationRoom = {
 type AutomationPlayer = CommandPlayer & {
   is_bot: boolean;
   bot_next_action_at: Date | null;
+};
+
+type AutomationOrderRoll = OrderRoll & {
+  rolled_at: Date;
 };
 
 export type BotAutomationResult = {
@@ -79,28 +84,36 @@ async function loadPlayers(client: PoolClient, roomId: string) {
   ).rows;
 }
 
-async function orderRollPlayerId(
+async function orderRollState(
   client: PoolClient,
   room: AutomationRoom,
   players: AutomationPlayer[],
 ) {
-  if (room.status !== "order_roll") return null;
+  if (room.status !== "order_roll") {
+    return { nextPlayerId: null, lastRollAt: null as Date | null };
+  }
 
   const rolls = (
-    await client.query<OrderRoll>(
-      `SELECT player_id,roll_round,value
+    await client.query<AutomationOrderRoll>(
+      `SELECT player_id,roll_round,value,rolled_at
        FROM game_order_rolls
        WHERE room_id=$1
        ORDER BY roll_round,rolled_at`,
       [room.id],
     )
   ).rows;
-
-  return nextOrderRollPlayerId(
-    players as OrderPlayer[],
-    rolls,
-    room.order_roll_round,
+  const currentRolls = rolls.filter(
+    (roll) => roll.roll_round === room.order_roll_round,
   );
+
+  return {
+    nextPlayerId: nextOrderRollPlayerId(
+      players as OrderPlayer[],
+      rolls,
+      room.order_roll_round,
+    ),
+    lastRollAt: currentRolls.at(-1)?.rolled_at ?? null,
+  };
 }
 
 function scheduledActionType(room: AutomationRoom): BotActionType | null {
@@ -328,10 +341,10 @@ export async function advanceBotAutomation(
 
   const players = await loadPlayers(client, roomId);
   const battle = isBattle(room.last_battle) ? room.last_battle : null;
-  const nextOrderPlayerId = await orderRollPlayerId(client, room, players);
+  const orderState = await orderRollState(client, room, players);
   const actorId = requiredActorId({
     status: room.status,
-    orderRollPlayerId: nextOrderPlayerId,
+    orderRollPlayerId: orderState.nextPlayerId,
     currentPlayerId: room.current_player_id,
     battle,
     pendingConquest:
@@ -346,8 +359,17 @@ export async function advanceBotAutomation(
   const delayAction = scheduledActionType(room);
   if (!delayAction) return { changed: false, kind: "none" };
 
-  if (actor.bot_next_action_at === null) {
-    const dueAt = new Date(nowMs + pickBotDelayMs(delayAction));
+  const releaseAt =
+    delayAction === "roll_order"
+      ? orderRollActorAvailableAt(orderState.lastRollAt)
+      : null;
+  const actionBaseTimeMs = Math.max(nowMs, releaseAt?.getTime() ?? nowMs);
+
+  if (
+    actor.bot_next_action_at === null ||
+    actor.bot_next_action_at.getTime() < actionBaseTimeMs
+  ) {
+    const dueAt = new Date(actionBaseTimeMs + pickBotDelayMs(delayAction));
     await client.query(
       `UPDATE room_players
        SET bot_next_action_at=$3
