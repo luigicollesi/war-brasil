@@ -120,8 +120,15 @@ try {
     await applyMigration("017-initial-territory-presentation.sql");
   }
 
+  if (
+    !(await columnExists("game_rooms", "automation_due_at")) ||
+    !(await columnExists("game_rooms", "automation_kind"))
+  ) {
+    await applyMigration("018-game-automation-schedule.sql");
+  }
+
   await client.query("COMMIT");
-  console.log("[war-brasil] banco local preparado para bots, objetivos e apresentação inicial.");
+  console.log("[war-brasil] banco local preparado para bots, objetivos, apresentação inicial e agenda de automação.");
 } catch (error) {
   await client.query("ROLLBACK").catch(() => undefined);
   console.error(
