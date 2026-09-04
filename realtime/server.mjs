@@ -11,6 +11,7 @@ import {
   parseClientMessage,
   serverEvent,
 } from "./protocol.mjs";
+import { RedisRoomSubscriber } from "./redis-room-subscriber.mjs";
 import { GameRealtimeRegistry } from "./registry.mjs";
 
 if (process.env.GAME_REALTIME_ENABLED !== "true") {
@@ -26,6 +27,18 @@ if (!connectionString) {
 const port = Number(process.env.GAME_REALTIME_PORT ?? 3001);
 if (!Number.isInteger(port) || port < 1 || port > 65535) {
   throw new Error("GAME_REALTIME_PORT inválida.");
+}
+
+const eventSourceMode = process.env.GAME_REALTIME_EVENT_SOURCE?.trim() || "postgres";
+if (!new Set(["postgres", "redis"]).has(eventSourceMode)) {
+  throw new Error(
+    `GAME_REALTIME_EVENT_SOURCE inválido: ${eventSourceMode}. Use postgres ou redis.`,
+  );
+}
+
+const redisUrl = process.env.GAME_REALTIME_REDIS_URL?.trim() || null;
+if (eventSourceMode === "redis" && !redisUrl) {
+  throw new Error("GAME_REALTIME_REDIS_URL é obrigatória quando o event source é redis.");
 }
 
 function allowedOrigins() {
@@ -69,34 +82,55 @@ function requestedSubprotocol(request) {
 const origins = allowedOrigins();
 const pool = new Pool({ connectionString, max: 5 });
 const registry = new GameRealtimeRegistry();
-let listenerHealthy = false;
+let eventSourceHealthy = false;
 let acceptingUpgrades = false;
 let shuttingDown = false;
 
 function gatewayReady() {
-  return acceptingUpgrades && listenerHealthy && !shuttingDown;
+  return acceptingUpgrades && eventSourceHealthy && !shuttingDown;
 }
 
-const listener = new PostgresRealtimeListener({
-  connectionString,
-  onEvent: (event) => {
-    if (event.kind === "patch") {
-      registry.broadcastPatch(event);
-      return;
-    }
-    registry.broadcastInvalidation(
-      event.roomId,
-      event.revision,
-      event.scope === "player" ? event.playerId : null,
-    );
-  },
-  onHealthChange: (healthy) => {
-    listenerHealthy = healthy;
-    if (!healthy) {
-      registry.closeAll(1012, "Canal realtime temporariamente indisponível");
-    }
-  },
-});
+function handleRealtimeEvent(event) {
+  if (event.kind === "patch") {
+    registry.broadcastPatch(event);
+    return;
+  }
+  registry.broadcastInvalidation(
+    event.roomId,
+    event.revision,
+    event.scope === "player" ? event.playerId : null,
+  );
+}
+
+function handleSourceHealth(healthy) {
+  eventSourceHealthy = healthy;
+  if (!healthy) {
+    registry.closeAll(1012, "Canal realtime temporariamente indisponível");
+  }
+}
+
+const eventSource =
+  eventSourceMode === "redis"
+    ? new RedisRoomSubscriber({
+        url: redisUrl,
+        onEvent: handleRealtimeEvent,
+        onHealthChange: handleSourceHealth,
+      })
+    : new PostgresRealtimeListener({
+        connectionString,
+        onEvent: handleRealtimeEvent,
+        onHealthChange: handleSourceHealth,
+      });
+
+async function acquireRoomSource(roomId) {
+  if (eventSourceMode !== "redis") return;
+  await eventSource.acquireRoom(roomId);
+}
+
+async function releaseRoomSource(roomId) {
+  if (eventSourceMode !== "redis") return;
+  await eventSource.releaseRoom(roomId);
+}
 
 const wss = new WebSocketServer({
   noServer: true,
@@ -110,13 +144,35 @@ const wss = new WebSocketServer({
 });
 
 async function setupConnection(socket, identity) {
+  try {
+    await acquireRoomSource(identity.roomId);
+  } catch {
+    socket.close(1012, "Não foi possível assinar a sala realtime");
+    return;
+  }
+
+  if (socket.readyState !== socket.OPEN) {
+    await releaseRoomSource(identity.roomId);
+    return;
+  }
+
   const context = registry.add(socket, {
     roomId: identity.roomId,
     playerId: identity.playerId,
   });
 
+  let releasedSource = false;
+  const releaseSourceOnce = () => {
+    if (releasedSource) return;
+    releasedSource = true;
+    void releaseRoomSource(context.roomId);
+  };
+
   socket.on("pong", () => registry.markAlive(socket));
-  socket.on("close", () => registry.remove(socket));
+  socket.on("close", () => {
+    registry.remove(socket);
+    releaseSourceOnce();
+  });
   socket.on("error", () => undefined);
   socket.on("message", (data, isBinary) => {
     if (isBinary) {
@@ -170,9 +226,14 @@ function statusBody() {
     ready: gatewayReady(),
     live: !shuttingDown,
     acceptingUpgrades,
-    listenerHealthy,
+    eventSourceMode,
+    eventSourceHealthy,
     connections: registry.size(),
     rooms: registry.roomCount(),
+    sourceRooms:
+      eventSourceMode === "redis" && typeof eventSource.roomCount === "function"
+        ? eventSource.roomCount()
+        : null,
     metrics: realtimeMetricsSnapshot(),
   };
 }
@@ -264,10 +325,12 @@ server.on("upgrade", async (request, socket, head) => {
 const heartbeat = setInterval(() => registry.heartbeat(), 30_000);
 heartbeat.unref?.();
 
-await listener.start();
+await eventSource.start();
 server.listen(port, "0.0.0.0", () => {
   acceptingUpgrades = true;
-  console.log(`War-Brasil realtime gateway ouvindo na porta ${port}.`);
+  console.log(
+    `War-Brasil realtime gateway ouvindo na porta ${port} (${eventSourceMode}).`,
+  );
 });
 
 async function shutdown() {
@@ -277,10 +340,11 @@ async function shutdown() {
   recordRealtimeMetric("draining", {
     connections: registry.size(),
     rooms: registry.roomCount(),
+    eventSourceMode,
   });
   clearInterval(heartbeat);
   registry.closeAll(1012, "Servidor reiniciando");
-  await listener.stop();
+  await eventSource.stop();
   await new Promise((resolve) => server.close(resolve));
   await pool.end();
 }
