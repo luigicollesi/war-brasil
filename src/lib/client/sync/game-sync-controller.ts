@@ -3,7 +3,10 @@ import {
   type ApplicableGameCommandResult,
 } from "@/src/lib/game-command-patch";
 import type { GameSnapshot } from "@/src/lib/game-contract";
-import type { GameRealtimeEvent } from "@/src/lib/game-realtime-contract";
+import type {
+  GamePatchEvent,
+  GameRealtimeEvent,
+} from "@/src/lib/game-realtime-contract";
 import { GameSnapshotCoordinator } from "./game-snapshot-coordinator";
 import { RevisionCoordinator } from "./revision-coordinator";
 import type { GameRealtimeMode } from "../transport/game-realtime-mode";
@@ -22,6 +25,12 @@ export type GameSyncResult = {
   unchanged: boolean;
   revision: number | null;
   responseBytes: number | null;
+};
+
+export type GameRealtimePatchResult = {
+  applied: boolean;
+  stale: boolean;
+  snapshot: GameSnapshot | null;
 };
 
 type GameSyncControllerDependencies = {
@@ -134,6 +143,35 @@ export class GameSyncController {
 
     this.revisions.observe(result.revision);
     return this.snapshots.apply(nextSnapshot);
+  }
+
+  applyRealtimePatch(event: GamePatchEvent): GameRealtimePatchResult {
+    const { baseRevision, revision, patch } = event.payload;
+    const currentRevision = this.revisions.current();
+
+    if (currentRevision !== null && revision <= currentRevision) {
+      return {
+        applied: false,
+        stale: true,
+        snapshot: this.snapshots.current(),
+      };
+    }
+
+    if (this.realtimeMode !== "hybrid") {
+      return { applied: false, stale: false, snapshot: null };
+    }
+
+    const snapshot = this.applyCommandResult({
+      baseRevision,
+      revision,
+      patch,
+    });
+    if (snapshot) {
+      return { applied: true, stale: false, snapshot };
+    }
+
+    this.revisions.require(revision);
+    return { applied: false, stale: false, snapshot: null };
   }
 
   async startRealtime(onEvent?: (event: GameRealtimeEvent) => void) {
