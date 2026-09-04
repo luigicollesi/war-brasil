@@ -16,6 +16,7 @@ import {
 } from "@/src/lib/game-order-rules";
 import { advanceGameRound } from "@/src/lib/game-round-service";
 import { reinforcementFor } from "@/src/lib/game-rules";
+import { isOrderRollActorAvailable } from "@/src/lib/game-transitions";
 import { RoomError } from "@/src/lib/rooms";
 
 type CommandRoom = {
@@ -30,6 +31,10 @@ type CommandRoom = {
   conquered_this_turn: boolean;
   pending_from_territory_id: number | null;
   last_battle: unknown | null;
+};
+
+type CommandOrderRoll = OrderRoll & {
+  rolled_at: Date;
 };
 
 function normalizeRoomId(value: string) {
@@ -209,8 +214,8 @@ export async function executeRollOrderDie(
     )
   ).rows;
   const rolls = (
-    await client.query<OrderRoll>(
-      `SELECT player_id,roll_round,value
+    await client.query<CommandOrderRoll>(
+      `SELECT player_id,roll_round,value,rolled_at
        FROM game_order_rolls
        WHERE room_id=$1
        ORDER BY roll_round,rolled_at`,
@@ -229,6 +234,17 @@ export async function executeRollOrderDie(
       nextPlayerId,
       requestPlayerId: player.id,
     });
+  }
+
+  const lastRollAt =
+    rolls
+      .filter((roll) => roll.roll_round === room.order_roll_round)
+      .at(-1)?.rolled_at ?? null;
+  if (!isOrderRollActorAvailable(lastRollAt)) {
+    throw new RoomError(
+      "Aguarde a animação do dado anterior terminar antes de rolar.",
+      409,
+    );
   }
 
   const die = randomInt(1, 7);
