@@ -118,6 +118,17 @@ test("hook delega transporte, revisão e topologia ao controller", () => {
   assert.match(snapshotCoordinator, /shareGameSnapshot/);
 });
 
+test("rollout realtime começa desligado e reserva shadow/hybrid", () => {
+  const mode = readFileSync(
+    "src/lib/client/transport/game-realtime-mode.ts",
+    "utf8",
+  );
+
+  assert.match(mode, /NEXT_PUBLIC_GAME_REALTIME_MODE/);
+  assert.match(mode, /"off" \| "shadow" \| "hybrid"/);
+  assert.match(mode, /return "off"/);
+});
+
 test("camada autoritativa não depende de tecnologias realtime", () => {
   const command = readFileSync("src/lib/server/game-command.ts", "utf8");
   const sharedProtocol = readFileSync(
@@ -127,4 +138,23 @@ test("camada autoritativa não depende de tecnologias realtime", () => {
 
   assert.doesNotMatch(command, /WebSocket|Socket\.IO|socket\.io|Redis|WebTransport/i);
   assert.doesNotMatch(sharedProtocol, /window|document|WebSocket|Redis|server-only/);
+});
+
+test("boundaries publicam métricas por diagnostics channel sem acoplar fornecedor", () => {
+  const metrics = readFileSync(
+    "src/lib/server/observability/game-operation-metrics.ts",
+    "utf8",
+  );
+  const command = readFileSync("src/lib/server/game-command.ts", "utf8");
+  const query = readFileSync("src/lib/server/game-query.ts", "utf8");
+  const pool = readFileSync("src/lib/server/db/pool.ts", "utf8");
+
+  assert.match(metrics, /node:diagnostics_channel/);
+  assert.match(metrics, /war-brasil\.game\.operation/);
+  assert.match(command, /startGameOperationMetric\("game\.command"\)/);
+  assert.match(command, /startGameOperationMetric\("game\.conditional_command"\)/);
+  assert.match(query, /startGameOperationMetric\("game\.query"\)/);
+  assert.match(pool, /totalCount/);
+  assert.match(pool, /idleCount/);
+  assert.match(pool, /waitingCount/);
 });
