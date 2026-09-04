@@ -37,9 +37,9 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
 }
 
 const eventSourceMode = process.env.GAME_REALTIME_EVENT_SOURCE?.trim() || "postgres";
-if (!new Set(["postgres", "redis"]).has(eventSourceMode)) {
+if (!new Set(["postgres", "dual", "redis"]).has(eventSourceMode)) {
   throw new Error(
-    `GAME_REALTIME_EVENT_SOURCE inválido: ${eventSourceMode}. Use postgres ou redis.`,
+    `GAME_REALTIME_EVENT_SOURCE inválido: ${eventSourceMode}. Use postgres, dual ou redis.`,
   );
 }
 
@@ -56,8 +56,10 @@ if (authMode !== "cookie" && !realtimeTicketConfigured()) {
 }
 
 const redisUrl = process.env.GAME_REALTIME_REDIS_URL?.trim() || null;
-if (eventSourceMode === "redis" && !redisUrl) {
-  throw new Error("GAME_REALTIME_REDIS_URL é obrigatória quando o event source é redis.");
+if (eventSourceMode !== "postgres" && !redisUrl) {
+  throw new Error(
+    "GAME_REALTIME_REDIS_URL é obrigatória quando o event source usa Redis.",
+  );
 }
 
 function allowedOrigins() {
@@ -102,14 +104,28 @@ const origins = allowedOrigins();
 const pool = new Pool({ connectionString, max: 5 });
 const registry = new GameRealtimeRegistry();
 let eventSourceHealthy = false;
+let redisShadowHealthy = eventSourceMode !== "dual";
 let acceptingUpgrades = false;
 let shuttingDown = false;
+const recentPrimaryEvents = new Map();
 
 function gatewayReady() {
   return acceptingUpgrades && eventSourceHealthy && !shuttingDown;
 }
 
+function eventKey(event) {
+  return `${event.roomId}:${event.revision}:${event.kind}:${event.scope}`;
+}
+
+function rememberPrimaryEvent(event) {
+  recentPrimaryEvents.set(eventKey(event), Date.now());
+  if (recentPrimaryEvents.size <= 1_000) return;
+  const oldest = recentPrimaryEvents.keys().next().value;
+  if (oldest !== undefined) recentPrimaryEvents.delete(oldest);
+}
+
 function handleRealtimeEvent(event) {
+  rememberPrimaryEvent(event);
   if (event.kind === "patch") {
     registry.broadcastPatch(event);
     return;
@@ -121,34 +137,67 @@ function handleRealtimeEvent(event) {
   );
 }
 
-function handleSourceHealth(healthy) {
+function handlePrimarySourceHealth(healthy) {
   eventSourceHealthy = healthy;
   if (!healthy) {
     registry.closeAll(1012, "Canal realtime temporariamente indisponível");
   }
 }
 
-const eventSource =
+function handleRedisShadowEvent(event) {
+  const observedAt = recentPrimaryEvents.get(eventKey(event));
+  recordRealtimeMetric("redisShadowEvents", {
+    roomId: event.roomId,
+    revision: event.revision,
+    matchedPrimary: observedAt !== undefined,
+    deliveryDeltaMs: observedAt === undefined ? null : Date.now() - observedAt,
+  });
+}
+
+function handleRedisShadowHealth(healthy) {
+  redisShadowHealthy = healthy;
+  recordRealtimeMetric("redisShadowHealth", { healthy });
+}
+
+const postgresSource =
   eventSourceMode === "redis"
-    ? new RedisRoomSubscriber({
-        url: redisUrl,
-        onEvent: handleRealtimeEvent,
-        onHealthChange: handleSourceHealth,
-      })
+    ? null
     : new PostgresRealtimeListener({
         connectionString,
         onEvent: handleRealtimeEvent,
-        onHealthChange: handleSourceHealth,
+        onHealthChange: handlePrimarySourceHealth,
       });
+const redisSource =
+  eventSourceMode === "postgres"
+    ? null
+    : new RedisRoomSubscriber({
+        url: redisUrl,
+        onEvent:
+          eventSourceMode === "redis" ? handleRealtimeEvent : handleRedisShadowEvent,
+        onHealthChange:
+          eventSourceMode === "redis"
+            ? handlePrimarySourceHealth
+            : handleRedisShadowHealth,
+      });
+const primarySource = eventSourceMode === "redis" ? redisSource : postgresSource;
 
 async function acquireRoomSource(roomId) {
-  if (eventSourceMode !== "redis") return;
-  await eventSource.acquireRoom(roomId);
+  if (!redisSource) return;
+  try {
+    await redisSource.acquireRoom(roomId);
+  } catch (error) {
+    recordRealtimeMetric("redisRoomAcquireFailures", {
+      roomId,
+      mode: eventSourceMode,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    if (eventSourceMode === "redis") throw error;
+  }
 }
 
 async function releaseRoomSource(roomId) {
-  if (eventSourceMode !== "redis") return;
-  await eventSource.releaseRoom(roomId);
+  if (!redisSource) return;
+  await redisSource.releaseRoom(roomId).catch(() => undefined);
 }
 
 async function freshRealtimeIdentity(identity) {
@@ -285,13 +334,11 @@ function statusBody() {
     acceptingUpgrades,
     eventSourceMode,
     eventSourceHealthy,
+    redisShadowHealthy: eventSourceMode === "dual" ? redisShadowHealthy : null,
     authMode,
     connections: registry.size(),
     rooms: registry.roomCount(),
-    sourceRooms:
-      eventSourceMode === "redis" && typeof eventSource.roomCount === "function"
-        ? eventSource.roomCount()
-        : null,
+    sourceRooms: redisSource ? redisSource.roomCount() : null,
     metrics: realtimeMetricsSnapshot(),
   };
 }
@@ -379,7 +426,18 @@ server.on("upgrade", async (request, socket, head) => {
 const heartbeat = setInterval(() => registry.heartbeat(), 30_000);
 heartbeat.unref?.();
 
-await eventSource.start();
+if (!primarySource) {
+  throw new Error("Realtime primary event source não foi configurado.");
+}
+await primarySource.start();
+if (eventSourceMode === "dual" && redisSource) {
+  await redisSource.start().catch((error) => {
+    redisShadowHealthy = false;
+    recordRealtimeMetric("redisShadowStartFailure", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  });
+}
 server.listen(port, "0.0.0.0", () => {
   acceptingUpgrades = true;
   console.log(
@@ -398,7 +456,10 @@ async function shutdown() {
   });
   clearInterval(heartbeat);
   registry.closeAll(1012, "Servidor reiniciando");
-  await eventSource.stop();
+  if (redisSource && redisSource !== primarySource) {
+    await redisSource.stop();
+  }
+  await primarySource.stop();
   await new Promise((resolve) => server.close(resolve));
   await pool.end();
 }
