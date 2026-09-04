@@ -23,14 +23,14 @@ test("preparação documentada acompanha limites e distribuição da sala", () =
   assert.match(rooms, /index \+ 1/);
 });
 
-test("turno mantém cartas, reforço, ataque e manobra enquanto trade é roteado no backend", () => {
+test("turno apresenta troca, reforço, ataque e manobra sem remapear a fase autoritativa", () => {
   const turn = source("src/components/game-guide/sections/guide-turn-section.tsx");
   const command = source("src/lib/server/game-command-service.ts");
   const turnService = source("src/lib/server/game-turn-service.ts");
   const hydration = source("src/lib/shared/game-snapshot-hydration.ts");
   const troops = source("src/lib/server/game-troop-command-service.ts");
 
-  const labels = ["Cartas", "Reforços", "Ataques", "Manobra"];
+  const labels = ["Troca", "Reforços", "Ataques", "Manobra"];
   let previous = -1;
   for (const label of labels) {
     const index = turn.indexOf(`label: "${label}"`);
@@ -41,7 +41,7 @@ test("turno mantém cartas, reforço, ataque e manobra enquanto trade é roteado
   assert.match(command, /input\.action === "finishTrade" \|\| input\.action === "finishCards"/);
   assert.match(turnService, /SET phase='trade'/);
   assert.match(turnService, /SET phase='reinforcement'/);
-  assert.match(hydration, /payload\.room\.phase === "trade" \? "cards"/);
+  assert.doesNotMatch(hydration, /payload\.room\.phase === "trade" \? "cards"/);
   assert.match(troops, /phase=CASE WHEN \$2=0 THEN 'attack' ELSE phase END/);
   assert.match(command, /input\.action === "finishAttack"/);
   assert.match(command, /SET phase='maneuver'/);
