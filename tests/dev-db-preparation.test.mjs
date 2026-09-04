@@ -22,6 +22,8 @@ test("ambiente dev prepara migrations necessárias antes de subir o Next", () =>
     "014-balanced-objective-catalog.sql",
     "015-player-card-trade-count.sql",
     "016-disable-elimination-fallback.sql",
+    "021-player-trade-phase.sql",
+    "022-complete-player-trade-negotiation.sql",
   ]) {
     assert.match(prepare, new RegExp(migration.replaceAll(".", "\\.")));
   }
