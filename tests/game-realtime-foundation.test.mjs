@@ -103,7 +103,8 @@ test("hook delega transporte, revisão e topologia ao controller", () => {
     "utf8",
   );
 
-  assert.match(hook, /new GameSyncController\(roomId\)/);
+  assert.match(hook, /new GameSyncController\(roomId,\s*\{/);
+  assert.match(hook, /createGameRealtimeTransport\(realtimeMode\)/);
   assert.match(hook, /new GamePollScheduler\(\)/);
   assert.doesNotMatch(hook, /revisionRef|requiredRevisionRef|topologyVersionRef/);
   assert.doesNotMatch(hook, /hydrateGameSnapshot|shareGameSnapshot/);
