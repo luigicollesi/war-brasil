@@ -72,8 +72,9 @@ function validRoomPatch(value: unknown) {
   }
   if (
     value.reinforcementsRemaining !== undefined &&
-    (!Number.isSafeInteger(value.reinforcementsRemaining) ||
-      Number(value.reinforcementsRemaining) < 0)
+    (typeof value.reinforcementsRemaining !== "number" ||
+      !Number.isSafeInteger(value.reinforcementsRemaining) ||
+      value.reinforcementsRemaining < 0)
   ) {
     return false;
   }
@@ -90,17 +91,21 @@ function validRoomPatch(value: unknown) {
 function validTerritoryPatch(value: unknown) {
   if (!isRecord(value) || !hasOnlyKeys(value, TERRITORY_PATCH_KEYS)) return false;
   if (
+    typeof value.territoryId !== "number" ||
     !Number.isSafeInteger(value.territoryId) ||
-    Number(value.territoryId) < 1 ||
-    Number(value.territoryId) > 42 ||
+    value.territoryId < 1 ||
+    value.territoryId > 42 ||
+    typeof value.troops !== "number" ||
     !Number.isSafeInteger(value.troops) ||
-    Number(value.troops) < 1
+    value.troops < 1
   ) {
     return false;
   }
   if (
     value.movedInTurn !== undefined &&
-    (!Number.isSafeInteger(value.movedInTurn) || Number(value.movedInTurn) < 0)
+    (typeof value.movedInTurn !== "number" ||
+      !Number.isSafeInteger(value.movedInTurn) ||
+      value.movedInTurn < 0)
   ) {
     return false;
   }
@@ -122,7 +127,7 @@ export function isGameCommandPatch(value: unknown): value is GameCommandPatch {
     const ids = new Set<number>();
     for (const territory of value.territories) {
       if (!validTerritoryPatch(territory)) return false;
-      const territoryId = Number((territory as Record<string, unknown>).territoryId);
+      const territoryId = territory.territoryId;
       if (ids.has(territoryId)) return false;
       ids.add(territoryId);
     }
