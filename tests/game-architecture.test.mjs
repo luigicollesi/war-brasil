@@ -106,18 +106,27 @@ test("avanço automático usa expectedRevision e um command condicional", () => 
   assert.match(presentation, /advanceBattlePresentation/);
 });
 
-test("cliente trata 204 sem substituir snapshot e exige revisão mínima após comandos", () => {
-  const source = readFileSync("src/hooks/use-game-sync.ts", "utf8");
+test("transporte trata 204 sem substituir snapshot e controller exige revisão mínima", () => {
+  const hook = readFileSync("src/hooks/use-game-sync.ts", "utf8");
+  const transport = readFileSync(
+    "src/lib/client/transport/http-game-snapshot-transport.ts",
+    "utf8",
+  );
+  const controller = readFileSync(
+    "src/lib/client/sync/game-sync-controller.ts",
+    "utf8",
+  );
 
-  assert.match(source, /response\.status === 204/);
-  assert.match(source, /GAME_REVISION_HEADER/);
-  assert.match(source, /shouldAdvancePresentation/);
-  assert.match(source, /\/advance/);
-  assert.match(source, /requiredRevisionRef/);
-  assert.match(source, /minimumRevision/);
+  assert.match(transport, /response\.status === 204/);
+  assert.match(transport, /GAME_REVISION_HEADER/);
+  assert.match(hook, /shouldAdvancePresentation/);
+  assert.match(hook, /\/advance/);
+  assert.match(hook, /minimumRevision/);
+  assert.match(controller, /requireRevision/);
+  assert.match(controller, /needsRequiredRevision/);
 
-  const noContentBranch = source.match(
-    /if \(response\.status === 204\) \{[\s\S]*?\n\s*\}/,
+  const noContentBranch = transport.match(
+    /if \(response\.status === 204\) \{[\s\S]*?kind: "unchanged"[\s\S]*?\n\s*\}/,
   )?.[0];
   assert.ok(noContentBranch);
   assert.doesNotMatch(noContentBranch, /setSnapshot/);
