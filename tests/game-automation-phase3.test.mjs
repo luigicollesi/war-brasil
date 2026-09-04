@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { scheduledBotActionType } from "../.test-build/bots/bot-schedule.js";
+import { gameAutomationDriver } from "../.test-build/client/game-automation-driver.js";
 import {
   battlePresentationDueAt,
   initialTerritoryPresentationDueAt,
@@ -132,4 +133,17 @@ test("worker shadow observa e active delega mutação ao command boundary versio
   assert.match(auth, /timingSafeEqual/);
   assert.doesNotMatch(worker, /UPDATE game_rooms|DELETE FROM/);
   assert.doesNotMatch(query, /UPDATE|DELETE|FOR UPDATE/i);
+});
+
+test("driver de automação preserva browser como default e permite corte para server", () => {
+  assert.equal(gameAutomationDriver(undefined), "browser");
+  assert.equal(gameAutomationDriver("browser"), "browser");
+  assert.equal(gameAutomationDriver("server"), "server");
+  assert.equal(gameAutomationDriver("invalid"), "browser");
+
+  const sync = source("src/hooks/use-game-sync.ts");
+  assert.match(sync, /const automationDriver = gameAutomationDriver\(\)/);
+  assert.match(sync, /automationDriver === "browser"/);
+  assert.match(sync, /await advancePresentation\(\)/);
+  assert.match(sync, /presentationPending: Boolean\([\s\S]*automationDriver === "browser"/);
 });
