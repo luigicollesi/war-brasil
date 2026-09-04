@@ -132,7 +132,7 @@ export async function publishGameTradeSignal(
     card: TradeCardDescriptor;
   },
 ) {
-  if (!gameRealtimeEnabled()) return;
+  if (!gameRealtimeEnabled()) return false;
 
   try {
     await publishGameRealtimeBusEvent(client, {
@@ -147,9 +147,45 @@ export async function publishGameTradeSignal(
         card: input.card,
       },
     });
+    return true;
   } catch {
-    // Sinalização é propositalmente best-effort: não gera revision, receipt,
+    // Sinalização é propositalmente efêmera: não gera revision, receipt,
     // retry persistente nem telemetria com o conteúdo revelado da carta.
+    return false;
+  }
+}
+
+export async function publishGameTradeResolution(
+  client: PoolClient,
+  input: {
+    roomId: string;
+    offerId: string;
+    turnNumber: number;
+    recipientPlayerId: string;
+    actorPlayerId: string;
+    outcome: "declined" | "counter_declined";
+  },
+) {
+  if (!gameRealtimeEnabled()) return false;
+
+  try {
+    await publishGameRealtimeBusEvent(client, {
+      kind: "ephemeral",
+      scope: "room",
+      roomId: input.roomId,
+      eventId: randomUUID(),
+      eventType: "trade.resolution",
+      payload: {
+        offerId: input.offerId,
+        turnNumber: input.turnNumber,
+        recipientPlayerId: input.recipientPlayerId,
+        actorPlayerId: input.actorPlayerId,
+        outcome: input.outcome,
+      },
+    });
+    return true;
+  } catch {
+    return false;
   }
 }
 
