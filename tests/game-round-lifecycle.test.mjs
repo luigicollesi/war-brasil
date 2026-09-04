@@ -121,7 +121,9 @@ test("lifecycle inteiro reutiliza o PoolClient da transação externa", () => {
 
   assert.match(round, /type \{ PoolClient \} from "pg"/);
   assert.doesNotMatch(round, /pool\.connect|BEGIN|COMMIT|ROLLBACK/);
-  assert.match(command, /return gameCommand\(roomId, async \(client\) =>/);
+  assert.match(command, /return playerGameCommand\(/);
+  assert.match(command, /async \(client\) =>/);
+  assert.match(transaction, /return gameCommand\(roomId, execute,/);
   assert.match(presentation, /return gameConditionalCommand\(/);
   assert.match(transaction, /SELECT id,revision FROM game_rooms WHERE id=\$1 FOR UPDATE/);
   assert.match(transaction, /await client\.query\("ROLLBACK"\)/);
