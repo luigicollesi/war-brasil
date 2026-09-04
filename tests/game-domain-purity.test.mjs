@@ -11,6 +11,7 @@ const PURE_MODULES = [
   "src/lib/shared/game-command-patch.ts",
   "src/lib/shared/game-effective-connections.ts",
   "src/lib/shared/game-snapshot-sharing.ts",
+  "src/lib/shared/game-realtime-contract.ts",
   "src/lib/shared/game-view-model.ts",
   "src/lib/shared/game-map-focus.ts",
   "src/lib/shared/events/event-types.ts",
@@ -81,7 +82,12 @@ test("UI de manobra reutiliza a regra centralizada de tropas movimentáveis", ()
 
 test("sincronização delega hidratação e não recompõe topologia efetiva no hook", () => {
   const sync = readFileSync("src/hooks/use-game-sync.ts", "utf8");
+  const coordinator = readFileSync(
+    "src/lib/client/sync/game-snapshot-coordinator.ts",
+    "utf8",
+  );
 
-  assert.match(sync, /hydrateGameSnapshot\(payload, baseConnections\)/);
+  assert.match(sync, /GameSyncController/);
+  assert.match(coordinator, /hydrateGameSnapshot\(result\.payload, baseConnections\)/);
   assert.doesNotMatch(sync, /effectiveTerritoryConnections|effectiveGameConnections/);
 });
