@@ -15,6 +15,8 @@ export async function POST(
   let roomId: string | undefined;
 
   try {
+    ({ roomId } = await params);
+
     const session = getPlayerSession(request);
     if (!session) {
       throw new RoomError("Entre em uma sala antes de jogar.", 401);
@@ -26,7 +28,6 @@ export async function POST(
       );
     }
 
-    ({ roomId } = await params);
     const body = await readJsonObject(request);
     const result = await signalPlayerTradeCard(roomId, session, body);
     return noStoreJson(result);
