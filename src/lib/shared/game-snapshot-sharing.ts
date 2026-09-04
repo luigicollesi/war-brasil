@@ -5,6 +5,7 @@ import type {
   GameSnapshot,
   GameTerritory,
 } from "./game-contract";
+import type { TradeCardDescriptor } from "./game-trade-rules";
 import type {
   AppliedEventTroopChange,
   ResolvedBarrierMove,
@@ -230,16 +231,8 @@ function sameRematch(
 }
 
 function sameTradeDescriptor(
-  left: NonNullable<GameSnapshot["trade"]>["activeOffer"] extends infer T
-    ? T extends { offered: infer D }
-      ? D
-      : never
-    : never,
-  right: NonNullable<GameSnapshot["trade"]>["activeOffer"] extends infer T
-    ? T extends { offered: infer D }
-      ? D
-      : never
-    : never,
+  left: TradeCardDescriptor,
+  right: TradeCardDescriptor,
 ) {
   if (left.kind !== right.kind) return false;
   if (left.kind === "territory" && right.kind === "territory") {
