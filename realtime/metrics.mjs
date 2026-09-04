@@ -10,6 +10,7 @@ const counters = {
   authRejected: 0,
   broadcasts: 0,
   privateBroadcasts: 0,
+  privateCoalesced: 0,
   coalesced: 0,
   patchBroadcasts: 0,
   patchFallbacks: 0,
