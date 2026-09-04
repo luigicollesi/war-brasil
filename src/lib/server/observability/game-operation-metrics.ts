@@ -25,15 +25,22 @@ type GameOperationMetric = {
   pool: DatabasePoolStats;
 };
 
+type FinishGameOperationMetric = (
+  outcome: GameOperationOutcome,
+  pool: DatabasePoolStats,
+) => void;
+
 const metricsChannel = channel(GAME_OPERATION_METRICS_CHANNEL);
 
-export function startGameOperationMetric(name: GameOperationName) {
+export function startGameOperationMetric(
+  name: GameOperationName,
+): FinishGameOperationMetric {
   if (!metricsChannel.hasSubscribers) {
-    return (_outcome: GameOperationOutcome, _pool: DatabasePoolStats) => {};
+    return () => undefined;
   }
 
   const startedAt = performance.now();
-  return (outcome: GameOperationOutcome, pool: DatabasePoolStats) => {
+  return (outcome, pool) => {
     const metric: GameOperationMetric = {
       name,
       outcome,
