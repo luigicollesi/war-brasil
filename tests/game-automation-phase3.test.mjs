@@ -130,18 +130,26 @@ test("worker shadow observa e active delega mutação ao command boundary versio
   const query = source("worker/queries.mjs");
   const route = source("src/app/api/internal/automation/advance/route.ts");
   const auth = source("src/lib/server/automation/game-automation-worker-auth.ts");
+  const shadowQuery = query.slice(
+    query.indexOf("export const DUE_AUTOMATION_SQL"),
+    query.indexOf("export const CLAIM_DUE_AUTOMATION_SQL"),
+  );
 
   assert.match(worker, /mode === "shadow"/);
   assert.match(worker, /shadow\.due/);
   assert.match(worker, /executeActiveRow/);
   assert.match(worker, /active\.executed/);
+  assert.match(worker, /scanShadow\(\)[\s\S]*pool\.query\(DUE_AUTOMATION_SQL/);
+  assert.match(worker, /scanActive\(\)[\s\S]*pool\.query\(CLAIM_DUE_AUTOMATION_SQL/);
   assert.match(client, /expectedRevision: row\.revision/);
   assert.match(client, /Authorization: `Bearer \$\{token\}`/);
   assert.match(route, /advanceGameAutomationCommand/);
   assert.match(route, /expectedRevision/);
   assert.match(auth, /timingSafeEqual/);
   assert.doesNotMatch(worker, /UPDATE game_rooms|DELETE FROM/);
-  assert.doesNotMatch(query, /UPDATE|DELETE|FOR UPDATE/i);
+  assert.doesNotMatch(shadowQuery, /UPDATE|DELETE|FOR UPDATE/i);
+  assert.match(query, /CLAIM_DUE_AUTOMATION_SQL[\s\S]*FOR UPDATE SKIP LOCKED/);
+  assert.match(query, /CLAIM_DUE_AUTOMATION_SQL[\s\S]*UPDATE game_rooms room/);
 });
 
 test("driver de automação preserva browser como default e permite corte para server", () => {
