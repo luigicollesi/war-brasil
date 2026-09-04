@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { PoolClient } from "pg";
+import { reconcileGameAutomationSchedule } from "./automation/game-automation-schedule";
 import { databasePoolStats, pool } from "./db/pool";
 import {
   bumpGameRevision,
@@ -51,6 +52,7 @@ export async function gameCommand<T>(
     const baseRevision = await lockRoomRevision(client, roomId);
 
     const value = await execute(client);
+    await reconcileGameAutomationSchedule(client, roomId);
     const revision = await bumpGameRevision(client, roomId);
 
     await client.query("COMMIT");
@@ -87,6 +89,7 @@ export async function gameConditionalCommand<T>(
     const currentRevision = await lockRoomRevision(client, roomId);
 
     if (currentRevision !== expectedRevision) {
+      await reconcileGameAutomationSchedule(client, roomId);
       await client.query("COMMIT");
       transactionOpen = false;
       outcome = "success";
@@ -98,6 +101,7 @@ export async function gameConditionalCommand<T>(
     }
 
     const result = await execute(client);
+    await reconcileGameAutomationSchedule(client, roomId);
     const revision = result.changed
       ? await bumpGameRevision(client, roomId)
       : currentRevision;
