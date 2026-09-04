@@ -21,6 +21,7 @@ import {
   isOrderRollPresentationDue,
 } from "@/src/lib/game-transitions";
 import { RoomError } from "@/src/lib/rooms";
+import { beginPlayerTurnPhase } from "./game-turn-service";
 
 type PresentationRoom = BattleRoomState & {
   status: "order_roll" | "playing" | "finished";
@@ -74,10 +75,10 @@ async function startPlaying(
 
   await client.query(
     `UPDATE game_rooms
-     SET status='playing',started_at=NOW(),phase='cards',
+     SET status='playing',started_at=NOW(),phase='reinforcement',
          current_player_id=$2,turn_number=1,round_number=$3,
          jurassic_tunnel_territory_id=$4,reinforcements_remaining=0,
-         conquered_this_turn=FALSE
+         conquered_this_turn=FALSE,trade_offers_used=0
      WHERE id=$1`,
     [
       room.id,
@@ -86,6 +87,7 @@ async function startPlaying(
       firstRound.jurassicTunnelDestinationId,
     ],
   );
+  await beginPlayerTurnPhase(client, room.id, order[0].id);
 }
 
 async function advanceInitialTerritoryPresentation(
