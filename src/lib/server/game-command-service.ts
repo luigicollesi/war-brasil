@@ -15,9 +15,12 @@ import {
   type OrderRoll,
 } from "@/src/lib/game-order-rules";
 import { advanceGameRound } from "@/src/lib/game-round-service";
-import { reinforcementFor } from "@/src/lib/game-rules";
 import { isOrderRollActorAvailable } from "@/src/lib/game-transitions";
 import { RoomError } from "@/src/lib/rooms";
+import {
+  beginPlayerTurnPhase,
+  beginReinforcementForPlayer,
+} from "./game-turn-service";
 
 type CommandRoom = {
   id: string;
@@ -78,32 +81,6 @@ function assertTurn(
       requestPlayerId: player.id,
     });
   }
-}
-
-async function beginReinforcement(
-  client: PoolClient,
-  room: CommandRoom,
-  player: CommandPlayer,
-) {
-  const owned = (
-    await client.query<{ territory_id: number }>(
-      `SELECT territory_id
-       FROM game_territories
-       WHERE room_id=$1 AND owner_player_id=$2`,
-      [room.id, player.id],
-    )
-  ).rows;
-
-  const reinforcements = reinforcementFor(
-    owned.map((territory) => territory.territory_id),
-  );
-
-  await client.query(
-    `UPDATE game_rooms
-     SET phase='reinforcement',reinforcements_remaining=$2
-     WHERE id=$1`,
-    [room.id, reinforcements],
-  );
 }
 
 async function drawCard(
@@ -265,9 +242,9 @@ export async function executePhaseAction(
 ) {
   const room = await loadRoom(client, roomId);
 
-  if (input.action === "finishCards") {
-    assertTurn(room, player, "cards");
-    await beginReinforcement(client, room, player);
+  if (input.action === "finishTrade" || input.action === "finishCards") {
+    assertTurn(room, player, "trade");
+    await beginReinforcementForPlayer(client, room.id, player.id);
     return null;
   }
 
@@ -364,11 +341,12 @@ export async function executePhaseAction(
 
   await client.query(
     `UPDATE game_rooms
-     SET phase='cards',current_player_id=$2,turn_number=turn_number+1,
+     SET current_player_id=$2,turn_number=turn_number+1,
          reinforcements_remaining=0,conquered_this_turn=FALSE
      WHERE id=$1`,
     [room.id, next.id],
   );
+  await beginPlayerTurnPhase(client, room.id, next.id);
 
   return null;
 }
