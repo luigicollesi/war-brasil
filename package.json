@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node scripts/prepare-dev-db.mjs && next dev",
+    "dev": "node scripts/dev.mjs",
     "db:prepare:dev": "node scripts/prepare-dev-db.mjs",
     "build": "next build",
     "start": "next start",
