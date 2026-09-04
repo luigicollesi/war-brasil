@@ -23,8 +23,18 @@ function gameRealtimeChannel() {
   return configured || DEFAULT_GAME_REALTIME_CHANNEL;
 }
 
-function invalidationPayload(roomId: string, revision: number) {
-  return JSON.stringify({ kind: "invalidate", roomId, revision });
+function invalidationPayload(
+  roomId: string,
+  revision: number,
+  playerId?: string,
+) {
+  return JSON.stringify({
+    kind: "invalidate",
+    scope: playerId ? "player" : "room",
+    roomId,
+    revision,
+    ...(playerId ? { playerId } : {}),
+  });
 }
 
 function patchPayload(
@@ -35,6 +45,7 @@ function patchPayload(
 ) {
   return JSON.stringify({
     kind: "patch",
+    scope: "room",
     roomId,
     baseRevision,
     revision,
@@ -47,7 +58,7 @@ async function publishPayload(
   roomId: string,
   revision: number,
   payload: string,
-  metricName: "notify.publish" | "notify.patch",
+  metricName: "notify.publish" | "notify.private" | "notify.patch",
 ) {
   try {
     await client.query("SELECT pg_notify($1,$2)", [gameRealtimeChannel(), payload]);
@@ -78,6 +89,24 @@ export async function publishGameInvalidation(
     revision,
     invalidationPayload(roomId, revision),
     "notify.publish",
+  );
+}
+
+export async function publishPlayerGameInvalidation(
+  client: PoolClient,
+  roomId: string,
+  playerId: string,
+  revision: number,
+) {
+  if (!gameRealtimeEnabled()) return;
+  if (!/^\d+$/.test(playerId)) return;
+
+  await publishPayload(
+    client,
+    roomId,
+    revision,
+    invalidationPayload(roomId, revision, playerId),
+    "notify.private",
   );
 }
 
