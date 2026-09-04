@@ -4,6 +4,7 @@ import type {
   GamePlayer,
   GameSnapshot,
   GameTerritory,
+  GameTradeTerms,
 } from "./game-contract";
 import type { TradeCardDescriptor } from "./game-trade-rules";
 import type {
@@ -244,22 +245,7 @@ function sameTradeDescriptor(
   return left.kind === "wild" && right.kind === "wild";
 }
 
-function sameTradeTerms(
-  left: GameSnapshot["trade"] extends infer T
-    ? T extends { activeOffer: infer O }
-      ? O extends { original: infer Terms }
-        ? Terms
-        : never
-      : never
-    : never,
-  right: GameSnapshot["trade"] extends infer T
-    ? T extends { activeOffer: infer O }
-      ? O extends { original: infer Terms }
-        ? Terms
-        : never
-      : never
-    : never,
-) {
+function sameTradeTerms(left: GameTradeTerms, right: GameTradeTerms) {
   return (
     sameTradeDescriptor(left.offered, right.offered) &&
     sameTradeDescriptor(left.requested, right.requested)
