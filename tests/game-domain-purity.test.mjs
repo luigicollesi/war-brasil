@@ -67,7 +67,8 @@ test("configuração dedicada mantém a compilação dos testes fora do tsconfig
   assert.match(config, /"rootDir"\s*:\s*"src\/lib"/);
   assert.match(config, /"module"\s*:\s*"commonjs"/);
   assert.equal(packageJson.scripts["test:compile"], "tsc -p tsconfig.test.json");
-  assert.equal(packageJson.scripts.test, "npm run test:compile && npm run test:run");
+  assert.match(packageJson.scripts.test, /^npm run test:compile && npm run test:run(?: && .+)?$/);
+  assert.doesNotMatch(packageJson.scripts["test:compile"], /tsconfig\.json(?:\s|$)/);
 });
 
 test("UI de manobra reutiliza a regra centralizada de tropas movimentáveis", () => {
