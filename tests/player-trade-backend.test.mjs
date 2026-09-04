@@ -87,6 +87,29 @@ test("sinalização aceita território, símbolo ou coringa sem persistir conte�
   assert.doesNotMatch(signalPublisher, /revision:/);
 });
 
+test("endpoint de sinal não consome cota quando realtime está desativado", () => {
+  const route = source("src/app/api/games/[roomId]/trade/signal/route.ts");
+  const publisher = source("src/lib/server/game-realtime-publisher.ts");
+
+  assert.match(route, /GAME_REALTIME_ENABLED !== "true"/);
+  assert.match(route, /canal realtime não está ativo/);
+  assert.match(publisher, /if \(!gameRealtimeEnabled\(\)\) return false/);
+});
+
+test("recusa publica resultado efêmero sem gravar novo histórico", () => {
+  const route = source("src/app/api/games/[roomId]/trade/route.ts");
+  const notifier = source("src/lib/server/game-trade-resolution-notifier.ts");
+  const publisher = source("src/lib/server/game-realtime-publisher.ts");
+
+  assert.match(route, /body\.action === "decline"/);
+  assert.match(route, /publishTradeDeclineResolution/);
+  assert.match(notifier, /o\.status='declined'/);
+  assert.match(notifier, /outcome: "declined"/);
+  assert.match(notifier, /outcome: "counter_declined"/);
+  assert.match(publisher, /eventType: "trade\.resolution"/);
+  assert.doesNotMatch(notifier, /INSERT INTO|UPDATE game_player_trade_offers/);
+});
+
 test("snapshot revela termos públicos e apenas a própria seleção pendente", () => {
   const contract = source("src/lib/shared/game-contract.ts");
   const snapshot = source("src/lib/server/game-snapshot-service.ts");
