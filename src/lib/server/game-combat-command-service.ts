@@ -11,11 +11,12 @@ import {
   type BattleRoomState,
 } from "@/src/lib/game-battle-service";
 import { attackProfile, type AttackMode } from "@/src/lib/game-barrier-rules";
-import { gameCommand } from "@/src/lib/game-command";
+import { playerGameCommand } from "@/src/lib/game-command";
 import {
   resolveCommandPlayerBySession,
   type CommandPlayer,
 } from "@/src/lib/game-command-player";
+import type { GameCommandRequestMetadata } from "@/src/lib/game-command-request";
 import { isAttackOriginBlocked } from "@/src/lib/events/event-attack-rules";
 import { getEffectiveGameTopology } from "@/src/lib/game-effective-topology-service";
 import { resolveBattle } from "@/src/lib/game-rules";
@@ -383,6 +384,7 @@ export async function attackCommand(
   value: string,
   session: string,
   input: Record<string, unknown>,
+  metadata?: GameCommandRequestMetadata | null,
 ) {
   const roomId = normalizeRoomId(value);
   const fromTerritoryId = positiveInteger(
@@ -393,28 +395,55 @@ export async function attackCommand(
     input.toTerritoryId,
     "Território defensor inválido.",
   );
+  const normalizedInput = { fromTerritoryId, toTerritoryId };
 
-  return gameCommand(roomId, async (client) => {
-    const player = await resolveCommandPlayerBySession(client, roomId, session);
-    return executeAttack(client, roomId, player, {
-      fromTerritoryId,
-      toTerritoryId,
-    });
-  });
+  return playerGameCommand(
+    roomId,
+    session,
+    metadata,
+    "attack.start",
+    normalizedInput,
+    async (client) => {
+      const player = await resolveCommandPlayerBySession(client, roomId, session);
+      return executeAttack(client, roomId, player, normalizedInput);
+    },
+  );
 }
 
-export async function cancelBattleCommand(value: string, session: string) {
+export async function cancelBattleCommand(
+  value: string,
+  session: string,
+  metadata?: GameCommandRequestMetadata | null,
+) {
   const roomId = normalizeRoomId(value);
-  return gameCommand(roomId, async (client) => {
-    const player = await resolveCommandPlayerBySession(client, roomId, session);
-    return executeCancelBattle(client, roomId, player);
-  });
+  return playerGameCommand(
+    roomId,
+    session,
+    metadata,
+    "attack.cancel",
+    null,
+    async (client) => {
+      const player = await resolveCommandPlayerBySession(client, roomId, session);
+      return executeCancelBattle(client, roomId, player);
+    },
+  );
 }
 
-export async function rollBattleDiceCommand(value: string, session: string) {
+export async function rollBattleDiceCommand(
+  value: string,
+  session: string,
+  metadata?: GameCommandRequestMetadata | null,
+) {
   const roomId = normalizeRoomId(value);
-  return gameCommand(roomId, async (client) => {
-    const player = await resolveCommandPlayerBySession(client, roomId, session);
-    return executeRollBattleDice(client, roomId, player);
-  });
+  return playerGameCommand(
+    roomId,
+    session,
+    metadata,
+    "attack.roll",
+    null,
+    async (client) => {
+      const player = await resolveCommandPlayerBySession(client, roomId, session);
+      return executeRollBattleDice(client, roomId, player);
+    },
+  );
 }
