@@ -149,9 +149,9 @@ export async function publishGameTradeSignal(
     });
     return true;
   } catch {
-    // Sinalização é propositalmente efêmera: não gera revision, receipt,
-    // retry persistente nem telemetria com o conteúdo revelado da carta.
-    return false;
+    // O conteúdo continua efêmero, mas falha de transporte precisa abortar a
+    // transação chamadora para não consumir a cota sem entregar o sinal.
+    throw new Error("Não foi possível publicar a sinalização realtime.");
   }
 }
 
