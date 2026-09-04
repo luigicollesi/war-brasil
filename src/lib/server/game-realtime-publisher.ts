@@ -13,6 +13,18 @@ import { publishGameRealtimeMetric } from "./observability/game-realtime-metrics
 
 const GAME_REALTIME_NOTIFY_MAX_BYTES = 7_000;
 
+type GameRealtimeInvalidationBusEvent = Extract<
+  GameRealtimeBusEvent,
+  { kind: "invalidate" }
+>;
+type GameRealtimePatchBusEvent = Extract<
+  GameRealtimeBusEvent,
+  { kind: "patch" }
+>;
+type GameRealtimeRevisionBusEvent =
+  | GameRealtimeInvalidationBusEvent
+  | GameRealtimePatchBusEvent;
+
 function gameRealtimeEnabled() {
   return process.env.GAME_REALTIME_ENABLED === "true";
 }
@@ -25,7 +37,7 @@ function invalidationEvent(
   roomId: string,
   revision: number,
   playerId?: string,
-): GameRealtimeBusEvent {
+): GameRealtimeInvalidationBusEvent {
   if (playerId) {
     return {
       kind: "invalidate",
@@ -49,7 +61,7 @@ function patchEvent(
   baseRevision: number,
   revision: number,
   patch: GameCommandPatch,
-): GameRealtimeBusEvent {
+): GameRealtimePatchBusEvent {
   return {
     kind: "patch",
     scope: "room",
@@ -62,7 +74,7 @@ function patchEvent(
 
 async function publishEvent(
   client: PoolClient,
-  event: Extract<GameRealtimeBusEvent, { kind: "invalidate" | "patch" }>,
+  event: GameRealtimeRevisionBusEvent,
   metricName: "notify.publish" | "notify.private" | "notify.patch",
 ) {
   try {
