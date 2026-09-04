@@ -6,6 +6,7 @@ import { canonicalGameCommandRequest } from "@/src/lib/shared/game-command-canon
 import type { GameCommandRequestMetadata } from "@/src/lib/game-command-request";
 import type { GameCommandResult } from "@/src/lib/game-revision";
 import { RoomError } from "@/src/lib/rooms";
+import { publishGameCommandMetric } from "./observability/game-command-metrics";
 
 export type GameCommandReceiptRequest = GameCommandRequestMetadata & {
   session: string;
@@ -85,6 +86,13 @@ export async function prepareGameCommandReceipt(
     receipt.request_fingerprint !== fingerprint ||
     receipt.expected_revision !== request.expectedRevision
   ) {
+    publishGameCommandMetric({
+      name: "receipt.conflict",
+      roomId,
+      commandName: request.commandName,
+      expectedRevision: request.expectedRevision,
+      revision: receipt.revision,
+    });
     throw new RoomError(
       "Este identificador de comando já foi utilizado para outra solicitação.",
       409,
@@ -94,6 +102,14 @@ export async function prepareGameCommandReceipt(
       },
     );
   }
+
+  publishGameCommandMetric({
+    name: "receipt.replayed",
+    roomId,
+    commandName: request.commandName,
+    expectedRevision: request.expectedRevision,
+    revision: receipt.revision,
+  });
 
   return {
     playerId,
@@ -131,4 +147,12 @@ export async function saveGameCommandReceipt<T>(
       JSON.stringify(result.value ?? null),
     ],
   );
+
+  publishGameCommandMetric({
+    name: "receipt.created",
+    roomId,
+    commandName: request.commandName,
+    expectedRevision: request.expectedRevision,
+    revision: result.revision,
+  });
 }
