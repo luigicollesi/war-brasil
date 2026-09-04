@@ -69,16 +69,20 @@ export type GameCard = {
   symbol: CardSymbol | "wild";
 };
 
+export type GameTradeTerms = {
+  offered: TradeCardDescriptor;
+  requested: TradeCardDescriptor;
+};
+
 export type GameTradeOffer = {
   id: string;
   proposerPlayerId: string;
-  targetPlayerId: string | null;
-  offered: TradeCardDescriptor;
-  requested: TradeCardDescriptor;
-  status: "open" | "countered";
+  targetPlayerId: string;
+  status: "open" | "countered" | "accepted_pending_selection";
+  original: GameTradeTerms;
   counter: {
-    playerId: string;
-    card: TradeCardDescriptor;
+    proposerPlayerId: string;
+    terms: GameTradeTerms;
   } | null;
 };
 
@@ -88,6 +92,10 @@ export type GameTradeState = {
   signalsUsed: number;
   signalLimit: number;
   activeOffer: GameTradeOffer | null;
+  myPendingSelection: {
+    offerId: string;
+    descriptor: TradeCardDescriptor;
+  } | null;
 };
 
 export type ActiveGameEvent = {
