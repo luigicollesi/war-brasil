@@ -1,7 +1,15 @@
 "use client";
 
 import type { GameCommandPatch } from "../shared/game-command-patch";
+import {
+  GAME_COMMAND_ID_HEADER,
+  GAME_EXPECTED_REVISION_HEADER,
+} from "../shared/game-command-request";
 import { dispatchGameCommandPatch } from "./game-command-patch-bus";
+import {
+  currentGameCommandRevision,
+  recoverGameCommandRevision,
+} from "./game-command-sync-context";
 import {
   GAME_REVISION_HEADER,
   parseGameRevision,
@@ -46,29 +54,80 @@ function commandEnvelope(data: unknown) {
   return { baseRevision, patch };
 }
 
+async function responseData(response: Response) {
+  try {
+    return (await response.json()) as unknown;
+  } catch {
+    return null;
+  }
+}
+
+function retryableStatus(status: number) {
+  return status === 502 || status === 503 || status === 504;
+}
+
 export async function runGameCommand<T = unknown>(
   roomId: string,
   path: string,
   body?: unknown,
   fallback = "Não foi possível concluir a ação.",
 ): Promise<GameCommandClientResult<T>> {
-  const response = await fetch(
-    `/api/games/${encodeURIComponent(roomId)}/${path}`,
-    {
+  const expectedRevision = currentGameCommandRevision(roomId);
+  const commandId = expectedRevision === null ? null : crypto.randomUUID();
+  const headers = new Headers();
+  const serializedBody = body === undefined ? undefined : JSON.stringify(body);
+
+  if (serializedBody !== undefined) {
+    headers.set("Content-Type", "application/json");
+  }
+  if (commandId !== null && expectedRevision !== null) {
+    headers.set(GAME_COMMAND_ID_HEADER, commandId);
+    headers.set(GAME_EXPECTED_REVISION_HEADER, String(expectedRevision));
+  }
+
+  const send = () =>
+    fetch(`/api/games/${encodeURIComponent(roomId)}/${path}`, {
       method: "POST",
       cache: "no-store",
-      headers: body === undefined ? undefined : { "Content-Type": "application/json" },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    },
+      headers,
+      body: serializedBody,
+    });
+
+  let response: Response;
+  try {
+    response = await send();
+  } catch (error) {
+    if (commandId === null) throw error;
+    response = await send();
+  }
+
+  if (commandId !== null && retryableStatus(response.status)) {
+    response = await send();
+  }
+
+  const data = await responseData(response);
+  const returnedRevision = parseGameRevision(
+    response.headers.get(GAME_REVISION_HEADER),
   );
 
-  const data: unknown = await response.json();
-  if (!response.ok) throw new Error(errorMessage(data, fallback));
+  if (!response.ok) {
+    if (
+      returnedRevision !== null &&
+      expectedRevision !== null &&
+      returnedRevision !== expectedRevision
+    ) {
+      await recoverGameCommandRevision(roomId, returnedRevision).catch(
+        () => undefined,
+      );
+    }
+    throw new Error(errorMessage(data, fallback));
+  }
+
   const envelope = commandEnvelope(data);
   const result: GameCommandClientResult<T> = {
     data: data as T,
     baseRevision: envelope.baseRevision,
-    revision: parseGameRevision(response.headers.get(GAME_REVISION_HEADER)),
+    revision: returnedRevision,
     patch: envelope.patch,
   };
 
