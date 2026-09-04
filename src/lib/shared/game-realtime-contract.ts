@@ -50,6 +50,17 @@ export type GameTradeSignalEvent = GameRealtimeEnvelope<
   }
 >;
 
+export type GameTradeResolutionEvent = GameRealtimeEnvelope<
+  "trade.resolution",
+  {
+    offerId: string;
+    turnNumber: number;
+    recipientPlayerId: string;
+    actorPlayerId: string;
+    outcome: "declined" | "counter_declined";
+  }
+>;
+
 export type GameRealtimeReadyEvent = GameRealtimeEnvelope<
   "realtime.ready",
   { revision: number }
@@ -65,6 +76,7 @@ export type GameRealtimeEvent =
   | GamePrivateInvalidatedEvent
   | GamePatchEvent
   | GameTradeSignalEvent
+  | GameTradeResolutionEvent
   | GameRealtimeReadyEvent
   | GameRealtimePongEvent;
 
@@ -94,29 +106,12 @@ function validRevision(value: unknown) {
   return typeof value === "number" && Number.isSafeInteger(value) && value >= 1;
 }
 
-function validEnvelope(value: unknown): ValidatedRealtimeEnvelope | null {
-  if (!isRecord(value)) return null;
+function validPlayerId(value: unknown) {
+  return typeof value === "string" && /^\d+$/.test(value);
+}
 
-  const payload = value.payload;
-  if (
-    value.protocolVersion !== GAME_PROTOCOL_VERSION ||
-    typeof value.type !== "string" ||
-    typeof value.roomId !== "string" ||
-    value.roomId.length < 1 ||
-    typeof value.serverTime !== "number" ||
-    !Number.isFinite(value.serverTime) ||
-    !isRecord(payload)
-  ) {
-    return null;
-  }
-
-  return {
-    protocolVersion: GAME_PROTOCOL_VERSION,
-    type: value.type,
-    roomId: value.roomId,
-    serverTime: value.serverTime,
-    payload,
-  };
+function validOfferId(value: unknown) {
+  return typeof value === "string" && /^\d+$/.test(value);
 }
 
 export function isGameRealtimeEvent(value: unknown): value is GameRealtimeEvent {
@@ -144,12 +139,23 @@ export function isGameRealtimeEvent(value: unknown): value is GameRealtimeEvent 
 
   if (envelope.type === "trade.signal") {
     return (
-      typeof payload.playerId === "string" &&
-      /^\d+$/.test(payload.playerId) &&
+      validPlayerId(payload.playerId) &&
       typeof payload.turnNumber === "number" &&
       Number.isSafeInteger(payload.turnNumber) &&
       payload.turnNumber >= 1 &&
       isTradeCardDescriptor(payload.card)
+    );
+  }
+
+  if (envelope.type === "trade.resolution") {
+    return (
+      validOfferId(payload.offerId) &&
+      typeof payload.turnNumber === "number" &&
+      Number.isSafeInteger(payload.turnNumber) &&
+      payload.turnNumber >= 1 &&
+      validPlayerId(payload.recipientPlayerId) &&
+      validPlayerId(payload.actorPlayerId) &&
+      (payload.outcome === "declined" || payload.outcome === "counter_declined")
     );
   }
 
@@ -164,6 +170,31 @@ export function isGameRealtimeEvent(value: unknown): value is GameRealtimeEvent 
   }
 
   return false;
+}
+
+function validEnvelope(value: unknown): ValidatedRealtimeEnvelope | null {
+  if (!isRecord(value)) return null;
+
+  const payload = value.payload;
+  if (
+    value.protocolVersion !== GAME_PROTOCOL_VERSION ||
+    typeof value.type !== "string" ||
+    typeof value.roomId !== "string" ||
+    value.roomId.length < 1 ||
+    typeof value.serverTime !== "number" ||
+    !Number.isFinite(value.serverTime) ||
+    !isRecord(payload)
+  ) {
+    return null;
+  }
+
+  return {
+    protocolVersion: GAME_PROTOCOL_VERSION,
+    type: value.type,
+    roomId: value.roomId,
+    serverTime: value.serverTime,
+    payload,
+  };
 }
 
 export function isGameRealtimeClientMessage(
