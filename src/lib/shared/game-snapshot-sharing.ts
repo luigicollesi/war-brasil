@@ -164,6 +164,7 @@ function samePlayer(left: GamePlayer, right: GamePlayer) {
     left.color === right.color &&
     left.turnPosition === right.turnPosition &&
     left.isMe === right.isMe &&
+    left.isBot === right.isBot &&
     sameArray(
       left.rolls,
       right.rolls,
@@ -225,6 +226,69 @@ function sameRematch(
     left.voteCount === right.voteCount &&
     left.requiredCount === right.requiredCount &&
     left.hasVoted === right.hasVoted
+  );
+}
+
+function sameTradeDescriptor(
+  left: NonNullable<GameSnapshot["trade"]>["activeOffer"] extends infer T
+    ? T extends { offered: infer D }
+      ? D
+      : never
+    : never,
+  right: NonNullable<GameSnapshot["trade"]>["activeOffer"] extends infer T
+    ? T extends { offered: infer D }
+      ? D
+      : never
+    : never,
+) {
+  if (left.kind !== right.kind) return false;
+  if (left.kind === "territory" && right.kind === "territory") {
+    return left.territoryId === right.territoryId;
+  }
+  if (left.kind === "symbol" && right.kind === "symbol") {
+    return left.symbol === right.symbol;
+  }
+  return left.kind === "wild" && right.kind === "wild";
+}
+
+function sameTrade(
+  left: GameSnapshot["trade"],
+  right: GameSnapshot["trade"],
+) {
+  if (left === right) return true;
+  if (!left || !right) return false;
+  if (
+    left.offersUsed !== right.offersUsed ||
+    left.offerLimit !== right.offerLimit ||
+    left.signalsUsed !== right.signalsUsed ||
+    left.signalLimit !== right.signalLimit
+  ) {
+    return false;
+  }
+
+  const leftOffer = left.activeOffer;
+  const rightOffer = right.activeOffer;
+  if (leftOffer === rightOffer) return true;
+  if (!leftOffer || !rightOffer) return false;
+  if (
+    leftOffer.id !== rightOffer.id ||
+    leftOffer.proposerPlayerId !== rightOffer.proposerPlayerId ||
+    leftOffer.targetPlayerId !== rightOffer.targetPlayerId ||
+    leftOffer.status !== rightOffer.status ||
+    !sameTradeDescriptor(leftOffer.offered, rightOffer.offered) ||
+    !sameTradeDescriptor(leftOffer.requested, rightOffer.requested)
+  ) {
+    return false;
+  }
+
+  const leftCounter = leftOffer.counter;
+  const rightCounter = rightOffer.counter;
+  if (leftCounter === rightCounter) return true;
+  return Boolean(
+    leftCounter &&
+      rightCounter &&
+      leftCounter.playerId === rightCounter.playerId &&
+      sameTradeDescriptor(leftCounter.card, rightCounter.card),
   );
 }
 
@@ -292,6 +356,7 @@ export function shareGameSnapshot(
   const myCards = sameArray(previous.myCards, next.myCards, sameCard)
     ? previous.myCards
     : next.myCards;
+  const trade = sameTrade(previous.trade, next.trade) ? previous.trade : next.trade;
   const myObjective = sameObjective(previous.myObjective, next.myObjective)
     ? previous.myObjective
     : next.myObjective;
@@ -303,6 +368,7 @@ export function shareGameSnapshot(
     eligiblePlayerIds === previous.eligiblePlayerIds &&
     connections === previous.connections &&
     myCards === previous.myCards &&
+    trade === previous.trade &&
     myObjective === previous.myObjective
   ) {
     return previous;
@@ -315,6 +381,7 @@ export function shareGameSnapshot(
     eligiblePlayerIds,
     connections,
     myCards,
+    trade,
     myObjective,
   };
 }
