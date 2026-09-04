@@ -54,7 +54,7 @@ function syncTitleOverlay(surface: HTMLElement, visible: boolean) {
     surface.append(overlay);
   }
 
-  overlay.hidden = !visible;
+  overlay.style.display = visible ? "flex" : "none";
 }
 
 export function InitialTerritoryDrawPresentation({
