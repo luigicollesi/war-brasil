@@ -7,7 +7,7 @@
     "db:prepare:dev": "node scripts/prepare-dev-db.mjs",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint --max-warnings=0",
     "test:compile": "tsc -p tsconfig.test.json",
     "test:run": "node --test tests/",
     "test": "npm run test:compile && npm run test:run && npm run worker:test",
