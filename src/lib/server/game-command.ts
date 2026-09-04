@@ -1,12 +1,13 @@
 import "server-only";
 
 import type { PoolClient } from "pg";
-import { pool } from "./db/pool";
+import { databasePoolStats, pool } from "./db/pool";
 import {
   bumpGameRevision,
   type GameCommandResult,
   type GameRevision,
 } from "./game-revision";
+import { startGameOperationMetric } from "./observability/game-operation-metrics";
 import { RoomError } from "@/src/lib/rooms";
 
 type GameConditionalCommandResult<T> = {
@@ -34,6 +35,8 @@ export async function gameCommand<T>(
   execute: (client: PoolClient) => Promise<T>,
 ): Promise<GameCommandResult<T>> {
   const client = await pool.connect();
+  const finishMetric = startGameOperationMetric("game.command");
+  let outcome: "success" | "error" = "error";
 
   try {
     await client.query("BEGIN");
@@ -43,6 +46,7 @@ export async function gameCommand<T>(
     const revision = await bumpGameRevision(client, roomId);
 
     await client.query("COMMIT");
+    outcome = "success";
 
     return { value, baseRevision, revision };
   } catch (error) {
@@ -50,6 +54,7 @@ export async function gameCommand<T>(
     throw error;
   } finally {
     client.release();
+    finishMetric(outcome, databasePoolStats());
   }
 }
 
@@ -61,6 +66,8 @@ export async function gameConditionalCommand<T>(
   ) => Promise<{ value: T; changed: boolean }>,
 ): Promise<GameConditionalCommandResult<T>> {
   const client = await pool.connect();
+  const finishMetric = startGameOperationMetric("game.conditional_command");
+  let outcome: "success" | "error" = "error";
 
   try {
     await client.query("BEGIN");
@@ -68,6 +75,7 @@ export async function gameConditionalCommand<T>(
 
     if (currentRevision !== expectedRevision) {
       await client.query("COMMIT");
+      outcome = "success";
       return {
         value: null,
         revision: currentRevision,
@@ -81,6 +89,7 @@ export async function gameConditionalCommand<T>(
       : currentRevision;
 
     await client.query("COMMIT");
+    outcome = "success";
 
     return {
       value: result.value,
@@ -92,5 +101,6 @@ export async function gameConditionalCommand<T>(
     throw error;
   } finally {
     client.release();
+    finishMetric(outcome, databasePoolStats());
   }
 }
