@@ -3,8 +3,10 @@ import { loadEnvFile } from "node:process";
 import pg from "pg";
 import {
   automationWorkerBatchSize,
+  automationWorkerInternalBaseUrl,
   automationWorkerMode,
   automationWorkerPollMs,
+  automationWorkerToken,
 } from "./config.mjs";
 import { recordAutomationWorkerMetric } from "./metrics.mjs";
 import { DUE_AUTOMATION_SQL } from "./queries.mjs";
@@ -20,15 +22,17 @@ if (mode === "off") {
   process.exit(0);
 }
 
-if (mode === "active") {
-  throw new Error(
-    "GAME_AUTOMATION_WORKER_MODE=active ainda não está habilitado. Use shadow até o executor autoritativo da Fase 3 ser validado.",
-  );
-}
-
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) {
   throw new Error("DATABASE_URL é obrigatória para o automation worker.");
+}
+
+const internalBaseUrl = automationWorkerInternalBaseUrl();
+const workerToken = automationWorkerToken();
+if (mode === "active" && (!internalBaseUrl || !workerToken)) {
+  throw new Error(
+    "Modo active exige GAME_AUTOMATION_INTERNAL_BASE_URL e GAME_AUTOMATION_WORKER_TOKEN.",
+  );
 }
 
 const { Pool } = pg;
@@ -50,6 +54,62 @@ function scheduleKey(row) {
   return `${row.revision}:${row.automation_kind}:${dueAt}`;
 }
 
+function dueAtValue(row) {
+  return row.automation_due_at instanceof Date
+    ? row.automation_due_at.toISOString()
+    : row.automation_due_at;
+}
+
+async function executeDueAutomation(row) {
+  const startedAt = Date.now();
+  const response = await fetch(
+    `${internalBaseUrl}/api/internal/automation/advance`,
+    {
+      method: "POST",
+      cache: "no-store",
+      headers: {
+        Authorization: `Bearer ${workerToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        roomId: row.room_id,
+        expectedRevision: row.revision,
+      }),
+      signal: AbortSignal.timeout(10_000),
+    },
+  );
+
+  const data = await response.json().catch(() => null);
+  if (!response.ok) {
+    const detail =
+      data && typeof data === "object" && typeof data.error === "string"
+        ? data.error
+        : `HTTP ${response.status}`;
+    throw new Error(detail);
+  }
+
+  const changed = Boolean(
+    data && typeof data === "object" && data.changed === true,
+  );
+  const revision =
+    data &&
+    typeof data === "object" &&
+    Number.isSafeInteger(data.revision) &&
+    data.revision >= 1
+      ? data.revision
+      : null;
+
+  recordAutomationWorkerMetric(changed ? "active.executed" : "active.noop", {
+    roomId: row.room_id,
+    expectedRevision: row.revision,
+    revision,
+    kind: row.automation_kind,
+    dueAt: dueAtValue(row),
+    dueLagMs: Number(row.due_lag_ms) || 0,
+    durationMs: Date.now() - startedAt,
+  });
+}
+
 async function scan() {
   const startedAt = Date.now();
   const result = await pool.query(DUE_AUTOMATION_SQL, [batchSize]);
@@ -62,25 +122,36 @@ async function scan() {
     maxLagMs = Math.max(maxLagMs, lagMs);
     const key = scheduleKey(row);
 
-    if (observedSchedules.get(row.room_id) === key) continue;
-    observedSchedules.set(row.room_id, key);
-    recordAutomationWorkerMetric("shadow.due", {
-      roomId: row.room_id,
-      revision: row.revision,
-      kind: row.automation_kind,
-      dueAt:
-        row.automation_due_at instanceof Date
-          ? row.automation_due_at.toISOString()
-          : row.automation_due_at,
-      dueLagMs: lagMs,
-    });
+    if (mode === "shadow") {
+      if (observedSchedules.get(row.room_id) === key) continue;
+      observedSchedules.set(row.room_id, key);
+      recordAutomationWorkerMetric("shadow.due", {
+        roomId: row.room_id,
+        revision: row.revision,
+        kind: row.automation_kind,
+        dueAt: dueAtValue(row),
+        dueLagMs: lagMs,
+      });
+      continue;
+    }
+
+    try {
+      await executeDueAutomation(row);
+    } catch (error) {
+      recordAutomationWorkerMetric("active.failure", {
+        roomId: row.room_id,
+        revision: row.revision,
+        kind: row.automation_kind,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
   }
 
   for (const roomId of observedSchedules.keys()) {
     if (!activeRooms.has(roomId)) observedSchedules.delete(roomId);
   }
 
-  recordAutomationWorkerMetric("shadow.scan", {
+  recordAutomationWorkerMetric(`${mode}.scan`, {
     queueDepth: result.rowCount ?? result.rows.length,
     maxDueLagMs: maxLagMs,
     durationMs: Date.now() - startedAt,
@@ -93,7 +164,7 @@ async function tick() {
   try {
     await scan();
   } catch (error) {
-    recordAutomationWorkerMetric("shadow.failure", {
+    recordAutomationWorkerMetric(`${mode}.failure`, {
       error: error instanceof Error ? error.message : String(error),
     });
   } finally {
