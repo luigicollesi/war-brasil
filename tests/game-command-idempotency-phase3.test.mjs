@@ -101,6 +101,7 @@ test("command boundary consulta replay antes do fencing e salva receipt antes do
 
 test("receipt rejeita reutilização conflitante e preserva resposta original", () => {
   const receipt = source("src/lib/server/game-command-receipt.ts");
+  const fingerprint = source("src/lib/server/game-command-fingerprint.ts");
 
   assert.match(receipt, /WHERE room_id=\$1 AND player_id=\$2 AND command_id=\$3/);
   assert.match(receipt, /receipt\.command_name !== request\.commandName/);
@@ -109,7 +110,9 @@ test("receipt rejeita reutilização conflitante e preserva resposta original", 
   assert.match(receipt, /value: receipt\.response_value/);
   assert.match(receipt, /baseRevision: receipt\.base_revision/);
   assert.match(receipt, /revision: receipt\.revision/);
-  assert.match(receipt, /createHash\("sha256"\)/);
+  assert.match(receipt, /gameCommandRequestFingerprint/);
+  assert.match(fingerprint, /createHash\("sha256"\)/);
+  assert.match(fingerprint, /canonicalGameCommandRequest/);
 });
 
 test("cliente envia uma identidade por comando e faz no máximo uma repetição", () => {
