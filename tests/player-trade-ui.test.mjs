@@ -119,7 +119,7 @@ test("recusa gera feedback efêmero em modal para o destinatário correto", () =
   assert.match(sync, /event\.type === "trade\.resolution"/);
   assert.match(sync, /dispatchTradeResolution\(roomId, event\)/);
   assert.match(bus, /subscribeTradeResolution/);
-  assert.match(modal, /recipientPlayerId !== me\.id/);
+  assert.match(modal, /recipientPlayerId !== meId/);
   assert.match(modal, /Oferta recusada/);
   assert.match(modal, /Contraoferta recusada/);
   assert.match(modal, />\s*Entendi\s*</);
