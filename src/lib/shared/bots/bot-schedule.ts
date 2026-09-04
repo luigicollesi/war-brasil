@@ -28,7 +28,9 @@ export function scheduledBotActionType(
     return "complete_conquest";
   }
 
-  if (room.phase === "cards") return "finish_cards";
+  // Bots normalmente pulam `trade` ao iniciar o turno. Este fallback garante
+  // liveness caso uma sala antiga ou estado reparado coloque um bot nessa fase.
+  if (room.phase === "trade") return "finish_cards";
   if (room.phase === "reinforcement") return "reinforce";
   if (room.phase === "attack") return "attack";
   if (room.phase === "maneuver") return "maneuver";
