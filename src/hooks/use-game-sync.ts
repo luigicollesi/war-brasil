@@ -33,7 +33,12 @@ function responseMessage(data: unknown, fallback: string) {
   );
 }
 
-function revisionEvent(event: GameRealtimeEvent) {
+function revisionEvent(
+  event: GameRealtimeEvent,
+): event is Extract<
+  GameRealtimeEvent,
+  { type: "game.invalidate" | "realtime.ready" }
+> {
   return event.type === "game.invalidate" || event.type === "realtime.ready";
 }
 
@@ -272,8 +277,13 @@ export function useGameSync(roomId: string) {
       gameSyncMetricsStore.recordRealtimeState(state);
 
       if (!isActive || realtimeMode !== "hybrid" || previous === state) return;
+
+      if (state === "connected") {
+        scheduleNextPoll();
+        return;
+      }
+
       if (
-        state === "connected" ||
         state === "reconnecting" ||
         state === "degraded" ||
         state === "closed"
@@ -306,7 +316,11 @@ export function useGameSync(roomId: string) {
       if (event.type === "realtime.pong") {
         gameSyncMetricsStore.recordRealtimeClock(syncController.realtimeClock());
       }
-      if (realtimeMode === "hybrid" && revisionEvent(event)) {
+      if (
+        realtimeMode === "hybrid" &&
+        revisionEvent(event) &&
+        !syncController.hasObservedRevision(event.payload.revision)
+      ) {
         void wakeForRealtime();
       }
     });
