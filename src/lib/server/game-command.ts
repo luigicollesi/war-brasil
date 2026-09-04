@@ -1,7 +1,10 @@
 import "server-only";
 
 import type { PoolClient } from "pg";
-import type { GameCommandPatch } from "@/src/lib/game-command-patch";
+import {
+  isGameCommandPatch,
+  type GameCommandPatch,
+} from "@/src/lib/game-command-patch";
 import { RoomError } from "@/src/lib/rooms";
 import { reconcileGameAutomationSchedule } from "./automation/game-automation-schedule";
 import { databasePoolStats, pool } from "./db/pool";
@@ -61,7 +64,10 @@ export async function gameCommand<T>(
     const baseRevision = await lockRoomRevision(client, roomId);
 
     const value = await execute(client);
-    const realtimePatch = options.realtimePatch?.(value) ?? null;
+    const defaultPublicPatch = isGameCommandPatch(value) ? value : null;
+    const realtimePatch = options.realtimePatch
+      ? options.realtimePatch(value) ?? null
+      : defaultPublicPatch;
     await reconcileGameAutomationSchedule(client, roomId);
     const revision = await bumpGameRevision(client, roomId);
 
