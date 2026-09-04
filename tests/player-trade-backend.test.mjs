@@ -19,7 +19,9 @@ test("oferta e contraoferta usam descritores públicos e alvo obrigatório", () 
   assert.match(service, /counter_offered_kind/);
   assert.match(service, /counter_requested_kind/);
   assert.match(migration, /ALTER COLUMN target_player_id SET NOT NULL/);
-  assert.match(migration, /ALTER COLUMN offered_card_id DROP NOT NULL/);
+  assert.match(migration, /DROP COLUMN IF EXISTS offered_card_id/);
+  assert.match(migration, /DROP COLUMN IF EXISTS counter_card_id/);
+  assert.match(migration, /DROP COLUMN IF EXISTS accepted_card_id/);
 });
 
 test("aceite resolve carta concreta somente depois dos termos serem aceitos", () => {
