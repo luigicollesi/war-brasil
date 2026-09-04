@@ -23,6 +23,11 @@ export type GameInvalidatedEvent = GameRealtimeEnvelope<
   { revision: number }
 >;
 
+export type GamePrivateInvalidatedEvent = GameRealtimeEnvelope<
+  "game.private.invalidate",
+  { revision: number }
+>;
+
 export type GamePatchEvent = GameRealtimeEnvelope<
   "game.patch",
   {
@@ -44,6 +49,7 @@ export type GameRealtimePongEvent = GameRealtimeEnvelope<
 
 export type GameRealtimeEvent =
   | GameInvalidatedEvent
+  | GamePrivateInvalidatedEvent
   | GamePatchEvent
   | GameRealtimeReadyEvent
   | GameRealtimePongEvent;
@@ -105,7 +111,11 @@ export function isGameRealtimeEvent(value: unknown): value is GameRealtimeEvent 
 
   const payload = envelope.payload;
 
-  if (envelope.type === "game.invalidate" || envelope.type === "realtime.ready") {
+  if (
+    envelope.type === "game.invalidate" ||
+    envelope.type === "game.private.invalidate" ||
+    envelope.type === "realtime.ready"
+  ) {
     return validRevision(payload.revision);
   }
 
