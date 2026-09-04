@@ -43,6 +43,23 @@ test("registry envia somente revisions monotônicas", () => {
   );
 });
 
+test("ready nunca regride revision após evento durante handshake", () => {
+  const registry = new GameRealtimeRegistry();
+  const socket = fakeSocket();
+  registry.add(socket, { roomId: "12", playerId: "7" });
+
+  registry.broadcastInvalidation("12", 6);
+  registry.sendReady(socket, 5);
+
+  assert.deepEqual(
+    socket.sent.map((event) => [event.type, event.payload.revision]),
+    [
+      ["game.invalidate", 6],
+      ["realtime.ready", 6],
+    ],
+  );
+});
+
 test("registry entrega invalidation privada somente ao jogador alvo", () => {
   const registry = new GameRealtimeRegistry();
   const target = fakeSocket();
