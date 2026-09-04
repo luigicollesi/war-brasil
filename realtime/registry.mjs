@@ -87,6 +87,68 @@ export class GameRealtimeRegistry {
     }
   }
 
+  broadcastPatch(event) {
+    const room = this.rooms.get(event.roomId);
+    if (!room) return;
+
+    for (const context of room) {
+      this.sendPatch(context, event);
+    }
+  }
+
+  sendPatch(context, event) {
+    if (
+      context.socket.readyState !== WebSocket.OPEN ||
+      event.revision <= context.lastRevisionSent
+    ) {
+      return;
+    }
+
+    if (
+      context.pendingRevision !== null ||
+      context.socket.bufferedAmount > maxBufferedBytes()
+    ) {
+      context.pendingRevision = Math.max(
+        context.pendingRevision ?? 0,
+        event.revision,
+      );
+      recordRealtimeMetric("patchCoalesced", {
+        roomId: context.roomId,
+        revision: event.revision,
+      });
+      this.scheduleFlush(context);
+      return;
+    }
+
+    if (event.baseRevision !== context.lastRevisionSent) {
+      recordRealtimeMetric("patchFallbacks", {
+        roomId: context.roomId,
+        baseRevision: event.baseRevision,
+        revision: event.revision,
+        lastRevisionSent: context.lastRevisionSent,
+      });
+      this.sendRevision(context, event.revision);
+      return;
+    }
+
+    try {
+      context.socket.send(
+        serverEvent("game.patch", context.roomId, {
+          baseRevision: event.baseRevision,
+          revision: event.revision,
+          patch: event.patch,
+        }),
+      );
+      context.lastRevisionSent = event.revision;
+      recordRealtimeMetric("patchBroadcasts", {
+        roomId: context.roomId,
+        revision: event.revision,
+      });
+    } catch {
+      context.socket.terminate();
+    }
+  }
+
   sendRevision(context, revision) {
     if (
       context.socket.readyState !== WebSocket.OPEN ||
