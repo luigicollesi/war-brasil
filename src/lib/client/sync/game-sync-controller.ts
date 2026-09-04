@@ -46,6 +46,7 @@ export class GameSyncController {
   private readonly realtimeTransport: GameRealtimeTransport;
   private readonly realtimeMode: GameRealtimeMode;
   private unsubscribeRealtime: (() => void) | null = null;
+  private forceSnapshotOnNextSync = false;
 
   constructor(
     private readonly roomId: string,
@@ -61,6 +62,7 @@ export class GameSyncController {
   reset() {
     this.revisions.reset();
     this.snapshots.reset();
+    this.forceSnapshotOnNextSync = false;
   }
 
   currentSnapshot() {
@@ -75,12 +77,17 @@ export class GameSyncController {
     this.revisions.require(revision);
   }
 
+  forceSnapshot(revision?: number) {
+    this.forceSnapshotOnNextSync = true;
+    if (revision !== undefined) this.revisions.require(revision);
+  }
+
   hasObservedRevision(revision: number) {
     return this.revisions.hasObserved(revision);
   }
 
   needsRequiredRevision() {
-    return this.revisions.needsRequiredRevision();
+    return this.forceSnapshotOnNextSync || this.revisions.needsRequiredRevision();
   }
 
   realtimeState() {
@@ -97,9 +104,10 @@ export class GameSyncController {
 
   async sync(signal?: AbortSignal): Promise<GameSyncResult> {
     const previousSnapshot = this.snapshots.current();
+    const forceSnapshot = this.forceSnapshotOnNextSync;
     const result = await this.snapshotTransport.fetchSnapshot({
       roomId: this.roomId,
-      knownRevision: this.revisions.current(),
+      knownRevision: forceSnapshot ? null : this.revisions.current(),
       knownTopologyVersion: this.snapshots.knownTopologyVersion(),
       signal,
     });
@@ -117,6 +125,9 @@ export class GameSyncController {
 
     this.revisions.observe(result.revision);
     const nextSnapshot = this.snapshots.accept(result);
+    if (forceSnapshot && result.kind === "snapshot") {
+      this.forceSnapshotOnNextSync = false;
+    }
 
     return {
       snapshot: nextSnapshot,
@@ -178,11 +189,15 @@ export class GameSyncController {
     this.unsubscribeRealtime?.();
     this.unsubscribeRealtime = this.realtimeTransport.subscribe((event) => {
       if (event.roomId !== this.roomId) return;
-      if (
-        this.realtimeMode === "hybrid" &&
-        (event.type === "game.invalidate" || event.type === "realtime.ready")
-      ) {
-        this.revisions.require(event.payload.revision);
+      if (this.realtimeMode === "hybrid") {
+        if (event.type === "game.private.invalidate") {
+          this.forceSnapshot(event.payload.revision);
+        } else if (
+          event.type === "game.invalidate" ||
+          event.type === "realtime.ready"
+        ) {
+          this.revisions.require(event.payload.revision);
+        }
       }
       onEvent?.(event);
     });
