@@ -26,6 +26,14 @@ export function automationWorkerBatchSize(env = process.env) {
   return positiveInteger(env.GAME_AUTOMATION_WORKER_BATCH_SIZE, 50, 1, 500);
 }
 
+export function automationWorkerConcurrency(env = process.env) {
+  return positiveInteger(env.GAME_AUTOMATION_WORKER_CONCURRENCY, 4, 1, 32);
+}
+
+export function automationWorkerLeaseMs(env = process.env) {
+  return positiveInteger(env.GAME_AUTOMATION_WORKER_LEASE_MS, 10_000, 1_000, 120_000);
+}
+
 export function automationWorkerInternalBaseUrl(env = process.env) {
   const raw = env.GAME_AUTOMATION_INTERNAL_BASE_URL?.trim();
   if (!raw) return null;
@@ -37,7 +45,7 @@ export function automationWorkerInternalBaseUrl(env = process.env) {
     throw new Error("GAME_AUTOMATION_INTERNAL_BASE_URL deve ser uma URL HTTP(S) válida.");
   }
 
-  if (!['http:', 'https:'].includes(url.protocol)) {
+  if (!["http:", "https:"].includes(url.protocol)) {
     throw new Error("GAME_AUTOMATION_INTERNAL_BASE_URL deve usar HTTP ou HTTPS.");
   }
 
