@@ -9,10 +9,12 @@ type InitialTerritoryDrawPresentationProps = {
   revealedTerritoryIds: ReadonlySet<number>;
   highlightPlayerId: string | null;
   highlightOn: boolean;
+  presentationStartedAt: string;
   tick: number;
 };
 
 const NEUTRAL_TERRITORY_FILL = "#7d8582";
+const TITLE_OVERLAY_SELECTOR = "[data-initial-territory-title]";
 
 function colorHex(color: PlayerColor) {
   return PLAYER_COLORS.find((item) => item.value === color)?.hex ?? "#64756f";
@@ -33,11 +35,34 @@ function suppressMapLayers(surface: HTMLElement) {
     });
 }
 
+function syncTitleOverlay(surface: HTMLElement, visible: boolean) {
+  let overlay = surface.querySelector<HTMLElement>(TITLE_OVERLAY_SELECTOR);
+
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.dataset.initialTerritoryTitle = "true";
+    overlay.className =
+      "pointer-events-none absolute inset-0 z-30 flex items-center justify-center";
+
+    const title = document.createElement("div");
+    title.className =
+      "rounded-2xl border border-transparent bg-transparent px-6 py-4 text-center text-2xl font-semibold tracking-[-0.035em] text-[#17372d] sm:text-3xl";
+    title.style.textShadow = "0 2px 12px rgba(250, 248, 242, 0.95)";
+    title.setAttribute("role", "status");
+    title.textContent = "Sorteio de Territórios";
+    overlay.append(title);
+    surface.append(overlay);
+  }
+
+  overlay.hidden = !visible;
+}
+
 export function InitialTerritoryDrawPresentation({
   territories,
   revealedTerritoryIds,
   highlightPlayerId,
   highlightOn,
+  presentationStartedAt,
   tick,
 }: InitialTerritoryDrawPresentationProps) {
   useEffect(() => {
@@ -45,6 +70,12 @@ export function InitialTerritoryDrawPresentation({
     if (!board || !surface) return;
 
     suppressMapLayers(surface);
+
+    const startedAtMs = Date.parse(presentationStartedAt);
+    syncTitleOverlay(
+      surface,
+      Number.isFinite(startedAtMs) && tick < startedAtMs,
+    );
 
     const mapDocument = board.contentDocument;
     const root = mapDocument?.querySelector("#territories");
@@ -80,6 +111,7 @@ export function InitialTerritoryDrawPresentation({
   }, [
     highlightOn,
     highlightPlayerId,
+    presentationStartedAt,
     revealedTerritoryIds,
     territories,
     tick,
@@ -90,6 +122,7 @@ export function InitialTerritoryDrawPresentation({
       const { board, surface } = findMapSurface();
       if (!board || !surface) return;
 
+      surface.querySelector(TITLE_OVERLAY_SELECTOR)?.remove();
       surface.style.pointerEvents = "";
       surface
         .querySelectorAll<HTMLElement>(".road-network, .game-troop-layer, canvas")
