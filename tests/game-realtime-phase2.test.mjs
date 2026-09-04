@@ -214,7 +214,7 @@ test("shadow permanece observacional e hybrid aplica patch contínuo ou acorda s
   assert.match(hook, /realtimeMode,[\s\S]*realtimeState/);
 });
 
-test("gateway autentica antes do upgrade, valida origem e degrada quando LISTEN cai", () => {
+test("gateway autentica antes do upgrade, valida origem e degrada quando o bus cai", () => {
   const gateway = readFileSync("realtime/server.mjs", "utf8");
   const listener = readFileSync("realtime/listener.mjs", "utf8");
   const registry = readFileSync("realtime/registry.mjs", "utf8");
@@ -227,16 +227,21 @@ test("gateway autentica antes do upgrade, valida origem e degrada quando LISTEN 
   assert.match(gateway, /origins\.has\(origin\)/);
   assert.match(gateway, /readRealtimeIdentity/);
   assert.match(gateway, /GAME_REALTIME_SUBPROTOCOL/);
-  assert.match(gateway, /!listenerHealthy/);
+  assert.match(gateway, /function gatewayReady\(\)/);
+  assert.match(gateway, /acceptingUpgrades && listenerHealthy && !shuttingDown/);
   assert.match(gateway, /registry\.closeAll\(1012/);
   assert.match(gateway, /registry\.broadcastPatch\(event\)/);
   assert.match(gateway, /event\.scope === "player" \? event\.playerId : null/);
+  assert.match(gateway, /\/health\/live/);
+  assert.match(gateway, /\/health\/ready/);
+  assert.match(gateway, /recordRealtimeMetric\("draining"/);
   assert.match(listener, /LISTEN \$\{gameRealtimeChannel\(\)\}/);
   assert.match(registry, /bufferedAmount/);
   assert.match(registry, /pendingRevision = Math\.max/);
   assert.match(registry, /pendingPrivateRevision/);
   assert.match(registry, /game\.private\.invalidate/);
   assert.match(registry, /patchFallbacks/);
+  assert.match(registry, /Math\.max\(context\.lastRevisionSent, revision\)/);
   assert.match(postgresAdapter, /war_game_revision/);
   assert.match(protocol, /war_game_revision/);
 });
