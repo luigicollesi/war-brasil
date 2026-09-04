@@ -93,16 +93,30 @@ export async function runGameCommand<T = unknown>(
       body: serializedBody,
     });
 
-  let response: Response;
-  try {
-    response = await send();
-  } catch (error) {
-    if (commandId === null) throw error;
-    response = await send();
+  let response: Response | null = null;
+  let firstError: unknown = null;
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      response = await send();
+    } catch (error) {
+      firstError ??= error;
+      if (attempt === 0 && commandId !== null) continue;
+      throw error;
+    }
+
+    if (
+      attempt === 0 &&
+      commandId !== null &&
+      retryableStatus(response.status)
+    ) {
+      continue;
+    }
+    break;
   }
 
-  if (commandId !== null && retryableStatus(response.status)) {
-    response = await send();
+  if (!response) {
+    throw firstError ?? new Error(fallback);
   }
 
   const data = await responseData(response);
