@@ -10,7 +10,7 @@ import {
   isGameRealtimeEvent,
 } from "../.test-build/shared/game-realtime-contract.js";
 
-test("protocolo realtime v1 aceita ready, invalidate, pong e ping válidos", () => {
+test("protocolo realtime v1 aceita ready, invalidate, patch, pong e ping válidos", () => {
   const base = {
     protocolVersion: GAME_PROTOCOL_VERSION,
     roomId: "42",
@@ -33,6 +33,30 @@ test("protocolo realtime v1 aceita ready, invalidate, pong e ping válidos", () 
       payload: { revision: 9 },
     }),
     true,
+  );
+  assert.equal(
+    isGameRealtimeEvent({
+      ...base,
+      type: "game.patch",
+      payload: {
+        baseRevision: 9,
+        revision: 10,
+        patch: { territories: [{ territoryId: 2, troops: 4 }] },
+      },
+    }),
+    true,
+  );
+  assert.equal(
+    isGameRealtimeEvent({
+      ...base,
+      type: "game.patch",
+      payload: {
+        baseRevision: 9,
+        revision: 10,
+        patch: { myCards: [{ id: "private" }] },
+      },
+    }),
+    false,
   );
   assert.equal(
     isGameRealtimeEvent({
@@ -122,17 +146,20 @@ test("publisher realtime é best-effort, opcional e acontece depois do commit au
     "utf8",
   );
 
-  assert.match(command, /await client\.query\("COMMIT"\)[\s\S]*await publishGameInvalidation/);
+  assert.match(command, /await client\.query\("COMMIT"\)[\s\S]*await publishGameChange/);
   assert.match(command, /if \(result\.changed\) \{[\s\S]*publishGameInvalidation/);
   assert.match(command, /rollbackIfNeeded\(client, transactionOpen\)/);
   assert.match(publisher, /process\.env\.GAME_REALTIME_ENABLED === "true"/);
+  assert.match(publisher, /GAME_REALTIME_PATCHES_ENABLED === "true"/);
   assert.match(publisher, /if \(!gameRealtimeEnabled\(\)\) return/);
   assert.match(publisher, /SELECT pg_notify\(\$1,\$2\)/);
+  assert.match(publisher, /GAME_REALTIME_NOTIFY_MAX_BYTES/);
+  assert.match(publisher, /publishGameInvalidation/);
   assert.match(publisher, /catch \(error\)/);
   assert.doesNotMatch(publisher, /throw error/);
 });
 
-test("shadow não exige revision e hybrid usa evento realtime apenas para acordar snapshot HTTP", () => {
+test("shadow permanece observacional e hybrid aplica patch contínuo ou acorda snapshot HTTP", () => {
   const controller = readFileSync(
     "src/lib/client/sync/game-sync-controller.ts",
     "utf8",
@@ -143,14 +170,18 @@ test("shadow não exige revision e hybrid usa evento realtime apenas para acorda
     controller,
     /this\.realtimeMode === "hybrid"[\s\S]*this\.revisions\.require/,
   );
+  assert.match(controller, /applyRealtimePatch/);
+  assert.match(controller, /this\.applyCommandResult/);
+  assert.match(controller, /this\.revisions\.require\(revision\)/);
   assert.match(hook, /createGameRealtimeTransport\(realtimeMode\)/);
+  assert.match(hook, /event\.type === "game\.patch" && realtimeMode === "hybrid"/);
+  assert.match(hook, /syncController\.applyRealtimePatch\(event\)/);
   assert.match(
     hook,
     /realtimeMode === "hybrid"\s*&&\s*revisionEvent\(event\)/,
   );
   assert.match(hook, /void wakeForRealtime\(\)/);
   assert.match(hook, /realtimeMode,[\s\S]*realtimeState/);
-  assert.doesNotMatch(hook, /game\.patch.*WebSocket|WebSocket.*game\.patch/);
 });
 
 test("gateway autentica antes do upgrade, valida origem e degrada quando LISTEN cai", () => {
@@ -168,9 +199,11 @@ test("gateway autentica antes do upgrade, valida origem e degrada quando LISTEN 
   assert.match(gateway, /GAME_REALTIME_SUBPROTOCOL/);
   assert.match(gateway, /!listenerHealthy/);
   assert.match(gateway, /registry\.closeAll\(1012/);
+  assert.match(gateway, /registry\.broadcastPatch\(event\)/);
   assert.match(listener, /LISTEN \$\{gameRealtimeChannel\(\)\}/);
   assert.match(registry, /bufferedAmount/);
   assert.match(registry, /pendingRevision = Math\.max/);
+  assert.match(registry, /patchFallbacks/);
   assert.match(publisher, /war_game_revision/);
   assert.match(protocol, /war_game_revision/);
 });
