@@ -146,6 +146,14 @@ try {
     await applyMigration("021-player-trade-phase.sql");
   }
 
+  if (
+    !(await columnExists("game_player_trade_offers", "offered_kind")) ||
+    !(await columnExists("game_player_trade_offers", "accepted_terms")) ||
+    !(await columnExists("game_player_trade_offers", "proposer_selected_card_id"))
+  ) {
+    await applyMigration("022-complete-player-trade-negotiation.sql");
+  }
+
   await client.query("COMMIT");
   console.log(
     "[war-brasil] banco local preparado para bots, objetivos, apresentação inicial, automação, receipts e negociações de cartas.",
