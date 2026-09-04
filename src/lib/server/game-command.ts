@@ -23,6 +23,7 @@ import {
   publishGameChange,
   publishGameInvalidation,
 } from "./game-realtime-publisher";
+import { publishGameCommandMetric } from "./observability/game-command-metrics";
 import { startGameOperationMetric } from "./observability/game-operation-metrics";
 
 type GameConditionalCommandResult<T> = {
@@ -117,6 +118,13 @@ export async function gameCommand<T>(
       options.request &&
       options.request.expectedRevision !== baseRevision
     ) {
+      publishGameCommandMetric({
+        name: "revision.stale",
+        roomId,
+        commandName: options.request.commandName,
+        expectedRevision: options.request.expectedRevision,
+        revision: baseRevision,
+      });
       throw new RoomError(
         "A partida avançou antes deste comando. O estado será atualizado.",
         409,
