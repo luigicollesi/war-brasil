@@ -38,6 +38,10 @@ function validRevision(value) {
   return Number.isSafeInteger(value) && value >= 1;
 }
 
+function validPlayerId(value) {
+  return typeof value === "string" && /^\d+$/.test(value);
+}
+
 function validRoomPatch(value) {
   if (!isRecord(value) || !hasOnlyKeys(value, ROOM_PATCH_KEYS)) return false;
   if (value.status !== undefined && !GAME_STATUSES.has(value.status)) return false;
@@ -129,22 +133,33 @@ export function parseNotificationPayload(value) {
       return null;
     }
 
+    const scope = parsed.scope ?? "room";
+    if (scope !== "room" && scope !== "player") return null;
+
     if (parsed.kind === undefined || parsed.kind === "invalidate") {
+      if (scope === "player" && !validPlayerId(parsed.playerId)) return null;
+      if (scope === "room" && parsed.playerId !== undefined) return null;
+
       return {
         kind: "invalidate",
+        scope,
         roomId: parsed.roomId,
         revision: parsed.revision,
+        ...(scope === "player" ? { playerId: parsed.playerId } : {}),
       };
     }
 
     if (
       parsed.kind === "patch" &&
+      scope === "room" &&
+      parsed.playerId === undefined &&
       validRevision(parsed.baseRevision) &&
       parsed.revision > parsed.baseRevision &&
       validPublicPatch(parsed.patch)
     ) {
       return {
         kind: "patch",
+        scope: "room",
         roomId: parsed.roomId,
         baseRevision: parsed.baseRevision,
         revision: parsed.revision,
