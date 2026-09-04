@@ -359,16 +359,16 @@ export async function advanceBotAutomation(
   const delayAction = scheduledActionType(room);
   if (!delayAction) return { changed: false, kind: "none" };
 
-  const releaseAt =
+  const releaseTimeMs =
     delayAction === "roll_order"
-      ? orderRollActorAvailableAt(orderState.lastRollAt)
+      ? orderRollActorAvailableAt(orderState.lastRollAt)?.getTime() ?? null
       : null;
-  const actionBaseTimeMs = Math.max(nowMs, releaseAt?.getTime() ?? nowMs);
 
   if (
     actor.bot_next_action_at === null ||
-    actor.bot_next_action_at.getTime() < actionBaseTimeMs
+    (releaseTimeMs !== null && actor.bot_next_action_at.getTime() < releaseTimeMs)
   ) {
+    const actionBaseTimeMs = Math.max(nowMs, releaseTimeMs ?? nowMs);
     const dueAt = new Date(actionBaseTimeMs + pickBotDelayMs(delayAction));
     await client.query(
       `UPDATE room_players
