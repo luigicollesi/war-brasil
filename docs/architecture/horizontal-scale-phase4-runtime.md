@@ -25,13 +25,19 @@ Optional:
 
 ```text
 GAME_REALTIME_PORT=3001
-GAME_REALTIME_EVENT_SOURCE=postgres|redis
+GAME_REALTIME_EVENT_SOURCE=postgres|dual|redis
 GAME_REALTIME_REDIS_URL=redis://...
 GAME_REALTIME_AUTH_MODE=cookie|ticket|either
 GAME_REALTIME_TICKET_SECRET=<at least 32 characters>
 ```
 
-When `GAME_REALTIME_EVENT_SOURCE=redis`, the gateway subscribes to `war:game:<roomId>:v1` only while one or more local sockets belong to that room. The room subscription is acquired before the connection is confirmed with `realtime.ready`.
+Event source modes:
+
+- `postgres`: PostgreSQL `LISTEN/NOTIFY` is the primary source. Redis is not required.
+- `dual`: PostgreSQL remains the primary source that drives sockets. Redis subscribes to the same locally active rooms only for shadow delivery metrics. Redis failure in this mode does not make the gateway unready.
+- `redis`: Redis Pub/Sub is the primary realtime source. Redis health is therefore part of gateway readiness.
+
+When Redis participates (`dual` or `redis`), the gateway subscribes to `war:game:<roomId>:v1` only while one or more local sockets belong to that room. The room subscription is acquired before the connection is confirmed with `realtime.ready`.
 
 Health endpoints:
 
@@ -41,7 +47,7 @@ GET /health/ready
 GET /health
 ```
 
-`/health/ready` must be used for traffic admission. A draining gateway stops accepting new upgrades before closing existing sockets.
+`/health/ready` must be used for traffic admission. A draining gateway stops accepting new upgrades before closing existing sockets. In `dual`, the health payload also exposes Redis shadow health without using it as a readiness gate.
 
 ## Redis relay rollout
 
@@ -66,7 +72,14 @@ npm --prefix realtime run relay
 
 Only one relay instance is operationally necessary during this transitional rollout. Duplicate relays would produce duplicate ephemeral events, which revision handling makes safe but wasteful.
 
-If Redis or the relay is unavailable, authoritative HTTP commands and snapshots remain valid. Gateways must be switched back to `GAME_REALTIME_EVENT_SOURCE=postgres` or clients will naturally degrade to HTTP polling when sockets are unavailable.
+Recommended rollout order:
+
+1. Keep gateways on `postgres` and start the Redis relay.
+2. Move a subset of gateways to `dual` and compare Redis shadow delivery against PostgreSQL primary delivery.
+3. If shadow health and delivery metrics are acceptable, move gateways gradually to `redis`.
+4. On Redis or relay degradation, move gateways back to `postgres`; authoritative HTTP commands and snapshots remain valid throughout.
+
+If a gateway is already in `redis` mode and Redis becomes unavailable, clients naturally degrade to HTTP polling when sockets close or cannot reconnect. PostgreSQL remains the authoritative game state in every mode.
 
 ## Realtime tickets
 
