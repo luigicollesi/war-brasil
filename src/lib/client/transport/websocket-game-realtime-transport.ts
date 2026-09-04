@@ -21,16 +21,43 @@ const DEGRADED_AFTER_ATTEMPTS = 4;
 
 type WebSocketGameRealtimeTransportOptions = {
   url?: string;
+  authMode?: "cookie" | "ticket";
 };
 
-function connectionUrl(configuredUrl: string | undefined, roomId: string) {
+function connectionUrl(
+  configuredUrl: string | undefined,
+  roomId: string,
+  ticket?: string,
+) {
   const url = configuredUrl
     ? new URL(configuredUrl, window.location.href)
     : new URL(
         `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/realtime`,
       );
   url.searchParams.set("roomId", roomId);
+  if (ticket) url.searchParams.set("ticket", ticket);
   return url.toString();
+}
+
+async function fetchRealtimeTicket(roomId: string) {
+  const response = await fetch(`/api/games/${encodeURIComponent(roomId)}/realtime-ticket`, {
+    method: "POST",
+    cache: "no-store",
+  });
+  if (!response.ok) {
+    throw new Error(`Não foi possível obter ticket realtime (${response.status}).`);
+  }
+  const body: unknown = await response.json();
+  if (
+    !body ||
+    typeof body !== "object" ||
+    !("ticket" in body) ||
+    typeof body.ticket !== "string" ||
+    body.ticket.length < 32
+  ) {
+    throw new Error("Resposta de ticket realtime inválida.");
+  }
+  return body.ticket;
 }
 
 function pingNonce() {
@@ -49,6 +76,7 @@ export class WebSocketGameRealtimeTransport implements GameRealtimeTransport {
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private pingTimer: ReturnType<typeof setInterval> | null = null;
   private manuallyClosed = false;
+  private opening = false;
 
   constructor(private readonly options: WebSocketGameRealtimeTransportOptions = {}) {}
 
@@ -59,12 +87,13 @@ export class WebSocketGameRealtimeTransport implements GameRealtimeTransport {
 
     if (
       this.socket?.readyState === WebSocket.OPEN ||
-      this.socket?.readyState === WebSocket.CONNECTING
+      this.socket?.readyState === WebSocket.CONNECTING ||
+      this.opening
     ) {
       return;
     }
 
-    this.openSocket();
+    await this.openSocket();
   }
 
   subscribe(listener: GameRealtimeListener) {
@@ -102,9 +131,10 @@ export class WebSocketGameRealtimeTransport implements GameRealtimeTransport {
     this.transition("closed");
   }
 
-  private openSocket() {
+  private async openSocket() {
     const input = this.input;
-    if (!input || this.manuallyClosed) return;
+    if (!input || this.manuallyClosed || this.opening) return;
+    this.opening = true;
 
     this.transition(
       this.reconnectAttempt >= DEGRADED_AFTER_ATTEMPTS
@@ -114,18 +144,36 @@ export class WebSocketGameRealtimeTransport implements GameRealtimeTransport {
           : "connecting",
     );
 
+    let ticket: string | undefined;
+    try {
+      if (this.options.authMode === "ticket") {
+        ticket = await fetchRealtimeTicket(input.roomId);
+      }
+    } catch {
+      this.opening = false;
+      if (!this.manuallyClosed) this.scheduleReconnect();
+      return;
+    }
+
+    if (this.manuallyClosed || this.input?.roomId !== input.roomId) {
+      this.opening = false;
+      return;
+    }
+
     let socket: WebSocket;
     try {
       socket = new WebSocket(
-        connectionUrl(this.options.url, input.roomId),
+        connectionUrl(this.options.url, input.roomId, ticket),
         GAME_REALTIME_SUBPROTOCOL,
       );
     } catch {
+      this.opening = false;
       this.scheduleReconnect();
       return;
     }
 
     this.socket = socket;
+    this.opening = false;
 
     socket.onopen = () => {
       if (this.socket !== socket || this.manuallyClosed) return;
@@ -204,7 +252,7 @@ export class WebSocketGameRealtimeTransport implements GameRealtimeTransport {
 
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
-      this.openSocket();
+      void this.openSocket();
     }, delay);
   }
 
