@@ -220,7 +220,11 @@ test("reforço e manobra retornam patches autoritativos ligados à revisão base
   );
 
   assert.match(command, /const baseRevision = await lockRoomRevision/);
-  assert.match(command, /return \{ value, baseRevision, revision \}/);
+  assert.match(
+    command,
+    /const result: GameCommandResult<T> = \{ value, baseRevision, revision \}/,
+  );
+  assert.match(command, /return result;/);
   assert.match(reinforce, /baseRevision: result\.baseRevision/);
   assert.match(reinforce, /patch: result\.value/);
   assert.match(maneuver, /baseRevision: result\.baseRevision/);
