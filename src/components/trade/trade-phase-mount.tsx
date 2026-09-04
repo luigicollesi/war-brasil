@@ -16,6 +16,7 @@ export function TradePhaseMount({
   onRefresh: (minimumRevision?: number) => Promise<void>;
 }) {
   const [target, setTarget] = useState<HTMLElement | null>(null);
+  const scopeKey = `${snapshot.room.turnNumber}:${snapshot.room.currentPlayerId ?? "-"}`;
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -29,6 +30,7 @@ export function TradePhaseMount({
       {target
         ? createPortal(
             <TradePhasePanel
+              key={scopeKey}
               roomId={roomId}
               snapshot={snapshot}
               onRefresh={onRefresh}
@@ -36,11 +38,7 @@ export function TradePhaseMount({
             target,
           )
         : null}
-      <TradeSignalToast
-        key={`${snapshot.room.turnNumber}:${snapshot.room.currentPlayerId ?? "-"}`}
-        roomId={roomId}
-        snapshot={snapshot}
-      />
+      <TradeSignalToast key={scopeKey} roomId={roomId} snapshot={snapshot} />
     </>
   );
 }
