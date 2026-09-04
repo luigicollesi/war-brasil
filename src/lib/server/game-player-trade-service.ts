@@ -441,6 +441,7 @@ async function finalizeAcceptedTrade(
   if (
     offer.status !== "accepted_pending_selection" ||
     !offer.responder_player_id ||
+    !offer.accepted_terms ||
     !offer.proposer_selected_card_id ||
     !offer.responder_selected_card_id
   ) {
@@ -461,10 +462,25 @@ async function finalizeAcceptedTrade(
 
   await client.query(
     `UPDATE game_player_trade_offers
-     SET status='accepted',resolved_at=NOW()
-     WHERE room_id=$1 AND id=$2 AND status='accepted_pending_selection'`,
-    [room.id, offer.id],
+     SET status='accepted',
+         responder_player_id=$3,
+         accepted_terms=$4,
+         proposer_selected_card_id=$5,
+         responder_selected_card_id=$6,
+         resolved_at=NOW()
+     WHERE room_id=$1
+       AND id=$2
+       AND status IN ('open','countered','accepted_pending_selection')`,
+    [
+      room.id,
+      offer.id,
+      offer.responder_player_id,
+      offer.accepted_terms,
+      offer.proposer_selected_card_id,
+      offer.responder_selected_card_id,
+    ],
   );
+
   const advanced = await finishIfOfferBudgetEnded(client, room);
   return { completed: true, pendingSelection: false, advanced };
 }
@@ -500,6 +516,19 @@ async function beginAcceptedTrade(
     descriptors.responder,
   );
 
+  const acceptedOffer: TradeOfferRow = {
+    ...offer,
+    status: "accepted_pending_selection",
+    responder_player_id: responderPlayerId,
+    accepted_terms: terms,
+    proposer_selected_card_id: proposerCardId,
+    responder_selected_card_id: responderCardId,
+  };
+
+  if (proposerCardId && responderCardId) {
+    return finalizeAcceptedTrade(client, room, acceptedOffer);
+  }
+
   await client.query(
     `UPDATE game_player_trade_offers
      SET status='accepted_pending_selection',
@@ -518,18 +547,6 @@ async function beginAcceptedTrade(
     ],
   );
 
-  const acceptedOffer: TradeOfferRow = {
-    ...offer,
-    status: "accepted_pending_selection",
-    responder_player_id: responderPlayerId,
-    accepted_terms: terms,
-    proposer_selected_card_id: proposerCardId,
-    responder_selected_card_id: responderCardId,
-  };
-
-  if (proposerCardId && responderCardId) {
-    return finalizeAcceptedTrade(client, room, acceptedOffer);
-  }
   return { completed: false, pendingSelection: true, advanced: false };
 }
 
@@ -730,6 +747,18 @@ async function selectAcceptedCard(
     throw new RoomError("A carta selecionada não corresponde ao símbolo negociado.", 422);
   }
 
+  const selectedOffer: TradeOfferRow =
+    column === "proposer_selected_card_id"
+      ? { ...offer, proposer_selected_card_id: card.id }
+      : { ...offer, responder_selected_card_id: card.id };
+
+  if (
+    selectedOffer.proposer_selected_card_id &&
+    selectedOffer.responder_selected_card_id
+  ) {
+    return finalizeAcceptedTrade(client, room, selectedOffer);
+  }
+
   await client.query(
     `UPDATE game_player_trade_offers
      SET ${column}=$3
@@ -737,10 +766,6 @@ async function selectAcceptedCard(
     [room.id, offer.id, card.id],
   );
 
-  const refreshed = await offerById(client, room.id, offer.id);
-  if (refreshed.proposer_selected_card_id && refreshed.responder_selected_card_id) {
-    return finalizeAcceptedTrade(client, room, refreshed);
-  }
   return { completed: false, pendingSelection: true, advanced: false };
 }
 
