@@ -7,6 +7,7 @@ import type { GameSnapshot } from "@/src/lib/game-contract";
 import type { GameRealtimeEvent } from "@/src/lib/game-realtime-contract";
 import { gameAutomationDriver } from "@/src/lib/client/game-automation-driver";
 import { registerGameCommandSyncContext } from "@/src/lib/client/game-command-sync-context";
+import { dispatchTradeSignal } from "@/src/lib/client/game-realtime-ephemeral-bus";
 import { GamePollScheduler } from "@/src/lib/client/sync/game-poll-scheduler";
 import {
   GameSyncController,
@@ -334,6 +335,11 @@ export function useGameSync(roomId: string) {
 
       if (event.type === "realtime.pong") {
         gameSyncMetricsStore.recordRealtimeClock(syncController.realtimeClock());
+        return;
+      }
+
+      if (event.type === "trade.signal") {
+        dispatchTradeSignal(roomId, event);
         return;
       }
 
