@@ -23,6 +23,10 @@ const migration = readFileSync(
   "src/lib/db/migrations/020-automation-worker-claims.sql",
   "utf8",
 );
+const automationSchedule = readFileSync(
+  "src/lib/server/automation/game-automation-schedule.ts",
+  "utf8",
+);
 const prepareDevDb = readFileSync("scripts/prepare-dev-db.mjs", "utf8");
 const gateway = readFileSync("realtime/server.mjs", "utf8");
 const redisSubscriber = readFileSync("realtime/redis-room-subscriber.mjs", "utf8");
@@ -77,6 +81,17 @@ test("automation claims are durable operational metadata, not game revisions", (
   assert.match(worker, /runWithConcurrency/);
   assert.match(worker, /claim\.recovered/);
   assert.doesNotMatch(migration, /revision/);
+});
+
+test("rescheduling invalidates an old worker lease only when the canonical schedule changes", () => {
+  assert.match(
+    automationSchedule,
+    /SET automation_due_at=\$2,[\s\S]*automation_kind=\$3,[\s\S]*automation_claimed_by=NULL,[\s\S]*automation_claimed_until=NULL/,
+  );
+  assert.match(
+    automationSchedule,
+    /WHERE id=\$1[\s\S]*automation_due_at IS DISTINCT FROM \$2::timestamptz[\s\S]*automation_kind IS DISTINCT FROM \$3::varchar/,
+  );
 });
 
 test("redis gateway subscriptions are scoped to rooms with local sockets", () => {
