@@ -111,19 +111,21 @@ test("snapshot transporta somente a topologia base e os efeitos resolvidos separ
 });
 
 test("cliente cacheia base e hidrata evento mais túnel a partir do snapshot atual", () => {
-  const sync = readFileSync("src/hooks/use-game-sync.ts", "utf8");
+  const coordinator = readFileSync(
+    "src/lib/client/sync/game-snapshot-coordinator.ts",
+    "utf8",
+  );
   const hydration = readFileSync(
     "src/lib/shared/game-snapshot-hydration.ts",
     "utf8",
   );
 
-  assert.match(sync, /baseTopologyConnectionsRef/);
+  assert.match(coordinator, /private baseConnections/);
   assert.match(
-    sync,
-    /payload\.connections \?\? baseTopologyConnectionsRef\.current/,
+    coordinator,
+    /result\.payload\.connections \?\? this\.baseConnections/,
   );
-  assert.match(sync, /hydrateGameSnapshot\(payload, baseConnections\)/);
-  assert.doesNotMatch(sync, /topologyConnectionsRef/);
+  assert.match(coordinator, /hydrateGameSnapshot\(result\.payload, baseConnections\)/);
   assert.match(hydration, /effectiveGameConnections\(/);
   assert.match(hydration, /payload\.room\.activeEvent\?\.resolvedEffects/);
   assert.match(hydration, /payload\.room\.jurassicTunnelDestinationId/);
