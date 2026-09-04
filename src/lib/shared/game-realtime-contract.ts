@@ -1,3 +1,8 @@
+import {
+  isGameCommandPatch,
+  type GameCommandPatch,
+} from "./game-command-patch";
+
 export const GAME_PROTOCOL_VERSION = 1 as const;
 export const GAME_REALTIME_SUBPROTOCOL =
   `war-brasil.v${GAME_PROTOCOL_VERSION}` as const;
@@ -18,6 +23,15 @@ export type GameInvalidatedEvent = GameRealtimeEnvelope<
   { revision: number }
 >;
 
+export type GamePatchEvent = GameRealtimeEnvelope<
+  "game.patch",
+  {
+    baseRevision: number;
+    revision: number;
+    patch: GameCommandPatch;
+  }
+>;
+
 export type GameRealtimeReadyEvent = GameRealtimeEnvelope<
   "realtime.ready",
   { revision: number }
@@ -30,6 +44,7 @@ export type GameRealtimePongEvent = GameRealtimeEnvelope<
 
 export type GameRealtimeEvent =
   | GameInvalidatedEvent
+  | GamePatchEvent
   | GameRealtimeReadyEvent
   | GameRealtimePongEvent;
 
@@ -92,6 +107,15 @@ export function isGameRealtimeEvent(value: unknown): value is GameRealtimeEvent 
 
   if (envelope.type === "game.invalidate" || envelope.type === "realtime.ready") {
     return validRevision(payload.revision);
+  }
+
+  if (envelope.type === "game.patch") {
+    return (
+      validRevision(payload.baseRevision) &&
+      validRevision(payload.revision) &&
+      Number(payload.revision) > Number(payload.baseRevision) &&
+      isGameCommandPatch(payload.patch)
+    );
   }
 
   if (envelope.type === "realtime.pong") {
