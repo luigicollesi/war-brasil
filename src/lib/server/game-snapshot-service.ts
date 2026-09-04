@@ -13,6 +13,11 @@ import {
   nextOrderRollPlayerId,
   type OrderRoll,
 } from "@/src/lib/game-order-rules";
+import {
+  PLAYER_TRADE_OFFER_LIMIT,
+  PLAYER_TRADE_SIGNAL_LIMIT,
+  type TradeCardDescriptor,
+} from "@/src/lib/game-trade-rules";
 import { getRoomRoundEventDetails } from "@/src/lib/events/event-repository";
 import { EventConfigurationError } from "@/src/lib/events/event-types";
 import { gameQuery } from "@/src/lib/game-query";
@@ -34,6 +39,7 @@ type SnapshotRoom = {
   round_number: number;
   jurassic_tunnel_territory_id: number | null;
   reinforcements_remaining: number;
+  trade_offers_used: number;
   winner_player_id: string | null;
   pending_from_territory_id: number | null;
   pending_to_territory_id: number | null;
@@ -47,6 +53,7 @@ type SnapshotPlayer = {
   turn_position: number | null;
   is_me: boolean;
   is_bot: boolean;
+  trade_signals_used: number;
 };
 
 type SnapshotTerritory = {
@@ -69,6 +76,21 @@ type SnapshotCard = {
   is_wild: boolean;
 };
 
+type SnapshotTradeOffer = {
+  id: string;
+  proposer_player_id: string;
+  target_player_id: string | null;
+  requested_kind: "territory" | "symbol" | "wild";
+  requested_territory_id: number | null;
+  requested_symbol: "leaf" | "gold" | "water" | null;
+  status: "open" | "countered";
+  responder_player_id: string | null;
+  offered_territory_id: number | null;
+  offered_is_wild: boolean;
+  counter_territory_id: number | null;
+  counter_is_wild: boolean | null;
+};
+
 type SnapshotObjective = {
   id: string;
   type: string;
@@ -83,6 +105,33 @@ function normalizeRoomId(value: string) {
     throw new RoomError("Partida não encontrada.", 404);
   }
   return value;
+}
+
+function publicCardDescriptor(
+  isWild: boolean,
+  territoryId: number | null,
+): TradeCardDescriptor {
+  if (isWild) return { kind: "wild" };
+  if (territoryId === null) {
+    throw new RoomError("Oferta de troca contém uma carta inválida.", 500);
+  }
+  return { kind: "territory", territoryId };
+}
+
+function requestedTradeDescriptor(
+  offer: SnapshotTradeOffer,
+): TradeCardDescriptor {
+  if (offer.requested_kind === "wild") return { kind: "wild" };
+  if (offer.requested_kind === "territory") {
+    if (offer.requested_territory_id === null) {
+      throw new RoomError("Oferta de troca possui pedido inválido.", 500);
+    }
+    return { kind: "territory", territoryId: offer.requested_territory_id };
+  }
+  if (offer.requested_symbol === null) {
+    throw new RoomError("Oferta de troca possui pedido inválido.", 500);
+  }
+  return { kind: "symbol", symbol: offer.requested_symbol };
 }
 
 async function loadSnapshotObjective(
@@ -138,8 +187,9 @@ export async function getGameSnapshotQuery(
                 gr.initial_territory_presentation_started_at,
                 gr.phase,gr.current_player_id,gr.turn_number,gr.round_number,
                 gr.jurassic_tunnel_territory_id,gr.reinforcements_remaining,
-                gr.winner_player_id,gr.pending_from_territory_id,
-                gr.pending_to_territory_id,gr.last_battle
+                gr.trade_offers_used,gr.winner_player_id,
+                gr.pending_from_territory_id,gr.pending_to_territory_id,
+                gr.last_battle
          FROM game_rooms gr
          JOIN room_players access_player
            ON access_player.room_id=gr.id
@@ -162,7 +212,7 @@ export async function getGameSnapshotQuery(
 
     const players = (
       await client.query<SnapshotPlayer>(
-        `SELECT id,faction_name,color,turn_position,is_bot,
+        `SELECT id,faction_name,color,turn_position,is_bot,trade_signals_used,
                 player_session=$2 is_me
          FROM room_players
          WHERE room_id=$1
@@ -209,6 +259,28 @@ export async function getGameSnapshotQuery(
         [room.id, me.id],
       )
     ).rows;
+
+    const tradeOffer =
+      room.status === "playing" && room.phase === "trade"
+        ? (
+            await client.query<SnapshotTradeOffer>(
+              `SELECT o.id,o.proposer_player_id,o.target_player_id,
+                      o.requested_kind,o.requested_territory_id,o.requested_symbol,
+                      o.status,o.responder_player_id,
+                      offered.territory_id offered_territory_id,
+                      offered.is_wild offered_is_wild,
+                      counter.territory_id counter_territory_id,
+                      counter.is_wild counter_is_wild
+               FROM game_player_trade_offers o
+               JOIN game_cards offered ON offered.id=o.offered_card_id
+               LEFT JOIN game_cards counter ON counter.id=o.counter_card_id
+               WHERE o.room_id=$1 AND o.status IN ('open','countered')
+               ORDER BY o.id DESC
+               LIMIT 1`,
+              [room.id],
+            )
+          ).rows[0] ?? null
+        : null;
 
     const objective = await loadSnapshotObjective(client, room.id, me.id);
 
@@ -394,6 +466,40 @@ export async function getGameSnapshotQuery(
         territoryId: card.territory_id,
         symbol: card.is_wild ? "wild" : card.symbol!,
       })),
+      trade:
+        room.status === "playing" && room.phase === "trade"
+          ? {
+              offersUsed: room.trade_offers_used,
+              offerLimit: PLAYER_TRADE_OFFER_LIMIT,
+              signalsUsed: me.trade_signals_used,
+              signalLimit: PLAYER_TRADE_SIGNAL_LIMIT,
+              activeOffer: tradeOffer
+                ? {
+                    id: tradeOffer.id,
+                    proposerPlayerId: tradeOffer.proposer_player_id,
+                    targetPlayerId: tradeOffer.target_player_id,
+                    offered: publicCardDescriptor(
+                      tradeOffer.offered_is_wild,
+                      tradeOffer.offered_territory_id,
+                    ),
+                    requested: requestedTradeDescriptor(tradeOffer),
+                    status: tradeOffer.status,
+                    counter:
+                      tradeOffer.status === "countered" &&
+                      tradeOffer.responder_player_id &&
+                      tradeOffer.counter_is_wild !== null
+                        ? {
+                            playerId: tradeOffer.responder_player_id,
+                            card: publicCardDescriptor(
+                              tradeOffer.counter_is_wild,
+                              tradeOffer.counter_territory_id,
+                            ),
+                          }
+                        : null,
+                  }
+                : null,
+            }
+          : null,
       myObjective: objective
         ? {
             id: objective.id,
