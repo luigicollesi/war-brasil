@@ -2,6 +2,7 @@ import "server-only";
 
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
+import { GAME_REVISION_HEADER } from "@/src/lib/game-sync-contract";
 import { RoomError } from "@/src/lib/rooms";
 
 type ApiErrorContext = {
@@ -86,6 +87,13 @@ function unexpectedClientMessage(error: unknown, debugId: string) {
   return `${base} Motivo técnico: ${error.message}${databaseCode}${constraint}`;
 }
 
+function roomErrorCurrentRevision(error: RoomError) {
+  const value = error.debug?.currentRevision;
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 1
+    ? value
+    : null;
+}
+
 /**
  * Produz uma resposta segura para o cliente e um log correlacionável no servidor.
  * Nunca passe sessões, cookies ou valores brutos de formulário neste contexto.
@@ -103,7 +111,21 @@ export function roomErrorResponse(error: unknown, context: ApiErrorContext) {
 
   if (error instanceof RoomError) {
     console.warn("[war-brasil] operação recusada", diagnostic);
-    return noStoreJson({ error: error.message, debugId }, { status: error.status });
+    const currentRevision = roomErrorCurrentRevision(error);
+    return noStoreJson(
+      {
+        error: error.message,
+        debugId,
+        ...(currentRevision === null ? {} : { currentRevision }),
+      },
+      {
+        status: error.status,
+        headers:
+          currentRevision === null
+            ? undefined
+            : { [GAME_REVISION_HEADER]: String(currentRevision) },
+      },
+    );
   }
 
   console.error("[war-brasil] falha inesperada na operação", diagnostic);
