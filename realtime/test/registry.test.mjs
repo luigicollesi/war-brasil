@@ -43,6 +43,50 @@ test("registry envia somente revisions monotônicas", () => {
   );
 });
 
+test("registry entrega invalidation privada somente ao jogador alvo", () => {
+  const registry = new GameRealtimeRegistry();
+  const target = fakeSocket();
+  const other = fakeSocket();
+  registry.add(target, { roomId: "12", playerId: "7" });
+  registry.add(other, { roomId: "12", playerId: "8" });
+  registry.sendReady(target, 5);
+  registry.sendReady(other, 5);
+
+  registry.broadcastInvalidation("12", 5, "7");
+
+  assert.deepEqual(
+    target.sent.map((event) => event.type),
+    ["realtime.ready", "game.private.invalidate"],
+  );
+  assert.deepEqual(
+    other.sent.map((event) => event.type),
+    ["realtime.ready"],
+  );
+});
+
+test("registry preserva escopo privado durante backpressure", () => {
+  const registry = new GameRealtimeRegistry();
+  const target = fakeSocket();
+  const other = fakeSocket();
+  registry.add(target, { roomId: "12", playerId: "7" });
+  registry.add(other, { roomId: "12", playerId: "8" });
+  registry.sendReady(target, 5);
+  registry.sendReady(other, 5);
+
+  target.bufferedAmount = 100_000;
+  registry.broadcastInvalidation("12", 6, "7");
+  registry.broadcastInvalidation("12", 8, "7");
+  assert.equal(target.sent.length, 1);
+  assert.equal(other.sent.length, 1);
+
+  target.bufferedAmount = 0;
+  registry.heartbeat();
+
+  assert.equal(target.sent.at(-1).type, "game.private.invalidate");
+  assert.equal(target.sent.at(-1).payload.revision, 8);
+  assert.equal(other.sent.length, 1);
+});
+
 test("registry entrega patch somente quando baseRevision é contínua", () => {
   const registry = new GameRealtimeRegistry();
   const socket = fakeSocket();
@@ -51,6 +95,7 @@ test("registry entrega patch somente quando baseRevision é contínua", () => {
 
   registry.broadcastPatch({
     kind: "patch",
+    scope: "room",
     roomId: "12",
     baseRevision: 4,
     revision: 5,
@@ -63,6 +108,7 @@ test("registry entrega patch somente quando baseRevision é contínua", () => {
 
   registry.broadcastPatch({
     kind: "patch",
+    scope: "room",
     roomId: "12",
     baseRevision: 6,
     revision: 7,
@@ -101,6 +147,7 @@ test("patch congestionado é descartado em favor da revision mais nova", () => {
   socket.bufferedAmount = 100_000;
   registry.broadcastPatch({
     kind: "patch",
+    scope: "room",
     roomId: "12",
     baseRevision: 4,
     revision: 5,
