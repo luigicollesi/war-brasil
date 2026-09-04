@@ -1,0 +1,126 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import test from "node:test";
+import { scheduledBotActionType } from "../.test-build/bots/bot-schedule.js";
+import {
+  battlePresentationDueAt,
+  initialTerritoryPresentationDueAt,
+  orderRollPresentationDueAt,
+} from "../.test-build/game-transitions.js";
+
+function source(path) {
+  return readFileSync(path, "utf8");
+}
+
+test("agenda reutiliza exatamente os relógios de apresentação existentes", () => {
+  const start = new Date("2026-09-04T00:00:00.000Z");
+  assert.equal(
+    initialTerritoryPresentationDueAt(start)?.toISOString(),
+    "2026-09-04T00:00:06.200Z",
+  );
+  assert.equal(
+    orderRollPresentationDueAt(true, start)?.toISOString(),
+    "2026-09-04T00:00:02.000Z",
+  );
+  assert.equal(orderRollPresentationDueAt(false, start), null);
+  assert.equal(
+    battlePresentationDueAt("show_attacker_result", start)?.toISOString(),
+    "2026-09-04T00:00:03.000Z",
+  );
+  assert.equal(
+    battlePresentationDueAt("show_comparison", start)?.toISOString(),
+    "2026-09-04T00:00:02.000Z",
+  );
+  assert.equal(battlePresentationDueAt("awaiting_attacker_roll", start), null);
+});
+
+test("agendamento de bot deriva somente do estado atual da partida", () => {
+  assert.equal(
+    scheduledBotActionType({
+      status: "order_roll",
+      phase: "cards",
+      pendingFromTerritoryId: null,
+      pendingToTerritoryId: null,
+      battleStage: null,
+    }),
+    "roll_order",
+  );
+  assert.equal(
+    scheduledBotActionType({
+      status: "playing",
+      phase: "attack",
+      pendingFromTerritoryId: null,
+      pendingToTerritoryId: null,
+      battleStage: "awaiting_defender_roll",
+    }),
+    "roll_battle",
+  );
+  assert.equal(
+    scheduledBotActionType({
+      status: "playing",
+      phase: "attack",
+      pendingFromTerritoryId: 1,
+      pendingToTerritoryId: 2,
+      battleStage: null,
+    }),
+    "complete_conquest",
+  );
+  assert.equal(
+    scheduledBotActionType({
+      status: "finished",
+      phase: "finished",
+      pendingFromTerritoryId: null,
+      pendingToTerritoryId: null,
+      battleStage: null,
+    }),
+    null,
+  );
+});
+
+test("migration cria agenda durável indexada sem transformar job em entidade de gameplay", () => {
+  const migration = source("src/lib/db/migrations/018-game-automation-schedule.sql");
+  assert.match(migration, /automation_due_at TIMESTAMPTZ/);
+  assert.match(migration, /automation_kind VARCHAR\(20\)/);
+  assert.match(migration, /'presentation', 'bot'/);
+  assert.match(migration, /game_rooms_automation_due_idx/);
+  assert.match(migration, /WHERE automation_due_at IS NOT NULL/);
+});
+
+test("command boundary reconcilia agenda dentro do lock antes da revision e do commit", () => {
+  const command = source("src/lib/server/game-command.ts");
+  const execute = command.indexOf("const value = await execute(client)");
+  const reconcile = command.indexOf("await reconcileGameAutomationSchedule(client, roomId)");
+  const revision = command.indexOf("await bumpGameRevision(client, roomId)");
+  const commit = command.indexOf('await client.query("COMMIT")');
+
+  assert.ok(execute >= 0);
+  assert.ok(reconcile > execute);
+  assert.ok(revision > reconcile);
+  assert.ok(commit > revision);
+  assert.match(command, /result = await execute\(client\)[\s\S]*reconcileGameAutomationSchedule/);
+});
+
+test("scheduler persiste somente apresentação ou bot e limpa timers obsoletos", () => {
+  const schedule = source(
+    "src/lib/server/automation/game-automation-schedule.ts",
+  );
+  assert.match(schedule, /initialTerritoryPresentationDueAt/);
+  assert.match(schedule, /orderRollPresentationDueAt/);
+  assert.match(schedule, /battlePresentationDueAt/);
+  assert.match(schedule, /requiredActorId/);
+  assert.match(schedule, /pickBotDelayMs/);
+  assert.match(schedule, /automation_due_at=\$2,automation_kind=\$3/);
+  assert.match(schedule, /bot_next_action_at=NULL/);
+  assert.doesNotMatch(schedule, /setTimeout|setInterval/);
+});
+
+test("worker inicia somente em shadow e não executa mutações autoritativas", () => {
+  const worker = source("worker/server.mjs");
+  const query = source("worker/queries.mjs");
+  assert.match(worker, /mode === "active"/);
+  assert.match(worker, /ainda não está habilitado/);
+  assert.match(worker, /shadow\.due/);
+  assert.match(worker, /shadow\.scan/);
+  assert.doesNotMatch(worker, /\/advance|UPDATE game_rooms|DELETE FROM/);
+  assert.doesNotMatch(query, /UPDATE|DELETE|FOR UPDATE/i);
+});
