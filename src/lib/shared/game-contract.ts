@@ -1,5 +1,6 @@
 import type { AttackMode } from "./game-barrier-rules";
 import type { CardSymbol } from "./game-config";
+import type { TradeCardDescriptor } from "./game-trade-rules";
 import type {
   AppliedEventTroopChange,
   ResolvedEventEffect,
@@ -10,7 +11,7 @@ import type { TerritoryConnection } from "./territory-connections";
 export type GameStatus = "waiting" | "order_roll" | "playing" | "finished";
 
 export type GamePhase =
-  | "cards"
+  | "trade"
   | "reinforcement"
   | "attack"
   | "maneuver"
@@ -67,6 +68,27 @@ export type GameCard = {
   symbol: CardSymbol | "wild";
 };
 
+export type GameTradeOffer = {
+  id: string;
+  proposerPlayerId: string;
+  targetPlayerId: string | null;
+  offered: TradeCardDescriptor;
+  requested: TradeCardDescriptor;
+  status: "open" | "countered";
+  counter: {
+    playerId: string;
+    card: TradeCardDescriptor;
+  } | null;
+};
+
+export type GameTradeState = {
+  offersUsed: number;
+  offerLimit: number;
+  signalsUsed: number;
+  signalLimit: number;
+  activeOffer: GameTradeOffer | null;
+};
+
 export type ActiveGameEvent = {
   eventId: number;
   name: string;
@@ -117,6 +139,7 @@ export type GameSnapshot = {
   eligiblePlayerIds: string[];
   connections: TerritoryConnection[];
   myCards: GameCard[];
+  trade: GameTradeState | null;
   myObjective: {
     id: string;
     name: string;
