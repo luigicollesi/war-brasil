@@ -10,7 +10,7 @@ import {
   isGameRealtimeEvent,
 } from "../.test-build/shared/game-realtime-contract.js";
 
-test("protocolo realtime v1 aceita ready, invalidate, patch, pong e ping válidos", () => {
+test("protocolo realtime v1 aceita ready, invalidations, patch, pong e ping válidos", () => {
   const base = {
     protocolVersion: GAME_PROTOCOL_VERSION,
     roomId: "42",
@@ -30,6 +30,14 @@ test("protocolo realtime v1 aceita ready, invalidate, patch, pong e ping válido
     isGameRealtimeEvent({
       ...base,
       type: "game.invalidate",
+      payload: { revision: 9 },
+    }),
+    true,
+  );
+  assert.equal(
+    isGameRealtimeEvent({
+      ...base,
+      type: "game.private.invalidate",
       payload: { revision: 9 },
     }),
     true,
@@ -155,6 +163,8 @@ test("publisher realtime é best-effort, opcional e acontece depois do commit au
   assert.match(publisher, /SELECT pg_notify\(\$1,\$2\)/);
   assert.match(publisher, /GAME_REALTIME_NOTIFY_MAX_BYTES/);
   assert.match(publisher, /publishGameInvalidation/);
+  assert.match(publisher, /publishPlayerGameInvalidation/);
+  assert.match(publisher, /scope: playerId \? "player" : "room"/);
   assert.match(publisher, /catch \(error\)/);
   assert.doesNotMatch(publisher, /throw error/);
 });
@@ -173,6 +183,9 @@ test("shadow permanece observacional e hybrid aplica patch contínuo ou acorda s
   assert.match(controller, /applyRealtimePatch/);
   assert.match(controller, /this\.applyCommandResult/);
   assert.match(controller, /this\.revisions\.require\(revision\)/);
+  assert.match(controller, /event\.type === "game\.private\.invalidate"/);
+  assert.match(controller, /this\.forceSnapshot\(event\.payload\.revision\)/);
+  assert.match(controller, /knownRevision: forceSnapshot \? null/);
   assert.match(hook, /createGameRealtimeTransport\(realtimeMode\)/);
   assert.match(hook, /event\.type === "game\.patch" && realtimeMode === "hybrid"/);
   assert.match(hook, /syncController\.applyRealtimePatch\(event\)/);
@@ -200,9 +213,12 @@ test("gateway autentica antes do upgrade, valida origem e degrada quando LISTEN 
   assert.match(gateway, /!listenerHealthy/);
   assert.match(gateway, /registry\.closeAll\(1012/);
   assert.match(gateway, /registry\.broadcastPatch\(event\)/);
+  assert.match(gateway, /event\.scope === "player" \? event\.playerId : null/);
   assert.match(listener, /LISTEN \$\{gameRealtimeChannel\(\)\}/);
   assert.match(registry, /bufferedAmount/);
   assert.match(registry, /pendingRevision = Math\.max/);
+  assert.match(registry, /pendingPrivateRevision/);
+  assert.match(registry, /game\.private\.invalidate/);
   assert.match(registry, /patchFallbacks/);
   assert.match(publisher, /war_game_revision/);
   assert.match(protocol, /war_game_revision/);
