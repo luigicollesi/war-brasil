@@ -5,6 +5,10 @@ import { publishGameRealtimeMetric } from "./observability/game-realtime-metrics
 
 export const DEFAULT_GAME_REALTIME_CHANNEL = "war_game_revision";
 
+function gameRealtimeEnabled() {
+  return process.env.GAME_REALTIME_ENABLED === "true";
+}
+
 function gameRealtimeChannel() {
   const configured = process.env.GAME_REALTIME_CHANNEL?.trim();
   return configured || DEFAULT_GAME_REALTIME_CHANNEL;
@@ -15,6 +19,8 @@ export async function publishGameInvalidation(
   roomId: string,
   revision: number,
 ) {
+  if (!gameRealtimeEnabled()) return;
+
   try {
     await client.query("SELECT pg_notify($1,$2)", [
       gameRealtimeChannel(),
