@@ -43,6 +43,10 @@ function validPlayerId(value) {
   return typeof value === "string" && /^\d+$/.test(value);
 }
 
+function validOfferId(value) {
+  return typeof value === "string" && /^\d+$/.test(value);
+}
+
 function validTradeDescriptor(value) {
   if (!isRecord(value)) return false;
   if (value.kind === "wild") {
@@ -161,24 +165,54 @@ export function parseNotificationPayload(value) {
         typeof parsed.eventId !== "string" ||
         parsed.eventId.length < 1 ||
         parsed.eventId.length > 64 ||
-        parsed.eventType !== "trade.signal" ||
-        !isRecord(parsed.payload) ||
-        !validPlayerId(parsed.payload.playerId) ||
-        !Number.isSafeInteger(parsed.payload.turnNumber) ||
-        parsed.payload.turnNumber < 1 ||
-        !validTradeDescriptor(parsed.payload.card)
+        !isRecord(parsed.payload)
       ) {
         return null;
       }
 
-      return {
-        kind: "ephemeral",
-        scope: "room",
-        roomId: parsed.roomId,
-        eventId: parsed.eventId,
-        eventType: "trade.signal",
-        payload: parsed.payload,
-      };
+      if (parsed.eventType === "trade.signal") {
+        if (
+          !validPlayerId(parsed.payload.playerId) ||
+          !Number.isSafeInteger(parsed.payload.turnNumber) ||
+          parsed.payload.turnNumber < 1 ||
+          !validTradeDescriptor(parsed.payload.card)
+        ) {
+          return null;
+        }
+
+        return {
+          kind: "ephemeral",
+          scope: "room",
+          roomId: parsed.roomId,
+          eventId: parsed.eventId,
+          eventType: "trade.signal",
+          payload: parsed.payload,
+        };
+      }
+
+      if (parsed.eventType === "trade.resolution") {
+        if (
+          !validOfferId(parsed.payload.offerId) ||
+          !Number.isSafeInteger(parsed.payload.turnNumber) ||
+          parsed.payload.turnNumber < 1 ||
+          !validPlayerId(parsed.payload.recipientPlayerId) ||
+          !validPlayerId(parsed.payload.actorPlayerId) ||
+          !new Set(["declined", "counter_declined"]).has(parsed.payload.outcome)
+        ) {
+          return null;
+        }
+
+        return {
+          kind: "ephemeral",
+          scope: "room",
+          roomId: parsed.roomId,
+          eventId: parsed.eventId,
+          eventType: "trade.resolution",
+          payload: parsed.payload,
+        };
+      }
+
+      return null;
     }
 
     if (!validRevision(parsed.revision)) return null;
