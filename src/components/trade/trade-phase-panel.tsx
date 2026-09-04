@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { GameModal } from "@/src/components/game-modal";
 import { TerritoryCard } from "@/src/components/territory-card";
 import { runGameCommand } from "@/src/lib/client/game-command-client";
@@ -72,6 +72,31 @@ function symbolCounts(cards: readonly GameCard[]) {
   }));
 }
 
+function TerritoryDescriptorButton({
+  territoryId,
+  value,
+  onChange,
+}: {
+  territoryId: number;
+  value: TradeCardDescriptor | null;
+  onChange: (descriptor: TradeCardDescriptor) => void;
+}) {
+  const descriptor: TradeCardDescriptor = { kind: "territory", territoryId };
+  return (
+    <button
+      type="button"
+      onClick={() => onChange(descriptor)}
+      className={`rounded-xl border px-3 py-2 text-left text-xs transition ${
+        sameDescriptor(value, descriptor)
+          ? "border-[#e4b94f] bg-[#e4b94f]/15 text-[#f3d77f]"
+          : "border-white/10 bg-white/5 text-[#e8eee9]"
+      }`}
+    >
+      {TERRITORY_METADATA[territoryId]?.name ?? `Território ${territoryId}`}
+    </button>
+  );
+}
+
 function TradeDescriptorPicker({
   mode,
   snapshot,
@@ -89,25 +114,27 @@ function TradeDescriptorPicker({
   const counts = symbolCounts(snapshot.myCards);
   const wildCount = snapshot.myCards.filter((card) => card.symbol === "wild").length;
 
-  const territoryIds =
-    mode === "owned"
-      ? Array.from(
-          new Set(
-            snapshot.myCards.flatMap((card) =>
-              card.symbol !== "wild" && card.territoryId !== null
-                ? [card.territoryId]
-                : [],
-            ),
-          ),
-        )
-      : Object.keys(TERRITORY_METADATA).map(Number);
+  const ownedTerritoryIds = Array.from(
+    new Set(
+      snapshot.myCards.flatMap((card) =>
+        card.symbol !== "wild" && card.territoryId !== null ? [card.territoryId] : [],
+      ),
+    ),
+  ).sort((left, right) =>
+    (TERRITORY_METADATA[left]?.name ?? "").localeCompare(
+      TERRITORY_METADATA[right]?.name ?? "",
+      "pt-BR",
+    ),
+  );
 
-  const visibleTerritoryIds = territoryIds.filter((territoryId) => {
-    if (!normalizedSearch) return true;
-    return TERRITORY_METADATA[territoryId]?.name
-      .toLocaleLowerCase("pt-BR")
-      .includes(normalizedSearch);
-  });
+  const requestedTerritoryIds = Object.keys(TERRITORY_METADATA)
+    .map(Number)
+    .filter((territoryId) => {
+      if (!normalizedSearch) return true;
+      return TERRITORY_METADATA[territoryId]?.name
+        .toLocaleLowerCase("pt-BR")
+        .includes(normalizedSearch);
+    });
 
   const playerOrder = [...snapshot.players]
     .filter((player) => player.turnPosition !== null)
@@ -117,10 +144,10 @@ function TradeDescriptorPicker({
       return (left.turnPosition ?? 999) - (right.turnPosition ?? 999);
     });
 
-  const territoryGroups = playerOrder
+  const requestGroups = playerOrder
     .map((player) => ({
       player,
-      territories: visibleTerritoryIds
+      territories: requestedTerritoryIds
         .filter(
           (territoryId) =>
             snapshot.territories.find((item) => item.territoryId === territoryId)
@@ -135,7 +162,7 @@ function TradeDescriptorPicker({
     }))
     .filter((group) => group.territories.length > 0);
 
-  const ungroupedTerritories = visibleTerritoryIds
+  const ungroupedRequested = requestedTerritoryIds
     .filter(
       (territoryId) =>
         !snapshot.territories.some((item) => item.territoryId === territoryId),
@@ -204,79 +231,72 @@ function TradeDescriptorPicker({
         </div>
 
         <div className="mt-3 max-h-[38vh] space-y-4 overflow-y-auto pr-1">
-          {territoryGroups.map(({ player, territories }) => (
-            <div key={player.id}>
-              <div className="mb-2 flex items-center gap-2">
-                <span
-                  className="h-2.5 w-2.5 rounded-full"
-                  style={{ backgroundColor: playerColor(player) }}
-                />
-                <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#b9cbc3]">
-                  {player.id === me?.id ? "Seus territórios" : player.factionName}
-                </p>
-              </div>
+          {mode === "owned" ? (
+            ownedTerritoryIds.length > 0 ? (
               <div className="grid gap-2 sm:grid-cols-2">
-                {territories.map((territoryId) => {
-                  const descriptor: TradeCardDescriptor = {
-                    kind: "territory",
-                    territoryId,
-                  };
-                  return (
-                    <button
-                      key={territoryId}
-                      type="button"
-                      onClick={() => onChange(descriptor)}
-                      className={`rounded-xl border px-3 py-2 text-left text-xs transition ${
-                        sameDescriptor(value, descriptor)
-                          ? "border-[#e4b94f] bg-[#e4b94f]/15 text-[#f3d77f]"
-                          : "border-white/10 bg-white/5 text-[#e8eee9]"
-                      }`}
-                    >
-                      {TERRITORY_METADATA[territoryId]?.name ?? `Território ${territoryId}`}
-                    </button>
-                  );
-                })}
+                {ownedTerritoryIds.map((territoryId) => (
+                  <TerritoryDescriptorButton
+                    key={territoryId}
+                    territoryId={territoryId}
+                    value={value}
+                    onChange={onChange}
+                  />
+                ))}
               </div>
-            </div>
-          ))}
-
-          {ungroupedTerritories.length > 0 ? (
-            <div>
-              <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[#b9cbc3]">
-                Outros
+            ) : (
+              <p className="text-sm text-[#9eb0a8]">
+                Você não possui cartas de território disponíveis.
               </p>
-              <div className="grid gap-2 sm:grid-cols-2">
-                {ungroupedTerritories.map((territoryId) => {
-                  const descriptor: TradeCardDescriptor = {
-                    kind: "territory",
-                    territoryId,
-                  };
-                  return (
-                    <button
-                      key={territoryId}
-                      type="button"
-                      onClick={() => onChange(descriptor)}
-                      className={`rounded-xl border px-3 py-2 text-left text-xs ${
-                        sameDescriptor(value, descriptor)
-                          ? "border-[#e4b94f] bg-[#e4b94f]/15 text-[#f3d77f]"
-                          : "border-white/10 bg-white/5 text-[#e8eee9]"
-                      }`}
-                    >
-                      {TERRITORY_METADATA[territoryId]?.name ?? `Território ${territoryId}`}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ) : null}
+            )
+          ) : (
+            <>
+              {requestGroups.map(({ player, territories }) => (
+                <div key={player.id}>
+                  <div className="mb-2 flex items-center gap-2">
+                    <span
+                      className="h-2.5 w-2.5 rounded-full"
+                      style={{ backgroundColor: playerColor(player) }}
+                    />
+                    <p className="text-[10px] font-bold uppercase tracking-[0.12em] text-[#b9cbc3]">
+                      {player.id === me?.id ? "Seus territórios" : player.factionName}
+                    </p>
+                  </div>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {territories.map((territoryId) => (
+                      <TerritoryDescriptorButton
+                        key={territoryId}
+                        territoryId={territoryId}
+                        value={value}
+                        onChange={onChange}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
 
-          {visibleTerritoryIds.length === 0 ? (
-            <p className="text-sm text-[#9eb0a8]">
-              {mode === "owned"
-                ? "Você não possui cartas de território disponíveis."
-                : "Nenhum território encontrado."}
-            </p>
-          ) : null}
+              {ungroupedRequested.length > 0 ? (
+                <div>
+                  <p className="mb-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[#b9cbc3]">
+                    Outros
+                  </p>
+                  <div className="grid gap-2 sm:grid-cols-2">
+                    {ungroupedRequested.map((territoryId) => (
+                      <TerritoryDescriptorButton
+                        key={territoryId}
+                        territoryId={territoryId}
+                        value={value}
+                        onChange={onChange}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              {requestedTerritoryIds.length === 0 ? (
+                <p className="text-sm text-[#9eb0a8]">Nenhum território encontrado.</p>
+              ) : null}
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -429,11 +449,9 @@ function TradeBuilderModal({
 function NegotiationTerms({
   label,
   terms,
-  snapshot,
 }: {
   label: string;
   terms: GameTradeTerms;
-  snapshot: GameSnapshot;
 }) {
   return (
     <div className="rounded-xl border border-white/10 bg-white/5 p-3">
@@ -480,22 +498,24 @@ function PendingCardSelectionModal({
       </p>
       <div className="mt-5 grid max-h-[58dvh] grid-cols-2 gap-3 overflow-y-auto p-1 sm:grid-cols-3">
         {cards.map((card) => (
-          <button
+          <div
             key={card.id}
-            type="button"
-            disabled={submittingId !== null}
-            onClick={() => {
-              setSubmittingId(card.id);
-              void onSubmit({
-                action: "selectCard",
-                offerId: pending.offerId,
-                cardId: card.id,
-              }).finally(() => setSubmittingId(null));
-            }}
-            className="rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-[#e4b94f] disabled:opacity-50"
+            className={submittingId !== null ? "pointer-events-none opacity-50" : ""}
           >
-            <TerritoryCard territoryId={card.territoryId} symbol={card.symbol} />
-          </button>
+            <TerritoryCard
+              territoryId={card.territoryId}
+              symbol={card.symbol}
+              onClick={() => {
+                if (submittingId !== null) return;
+                setSubmittingId(card.id);
+                void onSubmit({
+                  action: "selectCard",
+                  offerId: pending.offerId,
+                  cardId: card.id,
+                }).finally(() => setSubmittingId(null));
+              }}
+            />
+          </div>
         ))}
       </div>
       {cards.length === 0 ? (
@@ -598,6 +618,10 @@ export function TradePhasePanel({
   const isTarget = activeOffer?.targetPlayerId === me.id;
   const isOriginalProposer = activeOffer?.proposerPlayerId === me.id;
   const counter = activeOffer?.counter ?? null;
+  const eligibleTargets = snapshot.players.filter(
+    (player) =>
+      player.id !== me.id && !player.isBot && player.turnPosition !== null,
+  );
   const canAcceptOriginal = Boolean(
     activeOffer &&
       activeOffer.status === "open" &&
@@ -613,6 +637,7 @@ export function TradePhasePanel({
     !isTurn &&
     !me.isBot &&
     me.turnPosition !== null &&
+    snapshot.myCards.length > 0 &&
     remainingSignals > 0;
 
   async function command(body: Record<string, unknown>) {
@@ -647,14 +672,23 @@ export function TradePhasePanel({
   }
 
   return (
-    <div className="mt-5 space-y-4">
+    <div className="trade-phase-panel mt-5 space-y-4">
+      <div>
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#d9b650]">
+          Fase de troca
+        </p>
+        <h3 className="mt-1 text-base font-semibold text-white">
+          Negocie cartas ou siga direto para os reforços.
+        </h3>
+      </div>
+
       <div className="flex flex-wrap items-center gap-3">
         {isTurn ? (
           <>
             <span className="rounded-full border border-[#e4b94f]/25 bg-[#e4b94f]/10 px-3 py-1 text-xs font-semibold text-[#f1d278]">
               {remainingOffers} {remainingOffers === 1 ? "oferta restante" : "ofertas restantes"}
             </span>
-            {!activeOffer && remainingOffers > 0 ? (
+            {!activeOffer && remainingOffers > 0 && eligibleTargets.length > 0 ? (
               <button
                 type="button"
                 onClick={() => setBuilder("offer")}
@@ -690,6 +724,12 @@ export function TradePhasePanel({
         )}
       </div>
 
+      {isTurn && eligibleTargets.length === 0 && !activeOffer ? (
+        <p className="text-xs text-[#9eb0a8]">
+          Não há outro jogador humano ativo disponível para negociação.
+        </p>
+      ) : null}
+
       {activeOffer ? (
         <div className="rounded-2xl border border-white/10 bg-black/15 p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -714,13 +754,11 @@ export function TradePhasePanel({
             <NegotiationTerms
               label={`Oferta de ${playerName(snapshot, activeOffer.proposerPlayerId)}`}
               terms={activeOffer.original}
-              snapshot={snapshot}
             />
             {counter ? (
               <NegotiationTerms
                 label={`Contraoferta de ${playerName(snapshot, counter.proposerPlayerId)}`}
                 terms={counter.terms}
-                snapshot={snapshot}
               />
             ) : null}
           </div>
