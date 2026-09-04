@@ -18,6 +18,7 @@ const TERRITORY_PATCH_KEYS = new Set([
 ]);
 const GAME_STATUSES = new Set(["waiting", "order_roll", "playing", "finished"]);
 const GAME_PHASES = new Set([
+  "cards",
   "trade",
   "reinforcement",
   "attack",
