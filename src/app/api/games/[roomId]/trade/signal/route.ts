@@ -19,6 +19,12 @@ export async function POST(
     if (!session) {
       throw new RoomError("Entre em uma sala antes de jogar.", 401);
     }
+    if (process.env.GAME_REALTIME_ENABLED !== "true") {
+      throw new RoomError(
+        "A sinalização de posse está indisponível porque o canal realtime não está ativo.",
+        503,
+      );
+    }
 
     ({ roomId } = await params);
     const body = await readJsonObject(request);
