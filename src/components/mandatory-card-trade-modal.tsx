@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { GameModal } from "@/src/components/game-modal";
 import { TerritoryCard } from "@/src/components/territory-card";
+import { TradePhaseMount } from "@/src/components/trade/trade-phase-mount";
 import { runGameCommand } from "@/src/lib/game-command-client";
 import type { GameSnapshot } from "@/src/lib/game-contract";
 import { isValidTrade } from "@/src/lib/game-rules";
@@ -37,6 +38,20 @@ export function MandatoryCardTradeModal({
   );
   const valid =
     selected.length === 3 && isValidTrade(selected.map((card) => card.symbol));
+
+  if (
+    snapshot.room.status === "playing" &&
+    snapshot.room.phase === "trade" &&
+    snapshot.trade
+  ) {
+    return (
+      <TradePhaseMount
+        roomId={roomId}
+        snapshot={snapshot}
+        onRefresh={onRefresh}
+      />
+    );
+  }
 
   if (!active) return null;
 
