@@ -114,6 +114,9 @@ function gatewayReady() {
 }
 
 function eventKey(event) {
+  if (event.kind === "ephemeral") {
+    return `${event.roomId}:ephemeral:${event.eventId}`;
+  }
   return `${event.roomId}:${event.revision}:${event.kind}:${event.scope}`;
 }
 
@@ -126,6 +129,10 @@ function rememberPrimaryEvent(event) {
 
 function handleRealtimeEvent(event) {
   rememberPrimaryEvent(event);
+  if (event.kind === "ephemeral") {
+    registry.broadcastEphemeral(event);
+    return;
+  }
   if (event.kind === "patch") {
     registry.broadcastPatch(event);
     return;
@@ -148,7 +155,8 @@ function handleRedisShadowEvent(event) {
   const observedAt = recentPrimaryEvents.get(eventKey(event));
   recordRealtimeMetric("redisShadowEvents", {
     roomId: event.roomId,
-    revision: event.revision,
+    revision: event.kind === "ephemeral" ? null : event.revision,
+    eventType: event.kind === "ephemeral" ? event.eventType : null,
     matchedPrimary: observedAt !== undefined,
     deliveryDeltaMs: observedAt === undefined ? null : Date.now() - observedAt,
   });
