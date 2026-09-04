@@ -39,6 +39,22 @@ async function columnExists(tableName, columnName) {
   return Boolean(result.rows[0]?.exists);
 }
 
+async function constraintExists(tableName, constraintName) {
+  const result = await client.query(
+    `SELECT EXISTS (
+       SELECT 1
+       FROM pg_constraint c
+       JOIN pg_class t ON t.oid=c.conrelid
+       JOIN pg_namespace n ON n.oid=t.relnamespace
+       WHERE n.nspname='public'
+         AND t.relname=$1
+         AND c.conname=$2
+     ) AS exists`,
+    [tableName, constraintName],
+  );
+  return Boolean(result.rows[0]?.exists);
+}
+
 async function queryHasRows(sql) {
   const result = await client.query(sql);
   return (result.rowCount ?? 0) > 0;
@@ -152,6 +168,22 @@ try {
     !(await columnExists("game_player_trade_offers", "proposer_selected_card_id"))
   ) {
     await applyMigration("022-complete-player-trade-negotiation.sql");
+  }
+
+  if (
+    (await columnExists("game_player_trade_offers", "offered_card_id")) ||
+    (await columnExists("game_player_trade_offers", "counter_card_id")) ||
+    (await columnExists("game_player_trade_offers", "accepted_card_id")) ||
+    !(await constraintExists(
+      "game_player_trade_offers",
+      "game_player_trade_offers_state_check",
+    )) ||
+    !(await constraintExists(
+      "game_player_trade_offers",
+      "game_player_trade_offers_responder_check",
+    ))
+  ) {
+    await applyMigration("023-trade-negotiation-invariants.sql");
   }
 
   await client.query("COMMIT");
