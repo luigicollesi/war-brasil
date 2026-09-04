@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { subscribeTradeSignal } from "@/src/lib/client/game-realtime-ephemeral-bus";
 import type { GameSnapshot } from "@/src/lib/shared/game-contract";
 import type { GameTradeSignalEvent } from "@/src/lib/shared/game-realtime-contract";
@@ -27,8 +27,8 @@ export function TradeSignalToast({
   roomId: string;
   snapshot: GameSnapshot;
 }) {
-  const [event, setEvent] = useState<GameTradeSignalEvent | null>(null);
-  const timeoutRef = useRef<number | null>(null);
+  const [queue, setQueue] = useState<GameTradeSignalEvent[]>([]);
+  const event = queue[0] ?? null;
 
   useEffect(() => {
     return subscribeTradeSignal(roomId, (nextEvent) => {
@@ -38,22 +38,17 @@ export function TradeSignalToast({
       ) {
         return;
       }
-
-      if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current);
-      setEvent(nextEvent);
-      timeoutRef.current = window.setTimeout(() => {
-        setEvent(null);
-        timeoutRef.current = null;
-      }, 4200);
+      setQueue((current) => [...current, nextEvent]);
     });
   }, [roomId, snapshot.room.phase, snapshot.room.turnNumber]);
 
-  useEffect(
-    () => () => {
-      if (timeoutRef.current !== null) window.clearTimeout(timeoutRef.current);
-    },
-    [],
-  );
+  useEffect(() => {
+    if (!event) return;
+    const timeoutId = window.setTimeout(() => {
+      setQueue((current) => current.slice(1));
+    }, 3600);
+    return () => window.clearTimeout(timeoutId);
+  }, [event]);
 
   if (!event) return null;
 
