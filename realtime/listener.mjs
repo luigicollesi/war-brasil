@@ -3,6 +3,7 @@ import { recordRealtimeMetric } from "./metrics.mjs";
 import { gameRealtimeChannel, parseNotificationPayload } from "./protocol.mjs";
 
 const MAX_RECONNECT_DELAY_MS = 15_000;
+const CONNECTION_TIMEOUT_MS = 5_000;
 
 export class PostgresRealtimeListener {
   constructor({ connectionString, onInvalidation, onHealthChange }) {
@@ -24,7 +25,10 @@ export class PostgresRealtimeListener {
   async connect() {
     if (this.stopped) return;
 
-    const client = new Client({ connectionString: this.connectionString });
+    const client = new Client({
+      connectionString: this.connectionString,
+      connectionTimeoutMillis: CONNECTION_TIMEOUT_MS,
+    });
     this.client = client;
 
     client.on("notification", (message) => {
@@ -44,7 +48,7 @@ export class PostgresRealtimeListener {
       await client.connect();
       await client.query(`LISTEN ${gameRealtimeChannel()}`);
       if (this.client !== client || this.stopped) {
-        await client.end().catch(() => {});
+        await client.end().catch(() => undefined);
         return;
       }
       this.reconnectAttempt = 0;
@@ -60,7 +64,9 @@ export class PostgresRealtimeListener {
     this.setHealthy(false);
     try {
       await client.end();
-    } catch {}
+    } catch {
+      // Best-effort cleanup. Reconnect is scheduled below.
+    }
     this.scheduleReconnect();
   }
 
@@ -103,7 +109,9 @@ export class PostgresRealtimeListener {
     if (client) {
       try {
         await client.end();
-      } catch {}
+      } catch {
+        // Best-effort shutdown.
+      }
     }
   }
 }

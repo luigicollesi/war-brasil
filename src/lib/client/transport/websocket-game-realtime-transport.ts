@@ -131,12 +131,7 @@ export class WebSocketGameRealtimeTransport implements GameRealtimeTransport {
       if (this.socket !== socket || this.manuallyClosed) return;
       if (socket.protocol !== GAME_REALTIME_SUBPROTOCOL) {
         socket.close(1002, "Subprotocolo realtime incompatível");
-        return;
       }
-      this.reconnectAttempt = 0;
-      this.transition("connected");
-      this.startPingTimer();
-      this.sendPing();
     };
 
     socket.onmessage = (message) => {
@@ -158,7 +153,12 @@ export class WebSocketGameRealtimeTransport implements GameRealtimeTransport {
         return;
       }
 
-      if (parsed.type === "realtime.pong") {
+      if (parsed.type === "realtime.ready") {
+        this.reconnectAttempt = 0;
+        this.transition("connected");
+        this.startPingTimer();
+        this.sendPing();
+      } else if (parsed.type === "realtime.pong") {
         this.serverClock.recordSample(
           parsed.payload.clientTime,
           parsed.serverTime,
@@ -169,12 +169,16 @@ export class WebSocketGameRealtimeTransport implements GameRealtimeTransport {
       for (const listener of this.listeners) listener(parsed);
     };
 
-    socket.onerror = () => {};
-    socket.onclose = () => {
+    socket.onerror = () => undefined;
+    socket.onclose = (event) => {
       if (this.socket === socket) this.socket = null;
       this.clearPingTimer();
       if (this.manuallyClosed) {
         this.transition("closed");
+        return;
+      }
+      if (event.code === 1002 || event.code === 1003) {
+        this.transition("degraded");
         return;
       }
       this.scheduleReconnect();
