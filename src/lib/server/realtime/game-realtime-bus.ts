@@ -2,6 +2,7 @@ import "server-only";
 
 import type { PoolClient } from "pg";
 import type { GameCommandPatch } from "@/src/lib/game-command-patch";
+import type { TradeCardDescriptor } from "@/src/lib/game-trade-rules";
 
 export type GameRealtimeRoomInvalidationEvent = {
   kind: "invalidate";
@@ -27,10 +28,24 @@ export type GameRealtimePatchEvent = {
   patch: GameCommandPatch;
 };
 
+export type GameRealtimeTradeSignalEvent = {
+  kind: "ephemeral";
+  scope: "room";
+  roomId: string;
+  eventId: string;
+  eventType: "trade.signal";
+  payload: {
+    playerId: string;
+    turnNumber: number;
+    card: TradeCardDescriptor;
+  };
+};
+
 export type GameRealtimeBusEvent =
   | GameRealtimeRoomInvalidationEvent
   | GameRealtimePlayerInvalidationEvent
-  | GameRealtimePatchEvent;
+  | GameRealtimePatchEvent
+  | GameRealtimeTradeSignalEvent;
 
 export type GameRealtimeBusPublishContext = {
   postgresClient: PoolClient;
