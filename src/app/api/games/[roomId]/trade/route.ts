@@ -9,6 +9,7 @@ import { getPlayerSession } from "@/src/lib/player-session";
 import { RoomError } from "@/src/lib/rooms";
 import { readGameCommandRequestMetadata } from "@/src/lib/server/game-command-request";
 import { playerTradeCommand } from "@/src/lib/server/game-player-trade-service";
+import { publishTradeDeclineResolution } from "@/src/lib/server/game-trade-resolution-notifier";
 
 export async function POST(
   request: NextRequest,
@@ -27,6 +28,12 @@ export async function POST(
     ({ roomId } = await params);
     body = await readJsonObject(request);
     const result = await playerTradeCommand(roomId, session, body, metadata);
+
+    if (body.action === "decline") {
+      await publishTradeDeclineResolution(roomId, session, body.offerId).catch(
+        () => false,
+      );
+    }
 
     return noStoreJson(
       { revision: result.revision, result: result.value },
