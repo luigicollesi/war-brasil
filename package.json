@@ -13,7 +13,9 @@
     "test": "npm run test:compile && npm run test:run",
     "realtime:install": "npm --prefix realtime ci",
     "realtime:start": "npm --prefix realtime start",
-    "realtime:test": "npm --prefix realtime test"
+    "realtime:test": "npm --prefix realtime test",
+    "worker:start": "node worker/server.mjs",
+    "worker:test": "node --check worker/server.mjs && node --test worker/test/*.test.mjs"
   },
   "dependencies": {
     "@react-three/fiber": "9.7.0",
