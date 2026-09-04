@@ -321,9 +321,31 @@ export function useGameSync(roomId: string) {
         event,
         syncController.currentRevision(),
       );
+
       if (event.type === "realtime.pong") {
         gameSyncMetricsStore.recordRealtimeClock(syncController.realtimeClock());
+        return;
       }
+
+      if (event.type === "game.patch" && realtimeMode === "hybrid") {
+        const result = syncController.applyRealtimePatch(event);
+        gameSyncMetricsStore.recordRealtimePatchResult(result);
+
+        if (result.applied && result.snapshot) {
+          if (isActive) {
+            setSnapshot(result.snapshot);
+            setError("");
+          }
+          scheduleNextPoll();
+          return;
+        }
+
+        if (!result.stale) {
+          void wakeForRealtime();
+        }
+        return;
+      }
+
       if (
         realtimeMode === "hybrid" &&
         revisionEvent(event) &&
