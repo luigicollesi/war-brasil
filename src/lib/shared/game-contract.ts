@@ -11,7 +11,6 @@ import type { TerritoryConnection } from "./territory-connections";
 export type GameStatus = "waiting" | "order_roll" | "playing" | "finished";
 
 export type GamePhase =
-  | "cards"
   | "trade"
   | "reinforcement"
   | "attack"
