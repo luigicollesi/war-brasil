@@ -261,34 +261,68 @@ CREATE TABLE IF NOT EXISTS game_player_trade_offers (
   room_id BIGINT NOT NULL REFERENCES game_rooms(id) ON DELETE CASCADE,
   turn_number INTEGER NOT NULL CHECK (turn_number >= 1),
   proposer_player_id BIGINT NOT NULL REFERENCES room_players(id) ON DELETE CASCADE,
-  target_player_id BIGINT REFERENCES room_players(id) ON DELETE CASCADE,
-  offered_card_id BIGINT NOT NULL REFERENCES game_cards(id) ON DELETE RESTRICT,
+  target_player_id BIGINT NOT NULL REFERENCES room_players(id) ON DELETE CASCADE,
+  offered_kind TEXT NOT NULL
+    CHECK (offered_kind IN ('territory', 'symbol', 'wild')),
+  offered_territory_id SMALLINT CHECK (offered_territory_id BETWEEN 1 AND 42),
+  offered_symbol TEXT CHECK (offered_symbol IN ('leaf', 'gold', 'water')),
   requested_kind TEXT NOT NULL
     CHECK (requested_kind IN ('territory', 'symbol', 'wild')),
   requested_territory_id SMALLINT CHECK (requested_territory_id BETWEEN 1 AND 42),
   requested_symbol TEXT CHECK (requested_symbol IN ('leaf', 'gold', 'water')),
   status TEXT NOT NULL DEFAULT 'open'
-    CHECK (status IN ('open', 'countered', 'accepted', 'declined', 'cancelled')),
+    CHECK (status IN (
+      'open',
+      'countered',
+      'accepted_pending_selection',
+      'accepted',
+      'declined',
+      'cancelled'
+    )),
   responder_player_id BIGINT REFERENCES room_players(id) ON DELETE SET NULL,
-  counter_card_id BIGINT REFERENCES game_cards(id) ON DELETE RESTRICT,
-  accepted_card_id BIGINT REFERENCES game_cards(id) ON DELETE RESTRICT,
+  counter_offered_kind TEXT CHECK (counter_offered_kind IN ('territory', 'symbol', 'wild')),
+  counter_offered_territory_id SMALLINT CHECK (counter_offered_territory_id BETWEEN 1 AND 42),
+  counter_offered_symbol TEXT CHECK (counter_offered_symbol IN ('leaf', 'gold', 'water')),
+  counter_requested_kind TEXT CHECK (counter_requested_kind IN ('territory', 'symbol', 'wild')),
+  counter_requested_territory_id SMALLINT CHECK (counter_requested_territory_id BETWEEN 1 AND 42),
+  counter_requested_symbol TEXT CHECK (counter_requested_symbol IN ('leaf', 'gold', 'water')),
+  accepted_terms TEXT CHECK (accepted_terms IN ('original', 'counter')),
+  proposer_selected_card_id BIGINT REFERENCES game_cards(id) ON DELETE RESTRICT,
+  responder_selected_card_id BIGINT REFERENCES game_cards(id) ON DELETE RESTRICT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   resolved_at TIMESTAMPTZ,
-  CHECK (target_player_id IS NULL OR target_player_id <> proposer_player_id),
+  CHECK (target_player_id <> proposer_player_id),
+  CHECK (
+    (offered_kind='territory' AND offered_territory_id IS NOT NULL AND offered_symbol IS NULL)
+    OR (offered_kind='symbol' AND offered_territory_id IS NULL AND offered_symbol IS NOT NULL)
+    OR (offered_kind='wild' AND offered_territory_id IS NULL AND offered_symbol IS NULL)
+  ),
   CHECK (
     (requested_kind='territory' AND requested_territory_id IS NOT NULL AND requested_symbol IS NULL)
     OR (requested_kind='symbol' AND requested_territory_id IS NULL AND requested_symbol IS NOT NULL)
     OR (requested_kind='wild' AND requested_territory_id IS NULL AND requested_symbol IS NULL)
   ),
   CHECK (
-    status <> 'countered'
-    OR (responder_player_id IS NOT NULL AND counter_card_id IS NOT NULL)
+    (counter_offered_kind IS NULL AND counter_offered_territory_id IS NULL AND counter_offered_symbol IS NULL
+      AND counter_requested_kind IS NULL AND counter_requested_territory_id IS NULL AND counter_requested_symbol IS NULL)
+    OR (
+      (
+        (counter_offered_kind='territory' AND counter_offered_territory_id IS NOT NULL AND counter_offered_symbol IS NULL)
+        OR (counter_offered_kind='symbol' AND counter_offered_territory_id IS NULL AND counter_offered_symbol IS NOT NULL)
+        OR (counter_offered_kind='wild' AND counter_offered_territory_id IS NULL AND counter_offered_symbol IS NULL)
+      )
+      AND (
+        (counter_requested_kind='territory' AND counter_requested_territory_id IS NOT NULL AND counter_requested_symbol IS NULL)
+        OR (counter_requested_kind='symbol' AND counter_requested_territory_id IS NULL AND counter_requested_symbol IS NOT NULL)
+        OR (counter_requested_kind='wild' AND counter_requested_territory_id IS NULL AND counter_requested_symbol IS NULL)
+      )
+    )
   )
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS game_player_trade_offers_one_active_idx
   ON game_player_trade_offers(room_id)
-  WHERE status IN ('open', 'countered');
+  WHERE status IN ('open', 'countered', 'accepted_pending_selection');
 
 CREATE INDEX IF NOT EXISTS game_player_trade_offers_room_turn_idx
   ON game_player_trade_offers(room_id, turn_number, id DESC);
