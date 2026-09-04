@@ -1,10 +1,12 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import {
   isGameCommandPatch,
   type GameCommandPatch,
 } from "@/src/lib/game-command-patch";
+import type { TradeCardDescriptor } from "@/src/lib/game-trade-rules";
 import type { GameRealtimeBusEvent } from "./realtime/game-realtime-bus";
 import { publishGameRealtimeBusEvent } from "./realtime/game-realtime-bus-runtime";
 import { publishGameRealtimeMetric } from "./observability/game-realtime-metrics";
@@ -60,7 +62,7 @@ function patchEvent(
 
 async function publishEvent(
   client: PoolClient,
-  event: GameRealtimeBusEvent,
+  event: Extract<GameRealtimeBusEvent, { kind: "invalidate" | "patch" }>,
   metricName: "notify.publish" | "notify.private" | "notify.patch",
 ) {
   try {
@@ -107,6 +109,36 @@ export async function publishPlayerGameInvalidation(
     invalidationEvent(roomId, revision, playerId),
     "notify.private",
   );
+}
+
+export async function publishGameTradeSignal(
+  client: PoolClient,
+  input: {
+    roomId: string;
+    playerId: string;
+    turnNumber: number;
+    card: TradeCardDescriptor;
+  },
+) {
+  if (!gameRealtimeEnabled()) return;
+
+  try {
+    await publishGameRealtimeBusEvent(client, {
+      kind: "ephemeral",
+      scope: "room",
+      roomId: input.roomId,
+      eventId: randomUUID(),
+      eventType: "trade.signal",
+      payload: {
+        playerId: input.playerId,
+        turnNumber: input.turnNumber,
+        card: input.card,
+      },
+    });
+  } catch {
+    // Sinalização é propositalmente best-effort: não gera revision, receipt,
+    // retry persistente nem telemetria com o conteúdo revelado da carta.
+  }
 }
 
 export async function publishGameChange(
