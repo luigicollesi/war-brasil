@@ -1,4 +1,4 @@
-import type { GamePhase, GameStatus } from "./game-contract";
+import type { GamePhase, GameSnapshot, GameStatus } from "./game-contract";
 
 export type GameCommandPatch = {
   room?: {
@@ -106,8 +106,7 @@ function validTerritoryPatch(value: unknown) {
     value.movedInTurn !== undefined &&
     (typeof value.movedInTurn !== "number" ||
       !Number.isSafeInteger(value.movedInTurn) ||
-      value.movedInTurn < 0 ||
-      value.movedInTurn > value.troops)
+      value.movedInTurn < 0)
   ) {
     return false;
   }
@@ -116,13 +115,69 @@ function validTerritoryPatch(value: unknown) {
 
 export function isGameCommandPatch(value: unknown): value is GameCommandPatch {
   if (!isRecord(value) || !hasOnlyKeys(value, PATCH_KEYS)) return false;
-  if (value.room !== undefined && !validRoomPatch(value.room)) return false;
-  if (
-    value.territories !== undefined &&
-    (!Array.isArray(value.territories) ||
-      value.territories.some((territory) => !validTerritoryPatch(territory)))
-  ) {
-    return false;
+
+  const hasRoom = value.room !== undefined;
+  const hasTerritories = value.territories !== undefined;
+  if (!hasRoom && !hasTerritories) return false;
+  if (hasRoom && !validRoomPatch(value.room)) return false;
+
+  if (hasTerritories) {
+    if (!Array.isArray(value.territories) || value.territories.length > 42) {
+      return false;
+    }
+    const ids = new Set<number>();
+    for (const territory of value.territories) {
+      if (!validTerritoryPatch(territory)) return false;
+      const territoryId = territory.territoryId;
+      if (ids.has(territoryId)) return false;
+      ids.add(territoryId);
+    }
   }
-  return value.room !== undefined || value.territories !== undefined;
+
+  return true;
+}
+
+export function applyGameCommandPatch(
+  snapshot: GameSnapshot,
+  patch: GameCommandPatch,
+): GameSnapshot | null {
+  let room = snapshot.room;
+  let territories = snapshot.territories;
+
+  if (patch.room) {
+    room = {
+      ...room,
+      ...patch.room,
+    };
+  }
+
+  if (patch.territories?.length) {
+    const updates = new Map(
+      patch.territories.map((territory) => [territory.territoryId, territory]),
+    );
+    let matched = 0;
+
+    territories = snapshot.territories.map((territory) => {
+      const update = updates.get(territory.territoryId);
+      if (!update) return territory;
+      matched += 1;
+      return {
+        ...territory,
+        troops: update.troops,
+        movedInTurn: update.movedInTurn ?? territory.movedInTurn,
+      };
+    });
+
+    if (matched !== updates.size) return null;
+  }
+
+  if (room === snapshot.room && territories === snapshot.territories) {
+    return snapshot;
+  }
+
+  return {
+    ...snapshot,
+    room,
+    territories,
+  };
 }
