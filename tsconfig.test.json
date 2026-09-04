@@ -12,6 +12,7 @@
     "src/lib/game-config.ts",
     "src/lib/lobby.ts",
     "src/lib/game-rules.ts",
+    "src/lib/game-trade-rules.ts",
     "src/lib/game-guide-presentation.ts",
     "src/lib/game-round-rules.ts",
     "src/lib/game-barrier-rules.ts",
