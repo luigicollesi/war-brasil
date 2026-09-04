@@ -5,9 +5,15 @@ import {
   isGameCommandPatch,
   type GameCommandPatch,
 } from "@/src/lib/game-command-patch";
+import type { GameCommandRequestMetadata } from "@/src/lib/game-command-request";
 import { RoomError } from "@/src/lib/rooms";
 import { reconcileGameAutomationSchedule } from "./automation/game-automation-schedule";
 import { databasePoolStats, pool } from "./db/pool";
+import {
+  prepareGameCommandReceipt,
+  saveGameCommandReceipt,
+  type GameCommandReceiptRequest,
+} from "./game-command-receipt";
 import {
   bumpGameRevision,
   type GameCommandResult,
@@ -27,6 +33,7 @@ type GameConditionalCommandResult<T> = {
 
 type GameCommandOptions<T> = {
   realtimePatch?: (value: T) => GameCommandPatch | null | undefined;
+  request?: GameCommandReceiptRequest;
 };
 
 async function lockRoomRevision(client: PoolClient, roomId: string) {
@@ -48,6 +55,28 @@ async function rollbackIfNeeded(client: PoolClient, transactionOpen: boolean) {
   await client.query("ROLLBACK");
 }
 
+export async function playerGameCommand<T>(
+  roomId: string,
+  session: string,
+  metadata: GameCommandRequestMetadata | null | undefined,
+  commandName: string,
+  payload: unknown,
+  execute: (client: PoolClient) => Promise<T>,
+  options: Omit<GameCommandOptions<T>, "request"> = {},
+) {
+  return gameCommand(roomId, execute, {
+    ...options,
+    request: metadata
+      ? {
+          ...metadata,
+          session,
+          commandName,
+          payload,
+        }
+      : undefined,
+  });
+}
+
 export async function gameCommand<T>(
   roomId: string,
   execute: (client: PoolClient) => Promise<T>,
@@ -62,6 +91,43 @@ export async function gameCommand<T>(
     await client.query("BEGIN");
     transactionOpen = true;
     const baseRevision = await lockRoomRevision(client, roomId);
+    const preparedReceipt = options.request
+      ? await prepareGameCommandReceipt(client, roomId, options.request)
+      : null;
+
+    if (preparedReceipt?.replay) {
+      if (preparedReceipt.replay.revision > baseRevision) {
+        throw new RoomError("Receipt de comando inconsistente com a partida.", 500, {
+          roomId,
+          commandId: options.request?.commandId,
+          receiptRevision: preparedReceipt.replay.revision,
+          currentRevision: baseRevision,
+        });
+      }
+
+      await client.query("COMMIT");
+      transactionOpen = false;
+      outcome = "success";
+
+      await publishGameInvalidation(client, roomId, baseRevision);
+      return preparedReceipt.replay as GameCommandResult<T>;
+    }
+
+    if (
+      options.request &&
+      options.request.expectedRevision !== baseRevision
+    ) {
+      throw new RoomError(
+        "A partida avançou antes deste comando. O estado será atualizado.",
+        409,
+        {
+          commandId: options.request.commandId,
+          commandName: options.request.commandName,
+          expectedRevision: options.request.expectedRevision,
+          currentRevision: baseRevision,
+        },
+      );
+    }
 
     const value = await execute(client);
     const defaultPublicPatch = isGameCommandPatch(value) ? value : null;
@@ -70,6 +136,17 @@ export async function gameCommand<T>(
       : defaultPublicPatch;
     await reconcileGameAutomationSchedule(client, roomId);
     const revision = await bumpGameRevision(client, roomId);
+    const result: GameCommandResult<T> = { value, baseRevision, revision };
+
+    if (options.request && preparedReceipt) {
+      await saveGameCommandReceipt(
+        client,
+        roomId,
+        options.request,
+        preparedReceipt,
+        result,
+      );
+    }
 
     await client.query("COMMIT");
     transactionOpen = false;
@@ -82,7 +159,7 @@ export async function gameCommand<T>(
       patch: realtimePatch,
     });
 
-    return { value, baseRevision, revision };
+    return result;
   } catch (error) {
     await rollbackIfNeeded(client, transactionOpen);
     throw error;
