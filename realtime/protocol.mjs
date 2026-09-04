@@ -18,7 +18,7 @@ const TERRITORY_PATCH_KEYS = new Set([
 ]);
 const GAME_STATUSES = new Set(["waiting", "order_roll", "playing", "finished"]);
 const GAME_PHASES = new Set([
-  "cards",
+  "trade",
   "reinforcement",
   "attack",
   "maneuver",
@@ -40,6 +40,28 @@ function validRevision(value) {
 
 function validPlayerId(value) {
   return typeof value === "string" && /^\d+$/.test(value);
+}
+
+function validTradeDescriptor(value) {
+  if (!isRecord(value)) return false;
+  if (value.kind === "wild") {
+    return Object.keys(value).every((key) => key === "kind");
+  }
+  if (value.kind === "territory") {
+    return (
+      Object.keys(value).every((key) => key === "kind" || key === "territoryId") &&
+      Number.isSafeInteger(value.territoryId) &&
+      value.territoryId >= 1 &&
+      value.territoryId <= 42
+    );
+  }
+  if (value.kind === "symbol") {
+    return (
+      Object.keys(value).every((key) => key === "kind" || key === "symbol") &&
+      new Set(["leaf", "gold", "water"]).has(value.symbol)
+    );
+  }
+  return false;
 }
 
 function validRoomPatch(value) {
@@ -127,11 +149,38 @@ export function parseNotificationPayload(value) {
     if (
       !isRecord(parsed) ||
       typeof parsed.roomId !== "string" ||
-      !/^\d+$/.test(parsed.roomId) ||
-      !validRevision(parsed.revision)
+      !/^\d+$/.test(parsed.roomId)
     ) {
       return null;
     }
+
+    if (parsed.kind === "ephemeral") {
+      if (
+        parsed.scope !== "room" ||
+        typeof parsed.eventId !== "string" ||
+        parsed.eventId.length < 1 ||
+        parsed.eventId.length > 64 ||
+        parsed.eventType !== "trade.signal" ||
+        !isRecord(parsed.payload) ||
+        !validPlayerId(parsed.payload.playerId) ||
+        !Number.isSafeInteger(parsed.payload.turnNumber) ||
+        parsed.payload.turnNumber < 1 ||
+        !validTradeDescriptor(parsed.payload.card)
+      ) {
+        return null;
+      }
+
+      return {
+        kind: "ephemeral",
+        scope: "room",
+        roomId: parsed.roomId,
+        eventId: parsed.eventId,
+        eventType: "trade.signal",
+        payload: parsed.payload,
+      };
+    }
+
+    if (!validRevision(parsed.revision)) return null;
 
     const scope = parsed.scope ?? "room";
     if (scope !== "room" && scope !== "player") return null;
