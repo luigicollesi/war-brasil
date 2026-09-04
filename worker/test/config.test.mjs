@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   automationWorkerBatchSize,
+  automationWorkerConcurrency,
   automationWorkerInternalBaseUrl,
+  automationWorkerLeaseMs,
   automationWorkerMode,
   automationWorkerPollMs,
   automationWorkerToken,
@@ -24,7 +26,7 @@ test("worker começa desligado e reserva shadow/active", () => {
   );
 });
 
-test("worker aplica limites seguros para intervalo e batch", () => {
+test("worker aplica limites seguros para intervalo, batch, concorrência e lease", () => {
   assert.equal(automationWorkerPollMs({}), 500);
   assert.equal(
     automationWorkerPollMs({ GAME_AUTOMATION_WORKER_POLL_MS: "100" }),
@@ -43,6 +45,26 @@ test("worker aplica limites seguros para intervalo e batch", () => {
   assert.equal(
     automationWorkerBatchSize({ GAME_AUTOMATION_WORKER_BATCH_SIZE: "1000" }),
     50,
+  );
+
+  assert.equal(automationWorkerConcurrency({}), 4);
+  assert.equal(
+    automationWorkerConcurrency({ GAME_AUTOMATION_WORKER_CONCURRENCY: "8" }),
+    8,
+  );
+  assert.equal(
+    automationWorkerConcurrency({ GAME_AUTOMATION_WORKER_CONCURRENCY: "64" }),
+    4,
+  );
+
+  assert.equal(automationWorkerLeaseMs({}), 10_000);
+  assert.equal(
+    automationWorkerLeaseMs({ GAME_AUTOMATION_WORKER_LEASE_MS: "30000" }),
+    30_000,
+  );
+  assert.equal(
+    automationWorkerLeaseMs({ GAME_AUTOMATION_WORKER_LEASE_MS: "500" }),
+    10_000,
   );
 });
 
