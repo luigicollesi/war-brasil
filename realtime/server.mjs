@@ -1,6 +1,6 @@
 import http from "node:http";
 import { Pool } from "pg";
-import { WebSocketServer } from "ws";
+import WebSocket, { WebSocketServer } from "ws";
 import { readRealtimeIdentity } from "./auth.mjs";
 import { PostgresRealtimeListener } from "./listener.mjs";
 import { realtimeMetricsSnapshot, recordRealtimeMetric } from "./metrics.mjs";
@@ -151,7 +151,7 @@ async function setupConnection(socket, identity) {
     return;
   }
 
-  if (socket.readyState !== socket.OPEN) {
+  if (socket.readyState !== WebSocket.OPEN) {
     await releaseRoomSource(identity.roomId);
     return;
   }
