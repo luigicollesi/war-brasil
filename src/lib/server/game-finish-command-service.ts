@@ -2,7 +2,8 @@ import "server-only";
 
 import { randomInt } from "node:crypto";
 import type { PoolClient } from "pg";
-import { gameCommand } from "@/src/lib/game-command";
+import { playerGameCommand } from "@/src/lib/game-command";
+import type { GameCommandRequestMetadata } from "@/src/lib/game-command-request";
 import { INITIAL_TERRITORY_SYNC_DELAY_MS } from "@/src/lib/game-transitions";
 import {
   assignObjectives,
@@ -72,6 +73,7 @@ function assertFinished(room: FinishRoom) {
 }
 
 async function clearGameArtifacts(client: PoolClient, roomId: string) {
+  await client.query("DELETE FROM game_command_receipts WHERE room_id=$1", [roomId]);
   await client.query("DELETE FROM game_rematch_votes WHERE room_id=$1", [roomId]);
   await client.query("DELETE FROM game_round_events WHERE room_id=$1", [roomId]);
   await client.query("DELETE FROM game_order_rolls WHERE room_id=$1", [roomId]);
@@ -202,74 +204,93 @@ async function initializeFreshGame(client: PoolClient, roomId: string) {
   );
 }
 
-export async function voteRematchCommand(value: string, session: string) {
+export async function voteRematchCommand(
+  value: string,
+  session: string,
+  metadata?: GameCommandRequestMetadata | null,
+) {
   const roomId = normalizeRoomId(value);
 
-  return gameCommand(roomId, async (client) => {
-    const room = await loadRoom(client, roomId);
-    assertFinished(room);
-    const player = await playerFor(client, room.id, session);
+  return playerGameCommand(
+    roomId,
+    session,
+    metadata,
+    "rematch.vote",
+    null,
+    async (client) => {
+      const room = await loadRoom(client, roomId);
+      assertFinished(room);
+      const player = await playerFor(client, room.id, session);
 
-    await client.query(
-      `INSERT INTO game_rematch_votes(room_id,player_id)
-       VALUES($1,$2)
-       ON CONFLICT (room_id,player_id) DO NOTHING`,
-      [room.id, player.id],
-    );
+      await client.query(
+        `INSERT INTO game_rematch_votes(room_id,player_id)
+         VALUES($1,$2)
+         ON CONFLICT (room_id,player_id) DO NOTHING`,
+        [room.id, player.id],
+      );
 
-    const counts = (
-      await client.query<{
-        player_count: number;
-        human_count: number;
-        vote_count: number;
-      }>(
-        `SELECT COUNT(*)::int player_count,
-                COUNT(*) FILTER (WHERE p.is_bot=FALSE)::int human_count,
-                COUNT(v.player_id) FILTER (WHERE p.is_bot=FALSE)::int vote_count
-         FROM room_players p
-         LEFT JOIN game_rematch_votes v
-           ON v.room_id=p.room_id AND v.player_id=p.id
-         WHERE p.room_id=$1`,
-        [room.id],
-      )
-    ).rows[0];
+      const counts = (
+        await client.query<{
+          player_count: number;
+          human_count: number;
+          vote_count: number;
+        }>(
+          `SELECT COUNT(*)::int player_count,
+                  COUNT(*) FILTER (WHERE p.is_bot=FALSE)::int human_count,
+                  COUNT(v.player_id) FILTER (WHERE p.is_bot=FALSE)::int vote_count
+           FROM room_players p
+           LEFT JOIN game_rematch_votes v
+             ON v.room_id=p.room_id AND v.player_id=p.id
+           WHERE p.room_id=$1`,
+          [room.id],
+        )
+      ).rows[0];
 
-    const playerCount = counts?.player_count ?? 0;
-    const humanCount = counts?.human_count ?? 0;
-    const voteCount = counts?.vote_count ?? 0;
-    const restarted =
-      playerCount >= MINIMUM_PLAYERS_TO_START &&
-      humanCount >= 1 &&
-      voteCount === humanCount;
+      const playerCount = counts?.player_count ?? 0;
+      const humanCount = counts?.human_count ?? 0;
+      const voteCount = counts?.vote_count ?? 0;
+      const restarted =
+        playerCount >= MINIMUM_PLAYERS_TO_START &&
+        humanCount >= 1 &&
+        voteCount === humanCount;
 
-    if (restarted) {
-      await resetRoomToWaiting(client, room.id);
-      await initializeFreshGame(client, room.id);
-    }
+      if (restarted) {
+        await resetRoomToWaiting(client, room.id);
+        await initializeFreshGame(client, room.id);
+      }
 
-    return {
-      restarted,
-      voteCount,
-      requiredCount: humanCount,
-    };
-  });
+      return {
+        restarted,
+        voteCount,
+        requiredCount: humanCount,
+      };
+    },
+  );
 }
 
 export async function returnEveryoneToLobbyCommand(
   value: string,
   session: string,
+  metadata?: GameCommandRequestMetadata | null,
 ) {
   const roomId = normalizeRoomId(value);
 
-  return gameCommand(roomId, async (client) => {
-    const room = await loadRoom(client, roomId);
-    assertFinished(room);
-    await playerFor(client, room.id, session);
+  return playerGameCommand(
+    roomId,
+    session,
+    metadata,
+    "return_lobby",
+    null,
+    async (client) => {
+      const room = await loadRoom(client, roomId);
+      assertFinished(room);
+      await playerFor(client, room.id, session);
 
-    await resetRoomToWaiting(client, room.id);
+      await resetRoomToWaiting(client, room.id);
 
-    return {
-      code: room.code,
-    };
-  });
+      return {
+        code: room.code,
+      };
+    },
+  );
 }
