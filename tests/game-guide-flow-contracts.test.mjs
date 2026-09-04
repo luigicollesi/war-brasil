@@ -23,9 +23,11 @@ test("preparação documentada acompanha limites e distribuição da sala", () =
   assert.match(rooms, /index \+ 1/);
 });
 
-test("turno percorre cartas, reforço, ataque e manobra na ordem ensinada", () => {
+test("turno mantém cartas, reforço, ataque e manobra enquanto trade é roteado no backend", () => {
   const turn = source("src/components/game-guide/sections/guide-turn-section.tsx");
   const command = source("src/lib/server/game-command-service.ts");
+  const turnService = source("src/lib/server/game-turn-service.ts");
+  const hydration = source("src/lib/shared/game-snapshot-hydration.ts");
   const troops = source("src/lib/server/game-troop-command-service.ts");
 
   const labels = ["Cartas", "Reforços", "Ataques", "Manobra"];
@@ -36,13 +38,15 @@ test("turno percorre cartas, reforço, ataque e manobra na ordem ensinada", () =
     previous = index;
   }
 
-  assert.match(command, /input\.action === "finishCards"/);
-  assert.match(command, /SET phase='reinforcement'/);
+  assert.match(command, /input\.action === "finishTrade" \|\| input\.action === "finishCards"/);
+  assert.match(turnService, /SET phase='trade'/);
+  assert.match(turnService, /SET phase='reinforcement'/);
+  assert.match(hydration, /payload\.room\.phase === "trade" \? "cards"/);
   assert.match(troops, /phase=CASE WHEN \$2=0 THEN 'attack' ELSE phase END/);
   assert.match(command, /input\.action === "finishAttack"/);
   assert.match(command, /SET phase='maneuver'/);
   assert.match(command, /input\.action !== "endTurn"/);
-  assert.match(command, /SET phase='cards',current_player_id=\$2/);
+  assert.match(command, /beginPlayerTurnPhase\(client, room\.id, next\.id\)/);
 });
 
 test("fim do turno concede no máximo uma carta quando houve conquista", () => {
