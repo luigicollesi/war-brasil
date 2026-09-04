@@ -2,19 +2,14 @@
 
 import { useState } from "react";
 import { runGameCommand } from "@/src/lib/client/game-command-client";
-import { sendTradeSignal } from "@/src/lib/client/game-trade-client";
 import type { GameSnapshot } from "@/src/lib/shared/game-contract";
-import {
-  cardsMatchingTradeDescriptor,
-  type TradeCardDescriptor,
-} from "@/src/lib/shared/game-trade-rules";
+import { cardsMatchingTradeDescriptor } from "@/src/lib/shared/game-trade-rules";
 import {
   TradeBuilderModal,
   type TradeBuilderMode,
 } from "./trade-builder-modal";
 import { TradeCardSelectionModal } from "./trade-card-selection-modal";
 import { TradeNegotiationSummary } from "./trade-negotiation-summary";
-import { TradeSignalModal } from "./trade-signal-modal";
 import { tradePlayerName } from "./trade-ui-helpers";
 
 type TradePhasePanelProps = {
@@ -31,10 +26,8 @@ export function TradePhasePanel({
   const trade = snapshot.trade;
   const me = snapshot.players.find((player) => player.isMe);
   const [builder, setBuilder] = useState<TradeBuilderMode | null>(null);
-  const [signalOpen, setSignalOpen] = useState(false);
   const [message, setMessage] = useState("");
   const [busyAction, setBusyAction] = useState<string | null>(null);
-  const [localSignalsUsed, setLocalSignalsUsed] = useState(trade?.signalsUsed ?? 0);
 
   if (!trade || !me) return null;
 
@@ -42,8 +35,6 @@ export function TradePhasePanel({
   const activeOffer = trade.activeOffer;
   const counter = activeOffer?.counter ?? null;
   const remainingOffers = Math.max(0, trade.offerLimit - trade.offersUsed);
-  const effectiveSignalsUsed = Math.max(localSignalsUsed, trade.signalsUsed);
-  const remainingSignals = Math.max(0, trade.signalLimit - effectiveSignalsUsed);
   const isTarget = activeOffer?.targetPlayerId === me.id;
   const isOriginalProposer = activeOffer?.proposerPlayerId === me.id;
   const eligibleTargets = snapshot.players.filter(
@@ -65,12 +56,6 @@ export function TradePhasePanel({
       cardsMatchingTradeDescriptor(snapshot.myCards, counter.terms.requested)
         .length > 0,
   );
-  const canSignal =
-    !isTurn &&
-    !me.isBot &&
-    me.turnPosition !== null &&
-    snapshot.myCards.length > 0 &&
-    remainingSignals > 0;
 
   async function command(body: Record<string, unknown>) {
     setMessage("");
@@ -89,22 +74,6 @@ export function TradePhasePanel({
       return false;
     } finally {
       setBusyAction(null);
-    }
-  }
-
-  async function signal(descriptor: TradeCardDescriptor) {
-    setMessage("");
-    try {
-      const result = await sendTradeSignal(roomId, descriptor);
-      setLocalSignalsUsed(result.signalsUsed);
-      return true;
-    } catch (error) {
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : "Não foi possível enviar a sinalização.",
-      );
-      return false;
     }
   }
 
@@ -145,21 +114,10 @@ export function TradePhasePanel({
             </button>
           </>
         ) : (
-          <>
-            <span className="text-sm text-[#b9cbc3]">
-              Negociações de{" "}
-              {tradePlayerName(snapshot, snapshot.room.currentPlayerId ?? "")}.
-            </span>
-            {canSignal ? (
-              <button
-                type="button"
-                onClick={() => setSignalOpen(true)}
-                className="rounded-xl border border-[#e4b94f]/30 bg-[#e4b94f]/10 px-4 py-3 text-xs font-bold uppercase tracking-wider text-[#f1d278]"
-              >
-                Notificar posse · {remainingSignals}
-              </button>
-            ) : null}
-          </>
+          <span className="text-sm text-[#b9cbc3]">
+            Negociações de{" "}
+            {tradePlayerName(snapshot, snapshot.room.currentPlayerId ?? "")}.
+          </span>
         )}
       </div>
 
@@ -307,14 +265,6 @@ export function TradePhasePanel({
           offerId={activeOffer?.id}
           onClose={() => setBuilder(null)}
           onSubmit={command}
-        />
-      ) : null}
-
-      {signalOpen ? (
-        <TradeSignalModal
-          snapshot={snapshot}
-          onClose={() => setSignalOpen(false)}
-          onSignal={signal}
         />
       ) : null}
 
