@@ -244,6 +244,12 @@ export async function executePhaseAction(
 
   if (input.action === "finishTrade" || input.action === "finishCards") {
     assertTurn(room, player, "trade");
+    await client.query(
+      `UPDATE game_player_trade_offers
+       SET status='cancelled',resolved_at=NOW()
+       WHERE room_id=$1 AND status IN ('open','countered')`,
+      [room.id],
+    );
     await beginReinforcementForPlayer(client, room.id, player.id);
     return null;
   }
