@@ -360,12 +360,13 @@ function GameReadyClient({
         arrow={battleArrow ?? interaction.arrow}
       />
 
-      {initialPresentationActive ? (
+      {initialPresentationActive && initialPresentationStartedAt ? (
         <InitialTerritoryDrawPresentation
           territories={boardTerritories}
           revealedTerritoryIds={revealedTerritoryIds}
           highlightPlayerId={me?.id ?? null}
           highlightOn={highlightOn}
+          presentationStartedAt={initialPresentationStartedAt}
           tick={presentationClockMs}
         />
       ) : null}
