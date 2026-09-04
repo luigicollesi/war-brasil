@@ -34,6 +34,8 @@
     "src/lib/game-effective-connections.ts",
     "src/lib/game-snapshot-hydration.ts",
     "src/lib/game-snapshot-sharing.ts",
+    "src/lib/shared/game-command-fingerprint.ts",
+    "src/lib/shared/game-command-request.ts",
     "src/lib/shared/game-realtime-contract.ts",
     "src/lib/client/game-automation-driver.ts",
     "src/lib/client/sync/revision-coordinator.ts",
