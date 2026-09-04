@@ -7,6 +7,7 @@ import {
   type GameCommandResult,
   type GameRevision,
 } from "./game-revision";
+import { publishGameInvalidation } from "./game-realtime-publisher";
 import { startGameOperationMetric } from "./observability/game-operation-metrics";
 import { RoomError } from "@/src/lib/rooms";
 
@@ -30,6 +31,11 @@ async function lockRoomRevision(client: PoolClient, roomId: string) {
   return room.revision;
 }
 
+async function rollbackIfNeeded(client: PoolClient, transactionOpen: boolean) {
+  if (!transactionOpen) return;
+  await client.query("ROLLBACK");
+}
+
 export async function gameCommand<T>(
   roomId: string,
   execute: (client: PoolClient) => Promise<T>,
@@ -37,20 +43,25 @@ export async function gameCommand<T>(
   const client = await pool.connect();
   const finishMetric = startGameOperationMetric("game.command");
   let outcome: "success" | "error" = "error";
+  let transactionOpen = false;
 
   try {
     await client.query("BEGIN");
+    transactionOpen = true;
     const baseRevision = await lockRoomRevision(client, roomId);
 
     const value = await execute(client);
     const revision = await bumpGameRevision(client, roomId);
 
     await client.query("COMMIT");
+    transactionOpen = false;
     outcome = "success";
+
+    await publishGameInvalidation(client, roomId, revision);
 
     return { value, baseRevision, revision };
   } catch (error) {
-    await client.query("ROLLBACK");
+    await rollbackIfNeeded(client, transactionOpen);
     throw error;
   } finally {
     client.release();
@@ -68,13 +79,16 @@ export async function gameConditionalCommand<T>(
   const client = await pool.connect();
   const finishMetric = startGameOperationMetric("game.conditional_command");
   let outcome: "success" | "error" = "error";
+  let transactionOpen = false;
 
   try {
     await client.query("BEGIN");
+    transactionOpen = true;
     const currentRevision = await lockRoomRevision(client, roomId);
 
     if (currentRevision !== expectedRevision) {
       await client.query("COMMIT");
+      transactionOpen = false;
       outcome = "success";
       return {
         value: null,
@@ -89,7 +103,12 @@ export async function gameConditionalCommand<T>(
       : currentRevision;
 
     await client.query("COMMIT");
+    transactionOpen = false;
     outcome = "success";
+
+    if (result.changed) {
+      await publishGameInvalidation(client, roomId, revision);
+    }
 
     return {
       value: result.value,
@@ -97,7 +116,7 @@ export async function gameConditionalCommand<T>(
       changed: result.changed,
     };
   } catch (error) {
-    await client.query("ROLLBACK");
+    await rollbackIfNeeded(client, transactionOpen);
     throw error;
   } finally {
     client.release();
