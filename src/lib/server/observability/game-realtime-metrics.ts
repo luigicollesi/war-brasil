@@ -6,6 +6,7 @@ export const GAME_REALTIME_METRICS_CHANNEL = "war-brasil.game.realtime";
 
 type GameRealtimeMetricName =
   | "notify.publish"
+  | "notify.private"
   | "notify.patch"
   | "notify.patch_fallback"
   | "notify.failure";
