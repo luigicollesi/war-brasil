@@ -9,8 +9,6 @@ import type { GameRealtimeBusEvent } from "./realtime/game-realtime-bus";
 import { publishGameRealtimeBusEvent } from "./realtime/game-realtime-bus-runtime";
 import { publishGameRealtimeMetric } from "./observability/game-realtime-metrics";
 
-export { DEFAULT_GAME_REALTIME_CHANNEL } from "./realtime/postgres-game-realtime-bus";
-
 const GAME_REALTIME_NOTIFY_MAX_BYTES = 7_000;
 
 function gameRealtimeEnabled() {
