@@ -18,6 +18,12 @@ const publisher = readFileSync(
   "src/lib/server/game-realtime-publisher.ts",
   "utf8",
 );
+const worker = readFileSync("worker/server.mjs", "utf8");
+const migration = readFileSync(
+  "src/lib/db/migrations/020-automation-worker-claims.sql",
+  "utf8",
+);
+const prepareDevDb = readFileSync("scripts/prepare-dev-db.mjs", "utf8");
 
 test("phase 4 starts with a transport-independent realtime bus contract", () => {
   assert.match(bus, /interface GameRealtimeBus/);
@@ -42,4 +48,16 @@ test("game publisher no longer owns postgres notification details", () => {
   assert.doesNotMatch(publisher, /GAME_REALTIME_CHANNEL/);
   assert.match(publisher, /GAME_REALTIME_NOTIFY_MAX_BYTES/);
   assert.match(publisher, /notify\.failure/);
+});
+
+test("automation claims are durable operational metadata, not game revisions", () => {
+  assert.match(migration, /automation_claimed_by TEXT/);
+  assert.match(migration, /automation_claimed_until TIMESTAMPTZ/);
+  assert.match(migration, /game_rooms_automation_claim_idx/);
+  assert.match(prepareDevDb, /020-automation-worker-claims\.sql/);
+  assert.match(worker, /CLAIM_DUE_AUTOMATION_SQL/);
+  assert.match(worker, /RELEASE_AUTOMATION_CLAIM_SQL/);
+  assert.match(worker, /runWithConcurrency/);
+  assert.match(worker, /claim\.recovered/);
+  assert.doesNotMatch(migration, /revision/);
 });
