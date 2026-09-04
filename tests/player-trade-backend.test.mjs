@@ -72,14 +72,17 @@ test("sinalização aceita território, símbolo ou coringa sem persistir conte�
 
   const signalStart = service.indexOf("export async function signalPlayerTradeCard");
   const signalBody = service.slice(signalStart);
+  const publishStart = publisher.indexOf("export async function publishGameTradeSignal");
+  const publishEnd = publisher.indexOf("export async function publishGameChange");
+  const signalPublisher = publisher.slice(publishStart, publishEnd);
 
   assert.match(signalBody, /isTradeCardDescriptor\(input\.card\)/);
   assert.match(signalBody, /requireDescriptorAvailable/);
   assert.doesNotMatch(signalBody, /activeOwnsTerritory/);
   assert.doesNotMatch(signalBody, /Apenas cartas de território podem ser sinalizadas/);
   assert.match(signalBody, /trade_signals_used=\$3/);
-  assert.match(publisher, /eventType: "trade\.signal"/);
-  assert.doesNotMatch(publisher, /revision:[\s\S]*trade\.signal/);
+  assert.match(signalPublisher, /eventType: "trade\.signal"/);
+  assert.doesNotMatch(signalPublisher, /revision:/);
 });
 
 test("snapshot revela termos públicos e apenas a própria seleção pendente", () => {
