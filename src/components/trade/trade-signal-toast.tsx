@@ -29,8 +29,11 @@ export function TradeSignalToast({
 }) {
   const [queue, setQueue] = useState<GameTradeSignalEvent[]>([]);
   const currentTurnRef = useRef(snapshot.room.turnNumber);
-  currentTurnRef.current = snapshot.room.turnNumber;
   const event = queue[0] ?? null;
+
+  useEffect(() => {
+    currentTurnRef.current = snapshot.room.turnNumber;
+  }, [snapshot.room.turnNumber]);
 
   useEffect(() => {
     return subscribeTradeSignal(roomId, (nextEvent) => {
