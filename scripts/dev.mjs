@@ -1,5 +1,6 @@
 import { spawn, spawnSync } from "node:child_process";
 import { existsSync } from "node:fs";
+import { networkInterfaces } from "node:os";
 import { resolve } from "node:path";
 import { loadEnvFile } from "node:process";
 
@@ -17,13 +18,34 @@ if (!env.GAME_REALTIME_ENABLED) {
 
 const realtimeEnabled = env.GAME_REALTIME_ENABLED === "true";
 const realtimePort = env.GAME_REALTIME_PORT?.trim() || "3001";
+const nextPort = env.PORT?.trim() || "3000";
+
+function localDevelopmentOrigins(port) {
+  const origins = new Set([
+    `http://localhost:${port}`,
+    `http://127.0.0.1:${port}`,
+  ]);
+
+  for (const interfaces of Object.values(networkInterfaces())) {
+    for (const address of interfaces ?? []) {
+      if (address.internal) continue;
+      const hostname = address.family === "IPv6" ? `[${address.address}]` : address.address;
+      origins.add(`http://${hostname}:${port}`);
+    }
+  }
+
+  return [...origins].join(",");
+}
 
 if (realtimeEnabled) {
   if (!env.NEXT_PUBLIC_GAME_REALTIME_MODE) {
     env.NEXT_PUBLIC_GAME_REALTIME_MODE = "hybrid";
   }
-  if (!env.NEXT_PUBLIC_GAME_REALTIME_URL) {
-    env.NEXT_PUBLIC_GAME_REALTIME_URL = `ws://localhost:${realtimePort}/realtime`;
+  if (!env.NEXT_PUBLIC_GAME_REALTIME_PORT) {
+    env.NEXT_PUBLIC_GAME_REALTIME_PORT = realtimePort;
+  }
+  if (!env.GAME_REALTIME_ALLOWED_ORIGINS) {
+    env.GAME_REALTIME_ALLOWED_ORIGINS = localDevelopmentOrigins(nextPort);
   }
 } else if (!env.NEXT_PUBLIC_GAME_REALTIME_MODE) {
   env.NEXT_PUBLIC_GAME_REALTIME_MODE = "off";
@@ -96,7 +118,12 @@ function start(name, script, args = []) {
       return;
     }
 
-    if (children.every(({ child: running }) => running.exitCode !== null || running.signalCode !== null)) {
+    if (
+      children.every(
+        ({ child: running }) =>
+          running.exitCode !== null || running.signalCode !== null,
+      )
+    ) {
       process.exit(process.exitCode ?? 0);
     }
   });
@@ -123,7 +150,7 @@ process.on("SIGTERM", () => {
 
 console.log(
   realtimeEnabled
-    ? `[war-brasil] dev: Next + realtime (${env.NEXT_PUBLIC_GAME_REALTIME_MODE}) em ws://localhost:${realtimePort}/realtime.`
+    ? `[war-brasil] dev: Next + realtime (${env.NEXT_PUBLIC_GAME_REALTIME_MODE}); clientes usam o mesmo hostname da página na porta ${realtimePort}.`
     : "[war-brasil] dev: realtime explicitamente desativado; sinalizações de posse ficarão indisponíveis.",
 );
 
