@@ -15,14 +15,22 @@ import { tradePlayerName } from "./trade-ui-helpers";
 type TradePhasePanelProps = {
   roomId: string;
   snapshot: GameSnapshot;
-  onRefresh: (minimumRevision?: number) => Promise<void>;
 };
 
-export function TradePhasePanel({
-  roomId,
-  snapshot,
-  onRefresh,
-}: TradePhasePanelProps) {
+function pendingLabel(action: string | null) {
+  if (action === "offer") return "Enviando oferta...";
+  if (action === "counter") return "Enviando contraoferta...";
+  if (action === "accept" || action === "acceptCounter") {
+    return "Confirmando troca...";
+  }
+  if (action === "decline") return "Recusando oferta...";
+  if (action === "cancel") return "Cancelando oferta...";
+  if (action === "selectCard") return "Confirmando carta...";
+  if (action === "finish") return "Iniciando reforços...";
+  return action ? "Processando negociação..." : "";
+}
+
+export function TradePhasePanel({ roomId, snapshot }: TradePhasePanelProps) {
   const trade = snapshot.trade;
   const me = snapshot.players.find((player) => player.isMe);
   const [builder, setBuilder] = useState<TradeBuilderMode | null>(null);
@@ -62,8 +70,7 @@ export function TradePhasePanel({
     const action = typeof body.action === "string" ? body.action : "trade";
     setBusyAction(action);
     try {
-      const result = await runGameCommand(roomId, "trade", body);
-      await onRefresh(result.revision ?? undefined);
+      await runGameCommand(roomId, "trade", body);
       return true;
     } catch (error) {
       setMessage(
@@ -98,8 +105,9 @@ export function TradePhasePanel({
             {!activeOffer && remainingOffers > 0 && eligibleTargets.length > 0 ? (
               <button
                 type="button"
+                disabled={busyAction !== null}
                 onClick={() => setBuilder("offer")}
-                className="rounded-xl bg-[#e4b94f] px-4 py-3 text-xs font-bold uppercase tracking-wider text-[#12392f]"
+                className="rounded-xl bg-[#e4b94f] px-4 py-3 text-xs font-bold uppercase tracking-wider text-[#12392f] disabled:opacity-40"
               >
                 Solicitar troca
               </button>
@@ -252,8 +260,14 @@ export function TradePhasePanel({
         </div>
       ) : null}
 
+      {busyAction ? (
+        <p className="text-sm text-[#f1d278]" role="status" aria-live="polite">
+          {pendingLabel(busyAction)}
+        </p>
+      ) : null}
+
       {message ? (
-        <p className="text-sm text-[#f0a090]" role="status" aria-live="polite">
+        <p className="text-sm text-[#f0a090]" role="alert">
           {message}
         </p>
       ) : null}
