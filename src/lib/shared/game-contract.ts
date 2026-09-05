@@ -86,17 +86,22 @@ export type GameTradeOffer = {
   } | null;
 };
 
-export type GameTradeState = {
+export type GameTradePublicState = {
   offersUsed: number;
   offerLimit: number;
+  activeOffer: GameTradeOffer | null;
+};
+
+export type GameTradePrivateState = {
   signalsUsed: number;
   signalLimit: number;
-  activeOffer: GameTradeOffer | null;
   myPendingSelection: {
     offerId: string;
     descriptor: TradeCardDescriptor;
   } | null;
 };
+
+export type GameTradeState = GameTradePublicState & GameTradePrivateState;
 
 export type ActiveGameEvent = {
   eventId: number;
