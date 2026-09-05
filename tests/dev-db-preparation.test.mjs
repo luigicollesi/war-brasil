@@ -21,7 +21,9 @@ test("ambiente dev prepara migrations antes de subir Next e realtime", () => {
   assert.match(dev, /realtime\/server\.mjs/);
   assert.match(dev, /env\.GAME_REALTIME_ENABLED = "true"/);
   assert.match(dev, /env\.NEXT_PUBLIC_GAME_REALTIME_MODE = "hybrid"/);
-  assert.match(dev, /NEXT_PUBLIC_GAME_REALTIME_URL/);
+  assert.match(dev, /NEXT_PUBLIC_GAME_REALTIME_PORT/);
+  assert.match(dev, /GAME_REALTIME_ALLOWED_ORIGINS/);
+  assert.match(dev, /networkInterfaces\(\)/);
   assert.match(dev, /realtime\/node_modules\/ws\/package\.json/);
   assert.match(dev, /\["--prefix", "realtime", "ci"\]/);
 
@@ -49,6 +51,20 @@ test("orquestrador dev mantém processos separados e encerra ambos em conjunto",
   assert.match(dev, /process\.on\("SIGTERM"/);
   assert.match(dev, /child\.kill\(signal\)/);
   assert.doesNotMatch(dev, /GAME_REALTIME_ENABLED\s*=\s*"false"/);
+});
+
+test("dev realtime usa hostname do cliente e libera origins da máquina local", () => {
+  const transport = readFileSync(
+    "src/lib/client/transport/websocket-game-realtime-transport.ts",
+    "utf8",
+  );
+
+  assert.match(transport, /window\.location\.hostname/);
+  assert.match(transport, /NEXT_PUBLIC_GAME_REALTIME_PORT/);
+  assert.doesNotMatch(transport, /ws:\/\/localhost:3001\/realtime/);
+  assert.match(dev, /localDevelopmentOrigins/);
+  assert.match(dev, /http:\/\/localhost:/);
+  assert.match(dev, /http:\/\/127\.0\.0\.1:/);
 });
 
 test("preparação do banco é transacional, convergente e não inicia o servidor", () => {
