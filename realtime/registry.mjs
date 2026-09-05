@@ -97,6 +97,11 @@ export class GameRealtimeRegistry {
   }
 
   broadcastPatch(event) {
+    if (event.scope === "player") {
+      this.broadcastPrivatePatch(event);
+      return;
+    }
+
     const room = this.rooms.get(event.roomId);
     if (!room) return;
 
