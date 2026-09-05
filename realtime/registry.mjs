@@ -106,8 +106,9 @@ export class GameRealtimeRegistry {
 
   broadcastEphemeral(event) {
     const room = this.rooms.get(event.roomId);
-    if (!room) return;
+    if (!room) return 0;
 
+    let delivered = 0;
     for (const context of room) {
       if (
         context.socket.readyState !== WebSocket.OPEN ||
@@ -124,6 +125,7 @@ export class GameRealtimeRegistry {
         context.socket.send(
           serverEvent(event.eventType, event.roomId, event.payload),
         );
+        delivered += 1;
         recordRealtimeMetric("ephemeralBroadcasts", {
           roomId: event.roomId,
           eventType: event.eventType,
@@ -132,6 +134,7 @@ export class GameRealtimeRegistry {
         context.socket.terminate();
       }
     }
+    return delivered;
   }
 
   sendPatch(context, event) {
