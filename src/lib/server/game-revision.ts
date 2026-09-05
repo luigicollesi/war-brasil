@@ -1,6 +1,8 @@
 import "server-only";
 
 import type { PoolClient } from "pg";
+import type { GameCommandPatch } from "@/src/lib/game-command-patch";
+import type { GamePrivatePatch } from "@/src/lib/game-private-patch";
 import { RoomError } from "@/src/lib/rooms";
 
 export type GameRevision = number;
@@ -9,6 +11,8 @@ export type GameCommandResult<T> = {
   value: T;
   baseRevision: GameRevision;
   revision: GameRevision;
+  patch?: GameCommandPatch;
+  privatePatch?: GamePrivatePatch;
 };
 
 export async function readPlayerGameRevision(
@@ -47,6 +51,5 @@ export async function bumpGameRevision(
   if (!row) {
     throw new RoomError("Partida não encontrada.", 404);
   }
-
   return row.revision;
 }
