@@ -380,7 +380,7 @@ export function parseNotificationPayload(value) {
       validPrivatePatch(parsed.patch)
     ) {
       return {
-        kind: "private_patch",
+        kind: "patch",
         scope: "player",
         roomId: parsed.roomId,
         playerId: parsed.playerId,
