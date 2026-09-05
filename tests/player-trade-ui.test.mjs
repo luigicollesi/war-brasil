@@ -15,6 +15,7 @@ test("cliente recebe trade sem remapear para cards", () => {
   assert.match(runtime, /<TradePhaseMount/);
   assert.match(runtime, /<TradeResponseModal/);
   assert.match(runtime, /<TradeResolutionModal/);
+  assert.match(runtime, /<TradeSignalToast/);
 });
 
 test("destinatário recebe oferta aberta em modal de resposta", () => {
@@ -102,11 +103,20 @@ test("sinalização não usa command revisionado nem retry", () => {
   assert.doesNotMatch(bus, /localStorage|sessionStorage|indexedDB|fetch/);
 });
 
-test("toast efêmero ignora sinais de outro turno e não cria histórico", () => {
+test("toast de sinal fica global e não descarta broadcast por snapshot atrasado", () => {
+  const runtime = source("src/components/mandatory-card-trade-modal.tsx");
+  const mount = source("src/components/trade/trade-phase-mount.tsx");
   const toast = source("src/components/trade/trade-signal-toast.tsx");
 
-  assert.match(toast, /nextEvent\.payload\.turnNumber !== snapshot\.room\.turnNumber/);
-  assert.match(toast, /snapshot\.room\.phase !== "trade"/);
+  assert.match(runtime, /<TradeSignalToast/);
+  assert.doesNotMatch(mount, /<TradeSignalToast/);
+  assert.match(toast, /useRef\(snapshot\.room\.turnNumber\)/);
+  assert.match(toast, /nextEvent\.payload\.turnNumber < currentTurnRef\.current/);
+  assert.doesNotMatch(toast, /snapshot\.room\.phase !== "trade"/);
+  assert.doesNotMatch(
+    toast,
+    /nextEvent\.payload\.turnNumber !== snapshot\.room\.turnNumber/,
+  );
   assert.match(toast, /window\.setTimeout/);
   assert.doesNotMatch(toast, /localStorage|sessionStorage|history|indexedDB/);
 });
