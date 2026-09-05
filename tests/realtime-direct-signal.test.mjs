@@ -18,28 +18,33 @@ test("dev conecta Next ao endpoint interno do gateway para sinais efêmeros", ()
   assert.match(envExample, /GAME_REALTIME_INTERNAL_TOKEN/);
 });
 
-test("publisher exige confirmação de entrega direta quando URL interna está configurada", () => {
+test("publisher exige entrega direta para todos os jogadores realtime conectados", () => {
   const publisher = source("src/lib/server/game-realtime-publisher.ts");
 
   assert.match(publisher, /\/internal\/ephemeral/);
   assert.match(publisher, /Authorization: `Bearer \$\{token\}`/);
-  assert.match(publisher, /body\.delivered < 1/);
-  assert.match(publisher, /Nenhum cliente conectado recebeu a sinalização realtime/);
+  assert.match(publisher, /body\.connectedPlayers < 2/);
+  assert.match(publisher, /body\.deliveredPlayers !== body\.connectedPlayers/);
+  assert.match(publisher, /pelo menos dois jogadores conectados ao realtime/);
+  assert.match(publisher, /Nem todos os jogadores conectados receberam/);
   assert.match(publisher, /const delivered = await publishEphemeralDirect\(event\)/);
   assert.match(publisher, /if \(delivered !== null\) return true/);
   assert.match(publisher, /await publishGameRealtimeBusEvent\(client, event\)/);
 });
 
-test("gateway valida e transmite evento efêmero interno retornando quantidade entregue", () => {
+test("gateway retorna confirmação plana por jogador e socket entregue", () => {
   const server = source("realtime/server.mjs");
   const registry = source("realtime/registry.mjs");
 
   assert.match(server, /request\.url === "\/internal\/ephemeral"/);
   assert.match(server, /parseNotificationPayload/);
   assert.match(server, /request\.headers\.authorization !== `Bearer \$\{internalToken\}`/);
-  assert.match(server, /const delivered = registry\.broadcastEphemeral\(event\)/);
-  assert.match(server, /writeJson\(response, 200, \{ delivered \}\)/);
+  assert.match(server, /const delivery = registry\.broadcastEphemeral\(event\)/);
+  assert.match(server, /writeJson\(response, 200, delivery\)/);
   assert.match(registry, /let delivered = 0/);
+  assert.match(registry, /const connectedPlayerIds = new Set\(\)/);
+  assert.match(registry, /const deliveredPlayerIds = new Set\(\)/);
   assert.match(registry, /delivered \+= 1/);
-  assert.match(registry, /return delivered/);
+  assert.match(registry, /deliveredPlayers: deliveredPlayerIds\.size/);
+  assert.match(registry, /connectedPlayers: connectedPlayerIds\.size/);
 });
