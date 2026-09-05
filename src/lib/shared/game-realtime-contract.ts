@@ -3,11 +3,15 @@ import {
   type GameCommandPatch,
 } from "./game-command-patch";
 import {
+  isGamePrivatePatch,
+  type GamePrivatePatch,
+} from "./game-private-patch";
+import {
   isTradeCardDescriptor,
   type TradeCardDescriptor,
 } from "./game-trade-rules";
 
-export const GAME_PROTOCOL_VERSION = 1 as const;
+export const GAME_PROTOCOL_VERSION = 2 as const;
 export const GAME_REALTIME_SUBPROTOCOL =
   `war-brasil.v${GAME_PROTOCOL_VERSION}` as const;
 
@@ -38,6 +42,15 @@ export type GamePatchEvent = GameRealtimeEnvelope<
     baseRevision: number;
     revision: number;
     patch: GameCommandPatch;
+  }
+>;
+
+export type GamePrivatePatchEvent = GameRealtimeEnvelope<
+  "game.private.patch",
+  {
+    baseRevision: number;
+    revision: number;
+    patch: GamePrivatePatch;
   }
 >;
 
@@ -75,6 +88,7 @@ export type GameRealtimeEvent =
   | GameInvalidatedEvent
   | GamePrivateInvalidatedEvent
   | GamePatchEvent
+  | GamePrivatePatchEvent
   | GameTradeSignalEvent
   | GameTradeResolutionEvent
   | GameRealtimeReadyEvent
@@ -134,6 +148,15 @@ export function isGameRealtimeEvent(value: unknown): value is GameRealtimeEvent 
       validRevision(payload.revision) &&
       Number(payload.revision) > Number(payload.baseRevision) &&
       isGameCommandPatch(payload.patch)
+    );
+  }
+
+  if (envelope.type === "game.private.patch") {
+    return (
+      validRevision(payload.baseRevision) &&
+      validRevision(payload.revision) &&
+      Number(payload.revision) > Number(payload.baseRevision) &&
+      isGamePrivatePatch(payload.patch)
     );
   }
 
@@ -205,7 +228,7 @@ export function isGameRealtimeClientMessage(
     value.protocolVersion === GAME_PROTOCOL_VERSION &&
     value.type === "realtime.ping" &&
     typeof value.roomId === "string" &&
-    value.roomId.length >= 1 &&
+    value.roomId.length < 1 === false &&
     typeof value.clientTime === "number" &&
     Number.isFinite(value.clientTime) &&
     typeof value.nonce === "string" &&
