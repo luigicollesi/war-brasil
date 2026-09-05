@@ -21,6 +21,10 @@ type GameRealtimePatchBusEvent = Extract<
   GameRealtimeBusEvent,
   { kind: "patch" }
 >;
+type GameRealtimeEphemeralBusEvent = Extract<
+  GameRealtimeBusEvent,
+  { kind: "ephemeral" }
+>;
 type GameRealtimeRevisionBusEvent =
   | GameRealtimeInvalidationBusEvent
   | GameRealtimePatchBusEvent;
@@ -31,6 +35,63 @@ function gameRealtimeEnabled() {
 
 function gameRealtimePatchesEnabled() {
   return process.env.GAME_REALTIME_PATCHES_ENABLED === "true";
+}
+
+function directEphemeralUrl() {
+  const raw = process.env.GAME_REALTIME_INTERNAL_URL?.trim();
+  return raw ? raw.replace(/\/$/, "") : null;
+}
+
+function directEphemeralToken() {
+  return process.env.GAME_REALTIME_INTERNAL_TOKEN?.trim() || null;
+}
+
+async function publishEphemeralDirect(event: GameRealtimeEphemeralBusEvent) {
+  const baseUrl = directEphemeralUrl();
+  if (!baseUrl) return null;
+
+  const token = directEphemeralToken();
+  if (!token) {
+    throw new Error(
+      "GAME_REALTIME_INTERNAL_TOKEN é obrigatório para entrega realtime direta.",
+    );
+  }
+
+  const response = await fetch(`${baseUrl}/internal/ephemeral`, {
+    method: "POST",
+    cache: "no-store",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(event),
+  });
+
+  let body: unknown = null;
+  try {
+    body = await response.json();
+  } catch {
+    body = null;
+  }
+
+  if (!response.ok) {
+    throw new Error(`Gateway realtime recusou a entrega (${response.status}).`);
+  }
+  if (
+    typeof body !== "object" ||
+    body === null ||
+    !("delivered" in body) ||
+    typeof body.delivered !== "number" ||
+    !Number.isSafeInteger(body.delivered) ||
+    body.delivered < 0
+  ) {
+    throw new Error("Gateway realtime retornou confirmação de entrega inválida.");
+  }
+  if (body.delivered < 1) {
+    throw new Error("Nenhum cliente conectado recebeu a sinalização realtime.");
+  }
+
+  return body.delivered;
 }
 
 function invalidationEvent(
@@ -134,23 +195,26 @@ export async function publishGameTradeSignal(
 ) {
   if (!gameRealtimeEnabled()) return false;
 
+  const event: GameRealtimeEphemeralBusEvent = {
+    kind: "ephemeral",
+    scope: "room",
+    roomId: input.roomId,
+    eventId: randomUUID(),
+    eventType: "trade.signal",
+    payload: {
+      playerId: input.playerId,
+      turnNumber: input.turnNumber,
+      card: input.card,
+    },
+  };
+
   try {
-    await publishGameRealtimeBusEvent(client, {
-      kind: "ephemeral",
-      scope: "room",
-      roomId: input.roomId,
-      eventId: randomUUID(),
-      eventType: "trade.signal",
-      payload: {
-        playerId: input.playerId,
-        turnNumber: input.turnNumber,
-        card: input.card,
-      },
-    });
+    const delivered = await publishEphemeralDirect(event);
+    if (delivered !== null) return true;
+
+    await publishGameRealtimeBusEvent(client, event);
     return true;
   } catch {
-    // O conteúdo continua efêmero, mas falha de transporte precisa abortar a
-    // transação chamadora para não consumir a cota sem entregar o sinal.
     throw new Error("Não foi possível publicar a sinalização realtime.");
   }
 }
