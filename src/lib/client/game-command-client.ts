@@ -2,6 +2,10 @@
 
 import type { GameCommandPatch } from "../shared/game-command-patch";
 import {
+  isGamePrivatePatch,
+  type GamePrivatePatch,
+} from "../shared/game-private-patch";
+import {
   GAME_COMMAND_ID_HEADER,
   GAME_EXPECTED_REVISION_HEADER,
 } from "../shared/game-command-request";
@@ -20,6 +24,7 @@ type GameCommandClientResult<T> = {
   baseRevision: number | null;
   revision: number | null;
   patch?: GameCommandPatch;
+  privatePatch?: GamePrivatePatch;
 };
 
 function errorMessage(data: unknown, fallback: string) {
@@ -36,6 +41,7 @@ function commandEnvelope(data: unknown) {
     return {
       baseRevision: null,
       patch: undefined,
+      privatePatch: undefined,
     };
   }
 
@@ -50,8 +56,11 @@ function commandEnvelope(data: unknown) {
     typeof record.patch === "object" && record.patch !== null
       ? (record.patch as GameCommandPatch)
       : undefined;
+  const privatePatch = isGamePrivatePatch(record.privatePatch)
+    ? record.privatePatch
+    : undefined;
 
-  return { baseRevision, patch };
+  return { baseRevision, patch, privatePatch };
 }
 
 async function responseData(response: Response) {
@@ -143,10 +152,19 @@ export async function runGameCommand<T = unknown>(
     baseRevision: envelope.baseRevision,
     revision: returnedRevision,
     patch: envelope.patch,
+    privatePatch: envelope.privatePatch,
   };
 
-  if (result.patch) {
+  if (result.patch || result.privatePatch) {
     dispatchGameCommandPatch(roomId, result);
+  } else if (
+    returnedRevision !== null &&
+    expectedRevision !== null &&
+    returnedRevision !== expectedRevision
+  ) {
+    await recoverGameCommandRevision(roomId, returnedRevision).catch(
+      () => undefined,
+    );
   }
 
   return result;
