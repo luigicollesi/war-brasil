@@ -2,6 +2,7 @@ import "server-only";
 
 import type { PoolClient } from "pg";
 import type { GameCommandPatch } from "@/src/lib/game-command-patch";
+import type { GamePrivatePatch } from "@/src/lib/game-private-patch";
 import type { TradeCardDescriptor } from "@/src/lib/game-trade-rules";
 
 export type GameRealtimeRoomInvalidationEvent = {
@@ -26,6 +27,16 @@ export type GameRealtimePatchEvent = {
   baseRevision: number;
   revision: number;
   patch: GameCommandPatch;
+};
+
+export type GameRealtimePrivatePatchEvent = {
+  kind: "private_patch";
+  scope: "player";
+  roomId: string;
+  playerId: string;
+  baseRevision: number;
+  revision: number;
+  patch: GamePrivatePatch;
 };
 
 export type GameRealtimeTradeSignalEvent = {
@@ -60,6 +71,7 @@ export type GameRealtimeBusEvent =
   | GameRealtimeRoomInvalidationEvent
   | GameRealtimePlayerInvalidationEvent
   | GameRealtimePatchEvent
+  | GameRealtimePrivatePatchEvent
   | GameRealtimeTradeSignalEvent
   | GameRealtimeTradeResolutionEvent;
 
