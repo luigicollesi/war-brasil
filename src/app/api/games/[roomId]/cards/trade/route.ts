@@ -4,7 +4,7 @@ import {
   readJsonObject,
   roomErrorResponse,
 } from "@/src/lib/api-response";
-import { tradeCardsPatchCommand } from "@/src/lib/server/game-card-redemption-patch-command-service";
+import { tradeCardsPatchCommand as tradeCardsCommand } from "@/src/lib/server/game-card-redemption-patch-command-service";
 import { readGameCommandRequestMetadata } from "@/src/lib/server/game-command-request";
 import { GAME_REVISION_HEADER } from "@/src/lib/game-sync-contract";
 import { getPlayerSession } from "@/src/lib/player-session";
@@ -26,7 +26,7 @@ export async function POST(
     const metadata = readGameCommandRequestMetadata(request);
     ({ roomId } = await params);
     body = await readJsonObject(request);
-    const result = await tradeCardsPatchCommand(roomId, session, body, metadata);
+    const result = await tradeCardsCommand(roomId, session, body, metadata);
 
     return noStoreJson(
       {

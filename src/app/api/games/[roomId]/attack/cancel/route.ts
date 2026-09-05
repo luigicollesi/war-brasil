@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { noStoreJson, roomErrorResponse } from "@/src/lib/api-response";
-import { cancelBattlePatchCommand } from "@/src/lib/server/game-combat-patch-command-service";
+import { cancelBattlePatchCommand as cancelBattleCommand } from "@/src/lib/server/game-combat-patch-command-service";
 import { readGameCommandRequestMetadata } from "@/src/lib/server/game-command-request";
 import { GAME_REVISION_HEADER } from "@/src/lib/game-sync-contract";
 import { getPlayerSession } from "@/src/lib/player-session";
@@ -20,7 +20,7 @@ export async function POST(
 
     const metadata = readGameCommandRequestMetadata(request);
     ({ roomId } = await params);
-    const result = await cancelBattlePatchCommand(roomId, session, metadata);
+    const result = await cancelBattleCommand(roomId, session, metadata);
 
     return noStoreJson(
       {
