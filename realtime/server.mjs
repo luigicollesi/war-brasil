@@ -396,8 +396,8 @@ async function handleInternalEphemeral(request, response) {
       return;
     }
 
-    const delivered = registry.broadcastEphemeral(event);
-    writeJson(response, 200, { delivered });
+    const delivery = registry.broadcastEphemeral(event);
+    writeJson(response, 200, delivery);
   } catch {
     writeJson(response, 400, { error: "Payload interno realtime inválido." });
   }
