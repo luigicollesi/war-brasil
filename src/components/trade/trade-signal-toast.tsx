@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { subscribeTradeSignal } from "@/src/lib/client/game-realtime-ephemeral-bus";
 import type { GameSnapshot } from "@/src/lib/shared/game-contract";
 import type { GameTradeSignalEvent } from "@/src/lib/shared/game-realtime-contract";
@@ -28,19 +28,18 @@ export function TradeSignalToast({
   snapshot: GameSnapshot;
 }) {
   const [queue, setQueue] = useState<GameTradeSignalEvent[]>([]);
+  const currentTurnRef = useRef(snapshot.room.turnNumber);
+  currentTurnRef.current = snapshot.room.turnNumber;
   const event = queue[0] ?? null;
 
   useEffect(() => {
     return subscribeTradeSignal(roomId, (nextEvent) => {
-      if (
-        snapshot.room.phase !== "trade" ||
-        nextEvent.payload.turnNumber !== snapshot.room.turnNumber
-      ) {
-        return;
-      }
+      // Cada cliente pode receber o broadcast antes de seu snapshot HTTP alcançar
+      // a fase de troca. Só descartamos eventos comprovadamente antigos.
+      if (nextEvent.payload.turnNumber < currentTurnRef.current) return;
       setQueue((current) => [...current, nextEvent]);
     });
-  }, [roomId, snapshot.room.phase, snapshot.room.turnNumber]);
+  }, [roomId]);
 
   useEffect(() => {
     if (!event) return;
