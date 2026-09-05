@@ -1,4 +1,5 @@
 import { spawn, spawnSync } from "node:child_process";
+import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { networkInterfaces } from "node:os";
 import { resolve } from "node:path";
@@ -46,6 +47,12 @@ if (realtimeEnabled) {
   }
   if (!env.GAME_REALTIME_ALLOWED_ORIGINS) {
     env.GAME_REALTIME_ALLOWED_ORIGINS = localDevelopmentOrigins(nextPort);
+  }
+  if (!env.GAME_REALTIME_INTERNAL_URL) {
+    env.GAME_REALTIME_INTERNAL_URL = `http://127.0.0.1:${realtimePort}`;
+  }
+  if (!env.GAME_REALTIME_INTERNAL_TOKEN) {
+    env.GAME_REALTIME_INTERNAL_TOKEN = `${randomUUID()}${randomUUID()}`;
   }
 } else if (!env.NEXT_PUBLIC_GAME_REALTIME_MODE) {
   env.NEXT_PUBLIC_GAME_REALTIME_MODE = "off";
