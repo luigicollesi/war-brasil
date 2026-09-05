@@ -8,7 +8,7 @@ import { GAME_REVISION_HEADER } from "@/src/lib/game-sync-contract";
 import { getPlayerSession } from "@/src/lib/player-session";
 import { RoomError } from "@/src/lib/rooms";
 import { readGameCommandRequestMetadata } from "@/src/lib/server/game-command-request";
-import { playerTradeCommand } from "@/src/lib/server/game-player-trade-service";
+import { playerTradePatchCommand } from "@/src/lib/server/game-player-trade-patch-service";
 import { publishTradeDeclineResolution } from "@/src/lib/server/game-trade-resolution-notifier";
 
 export async function POST(
@@ -27,7 +27,7 @@ export async function POST(
     const metadata = readGameCommandRequestMetadata(request);
     ({ roomId } = await params);
     body = await readJsonObject(request);
-    const result = await playerTradeCommand(roomId, session, body, metadata);
+    const result = await playerTradePatchCommand(roomId, session, body, metadata);
 
     if (body.action === "decline") {
       await publishTradeDeclineResolution(roomId, session, body.offerId).catch(
@@ -36,7 +36,13 @@ export async function POST(
     }
 
     return noStoreJson(
-      { revision: result.revision, result: result.value },
+      {
+        revision: result.revision,
+        baseRevision: result.baseRevision,
+        result: result.value,
+        ...(result.patch ? { patch: result.patch } : {}),
+        ...(result.privatePatch ? { privatePatch: result.privatePatch } : {}),
+      },
       {
         headers: {
           [GAME_REVISION_HEADER]: String(result.revision),
