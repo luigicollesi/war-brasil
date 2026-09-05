@@ -2,9 +2,14 @@ import {
   applyGameCommandPatch,
   type ApplicableGameCommandResult,
 } from "@/src/lib/game-command-patch";
+import {
+  applyGamePrivatePatch,
+  type GamePrivatePatch,
+} from "@/src/lib/game-private-patch";
 import type { GameSnapshot } from "@/src/lib/game-contract";
 import type {
   GamePatchEvent,
+  GamePrivatePatchEvent,
   GameRealtimeEvent,
 } from "@/src/lib/game-realtime-contract";
 import { GameSnapshotCoordinator } from "./game-snapshot-coordinator";
@@ -33,6 +38,10 @@ export type GameRealtimePatchResult = {
   snapshot: GameSnapshot | null;
 };
 
+export type GameRealtimePrivatePatchResult = GameRealtimePatchResult & {
+  buffered: boolean;
+};
+
 type GameSyncControllerDependencies = {
   snapshotTransport?: GameSnapshotTransport;
   realtimeTransport?: GameRealtimeTransport;
@@ -45,6 +54,7 @@ export class GameSyncController {
   private readonly snapshotTransport: GameSnapshotTransport;
   private readonly realtimeTransport: GameRealtimeTransport;
   private readonly realtimeMode: GameRealtimeMode;
+  private readonly pendingPrivatePatches = new Map<number, GamePrivatePatch>();
   private unsubscribeRealtime: (() => void) | null = null;
   private forceSnapshotOnNextSync = false;
 
@@ -62,6 +72,7 @@ export class GameSyncController {
   reset() {
     this.revisions.reset();
     this.snapshots.reset();
+    this.pendingPrivatePatches.clear();
     this.forceSnapshotOnNextSync = false;
   }
 
@@ -104,6 +115,23 @@ export class GameSyncController {
     return this.realtimeTransport.subscribeState(listener);
   }
 
+  private discardPrivatePatchesThrough(revision: number) {
+    for (const pendingRevision of this.pendingPrivatePatches.keys()) {
+      if (pendingRevision <= revision) {
+        this.pendingPrivatePatches.delete(pendingRevision);
+      }
+    }
+  }
+
+  private applyPendingPrivatePatch(snapshot: GameSnapshot, revision: number) {
+    const patch = this.pendingPrivatePatches.get(revision);
+    if (!patch) return snapshot;
+    const nextSnapshot = applyGamePrivatePatch(snapshot, patch);
+    if (!nextSnapshot) return null;
+    this.pendingPrivatePatches.delete(revision);
+    return nextSnapshot;
+  }
+
   async sync(signal?: AbortSignal): Promise<GameSyncResult> {
     const previousSnapshot = this.snapshots.current();
     const forceSnapshot = this.forceSnapshotOnNextSync;
@@ -127,6 +155,7 @@ export class GameSyncController {
 
     this.revisions.observe(result.revision);
     const nextSnapshot = this.snapshots.accept(result);
+    this.discardPrivatePatchesThrough(result.revision);
     if (forceSnapshot && result.kind === "snapshot") {
       this.forceSnapshotOnNextSync = false;
     }
@@ -151,8 +180,16 @@ export class GameSyncController {
       return null;
     }
 
-    const nextSnapshot = applyGameCommandPatch(currentSnapshot, result.patch);
+    let nextSnapshot = applyGameCommandPatch(currentSnapshot, result.patch);
     if (!nextSnapshot) return null;
+
+    if (result.privatePatch) {
+      nextSnapshot = applyGamePrivatePatch(nextSnapshot, result.privatePatch);
+      if (!nextSnapshot) return null;
+    } else if (result.revision !== null) {
+      nextSnapshot = this.applyPendingPrivatePatch(nextSnapshot, result.revision);
+      if (!nextSnapshot) return null;
+    }
 
     this.revisions.observe(result.revision);
     return this.snapshots.apply(nextSnapshot);
@@ -185,6 +222,56 @@ export class GameSyncController {
 
     this.revisions.require(revision);
     return { applied: false, stale: false, snapshot: null };
+  }
+
+  applyRealtimePrivatePatch(
+    event: GamePrivatePatchEvent,
+  ): GameRealtimePrivatePatchResult {
+    const { baseRevision, revision, patch } = event.payload;
+    const currentRevision = this.revisions.current();
+    const currentSnapshot = this.snapshots.current();
+
+    if (!currentSnapshot || currentRevision === null) {
+      this.forceSnapshot(revision);
+      return { applied: false, stale: false, buffered: false, snapshot: null };
+    }
+
+    if (revision < currentRevision) {
+      return {
+        applied: false,
+        stale: true,
+        buffered: false,
+        snapshot: currentSnapshot,
+      };
+    }
+
+    if (revision === currentRevision) {
+      const nextSnapshot = applyGamePrivatePatch(currentSnapshot, patch);
+      if (!nextSnapshot) {
+        this.forceSnapshot(revision);
+        return { applied: false, stale: false, buffered: false, snapshot: null };
+      }
+      return {
+        applied: true,
+        stale: false,
+        buffered: false,
+        snapshot: this.snapshots.apply(nextSnapshot),
+      };
+    }
+
+    if (baseRevision === currentRevision) {
+      this.pendingPrivatePatches.set(revision, patch);
+      this.revisions.require(revision);
+      return {
+        applied: false,
+        stale: false,
+        buffered: true,
+        snapshot: currentSnapshot,
+      };
+    }
+
+    this.forceSnapshot(revision);
+    return { applied: false, stale: false, buffered: false, snapshot: null };
   }
 
   async startRealtime(onEvent?: (event: GameRealtimeEvent) => void) {
