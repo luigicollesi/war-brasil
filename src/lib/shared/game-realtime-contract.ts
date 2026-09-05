@@ -228,7 +228,7 @@ export function isGameRealtimeClientMessage(
     value.protocolVersion === GAME_PROTOCOL_VERSION &&
     value.type === "realtime.ping" &&
     typeof value.roomId === "string" &&
-    value.roomId.length < 1 === false &&
+    value.roomId.length >= 1 &&
     typeof value.clientTime === "number" &&
     Number.isFinite(value.clientTime) &&
     typeof value.nonce === "string" &&
