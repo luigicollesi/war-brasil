@@ -26,6 +26,7 @@ export class GameRealtimeRegistry {
       isAlive: true,
       lastRevisionSent: 0,
       lastPrivateRevisionSent: 0,
+      lastPrivatePatchRevisionSent: 0,
       pendingRevision: null,
       pendingPrivateRevision: null,
       flushTimer: null,
@@ -101,6 +102,16 @@ export class GameRealtimeRegistry {
 
     for (const context of room) {
       this.sendPatch(context, event);
+    }
+  }
+
+  broadcastPrivatePatch(event) {
+    const room = this.rooms.get(event.roomId);
+    if (!room) return;
+
+    for (const context of room) {
+      if (context.playerId !== event.playerId) continue;
+      this.sendPrivatePatch(context, event);
     }
   }
 
@@ -199,6 +210,43 @@ export class GameRealtimeRegistry {
       context.lastRevisionSent = event.revision;
       recordRealtimeMetric("patchBroadcasts", {
         roomId: context.roomId,
+        revision: event.revision,
+      });
+    } catch {
+      context.socket.terminate();
+    }
+  }
+
+  sendPrivatePatch(context, event) {
+    if (
+      context.socket.readyState !== WebSocket.OPEN ||
+      event.revision <= context.lastPrivatePatchRevisionSent
+    ) {
+      return;
+    }
+
+    if (context.socket.bufferedAmount > maxBufferedBytes()) {
+      recordRealtimeMetric("privatePatchFallbacks", {
+        roomId: context.roomId,
+        playerId: context.playerId,
+        revision: event.revision,
+      });
+      this.sendPrivateRevision(context, event.revision);
+      return;
+    }
+
+    try {
+      context.socket.send(
+        serverEvent("game.private.patch", context.roomId, {
+          baseRevision: event.baseRevision,
+          revision: event.revision,
+          patch: event.patch,
+        }),
+      );
+      context.lastPrivatePatchRevisionSent = event.revision;
+      recordRealtimeMetric("privatePatchBroadcasts", {
+        roomId: context.roomId,
+        playerId: context.playerId,
         revision: event.revision,
       });
     } catch {
