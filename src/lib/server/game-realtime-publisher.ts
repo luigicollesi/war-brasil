@@ -81,17 +81,32 @@ async function publishEphemeralDirect(event: GameRealtimeEphemeralBusEvent) {
     typeof body !== "object" ||
     body === null ||
     !("delivered" in body) ||
+    !("deliveredPlayers" in body) ||
+    !("connectedPlayers" in body) ||
     typeof body.delivered !== "number" ||
+    typeof body.deliveredPlayers !== "number" ||
+    typeof body.connectedPlayers !== "number" ||
     !Number.isSafeInteger(body.delivered) ||
-    body.delivered < 0
+    !Number.isSafeInteger(body.deliveredPlayers) ||
+    !Number.isSafeInteger(body.connectedPlayers) ||
+    body.delivered < 0 ||
+    body.deliveredPlayers < 0 ||
+    body.connectedPlayers < 0
   ) {
     throw new Error("Gateway realtime retornou confirmação de entrega inválida.");
   }
-  if (body.delivered < 1) {
-    throw new Error("Nenhum cliente conectado recebeu a sinalização realtime.");
+  if (body.connectedPlayers < 2) {
+    throw new Error(
+      "A sinalização exige pelo menos dois jogadores conectados ao realtime.",
+    );
+  }
+  if (body.deliveredPlayers !== body.connectedPlayers) {
+    throw new Error(
+      "Nem todos os jogadores conectados receberam a sinalização realtime.",
+    );
   }
 
-  return body.delivered;
+  return body.deliveredPlayers;
 }
 
 function invalidationEvent(
