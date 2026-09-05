@@ -81,6 +81,44 @@ test("registry entrega invalidation privada somente ao jogador alvo", () => {
   );
 });
 
+test("registry faz broadcast de trade.signal para todos os sockets da sala", () => {
+  const registry = new GameRealtimeRegistry();
+  const sender = fakeSocket();
+  const activePlayer = fakeSocket();
+  const otherPlayer = fakeSocket();
+  const otherRoom = fakeSocket();
+
+  registry.add(sender, { roomId: "12", playerId: "7" });
+  registry.add(activePlayer, { roomId: "12", playerId: "8" });
+  registry.add(otherPlayer, { roomId: "12", playerId: "9" });
+  registry.add(otherRoom, { roomId: "13", playerId: "10" });
+
+  registry.broadcastEphemeral({
+    kind: "ephemeral",
+    scope: "room",
+    roomId: "12",
+    eventId: "signal-1",
+    eventType: "trade.signal",
+    payload: {
+      playerId: "7",
+      turnNumber: 3,
+      card: { kind: "symbol", symbol: "leaf" },
+    },
+  });
+
+  for (const socket of [sender, activePlayer, otherPlayer]) {
+    assert.equal(socket.sent.length, 1);
+    assert.equal(socket.sent[0].type, "trade.signal");
+    assert.equal(socket.sent[0].roomId, "12");
+    assert.equal(socket.sent[0].payload.playerId, "7");
+    assert.deepEqual(socket.sent[0].payload.card, {
+      kind: "symbol",
+      symbol: "leaf",
+    });
+  }
+  assert.equal(otherRoom.sent.length, 0);
+});
+
 test("registry preserva escopo privado durante backpressure", () => {
   const registry = new GameRealtimeRegistry();
   const target = fakeSocket();
