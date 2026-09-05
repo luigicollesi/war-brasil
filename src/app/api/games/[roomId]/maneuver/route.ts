@@ -32,7 +32,8 @@ export async function POST(
       {
         revision: result.revision,
         baseRevision: result.baseRevision,
-        patch: result.value,
+        ...(result.patch ? { patch: result.patch } : {}),
+        ...(result.privatePatch ? { privatePatch: result.privatePatch } : {}),
       },
       {
         headers: {

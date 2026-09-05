@@ -3,13 +3,10 @@ import { loadEnvFile } from "node:process";
 import { Client } from "pg";
 
 for (const envFile of [".env", ".env.local"]) {
-  if (existsSync(envFile)) {
-    loadEnvFile(envFile);
-  }
+  if (existsSync(envFile)) loadEnvFile(envFile);
 }
 
 const connectionString = process.env.DATABASE_URL;
-
 if (!connectionString) {
   console.error("[war-brasil] DATABASE_URL não está configurada para preparar o banco local.");
   process.exit(1);
@@ -28,11 +25,8 @@ async function tableExists(tableName) {
 async function columnExists(tableName, columnName) {
   const result = await client.query(
     `SELECT EXISTS (
-       SELECT 1
-       FROM information_schema.columns
-       WHERE table_schema='public'
-         AND table_name=$1
-         AND column_name=$2
+       SELECT 1 FROM information_schema.columns
+       WHERE table_schema='public' AND table_name=$1 AND column_name=$2
      ) AS exists`,
     [tableName, columnName],
   );
@@ -42,13 +36,10 @@ async function columnExists(tableName, columnName) {
 async function constraintExists(tableName, constraintName) {
   const result = await client.query(
     `SELECT EXISTS (
-       SELECT 1
-       FROM pg_constraint c
+       SELECT 1 FROM pg_constraint c
        JOIN pg_class t ON t.oid=c.conrelid
        JOIN pg_namespace n ON n.oid=t.relnamespace
-       WHERE n.nspname='public'
-         AND t.relname=$1
-         AND c.conname=$2
+       WHERE n.nspname='public' AND t.relname=$1 AND c.conname=$2
      ) AS exists`,
     [tableName, constraintName],
   );
@@ -76,17 +67,12 @@ try {
     );
   }
 
-  if (
-    !(await columnExists("room_players", "is_bot")) ||
-    !(await tableExists("bot_names"))
-  ) {
+  if (!(await columnExists("room_players", "is_bot")) || !(await tableExists("bot_names"))) {
     await applyMigration("011-bot-players.sql");
   }
-
   if (!(await columnExists("room_players", "bot_next_action_at"))) {
     await applyMigration("012-bot-automation.sql");
   }
-
   if (
     !(await tableExists("objective_rules")) ||
     !(await columnExists("game_player_objectives", "objective_rule_id")) ||
@@ -96,38 +82,25 @@ try {
   }
 
   const balancedCatalogReady = await queryHasRows(
-    `SELECT 1
-     FROM objectives objective
-     WHERE objective.id='balanced_territory_control'
-       AND objective.is_active=TRUE
+    `SELECT 1 FROM objectives objective
+     WHERE objective.id='balanced_territory_control' AND objective.is_active=TRUE
        AND EXISTS (
-         SELECT 1
-         FROM objective_rules rule
-         WHERE rule.objective_id=objective.id
-           AND rule.is_active=TRUE
-       )
-     LIMIT 1`,
+         SELECT 1 FROM objective_rules rule
+         WHERE rule.objective_id=objective.id AND rule.is_active=TRUE
+       ) LIMIT 1`,
   );
-
-  if (!balancedCatalogReady) {
-    await applyMigration("014-balanced-objective-catalog.sql");
-  }
+  if (!balancedCatalogReady) await applyMigration("014-balanced-objective-catalog.sql");
 
   if (!(await columnExists("room_players", "card_trade_count"))) {
     await applyMigration("015-player-card-trade-count.sql");
   }
 
   const eliminationFallbackExists = await queryHasRows(
-    `SELECT 1
-     FROM objectives
+    `SELECT 1 FROM objectives
      WHERE type IN ('elimination', 'elimination_plus')
-       AND fallback_objective_id IS NOT NULL
-     LIMIT 1`,
+       AND fallback_objective_id IS NOT NULL LIMIT 1`,
   );
-
-  if (eliminationFallbackExists) {
-    await applyMigration("016-disable-elimination-fallback.sql");
-  }
+  if (eliminationFallbackExists) await applyMigration("016-disable-elimination-fallback.sql");
 
   if (
     !(await columnExists("game_rooms", "initial_territory_presentation_started_at")) ||
@@ -135,25 +108,21 @@ try {
   ) {
     await applyMigration("017-initial-territory-presentation.sql");
   }
-
   if (
     !(await columnExists("game_rooms", "automation_due_at")) ||
     !(await columnExists("game_rooms", "automation_kind"))
   ) {
     await applyMigration("018-game-automation-schedule.sql");
   }
-
   if (!(await tableExists("game_command_receipts"))) {
     await applyMigration("019-game-command-receipts.sql");
   }
-
   if (
     !(await columnExists("game_rooms", "automation_claimed_by")) ||
     !(await columnExists("game_rooms", "automation_claimed_until"))
   ) {
     await applyMigration("020-automation-worker-claims.sql");
   }
-
   if (
     !(await columnExists("game_rooms", "trade_offers_used")) ||
     !(await columnExists("room_players", "trade_signals_used")) ||
@@ -161,7 +130,6 @@ try {
   ) {
     await applyMigration("021-player-trade-phase.sql");
   }
-
   if (
     !(await columnExists("game_player_trade_offers", "offered_kind")) ||
     !(await columnExists("game_player_trade_offers", "accepted_terms")) ||
@@ -169,39 +137,36 @@ try {
   ) {
     await applyMigration("022-complete-player-trade-negotiation.sql");
   }
-
   if (
     (await columnExists("game_player_trade_offers", "offered_card_id")) ||
     (await columnExists("game_player_trade_offers", "counter_card_id")) ||
     (await columnExists("game_player_trade_offers", "accepted_card_id")) ||
-    !(await constraintExists(
-      "game_player_trade_offers",
-      "game_player_trade_offers_state_check",
-    )) ||
-    !(await constraintExists(
-      "game_player_trade_offers",
-      "game_player_trade_offers_responder_check",
-    ))
+    !(await constraintExists("game_player_trade_offers", "game_player_trade_offers_state_check")) ||
+    !(await constraintExists("game_player_trade_offers", "game_player_trade_offers_responder_check"))
   ) {
     await applyMigration("023-trade-negotiation-invariants.sql");
   }
 
   const orderRollPhaseCompatibilityReady = await queryHasRows(
-    `SELECT 1
-     FROM pg_constraint c
+    `SELECT 1 FROM pg_constraint c
      JOIN pg_class t ON t.oid=c.conrelid
      JOIN pg_namespace n ON n.oid=t.relnamespace
-     WHERE n.nspname='public'
-       AND t.relname='game_rooms'
+     WHERE n.nspname='public' AND t.relname='game_rooms'
        AND c.conname='game_rooms_phase_check'
        AND pg_get_constraintdef(c.oid) ILIKE '%order_roll%'
        AND pg_get_constraintdef(c.oid) ILIKE '%cards%'
        AND pg_get_constraintdef(c.oid) ILIKE '%trade%'
      LIMIT 1`,
   );
-
   if (!orderRollPhaseCompatibilityReady) {
     await applyMigration("024-order-roll-phase-compatibility.sql");
+  }
+
+  const commandReceiptPatchesReady =
+    (await columnExists("game_command_receipts", "response_patch")) &&
+    (await columnExists("game_command_receipts", "response_private_patch"));
+  if (!commandReceiptPatchesReady) {
+    await applyMigration("025-command-receipt-patches.sql");
   }
 
   await client.query("COMMIT");

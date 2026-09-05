@@ -4,7 +4,7 @@ import {
   readJsonObject,
   roomErrorResponse,
 } from "@/src/lib/api-response";
-import { phaseCommand } from "@/src/lib/game-command-service";
+import { phasePatchCommand } from "@/src/lib/server/game-phase-patch-command-service";
 import { readGameCommandRequestMetadata } from "@/src/lib/server/game-command-request";
 import { GAME_REVISION_HEADER } from "@/src/lib/game-sync-contract";
 import { getPlayerSession } from "@/src/lib/player-session";
@@ -26,10 +26,15 @@ export async function POST(
     const metadata = readGameCommandRequestMetadata(request);
     ({ roomId } = await params);
     body = await readJsonObject(request);
-    const result = await phaseCommand(roomId, session, body, metadata);
+    const result = await phasePatchCommand(roomId, session, body, metadata);
 
     return noStoreJson(
-      { revision: result.revision },
+      {
+        revision: result.revision,
+        baseRevision: result.baseRevision,
+        ...(result.patch ? { patch: result.patch } : {}),
+        ...(result.privatePatch ? { privatePatch: result.privatePatch } : {}),
+      },
       {
         headers: {
           [GAME_REVISION_HEADER]: String(result.revision),

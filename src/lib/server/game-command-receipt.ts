@@ -3,7 +3,9 @@ import "server-only";
 import { createHash } from "node:crypto";
 import type { PoolClient } from "pg";
 import { canonicalGameCommandRequest } from "@/src/lib/shared/game-command-canonical";
+import { isGameCommandPatch } from "@/src/lib/game-command-patch";
 import type { GameCommandRequestMetadata } from "@/src/lib/game-command-request";
+import { isGamePrivatePatch } from "@/src/lib/game-private-patch";
 import type { GameCommandResult } from "@/src/lib/game-revision";
 import { RoomError } from "@/src/lib/rooms";
 import { publishGameCommandMetric } from "./observability/game-command-metrics";
@@ -21,6 +23,8 @@ type ReceiptRow = {
   base_revision: number;
   revision: number;
   response_value: unknown;
+  response_patch: unknown | null;
+  response_private_patch: unknown | null;
 };
 
 export type PreparedGameCommandReceipt = {
@@ -70,7 +74,8 @@ export async function prepareGameCommandReceipt(
   const receipt = (
     await client.query<ReceiptRow>(
       `SELECT command_name,request_fingerprint,expected_revision,
-              base_revision,revision,response_value
+              base_revision,revision,response_value,response_patch,
+              response_private_patch
        FROM game_command_receipts
        WHERE room_id=$1 AND player_id=$2 AND command_id=$3`,
       [roomId, playerId, request.commandId],
@@ -111,6 +116,13 @@ export async function prepareGameCommandReceipt(
     revision: receipt.revision,
   });
 
+  const patch = isGameCommandPatch(receipt.response_patch)
+    ? receipt.response_patch
+    : undefined;
+  const privatePatch = isGamePrivatePatch(receipt.response_private_patch)
+    ? receipt.response_private_patch
+    : undefined;
+
   return {
     playerId,
     fingerprint,
@@ -118,6 +130,8 @@ export async function prepareGameCommandReceipt(
       value: receipt.response_value,
       baseRevision: receipt.base_revision,
       revision: receipt.revision,
+      ...(patch ? { patch } : {}),
+      ...(privatePatch ? { privatePatch } : {}),
     },
   };
 }
@@ -132,9 +146,10 @@ export async function saveGameCommandReceipt<T>(
   await client.query(
     `INSERT INTO game_command_receipts (
        room_id,player_id,command_id,command_name,request_fingerprint,
-       expected_revision,base_revision,revision,response_value
+       expected_revision,base_revision,revision,response_value,
+       response_patch,response_private_patch
      )
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb)`,
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9::jsonb,$10::jsonb,$11::jsonb)`,
     [
       roomId,
       prepared.playerId,
@@ -145,6 +160,8 @@ export async function saveGameCommandReceipt<T>(
       result.baseRevision,
       result.revision,
       JSON.stringify(result.value ?? null),
+      result.patch ? JSON.stringify(result.patch) : null,
+      result.privatePatch ? JSON.stringify(result.privatePatch) : null,
     ],
   );
 

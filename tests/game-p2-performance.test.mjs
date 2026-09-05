@@ -4,69 +4,17 @@ import test from "node:test";
 import { nextGamePollDelay } from "../.test-build/game-polling.js";
 
 test("polling adapta intervalo a visibilidade, falhas e estado offline", () => {
-  assert.equal(
-    nextGamePollDelay({
-      visible: true,
-      online: true,
-      failures: 0,
-      presentationPending: false,
-    }),
-    1_000,
-  );
-  assert.equal(
-    nextGamePollDelay({
-      visible: false,
-      online: true,
-      failures: 0,
-      presentationPending: false,
-    }),
-    5_000,
-  );
-  assert.equal(
-    nextGamePollDelay({
-      visible: false,
-      online: true,
-      failures: 0,
-      presentationPending: true,
-    }),
-    2_500,
-  );
-  assert.equal(
-    nextGamePollDelay({
-      visible: true,
-      online: true,
-      failures: 1,
-      presentationPending: false,
-    }),
-    2_000,
-  );
-  assert.equal(
-    nextGamePollDelay({
-      visible: true,
-      online: true,
-      failures: 3,
-      presentationPending: false,
-    }),
-    8_000,
-  );
-  assert.equal(
-    nextGamePollDelay({
-      visible: true,
-      online: false,
-      failures: 0,
-      presentationPending: false,
-    }),
-    15_000,
-  );
+  assert.equal(nextGamePollDelay({ visible: true, online: true, failures: 0, presentationPending: false }), 1_000);
+  assert.equal(nextGamePollDelay({ visible: false, online: true, failures: 0, presentationPending: false }), 5_000);
+  assert.equal(nextGamePollDelay({ visible: false, online: true, failures: 0, presentationPending: true }), 2_500);
+  assert.equal(nextGamePollDelay({ visible: true, online: true, failures: 1, presentationPending: false }), 2_000);
+  assert.equal(nextGamePollDelay({ visible: true, online: true, failures: 3, presentationPending: false }), 8_000);
+  assert.equal(nextGamePollDelay({ visible: true, online: false, failures: 0, presentationPending: false }), 15_000);
 });
 
 test("game sync usa scheduler adaptativo e sincroniza imediatamente ao voltar", () => {
   const source = readFileSync("src/hooks/use-game-sync.ts", "utf8");
-  const scheduler = readFileSync(
-    "src/lib/client/sync/game-poll-scheduler.ts",
-    "utf8",
-  );
-
+  const scheduler = readFileSync("src/lib/client/sync/game-poll-scheduler.ts", "utf8");
   assert.match(source, /GamePollScheduler/);
   assert.match(scheduler, /nextGamePollDelay/);
   assert.match(scheduler, /consecutiveFailures/);
@@ -78,11 +26,7 @@ test("game sync usa scheduler adaptativo e sincroniza imediatamente ao voltar", 
 
 test("snapshot preserva referências de slices inalterados", () => {
   const sharing = readFileSync("src/lib/shared/game-snapshot-sharing.ts", "utf8");
-  const coordinator = readFileSync(
-    "src/lib/client/sync/game-snapshot-coordinator.ts",
-    "utf8",
-  );
-
+  const coordinator = readFileSync("src/lib/client/sync/game-snapshot-coordinator.ts", "utf8");
   assert.match(sharing, /shareGameSnapshot/);
   assert.match(sharing, /previous\.territories/);
   assert.match(sharing, /previous\.players/);
@@ -93,7 +37,6 @@ test("snapshot preserva referências de slices inalterados", () => {
 
 test("rede viária agrupa rotas base e individualiza somente destaques", () => {
   const source = readFileSync("src/components/road-network.tsx", "utf8");
-
   assert.match(source, /basePath: base\.join\(" "\)/);
   assert.match(source, /road-route-base/);
   assert.match(source, /layers\.highlighted\.map/);
@@ -103,11 +46,7 @@ test("rede viária agrupa rotas base e individualiza somente destaques", () => {
 
 test("mobile usa budget de GPU reduzido sem alterar acabamento desktop", () => {
   const page = readFileSync("src/app/game/[roomId]/page.tsx", "utf8");
-  const css = readFileSync(
-    "src/app/game/[roomId]/game-performance.css",
-    "utf8",
-  );
-
+  const css = readFileSync("src/app/game/[roomId]/game-performance.css", "utf8");
   assert.match(page, /game-roads\.css["'];\nimport ["']\.\/game-performance\.css/);
   assert.match(css, /@media \(max-width: 767px\)/);
   assert.match(css, /backdrop-filter: blur\(10px\)/);
@@ -118,7 +57,6 @@ test("mobile usa budget de GPU reduzido sem alterar acabamento desktop", () => {
 
 test("objetivos usam agregações específicas em vez de materializar o tabuleiro inteiro", () => {
   const source = readFileSync("src/lib/server/game-objective-service.ts", "utf8");
-
   assert.match(source, /COUNT\(\*\)::int count/);
   assert.match(source, /SELECT EXISTS\(/);
   assert.match(source, /ownedTerritoryIds/);
@@ -128,47 +66,31 @@ test("objetivos usam agregações específicas em vez de materializar o tabuleir
 });
 
 test("mudanças apenas de tropas não reavaliam objetivos de domínio", () => {
-  const service = readFileSync(
-    "src/lib/server/game-troop-command-service.ts",
-    "utf8",
-  );
-  const reinforcementRoute = readFileSync(
-    "src/app/api/games/[roomId]/reinforce/route.ts",
-    "utf8",
-  );
-  const tradeRoute = readFileSync(
-    "src/app/api/games/[roomId]/cards/trade/route.ts",
-    "utf8",
-  );
-
+  const service = readFileSync("src/lib/server/game-troop-command-service.ts", "utf8");
+  const reinforcementRoute = readFileSync("src/app/api/games/[roomId]/reinforce/route.ts", "utf8");
+  const tradeRoute = readFileSync("src/app/api/games/[roomId]/cards/trade/route.ts", "utf8");
+  const tradePatchService = readFileSync("src/lib/server/game-card-redemption-patch-command-service.ts", "utf8");
   assert.match(service, /"troops_changed"/);
   assert.match(service, /changedTroops/);
   assert.match(reinforcementRoute, /game-troop-command-service/);
-  assert.match(tradeRoute, /game-troop-command-service/);
+  assert.match(tradeRoute, /game-card-redemption-patch-command-service/);
+  assert.match(tradePatchService, /executeTradeCards/);
 });
 
 test("combate avalia objetivo somente quando controle territorial muda", () => {
   const source = readFileSync("src/lib/server/game-battle-service.ts", "utf8");
-  const survivingDefense = source.match(
-    /if \(defenderTroops > 0\) \{[\s\S]*?\n  \}/,
-  )?.[0];
-
+  const survivingDefense = source.match(/if \(defenderTroops > 0\) \{[\s\S]*?\n  \}/)?.[0];
   assert.ok(survivingDefense);
   assert.doesNotMatch(survivingDefense, /objectiveWon/);
   assert.match(source, /"territory_control_changed"/);
 });
 
 test("transferência pós-conquista reavalia somente objetivos afetados por tropas", () => {
-  const route = readFileSync(
-    "src/app/api/games/[roomId]/conquest/route.ts",
-    "utf8",
-  );
-  const service = readFileSync(
-    "src/lib/server/game-conquest-command-service.ts",
-    "utf8",
-  );
-
-  assert.match(route, /game-conquest-command-service/);
+  const route = readFileSync("src/app/api/games/[roomId]/conquest/route.ts", "utf8");
+  const patchService = readFileSync("src/lib/server/game-conquest-patch-command-service.ts", "utf8");
+  const service = readFileSync("src/lib/server/game-conquest-command-service.ts", "utf8");
+  assert.match(route, /game-conquest-patch-command-service/);
+  assert.match(patchService, /executeCompleteConquest/);
   assert.match(service, /"troops_changed"/);
   assert.match(service, /advanceBattlePresentation/);
   assert.match(service, /saveBattle/);
@@ -176,19 +98,9 @@ test("transferência pós-conquista reavalia somente objetivos afetados por trop
 
 test("topologia fixa atravessa a rede apenas quando a versão muda", () => {
   const contract = readFileSync("src/lib/shared/game-sync-contract.ts", "utf8");
-  const route = readFileSync(
-    "src/app/api/games/[roomId]/route.ts",
-    "utf8",
-  );
-  const transport = readFileSync(
-    "src/lib/client/transport/http-game-snapshot-transport.ts",
-    "utf8",
-  );
-  const coordinator = readFileSync(
-    "src/lib/client/sync/game-snapshot-coordinator.ts",
-    "utf8",
-  );
-
+  const route = readFileSync("src/app/api/games/[roomId]/route.ts", "utf8");
+  const transport = readFileSync("src/lib/client/transport/http-game-snapshot-transport.ts", "utf8");
+  const coordinator = readFileSync("src/lib/client/sync/game-snapshot-coordinator.ts", "utf8");
   assert.match(contract, /GAME_TOPOLOGY_HEADER/);
   assert.match(contract, /GAME_TOPOLOGY_VERSION/);
   assert.match(route, /knownTopology === GAME_TOPOLOGY_VERSION/);
@@ -197,38 +109,23 @@ test("topologia fixa atravessa a rede apenas quando a versão muda", () => {
   assert.match(transport, /GAME_TOPOLOGY_HEADER/);
   assert.match(coordinator, /topologyVersion/);
   assert.match(coordinator, /baseConnections/);
-  assert.match(
-    coordinator,
-    /result\.payload\.connections \?\? this\.baseConnections/,
-  );
+  assert.match(coordinator, /result\.payload\.connections \?\? this\.baseConnections/);
   assert.match(coordinator, /hydrateGameSnapshot\(result\.payload, baseConnections\)/);
 });
 
 test("reforço e manobra retornam patches autoritativos ligados à revisão base", () => {
   const command = readFileSync("src/lib/server/game-command.ts", "utf8");
-  const reinforce = readFileSync(
-    "src/app/api/games/[roomId]/reinforce/route.ts",
-    "utf8",
-  );
-  const maneuver = readFileSync(
-    "src/app/api/games/[roomId]/maneuver/route.ts",
-    "utf8",
-  );
-  const maneuverService = readFileSync(
-    "src/lib/server/game-maneuver-command-service.ts",
-    "utf8",
-  );
-
+  const reinforce = readFileSync("src/app/api/games/[roomId]/reinforce/route.ts", "utf8");
+  const maneuver = readFileSync("src/app/api/games/[roomId]/maneuver/route.ts", "utf8");
+  const maneuverService = readFileSync("src/lib/server/game-maneuver-command-service.ts", "utf8");
   assert.match(command, /const baseRevision = await lockRoomRevision/);
-  assert.match(
-    command,
-    /const result: GameCommandResult<T> = \{ value, baseRevision, revision \}/,
-  );
-  assert.match(command, /return result;/);
+  assert.match(command, /const result: GameCommandResult<T> = \{/);
+  assert.match(command, /publicPatch \? \{ patch: publicPatch \}/);
+  assert.match(command, /requesterPrivatePatch/);
   assert.match(reinforce, /baseRevision: result\.baseRevision/);
-  assert.match(reinforce, /patch: result\.value/);
+  assert.match(reinforce, /result\.patch/);
   assert.match(maneuver, /baseRevision: result\.baseRevision/);
-  assert.match(maneuver, /patch: result\.value/);
+  assert.match(maneuver, /result\.patch/);
   assert.match(maneuverService, /RETURNING troops,moved_in_turn/);
 });
 
@@ -236,19 +133,15 @@ test("command patch só é aplicado sobre a revisão base e refresh vira no-op q
   const client = readFileSync("src/lib/client/game-command-client.ts", "utf8");
   const bus = readFileSync("src/lib/client/game-command-patch-bus.ts", "utf8");
   const sync = readFileSync("src/hooks/use-game-sync.ts", "utf8");
-  const controller = readFileSync(
-    "src/lib/client/sync/game-sync-controller.ts",
-    "utf8",
-  );
-  const revisions = readFileSync(
-    "src/lib/client/sync/revision-coordinator.ts",
-    "utf8",
-  );
+  const controller = readFileSync("src/lib/client/sync/game-sync-controller.ts", "utf8");
+  const revisions = readFileSync("src/lib/client/sync/revision-coordinator.ts", "utf8");
   const patch = readFileSync("src/lib/shared/game-command-patch.ts", "utf8");
-
+  assert.match(client, /isGameCommandPatch/);
   assert.match(client, /dispatchGameCommandPatch/);
   assert.match(bus, /registerGameCommandPatchHandler/);
   assert.match(controller, /canApplyPatch\(result\.baseRevision, result\.revision\)/);
+  assert.match(controller, /pendingFrames/);
+  assert.match(controller, /bufferFramePatch/);
   assert.match(controller, /applyGameCommandPatch/);
   assert.match(revisions, /this\.currentRevision === baseRevision/);
   assert.match(sync, /hasObservedRevision\(minimumRevision\)/);

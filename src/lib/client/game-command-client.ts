@@ -1,6 +1,9 @@
 "use client";
 
-import type { GameCommandPatch } from "../shared/game-command-patch";
+import {
+  isGameCommandPatch,
+  type GameCommandPatch,
+} from "../shared/game-command-patch";
 import {
   isGamePrivatePatch,
   type GamePrivatePatch,
@@ -52,10 +55,7 @@ function commandEnvelope(data: unknown) {
     record.baseRevision >= 1
       ? record.baseRevision
       : null;
-  const patch =
-    typeof record.patch === "object" && record.patch !== null
-      ? (record.patch as GameCommandPatch)
-      : undefined;
+  const patch = isGameCommandPatch(record.patch) ? record.patch : undefined;
   const privatePatch = isGamePrivatePatch(record.privatePatch)
     ? record.privatePatch
     : undefined;
