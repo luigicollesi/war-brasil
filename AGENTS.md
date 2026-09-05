@@ -6,6 +6,13 @@
 - Inspect existing code/config before editing. Reuse the current architecture, package manager, scripts, and dependencies.
 - Do not add dependencies, refactor unrelated code, or change public behavior unless required.
 
+## Project maintenance
+
+- `.env.example` is the canonical public reference for project environment variables. Whenever a runtime/configuration change adds, removes, renames, or materially changes an environment variable, update `.env.example` in the same change. Keep real secrets only in ignored local/deployment environment files; never commit them.
+- For database schema changes, prefer a new numbered migration under `src/lib/db/migrations/` instead of rewriting a migration that may already have been applied.
+- Keep `src/lib/db/schema.sql` aligned with the final schema for clean installations. When an existing development database needs automatic convergence, update `scripts/prepare-dev-db.mjs` and its tests together with the migration.
+- Environment, schema, migration, and dev-runtime documentation must describe the behavior that actually exists in the current branch; remove stale transitional instructions when the implementation changes.
+
 ## Skills
 
 - Skills are optional. Use one only when it clearly helps the current task.
