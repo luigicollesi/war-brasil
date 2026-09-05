@@ -12,6 +12,7 @@ import {
   GAME_REALTIME_PATH,
   GAME_REALTIME_SUBPROTOCOL,
   parseClientMessage,
+  parseNotificationPayload,
   serverEvent,
 } from "./protocol.mjs";
 import { RedisRoomSubscriber } from "./redis-room-subscriber.mjs";
@@ -36,6 +37,7 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
   throw new Error("GAME_REALTIME_PORT inválida.");
 }
 
+const internalToken = process.env.GAME_REALTIME_INTERNAL_TOKEN?.trim() || null;
 const eventSourceMode = process.env.GAME_REALTIME_EVENT_SOURCE?.trim() || "postgres";
 if (!new Set(["postgres", "dual", "redis"]).has(eventSourceMode)) {
   throw new Error(
@@ -98,6 +100,27 @@ function requestedSubprotocol(request) {
     .split(",")
     .map((value) => value.trim())
     .includes(GAME_REALTIME_SUBPROTOCOL);
+}
+
+function writeJson(response, statusCode, body) {
+  response.writeHead(statusCode, {
+    "Content-Type": "application/json; charset=utf-8",
+    "Cache-Control": "no-store",
+  });
+  response.end(JSON.stringify(body));
+}
+
+async function readJsonBody(request) {
+  const chunks = [];
+  let total = 0;
+  for await (const chunk of request) {
+    total += chunk.length;
+    if (total > GAME_REALTIME_MAX_PAYLOAD_BYTES) {
+      throw new Error("Payload interno realtime muito grande.");
+    }
+    chunks.push(chunk);
+  }
+  return JSON.parse(Buffer.concat(chunks).toString("utf8"));
 }
 
 const origins = allowedOrigins();
@@ -351,7 +374,41 @@ function statusBody() {
   };
 }
 
+async function handleInternalEphemeral(request, response) {
+  if (!gatewayReady()) {
+    writeJson(response, 503, { error: "Realtime indisponível." });
+    return;
+  }
+  if (!internalToken) {
+    writeJson(response, 503, { error: "Canal interno realtime não configurado." });
+    return;
+  }
+  if (request.headers.authorization !== `Bearer ${internalToken}`) {
+    writeJson(response, 401, { error: "Credencial interna realtime inválida." });
+    return;
+  }
+
+  try {
+    const body = await readJsonBody(request);
+    const event = parseNotificationPayload(JSON.stringify(body));
+    if (!event || event.kind !== "ephemeral") {
+      writeJson(response, 422, { error: "Evento efêmero realtime inválido." });
+      return;
+    }
+
+    const delivered = registry.broadcastEphemeral(event);
+    writeJson(response, 200, { delivered });
+  } catch {
+    writeJson(response, 400, { error: "Payload interno realtime inválido." });
+  }
+}
+
 const server = http.createServer((request, response) => {
+  if (request.method === "POST" && request.url === "/internal/ephemeral") {
+    void handleInternalEphemeral(request, response);
+    return;
+  }
+
   if (request.method === "GET" && request.url === "/health/live") {
     response.writeHead(200, {
       "Content-Type": "application/json; charset=utf-8",
