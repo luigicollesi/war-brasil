@@ -6,6 +6,7 @@ import { TerritoryCard } from "@/src/components/territory-card";
 import { TradePhaseMount } from "@/src/components/trade/trade-phase-mount";
 import { TradeResolutionModal } from "@/src/components/trade/trade-resolution-modal";
 import { TradeResponseModal } from "@/src/components/trade/trade-response-modal";
+import { TradeSignalToast } from "@/src/components/trade/trade-signal-toast";
 import { runGameCommand } from "@/src/lib/game-command-client";
 import type { GameSnapshot } from "@/src/lib/game-contract";
 import { isValidTrade } from "@/src/lib/game-rules";
@@ -71,6 +72,7 @@ export function MandatoryCardTradeModal({
   return (
     <>
       <TradeResolutionModal roomId={roomId} snapshot={snapshot} />
+      <TradeSignalToast roomId={roomId} snapshot={snapshot} />
 
       {tradeActive ? (
         <>
