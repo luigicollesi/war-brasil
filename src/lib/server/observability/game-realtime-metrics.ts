@@ -8,7 +8,9 @@ type GameRealtimeMetricName =
   | "notify.publish"
   | "notify.private"
   | "notify.patch"
+  | "notify.private_patch"
   | "notify.patch_fallback"
+  | "notify.private_patch_fallback"
   | "notify.failure";
 
 type GameRealtimeMetric = {
