@@ -24,16 +24,23 @@ type WebSocketGameRealtimeTransportOptions = {
   authMode?: "cookie" | "ticket";
 };
 
+function websocketHostname() {
+  const hostname = window.location.hostname;
+  return hostname.includes(":") ? `[${hostname}]` : hostname;
+}
+
 function connectionUrl(
   configuredUrl: string | undefined,
   roomId: string,
   ticket?: string,
 ) {
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const configuredPort = process.env.NEXT_PUBLIC_GAME_REALTIME_PORT?.trim();
   const url = configuredUrl
     ? new URL(configuredUrl, window.location.href)
-    : new URL(
-        `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/realtime`,
-      );
+    : configuredPort
+      ? new URL(`${protocol}//${websocketHostname()}:${configuredPort}/realtime`)
+      : new URL(`${protocol}//${window.location.host}/realtime`);
   url.searchParams.set("roomId", roomId);
   if (ticket) url.searchParams.set("ticket", ticket);
   return url.toString();
@@ -259,7 +266,7 @@ export class WebSocketGameRealtimeTransport implements GameRealtimeTransport {
   private sendPing() {
     const socket = this.socket;
     const input = this.input;
-    if (!socket || !input || socket.readyState !== WebSocket.OPEN) return;
+    if (!socket || socket.readyState !== WebSocket.OPEN || !input) return;
 
     const message: GameRealtimeClientMessage = {
       protocolVersion: GAME_PROTOCOL_VERSION,
@@ -286,9 +293,9 @@ export class WebSocketGameRealtimeTransport implements GameRealtimeTransport {
     this.reconnectTimer = null;
   }
 
-  private transition(next: GameRealtimeState) {
-    if (this.currentState === next) return;
-    this.currentState = next;
-    for (const listener of this.stateListeners) listener(next);
+  private transition(state: GameRealtimeState) {
+    if (this.currentState === state) return;
+    this.currentState = state;
+    for (const listener of this.stateListeners) listener(state);
   }
 }
