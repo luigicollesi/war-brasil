@@ -351,6 +351,23 @@ export function useGameSync(roomId: string) {
         return;
       }
 
+      if (event.type === "game.private.patch" && realtimeMode === "hybrid") {
+        const result = syncController.applyRealtimePrivatePatch(event);
+        if (result.applied && result.snapshot) {
+          gameSyncMetricsStore.recordRealtimePatchResult(result);
+          if (isActive) {
+            setSnapshot(result.snapshot);
+            setError("");
+          }
+          scheduleNextPoll();
+          return;
+        }
+        if (result.buffered || result.stale) return;
+        gameSyncMetricsStore.recordRealtimePatchResult(result);
+        void wakeForRealtime();
+        return;
+      }
+
       if (event.type === "game.patch" && realtimeMode === "hybrid") {
         const result = syncController.applyRealtimePatch(event);
         gameSyncMetricsStore.recordRealtimePatchResult(result);
