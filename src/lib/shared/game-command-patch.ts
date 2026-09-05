@@ -1,4 +1,12 @@
-import type { GamePhase, GameSnapshot, GameStatus } from "./game-contract";
+import type {
+  GamePhase,
+  GameSnapshot,
+  GameStatus,
+  GameTradeOffer,
+  GameTradePublicState,
+  GameTradeTerms,
+} from "./game-contract";
+import { isTradeCardDescriptor } from "./game-trade-rules";
 
 export type GameCommandPatch = {
   room?: {
@@ -12,12 +20,14 @@ export type GameCommandPatch = {
     troops: number;
     movedInTurn?: number;
   }>;
+  trade?: GameTradePublicState | null;
 };
 
 export type ApplicableGameCommandResult = {
   baseRevision: number | null;
   revision: number | null;
   patch?: GameCommandPatch;
+  privatePatch?: import("./game-private-patch").GamePrivatePatch;
 };
 
 const GAME_STATUSES = new Set<GameStatus>([
@@ -35,7 +45,7 @@ const GAME_PHASES = new Set<GamePhase>([
   "end_turn",
   "finished",
 ]);
-const PATCH_KEYS = new Set(["room", "territories"]);
+const PATCH_KEYS = new Set(["room", "territories", "trade"]);
 const ROOM_PATCH_KEYS = new Set([
   "status",
   "phase",
@@ -47,6 +57,17 @@ const TERRITORY_PATCH_KEYS = new Set([
   "troops",
   "movedInTurn",
 ]);
+const TRADE_PATCH_KEYS = new Set(["offersUsed", "offerLimit", "activeOffer"]);
+const OFFER_KEYS = new Set([
+  "id",
+  "proposerPlayerId",
+  "targetPlayerId",
+  "status",
+  "original",
+  "counter",
+]);
+const TERMS_KEYS = new Set(["offered", "requested"]);
+const COUNTER_KEYS = new Set(["proposerPlayerId", "terms"]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -54,6 +75,59 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function hasOnlyKeys(record: Record<string, unknown>, allowed: Set<string>) {
   return Object.keys(record).every((key) => allowed.has(key));
+}
+
+function validNumericPlayerId(value: unknown) {
+  return typeof value === "string" && /^\d+$/.test(value);
+}
+
+function validTradeTerms(value: unknown): value is GameTradeTerms {
+  return (
+    isRecord(value) &&
+    hasOnlyKeys(value, TERMS_KEYS) &&
+    isTradeCardDescriptor(value.offered) &&
+    isTradeCardDescriptor(value.requested)
+  );
+}
+
+function validTradeOffer(value: unknown): value is GameTradeOffer {
+  if (!isRecord(value) || !hasOnlyKeys(value, OFFER_KEYS)) return false;
+  if (
+    typeof value.id !== "string" ||
+    !/^\d+$/.test(value.id) ||
+    !validNumericPlayerId(value.proposerPlayerId) ||
+    !validNumericPlayerId(value.targetPlayerId) ||
+    !new Set(["open", "countered", "accepted_pending_selection"]).has(
+      value.status as string,
+    ) ||
+    !validTradeTerms(value.original)
+  ) {
+    return false;
+  }
+
+  if (value.counter === null) return true;
+  return (
+    isRecord(value.counter) &&
+    hasOnlyKeys(value.counter, COUNTER_KEYS) &&
+    validNumericPlayerId(value.counter.proposerPlayerId) &&
+    validTradeTerms(value.counter.terms)
+  );
+}
+
+function validTradePublicState(value: unknown): value is GameTradePublicState {
+  if (!isRecord(value) || !hasOnlyKeys(value, TRADE_PATCH_KEYS)) return false;
+  if (
+    typeof value.offersUsed !== "number" ||
+    !Number.isSafeInteger(value.offersUsed) ||
+    value.offersUsed < 0 ||
+    typeof value.offerLimit !== "number" ||
+    !Number.isSafeInteger(value.offerLimit) ||
+    value.offerLimit < 1 ||
+    value.offersUsed > value.offerLimit
+  ) {
+    return false;
+  }
+  return value.activeOffer === null || validTradeOffer(value.activeOffer);
 }
 
 function validRoomPatch(value: unknown) {
@@ -118,7 +192,8 @@ export function isGameCommandPatch(value: unknown): value is GameCommandPatch {
 
   const hasRoom = value.room !== undefined;
   const hasTerritories = value.territories !== undefined;
-  if (!hasRoom && !hasTerritories) return false;
+  const hasTrade = value.trade !== undefined;
+  if (!hasRoom && !hasTerritories && !hasTrade) return false;
   if (hasRoom && !validRoomPatch(value.room)) return false;
 
   if (hasTerritories) {
@@ -134,6 +209,10 @@ export function isGameCommandPatch(value: unknown): value is GameCommandPatch {
     }
   }
 
+  if (hasTrade && value.trade !== null && !validTradePublicState(value.trade)) {
+    return false;
+  }
+
   return true;
 }
 
@@ -143,6 +222,7 @@ export function applyGameCommandPatch(
 ): GameSnapshot | null {
   let room = snapshot.room;
   let territories = snapshot.territories;
+  let trade = snapshot.trade;
 
   if (patch.room) {
     room = {
@@ -171,7 +251,23 @@ export function applyGameCommandPatch(
     if (matched !== updates.size) return null;
   }
 
-  if (room === snapshot.room && territories === snapshot.territories) {
+  if (patch.trade !== undefined) {
+    if (patch.trade === null) {
+      trade = null;
+    } else {
+      if (!snapshot.trade) return null;
+      trade = {
+        ...snapshot.trade,
+        ...patch.trade,
+      };
+    }
+  }
+
+  if (
+    room === snapshot.room &&
+    territories === snapshot.territories &&
+    trade === snapshot.trade
+  ) {
     return snapshot;
   }
 
@@ -179,5 +275,6 @@ export function applyGameCommandPatch(
     ...snapshot,
     room,
     territories,
+    trade,
   };
 }
