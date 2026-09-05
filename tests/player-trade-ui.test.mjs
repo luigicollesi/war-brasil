@@ -103,22 +103,22 @@ test("sinalização não usa command revisionado nem retry", () => {
   assert.doesNotMatch(bus, /localStorage|sessionStorage|indexedDB|fetch/);
 });
 
-test("toast de sinal fica global e não descarta broadcast por snapshot atrasado", () => {
+test("sinal de posse abre modal global e não descarta broadcast por snapshot atrasado", () => {
   const runtime = source("src/components/mandatory-card-trade-modal.tsx");
   const mount = source("src/components/trade/trade-phase-mount.tsx");
-  const toast = source("src/components/trade/trade-signal-toast.tsx");
+  const modal = source("src/components/trade/trade-signal-toast.tsx");
 
   assert.match(runtime, /<TradeSignalToast/);
   assert.doesNotMatch(mount, /<TradeSignalToast/);
-  assert.match(toast, /useRef\(snapshot\.room\.turnNumber\)/);
-  assert.match(toast, /nextEvent\.payload\.turnNumber < currentTurnRef\.current/);
-  assert.doesNotMatch(toast, /snapshot\.room\.phase !== "trade"/);
-  assert.doesNotMatch(
-    toast,
-    /nextEvent\.payload\.turnNumber !== snapshot\.room\.turnNumber/,
-  );
-  assert.match(toast, /window\.setTimeout/);
-  assert.doesNotMatch(toast, /localStorage|sessionStorage|history|indexedDB/);
+  assert.match(modal, /useRef\(snapshot\.room\.turnNumber\)/);
+  assert.match(modal, /nextEvent\.payload\.turnNumber < currentTurnRef\.current/);
+  assert.doesNotMatch(modal, /snapshot\.room\.phase !== "trade"/);
+  assert.match(modal, /<GameModal/);
+  assert.match(modal, /eyebrow="Notificação de posse"/);
+  assert.match(modal, /Carta disponível para troca/);
+  assert.match(modal, />\s*Entendi\s*</);
+  assert.doesNotMatch(modal, /window\.setTimeout/);
+  assert.doesNotMatch(modal, /localStorage|sessionStorage|history|indexedDB/);
 });
 
 test("recusa gera feedback efêmero em modal para o destinatário correto", () => {
