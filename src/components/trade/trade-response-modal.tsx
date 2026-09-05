@@ -12,20 +12,27 @@ import { tradePlayerName } from "./trade-ui-helpers";
 type TradeResponseModalProps = {
   roomId: string;
   snapshot: GameSnapshot;
-  onRefresh: (minimumRevision?: number) => Promise<void>;
 };
+
+function pendingLabel(action: string | null) {
+  if (action === "accept" || action === "acceptCounter") {
+    return "Confirmando troca...";
+  }
+  if (action === "decline") return "Recusando oferta...";
+  if (action === "counter") return "Enviando contraoferta...";
+  return action ? "Processando resposta..." : "";
+}
 
 export function TradeResponseModal({
   roomId,
   snapshot,
-  onRefresh,
 }: TradeResponseModalProps) {
   const trade = snapshot.trade;
   const me = snapshot.players.find((player) => player.isMe);
   const offer = trade?.activeOffer ?? null;
   const counter = offer?.counter ?? null;
   const [counterOpen, setCounterOpen] = useState(false);
-  const [busy, setBusy] = useState(false);
+  const [busyAction, setBusyAction] = useState<string | null>(null);
   const [error, setError] = useState("");
 
   const incomingOffer = Boolean(
@@ -58,13 +65,13 @@ export function TradeResponseModal({
   );
 
   async function command(body: Record<string, unknown>) {
-    if (busy) return false;
-    setBusy(true);
+    if (busyAction) return false;
+    const action = typeof body.action === "string" ? body.action : "trade";
+    setBusyAction(action);
     setError("");
 
     try {
-      const result = await runGameCommand(roomId, "trade", body);
-      await onRefresh(result.revision ?? undefined);
+      await runGameCommand(roomId, "trade", body);
       return true;
     } catch (requestError) {
       setError(
@@ -74,7 +81,7 @@ export function TradeResponseModal({
       );
       return false;
     } finally {
-      setBusy(false);
+      setBusyAction(null);
     }
   }
 
@@ -110,7 +117,7 @@ export function TradeResponseModal({
           {canAcceptCounter ? (
             <button
               type="button"
-              disabled={busy}
+              disabled={busyAction !== null}
               onClick={() =>
                 void command({ action: "acceptCounter", offerId: offer.id })
               }
@@ -121,7 +128,7 @@ export function TradeResponseModal({
           ) : null}
           <button
             type="button"
-            disabled={busy}
+            disabled={busyAction !== null}
             onClick={() =>
               void command({ action: "decline", offerId: offer.id })
             }
@@ -131,6 +138,11 @@ export function TradeResponseModal({
           </button>
         </div>
 
+        {busyAction ? (
+          <p className="mt-4 text-sm text-[#f1d278]" role="status" aria-live="polite">
+            {pendingLabel(busyAction)}
+          </p>
+        ) : null}
         {error ? (
           <p className="mt-4 text-sm text-[#f0a090]" role="alert">
             {error}
@@ -158,7 +170,7 @@ export function TradeResponseModal({
         {canAcceptOriginal ? (
           <button
             type="button"
-            disabled={busy}
+            disabled={busyAction !== null}
             onClick={() =>
               void command({ action: "accept", offerId: offer.id })
             }
@@ -169,7 +181,7 @@ export function TradeResponseModal({
         ) : null}
         <button
           type="button"
-          disabled={busy}
+          disabled={busyAction !== null}
           onClick={() => setCounterOpen(true)}
           className="rounded-xl border border-white/15 px-4 py-3 text-xs font-bold uppercase tracking-wider text-white disabled:opacity-40"
         >
@@ -177,7 +189,7 @@ export function TradeResponseModal({
         </button>
         <button
           type="button"
-          disabled={busy}
+          disabled={busyAction !== null}
           onClick={() =>
             void command({ action: "decline", offerId: offer.id })
           }
@@ -187,6 +199,11 @@ export function TradeResponseModal({
         </button>
       </div>
 
+      {busyAction ? (
+        <p className="mt-4 text-sm text-[#f1d278]" role="status" aria-live="polite">
+          {pendingLabel(busyAction)}
+        </p>
+      ) : null}
       {error ? (
         <p className="mt-4 text-sm text-[#f0a090]" role="alert">
           {error}
