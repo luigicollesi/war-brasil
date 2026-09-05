@@ -1,7 +1,7 @@
 # WAR Brasil
 
-Base inicial de um jogo de estratégia no mapa do Brasil, construída com Next.js,
-React, TypeScript e Tailwind CSS.
+Jogo de estratégia no mapa do Brasil, construído com Next.js, React, TypeScript,
+Tailwind CSS e PostgreSQL.
 
 ## Rotas
 
@@ -15,24 +15,62 @@ React, TypeScript e Tailwind CSS.
 `src/lib` possui fronteiras explícitas entre `client/`, `server/` e `shared/`.
 O Next.js continua responsável pela aplicação web e pelos Route Handlers em
 `src/app/api`, que atuam como adaptadores HTTP para o código server-side.
-Consulte `src/lib/README.md` para as regras de dependência e a estratégia de
-compatibilidade durante a migração.
+Consulte `src/lib/README.md` para as regras de dependência.
+
+O realtime permanece em um processo separado em `realtime/`. No ambiente de
+desenvolvimento, `npm run dev` coordena Next + gateway realtime sem fundir as
+duas responsabilidades.
+
+## Variáveis de ambiente
+
+Use `.env.example` como referência pública e copie para um arquivo local ignorado:
+
+```bash
+cp .env.example .env.local
+```
+
+No mínimo, configure `DATABASE_URL` para o seu PostgreSQL. A referência já traz
+os valores recomendados para desenvolvimento com realtime habilitado.
+
+Para acesso pela rede local/celular, não fixe
+`NEXT_PUBLIC_GAME_REALTIME_URL=ws://localhost:...`. O desenvolvimento usa
+`NEXT_PUBLIC_GAME_REALTIME_PORT` e o cliente reaproveita o hostname pelo qual a
+página foi aberta.
+
+Segredos reais nunca devem ser adicionados ao `.env.example`.
 
 ## Banco de dados
 
-Copie `.env.example` para um arquivo de ambiente local e configure `DATABASE_URL`.
-O pool PostgreSQL reutilizável fica em `src/lib/server/db/pool.ts` e só pode ser
-importado por código executado no servidor. O caminho histórico
-`src/lib/db/pool.ts` permanece temporariamente como reexport de compatibilidade.
+O schema canônico para uma instalação limpa fica em `src/lib/db/schema.sql`.
+Mudanças de schema em bancos existentes devem ser feitas por migrations
+numeradas em `src/lib/db/migrations/`.
 
-O schema de `game_rooms` e `room_players` está em `src/lib/db/schema.sql` e
-não é executado automaticamente pela aplicação. A lobby usa polling de um
-segundo e o PostgreSQL permanece como fonte de verdade para jogadores, cores,
-prontidão e início da partida.
+Depois de criar o schema base ou ao atualizar o branch de desenvolvimento, use:
 
-Para bancos que já receberam o schema inicial, aplique também
-`src/lib/db/migrations/002-game-initialization.sql`. Ela adiciona a fase de
-sorteio, a distribuição de territórios, tropas e resultados dos dados.
+```bash
+npm run db:prepare:dev
+```
 
-Para habilitar turnos, objetivos e cartas em um banco que já recebeu a
-migração anterior, aplique em seguida `src/lib/db/migrations/003-playable-game.sql`.
+O preparador aplica as migrations necessárias de forma convergente para o
+ambiente de desenvolvimento. `npm run dev` executa essa preparação antes de
+subir os processos locais.
+
+PostgreSQL permanece como fonte autoritativa do estado do jogo. Realtime apenas
+propaga revisions e eventos efêmeros, como sinalizações de posse.
+
+## Desenvolvimento
+
+Com `.env.local` configurado:
+
+```bash
+npm run dev
+```
+
+Por padrão, isso inicia:
+
+- Next.js na porta `3000`;
+- gateway realtime na porta `3001`;
+- cliente realtime em modo `hybrid`;
+- origem local/LAN detectada automaticamente pelo orquestrador de desenvolvimento.
+
+Configurações explícitas no ambiente continuam prevalecendo sobre esses defaults.
