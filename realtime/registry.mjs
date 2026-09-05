@@ -106,10 +106,19 @@ export class GameRealtimeRegistry {
 
   broadcastEphemeral(event) {
     const room = this.rooms.get(event.roomId);
-    if (!room) return 0;
+    if (!room) {
+      return { delivered: 0, deliveredPlayers: 0, connectedPlayers: 0 };
+    }
 
     let delivered = 0;
+    const connectedPlayerIds = new Set();
+    const deliveredPlayerIds = new Set();
+
     for (const context of room) {
+      if (context.socket.readyState === WebSocket.OPEN) {
+        connectedPlayerIds.add(context.playerId);
+      }
+
       if (
         context.socket.readyState !== WebSocket.OPEN ||
         context.socket.bufferedAmount > maxBufferedBytes()
@@ -126,6 +135,7 @@ export class GameRealtimeRegistry {
           serverEvent(event.eventType, event.roomId, event.payload),
         );
         delivered += 1;
+        deliveredPlayerIds.add(context.playerId);
         recordRealtimeMetric("ephemeralBroadcasts", {
           roomId: event.roomId,
           eventType: event.eventType,
@@ -134,7 +144,12 @@ export class GameRealtimeRegistry {
         context.socket.terminate();
       }
     }
-    return delivered;
+
+    return {
+      delivered,
+      deliveredPlayers: deliveredPlayerIds.size,
+      connectedPlayers: connectedPlayerIds.size,
+    };
   }
 
   sendPatch(context, event) {
