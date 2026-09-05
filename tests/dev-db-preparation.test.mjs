@@ -5,6 +5,8 @@ import test from "node:test";
 const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
 const dev = readFileSync("scripts/dev.mjs", "utf8");
 const prepare = readFileSync("scripts/prepare-dev-db.mjs", "utf8");
+const envExample = readFileSync(".env.example", "utf8");
+const agents = readFileSync("AGENTS.md", "utf8");
 const orderRollPhaseMigration = readFileSync(
   "src/lib/db/migrations/024-order-roll-phase-compatibility.sql",
   "utf8",
@@ -41,6 +43,37 @@ test("ambiente dev prepara migrations antes de subir Next e realtime", () => {
   ]) {
     assert.match(prepare, new RegExp(migration.replaceAll(".", "\\.")));
   }
+});
+
+test("referência de ambiente cobre banco, realtime local e automação sem fixar localhost no websocket", () => {
+  for (const variable of [
+    "DATABASE_URL",
+    "GAME_REALTIME_ENABLED",
+    "GAME_REALTIME_PORT",
+    "GAME_REALTIME_EVENT_SOURCE",
+    "GAME_REALTIME_AUTH_MODE",
+    "NEXT_PUBLIC_GAME_REALTIME_MODE",
+    "NEXT_PUBLIC_GAME_REALTIME_PORT",
+    "NEXT_PUBLIC_GAME_AUTOMATION_DRIVER",
+    "GAME_AUTOMATION_WORKER_MODE",
+  ]) {
+    assert.match(envExample, new RegExp(`^${variable}=`, "m"));
+  }
+
+  assert.doesNotMatch(
+    envExample,
+    /^NEXT_PUBLIC_GAME_REALTIME_URL=ws:\/\/localhost:/m,
+  );
+  assert.match(envExample, /GAME_REALTIME_ALLOWED_ORIGINS/);
+  assert.match(envExample, /GAME_REALTIME_TICKET_SECRET/);
+  assert.match(envExample, /GAME_REALTIME_REDIS_URL/);
+});
+
+test("contexto do projeto exige manter env example e migrations sincronizados", () => {
+  assert.match(agents, /\.env\.example.*canonical public reference/i);
+  assert.match(agents, /new numbered migration/i);
+  assert.match(agents, /src\/lib\/db\/schema\.sql/);
+  assert.match(agents, /scripts\/prepare-dev-db\.mjs/);
 });
 
 test("orquestrador dev mantém processos separados e encerra ambos em conjunto", () => {
