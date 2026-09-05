@@ -1,6 +1,7 @@
 import {
   applyGameCommandPatch,
   type ApplicableGameCommandResult,
+  type GameCommandPatch,
 } from "@/src/lib/game-command-patch";
 import {
   applyGamePrivatePatch,
@@ -48,13 +49,20 @@ type GameSyncControllerDependencies = {
   realtimeMode?: GameRealtimeMode;
 };
 
+type PendingRevisionFrame = {
+  baseRevision: number;
+  revision: number;
+  publicPatch?: GameCommandPatch;
+  privatePatch?: GamePrivatePatch;
+};
+
 export class GameSyncController {
   private readonly revisions = new RevisionCoordinator();
   private readonly snapshots = new GameSnapshotCoordinator();
   private readonly snapshotTransport: GameSnapshotTransport;
   private readonly realtimeTransport: GameRealtimeTransport;
   private readonly realtimeMode: GameRealtimeMode;
-  private readonly pendingPrivatePatches = new Map<number, GamePrivatePatch>();
+  private readonly pendingFrames = new Map<number, PendingRevisionFrame>();
   private unsubscribeRealtime: (() => void) | null = null;
   private forceSnapshotOnNextSync = false;
 
@@ -72,7 +80,7 @@ export class GameSyncController {
   reset() {
     this.revisions.reset();
     this.snapshots.reset();
-    this.pendingPrivatePatches.clear();
+    this.pendingFrames.clear();
     this.forceSnapshotOnNextSync = false;
   }
 
@@ -115,20 +123,41 @@ export class GameSyncController {
     return this.realtimeTransport.subscribeState(listener);
   }
 
-  private discardPrivatePatchesThrough(revision: number) {
-    for (const pendingRevision of this.pendingPrivatePatches.keys()) {
+  private discardFramesThrough(revision: number) {
+    for (const pendingRevision of this.pendingFrames.keys()) {
       if (pendingRevision <= revision) {
-        this.pendingPrivatePatches.delete(pendingRevision);
+        this.pendingFrames.delete(pendingRevision);
       }
     }
   }
 
-  private applyPendingPrivatePatch(snapshot: GameSnapshot, revision: number) {
-    const patch = this.pendingPrivatePatches.get(revision);
-    if (!patch) return snapshot;
-    const nextSnapshot = applyGamePrivatePatch(snapshot, patch);
+  private bufferFramePatch(
+    baseRevision: number,
+    revision: number,
+    patch: Pick<PendingRevisionFrame, "publicPatch" | "privatePatch">,
+  ) {
+    const existing = this.pendingFrames.get(revision);
+    if (existing && existing.baseRevision !== baseRevision) return false;
+    this.pendingFrames.set(revision, {
+      baseRevision,
+      revision,
+      ...existing,
+      ...patch,
+    });
+    return true;
+  }
+
+  private applyPendingPrivatePatch(
+    snapshot: GameSnapshot,
+    baseRevision: number,
+    revision: number,
+  ) {
+    const frame = this.pendingFrames.get(revision);
+    if (!frame?.privatePatch) return snapshot;
+    if (frame.baseRevision !== baseRevision) return null;
+    const nextSnapshot = applyGamePrivatePatch(snapshot, frame.privatePatch);
     if (!nextSnapshot) return null;
-    this.pendingPrivatePatches.delete(revision);
+    this.pendingFrames.delete(revision);
     return nextSnapshot;
   }
 
@@ -155,7 +184,7 @@ export class GameSyncController {
 
     this.revisions.observe(result.revision);
     const nextSnapshot = this.snapshots.accept(result);
-    this.discardPrivatePatchesThrough(result.revision);
+    this.discardFramesThrough(result.revision);
     if (forceSnapshot && result.kind === "snapshot") {
       this.forceSnapshotOnNextSync = false;
     }
@@ -172,11 +201,25 @@ export class GameSyncController {
 
   applyCommandResult(result: ApplicableGameCommandResult) {
     const currentSnapshot = this.snapshots.current();
-    if (
-      !currentSnapshot ||
-      !result.patch ||
-      !this.revisions.canApplyPatch(result.baseRevision, result.revision)
-    ) {
+    const currentRevision = this.revisions.current();
+    if (!currentSnapshot) return null;
+
+    if (!result.patch) {
+      if (
+        result.privatePatch &&
+        result.revision !== null &&
+        result.revision === currentRevision
+      ) {
+        const privateSnapshot = applyGamePrivatePatch(
+          currentSnapshot,
+          result.privatePatch,
+        );
+        return privateSnapshot ? this.snapshots.apply(privateSnapshot) : null;
+      }
+      return null;
+    }
+
+    if (!this.revisions.canApplyPatch(result.baseRevision, result.revision)) {
       return null;
     }
 
@@ -186,8 +229,13 @@ export class GameSyncController {
     if (result.privatePatch) {
       nextSnapshot = applyGamePrivatePatch(nextSnapshot, result.privatePatch);
       if (!nextSnapshot) return null;
-    } else if (result.revision !== null) {
-      nextSnapshot = this.applyPendingPrivatePatch(nextSnapshot, result.revision);
+      if (result.revision !== null) this.pendingFrames.delete(result.revision);
+    } else if (result.baseRevision !== null && result.revision !== null) {
+      nextSnapshot = this.applyPendingPrivatePatch(
+        nextSnapshot,
+        result.baseRevision,
+        result.revision,
+      );
       if (!nextSnapshot) return null;
     }
 
@@ -211,16 +259,23 @@ export class GameSyncController {
       return { applied: false, stale: false, snapshot: null };
     }
 
+    if (currentRevision !== baseRevision) {
+      this.forceSnapshot(revision);
+      return { applied: false, stale: false, snapshot: null };
+    }
+
+    this.bufferFramePatch(baseRevision, revision, { publicPatch: patch });
     const snapshot = this.applyCommandResult({
       baseRevision,
       revision,
       patch,
     });
     if (snapshot) {
+      this.pendingFrames.delete(revision);
       return { applied: true, stale: false, snapshot };
     }
 
-    this.revisions.require(revision);
+    this.forceSnapshot(revision);
     return { applied: false, stale: false, snapshot: null };
   }
 
@@ -251,6 +306,7 @@ export class GameSyncController {
         this.forceSnapshot(revision);
         return { applied: false, stale: false, buffered: false, snapshot: null };
       }
+      this.pendingFrames.delete(revision);
       return {
         applied: true,
         stale: false,
@@ -260,7 +316,10 @@ export class GameSyncController {
     }
 
     if (baseRevision === currentRevision) {
-      this.pendingPrivatePatches.set(revision, patch);
+      if (!this.bufferFramePatch(baseRevision, revision, { privatePatch: patch })) {
+        this.forceSnapshot(revision);
+        return { applied: false, stale: false, buffered: false, snapshot: null };
+      }
       this.revisions.require(revision);
       return {
         applied: false,

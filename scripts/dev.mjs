@@ -39,6 +39,9 @@ function localDevelopmentOrigins(port) {
 }
 
 if (realtimeEnabled) {
+  if (env.GAME_REALTIME_PATCHES_ENABLED === undefined) {
+    env.GAME_REALTIME_PATCHES_ENABLED = "true";
+  }
   if (!env.NEXT_PUBLIC_GAME_REALTIME_MODE) {
     env.NEXT_PUBLIC_GAME_REALTIME_MODE = "hybrid";
   }
@@ -157,7 +160,7 @@ process.on("SIGTERM", () => {
 
 console.log(
   realtimeEnabled
-    ? `[war-brasil] dev: Next + realtime (${env.NEXT_PUBLIC_GAME_REALTIME_MODE}); clientes usam o mesmo hostname da página na porta ${realtimePort}.`
+    ? `[war-brasil] dev: Next + realtime (${env.NEXT_PUBLIC_GAME_REALTIME_MODE}, patches=${env.GAME_REALTIME_PATCHES_ENABLED}); clientes usam o mesmo hostname da página na porta ${realtimePort}.`
     : "[war-brasil] dev: realtime explicitamente desativado; sinalizações de posse ficarão indisponíveis.",
 );
 
