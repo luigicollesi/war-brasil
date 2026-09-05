@@ -6,6 +6,10 @@ import {
   isGameCommandPatch,
   type GameCommandPatch,
 } from "@/src/lib/game-command-patch";
+import {
+  isGamePrivatePatch,
+  type GamePrivatePatch,
+} from "@/src/lib/game-private-patch";
 import type { TradeCardDescriptor } from "@/src/lib/game-trade-rules";
 import type { GameRealtimeBusEvent } from "./realtime/game-realtime-bus";
 import { publishGameRealtimeBusEvent } from "./realtime/game-realtime-bus-runtime";
@@ -21,13 +25,18 @@ type GameRealtimePatchBusEvent = Extract<
   GameRealtimeBusEvent,
   { kind: "patch" }
 >;
+type GameRealtimePrivatePatchBusEvent = Extract<
+  GameRealtimeBusEvent,
+  { kind: "private_patch" }
+>;
 type GameRealtimeEphemeralBusEvent = Extract<
   GameRealtimeBusEvent,
   { kind: "ephemeral" }
 >;
 type GameRealtimeRevisionBusEvent =
   | GameRealtimeInvalidationBusEvent
-  | GameRealtimePatchBusEvent;
+  | GameRealtimePatchBusEvent
+  | GameRealtimePrivatePatchBusEvent;
 
 function gameRealtimeEnabled() {
   return process.env.GAME_REALTIME_ENABLED === "true";
@@ -148,10 +157,32 @@ function patchEvent(
   };
 }
 
+function privatePatchEvent(
+  roomId: string,
+  playerId: string,
+  baseRevision: number,
+  revision: number,
+  patch: GamePrivatePatch,
+): GameRealtimePrivatePatchBusEvent {
+  return {
+    kind: "private_patch",
+    scope: "player",
+    roomId,
+    playerId,
+    baseRevision,
+    revision,
+    patch,
+  };
+}
+
 async function publishEvent(
   client: PoolClient,
   event: GameRealtimeRevisionBusEvent,
-  metricName: "notify.publish" | "notify.private" | "notify.patch",
+  metricName:
+    | "notify.publish"
+    | "notify.private"
+    | "notify.patch"
+    | "notify.private_patch",
 ) {
   try {
     await publishGameRealtimeBusEvent(client, event);
@@ -196,6 +227,49 @@ export async function publishPlayerGameInvalidation(
     client,
     invalidationEvent(roomId, revision, playerId),
     "notify.private",
+  );
+}
+
+export async function publishPlayerGamePatch(
+  client: PoolClient,
+  input: {
+    roomId: string;
+    playerId: string;
+    baseRevision: number;
+    revision: number;
+    patch: GamePrivatePatch;
+  },
+) {
+  if (!gameRealtimeEnabled()) return;
+  if (!/^\d+$/.test(input.playerId)) return;
+
+  if (gameRealtimePatchesEnabled() && isGamePrivatePatch(input.patch)) {
+    const event = privatePatchEvent(
+      input.roomId,
+      input.playerId,
+      input.baseRevision,
+      input.revision,
+      input.patch,
+    );
+    const payloadBytes = Buffer.byteLength(JSON.stringify(event), "utf8");
+    if (payloadBytes <= GAME_REALTIME_NOTIFY_MAX_BYTES) {
+      await publishEvent(client, event, "notify.private_patch");
+      return;
+    }
+
+    publishGameRealtimeMetric({
+      name: "notify.private_patch_fallback",
+      roomId: input.roomId,
+      revision: input.revision,
+      payloadBytes,
+    });
+  }
+
+  await publishPlayerGameInvalidation(
+    client,
+    input.roomId,
+    input.playerId,
+    input.revision,
   );
 }
 
