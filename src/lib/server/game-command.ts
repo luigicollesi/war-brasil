@@ -5,6 +5,7 @@ import {
   isGameCommandPatch,
   type GameCommandPatch,
 } from "@/src/lib/game-command-patch";
+import type { GamePrivatePatch } from "@/src/lib/game-private-patch";
 import type { GameCommandRequestMetadata } from "@/src/lib/game-command-request";
 import { RoomError } from "@/src/lib/rooms";
 import { reconcileGameAutomationSchedule } from "./automation/game-automation-schedule";
@@ -22,6 +23,7 @@ import {
 import {
   publishGameChange,
   publishGameInvalidation,
+  publishPlayerGamePatch,
 } from "./game-realtime-publisher";
 import { publishGameCommandMetric } from "./observability/game-command-metrics";
 import { startGameOperationMetric } from "./observability/game-operation-metrics";
@@ -32,8 +34,22 @@ type GameConditionalCommandResult<T> = {
   changed: boolean;
 };
 
+type GamePrivatePatchDelivery = {
+  playerId: string;
+  patch: GamePrivatePatch;
+};
+
+type GameCommandSyncEffects = {
+  publicPatch?: GameCommandPatch | null;
+  privatePatches?: GamePrivatePatchDelivery[];
+};
+
 type GameCommandOptions<T> = {
   realtimePatch?: (value: T) => GameCommandPatch | null | undefined;
+  syncEffects?: (
+    client: PoolClient,
+    value: T,
+  ) => Promise<GameCommandSyncEffects> | GameCommandSyncEffects;
   request?: GameCommandReceiptRequest;
 };
 
@@ -139,12 +155,33 @@ export async function gameCommand<T>(
 
     const value = await execute(client);
     const defaultPublicPatch = isGameCommandPatch(value) ? value : null;
-    const realtimePatch = options.realtimePatch
-      ? options.realtimePatch(value) ?? null
-      : defaultPublicPatch;
     await reconcileGameAutomationSchedule(client, roomId);
+
+    const syncEffects = options.syncEffects
+      ? await options.syncEffects(client, value)
+      : null;
+    const publicPatch =
+      syncEffects?.publicPatch ??
+      (options.realtimePatch
+        ? options.realtimePatch(value) ?? null
+        : defaultPublicPatch);
+    const privatePatches = syncEffects?.privatePatches ?? [];
+
     const revision = await bumpGameRevision(client, roomId);
-    const result: GameCommandResult<T> = { value, baseRevision, revision };
+    const requesterPrivatePatch = preparedReceipt
+      ? privatePatches.find(
+          (delivery) => delivery.playerId === preparedReceipt.playerId,
+        )?.patch
+      : undefined;
+    const result: GameCommandResult<T> = {
+      value,
+      baseRevision,
+      revision,
+      ...(publicPatch ? { patch: publicPatch } : {}),
+      ...(requesterPrivatePatch
+        ? { privatePatch: requesterPrivatePatch }
+        : {}),
+    };
 
     if (options.request && preparedReceipt) {
       await saveGameCommandReceipt(
@@ -164,8 +201,17 @@ export async function gameCommand<T>(
       roomId,
       baseRevision,
       revision,
-      patch: realtimePatch,
+      patch: publicPatch,
     });
+    for (const delivery of privatePatches) {
+      await publishPlayerGamePatch(client, {
+        roomId,
+        playerId: delivery.playerId,
+        baseRevision,
+        revision,
+        patch: delivery.patch,
+      });
+    }
 
     return result;
   } catch (error) {
