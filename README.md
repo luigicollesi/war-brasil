@@ -1,7 +1,23 @@
 # WAR Brasil
 
-Jogo de estratégia no mapa do Brasil, construído com Next.js, React, TypeScript,
-Tailwind CSS e PostgreSQL.
+WAR Brasil é um jogo de estratégia multiplayer por turnos inspirado no WAR, adaptado para um mapa do Brasil com 42 territórios. A aplicação reúne criação de salas, lobby sincronizado, distribuição inicial, tabuleiro interativo e persistência do estado da partida em PostgreSQL.
+
+O projeto é desenvolvido com Next.js, React, TypeScript e Tailwind CSS, mantendo fronteiras explícitas entre código client-side, server-side e compartilhado. A ideia é evoluir as regras e o multiplayer sem acoplar a lógica do jogo à interface, preservando uma base que possa crescer sem depender de uma única camada da aplicação.
+
+> Este branch contém o desenvolvimento ativo e pode incluir funcionalidades ainda em validação antes de seguirem para produção.
+
+## Fluxo de branches
+
+O repositório mantém apenas dois branches principais de longa duração:
+
+- `main` — versão de produção e único branch ligado ao deploy da Vercel;
+- `dev` — desenvolvimento ativo e integração das próximas mudanças, sem deploy na Vercel.
+
+Branches adicionais são temporários e podem ser criados a partir de `dev` quando uma funcionalidade precisa ser desenvolvida de forma isolada ou quando há trabalho paralelo. Depois de validada, a mudança retorna para `dev`; somente versões consolidadas seguem de `dev` para `main`.
+
+```text
+branch temporário → dev → main
+```
 
 ## Rotas
 
