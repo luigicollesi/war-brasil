@@ -1,10 +1,10 @@
-export const GAME_PROTOCOL_VERSION = 1;
+export const GAME_PROTOCOL_VERSION = 2;
 export const GAME_REALTIME_SUBPROTOCOL = `war-brasil.v${GAME_PROTOCOL_VERSION}`;
 export const DEFAULT_GAME_REALTIME_CHANNEL = "war_game_revision";
 export const GAME_REALTIME_PATH = "/realtime";
 export const GAME_REALTIME_MAX_PAYLOAD_BYTES = 16 * 1024;
 
-const PATCH_KEYS = new Set(["room", "territories"]);
+const PATCH_KEYS = new Set(["room", "territories", "trade"]);
 const ROOM_PATCH_KEYS = new Set([
   "status",
   "phase",
@@ -16,6 +16,26 @@ const TERRITORY_PATCH_KEYS = new Set([
   "troops",
   "movedInTurn",
 ]);
+const TRADE_PUBLIC_KEYS = new Set(["offersUsed", "offerLimit", "activeOffer"]);
+const TRADE_OFFER_KEYS = new Set([
+  "id",
+  "proposerPlayerId",
+  "targetPlayerId",
+  "status",
+  "original",
+  "counter",
+]);
+const TRADE_TERMS_KEYS = new Set(["offered", "requested"]);
+const TRADE_COUNTER_KEYS = new Set(["proposerPlayerId", "terms"]);
+const PRIVATE_PATCH_KEYS = new Set(["myCards", "trade"]);
+const PRIVATE_TRADE_KEYS = new Set([
+  "signalsUsed",
+  "signalLimit",
+  "myPendingSelection",
+]);
+const PENDING_SELECTION_KEYS = new Set(["offerId", "descriptor"]);
+const CARD_KEYS = new Set(["id", "territoryId", "symbol"]);
+const CARD_SYMBOLS = new Set(["leaf", "gold", "water", "wild"]);
 const GAME_STATUSES = new Set(["waiting", "order_roll", "playing", "finished"]);
 const GAME_PHASES = new Set([
   "cards",
@@ -69,6 +89,49 @@ function validTradeDescriptor(value) {
   return false;
 }
 
+function validTradeTerms(value) {
+  return (
+    isRecord(value) &&
+    hasOnlyKeys(value, TRADE_TERMS_KEYS) &&
+    validTradeDescriptor(value.offered) &&
+    validTradeDescriptor(value.requested)
+  );
+}
+
+function validTradeOffer(value) {
+  if (!isRecord(value) || !hasOnlyKeys(value, TRADE_OFFER_KEYS)) return false;
+  if (
+    !validOfferId(value.id) ||
+    !validPlayerId(value.proposerPlayerId) ||
+    !validPlayerId(value.targetPlayerId) ||
+    !new Set(["open", "countered", "accepted_pending_selection"]).has(value.status) ||
+    !validTradeTerms(value.original)
+  ) {
+    return false;
+  }
+  if (value.counter === null) return true;
+  return (
+    isRecord(value.counter) &&
+    hasOnlyKeys(value.counter, TRADE_COUNTER_KEYS) &&
+    validPlayerId(value.counter.proposerPlayerId) &&
+    validTradeTerms(value.counter.terms)
+  );
+}
+
+function validTradePublicState(value) {
+  if (!isRecord(value) || !hasOnlyKeys(value, TRADE_PUBLIC_KEYS)) return false;
+  if (
+    !Number.isSafeInteger(value.offersUsed) ||
+    value.offersUsed < 0 ||
+    !Number.isSafeInteger(value.offerLimit) ||
+    value.offerLimit < 1 ||
+    value.offersUsed > value.offerLimit
+  ) {
+    return false;
+  }
+  return value.activeOffer === null || validTradeOffer(value.activeOffer);
+}
+
 function validRoomPatch(value) {
   if (!isRecord(value) || !hasOnlyKeys(value, ROOM_PATCH_KEYS)) return false;
   if (value.status !== undefined && !GAME_STATUSES.has(value.status)) return false;
@@ -112,7 +175,13 @@ function validTerritoryPatch(value) {
 
 function validPublicPatch(value) {
   if (!isRecord(value) || !hasOnlyKeys(value, PATCH_KEYS)) return false;
-  if (value.room === undefined && value.territories === undefined) return false;
+  if (
+    value.room === undefined &&
+    value.territories === undefined &&
+    value.trade === undefined
+  ) {
+    return false;
+  }
   if (value.room !== undefined && !validRoomPatch(value.room)) return false;
   if (value.territories !== undefined) {
     if (!Array.isArray(value.territories) || value.territories.length > 42) {
@@ -126,7 +195,58 @@ function validPublicPatch(value) {
       ids.add(territory.territoryId);
     }
   }
+  if (value.trade !== undefined && value.trade !== null && !validTradePublicState(value.trade)) {
+    return false;
+  }
   return true;
+}
+
+function validGameCard(value) {
+  if (!isRecord(value) || !hasOnlyKeys(value, CARD_KEYS)) return false;
+  if (!validOfferId(value.id)) return false;
+  if (
+    value.territoryId !== null &&
+    (!Number.isSafeInteger(value.territoryId) ||
+      value.territoryId < 1 ||
+      value.territoryId > 42)
+  ) {
+    return false;
+  }
+  return CARD_SYMBOLS.has(value.symbol);
+}
+
+function validPrivateTradeState(value) {
+  if (!isRecord(value) || !hasOnlyKeys(value, PRIVATE_TRADE_KEYS)) return false;
+  if (
+    !Number.isSafeInteger(value.signalsUsed) ||
+    value.signalsUsed < 0 ||
+    !Number.isSafeInteger(value.signalLimit) ||
+    value.signalLimit < 1 ||
+    value.signalsUsed > value.signalLimit
+  ) {
+    return false;
+  }
+  if (value.myPendingSelection === null) return true;
+  return (
+    isRecord(value.myPendingSelection) &&
+    hasOnlyKeys(value.myPendingSelection, PENDING_SELECTION_KEYS) &&
+    validOfferId(value.myPendingSelection.offerId) &&
+    validTradeDescriptor(value.myPendingSelection.descriptor)
+  );
+}
+
+function validPrivatePatch(value) {
+  if (!isRecord(value) || !hasOnlyKeys(value, PRIVATE_PATCH_KEYS)) return false;
+  if (value.myCards === undefined && value.trade === undefined) return false;
+  if (value.myCards !== undefined) {
+    if (!Array.isArray(value.myCards) || value.myCards.length > 128) return false;
+    const ids = new Set();
+    for (const card of value.myCards) {
+      if (!validGameCard(card) || ids.has(card.id)) return false;
+      ids.add(card.id);
+    }
+  }
+  return value.trade === undefined || validPrivateTradeState(value.trade);
 }
 
 export function gameRealtimeChannel() {
@@ -245,6 +365,25 @@ export function parseNotificationPayload(value) {
         kind: "patch",
         scope: "room",
         roomId: parsed.roomId,
+        baseRevision: parsed.baseRevision,
+        revision: parsed.revision,
+        patch: parsed.patch,
+      };
+    }
+
+    if (
+      parsed.kind === "private_patch" &&
+      scope === "player" &&
+      validPlayerId(parsed.playerId) &&
+      validRevision(parsed.baseRevision) &&
+      parsed.revision > parsed.baseRevision &&
+      validPrivatePatch(parsed.patch)
+    ) {
+      return {
+        kind: "private_patch",
+        scope: "player",
+        roomId: parsed.roomId,
+        playerId: parsed.playerId,
         baseRevision: parsed.baseRevision,
         revision: parsed.revision,
         patch: parsed.patch,
