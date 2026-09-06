@@ -43,6 +43,15 @@ function territoryIdFromTarget(target: SVGElement | null): number | null {
   return Number.isInteger(id) && id > 0 ? id : null;
 }
 
+function embeddedMapSurface(root: Element): HTMLElement | null {
+  const frameElement = root.ownerDocument.defaultView?.frameElement;
+  return frameElement?.closest?.(".game-map-surface") as HTMLElement | null;
+}
+
+function mapGestureIsActive(root: Element) {
+  return embeddedMapSurface(root)?.dataset.mapGestureActive === "true";
+}
+
 function maskGeometryForSurface(surface: SVGElement): SVGGeometryElement | null {
   if (maskGeometryBySurface.has(surface)) {
     return maskGeometryBySurface.get(surface) ?? null;
@@ -156,6 +165,10 @@ export function territoryIdFromEvent(
   // here would return the destination instead of the source territory.
   if (event.type === "pointerout" || !isClientPointEvent(event)) {
     return territoryIdFromNode(event.target, root);
+  }
+
+  if (event.type.startsWith("pointer") && mapGestureIsActive(root)) {
+    return null;
   }
 
   return territoryIdAtClientPoint(event, root);
