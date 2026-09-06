@@ -22,8 +22,8 @@ export async function readPlayerGameRevision(
 ): Promise<GameRevision> {
   const result = await client.query<{ revision: number }>(
     `SELECT gr.revision
-     FROM game_rooms gr
-     JOIN room_players rp
+     FROM game.rooms gr
+     JOIN game.players rp
        ON rp.room_id=gr.id
       AND rp.player_session=$2
      WHERE gr.id=$1`,
@@ -43,7 +43,7 @@ export async function bumpGameRevision(
   roomId: string,
 ): Promise<GameRevision> {
   const result = await client.query<{ revision: number }>(
-    "UPDATE game_rooms SET revision=revision+1 WHERE id=$1 RETURNING revision",
+    "UPDATE game.rooms SET revision=revision+1 WHERE id=$1 RETURNING revision",
     [roomId],
   );
 
