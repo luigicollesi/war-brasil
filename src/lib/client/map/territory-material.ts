@@ -39,6 +39,16 @@ const TERRITORY_MATERIALS: Record<PlayerColor, TerritoryMaterial> = {
   },
 };
 
+const NEUTRAL_TERRITORY_MATERIAL: TerritoryMaterial = {
+  face: ["#939c98", "#8b9490", "#828b87", "#79827e", "#717a76"],
+  side: ["#626b67", "#58605d", "#4d5552"],
+  rim: "#3f4744",
+};
+
 export function territoryMaterial(color: PlayerColor): TerritoryMaterial {
   return TERRITORY_MATERIALS[color];
+}
+
+export function neutralTerritoryMaterial(): TerritoryMaterial {
+  return NEUTRAL_TERRITORY_MATERIAL;
 }
