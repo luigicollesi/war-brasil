@@ -69,11 +69,14 @@ test("opening presentation has one renderer and a boundary-driven scheduler", ()
   assert.match(board, /!presentationActive && troopsVisible/);
 });
 
-test("hit geometry is generated once from visual polygon paths", () => {
+test("hit geometry is generated once and never falls back to raw visual geometry", () => {
   assert.match(hitGeometry, /export function buildTerritoryHitLayer/);
+  assert.match(hitGeometry, /resolveHitPolygonPath/);
   assert.match(hitGeometry, /safeInsetPolygonPath/);
-  assert.match(hitGeometry, /data-map-hit-layer/);
-  assert.match(hitGeometry, /hitGeometryFallback/);
+  assert.match(hitGeometry, /safeScaledPolygonPath/);
+  assert.match(hitGeometry, /data\.hitGeometryStrategy = hit\.strategy/);
+  assert.doesNotMatch(hitGeometry, /hitGeometryFallback/);
+  assert.doesNotMatch(hitGeometry, /d: insetD \?\? sourceD/);
   assert.match(board, /buildTerritoryHitLayer\(mapDocument, root, nextVisualNodes\)/);
 });
 
@@ -119,6 +122,12 @@ test("gestos móveis continuam protegendo seleção acidental", () => {
   assert.match(zoom, /suppressSelection\(\)/);
   assert.match(zoom, /svg\.addEventListener\("click", onClickCapture, true\)/);
   assert.match(zoom, /event\.stopImmediatePropagation\(\)/);
+});
+
+test("hover cleanup is stable under react hook linting", () => {
+  assert.match(board, /useCallback/);
+  assert.match(board, /const clearHoveredTerritory = useCallback/);
+  assert.match(board, /\[clearHoveredTerritory, presentationActive\]/);
 });
 
 test("polimento não altera geometria canônica do mapa", () => {
