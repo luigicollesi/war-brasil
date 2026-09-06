@@ -26,8 +26,8 @@ export async function publishTradeDeclineResolution(
       await client.query<DeclinedTradeRow>(
         `SELECT o.id,o.turn_number,o.proposer_player_id,o.target_player_id,
                 o.responder_player_id,p.id actor_player_id
-         FROM game_player_trade_offers o
-         JOIN room_players p
+         FROM game.trade_offers o
+         JOIN game.players p
            ON p.room_id=o.room_id
           AND p.player_session=$3
          WHERE o.room_id=$1
