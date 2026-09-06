@@ -108,7 +108,7 @@ test("preparação do banco usa ledger, ordem, lock, baseline e uma transação"
   assert.match(prepare, /assertMigrationHistory/);
   assert.match(prepare, /assertMigrationBaseline/);
   assert.match(prepare, /ops\.pgmigrations/);
-  assert.match(prepare, /game\.rooms/);
+  assert.match(prepare, /n\.nspname='game' AND c\.relname='rooms'/);
   assert.match(prepare, /territory_card_symbols/);
   assert.match(prepare, /territory_connections/);
   assert.match(prepare, /game_player_trade_offers_state_check/);
