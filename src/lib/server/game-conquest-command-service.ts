@@ -50,7 +50,7 @@ async function loadRoom(client: PoolClient, roomId: string) {
     await client.query<ConquestRoom>(
       `SELECT id,status,phase,current_player_id,
               pending_from_territory_id,pending_to_territory_id,last_battle
-       FROM game_rooms
+       FROM game.rooms
        WHERE id=$1`,
       [roomId],
     )
@@ -104,7 +104,7 @@ export async function executeCompleteConquest(
   const rows = (
     await client.query<LockedTerritory>(
       `SELECT territory_id,owner_player_id,troops
-       FROM game_territories
+       FROM game.territories
        WHERE room_id=$1 AND territory_id=ANY($2::smallint[])
        FOR UPDATE`,
       [room.id, [from, to]],
@@ -125,19 +125,19 @@ export async function executeCompleteConquest(
   }
 
   await client.query(
-    `UPDATE game_territories
+    `UPDATE game.territories
      SET troops=troops-$3
      WHERE room_id=$1 AND territory_id=$2`,
     [room.id, from, troops],
   );
   await client.query(
-    `UPDATE game_territories
+    `UPDATE game.territories
      SET troops=$3,moved_in_turn=0
      WHERE room_id=$1 AND territory_id=$2`,
     [room.id, to, troops],
   );
   await client.query(
-    `UPDATE game_rooms
+    `UPDATE game.rooms
      SET pending_from_territory_id=NULL,pending_to_territory_id=NULL
      WHERE id=$1`,
     [room.id],
