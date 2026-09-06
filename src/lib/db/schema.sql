@@ -1,4 +1,8 @@
-CREATE TABLE IF NOT EXISTS game_rooms (
+CREATE SCHEMA IF NOT EXISTS game;
+CREATE SCHEMA IF NOT EXISTS catalog;
+CREATE SCHEMA IF NOT EXISTS ops;
+
+CREATE TABLE IF NOT EXISTS game.rooms (
   id BIGSERIAL PRIMARY KEY,
   code VARCHAR(12) NOT NULL UNIQUE,
   status VARCHAR(20) NOT NULL DEFAULT 'waiting'
@@ -10,7 +14,10 @@ CREATE TABLE IF NOT EXISTS game_rooms (
     CHECK (order_roll_round >= 1),
   initial_territory_presentation_started_at TIMESTAMPTZ,
   phase VARCHAR(20) NOT NULL DEFAULT 'trade'
-    CHECK (phase IN ('trade', 'reinforcement', 'attack', 'maneuver', 'end_turn', 'finished')),
+    CHECK (
+      phase IN ('trade', 'reinforcement', 'attack', 'maneuver', 'end_turn', 'finished')
+      OR (phase = 'cards' AND status = 'order_roll')
+    ),
   current_player_id BIGINT,
   turn_number INTEGER NOT NULL DEFAULT 1 CHECK (turn_number >= 1),
   round_number INTEGER NOT NULL DEFAULT 1 CHECK (round_number >= 1),
@@ -43,16 +50,16 @@ CREATE TABLE IF NOT EXISTS game_rooms (
 );
 
 CREATE INDEX IF NOT EXISTS game_rooms_automation_due_idx
-  ON game_rooms (automation_due_at, id)
+  ON game.rooms (automation_due_at, id)
   WHERE automation_due_at IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS game_rooms_automation_claim_idx
-  ON game_rooms (automation_due_at, automation_claimed_until, id)
+  ON game.rooms (automation_due_at, automation_claimed_until, id)
   WHERE automation_due_at IS NOT NULL;
 
-CREATE TABLE IF NOT EXISTS room_players (
+CREATE TABLE IF NOT EXISTS game.players (
   id BIGSERIAL PRIMARY KEY,
-  room_id BIGINT NOT NULL REFERENCES game_rooms(id) ON DELETE CASCADE,
+  room_id BIGINT NOT NULL REFERENCES game.rooms(id) ON DELETE CASCADE,
   player_session UUID NOT NULL,
   faction_name VARCHAR(32) NOT NULL,
   color VARCHAR(16) NOT NULL
@@ -71,11 +78,11 @@ CREATE TABLE IF NOT EXISTS room_players (
   UNIQUE (room_id, turn_position)
 );
 
-CREATE INDEX IF NOT EXISTS room_players_room_id_idx ON room_players(room_id);
+CREATE INDEX IF NOT EXISTS room_players_room_id_idx ON game.players(room_id);
 
-CREATE TABLE IF NOT EXISTS game_command_receipts (
-  room_id BIGINT NOT NULL REFERENCES game_rooms(id) ON DELETE CASCADE,
-  player_id BIGINT NOT NULL REFERENCES room_players(id) ON DELETE CASCADE,
+CREATE TABLE IF NOT EXISTS ops.command_receipts (
+  room_id BIGINT NOT NULL REFERENCES game.rooms(id) ON DELETE CASCADE,
+  player_id BIGINT NOT NULL REFERENCES game.players(id) ON DELETE CASCADE,
   command_id UUID NOT NULL,
   command_name VARCHAR(80) NOT NULL,
   request_fingerprint CHAR(64) NOT NULL
@@ -93,9 +100,9 @@ CREATE TABLE IF NOT EXISTS game_command_receipts (
 );
 
 CREATE INDEX IF NOT EXISTS game_command_receipts_room_created_idx
-  ON game_command_receipts (room_id, created_at);
+  ON ops.command_receipts (room_id, created_at);
 
-CREATE TABLE IF NOT EXISTS bot_names (
+CREATE TABLE IF NOT EXISTS catalog.bot_names (
   id BIGSERIAL PRIMARY KEY,
   color VARCHAR(16) NOT NULL
     CHECK (color IN ('forest', 'ocean', 'sun', 'ruby', 'violet', 'orange')),
@@ -103,7 +110,7 @@ CREATE TABLE IF NOT EXISTS bot_names (
   UNIQUE (color, name)
 );
 
-INSERT INTO bot_names (color, name) VALUES
+INSERT INTO catalog.bot_names (color, name) VALUES
   ('forest', 'Integralistas'),
   ('forest', 'Cabanos'),
   ('forest', 'Conselheiristas'),
@@ -130,28 +137,28 @@ INSERT INTO bot_names (color, name) VALUES
   ('orange', 'Castilhistas')
 ON CONFLICT (color, name) DO NOTHING;
 
-ALTER TABLE game_rooms
+ALTER TABLE game.rooms
   ADD CONSTRAINT game_rooms_current_player_fkey
-  FOREIGN KEY (current_player_id) REFERENCES room_players(id) ON DELETE SET NULL;
+  FOREIGN KEY (current_player_id) REFERENCES game.players(id) ON DELETE SET NULL;
 
-ALTER TABLE game_rooms
+ALTER TABLE game.rooms
   ADD CONSTRAINT game_rooms_winner_player_fkey
-  FOREIGN KEY (winner_player_id) REFERENCES room_players(id) ON DELETE SET NULL;
+  FOREIGN KEY (winner_player_id) REFERENCES game.players(id) ON DELETE SET NULL;
 
-CREATE TABLE IF NOT EXISTS game_rematch_votes (
-  room_id BIGINT NOT NULL REFERENCES game_rooms(id) ON DELETE CASCADE,
-  player_id BIGINT NOT NULL REFERENCES room_players(id) ON DELETE CASCADE,
+CREATE TABLE IF NOT EXISTS game.rematch_votes (
+  room_id BIGINT NOT NULL REFERENCES game.rooms(id) ON DELETE CASCADE,
+  player_id BIGINT NOT NULL REFERENCES game.players(id) ON DELETE CASCADE,
   voted_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (room_id, player_id)
 );
 
 CREATE INDEX IF NOT EXISTS game_rematch_votes_room_id_idx
-  ON game_rematch_votes(room_id);
+  ON game.rematch_votes(room_id);
 
-CREATE TABLE IF NOT EXISTS game_territories (
-  room_id BIGINT NOT NULL REFERENCES game_rooms(id) ON DELETE CASCADE,
+CREATE TABLE IF NOT EXISTS game.territories (
+  room_id BIGINT NOT NULL REFERENCES game.rooms(id) ON DELETE CASCADE,
   territory_id SMALLINT NOT NULL CHECK (territory_id BETWEEN 1 AND 42),
-  owner_player_id BIGINT NOT NULL REFERENCES room_players(id) ON DELETE RESTRICT,
+  owner_player_id BIGINT NOT NULL REFERENCES game.players(id) ON DELETE RESTRICT,
   troops SMALLINT NOT NULL DEFAULT 1 CHECK (troops >= 1),
   moved_in_turn SMALLINT NOT NULL DEFAULT 0 CHECK (moved_in_turn >= 0 AND moved_in_turn <= troops),
   initial_draw_order SMALLINT CHECK (initial_draw_order BETWEEN 1 AND 42),
@@ -159,22 +166,22 @@ CREATE TABLE IF NOT EXISTS game_territories (
 );
 
 CREATE INDEX IF NOT EXISTS game_territories_room_owner_idx
-  ON game_territories(room_id, owner_player_id);
+  ON game.territories(room_id, owner_player_id);
 
 CREATE UNIQUE INDEX IF NOT EXISTS game_territories_room_initial_draw_order_idx
-  ON game_territories(room_id, initial_draw_order)
+  ON game.territories(room_id, initial_draw_order)
   WHERE initial_draw_order IS NOT NULL;
 
-CREATE TABLE IF NOT EXISTS game_order_rolls (
-  room_id BIGINT NOT NULL REFERENCES game_rooms(id) ON DELETE CASCADE,
-  player_id BIGINT NOT NULL REFERENCES room_players(id) ON DELETE CASCADE,
+CREATE TABLE IF NOT EXISTS game.order_rolls (
+  room_id BIGINT NOT NULL REFERENCES game.rooms(id) ON DELETE CASCADE,
+  player_id BIGINT NOT NULL REFERENCES game.players(id) ON DELETE CASCADE,
   roll_round INTEGER NOT NULL CHECK (roll_round >= 1),
   value SMALLINT NOT NULL CHECK (value BETWEEN 1 AND 6),
   rolled_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (room_id, player_id, roll_round)
 );
 
-CREATE TABLE IF NOT EXISTS objectives (
+CREATE TABLE IF NOT EXISTS catalog.objectives (
   id TEXT PRIMARY KEY,
   type TEXT NOT NULL CHECK (
     type IN (
@@ -198,14 +205,14 @@ CREATE TABLE IF NOT EXISTS objectives (
   target_selector TEXT CHECK (
     target_selector IS NULL OR target_selector = 'random_other_player'
   ),
-  fallback_objective_id TEXT REFERENCES objectives(id),
+  fallback_objective_id TEXT REFERENCES catalog.objectives(id),
   is_active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
-CREATE TABLE IF NOT EXISTS objective_rules (
+CREATE TABLE IF NOT EXISTS catalog.objective_rules (
   id BIGSERIAL PRIMARY KEY,
-  objective_id TEXT NOT NULL REFERENCES objectives(id) ON DELETE CASCADE,
+  objective_id TEXT NOT NULL REFERENCES catalog.objectives(id) ON DELETE CASCADE,
   player_count SMALLINT NOT NULL CHECK (player_count BETWEEN 2 AND 6),
   revision INTEGER NOT NULL DEFAULT 1 CHECK (revision >= 1),
   params JSONB NOT NULL DEFAULT '{}'::jsonb
@@ -219,18 +226,18 @@ CREATE TABLE IF NOT EXISTS objective_rules (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS objective_rules_active_objective_player_count_idx
-  ON objective_rules(objective_id, player_count)
+  ON catalog.objective_rules(objective_id, player_count)
   WHERE is_active = TRUE;
 
 CREATE INDEX IF NOT EXISTS objective_rules_player_count_idx
-  ON objective_rules(player_count, is_active);
+  ON catalog.objective_rules(player_count, is_active);
 
-CREATE TABLE IF NOT EXISTS game_player_objectives (
-  room_id BIGINT NOT NULL REFERENCES game_rooms(id) ON DELETE CASCADE,
-  player_id BIGINT NOT NULL REFERENCES room_players(id) ON DELETE CASCADE,
-  objective_id TEXT NOT NULL REFERENCES objectives(id),
-  objective_rule_id BIGINT REFERENCES objective_rules(id) ON DELETE RESTRICT,
-  target_player_id BIGINT REFERENCES room_players(id) ON DELETE SET NULL,
+CREATE TABLE IF NOT EXISTS game.player_objectives (
+  room_id BIGINT NOT NULL REFERENCES game.rooms(id) ON DELETE CASCADE,
+  player_id BIGINT NOT NULL REFERENCES game.players(id) ON DELETE CASCADE,
+  objective_id TEXT NOT NULL REFERENCES catalog.objectives(id),
+  objective_rule_id BIGINT REFERENCES catalog.objective_rules(id) ON DELETE RESTRICT,
+  target_player_id BIGINT REFERENCES game.players(id) ON DELETE SET NULL,
   resolved_params JSONB
     CHECK (resolved_params IS NULL OR jsonb_typeof(resolved_params) = 'object'),
   assigned_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -238,18 +245,18 @@ CREATE TABLE IF NOT EXISTS game_player_objectives (
 );
 
 CREATE INDEX IF NOT EXISTS game_player_objectives_target_idx
-  ON game_player_objectives(room_id, target_player_id);
+  ON game.player_objectives(room_id, target_player_id);
 
 CREATE INDEX IF NOT EXISTS game_player_objectives_rule_idx
-  ON game_player_objectives(objective_rule_id);
+  ON game.player_objectives(objective_rule_id);
 
-CREATE TABLE IF NOT EXISTS game_cards (
+CREATE TABLE IF NOT EXISTS game.cards (
   id BIGSERIAL PRIMARY KEY,
-  room_id BIGINT NOT NULL REFERENCES game_rooms(id) ON DELETE CASCADE,
+  room_id BIGINT NOT NULL REFERENCES game.rooms(id) ON DELETE CASCADE,
   territory_id SMALLINT CHECK (territory_id BETWEEN 1 AND 42),
   symbol TEXT CHECK (symbol IN ('leaf', 'gold', 'water')),
   is_wild BOOLEAN NOT NULL DEFAULT FALSE,
-  owner_player_id BIGINT REFERENCES room_players(id) ON DELETE SET NULL,
+  owner_player_id BIGINT REFERENCES game.players(id) ON DELETE SET NULL,
   zone VARCHAR(12) NOT NULL DEFAULT 'deck'
     CHECK (zone IN ('deck', 'hand', 'discard')),
   deck_order INTEGER,
@@ -258,12 +265,12 @@ CREATE TABLE IF NOT EXISTS game_cards (
   UNIQUE (room_id, territory_id)
 );
 
-CREATE TABLE IF NOT EXISTS game_player_trade_offers (
+CREATE TABLE IF NOT EXISTS game.trade_offers (
   id BIGSERIAL PRIMARY KEY,
-  room_id BIGINT NOT NULL REFERENCES game_rooms(id) ON DELETE CASCADE,
+  room_id BIGINT NOT NULL REFERENCES game.rooms(id) ON DELETE CASCADE,
   turn_number INTEGER NOT NULL CHECK (turn_number >= 1),
-  proposer_player_id BIGINT NOT NULL REFERENCES room_players(id) ON DELETE CASCADE,
-  target_player_id BIGINT NOT NULL REFERENCES room_players(id) ON DELETE CASCADE,
+  proposer_player_id BIGINT NOT NULL REFERENCES game.players(id) ON DELETE CASCADE,
+  target_player_id BIGINT NOT NULL REFERENCES game.players(id) ON DELETE CASCADE,
   offered_kind TEXT NOT NULL
     CHECK (offered_kind IN ('territory', 'symbol', 'wild')),
   offered_territory_id SMALLINT CHECK (offered_territory_id BETWEEN 1 AND 42),
@@ -281,7 +288,7 @@ CREATE TABLE IF NOT EXISTS game_player_trade_offers (
       'declined',
       'cancelled'
     )),
-  responder_player_id BIGINT REFERENCES room_players(id) ON DELETE SET NULL,
+  responder_player_id BIGINT REFERENCES game.players(id) ON DELETE SET NULL,
   counter_offered_kind TEXT CHECK (counter_offered_kind IN ('territory', 'symbol', 'wild')),
   counter_offered_territory_id SMALLINT CHECK (counter_offered_territory_id BETWEEN 1 AND 42),
   counter_offered_symbol TEXT CHECK (counter_offered_symbol IN ('leaf', 'gold', 'water')),
@@ -289,8 +296,8 @@ CREATE TABLE IF NOT EXISTS game_player_trade_offers (
   counter_requested_territory_id SMALLINT CHECK (counter_requested_territory_id BETWEEN 1 AND 42),
   counter_requested_symbol TEXT CHECK (counter_requested_symbol IN ('leaf', 'gold', 'water')),
   accepted_terms TEXT CHECK (accepted_terms IN ('original', 'counter')),
-  proposer_selected_card_id BIGINT REFERENCES game_cards(id) ON DELETE RESTRICT,
-  responder_selected_card_id BIGINT REFERENCES game_cards(id) ON DELETE RESTRICT,
+  proposer_selected_card_id BIGINT REFERENCES game.cards(id) ON DELETE RESTRICT,
+  responder_selected_card_id BIGINT REFERENCES game.cards(id) ON DELETE RESTRICT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   resolved_at TIMESTAMPTZ,
   CHECK (target_player_id <> proposer_player_id),
@@ -376,13 +383,13 @@ CREATE TABLE IF NOT EXISTS game_player_trade_offers (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS game_player_trade_offers_one_active_idx
-  ON game_player_trade_offers(room_id)
+  ON game.trade_offers(room_id)
   WHERE status IN ('open', 'countered', 'accepted_pending_selection');
 
 CREATE INDEX IF NOT EXISTS game_player_trade_offers_room_turn_idx
-  ON game_player_trade_offers(room_id, turn_number, id DESC);
+  ON game.trade_offers(room_id, turn_number, id DESC);
 
-CREATE TABLE IF NOT EXISTS events (
+CREATE TABLE IF NOT EXISTS catalog.events (
   id INTEGER PRIMARY KEY CHECK (id >= 0),
   name TEXT NOT NULL,
   description TEXT NOT NULL,
@@ -390,19 +397,19 @@ CREATE TABLE IF NOT EXISTS events (
     CHECK (jsonb_typeof(effects) = 'array')
 );
 
-CREATE TABLE IF NOT EXISTS event_connections (
-  from_event INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
-  to_event INTEGER NOT NULL REFERENCES events(id) ON DELETE CASCADE,
+CREATE TABLE IF NOT EXISTS catalog.event_connections (
+  from_event INTEGER NOT NULL REFERENCES catalog.events(id) ON DELETE CASCADE,
+  to_event INTEGER NOT NULL REFERENCES catalog.events(id) ON DELETE CASCADE,
   weight INTEGER NOT NULL CHECK (weight > 0),
   PRIMARY KEY (from_event, to_event),
   CHECK (to_event <> 0),
   CHECK (from_event <> to_event)
 );
 
-CREATE TABLE IF NOT EXISTS game_round_events (
-  room_id BIGINT NOT NULL REFERENCES game_rooms(id) ON DELETE CASCADE,
+CREATE TABLE IF NOT EXISTS game.round_events (
+  room_id BIGINT NOT NULL REFERENCES game.rooms(id) ON DELETE CASCADE,
   round_number INTEGER NOT NULL CHECK (round_number >= 1),
-  event_id INTEGER NOT NULL REFERENCES events(id) ON DELETE RESTRICT,
+  event_id INTEGER NOT NULL REFERENCES catalog.events(id) ON DELETE RESTRICT,
   resolved_effects JSONB NOT NULL DEFAULT '[]'::jsonb
     CHECK (jsonb_typeof(resolved_effects) = 'array'),
   applied_troop_changes JSONB NOT NULL DEFAULT '[]'::jsonb
@@ -412,4 +419,20 @@ CREATE TABLE IF NOT EXISTS game_round_events (
 );
 
 CREATE INDEX IF NOT EXISTS game_round_events_event_id_idx
-  ON game_round_events(event_id);
+  ON game.round_events(event_id);
+
+CREATE OR REPLACE VIEW public.game_rooms AS SELECT * FROM game.rooms;
+CREATE OR REPLACE VIEW public.room_players AS SELECT * FROM game.players;
+CREATE OR REPLACE VIEW public.game_territories AS SELECT * FROM game.territories;
+CREATE OR REPLACE VIEW public.game_order_rolls AS SELECT * FROM game.order_rolls;
+CREATE OR REPLACE VIEW public.game_rematch_votes AS SELECT * FROM game.rematch_votes;
+CREATE OR REPLACE VIEW public.game_player_objectives AS SELECT * FROM game.player_objectives;
+CREATE OR REPLACE VIEW public.game_cards AS SELECT * FROM game.cards;
+CREATE OR REPLACE VIEW public.game_player_trade_offers AS SELECT * FROM game.trade_offers;
+CREATE OR REPLACE VIEW public.game_round_events AS SELECT * FROM game.round_events;
+CREATE OR REPLACE VIEW public.objectives AS SELECT * FROM catalog.objectives;
+CREATE OR REPLACE VIEW public.objective_rules AS SELECT * FROM catalog.objective_rules;
+CREATE OR REPLACE VIEW public.events AS SELECT * FROM catalog.events;
+CREATE OR REPLACE VIEW public.event_connections AS SELECT * FROM catalog.event_connections;
+CREATE OR REPLACE VIEW public.bot_names AS SELECT * FROM catalog.bot_names;
+CREATE OR REPLACE VIEW public.game_command_receipts AS SELECT * FROM ops.command_receipts;
