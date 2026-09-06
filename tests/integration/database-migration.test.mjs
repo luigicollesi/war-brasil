@@ -171,6 +171,7 @@ async function assertOrganizedDatabase(connectionString) {
     assert.deepEqual(history.rows.map((row) => row.name), [
       "026-organize-database-schemas.sql",
       "027-normalize-schema-table-names.sql",
+      "028-normalize-rooms-phase-constraint.sql",
     ]);
 
     const room = await client.query(
@@ -309,7 +310,7 @@ async function assertOrganizedDatabase(connectionString) {
 if (!databaseUrl) {
   test("migrations de banco exigem DATABASE_URL", { skip: true }, () => {});
 } else {
-  test("026+027 migram banco v025, preservam catálogos e são idempotentes", async () => {
+  test("026-028 migram banco v025, preservam catálogos e são idempotentes", async () => {
     await withTemporaryDatabase("legacy", async (connectionString) => {
       await applySql(connectionString, "tests/fixtures/db/schema-v025.sql");
       await applySql(
