@@ -9,7 +9,13 @@
 
 /* The SVG already owns its board/contact shadows. Avoid a second blurred silhouette. */
 .game-map-surface {
+  isolation: isolate;
   filter: none;
+}
+
+/* Mobile pan/zoom continuously transforms the embedded SVG object. */
+.game-map-object {
+  will-change: transform;
 }
 
 .game-territory-tooltip {
