@@ -78,7 +78,7 @@ export async function saveBattle(
   battle: Battle | null,
 ) {
   await client.query(
-    "UPDATE game_rooms SET last_battle=$2 WHERE id=$1",
+    "UPDATE game.rooms SET last_battle=$2 WHERE id=$1",
     [room.id, battle ? JSON.stringify(battle) : null],
   );
   room.last_battle = battle;
@@ -93,9 +93,9 @@ async function evaluateEliminationObjectiveOwners(
   const candidates = (
     await client.query<{ player_id: string }>(
       `SELECT a.player_id
-       FROM game_player_objectives a
-       JOIN objectives o ON o.id=a.objective_id
-       JOIN room_players p
+       FROM game.player_objectives a
+       JOIN catalog.objectives o ON o.id=a.objective_id
+       JOIN game.players p
          ON p.room_id=a.room_id AND p.id=a.player_id
        WHERE a.room_id=$1
          AND a.target_player_id=$2
@@ -130,14 +130,14 @@ async function eliminatePlayer(
   conquerorPlayerId: string,
 ) {
   await client.query(
-    `UPDATE room_players
+    `UPDATE game.players
      SET turn_position=NULL,bot_next_action_at=NULL
      WHERE room_id=$1 AND id=$2`,
     [roomId, eliminatedPlayerId],
   );
 
   await client.query(
-    `UPDATE game_cards
+    `UPDATE game.cards
      SET owner_player_id=$3
      WHERE room_id=$1 AND owner_player_id=$2 AND zone='hand'`,
     [roomId, eliminatedPlayerId, conquerorPlayerId],
@@ -152,7 +152,7 @@ async function applyBattleOutcome(
   const rows = (
     await client.query<LockedTerritory>(
       `SELECT territory_id,owner_player_id,troops
-       FROM game_territories
+       FROM game.territories
        WHERE room_id=$1 AND territory_id=ANY($2::smallint[])
        FOR UPDATE`,
       [room.id, [battle.attackerTerritoryId, battle.defenderTerritoryId]],
@@ -195,7 +195,7 @@ async function applyBattleOutcome(
   }
 
   await client.query(
-    `UPDATE game_territories
+    `UPDATE game.territories
      SET troops=$3,moved_in_turn=0
      WHERE room_id=$1 AND territory_id=$2`,
     [room.id, attacker.territory_id, attackerTroops],
@@ -206,7 +206,7 @@ async function applyBattleOutcome(
 
   if (defenderTroops > 0) {
     await client.query(
-      `UPDATE game_territories
+      `UPDATE game.territories
        SET troops=$3
        WHERE room_id=$1 AND territory_id=$2`,
       [room.id, defender.territory_id, defenderTroops],
@@ -215,7 +215,7 @@ async function applyBattleOutcome(
   }
 
   await client.query(
-    `UPDATE game_territories
+    `UPDATE game.territories
      SET owner_player_id=$3,troops=$4,moved_in_turn=0
      WHERE room_id=$1 AND territory_id=$2`,
     [
@@ -226,7 +226,7 @@ async function applyBattleOutcome(
     ],
   );
   await client.query(
-    `UPDATE game_rooms
+    `UPDATE game.rooms
      SET conquered_this_turn=TRUE,
          pending_from_territory_id=$2,
          pending_to_territory_id=$3
@@ -239,7 +239,7 @@ async function applyBattleOutcome(
 
   const defenderStillHasTerritory = await client.query(
     `SELECT 1
-     FROM game_territories
+     FROM game.territories
      WHERE room_id=$1 AND owner_player_id=$2
      LIMIT 1`,
     [room.id, battle.defenderPlayerId],
