@@ -9,8 +9,10 @@
 ## Project maintenance
 
 - `.env.example` is the canonical public reference for project environment variables. Whenever a runtime/configuration change adds, removes, renames, or materially changes an environment variable, update `.env.example` in the same change. Keep real secrets only in ignored local/deployment environment files; never commit them.
-- For database schema changes, prefer a new numbered migration under `src/lib/db/migrations/` instead of rewriting a migration that may already have been applied.
-- Keep `src/lib/db/schema.sql` aligned with the final schema for clean installations. When an existing development database needs automatic convergence, update `scripts/prepare-dev-db.mjs` and its tests together with the migration.
+- Database migrations `002` through `025` under `src/lib/db/migrations/` are legacy history and must not be rewritten or replayed by the managed runner.
+- New database migrations start at `026` and belong under `src/lib/db/migrations/managed/`, using the `NNN-description.sql` naming convention with `-- Up Migration` and `-- Down Migration` sections.
+- Keep `src/lib/db/schema.sql` aligned with the current clean-install schema. When an existing development database needs automatic convergence, update `scripts/prepare-dev-db.mjs`, the managed migration, and the database tests together.
+- `scripts/prepare-dev-db.mjs` must remain a finite migration runner backed by `ops.pgmigrations`; do not restore state-based migration heuristics for individual columns or constraints.
 - Environment, schema, migration, and dev-runtime documentation must describe the behavior that actually exists in the current branch; remove stale transitional instructions when the implementation changes.
 
 ## Skills
