@@ -23,13 +23,13 @@ test("manobra reutiliza topologia base cacheada através do serviço efetivo sem
   assert.match(maneuver, /jurassic_tunnel_territory_id/);
   assert.match(maneuver, /bestTerritoryRoute/);
   assert.doesNotMatch(maneuver, /getBaseTerritoryConnections/);
-  assert.doesNotMatch(maneuver, /FROM territory_connections/);
+  assert.doesNotMatch(maneuver, /FROM catalog\.territory_connections/);
 
   assert.match(effectiveTopology, /getBaseTerritoryConnections/);
   assert.match(effectiveTopology, /effectiveGameConnections/);
   assert.match(topology, /cachedTopology/);
   assert.match(topology, /loadingTopology/);
-  assert.match(topology, /FROM territory_connections/);
+  assert.match(topology, /FROM catalog\.territory_connections/);
 });
 
 test("mapa mantém pointermove fora do estado React", () => {
