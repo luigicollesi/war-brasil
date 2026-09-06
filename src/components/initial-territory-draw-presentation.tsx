@@ -1,24 +1,21 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import type { BoardTerritory } from "@/src/components/interactive-board";
-import { PLAYER_COLORS, type PlayerColor } from "@/src/lib/lobby";
+import {
+  neutralTerritoryMaterial,
+  territoryMaterial,
+} from "@/src/lib/client/map/territory-material";
+import {
+  applyTerritoryMaterial,
+  collectTerritoryVisualNodes,
+} from "@/src/lib/client/map/territory-svg-nodes";
+import {
+  applyTerritoryOpeningHighlightState,
+  ensureTerritoryRuntimeStyles,
+} from "@/src/lib/client/map/territory-visual-state";
 
-type InitialTerritoryDrawPresentationProps = {
-  territories: readonly BoardTerritory[];
-  revealedTerritoryIds: ReadonlySet<number>;
-  highlightPlayerId: string | null;
-  highlightOn: boolean;
-  presentationStartedAt: string;
-  tick: number;
-};
-
-const NEUTRAL_TERRITORY_FILL = "#7d8582";
 const TITLE_OVERLAY_SELECTOR = "[data-initial-territory-title]";
-
-function colorHex(color: PlayerColor) {
-  return PLAYER_COLORS.find((item) => item.value === color)?.hex ?? "#64756f";
-}
 
 function findMapSurface() {
   const board = document.querySelector<HTMLObjectElement>(".game-map-object");
@@ -32,6 +29,15 @@ function suppressMapLayers(surface: HTMLElement) {
     .querySelectorAll<HTMLElement>(".road-network, .game-troop-layer, canvas")
     .forEach((layer) => {
       layer.style.display = "none";
+    });
+}
+
+function restoreMapLayers(surface: HTMLElement) {
+  surface.style.pointerEvents = "";
+  surface
+    .querySelectorAll<HTMLElement>(".road-network, .game-troop-layer, canvas")
+    .forEach((layer) => {
+      layer.style.display = "";
     });
 }
 
@@ -64,7 +70,17 @@ export function InitialTerritoryDrawPresentation({
   highlightOn,
   presentationStartedAt,
   tick,
-}: InitialTerritoryDrawPresentationProps) {
+}: {
+  territories: readonly BoardTerritory[];
+  revealedTerritoryIds: ReadonlySet<number>;
+  highlightPlayerId: string | null;
+  highlightOn: boolean;
+  presentationStartedAt: string;
+  tick: number;
+}) {
+  const latestTerritoriesRef = useRef(territories);
+  latestTerritoriesRef.current = territories;
+
   useEffect(() => {
     const { board, surface } = findMapSurface();
     if (!board || !surface) return;
@@ -79,14 +95,20 @@ export function InitialTerritoryDrawPresentation({
 
     const mapDocument = board.contentDocument;
     const root = mapDocument?.querySelector("#territories");
-    if (!root) return;
+    if (!mapDocument || !root) return;
 
+    ensureTerritoryRuntimeStyles(mapDocument);
+
+    const paths = Array.from(
+      root.querySelectorAll<SVGPathElement>("path.territory"),
+    );
+    const visualNodes = collectTerritoryVisualNodes(mapDocument, paths);
     const territoryById = new Map(
       territories.map((territory) => [territory.territoryId, territory]),
     );
+    const neutralMaterial = neutralTerritoryMaterial();
 
-    for (const path of root.querySelectorAll<SVGPathElement>("path.territory")) {
-      const territoryId = Number(path.dataset.id);
+    for (const [territoryId, nodes] of visualNodes) {
       const territory = territoryById.get(territoryId);
       if (!territory) continue;
 
@@ -98,15 +120,15 @@ export function InitialTerritoryDrawPresentation({
           territory.ownerPlayerId === highlightPlayerId,
       );
 
-      path.style.fill = revealed
-        ? colorHex(territory.ownerColor)
-        : NEUTRAL_TERRITORY_FILL;
-      path.style.fillOpacity = highlighted ? "0.86" : "0.55";
-      path.style.filter = highlighted
-        ? "brightness(1.2) drop-shadow(0 0 9px rgba(255,255,255,.72))"
-        : "none";
-      path.style.cursor = "default";
-      path.setAttribute("tabindex", "-1");
+      applyTerritoryMaterial(
+        territoryId,
+        nodes,
+        revealed ? territoryMaterial(territory.ownerColor) : neutralMaterial,
+      );
+      applyTerritoryOpeningHighlightState(nodes, highlighted);
+
+      nodes.face.style.cursor = "default";
+      nodes.face.setAttribute("tabindex", "-1");
     }
   }, [
     highlightOn,
@@ -123,33 +145,38 @@ export function InitialTerritoryDrawPresentation({
       if (!board || !surface) return;
 
       surface.querySelector(TITLE_OVERLAY_SELECTOR)?.remove();
-      surface.style.pointerEvents = "";
-      surface
-        .querySelectorAll<HTMLElement>(".road-network, .game-troop-layer, canvas")
-        .forEach((layer) => {
-          layer.style.display = "";
-        });
+      restoreMapLayers(surface);
 
       const mapDocument = board.contentDocument;
       const root = mapDocument?.querySelector("#territories");
-      if (!root) return;
+      if (!mapDocument || !root) return;
 
+      const paths = Array.from(
+        root.querySelectorAll<SVGPathElement>("path.territory"),
+      );
+      const visualNodes = collectTerritoryVisualNodes(mapDocument, paths);
       const territoryById = new Map(
-        territories.map((territory) => [territory.territoryId, territory]),
+        latestTerritoriesRef.current.map((territory) => [
+          territory.territoryId,
+          territory,
+        ]),
       );
 
-      for (const path of root.querySelectorAll<SVGPathElement>("path.territory")) {
-        const territory = territoryById.get(Number(path.dataset.id));
+      for (const [territoryId, nodes] of visualNodes) {
+        const territory = territoryById.get(territoryId);
         if (!territory) continue;
 
-        path.style.fill = colorHex(territory.ownerColor);
-        path.style.fillOpacity = "0.55";
-        path.style.filter = "none";
-        path.style.cursor = "pointer";
-        path.setAttribute("tabindex", "0");
+        applyTerritoryMaterial(
+          territoryId,
+          nodes,
+          territoryMaterial(territory.ownerColor),
+        );
+        applyTerritoryOpeningHighlightState(nodes, false);
+        nodes.face.style.cursor = "pointer";
+        nodes.face.setAttribute("tabindex", "0");
       }
     },
-    [territories],
+    [],
   );
 
   return null;
