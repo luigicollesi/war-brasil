@@ -216,8 +216,7 @@ export class GameSyncController {
           currentSnapshot,
           result.privatePatch,
         );
-        if (!privateSnapshot) return null;
-        return this.snapshots.replace(privateSnapshot);
+        return privateSnapshot ? this.snapshots.apply(privateSnapshot) : null;
       }
       return null;
     }
@@ -226,111 +225,75 @@ export class GameSyncController {
       return null;
     }
 
-    const patchedSnapshot = applyGameCommandPatch(currentSnapshot, result.patch);
-    if (!patchedSnapshot || result.revision === null || result.baseRevision === null) {
-      return null;
-    }
+    let nextSnapshot = applyGameCommandPatch(currentSnapshot, result.patch);
+    if (!nextSnapshot) return null;
 
-    let nextSnapshot = patchedSnapshot;
     if (result.privatePatch) {
-      const privateSnapshot = applyGamePrivatePatch(nextSnapshot, result.privatePatch);
-      if (!privateSnapshot) return null;
-      nextSnapshot = privateSnapshot;
-    } else {
-      const withPendingPrivate = this.applyPendingPrivatePatch(
+      nextSnapshot = applyGamePrivatePatch(nextSnapshot, result.privatePatch);
+      if (!nextSnapshot) return null;
+      if (result.revision !== null) this.pendingFrames.delete(result.revision);
+    } else if (result.baseRevision !== null && result.revision !== null) {
+      nextSnapshot = this.applyPendingPrivatePatch(
         nextSnapshot,
         result.baseRevision,
         result.revision,
       );
-      if (!withPendingPrivate) return null;
-      nextSnapshot = withPendingPrivate;
+      if (!nextSnapshot) return null;
     }
 
     this.revisions.observe(result.revision);
-    this.discardFramesThrough(result.revision);
-    return this.snapshots.replace(nextSnapshot);
+    return this.snapshots.apply(nextSnapshot);
   }
 
   applyRealtimePatch(event: GamePatchEvent): GameRealtimePatchResult {
-    if (event.roomId !== this.roomId) {
-      return { applied: false, stale: true, snapshot: this.snapshots.current() };
-    }
-
-    const currentSnapshot = this.snapshots.current();
+    const { baseRevision, revision, patch } = event.payload;
     const currentRevision = this.revisions.current();
-    if (!currentSnapshot || currentRevision === null) {
-      this.forceSnapshot(event.revision);
-      return { applied: false, stale: false, snapshot: currentSnapshot };
+
+    if (currentRevision !== null && revision <= currentRevision) {
+      return {
+        applied: false,
+        stale: true,
+        snapshot: this.snapshots.current(),
+      };
     }
 
-    if (event.revision <= currentRevision) {
-      return { applied: false, stale: true, snapshot: currentSnapshot };
+    if (this.realtimeMode !== "hybrid") {
+      return { applied: false, stale: false, snapshot: null };
     }
 
-    if (!this.revisions.canApplyPatch(event.baseRevision, event.revision)) {
-      this.forceSnapshot(event.revision);
-      return { applied: false, stale: false, snapshot: currentSnapshot };
+    if (currentRevision !== baseRevision) {
+      this.forceSnapshot(revision);
+      return { applied: false, stale: false, snapshot: null };
     }
 
-    if (
-      !this.bufferFramePatch(event.baseRevision, event.revision, {
-        publicPatch: event.patch,
-      })
-    ) {
-      this.forceSnapshot(event.revision);
-      return { applied: false, stale: false, snapshot: currentSnapshot };
+    this.bufferFramePatch(baseRevision, revision, { publicPatch: patch });
+    const snapshot = this.applyCommandResult({
+      baseRevision,
+      revision,
+      patch,
+    });
+    if (snapshot) {
+      this.pendingFrames.delete(revision);
+      return { applied: true, stale: false, snapshot };
     }
 
-    const publicSnapshot = applyGameCommandPatch(currentSnapshot, event.patch);
-    if (!publicSnapshot) {
-      this.forceSnapshot(event.revision);
-      return { applied: false, stale: false, snapshot: currentSnapshot };
-    }
-
-    const nextSnapshot = this.applyPendingPrivatePatch(
-      publicSnapshot,
-      event.baseRevision,
-      event.revision,
-    );
-    if (!nextSnapshot) {
-      this.forceSnapshot(event.revision);
-      return { applied: false, stale: false, snapshot: currentSnapshot };
-    }
-
-    this.revisions.observe(event.revision);
-    this.discardFramesThrough(event.revision);
-    return {
-      applied: true,
-      stale: false,
-      snapshot: this.snapshots.replace(nextSnapshot),
-    };
+    this.forceSnapshot(revision);
+    return { applied: false, stale: false, snapshot: null };
   }
 
   applyRealtimePrivatePatch(
     event: GamePrivatePatchEvent,
   ): GameRealtimePrivatePatchResult {
-    if (event.roomId !== this.roomId) {
-      return {
-        applied: false,
-        stale: true,
-        buffered: false,
-        snapshot: this.snapshots.current(),
-      };
-    }
-
-    const currentSnapshot = this.snapshots.current();
+    const { baseRevision, revision, patch } = event.payload;
     const currentRevision = this.revisions.current();
+    const currentSnapshot = this.snapshots.current();
+
     if (!currentSnapshot || currentRevision === null) {
-      this.forceSnapshot(event.revision);
-      return {
-        applied: false,
-        stale: false,
-        buffered: false,
-        snapshot: currentSnapshot,
-      };
+      this.forceSnapshot(revision);
+      return { applied: false, stale: false, buffered: false, snapshot: null };
     }
 
-    if (event.revision < currentRevision) {
+    if (revision < currentRevision) {
       return {
         applied: false,
         stale: true,
@@ -339,58 +302,67 @@ export class GameSyncController {
       };
     }
 
-    if (event.revision === currentRevision) {
-      const privateSnapshot = applyGamePrivatePatch(currentSnapshot, event.patch);
-      if (!privateSnapshot) {
-        this.forceSnapshot(event.revision);
-        return {
-          applied: false,
-          stale: false,
-          buffered: false,
-          snapshot: currentSnapshot,
-        };
+    if (revision === currentRevision) {
+      const nextSnapshot = applyGamePrivatePatch(currentSnapshot, patch);
+      if (!nextSnapshot) {
+        this.forceSnapshot(revision);
+        return { applied: false, stale: false, buffered: false, snapshot: null };
       }
+      this.pendingFrames.delete(revision);
       return {
         applied: true,
         stale: false,
         buffered: false,
-        snapshot: this.snapshots.replace(privateSnapshot),
+        snapshot: this.snapshots.apply(nextSnapshot),
       };
     }
 
-    if (
-      event.baseRevision !== currentRevision ||
-      !this.bufferFramePatch(event.baseRevision, event.revision, {
-        privatePatch: event.patch,
-      })
-    ) {
-      this.forceSnapshot(event.revision);
+    if (baseRevision === currentRevision) {
+      if (!this.bufferFramePatch(baseRevision, revision, { privatePatch: patch })) {
+        this.forceSnapshot(revision);
+        return { applied: false, stale: false, buffered: false, snapshot: null };
+      }
+      this.revisions.require(revision);
       return {
         applied: false,
         stale: false,
-        buffered: false,
+        buffered: true,
         snapshot: currentSnapshot,
       };
     }
 
-    return {
-      applied: false,
-      stale: false,
-      buffered: true,
-      snapshot: currentSnapshot,
-    };
+    this.forceSnapshot(revision);
+    return { applied: false, stale: false, buffered: false, snapshot: null };
   }
 
-  connectRealtime(onEvent: (event: GameRealtimeEvent) => void) {
-    if (this.realtimeMode === "off" || this.unsubscribeRealtime) return;
-    this.unsubscribeRealtime = this.realtimeTransport.connect({
+  async startRealtime(onEvent?: (event: GameRealtimeEvent) => void) {
+    this.unsubscribeRealtime?.();
+    this.unsubscribeRealtime = this.realtimeTransport.subscribe((event) => {
+      if (event.roomId !== this.roomId) return;
+      if (
+        this.realtimeMode === "hybrid" &&
+        event.type === "game.private.invalidate"
+      ) {
+        this.forceSnapshot(event.payload.revision);
+        onEvent?.({ ...event, type: "game.invalidate" });
+        return;
+      }
+      if (
+        this.realtimeMode === "hybrid" &&
+        (event.type === "game.invalidate" || event.type === "realtime.ready")
+      ) {
+        this.revisions.require(event.payload.revision);
+      }
+      onEvent?.(event);
+    });
+
+    await this.realtimeTransport.connect({
       roomId: this.roomId,
-      knownRevision: this.revisions.current(),
-      onEvent,
+      revision: this.revisions.current(),
     });
   }
 
-  disconnectRealtime() {
+  stopRealtime() {
     this.unsubscribeRealtime?.();
     this.unsubscribeRealtime = null;
     this.realtimeTransport.disconnect();
