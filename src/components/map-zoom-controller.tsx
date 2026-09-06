@@ -2,6 +2,11 @@
 
 import { useEffect } from "react";
 import {
+  MAP_GESTURE_STATE_EVENT,
+  MAP_VISUALS_READY_EVENT,
+  type MapGestureKind,
+} from "@/src/lib/client/map/map-runtime-events";
+import {
   DEFAULT_MAP_VIEWPORT,
   MAP_AUTO_FOCUS_DURATION_MS,
   MAP_MAX_SCALE,
@@ -213,7 +218,8 @@ export function MapZoomController() {
               height: box.height,
             });
           } catch {
-            // Ignore a path whose geometry is not ready yet; a later SVG load can retry.
+            // Ignore geometry that is not ready yet. MAP_VISUALS_READY_EVENT
+            // rebinding gives the board another deterministic opportunity.
           }
         }
       };
@@ -318,18 +324,20 @@ export function MapZoomController() {
         svg.style.userSelect = "none";
         svg.style.webkitUserSelect = "none";
 
-        const setGestureActive = (active: boolean) => {
+        let gestureActive = false;
+        let gestureKind: MapGestureKind = null;
+        const setGestureActive = (active: boolean, kind: MapGestureKind = null) => {
+          const nextKind = active ? kind : null;
+          if (gestureActive === active && gestureKind === nextKind) return;
+          gestureActive = active;
+          gestureKind = nextKind;
           surface.dataset.mapGestureActive = active ? "true" : "false";
-          if (!active) return;
-
-          // InteractiveBoard owns hover state. A synthetic bubbling pointerout
-          // from the currently highlighted face asks it to clear that state
-          // before pan/pinch takes control of the pointer stream.
-          const hovered = svg.querySelector<SVGElement>(".territory.is-hovered");
-          if (!hovered) return;
-          const leaveEvent = svg.ownerDocument.createEvent("Event");
-          leaveEvent.initEvent("pointerout", true, false);
-          hovered.dispatchEvent(leaveEvent);
+          surface.dataset.mapGestureKind = nextKind ?? "";
+          surface.dispatchEvent(
+            new CustomEvent(MAP_GESTURE_STATE_EVENT, {
+              detail: { active, kind: nextKind },
+            }),
+          );
         };
 
         setGestureActive(false);
@@ -427,7 +435,7 @@ export function MapZoomController() {
           }
 
           manualViewportOverride = true;
-          setGestureActive(true);
+          setGestureActive(true, "pinch");
           pinch = {
             distance: distance(samples[0], samples[1]),
             focus: relativePoint(midpoint(samples[0], samples[1])),
@@ -508,7 +516,7 @@ export function MapZoomController() {
           );
           if (totalDistance <= MAP_PAN_THRESHOLD) return;
 
-          setGestureActive(true);
+          setGestureActive(true, "pan");
           suppressSelection();
           event.preventDefault();
 
@@ -602,7 +610,16 @@ export function MapZoomController() {
         }
       };
 
+      const onVisualsReady = () => {
+        bindSvg();
+        applyTerritoryStrokeScale();
+        if (!applyFocusFromSurface({ force: true, animated: false })) {
+          applyViewport(viewport);
+        }
+      };
+
       board.addEventListener("load", onBoardLoad);
+      surface.addEventListener(MAP_VISUALS_READY_EVENT, onVisualsReady);
       bindSvg();
 
       const focusObserver = new MutationObserver(() => {
@@ -642,6 +659,7 @@ export function MapZoomController() {
       detachSurface = () => {
         cancelAutoFocusAnimation();
         board.removeEventListener("load", onBoardLoad);
+        surface.removeEventListener(MAP_VISUALS_READY_EVENT, onVisualsReady);
         detachSvg();
         focusObserver.disconnect();
         resizeObserver.disconnect();
