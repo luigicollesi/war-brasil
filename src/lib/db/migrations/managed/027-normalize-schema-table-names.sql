@@ -293,6 +293,82 @@ BEGIN
 END
 $$;
 
+-- Migration 023 gave these invariants semantic names. Older snapshots may have
+-- the same checks under PostgreSQL-generated names, so converge by definition.
+DO $$
+DECLARE
+  current_name TEXT;
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    WHERE n.nspname = 'game'
+      AND t.relname = 'trade_offers'
+      AND c.conname = 'trade_offers_responder_check'
+  ) THEN
+    SELECT c.conname
+      INTO current_name
+      FROM pg_constraint c
+      JOIN pg_class t ON t.oid = c.conrelid
+      JOIN pg_namespace n ON n.oid = t.relnamespace
+     WHERE n.nspname = 'game'
+       AND t.relname = 'trade_offers'
+       AND c.contype = 'c'
+       AND pg_get_constraintdef(c.oid) LIKE '%responder_player_id IS NULL%'
+       AND pg_get_constraintdef(c.oid) LIKE '%target_player_id%'
+     ORDER BY c.conname
+     LIMIT 1;
+
+    IF current_name IS NULL THEN
+      RAISE EXCEPTION 'trade_offers responder invariant not found';
+    END IF;
+
+    EXECUTE format(
+      'ALTER TABLE game.trade_offers RENAME CONSTRAINT %I TO trade_offers_responder_check',
+      current_name
+    );
+  END IF;
+
+  current_name := NULL;
+
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid
+    JOIN pg_namespace n ON n.oid = t.relnamespace
+    WHERE n.nspname = 'game'
+      AND t.relname = 'trade_offers'
+      AND c.conname = 'trade_offers_state_check'
+  ) THEN
+    SELECT c.conname
+      INTO current_name
+      FROM pg_constraint c
+      JOIN pg_class t ON t.oid = c.conrelid
+      JOIN pg_namespace n ON n.oid = t.relnamespace
+     WHERE n.nspname = 'game'
+       AND t.relname = 'trade_offers'
+       AND c.contype = 'c'
+       AND pg_get_constraintdef(c.oid) LIKE '%accepted_pending_selection%'
+       AND pg_get_constraintdef(c.oid) LIKE '%proposer_selected_card_id%'
+       AND pg_get_constraintdef(c.oid) LIKE '%responder_selected_card_id%'
+       AND pg_get_constraintdef(c.oid) LIKE '%resolved_at%'
+     ORDER BY c.conname
+     LIMIT 1;
+
+    IF current_name IS NULL THEN
+      RAISE EXCEPTION 'trade_offers state invariant not found';
+    END IF;
+
+    EXECUTE format(
+      'ALTER TABLE game.trade_offers RENAME CONSTRAINT %I TO trade_offers_state_check',
+      current_name
+    );
+  END IF;
+END
+$$;
+
 -- Legacy public API for the current application runtime.
 CREATE OR REPLACE VIEW public.game_rooms AS SELECT * FROM game.rooms;
 CREATE OR REPLACE VIEW public.room_players AS SELECT * FROM game.players;
