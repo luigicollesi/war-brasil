@@ -24,6 +24,7 @@ import {
   territoryMaterial,
 } from "@/src/lib/client/map/territory-material";
 import { buildTerritoryHitLayer } from "@/src/lib/client/map/territory-hit-geometry";
+import { setTerritoryHitInteractionEnabled } from "@/src/lib/client/map/territory-hit-interaction-state";
 import { territoryIdFromEvent } from "@/src/lib/client/map/territory-svg-interaction";
 import {
   applyTerritoryMaterial,
@@ -348,6 +349,10 @@ export function InteractiveBoard({
   }, []);
 
   useEffect(() => {
+    const root = boardRef.current?.contentDocument?.querySelector("#board-v2");
+    if (root) {
+      setTerritoryHitInteractionEnabled(root, !presentationActive);
+    }
     if (presentationActive) clearHoveredTerritory();
   }, [clearHoveredTerritory, presentationActive]);
 
@@ -406,6 +411,7 @@ export function InteractiveBoard({
 
     const nextVisualNodes = collectTerritoryVisualNodes(mapDocument, paths);
     buildTerritoryHitLayer(mapDocument, root, nextVisualNodes);
+    setTerritoryHitInteractionEnabled(root, interactionEnabledRef.current);
 
     visualNodesByIdRef.current = nextVisualNodes;
     materialSignatureRef.current.clear();
