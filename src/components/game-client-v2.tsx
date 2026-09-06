@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { BattleOverlay } from "@/src/components/battle-overlay";
 import { OrderDiceCinematic } from "@/src/components/dice-3d/order-dice-cinematic";
 import { GameDie } from "@/src/components/game-die";
@@ -118,6 +118,7 @@ function GameReadyClient({
   const [completedOrderPresentationId, setCompletedOrderPresentationId] =
     useState<string | null>(null);
   const [presentationClockMs, setPresentationClockMs] = useState(() => Date.now());
+  const presentationIdentityRef = useRef<string | null>(null);
   const initialTerritoryPresentation =
     snapshot.room.presentation?.kind === "initial_territory_draw"
       ? snapshot.room.presentation
@@ -126,14 +127,33 @@ function GameReadyClient({
     initialTerritoryPresentation?.startedAt ?? null;
   const initialTerritoryIdsKey =
     initialTerritoryPresentation?.territoryIds.join(",") ?? "";
+  const scheduledTerritoryIds = useMemo(
+    () =>
+      initialTerritoryIdsKey
+        ? initialTerritoryIdsKey.split(",").map((value) => Number(value))
+        : [],
+    [initialTerritoryIdsKey],
+  );
+  const initialPresentationKey = initialPresentationStartedAt
+    ? `${initialPresentationStartedAt}|${initialTerritoryIdsKey}`
+    : null;
 
   useEffect(() => {
-    if (!initialTerritoryPresentation) return;
+    if (!initialPresentationKey || !initialPresentationStartedAt) {
+      presentationIdentityRef.current = null;
+      return;
+    }
 
     const nowMs = Date.now();
+    if (presentationIdentityRef.current !== initialPresentationKey) {
+      presentationIdentityRef.current = initialPresentationKey;
+      setPresentationClockMs(nowMs);
+      return;
+    }
+
     const wakeAt = nextInitialTerritoryPresentationWakeAt({
-      territoryIds: initialTerritoryPresentation.territoryIds,
-      startedAt: initialTerritoryPresentation.startedAt,
+      territoryIds: scheduledTerritoryIds,
+      startedAt: initialPresentationStartedAt,
       nowMs,
     });
     if (wakeAt === null) return;
@@ -144,10 +164,10 @@ function GameReadyClient({
     );
     return () => window.clearTimeout(timeoutId);
   }, [
+    initialPresentationKey,
     initialPresentationStartedAt,
-    initialTerritoryIdsKey,
-    initialTerritoryPresentation,
     presentationClockMs,
+    scheduledTerritoryIds,
   ]);
 
   const boardTerritories = useMemo<BoardTerritory[]>(
