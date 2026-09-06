@@ -8,11 +8,20 @@ const PATCH_KEYS = new Set(["room", "territories", "trade"]);
 const ROOM_PATCH_KEYS = new Set([
   "status",
   "phase",
+  "currentPlayerId",
+  "turnNumber",
+  "roundNumber",
+  "jurassicTunnelDestinationId",
   "reinforcementsRemaining",
   "winnerPlayerId",
+  "automaticAdvancePending",
+  "pendingConquest",
+  "battle",
 ]);
 const TERRITORY_PATCH_KEYS = new Set([
   "territoryId",
+  "ownerPlayerId",
+  "ownerColor",
   "troops",
   "movedInTurn",
 ]);
@@ -46,6 +55,40 @@ const GAME_PHASES = new Set([
   "end_turn",
   "finished",
 ]);
+const PLAYER_COLORS = new Set([
+  "forest",
+  "ocean",
+  "sun",
+  "ruby",
+  "violet",
+  "orange",
+]);
+const BATTLE_STAGES = new Set([
+  "awaiting_attacker_roll",
+  "show_attacker_result",
+  "awaiting_defender_roll",
+  "show_defender_result",
+  "show_comparison",
+  "show_battle_result",
+]);
+const PENDING_CONQUEST_KEYS = new Set(["fromTerritoryId", "toTerritoryId"]);
+const BATTLE_KEYS = new Set([
+  "attacker",
+  "defender",
+  "attackerLosses",
+  "defenderLosses",
+  "conquered",
+  "attackerTerritoryId",
+  "defenderTerritoryId",
+  "attackerPlayerId",
+  "defenderPlayerId",
+  "stage",
+  "stageStartedAt",
+  "attackMode",
+  "barrierName",
+  "attackerTroopsAfter",
+  "defenderTroopsAfter",
+]);
 
 function isRecord(value) {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -63,8 +106,24 @@ function validPlayerId(value) {
   return typeof value === "string" && /^\d+$/.test(value);
 }
 
+function validNullablePlayerId(value) {
+  return value === null || validPlayerId(value);
+}
+
 function validOfferId(value) {
   return typeof value === "string" && /^\d+$/.test(value);
+}
+
+function validNonNegativeInteger(value) {
+  return Number.isSafeInteger(value) && value >= 0;
+}
+
+function validPositiveInteger(value) {
+  return Number.isSafeInteger(value) && value >= 1;
+}
+
+function validTerritoryId(value) {
+  return validPositiveInteger(value) && value <= 42;
 }
 
 function validTradeDescriptor(value) {
@@ -75,9 +134,7 @@ function validTradeDescriptor(value) {
   if (value.kind === "territory") {
     return (
       Object.keys(value).every((key) => key === "kind" || key === "territoryId") &&
-      Number.isSafeInteger(value.territoryId) &&
-      value.territoryId >= 1 &&
-      value.territoryId <= 42
+      validTerritoryId(value.territoryId)
     );
   }
   if (value.kind === "symbol") {
@@ -121,10 +178,8 @@ function validTradeOffer(value) {
 function validTradePublicState(value) {
   if (!isRecord(value) || !hasOnlyKeys(value, TRADE_PUBLIC_KEYS)) return false;
   if (
-    !Number.isSafeInteger(value.offersUsed) ||
-    value.offersUsed < 0 ||
-    !Number.isSafeInteger(value.offerLimit) ||
-    value.offerLimit < 1 ||
+    !validNonNegativeInteger(value.offersUsed) ||
+    !validPositiveInteger(value.offerLimit) ||
     value.offersUsed > value.offerLimit
   ) {
     return false;
@@ -132,21 +187,123 @@ function validTradePublicState(value) {
   return value.activeOffer === null || validTradeOffer(value.activeOffer);
 }
 
+function validDice(value) {
+  return (
+    Array.isArray(value) &&
+    value.length <= 3 &&
+    value.every((die) => Number.isSafeInteger(die) && die >= 1 && die <= 6)
+  );
+}
+
+function validBattle(value) {
+  if (!isRecord(value) || !hasOnlyKeys(value, BATTLE_KEYS)) return false;
+  if (
+    !validDice(value.attacker) ||
+    !validDice(value.defender) ||
+    !validNonNegativeInteger(value.attackerLosses) ||
+    !validNonNegativeInteger(value.defenderLosses) ||
+    typeof value.conquered !== "boolean" ||
+    !validTerritoryId(value.attackerTerritoryId) ||
+    !validTerritoryId(value.defenderTerritoryId) ||
+    !validPlayerId(value.attackerPlayerId) ||
+    !validPlayerId(value.defenderPlayerId) ||
+    typeof value.stage !== "string" ||
+    !BATTLE_STAGES.has(value.stage) ||
+    typeof value.stageStartedAt !== "string" ||
+    value.stageStartedAt.length < 1
+  ) {
+    return false;
+  }
+  if (
+    value.attackMode !== undefined &&
+    value.attackMode !== "normal" &&
+    value.attackMode !== "barrier"
+  ) {
+    return false;
+  }
+  if (
+    value.barrierName !== undefined &&
+    value.barrierName !== null &&
+    typeof value.barrierName !== "string"
+  ) {
+    return false;
+  }
+  if (
+    value.attackerTroopsAfter !== undefined &&
+    !validNonNegativeInteger(value.attackerTroopsAfter)
+  ) {
+    return false;
+  }
+  if (
+    value.defenderTroopsAfter !== undefined &&
+    !validNonNegativeInteger(value.defenderTroopsAfter)
+  ) {
+    return false;
+  }
+  return true;
+}
+
+function validPendingConquest(value) {
+  return (
+    value === null ||
+    (isRecord(value) &&
+      hasOnlyKeys(value, PENDING_CONQUEST_KEYS) &&
+      validTerritoryId(value.fromTerritoryId) &&
+      validTerritoryId(value.toTerritoryId))
+  );
+}
+
 function validRoomPatch(value) {
   if (!isRecord(value) || !hasOnlyKeys(value, ROOM_PATCH_KEYS)) return false;
   if (value.status !== undefined && !GAME_STATUSES.has(value.status)) return false;
   if (value.phase !== undefined && !GAME_PHASES.has(value.phase)) return false;
   if (
+    value.currentPlayerId !== undefined &&
+    !validNullablePlayerId(value.currentPlayerId)
+  ) {
+    return false;
+  }
+  if (value.turnNumber !== undefined && !validPositiveInteger(value.turnNumber)) {
+    return false;
+  }
+  if (value.roundNumber !== undefined && !validPositiveInteger(value.roundNumber)) {
+    return false;
+  }
+  if (
+    value.jurassicTunnelDestinationId !== undefined &&
+    value.jurassicTunnelDestinationId !== null &&
+    !validTerritoryId(value.jurassicTunnelDestinationId)
+  ) {
+    return false;
+  }
+  if (
     value.reinforcementsRemaining !== undefined &&
-    (!Number.isSafeInteger(value.reinforcementsRemaining) ||
-      value.reinforcementsRemaining < 0)
+    !validNonNegativeInteger(value.reinforcementsRemaining)
   ) {
     return false;
   }
   if (
     value.winnerPlayerId !== undefined &&
-    value.winnerPlayerId !== null &&
-    (typeof value.winnerPlayerId !== "string" || value.winnerPlayerId.length < 1)
+    !validNullablePlayerId(value.winnerPlayerId)
+  ) {
+    return false;
+  }
+  if (
+    value.automaticAdvancePending !== undefined &&
+    typeof value.automaticAdvancePending !== "boolean"
+  ) {
+    return false;
+  }
+  if (
+    value.pendingConquest !== undefined &&
+    !validPendingConquest(value.pendingConquest)
+  ) {
+    return false;
+  }
+  if (
+    value.battle !== undefined &&
+    value.battle !== null &&
+    !validBattle(value.battle)
   ) {
     return false;
   }
@@ -155,18 +312,27 @@ function validRoomPatch(value) {
 
 function validTerritoryPatch(value) {
   if (!isRecord(value) || !hasOnlyKeys(value, TERRITORY_PATCH_KEYS)) return false;
-  if (
-    !Number.isSafeInteger(value.territoryId) ||
-    value.territoryId < 1 ||
-    value.territoryId > 42 ||
-    !Number.isSafeInteger(value.troops) ||
-    value.troops < 1
-  ) {
+  if (!validTerritoryId(value.territoryId)) return false;
+
+  const hasUpdate =
+    value.ownerPlayerId !== undefined ||
+    value.ownerColor !== undefined ||
+    value.troops !== undefined ||
+    value.movedInTurn !== undefined;
+  if (!hasUpdate) return false;
+
+  if (value.ownerPlayerId !== undefined && !validPlayerId(value.ownerPlayerId)) {
+    return false;
+  }
+  if (value.ownerColor !== undefined && !PLAYER_COLORS.has(value.ownerColor)) {
+    return false;
+  }
+  if (value.troops !== undefined && !validPositiveInteger(value.troops)) {
     return false;
   }
   if (
     value.movedInTurn !== undefined &&
-    (!Number.isSafeInteger(value.movedInTurn) || value.movedInTurn < 0)
+    !validNonNegativeInteger(value.movedInTurn)
   ) {
     return false;
   }
@@ -204,12 +370,7 @@ function validPublicPatch(value) {
 function validGameCard(value) {
   if (!isRecord(value) || !hasOnlyKeys(value, CARD_KEYS)) return false;
   if (!validOfferId(value.id)) return false;
-  if (
-    value.territoryId !== null &&
-    (!Number.isSafeInteger(value.territoryId) ||
-      value.territoryId < 1 ||
-      value.territoryId > 42)
-  ) {
+  if (value.territoryId !== null && !validTerritoryId(value.territoryId)) {
     return false;
   }
   return CARD_SYMBOLS.has(value.symbol);
@@ -218,10 +379,8 @@ function validGameCard(value) {
 function validPrivateTradeState(value) {
   if (!isRecord(value) || !hasOnlyKeys(value, PRIVATE_TRADE_KEYS)) return false;
   if (
-    !Number.isSafeInteger(value.signalsUsed) ||
-    value.signalsUsed < 0 ||
-    !Number.isSafeInteger(value.signalLimit) ||
-    value.signalLimit < 1 ||
+    !validNonNegativeInteger(value.signalsUsed) ||
+    !validPositiveInteger(value.signalLimit) ||
     value.signalsUsed > value.signalLimit
   ) {
     return false;
