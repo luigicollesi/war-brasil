@@ -15,6 +15,7 @@ import { TerritorySpecialMarkers } from "@/src/components/territory-special-mark
 import type { BoardPresentationState } from "@/src/lib/client/map/board-presentation";
 import { NORMAL_BOARD_PRESENTATION } from "@/src/lib/client/map/board-presentation";
 import {
+  MAP_BOARD_PRESENTATION_EVENT,
   MAP_GESTURE_STATE_EVENT,
   MAP_VISUALS_READY_EVENT,
   isMapGestureState,
@@ -141,6 +142,12 @@ function mobileTroopMarkerRadius({
   const safePixels =
     (visualSafeWorld / MAP_WORLD_SIZE) * surfaceWidth * viewport.scale * 0.82;
   return Math.max(5, Math.min(preferred, safePixels));
+}
+
+function isBoardPresentationState(value: unknown): value is BoardPresentationState {
+  if (!value || typeof value !== "object") return false;
+  const candidate = value as Partial<BoardPresentationState>;
+  return candidate.mode === "normal" || candidate.mode === "initial-territory-draw";
 }
 
 function MobileTroopCanvas({
@@ -285,8 +292,10 @@ export function InteractiveBoard({
   const tooltipFrameRef = useRef(0);
   const hoveredTerritoryRef = useRef<number | null>(null);
   const onSelectRef = useRef(onSelect);
-  const interactionEnabledRef = useRef(presentation.mode === "normal");
+  const interactionEnabledRef = useRef(true);
   const gestureActiveRef = useRef(false);
+  const [runtimePresentation, setRuntimePresentation] =
+    useState<BoardPresentationState | null>(null);
   const [geometries, setGeometries] = useState<Map<number, TerritoryGeometry>>(
     new Map(),
   );
@@ -295,7 +304,11 @@ export function InteractiveBoard({
     useState<HoveredTerritory | null>(null);
   const roadsVisible = useRoadVisibility();
   const troopsVisible = useTroopVisibility();
-  const presentationActive = presentation.mode !== "normal";
+  const effectivePresentation =
+    presentation.mode !== "normal"
+      ? presentation
+      : runtimePresentation ?? presentation;
+  const presentationActive = effectivePresentation.mode !== "normal";
   interactionEnabledRef.current = !presentationActive;
 
   const territoryById = useMemo(
@@ -345,6 +358,22 @@ export function InteractiveBoard({
     hoveredTerritoryRef.current = null;
     setHoveredTerritory(null);
   };
+
+  useEffect(() => {
+    const surface = containerRef.current;
+    if (!surface) return;
+
+    const onPresentation = (event: Event) => {
+      const detail = (event as CustomEvent<unknown>).detail;
+      if (!isBoardPresentationState(detail)) return;
+      setRuntimePresentation(detail.mode === "normal" ? null : detail);
+    };
+
+    surface.addEventListener(MAP_BOARD_PRESENTATION_EVENT, onPresentation);
+    return () => {
+      surface.removeEventListener(MAP_BOARD_PRESENTATION_EVENT, onPresentation);
+    };
+  }, []);
 
   useEffect(() => {
     if (presentationActive) clearHoveredTerritory();
@@ -522,7 +551,10 @@ export function InteractiveBoard({
 
   useEffect(() => {
     const available = new Set(availableTerritoryIds);
-    const opening = presentation.mode === "initial-territory-draw" ? presentation : null;
+    const opening =
+      effectivePresentation.mode === "initial-territory-draw"
+        ? effectivePresentation
+        : null;
 
     for (const territory of territories) {
       const id = territory.territoryId;
@@ -581,7 +613,7 @@ export function InteractiveBoard({
     selectedTerritoryId,
     availableTerritoryIds,
     targetById,
-    presentation,
+    effectivePresentation,
   ]);
 
   const hoveredTerritoryId = hoveredTerritory?.id ?? null;
@@ -656,7 +688,8 @@ export function InteractiveBoard({
           <p>Não foi possível carregar o mapa interativo.</p>
         </object>
 
-        {presentation.mode === "initial-territory-draw" && presentation.titleVisible ? (
+        {effectivePresentation.mode === "initial-territory-draw" &&
+        effectivePresentation.titleVisible ? (
           <div
             data-initial-territory-title
             className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center"
