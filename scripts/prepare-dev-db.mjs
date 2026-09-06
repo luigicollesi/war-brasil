@@ -217,16 +217,18 @@ async function assertMigrationBaseline() {
   );
 
   const phaseConstraintResult = await client.query(`
-    SELECT pg_get_constraintdef(c.oid) AS definition
-    FROM pg_constraint c
-    WHERE c.conrelid=to_regclass('public.game_rooms')
-      AND c.conname='game_rooms_phase_check'
+    SELECT EXISTS (
+      SELECT 1
+      FROM pg_constraint c
+      WHERE c.conrelid=to_regclass('public.game_rooms')
+        AND c.contype='c'
+        AND pg_get_constraintdef(c.oid) LIKE '%phase%'
+        AND pg_get_constraintdef(c.oid) LIKE '%status%'
+        AND pg_get_constraintdef(c.oid) LIKE '%cards%'
+        AND pg_get_constraintdef(c.oid) LIKE '%order_roll%'
+    ) AS compatible
   `);
-  const phaseDefinition = String(
-    phaseConstraintResult.rows[0]?.definition ?? "",
-  );
-  const phaseCompatible =
-    phaseDefinition.includes("cards") && phaseDefinition.includes("order_roll");
+  const phaseCompatible = Boolean(phaseConstraintResult.rows[0]?.compatible);
 
   const problems = [];
   if (missingTables.length > 0) {
