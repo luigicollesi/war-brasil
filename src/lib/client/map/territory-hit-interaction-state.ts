@@ -10,6 +10,11 @@ export function setTerritoryHitInteractionEnabled(
   )) {
     const keyboardTarget = path.dataset.territorySurface === "face";
 
+    if (!enabled && path.ownerDocument.activeElement === path) {
+      const focusablePath = path as SVGPathElement & { blur?: () => void };
+      focusablePath.blur?.();
+    }
+
     path.style.pointerEvents = enabled ? "fill" : "none";
     path.style.cursor = enabled ? "pointer" : "default";
 
