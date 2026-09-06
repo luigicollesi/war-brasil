@@ -7,12 +7,26 @@ import {
 } from "../.test-build/client/map/board-presentation.js";
 import {
   insetPolygonPath,
+  resolveHitPolygonPath,
   safeInsetPolygonPath,
+  safeScaledPolygonPath,
 } from "../.test-build/client/map/territory-hit-geometry.js";
 
 const START = "2026-09-06T12:00:00.000Z";
 const START_MS = Date.parse(START);
 const MAP_SVG = readFileSync("public/mapa-war-brasil-25d.svg", "utf8");
+
+function attribute(tag, name) {
+  return new RegExp(`\\b${name}="([^"]*)"`).exec(tag)?.[1] ?? null;
+}
+
+function hasClass(tag, className) {
+  return (attribute(tag, "class") ?? "").split(/\s+/).includes(className);
+}
+
+function mapPathTags() {
+  return [...MAP_SVG.matchAll(/<path\b[^>]*>/g)].map((match) => match[0]);
+}
 
 test("hit geometry erodes a polygon instead of relying on masked visual pixels", () => {
   assert.equal(
@@ -37,6 +51,13 @@ test("unsafe self-intersecting hit geometry is rejected", () => {
     safeInsetPolygonPath("M 0 0 L 10 10 L 0 10 L 10 0 Z", 1),
     null,
   );
+});
+
+test("scaled fallback remains conservative for concave polygons", () => {
+  const source = "M 0 0 L 20 0 L 20 8 L 12 8 L 12 20 L 0 20 Z";
+  const scaled = safeScaledPolygonPath(source, 2);
+  assert.ok(scaled);
+  assert.notEqual(scaled, source);
 });
 
 test("asset preserves the 42 canonical face ids and four depth layers", () => {
@@ -69,6 +90,42 @@ test("asset preserves the 42 canonical face ids and four depth layers", () => {
   assert.match(MAP_SVG, /viewBox="0 0 1254 1254"/);
   assert.match(MAP_SVG, /data-top-inset="4\.0"/);
   assert.match(MAP_SVG, /data-body-inset="1\.05"/);
+});
+
+test("every real face and depth can build a conservative hit polygon", () => {
+  const tags = mapPathTags();
+  const faces = tags.filter((tag) => hasClass(tag, "territory"));
+  const depths = tags.filter((tag) => hasClass(tag, "territory-depth"));
+  const topInset = Number(/data-top-inset="([^"]+)"/.exec(MAP_SVG)?.[1]);
+  const bodyInset = Number(/data-body-inset="([^"]+)"/.exec(MAP_SVG)?.[1]);
+
+  assert.equal(faces.length, 42);
+  assert.equal(depths.length, 42 * 4);
+  assert.ok(Number.isFinite(topInset) && topInset > 0);
+  assert.ok(Number.isFinite(bodyInset) && bodyInset > 0);
+
+  for (const tag of faces) {
+    const id = Number(attribute(tag, "data-territory-id"));
+    const d = attribute(tag, "d");
+    assert.ok(Number.isInteger(id) && id >= 1 && id <= 42);
+    assert.ok(d, `territory ${id} face is missing d`);
+    assert.ok(
+      resolveHitPolygonPath(d, topInset),
+      `territory ${id} face has no conservative hit geometry`,
+    );
+  }
+
+  for (const tag of depths) {
+    const id = Number(attribute(tag, "data-territory-id"));
+    const layer = attribute(tag, "data-layer");
+    const d = attribute(tag, "d");
+    assert.ok(Number.isInteger(id) && id >= 1 && id <= 42);
+    assert.ok(d, `territory ${id} ${layer} is missing d`);
+    assert.ok(
+      resolveHitPolygonPath(d, bodyInset),
+      `territory ${id} ${layer} has no conservative hit geometry`,
+    );
+  }
 });
 
 test("opening presentation is discrete and reveals only territories whose boundary passed", () => {
