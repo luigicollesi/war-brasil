@@ -71,7 +71,7 @@ export async function readRoomCommandPatch(
               jurassic_tunnel_territory_id,reinforcements_remaining,
               winner_player_id,pending_from_territory_id,
               pending_to_territory_id,last_battle
-       FROM game_rooms
+       FROM game.rooms
        WHERE id=$1`,
       [roomId],
     )
@@ -88,7 +88,7 @@ export async function readRoomCommandPatch(
         (
           await client.query<{ is_bot: boolean }>(
             `SELECT is_bot
-             FROM room_players
+             FROM game.players
              WHERE room_id=$1 AND id=$2`,
             [roomId, actorId],
           )
@@ -131,13 +131,13 @@ export async function readTerritoryCommandPatches(
     await client.query<TerritoryPatchRow>(
       uniqueIds
         ? `SELECT t.territory_id,t.owner_player_id,p.color,t.troops,t.moved_in_turn
-           FROM game_territories t
-           JOIN room_players p ON p.id=t.owner_player_id
+           FROM game.territories t
+           JOIN game.players p ON p.id=t.owner_player_id
            WHERE t.room_id=$1 AND t.territory_id=ANY($2::smallint[])
            ORDER BY t.territory_id`
         : `SELECT t.territory_id,t.owner_player_id,p.color,t.troops,t.moved_in_turn
-           FROM game_territories t
-           JOIN room_players p ON p.id=t.owner_player_id
+           FROM game.territories t
+           JOIN game.players p ON p.id=t.owner_player_id
            WHERE t.room_id=$1
            ORDER BY t.territory_id`,
       uniqueIds ? [roomId, uniqueIds] : [roomId],
@@ -162,11 +162,11 @@ export async function readTerritoryMovementPatches(
     await client.query<{ territory_id: number; moved_in_turn: number }>(
       ownerPlayerId
         ? `SELECT territory_id,moved_in_turn
-           FROM game_territories
+           FROM game.territories
            WHERE room_id=$1 AND owner_player_id=$2
            ORDER BY territory_id`
         : `SELECT territory_id,moved_in_turn
-           FROM game_territories
+           FROM game.territories
            WHERE room_id=$1
            ORDER BY territory_id`,
       ownerPlayerId ? [roomId, ownerPlayerId] : [roomId],
@@ -187,7 +187,7 @@ export async function readPlayerHandPrivatePatch(
   const cards = (
     await client.query<HandCardRow>(
       `SELECT id,territory_id,symbol,is_wild
-       FROM game_cards
+       FROM game.cards
        WHERE room_id=$1 AND owner_player_id=$2 AND zone='hand'
        ORDER BY id`,
       [roomId, playerId],
