@@ -70,7 +70,7 @@ test("remoção de bot nunca pode apagar um jogador humano", () => {
     rooms.indexOf("export async function getLobbySnapshot"),
   );
 
-  assert.match(removeBot, /DELETE FROM room_players/);
+  assert.match(removeBot, /DELETE FROM game\.players/);
   assert.match(removeBot, /AND is_bot = TRUE/);
 });
 
@@ -82,7 +82,7 @@ test("contratos do lobby e do jogo expõem isBot sem criar entidade paralela", (
   assert.match(gameSnapshot, /isBot: player\.is_bot/);
 });
 
-test("inicialização continua incluindo todos os room_players", () => {
+test("inicialização continua incluindo todos os jogadores da sala", () => {
   const initializeGame = rooms.slice(
     rooms.indexOf("async function initializeGame"),
     rooms.indexOf("export async function createRoom"),
@@ -90,7 +90,7 @@ test("inicialização continua incluindo todos os room_players", () => {
 
   assert.match(
     initializeGame,
-    /SELECT id FROM room_players WHERE room_id = \$1 ORDER BY joined_at/,
+    /SELECT id FROM game\.players WHERE room_id = \$1 ORDER BY joined_at/,
   );
   assert.doesNotMatch(initializeGame, /is_bot\s*=\s*FALSE/);
 });
