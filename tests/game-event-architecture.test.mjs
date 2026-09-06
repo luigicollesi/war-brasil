@@ -71,7 +71,7 @@ test("histórico é lido da tabela de rodadas em ordem decrescente e com janela 
     "utf8",
   );
 
-  assert.match(source, /FROM game_round_events/);
+  assert.match(source, /FROM game\.round_events/);
   assert.match(source, /ORDER BY round_number DESC/);
   assert.match(source, /LIMIT \$2/);
 });
@@ -131,10 +131,10 @@ test("contrato estrutural do catálogo é domínio puro e pode validar o banco n
   assert.match(catalog, /STANDARD_EVENT_OUTGOING_COUNT = 5/);
   assert.match(catalogService, /assertEventCatalogShape/);
   assert.match(catalogService, /getEventCatalogSnapshot/);
-  assert.match(repository, /SELECT id[\s\S]*FROM events[\s\S]*ORDER BY id/);
+  assert.match(repository, /SELECT id[\s\S]*FROM catalog\.events[\s\S]*ORDER BY id/);
   assert.match(
     repository,
-    /FROM event_connections[\s\S]*ORDER BY from_event,to_event/,
+    /FROM catalog\.event_connections[\s\S]*ORDER BY from_event,to_event/,
   );
 });
 
