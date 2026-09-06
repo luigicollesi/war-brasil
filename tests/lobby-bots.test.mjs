@@ -19,10 +19,11 @@ const lobbyClient = readFileSync("src/components/lobby-client.tsx", "utf8");
 test("schema e migration identificam bots e versionam o catálogo de facções", () => {
   for (const source of [migration, schema]) {
     assert.match(source, /is_bot BOOLEAN NOT NULL DEFAULT FALSE/);
-    assert.match(source, /CREATE TABLE IF NOT EXISTS bot_names/);
     assert.match(source, /UNIQUE \(color, name\)/);
     assert.match(source, /ON CONFLICT \(color, name\) DO NOTHING/);
   }
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS bot_names/);
+  assert.match(schema, /CREATE TABLE IF NOT EXISTS catalog\.bot_names/);
 
   const seededNames =
     migration.match(/\('(forest|ocean|sun|ruby|violet|orange)', '[^']+'\)/g) ?? [];
