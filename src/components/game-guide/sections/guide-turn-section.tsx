@@ -1,11 +1,8 @@
 import { GuideFlow } from "@/src/components/game-guide/guide-flow";
 import { GuideHeading } from "@/src/components/game-guide/guide-heading";
-import {
-  PLAYER_TRADE_OFFER_LIMIT,
-  PLAYER_TRADE_SIGNAL_LIMIT,
-} from "@/src/lib/shared/game-trade-rules";
+import type { GameGuidePresentation } from "@/src/lib/game-guide-presentation";
 
-export function GuideTurnSection() {
+export function GuideTurnSection({ guide }: { guide: GameGuidePresentation }) {
   return (
     <article className="wb-guide-chapter wb-guide-section--turn">
       <GuideHeading number="04" title="Siga seu turno">
@@ -107,14 +104,14 @@ export function GuideTurnSection() {
         <div className="mt-6 grid gap-px overflow-hidden rounded-[var(--wb-radius-lg)] border border-[rgba(214,169,62,.2)] bg-[rgba(214,169,62,.2)] md:grid-cols-2">
           <p className="bg-[rgba(7,30,24,.86)] p-5 text-sm leading-6 text-[var(--wb-text-muted)]">
             <strong className="text-[var(--wb-text)]">
-              Até {PLAYER_TRADE_OFFER_LIMIT} ofertas iniciadas por turno.
+              Até {guide.playerTrade.offerLimitPerTurn} ofertas iniciadas por turno.
             </strong>{" "}
             Só pode existir uma negociação ativa por vez; resolva ou cancele a atual
             antes de abrir outra ou seguir para os reforços.
           </p>
           <p className="bg-[rgba(7,30,24,.86)] p-5 text-sm leading-6 text-[var(--wb-text-muted)]">
             <strong className="text-[var(--wb-text)]">
-              Notificar posse · até {PLAYER_TRADE_SIGNAL_LIMIT} vezes.
+              Notificar posse · até {guide.playerTrade.signalLimitPerTurn} vezes.
             </strong>{" "}
             Enquanto outro jogador está no turno, cada humano ativo pode sinalizar
             publicamente uma carta que possui. O aviso dura poucos segundos e não
