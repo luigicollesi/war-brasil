@@ -9,6 +9,13 @@ export type TerritoryHitNodes = {
   depths: SVGPathElement[];
 };
 
+export type HitPolygonStrategy = "offset" | "scaled";
+
+export type HitPolygonResult = {
+  d: string;
+  strategy: HitPolygonStrategy;
+};
+
 type Point = { x: number; y: number };
 
 type ParsedPolygon = {
@@ -223,15 +230,13 @@ function isSimplePolygon(points: readonly Point[]) {
   return true;
 }
 
-function pointInOrOnPolygon(point: Point, polygon: readonly Point[]) {
-  for (let index = 0; index < polygon.length; index += 1) {
-    if (pointOnSegment(point, polygon[index], polygon[(index + 1) % polygon.length])) {
-      return true;
-    }
-  }
-
+function pointInPolygon(point: Point, polygon: readonly Point[]) {
   let inside = false;
-  for (let current = 0, previous = polygon.length - 1; current < polygon.length; previous = current++) {
+  for (
+    let current = 0, previous = polygon.length - 1;
+    current < polygon.length;
+    previous = current++
+  ) {
     const a = polygon[current];
     const b = polygon[previous];
     const crossesRay =
@@ -240,6 +245,15 @@ function pointInOrOnPolygon(point: Point, polygon: readonly Point[]) {
     if (crossesRay) inside = !inside;
   }
   return inside;
+}
+
+function pointInOrOnPolygon(point: Point, polygon: readonly Point[]) {
+  for (let index = 0; index < polygon.length; index += 1) {
+    if (pointOnSegment(point, polygon[index], polygon[(index + 1) % polygon.length])) {
+      return true;
+    }
+  }
+  return pointInPolygon(point, polygon);
 }
 
 function insetIsContained(
@@ -260,6 +274,110 @@ function insetIsContained(
     }
   }
   return true;
+}
+
+function distanceToSegment(point: Point, start: Point, end: Point) {
+  const dx = end.x - start.x;
+  const dy = end.y - start.y;
+  const lengthSquared = dx * dx + dy * dy;
+  if (lengthSquared <= GEOMETRY_EPSILON) {
+    return Math.hypot(point.x - start.x, point.y - start.y);
+  }
+
+  const projection = Math.max(
+    0,
+    Math.min(
+      1,
+      ((point.x - start.x) * dx + (point.y - start.y) * dy) / lengthSquared,
+    ),
+  );
+  return Math.hypot(
+    point.x - (start.x + projection * dx),
+    point.y - (start.y + projection * dy),
+  );
+}
+
+function clearanceFromEdges(point: Point, polygon: readonly Point[]) {
+  let clearance = Number.POSITIVE_INFINITY;
+  for (let index = 0; index < polygon.length; index += 1) {
+    clearance = Math.min(
+      clearance,
+      distanceToSegment(point, polygon[index], polygon[(index + 1) % polygon.length]),
+    );
+  }
+  return clearance;
+}
+
+function polygonBounds(points: readonly Point[]) {
+  let minX = Number.POSITIVE_INFINITY;
+  let minY = Number.POSITIVE_INFINITY;
+  let maxX = Number.NEGATIVE_INFINITY;
+  let maxY = Number.NEGATIVE_INFINITY;
+  for (const point of points) {
+    minX = Math.min(minX, point.x);
+    minY = Math.min(minY, point.y);
+    maxX = Math.max(maxX, point.x);
+    maxY = Math.max(maxY, point.y);
+  }
+  return { minX, minY, maxX, maxY };
+}
+
+function polygonCentroid(points: readonly Point[]): Point | null {
+  let x = 0;
+  let y = 0;
+  let areaFactor = 0;
+
+  for (let index = 0; index < points.length; index += 1) {
+    const current = points[index];
+    const next = points[(index + 1) % points.length];
+    const factor = current.x * next.y - next.x * current.y;
+    areaFactor += factor;
+    x += (current.x + next.x) * factor;
+    y += (current.y + next.y) * factor;
+  }
+
+  if (Math.abs(areaFactor) <= GEOMETRY_EPSILON) return null;
+  return {
+    x: x / (3 * areaFactor),
+    y: y / (3 * areaFactor),
+  };
+}
+
+function bestInteriorAnchor(points: readonly Point[]): Point | null {
+  const bounds = polygonBounds(points);
+  const candidates: Point[] = [];
+  const centroid = polygonCentroid(points);
+  if (centroid) candidates.push(centroid);
+  candidates.push({
+    x: (bounds.minX + bounds.maxX) / 2,
+    y: (bounds.minY + bounds.maxY) / 2,
+  });
+  candidates.push({
+    x: points.reduce((sum, point) => sum + point.x, 0) / points.length,
+    y: points.reduce((sum, point) => sum + point.y, 0) / points.length,
+  });
+
+  const gridSteps = 9;
+  for (let row = 1; row < gridSteps; row += 1) {
+    for (let column = 1; column < gridSteps; column += 1) {
+      candidates.push({
+        x: bounds.minX + ((bounds.maxX - bounds.minX) * column) / gridSteps,
+        y: bounds.minY + ((bounds.maxY - bounds.minY) * row) / gridSteps,
+      });
+    }
+  }
+
+  let best: Point | null = null;
+  let bestClearance = 0;
+  for (const candidate of candidates) {
+    if (!pointInPolygon(candidate, points)) continue;
+    const clearance = clearanceFromEdges(candidate, points);
+    if (clearance > bestClearance) {
+      best = candidate;
+      bestClearance = clearance;
+    }
+  }
+  return best;
 }
 
 function formatNumber(value: number) {
@@ -297,32 +415,71 @@ export function safeInsetPolygonPath(d: string, inset: number): string | null {
   return polygonPath(insetPoints);
 }
 
+export function safeScaledPolygonPath(d: string, inset: number): string | null {
+  const source = parsePolygonPath(d);
+  if (!source || !isSimplePolygon(source.points)) return null;
+  const anchor = bestInteriorAnchor(source.points);
+  if (!anchor) return null;
+
+  const bounds = polygonBounds(source.points);
+  const minimumDimension = Math.min(
+    bounds.maxX - bounds.minX,
+    bounds.maxY - bounds.minY,
+  );
+  if (minimumDimension <= GEOMETRY_EPSILON) return null;
+
+  let factor = Math.max(0.25, Math.min(0.98, 1 - (2 * inset) / minimumDimension));
+  for (let attempt = 0; attempt < 18; attempt += 1) {
+    const candidate = source.points.map((point) => ({
+      x: anchor.x + (point.x - anchor.x) * factor,
+      y: anchor.y + (point.y - anchor.y) * factor,
+    }));
+
+    if (
+      isSimplePolygon(candidate) &&
+      insetIsContained(source.points, candidate) &&
+      Math.abs(signedArea(candidate)) < Math.abs(signedArea(source.points))
+    ) {
+      return polygonPath(candidate);
+    }
+    factor *= 0.82;
+  }
+
+  return null;
+}
+
+export function resolveHitPolygonPath(d: string, inset: number): HitPolygonResult | null {
+  const offset = safeInsetPolygonPath(d, inset);
+  if (offset) return { d: offset, strategy: "offset" };
+
+  const scaled = safeScaledPolygonPath(d, inset);
+  return scaled ? { d: scaled, strategy: "scaled" } : null;
+}
+
 function createHitPath({
   document,
   territoryId,
   surface,
-  d,
+  hit,
   label,
   keyboard,
-  fallback = false,
 }: {
   document: Document;
   territoryId: number;
   surface: string;
-  d: string;
+  hit: HitPolygonResult;
   label: string;
   keyboard: boolean;
-  fallback?: boolean;
 }) {
   const path = document.createElementNS(SVG_NS, "path") as SVGPathElement;
-  path.setAttribute("d", d);
+  path.setAttribute("d", hit.d);
   path.setAttribute("fill", "transparent");
   path.setAttribute("stroke", "none");
   path.setAttribute("pointer-events", "fill");
   path.dataset.territoryHit = "true";
   path.dataset.territoryId = String(territoryId);
   path.dataset.territorySurface = surface;
-  if (fallback) path.dataset.hitGeometryFallback = "true";
+  path.dataset.hitGeometryStrategy = hit.strategy;
   path.style.cursor = "pointer";
 
   if (keyboard) {
@@ -340,7 +497,7 @@ function createHitPath({
 function warnInvalidHitGeometry(territoryId: number, surface: string) {
   if (process.env.NODE_ENV === "production") return;
   console.warn(
-    `[map-25d] Territory ${territoryId} ${surface} could not produce a safe inset hit polygon.`,
+    `[map-25d] Territory ${territoryId} ${surface} could not produce a conservative hit polygon.`,
   );
 }
 
@@ -371,21 +528,21 @@ export function buildTerritoryHitLayer(
       const visualDepth = nodes.depths[depthIndex];
       if (!visualDepth) continue;
       const sourceD = visualDepth.getAttribute("d") ?? "";
-      const hitD = safeInsetPolygonPath(sourceD, depthInset);
-      if (!hitD) {
+      const hit = resolveHitPolygonPath(sourceD, depthInset);
+      if (!hit) {
         warnInvalidHitGeometry(id, `depth-${depthIndex + 1}`);
         continue;
       }
-      const hit = createHitPath({
+      const hitPath = createHitPath({
         document,
         territoryId: id,
         surface: `depth-${depthIndex + 1}`,
-        d: hitD,
+        hit,
         label: nodes.face.dataset.name ?? `Território ${id}`,
         keyboard: false,
       });
-      layer.append(hit);
-      result.get(id)?.depths.push(hit);
+      layer.append(hitPath);
+      result.get(id)?.depths.push(hitPath);
     }
   }
 
@@ -395,20 +552,23 @@ export function buildTerritoryHitLayer(
       throw new Error(`Territory ${id} face: missing source geometry`);
     }
 
-    const insetD = safeInsetPolygonPath(sourceD, faceInset);
-    if (!insetD) warnInvalidHitGeometry(id, "face");
-    const hit = createHitPath({
+    const hit = resolveHitPolygonPath(sourceD, faceInset);
+    if (!hit) {
+      throw new Error(
+        `Territory ${id} face could not produce a conservative hit polygon`,
+      );
+    }
+    const hitPath = createHitPath({
       document,
       territoryId: id,
       surface: "face",
-      d: insetD ?? sourceD,
+      hit,
       label: nodes.face.dataset.name ?? `Território ${id}`,
       keyboard: true,
-      fallback: !insetD,
     });
-    layer.append(hit);
+    layer.append(hitPath);
     result.set(id, {
-      face: hit,
+      face: hitPath,
       depths: result.get(id)?.depths ?? [],
     });
   }
