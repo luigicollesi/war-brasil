@@ -22,6 +22,30 @@ test("abertura usa título transparente sincronizado pelo startedAt do backend",
   );
 });
 
+test("apresentação inicial preserva o material 2.5d completo", () => {
+  const presentation = readFileSync(
+    "src/components/initial-territory-draw-presentation.tsx",
+    "utf8",
+  );
+  const material = readFileSync(
+    "src/lib/client/map/territory-material.ts",
+    "utf8",
+  );
+  const visualState = readFileSync(
+    "src/lib/client/map/territory-visual-state.ts",
+    "utf8",
+  );
+
+  assert.match(presentation, /neutralTerritoryMaterial/);
+  assert.match(presentation, /applyTerritoryMaterial/);
+  assert.match(presentation, /applyTerritoryOpeningHighlightState/);
+  assert.match(presentation, /collectTerritoryVisualNodes/);
+  assert.doesNotMatch(presentation, /path\.style\.fill\s*=/);
+  assert.doesNotMatch(presentation, /path\.style\.fillOpacity\s*=/);
+  assert.match(material, /NEUTRAL_TERRITORY_MATERIAL/);
+  assert.match(visualState, /is-opening-highlight/);
+});
+
 test("revelação continua local mas segue a ordem round-robin persistida pelo backend", () => {
   const rooms = readFileSync("src/lib/server/rooms.ts", "utf8");
   const snapshot = readFileSync(
