@@ -15,57 +15,58 @@ export function ensureTerritoryRuntimeStyles(document: Document) {
   style.id = RUNTIME_STYLE_ID;
   style.textContent = `
     .territory {
+      --territory-stroke-width: .9;
       stroke: #e4dcc0;
-      stroke-opacity: .48;
-      stroke-width: .95;
+      stroke-opacity: .44;
+      stroke-width: var(--territory-render-stroke-width, var(--territory-stroke-width));
       filter: none;
       transition: stroke .14s ease, stroke-opacity .14s ease, stroke-width .14s ease, filter .14s ease;
     }
 
     .territory.is-available {
+      --territory-stroke-width: 1.3;
       stroke: #f2ead2;
-      stroke-opacity: .76;
-      stroke-width: 1.45;
-      filter: brightness(1.035) saturate(1.015);
+      stroke-opacity: .72;
+      filter: brightness(1.03) saturate(1.012);
     }
 
     .territory.is-target {
+      --territory-stroke-width: 1.4;
       stroke: #d9c58a;
-      stroke-opacity: .78;
-      stroke-width: 1.55;
-      filter: brightness(1.02);
+      stroke-opacity: .74;
+      filter: brightness(1.018);
     }
 
     .territory.is-target-selectable {
-      stroke: #efcf70;
-      stroke-opacity: .94;
-      stroke-width: 2.05;
-      filter: brightness(1.045) saturate(1.025) drop-shadow(0 0 3px rgba(217, 182, 80, .24));
+      --territory-stroke-width: 1.8;
+      stroke: #f0d27b;
+      stroke-opacity: .92;
+      filter: brightness(1.04) saturate(1.02) drop-shadow(0 0 2.5px rgba(217, 182, 80, .2));
     }
 
     .territory:hover,
     .territory.is-hovered {
+      --territory-stroke-width: 1.6;
       stroke: #fff7df;
-      stroke-opacity: .96;
-      stroke-width: 1.9;
-      filter: brightness(1.065) saturate(1.025);
+      stroke-opacity: .93;
+      filter: brightness(1.05) saturate(1.02);
     }
 
     .territory.is-selected,
     .territory.is-selected:hover,
     .territory.is-selected.is-hovered {
-      stroke: #e9c961;
+      --territory-stroke-width: 2.2;
+      stroke: #f0d473;
       stroke-opacity: 1;
-      stroke-width: 2.65;
-      filter: brightness(1.055) saturate(1.025) drop-shadow(0 0 4px rgba(217, 182, 80, .3));
+      filter: brightness(1.05) saturate(1.02) drop-shadow(0 0 3px rgba(217, 182, 80, .26));
     }
 
     .territory:focus-visible {
+      --territory-stroke-width: 1.9;
       outline: none;
       stroke: #fff7df;
       stroke-opacity: 1;
-      stroke-width: 2.2;
-      filter: brightness(1.06);
+      filter: brightness(1.05);
     }
   `;
 
