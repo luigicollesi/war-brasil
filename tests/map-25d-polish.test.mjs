@@ -13,6 +13,10 @@ const hitGeometry = readFileSync(
   "src/lib/client/map/territory-hit-geometry.ts",
   "utf8",
 );
+const hitInteractionState = readFileSync(
+  "src/lib/client/map/territory-hit-interaction-state.ts",
+  "utf8",
+);
 const nodes = readFileSync(
   "src/lib/client/map/territory-svg-nodes.ts",
   "utf8",
@@ -69,6 +73,15 @@ test("opening presentation has one renderer and a boundary-driven scheduler", ()
   assert.match(board, /!presentationActive && troopsVisible/);
 });
 
+test("opening presentation disables pointer and keyboard hit targets", () => {
+  assert.match(hitInteractionState, /setTerritoryHitInteractionEnabled/);
+  assert.match(hitInteractionState, /path\.style\.pointerEvents = enabled \? "fill" : "none"/);
+  assert.match(hitInteractionState, /path\.setAttribute\("tabindex", enabled \? "0" : "-1"\)/);
+  assert.match(hitInteractionState, /path\.setAttribute\("aria-disabled", "true"\)/);
+  assert.match(board, /setTerritoryHitInteractionEnabled\(root, !presentationActive\)/);
+  assert.match(board, /setTerritoryHitInteractionEnabled\(root, interactionEnabledRef\.current\)/);
+});
+
 test("hit geometry is generated once and never falls back to raw visual geometry", () => {
   assert.match(hitGeometry, /export function buildTerritoryHitLayer/);
   assert.match(hitGeometry, /resolveHitPolygonPath/);
@@ -93,6 +106,7 @@ test("test compile inclui os módulos client novos do mapa 2.5d", () => {
     "board-presentation.ts",
     "map-runtime-events.ts",
     "territory-hit-geometry.ts",
+    "territory-hit-interaction-state.ts",
     "territory-material.ts",
     "territory-svg-nodes.ts",
     "territory-svg-interaction.ts",
