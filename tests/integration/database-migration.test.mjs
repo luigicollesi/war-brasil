@@ -8,15 +8,15 @@ const databaseUrl = process.env.DATABASE_URL;
 
 const physicalTables = new Map([
   ["game", [
-    "game_cards",
-    "game_order_rolls",
-    "game_player_objectives",
-    "game_player_trade_offers",
-    "game_rematch_votes",
-    "game_rooms",
-    "game_round_events",
-    "game_territories",
-    "room_players",
+    "cards",
+    "order_rolls",
+    "player_objectives",
+    "players",
+    "rematch_votes",
+    "rooms",
+    "round_events",
+    "territories",
+    "trade_offers",
   ]],
   ["catalog", [
     "bot_names",
@@ -24,8 +24,10 @@ const physicalTables = new Map([
     "events",
     "objective_rules",
     "objectives",
+    "territory_card_symbols",
+    "territory_connections",
   ]],
-  ["ops", ["game_command_receipts", "pgmigrations"]],
+  ["ops", ["command_receipts", "pgmigrations"]],
 ]);
 
 const compatibilityViews = [
@@ -44,6 +46,8 @@ const compatibilityViews = [
   "objective_rules",
   "objectives",
   "room_players",
+  "territory_card_symbols",
+  "territory_connections",
 ].sort();
 
 function urlForDatabase(name) {
@@ -132,6 +136,7 @@ async function assertOrganizedDatabase(connectionString) {
     );
     assert.deepEqual(history.rows.map((row) => row.name), [
       "026-organize-database-schemas.sql",
+      "027-normalize-schema-table-names.sql",
     ]);
 
     const room = await client.query(
@@ -162,7 +167,7 @@ async function assertOrganizedDatabase(connectionString) {
       [roomId, playerId],
     );
     const voteCount = await client.query(
-      "SELECT COUNT(*)::int AS count FROM game.game_rematch_votes WHERE room_id=$1",
+      "SELECT COUNT(*)::int AS count FROM game.rematch_votes WHERE room_id=$1",
       [roomId],
     );
     assert.equal(voteCount.rows[0].count, 1);
@@ -187,28 +192,49 @@ async function assertOrganizedDatabase(connectionString) {
     );
 
     const sequence = await client.query(
-      "SELECT pg_get_serial_sequence('game.game_rooms', 'id') AS name",
+      "SELECT pg_get_serial_sequence('game.rooms', 'id') AS name",
     );
-    assert.equal(sequence.rows[0].name, "game.game_rooms_id_seq");
+    assert.equal(sequence.rows[0].name, "game.rooms_id_seq");
 
-    const constraints = await client.query(`
+    const roomConstraints = await client.query(`
       SELECT c.conname
       FROM pg_constraint c
       JOIN pg_class t ON t.oid = c.conrelid
       JOIN pg_namespace n ON n.oid = t.relnamespace
-      WHERE n.nspname='game' AND t.relname='game_rooms'
+      WHERE n.nspname='game' AND t.relname='rooms'
     `);
-    const constraintNames = new Set(constraints.rows.map((row) => row.conname));
+    const roomConstraintNames = new Set(
+      roomConstraints.rows.map((row) => row.conname),
+    );
     for (const name of [
-      "game_rooms_pkey",
-      "game_rooms_code_key",
-      "game_rooms_status_check",
-      "game_rooms_phase_check",
-      "game_rooms_current_player_fkey",
-      "game_rooms_winner_player_fkey",
+      "rooms_pkey",
+      "rooms_code_key",
+      "rooms_status_check",
+      "rooms_phase_check",
+      "rooms_current_player_fkey",
+      "rooms_winner_player_fkey",
     ]) {
-      assert.equal(constraintNames.has(name), true, name);
+      assert.equal(roomConstraintNames.has(name), true, name);
     }
+
+    const tradeConstraints = await client.query(`
+      SELECT c.conname
+      FROM pg_constraint c
+      JOIN pg_class t ON t.oid = c.conrelid
+      JOIN pg_namespace n ON n.oid = t.relnamespace
+      WHERE n.nspname='game' AND t.relname='trade_offers'
+    `);
+    const tradeConstraintNames = new Set(
+      tradeConstraints.rows.map((row) => row.conname),
+    );
+    assert.equal(
+      tradeConstraintNames.has("trade_offers_responder_check"),
+      true,
+    );
+    assert.equal(
+      tradeConstraintNames.has("trade_offers_state_check"),
+      true,
+    );
   } finally {
     await client.end();
   }
@@ -217,7 +243,7 @@ async function assertOrganizedDatabase(connectionString) {
 if (!databaseUrl) {
   test("migrations de banco exigem DATABASE_URL", { skip: true }, () => {});
 } else {
-  test("026 migra banco v025, mantém compatibilidade e é idempotente", async () => {
+  test("026+027 migram banco v025, mantêm compatibilidade e são idempotentes", async () => {
     await withTemporaryDatabase("legacy", async (connectionString) => {
       await applySql(connectionString, "tests/fixtures/db/schema-v025.sql");
       runPrepare(connectionString);
