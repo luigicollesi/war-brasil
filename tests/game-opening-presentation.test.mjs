@@ -2,19 +2,24 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-test("abertura usa título transparente sincronizado pelo startedAt do backend", () => {
+test("abertura usa timeline persistida do backend e renderer único do tabuleiro", () => {
   const client = readFileSync("src/components/game-client-v2.tsx", "utf8");
+  const board = readFileSync("src/components/interactive-board.tsx", "utf8");
   const presentation = readFileSync(
-    "src/components/initial-territory-draw-presentation.tsx",
+    "src/lib/client/map/board-presentation.ts",
     "utf8",
   );
   const rooms = readFileSync("src/lib/server/rooms.ts", "utf8");
 
-  assert.match(client, /presentationStartedAt=\{initialPresentationStartedAt\}/);
-  assert.match(presentation, /Sorteio de Territórios/);
-  assert.match(presentation, /tick < startedAtMs/);
-  assert.match(presentation, /border-transparent bg-transparent/);
-  assert.match(presentation, /pointer-events-none absolute inset-0/);
+  assert.match(client, /deriveInitialTerritoryBoardPresentation/);
+  assert.match(client, /nextInitialTerritoryPresentationWakeAt/);
+  assert.match(client, /presentation=\{boardPresentation\}/);
+  assert.doesNotMatch(client, /InitialTerritoryDrawPresentation/);
+  assert.doesNotMatch(client, /setInterval\(/);
+  assert.match(client, /window\.setTimeout/);
+  assert.match(board, /Sorteio de Territórios/);
+  assert.match(board, /data-initial-territory-title/);
+  assert.match(presentation, /titleVisible/);
   assert.match(rooms, /INITIAL_TERRITORY_SYNC_DELAY_MS/);
   assert.match(
     rooms,
@@ -23,10 +28,7 @@ test("abertura usa título transparente sincronizado pelo startedAt do backend",
 });
 
 test("apresentação inicial preserva o material 2.5d completo", () => {
-  const presentation = readFileSync(
-    "src/components/initial-territory-draw-presentation.tsx",
-    "utf8",
-  );
+  const board = readFileSync("src/components/interactive-board.tsx", "utf8");
   const material = readFileSync(
     "src/lib/client/map/territory-material.ts",
     "utf8",
@@ -36,30 +38,30 @@ test("apresentação inicial preserva o material 2.5d completo", () => {
     "utf8",
   );
 
-  assert.match(presentation, /neutralTerritoryMaterial/);
-  assert.match(presentation, /applyTerritoryMaterial/);
-  assert.match(presentation, /applyTerritoryOpeningHighlightState/);
-  assert.match(presentation, /collectTerritoryVisualNodes/);
-  assert.doesNotMatch(presentation, /path\.style\.fill\s*=/);
-  assert.doesNotMatch(presentation, /path\.style\.fillOpacity\s*=/);
+  assert.match(board, /neutralTerritoryMaterial/);
+  assert.match(board, /applyTerritoryMaterial/);
+  assert.match(board, /openingHighlight/);
+  assert.match(board, /effectivePresentation/);
   assert.match(material, /NEUTRAL_TERRITORY_MATERIAL/);
   assert.match(visualState, /is-opening-highlight/);
 });
 
-test("revelação continua local mas segue a ordem round-robin persistida pelo backend", () => {
+test("revelação segue a ordem round-robin persistida pelo backend", () => {
   const rooms = readFileSync("src/lib/server/rooms.ts", "utf8");
   const snapshot = readFileSync(
     "src/lib/server/game-snapshot-service.ts",
     "utf8",
   );
-  const client = readFileSync("src/components/game-client-v2.tsx", "utf8");
+  const presentation = readFileSync(
+    "src/lib/client/map/board-presentation.ts",
+    "utf8",
+  );
 
   assert.match(rooms, /players\[index % players\.length\]\.id/);
   assert.match(rooms, /initial_draw_order/);
   assert.match(snapshot, /initial_draw_order/);
   assert.match(snapshot, /territoryDrawOrder/);
-  assert.match(client, /INITIAL_TERRITORY_REVEAL_STEP_MS/);
-  assert.match(client, /territoryIds\.slice/);
+  assert.match(presentation, /territoryIds\.slice\(0, revealedCount\)/);
 });
 
 test("cinematic de ordem usa o mesmo contrato temporal do backend", () => {
