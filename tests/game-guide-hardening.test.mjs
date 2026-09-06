@@ -55,6 +55,7 @@ test("seções dependem da camada de apresentação e não de serviços ou regra
   const forbiddenImports = [
     /@\/src\/lib\/game-rules/,
     /@\/src\/lib\/game-barrier-rules/,
+    /@\/src\/lib\/shared\/game-trade-rules/,
     /@\/src\/lib\/game-command-service/,
     /@\/src\/lib\/game-.*-command-service/,
     /@\/src\/lib\/game-battle-service/,
