@@ -55,7 +55,7 @@ async function loadRoom(client: PoolClient, roomId: string) {
   const room = (
     await client.query<TroopRoom>(
       `SELECT id,status,phase,current_player_id,reinforcements_remaining
-       FROM game_rooms
+       FROM game.rooms
        WHERE id=$1`,
       [roomId],
     )
@@ -73,7 +73,7 @@ async function handCardCount(
   const row = (
     await client.query<{ count: number }>(
       `SELECT COUNT(*)::int count
-       FROM game_cards
+       FROM game.cards
        WHERE room_id=$1 AND owner_player_id=$2 AND zone='hand'`,
       [roomId, playerId],
     )
@@ -123,7 +123,7 @@ export async function executeReinforcement(
 
   const own = await client.query(
     `SELECT 1
-     FROM game_territories
+     FROM game.territories
      WHERE room_id=$1 AND territory_id=$2 AND owner_player_id=$3
      FOR UPDATE`,
     [room.id, input.territoryId, player.id],
@@ -136,7 +136,7 @@ export async function executeReinforcement(
   const remaining = room.reinforcements_remaining - input.troops;
   const territory = (
     await client.query<{ troops: number }>(
-      `UPDATE game_territories
+      `UPDATE game.territories
        SET troops=troops+$3
        WHERE room_id=$1 AND territory_id=$2
        RETURNING troops`,
@@ -145,7 +145,7 @@ export async function executeReinforcement(
   ).rows[0];
 
   await client.query(
-    `UPDATE game_rooms
+    `UPDATE game.rooms
      SET reinforcements_remaining=$2,
          phase=CASE WHEN $2=0 THEN 'attack' ELSE phase END
      WHERE id=$1`,
@@ -198,7 +198,7 @@ export async function executeTradeCards(
 
   const cards = await client.query<TradeCard>(
     `SELECT territory_id,symbol,is_wild
-     FROM game_cards
+     FROM game.cards
      WHERE room_id=$1
        AND owner_player_id=$2
        AND zone='hand'
@@ -223,7 +223,7 @@ export async function executeTradeCards(
     (
       await client.query<{ territory_id: number }>(
         `SELECT territory_id
-         FROM game_territories
+         FROM game.territories
          WHERE room_id=$1 AND owner_player_id=$2`,
         [room.id, player.id],
       )
@@ -231,7 +231,7 @@ export async function executeTradeCards(
   );
 
   await client.query(
-    `UPDATE game_cards
+    `UPDATE game.cards
      SET zone='discard',owner_player_id=NULL,deck_order=NULL
      WHERE id=ANY($1::bigint[])`,
     [ids],
@@ -242,7 +242,7 @@ export async function executeTradeCards(
     if (card.territory_id && owned.has(card.territory_id)) {
       changedTroops = true;
       await client.query(
-        `UPDATE game_territories
+        `UPDATE game.territories
          SET troops=troops+$3
          WHERE room_id=$1 AND territory_id=$2`,
         [room.id, card.territory_id, OWNED_TERRITORY_CARD_BONUS],
@@ -252,7 +252,7 @@ export async function executeTradeCards(
 
   const tradeProgress = (
     await client.query<{ trade_count_before: number }>(
-      `UPDATE room_players
+      `UPDATE game.players
        SET card_trade_count=card_trade_count+1
        WHERE room_id=$1 AND id=$2
        RETURNING card_trade_count-1 trade_count_before`,
@@ -265,7 +265,7 @@ export async function executeTradeCards(
   }
 
   await client.query(
-    `UPDATE game_rooms
+    `UPDATE game.rooms
      SET reinforcements_remaining=reinforcements_remaining+$2
      WHERE id=$1`,
     [room.id, tradeValue(tradeProgress.trade_count_before)],
