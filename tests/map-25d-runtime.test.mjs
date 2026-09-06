@@ -41,17 +41,21 @@ test("unsafe self-intersecting hit geometry is rejected", () => {
 
 test("asset preserves the 42 canonical face ids and four depth layers", () => {
   const faceIds = [
-    ...MAP_SVG.matchAll(/data-id="(\d+)"[^>]*data-layer="face"/g),
+    ...MAP_SVG.matchAll(
+      /<path(?=[^>]*data-id="(\d+)")(?=[^>]*data-layer="face")[^>]*>/g,
+    ),
   ].map((match) => Number(match[1]));
   const depthEntries = [
     ...MAP_SVG.matchAll(
-      /data-territory-id="(\d+)"[^>]*data-layer="depth-([1-4])"/g,
+      /<path(?=[^>]*data-territory-id="(\d+)")(?=[^>]*data-layer="depth-([1-4])")[^>]*>/g,
     ),
   ].map((match) => [Number(match[1]), Number(match[2])]);
 
   assert.equal(faceIds.length, 42);
-  assert.deepEqual([...new Set(faceIds)].sort((a, b) => a - b),
-    Array.from({ length: 42 }, (_, index) => index + 1));
+  assert.deepEqual(
+    [...new Set(faceIds)].sort((a, b) => a - b),
+    Array.from({ length: 42 }, (_, index) => index + 1),
+  );
   assert.equal(depthEntries.length, 42 * 4);
 
   for (let territoryId = 1; territoryId <= 42; territoryId += 1) {
