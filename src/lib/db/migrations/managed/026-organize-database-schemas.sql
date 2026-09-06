@@ -3,6 +3,8 @@
 -- It is safe to execute as a whole in SQL editors such as Neon.
 -- Rollback, if ever required, must be performed as an explicit separate operation.
 
+-- Up Migration
+
 CREATE SCHEMA IF NOT EXISTS game;
 CREATE SCHEMA IF NOT EXISTS catalog;
 CREATE SCHEMA IF NOT EXISTS ops;
