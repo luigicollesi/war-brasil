@@ -87,7 +87,7 @@ export async function getEvent(
   const row = (
     await client.query<EventRow>(
       `SELECT id,name,description,effects
-       FROM events
+       FROM catalog.events
        WHERE id=$1`,
       [eventId],
     )
@@ -103,7 +103,7 @@ export async function getEventCatalogSnapshot(client: PoolClient): Promise<{
   const eventRows = (
     await client.query<{ id: number }>(
       `SELECT id
-       FROM events
+       FROM catalog.events
        ORDER BY id`,
     )
   ).rows;
@@ -111,7 +111,7 @@ export async function getEventCatalogSnapshot(client: PoolClient): Promise<{
   const connectionRows = (
     await client.query<EventConnectionRow>(
       `SELECT from_event,to_event,weight
-       FROM event_connections
+       FROM catalog.event_connections
        ORDER BY from_event,to_event`,
     )
   ).rows;
@@ -129,7 +129,7 @@ export async function getOutgoingEventConnections(
   const rows = (
     await client.query<EventConnectionRow>(
       `SELECT from_event,to_event,weight
-       FROM event_connections
+       FROM catalog.event_connections
        WHERE from_event=$1
        ORDER BY to_event`,
       [eventId],
@@ -151,7 +151,7 @@ export async function getRecentRoomEventIds(
   const rows = (
     await client.query<{ event_id: number }>(
       `SELECT event_id
-       FROM game_round_events
+       FROM game.round_events
        WHERE room_id=$1
        ORDER BY round_number DESC
        LIMIT $2`,
@@ -175,7 +175,7 @@ export async function getRoomRoundEvent(
     await client.query<GameRoundEventRow>(
       `SELECT room_id,round_number,event_id,resolved_effects,
               applied_troop_changes,activated_at
-       FROM game_round_events
+       FROM game.round_events
        WHERE room_id=$1 AND round_number=$2`,
       [roomId, roundNumber],
     )
@@ -197,8 +197,8 @@ export async function getRoomRoundEventDetails(
     await client.query<GameRoundEventDetailsRow>(
       `SELECT gre.room_id,gre.round_number,gre.event_id,gre.resolved_effects,
               gre.applied_troop_changes,gre.activated_at,e.name,e.description
-       FROM game_round_events gre
-       JOIN events e ON e.id=gre.event_id
+       FROM game.round_events gre
+       JOIN catalog.events e ON e.id=gre.event_id
        WHERE gre.room_id=$1 AND gre.round_number=$2`,
       [roomId, roundNumber],
     )
@@ -215,7 +215,7 @@ export async function getLatestRoomEvent(
     await client.query<GameRoundEventRow>(
       `SELECT room_id,round_number,event_id,resolved_effects,
               applied_troop_changes,activated_at
-       FROM game_round_events
+       FROM game.round_events
        WHERE room_id=$1
        ORDER BY round_number DESC
        LIMIT 1`,
@@ -242,7 +242,7 @@ export async function recordRoundEvent(
 
   const row = (
     await client.query<GameRoundEventRow>(
-      `INSERT INTO game_round_events
+      `INSERT INTO game.round_events
          (room_id,round_number,event_id,resolved_effects,applied_troop_changes)
        VALUES ($1,$2,$3,$4::jsonb,$5::jsonb)
        RETURNING room_id,round_number,event_id,resolved_effects,
@@ -273,7 +273,7 @@ export async function setRoundEventAppliedTroopChanges(
 ): Promise<GameRoundEvent> {
   const row = (
     await client.query<GameRoundEventRow>(
-      `UPDATE game_round_events
+      `UPDATE game.round_events
        SET applied_troop_changes=$3::jsonb
        WHERE room_id=$1 AND round_number=$2
        RETURNING room_id,round_number,event_id,resolved_effects,
