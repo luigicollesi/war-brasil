@@ -175,10 +175,10 @@ test("rolagens humanas são executadas por playerGameCommand e portanto são rep
 test("reset da partida remove receipts antigos antes de criar a nova sessão de jogo", () => {
   const finish = source("src/lib/server/game-finish-command-service.ts");
   const deleteReceipt = finish.indexOf(
-    'DELETE FROM game_command_receipts WHERE room_id=$1',
+    'DELETE FROM ops.command_receipts WHERE room_id=$1',
   );
   const deleteTerritories = finish.indexOf(
-    'DELETE FROM game_territories WHERE room_id=$1',
+    'DELETE FROM game.territories WHERE room_id=$1',
   );
 
   assert.ok(deleteReceipt >= 0);
