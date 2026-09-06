@@ -58,15 +58,14 @@ test("contrato de headers aceita UUID e revision positiva", () => {
   assert.equal(parseGameExpectedRevision("0"), null);
 });
 
-test("migration 019 torna receipts duráveis e vinculados ao ator", () => {
+test("migration 019 torna receipts duráveis e schema canônico usa ops.command_receipts", () => {
   const migration = source("src/lib/db/migrations/019-game-command-receipts.sql");
   const schema = source("src/lib/db/schema.sql");
 
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS game_command_receipts/);
+  assert.match(schema, /CREATE TABLE IF NOT EXISTS ops\.command_receipts/);
+
   for (const sql of [migration, schema]) {
-    assert.match(
-      sql,
-      /CREATE TABLE IF NOT EXISTS (?:ops\.)?game_command_receipts/,
-    );
     assert.match(sql, /PRIMARY KEY \(room_id, player_id, command_id\)/);
     assert.match(sql, /expected_revision = base_revision/);
     assert.match(sql, /revision > base_revision/);
