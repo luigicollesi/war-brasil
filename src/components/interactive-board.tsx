@@ -12,6 +12,16 @@ import {
   type TerritoryArrowKind,
 } from "@/src/components/territory-arrow";
 import { TerritorySpecialMarkers } from "@/src/components/territory-special-markers";
+import { territoryMaterial } from "@/src/lib/client/map/territory-material";
+import {
+  applyTerritoryMaterial,
+  collectTerritoryVisualNodes,
+  type TerritoryVisualNodes,
+} from "@/src/lib/client/map/territory-svg-nodes";
+import {
+  applyTerritoryVisualState,
+  ensureTerritoryRuntimeStyles,
+} from "@/src/lib/client/map/territory-visual-state";
 import {
   barrierAttackSummary,
   barrierManeuverSummary,
@@ -77,19 +87,6 @@ const regionLabels: Record<string, string> = {
   "centro-oeste": "Centro-Oeste",
   sudeste: "Sudeste",
   sul: "Sul",
-};
-
-const regionBorders: Record<string, { stroke: string; glow: string }> = {
-  norte: { stroke: "#55d075", glow: "rgba(85,208,117,.72)" },
-  nordeste: { stroke: "#55a8ff", glow: "rgba(85,168,255,.72)" },
-  "centro-oeste": { stroke: "#f4c542", glow: "rgba(244,197,66,.72)" },
-  sudeste: { stroke: "#ef5555", glow: "rgba(239,85,85,.72)" },
-  sul: { stroke: "#f08a35", glow: "rgba(240,138,53,.72)" },
-};
-
-const fallbackRegionBorder = {
-  stroke: "#ffffff",
-  glow: "rgba(255,255,255,.55)",
 };
 
 function colorHex(color: PlayerColor) {
@@ -233,6 +230,8 @@ export function InteractiveBoard({
   const containerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const pathsByIdRef = useRef(new Map<number, SVGPathElement>());
+  const visualNodesByIdRef = useRef(new Map<number, TerritoryVisualNodes>());
+  const materialSignatureRef = useRef(new Map<number, PlayerColor>());
   const visualSignatureRef = useRef(new Map<number, string>());
   const cleanupBoardRef = useRef<(() => void) | null>(null);
   const pointerRef = useRef({ x: 0, y: 0 });
@@ -313,12 +312,14 @@ export function InteractiveBoard({
     cleanupBoardRef.current?.();
     const mapDocument = boardRef.current?.contentDocument;
     const root = mapDocument?.querySelector("#territories");
-    if (!root) return;
+    if (!mapDocument || !root) return;
 
     const paths = Array.from(
       root.querySelectorAll<SVGPathElement>("path.territory"),
     );
     if (!paths.length) return;
+
+    ensureTerritoryRuntimeStyles(mapDocument);
 
     const nextPaths = new Map<number, SVGPathElement>();
     const nextGeometries = new Map<number, TerritoryGeometry>();
@@ -334,6 +335,8 @@ export function InteractiveBoard({
     }
 
     pathsByIdRef.current = nextPaths;
+    visualNodesByIdRef.current = collectTerritoryVisualNodes(mapDocument, paths);
+    materialSignatureRef.current.clear();
     visualSignatureRef.current.clear();
     setGeometries(nextGeometries);
 
@@ -396,52 +399,37 @@ export function InteractiveBoard({
     const available = new Set(availableTerritoryIds);
 
     for (const territory of territories) {
-      const path = pathsByIdRef.current.get(territory.territoryId);
-      if (!path) continue;
-
       const id = territory.territoryId;
+      const nodes = visualNodesByIdRef.current.get(id);
+      const path = nodes?.face ?? pathsByIdRef.current.get(id);
+      if (!path || !nodes) continue;
+
+      if (materialSignatureRef.current.get(id) !== territory.ownerColor) {
+        applyTerritoryMaterial(id, nodes, territoryMaterial(territory.ownerColor));
+        materialSignatureRef.current.set(id, territory.ownerColor);
+      }
+
       const isAvailable = available.has(id);
       const targetHint = targetById.get(id);
       const isTarget = Boolean(targetHint);
       const targetSelectable = targetHint?.selectable ?? false;
       const isSelected = selectedTerritoryId === id;
-      const regionStyle =
-        regionBorders[path.dataset.region ?? ""] ?? fallbackRegionBorder;
       const signature = [
-        territory.ownerColor,
         isAvailable ? 1 : 0,
         isTarget ? 1 : 0,
         targetSelectable ? 1 : 0,
         isSelected ? 1 : 0,
-        regionStyle.stroke,
       ].join(":");
 
       if (visualSignatureRef.current.get(id) === signature) continue;
       visualSignatureRef.current.set(id, signature);
 
-      path.style.fill = colorHex(territory.ownerColor);
-      path.style.fillOpacity = isSelected || isAvailable || targetSelectable
-        ? "0.86"
-        : isTarget
-          ? "0.72"
-          : "0.55";
-      path.style.stroke = regionStyle.stroke;
-      path.style.strokeWidth = isSelected
-        ? "8"
-        : targetSelectable
-          ? "7"
-          : isTarget
-            ? "6"
-            : isAvailable
-              ? "5"
-              : "4";
-      path.style.filter =
-        isSelected || targetSelectable
-          ? `brightness(1.12) drop-shadow(0 0 9px ${regionStyle.glow})`
-          : isTarget || isAvailable
-            ? `brightness(1.06) drop-shadow(0 0 7px ${regionStyle.glow})`
-            : "none";
-      path.classList.toggle("is-selected", isSelected);
+      applyTerritoryVisualState(path, {
+        available: isAvailable,
+        target: isTarget,
+        targetSelectable,
+        selected: isSelected,
+      });
     }
   }, [
     geometries,
@@ -512,7 +500,7 @@ export function InteractiveBoard({
       >
         <object
           ref={boardRef}
-          data="/war-brasil-42.production.svg"
+          data="/mapa-war-brasil-25d.svg"
           type="image/svg+xml"
           title="Mapa interativo do Brasil"
           aria-label="Mapa interativo do Brasil"
