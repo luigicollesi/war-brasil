@@ -72,7 +72,7 @@ test("snapshot usa read model do evento com catálogo e falha rápido em playing
   assert.match(source, /name: roundEvent\.name/);
   assert.match(source, /description: roundEvent\.description/);
   assert.match(source, /appliedTroopChanges: roundEvent\.appliedTroopChanges/);
-  assert.match(repository, /JOIN events e ON e\.id=gre\.event_id/);
+  assert.match(repository, /JOIN catalog\.events e ON e\.id=gre\.event_id/);
 });
 
 test("resultado factual é persistido sem alterar resolved_effects", () => {
