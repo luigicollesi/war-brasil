@@ -81,11 +81,7 @@ export function MandatoryCardTradeModal({
             snapshot={snapshot}
             onRefresh={onRefresh}
           />
-          <TradeResponseModal
-            roomId={roomId}
-            snapshot={snapshot}
-            onRefresh={onRefresh}
-          />
+          <TradeResponseModal roomId={roomId} snapshot={snapshot} />
         </>
       ) : null}
 
