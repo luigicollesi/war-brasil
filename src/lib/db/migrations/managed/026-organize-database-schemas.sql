@@ -33,6 +33,8 @@ BEGIN
       ('events', 'catalog', 'events'),
       ('event_connections', 'catalog', 'event_connections'),
       ('bot_names', 'catalog', 'bot_names'),
+      ('territory_card_symbols', 'catalog', 'territory_card_symbols'),
+      ('territory_connections', 'catalog', 'territory_connections'),
       ('game_command_receipts', 'ops', 'command_receipts')
     ) AS mapping(legacy_name, target_schema, final_name)
   LOOP
@@ -130,6 +132,8 @@ BEGIN
       ('events', 'catalog', 'events'),
       ('event_connections', 'catalog', 'event_connections'),
       ('bot_names', 'catalog', 'bot_names'),
+      ('territory_card_symbols', 'catalog', 'territory_card_symbols'),
+      ('territory_connections', 'catalog', 'territory_connections'),
       ('game_command_receipts', 'ops', 'command_receipts')
     ) AS mapping(legacy_name, target_schema, final_name)
   LOOP
