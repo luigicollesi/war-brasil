@@ -318,6 +318,22 @@ export function MapZoomController() {
         svg.style.userSelect = "none";
         svg.style.webkitUserSelect = "none";
 
+        const setGestureActive = (active: boolean) => {
+          surface.dataset.mapGestureActive = active ? "true" : "false";
+          if (!active) return;
+
+          // InteractiveBoard owns hover state. A synthetic bubbling pointerout
+          // from the currently highlighted face asks it to clear that state
+          // before pan/pinch takes control of the pointer stream.
+          const hovered = svg.querySelector<SVGElement>(".territory.is-hovered");
+          if (!hovered) return;
+          const leaveEvent = svg.ownerDocument.createEvent("Event");
+          leaveEvent.initEvent("pointerout", true, false);
+          hovered.dispatchEvent(leaveEvent);
+        };
+
+        setGestureActive(false);
+
         const baseStrokeByPath = new WeakMap<SVGPathElement, number>();
         const classSignatureByPath = new WeakMap<SVGPathElement, string>();
 
@@ -354,12 +370,15 @@ export function MapZoomController() {
           for (const path of territoryRoot.querySelectorAll<SVGPathElement>(
             "path.territory",
           )) {
+            if (!mobile) {
+              path.style.removeProperty(TERRITORY_RENDER_STROKE_PROPERTY);
+              continue;
+            }
+
             const baseStroke = readBaseStroke(path);
             if (baseStroke === undefined) continue;
 
-            const nextStroke = mobile
-              ? mapStrokeWidthForScale(baseStroke, viewport.scale)
-              : baseStroke;
+            const nextStroke = mapStrokeWidthForScale(baseStroke, viewport.scale);
             const currentRenderedStroke = Number.parseFloat(
               path.style.getPropertyValue(TERRITORY_RENDER_STROKE_PROPERTY),
             );
@@ -408,6 +427,7 @@ export function MapZoomController() {
           }
 
           manualViewportOverride = true;
+          setGestureActive(true);
           pinch = {
             distance: distance(samples[0], samples[1]),
             focus: relativePoint(midpoint(samples[0], samples[1])),
@@ -488,6 +508,7 @@ export function MapZoomController() {
           );
           if (totalDistance <= MAP_PAN_THRESHOLD) return;
 
+          setGestureActive(true);
           suppressSelection();
           event.preventDefault();
 
@@ -530,6 +551,7 @@ export function MapZoomController() {
           }
 
           single = null;
+          setGestureActive(false);
           if (viewport.scale <= MAP_MIN_SCALE + 0.01) {
             applyViewport({ ...DEFAULT_MAP_VIEWPORT });
           }
@@ -553,6 +575,7 @@ export function MapZoomController() {
         svg.addEventListener("click", onClickCapture, true);
 
         detachSvg = () => {
+          setGestureActive(false);
           strokeObserver?.disconnect();
           applyTerritoryStrokeScale = () => {};
           territoryBoundsById.clear();
