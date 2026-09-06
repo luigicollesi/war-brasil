@@ -12,12 +12,19 @@ import {
   type TerritoryArrowKind,
 } from "@/src/components/territory-arrow";
 import { TerritorySpecialMarkers } from "@/src/components/territory-special-markers";
-import { territoryMaterial } from "@/src/lib/client/map/territory-material";
+import type { BoardPresentationState } from "@/src/lib/client/map/board-presentation";
+import { NORMAL_BOARD_PRESENTATION } from "@/src/lib/client/map/board-presentation";
 import {
-  prepareTerritoryInteractiveSurfaces,
-  territoryIdFromEvent,
-  territoryIdFromNode,
-} from "@/src/lib/client/map/territory-svg-interaction";
+  MAP_GESTURE_STATE_EVENT,
+  MAP_VISUALS_READY_EVENT,
+  isMapGestureState,
+} from "@/src/lib/client/map/map-runtime-events";
+import {
+  neutralTerritoryMaterial,
+  territoryMaterial,
+} from "@/src/lib/client/map/territory-material";
+import { buildTerritoryHitLayer } from "@/src/lib/client/map/territory-hit-geometry";
+import { territoryIdFromEvent } from "@/src/lib/client/map/territory-svg-interaction";
 import {
   applyTerritoryMaterial,
   collectTerritoryVisualNodes,
@@ -25,6 +32,7 @@ import {
 } from "@/src/lib/client/map/territory-svg-nodes";
 import {
   applyTerritoryHoverState,
+  applyTerritoryKeyboardFocusState,
   applyTerritoryVisualState,
   ensureTerritoryRuntimeStyles,
 } from "@/src/lib/client/map/territory-visual-state";
@@ -39,6 +47,7 @@ import { deriveMapFocusTerritoryIds } from "@/src/lib/game-map-focus";
 import {
   DEFAULT_MAP_VIEWPORT,
   MAP_VIEWPORT_EVENT,
+  MAP_WORLD_SIZE,
   projectMapPoint,
   type MapViewportTransform,
 } from "@/src/lib/game-map-viewport";
@@ -85,6 +94,7 @@ type InteractiveBoardProps = {
   targetHints: readonly MapTargetHint[];
   interactionMode: GamePhase;
   arrow?: MapArrow;
+  presentation?: BoardPresentationState;
 };
 
 const regionLabels: Record<string, string> = {
@@ -95,21 +105,54 @@ const regionLabels: Record<string, string> = {
   sul: "Sul",
 };
 
-function troopMarkerRadius(troops: number) {
+function preferredTroopMarkerRadius(troops: number) {
   const digits = String(Math.max(0, troops)).length;
   if (digits <= 1) return 19;
   if (digits === 2) return 22;
   return 26;
 }
 
+function desktopTroopMarkerRadius(
+  troops: number,
+  geometry: TerritoryGeometry,
+  topInset: number,
+) {
+  const preferred = preferredTroopMarkerRadius(troops);
+  const visualSafeRadius = Math.max(0, geometry.safeRadius - topInset) * 0.82;
+  return Math.max(7, Math.min(preferred, visualSafeRadius));
+}
+
+function mobileTroopMarkerRadius({
+  troops,
+  geometry,
+  topInset,
+  viewport,
+  surfaceWidth,
+}: {
+  troops: number;
+  geometry: TerritoryGeometry;
+  topInset: number;
+  viewport: MapViewportTransform;
+  surfaceWidth: number;
+}) {
+  const digits = String(Math.max(0, troops)).length;
+  const preferred = digits <= 1 ? 12 : digits === 2 ? 13.5 : 15;
+  const visualSafeWorld = Math.max(0, geometry.safeRadius - topInset);
+  const safePixels =
+    (visualSafeWorld / MAP_WORLD_SIZE) * surfaceWidth * viewport.scale * 0.82;
+  return Math.max(5, Math.min(preferred, safePixels));
+}
+
 function MobileTroopCanvas({
   territories,
   geometries,
   specialMarkerIds,
+  topInset,
 }: {
   territories: readonly BoardTerritory[];
   geometries: ReadonlyMap<number, TerritoryGeometry>;
   specialMarkerIds: ReadonlySet<number>;
+  topInset: number;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const viewportRef = useRef<MapViewportTransform>({ ...DEFAULT_MAP_VIEWPORT });
@@ -149,8 +192,17 @@ function MobileTroopCanvas({
         if (!geometry) continue;
 
         const digits = String(Math.max(0, territory.troops)).length;
-        const radius = digits <= 1 ? 12 : digits === 2 ? 13.5 : 15;
-        const fontSize = digits <= 1 ? 18 : digits === 2 ? 16 : 13;
+        const radius = mobileTroopMarkerRadius({
+          troops: territory.troops,
+          geometry,
+          topInset,
+          viewport: viewportRef.current,
+          surfaceWidth: width,
+        });
+        const fontSize = Math.max(
+          9,
+          Math.min(digits <= 1 ? 18 : digits === 2 ? 16 : 13, radius * 1.32),
+        );
         const point = projectMapPoint(
           { x: geometry.x, y: geometry.y },
           width,
@@ -163,7 +215,7 @@ function MobileTroopCanvas({
         context.arc(point.x, point.y, radius, 0, Math.PI * 2);
         context.fillStyle = "#f3efe4";
         context.fill();
-        context.lineWidth = 2;
+        context.lineWidth = Math.max(1.25, Math.min(2, radius * 0.15));
         context.strokeStyle = markerMaterial.side[0];
         context.stroke();
 
@@ -191,7 +243,7 @@ function MobileTroopCanvas({
       observer.disconnect();
       surface?.removeEventListener(MAP_VIEWPORT_EVENT, onViewportChange);
     };
-  }, [geometries, specialMarkerIds, territories]);
+  }, [geometries, specialMarkerIds, territories, topInset]);
 
   return (
     <canvas
@@ -220,26 +272,32 @@ export function InteractiveBoard({
   targetHints,
   interactionMode,
   arrow = null,
+  presentation = NORMAL_BOARD_PRESENTATION,
 }: InteractiveBoardProps) {
   const boardRef = useRef<HTMLObjectElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
-  const pathsByIdRef = useRef(new Map<number, SVGPathElement>());
   const visualNodesByIdRef = useRef(new Map<number, TerritoryVisualNodes>());
-  const materialSignatureRef = useRef(new Map<number, PlayerColor>());
+  const materialSignatureRef = useRef(new Map<number, string>());
   const visualSignatureRef = useRef(new Map<number, string>());
   const cleanupBoardRef = useRef<(() => void) | null>(null);
   const pointerRef = useRef({ x: 0, y: 0 });
   const tooltipFrameRef = useRef(0);
   const hoveredTerritoryRef = useRef<number | null>(null);
   const onSelectRef = useRef(onSelect);
+  const interactionEnabledRef = useRef(presentation.mode === "normal");
+  const gestureActiveRef = useRef(false);
   const [geometries, setGeometries] = useState<Map<number, TerritoryGeometry>>(
     new Map(),
   );
+  const [mapTopInset, setMapTopInset] = useState(4);
   const [hoveredTerritory, setHoveredTerritory] =
     useState<HoveredTerritory | null>(null);
   const roadsVisible = useRoadVisibility();
   const troopsVisible = useTroopVisibility();
+  const presentationActive = presentation.mode !== "normal";
+  interactionEnabledRef.current = !presentationActive;
+
   const territoryById = useMemo(
     () => new Map(territories.map((territory) => [territory.territoryId, territory])),
     [territories],
@@ -263,18 +321,34 @@ export function InteractiveBoard({
   );
   const focusTerritoryIds = useMemo(
     () =>
-      deriveMapFocusTerritoryIds({
-        phase: interactionMode,
-        selectedTerritoryId,
-        targetHints,
-        arrow,
-      }),
-    [arrow, interactionMode, selectedTerritoryId, targetHints],
+      presentationActive
+        ? []
+        : deriveMapFocusTerritoryIds({
+            phase: interactionMode,
+            selectedTerritoryId,
+            targetHints,
+            arrow,
+          }),
+    [arrow, interactionMode, presentationActive, selectedTerritoryId, targetHints],
   );
 
   useEffect(() => {
     onSelectRef.current = onSelect;
   }, [onSelect]);
+
+  const clearHoveredTerritory = () => {
+    const previousId = hoveredTerritoryRef.current;
+    if (previousId !== null) {
+      const previousNodes = visualNodesByIdRef.current.get(previousId);
+      if (previousNodes) applyTerritoryHoverState(previousNodes, false);
+    }
+    hoveredTerritoryRef.current = null;
+    setHoveredTerritory(null);
+  };
+
+  useEffect(() => {
+    if (presentationActive) clearHoveredTerritory();
+  }, [presentationActive]);
 
   useEffect(
     () => () => {
@@ -307,8 +381,11 @@ export function InteractiveBoard({
     cleanupBoardRef.current?.();
     const mapDocument = boardRef.current?.contentDocument;
     const faceRoot = mapDocument?.querySelector("#territories");
-    const root = mapDocument?.querySelector("#board") ?? mapDocument?.documentElement;
-    if (!mapDocument || !faceRoot || !root) return;
+    const root = mapDocument?.querySelector("#board-v2");
+    const surface = containerRef.current;
+    if (!mapDocument || !faceRoot || !root || !surface) return;
+
+    root.setAttribute("data-map-interaction-root", "true");
 
     const paths = Array.from(
       faceRoot.querySelectorAll<SVGPathElement>("path.territory"),
@@ -317,29 +394,27 @@ export function InteractiveBoard({
 
     ensureTerritoryRuntimeStyles(mapDocument);
 
-    const nextPaths = new Map<number, SVGPathElement>();
     const nextGeometries = new Map<number, TerritoryGeometry>();
-
     for (const path of paths) {
       const id = Number(path.dataset.id);
-      nextPaths.set(id, path);
       nextGeometries.set(id, territoryGeometryFromPath(path));
-      path.setAttribute("tabindex", "0");
-      path.setAttribute("role", "button");
-      path.setAttribute("aria-label", path.dataset.name ?? "Território");
-      path.style.cursor = "pointer";
+      path.removeAttribute("tabindex");
+      path.removeAttribute("role");
+      path.removeAttribute("aria-label");
     }
 
     const nextVisualNodes = collectTerritoryVisualNodes(mapDocument, paths);
-    prepareTerritoryInteractiveSurfaces(nextVisualNodes);
+    buildTerritoryHitLayer(mapDocument, root, nextVisualNodes);
 
-    pathsByIdRef.current = nextPaths;
     visualNodesByIdRef.current = nextVisualNodes;
     materialSignatureRef.current.clear();
     visualSignatureRef.current.clear();
     hoveredTerritoryRef.current = null;
     setHoveredTerritory(null);
     setGeometries(nextGeometries);
+
+    const topInset = Number(mapDocument.documentElement.getAttribute("data-top-inset"));
+    setMapTopInset(Number.isFinite(topInset) ? Math.max(0, topInset) : 4);
 
     const setHoveredTerritoryId = (nextId: number | null) => {
       const previousId = hoveredTerritoryRef.current;
@@ -372,89 +447,121 @@ export function InteractiveBoard({
     };
 
     const click = (event: Event) => {
+      if (!interactionEnabledRef.current || gestureActiveRef.current) return;
       const id = territoryIdFromEvent(event, root);
       if (id !== null) onSelectRef.current?.(id);
     };
+
     const keyDown = (event: Event) => {
+      if (!interactionEnabledRef.current || gestureActiveRef.current) return;
       const keyboardEvent = event as KeyboardEvent;
       if (keyboardEvent.key !== "Enter" && keyboardEvent.key !== " ") return;
-      const id = territoryIdFromEvent(event, faceRoot);
+      const id = territoryIdFromEvent(event, root);
       if (id === null) return;
       keyboardEvent.preventDefault();
       onSelectRef.current?.(id);
     };
-    const pointerOver = (event: Event) => {
-      const id = territoryIdFromEvent(event, root);
-      if (id === null) return;
-      setHoveredTerritoryId(id);
-      scheduleTooltipPosition(event as PointerEvent);
-    };
-    const pointerMove = (event: Event) => {
-      const id = territoryIdFromEvent(event, root);
-      if (id === null) {
-        if (hoveredTerritoryRef.current === null) return;
+
+    const syncPointerHover = (event: Event) => {
+      if (!interactionEnabledRef.current || gestureActiveRef.current) {
+        setHoveredTerritoryId(null);
         return;
       }
+      const id = territoryIdFromEvent(event, root);
       setHoveredTerritoryId(id);
-      scheduleTooltipPosition(event as PointerEvent);
+      if (id !== null) scheduleTooltipPosition(event as PointerEvent);
     };
-    const pointerOut = (event: Event) => {
-      const fromId = territoryIdFromEvent(event, root);
-      if (fromId === null) return;
 
-      const related = (event as PointerEvent).relatedTarget;
-      const toId = territoryIdFromNode(related, root);
-      if (fromId === toId) return;
+    const pointerLeave = () => setHoveredTerritoryId(null);
 
-      setHoveredTerritoryId(toId);
+    const focusIn = (event: Event) => {
+      const id = territoryIdFromEvent(event, root);
+      if (id === null) return;
+      const nodes = visualNodesByIdRef.current.get(id);
+      if (nodes) applyTerritoryKeyboardFocusState(nodes, true);
+    };
+
+    const focusOut = (event: Event) => {
+      const id = territoryIdFromEvent(event, root);
+      if (id === null) return;
+      const nodes = visualNodesByIdRef.current.get(id);
+      if (nodes) applyTerritoryKeyboardFocusState(nodes, false);
+    };
+
+    const gestureState = (event: Event) => {
+      const detail = (event as CustomEvent<unknown>).detail;
+      if (!isMapGestureState(detail)) return;
+      gestureActiveRef.current = detail.active;
+      if (detail.active) setHoveredTerritoryId(null);
     };
 
     root.addEventListener("click", click);
-    faceRoot.addEventListener("keydown", keyDown);
-    root.addEventListener("pointerover", pointerOver);
-    root.addEventListener("pointermove", pointerMove);
-    root.addEventListener("pointerout", pointerOut);
+    root.addEventListener("keydown", keyDown);
+    root.addEventListener("pointerover", syncPointerHover);
+    root.addEventListener("pointermove", syncPointerHover);
+    root.addEventListener("pointerleave", pointerLeave);
+    root.addEventListener("focusin", focusIn);
+    root.addEventListener("focusout", focusOut);
+    surface.addEventListener(MAP_GESTURE_STATE_EVENT, gestureState);
+
+    surface.dispatchEvent(new CustomEvent(MAP_VISUALS_READY_EVENT));
 
     cleanupBoardRef.current = () => {
       root.removeEventListener("click", click);
-      faceRoot.removeEventListener("keydown", keyDown);
-      root.removeEventListener("pointerover", pointerOver);
-      root.removeEventListener("pointermove", pointerMove);
-      root.removeEventListener("pointerout", pointerOut);
-
-      const hoveredId = hoveredTerritoryRef.current;
-      if (hoveredId !== null) {
-        const nodes = visualNodesByIdRef.current.get(hoveredId);
-        if (nodes) applyTerritoryHoverState(nodes, false);
-      }
-      hoveredTerritoryRef.current = null;
+      root.removeEventListener("keydown", keyDown);
+      root.removeEventListener("pointerover", syncPointerHover);
+      root.removeEventListener("pointermove", syncPointerHover);
+      root.removeEventListener("pointerleave", pointerLeave);
+      root.removeEventListener("focusin", focusIn);
+      root.removeEventListener("focusout", focusOut);
+      surface.removeEventListener(MAP_GESTURE_STATE_EVENT, gestureState);
+      clearHoveredTerritory();
+      gestureActiveRef.current = false;
     };
   }
 
   useEffect(() => {
     const available = new Set(availableTerritoryIds);
+    const opening = presentation.mode === "initial-territory-draw" ? presentation : null;
 
     for (const territory of territories) {
       const id = territory.territoryId;
       const nodes = visualNodesByIdRef.current.get(id);
-      const path = nodes?.face ?? pathsByIdRef.current.get(id);
-      if (!path || !nodes) continue;
+      if (!nodes) continue;
 
-      if (materialSignatureRef.current.get(id) !== territory.ownerColor) {
-        applyTerritoryMaterial(id, nodes, territoryMaterial(territory.ownerColor));
-        materialSignatureRef.current.set(id, territory.ownerColor);
+      const revealed = !opening || opening.revealedTerritoryIds.has(id);
+      const materialKey = revealed ? `owner:${territory.ownerColor}` : "neutral";
+
+      if (materialSignatureRef.current.get(id) !== materialKey) {
+        applyTerritoryMaterial(
+          id,
+          nodes,
+          revealed
+            ? territoryMaterial(territory.ownerColor)
+            : neutralTerritoryMaterial(),
+        );
+        materialSignatureRef.current.set(id, materialKey);
       }
 
-      const isAvailable = available.has(id);
-      const targetHint = targetById.get(id);
+      const gameplayVisuals = !opening;
+      const isAvailable = gameplayVisuals && available.has(id);
+      const targetHint = gameplayVisuals ? targetById.get(id) : undefined;
       const isTarget = Boolean(targetHint);
       const targetSelectable = targetHint?.selectable ?? false;
-      const isSelected = selectedTerritoryId === id;
+      const isSelected = gameplayVisuals && selectedTerritoryId === id;
+      const openingHighlight = Boolean(
+        opening &&
+          revealed &&
+          opening.highlightOn &&
+          opening.highlightPlayerId &&
+          territory.ownerPlayerId === opening.highlightPlayerId,
+      );
       const signature = [
         isAvailable ? 1 : 0,
         isTarget ? 1 : 0,
         targetSelectable ? 1 : 0,
         isSelected ? 1 : 0,
+        openingHighlight ? 1 : 0,
       ].join(":");
 
       if (visualSignatureRef.current.get(id) === signature) continue;
@@ -465,6 +572,7 @@ export function InteractiveBoard({
         target: isTarget,
         targetSelectable,
         selected: isSelected,
+        openingHighlight,
       });
     }
   }, [
@@ -473,6 +581,7 @@ export function InteractiveBoard({
     selectedTerritoryId,
     availableTerritoryIds,
     targetById,
+    presentation,
   ]);
 
   const hoveredTerritoryId = hoveredTerritory?.id ?? null;
@@ -533,6 +642,7 @@ export function InteractiveBoard({
         ref={containerRef}
         className="game-map-surface"
         data-map-focus-ids={focusTerritoryIds.join(",")}
+        data-map-presentation-active={presentationActive ? "true" : "false"}
       >
         <object
           ref={boardRef}
@@ -545,7 +655,23 @@ export function InteractiveBoard({
         >
           <p>Não foi possível carregar o mapa interativo.</p>
         </object>
-        {roadsVisible ? (
+
+        {presentation.mode === "initial-territory-draw" && presentation.titleVisible ? (
+          <div
+            data-initial-territory-title
+            className="pointer-events-none absolute inset-0 z-30 flex items-center justify-center"
+          >
+            <div
+              className="rounded-2xl border border-transparent bg-transparent px-6 py-4 text-center text-2xl font-semibold tracking-[-0.035em] text-[#17372d] sm:text-3xl"
+              style={{ textShadow: "0 2px 12px rgba(250, 248, 242, 0.95)" }}
+              role="status"
+            >
+              Sorteio de Territórios
+            </div>
+          </div>
+        ) : null}
+
+        {!presentationActive && roadsVisible ? (
           <RoadNetwork
             connections={connections}
             anchors={geometries}
@@ -554,7 +680,8 @@ export function InteractiveBoard({
             targetTerritoryIds={roadTargetTerritoryIds}
           />
         ) : null}
-        {troopsVisible ? (
+
+        {!presentationActive && troopsVisible ? (
           <>
             <svg
               aria-hidden="true"
@@ -566,7 +693,11 @@ export function InteractiveBoard({
 
                 const geometry = geometries.get(territory.territoryId);
                 if (!geometry) return null;
-                const radius = troopMarkerRadius(territory.troops);
+                const radius = desktopTroopMarkerRadius(
+                  territory.troops,
+                  geometry,
+                  mapTopInset,
+                );
                 const markerMaterial = territoryMaterial(territory.ownerColor);
 
                 return (
@@ -585,7 +716,7 @@ export function InteractiveBoard({
                       x="0"
                       y="1"
                       fill="#17201c"
-                      fontSize="21"
+                      fontSize={Math.max(11, Math.min(21, radius * 1.05))}
                       fontWeight="800"
                       textAnchor="middle"
                       dominantBaseline="central"
@@ -603,21 +734,28 @@ export function InteractiveBoard({
               territories={territories}
               geometries={geometries}
               specialMarkerIds={specialMarkerIds}
+              topInset={mapTopInset}
             />
           </>
         ) : null}
-        {tunnelFrom && tunnelTo && tunnelTargetName ? (
+
+        {!presentationActive && tunnelFrom && tunnelTo && tunnelTargetName ? (
           <JurassicTunnelConnection
             from={tunnelFrom}
             to={tunnelTo}
             targetName={tunnelTargetName}
           />
         ) : null}
-        <TerritorySpecialMarkers targets={targetHints} geometries={geometries} />
-        {from && to && arrow ? (
+
+        {!presentationActive ? (
+          <TerritorySpecialMarkers targets={targetHints} geometries={geometries} />
+        ) : null}
+
+        {!presentationActive && from && to && arrow ? (
           <TerritoryArrow from={from} to={to} kind={arrow.kind} />
         ) : null}
-        {hoveredDetails && hoveredState ? (
+
+        {!presentationActive && hoveredDetails && hoveredState ? (
           <div
             ref={tooltipRef}
             className="game-territory-tooltip"
