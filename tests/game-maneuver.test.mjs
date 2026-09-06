@@ -193,5 +193,5 @@ test("backend recalcula topologia efetiva e melhor rota própria antes de mover 
   assert.doesNotMatch(source, /effectiveTerritoryConnections\(/);
   assert.doesNotMatch(source, /getPassableTerritoryConnections/);
   assert.doesNotMatch(source, /reachableTerritoryIds/);
-  assert.doesNotMatch(source, /FROM territory_connections/);
+  assert.doesNotMatch(source, /FROM catalog\.territory_connections/);
 });

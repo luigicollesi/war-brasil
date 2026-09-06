@@ -167,7 +167,7 @@ async function readRoom(client: PoolClient, roomId: string) {
   const room = (
     await client.query<TradeRoomProjection>(
       `SELECT status,phase,reinforcements_remaining,trade_offers_used
-       FROM game_rooms
+       FROM game.rooms
        WHERE id=$1`,
       [roomId],
     )
@@ -186,7 +186,7 @@ async function readActiveOffer(client: PoolClient, roomId: string) {
               counter_offered_kind,counter_offered_territory_id,counter_offered_symbol,
               counter_requested_kind,counter_requested_territory_id,counter_requested_symbol,
               accepted_terms,proposer_selected_card_id,responder_selected_card_id
-       FROM game_player_trade_offers
+       FROM game.trade_offers
        WHERE room_id=$1
          AND status IN ('open','countered','accepted_pending_selection')
        ORDER BY id DESC
@@ -231,13 +231,13 @@ export async function readTradePrivatePatch(
     readRoom(client, roomId),
     client.query<TradePlayerProjection>(
       `SELECT trade_signals_used
-       FROM room_players
+       FROM game.players
        WHERE room_id=$1 AND id=$2`,
       [roomId, playerId],
     ),
     client.query<CardProjection>(
       `SELECT id,territory_id,symbol,is_wild
-       FROM game_cards
+       FROM game.cards
        WHERE room_id=$1 AND owner_player_id=$2 AND zone='hand'
        ORDER BY id`,
       [roomId, playerId],
@@ -279,7 +279,7 @@ async function tradeParticipantIds(
       target_player_id: string;
     }>(
       `SELECT proposer_player_id,target_player_id
-       FROM game_player_trade_offers
+       FROM game.trade_offers
        WHERE room_id=$1 AND id=$2`,
       [roomId, offerId],
     )

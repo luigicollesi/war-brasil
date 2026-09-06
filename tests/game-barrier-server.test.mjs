@@ -95,7 +95,7 @@ test("manobra usa topologia efetiva completa e recalcula a melhor rota no servid
   assert.doesNotMatch(maneuver, /effectiveTerritoryConnections/);
   assert.doesNotMatch(maneuver, /getPassableTerritoryConnections/);
   assert.doesNotMatch(maneuver, /reachableTerritoryIds/);
-  assert.doesNotMatch(maneuver, /FROM territory_connections/);
+  assert.doesNotMatch(maneuver, /FROM catalog\.territory_connections/);
 });
 
 test("manobra rejeita duas barreiras e exige duas tropas para uma travessia", () => {

@@ -35,11 +35,11 @@ test("votos de revanche são persistidos por humano e bots não bloqueiam reiní
 test("reinício recria uma partida limpa e reapresenta a distribuição inicial", () => {
   const service = source("src/lib/server/game-finish-command-service.ts");
 
-  assert.match(service, /DELETE FROM game_round_events/);
-  assert.match(service, /DELETE FROM game_order_rolls/);
-  assert.match(service, /DELETE FROM game_cards/);
-  assert.match(service, /DELETE FROM game_player_objectives/);
-  assert.match(service, /DELETE FROM game_territories/);
+  assert.match(service, /DELETE FROM game\.round_events/);
+  assert.match(service, /DELETE FROM game\.order_rolls/);
+  assert.match(service, /DELETE FROM game\.cards/);
+  assert.match(service, /DELETE FROM game\.player_objectives/);
+  assert.match(service, /DELETE FROM game\.territories/);
   assert.match(service, /owner_player_id,troops,initial_draw_order/);
   assert.match(service, /\$\{offset \+ 3\}, 1, \$\$\{offset \+ 4\}/);
   assert.match(service, /index \+ 1/);
@@ -77,6 +77,6 @@ test("vitória monta modal terminal com votação e retorno coletivo", () => {
   assert.match(modal, /Voltar todos ao lobby/);
   assert.match(modal, /rematch\.voteCount/);
   assert.doesNotMatch(modal, /onClose=/);
-  assert.match(snapshot, /game_rematch_votes/);
+  assert.match(snapshot, /game\.rematch_votes/);
   assert.match(snapshot, /hasVoted/);
 });

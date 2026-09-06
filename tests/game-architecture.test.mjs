@@ -5,7 +5,7 @@ import test from "node:test";
 test("command boundary serializa a sala e incrementa revisão antes do commit", () => {
   const source = readFileSync("src/lib/server/game-command.ts", "utf8");
 
-  assert.match(source, /SELECT id,revision FROM game_rooms WHERE id=\$1 FOR UPDATE/);
+  assert.match(source, /SELECT id,revision FROM game\.rooms WHERE id=\$1 FOR UPDATE/);
   assert.match(source, /const value = await execute\(client\)/);
   assert.match(source, /const revision = await bumpGameRevision\(client, roomId\)/);
   assert.match(source, /await client\.query\("COMMIT"\)/);
@@ -63,7 +63,7 @@ test("advance valida acesso do jogador dentro de transação read-only", () => {
 
   assert.match(route, /gameQuery/);
   assert.match(route, /readPlayerGameRevision/);
-  assert.match(revision, /JOIN room_players rp/);
+  assert.match(revision, /JOIN game\.players rp/);
   assert.match(revision, /rp\.player_session=\$2/);
 });
 
@@ -202,7 +202,7 @@ test("topologia base permanece cacheada e gameplay usa uma única topologia efet
 
   assert.match(topology, /cachedTopology/);
   assert.match(topology, /loadingTopology/);
-  assert.match(topology, /FROM territory_connections/);
+  assert.match(topology, /FROM catalog\.territory_connections/);
   assert.match(effective, /getBaseTerritoryConnections/);
   assert.match(effective, /getRoomRoundEvent/);
   assert.match(effective, /effectiveGameConnections/);
@@ -210,8 +210,8 @@ test("topologia base permanece cacheada e gameplay usa uma única topologia efet
   assert.match(maneuver, /getEffectiveGameTopology/);
   assert.doesNotMatch(combat, /getBaseTerritoryConnection|isJurassicTunnelConnection/);
   assert.doesNotMatch(maneuver, /getBaseTerritoryConnections|effectiveTerritoryConnections/);
-  assert.doesNotMatch(combat, /FROM territory_connections/);
-  assert.doesNotMatch(maneuver, /FROM territory_connections/);
+  assert.doesNotMatch(combat, /FROM catalog\.territory_connections/);
+  assert.doesNotMatch(maneuver, /FROM catalog\.territory_connections/);
 });
 
 test("efeitos permanentes só alteram tropas e nunca a topologia base", () => {
@@ -221,13 +221,13 @@ test("efeitos permanentes só alteram tropas e nunca a topologia base", () => {
   );
 
   assert.match(source, /MIN_TERRITORY_TROOPS/);
-  assert.match(source, /UPDATE game_territories/);
+  assert.match(source, /UPDATE game\.territories/);
   assert.match(source, /GREATEST\(\$\{MIN_TERRITORY_TROOPS\},troops-\$3\)/);
   assert.match(
     source,
     /LEAST\(moved_in_turn,GREATEST\(\$\{MIN_TERRITORY_TROOPS\},troops-\$3\)\)/,
   );
-  assert.doesNotMatch(source, /UPDATE territory_connections/);
+  assert.doesNotMatch(source, /UPDATE catalog\.territory_connections/);
 });
 
 test("evento de gameplay é lido pela rodada exata e resolved_effects é validado", () => {

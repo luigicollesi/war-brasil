@@ -19,10 +19,11 @@ const lobbyClient = readFileSync("src/components/lobby-client.tsx", "utf8");
 test("schema e migration identificam bots e versionam o catálogo de facções", () => {
   for (const source of [migration, schema]) {
     assert.match(source, /is_bot BOOLEAN NOT NULL DEFAULT FALSE/);
-    assert.match(source, /CREATE TABLE IF NOT EXISTS bot_names/);
     assert.match(source, /UNIQUE \(color, name\)/);
     assert.match(source, /ON CONFLICT \(color, name\) DO NOTHING/);
   }
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS bot_names/);
+  assert.match(schema, /CREATE TABLE IF NOT EXISTS catalog\.bot_names/);
 
   const seededNames =
     migration.match(/\('(forest|ocean|sun|ruby|violet|orange)', '[^']+'\)/g) ?? [];
@@ -69,7 +70,7 @@ test("remoção de bot nunca pode apagar um jogador humano", () => {
     rooms.indexOf("export async function getLobbySnapshot"),
   );
 
-  assert.match(removeBot, /DELETE FROM room_players/);
+  assert.match(removeBot, /DELETE FROM game\.players/);
   assert.match(removeBot, /AND is_bot = TRUE/);
 });
 
@@ -81,7 +82,7 @@ test("contratos do lobby e do jogo expõem isBot sem criar entidade paralela", (
   assert.match(gameSnapshot, /isBot: player\.is_bot/);
 });
 
-test("inicialização continua incluindo todos os room_players", () => {
+test("inicialização continua incluindo todos os jogadores da sala", () => {
   const initializeGame = rooms.slice(
     rooms.indexOf("async function initializeGame"),
     rooms.indexOf("export async function createRoom"),
@@ -89,7 +90,7 @@ test("inicialização continua incluindo todos os room_players", () => {
 
   assert.match(
     initializeGame,
-    /SELECT id FROM room_players WHERE room_id = \$1 ORDER BY joined_at/,
+    /SELECT id FROM game\.players WHERE room_id = \$1 ORDER BY joined_at/,
   );
   assert.doesNotMatch(initializeGame, /is_bot\s*=\s*FALSE/);
 });

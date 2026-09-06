@@ -134,7 +134,7 @@ export async function advanceGameRound(
   });
 
   await client.query(
-    `UPDATE game_rooms
+    `UPDATE game.rooms
      SET round_number=$2,jurassic_tunnel_territory_id=$3
      WHERE id=$1`,
     [input.roomId, nextRoundNumber, jurassicTunnelDestinationId],

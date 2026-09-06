@@ -65,7 +65,7 @@ async function loadRoom(client: PoolClient, roomId: string) {
       `SELECT id,status,order_roll_round,phase,current_player_id,
               reinforcements_remaining,pending_from_territory_id,
               pending_to_territory_id,last_battle
-       FROM game_rooms
+       FROM game.rooms
        WHERE id=$1`,
       [roomId],
     )
@@ -76,7 +76,7 @@ async function loadPlayers(client: PoolClient, roomId: string) {
   return (
     await client.query<AutomationPlayer>(
       `SELECT id,turn_position,is_bot,bot_next_action_at
-       FROM room_players
+       FROM game.players
        WHERE room_id=$1
        ORDER BY joined_at,id`,
       [roomId],
@@ -96,7 +96,7 @@ async function orderRollState(
   const rolls = (
     await client.query<AutomationOrderRoll>(
       `SELECT player_id,roll_round,value,rolled_at
-       FROM game_order_rolls
+       FROM game.order_rolls
        WHERE room_id=$1
        ORDER BY roll_round,rolled_at`,
       [room.id],
@@ -371,7 +371,7 @@ export async function advanceBotAutomation(
     const actionBaseTimeMs = Math.max(nowMs, releaseTimeMs ?? nowMs);
     const dueAt = new Date(actionBaseTimeMs + pickBotDelayMs(delayAction));
     await client.query(
-      `UPDATE room_players
+      `UPDATE game.players
        SET bot_next_action_at=$3
        WHERE room_id=$1 AND id=$2 AND is_bot=TRUE`,
       [roomId, actor.id, dueAt],
@@ -386,7 +386,7 @@ export async function advanceBotAutomation(
   const action = await chooseDueAction(client, room, actor);
   if (!action) {
     await client.query(
-      `UPDATE room_players
+      `UPDATE game.players
        SET bot_next_action_at=NULL
        WHERE room_id=$1 AND id=$2 AND is_bot=TRUE`,
       [roomId, actor.id],
@@ -401,7 +401,7 @@ export async function advanceBotAutomation(
   }
 
   await client.query(
-    `UPDATE room_players
+    `UPDATE game.players
      SET bot_next_action_at=NULL
      WHERE room_id=$1 AND id=$2 AND is_bot=TRUE`,
     [roomId, actor.id],

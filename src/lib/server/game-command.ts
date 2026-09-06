@@ -55,7 +55,7 @@ type GameCommandOptions<T> = {
 
 async function lockRoomRevision(client: PoolClient, roomId: string) {
   const lockedRoom = await client.query<{ id: string; revision: number }>(
-    "SELECT id,revision FROM game_rooms WHERE id=$1 FOR UPDATE",
+    "SELECT id,revision FROM game.rooms WHERE id=$1 FOR UPDATE",
     [roomId],
   );
 

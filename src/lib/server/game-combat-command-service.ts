@@ -61,7 +61,7 @@ async function loadRoom(client: PoolClient, roomId: string) {
     `SELECT id,status,phase,current_player_id,round_number,
             jurassic_tunnel_territory_id,pending_from_territory_id,
             pending_to_territory_id,last_battle
-     FROM game_rooms
+     FROM game.rooms
      WHERE id=$1`,
     [roomId],
   );
@@ -151,7 +151,7 @@ export async function executeAttack(
   const rows = (
     await client.query<LockedTerritory>(
       `SELECT territory_id,owner_player_id,troops
-       FROM game_territories
+       FROM game.territories
        WHERE room_id=$1 AND territory_id=ANY($2::smallint[])
        FOR UPDATE`,
       [room.id, [input.fromTerritoryId, input.toTerritoryId]],
@@ -280,7 +280,7 @@ export async function executeRollBattleDice(
   const rows = (
     await client.query<LockedTerritory>(
       `SELECT territory_id,owner_player_id,troops
-       FROM game_territories
+       FROM game.territories
        WHERE room_id=$1 AND territory_id=ANY($2::smallint[])
        FOR UPDATE`,
       [room.id, [battle.attackerTerritoryId, battle.defenderTerritoryId]],

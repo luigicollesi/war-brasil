@@ -7,7 +7,7 @@ export const DUE_AUTOMATION_SQL = `
            0,
            FLOOR(EXTRACT(EPOCH FROM (NOW() - automation_due_at)) * 1000)
          )::bigint due_lag_ms
-  FROM game_rooms
+  FROM game.rooms
   WHERE automation_due_at IS NOT NULL
     AND automation_due_at <= NOW()
   ORDER BY automation_due_at,id
@@ -18,7 +18,7 @@ export const CLAIM_DUE_AUTOMATION_SQL = `
   WITH due AS (
     SELECT id,
            automation_claimed_until
-    FROM game_rooms
+    FROM game.rooms
     WHERE automation_due_at IS NOT NULL
       AND automation_due_at <= NOW()
       AND (
@@ -29,7 +29,7 @@ export const CLAIM_DUE_AUTOMATION_SQL = `
     FOR UPDATE SKIP LOCKED
     LIMIT $1
   )
-  UPDATE game_rooms room
+  UPDATE game.rooms room
   SET automation_claimed_by=$2,
       automation_claimed_until=NOW() + ($3 * INTERVAL '1 millisecond')
   FROM due
@@ -46,7 +46,7 @@ export const CLAIM_DUE_AUTOMATION_SQL = `
 `;
 
 export const RELEASE_AUTOMATION_CLAIM_SQL = `
-  UPDATE game_rooms
+  UPDATE game.rooms
   SET automation_claimed_by=NULL,
       automation_claimed_until=NULL
   WHERE id=$1

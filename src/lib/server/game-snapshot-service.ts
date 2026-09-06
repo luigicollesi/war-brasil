@@ -218,10 +218,10 @@ async function loadSnapshotObjective(
                     o.params
                   ) params,
                   t.faction_name target_name
-           FROM game_player_objectives a
-           JOIN objectives o ON o.id=a.objective_id
-           LEFT JOIN objective_rules r ON r.id=a.objective_rule_id
-           LEFT JOIN room_players t ON t.id=a.target_player_id
+           FROM game.player_objectives a
+           JOIN catalog.objectives o ON o.id=a.objective_id
+           LEFT JOIN catalog.objective_rules r ON r.id=a.objective_rule_id
+           LEFT JOIN game.players t ON t.id=a.target_player_id
            WHERE a.room_id=$1 AND a.player_id=$2`,
           [roomId, playerId],
         )
@@ -231,9 +231,9 @@ async function loadSnapshotObjective(
         await client.query<SnapshotObjective>(
           `SELECT o.id,o.type,o.name,o.description,o.params,
                   t.faction_name target_name
-           FROM game_player_objectives a
-           JOIN objectives o ON o.id=a.objective_id
-           LEFT JOIN room_players t ON t.id=a.target_player_id
+           FROM game.player_objectives a
+           JOIN catalog.objectives o ON o.id=a.objective_id
+           LEFT JOIN game.players t ON t.id=a.target_player_id
            WHERE a.room_id=$1 AND a.player_id=$2`,
           [roomId, playerId],
         )
@@ -258,8 +258,8 @@ export async function getGameSnapshotQuery(
                 gr.trade_offers_used,gr.winner_player_id,
                 gr.pending_from_territory_id,gr.pending_to_territory_id,
                 gr.last_battle
-         FROM game_rooms gr
-         JOIN room_players access_player
+         FROM game.rooms gr
+         JOIN game.players access_player
            ON access_player.room_id=gr.id
           AND access_player.player_session=$2
          WHERE gr.id=$1`,
@@ -282,7 +282,7 @@ export async function getGameSnapshotQuery(
       await client.query<SnapshotPlayer>(
         `SELECT id,faction_name,color,turn_position,is_bot,trade_signals_used,
                 player_session=$2 is_me
-         FROM room_players
+         FROM game.players
          WHERE room_id=$1
          ORDER BY turn_position NULLS LAST,joined_at,id`,
         [room.id, session],
@@ -297,8 +297,8 @@ export async function getGameSnapshotQuery(
       await client.query<SnapshotTerritory>(
         `SELECT t.territory_id,t.owner_player_id,p.color,t.troops,t.moved_in_turn,
                 t.initial_draw_order
-         FROM game_territories t
-         JOIN room_players p ON p.id=t.owner_player_id
+         FROM game.territories t
+         JOIN game.players p ON p.id=t.owner_player_id
          WHERE t.room_id=$1
          ORDER BY t.territory_id`,
         [room.id],
@@ -310,7 +310,7 @@ export async function getGameSnapshotQuery(
         ? (
             await client.query<SnapshotOrderRoll>(
               `SELECT player_id,roll_round,value,rolled_at
-               FROM game_order_rolls
+               FROM game.order_rolls
                WHERE room_id=$1
                ORDER BY roll_round,rolled_at`,
               [room.id],
@@ -321,7 +321,7 @@ export async function getGameSnapshotQuery(
     const cards = (
       await client.query<SnapshotCard>(
         `SELECT id,territory_id,symbol,is_wild
-         FROM game_cards
+         FROM game.cards
          WHERE room_id=$1 AND owner_player_id=$2 AND zone='hand'
          ORDER BY id`,
         [room.id, me.id],
@@ -339,7 +339,7 @@ export async function getGameSnapshotQuery(
                       counter_offered_kind,counter_offered_territory_id,counter_offered_symbol,
                       counter_requested_kind,counter_requested_territory_id,counter_requested_symbol,
                       accepted_terms,proposer_selected_card_id,responder_selected_card_id
-               FROM game_player_trade_offers
+               FROM game.trade_offers
                WHERE room_id=$1
                  AND status IN ('open','countered','accepted_pending_selection')
                ORDER BY id DESC
@@ -356,8 +356,8 @@ export async function getGameSnapshotQuery(
         ? (
             await client.query<{ player_id: string }>(
               `SELECT v.player_id
-               FROM game_rematch_votes v
-               JOIN room_players p ON p.id=v.player_id AND p.room_id=v.room_id
+               FROM game.rematch_votes v
+               JOIN game.players p ON p.id=v.player_id AND p.room_id=v.room_id
                WHERE v.room_id=$1 AND p.is_bot=FALSE`,
               [room.id],
             )

@@ -40,7 +40,7 @@ export async function loadBotStrategicState(
     await client.query<StateRoom>(
       `SELECT id,phase,round_number,reinforcements_remaining,
               conquered_this_turn,jurassic_tunnel_territory_id
-       FROM game_rooms
+       FROM game.rooms
        WHERE id=$1`,
       [roomId],
     )
@@ -50,7 +50,7 @@ export async function loadBotStrategicState(
   const bot = (
     await client.query<StateBot>(
       `SELECT id,card_trade_count
-       FROM room_players
+       FROM game.players
        WHERE room_id=$1 AND id=$2 AND is_bot=TRUE`,
       [roomId, botId],
     )
@@ -68,9 +68,9 @@ export async function loadBotStrategicState(
                     o.params
                   ) params,
                   a.target_player_id
-           FROM game_player_objectives a
-           JOIN objectives o ON o.id=a.objective_id
-           LEFT JOIN objective_rules r ON r.id=a.objective_rule_id
+           FROM game.player_objectives a
+           JOIN catalog.objectives o ON o.id=a.objective_id
+           LEFT JOIN catalog.objective_rules r ON r.id=a.objective_rule_id
            WHERE a.room_id=$1 AND a.player_id=$2`,
           [roomId, botId],
         )
@@ -79,8 +79,8 @@ export async function loadBotStrategicState(
       (
         await client.query<ObjectiveRow>(
           `SELECT o.type,o.params,a.target_player_id
-           FROM game_player_objectives a
-           JOIN objectives o ON o.id=a.objective_id
+           FROM game.player_objectives a
+           JOIN catalog.objectives o ON o.id=a.objective_id
            WHERE a.room_id=$1 AND a.player_id=$2`,
           [roomId, botId],
         )
@@ -95,7 +95,7 @@ export async function loadBotStrategicState(
       is_bot: boolean;
     }>(
       `SELECT id,turn_position,is_bot
-       FROM room_players
+       FROM game.players
        WHERE room_id=$1
        ORDER BY joined_at,id`,
       [roomId],
@@ -114,7 +114,7 @@ export async function loadBotStrategicState(
       moved_in_turn: number;
     }>(
       `SELECT territory_id,owner_player_id,troops,moved_in_turn
-       FROM game_territories
+       FROM game.territories
        WHERE room_id=$1
        ORDER BY territory_id`,
       [roomId],
@@ -134,7 +134,7 @@ export async function loadBotStrategicState(
       is_wild: boolean;
     }>(
       `SELECT id::text id,territory_id,symbol,is_wild
-       FROM game_cards
+       FROM game.cards
        WHERE room_id=$1 AND owner_player_id=$2 AND zone='hand'
        ORDER BY id`,
       [roomId, botId],

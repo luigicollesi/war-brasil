@@ -55,7 +55,7 @@ async function loadRoom(client: PoolClient, roomId: string) {
     await client.query<ManeuverRoom>(
       `SELECT id,status,phase,current_player_id,round_number,
               jurassic_tunnel_territory_id
-       FROM game_rooms
+       FROM game.rooms
        WHERE id=$1`,
       [roomId],
     )
@@ -100,7 +100,7 @@ export async function executeManeuver(
   const owned = (
     await client.query<OwnedTerritory>(
       `SELECT territory_id,troops,moved_in_turn
-       FROM game_territories
+       FROM game.territories
        WHERE room_id=$1 AND owner_player_id=$2
        FOR UPDATE`,
       [room.id, player.id],
@@ -190,7 +190,7 @@ export async function executeManeuver(
 
   const updatedSource = (
     await client.query<{ troops: number; moved_in_turn: number }>(
-      `UPDATE game_territories
+      `UPDATE game.territories
        SET troops=troops-$3
        WHERE room_id=$1 AND territory_id=$2
        RETURNING troops,moved_in_turn`,
@@ -199,7 +199,7 @@ export async function executeManeuver(
   ).rows[0];
   const updatedDestination = (
     await client.query<{ troops: number; moved_in_turn: number }>(
-      `UPDATE game_territories
+      `UPDATE game.territories
        SET troops=troops+$3,moved_in_turn=moved_in_turn+$3
        WHERE room_id=$1 AND territory_id=$2
        RETURNING troops,moved_in_turn`,

@@ -51,7 +51,7 @@ async function loadRoom(client: PoolClient, roomId: string) {
             phase,current_player_id,round_number,
             jurassic_tunnel_territory_id,conquered_this_turn,
             pending_from_territory_id,last_battle
-     FROM game_rooms
+     FROM game.rooms
      WHERE id=$1`,
     [roomId],
   );
@@ -88,7 +88,7 @@ async function drawCard(
 ) {
   let card = await client.query<{ id: string }>(
     `SELECT id
-     FROM game_cards
+     FROM game.cards
      WHERE room_id=$1 AND zone='deck'
      ORDER BY deck_order
      FOR UPDATE
@@ -100,7 +100,7 @@ async function drawCard(
     const discard = (
       await client.query<{ id: string }>(
         `SELECT id
-         FROM game_cards
+         FROM game.cards
          WHERE room_id=$1 AND zone='discard'
          FOR UPDATE`,
         [room.id],
@@ -115,7 +115,7 @@ async function drawCard(
 
     for (const [index, item] of discard.entries()) {
       await client.query(
-        `UPDATE game_cards
+        `UPDATE game.cards
          SET zone='deck',deck_order=$2
          WHERE id=$1`,
         [item.id, order[index]],
@@ -124,7 +124,7 @@ async function drawCard(
 
     card = await client.query<{ id: string }>(
       `SELECT id
-       FROM game_cards
+       FROM game.cards
        WHERE room_id=$1 AND zone='deck'
        ORDER BY deck_order
        FOR UPDATE
@@ -135,7 +135,7 @@ async function drawCard(
 
   if (card.rowCount) {
     await client.query(
-      `UPDATE game_cards
+      `UPDATE game.cards
        SET zone='hand',owner_player_id=$2,deck_order=NULL
        WHERE id=$1`,
       [card.rows[0].id, playerId],
@@ -150,7 +150,7 @@ async function evaluateRoundTroopObjectiveWinners(
   const players = (
     await client.query<{ id: string }>(
       `SELECT id
-       FROM room_players
+       FROM game.players
        WHERE room_id=$1 AND turn_position IS NOT NULL
        ORDER BY turn_position,id`,
       [roomId],
@@ -184,14 +184,14 @@ export async function executeRollOrderDie(
 
   const players = (
     await client.query<OrderPlayer>(
-      "SELECT id FROM room_players WHERE room_id=$1 ORDER BY joined_at,id",
+      "SELECT id FROM game.players WHERE room_id=$1 ORDER BY joined_at,id",
       [room.id],
     )
   ).rows;
   const rolls = (
     await client.query<CommandOrderRoll>(
       `SELECT player_id,roll_round,value,rolled_at
-       FROM game_order_rolls
+       FROM game.order_rolls
        WHERE room_id=$1
        ORDER BY roll_round,rolled_at`,
       [room.id],
@@ -224,7 +224,7 @@ export async function executeRollOrderDie(
 
   const die = randomInt(1, 7);
   await client.query(
-    `INSERT INTO game_order_rolls(room_id,player_id,roll_round,value)
+    `INSERT INTO game.order_rolls(room_id,player_id,roll_round,value)
      VALUES($1,$2,$3,$4)`,
     [room.id, player.id, room.order_roll_round, die],
   );
@@ -256,13 +256,13 @@ export async function executePhaseAction(
     }
 
     await client.query(
-      `UPDATE game_territories
+      `UPDATE game.territories
        SET moved_in_turn=0
        WHERE room_id=$1 AND owner_player_id=$2`,
       [room.id, player.id],
     );
     await client.query(
-      "UPDATE game_rooms SET phase='maneuver' WHERE id=$1",
+      "UPDATE game.rooms SET phase='maneuver' WHERE id=$1",
       [room.id],
     );
     return null;
@@ -282,12 +282,12 @@ export async function executePhaseAction(
     (
       await client.query<{ id: string; turn_position: number | null }>(
         `SELECT p.id,p.turn_position
-         FROM room_players p
+         FROM game.players p
          WHERE p.room_id=$1
-           AND p.turn_position>(SELECT turn_position FROM room_players WHERE id=$2)
+           AND p.turn_position>(SELECT turn_position FROM game.players WHERE id=$2)
            AND EXISTS(
              SELECT 1
-             FROM game_territories
+             FROM game.territories
              WHERE room_id=$1 AND owner_player_id=p.id
            )
          ORDER BY p.turn_position
@@ -298,11 +298,11 @@ export async function executePhaseAction(
     (
       await client.query<{ id: string; turn_position: number | null }>(
         `SELECT p.id,p.turn_position
-         FROM room_players p
+         FROM game.players p
          WHERE p.room_id=$1
            AND EXISTS(
              SELECT 1
-             FROM game_territories
+             FROM game.territories
              WHERE room_id=$1 AND owner_player_id=p.id
            )
          ORDER BY p.turn_position
@@ -316,7 +316,7 @@ export async function executePhaseAction(
   }
 
   await client.query(
-    "UPDATE game_territories SET moved_in_turn=0 WHERE room_id=$1",
+    "UPDATE game.territories SET moved_in_turn=0 WHERE room_id=$1",
     [room.id],
   );
 
@@ -338,7 +338,7 @@ export async function executePhaseAction(
   }
 
   await client.query(
-    `UPDATE game_rooms
+    `UPDATE game.rooms
      SET current_player_id=$2,turn_number=turn_number+1,
          reinforcements_remaining=0,conquered_this_turn=FALSE
      WHERE id=$1`,

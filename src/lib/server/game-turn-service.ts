@@ -12,7 +12,7 @@ export async function beginReinforcementForPlayer(
   const owned = (
     await client.query<{ territory_id: number }>(
       `SELECT territory_id
-       FROM game_territories
+       FROM game.territories
        WHERE room_id=$1 AND owner_player_id=$2`,
       [roomId, playerId],
     )
@@ -23,7 +23,7 @@ export async function beginReinforcementForPlayer(
   );
 
   await client.query(
-    `UPDATE game_rooms
+    `UPDATE game.rooms
      SET phase='reinforcement',reinforcements_remaining=$2
      WHERE id=$1`,
     [roomId, reinforcements],
@@ -41,8 +41,8 @@ export async function beginPlayerTurnPhase(
     await client.query<{ is_bot: boolean; card_count: number }>(
       `SELECT p.is_bot,
               COUNT(c.id)::int card_count
-       FROM room_players p
-       LEFT JOIN game_cards c
+       FROM game.players p
+       LEFT JOIN game.cards c
          ON c.room_id=p.room_id
         AND c.owner_player_id=p.id
         AND c.zone='hand'
@@ -57,19 +57,19 @@ export async function beginPlayerTurnPhase(
   }
 
   await client.query(
-    `UPDATE game_player_trade_offers
+    `UPDATE game.trade_offers
      SET status='cancelled',resolved_at=NOW()
      WHERE room_id=$1 AND status IN ('open','countered')`,
     [roomId],
   );
   await client.query(
-    `UPDATE game_rooms
+    `UPDATE game.rooms
      SET trade_offers_used=0
      WHERE id=$1`,
     [roomId],
   );
   await client.query(
-    `UPDATE room_players
+    `UPDATE game.players
      SET trade_signals_used=0
      WHERE room_id=$1`,
     [roomId],
@@ -77,7 +77,7 @@ export async function beginPlayerTurnPhase(
 
   if (!player.is_bot && player.card_count > 0) {
     await client.query(
-      `UPDATE game_rooms
+      `UPDATE game.rooms
        SET phase='trade',reinforcements_remaining=0
        WHERE id=$1`,
       [roomId],
