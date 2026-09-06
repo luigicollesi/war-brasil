@@ -17,6 +17,10 @@ import {
 } from "../.test-build/game-barrier-rules.js";
 import { buildGameGuidePresentation } from "../.test-build/game-guide-presentation.js";
 import { TERRITORY_METADATA } from "../.test-build/game-config.js";
+import {
+  PLAYER_TRADE_OFFER_LIMIT,
+  PLAYER_TRADE_SIGNAL_LIMIT,
+} from "../.test-build/shared/game-trade-rules.js";
 import { PLAYER_COLORS } from "../.test-build/lobby.js";
 import {
   eligibleOrderPlayerIds,
@@ -47,6 +51,8 @@ test("limites compartilhados do manual são as mesmas constantes do domínio", (
 
   assert.equal(PLAYER_COLORS.length, 6);
   assert.equal(guide.setup.initialTroopsPerTerritory, MIN_TERRITORY_TROOPS);
+  assert.equal(guide.playerTrade.offerLimitPerTurn, PLAYER_TRADE_OFFER_LIMIT);
+  assert.equal(guide.playerTrade.signalLimitPerTurn, PLAYER_TRADE_SIGNAL_LIMIT);
   assert.equal(guide.conquest.minimumMove, MIN_TERRITORY_TROOPS);
   assert.equal(guide.conquest.minimumTroopsLeftAtOrigin, MIN_TERRITORY_TROOPS);
   assert.equal(guide.maneuver.minimumTroopsLeftAtOrigin, MIN_TERRITORY_TROOPS);
