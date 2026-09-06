@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { JurassicTunnelConnection } from "@/src/components/jurassic-tunnel-connection";
 import { RoadNetwork } from "@/src/components/road-network";
 import {
@@ -337,7 +337,7 @@ export function InteractiveBoard({
     onSelectRef.current = onSelect;
   }, [onSelect]);
 
-  const clearHoveredTerritory = () => {
+  const clearHoveredTerritory = useCallback(() => {
     const previousId = hoveredTerritoryRef.current;
     if (previousId !== null) {
       const previousNodes = visualNodesByIdRef.current.get(previousId);
@@ -345,11 +345,11 @@ export function InteractiveBoard({
     }
     hoveredTerritoryRef.current = null;
     setHoveredTerritory(null);
-  };
+  }, []);
 
   useEffect(() => {
     if (presentationActive) clearHoveredTerritory();
-  }, [presentationActive]);
+  }, [clearHoveredTerritory, presentationActive]);
 
   useEffect(
     () => () => {
