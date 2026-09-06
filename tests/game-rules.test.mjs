@@ -90,7 +90,7 @@ test("snapshot consulta objetivo e cartas somente do jogador da sessão", () => 
 
 test("mutações críticas bloqueiam a sala antes de alterar o estado", () => {
   const source = readFileSync("src/lib/server/game-command.ts", "utf8");
-  assert.match(source, /SELECT id,revision FROM game_rooms WHERE id=\$1 FOR UPDATE/);
+  assert.match(source, /SELECT id,revision FROM game\.rooms WHERE id=\$1 FOR UPDATE/);
   assert.match(source, /await client\.query\("BEGIN"\)/);
 });
 
@@ -187,7 +187,7 @@ test("backend da manobra recalcula a melhor rota usando a topologia efetiva", ()
   assert.doesNotMatch(source, /getPassableTerritoryConnections/);
   assert.doesNotMatch(source, /getBaseTerritoryConnections/);
   assert.doesNotMatch(source, /effectiveTerritoryConnections/);
-  assert.doesNotMatch(source, /FROM territory_connections/);
+  assert.doesNotMatch(source, /FROM catalog\.territory_connections/);
 });
 
 test("modal de troca renderiza as cartas da mão", () => {
