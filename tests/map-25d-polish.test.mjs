@@ -4,6 +4,10 @@ import test from "node:test";
 
 const board = readFileSync("src/components/interactive-board.tsx", "utf8");
 const zoom = readFileSync("src/components/map-zoom-controller.tsx", "utf8");
+const interaction = readFileSync(
+  "src/lib/client/map/territory-svg-interaction.ts",
+  "utf8",
+);
 const visualState = readFileSync(
   "src/lib/client/map/territory-visual-state.ts",
   "utf8",
@@ -31,6 +35,14 @@ test("hover e seleção tratam face e profundidade como uma única peça visual"
   assert.match(board, /applyTerritoryHoverState\(nextNodes, true\)/);
   assert.match(board, /applyTerritoryVisualState\(nodes,/);
   assert.doesNotMatch(board, /applyTerritoryHoverState\(previousNodes\.face/);
+});
+
+test("laterais continuam ponteiro-interativas sem duplicar semântica acessível", () => {
+  assert.match(interaction, /surface !== nodes\.face/);
+  assert.match(interaction, /surface\.setAttribute\("aria-hidden", "true"\)/);
+  assert.match(interaction, /surface\.removeAttribute\("tabindex"\)/);
+  assert.match(interaction, /surface\.removeAttribute\("role"\)/);
+  assert.match(interaction, /surface\.style\.pointerEvents = "visiblePainted"/);
 });
 
 test("tokens de tropas compartilham linguagem material em desktop e mobile", () => {
