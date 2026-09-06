@@ -7,8 +7,8 @@ import {
   serverEvent,
 } from "../protocol.mjs";
 
-test("protocol mantém subprotocolo v1 e valida notification mínima", () => {
-  assert.equal(GAME_REALTIME_SUBPROTOCOL, "war-brasil.v1");
+test("protocol mantém subprotocolo v2 e valida notification mínima", () => {
+  assert.equal(GAME_REALTIME_SUBPROTOCOL, "war-brasil.v2");
   assert.deepEqual(
     parseNotificationPayload(JSON.stringify({ roomId: "12", revision: 4 })),
     { kind: "invalidate", scope: "room", roomId: "12", revision: 4 },
@@ -75,7 +75,7 @@ test("protocol valida escopo privado e exige playerId", () => {
   );
 });
 
-test("protocol aceita patch público estrito e rejeita campos privados", () => {
+test("protocol aceita patch público v2 completo e rejeita campos privados", () => {
   const patch = parseNotificationPayload(
     JSON.stringify({
       kind: "patch",
@@ -84,8 +84,42 @@ test("protocol aceita patch público estrito e rejeita campos privados", () => {
       baseRevision: 4,
       revision: 5,
       patch: {
-        room: { phase: "attack", reinforcementsRemaining: 0 },
-        territories: [{ territoryId: 7, troops: 4 }],
+        room: {
+          phase: "attack",
+          currentPlayerId: "7",
+          turnNumber: 3,
+          roundNumber: 2,
+          jurassicTunnelDestinationId: 14,
+          reinforcementsRemaining: 0,
+          automaticAdvancePending: false,
+          pendingConquest: { fromTerritoryId: 2, toTerritoryId: 3 },
+          battle: {
+            attacker: [6, 4],
+            defender: [5],
+            attackerLosses: 0,
+            defenderLosses: 1,
+            conquered: false,
+            attackerTerritoryId: 2,
+            defenderTerritoryId: 3,
+            attackerPlayerId: "7",
+            defenderPlayerId: "8",
+            stage: "show_battle_result",
+            stageStartedAt: "2026-09-06T07:00:00.000Z",
+            attackMode: "normal",
+            barrierName: null,
+            attackerTroopsAfter: 5,
+            defenderTroopsAfter: 1,
+          },
+        },
+        territories: [
+          {
+            territoryId: 3,
+            ownerPlayerId: "7",
+            ownerColor: "forest",
+            troops: 2,
+            movedInTurn: 0,
+          },
+        ],
       },
     }),
   );
@@ -94,7 +128,9 @@ test("protocol aceita patch público estrito e rejeita campos privados", () => {
   assert.equal(patch.scope, "room");
   assert.equal(patch.baseRevision, 4);
   assert.equal(patch.revision, 5);
-  assert.equal(patch.patch.territories[0].troops, 4);
+  assert.equal(patch.patch.room.currentPlayerId, "7");
+  assert.equal(patch.patch.room.battle.stage, "show_battle_result");
+  assert.equal(patch.patch.territories[0].ownerColor, "forest");
 
   assert.equal(
     parseNotificationPayload(
@@ -124,6 +160,31 @@ test("protocol aceita patch público estrito e rejeita campos privados", () => {
   );
 });
 
+test("protocol aceita patches parciais de ownership sem exigir troops", () => {
+  const patch = parseNotificationPayload(
+    JSON.stringify({
+      kind: "patch",
+      scope: "room",
+      roomId: "12",
+      baseRevision: 5,
+      revision: 6,
+      patch: {
+        territories: [
+          {
+            territoryId: 9,
+            ownerPlayerId: "8",
+            ownerColor: "ocean",
+          },
+        ],
+      },
+    }),
+  );
+
+  assert.equal(patch.kind, "patch");
+  assert.equal(patch.patch.territories[0].ownerPlayerId, "8");
+  assert.equal(patch.patch.territories[0].ownerColor, "ocean");
+});
+
 test("protocol rejeita patch com escopo privado", () => {
   assert.equal(
     parseNotificationPayload(
@@ -139,6 +200,27 @@ test("protocol rejeita patch com escopo privado", () => {
     ),
     null,
   );
+});
+
+test("protocol aceita patch privado somente no escopo do jogador", () => {
+  const event = parseNotificationPayload(
+    JSON.stringify({
+      kind: "private_patch",
+      scope: "player",
+      playerId: "7",
+      roomId: "12",
+      baseRevision: 5,
+      revision: 6,
+      patch: {
+        myCards: [{ id: "41", territoryId: null, symbol: "wild" }],
+      },
+    }),
+  );
+
+  assert.equal(event.kind, "patch");
+  assert.equal(event.scope, "player");
+  assert.equal(event.playerId, "7");
+  assert.equal(event.patch.myCards[0].id, "41");
 });
 
 test("protocol aceita resolução efêmera de negociação e rejeita outcome inválido", () => {
@@ -185,9 +267,9 @@ test("protocol aceita resolução efêmera de negociação e rejeita outcome inv
   );
 });
 
-test("protocol aceita apenas ping da própria sala", () => {
+test("protocol aceita apenas ping v2 da própria sala", () => {
   const message = JSON.stringify({
-    protocolVersion: 1,
+    protocolVersion: 2,
     type: "realtime.ping",
     roomId: "12",
     clientTime: 1000,
@@ -201,11 +283,25 @@ test("protocol aceita apenas ping da própria sala", () => {
     nonce: "n1",
   });
   assert.equal(parseClientMessage(message, "13"), null);
+
+  assert.equal(
+    parseClientMessage(
+      JSON.stringify({
+        protocolVersion: 1,
+        type: "realtime.ping",
+        roomId: "12",
+        clientTime: 1000,
+        nonce: "legacy",
+      }),
+      "12",
+    ),
+    null,
+  );
 });
 
-test("server event inclui versão, sala e serverTime", () => {
+test("server event inclui versão v2, sala e serverTime", () => {
   const event = JSON.parse(serverEvent("game.invalidate", "12", { revision: 5 }));
-  assert.equal(event.protocolVersion, 1);
+  assert.equal(event.protocolVersion, 2);
   assert.equal(event.roomId, "12");
   assert.equal(event.payload.revision, 5);
   assert.equal(typeof event.serverTime, "number");
