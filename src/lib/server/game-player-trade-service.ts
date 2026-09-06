@@ -169,7 +169,7 @@ async function loadRoom(client: PoolClient, roomId: string, lock = false) {
   const room = (
     await client.query<TradeRoom>(
       `SELECT id,status,phase,current_player_id,turn_number,trade_offers_used
-       FROM game_rooms
+       FROM game.rooms
        WHERE id=$1${lock ? " FOR UPDATE" : ""}`,
       [roomId],
     )
@@ -188,7 +188,7 @@ async function loadPlayer(
   return (
     await client.query<TradePlayer>(
       `SELECT id,is_bot,turn_position,trade_signals_used
-       FROM room_players
+       FROM game.players
        WHERE room_id=$1 AND id=$2${lock ? " FOR UPDATE" : ""}`,
       [roomId, playerId],
     )
@@ -203,7 +203,7 @@ async function playerBySession(
   return (
     await client.query<TradePlayer>(
       `SELECT id,is_bot,turn_position,trade_signals_used
-       FROM room_players
+       FROM game.players
        WHERE room_id=$1 AND player_session=$2
        FOR UPDATE`,
       [roomId, session],
@@ -266,7 +266,7 @@ async function loadHandCard(
   const card = (
     await client.query<TradeCardRow>(
       `SELECT id,owner_player_id,territory_id,symbol,is_wild,zone
-       FROM game_cards
+       FROM game.cards
        WHERE room_id=$1 AND id=$2
        FOR UPDATE`,
       [roomId, cardId],
@@ -297,7 +297,7 @@ async function matchingHandCards(
   return (
     await client.query<TradeCardRow>(
       `SELECT id,owner_player_id,territory_id,symbol,is_wild,zone
-       FROM game_cards
+       FROM game.cards
        WHERE room_id=$1
          AND owner_player_id=$2
          AND zone='hand'
@@ -349,7 +349,7 @@ async function activeOffer(client: PoolClient, roomId: string) {
               counter_offered_kind,counter_offered_territory_id,counter_offered_symbol,
               counter_requested_kind,counter_requested_territory_id,counter_requested_symbol,
               accepted_terms,proposer_selected_card_id,responder_selected_card_id
-       FROM game_player_trade_offers
+       FROM game.trade_offers
        WHERE room_id=$1
          AND status IN ('open','countered','accepted_pending_selection')
        ORDER BY id DESC
@@ -406,7 +406,7 @@ async function swapCards(
   }
 
   await client.query(
-    `UPDATE game_cards
+    `UPDATE game.cards
      SET owner_player_id=CASE
        WHEN id=$2 THEN $4::bigint
        WHEN id=$3 THEN $5::bigint
@@ -461,7 +461,7 @@ async function finalizeAcceptedTrade(
   );
 
   await client.query(
-    `UPDATE game_player_trade_offers
+    `UPDATE game.trade_offers
      SET status='accepted',
          responder_player_id=$3,
          accepted_terms=$4,
@@ -530,7 +530,7 @@ async function beginAcceptedTrade(
   }
 
   await client.query(
-    `UPDATE game_player_trade_offers
+    `UPDATE game.trade_offers
      SET status='accepted_pending_selection',
          responder_player_id=$3,
          accepted_terms=$4,
@@ -587,7 +587,7 @@ async function createOffer(
 
   const inserted = (
     await client.query<{ id: string }>(
-      `INSERT INTO game_player_trade_offers(
+      `INSERT INTO game.trade_offers(
          room_id,turn_number,proposer_player_id,target_player_id,
          offered_kind,offered_territory_id,offered_symbol,
          requested_kind,requested_territory_id,requested_symbol
@@ -610,7 +610,7 @@ async function createOffer(
   ).rows[0];
 
   await client.query(
-    `UPDATE game_rooms
+    `UPDATE game.rooms
      SET trade_offers_used=trade_offers_used+1
      WHERE id=$1`,
     [room.id],
@@ -660,7 +660,7 @@ async function counterOffer(
   const requestedColumns = descriptorColumns(requested);
 
   await client.query(
-    `UPDATE game_player_trade_offers
+    `UPDATE game.trade_offers
      SET status='countered',responder_player_id=$3,
          counter_offered_kind=$4,counter_offered_territory_id=$5,counter_offered_symbol=$6,
          counter_requested_kind=$7,counter_requested_territory_id=$8,counter_requested_symbol=$9
@@ -760,7 +760,7 @@ async function selectAcceptedCard(
   }
 
   await client.query(
-    `UPDATE game_player_trade_offers
+    `UPDATE game.trade_offers
      SET ${column}=$3
      WHERE room_id=$1 AND id=$2 AND status='accepted_pending_selection'`,
     [room.id, offer.id, card.id],
@@ -798,7 +798,7 @@ async function closeOffer(
   }
 
   await client.query(
-    `UPDATE game_player_trade_offers
+    `UPDATE game.trade_offers
      SET status=$3,resolved_at=NOW()
      WHERE room_id=$1 AND id=$2`,
     [room.id, offer.id, status],
@@ -913,7 +913,7 @@ export async function signalPlayerTradeCard(
 
     const signalsUsed = player.trade_signals_used + 1;
     await client.query(
-      `UPDATE room_players
+      `UPDATE game.players
        SET trade_signals_used=$3
        WHERE room_id=$1 AND id=$2`,
       [room.id, player.id, signalsUsed],
