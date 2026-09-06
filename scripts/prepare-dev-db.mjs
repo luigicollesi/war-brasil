@@ -90,7 +90,8 @@ try {
   const baseSchema = await client.query(`
     SELECT
       to_regclass('public.game_rooms') IS NOT NULL
-      OR to_regclass('game.game_rooms') IS NOT NULL AS exists
+      OR to_regclass('game.game_rooms') IS NOT NULL
+      OR to_regclass('game.rooms') IS NOT NULL AS exists
   `);
   if (!baseSchema.rows[0]?.exists) {
     throw new Error(
