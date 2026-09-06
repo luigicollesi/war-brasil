@@ -10,8 +10,8 @@ test("estado estratégico lê somente objetivo e cartas privadas do próprio bot
   const stateService = source("src/lib/server/bots/bot-state-service.ts");
   assert.match(stateService, /WHERE a\.room_id=\$1 AND a\.player_id=\$2/);
   assert.match(stateService, /owner_player_id=\$2 AND zone='hand'/);
-  assert.doesNotMatch(stateService, /SELECT[\s\S]*game_player_objectives[\s\S]*WHERE a\.room_id=\$1\s*(?:ORDER|$)/);
-  assert.doesNotMatch(stateService, /SELECT[\s\S]*game_cards[\s\S]*WHERE room_id=\$1\s*(?:ORDER|$)/);
+  assert.doesNotMatch(stateService, /SELECT[\s\S]*game\.player_objectives[\s\S]*WHERE a\.room_id=\$1\s*(?:ORDER|$)/);
+  assert.doesNotMatch(stateService, /SELECT[\s\S]*game\.cards[\s\S]*WHERE room_id=\$1\s*(?:ORDER|$)/);
 });
 
 test("estratégia permanece pura e não abre transação nem chama HTTP", () => {
