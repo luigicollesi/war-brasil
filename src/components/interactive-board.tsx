@@ -14,11 +14,17 @@ import {
 import { TerritorySpecialMarkers } from "@/src/components/territory-special-markers";
 import { territoryMaterial } from "@/src/lib/client/map/territory-material";
 import {
+  prepareTerritoryInteractiveSurfaces,
+  territoryIdFromEvent,
+  territoryIdFromNode,
+} from "@/src/lib/client/map/territory-svg-interaction";
+import {
   applyTerritoryMaterial,
   collectTerritoryVisualNodes,
   type TerritoryVisualNodes,
 } from "@/src/lib/client/map/territory-svg-nodes";
 import {
+  applyTerritoryHoverState,
   applyTerritoryVisualState,
   ensureTerritoryRuntimeStyles,
 } from "@/src/lib/client/map/territory-visual-state";
@@ -208,14 +214,6 @@ function readTerritory(path: SVGPathElement): TerritoryDetails {
   };
 }
 
-function territoryPathFromEvent(event: Event, root: Element) {
-  const target = event.target as {
-    closest?: (selector: string) => Element | null;
-  } | null;
-  const path = target?.closest?.("path.territory") as SVGPathElement | null;
-  return path && root.contains(path) ? path : null;
-}
-
 export function InteractiveBoard({
   territories,
   connections = [],
@@ -311,11 +309,12 @@ export function InteractiveBoard({
   function initializeBoard() {
     cleanupBoardRef.current?.();
     const mapDocument = boardRef.current?.contentDocument;
-    const root = mapDocument?.querySelector("#territories");
-    if (!mapDocument || !root) return;
+    const faceRoot = mapDocument?.querySelector("#territories");
+    const root = mapDocument?.querySelector("#board") ?? mapDocument?.documentElement;
+    if (!mapDocument || !faceRoot || !root) return;
 
     const paths = Array.from(
-      root.querySelectorAll<SVGPathElement>("path.territory"),
+      faceRoot.querySelectorAll<SVGPathElement>("path.territory"),
     );
     if (!paths.length) return;
 
@@ -334,64 +333,104 @@ export function InteractiveBoard({
       path.style.cursor = "pointer";
     }
 
+    const nextVisualNodes = collectTerritoryVisualNodes(mapDocument, paths);
+    prepareTerritoryInteractiveSurfaces(nextVisualNodes);
+
     pathsByIdRef.current = nextPaths;
-    visualNodesByIdRef.current = collectTerritoryVisualNodes(mapDocument, paths);
+    visualNodesByIdRef.current = nextVisualNodes;
     materialSignatureRef.current.clear();
     visualSignatureRef.current.clear();
+    hoveredTerritoryRef.current = null;
+    setHoveredTerritory(null);
     setGeometries(nextGeometries);
 
+    const setHoveredTerritoryId = (nextId: number | null) => {
+      const previousId = hoveredTerritoryRef.current;
+      if (previousId === nextId) return;
+
+      if (previousId !== null) {
+        const previousNodes = visualNodesByIdRef.current.get(previousId);
+        if (previousNodes) applyTerritoryHoverState(previousNodes.face, false);
+      }
+
+      if (nextId === null) {
+        hoveredTerritoryRef.current = null;
+        setHoveredTerritory(null);
+        return;
+      }
+
+      const nextNodes = visualNodesByIdRef.current.get(nextId);
+      if (!nextNodes) {
+        hoveredTerritoryRef.current = null;
+        setHoveredTerritory(null);
+        return;
+      }
+
+      hoveredTerritoryRef.current = nextId;
+      applyTerritoryHoverState(nextNodes.face, true);
+      setHoveredTerritory({
+        id: nextId,
+        details: readTerritory(nextNodes.face),
+      });
+    };
+
     const click = (event: Event) => {
-      const path = territoryPathFromEvent(event, root);
-      if (path) onSelectRef.current?.(Number(path.dataset.id));
+      const id = territoryIdFromEvent(event, root);
+      if (id !== null) onSelectRef.current?.(id);
     };
     const keyDown = (event: Event) => {
       const keyboardEvent = event as KeyboardEvent;
       if (keyboardEvent.key !== "Enter" && keyboardEvent.key !== " ") return;
-      const path = territoryPathFromEvent(event, root);
-      if (!path) return;
+      const id = territoryIdFromEvent(event, faceRoot);
+      if (id === null) return;
       keyboardEvent.preventDefault();
-      onSelectRef.current?.(Number(path.dataset.id));
+      onSelectRef.current?.(id);
     };
     const pointerOver = (event: Event) => {
-      const path = territoryPathFromEvent(event, root);
-      if (!path) return;
-      const id = Number(path.dataset.id);
-      hoveredTerritoryRef.current = id;
-      setHoveredTerritory((current) =>
-        current?.id === id ? current : { id, details: readTerritory(path) },
-      );
+      const id = territoryIdFromEvent(event, root);
+      if (id === null) return;
+      setHoveredTerritoryId(id);
       scheduleTooltipPosition(event as PointerEvent);
     };
     const pointerMove = (event: Event) => {
-      if (
-        hoveredTerritoryRef.current === null &&
-        !territoryPathFromEvent(event, root)
-      ) {
+      const id = territoryIdFromEvent(event, root);
+      if (id === null) {
+        if (hoveredTerritoryRef.current === null) return;
         return;
       }
+      setHoveredTerritoryId(id);
       scheduleTooltipPosition(event as PointerEvent);
     };
     const pointerOut = (event: Event) => {
-      const path = territoryPathFromEvent(event, root);
-      if (!path) return;
-      const related = (event as PointerEvent).relatedTarget as Node | null;
-      if (related && path.contains(related)) return;
-      hoveredTerritoryRef.current = null;
-      setHoveredTerritory(null);
+      const fromId = territoryIdFromEvent(event, root);
+      if (fromId === null) return;
+
+      const related = (event as PointerEvent).relatedTarget;
+      const toId = territoryIdFromNode(related, root);
+      if (fromId === toId) return;
+
+      setHoveredTerritoryId(toId);
     };
 
     root.addEventListener("click", click);
-    root.addEventListener("keydown", keyDown);
+    faceRoot.addEventListener("keydown", keyDown);
     root.addEventListener("pointerover", pointerOver);
     root.addEventListener("pointermove", pointerMove);
     root.addEventListener("pointerout", pointerOut);
 
     cleanupBoardRef.current = () => {
       root.removeEventListener("click", click);
-      root.removeEventListener("keydown", keyDown);
+      faceRoot.removeEventListener("keydown", keyDown);
       root.removeEventListener("pointerover", pointerOver);
       root.removeEventListener("pointermove", pointerMove);
       root.removeEventListener("pointerout", pointerOut);
+
+      const hoveredId = hoveredTerritoryRef.current;
+      if (hoveredId !== null) {
+        const nodes = visualNodesByIdRef.current.get(hoveredId);
+        if (nodes) applyTerritoryHoverState(nodes.face, false);
+      }
+      hoveredTerritoryRef.current = null;
     };
   }
 
