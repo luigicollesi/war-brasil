@@ -39,9 +39,10 @@ test("eventos de face e profundidade são normalizados por territoryId", () => {
 test("hover é semântico e não reinicia entre face e lateral do mesmo território", () => {
   assert.match(board, /if \(previousId === nextId\) return/);
   assert.match(board, /if \(fromId === toId\) return/);
-  assert.match(board, /applyTerritoryHoverState\(previousNodes\.face, false\)/);
-  assert.match(board, /applyTerritoryHoverState\(nextNodes\.face, true\)/);
+  assert.match(board, /applyTerritoryHoverState\(previousNodes, false\)/);
+  assert.match(board, /applyTerritoryHoverState\(nextNodes, true\)/);
   assert.match(visualState, /\.territory\.is-hovered/);
+  assert.match(visualState, /\.territory-depth\.is-hovered/);
 });
 
 test("teclado permanece restrito às faces enquanto ponteiro usa a raiz 2.5D", () => {
