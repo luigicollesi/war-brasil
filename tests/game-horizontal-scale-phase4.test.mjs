@@ -75,7 +75,9 @@ test("automation claims are durable operational metadata, not game revisions", (
   assert.match(migration, /automation_claimed_by TEXT/);
   assert.match(migration, /automation_claimed_until TIMESTAMPTZ/);
   assert.match(migration, /game_rooms_automation_claim_idx/);
-  assert.match(prepareDevDb, /020-automation-worker-claims\.sql/);
+  assert.match(prepareDevDb, /src\/lib\/db\/migrations\/managed/);
+  assert.match(prepareDevDb, /ops\.pgmigrations/);
+  assert.doesNotMatch(prepareDevDb, /020-automation-worker-claims\.sql/);
   assert.match(worker, /CLAIM_DUE_AUTOMATION_SQL/);
   assert.match(worker, /RELEASE_AUTOMATION_CLAIM_SQL/);
   assert.match(worker, /runWithConcurrency/);
