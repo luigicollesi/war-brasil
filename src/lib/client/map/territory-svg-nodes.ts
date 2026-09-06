@@ -1,5 +1,11 @@
 import type { TerritoryMaterial } from "@/src/lib/client/map/territory-material";
 
+const EXPECTED_TERRITORY_COUNT = 42;
+const EXPECTED_FACE_STOPS = 5;
+const EXPECTED_SIDE_STOPS = 3;
+const EXPECTED_DEPTH_LAYERS = [1, 2, 3, 4] as const;
+const MASK_REFERENCE = /^url\(#([^)]+)\)$/;
+
 export type TerritoryVisualNodes = {
   face: SVGPathElement;
   faceStops: SVGStopElement[];
@@ -13,6 +19,121 @@ export type TerritoryVisualNodes = {
 
 function territorySelector(id: number, selector: string) {
   return `${selector}[data-territory-id="${id}"]`;
+}
+
+function depthLayer(path: SVGPathElement) {
+  return Number(path.dataset.layer?.replace("depth-", "")) || 0;
+}
+
+function maskId(path: SVGPathElement) {
+  const reference = path.getAttribute("mask")?.trim();
+  return reference ? MASK_REFERENCE.exec(reference)?.[1] ?? null : null;
+}
+
+function validateMaskContract(
+  document: Document,
+  path: SVGPathElement,
+  expectedMaskId: string,
+  label: string,
+  issues: string[],
+) {
+  const actualMaskId = maskId(path);
+  if (actualMaskId !== expectedMaskId) {
+    issues.push(`${label}: expected mask ${expectedMaskId}, received ${actualMaskId ?? "none"}`);
+    return;
+  }
+
+  const mask = document.getElementById(expectedMaskId);
+  const geometry = mask?.querySelectorAll<SVGGeometryElement>("path") ?? [];
+  if (!mask || geometry.length !== 1) {
+    issues.push(`${label}: mask ${expectedMaskId} must contain exactly one path`);
+    return;
+  }
+
+  const maskPath = geometry[0];
+  const fill = maskPath.getAttribute("fill")?.toLowerCase();
+  const stroke = maskPath.getAttribute("stroke")?.toLowerCase();
+  const strokeWidth = Number(maskPath.getAttribute("stroke-width"));
+  if (fill !== "#fff" || stroke !== "#000" || !Number.isFinite(strokeWidth) || strokeWidth <= 0) {
+    issues.push(
+      `${label}: mask ${expectedMaskId} must use white fill and a positive black erosion stroke`,
+    );
+  }
+}
+
+export function validateTerritoryVisualRegistry(
+  document: Document,
+  registry: ReadonlyMap<number, TerritoryVisualNodes>,
+): string[] {
+  const issues: string[] = [];
+  const svg = document.documentElement;
+
+  if (svg.getAttribute("viewBox") !== "0 0 1254 1254") {
+    issues.push(`map viewBox must be 0 0 1254 1254`);
+  }
+  if (svg.getAttribute("data-layout") !== "2.5d-premium-v2") {
+    issues.push(`map data-layout must be 2.5d-premium-v2`);
+  }
+  if (!document.getElementById("board-v2")) {
+    issues.push(`map interaction root #board-v2 is missing`);
+  }
+  if (registry.size !== EXPECTED_TERRITORY_COUNT) {
+    issues.push(
+      `expected ${EXPECTED_TERRITORY_COUNT} territories, received ${registry.size}`,
+    );
+  }
+
+  for (let id = 1; id <= EXPECTED_TERRITORY_COUNT; id += 1) {
+    const nodes = registry.get(id);
+    if (!nodes) {
+      issues.push(`territory ${id}: visual registry entry is missing`);
+      continue;
+    }
+
+    if (Number(nodes.face.dataset.id) !== id || Number(nodes.face.dataset.territoryId) !== id) {
+      issues.push(`territory ${id}: face data identifiers are inconsistent`);
+    }
+    if (nodes.faceStops.length !== EXPECTED_FACE_STOPS) {
+      issues.push(
+        `territory ${id}: expected ${EXPECTED_FACE_STOPS} face gradient stops, received ${nodes.faceStops.length}`,
+      );
+    }
+    if (nodes.sideStops.length !== EXPECTED_SIDE_STOPS) {
+      issues.push(
+        `territory ${id}: expected ${EXPECTED_SIDE_STOPS} side gradient stops, received ${nodes.sideStops.length}`,
+      );
+    }
+
+    const layers = nodes.depths.map(depthLayer);
+    if (
+      layers.length !== EXPECTED_DEPTH_LAYERS.length ||
+      layers.some((layer, index) => layer !== EXPECTED_DEPTH_LAYERS[index])
+    ) {
+      issues.push(
+        `territory ${id}: expected depth layers 1,2,3,4, received ${layers.join(",") || "none"}`,
+      );
+    }
+
+    validateMaskContract(
+      document,
+      nodes.face,
+      `face-mask-${id}`,
+      `territory ${id} face`,
+      issues,
+    );
+    for (const depth of nodes.depths) {
+      const layer = depthLayer(depth);
+      validateMaskContract(
+        document,
+        depth,
+        `body-mask-${id}-${layer}`,
+        `territory ${id} depth ${layer}`,
+        issues,
+      );
+    }
+  }
+
+  return issues;
 }
 
 export function collectTerritoryVisualNodes(
@@ -35,11 +156,7 @@ export function collectTerritoryVisualNodes(
       document.querySelectorAll<SVGPathElement>(
         territorySelector(id, "path.territory-depth"),
       ),
-    ).sort((left, right) => {
-      const leftLayer = Number(left.dataset.layer?.replace("depth-", "")) || 0;
-      const rightLayer = Number(right.dataset.layer?.replace("depth-", "")) || 0;
-      return leftLayer - rightLayer;
-    });
+    ).sort((left, right) => depthLayer(left) - depthLayer(right));
 
     result.set(id, {
       face,
@@ -63,6 +180,13 @@ export function collectTerritoryVisualNodes(
     });
   }
 
+  if (process.env.NODE_ENV !== "production") {
+    const issues = validateTerritoryVisualRegistry(document, result);
+    if (issues.length) {
+      throw new Error(`Invalid 2.5D map visual contract:\n${issues.join("\n")}`);
+    }
+  }
+
   return result;
 }
 
@@ -82,7 +206,7 @@ export function applyTerritoryMaterial(
   });
 
   for (const depth of nodes.depths) {
-    const layer = Number(depth.dataset.layer?.replace("depth-", ""));
+    const layer = depthLayer(depth);
     if (layer === 1) {
       depth.setAttribute("fill", `url(#side-grad-${id})`);
     } else if (layer === 2) {
