@@ -102,12 +102,17 @@ test("dev realtime usa hostname do cliente e libera origins da máquina local", 
   assert.match(dev, /http:\/\/127\.0\.0\.1:/);
 });
 
-test("preparação do banco usa ledger, ordem, lock e uma transação", () => {
+test("preparação do banco usa ledger, ordem, lock, baseline e uma transação", () => {
   assert.match(prepare, /src\/lib\/db\/migrations\/managed/);
   assert.match(prepare, /migrationNamePattern/);
   assert.match(prepare, /assertMigrationHistory/);
+  assert.match(prepare, /assertMigrationBaseline/);
   assert.match(prepare, /ops\.pgmigrations/);
   assert.match(prepare, /game\.rooms/);
+  assert.match(prepare, /territory_card_symbols/);
+  assert.match(prepare, /territory_connections/);
+  assert.match(prepare, /game_player_trade_offers_state_check/);
+  assert.match(prepare, /Banco legado não corresponde ao baseline v025/);
   assert.match(prepare, /BEGIN/);
   assert.match(prepare, /pg_advisory_xact_lock/);
   assert.match(prepare, /COMMIT/);
@@ -119,7 +124,7 @@ test("preparação do banco usa ledger, ordem, lock e uma transação", () => {
   assert.doesNotMatch(prepare, /next dev|next start|setInterval|setTimeout/);
 });
 
-test("migrations 026+027 separam schemas e removem prefixos redundantes", () => {
+test("fase 1 termina com schemas físicos normalizados e views legadas", () => {
   for (const schemaName of ["game", "catalog", "ops"]) {
     assert.match(schema, new RegExp(`CREATE SCHEMA IF NOT EXISTS ${schemaName}`));
     assert.match(
@@ -128,28 +133,74 @@ test("migrations 026+027 separam schemas e removem prefixos redundantes", () => 
     );
   }
 
+  for (const tableName of [
+    "rooms",
+    "players",
+    "territories",
+    "order_rolls",
+    "rematch_votes",
+    "player_objectives",
+    "cards",
+    "trade_offers",
+    "round_events",
+  ]) {
+    assert.match(
+      schema,
+      new RegExp(`CREATE TABLE IF NOT EXISTS game\\.${tableName}\\b`),
+    );
+  }
+  assert.match(schema, /CREATE TABLE IF NOT EXISTS ops\.command_receipts\b/);
+  assert.match(schema, /CREATE TABLE IF NOT EXISTS catalog\.territory_card_symbols\b/);
+  assert.match(schema, /CREATE TABLE IF NOT EXISTS catalog\.territory_connections\b/);
+  assert.doesNotMatch(schema, /CREATE TABLE IF NOT EXISTS game\.game_rooms\b/);
+  assert.doesNotMatch(schema, /CREATE TABLE IF NOT EXISTS game\.room_players\b/);
+  assert.doesNotMatch(
+    schema,
+    /CREATE TABLE IF NOT EXISTS ops\.game_command_receipts\b/,
+  );
+
   assert.match(schemaOrganizationMigration, /ALTER TABLE public\.%I SET SCHEMA %I/);
+  assert.match(
+    schemaOrganizationMigration,
+    /'territory_card_symbols', 'catalog', 'territory_card_symbols'/,
+  );
+  assert.match(
+    schemaOrganizationMigration,
+    /'territory_connections', 'catalog', 'territory_connections'/,
+  );
+
   assert.match(schemaNamingMigration, /'game', 'game_rooms', 'rooms'/);
   assert.match(schemaNamingMigration, /'game', 'room_players', 'players'/);
   assert.match(schemaNamingMigration, /'game', 'game_territories', 'territories'/);
   assert.match(schemaNamingMigration, /'game', 'game_cards', 'cards'/);
-  assert.match(schemaNamingMigration, /'game', 'game_player_trade_offers', 'trade_offers'/);
-  assert.match(schemaNamingMigration, /'ops', 'game_command_receipts', 'command_receipts'/);
   assert.match(
     schemaNamingMigration,
-    /CREATE TABLE IF NOT EXISTS catalog\.territory_card_symbols/,
+    /'game', 'game_player_trade_offers', 'trade_offers'/,
   );
   assert.match(
     schemaNamingMigration,
-    /CREATE TABLE IF NOT EXISTS catalog\.territory_connections/,
+    /'ops', 'game_command_receipts', 'command_receipts'/,
   );
-  assert.match(
+  assert.doesNotMatch(
     schemaNamingMigration,
+    /CREATE TABLE IF NOT EXISTS catalog\.territory_(?:card_symbols|connections)/,
+  );
+  assert.match(schemaNamingMigration, /trade_offers_target_player_check/);
+  assert.match(schemaNamingMigration, /trade_offers_requested_descriptor_check/);
+  assert.match(schemaNamingMigration, /trade_offers_responder_check/);
+  assert.match(schemaNamingMigration, /trade_offers_state_check/);
+
+  assert.match(
+    schema,
     /CREATE OR REPLACE VIEW public\.game_rooms AS SELECT \* FROM game\.rooms/,
   );
   assert.match(
-    schemaNamingMigration,
+    schema,
     /CREATE OR REPLACE VIEW public\.territory_connections AS SELECT \* FROM catalog\.territory_connections/,
+  );
+  assert.match(
+    schema,
+    /CREATE OR REPLACE VIEW public\.game_command_receipts AS SELECT \* FROM ops\.command_receipts/,
   );
 });
 
