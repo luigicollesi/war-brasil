@@ -220,7 +220,7 @@ test("avaliação e snapshot usam os parâmetros resolvidos do schema atual", ()
     "src/lib/shared/objectives/objective-presentation.ts",
   );
 
-  assert.match(service, /LEFT JOIN objective_rules r ON r\.id=a\.objective_rule_id/);
+  assert.match(service, /LEFT JOIN catalog\.objective_rules r ON r\.id=a\.objective_rule_id/);
   assert.match(service, /CASE WHEN r\.objective_id=a\.objective_id THEN a\.resolved_params END/);
   assert.match(service, /withObjectiveSchemaCompatibility/);
   assert.match(snapshot, /withObjectiveSchemaCompatibility/);
