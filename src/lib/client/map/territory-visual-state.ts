@@ -62,9 +62,9 @@ export function ensureTerritoryRuntimeStyles(document: Document) {
     .territory.is-selected:hover,
     .territory.is-selected.is-hovered {
       --territory-stroke-width: 2.2;
-      stroke: #f0d473;
+      stroke: #fff0c4;
       stroke-opacity: 1;
-      filter: brightness(1.05) saturate(1.02) drop-shadow(0 0 3px rgba(217, 182, 80, .26));
+      filter: brightness(1.05) saturate(1.02) drop-shadow(0 0 3px rgba(217, 182, 80, .3));
     }
 
     .territory-depth.is-selected {
