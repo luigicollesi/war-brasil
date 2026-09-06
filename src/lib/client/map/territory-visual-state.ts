@@ -1,3 +1,5 @@
+import type { TerritoryVisualNodes } from "@/src/lib/client/map/territory-svg-nodes";
+
 const SVG_NS = "http://www.w3.org/2000/svg";
 const RUNTIME_STYLE_ID = "war-territory-runtime-style";
 
@@ -21,6 +23,10 @@ export function ensureTerritoryRuntimeStyles(document: Document) {
       stroke-width: var(--territory-render-stroke-width, var(--territory-stroke-width));
       filter: none;
       transition: stroke .14s ease, stroke-opacity .14s ease, stroke-width .14s ease, filter .14s ease;
+    }
+
+    .territory-depth {
+      transition: filter .14s ease;
     }
 
     .territory.is-available {
@@ -52,6 +58,10 @@ export function ensureTerritoryRuntimeStyles(document: Document) {
       filter: brightness(1.05) saturate(1.02);
     }
 
+    .territory-depth.is-hovered {
+      filter: brightness(1.035) saturate(1.012);
+    }
+
     .territory.is-selected,
     .territory.is-selected:hover,
     .territory.is-selected.is-hovered {
@@ -59,6 +69,14 @@ export function ensureTerritoryRuntimeStyles(document: Document) {
       stroke: #f0d473;
       stroke-opacity: 1;
       filter: brightness(1.05) saturate(1.02) drop-shadow(0 0 3px rgba(217, 182, 80, .26));
+    }
+
+    .territory-depth.is-selected {
+      filter: brightness(1.025) saturate(1.01);
+    }
+
+    .territory-depth.is-selected.is-hovered {
+      filter: brightness(1.045) saturate(1.015);
     }
 
     .territory:focus-visible {
@@ -74,9 +92,10 @@ export function ensureTerritoryRuntimeStyles(document: Document) {
 }
 
 export function applyTerritoryVisualState(
-  face: SVGPathElement,
+  nodes: TerritoryVisualNodes,
   state: TerritoryVisualState,
 ) {
+  const face = nodes.face;
   face.style.removeProperty("stroke");
   face.style.removeProperty("stroke-width");
   face.style.removeProperty("stroke-opacity");
@@ -86,11 +105,18 @@ export function applyTerritoryVisualState(
   face.classList.toggle("is-target", state.target);
   face.classList.toggle("is-target-selectable", state.targetSelectable);
   face.classList.toggle("is-selected", state.selected);
+
+  for (const depth of nodes.depths) {
+    depth.classList.toggle("is-selected", state.selected);
+  }
 }
 
 export function applyTerritoryHoverState(
-  face: SVGPathElement,
+  nodes: TerritoryVisualNodes,
   hovered: boolean,
 ) {
-  face.classList.toggle("is-hovered", hovered);
+  nodes.face.classList.toggle("is-hovered", hovered);
+  for (const depth of nodes.depths) {
+    depth.classList.toggle("is-hovered", hovered);
+  }
 }
