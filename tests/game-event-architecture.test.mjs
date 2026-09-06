@@ -11,7 +11,7 @@ test("schema de eventos mantém catálogo, grafo e histórico por rodada separad
   assert.match(migration, /CREATE TABLE IF NOT EXISTS game_round_events/);
   assert.match(schema, /CREATE TABLE IF NOT EXISTS catalog\.events/);
   assert.match(schema, /CREATE TABLE IF NOT EXISTS catalog\.event_connections/);
-  assert.match(schema, /CREATE TABLE IF NOT EXISTS game\.game_round_events/);
+  assert.match(schema, /CREATE TABLE IF NOT EXISTS game\.round_events/);
 
   for (const source of [migration, schema]) {
     assert.match(source, /PRIMARY KEY \(room_id, round_number\)/);
