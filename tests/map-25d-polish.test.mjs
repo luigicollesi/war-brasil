@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const board = readFileSync("src/components/interactive-board.tsx", "utf8");
+const gameClient = readFileSync("src/components/game-client-v2.tsx", "utf8");
 const zoom = readFileSync("src/components/map-zoom-controller.tsx", "utf8");
 const runtimeEvents = readFileSync(
   "src/lib/client/map/map-runtime-events.ts",
@@ -53,8 +54,14 @@ test("gesture state is explicit and no synthetic pointerout is dispatched", () =
   assert.doesNotMatch(zoom, /dispatchEvent\(leaveEvent\)/);
 });
 
-test("opening presentation is rendered by InteractiveBoard", () => {
-  assert.match(board, /effectivePresentation/);
+test("opening presentation has one renderer and a boundary-driven scheduler", () => {
+  assert.match(gameClient, /presentation=\{boardPresentation\}/);
+  assert.match(gameClient, /nextInitialTerritoryPresentationWakeAt/);
+  assert.doesNotMatch(gameClient, /InitialTerritoryDrawPresentation/);
+  assert.doesNotMatch(gameClient, /setInterval\(/);
+  assert.doesNotMatch(runtimeEvents, /MAP_BOARD_PRESENTATION_EVENT/);
+  assert.match(board, /const effectivePresentation = presentation/);
+  assert.doesNotMatch(board, /runtimePresentation/);
   assert.match(board, /neutralTerritoryMaterial/);
   assert.match(board, /openingHighlight/);
   assert.match(board, /data-initial-territory-title/);
@@ -64,8 +71,9 @@ test("opening presentation is rendered by InteractiveBoard", () => {
 
 test("hit geometry is generated once from visual polygon paths", () => {
   assert.match(hitGeometry, /export function buildTerritoryHitLayer/);
-  assert.match(hitGeometry, /insetPolygonPath/);
+  assert.match(hitGeometry, /safeInsetPolygonPath/);
   assert.match(hitGeometry, /data-map-hit-layer/);
+  assert.match(hitGeometry, /hitGeometryFallback/);
   assert.match(board, /buildTerritoryHitLayer\(mapDocument, root, nextVisualNodes\)/);
 });
 
