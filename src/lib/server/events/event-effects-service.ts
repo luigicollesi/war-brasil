@@ -47,7 +47,7 @@ async function applyTroopEffect(
   const beforeRows = (
     await client.query<TerritoryStateRow>(
       `SELECT territory_id,troops,moved_in_turn
-       FROM game_territories
+       FROM game.territories
        WHERE room_id=$1 AND territory_id=ANY($2::smallint[])
        ORDER BY territory_id
        FOR UPDATE`,
@@ -63,11 +63,11 @@ async function applyTroopEffect(
 
   const query =
     effect.type === "ADD_TROOPS"
-      ? `UPDATE game_territories
+      ? `UPDATE game.territories
          SET troops=troops+$3
          WHERE room_id=$1 AND territory_id=ANY($2::smallint[])
          RETURNING territory_id,troops,moved_in_turn`
-      : `UPDATE game_territories
+      : `UPDATE game.territories
          SET troops=GREATEST(${MIN_TERRITORY_TROOPS},troops-$3),
              moved_in_turn=LEAST(moved_in_turn,GREATEST(${MIN_TERRITORY_TROOPS},troops-$3))
          WHERE room_id=$1 AND territory_id=ANY($2::smallint[])
