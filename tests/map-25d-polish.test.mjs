@@ -4,8 +4,12 @@ import test from "node:test";
 
 const board = readFileSync("src/components/interactive-board.tsx", "utf8");
 const zoom = readFileSync("src/components/map-zoom-controller.tsx", "utf8");
-const interaction = readFileSync(
-  "src/lib/client/map/territory-svg-interaction.ts",
+const runtimeEvents = readFileSync(
+  "src/lib/client/map/map-runtime-events.ts",
+  "utf8",
+);
+const hitGeometry = readFileSync(
+  "src/lib/client/map/territory-hit-geometry.ts",
   "utf8",
 );
 const nodes = readFileSync(
@@ -18,7 +22,8 @@ const visualState = readFileSync(
 );
 const testConfig = readFileSync("tsconfig.test.json", "utf8");
 const layout = readFileSync("src/app/layout.tsx", "utf8");
-const polish = readFileSync("src/app/map-25d-polish.css", "utf8");
+const page = readFileSync("src/app/game/[roomId]/page.tsx", "utf8");
+const polish = readFileSync("src/app/game/[roomId]/map-25d-polish.css", "utf8");
 const svg = readFileSync("public/mapa-war-brasil-25d.svg", "utf8");
 
 test("zoom separa stroke semântico do stroke compensado de renderização", () => {
@@ -28,57 +33,55 @@ test("zoom separa stroke semântico do stroke compensado de renderização", () 
   assert.match(zoom, /TERRITORY_RENDER_STROKE_PROPERTY/);
   assert.match(zoom, /getComputedStyle\(path\)/);
   assert.match(zoom, /getPropertyValue\(TERRITORY_BASE_STROKE_PROPERTY\)/);
-  assert.match(zoom, /attributeFilter: \["class"\]/);
-  assert.doesNotMatch(zoom, /Number\.parseFloat\(path\.style\.strokeWidth\)/);
+  assert.match(zoom, /path\.style\.removeProperty\(TERRITORY_RENDER_STROKE_PROPERTY\)/);
 });
 
-test("runtime style sinaliza readiness por classe e foco não altera largura semântica", () => {
-  assert.match(visualState, /RUNTIME_READY_CLASS/);
-  assert.match(visualState, /path\.classList\.add\(RUNTIME_READY_CLASS\)/);
-  const focusRule = visualState.match(/\.territory:focus-visible\s*\{([\s\S]*?)\}/)?.[1] ?? "";
-  assert.doesNotMatch(focusRule, /--territory-stroke-width/);
-  assert.match(focusRule, /drop-shadow/);
+test("visual readiness is an explicit event instead of a class timing hack", () => {
+  assert.match(runtimeEvents, /MAP_VISUALS_READY_EVENT/);
+  assert.match(board, /surface\.dispatchEvent\(new CustomEvent\(MAP_VISUALS_READY_EVENT\)\)/);
+  assert.match(zoom, /surface\.addEventListener\(MAP_VISUALS_READY_EVENT, onVisualsReady\)/);
+  assert.doesNotMatch(visualState, /RUNTIME_READY_CLASS/);
 });
 
-test("hover e seleção tratam face e profundidade como uma única peça visual", () => {
-  assert.match(visualState, /\.territory-depth\.is-hovered/);
-  assert.match(visualState, /\.territory-depth\.is-selected/);
-  assert.match(visualState, /for \(const depth of nodes\.depths\)/);
-  assert.match(board, /applyTerritoryHoverState\(previousNodes, false\)/);
-  assert.match(board, /applyTerritoryHoverState\(nextNodes, true\)/);
-  assert.match(board, /applyTerritoryVisualState\(nodes,/);
-  assert.doesNotMatch(board, /applyTerritoryHoverState\(previousNodes\.face/);
+test("gesture state is explicit and no synthetic pointerout is dispatched", () => {
+  assert.match(runtimeEvents, /MAP_GESTURE_STATE_EVENT/);
+  assert.match(runtimeEvents, /kind: MapGestureKind/);
+  assert.match(zoom, /setGestureActive\(true, "pinch"\)/);
+  assert.match(zoom, /setGestureActive\(true, "pan"\)/);
+  assert.match(board, /surface\.addEventListener\(MAP_GESTURE_STATE_EVENT, gestureState\)/);
+  assert.doesNotMatch(zoom, /createEvent\("Event"\)/);
+  assert.doesNotMatch(zoom, /dispatchEvent\(leaveEvent\)/);
 });
 
-test("laterais continuam ponteiro-interativas sem duplicar semântica acessível", () => {
-  assert.match(interaction, /surface !== nodes\.face/);
-  assert.match(interaction, /surface\.setAttribute\("aria-hidden", "true"\)/);
-  assert.match(interaction, /surface\.removeAttribute\("tabindex"\)/);
-  assert.match(interaction, /surface\.removeAttribute\("role"\)/);
-  assert.match(interaction, /surface\.style\.pointerEvents = "visiblePainted"/);
+test("opening presentation is rendered by InteractiveBoard", () => {
+  assert.match(board, /effectivePresentation/);
+  assert.match(board, /neutralTerritoryMaterial/);
+  assert.match(board, /openingHighlight/);
+  assert.match(board, /data-initial-territory-title/);
+  assert.match(board, /!presentationActive && roadsVisible/);
+  assert.match(board, /!presentationActive && troopsVisible/);
 });
 
-test("hit testing espelha a máscara visível e atravessa superfícies mascaradas", () => {
-  assert.match(interaction, /elementsFromPoint/);
-  assert.match(interaction, /isPointInFill/);
-  assert.match(interaction, /isPointInStroke/);
-  assert.match(interaction, /MASK_REFERENCE/);
-  assert.match(interaction, /pointIsInsideVisibleMask/);
-  assert.match(interaction, /continue;/);
+test("hit geometry is generated once from visual polygon paths", () => {
+  assert.match(hitGeometry, /export function buildTerritoryHitLayer/);
+  assert.match(hitGeometry, /insetPolygonPath/);
+  assert.match(hitGeometry, /data-map-hit-layer/);
+  assert.match(board, /buildTerritoryHitLayer\(mapDocument, root, nextVisualNodes\)/);
 });
 
-test("registry valida integralmente o contrato visual dos 42 territórios", () => {
+test("registry ainda valida integralmente o contrato visual dos 42 territórios", () => {
   assert.match(nodes, /EXPECTED_TERRITORY_COUNT = 42/);
   assert.match(nodes, /EXPECTED_FACE_STOPS = 5/);
   assert.match(nodes, /EXPECTED_SIDE_STOPS = 3/);
   assert.match(nodes, /EXPECTED_DEPTH_LAYERS = \[1, 2, 3, 4\]/);
   assert.match(nodes, /validateTerritoryVisualRegistry/);
-  assert.match(nodes, /validateMaskContract/);
-  assert.match(nodes, /process\.env\.NODE_ENV !== "production"/);
 });
 
-test("test compile inclui os módulos client do mapa 2.5d", () => {
+test("test compile inclui os módulos client novos do mapa 2.5d", () => {
   for (const file of [
+    "board-presentation.ts",
+    "map-runtime-events.ts",
+    "territory-hit-geometry.ts",
     "territory-material.ts",
     "territory-svg-nodes.ts",
     "territory-svg-interaction.ts",
@@ -88,20 +91,19 @@ test("test compile inclui os módulos client do mapa 2.5d", () => {
   }
 });
 
-test("tokens de tropas compartilham linguagem material em desktop e mobile", () => {
-  assert.match(board, /const markerMaterial = territoryMaterial\(territory\.ownerColor\)/g);
-  assert.match(board, /fillStyle = "#f3efe4"/);
-  assert.match(board, /strokeStyle = markerMaterial\.side\[0\]/);
-  assert.match(board, /fill="#f3efe4"/);
-  assert.match(board, /stroke=\{markerMaterial\.side\[0\]\}/);
-  assert.match(board, /fill="#17201c"/);
+test("tokens de tropas respeitam o inset visual e a safeRadius", () => {
+  assert.match(board, /geometry\.safeRadius - topInset/);
+  assert.match(board, /desktopTroopMarkerRadius/);
+  assert.match(board, /mobileTroopMarkerRadius/);
+  assert.match(board, /MAP_WORLD_SIZE/);
 });
 
-test("integração visual remove sombra externa duplicada e reduz halo do fundo", () => {
-  assert.match(layout, /import "\.\/map-25d-polish\.css"/);
-  assert.match(polish, /\.game-map-surface\s*\{[\s\S]*?filter: none;/);
-  assert.match(polish, /rgba\(63, 117, 91, 0\.12\)/);
-  assert.match(polish, /\.game-territory-tooltip/);
+test("polimento 2.5d fica restrito à rota do jogo", () => {
+  assert.doesNotMatch(layout, /map-25d-polish\.css/);
+  assert.match(page, /import "\.\/map-25d-polish\.css"/);
+  assert.match(polish, /\.game-map-surface/);
+  assert.match(polish, /data-map-gesture-active/);
+  assert.match(polish, /will-change: auto/);
 });
 
 test("gestos móveis continuam protegendo seleção acidental", () => {
