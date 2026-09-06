@@ -1,6 +1,5 @@
 export const MAP_VISUALS_READY_EVENT = "war:map-visuals-ready";
 export const MAP_GESTURE_STATE_EVENT = "war:map-gesture-state";
-export const MAP_BOARD_PRESENTATION_EVENT = "war:map-board-presentation";
 
 export type MapGestureKind = "pan" | "pinch" | null;
 
