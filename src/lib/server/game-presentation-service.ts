@@ -44,7 +44,7 @@ async function loadRoom(client: PoolClient, roomId: string) {
   const result = await client.query<PresentationRoom>(
     `SELECT id,status,order_roll_round,initial_territory_presentation_started_at,
             pending_from_territory_id,pending_to_territory_id,last_battle
-     FROM game_rooms
+     FROM game.rooms
      WHERE id=$1`,
     [roomId],
   );
@@ -61,20 +61,20 @@ async function startPlaying(
 ) {
   for (const [index, player] of order.entries()) {
     await client.query(
-      "UPDATE room_players SET turn_position=$1 WHERE id=$2",
+      "UPDATE game.players SET turn_position=$1 WHERE id=$2",
       [index + 1, player.id],
     );
   }
 
   await client.query(
-    "UPDATE room_players SET bot_next_action_at=NULL WHERE room_id=$1",
+    "UPDATE game.players SET bot_next_action_at=NULL WHERE room_id=$1",
     [room.id],
   );
 
   const firstRound = await initializeFirstGameRound(client, room.id);
 
   await client.query(
-    `UPDATE game_rooms
+    `UPDATE game.rooms
      SET status='playing',started_at=NOW(),phase='reinforcement',
          current_player_id=$2,turn_number=1,round_number=$3,
          jurassic_tunnel_territory_id=$4,reinforcements_remaining=0,
@@ -101,7 +101,7 @@ async function advanceInitialTerritoryPresentation(
   }
 
   await client.query(
-    `UPDATE game_rooms
+    `UPDATE game.rooms
      SET initial_territory_presentation_started_at=NULL
      WHERE id=$1 AND initial_territory_presentation_started_at IS NOT NULL`,
     [room.id],
@@ -119,7 +119,7 @@ async function advanceOrderRollPresentation(
   const players = (
     await client.query<OrderPlayer>(
       `SELECT id
-       FROM room_players
+       FROM game.players
        WHERE room_id=$1
        ORDER BY joined_at,id`,
       [room.id],
@@ -128,7 +128,7 @@ async function advanceOrderRollPresentation(
   const rolls = (
     await client.query<PresentationOrderRoll>(
       `SELECT player_id,roll_round,value,rolled_at
-       FROM game_order_rolls
+       FROM game.order_rolls
        WHERE room_id=$1
        ORDER BY roll_round,rolled_at`,
       [room.id],
@@ -165,7 +165,7 @@ async function advanceOrderRollPresentation(
   const historiesByPlayer = orderRollHistories(players, rolls);
   if (unresolvedOrderPlayerIds(historiesByPlayer).length) {
     await client.query(
-      `UPDATE game_rooms
+      `UPDATE game.rooms
        SET order_roll_round=order_roll_round+1
        WHERE id=$1`,
       [room.id],
