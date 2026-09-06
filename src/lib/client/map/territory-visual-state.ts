@@ -75,6 +75,17 @@ export function ensureTerritoryRuntimeStyles(document: Document) {
       filter: brightness(1.045) saturate(1.015);
     }
 
+    .territory.is-opening-highlight {
+      --territory-stroke-width: 1.8;
+      stroke: #fff7df;
+      stroke-opacity: .92;
+      filter: brightness(1.075) saturate(1.025);
+    }
+
+    .territory-depth.is-opening-highlight {
+      filter: brightness(1.045) saturate(1.015);
+    }
+
     .territory:focus-visible {
       --territory-stroke-width: 1.9;
       outline: none;
@@ -120,5 +131,15 @@ export function applyTerritoryHoverState(
   nodes.face.classList.toggle("is-hovered", hovered);
   for (const depth of nodes.depths) {
     depth.classList.toggle("is-hovered", hovered);
+  }
+}
+
+export function applyTerritoryOpeningHighlightState(
+  nodes: TerritoryVisualNodes,
+  highlighted: boolean,
+) {
+  nodes.face.classList.toggle("is-opening-highlight", highlighted);
+  for (const depth of nodes.depths) {
+    depth.classList.toggle("is-opening-highlight", highlighted);
   }
 }
