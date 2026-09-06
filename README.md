@@ -58,18 +58,40 @@ Segredos reais nunca devem ser adicionados ao `.env.example`.
 ## Banco de dados
 
 O schema canônico para uma instalação limpa fica em `src/lib/db/schema.sql`.
-Mudanças de schema em bancos existentes devem ser feitas por migrations
-numeradas em `src/lib/db/migrations/`.
+As tabelas da aplicação são separadas em três namespaces PostgreSQL:
+
+- `game` — estado pertencente a uma partida, jogadores, territórios, cartas e rodadas;
+- `catalog` — objetivos, eventos e outros dados de referência compartilhados;
+- `ops` — estado operacional, incluindo receipts de comandos e histórico de migrations.
+
+Nesta etapa de transição, os nomes físicos das tabelas foram preservados dentro
+desses schemas para manter constraints, sequences e tratamento de erros
+idênticos aos bancos existentes. Views automaticamente atualizáveis em `public`
+expõem temporariamente os nomes anteriores para que Next.js, realtime e worker
+continuem funcionando enquanto as queries são migradas nas próximas etapas.
+
+As migrations `002` a `025` em `src/lib/db/migrations/` formam o histórico
+legado e não são reexecutadas pelo runner atual. Novas migrations começam em
+`026` e ficam em `src/lib/db/migrations/managed/`, com execução registrada em
+`ops.pgmigrations`.
 
 Depois de criar o schema base ou ao atualizar o branch de desenvolvimento, use:
 
 ```bash
-npm run db:prepare:dev
+npm run db:migrate
 ```
 
-O preparador aplica as migrations necessárias de forma convergente para o
-ambiente de desenvolvimento. `npm run dev` executa essa preparação antes de
-subir os processos locais.
+`npm run db:prepare:dev` é um alias compatível para o mesmo runner. Ele ordena
+as migrations gerenciadas, valida o histórico, usa advisory lock e executa as
+pendências em uma única transação. `npm run dev` executa essa preparação antes
+de subir os processos locais.
+
+O CI valida tanto upgrade de um banco no estado v025 quanto instalação limpa
+contra PostgreSQL real por meio de:
+
+```bash
+npm run test:db
+```
 
 PostgreSQL permanece como fonte autoritativa do estado do jogo. Realtime apenas
 propaga revisions e eventos efêmeros, como sinalizações de posse.
