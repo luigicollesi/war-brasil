@@ -47,6 +47,12 @@ export function prepareTerritoryInteractiveSurfaces(
       surface.dataset.territoryInteractive = "true";
       surface.style.pointerEvents = "visiblePainted";
       surface.style.cursor = "pointer";
+
+      if (surface !== nodes.face) {
+        surface.setAttribute("aria-hidden", "true");
+        surface.removeAttribute("tabindex");
+        surface.removeAttribute("role");
+      }
     }
   }
 }
