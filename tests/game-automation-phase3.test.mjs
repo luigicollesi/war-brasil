@@ -146,10 +146,10 @@ test("worker shadow observa e active delega mutação ao command boundary versio
   assert.match(route, /advanceGameAutomationCommand/);
   assert.match(route, /expectedRevision/);
   assert.match(auth, /timingSafeEqual/);
-  assert.doesNotMatch(worker, /UPDATE game_rooms|DELETE FROM/);
+  assert.doesNotMatch(worker, /UPDATE\s+game\.rooms|DELETE FROM/);
   assert.doesNotMatch(shadowQuery, /UPDATE|DELETE|FOR UPDATE/i);
   assert.match(query, /CLAIM_DUE_AUTOMATION_SQL[\s\S]*FOR UPDATE SKIP LOCKED/);
-  assert.match(query, /CLAIM_DUE_AUTOMATION_SQL[\s\S]*UPDATE game_rooms room/);
+  assert.match(query, /CLAIM_DUE_AUTOMATION_SQL[\s\S]*UPDATE game\.rooms room/);
 });
 
 test("driver de automação preserva browser como default e permite corte para server", () => {
