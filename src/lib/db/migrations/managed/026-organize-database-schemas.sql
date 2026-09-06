@@ -1,4 +1,7 @@
--- Up Migration
+-- Migration 026: organize application tables into domain schemas.
+-- This file contains only the forward migration on purpose.
+-- It is safe to execute as a whole in SQL editors such as Neon.
+-- Rollback, if ever required, must be performed as an explicit separate operation.
 
 CREATE SCHEMA IF NOT EXISTS game;
 CREATE SCHEMA IF NOT EXISTS catalog;
@@ -93,42 +96,3 @@ CREATE OR REPLACE VIEW public.events AS SELECT * FROM catalog.events;
 CREATE OR REPLACE VIEW public.event_connections AS SELECT * FROM catalog.event_connections;
 CREATE OR REPLACE VIEW public.bot_names AS SELECT * FROM catalog.bot_names;
 CREATE OR REPLACE VIEW public.game_command_receipts AS SELECT * FROM ops.game_command_receipts;
-
--- Down Migration
-
-DROP VIEW IF EXISTS public.game_command_receipts;
-DROP VIEW IF EXISTS public.bot_names;
-DROP VIEW IF EXISTS public.event_connections;
-DROP VIEW IF EXISTS public.events;
-DROP VIEW IF EXISTS public.objective_rules;
-DROP VIEW IF EXISTS public.objectives;
-DROP VIEW IF EXISTS public.game_round_events;
-DROP VIEW IF EXISTS public.game_player_trade_offers;
-DROP VIEW IF EXISTS public.game_cards;
-DROP VIEW IF EXISTS public.game_player_objectives;
-DROP VIEW IF EXISTS public.game_rematch_votes;
-DROP VIEW IF EXISTS public.game_order_rolls;
-DROP VIEW IF EXISTS public.game_territories;
-DROP VIEW IF EXISTS public.room_players;
-DROP VIEW IF EXISTS public.game_rooms;
-
-ALTER TABLE game.game_rooms SET SCHEMA public;
-ALTER TABLE game.room_players SET SCHEMA public;
-ALTER TABLE game.game_territories SET SCHEMA public;
-ALTER TABLE game.game_order_rolls SET SCHEMA public;
-ALTER TABLE game.game_rematch_votes SET SCHEMA public;
-ALTER TABLE game.game_player_objectives SET SCHEMA public;
-ALTER TABLE game.game_cards SET SCHEMA public;
-ALTER TABLE game.game_player_trade_offers SET SCHEMA public;
-ALTER TABLE game.game_round_events SET SCHEMA public;
-
-ALTER TABLE catalog.objectives SET SCHEMA public;
-ALTER TABLE catalog.objective_rules SET SCHEMA public;
-ALTER TABLE catalog.events SET SCHEMA public;
-ALTER TABLE catalog.event_connections SET SCHEMA public;
-ALTER TABLE catalog.bot_names SET SCHEMA public;
-
-ALTER TABLE ops.game_command_receipts SET SCHEMA public;
-
-DROP SCHEMA IF EXISTS game;
-DROP SCHEMA IF EXISTS catalog;
