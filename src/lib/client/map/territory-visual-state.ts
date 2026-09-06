@@ -19,7 +19,7 @@ export function ensureTerritoryRuntimeStyles(document: Document) {
       stroke-opacity: .48;
       stroke-width: .95;
       filter: none;
-      transition: stroke .14s ease, stroke-opacity .14s ease, stroke-width .14s ease;
+      transition: stroke .14s ease, stroke-opacity .14s ease, stroke-width .14s ease, filter .14s ease;
     }
 
     .territory.is-available {
@@ -43,7 +43,8 @@ export function ensureTerritoryRuntimeStyles(document: Document) {
       filter: brightness(1.045) saturate(1.025) drop-shadow(0 0 3px rgba(217, 182, 80, .24));
     }
 
-    .territory:hover {
+    .territory:hover,
+    .territory.is-hovered {
       stroke: #fff7df;
       stroke-opacity: .96;
       stroke-width: 1.9;
@@ -51,7 +52,8 @@ export function ensureTerritoryRuntimeStyles(document: Document) {
     }
 
     .territory.is-selected,
-    .territory.is-selected:hover {
+    .territory.is-selected:hover,
+    .territory.is-selected.is-hovered {
       stroke: #e9c961;
       stroke-opacity: 1;
       stroke-width: 2.65;
@@ -83,4 +85,11 @@ export function applyTerritoryVisualState(
   face.classList.toggle("is-target", state.target);
   face.classList.toggle("is-target-selectable", state.targetSelectable);
   face.classList.toggle("is-selected", state.selected);
+}
+
+export function applyTerritoryHoverState(
+  face: SVGPathElement,
+  hovered: boolean,
+) {
+  face.classList.toggle("is-hovered", hovered);
 }
