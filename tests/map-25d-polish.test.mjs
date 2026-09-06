@@ -61,6 +61,8 @@ test("gesture state is explicit and no synthetic pointerout is dispatched", () =
 test("opening presentation has one renderer and a boundary-driven scheduler", () => {
   assert.match(gameClient, /presentation=\{boardPresentation\}/);
   assert.match(gameClient, /nextInitialTerritoryPresentationWakeAt/);
+  assert.match(gameClient, /presentationIdentityRef/);
+  assert.match(gameClient, /setPresentationClockMs\(nowMs\)/);
   assert.doesNotMatch(gameClient, /InitialTerritoryDrawPresentation/);
   assert.doesNotMatch(gameClient, /setInterval\(/);
   assert.doesNotMatch(runtimeEvents, /MAP_BOARD_PRESENTATION_EVENT/);
@@ -78,8 +80,12 @@ test("opening presentation disables pointer and keyboard hit targets", () => {
   assert.match(hitInteractionState, /path\.style\.pointerEvents = enabled \? "fill" : "none"/);
   assert.match(hitInteractionState, /path\.setAttribute\("tabindex", enabled \? "0" : "-1"\)/);
   assert.match(hitInteractionState, /path\.setAttribute\("aria-disabled", "true"\)/);
+  assert.match(hitInteractionState, /path\.ownerDocument\.activeElement === path/);
+  assert.match(hitInteractionState, /focusablePath\.blur\?\.\(\)/);
   assert.match(board, /setTerritoryHitInteractionEnabled\(root, !presentationActive\)/);
   assert.match(board, /setTerritoryHitInteractionEnabled\(root, interactionEnabledRef\.current\)/);
+  assert.match(polish, /data-map-presentation-active="true"/);
+  assert.match(polish, /pointer-events: none/);
 });
 
 test("hit geometry is generated once and never falls back to raw visual geometry", () => {
