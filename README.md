@@ -57,18 +57,45 @@ Segredos reais nunca devem ser adicionados ao `.env.example`.
 
 ## Banco de dados
 
-O schema canônico para uma instalação limpa fica em `src/lib/db/schema.sql`.
+O schema canônico para uma instalação limpa fica em `src/lib/db/schema.sql` e
+as migrations gerenciadas convergem bancos existentes para o mesmo estado.
 As tabelas da aplicação são separadas em três namespaces PostgreSQL:
 
-- `game` — estado pertencente a uma partida, jogadores, territórios, cartas e rodadas;
-- `catalog` — objetivos, eventos e outros dados de referência compartilhados;
-- `ops` — estado operacional, incluindo receipts de comandos e histórico de migrations.
+- `game` — estado pertencente a uma partida;
+- `catalog` — regras, mapa e outros dados de referência compartilhados;
+- `ops` — estado operacional e histórico de migrations.
 
-Nesta etapa de transição, os nomes físicos das tabelas foram preservados dentro
-desses schemas para manter constraints, sequences e tratamento de erros
-idênticos aos bancos existentes. Views automaticamente atualizáveis em `public`
-expõem temporariamente os nomes anteriores para que Next.js, realtime e worker
-continuem funcionando enquanto as queries são migradas nas próximas etapas.
+Os nomes físicos removem prefixos que ficaram redundantes depois da separação
+por schema:
+
+```text
+game.rooms
+game.players
+game.territories
+game.order_rolls
+game.rematch_votes
+game.player_objectives
+game.cards
+game.trade_offers
+game.round_events
+
+catalog.objectives
+catalog.objective_rules
+catalog.events
+catalog.event_connections
+catalog.bot_names
+catalog.territory_card_symbols
+catalog.territory_connections
+
+ops.command_receipts
+ops.pgmigrations
+```
+
+Views automaticamente atualizáveis em `public` ainda expõem temporariamente os
+nomes legados (`game_rooms`, `room_players`, `game_cards`, etc.) para que
+Next.js, realtime e worker continuem funcionando enquanto as queries são
+migradas para nomes schema-qualified. As views serão removidas depois que todo
+o runtime deixar de depender da interface antiga.
 
 As migrations `002` a `025` em `src/lib/db/migrations/` formam o histórico
 legado e não são reexecutadas pelo runner atual. Novas migrations começam em
