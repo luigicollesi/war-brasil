@@ -7,6 +7,9 @@ const dev = readFileSync("scripts/dev.mjs", "utf8");
 const prepare = readFileSync("scripts/prepare-dev-db.mjs", "utf8");
 const envExample = readFileSync(".env.example", "utf8");
 const agents = readFileSync("AGENTS.md", "utf8");
+const schema = readFileSync("src/lib/db/schema.sql", "utf8");
+const workflow = readFileSync(".github/workflows/test.yml", "utf8");
+const nodeVersion = readFileSync(".nvmrc", "utf8").trim();
 const orderRollPhaseMigration = readFileSync("src/lib/db/migrations/024-order-roll-phase-compatibility.sql", "utf8");
 const commandReceiptPatchMigration = readFileSync("src/lib/db/migrations/025-command-receipt-patches.sql", "utf8");
 
@@ -111,4 +114,14 @@ test("compatibilidade de fase permite cards somente durante order_roll", () => {
 test("receipts persistem patches públicos e privados para replay idempotente", () => {
   assert.match(commandReceiptPatchMigration, /ADD COLUMN IF NOT EXISTS response_patch JSONB/);
   assert.match(commandReceiptPatchMigration, /ADD COLUMN IF NOT EXISTS response_private_patch JSONB/);
+  assert.match(schema, /response_patch JSONB/);
+  assert.match(schema, /response_private_patch JSONB/);
+});
+
+test("CI e desenvolvimento usam Node 24 LTS e Actions compatíveis com runtime atual", () => {
+  assert.equal(nodeVersion, "24");
+  assert.match(workflow, /actions\/checkout@v7/);
+  assert.match(workflow, /actions\/setup-node@v7/);
+  assert.match(workflow, /node-version-file:\s*\.nvmrc/);
+  assert.doesNotMatch(workflow, /node-version:\s*20/);
 });
