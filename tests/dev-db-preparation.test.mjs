@@ -22,6 +22,10 @@ const schemaOrganizationMigration = readFileSync(
   "src/lib/db/migrations/managed/026-organize-database-schemas.sql",
   "utf8",
 );
+const schemaNamingMigration = readFileSync(
+  "src/lib/db/migrations/managed/027-normalize-schema-table-names.sql",
+  "utf8",
+);
 
 test("ambiente dev prepara migrations gerenciadas antes de subir Next e realtime", () => {
   assert.equal(packageJson.scripts.dev, "node scripts/dev.mjs");
@@ -103,6 +107,7 @@ test("preparação do banco usa ledger, ordem, lock e uma transação", () => {
   assert.match(prepare, /migrationNamePattern/);
   assert.match(prepare, /assertMigrationHistory/);
   assert.match(prepare, /ops\.pgmigrations/);
+  assert.match(prepare, /game\.rooms/);
   assert.match(prepare, /BEGIN/);
   assert.match(prepare, /pg_advisory_xact_lock/);
   assert.match(prepare, /COMMIT/);
@@ -114,7 +119,7 @@ test("preparação do banco usa ledger, ordem, lock e uma transação", () => {
   assert.doesNotMatch(prepare, /next dev|next start|setInterval|setTimeout/);
 });
 
-test("schema 026 separa domínio, catálogo e operação sem renomear tabelas ainda", () => {
+test("migrations 026+027 separam schemas e removem prefixos redundantes", () => {
   for (const schemaName of ["game", "catalog", "ops"]) {
     assert.match(schema, new RegExp(`CREATE SCHEMA IF NOT EXISTS ${schemaName}`));
     assert.match(
@@ -122,16 +127,30 @@ test("schema 026 separa domínio, catálogo e operação sem renomear tabelas ai
       new RegExp(`CREATE SCHEMA IF NOT EXISTS ${schemaName}`),
     );
   }
-  assert.match(schema, /CREATE TABLE IF NOT EXISTS game\.game_rooms/);
-  assert.match(schema, /CREATE TABLE IF NOT EXISTS game\.room_players/);
-  assert.match(schema, /CREATE TABLE IF NOT EXISTS catalog\.objectives/);
-  assert.match(schema, /CREATE TABLE IF NOT EXISTS ops\.game_command_receipts/);
-  assert.match(
-    schema,
-    /CREATE OR REPLACE VIEW public\.game_rooms AS SELECT \* FROM game\.game_rooms/,
-  );
+
   assert.match(schemaOrganizationMigration, /ALTER TABLE public\.%I SET SCHEMA %I/);
-  assert.doesNotMatch(schemaOrganizationMigration, /RENAME TO/);
+  assert.match(schemaNamingMigration, /'game', 'game_rooms', 'rooms'/);
+  assert.match(schemaNamingMigration, /'game', 'room_players', 'players'/);
+  assert.match(schemaNamingMigration, /'game', 'game_territories', 'territories'/);
+  assert.match(schemaNamingMigration, /'game', 'game_cards', 'cards'/);
+  assert.match(schemaNamingMigration, /'game', 'game_player_trade_offers', 'trade_offers'/);
+  assert.match(schemaNamingMigration, /'ops', 'game_command_receipts', 'command_receipts'/);
+  assert.match(
+    schemaNamingMigration,
+    /CREATE TABLE IF NOT EXISTS catalog\.territory_card_symbols/,
+  );
+  assert.match(
+    schemaNamingMigration,
+    /CREATE TABLE IF NOT EXISTS catalog\.territory_connections/,
+  );
+  assert.match(
+    schemaNamingMigration,
+    /CREATE OR REPLACE VIEW public\.game_rooms AS SELECT \* FROM game\.rooms/,
+  );
+  assert.match(
+    schemaNamingMigration,
+    /CREATE OR REPLACE VIEW public\.territory_connections AS SELECT \* FROM catalog\.territory_connections/,
+  );
 });
 
 test("compatibilidade de fase permite cards somente durante order_roll", () => {
