@@ -9,7 +9,6 @@ import { TradeSignalAction } from "./trade-signal-action";
 export function TradePhaseMount({
   roomId,
   snapshot,
-  onRefresh,
 }: {
   roomId: string;
   snapshot: GameSnapshot;
@@ -33,7 +32,6 @@ export function TradePhaseMount({
               key={scopeKey}
               roomId={roomId}
               snapshot={snapshot}
-              onRefresh={onRefresh}
             />,
             target,
           )
