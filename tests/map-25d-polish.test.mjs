@@ -8,10 +8,15 @@ const interaction = readFileSync(
   "src/lib/client/map/territory-svg-interaction.ts",
   "utf8",
 );
+const nodes = readFileSync(
+  "src/lib/client/map/territory-svg-nodes.ts",
+  "utf8",
+);
 const visualState = readFileSync(
   "src/lib/client/map/territory-visual-state.ts",
   "utf8",
 );
+const testConfig = readFileSync("tsconfig.test.json", "utf8");
 const layout = readFileSync("src/app/layout.tsx", "utf8");
 const polish = readFileSync("src/app/map-25d-polish.css", "utf8");
 const svg = readFileSync("public/mapa-war-brasil-25d.svg", "utf8");
@@ -25,6 +30,14 @@ test("zoom separa stroke semântico do stroke compensado de renderização", () 
   assert.match(zoom, /getPropertyValue\(TERRITORY_BASE_STROKE_PROPERTY\)/);
   assert.match(zoom, /attributeFilter: \["class"\]/);
   assert.doesNotMatch(zoom, /Number\.parseFloat\(path\.style\.strokeWidth\)/);
+});
+
+test("runtime style sinaliza readiness por classe e foco não altera largura semântica", () => {
+  assert.match(visualState, /RUNTIME_READY_CLASS/);
+  assert.match(visualState, /path\.classList\.add\(RUNTIME_READY_CLASS\)/);
+  const focusRule = visualState.match(/\.territory:focus-visible\s*\{([\s\S]*?)\}/)?.[1] ?? "";
+  assert.doesNotMatch(focusRule, /--territory-stroke-width/);
+  assert.match(focusRule, /drop-shadow/);
 });
 
 test("hover e seleção tratam face e profundidade como uma única peça visual", () => {
@@ -43,6 +56,36 @@ test("laterais continuam ponteiro-interativas sem duplicar semântica acessível
   assert.match(interaction, /surface\.removeAttribute\("tabindex"\)/);
   assert.match(interaction, /surface\.removeAttribute\("role"\)/);
   assert.match(interaction, /surface\.style\.pointerEvents = "visiblePainted"/);
+});
+
+test("hit testing espelha a máscara visível e atravessa superfícies mascaradas", () => {
+  assert.match(interaction, /elementsFromPoint/);
+  assert.match(interaction, /isPointInFill/);
+  assert.match(interaction, /isPointInStroke/);
+  assert.match(interaction, /MASK_REFERENCE/);
+  assert.match(interaction, /pointIsInsideVisibleMask/);
+  assert.match(interaction, /continue;/);
+});
+
+test("registry valida integralmente o contrato visual dos 42 territórios", () => {
+  assert.match(nodes, /EXPECTED_TERRITORY_COUNT = 42/);
+  assert.match(nodes, /EXPECTED_FACE_STOPS = 5/);
+  assert.match(nodes, /EXPECTED_SIDE_STOPS = 3/);
+  assert.match(nodes, /EXPECTED_DEPTH_LAYERS = \[1, 2, 3, 4\]/);
+  assert.match(nodes, /validateTerritoryVisualRegistry/);
+  assert.match(nodes, /validateMaskContract/);
+  assert.match(nodes, /process\.env\.NODE_ENV !== "production"/);
+});
+
+test("test compile inclui os módulos client do mapa 2.5d", () => {
+  for (const file of [
+    "territory-material.ts",
+    "territory-svg-nodes.ts",
+    "territory-svg-interaction.ts",
+    "territory-visual-state.ts",
+  ]) {
+    assert.match(testConfig, new RegExp(file.replace(".", "\\.")));
+  }
 });
 
 test("tokens de tropas compartilham linguagem material em desktop e mobile", () => {
