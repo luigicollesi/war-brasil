@@ -47,7 +47,7 @@ async function resolveReceiptPlayerId(
   const player = (
     await client.query<{ id: string }>(
       `SELECT id
-       FROM room_players
+       FROM game.players
        WHERE room_id=$1 AND player_session=$2
        FOR UPDATE`,
       [roomId, session],
@@ -76,7 +76,7 @@ export async function prepareGameCommandReceipt(
       `SELECT command_name,request_fingerprint,expected_revision,
               base_revision,revision,response_value,response_patch,
               response_private_patch
-       FROM game_command_receipts
+       FROM ops.command_receipts
        WHERE room_id=$1 AND player_id=$2 AND command_id=$3`,
       [roomId, playerId, request.commandId],
     )
@@ -144,7 +144,7 @@ export async function saveGameCommandReceipt<T>(
   result: GameCommandResult<T>,
 ) {
   await client.query(
-    `INSERT INTO game_command_receipts (
+    `INSERT INTO ops.command_receipts (
        room_id,player_id,command_id,command_name,request_fingerprint,
        expected_revision,base_revision,revision,response_value,
        response_patch,response_private_patch
