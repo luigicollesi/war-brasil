@@ -17,6 +17,16 @@
   will-change: auto;
 }
 
+/* Opening presentation is intentionally non-interactive: no click, pan or pinch reaches the SVG. */
+.game-map-surface[data-map-presentation-active="true"] .game-map-object,
+.game-map-surface[data-map-presentation-active="true"] .game-map-reset-control {
+  pointer-events: none;
+}
+
+.game-map-surface[data-map-presentation-active="true"] .game-map-reset-control {
+  opacity: 0.35;
+}
+
 .game-territory-tooltip {
   border-color: rgba(217, 182, 80, 0.18);
   background: rgba(6, 30, 23, 0.93);
