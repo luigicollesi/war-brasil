@@ -124,4 +124,9 @@ test("CI e desenvolvimento usam Node 24 LTS e Actions compatíveis com runtime a
   assert.match(workflow, /actions\/setup-node@v7/);
   assert.match(workflow, /node-version-file:\s*\.nvmrc/);
   assert.doesNotMatch(workflow, /node-version:\s*20/);
+  assert.equal(packageJson.scripts["test:run"], 'node --test "tests/*.test.mjs"');
+  assert.equal(
+    packageJson.scripts["worker:test"],
+    'node --check worker/server.mjs && node --test "worker/test/*.test.mjs"',
+  );
 });
