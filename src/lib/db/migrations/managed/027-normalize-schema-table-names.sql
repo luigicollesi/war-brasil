@@ -7,87 +7,6 @@ CREATE SCHEMA IF NOT EXISTS game;
 CREATE SCHEMA IF NOT EXISTS catalog;
 CREATE SCHEMA IF NOT EXISTS ops;
 
--- Bring map reference tables under catalog. If an older database does not
--- contain them yet, create the canonical empty structures below.
-DO $$
-DECLARE
-  relation RECORD;
-  public_kind "char";
-  catalog_kind "char";
-BEGIN
-  FOR relation IN
-    SELECT *
-    FROM (VALUES
-      ('territory_card_symbols'),
-      ('territory_connections')
-    ) AS mapping(table_name)
-  LOOP
-    public_kind := NULL;
-    catalog_kind := NULL;
-
-    SELECT c.relkind
-      INTO public_kind
-      FROM pg_class c
-      JOIN pg_namespace n ON n.oid = c.relnamespace
-     WHERE n.nspname = 'public'
-       AND c.relname = relation.table_name;
-
-    SELECT c.relkind
-      INTO catalog_kind
-      FROM pg_class c
-      JOIN pg_namespace n ON n.oid = c.relnamespace
-     WHERE n.nspname = 'catalog'
-       AND c.relname = relation.table_name;
-
-    IF catalog_kind IN ('r', 'p') THEN
-      IF public_kind IN ('r', 'p') THEN
-        RAISE EXCEPTION
-          'Ambiguous database state: both public.% and catalog.% are physical tables',
-          relation.table_name,
-          relation.table_name;
-      ELSIF public_kind IS NOT NULL AND public_kind <> 'v' THEN
-        RAISE EXCEPTION
-          'Unexpected relation public.% with relkind %',
-          relation.table_name,
-          public_kind;
-      END IF;
-    ELSIF public_kind IN ('r', 'p') AND catalog_kind IS NULL THEN
-      EXECUTE format(
-        'ALTER TABLE public.%I SET SCHEMA catalog',
-        relation.table_name
-      );
-    ELSIF public_kind IS NULL AND catalog_kind IS NULL THEN
-      NULL;
-    ELSE
-      RAISE EXCEPTION
-        'Cannot organize catalog.%: public relkind %, catalog relkind %',
-        relation.table_name,
-        public_kind,
-        catalog_kind;
-    END IF;
-  END LOOP;
-END
-$$;
-
-CREATE TABLE IF NOT EXISTS catalog.territory_card_symbols (
-  territory_id INTEGER PRIMARY KEY
-    CHECK (territory_id BETWEEN 1 AND 42),
-  symbol TEXT NOT NULL
-    CHECK (symbol IN ('leaf', 'gold', 'water'))
-);
-
-CREATE TABLE IF NOT EXISTS catalog.territory_connections (
-  territory_a INTEGER NOT NULL
-    CHECK (territory_a BETWEEN 1 AND 42),
-  territory_b INTEGER NOT NULL
-    CHECK (territory_b BETWEEN 1 AND 42),
-  is_passable BOOLEAN NOT NULL DEFAULT TRUE,
-  barrier_name TEXT,
-  description TEXT,
-  PRIMARY KEY (territory_a, territory_b),
-  CHECK (territory_a < territory_b)
-);
-
 -- Rename domain tables. Running this again is safe: a table already using the
 -- final name is accepted, while ambiguous duplicate physical tables fail.
 DO $$
@@ -157,8 +76,8 @@ BEGIN
 END
 $$;
 
--- Keep object names aligned with their renamed tables. PostgreSQL preserves
--- existing constraint/index/sequence names when only the table is renamed.
+-- PostgreSQL preserves constraint, index and sequence names when a table is
+-- renamed. Normalize those dependent object names as part of the same phase.
 DO $$
 DECLARE
   relation RECORD;
@@ -293,8 +212,9 @@ BEGIN
 END
 $$;
 
--- Migration 023 gave these invariants semantic names. Older snapshots may have
--- the same checks under PostgreSQL-generated names, so converge by definition.
+-- Migration 023 gave these invariants semantic names. Older snapshots can
+-- contain the same checks under PostgreSQL-generated names, so converge by
+-- definition rather than assuming one generated suffix.
 DO $$
 DECLARE
   current_name TEXT;
