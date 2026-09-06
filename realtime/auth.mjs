@@ -26,8 +26,8 @@ export async function readRealtimeIdentity(pool, roomId, cookieHeader) {
 
   const result = await pool.query(
     `SELECT rp.id::text AS player_id, gr.revision
-     FROM game_rooms gr
-     JOIN room_players rp
+     FROM game.rooms gr
+     JOIN game.players rp
        ON rp.room_id=gr.id
       AND rp.player_session=$2
      WHERE gr.id=$1`,
@@ -49,8 +49,8 @@ export async function readRealtimeIdentityByPlayer(pool, roomId, playerId) {
 
   const result = await pool.query(
     `SELECT rp.id::text AS player_id, gr.revision
-     FROM game_rooms gr
-     JOIN room_players rp
+     FROM game.rooms gr
+     JOIN game.players rp
        ON rp.room_id=gr.id
       AND rp.id=$2
      WHERE gr.id=$1`,
