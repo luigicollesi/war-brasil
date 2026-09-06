@@ -18,13 +18,13 @@
 }
 
 /* Opening presentation is intentionally non-interactive: no click, pan or pinch reaches the SVG. */
-.game-map-surface[data-map-presentation-active="true"] .game-map-object,
-.game-map-surface[data-map-presentation-active="true"] .game-map-reset-control {
+.game-map-surface[data-map-presentation-active="true"] .game-map-object {
   pointer-events: none;
 }
 
+/* The reset control lives outside the embedded SVG, so remove it from rendering and sequential focus too. */
 .game-map-surface[data-map-presentation-active="true"] .game-map-reset-control {
-  opacity: 0.35;
+  display: none;
 }
 
 .game-territory-tooltip {
