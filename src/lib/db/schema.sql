@@ -84,6 +84,8 @@ CREATE TABLE IF NOT EXISTS game_command_receipts (
   base_revision INTEGER NOT NULL CHECK (base_revision >= 1),
   revision INTEGER NOT NULL CHECK (revision >= 2),
   response_value JSONB NOT NULL,
+  response_patch JSONB,
+  response_private_patch JSONB,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   PRIMARY KEY (room_id, player_id, command_id),
   CHECK (expected_revision = base_revision),
