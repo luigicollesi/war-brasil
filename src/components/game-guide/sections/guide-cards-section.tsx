@@ -13,8 +13,8 @@ export function GuideCardsSection({
   return (
     <article className="wb-guide-chapter wb-guide-section--cards">
       <GuideHeading number="11" title="Transforme cartas em tropas">
-        Durante o reforço, forme uma combinação de 3 cartas para trocá-las por
-        tropas.
+        Durante o reforço, forme uma combinação de 3 cartas para convertê-las em
+        tropas. Esta regra é separada da negociação de cartas entre jogadores.
       </GuideHeading>
 
       <GuideFlow
@@ -73,7 +73,7 @@ export function GuideCardsSection({
         </section>
 
         <section className="wb-guide-card-progress">
-          <p className="wb-guide-label">Valor das suas trocas</p>
+          <p className="wb-guide-label">Valor das combinações resgatadas</p>
           <GuideRuleScale
             ariaLabel="Progressão pessoal de reforços por troca de cartas"
             items={guide.cards.tradeValues.map((value, index) => ({
