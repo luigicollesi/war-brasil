@@ -149,7 +149,7 @@ async function withTransaction<T>(callback: (client: PoolClient) => Promise<T>) 
 async function findRoomForUpdate(client: PoolClient, code: string) {
   const result = await client.query<RoomRow>(
     `SELECT id, code, status, created_at, started_at
-     FROM game_rooms
+     FROM game.rooms
      WHERE code = $1
      FOR UPDATE`,
     [code],
@@ -162,7 +162,7 @@ async function findRoomForUpdate(client: PoolClient, code: string) {
 
 async function availableColors(client: PoolClient, roomId: string) {
   const result = await client.query<{ color: PlayerColor }>(
-    "SELECT color FROM room_players WHERE room_id = $1",
+    "SELECT color FROM game.players WHERE room_id = $1",
     [roomId],
   );
   const occupiedColors = new Set(result.rows.map((player) => player.color));
@@ -185,7 +185,7 @@ async function assertRoomBotManager(
   const manager = (
     await client.query<{ player_session: string }>(
       `SELECT player_session
-       FROM room_players
+       FROM game.players
        WHERE room_id = $1 AND is_bot = FALSE
        ORDER BY joined_at ASC, id ASC
        LIMIT 1`,
@@ -200,7 +200,7 @@ async function assertRoomBotManager(
 
 async function resetHumanReadiness(client: PoolClient, roomId: string) {
   await client.query(
-    `UPDATE room_players
+    `UPDATE game.players
      SET is_ready = FALSE
      WHERE room_id = $1 AND is_bot = FALSE`,
     [roomId],
@@ -211,7 +211,7 @@ async function randomBotName(client: PoolClient, color: PlayerColor) {
   const names = (
     await client.query<{ name: string }>(
       `SELECT name
-       FROM bot_names
+       FROM catalog.bot_names
        WHERE color = $1
        ORDER BY id`,
       [color],
@@ -230,7 +230,7 @@ async function randomBotName(client: PoolClient, color: PlayerColor) {
 
 async function initializeGame(client: PoolClient, room: RoomRow) {
   const playerResult = await client.query<{ id: string }>(
-    "SELECT id FROM room_players WHERE room_id = $1 ORDER BY joined_at",
+    "SELECT id FROM game.players WHERE room_id = $1 ORDER BY joined_at",
     [room.id],
   );
   const players = playerResult.rows;
@@ -263,7 +263,7 @@ async function initializeGame(client: PoolClient, room: RoomRow) {
   }
 
   await client.query(
-    `INSERT INTO game_territories (
+    `INSERT INTO game.territories (
        room_id, territory_id, owner_player_id, troops, initial_draw_order
      )
      VALUES ${values.join(", ")}`,
@@ -285,27 +285,27 @@ async function initializeGame(client: PoolClient, room: RoomRow) {
     [deckOrders[index], deckOrders[swapIndex]] = [deckOrders[swapIndex], deckOrders[index]];
   }
   const symbols = await client.query<{ territory_id: number; symbol: string }>(
-    "SELECT territory_id, symbol FROM territory_card_symbols ORDER BY territory_id",
+    "SELECT territory_id, symbol FROM catalog.territory_card_symbols ORDER BY territory_id",
   );
   if (symbols.rows.length !== 42) {
     throw new RoomError("Os símbolos das cartas de território estão incompletos.", 503);
   }
   for (const [index, card] of symbols.rows.entries()) {
     await client.query(
-      `INSERT INTO game_cards (room_id, territory_id, symbol, deck_order)
+      `INSERT INTO game.cards (room_id, territory_id, symbol, deck_order)
        VALUES ($1, $2, $3, $4)`,
       [room.id, card.territory_id, card.symbol, deckOrders[index]],
     );
   }
   for (let index = 0; index < 2; index += 1) {
     await client.query(
-      `INSERT INTO game_cards (room_id, is_wild, deck_order)
+      `INSERT INTO game.cards (room_id, is_wild, deck_order)
        VALUES ($1, TRUE, $2)`,
       [room.id, deckOrders[42 + index]],
     );
   }
   await client.query(
-    `UPDATE game_rooms
+    `UPDATE game.rooms
      SET status = 'order_roll', order_roll_round = 1, started_at = NULL,
          initial_territory_presentation_started_at =
            NOW() + ($2::int * INTERVAL '1 millisecond'),
@@ -324,7 +324,7 @@ export async function createRoom(playerSession: string) {
     try {
       return await withTransaction(async (client) => {
         const roomResult = await client.query<RoomRow>(
-          `INSERT INTO game_rooms (code)
+          `INSERT INTO game.rooms (code)
            VALUES ($1)
            RETURNING id, code, status, created_at, started_at`,
           [code],
@@ -332,7 +332,7 @@ export async function createRoom(playerSession: string) {
         const room = roomResult.rows[0];
 
         await client.query(
-          `INSERT INTO room_players (room_id, player_session, faction_name, color)
+          `INSERT INTO game.players (room_id, player_session, faction_name, color)
            VALUES ($1, $2, $3, $4)`,
           [room.id, playerSession, DEFAULT_FACTION_NAME, DEFAULT_COLORS[0]],
         );
@@ -340,7 +340,7 @@ export async function createRoom(playerSession: string) {
         return room;
       });
     } catch (error) {
-      if (isUniqueViolation(error, "game_rooms_code_key")) continue;
+      if (isUniqueViolation(error, "rooms_code_key")) continue;
       throw error;
     }
   }
@@ -359,7 +359,7 @@ export async function joinRoom(codeValue: unknown, playerSession: string) {
     }
 
     const existingPlayer = await client.query<{ id: string }>(
-      `SELECT id FROM room_players
+      `SELECT id FROM game.players
        WHERE room_id = $1 AND player_session = $2`,
       [room.id, playerSession],
     );
@@ -368,7 +368,7 @@ export async function joinRoom(codeValue: unknown, playerSession: string) {
 
     const color = await findAvailableColor(client, room.id);
     await client.query(
-      `INSERT INTO room_players (room_id, player_session, faction_name, color)
+      `INSERT INTO game.players (room_id, player_session, faction_name, color)
        VALUES ($1, $2, $3, $4)`,
       [room.id, playerSession, DEFAULT_FACTION_NAME, color],
     );
@@ -399,7 +399,7 @@ export async function addBotToRoom(codeValue: unknown, playerSession: string) {
     const botSession = randomUUID();
     const bot = (
       await client.query<{ id: string }>(
-        `INSERT INTO room_players (
+        `INSERT INTO game.players (
            room_id, player_session, faction_name, color, is_ready, is_bot
          )
          VALUES ($1, $2, $3, $4, TRUE, TRUE)
@@ -433,7 +433,7 @@ export async function removeBotFromRoom(
     await assertRoomBotManager(client, room.id, playerSession);
 
     const removed = await client.query<{ id: string }>(
-      `DELETE FROM room_players
+      `DELETE FROM game.players
        WHERE room_id = $1 AND id = $2 AND is_bot = TRUE
        RETURNING id`,
       [room.id, botId],
@@ -455,7 +455,7 @@ export async function getLobbySnapshot(codeValue: unknown, playerSession: string
 
   const roomResult = await pool.query<RoomRow>(
     `SELECT id, code, status, created_at, started_at
-     FROM game_rooms
+     FROM game.rooms
      WHERE code = $1`,
     [code],
   );
@@ -465,7 +465,7 @@ export async function getLobbySnapshot(codeValue: unknown, playerSession: string
   const playerResult = await pool.query<PlayerRow>(
     `SELECT id, faction_name, color, is_ready, is_bot,
             player_session = $2 AS is_me
-     FROM room_players
+     FROM game.players
      WHERE room_id = $1
      ORDER BY joined_at ASC, id ASC`,
     [room.id, playerSession],
@@ -497,7 +497,7 @@ export async function updateLobbyPlayer(
 
     const playerResult = await client.query<PlayerRow>(
       `SELECT id, faction_name, color, is_ready, is_bot
-       FROM room_players
+       FROM game.players
        WHERE room_id = $1 AND player_session = $2
        FOR UPDATE`,
       [room.id, playerSession],
@@ -516,7 +516,7 @@ export async function updateLobbyPlayer(
 
     if (color !== player.color) {
       const colorResult = await client.query<{ id: string }>(
-        `SELECT id FROM room_players
+        `SELECT id FROM game.players
          WHERE room_id = $1 AND color = $2 AND id <> $3`,
         [room.id, color, player.id],
       );
@@ -534,7 +534,7 @@ export async function updateLobbyPlayer(
     const isReady = profileChanged ? false : requestedReady;
 
     await client.query(
-      `UPDATE room_players
+      `UPDATE game.players
        SET faction_name = $1, color = $2, is_ready = $3
        WHERE id = $4`,
       [factionName, color, isReady, player.id],
@@ -543,7 +543,7 @@ export async function updateLobbyPlayer(
     const readinessResult = await client.query<ReadinessRow>(
       `SELECT COUNT(*)::int AS player_count,
               COUNT(*) FILTER (WHERE is_ready)::int AS ready_count
-       FROM room_players
+       FROM game.players
        WHERE room_id = $1`,
       [room.id],
     );
