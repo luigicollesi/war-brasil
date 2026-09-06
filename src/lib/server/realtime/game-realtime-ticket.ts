@@ -42,8 +42,8 @@ export async function issueGameRealtimeTicket(roomId: string, session: string) {
 
   const result = await pool.query<{ player_id: string }>(
     `SELECT rp.id::text player_id
-     FROM game_rooms room
-     JOIN room_players rp
+     FROM game.rooms room
+     JOIN game.players rp
        ON rp.room_id=room.id
       AND rp.player_session=$2
      WHERE room.id=$1`,
