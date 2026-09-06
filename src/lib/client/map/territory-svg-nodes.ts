@@ -5,6 +5,7 @@ export type TerritoryVisualNodes = {
   faceStops: SVGStopElement[];
   sideStops: SVGStopElement[];
   depths: SVGPathElement[];
+  interactiveSurfaces: SVGPathElement[];
   deepRim: SVGPathElement | null;
   bevelLight: SVGPathElement | null;
   bevelDark: SVGPathElement | null;
@@ -49,6 +50,7 @@ export function collectTerritoryVisualNodes(
         ? Array.from(sideGradient.querySelectorAll<SVGStopElement>("stop"))
         : [],
       depths,
+      interactiveSurfaces: [face, ...depths],
       deepRim: document.querySelector<SVGPathElement>(
         territorySelector(id, "path.territory-deep-rim"),
       ),
