@@ -82,7 +82,7 @@ async function initialTerritoryState(
     await client.query<InitialTerritoryState>(
       `SELECT COUNT(*) FILTER (WHERE owner_player_id=$2)::int initial_territories,
               COUNT(*)::int total_territories
-       FROM game_territories
+       FROM game.territories
        WHERE room_id=$1`,
       [roomId, playerId],
     )
@@ -191,8 +191,8 @@ async function assignBalancedObjectives(
   const rules = (
     await client.query<ObjectiveRuleRow>(
       `SELECT r.id objective_rule_id,r.objective_id,r.params,o.target_selector
-       FROM objective_rules r
-       JOIN objectives o ON o.id=r.objective_id
+       FROM catalog.objective_rules r
+       JOIN catalog.objectives o ON o.id=r.objective_id
        WHERE r.player_count=$1
          AND r.is_active=TRUE
          AND o.is_active=TRUE
@@ -225,7 +225,7 @@ async function assignBalancedObjectives(
     );
 
     await client.query(
-      `INSERT INTO game_player_objectives
+      `INSERT INTO game.player_objectives
          (room_id,player_id,objective_id,objective_rule_id,target_player_id,resolved_params)
        VALUES ($1,$2,$3,$4,$5,$6::jsonb)`,
       [
@@ -248,7 +248,7 @@ async function assignLegacyObjectives(
   const objectives = (
     await client.query<LegacyObjectiveRow>(
       `SELECT id,target_selector
-       FROM objectives
+       FROM catalog.objectives
        WHERE is_active=TRUE
        ORDER BY id`,
     )
@@ -272,7 +272,7 @@ async function assignLegacyObjectives(
     );
 
     await client.query(
-      `INSERT INTO game_player_objectives
+      `INSERT INTO game.player_objectives
          (room_id,player_id,objective_id,target_player_id)
        VALUES ($1,$2,$3,$4)`,
       [roomId, player.id, objective.id, targetPlayerId],
@@ -304,8 +304,8 @@ async function resolveBalancedFallbacks(
   const assignments = (
     await client.query<FallbackAssignmentRow>(
       `SELECT a.player_id,a.objective_id,o.fallback_objective_id
-       FROM game_player_objectives a
-       JOIN objectives o ON o.id=a.objective_id
+       FROM game.player_objectives a
+       JOIN catalog.objectives o ON o.id=a.objective_id
        WHERE a.room_id=$1
          AND a.target_player_id=$2
          AND a.player_id<>$3
@@ -317,7 +317,7 @@ async function resolveBalancedFallbacks(
   for (const assignment of assignments) {
     if (assignment.objective_id !== "balanced_elimination") {
       await client.query(
-        `UPDATE game_player_objectives
+        `UPDATE game.player_objectives
          SET objective_id=$3,
              objective_rule_id=NULL,
              target_player_id=NULL,
@@ -331,7 +331,7 @@ async function resolveBalancedFallbacks(
     const rule = (
       await client.query<ObjectiveRuleSnapshotRow>(
         `SELECT id,params
-         FROM objective_rules
+         FROM catalog.objective_rules
          WHERE objective_id=$1
            AND player_count=$2
            AND is_active=TRUE
@@ -353,7 +353,7 @@ async function resolveBalancedFallbacks(
     );
 
     await client.query(
-      `UPDATE game_player_objectives
+      `UPDATE game.player_objectives
        SET objective_id=$3,
            objective_rule_id=$4,
            target_player_id=NULL,
@@ -379,9 +379,9 @@ async function resolveLegacyFallbacks(
   eliminatorPlayerId: string,
 ) {
   const result = await client.query(
-    `UPDATE game_player_objectives a
+    `UPDATE game.player_objectives a
      SET objective_id=o.fallback_objective_id,target_player_id=NULL
-     FROM objectives o
+     FROM catalog.objectives o
      WHERE a.objective_id=o.id
        AND a.room_id=$1
        AND a.target_player_id=$2
@@ -403,7 +403,7 @@ export async function resolveObjectiveFallbacks(
     (
       await client.query<{ count: number }>(
         `SELECT COUNT(*)::int count
-         FROM room_players
+         FROM game.players
          WHERE room_id=$1`,
         [roomId],
       )
