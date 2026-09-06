@@ -7,6 +7,65 @@ CREATE SCHEMA IF NOT EXISTS game;
 CREATE SCHEMA IF NOT EXISTS catalog;
 CREATE SCHEMA IF NOT EXISTS ops;
 
+-- Compatibility with earlier Phase 1 states: the first revision of 026 did
+-- not include the two map-reference tables. Move them here when they are still
+-- physical tables in public, but never recreate or overwrite their data.
+DO $$
+DECLARE
+  relation_name TEXT;
+  public_kind "char";
+  catalog_kind "char";
+BEGIN
+  FOREACH relation_name IN ARRAY ARRAY[
+    'territory_card_symbols',
+    'territory_connections'
+  ]
+  LOOP
+    public_kind := NULL;
+    catalog_kind := NULL;
+
+    SELECT c.relkind
+      INTO public_kind
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+     WHERE n.nspname = 'public'
+       AND c.relname = relation_name;
+
+    SELECT c.relkind
+      INTO catalog_kind
+      FROM pg_class c
+      JOIN pg_namespace n ON n.oid = c.relnamespace
+     WHERE n.nspname = 'catalog'
+       AND c.relname = relation_name;
+
+    IF catalog_kind IN ('r', 'p') THEN
+      IF public_kind IN ('r', 'p') THEN
+        RAISE EXCEPTION
+          'Ambiguous database state: both public.% and catalog.% are physical tables',
+          relation_name,
+          relation_name;
+      ELSIF public_kind IS NOT NULL AND public_kind <> 'v' THEN
+        RAISE EXCEPTION
+          'Unexpected relation public.% with relkind %',
+          relation_name,
+          public_kind;
+      END IF;
+    ELSIF public_kind IN ('r', 'p') AND catalog_kind IS NULL THEN
+      EXECUTE format(
+        'ALTER TABLE public.%I SET SCHEMA catalog',
+        relation_name
+      );
+    ELSE
+      RAISE EXCEPTION
+        'Cannot organize catalog.%: public relkind %, catalog relkind %',
+        relation_name,
+        public_kind,
+        catalog_kind;
+    END IF;
+  END LOOP;
+END
+$$;
+
 -- Rename domain tables. Running this again is safe: a table already using the
 -- final name is accepted, while ambiguous duplicate physical tables fail.
 DO $$
