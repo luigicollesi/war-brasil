@@ -22,11 +22,7 @@ export function ensureTerritoryRuntimeStyles(document: Document) {
       stroke-opacity: .44;
       stroke-width: var(--territory-render-stroke-width, var(--territory-stroke-width));
       filter: none;
-      transition: stroke .14s ease, stroke-opacity .14s ease, stroke-width .14s ease, filter .14s ease;
-    }
-
-    .territory-depth {
-      transition: filter .14s ease;
+      transition: stroke .14s ease, stroke-opacity .14s ease, stroke-width .14s ease;
     }
 
     .territory.is-available {
@@ -85,6 +81,12 @@ export function ensureTerritoryRuntimeStyles(document: Document) {
       stroke: #fff7df;
       stroke-opacity: 1;
       filter: brightness(1.05);
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .territory {
+        transition: none;
+      }
     }
   `;
 
