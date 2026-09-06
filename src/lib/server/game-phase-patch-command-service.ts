@@ -42,7 +42,7 @@ export async function phasePatchCommand(
       roundBefore =
         (
           await client.query<{ round_number: number }>(
-            "SELECT round_number FROM game_rooms WHERE id=$1",
+            "SELECT round_number FROM game.rooms WHERE id=$1",
             [roomId],
           )
         ).rows[0]?.round_number ?? null;
