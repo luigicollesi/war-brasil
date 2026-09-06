@@ -31,6 +31,8 @@ test("apresentação do manual expõe os dados necessários sem regra visual par
   assert.equal(guide.regionCount, 5);
   assert.equal(guide.setup.initialTroopsPerTerritory, 1);
   assert.equal(guide.regions.length, 5);
+  assert.equal(guide.playerTrade.offerLimitPerTurn, 3);
+  assert.equal(guide.playerTrade.signalLimitPerTurn, 2);
   assert.equal(guide.attack.normalDiceBands.length, 3);
   assert.equal(guide.attack.barrierDiceBands.length, 3);
   assert.equal(guide.defense.diceBands.length, 3);
@@ -51,7 +53,7 @@ test("GameQuickGuide orquestra as quinze seções na ordem planejada", () => {
     "<GuideSetupSection guide={guide} />",
     "<GuideOrderSection />",
     "<GuideObjectiveSection />",
-    "<GuideTurnSection />",
+    "<GuideTurnSection guide={guide} />",
     "<GuideReinforcementSection guide={guide} />",
     "<GuideAttackSection guide={guide} />",
     "<GuideCombatSection guide={guide} />",
@@ -91,6 +93,11 @@ test("seções mantêm numeração, títulos de ação e foco educativo", () => 
   assert.match(order, /Empate/);
   assert.doesNotMatch(order, /<strong>Turno|<strong>Rodada/);
   assert.match(turn, /GuideFlow/);
+  assert.match(turn, /Negociação entre jogadores/);
+  assert.match(turn, /aceitar.*recusar.*contraofertar/s);
+  assert.match(turn, /guide\.playerTrade\.offerLimitPerTurn/);
+  assert.match(turn, /guide\.playerTrade\.signalLimitPerTurn/);
+  assert.match(turn, /Negociação não gera tropas/);
   assert.doesNotMatch(turn, /GameDie|Domínio regional|wb-guide-rule-grid/);
   assert.match(victory, /15 · Vitória/);
   assert.match(victory, /<h2>Cumpra seu objetivo\.<\/h2>/);
