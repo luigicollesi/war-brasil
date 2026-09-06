@@ -7,26 +7,32 @@ import { Client } from "pg";
 const databaseUrl = process.env.DATABASE_URL;
 
 const physicalTables = new Map([
-  ["game", [
-    "cards",
-    "order_rolls",
-    "player_objectives",
-    "players",
-    "rematch_votes",
-    "rooms",
-    "round_events",
-    "territories",
-    "trade_offers",
-  ]],
-  ["catalog", [
-    "bot_names",
-    "event_connections",
-    "events",
-    "objective_rules",
-    "objectives",
-    "territory_card_symbols",
-    "territory_connections",
-  ]],
+  [
+    "game",
+    [
+      "cards",
+      "order_rolls",
+      "player_objectives",
+      "players",
+      "rematch_votes",
+      "rooms",
+      "round_events",
+      "territories",
+      "trade_offers",
+    ],
+  ],
+  [
+    "catalog",
+    [
+      "bot_names",
+      "event_connections",
+      "events",
+      "objective_rules",
+      "objectives",
+      "territory_card_symbols",
+      "territory_connections",
+    ],
+  ],
   ["ops", ["command_receipts", "pgmigrations"]],
 ]);
 
@@ -70,12 +76,16 @@ async function withTemporaryDatabase(label, callback) {
   }
 }
 
-function runPrepare(connectionString) {
-  const result = spawnSync(process.execPath, ["scripts/prepare-dev-db.mjs"], {
+function runPrepareResult(connectionString) {
+  return spawnSync(process.execPath, ["scripts/prepare-dev-db.mjs"], {
     cwd: process.cwd(),
     encoding: "utf8",
     env: { ...process.env, DATABASE_URL: connectionString },
   });
+}
+
+function runPrepare(connectionString) {
+  const result = runPrepareResult(connectionString);
   assert.equal(
     result.status,
     0,
@@ -88,6 +98,30 @@ async function applySql(connectionString, path) {
   await client.connect();
   try {
     await client.query(readFileSync(path, "utf8"));
+  } finally {
+    await client.end();
+  }
+}
+
+async function assertLegacyCatalogPreserved(connectionString) {
+  const client = new Client({ connectionString });
+  await client.connect();
+  try {
+    const symbol = await client.query(
+      "SELECT symbol FROM catalog.territory_card_symbols WHERE territory_id=1",
+    );
+    assert.equal(symbol.rows[0]?.symbol, "leaf");
+
+    const connection = await client.query(`
+      SELECT is_passable, barrier_name, description
+      FROM catalog.territory_connections
+      WHERE territory_a=1 AND territory_b=2
+    `);
+    assert.deepEqual(connection.rows[0], {
+      is_passable: false,
+      barrier_name: "fixture-barrier",
+      description: "fixture-connection",
+    });
   } finally {
     await client.end();
   }
@@ -227,14 +261,46 @@ async function assertOrganizedDatabase(connectionString) {
     const tradeConstraintNames = new Set(
       tradeConstraints.rows.map((row) => row.conname),
     );
-    assert.equal(
-      tradeConstraintNames.has("trade_offers_responder_check"),
-      true,
-    );
-    assert.equal(
-      tradeConstraintNames.has("trade_offers_state_check"),
-      true,
-    );
+    for (const name of [
+      "trade_offers_status_check",
+      "trade_offers_target_player_check",
+      "trade_offers_offered_descriptor_check",
+      "trade_offers_requested_descriptor_check",
+      "trade_offers_counter_descriptor_check",
+      "trade_offers_responder_check",
+      "trade_offers_state_check",
+    ]) {
+      assert.equal(tradeConstraintNames.has(name), true, name);
+    }
+
+    const indexes = await client.query(`
+      SELECT schemaname, indexname
+      FROM pg_indexes
+      WHERE schemaname IN ('game', 'ops')
+    `);
+    const indexNames = new Set(indexes.rows.map((row) => row.indexname));
+    for (const name of [
+      "rooms_automation_due_idx",
+      "players_room_id_idx",
+      "territories_room_owner_idx",
+      "trade_offers_one_active_idx",
+      "command_receipts_room_created_idx",
+    ]) {
+      assert.equal(indexNames.has(name), true, name);
+    }
+    for (const legacyPrefix of [
+      "game_rooms_",
+      "room_players_",
+      "game_territories_",
+      "game_player_trade_offers_",
+      "game_command_receipts_",
+    ]) {
+      assert.equal(
+        [...indexNames].some((name) => name.startsWith(legacyPrefix)),
+        false,
+        legacyPrefix,
+      );
+    }
   } finally {
     await client.end();
   }
@@ -243,16 +309,32 @@ async function assertOrganizedDatabase(connectionString) {
 if (!databaseUrl) {
   test("migrations de banco exigem DATABASE_URL", { skip: true }, () => {});
 } else {
-  test("026+027 migram banco v025, mantêm compatibilidade e são idempotentes", async () => {
+  test("026+027 migram banco v025, preservam catálogos e são idempotentes", async () => {
     await withTemporaryDatabase("legacy", async (connectionString) => {
       await applySql(connectionString, "tests/fixtures/db/schema-v025.sql");
+      await applySql(
+        connectionString,
+        "tests/fixtures/db/schema-v025-supplement.sql",
+      );
       runPrepare(connectionString);
       runPrepare(connectionString);
       await assertOrganizedDatabase(connectionString);
+      await assertLegacyCatalogPreserved(connectionString);
     });
   });
 
-  test("schema canônico novo converge para o mesmo estado gerenciado", async () => {
+  test("runner rejeita public.* incompleto em vez de tratar como v025", async () => {
+    await withTemporaryDatabase("old-baseline", async (connectionString) => {
+      await applySql(connectionString, "tests/fixtures/db/schema-v025.sql");
+      const result = runPrepareResult(connectionString);
+      assert.notEqual(result.status, 0);
+      assert.match(result.stderr, /Banco legado não corresponde ao baseline v025/);
+      assert.match(result.stderr, /territory_card_symbols/);
+      assert.match(result.stderr, /territory_connections/);
+    });
+  });
+
+  test("schema canônico novo já nasce no estado físico final", async () => {
     await withTemporaryDatabase("clean", async (connectionString) => {
       await applySql(connectionString, "src/lib/db/schema.sql");
       runPrepare(connectionString);
