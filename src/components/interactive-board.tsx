@@ -42,7 +42,7 @@ import {
   projectMapPoint,
   type MapViewportTransform,
 } from "@/src/lib/game-map-viewport";
-import { PLAYER_COLORS, type PlayerColor } from "@/src/lib/lobby";
+import type { PlayerColor } from "@/src/lib/lobby";
 import {
   findTerritoryConnection,
   type TerritoryConnection,
@@ -94,10 +94,6 @@ const regionLabels: Record<string, string> = {
   sudeste: "Sudeste",
   sul: "Sul",
 };
-
-function colorHex(color: PlayerColor) {
-  return PLAYER_COLORS.find((item) => item.value === color)?.hex ?? "#64756f";
-}
 
 function troopMarkerRadius(troops: number) {
   const digits = String(Math.max(0, troops)).length;
@@ -161,16 +157,17 @@ function MobileTroopCanvas({
           height,
           viewportRef.current,
         );
+        const markerMaterial = territoryMaterial(territory.ownerColor);
 
         context.beginPath();
         context.arc(point.x, point.y, radius, 0, Math.PI * 2);
-        context.fillStyle = "#ffffff";
+        context.fillStyle = "#f3efe4";
         context.fill();
         context.lineWidth = 2;
-        context.strokeStyle = colorHex(territory.ownerColor);
+        context.strokeStyle = markerMaterial.side[0];
         context.stroke();
 
-        context.fillStyle = "#000000";
+        context.fillStyle = "#17201c";
         context.font = `900 ${fontSize}px Inter, Arial, sans-serif`;
         context.textAlign = "center";
         context.textBaseline = "middle";
@@ -350,7 +347,7 @@ export function InteractiveBoard({
 
       if (previousId !== null) {
         const previousNodes = visualNodesByIdRef.current.get(previousId);
-        if (previousNodes) applyTerritoryHoverState(previousNodes.face, false);
+        if (previousNodes) applyTerritoryHoverState(previousNodes, false);
       }
 
       if (nextId === null) {
@@ -367,7 +364,7 @@ export function InteractiveBoard({
       }
 
       hoveredTerritoryRef.current = nextId;
-      applyTerritoryHoverState(nextNodes.face, true);
+      applyTerritoryHoverState(nextNodes, true);
       setHoveredTerritory({
         id: nextId,
         details: readTerritory(nextNodes.face),
@@ -428,7 +425,7 @@ export function InteractiveBoard({
       const hoveredId = hoveredTerritoryRef.current;
       if (hoveredId !== null) {
         const nodes = visualNodesByIdRef.current.get(hoveredId);
-        if (nodes) applyTerritoryHoverState(nodes.face, false);
+        if (nodes) applyTerritoryHoverState(nodes, false);
       }
       hoveredTerritoryRef.current = null;
     };
@@ -463,7 +460,7 @@ export function InteractiveBoard({
       if (visualSignatureRef.current.get(id) === signature) continue;
       visualSignatureRef.current.set(id, signature);
 
-      applyTerritoryVisualState(path, {
+      applyTerritoryVisualState(nodes, {
         available: isAvailable,
         target: isTarget,
         targetSelectable,
@@ -570,6 +567,7 @@ export function InteractiveBoard({
                 const geometry = geometries.get(territory.territoryId);
                 if (!geometry) return null;
                 const radius = troopMarkerRadius(territory.troops);
+                const markerMaterial = territoryMaterial(territory.ownerColor);
 
                 return (
                   <g
@@ -578,22 +576,22 @@ export function InteractiveBoard({
                   >
                     <circle
                       r={radius}
-                      fill="rgba(4, 22, 17, 0.88)"
-                      stroke={colorHex(territory.ownerColor)}
-                      strokeWidth="5"
+                      fill="#f3efe4"
+                      stroke={markerMaterial.side[0]}
+                      strokeWidth="4"
                       vectorEffect="non-scaling-stroke"
                     />
                     <text
                       x="0"
                       y="1"
-                      fill="#fffdf5"
+                      fill="#17201c"
                       fontSize="21"
                       fontWeight="800"
                       textAnchor="middle"
                       dominantBaseline="central"
                       paintOrder="stroke"
-                      stroke="rgba(0,0,0,.34)"
-                      strokeWidth="2"
+                      stroke="rgba(255,255,255,.34)"
+                      strokeWidth="1.5"
                     >
                       {territory.troops}
                     </text>
@@ -625,7 +623,16 @@ export function InteractiveBoard({
             className="game-territory-tooltip"
             style={{ left: 0, top: 0 }}
           >
-            <p className="font-semibold">{hoveredDetails.name}</p>
+            <p className="flex items-center gap-2 font-semibold">
+              <span
+                aria-hidden="true"
+                className="inline-block h-2.5 w-2.5 shrink-0 rounded-full border border-white/30"
+                style={{
+                  backgroundColor: territoryMaterial(hoveredState.ownerColor).face[2],
+                }}
+              />
+              {hoveredDetails.name}
+            </p>
             <p className="mt-1 text-[#c8d9d1]">
               {hoveredState.ownerName} ·{" "}
               {regionLabels[hoveredDetails.region] ?? hoveredDetails.region}
