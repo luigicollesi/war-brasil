@@ -12,7 +12,8 @@
 - Database migrations `002` through `025` under `src/lib/db/migrations/` are legacy history and must not be rewritten or replayed by the managed runner.
 - New database migrations start at `026` and belong under `src/lib/db/migrations/managed/`, using the `NNN-description.sql` naming convention and a required `-- Up Migration` section. A rollback section is optional; forward-only migrations are preferred when rollback would be unsafe or when the file may be executed directly in SQL editors.
 - Keep `src/lib/db/schema.sql` aligned with the current clean-install schema. When an existing development database needs automatic convergence, update `scripts/prepare-dev-db.mjs`, the managed migration, and the database tests together.
-- `scripts/prepare-dev-db.mjs` must remain a finite migration runner backed by `ops.pgmigrations`; do not restore state-based migration heuristics for individual columns or constraints.
+- `scripts/prepare-dev-db.mjs` must remain a finite migration runner backed by `ops.pgmigrations`. It may validate that an unmanaged legacy database matches the required baseline before the first managed migration, but it must not use per-column/per-constraint heuristics to decide which managed migrations or partial migration steps to apply.
+- While runtime SQL still uses legacy unqualified table names, keep the `public` compatibility views aligned with the final schema-qualified physical tables. Remove those views only together with the runtime SQL migration that makes them unnecessary.
 - Environment, schema, migration, and dev-runtime documentation must describe the behavior that actually exists in the current branch; remove stale transitional instructions when the implementation changes.
 
 ## Skills
