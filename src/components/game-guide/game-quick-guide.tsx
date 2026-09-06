@@ -32,7 +32,7 @@ export function GameQuickGuide() {
       <GuideSetupSection guide={guide} />
       <GuideOrderSection />
       <GuideObjectiveSection />
-      <GuideTurnSection />
+      <GuideTurnSection guide={guide} />
       <GuideReinforcementSection guide={guide} />
       <GuideAttackSection guide={guide} />
       <GuideCombatSection guide={guide} />
