@@ -12,89 +12,139 @@ CREATE SCHEMA IF NOT EXISTS ops;
 DO $$
 DECLARE
   relation RECORD;
-  source_kind "char";
-  target_kind "char";
+  public_kind "char";
+  legacy_target_kind "char";
+  final_target_kind "char";
 BEGIN
   FOR relation IN
     SELECT *
     FROM (VALUES
-      ('game_rooms', 'game'),
-      ('room_players', 'game'),
-      ('game_territories', 'game'),
-      ('game_order_rolls', 'game'),
-      ('game_rematch_votes', 'game'),
-      ('game_player_objectives', 'game'),
-      ('game_cards', 'game'),
-      ('game_player_trade_offers', 'game'),
-      ('game_round_events', 'game'),
-      ('objectives', 'catalog'),
-      ('objective_rules', 'catalog'),
-      ('events', 'catalog'),
-      ('event_connections', 'catalog'),
-      ('bot_names', 'catalog'),
-      ('game_command_receipts', 'ops')
-    ) AS mapping(table_name, target_schema)
+      ('game_rooms', 'game', 'rooms'),
+      ('room_players', 'game', 'players'),
+      ('game_territories', 'game', 'territories'),
+      ('game_order_rolls', 'game', 'order_rolls'),
+      ('game_rematch_votes', 'game', 'rematch_votes'),
+      ('game_player_objectives', 'game', 'player_objectives'),
+      ('game_cards', 'game', 'cards'),
+      ('game_player_trade_offers', 'game', 'trade_offers'),
+      ('game_round_events', 'game', 'round_events'),
+      ('objectives', 'catalog', 'objectives'),
+      ('objective_rules', 'catalog', 'objective_rules'),
+      ('events', 'catalog', 'events'),
+      ('event_connections', 'catalog', 'event_connections'),
+      ('bot_names', 'catalog', 'bot_names'),
+      ('game_command_receipts', 'ops', 'command_receipts')
+    ) AS mapping(legacy_name, target_schema, final_name)
   LOOP
+    public_kind := NULL;
+    legacy_target_kind := NULL;
+    final_target_kind := NULL;
+
     SELECT c.relkind
-      INTO source_kind
+      INTO public_kind
       FROM pg_class c
       JOIN pg_namespace n ON n.oid = c.relnamespace
      WHERE n.nspname = 'public'
-       AND c.relname = relation.table_name;
+       AND c.relname = relation.legacy_name;
 
     SELECT c.relkind
-      INTO target_kind
+      INTO legacy_target_kind
       FROM pg_class c
       JOIN pg_namespace n ON n.oid = c.relnamespace
      WHERE n.nspname = relation.target_schema
-       AND c.relname = relation.table_name;
+       AND c.relname = relation.legacy_name;
 
-    IF target_kind IN ('r', 'p') THEN
-      IF source_kind IN ('r', 'p') THEN
+    IF relation.final_name <> relation.legacy_name THEN
+      SELECT c.relkind
+        INTO final_target_kind
+        FROM pg_class c
+        JOIN pg_namespace n ON n.oid = c.relnamespace
+       WHERE n.nspname = relation.target_schema
+         AND c.relname = relation.final_name;
+    ELSE
+      final_target_kind := legacy_target_kind;
+    END IF;
+
+    IF final_target_kind IN ('r', 'p') THEN
+      IF public_kind IN ('r', 'p') OR
+         (relation.final_name <> relation.legacy_name AND legacy_target_kind IN ('r', 'p')) THEN
         RAISE EXCEPTION
-          'Ambiguous database state: both public.% and %.% are physical tables',
-          relation.table_name,
-          relation.target_schema,
-          relation.table_name;
-      ELSIF source_kind IS NOT NULL AND source_kind <> 'v' THEN
+          'Ambiguous database state for %: multiple physical tables exist',
+          relation.legacy_name;
+      ELSIF public_kind IS NOT NULL AND public_kind <> 'v' THEN
         RAISE EXCEPTION
           'Unexpected relation public.% with relkind %',
-          relation.table_name,
-          source_kind;
+          relation.legacy_name,
+          public_kind;
       END IF;
-    ELSIF source_kind IN ('r', 'p') AND target_kind IS NULL THEN
+    ELSIF legacy_target_kind IN ('r', 'p') THEN
+      IF public_kind IN ('r', 'p') THEN
+        RAISE EXCEPTION
+          'Ambiguous database state: both public.% and %.% are physical tables',
+          relation.legacy_name,
+          relation.target_schema,
+          relation.legacy_name;
+      ELSIF public_kind IS NOT NULL AND public_kind <> 'v' THEN
+        RAISE EXCEPTION
+          'Unexpected relation public.% with relkind %',
+          relation.legacy_name,
+          public_kind;
+      END IF;
+    ELSIF public_kind IN ('r', 'p') THEN
       EXECUTE format(
         'ALTER TABLE public.%I SET SCHEMA %I',
-        relation.table_name,
+        relation.legacy_name,
         relation.target_schema
       );
     ELSE
       RAISE EXCEPTION
-        'Cannot organize %.%: source relkind %, target relkind %',
-        relation.target_schema,
-        relation.table_name,
-        source_kind,
-        target_kind;
+        'Cannot organize %: public relkind %, legacy target relkind %, final target relkind %',
+        relation.legacy_name,
+        public_kind,
+        legacy_target_kind,
+        final_target_kind;
     END IF;
-
-    source_kind := NULL;
-    target_kind := NULL;
   END LOOP;
 END
 $$;
 
-CREATE OR REPLACE VIEW public.game_rooms AS SELECT * FROM game.game_rooms;
-CREATE OR REPLACE VIEW public.room_players AS SELECT * FROM game.room_players;
-CREATE OR REPLACE VIEW public.game_territories AS SELECT * FROM game.game_territories;
-CREATE OR REPLACE VIEW public.game_order_rolls AS SELECT * FROM game.game_order_rolls;
-CREATE OR REPLACE VIEW public.game_rematch_votes AS SELECT * FROM game.game_rematch_votes;
-CREATE OR REPLACE VIEW public.game_player_objectives AS SELECT * FROM game.game_player_objectives;
-CREATE OR REPLACE VIEW public.game_cards AS SELECT * FROM game.game_cards;
-CREATE OR REPLACE VIEW public.game_player_trade_offers AS SELECT * FROM game.game_player_trade_offers;
-CREATE OR REPLACE VIEW public.game_round_events AS SELECT * FROM game.game_round_events;
-CREATE OR REPLACE VIEW public.objectives AS SELECT * FROM catalog.objectives;
-CREATE OR REPLACE VIEW public.objective_rules AS SELECT * FROM catalog.objective_rules;
-CREATE OR REPLACE VIEW public.events AS SELECT * FROM catalog.events;
-CREATE OR REPLACE VIEW public.event_connections AS SELECT * FROM catalog.event_connections;
-CREATE OR REPLACE VIEW public.bot_names AS SELECT * FROM catalog.bot_names;
-CREATE OR REPLACE VIEW public.game_command_receipts AS SELECT * FROM ops.game_command_receipts;
+DO $$
+DECLARE
+  relation RECORD;
+  selected_name TEXT;
+BEGIN
+  FOR relation IN
+    SELECT *
+    FROM (VALUES
+      ('game_rooms', 'game', 'rooms'),
+      ('room_players', 'game', 'players'),
+      ('game_territories', 'game', 'territories'),
+      ('game_order_rolls', 'game', 'order_rolls'),
+      ('game_rematch_votes', 'game', 'rematch_votes'),
+      ('game_player_objectives', 'game', 'player_objectives'),
+      ('game_cards', 'game', 'cards'),
+      ('game_player_trade_offers', 'game', 'trade_offers'),
+      ('game_round_events', 'game', 'round_events'),
+      ('objectives', 'catalog', 'objectives'),
+      ('objective_rules', 'catalog', 'objective_rules'),
+      ('events', 'catalog', 'events'),
+      ('event_connections', 'catalog', 'event_connections'),
+      ('bot_names', 'catalog', 'bot_names'),
+      ('game_command_receipts', 'ops', 'command_receipts')
+    ) AS mapping(legacy_name, target_schema, final_name)
+  LOOP
+    IF to_regclass(format('%I.%I', relation.target_schema, relation.final_name)) IS NOT NULL THEN
+      selected_name := relation.final_name;
+    ELSE
+      selected_name := relation.legacy_name;
+    END IF;
+
+    EXECUTE format(
+      'CREATE OR REPLACE VIEW public.%I AS SELECT * FROM %I.%I',
+      relation.legacy_name,
+      relation.target_schema,
+      selected_name
+    );
+  END LOOP;
+END
+$$;
