@@ -34,7 +34,7 @@ async function loadRoom(client: PoolClient, roomId: string) {
   const room = (
     await client.query<FinishRoom>(
       `SELECT id,code,status
-       FROM game_rooms
+       FROM game.rooms
        WHERE id=$1`,
       [roomId],
     )
@@ -52,7 +52,7 @@ async function playerFor(
   const player = (
     await client.query<FinishPlayer>(
       `SELECT id
-       FROM room_players
+       FROM game.players
        WHERE room_id=$1 AND player_session=$2 AND is_bot=FALSE
        FOR UPDATE`,
       [roomId, session],
@@ -73,21 +73,21 @@ function assertFinished(room: FinishRoom) {
 }
 
 async function clearGameArtifacts(client: PoolClient, roomId: string) {
-  await client.query("DELETE FROM game_command_receipts WHERE room_id=$1", [roomId]);
-  await client.query("DELETE FROM game_rematch_votes WHERE room_id=$1", [roomId]);
-  await client.query("DELETE FROM game_round_events WHERE room_id=$1", [roomId]);
-  await client.query("DELETE FROM game_order_rolls WHERE room_id=$1", [roomId]);
-  await client.query("DELETE FROM game_player_trade_offers WHERE room_id=$1", [roomId]);
-  await client.query("DELETE FROM game_cards WHERE room_id=$1", [roomId]);
-  await client.query("DELETE FROM game_player_objectives WHERE room_id=$1", [roomId]);
-  await client.query("DELETE FROM game_territories WHERE room_id=$1", [roomId]);
+  await client.query("DELETE FROM ops.command_receipts WHERE room_id=$1", [roomId]);
+  await client.query("DELETE FROM game.rematch_votes WHERE room_id=$1", [roomId]);
+  await client.query("DELETE FROM game.round_events WHERE room_id=$1", [roomId]);
+  await client.query("DELETE FROM game.order_rolls WHERE room_id=$1", [roomId]);
+  await client.query("DELETE FROM game.trade_offers WHERE room_id=$1", [roomId]);
+  await client.query("DELETE FROM game.cards WHERE room_id=$1", [roomId]);
+  await client.query("DELETE FROM game.player_objectives WHERE room_id=$1", [roomId]);
+  await client.query("DELETE FROM game.territories WHERE room_id=$1", [roomId]);
 }
 
 async function resetRoomToWaiting(client: PoolClient, roomId: string) {
   await clearGameArtifacts(client, roomId);
 
   await client.query(
-    `UPDATE room_players
+    `UPDATE game.players
      SET is_ready=is_bot,turn_position=NULL,bot_next_action_at=NULL,
          card_trade_count=0,trade_signals_used=0
      WHERE room_id=$1`,
@@ -95,7 +95,7 @@ async function resetRoomToWaiting(client: PoolClient, roomId: string) {
   );
 
   await client.query(
-    `UPDATE game_rooms
+    `UPDATE game.rooms
      SET status='waiting',started_at=NULL,order_roll_round=1,
          initial_territory_presentation_started_at=NULL,phase='trade',
          current_player_id=NULL,turn_number=1,round_number=1,
@@ -111,7 +111,7 @@ async function resetRoomToWaiting(client: PoolClient, roomId: string) {
 async function initializeFreshGame(client: PoolClient, roomId: string) {
   const players = (
     await client.query<FinishPlayer>(
-      "SELECT id FROM room_players WHERE room_id=$1 ORDER BY joined_at,id",
+      "SELECT id FROM game.players WHERE room_id=$1 ORDER BY joined_at,id",
       [roomId],
     )
   ).rows;
@@ -145,7 +145,7 @@ async function initializeFreshGame(client: PoolClient, roomId: string) {
   }
 
   await client.query(
-    `INSERT INTO game_territories (
+    `INSERT INTO game.territories (
        room_id,territory_id,owner_player_id,troops,initial_draw_order
      )
      VALUES ${territoryValues.join(", ")}`,
@@ -171,7 +171,7 @@ async function initializeFreshGame(client: PoolClient, roomId: string) {
   }
 
   const symbols = await client.query<{ territory_id: number; symbol: string }>(
-    "SELECT territory_id,symbol FROM territory_card_symbols ORDER BY territory_id",
+    "SELECT territory_id,symbol FROM catalog.territory_card_symbols ORDER BY territory_id",
   );
   if (symbols.rows.length !== 42) {
     throw new RoomError("Os símbolos das cartas de território estão incompletos.", 503);
@@ -179,7 +179,7 @@ async function initializeFreshGame(client: PoolClient, roomId: string) {
 
   for (const [index, card] of symbols.rows.entries()) {
     await client.query(
-      `INSERT INTO game_cards (room_id,territory_id,symbol,deck_order)
+      `INSERT INTO game.cards (room_id,territory_id,symbol,deck_order)
        VALUES ($1,$2,$3,$4)`,
       [roomId, card.territory_id, card.symbol, deckOrders[index]],
     );
@@ -187,14 +187,14 @@ async function initializeFreshGame(client: PoolClient, roomId: string) {
 
   for (let index = 0; index < 2; index += 1) {
     await client.query(
-      `INSERT INTO game_cards (room_id,is_wild,deck_order)
+      `INSERT INTO game.cards (room_id,is_wild,deck_order)
        VALUES ($1,TRUE,$2)`,
       [roomId, deckOrders[42 + index]],
     );
   }
 
   await client.query(
-    `UPDATE game_rooms
+    `UPDATE game.rooms
      SET status='order_roll',order_roll_round=1,started_at=NULL,
          initial_territory_presentation_started_at=
            NOW() + ($2::int * INTERVAL '1 millisecond'),
@@ -227,7 +227,7 @@ export async function voteRematchCommand(
       const player = await playerFor(client, room.id, session);
 
       await client.query(
-        `INSERT INTO game_rematch_votes(room_id,player_id)
+        `INSERT INTO game.rematch_votes(room_id,player_id)
          VALUES($1,$2)
          ON CONFLICT (room_id,player_id) DO NOTHING`,
         [room.id, player.id],
@@ -242,8 +242,8 @@ export async function voteRematchCommand(
           `SELECT COUNT(*)::int player_count,
                   COUNT(*) FILTER (WHERE p.is_bot=FALSE)::int human_count,
                   COUNT(v.player_id) FILTER (WHERE p.is_bot=FALSE)::int vote_count
-           FROM room_players p
-           LEFT JOIN game_rematch_votes v
+           FROM game.players p
+           LEFT JOIN game.rematch_votes v
              ON v.room_id=p.room_id AND v.player_id=p.id
            WHERE p.room_id=$1`,
           [room.id],
