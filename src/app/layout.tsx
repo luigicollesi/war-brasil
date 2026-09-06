@@ -10,6 +10,7 @@ import "./war-guide-regions.css";
 import "./war-guide-sections.css";
 import "./war-guide-final-sections.css";
 import "./war-guide-responsive.css";
+import "./map-25d-polish.css";
 
 const interfaceFont = Inter({
   variable: "--font-wb-ui",
