@@ -41,6 +41,7 @@
     "src/lib/client/map/board-presentation.ts",
     "src/lib/client/map/map-runtime-events.ts",
     "src/lib/client/map/territory-hit-geometry.ts",
+    "src/lib/client/map/territory-hit-interaction-state.ts",
     "src/lib/client/map/territory-material.ts",
     "src/lib/client/map/territory-svg-nodes.ts",
     "src/lib/client/map/territory-svg-interaction.ts",
