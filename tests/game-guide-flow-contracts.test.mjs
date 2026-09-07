@@ -65,7 +65,7 @@ test("troca obrigatória e bônus territorial usam limites compartilhados", () =
 
   assert.match(cards, /guide\.cards\.mandatoryTradeHandSize/);
   assert.match(cards, /ou mais cartas/);
-  assert.match(cards, /Troque\s+antes de reforçar/);
+  assert.match(cards, /Converta[\s\S]*antes de reforçar/);
   assert.match(troops, />=\s*MANDATORY_TRADE_HAND_SIZE/);
   assert.match(troops, /room\.phase !== "reinforcement"/);
   assert.match(troops, /OWNED_TERRITORY_CARD_BONUS/);
