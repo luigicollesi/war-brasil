@@ -17,6 +17,10 @@ import {
   resolveBattle,
   tradeValue,
 } from "./game-rules";
+import {
+  PLAYER_TRADE_OFFER_LIMIT,
+  PLAYER_TRADE_SIGNAL_LIMIT,
+} from "./game-trade-rules";
 
 const REGION_GUIDE_ORDER: readonly Region[] = [
   "nordeste",
@@ -109,6 +113,10 @@ export function buildGameGuidePresentation() {
     regions,
     setup: {
       initialTroopsPerTerritory: MIN_TERRITORY_TROOPS,
+    },
+    playerTrade: {
+      offerLimitPerTurn: PLAYER_TRADE_OFFER_LIMIT,
+      signalLimitPerTurn: PLAYER_TRADE_SIGNAL_LIMIT,
     },
     reinforcement: {
       territoryExample: reinforcementTerritoryExample,
