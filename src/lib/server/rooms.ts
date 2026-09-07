@@ -3,12 +3,11 @@ import "server-only";
 import { randomInt, randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import { pool } from "@/src/lib/db/pool";
-import { INITIAL_TERRITORY_SYNC_DELAY_MS } from "@/src/lib/game-transitions";
 import { isPlayerColor, type LobbySnapshot, type PlayerColor } from "@/src/lib/lobby";
-import {
-  assignObjectives,
-  ObjectiveConfigurationError,
-} from "@/src/lib/objectives/objective-assignment-service";
+import { RoomError } from "@/src/lib/server/room-error";
+import { startGame } from "@/src/lib/server/start-game-service";
+
+export { RoomError } from "@/src/lib/server/room-error";
 
 const ROOM_CODE_LENGTH = 6;
 const MINIMUM_PLAYERS_TO_START = 2;
@@ -45,16 +44,6 @@ type ReadinessRow = {
 };
 
 type UpdateInput = Record<string, unknown>;
-
-export class RoomError extends Error {
-  constructor(
-    message: string,
-    public readonly status: number,
-    public readonly debug?: Record<string, unknown>,
-  ) {
-    super(message);
-  }
-}
 
 function normalizeRoomCode(value: unknown) {
   if (typeof value !== "string") return null;
@@ -226,95 +215,6 @@ async function randomBotName(client: PoolClient, color: PlayerColor) {
   }
 
   return names[randomInt(0, names.length)].name;
-}
-
-async function initializeGame(client: PoolClient, room: RoomRow) {
-  const playerResult = await client.query<{ id: string }>(
-    "SELECT id FROM game.players WHERE room_id = $1 ORDER BY joined_at",
-    [room.id],
-  );
-  const players = playerResult.rows;
-  if (players.length < MINIMUM_PLAYERS_TO_START) {
-    throw new RoomError("São necessários ao menos dois jogadores.", 409);
-  }
-
-  const territoryIds = Array.from({ length: 42 }, (_, index) => index + 1);
-  for (let index = territoryIds.length - 1; index > 0; index -= 1) {
-    const swapIndex = randomInt(0, index + 1);
-    [territoryIds[index], territoryIds[swapIndex]] = [
-      territoryIds[swapIndex],
-      territoryIds[index],
-    ];
-  }
-
-  const values: string[] = [];
-  const parameters: Array<string | number> = [];
-  for (const [index, territoryId] of territoryIds.entries()) {
-    const parameterOffset = parameters.length;
-    values.push(
-      `($${parameterOffset + 1}, $${parameterOffset + 2}, $${parameterOffset + 3}, 1, $${parameterOffset + 4})`,
-    );
-    parameters.push(
-      room.id,
-      territoryId,
-      players[index % players.length].id,
-      index + 1,
-    );
-  }
-
-  await client.query(
-    `INSERT INTO game.territories (
-       room_id, territory_id, owner_player_id, troops, initial_draw_order
-     )
-     VALUES ${values.join(", ")}`,
-    parameters,
-  );
-
-  try {
-    await assignObjectives(client, room.id, players);
-  } catch (error) {
-    if (error instanceof ObjectiveConfigurationError) {
-      throw new RoomError(error.message, 503);
-    }
-    throw error;
-  }
-
-  const deckOrders = Array.from({ length: 44 }, (_, index) => index + 1);
-  for (let index = deckOrders.length - 1; index > 0; index -= 1) {
-    const swapIndex = randomInt(0, index + 1);
-    [deckOrders[index], deckOrders[swapIndex]] = [deckOrders[swapIndex], deckOrders[index]];
-  }
-  const symbols = await client.query<{ territory_id: number; symbol: string }>(
-    "SELECT territory_id, symbol FROM catalog.territory_card_symbols ORDER BY territory_id",
-  );
-  if (symbols.rows.length !== 42) {
-    throw new RoomError("Os símbolos das cartas de território estão incompletos.", 503);
-  }
-  for (const [index, card] of symbols.rows.entries()) {
-    await client.query(
-      `INSERT INTO game.cards (room_id, territory_id, symbol, deck_order)
-       VALUES ($1, $2, $3, $4)`,
-      [room.id, card.territory_id, card.symbol, deckOrders[index]],
-    );
-  }
-  for (let index = 0; index < 2; index += 1) {
-    await client.query(
-      `INSERT INTO game.cards (room_id, is_wild, deck_order)
-       VALUES ($1, TRUE, $2)`,
-      [room.id, deckOrders[42 + index]],
-    );
-  }
-  await client.query(
-    `UPDATE game.rooms
-     SET status = 'order_roll', order_roll_round = 1, started_at = NULL,
-         initial_territory_presentation_started_at =
-           NOW() + ($2::int * INTERVAL '1 millisecond'),
-         phase = 'cards', current_player_id = NULL, turn_number = 1,
-         reinforcements_remaining = 0, conquered_this_turn = FALSE, trade_count = 0
-     WHERE id = $1 AND status = 'waiting'`,
-    [room.id, INITIAL_TERRITORY_SYNC_DELAY_MS],
-  );
-  room.status = "order_roll";
 }
 
 export async function createRoom(playerSession: string) {
@@ -553,7 +453,8 @@ export async function updateLobbyPlayer(
       readiness.player_count >= MINIMUM_PLAYERS_TO_START &&
       readiness.player_count === readiness.ready_count
     ) {
-      await initializeGame(client, room);
+      await startGame(client, room.id);
+      room.status = "order_roll";
     }
 
     return room;
