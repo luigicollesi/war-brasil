@@ -6,6 +6,7 @@ import {
   type Region,
 } from "@/src/lib/game-config";
 import { withObjectiveSchemaCompatibility } from "@/src/lib/objectives/objective-schema-compatibility";
+import { finishDiceBalanceMatchForRoom } from "@/src/lib/server/game-dice-balance-service";
 
 type ObjectiveEvent =
   | "any"
@@ -60,8 +61,6 @@ function requiredRegions(objective: Objective): Region[] | null {
 function eventCanAffectObjective(type: string, event: ObjectiveEvent) {
   if (event === "any" || event === "territory_control_changed") return true;
 
-  // Reforços e bônus de cartas alteram apenas quantidade de tropas.
-  // Entre os objetivos legados, somente fortificação pode ser concluída assim.
   return type === "fortification";
 }
 
@@ -277,6 +276,7 @@ export async function objectiveWon(
        WHERE id=$1`,
       [roomId, playerId],
     );
+    await finishDiceBalanceMatchForRoom(client, roomId);
   }
 
   return won;
