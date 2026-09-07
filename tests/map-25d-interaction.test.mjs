@@ -26,10 +26,20 @@ test("visual paths no longer own pointer targeting", () => {
 
 test("hit layer contains face and depth surfaces with one semantic territory id", () => {
   assert.match(hitGeometry, /data\.territorySurface = surface/);
-  assert.match(hitGeometry, /surface: `depth-\$\{depthIndex \+ 1\}`/);
-  assert.match(hitGeometry, /surface: "face"/);
+  assert.match(hitGeometry, /visualSurface\.dataset\.layer \?\? "depth"/);
+  assert.match(hitGeometry, /isFace\s*\?\s*"face"/);
   assert.match(hitGeometry, /data\.territoryId = String\(territoryId\)/);
   assert.match(interaction, /export function territoryIdFromEvent/);
+});
+
+test("hit z-order follows the actual SVG paint order instead of a duplicated hardcoded order", () => {
+  assert.match(hitGeometry, /data\.mapHitOrder = "visual-paint-order"/);
+  assert.match(
+    hitGeometry,
+    /boardRoot\.querySelectorAll<SVGPathElement>\([\s\S]*?path\.territory-depth\[data-territory-id\],[\s\S]*?path\.territory\[data-territory-id\]/,
+  );
+  assert.match(hitGeometry, /for \(const visualSurface of visualSurfaces\)/);
+  assert.doesNotMatch(hitGeometry, /for \(const depthIndex of \[3, 2, 1, 0\]\)/);
 });
 
 test("masked visual pixels are not probed at runtime anymore", () => {
@@ -61,7 +71,7 @@ test("native SVG hover is neutralized and semantic class owns highlighting", () 
 });
 
 test("keyboard stays one focus target per territory", () => {
-  assert.match(hitGeometry, /keyboard: true/);
+  assert.match(hitGeometry, /keyboard: isFace/);
   assert.match(hitGeometry, /path\.setAttribute\("role", "button"\)/);
   assert.match(hitGeometry, /path\.setAttribute\("tabindex", "0"\)/);
   assert.match(hitGeometry, /path\.setAttribute\("aria-hidden", "true"\)/);
