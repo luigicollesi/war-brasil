@@ -85,8 +85,8 @@ export function GuideAnomalySection({
                 compact
                 ariaLabel="Tabuleiro antes da Anomalia"
                 markers={[
-                  { key: "sp-before", label: "São Paulo Oeste", troops: 3, x: 53, y: 68, tone: "ally" },
-                  { key: "goias-before", label: "Goiás", troops: 2, x: 48, y: 54, tone: "ally" },
+                  { key: "sp-before", label: "São Paulo Oeste", troops: 3, x: 57, y: 73, tone: "ally" },
+                  { key: "goias-before", label: "Goiás", troops: 2, x: 43, y: 50, tone: "ally" },
                 ]}
               />
             }
@@ -96,12 +96,12 @@ export function GuideAnomalySection({
                 compact
                 ariaLabel="Tabuleiro depois da Anomalia"
                 markers={[
-                  { key: "sp-after", label: "São Paulo Oeste", troops: guide.anomalies.minimumTroopsAfterRemoval, x: 53, y: 68, tone: "ally", selected: true },
-                  { key: "goias-after", label: "Goiás", troops: 2, x: 48, y: 54, tone: "accent" },
-                  { key: "bahia-after", label: "Nova conexão", troops: 1, x: 65, y: 49, tone: "neutral" },
+                  { key: "sp-after", label: "São Paulo Oeste", troops: guide.anomalies.minimumTroopsAfterRemoval, x: 56, y: 73, tone: "ally", selected: true },
+                  { key: "goias-after", label: "Goiás", troops: 2, x: 43, y: 50, tone: "accent" },
+                  { key: "bahia-after", label: "Nova conexão", troops: 1, x: 72, y: 41, tone: "neutral" },
                 ]}
                 arrows={[
-                  { key: "opened", from: { x: 50, y: 54 }, to: { x: 63, y: 50 }, kind: "route", label: "conexão aberta" },
+                  { key: "opened", from: { x: 50, y: 54 }, to: { x: 63, y: 50 }, kind: "route" },
                 ]}
               />
             }
