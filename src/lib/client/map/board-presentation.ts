@@ -2,7 +2,7 @@ import {
   INITIAL_TERRITORY_HIGHLIGHT_DURATION_MS,
   INITIAL_TERRITORY_HIGHLIGHT_STEP_MS,
   INITIAL_TERRITORY_REVEAL_STEP_MS,
-} from "@/src/lib/game-transitions";
+} from "../../game-transitions";
 
 export type BoardPresentationState =
   | { mode: "normal" }
