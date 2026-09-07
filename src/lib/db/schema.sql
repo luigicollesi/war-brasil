@@ -446,6 +446,178 @@ CREATE TABLE IF NOT EXISTS game.round_events (
 CREATE INDEX IF NOT EXISTS round_events_event_id_idx
   ON game.round_events(event_id);
 
+CREATE TABLE IF NOT EXISTS catalog.dice_balance_profiles (
+  id TEXT PRIMARY KEY,
+  algorithm TEXT NOT NULL
+    CONSTRAINT dice_balance_profiles_algorithm_check
+      CHECK (algorithm IN ('uniform', 'adaptive_halves')),
+  alpha DOUBLE PRECISION NOT NULL,
+  pressure_cap DOUBLE PRECISION NOT NULL,
+  dead_zone DOUBLE PRECISION NOT NULL,
+  retention_per_round DOUBLE PRECISION NOT NULL,
+  max_group_shift DOUBLE PRECISION NOT NULL,
+  inner_tilt DOUBLE PRECISION NOT NULL,
+  min_face_probability DOUBLE PRECISION NOT NULL,
+  max_face_probability DOUBLE PRECISION NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT dice_balance_profiles_probability_range_check CHECK (
+    min_face_probability > 0
+    AND max_face_probability < 1
+    AND min_face_probability <= max_face_probability
+  ),
+  CONSTRAINT dice_balance_profiles_algorithm_parameters_check CHECK (
+    (
+      algorithm = 'uniform'
+      AND alpha = 0
+      AND pressure_cap = 0
+      AND dead_zone = 0
+      AND retention_per_round = 1
+      AND max_group_shift = 0
+      AND inner_tilt = 0
+    )
+    OR
+    (
+      algorithm = 'adaptive_halves'
+      AND alpha > 0 AND alpha <= 1
+      AND pressure_cap > 0 AND pressure_cap <= 1
+      AND dead_zone >= 0 AND dead_zone < pressure_cap
+      AND retention_per_round > 0 AND retention_per_round <= 1
+      AND max_group_shift > 0 AND max_group_shift < 0.5
+      AND inner_tilt >= 0 AND inner_tilt < (1.0 / 3.0)
+    )
+  )
+);
+
+INSERT INTO catalog.dice_balance_profiles (
+  id, algorithm, alpha, pressure_cap, dead_zone, retention_per_round,
+  max_group_shift, inner_tilt, min_face_probability, max_face_probability
+) VALUES
+  (
+    'uniform-v1', 'uniform', 0, 0, 0, 1,
+    0, 0, (1.0 / 6.0), (1.0 / 6.0)
+  ),
+  (
+    'adaptive-halves-v1', 'adaptive_halves', 0.12, 0.60, 0.10, 0.80,
+    0.20, 0.03, 0.09, 0.27
+  )
+ON CONFLICT (id) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS catalog.dice_balance_settings (
+  id SMALLINT PRIMARY KEY DEFAULT 1
+    CONSTRAINT dice_balance_settings_singleton_check CHECK (id = 1),
+  default_profile_id TEXT NOT NULL
+    CONSTRAINT dice_balance_settings_default_profile_fkey
+      REFERENCES catalog.dice_balance_profiles(id) ON DELETE RESTRICT,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+INSERT INTO catalog.dice_balance_settings (id, default_profile_id)
+VALUES (1, 'adaptive-halves-v1')
+ON CONFLICT (id) DO NOTHING;
+
+CREATE OR REPLACE FUNCTION catalog.reject_dice_balance_profile_mutation()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RAISE EXCEPTION
+    'dice balance profiles are append-only; create a new profile version instead';
+END;
+$$;
+
+DROP TRIGGER IF EXISTS dice_balance_profiles_append_only
+  ON catalog.dice_balance_profiles;
+CREATE TRIGGER dice_balance_profiles_append_only
+BEFORE UPDATE OR DELETE ON catalog.dice_balance_profiles
+FOR EACH ROW
+EXECUTE FUNCTION catalog.reject_dice_balance_profile_mutation();
+
+CREATE TABLE IF NOT EXISTS game.matches (
+  id BIGSERIAL PRIMARY KEY,
+  room_id BIGINT NOT NULL
+    CONSTRAINT matches_room_id_fkey
+      REFERENCES game.rooms(id) ON DELETE CASCADE,
+  sequence INTEGER NOT NULL
+    CONSTRAINT matches_sequence_check CHECK (sequence >= 1),
+  requested_profile_id TEXT
+    CONSTRAINT matches_requested_profile_fkey
+      REFERENCES catalog.dice_balance_profiles(id) ON DELETE RESTRICT,
+  resolved_profile_id TEXT NOT NULL,
+  profile_source TEXT NOT NULL
+    CONSTRAINT matches_profile_source_check
+      CHECK (profile_source IN ('catalog', 'builtin_fallback')),
+  dice_balance_profile_snapshot JSONB NOT NULL
+    CONSTRAINT matches_profile_snapshot_object_check
+      CHECK (jsonb_typeof(dice_balance_profile_snapshot) = 'object'),
+  started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  finished_at TIMESTAMPTZ,
+  CONSTRAINT matches_room_sequence_key UNIQUE (room_id, sequence),
+  CONSTRAINT matches_room_id_id_key UNIQUE (room_id, id),
+  CONSTRAINT matches_profile_resolution_check CHECK (
+    (
+      profile_source = 'catalog'
+      AND requested_profile_id IS NOT NULL
+      AND resolved_profile_id = requested_profile_id
+    )
+    OR
+    (
+      profile_source = 'builtin_fallback'
+      AND resolved_profile_id = 'builtin-uniform-v1'
+    )
+  ),
+  CONSTRAINT matches_finished_at_check
+    CHECK (finished_at IS NULL OR finished_at >= started_at)
+);
+
+CREATE OR REPLACE FUNCTION game.reject_match_dice_profile_mutation()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RAISE EXCEPTION 'match dice profile fields are immutable after match creation';
+END;
+$$;
+
+DROP TRIGGER IF EXISTS matches_dice_profile_immutable ON game.matches;
+CREATE TRIGGER matches_dice_profile_immutable
+BEFORE UPDATE OF requested_profile_id,resolved_profile_id,profile_source,dice_balance_profile_snapshot
+ON game.matches
+FOR EACH ROW
+EXECUTE FUNCTION game.reject_match_dice_profile_mutation();
+
+ALTER TABLE game.rooms
+  ADD COLUMN IF NOT EXISTS current_match_id BIGINT;
+
+ALTER TABLE game.rooms
+  ADD CONSTRAINT rooms_current_match_fkey
+  FOREIGN KEY (id, current_match_id)
+  REFERENCES game.matches(room_id, id)
+  ON DELETE SET NULL (current_match_id);
+
+CREATE TABLE IF NOT EXISTS game.player_dice_states (
+  match_id BIGINT NOT NULL
+    CONSTRAINT player_dice_states_match_id_fkey
+      REFERENCES game.matches(id) ON DELETE CASCADE,
+  player_id BIGINT NOT NULL
+    CONSTRAINT player_dice_states_player_id_fkey
+      REFERENCES game.players(id) ON DELETE CASCADE,
+  pressure DOUBLE PRECISION NOT NULL DEFAULT 0
+    CONSTRAINT player_dice_states_pressure_check
+      CHECK (pressure BETWEEN -1.0 AND 1.0),
+  batch_count INTEGER NOT NULL DEFAULT 0
+    CONSTRAINT player_dice_states_batch_count_check CHECK (batch_count >= 0),
+  last_roll_round INTEGER
+    CONSTRAINT player_dice_states_last_roll_round_check
+      CHECK (last_roll_round IS NULL OR last_roll_round >= 1),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT player_dice_states_pkey PRIMARY KEY (match_id, player_id),
+  CONSTRAINT player_dice_states_batch_history_check CHECK (
+    (batch_count = 0 AND last_roll_round IS NULL)
+    OR (batch_count > 0 AND last_roll_round IS NOT NULL)
+  )
+);
+
 CREATE OR REPLACE VIEW public.game_rooms AS SELECT * FROM game.rooms;
 CREATE OR REPLACE VIEW public.room_players AS SELECT * FROM game.players;
 CREATE OR REPLACE VIEW public.game_territories AS SELECT * FROM game.territories;
