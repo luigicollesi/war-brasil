@@ -516,61 +516,80 @@ export function buildTerritoryHitLayer(
 
   const layer = document.createElementNS(SVG_NS, "g");
   layer.dataset.mapHitLayer = "true";
+  layer.dataset.mapHitOrder = "visual-paint-order";
   layer.setAttribute("fill-rule", "nonzero");
 
-  const result = new Map<number, TerritoryHitNodes>();
-  for (const [id, nodes] of territories) {
-    result.set(id, { face: nodes.face, depths: [] });
-  }
+  const faceHits = new Map<number, SVGPathElement>();
+  const depthHits = new Map<number, SVGPathElement[]>();
+  for (const id of territories.keys()) depthHits.set(id, []);
 
-  for (const depthIndex of [3, 2, 1, 0]) {
-    for (const [id, nodes] of territories) {
-      const visualDepth = nodes.depths[depthIndex];
-      if (!visualDepth) continue;
-      const sourceD = visualDepth.getAttribute("d") ?? "";
-      const hit = resolveHitPolygonPath(sourceD, depthInset);
-      if (!hit) {
-        warnInvalidHitGeometry(id, `depth-${depthIndex + 1}`);
-        continue;
-      }
-      const hitPath = createHitPath({
-        document,
-        territoryId: id,
-        surface: `depth-${depthIndex + 1}`,
-        hit,
-        label: nodes.face.dataset.name ?? `Território ${id}`,
-        keyboard: false,
-      });
-      layer.append(hitPath);
-      result.get(id)?.depths.push(hitPath);
-    }
-  }
+  const visualSurfaces = Array.from(
+    boardRoot.querySelectorAll<SVGPathElement>(
+      "path.territory-depth[data-territory-id], path.territory[data-territory-id]",
+    ),
+  );
 
-  for (const [id, nodes] of territories) {
-    const sourceD = nodes.face.getAttribute("d") ?? "";
+  for (const visualSurface of visualSurfaces) {
+    const id = Number(visualSurface.dataset.territoryId);
+    if (!Number.isInteger(id) || id <= 0) continue;
+
+    const nodes = territories.get(id);
+    if (!nodes) continue;
+
+    const isFace = visualSurface === nodes.face;
+    const isDepth = nodes.depths.includes(visualSurface);
+    if (!isFace && !isDepth) continue;
+
+    const surface = isFace
+      ? "face"
+      : visualSurface.dataset.layer ?? "depth";
+    const sourceD = visualSurface.getAttribute("d") ?? "";
     if (!sourceD) {
-      throw new Error(`Territory ${id} face: missing source geometry`);
+      if (isFace) {
+        throw new Error(`Territory ${id} face: missing source geometry`);
+      }
+      warnInvalidHitGeometry(id, surface);
+      continue;
     }
 
-    const hit = resolveHitPolygonPath(sourceD, faceInset);
+    const hit = resolveHitPolygonPath(sourceD, isFace ? faceInset : depthInset);
     if (!hit) {
-      throw new Error(
-        `Territory ${id} face could not produce a conservative hit polygon`,
-      );
+      if (isFace) {
+        throw new Error(
+          `Territory ${id} face could not produce a conservative hit polygon`,
+        );
+      }
+      warnInvalidHitGeometry(id, surface);
+      continue;
     }
+
     const hitPath = createHitPath({
       document,
       territoryId: id,
-      surface: "face",
+      surface,
       hit,
       label: nodes.face.dataset.name ?? `Território ${id}`,
-      keyboard: true,
+      keyboard: isFace,
     });
     layer.append(hitPath);
-    result.set(id, {
-      face: hitPath,
-      depths: result.get(id)?.depths ?? [],
-    });
+
+    if (isFace) {
+      if (faceHits.has(id)) {
+        throw new Error(`Territory ${id} face has duplicate hit geometry`);
+      }
+      faceHits.set(id, hitPath);
+    } else {
+      depthHits.get(id)?.push(hitPath);
+    }
+  }
+
+  const result = new Map<number, TerritoryHitNodes>();
+  for (const [id] of territories) {
+    const face = faceHits.get(id);
+    if (!face) {
+      throw new Error(`Territory ${id} face hit geometry is missing`);
+    }
+    result.set(id, { face, depths: depthHits.get(id) ?? [] });
   }
 
   boardRoot.append(layer);
