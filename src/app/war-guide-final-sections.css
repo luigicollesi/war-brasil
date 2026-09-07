@@ -127,7 +127,7 @@
   margin-top: 0;
 }
 
-.wb-guide-maneuver-route p {
+.wb-guide-maneuver-route > p {
   margin: 2px 0 0;
   border-left: 1px solid var(--wb-gold);
   padding-left: 14px;
@@ -197,6 +197,14 @@
   margin-top: 24px;
 }
 
+.wb-guide-anomaly-board-change .wb-guide-state-change-stage {
+  padding: 10px;
+}
+
+.wb-guide-anomaly-board-change .wb-guide-board-scene-frame {
+  width: min(100%, 260px);
+}
+
 .wb-guide-section--anomaly > .wb-guide-inline-note {
   margin-top: 28px;
 }
@@ -205,9 +213,86 @@
   align-items: center;
 }
 
+.wb-guide-victory-copy {
+  min-width: 0;
+}
+
 .wb-guide-victory-flow {
   max-width: 680px;
   margin-top: 26px;
+}
+
+.wb-guide-victory-side {
+  display: grid;
+  min-width: min(100%, 310px);
+  justify-items: center;
+  gap: 22px;
+}
+
+.wb-guide-victory-objective {
+  position: relative;
+  display: grid;
+  width: min(100%, 310px);
+  gap: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(214, 169, 62, .42);
+  border-radius: 18px;
+  padding: 22px;
+  background:
+    linear-gradient(145deg, rgba(214, 169, 62, .08), transparent 52%),
+    rgba(4, 20, 16, .9);
+  box-shadow: 0 16px 32px rgba(0, 0, 0, .2);
+}
+
+.wb-guide-victory-objective > small {
+  color: var(--wb-gold);
+  font-size: .62rem;
+  font-weight: 900;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+}
+
+.wb-guide-victory-objective > strong {
+  max-width: 220px;
+  color: var(--wb-text);
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: 1.45rem;
+  line-height: 1;
+}
+
+.wb-guide-victory-objective > span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-top: 1px solid var(--wb-border-neutral);
+  padding-top: 10px;
+  color: var(--wb-text-muted);
+  font-size: .7rem;
+}
+
+.wb-guide-victory-objective > span b {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border-radius: 50%;
+  background: rgba(87, 182, 128, .12);
+  color: var(--wb-success);
+}
+
+.wb-guide-victory-objective > em {
+  justify-self: start;
+  margin-top: 3px;
+  border: 1px solid rgba(87, 182, 128, .48);
+  border-radius: 8px;
+  padding: 7px 10px;
+  color: var(--wb-success);
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: 1rem;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: .12em;
+  transform: rotate(-2deg);
 }
 
 @media (max-width: 980px) {
@@ -271,7 +356,9 @@
     margin-top: 34px;
   }
 
-  .wb-guide-victory-flow {
+  .wb-guide-victory-flow,
+  .wb-guide-victory-side,
+  .wb-guide-victory-objective {
     width: 100%;
   }
 }
