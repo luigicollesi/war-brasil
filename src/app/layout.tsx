@@ -9,6 +9,7 @@ import "./war-guide-geographic.css";
 import "./war-guide-regions.css";
 import "./war-guide-sections.css";
 import "./war-guide-final-sections.css";
+import "./war-guide-scenes.css";
 import "./war-guide-responsive.css";
 
 const interfaceFont = Inter({
