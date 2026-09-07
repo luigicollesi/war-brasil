@@ -1,0 +1,484 @@
+.wb-guide-board-scene,
+.wb-guide-trade-scene {
+  margin: 0;
+}
+
+.wb-guide-board-scene-stage {
+  position: relative;
+  min-height: 300px;
+  overflow: hidden;
+  border: 1px solid rgba(214, 169, 62, .24);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 50% 46%, rgba(214, 169, 62, .09), transparent 42%),
+    linear-gradient(145deg, rgba(4, 22, 18, .96), rgba(8, 38, 29, .9));
+  isolation: isolate;
+}
+
+.wb-guide-board-scene-stage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgba(2, 16, 13, .12), transparent 42%, rgba(2, 16, 13, .54)),
+    radial-gradient(circle at center, transparent 30%, rgba(2, 16, 13, .32) 100%);
+}
+
+.wb-guide-board-scene-map {
+  z-index: 0;
+  object-fit: contain;
+  padding: 18px;
+  opacity: .34;
+  filter: saturate(.82) brightness(.86) contrast(1.08);
+}
+
+.wb-guide-board-scene-links {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.wb-guide-board-scene-links line {
+  vector-effect: non-scaling-stroke;
+  stroke: rgba(214, 169, 62, .7);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+}
+
+.wb-guide-board-scene-links line[data-kind="attack"] {
+  stroke: #ef8f79;
+  stroke-width: 3;
+}
+
+.wb-guide-board-scene-links line[data-kind="maneuver"] {
+  stroke: #75c99a;
+  stroke-width: 3;
+  stroke-dasharray: 7 5;
+}
+
+.wb-guide-board-scene-links line[data-kind="barrier"] {
+  stroke: #d9a15c;
+  stroke-width: 3;
+  stroke-dasharray: 3 4;
+}
+
+.wb-guide-board-scene-links line[data-kind="tunnel"] {
+  stroke: var(--wb-gold-bright);
+  stroke-width: 3;
+  stroke-dasharray: 9 6;
+}
+
+.wb-guide-board-arrow-head {
+  fill: #ef8f79;
+}
+
+.wb-guide-board-marker {
+  --wb-guide-marker-color: #d9e5dc;
+  position: absolute;
+  left: var(--wb-guide-board-x);
+  top: var(--wb-guide-board-y);
+  z-index: 4;
+  display: grid;
+  min-width: 112px;
+  grid-template-columns: 38px minmax(0, 1fr);
+  align-items: center;
+  gap: 9px;
+  transform: translate(-50%, -50%);
+}
+
+.wb-guide-board-marker[data-tone="ally"] { --wb-guide-marker-color: #67ca91; }
+.wb-guide-board-marker[data-tone="enemy"] { --wb-guide-marker-color: #e47c69; }
+.wb-guide-board-marker[data-tone="accent"] { --wb-guide-marker-color: var(--wb-gold-bright); }
+
+.wb-guide-board-troops {
+  position: relative;
+  display: grid;
+  width: 38px;
+  height: 38px;
+  place-items: center;
+  border: 2px solid rgba(255, 255, 255, .82);
+  border-radius: 50%;
+  background: var(--wb-guide-marker-color);
+  box-shadow:
+    0 0 0 5px rgba(2, 16, 13, .64),
+    0 8px 22px rgba(0, 0, 0, .38);
+  color: #06140f;
+  font-size: .92rem;
+  font-weight: 950;
+}
+
+.wb-guide-board-marker-copy {
+  display: block;
+  min-width: 0;
+  border-left: 2px solid var(--wb-guide-marker-color);
+  padding: 5px 7px 5px 9px;
+  border-radius: 0 8px 8px 0;
+  background: rgba(2, 16, 13, .82);
+  backdrop-filter: blur(5px);
+}
+
+.wb-guide-board-marker-copy strong,
+.wb-guide-board-marker-copy small {
+  display: block;
+}
+
+.wb-guide-board-marker-copy strong {
+  overflow: hidden;
+  color: var(--wb-text);
+  font-size: .72rem;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.wb-guide-board-marker-copy small {
+  margin-top: 3px;
+  color: var(--wb-text-muted);
+  font-size: .58rem;
+  line-height: 1.2;
+}
+
+.wb-guide-board-marker[data-status="selected"] .wb-guide-board-troops,
+.wb-guide-board-marker[data-status="target"] .wb-guide-board-troops {
+  box-shadow:
+    0 0 0 5px rgba(2, 16, 13, .64),
+    0 0 0 8px color-mix(in srgb, var(--wb-guide-marker-color) 52%, transparent),
+    0 8px 22px rgba(0, 0, 0, .38);
+}
+
+.wb-guide-board-marker[data-status="target"] .wb-guide-board-marker-copy::after {
+  content: "ALVO";
+  display: inline-block;
+  margin-top: 4px;
+  color: #ffb1a2;
+  font-size: .52rem;
+  font-weight: 950;
+  letter-spacing: .12em;
+}
+
+.wb-guide-board-marker[data-status="moved"] .wb-guide-board-marker-copy::after {
+  content: "JÁ MOVIDAS";
+  display: inline-block;
+  margin-top: 4px;
+  color: var(--wb-warning);
+  font-size: .5rem;
+  font-weight: 950;
+  letter-spacing: .1em;
+}
+
+.wb-guide-board-scene-badge {
+  position: absolute;
+  right: 14px;
+  bottom: 12px;
+  z-index: 5;
+  max-width: 70%;
+  border: 1px solid rgba(214, 169, 62, .24);
+  border-radius: 999px;
+  padding: 7px 11px;
+  background: rgba(2, 16, 13, .84);
+  color: var(--wb-text-soft);
+  font-size: .64rem;
+  font-weight: 850;
+  letter-spacing: .04em;
+}
+
+.wb-guide-board-scene figcaption,
+.wb-guide-trade-scene figcaption {
+  margin-top: 10px;
+  color: var(--wb-text-muted);
+  font-size: .76rem;
+  line-height: 1.5;
+}
+
+.wb-guide-scene-transition {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 14px;
+}
+
+.wb-guide-scene-transition > div > span {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--wb-text-muted);
+  font-size: .62rem;
+  font-weight: 900;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.wb-guide-scene-transition-arrow {
+  display: grid;
+  min-width: 74px;
+  justify-items: center;
+  gap: 6px;
+  color: var(--wb-gold-bright);
+}
+
+.wb-guide-scene-transition-arrow strong {
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.wb-guide-scene-transition-arrow small {
+  max-width: 88px;
+  color: var(--wb-text-muted);
+  font-size: .58rem;
+  font-weight: 800;
+  line-height: 1.25;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.wb-guide-trade-stage {
+  overflow: hidden;
+  border: 1px solid rgba(214, 169, 62, .24);
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 50% 25%, rgba(214, 169, 62, .1), transparent 38%),
+    rgba(4, 24, 19, .9);
+}
+
+.wb-guide-trade-players {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 20px 14px;
+}
+
+.wb-guide-trade-player {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.wb-guide-trade-player:last-child {
+  justify-content: flex-end;
+  text-align: right;
+}
+
+.wb-guide-trade-player > span {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, .6);
+  border-radius: 50%;
+  background: #67ca91;
+  color: #06140f;
+  font-weight: 950;
+}
+
+.wb-guide-trade-player[data-tone="enemy"] > span { background: #73aee8; }
+
+.wb-guide-trade-player strong,
+.wb-guide-trade-player small { display: block; }
+.wb-guide-trade-player strong { color: var(--wb-text); font-size: .78rem; }
+.wb-guide-trade-player small { margin-top: 2px; color: var(--wb-text-muted); font-size: .6rem; }
+.wb-guide-trade-versus { color: var(--wb-gold); font-size: 1.2rem; }
+
+.wb-guide-trade-terms {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 12px;
+  border-top: 1px solid var(--wb-border-neutral);
+  border-bottom: 1px solid var(--wb-border-neutral);
+  padding: 13px 20px;
+}
+
+.wb-guide-trade-terms > div:last-child { text-align: right; }
+.wb-guide-trade-terms small,
+.wb-guide-trade-terms strong { display: block; }
+.wb-guide-trade-terms small { color: var(--wb-text-muted); font-size: .58rem; text-transform: uppercase; }
+.wb-guide-trade-terms strong { margin-top: 4px; color: var(--wb-text); font-size: .78rem; }
+.wb-guide-trade-terms > span { color: var(--wb-gold-bright); font-weight: 950; }
+
+.wb-guide-trade-decisions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 7px;
+  padding: 12px 16px;
+}
+
+.wb-guide-trade-decisions span {
+  border: 1px solid var(--wb-border-neutral);
+  border-radius: 999px;
+  padding: 6px 10px;
+  color: var(--wb-text-muted);
+  font-size: .6rem;
+  font-weight: 850;
+}
+.wb-guide-trade-decisions [data-tone="success"] { border-color: rgba(103, 202, 145, .4); color: #8be0ae; }
+.wb-guide-trade-decisions [data-tone="accent"] { border-color: rgba(214, 169, 62, .4); color: var(--wb-gold-bright); }
+
+.wb-guide-trade-selection {
+  display: grid;
+  grid-template-columns: minmax(84px, 1fr) auto minmax(84px, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 16px 18px 20px;
+  background: rgba(0, 0, 0, .14);
+}
+
+.wb-guide-trade-selection > div:not(.wb-guide-trade-swap) {
+  display: grid;
+  justify-items: center;
+  gap: 7px;
+}
+
+.wb-guide-trade-selection small {
+  color: var(--wb-text-muted);
+  font-size: .56rem;
+  font-weight: 850;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.wb-guide-trade-selection .territory-card-artwork {
+  width: min(92px, 100%);
+}
+
+.wb-guide-trade-swap {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  color: var(--wb-gold-bright);
+  text-align: center;
+}
+
+.wb-guide-trade-swap strong { font-size: 1.55rem; line-height: 1; }
+.wb-guide-trade-swap span { color: var(--wb-text-soft); font-size: .6rem; font-weight: 850; }
+
+.wb-guide-player-trade-layout {
+  display: grid;
+  margin-top: clamp(28px, 5vw, 54px);
+  grid-template-columns: minmax(230px, .72fr) minmax(0, 1.28fr);
+  align-items: center;
+  gap: clamp(24px, 5vw, 58px);
+}
+
+.wb-guide-player-trade-copy h3 {
+  margin: 7px 0 0;
+  max-width: 520px;
+  color: var(--wb-text);
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: clamp(1.75rem, 3vw, 2.55rem);
+  line-height: .98;
+}
+
+.wb-guide-player-trade-copy > p:not(.wb-guide-label) {
+  margin: 15px 0 0;
+  color: var(--wb-text-muted);
+  font-size: .86rem;
+  line-height: 1.65;
+}
+
+.wb-guide-player-trade-limits {
+  display: grid;
+  margin-top: 20px;
+  gap: 8px;
+}
+
+.wb-guide-player-trade-limits div {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  gap: 9px;
+  border-top: 1px solid var(--wb-border-neutral);
+  padding-top: 9px;
+}
+
+.wb-guide-player-trade-limits strong {
+  color: var(--wb-gold-bright);
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: 1.45rem;
+}
+
+.wb-guide-player-trade-limits span {
+  color: var(--wb-text-muted);
+  font-size: .7rem;
+  line-height: 1.35;
+}
+
+.wb-guide-scene-rule-row {
+  display: grid;
+  margin-top: 22px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.wb-guide-scene-rule-row p {
+  margin: 0;
+  border-left: 2px solid rgba(214, 169, 62, .35);
+  padding: 8px 0 8px 12px;
+  color: var(--wb-text-muted);
+  font-size: .72rem;
+  line-height: 1.5;
+}
+
+.wb-guide-scene-rule-row strong { color: var(--wb-text-soft); }
+
+@media (max-width: 900px) {
+  .wb-guide-player-trade-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .wb-guide-board-scene-stage { min-height: 285px; }
+}
+
+@media (max-width: 700px) {
+  .wb-guide-board-scene-stage { min-height: 250px; border-radius: 14px; }
+  .wb-guide-board-scene-map { padding: 10px; opacity: .28; }
+  .wb-guide-board-marker {
+    min-width: 88px;
+    grid-template-columns: 32px minmax(0, 1fr);
+    gap: 6px;
+  }
+  .wb-guide-board-troops { width: 32px; height: 32px; font-size: .8rem; }
+  .wb-guide-board-marker-copy { padding: 4px 5px 4px 7px; }
+  .wb-guide-board-marker-copy strong { font-size: .64rem; }
+  .wb-guide-board-marker-copy small { font-size: .52rem; }
+
+  .wb-guide-scene-transition {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+  .wb-guide-scene-transition-arrow {
+    min-width: 0;
+    grid-template-columns: auto auto;
+    justify-content: center;
+    align-items: center;
+  }
+  .wb-guide-scene-transition-arrow strong { transform: rotate(90deg); }
+  .wb-guide-scene-transition-arrow small { max-width: none; }
+
+  .wb-guide-trade-players { padding-inline: 13px; }
+  .wb-guide-trade-terms { padding-inline: 13px; }
+  .wb-guide-trade-selection { padding-inline: 12px; gap: 8px; }
+  .wb-guide-trade-player small { display: none; }
+  .wb-guide-trade-selection .territory-card-artwork { width: min(76px, 100%); }
+
+  .wb-guide-scene-rule-row { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .wb-guide-board-scene-links line[data-kind="maneuver"],
+  .wb-guide-board-scene-links line[data-kind="tunnel"] {
+    animation: wb-guide-route-flow 1.7s linear infinite;
+  }
+}
+
+@keyframes wb-guide-route-flow {
+  to { stroke-dashoffset: -26; }
+}
