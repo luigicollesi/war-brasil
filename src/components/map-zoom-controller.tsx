@@ -91,6 +91,8 @@ export function MapZoomController() {
       let lastMobile = window.matchMedia(MOBILE_MAP_QUERY).matches;
       let autoFocusFrame: number | null = null;
       const territoryBoundsById = new Map<number, MapWorldBounds>();
+      const presentationIsActive = () =>
+        surface.dataset.mapPresentationActive === "true";
 
       const resetButton = document.createElement("button");
       resetButton.type = "button";
@@ -181,11 +183,13 @@ export function MapZoomController() {
       };
 
       const resetMapViewport = () => {
+        if (presentationIsActive()) return;
         manualViewportOverride = true;
         animateViewportTo({ ...DEFAULT_MAP_VIEWPORT }, { animated: true });
       };
 
       const onResetPointerDown = (event: PointerEvent) => {
+        if (presentationIsActive()) event.preventDefault();
         event.stopPropagation();
       };
 
@@ -419,6 +423,24 @@ export function MapZoomController() {
         let single: SingleGesture | null = null;
         let pinch: PinchGesture | null = null;
 
+        const cancelGestureState = () => {
+          pointers.clear();
+          single = null;
+          pinch = null;
+          setGestureActive(false);
+        };
+
+        const presentationObserver = new MutationObserver(() => {
+          if (!presentationIsActive()) return;
+          cancelAutoFocusAnimation();
+          cancelGestureState();
+          suppressSelection();
+        });
+        presentationObserver.observe(surface, {
+          attributes: true,
+          attributeFilter: ["data-map-presentation-active"],
+        });
+
         const relativePoint = (point: PointerSample) => {
           const rect = surface.getBoundingClientRect();
           return {
@@ -428,6 +450,11 @@ export function MapZoomController() {
         };
 
         const startPinch = () => {
+          if (presentationIsActive()) {
+            cancelGestureState();
+            return;
+          }
+
           const samples = Array.from(pointers.values()).slice(0, 2);
           if (samples.length < 2) {
             pinch = null;
@@ -446,7 +473,7 @@ export function MapZoomController() {
         };
 
         const onPointerDown = (event: PointerEvent) => {
-          if (event.pointerType !== "touch") return;
+          if (event.pointerType !== "touch" || presentationIsActive()) return;
           cancelAutoFocusAnimation();
 
           pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
@@ -474,6 +501,10 @@ export function MapZoomController() {
         };
 
         const onPointerMove = (event: PointerEvent) => {
+          if (presentationIsActive()) {
+            cancelGestureState();
+            return;
+          }
           if (event.pointerType !== "touch" || !pointers.has(event.pointerId)) {
             return;
           }
@@ -537,6 +568,10 @@ export function MapZoomController() {
 
         const finishPointer = (event: PointerEvent) => {
           if (event.pointerType !== "touch") return;
+          if (presentationIsActive()) {
+            cancelGestureState();
+            return;
+          }
           pointers.delete(event.pointerId);
 
           if (pointers.size >= 2) {
@@ -569,7 +604,7 @@ export function MapZoomController() {
           const suppressUntil = Number(
             surface.dataset.mapGestureSuppressUntil ?? "0",
           );
-          if (performance.now() >= suppressUntil) return;
+          if (!presentationIsActive() && performance.now() >= suppressUntil) return;
 
           event.preventDefault();
           event.stopPropagation();
@@ -584,6 +619,7 @@ export function MapZoomController() {
 
         detachSvg = () => {
           setGestureActive(false);
+          presentationObserver.disconnect();
           strokeObserver?.disconnect();
           applyTerritoryStrokeScale = () => {};
           territoryBoundsById.clear();
