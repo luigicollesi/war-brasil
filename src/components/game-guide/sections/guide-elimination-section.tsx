@@ -23,11 +23,11 @@ export function GuideEliminationSection() {
           compact
           ariaLabel="Exemplo no mapa 2D: o último território inimigo é conquistado"
           markers={[
-            { key: "winner", label: "Conquistador", troops: 4, x: 44, y: 49, tone: "ally", selected: true },
-            { key: "last", label: "Último território", troops: 1, x: 61, y: 53, tone: "enemy" },
+            { key: "winner", label: "Conquistador", troops: 4, x: 33, y: 45, tone: "ally", selected: true },
+            { key: "last", label: "Último território", troops: 1, x: 70, y: 56, tone: "enemy" },
           ]}
           arrows={[
-            { key: "last-attack", from: { x: 46, y: 49 }, to: { x: 59, y: 52 }, kind: "attack", label: "último território" },
+            { key: "last-attack", from: { x: 46, y: 49 }, to: { x: 59, y: 52 }, kind: "attack" },
           ]}
           caption="Quando esse território cai, o rival fica com 0 territórios e sai da ordem de turnos."
         />
