@@ -13,8 +13,8 @@ export function GuideCardsSection({
   return (
     <article className="wb-guide-chapter wb-guide-section--cards">
       <GuideHeading number="11" title="Transforme cartas em tropas">
-        Durante o reforço, forme uma combinação de 3 cartas para trocá-las por
-        tropas.
+        Durante o reforço, converta uma combinação de 3 cartas em tropas. Esta
+        conversão é separada da negociação de cartas entre jogadores da seção 04.
       </GuideHeading>
 
       <GuideFlow
@@ -73,18 +73,18 @@ export function GuideCardsSection({
         </section>
 
         <section className="wb-guide-card-progress">
-          <p className="wb-guide-label">Valor das suas trocas</p>
+          <p className="wb-guide-label">Valor das suas conversões</p>
           <GuideRuleScale
-            ariaLabel="Progressão pessoal de reforços por troca de cartas"
+            ariaLabel="Progressão pessoal de reforços por conversão de cartas"
             items={guide.cards.tradeValues.map((value, index) => ({
               key: `trade-${index + 1}`,
-              label: `${index + 1}ª troca`,
+              label: `${index + 1}ª conversão`,
               value: `+${value} tropas`,
               tone: index === 0 ? "accent" : "default",
             }))}
           />
           <p>
-            Cada troca sua vale
+            Cada conversão sua vale
             {` +${guide.cards.incrementPerPersonalTrade} tropa`} a mais que a anterior.
             A progressão é <strong>individual</strong>.
           </p>
@@ -102,8 +102,9 @@ export function GuideCardsSection({
       </div>
 
       <p className="wb-guide-inline-note wb-guide-card-mandatory-note">
-        <strong>{guide.cards.mandatoryTradeHandSize} ou mais cartas.</strong> Troque
-        antes de reforçar. Cartas de um jogador eliminado entram na sua mão.
+        <strong>{guide.cards.mandatoryTradeHandSize} ou mais cartas.</strong> Converta
+        uma combinação antes de reforçar. Cartas de um jogador eliminado entram na
+        sua mão.
       </p>
     </article>
   );
