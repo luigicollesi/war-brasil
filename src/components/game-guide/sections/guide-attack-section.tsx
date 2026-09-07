@@ -1,6 +1,5 @@
-import { GuideConnection } from "@/src/components/game-guide/guide-connection";
+import { GuideBoardScene } from "@/src/components/game-guide/guide-board-scene";
 import { GuideHeading } from "@/src/components/game-guide/guide-heading";
-import { GuideTerritoryNode } from "@/src/components/game-guide/guide-territory-node";
 import type { GameGuidePresentation } from "@/src/lib/game-guide-presentation";
 
 export function GuideAttackSection({
@@ -29,11 +28,40 @@ export function GuideAttackSection({
       </div>
 
       <div className="wb-guide-visual wb-guide-attack-example">
-        <GuideConnection
-          directed
-          ariaLabel="Território próprio com quatro tropas atacando um território inimigo conectado com duas tropas"
-          from={<GuideTerritoryNode compact name="Origem" troops={4} tone="ally" />}
-          to={<GuideTerritoryNode compact name="Inimigo" troops={2} tone="enemy" />}
+        <GuideBoardScene
+          ariaLabel="Exemplo no mapa 2D: Goiás, com quatro tropas, ataca a Bahia, com duas tropas"
+          markers={[
+            {
+              key: "origin",
+              label: "Goiás",
+              troops: 4,
+              tone: "ally",
+              x: 49,
+              y: 57,
+              detail: "seu território",
+              status: "selected",
+            },
+            {
+              key: "target",
+              label: "Bahia",
+              troops: 2,
+              tone: "enemy",
+              x: 63,
+              y: 52,
+              detail: "território inimigo",
+              status: "target",
+            },
+          ]}
+          links={[
+            {
+              key: "attack",
+              from: "origin",
+              to: "target",
+              kind: "attack",
+              directed: true,
+            },
+          ]}
+          badge={`${guide.attack.normalMinimumTroops}+ tropas para iniciar um ataque normal`}
           caption="Antes da primeira rolagem, o ataque ainda pode ser cancelado. Barreiras usam as regras da seção 08."
         />
       </div>
