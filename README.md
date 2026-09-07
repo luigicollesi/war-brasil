@@ -58,19 +58,20 @@ Segredos reais nunca devem ser adicionados ao `.env.example`.
 ## Banco de dados
 
 O schema canônico para uma instalação limpa fica em `src/lib/db/schema.sql` e
-já representa o estado físico final da Phase 1. As tabelas da aplicação são
-separadas em três namespaces PostgreSQL:
+representa o estado físico atual. As tabelas da aplicação são separadas em três
+namespaces PostgreSQL:
 
-- `game` — estado pertencente a uma partida;
+- `game` — estado pertencente a uma sala ou execução de partida;
 - `catalog` — regras, mapa e outros dados de referência compartilhados;
 - `ops` — estado operacional e histórico de migrations.
 
-Os nomes físicos removem prefixos que ficaram redundantes depois da separação
-por schema:
+Os principais objetos físicos são:
 
 ```text
 game.rooms
 game.players
+game.matches
+game.player_dice_states
 game.territories
 game.order_rolls
 game.rematch_votes
@@ -79,6 +80,8 @@ game.cards
 game.trade_offers
 game.round_events
 
+catalog.dice_balance_profiles
+catalog.dice_balance_settings
 catalog.objectives
 catalog.objective_rules
 catalog.events
@@ -91,31 +94,39 @@ ops.command_receipts
 ops.pgmigrations
 ```
 
-Ao final da Phase 1, `public` não contém tabelas físicas da aplicação. Views
-automaticamente atualizáveis ainda expõem temporariamente os 17 nomes legados
-(`game_rooms`, `room_players`, `game_cards`, `territory_connections`, etc.) para
-que Next.js, realtime e worker continuem funcionando enquanto as queries são
-migradas para nomes schema-qualified. Essas views serão removidas em uma fase
-posterior, quando o runtime deixar de depender da interface antiga.
+`game.matches` identifica uma execução concreta da partida para o lifecycle e
+versionamento dos dados de combate. O perfil de balanceamento é validado e
+armazenado como snapshot imutável no início do match; o estado adaptativo de
+cada jogador fica em `game.player_dice_states`. Os demais artefatos de gameplay
+continuam vinculados à sala nesta fase.
+
+`public` não contém tabelas físicas da aplicação. Views automaticamente
+atualizáveis ainda expõem temporariamente os 17 nomes legados (`game_rooms`,
+`room_players`, `game_cards`, `territory_connections`, etc.) para consumidores
+que ainda dependam dessa interface. Objetos novos do balanceamento não recebem
+views de compatibilidade porque são usados apenas pelo runtime schema-qualified.
 
 As migrations `002` a `025` em `src/lib/db/migrations/` formam o histórico
 legado e não são reexecutadas pelo runner atual. As migrations gerenciadas
 começam em `026` e ficam em `src/lib/db/migrations/managed/`:
 
 - `026-organize-database-schemas.sql` move as 17 tabelas legadas de `public`
-  para `game`, `catalog` e `ops`, aceitando também bancos já organizados
-  manualmente;
-- `027-normalize-schema-table-names.sql` aplica os nomes físicos finais em
-  `game`/`ops` e normaliza os nomes dependentes de constraints, índices e
-  sequences.
+  para `game`, `catalog` e `ops`;
+- `027-normalize-schema-table-names.sql` aplica os nomes físicos finais e
+  normaliza constraints, índices e sequences dependentes;
+- `028-normalize-rooms-phase-constraint.sql` converge o nome e a semântica da
+  constraint de fase das salas;
+- `029-adaptive-combat-dice.sql` adiciona perfis versionados de dados de
+  combate, identidade de match, snapshots imutáveis e state adaptativo por
+  `(match, player)`. Partidas já em andamento no momento do upgrade são
+  preservadas com `uniform-v1`; somente novos matches usam o perfil padrão
+  adaptativo.
 
 O runner em `scripts/prepare-dev-db.mjs` registra as execuções em
 `ops.pgmigrations`, valida a ordem do histórico, usa advisory lock e executa as
 pendências em uma transação. Antes de mover um banco legado ainda baseado em
-tabelas físicas `public.*`, ele valida o baseline v025, incluindo os catálogos
-do mapa, as colunas introduzidas nas migrations recentes, as invariantes de
-negociação e a compatibilidade da fase `cards` durante `order_roll`. Um banco
-mais antigo falha explicitamente em vez de ser parcialmente reorganizado.
+tabelas físicas `public.*`, ele valida o baseline v025. Um banco mais antigo ou
+ambíguo falha explicitamente em vez de ser parcialmente reorganizado.
 
 Depois de criar o schema base ou ao atualizar o branch de desenvolvimento, use:
 
@@ -126,9 +137,9 @@ npm run db:migrate
 `npm run db:prepare:dev` é um alias compatível para o mesmo runner. `npm run dev`
 executa essa preparação antes de subir os processos locais.
 
-O CI valida em PostgreSQL 18 o upgrade de um banco legado v025, preservação dos
-catálogos do mapa, idempotência das migrations, rejeição de um baseline legado
-incompleto e instalação limpa por meio de:
+O CI usa PostgreSQL 18 para validar upgrade do baseline v025, preservação dos
+catálogos, idempotência das migrations, rollout de partidas existentes,
+constraints do subsistema de dados e instalação limpa por meio de:
 
 ```bash
 npm run test:db
