@@ -152,7 +152,7 @@ test("manobra, mapa, Anomalia e vitória mantêm as limitações essenciais", ()
   const victory = source("src/components/game-guide/sections/guide-victory-section.tsx");
 
   assert.match(maneuver, /cadeia própria/);
-  assert.match(maneuver, /não podem sair novamente/i);
+  assert.match(maneuver, /não podem\s+sair novamente/i);
   assert.match(maneuver, /GuideBoardScene/);
   assert.match(maneuver, /seção 08/);
   assert.doesNotMatch(maneuver, /GuideRuleScale|wb-guide-maneuver-barriers|GuideConnection/);
