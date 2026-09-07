@@ -1,5 +1,8 @@
 import { TerritoryCardArtwork } from "@/src/components/territory-card-artwork";
 
+const tradeCardClassName =
+  "wb-guide-trade-card relative aspect-[2/3] w-24 overflow-hidden rounded-xl bg-[#f9f4df]";
+
 function GuideTradePlayer({
   label,
   detail,
@@ -55,7 +58,12 @@ export function GuideTradeScene() {
         <div className="wb-guide-trade-selection" aria-hidden="true">
           <div>
             <small>Seleção privada</small>
-            <TerritoryCardArtwork territoryId={18} symbol="gold" sizes="92px" />
+            <TerritoryCardArtwork
+              territoryId={18}
+              symbol="gold"
+              sizes="92px"
+              className={tradeCardClassName}
+            />
           </div>
           <div className="wb-guide-trade-swap">
             <small>termos aceitos</small>
@@ -64,7 +72,12 @@ export function GuideTradeScene() {
           </div>
           <div>
             <small>Seleção privada</small>
-            <TerritoryCardArtwork territoryId={31} symbol="water" sizes="92px" />
+            <TerritoryCardArtwork
+              territoryId={31}
+              symbol="water"
+              sizes="92px"
+              className={tradeCardClassName}
+            />
           </div>
         </div>
       </div>
