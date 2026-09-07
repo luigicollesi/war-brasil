@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { useId, type CSSProperties, type ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 export type GuideSceneTone = "ally" | "enemy" | "accent" | "neutral";
 
@@ -41,6 +41,17 @@ function arrowPath(arrow: GuideSceneArrow) {
   return `M ${arrow.from.x} ${arrow.from.y} Q ${midpointX} ${midpointY - curve} ${arrow.to.x} ${arrow.to.y}`;
 }
 
+function sceneDomId(ariaLabel: string, markers: readonly GuideSceneMarker[]) {
+  const raw = `${ariaLabel}-${markers.map((marker) => marker.key).join("-")}`;
+  return raw
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 72);
+}
+
 export function GuideBoardScene({
   ariaLabel,
   markers,
@@ -56,9 +67,9 @@ export function GuideBoardScene({
   className?: string;
   compact?: boolean;
 }) {
-  const sceneId = useId().replaceAll(":", "");
-  const attackArrowId = `${sceneId}-guide-attack-arrow`;
-  const moveArrowId = `${sceneId}-guide-move-arrow`;
+  const sceneId = sceneDomId(ariaLabel, markers);
+  const attackArrowId = `${sceneId}-attack-arrow`;
+  const moveArrowId = `${sceneId}-move-arrow`;
 
   return (
     <figure
