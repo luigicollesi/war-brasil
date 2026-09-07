@@ -286,7 +286,6 @@ export function InteractiveBoard({
   const tooltipFrameRef = useRef(0);
   const hoveredTerritoryRef = useRef<number | null>(null);
   const onSelectRef = useRef(onSelect);
-  const interactionEnabledRef = useRef(true);
   const gestureActiveRef = useRef(false);
   const [geometries, setGeometries] = useState<Map<number, TerritoryGeometry>>(
     new Map(),
@@ -298,7 +297,6 @@ export function InteractiveBoard({
   const troopsVisible = useTroopVisibility();
   const effectivePresentation = presentation;
   const presentationActive = effectivePresentation.mode !== "normal";
-  interactionEnabledRef.current = !presentationActive;
 
   const territoryById = useMemo(
     () => new Map(territories.map((territory) => [territory.territoryId, territory])),
@@ -353,7 +351,10 @@ export function InteractiveBoard({
     if (root) {
       setTerritoryHitInteractionEnabled(root, !presentationActive);
     }
-    if (presentationActive) clearHoveredTerritory();
+    if (!presentationActive) return;
+
+    const frame = requestAnimationFrame(clearHoveredTerritory);
+    return () => cancelAnimationFrame(frame);
   }, [clearHoveredTerritory, presentationActive]);
 
   useEffect(
@@ -390,6 +391,8 @@ export function InteractiveBoard({
     const root = mapDocument?.querySelector("#board-v2");
     const surface = containerRef.current;
     if (!mapDocument || !faceRoot || !root || !surface) return;
+    const presentationIsActive = () =>
+      surface.dataset.mapPresentationActive === "true";
 
     root.setAttribute("data-map-interaction-root", "true");
 
@@ -411,7 +414,7 @@ export function InteractiveBoard({
 
     const nextVisualNodes = collectTerritoryVisualNodes(mapDocument, paths);
     buildTerritoryHitLayer(mapDocument, root, nextVisualNodes);
-    setTerritoryHitInteractionEnabled(root, interactionEnabledRef.current);
+    setTerritoryHitInteractionEnabled(root, !presentationIsActive());
 
     visualNodesByIdRef.current = nextVisualNodes;
     materialSignatureRef.current.clear();
@@ -454,13 +457,13 @@ export function InteractiveBoard({
     };
 
     const click = (event: Event) => {
-      if (!interactionEnabledRef.current || gestureActiveRef.current) return;
+      if (presentationIsActive() || gestureActiveRef.current) return;
       const id = territoryIdFromEvent(event, root);
       if (id !== null) onSelectRef.current?.(id);
     };
 
     const keyDown = (event: Event) => {
-      if (!interactionEnabledRef.current || gestureActiveRef.current) return;
+      if (presentationIsActive() || gestureActiveRef.current) return;
       const keyboardEvent = event as KeyboardEvent;
       if (keyboardEvent.key !== "Enter" && keyboardEvent.key !== " ") return;
       const id = territoryIdFromEvent(event, root);
@@ -470,7 +473,7 @@ export function InteractiveBoard({
     };
 
     const syncPointerHover = (event: Event) => {
-      if (!interactionEnabledRef.current || gestureActiveRef.current) {
+      if (presentationIsActive() || gestureActiveRef.current) {
         setHoveredTerritoryId(null);
         return;
       }
