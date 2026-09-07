@@ -22,6 +22,7 @@ const guideStyles = [
   "src/app/war-guide-regions.css",
   "src/app/war-guide-sections.css",
   "src/app/war-guide-final-sections.css",
+  "src/app/war-guide-scenes.css",
   "src/app/war-guide-responsive.css",
 ].map(source).join("\n");
 
@@ -55,6 +56,7 @@ test("seções dependem da camada de apresentação e não de serviços ou regra
   const forbiddenImports = [
     /@\/src\/lib\/game-rules/,
     /@\/src\/lib\/game-barrier-rules/,
+    /@\/src\/lib\/game-trade-rules/,
     /@\/src\/lib\/game-command-service/,
     /@\/src\/lib\/game-.*-command-service/,
     /@\/src\/lib\/game-battle-service/,
@@ -71,7 +73,7 @@ test("seções dependem da camada de apresentação e não de serviços ou regra
 
   const main = source("src/components/game-guide/game-quick-guide.tsx");
   assert.match(main, /buildGameGuidePresentation/);
-  assert.doesNotMatch(main, /game-rules|game-barrier-rules|command-service/);
+  assert.doesNotMatch(main, /game-rules|game-barrier-rules|game-trade-rules|command-service/);
 });
 
 test("estrutura semântica do manual permanece acessível depois da limpeza", () => {
@@ -80,6 +82,8 @@ test("estrutura semântica do manual permanece acessível depois da limpeza", ()
   const stateChange = source("src/components/game-guide/guide-state-change.tsx");
   const connection = source("src/components/game-guide/guide-connection.tsx");
   const mapExamples = source("src/components/game-guide/guide-map-examples.tsx");
+  const boardScene = source("src/components/game-guide/guide-board-scene.tsx");
+  const tradeScene = source("src/components/game-guide/guide-trade-scene.tsx");
   const reinforcement = source(`${sectionDirectory}/guide-reinforcement-section.tsx`);
   const barrier = source(`${sectionDirectory}/guide-barrier-section.tsx`);
 
@@ -95,6 +99,10 @@ test("estrutura semântica do manual permanece acessível depois da limpeza", ()
   assert.match(connection, /role="img"/);
   assert.match(mapExamples, /<figure/);
   assert.match(mapExamples, /role="img"/);
+  assert.match(boardScene, /<figure/);
+  assert.match(boardScene, /role="img"/);
+  assert.match(tradeScene, /<figure/);
+  assert.match(tradeScene, /role="img"/);
   assert.match(reinforcement, /scope="col"/);
   assert.match(reinforcement, /scope="row"/);
   assert.match(barrier, /alt=""/);
