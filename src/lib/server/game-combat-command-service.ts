@@ -1,6 +1,5 @@
 import "server-only";
 
-import { randomInt } from "node:crypto";
 import type { PoolClient } from "pg";
 import {
   advanceBattlePresentation,
@@ -20,6 +19,7 @@ import type { GameCommandRequestMetadata } from "@/src/lib/game-command-request"
 import { isAttackOriginBlocked } from "@/src/lib/events/event-attack-rules";
 import { getEffectiveGameTopology } from "@/src/lib/game-effective-topology-service";
 import { resolveBattle } from "@/src/lib/game-rules";
+import { rollCombatDice } from "@/src/lib/server/dice-roll-service";
 import { findTerritoryConnection } from "@/src/lib/territory-connections";
 import { RoomError } from "@/src/lib/rooms";
 
@@ -321,9 +321,13 @@ export async function executeRollBattleDice(
       );
     }
 
-    battle.attacker = Array.from(
-      { length: profile.diceCount },
-      () => randomInt(1, 7),
+    battle.attacker = (
+      await rollCombatDice(client, {
+        roomId: room.id,
+        playerId: player.id,
+        roundNumber: room.round_number,
+        diceCount: profile.diceCount,
+      })
     ).sort((a, b) => b - a);
     battle.stage = "show_attacker_result";
     battle.stageStartedAt = new Date().toISOString();
@@ -336,9 +340,13 @@ export async function executeRollBattleDice(
       throw new RoomError("Apenas o defensor pode rolar agora.", 403);
     }
 
-    battle.defender = Array.from(
-      { length: Math.min(3, defender.troops) },
-      () => randomInt(1, 7),
+    battle.defender = (
+      await rollCombatDice(client, {
+        roomId: room.id,
+        playerId: player.id,
+        roundNumber: room.round_number,
+        diceCount: Math.min(3, defender.troops),
+      })
     ).sort((a, b) => b - a);
 
     const resolved = resolveBattle(battle.attacker, battle.defender);
