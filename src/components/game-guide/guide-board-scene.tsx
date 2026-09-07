@@ -1,5 +1,5 @@
 import Image from "next/image";
-import type { CSSProperties, ReactNode } from "react";
+import { useId, type CSSProperties, type ReactNode } from "react";
 
 export type GuideSceneTone = "ally" | "enemy" | "accent" | "neutral";
 
@@ -56,6 +56,10 @@ export function GuideBoardScene({
   className?: string;
   compact?: boolean;
 }) {
+  const sceneId = useId().replaceAll(":", "");
+  const attackArrowId = `${sceneId}-guide-attack-arrow`;
+  const moveArrowId = `${sceneId}-guide-move-arrow`;
+
   return (
     <figure
       className={`wb-guide-board-scene ${compact ? "wb-guide-board-scene--compact" : ""} ${className}`.trim()}
@@ -77,11 +81,11 @@ export function GuideBoardScene({
           aria-hidden="true"
         >
           <defs>
-            <marker id="guide-attack-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
-              <path d="M0,0 L7,3.5 L0,7 Z" />
+            <marker id={attackArrowId} markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+              <path d="M0,0 L7,3.5 L0,7 Z" data-kind="attack" />
             </marker>
-            <marker id="guide-move-arrow" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
-              <path d="M0,0 L7,3.5 L0,7 Z" />
+            <marker id={moveArrowId} markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+              <path d="M0,0 L7,3.5 L0,7 Z" data-kind="move" />
             </marker>
           </defs>
           {arrows.map((arrow) => (
@@ -89,7 +93,13 @@ export function GuideBoardScene({
               key={arrow.key}
               d={arrowPath(arrow)}
               data-kind={arrow.kind ?? "route"}
-              markerEnd={arrow.kind === "attack" ? "url(#guide-attack-arrow)" : arrow.kind === "move" ? "url(#guide-move-arrow)" : undefined}
+              markerEnd={
+                arrow.kind === "attack"
+                  ? `url(#${attackArrowId})`
+                  : arrow.kind === "move"
+                    ? `url(#${moveArrowId})`
+                    : undefined
+              }
             />
           ))}
         </svg>
