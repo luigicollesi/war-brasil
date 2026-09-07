@@ -81,7 +81,7 @@ function normalizedAdaptiveState(
   };
 }
 
-function symmetricWeights(
+export function buildSymmetricDiceWeights(
   profile: DiceBalanceProfile,
   pressure: number,
   weightTotal: number,
@@ -146,7 +146,11 @@ export function rollCombatDiceBatch(input: {
     correction === 0
       ? Array.from({ length: diceCount }, () => uniformFace(randomIntSource))
       : (() => {
-          const weights = symmetricWeights(profile, decayedPressure, weightTotal);
+          const weights = buildSymmetricDiceWeights(
+            profile,
+            decayedPressure,
+            weightTotal,
+          );
           return Array.from({ length: diceCount }, () =>
             faceForWeightedDraw(weights, randomIntSource(0, weightTotal)),
           );
