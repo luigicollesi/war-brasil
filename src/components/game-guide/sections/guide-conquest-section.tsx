@@ -1,25 +1,7 @@
+import { GuideBoardScene } from "@/src/components/game-guide/guide-board-scene";
 import { GuideHeading } from "@/src/components/game-guide/guide-heading";
 import { GuideStateChange } from "@/src/components/game-guide/guide-state-change";
-import { GuideTerritoryNode } from "@/src/components/game-guide/guide-territory-node";
 import type { GameGuidePresentation } from "@/src/lib/game-guide-presentation";
-
-function TerritoryPair({
-  originTroops,
-  targetTroops,
-  targetTone,
-}: {
-  originTroops: number;
-  targetTroops: number;
-  targetTone: "enemy" | "ally";
-}) {
-  return (
-    <div className="wb-guide-territory-pair">
-      <GuideTerritoryNode compact name="Origem" troops={originTroops} tone="ally" />
-      <span aria-hidden="true">→</span>
-      <GuideTerritoryNode compact name="Destino" troops={targetTroops} tone={targetTone} />
-    </div>
-  );
-}
 
 export function GuideConquestSection({
   guide,
@@ -43,11 +25,35 @@ export function GuideConquestSection({
 
       <div className="wb-guide-visual">
         <GuideStateChange
-          ariaLabel="Exemplo de conquista: território atacante com cinco tropas conquista um território inimigo e move duas tropas"
-          className="wb-guide-conquest-example"
-          before={<TerritoryPair originTroops={5} targetTroops={1} targetTone="enemy" />}
+          ariaLabel="Exemplo no mapa 2D: território inimigo é conquistado e duas tropas são transferidas para ocupá-lo"
+          className="wb-guide-conquest-example wb-guide-conquest-board-change"
+          before={
+            <GuideBoardScene
+              compact
+              ariaLabel="Antes da conquista"
+              markers={[
+                { key: "origin-before", label: "Origem", troops: 5, x: 42, y: 48, tone: "ally", selected: true },
+                { key: "target-before", label: "Defesa", troops: 1, x: 61, y: 53, tone: "enemy" },
+              ]}
+              arrows={[
+                { key: "attack-before", from: { x: 44, y: 48 }, to: { x: 59, y: 52 }, kind: "attack" },
+              ]}
+            />
+          }
           action="conquistar + mover 2"
-          after={<TerritoryPair originTroops={3} targetTroops={2} targetTone="ally" />}
+          after={
+            <GuideBoardScene
+              compact
+              ariaLabel="Depois da conquista"
+              markers={[
+                { key: "origin-after", label: "Origem", troops: 3, x: 42, y: 48, tone: "ally" },
+                { key: "target-after", label: "Conquistado", troops: 2, x: 61, y: 53, tone: "ally", selected: true },
+              ]}
+              arrows={[
+                { key: "move-after", from: { x: 44, y: 48 }, to: { x: 59, y: 52 }, kind: "move", label: "+2" },
+              ]}
+            />
+          }
           caption={`Mova de ${guide.conquest.minimumMove} tropa até o limite disponível na origem.`}
         />
       </div>
