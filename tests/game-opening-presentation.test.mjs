@@ -17,6 +17,10 @@ test("abertura usa timeline persistida do backend e renderer único do tabuleiro
   assert.doesNotMatch(client, /InitialTerritoryDrawPresentation/);
   assert.doesNotMatch(client, /setInterval\(/);
   assert.match(client, /window\.setTimeout/);
+  assert.match(
+    client,
+    /setPresentationClockMs\(nowMs\);\s*}\s*const wakeAt = nextInitialTerritoryPresentationWakeAt/,
+  );
   assert.match(board, /Sorteio de Territórios/);
   assert.match(board, /data-initial-territory-title/);
   assert.match(presentation, /titleVisible/);
