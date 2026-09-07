@@ -32,8 +32,8 @@ export function GuideConquestSection({
               compact
               ariaLabel="Antes da conquista"
               markers={[
-                { key: "origin-before", label: "Origem", troops: 5, x: 42, y: 48, tone: "ally", selected: true },
-                { key: "target-before", label: "Defesa", troops: 1, x: 61, y: 53, tone: "enemy" },
+                { key: "origin-before", label: "Origem", troops: 5, x: 33, y: 45, tone: "ally", selected: true },
+                { key: "target-before", label: "Defesa", troops: 1, x: 70, y: 56, tone: "enemy" },
               ]}
               arrows={[
                 { key: "attack-before", from: { x: 44, y: 48 }, to: { x: 59, y: 52 }, kind: "attack" },
@@ -46,8 +46,8 @@ export function GuideConquestSection({
               compact
               ariaLabel="Depois da conquista"
               markers={[
-                { key: "origin-after", label: "Origem", troops: 3, x: 42, y: 48, tone: "ally" },
-                { key: "target-after", label: "Conquistado", troops: 2, x: 61, y: 53, tone: "ally", selected: true },
+                { key: "origin-after", label: "Origem", troops: 3, x: 33, y: 45, tone: "ally" },
+                { key: "target-after", label: "Conquistado", troops: 2, x: 70, y: 56, tone: "ally", selected: true },
               ]}
               arrows={[
                 { key: "move-after", from: { x: 44, y: 48 }, to: { x: 59, y: 52 }, kind: "move", label: "+2" },
