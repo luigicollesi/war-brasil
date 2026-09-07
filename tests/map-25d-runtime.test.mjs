@@ -128,6 +128,43 @@ test("every real face and depth can build a conservative hit polygon", () => {
   }
 });
 
+test("Brasília 40 keeps conservative target geometry on its tiny face and all depth layers", () => {
+  const tags = mapPathTags();
+  const face = tags.find(
+    (tag) =>
+      hasClass(tag, "territory") && attribute(tag, "data-territory-id") === "40",
+  );
+  const depths = tags.filter(
+    (tag) =>
+      hasClass(tag, "territory-depth") &&
+      attribute(tag, "data-territory-id") === "40",
+  );
+  const topInset = Number(/data-top-inset="([^"]+)"/.exec(MAP_SVG)?.[1]);
+  const bodyInset = Number(/data-body-inset="([^"]+)"/.exec(MAP_SVG)?.[1]);
+
+  assert.ok(face, "territory 40 face is missing");
+  assert.equal(depths.length, 4);
+
+  const faceD = attribute(face, "d");
+  assert.ok(faceD);
+  const faceHit = resolveHitPolygonPath(faceD, topInset);
+  assert.ok(faceHit, "territory 40 face has no conservative hit geometry");
+  assert.notEqual(faceHit.d, faceD, "territory 40 face must never fall back to raw geometry");
+
+  for (const depth of depths) {
+    const layer = attribute(depth, "data-layer");
+    const depthD = attribute(depth, "d");
+    assert.ok(depthD, `territory 40 ${layer} is missing d`);
+    const depthHit = resolveHitPolygonPath(depthD, bodyInset);
+    assert.ok(depthHit, `territory 40 ${layer} has no conservative hit geometry`);
+    assert.notEqual(
+      depthHit.d,
+      depthD,
+      `territory 40 ${layer} must never fall back to raw geometry`,
+    );
+  }
+});
+
 test("opening presentation is discrete and reveals only territories whose boundary passed", () => {
   const beforeStart = deriveInitialTerritoryBoardPresentation({
     territoryIds: [7, 3, 12],
