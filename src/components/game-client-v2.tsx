@@ -148,7 +148,6 @@ function GameReadyClient({
     if (presentationIdentityRef.current !== initialPresentationKey) {
       presentationIdentityRef.current = initialPresentationKey;
       setPresentationClockMs(nowMs);
-      return;
     }
 
     const wakeAt = nextInitialTerritoryPresentationWakeAt({
