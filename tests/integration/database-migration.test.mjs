@@ -11,7 +11,9 @@ const physicalTables = new Map([
     "game",
     [
       "cards",
+      "matches",
       "order_rolls",
+      "player_dice_states",
       "player_objectives",
       "players",
       "rematch_votes",
@@ -25,6 +27,8 @@ const physicalTables = new Map([
     "catalog",
     [
       "bot_names",
+      "dice_balance_profiles",
+      "dice_balance_settings",
       "event_connections",
       "events",
       "objective_rules",
@@ -55,6 +59,13 @@ const compatibilityViews = [
   "territory_card_symbols",
   "territory_connections",
 ].sort();
+
+const managedHistory = [
+  "026-organize-database-schemas.sql",
+  "027-normalize-schema-table-names.sql",
+  "028-normalize-rooms-phase-constraint.sql",
+  "029-adaptive-combat-dice.sql",
+];
 
 function urlForDatabase(name) {
   const url = new URL(databaseUrl);
@@ -103,6 +114,53 @@ async function applySql(connectionString, path) {
   }
 }
 
+function migrationUpSql(path) {
+  const source = readFileSync(path, "utf8");
+  const upMarker = "-- Up Migration";
+  const downMarker = "-- Down Migration";
+  const upIndex = source.indexOf(upMarker);
+  assert.notEqual(upIndex, -1, `${path} sem ${upMarker}`);
+  const downIndex = source.indexOf(downMarker, upIndex + upMarker.length);
+  return source
+    .slice(upIndex + upMarker.length, downIndex < 0 ? source.length : downIndex)
+    .trim();
+}
+
+async function prepareLegacyDatabaseTo028(connectionString) {
+  await applySql(connectionString, "tests/fixtures/db/schema-v025.sql");
+  await applySql(
+    connectionString,
+    "tests/fixtures/db/schema-v025-supplement.sql",
+  );
+
+  const client = new Client({ connectionString });
+  await client.connect();
+  try {
+    await client.query("BEGIN");
+    await client.query("CREATE SCHEMA IF NOT EXISTS ops");
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS ops.pgmigrations (
+        id BIGSERIAL PRIMARY KEY,
+        name TEXT NOT NULL UNIQUE,
+        run_on TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    for (const name of managedHistory.slice(0, 3)) {
+      await client.query(
+        migrationUpSql(`src/lib/db/migrations/managed/${name}`),
+      );
+      await client.query("INSERT INTO ops.pgmigrations(name) VALUES($1)", [name]);
+    }
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    await client.end();
+  }
+}
+
 async function assertLegacyCatalogPreserved(connectionString) {
   const client = new Client({ connectionString });
   await client.connect();
@@ -125,6 +183,55 @@ async function assertLegacyCatalogPreserved(connectionString) {
   } finally {
     await client.end();
   }
+}
+
+async function assertAdaptiveDiceSchema(client) {
+  const profiles = await client.query(`
+    SELECT id,algorithm,alpha,pressure_cap,dead_zone,retention_per_round,
+           max_group_shift,inner_tilt,min_face_probability,max_face_probability
+    FROM catalog.dice_balance_profiles
+    ORDER BY id
+  `);
+  assert.deepEqual(
+    profiles.rows.map((row) => row.id),
+    ["adaptive-halves-v1", "uniform-v1"],
+  );
+
+  const adaptive = profiles.rows.find((row) => row.id === "adaptive-halves-v1");
+  assert.equal(adaptive.algorithm, "adaptive_halves");
+  assert.equal(Number(adaptive.alpha), 0.12);
+  assert.equal(Number(adaptive.pressure_cap), 0.6);
+  assert.equal(Number(adaptive.dead_zone), 0.1);
+  assert.equal(Number(adaptive.retention_per_round), 0.8);
+  assert.equal(Number(adaptive.max_group_shift), 0.2);
+  assert.equal(Number(adaptive.inner_tilt), 0.03);
+
+  const setting = await client.query(
+    "SELECT default_profile_id FROM catalog.dice_balance_settings WHERE id=1",
+  );
+  assert.equal(setting.rows[0]?.default_profile_id, "adaptive-halves-v1");
+
+  const roomColumns = await client.query(`
+    SELECT column_name
+    FROM information_schema.columns
+    WHERE table_schema='game' AND table_name='rooms'
+  `);
+  assert.equal(
+    roomColumns.rows.some((row) => row.column_name === "current_match_id"),
+    true,
+  );
+
+  const triggers = await client.query(`
+    SELECT tgname
+    FROM pg_trigger
+    WHERE tgrelid IN (
+      'catalog.dice_balance_profiles'::regclass,
+      'game.matches'::regclass
+    ) AND NOT tgisinternal
+  `);
+  const triggerNames = new Set(triggers.rows.map((row) => row.tgname));
+  assert.equal(triggerNames.has("dice_balance_profiles_append_only"), true);
+  assert.equal(triggerNames.has("matches_dice_profile_immutable"), true);
 }
 
 async function assertOrganizedDatabase(connectionString) {
@@ -168,11 +275,9 @@ async function assertOrganizedDatabase(connectionString) {
     const history = await client.query(
       "SELECT name FROM ops.pgmigrations ORDER BY id",
     );
-    assert.deepEqual(history.rows.map((row) => row.name), [
-      "026-organize-database-schemas.sql",
-      "027-normalize-schema-table-names.sql",
-      "028-normalize-rooms-phase-constraint.sql",
-    ]);
+    assert.deepEqual(history.rows.map((row) => row.name), managedHistory);
+
+    await assertAdaptiveDiceSchema(client);
 
     const room = await client.query(
       "INSERT INTO public.game_rooms(code) VALUES('MIGRATION') RETURNING id, revision",
@@ -248,6 +353,7 @@ async function assertOrganizedDatabase(connectionString) {
       "rooms_phase_check",
       "rooms_current_player_fkey",
       "rooms_winner_player_fkey",
+      "rooms_current_match_fkey",
     ]) {
       assert.equal(roomConstraintNames.has(name), true, name);
     }
@@ -307,10 +413,61 @@ async function assertOrganizedDatabase(connectionString) {
   }
 }
 
+async function assertLegacyRoomRollout(connectionString) {
+  const client = new Client({ connectionString });
+  await client.connect();
+  try {
+    const rooms = await client.query(`
+      SELECT code,status,current_match_id
+      FROM game.rooms
+      WHERE code LIKE 'ROLL_%'
+      ORDER BY code
+    `);
+    const byCode = new Map(rooms.rows.map((row) => [row.code, row]));
+
+    assert.equal(byCode.get("ROLL_WAIT")?.current_match_id, null);
+    assert.ok(byCode.get("ROLL_ORDER")?.current_match_id);
+    assert.ok(byCode.get("ROLL_PLAY")?.current_match_id);
+    assert.equal(byCode.get("ROLL_DONE")?.current_match_id, null);
+
+    const matches = await client.query(`
+      SELECT room.code,match.resolved_profile_id,match.profile_source,
+             match.finished_at,match.dice_balance_profile_snapshot
+      FROM game.matches match
+      JOIN game.rooms room ON room.id=match.room_id
+      WHERE room.code LIKE 'ROLL_%'
+      ORDER BY room.code
+    `);
+    const matchByCode = new Map(matches.rows.map((row) => [row.code, row]));
+
+    assert.equal(matchByCode.has("ROLL_WAIT"), false);
+    for (const code of ["ROLL_ORDER", "ROLL_PLAY", "ROLL_DONE"]) {
+      const match = matchByCode.get(code);
+      assert.equal(match?.resolved_profile_id, "uniform-v1", code);
+      assert.equal(match?.profile_source, "catalog", code);
+      assert.equal(match?.dice_balance_profile_snapshot.algorithm, "uniform", code);
+    }
+    assert.equal(matchByCode.get("ROLL_ORDER")?.finished_at, null);
+    assert.equal(matchByCode.get("ROLL_PLAY")?.finished_at, null);
+    assert.ok(matchByCode.get("ROLL_DONE")?.finished_at);
+
+    const states = await client.query(`
+      SELECT COUNT(*)::int count
+      FROM game.player_dice_states state
+      JOIN game.matches match ON match.id=state.match_id
+      JOIN game.rooms room ON room.id=match.room_id
+      WHERE room.code LIKE 'ROLL_%'
+    `);
+    assert.equal(states.rows[0].count, 0);
+  } finally {
+    await client.end();
+  }
+}
+
 if (!databaseUrl) {
   test("migrations de banco exigem DATABASE_URL", { skip: true }, () => {});
 } else {
-  test("026-028 migram banco v025, preservam catálogos e são idempotentes", async () => {
+  test("026-029 migram banco v025, preservam catálogos e são idempotentes", async () => {
     await withTemporaryDatabase("legacy", async (connectionString) => {
       await applySql(connectionString, "tests/fixtures/db/schema-v025.sql");
       await applySql(
@@ -321,6 +478,29 @@ if (!databaseUrl) {
       runPrepare(connectionString);
       await assertOrganizedDatabase(connectionString);
       await assertLegacyCatalogPreserved(connectionString);
+    });
+  });
+
+  test("029 preserva partidas existentes como uniformes e deixa waiting sem match", async () => {
+    await withTemporaryDatabase("adaptive-rollout", async (connectionString) => {
+      await prepareLegacyDatabaseTo028(connectionString);
+
+      const client = new Client({ connectionString });
+      await client.connect();
+      try {
+        await client.query(`
+          INSERT INTO game.rooms(code,status,phase) VALUES
+            ('ROLL_WAIT','waiting','trade'),
+            ('ROLL_ORDER','order_roll','cards'),
+            ('ROLL_PLAY','playing','attack'),
+            ('ROLL_DONE','finished','finished')
+        `);
+      } finally {
+        await client.end();
+      }
+
+      runPrepare(connectionString);
+      await assertLegacyRoomRollout(connectionString);
     });
   });
 
@@ -335,7 +515,7 @@ if (!databaseUrl) {
     });
   });
 
-  test("schema canônico novo já nasce no estado físico final", async () => {
+  test("schema canônico novo converge ao estado físico final", async () => {
     await withTemporaryDatabase("clean", async (connectionString) => {
       await applySql(connectionString, "src/lib/db/schema.sql");
       runPrepare(connectionString);
