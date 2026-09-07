@@ -26,9 +26,9 @@ export function GuideManeuverSection({
           <GuideBoardScene
             ariaLabel="Exemplo no mapa 2D: uma manobra atravessa três territórios aliados conectados"
             markers={[
-              { key: "a", label: "Origem A", troops: 5, x: 37, y: 56, tone: "ally", selected: true },
-              { key: "b", label: "Ponte B", troops: 2, x: 50, y: 48, tone: "ally" },
-              { key: "c", label: "Destino C", troops: 3, x: 63, y: 43, tone: "ally", moved: true },
+              { key: "a", label: "Origem A", troops: 5, x: 31, y: 60, tone: "ally", selected: true },
+              { key: "b", label: "Ponte B", troops: 2, x: 50, y: 49, tone: "ally" },
+              { key: "c", label: "Destino C", troops: 3, x: 73, y: 35, tone: "ally", moved: true },
             ]}
             arrows={[
               { key: "route-a-b", from: { x: 39, y: 55 }, to: { x: 48, y: 49 }, kind: "route" },
