@@ -233,6 +233,11 @@ BEGIN
 END
 $$;
 
+-- Views created by migration 026 expand SELECT * at creation time. Recreate the
+-- compatibility view after adding current_match_id so upgraded and clean schemas
+-- expose the same room shape.
+CREATE OR REPLACE VIEW public.game_rooms AS SELECT * FROM game.rooms;
+
 CREATE TABLE IF NOT EXISTS game.player_dice_states (
   match_id BIGINT NOT NULL
     CONSTRAINT player_dice_states_match_id_fkey
@@ -351,6 +356,15 @@ BEGIN
       AND column_name = 'current_match_id'
   ) THEN
     RAISE EXCEPTION 'Adaptive dice schema incomplete: game.rooms.current_match_id is missing';
+  END IF;
+
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = 'game_rooms'
+      AND column_name = 'current_match_id'
+  ) THEN
+    RAISE EXCEPTION 'Adaptive dice schema incomplete: public.game_rooms is not aligned with game.rooms';
   END IF;
 
   IF NOT EXISTS (
