@@ -1,15 +1,11 @@
 import "server-only";
 
-import { randomInt } from "node:crypto";
 import type { PoolClient } from "pg";
 import { playerGameCommand } from "@/src/lib/game-command";
 import type { GameCommandRequestMetadata } from "@/src/lib/game-command-request";
-import { INITIAL_TERRITORY_SYNC_DELAY_MS } from "@/src/lib/game-transitions";
-import {
-  assignObjectives,
-  ObjectiveConfigurationError,
-} from "@/src/lib/objectives/objective-assignment-service";
-import { RoomError } from "@/src/lib/rooms";
+import { finishDiceBalanceMatchForRoom } from "@/src/lib/server/game-dice-balance-service";
+import { RoomError } from "@/src/lib/server/room-error";
+import { startGame } from "@/src/lib/server/start-game-service";
 
 const MINIMUM_PLAYERS_TO_START = 2;
 
@@ -84,6 +80,9 @@ async function clearGameArtifacts(client: PoolClient, roomId: string) {
 }
 
 async function resetRoomToWaiting(client: PoolClient, roomId: string) {
+  // Ending the match is part of the same transaction as clearing the old game.
+  // A rematch therefore cannot inherit pressure or an active profile snapshot.
+  await finishDiceBalanceMatchForRoom(client, roomId);
   await clearGameArtifacts(client, roomId);
 
   await client.query(
@@ -105,106 +104,6 @@ async function resetRoomToWaiting(client: PoolClient, roomId: string) {
          pending_to_territory_id=NULL,last_battle=NULL
      WHERE id=$1`,
     [roomId],
-  );
-}
-
-async function initializeFreshGame(client: PoolClient, roomId: string) {
-  const players = (
-    await client.query<FinishPlayer>(
-      "SELECT id FROM game.players WHERE room_id=$1 ORDER BY joined_at,id",
-      [roomId],
-    )
-  ).rows;
-
-  if (players.length < MINIMUM_PLAYERS_TO_START) {
-    throw new RoomError("São necessários ao menos dois jogadores.", 409);
-  }
-
-  const territoryIds = Array.from({ length: 42 }, (_, index) => index + 1);
-  for (let index = territoryIds.length - 1; index > 0; index -= 1) {
-    const swapIndex = randomInt(0, index + 1);
-    [territoryIds[index], territoryIds[swapIndex]] = [
-      territoryIds[swapIndex],
-      territoryIds[index],
-    ];
-  }
-
-  const territoryValues: string[] = [];
-  const territoryParameters: Array<string | number> = [];
-  for (const [index, territoryId] of territoryIds.entries()) {
-    const offset = territoryParameters.length;
-    territoryValues.push(
-      `($${offset + 1}, $${offset + 2}, $${offset + 3}, 1, $${offset + 4})`,
-    );
-    territoryParameters.push(
-      roomId,
-      territoryId,
-      players[index % players.length].id,
-      index + 1,
-    );
-  }
-
-  await client.query(
-    `INSERT INTO game.territories (
-       room_id,territory_id,owner_player_id,troops,initial_draw_order
-     )
-     VALUES ${territoryValues.join(", ")}`,
-    territoryParameters,
-  );
-
-  try {
-    await assignObjectives(client, roomId, players);
-  } catch (error) {
-    if (error instanceof ObjectiveConfigurationError) {
-      throw new RoomError(error.message, 503);
-    }
-    throw error;
-  }
-
-  const deckOrders = Array.from({ length: 44 }, (_, index) => index + 1);
-  for (let index = deckOrders.length - 1; index > 0; index -= 1) {
-    const swapIndex = randomInt(0, index + 1);
-    [deckOrders[index], deckOrders[swapIndex]] = [
-      deckOrders[swapIndex],
-      deckOrders[index],
-    ];
-  }
-
-  const symbols = await client.query<{ territory_id: number; symbol: string }>(
-    "SELECT territory_id,symbol FROM catalog.territory_card_symbols ORDER BY territory_id",
-  );
-  if (symbols.rows.length !== 42) {
-    throw new RoomError("Os símbolos das cartas de território estão incompletos.", 503);
-  }
-
-  for (const [index, card] of symbols.rows.entries()) {
-    await client.query(
-      `INSERT INTO game.cards (room_id,territory_id,symbol,deck_order)
-       VALUES ($1,$2,$3,$4)`,
-      [roomId, card.territory_id, card.symbol, deckOrders[index]],
-    );
-  }
-
-  for (let index = 0; index < 2; index += 1) {
-    await client.query(
-      `INSERT INTO game.cards (room_id,is_wild,deck_order)
-       VALUES ($1,TRUE,$2)`,
-      [roomId, deckOrders[42 + index]],
-    );
-  }
-
-  await client.query(
-    `UPDATE game.rooms
-     SET status='order_roll',order_roll_round=1,started_at=NULL,
-         initial_territory_presentation_started_at=
-           NOW() + ($2::int * INTERVAL '1 millisecond'),
-         phase='trade',current_player_id=NULL,turn_number=1,round_number=1,
-         jurassic_tunnel_territory_id=NULL,reinforcements_remaining=0,
-         conquered_this_turn=FALSE,trade_count=0,trade_offers_used=0,
-         winner_player_id=NULL,pending_from_territory_id=NULL,
-         pending_to_territory_id=NULL,last_battle=NULL
-     WHERE id=$1 AND status='waiting'`,
-    [roomId, INITIAL_TERRITORY_SYNC_DELAY_MS],
   );
 }
 
@@ -260,7 +159,7 @@ export async function voteRematchCommand(
 
       if (restarted) {
         await resetRoomToWaiting(client, room.id);
-        await initializeFreshGame(client, room.id);
+        await startGame(client, room.id);
       }
 
       return {
