@@ -170,8 +170,8 @@ test("tooltip move por RAF sem setState no pointermove e nós visuais ficam cach
   assert.match(source, /translate3d/);
   assert.match(source, /root\.addEventListener\("pointermove"/);
   assert.doesNotMatch(source, /setHovered\(\{details:/);
-  assert.match(source, /tooltip\.style\.opacity = "0"/);
-  assert.match(source, /tooltip\.style\.opacity = "1"/);
+  assert.match(source, /if \(previousId === nextId\) return;/);
+  assert.match(source, /!presentationActive && hoveredDetails && hoveredState \? \(/);
 });
 
 test("estradas desligadas não permanecem montadas no SVG overlay", () => {
