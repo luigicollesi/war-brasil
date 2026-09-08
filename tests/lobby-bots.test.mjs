@@ -8,6 +8,7 @@ const migration = readFileSync(
 );
 const schema = readFileSync("src/lib/db/schema.sql", "utf8");
 const rooms = readFileSync("src/lib/server/rooms.ts", "utf8");
+const startGame = readFileSync("src/lib/server/start-game-service.ts", "utf8");
 const lobby = readFileSync("src/lib/shared/lobby.ts", "utf8");
 const gameContract = readFileSync("src/lib/shared/game-contract.ts", "utf8");
 const gameSnapshot = readFileSync(
@@ -83,16 +84,11 @@ test("contratos do lobby e do jogo expõem isBot sem criar entidade paralela", (
 });
 
 test("inicialização continua incluindo todos os jogadores da sala", () => {
-  const initializeGame = rooms.slice(
-    rooms.indexOf("async function initializeGame"),
-    rooms.indexOf("export async function createRoom"),
-  );
-
   assert.match(
-    initializeGame,
-    /SELECT id FROM game\.players WHERE room_id = \$1 ORDER BY joined_at/,
+    startGame,
+    /SELECT id FROM game\.players WHERE room_id\s*=\s*\$1 ORDER BY joined_at,id/,
   );
-  assert.doesNotMatch(initializeGame, /is_bot\s*=\s*FALSE/);
+  assert.doesNotMatch(startGame, /is_bot\s*=\s*FALSE/);
 });
 
 test("rotas de lobby delegam criação e remoção ao domínio", () => {

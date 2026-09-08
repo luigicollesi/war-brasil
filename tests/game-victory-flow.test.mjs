@@ -29,23 +29,25 @@ test("votos de revanche são persistidos por humano e bots não bloqueiam reiní
   assert.match(service, /voteCount === humanCount/);
   assert.match(service, /requiredCount: humanCount/);
   assert.match(service, /resetRoomToWaiting/);
-  assert.match(service, /initializeFreshGame/);
+  assert.match(service, /await startGame\(client, room\.id\)/);
 });
 
 test("reinício recria uma partida limpa e reapresenta a distribuição inicial", () => {
   const service = source("src/lib/server/game-finish-command-service.ts");
+  const startGame = source("src/lib/server/start-game-service.ts");
 
   assert.match(service, /DELETE FROM game\.round_events/);
   assert.match(service, /DELETE FROM game\.order_rolls/);
   assert.match(service, /DELETE FROM game\.cards/);
   assert.match(service, /DELETE FROM game\.player_objectives/);
   assert.match(service, /DELETE FROM game\.territories/);
-  assert.match(service, /owner_player_id,troops,initial_draw_order/);
-  assert.match(service, /\$\{offset \+ 3\}, 1, \$\$\{offset \+ 4\}/);
-  assert.match(service, /index \+ 1/);
-  assert.match(service, /initial_territory_presentation_started_at/);
-  assert.match(service, /INITIAL_TERRITORY_SYNC_DELAY_MS/);
-  assert.match(service, /status='order_roll'/);
+  assert.match(service, /await startGame\(client, room\.id\)/);
+  assert.match(startGame, /owner_player_id,troops,initial_draw_order/);
+  assert.match(startGame, /players\[index % players\.length\]\.id/);
+  assert.match(startGame, /index \+ 1/);
+  assert.match(startGame, /initial_territory_presentation_started_at/);
+  assert.match(startGame, /INITIAL_TERRITORY_SYNC_DELAY_MS/);
+  assert.match(startGame, /status='order_roll'/);
 });
 
 test("qualquer jogador humano pode devolver a sala finalizada ao mesmo lobby", () => {
