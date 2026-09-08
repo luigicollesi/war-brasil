@@ -1,3 +1,4 @@
+import { GuideBoardScene } from "@/src/components/game-guide/guide-board-scene";
 import { GuideFlow } from "@/src/components/game-guide/guide-flow";
 import { GuideHeading } from "@/src/components/game-guide/guide-heading";
 import { TerritoryCardArtwork } from "@/src/components/territory-card-artwork";
@@ -18,6 +19,19 @@ export function GuideEliminationSection() {
       </div>
 
       <div className="wb-guide-visual wb-guide-elimination-visual">
+        <GuideBoardScene
+          compact
+          ariaLabel="Exemplo no mapa 2D: o último território inimigo é conquistado"
+          markers={[
+            { key: "winner", label: "Conquistador", troops: 4, x: 33, y: 45, tone: "ally", selected: true },
+            { key: "last", label: "Último território", troops: 1, x: 70, y: 56, tone: "enemy" },
+          ]}
+          arrows={[
+            { key: "last-attack", from: { x: 46, y: 49 }, to: { x: 59, y: 52 }, kind: "attack" },
+          ]}
+          caption="Quando esse território cai, o rival fica com 0 territórios e sai da ordem de turnos."
+        />
+
         <GuideFlow
           compact
           ariaLabel="Fluxo de eliminação de um jogador"

@@ -135,10 +135,17 @@ test("recusa gera feedback efêmero em modal para o destinatário correto", () =
   assert.match(modal, />\s*Entendi\s*</);
 });
 
-test("guia apresenta Troca como primeira etapa do turno", () => {
+test("guia apresenta Troca como primeira etapa e explica o fluxo visual completo", () => {
   const guide = source("src/components/game-guide/sections/guide-turn-section.tsx");
+  const scene = source("src/components/game-guide/guide-trade-scene.tsx");
 
   assert.match(guide, /key: "trade"/);
   assert.match(guide, /label: "Troca"/);
-  assert.match(guide, /só aparece quando o jogador da vez possui cartas/);
+  assert.match(guide, /GuideTradeScene/);
+  assert.match(guide, /aceitar, recusar ou contraofertar/);
+  assert.match(guide, /Notificar posse/);
+  assert.match(guide, /Negociação não gera tropas/);
+  assert.match(scene, /TerritoryCardArtwork/);
+  assert.match(scene, /ofertas/);
+  assert.match(scene, /sinais/);
 });
