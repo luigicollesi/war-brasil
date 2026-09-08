@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import type { TerritoryAnchor } from "@/src/lib/territory-geometry";
 
 const MAX_CURVE = 70;
@@ -7,11 +8,13 @@ const MAX_CURVE = 70;
 export function JurassicTunnelConnection({
   from,
   to,
+  targetName,
 }: {
   from: TerritoryAnchor;
   to: TerritoryAnchor;
   targetName: string;
 }) {
+  const [hovered, setHovered] = useState(false);
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const distance = Math.max(1, Math.hypot(dx, dy));
@@ -44,6 +47,43 @@ export function JurassicTunnelConnection({
         strokeDasharray="16 10"
         className="jurassic-tunnel-animation"
       />
+      <path
+        className="pointer-events-auto"
+        d={path}
+        fill="none"
+        stroke="transparent"
+        strokeWidth="24"
+        pointerEvents="stroke"
+        onPointerEnter={() => setHovered(true)}
+        onPointerLeave={() => setHovered(false)}
+      />
+      {hovered ? (
+        <g
+          pointerEvents="none"
+          transform={`translate(${controlX + 14} ${controlY - 18})`}
+        >
+          <rect
+            x="0"
+            y="0"
+            width="230"
+            height="58"
+            rx="10"
+            fill="rgba(18,57,47,.96)"
+          />
+          <text
+            x="12"
+            y="22"
+            fill="#f4df79"
+            fontSize="14"
+            fontWeight="700"
+          >
+            🦖 Túnel Jurássico
+          </text>
+          <text x="12" y="43" fill="#ffffff" fontSize="12">
+            Acre ↔ {targetName}
+          </text>
+        </g>
+      ) : null}
     </svg>
   );
 }

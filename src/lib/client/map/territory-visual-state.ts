@@ -3,6 +3,19 @@ import type { TerritoryVisualNodes } from "@/src/lib/client/map/territory-svg-no
 const SVG_NS = "http://www.w3.org/2000/svg";
 const RUNTIME_STYLE_ID = "war-territory-runtime-style";
 
+const regionBorders: Record<string, { stroke: string; glow: string }> = {
+  norte: { stroke: "#55d075", glow: "rgba(85,208,117,.72)" },
+  nordeste: { stroke: "#55a8ff", glow: "rgba(85,168,255,.72)" },
+  "centro-oeste": { stroke: "#f4c542", glow: "rgba(244,197,66,.72)" },
+  sudeste: { stroke: "#ef5555", glow: "rgba(239,85,85,.72)" },
+  sul: { stroke: "#f08a35", glow: "rgba(240,138,53,.72)" },
+};
+
+const fallbackRegionBorder = {
+  stroke: "#e4dcc0",
+  glow: "rgba(228,220,192,.55)",
+};
+
 export type TerritoryVisualState = {
   available: boolean;
   target: boolean;
@@ -19,7 +32,7 @@ export function ensureTerritoryRuntimeStyles(document: Document) {
   style.textContent = `
     .territory {
       --territory-stroke-width: .9;
-      stroke: #e4dcc0;
+      stroke: var(--territory-region-stroke, #e4dcc0);
       stroke-opacity: .44;
       stroke-width: var(--territory-render-stroke-width, var(--territory-stroke-width));
       filter: none;
@@ -31,35 +44,35 @@ export function ensureTerritoryRuntimeStyles(document: Document) {
        change the piece appearance. */
     .territory:hover {
       --territory-stroke-width: .9;
-      stroke: #e4dcc0;
+      stroke: var(--territory-region-stroke, #e4dcc0);
       stroke-opacity: .44;
       filter: none;
     }
 
     .territory.is-available {
       --territory-stroke-width: 1.3;
-      stroke: #f2ead2;
+      stroke: var(--territory-region-stroke, #f2ead2);
       stroke-opacity: .72;
       filter: brightness(1.03) saturate(1.012);
     }
 
     .territory.is-target {
       --territory-stroke-width: 1.4;
-      stroke: #d9c58a;
+      stroke: var(--territory-region-stroke, #d9c58a);
       stroke-opacity: .74;
       filter: brightness(1.018);
     }
 
     .territory.is-target-selectable {
       --territory-stroke-width: 1.8;
-      stroke: #f0d27b;
+      stroke: var(--territory-region-stroke, #f0d27b);
       stroke-opacity: .92;
-      filter: brightness(1.04) saturate(1.02) drop-shadow(0 0 2.5px rgba(217, 182, 80, .2));
+      filter: brightness(1.04) saturate(1.02) drop-shadow(0 0 2.5px var(--territory-region-glow, rgba(217, 182, 80, .2)));
     }
 
     .territory.is-hovered {
       --territory-stroke-width: 1.6;
-      stroke: #fff7df;
+      stroke: var(--territory-region-stroke, #fff7df);
       stroke-opacity: .93;
       filter: brightness(1.05) saturate(1.02);
     }
@@ -70,9 +83,9 @@ export function ensureTerritoryRuntimeStyles(document: Document) {
 
     .territory.is-selected {
       --territory-stroke-width: 2.2;
-      stroke: #fff0c4;
+      stroke: var(--territory-region-stroke, #fff0c4);
       stroke-opacity: 1;
-      filter: brightness(1.05) saturate(1.02) drop-shadow(0 0 3px rgba(217, 182, 80, .3));
+      filter: brightness(1.05) saturate(1.02) drop-shadow(0 0 3px var(--territory-region-glow, rgba(217, 182, 80, .3)));
     }
 
     .territory-depth.is-selected {
@@ -85,7 +98,7 @@ export function ensureTerritoryRuntimeStyles(document: Document) {
 
     .territory.is-opening-highlight {
       --territory-stroke-width: 1.8;
-      stroke: #fff7df;
+      stroke: var(--territory-region-stroke, #fff7df);
       stroke-opacity: .92;
       filter: brightness(1.075) saturate(1.025);
     }
@@ -96,9 +109,9 @@ export function ensureTerritoryRuntimeStyles(document: Document) {
 
     .territory.is-keyboard-focused {
       outline: none;
-      stroke: #fff7df;
+      stroke: var(--territory-region-stroke, #fff7df);
       stroke-opacity: 1;
-      filter: brightness(1.055) drop-shadow(0 0 2.5px rgba(255, 247, 223, .34));
+      filter: brightness(1.055) drop-shadow(0 0 2.5px var(--territory-region-glow, rgba(255, 247, 223, .34)));
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -116,10 +129,15 @@ export function applyTerritoryVisualState(
   state: TerritoryVisualState,
 ) {
   const face = nodes.face;
+  const regionStyle =
+    regionBorders[face.dataset.region ?? ""] ?? fallbackRegionBorder;
+
   face.style.removeProperty("stroke");
   face.style.removeProperty("stroke-width");
   face.style.removeProperty("stroke-opacity");
   face.style.removeProperty("filter");
+  face.style.setProperty("--territory-region-stroke", regionStyle.stroke);
+  face.style.setProperty("--territory-region-glow", regionStyle.glow);
 
   face.classList.toggle("is-available", state.available);
   face.classList.toggle("is-target", state.target);
