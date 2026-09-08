@@ -37,7 +37,7 @@ test("mapa mantém pointermove fora do estado React", () => {
 
   assert.match(source, /requestAnimationFrame/);
   assert.match(source, /tooltip\.style\.transform/);
-  assert.match(source, /pathsByIdRef/);
+  assert.match(source, /visualNodesByIdRef/);
   assert.match(source, /visualSignatureRef/);
   assert.doesNotMatch(source, /setHovered\(\{details:/);
 });

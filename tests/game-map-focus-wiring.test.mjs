@@ -81,6 +81,30 @@ test("manual pinch and pan take ownership of the viewport until focus changes", 
   );
 });
 
+test("opening presentation cancels active gestures and blocks new zoom, pan and reset input", () => {
+  assert.match(
+    zoomSource,
+    /surface\.dataset\.mapPresentationActive === "true"/,
+  );
+  assert.match(
+    zoomSource,
+    /const resetMapViewport = \(\) => \{\s*if \(presentationIsActive\(\)\) return;/,
+  );
+  assert.match(
+    zoomSource,
+    /const presentationObserver = new MutationObserver[\s\S]*?cancelGestureState\(\)[\s\S]*?data-map-presentation-active/,
+  );
+  assert.match(
+    zoomSource,
+    /const onPointerDown[\s\S]*?presentationIsActive\(\)/,
+  );
+  assert.match(
+    zoomSource,
+    /const onPointerMove[\s\S]*?presentationIsActive\(\)[\s\S]*?cancelGestureState\(\)/,
+  );
+  assert.match(zoomSource, /presentationObserver\.disconnect\(\)/);
+});
+
 test("resize and SVG reload reapply focus without running another camera animation", () => {
   const instantReapplyCount = (
     zoomSource.match(/force: true, animated: false/g) ?? []

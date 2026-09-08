@@ -2,6 +2,11 @@
 
 import { useEffect } from "react";
 import {
+  MAP_GESTURE_STATE_EVENT,
+  MAP_VISUALS_READY_EVENT,
+  type MapGestureKind,
+} from "@/src/lib/client/map/map-runtime-events";
+import {
   DEFAULT_MAP_VIEWPORT,
   MAP_AUTO_FOCUS_DURATION_MS,
   MAP_MAX_SCALE,
@@ -42,6 +47,8 @@ const CLICK_SUPPRESSION_MS = 450;
 const STROKE_EPSILON = 0.001;
 const MOBILE_MAP_QUERY = "(max-width: 767px)";
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
+const TERRITORY_BASE_STROKE_PROPERTY = "--territory-stroke-width";
+const TERRITORY_RENDER_STROKE_PROPERTY = "--territory-render-stroke-width";
 
 function midpoint(a: PointerSample, b: PointerSample) {
   return {
@@ -84,6 +91,8 @@ export function MapZoomController() {
       let lastMobile = window.matchMedia(MOBILE_MAP_QUERY).matches;
       let autoFocusFrame: number | null = null;
       const territoryBoundsById = new Map<number, MapWorldBounds>();
+      const presentationIsActive = () =>
+        surface.dataset.mapPresentationActive === "true";
 
       const resetButton = document.createElement("button");
       resetButton.type = "button";
@@ -174,11 +183,13 @@ export function MapZoomController() {
       };
 
       const resetMapViewport = () => {
+        if (presentationIsActive()) return;
         manualViewportOverride = true;
         animateViewportTo({ ...DEFAULT_MAP_VIEWPORT }, { animated: true });
       };
 
       const onResetPointerDown = (event: PointerEvent) => {
+        if (presentationIsActive()) event.preventDefault();
         event.stopPropagation();
       };
 
@@ -211,7 +222,8 @@ export function MapZoomController() {
               height: box.height,
             });
           } catch {
-            // Ignore a path whose geometry is not ready yet; a later SVG load can retry.
+            // Ignore geometry that is not ready yet. MAP_VISUALS_READY_EVENT
+            // rebinding gives the board another deterministic opportunity.
           }
         }
       };
@@ -316,8 +328,52 @@ export function MapZoomController() {
         svg.style.userSelect = "none";
         svg.style.webkitUserSelect = "none";
 
+        let gestureActive = false;
+        let gestureKind: MapGestureKind = null;
+        const setGestureActive = (active: boolean, kind: MapGestureKind = null) => {
+          const nextKind = active ? kind : null;
+          if (gestureActive === active && gestureKind === nextKind) return;
+          gestureActive = active;
+          gestureKind = nextKind;
+          surface.dataset.mapGestureActive = active ? "true" : "false";
+          surface.dataset.mapGestureKind = nextKind ?? "";
+          surface.dispatchEvent(
+            new CustomEvent(MAP_GESTURE_STATE_EVENT, {
+              detail: { active, kind: nextKind },
+            }),
+          );
+        };
+
+        setGestureActive(false);
+
         const baseStrokeByPath = new WeakMap<SVGPathElement, number>();
-        const lastAppliedStrokeByPath = new WeakMap<SVGPathElement, number>();
+        const classSignatureByPath = new WeakMap<SVGPathElement, string>();
+
+        const readBaseStroke = (path: SVGPathElement) => {
+          const classSignature = path.getAttribute("class") ?? "";
+          const cached = baseStrokeByPath.get(path);
+          if (
+            cached !== undefined &&
+            classSignatureByPath.get(path) === classSignature
+          ) {
+            return cached;
+          }
+
+          const view = path.ownerDocument.defaultView;
+          const computed = view?.getComputedStyle(path);
+          const semanticStroke = computed
+            ?.getPropertyValue(TERRITORY_BASE_STROKE_PROPERTY)
+            .trim();
+          const parsed = Number.parseFloat(
+            semanticStroke || computed?.strokeWidth || "",
+          );
+
+          if (!Number.isFinite(parsed) || parsed <= 0) return undefined;
+
+          baseStrokeByPath.set(path, parsed);
+          classSignatureByPath.set(path, classSignature);
+          return parsed;
+        };
 
         applyTerritoryStrokeScale = () => {
           if (!territoryRoot) return;
@@ -326,31 +382,30 @@ export function MapZoomController() {
           for (const path of territoryRoot.querySelectorAll<SVGPathElement>(
             "path.territory",
           )) {
-            const currentStroke = Number.parseFloat(path.style.strokeWidth);
-            const lastApplied = lastAppliedStrokeByPath.get(path);
-
-            if (
-              Number.isFinite(currentStroke) &&
-              (lastApplied === undefined ||
-                Math.abs(currentStroke - lastApplied) > STROKE_EPSILON)
-            ) {
-              baseStrokeByPath.set(path, currentStroke);
+            if (!mobile) {
+              path.style.removeProperty(TERRITORY_RENDER_STROKE_PROPERTY);
+              continue;
             }
 
-            const baseStroke = baseStrokeByPath.get(path);
+            const baseStroke = readBaseStroke(path);
             if (baseStroke === undefined) continue;
 
-            const nextStroke = mobile
-              ? mapStrokeWidthForScale(baseStroke, viewport.scale)
-              : baseStroke;
+            const nextStroke = mapStrokeWidthForScale(baseStroke, viewport.scale);
+            const currentRenderedStroke = Number.parseFloat(
+              path.style.getPropertyValue(TERRITORY_RENDER_STROKE_PROPERTY),
+            );
 
-            lastAppliedStrokeByPath.set(path, nextStroke);
             if (
-              !Number.isFinite(currentStroke) ||
-              Math.abs(currentStroke - nextStroke) > STROKE_EPSILON
+              Number.isFinite(currentRenderedStroke) &&
+              Math.abs(currentRenderedStroke - nextStroke) <= STROKE_EPSILON
             ) {
-              path.style.strokeWidth = String(nextStroke);
+              continue;
             }
+
+            path.style.setProperty(
+              TERRITORY_RENDER_STROKE_PROPERTY,
+              String(nextStroke),
+            );
           }
         };
 
@@ -360,13 +415,31 @@ export function MapZoomController() {
         strokeObserver?.observe(territoryRoot as Element, {
           attributes: true,
           subtree: true,
-          attributeFilter: ["style"],
+          attributeFilter: ["class"],
         });
         applyTerritoryStrokeScale();
 
         const pointers = new Map<number, PointerSample>();
         let single: SingleGesture | null = null;
         let pinch: PinchGesture | null = null;
+
+        const cancelGestureState = () => {
+          pointers.clear();
+          single = null;
+          pinch = null;
+          setGestureActive(false);
+        };
+
+        const presentationObserver = new MutationObserver(() => {
+          if (!presentationIsActive()) return;
+          cancelAutoFocusAnimation();
+          cancelGestureState();
+          suppressSelection();
+        });
+        presentationObserver.observe(surface, {
+          attributes: true,
+          attributeFilter: ["data-map-presentation-active"],
+        });
 
         const relativePoint = (point: PointerSample) => {
           const rect = surface.getBoundingClientRect();
@@ -377,6 +450,11 @@ export function MapZoomController() {
         };
 
         const startPinch = () => {
+          if (presentationIsActive()) {
+            cancelGestureState();
+            return;
+          }
+
           const samples = Array.from(pointers.values()).slice(0, 2);
           if (samples.length < 2) {
             pinch = null;
@@ -384,6 +462,7 @@ export function MapZoomController() {
           }
 
           manualViewportOverride = true;
+          setGestureActive(true, "pinch");
           pinch = {
             distance: distance(samples[0], samples[1]),
             focus: relativePoint(midpoint(samples[0], samples[1])),
@@ -394,7 +473,7 @@ export function MapZoomController() {
         };
 
         const onPointerDown = (event: PointerEvent) => {
-          if (event.pointerType !== "touch") return;
+          if (event.pointerType !== "touch" || presentationIsActive()) return;
           cancelAutoFocusAnimation();
 
           pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
@@ -422,6 +501,10 @@ export function MapZoomController() {
         };
 
         const onPointerMove = (event: PointerEvent) => {
+          if (presentationIsActive()) {
+            cancelGestureState();
+            return;
+          }
           if (event.pointerType !== "touch" || !pointers.has(event.pointerId)) {
             return;
           }
@@ -464,6 +547,7 @@ export function MapZoomController() {
           );
           if (totalDistance <= MAP_PAN_THRESHOLD) return;
 
+          setGestureActive(true, "pan");
           suppressSelection();
           event.preventDefault();
 
@@ -484,6 +568,10 @@ export function MapZoomController() {
 
         const finishPointer = (event: PointerEvent) => {
           if (event.pointerType !== "touch") return;
+          if (presentationIsActive()) {
+            cancelGestureState();
+            return;
+          }
           pointers.delete(event.pointerId);
 
           if (pointers.size >= 2) {
@@ -506,6 +594,7 @@ export function MapZoomController() {
           }
 
           single = null;
+          setGestureActive(false);
           if (viewport.scale <= MAP_MIN_SCALE + 0.01) {
             applyViewport({ ...DEFAULT_MAP_VIEWPORT });
           }
@@ -515,7 +604,7 @@ export function MapZoomController() {
           const suppressUntil = Number(
             surface.dataset.mapGestureSuppressUntil ?? "0",
           );
-          if (performance.now() >= suppressUntil) return;
+          if (!presentationIsActive() && performance.now() >= suppressUntil) return;
 
           event.preventDefault();
           event.stopPropagation();
@@ -529,9 +618,18 @@ export function MapZoomController() {
         svg.addEventListener("click", onClickCapture, true);
 
         detachSvg = () => {
+          setGestureActive(false);
+          presentationObserver.disconnect();
           strokeObserver?.disconnect();
           applyTerritoryStrokeScale = () => {};
           territoryBoundsById.clear();
+          if (territoryRoot) {
+            for (const path of territoryRoot.querySelectorAll<SVGPathElement>(
+              "path.territory",
+            )) {
+              path.style.removeProperty(TERRITORY_RENDER_STROKE_PROPERTY);
+            }
+          }
           svg.removeEventListener("pointerdown", onPointerDown);
           svg.removeEventListener("pointermove", onPointerMove);
           svg.removeEventListener("pointerup", finishPointer);
@@ -548,7 +646,16 @@ export function MapZoomController() {
         }
       };
 
+      const onVisualsReady = () => {
+        bindSvg();
+        applyTerritoryStrokeScale();
+        if (!applyFocusFromSurface({ force: true, animated: false })) {
+          applyViewport(viewport);
+        }
+      };
+
       board.addEventListener("load", onBoardLoad);
+      surface.addEventListener(MAP_VISUALS_READY_EVENT, onVisualsReady);
       bindSvg();
 
       const focusObserver = new MutationObserver(() => {
@@ -588,6 +695,7 @@ export function MapZoomController() {
       detachSurface = () => {
         cancelAutoFocusAnimation();
         board.removeEventListener("load", onBoardLoad);
+        surface.removeEventListener(MAP_VISUALS_READY_EVENT, onVisualsReady);
         detachSvg();
         focusObserver.disconnect();
         resizeObserver.disconnect();

@@ -19,6 +19,7 @@ import "./game-mobile-hand.css";
 import "./game-mobile-command.css";
 import "./game-mobile-territory-info.css";
 import "./game-map-zoom.css";
+import "./map-25d-polish.css";
 
 type GamePageProps = {
   params: Promise<{ roomId: string }>;

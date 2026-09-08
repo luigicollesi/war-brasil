@@ -1,14 +1,13 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { BattleOverlay } from "@/src/components/battle-overlay";
 import { OrderDiceCinematic } from "@/src/components/dice-3d/order-dice-cinematic";
 import { GameDie } from "@/src/components/game-die";
 import { GameTurnPanel } from "@/src/components/game-turn-panel";
 import { GameUtilityBar } from "@/src/components/game-utility-bar";
 import { GameVictoryModal } from "@/src/components/game-victory-modal";
-import { InitialTerritoryDrawPresentation } from "@/src/components/initial-territory-draw-presentation";
 import { MandatoryCardTradeModal } from "@/src/components/mandatory-card-trade-modal";
 import { MobileCardHandDrawer } from "@/src/components/mobile-card-hand-drawer";
 import {
@@ -19,14 +18,13 @@ import { TemporalAnomalyModal } from "@/src/components/temporal-anomaly-modal";
 import { useGameInteraction } from "@/src/hooks/use-game-interaction";
 import { useGameSync } from "@/src/hooks/use-game-sync";
 import { useTemporalAnomaly } from "@/src/hooks/use-temporal-anomaly";
+import {
+  NORMAL_BOARD_PRESENTATION,
+  deriveInitialTerritoryBoardPresentation,
+  nextInitialTerritoryPresentationWakeAt,
+} from "@/src/lib/client/map/board-presentation";
 import { runGameCommand } from "@/src/lib/game-command-client";
 import type { GameSnapshot } from "@/src/lib/game-contract";
-import {
-  INITIAL_TERRITORY_HIGHLIGHT_DURATION_MS,
-  INITIAL_TERRITORY_HIGHLIGHT_STEP_MS,
-  INITIAL_TERRITORY_REVEAL_DURATION_MS,
-  INITIAL_TERRITORY_REVEAL_STEP_MS,
-} from "@/src/lib/game-transitions";
 import { buildGameViewModel } from "@/src/lib/game-view-model";
 import { PLAYER_COLORS, type PlayerColor } from "@/src/lib/lobby";
 
@@ -120,22 +118,56 @@ function GameReadyClient({
   const [completedOrderPresentationId, setCompletedOrderPresentationId] =
     useState<string | null>(null);
   const [presentationClockMs, setPresentationClockMs] = useState(() => Date.now());
+  const presentationIdentityRef = useRef<string | null>(null);
   const initialTerritoryPresentation =
     snapshot.room.presentation?.kind === "initial_territory_draw"
       ? snapshot.room.presentation
       : null;
   const initialPresentationStartedAt =
     initialTerritoryPresentation?.startedAt ?? null;
+  const initialTerritoryIdsKey =
+    initialTerritoryPresentation?.territoryIds.join(",") ?? "";
+  const scheduledTerritoryIds = useMemo(
+    () =>
+      initialTerritoryIdsKey
+        ? initialTerritoryIdsKey.split(",").map((value) => Number(value))
+        : [],
+    [initialTerritoryIdsKey],
+  );
+  const initialPresentationKey = initialPresentationStartedAt
+    ? `${initialPresentationStartedAt}|${initialTerritoryIdsKey}`
+    : null;
 
   useEffect(() => {
-    if (!initialPresentationStartedAt) return;
+    if (!initialPresentationKey || !initialPresentationStartedAt) {
+      presentationIdentityRef.current = null;
+      return;
+    }
 
-    const intervalId = window.setInterval(
+    const nowMs = Date.now();
+    if (presentationIdentityRef.current !== initialPresentationKey) {
+      presentationIdentityRef.current = initialPresentationKey;
+      setPresentationClockMs(nowMs);
+    }
+
+    const wakeAt = nextInitialTerritoryPresentationWakeAt({
+      territoryIds: scheduledTerritoryIds,
+      startedAt: initialPresentationStartedAt,
+      nowMs,
+    });
+    if (wakeAt === null) return;
+
+    const timeoutId = window.setTimeout(
       () => setPresentationClockMs(Date.now()),
-      50,
+      Math.max(0, wakeAt - Date.now() + 1),
     );
-    return () => window.clearInterval(intervalId);
-  }, [initialPresentationStartedAt]);
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    initialPresentationKey,
+    initialPresentationStartedAt,
+    presentationClockMs,
+    scheduledTerritoryIds,
+  ]);
 
   const boardTerritories = useMemo<BoardTerritory[]>(
     () =>
@@ -156,42 +188,20 @@ function GameReadyClient({
     [game.playersById, snapshot.territories],
   );
   const me = game.me;
-  const initialPresentationActive = Boolean(initialTerritoryPresentation);
-  const initialPresentationStartedAtMs = initialPresentationStartedAt
-    ? Date.parse(initialPresentationStartedAt)
-    : Number.NaN;
-  const initialPresentationElapsedMs = Number.isFinite(
-    initialPresentationStartedAtMs,
-  )
-    ? Math.max(0, presentationClockMs - initialPresentationStartedAtMs)
-    : 0;
-  const revealedTerritoryCount = initialTerritoryPresentation
-    ? Math.min(
-        initialTerritoryPresentation.territoryIds.length,
-        Math.floor(
-          initialPresentationElapsedMs / INITIAL_TERRITORY_REVEAL_STEP_MS,
-        ),
-      )
-    : 0;
-  const revealedTerritoryIds = useMemo(
+  const boardPresentation = useMemo(
     () =>
-      new Set(
-        initialTerritoryPresentation?.territoryIds.slice(
-          0,
-          revealedTerritoryCount,
-        ) ?? [],
-      ),
-    [initialTerritoryPresentation, revealedTerritoryCount],
+      initialTerritoryPresentation
+        ? deriveInitialTerritoryBoardPresentation({
+            territoryIds: initialTerritoryPresentation.territoryIds,
+            startedAt: initialTerritoryPresentation.startedAt,
+            nowMs: presentationClockMs,
+            highlightPlayerId: me?.id ?? null,
+          })
+        : NORMAL_BOARD_PRESENTATION,
+    [initialTerritoryPresentation, me?.id, presentationClockMs],
   );
-  const highlightElapsedMs =
-    initialPresentationElapsedMs - INITIAL_TERRITORY_REVEAL_DURATION_MS;
-  const highlightOn = Boolean(
-    initialTerritoryPresentation &&
-      highlightElapsedMs >= 0 &&
-      highlightElapsedMs < INITIAL_TERRITORY_HIGHLIGHT_DURATION_MS &&
-      Math.floor(highlightElapsedMs / INITIAL_TERRITORY_HIGHLIGHT_STEP_MS) % 2 ===
-        0,
-  );
+  const initialPresentationActive =
+    boardPresentation.mode === "initial-territory-draw";
   const currentRound = snapshot.room.orderRollRound;
   const myCurrentRoll = me?.rolls.find((roll) => roll.round === currentRound);
   const canRoll = Boolean(
@@ -358,18 +368,8 @@ function GameReadyClient({
         targetHints={interaction.mapHints.targets}
         interactionMode={snapshot.room.phase}
         arrow={battleArrow ?? interaction.arrow}
+        presentation={boardPresentation}
       />
-
-      {initialPresentationActive && initialPresentationStartedAt ? (
-        <InitialTerritoryDrawPresentation
-          territories={boardTerritories}
-          revealedTerritoryIds={revealedTerritoryIds}
-          highlightPlayerId={me?.id ?? null}
-          highlightOn={highlightOn}
-          presentationStartedAt={initialPresentationStartedAt}
-          tick={presentationClockMs}
-        />
-      ) : null}
 
       <GameTurnPanel
         roomId={roomId}

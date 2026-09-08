@@ -253,14 +253,20 @@ test("último dado do sorteio permanece visível antes de avançar", () => {
 });
 
 test("territórios mantêm borda brilhante conforme a região", () => {
-  const source = readFileSync("src/components/interactive-board.tsx", "utf8");
+  const source = readFileSync(
+    "src/lib/client/map/territory-visual-state.ts",
+    "utf8",
+  );
   assert.match(source, /const regionBorders/);
   assert.match(source, /norte:/);
   assert.match(source, /nordeste:/);
   assert.match(source, /"centro-oeste":/);
   assert.match(source, /sudeste:/);
   assert.match(source, /sul:/);
-  assert.match(source, /path\.style\.stroke\s*=\s*regionStyle\.stroke/);
+  assert.match(source, /--territory-region-stroke/);
+  assert.match(source, /--territory-region-glow/);
+  assert.match(source, /regionStyle\.stroke/);
+  assert.match(source, /regionStyle\.glow/);
 });
 
 test("Túnel Jurássico usa curva derivada das geometrias calculadas do SVG", () => {
