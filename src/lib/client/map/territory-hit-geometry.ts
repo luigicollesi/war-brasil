@@ -173,20 +173,27 @@ function pointOnSegment(point: Point, a: Point, b: Point) {
   );
 }
 
-function segmentsIntersect(a: Point, b: Point, c: Point, d: Point) {
+function segmentsProperlyIntersect(a: Point, b: Point, c: Point, d: Point) {
   const abC = cross(a, b, c);
   const abD = cross(a, b, d);
   const cdA = cross(c, d, a);
   const cdB = cross(c, d, b);
 
-  if (
+  return (
     ((abC > GEOMETRY_EPSILON && abD < -GEOMETRY_EPSILON) ||
       (abC < -GEOMETRY_EPSILON && abD > GEOMETRY_EPSILON)) &&
     ((cdA > GEOMETRY_EPSILON && cdB < -GEOMETRY_EPSILON) ||
       (cdA < -GEOMETRY_EPSILON && cdB > GEOMETRY_EPSILON))
-  ) {
-    return true;
-  }
+  );
+}
+
+function segmentsIntersect(a: Point, b: Point, c: Point, d: Point) {
+  if (segmentsProperlyIntersect(a, b, c, d)) return true;
+
+  const abC = cross(a, b, c);
+  const abD = cross(a, b, d);
+  const cdA = cross(c, d, a);
+  const cdB = cross(c, d, b);
 
   return (
     (Math.abs(abC) <= GEOMETRY_EPSILON && pointOnSegment(c, a, b)) ||
@@ -196,11 +203,10 @@ function segmentsIntersect(a: Point, b: Point, c: Point, d: Point) {
   );
 }
 
-function isSimplePolygon(points: readonly Point[]) {
-  if (points.length < 3 || Math.abs(signedArea(points)) <= GEOMETRY_EPSILON) {
-    return false;
-  }
-
+function nonAdjacentEdges(
+  points: readonly Point[],
+  visit: (first: number, firstNext: number, second: number, secondNext: number) => boolean,
+) {
   for (let first = 0; first < points.length; first += 1) {
     const firstNext = (first + 1) % points.length;
     for (let second = first + 1; second < points.length; second += 1) {
@@ -213,21 +219,40 @@ function isSimplePolygon(points: readonly Point[]) {
       ) {
         continue;
       }
-
-      if (
-        segmentsIntersect(
-          points[first],
-          points[firstNext],
-          points[second],
-          points[secondNext],
-        )
-      ) {
-        return false;
-      }
+      if (!visit(first, firstNext, second, secondNext)) return false;
     }
   }
-
   return true;
+}
+
+function isSimplePolygon(points: readonly Point[]) {
+  if (points.length < 3 || Math.abs(signedArea(points)) <= GEOMETRY_EPSILON) {
+    return false;
+  }
+
+  return nonAdjacentEdges(points, (first, firstNext, second, secondNext) =>
+    !segmentsIntersect(
+      points[first],
+      points[firstNext],
+      points[second],
+      points[secondNext],
+    ),
+  );
+}
+
+function isWeaklySimplePolygon(points: readonly Point[]) {
+  if (points.length < 3 || Math.abs(signedArea(points)) <= GEOMETRY_EPSILON) {
+    return false;
+  }
+
+  return nonAdjacentEdges(points, (first, firstNext, second, secondNext) =>
+    !segmentsProperlyIntersect(
+      points[first],
+      points[firstNext],
+      points[second],
+      points[secondNext],
+    ),
+  );
 }
 
 function pointInPolygon(point: Point, polygon: readonly Point[]) {
@@ -417,7 +442,7 @@ export function safeInsetPolygonPath(d: string, inset: number): string | null {
 
 export function safeScaledPolygonPath(d: string, inset: number): string | null {
   const source = parsePolygonPath(d);
-  if (!source || !isSimplePolygon(source.points)) return null;
+  if (!source || !isWeaklySimplePolygon(source.points)) return null;
   const anchor = bestInteriorAnchor(source.points);
   if (!anchor) return null;
 
@@ -436,7 +461,7 @@ export function safeScaledPolygonPath(d: string, inset: number): string | null {
     }));
 
     if (
-      isSimplePolygon(candidate) &&
+      isWeaklySimplePolygon(candidate) &&
       insetIsContained(source.points, candidate) &&
       Math.abs(signedArea(candidate)) < Math.abs(signedArea(source.points))
     ) {
