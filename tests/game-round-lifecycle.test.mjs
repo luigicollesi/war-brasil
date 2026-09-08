@@ -76,7 +76,7 @@ test("virada escolhe evento da rodada exata, resolve e persiste resultado factua
   const outcomeIndex = advanceBody.indexOf(
     "await setRoundEventAppliedTroopChanges(client, {",
   );
-  const updateRoomIndex = advanceBody.indexOf("UPDATE game_rooms");
+  const updateRoomIndex = advanceBody.indexOf("UPDATE game.rooms");
 
   assert.ok(tunnelIndex >= 0);
   assert.ok(selectIndex > tunnelIndex);
@@ -95,7 +95,7 @@ test("endTurn só avança rodada no wrap e prepara a fase do próximo jogador de
   const command = source("src/lib/server/game-command-service.ts");
 
   const resetIndex = command.lastIndexOf(
-    'UPDATE game_territories SET moved_in_turn=0 WHERE room_id=$1',
+    'UPDATE game.territories SET moved_in_turn=0 WHERE room_id=$1',
   );
   const wrapIndex = command.indexOf("const wrapsRound =");
   const advanceIndex = command.indexOf("await advanceGameRound(client, {");
@@ -129,7 +129,7 @@ test("lifecycle inteiro reutiliza o PoolClient da transação externa", () => {
   assert.match(command, /async \(client\) =>/);
   assert.match(transaction, /return gameCommand\(roomId, execute,/);
   assert.match(presentation, /return gameConditionalCommand\(/);
-  assert.match(transaction, /SELECT id,revision FROM game_rooms WHERE id=\$1 FOR UPDATE/);
+  assert.match(transaction, /SELECT id,revision FROM game\.rooms WHERE id=\$1 FOR UPDATE/);
   assert.match(transaction, /await client\.query\("ROLLBACK"\)/);
 });
 
@@ -138,7 +138,7 @@ test("gameplay não faz mais self-healing de Túnel ou evento ausente", () => {
   const topology = source("src/lib/server/game-effective-topology-service.ts");
 
   assert.doesNotMatch(combat, /ensureJurassicTunnel/);
-  assert.doesNotMatch(combat, /UPDATE game_rooms SET jurassic_tunnel_territory_id/);
+  assert.doesNotMatch(combat, /UPDATE game\.rooms SET jurassic_tunnel_territory_id/);
   assert.match(topology, /jurassicTunnelDestinationId === null/);
   assert.match(topology, /if \(!roundEvent\)/);
   assert.doesNotMatch(topology, /roundEvent\?\.resolvedEffects \?\? \[\]/);

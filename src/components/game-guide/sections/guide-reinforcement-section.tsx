@@ -1,7 +1,7 @@
+import { GuideBoardScene } from "@/src/components/game-guide/guide-board-scene";
 import { GuideHeading } from "@/src/components/game-guide/guide-heading";
 import { GuideRuleScale } from "@/src/components/game-guide/guide-rule-scale";
 import { GuideStateChange } from "@/src/components/game-guide/guide-state-change";
-import { GuideTerritoryNode } from "@/src/components/game-guide/guide-territory-node";
 import type { GameGuidePresentation } from "@/src/lib/game-guide-presentation";
 
 function territoryLabel(minimum: number, maximum: number | null) {
@@ -56,20 +56,28 @@ export function GuideReinforcementSection({
       </div>
 
       <GuideStateChange
-        ariaLabel="Exemplo de distribuição de seis reforços entre territórios próprios"
-        className="wb-guide-reinforcement-example"
+        ariaLabel="Exemplo no mapa 2D: seis reforços são distribuídos entre dois territórios próprios"
+        className="wb-guide-reinforcement-example wb-guide-reinforcement-board-change"
         before={
-          <div className="wb-guide-territory-group">
-            <GuideTerritoryNode name="Goiás" troops={2} tone="ally" />
-            <GuideTerritoryNode name="Bahia" troops={1} tone="ally" />
-          </div>
+          <GuideBoardScene
+            compact
+            ariaLabel="Antes dos reforços"
+            markers={[
+              { key: "goias-before", label: "Goiás", troops: 2, x: 48, y: 54, tone: "ally" },
+              { key: "bahia-before", label: "Bahia", troops: 1, x: 62, y: 49, tone: "ally" },
+            ]}
+          />
         }
         action="+6 reforços"
         after={
-          <div className="wb-guide-territory-group">
-            <GuideTerritoryNode name="Goiás" troops={4} tone="ally" />
-            <GuideTerritoryNode name="Bahia" troops={5} tone="ally" />
-          </div>
+          <GuideBoardScene
+            compact
+            ariaLabel="Depois dos reforços"
+            markers={[
+              { key: "goias-after", label: "Goiás", troops: 4, x: 48, y: 54, tone: "ally", selected: true },
+              { key: "bahia-after", label: "Bahia", troops: 5, x: 62, y: 49, tone: "ally", selected: true },
+            ]}
+          />
         }
         caption="Distribua todo o saldo entre seus territórios. O ataque só é liberado quando o saldo chega a zero."
       />

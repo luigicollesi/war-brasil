@@ -50,7 +50,10 @@ test("servidor usa attackProfile tanto para validar quanto para rolar dados", ()
 
   assert.match(combat, /attackProfile\(attacker\.troops, attackMode\)/);
   assert.match(combat, /attackProfile\(attacker\.troops, battleAttackMode\(battle\)\)/);
-  assert.match(combat, /\{ length: profile\.diceCount \}/);
+  assert.match(
+    combat,
+    /rollCombatDice\(client, \{[\s\S]*?diceCount: profile\.diceCount,[\s\S]*?\}\)/,
+  );
   assert.doesNotMatch(combat, /Math\.min\(3, attacker\.troops - 1\)/);
 });
 
@@ -95,7 +98,7 @@ test("manobra usa topologia efetiva completa e recalcula a melhor rota no servid
   assert.doesNotMatch(maneuver, /effectiveTerritoryConnections/);
   assert.doesNotMatch(maneuver, /getPassableTerritoryConnections/);
   assert.doesNotMatch(maneuver, /reachableTerritoryIds/);
-  assert.doesNotMatch(maneuver, /FROM territory_connections/);
+  assert.doesNotMatch(maneuver, /FROM catalog\.territory_connections/);
 });
 
 test("manobra rejeita duas barreiras e exige duas tropas para uma travessia", () => {

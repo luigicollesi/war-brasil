@@ -6,6 +6,7 @@ import {
   type Region,
 } from "@/src/lib/game-config";
 import { withObjectiveSchemaCompatibility } from "@/src/lib/objectives/objective-schema-compatibility";
+import { finishDiceBalanceMatchForRoom } from "@/src/lib/server/game-dice-balance-service";
 
 type ObjectiveEvent =
   | "any"
@@ -60,8 +61,6 @@ function requiredRegions(objective: Objective): Region[] | null {
 function eventCanAffectObjective(type: string, event: ObjectiveEvent) {
   if (event === "any" || event === "territory_control_changed") return true;
 
-  // Reforços e bônus de cartas alteram apenas quantidade de tropas.
-  // Entre os objetivos legados, somente fortificação pode ser concluída assim.
   return type === "fortification";
 }
 
@@ -81,9 +80,9 @@ async function loadObjective(
                     o.params
                   ) params,
                   a.target_player_id
-           FROM game_player_objectives a
-           JOIN objectives o ON o.id=a.objective_id
-           LEFT JOIN objective_rules r ON r.id=a.objective_rule_id
+           FROM game.player_objectives a
+           JOIN catalog.objectives o ON o.id=a.objective_id
+           LEFT JOIN catalog.objective_rules r ON r.id=a.objective_rule_id
            WHERE a.room_id=$1 AND a.player_id=$2`,
           [roomId, playerId],
         )
@@ -92,8 +91,8 @@ async function loadObjective(
       (
         await client.query<Objective>(
           `SELECT o.id,o.type,o.name,o.description,o.params,a.target_player_id
-           FROM game_player_objectives a
-           JOIN objectives o ON o.id=a.objective_id
+           FROM game.player_objectives a
+           JOIN catalog.objectives o ON o.id=a.objective_id
            WHERE a.room_id=$1 AND a.player_id=$2`,
           [roomId, playerId],
         )
@@ -109,7 +108,7 @@ async function ownedTerritoryCount(
   const row = (
     await client.query<{ count: number }>(
       `SELECT COUNT(*)::int count
-       FROM game_territories
+       FROM game.territories
        WHERE room_id=$1 AND owner_player_id=$2`,
       [roomId, playerId],
     )
@@ -127,7 +126,7 @@ async function fortificationTerritoryCount(
   const row = (
     await client.query<{ count: number }>(
       `SELECT COUNT(*)::int count
-       FROM game_territories
+       FROM game.territories
        WHERE room_id=$1 AND owner_player_id=$2 AND troops >= $3`,
       [roomId, playerId, minimumTroops],
     )
@@ -145,7 +144,7 @@ async function playerHasTerritory(
     await client.query<{ exists: boolean }>(
       `SELECT EXISTS(
          SELECT 1
-         FROM game_territories
+         FROM game.territories
          WHERE room_id=$1 AND owner_player_id=$2
        ) exists`,
       [roomId, playerId],
@@ -163,7 +162,7 @@ async function ownedTerritoryIds(
   return (
     await client.query<{ territory_id: number }>(
       `SELECT territory_id
-       FROM game_territories
+       FROM game.territories
        WHERE room_id=$1 AND owner_player_id=$2`,
       [roomId, playerId],
     )
@@ -272,11 +271,12 @@ export async function objectiveWon(
 
   if (won) {
     await client.query(
-      `UPDATE game_rooms
+      `UPDATE game.rooms
        SET status='finished',phase='finished',winner_player_id=$2
        WHERE id=$1`,
       [roomId, playerId],
     );
+    await finishDiceBalanceMatchForRoom(client, roomId);
   }
 
   return won;

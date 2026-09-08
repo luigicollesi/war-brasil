@@ -32,7 +32,7 @@ test("eliminação remove jogador da ordem sem removê-lo da sala e transfere su
   const battle = source("src/lib/server/game-battle-service.ts");
 
   assert.match(battle, /SET turn_position=NULL,bot_next_action_at=NULL/);
-  assert.doesNotMatch(battle, /DELETE FROM room_players/);
+  assert.doesNotMatch(battle, /DELETE FROM game\.players/);
   assert.match(
     battle,
     /SET owner_player_id=\$3[\s\S]*owner_player_id=\$2 AND zone='hand'/,

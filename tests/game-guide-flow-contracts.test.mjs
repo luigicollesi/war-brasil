@@ -8,19 +8,19 @@ function source(path) {
 
 test("preparação documentada acompanha limites e distribuição da sala", () => {
   const setup = source("src/components/game-guide/sections/guide-setup-section.tsx");
-  const rooms = source("src/lib/server/rooms.ts");
+  const startGame = source("src/lib/server/start-game-service.ts");
   const lobby = source("src/lib/shared/lobby.ts");
 
   assert.match(setup, /2 a 6 jogadores/);
-  assert.match(rooms, /MINIMUM_PLAYERS_TO_START = 2/);
+  assert.match(startGame, /MINIMUM_PLAYERS_TO_START = 2/);
   assert.equal((lobby.match(/\{ value:/g) ?? []).length, 6);
-  assert.match(rooms, /Array\.from\(\{ length: 42 \}/);
-  assert.match(rooms, /players\[index % players\.length\]\.id/);
+  assert.match(startGame, /TERRITORY_COUNT = 42/);
+  assert.match(startGame, /players\[index % players\.length\]\.id/);
   assert.match(
-    rooms,
-    /owner_player_id, troops, initial_draw_order[\s\S]*VALUES \$\{values\.join/,
+    startGame,
+    /owner_player_id,troops,initial_draw_order[\s\S]*VALUES \$\{values\.join/,
   );
-  assert.match(rooms, /index \+ 1/);
+  assert.match(startGame, /index \+ 1/);
 });
 
 test("turno apresenta troca, reforço, ataque e manobra sem remapear a fase autoritativa", () => {
@@ -65,7 +65,7 @@ test("troca obrigatória e bônus territorial usam limites compartilhados", () =
 
   assert.match(cards, /guide\.cards\.mandatoryTradeHandSize/);
   assert.match(cards, /ou mais cartas/);
-  assert.match(cards, /Troque\s+antes de reforçar/);
+  assert.match(cards, /resgate\s+antes de reforçar/i);
   assert.match(troops, />=\s*MANDATORY_TRADE_HAND_SIZE/);
   assert.match(troops, /room\.phase !== "reinforcement"/);
   assert.match(troops, /OWNED_TERRITORY_CARD_BONUS/);

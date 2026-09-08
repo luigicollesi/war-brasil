@@ -1,7 +1,7 @@
+import { GuideBoardScene } from "@/src/components/game-guide/guide-board-scene";
 import { GuideFlow } from "@/src/components/game-guide/guide-flow";
 import { GuideHeading } from "@/src/components/game-guide/guide-heading";
 import { GuideStateChange } from "@/src/components/game-guide/guide-state-change";
-import { GuideTerritoryNode } from "@/src/components/game-guide/guide-territory-node";
 import { TemporalAnomalyEffectList } from "@/src/components/temporal-anomaly-effect-list";
 import type { TemporalAnomalyPresentation } from "@/src/lib/events/event-presentation";
 import type { GameGuidePresentation } from "@/src/lib/game-guide-presentation";
@@ -72,23 +72,40 @@ export function GuideAnomalySection({
 
         <div className="wb-guide-anomaly-copy">
           <p>
-            Anomalias podem alterar tropas, bloquear ataques, abrir ou fechar
-            conexões e reposicionar Barreiras.
+            Leia a Anomalia como uma mudança no próprio tabuleiro: contadores podem
+            cair, uma origem pode perder o ataque e conexões podem abrir ou mudar de
+            Barreira.
           </p>
 
           <GuideStateChange
-            ariaLabel="Anomalia não remove a última tropa de um território"
-            className="wb-guide-anomaly-floor"
-            before={<GuideTerritoryNode name="Território" troops={2} tone="ally" />}
-            action="Anomalia −5"
-            after={
-              <GuideTerritoryNode
-                name="Território"
-                troops={guide.anomalies.minimumTroopsAfterRemoval}
-                tone="ally"
+            ariaLabel="Exemplo no mapa 2D: uma Anomalia reduz tropas e abre uma nova conexão"
+            className="wb-guide-anomaly-floor wb-guide-anomaly-board-change"
+            before={
+              <GuideBoardScene
+                compact
+                ariaLabel="Tabuleiro antes da Anomalia"
+                markers={[
+                  { key: "sp-before", label: "São Paulo Oeste", troops: 3, x: 57, y: 73, tone: "ally" },
+                  { key: "goias-before", label: "Goiás", troops: 2, x: 43, y: 50, tone: "ally" },
+                ]}
               />
             }
-            caption={`Remoções nunca deixam um território abaixo de ${guide.anomalies.minimumTroopsAfterRemoval} tropa.`}
+            action="Anomalia"
+            after={
+              <GuideBoardScene
+                compact
+                ariaLabel="Tabuleiro depois da Anomalia"
+                markers={[
+                  { key: "sp-after", label: "São Paulo Oeste", troops: guide.anomalies.minimumTroopsAfterRemoval, x: 56, y: 73, tone: "ally", selected: true },
+                  { key: "goias-after", label: "Goiás", troops: 2, x: 43, y: 50, tone: "accent" },
+                  { key: "bahia-after", label: "Nova conexão", troops: 1, x: 72, y: 41, tone: "neutral" },
+                ]}
+                arrows={[
+                  { key: "opened", from: { x: 50, y: 54 }, to: { x: 63, y: 50 }, kind: "route" },
+                ]}
+              />
+            }
+            caption={`Mesmo quando o efeito removeria mais tropas, um território nunca fica abaixo de ${guide.anomalies.minimumTroopsAfterRemoval}.`}
           />
         </div>
       </div>

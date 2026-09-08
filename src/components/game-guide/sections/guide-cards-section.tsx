@@ -13,8 +13,8 @@ export function GuideCardsSection({
   return (
     <article className="wb-guide-chapter wb-guide-section--cards">
       <GuideHeading number="11" title="Transforme cartas em tropas">
-        Durante o reforço, forme uma combinação de 3 cartas para trocá-las por
-        tropas.
+        Durante o reforço, resgate uma combinação de 3 cartas para convertê-las em
+        tropas. Isso é diferente da negociação entre jogadores da seção 04.
       </GuideHeading>
 
       <GuideFlow
@@ -34,7 +34,7 @@ export function GuideCardsSection({
 
       <div className="wb-guide-cards-layout">
         <section className="wb-guide-card-combinations">
-          <p className="wb-guide-label">Combinações válidas</p>
+          <p className="wb-guide-label">Combinações válidas para resgate</p>
 
           <div className="wb-guide-card-combination-list">
             <div>
@@ -73,19 +73,19 @@ export function GuideCardsSection({
         </section>
 
         <section className="wb-guide-card-progress">
-          <p className="wb-guide-label">Valor das suas trocas</p>
+          <p className="wb-guide-label">Valor dos seus resgates</p>
           <GuideRuleScale
-            ariaLabel="Progressão pessoal de reforços por troca de cartas"
+            ariaLabel="Progressão pessoal de reforços por resgate de cartas"
             items={guide.cards.tradeValues.map((value, index) => ({
               key: `trade-${index + 1}`,
-              label: `${index + 1}ª troca`,
+              label: `${index + 1}º resgate`,
               value: `+${value} tropas`,
               tone: index === 0 ? "accent" : "default",
             }))}
           />
           <p>
-            Cada troca sua vale
-            {` +${guide.cards.incrementPerPersonalTrade} tropa`} a mais que a anterior.
+            Cada resgate seu vale
+            {` +${guide.cards.incrementPerPersonalTrade} tropa`} a mais que o anterior.
             A progressão é <strong>individual</strong>.
           </p>
         </section>
@@ -102,8 +102,8 @@ export function GuideCardsSection({
       </div>
 
       <p className="wb-guide-inline-note wb-guide-card-mandatory-note">
-        <strong>{guide.cards.mandatoryTradeHandSize} ou mais cartas.</strong> Troque
-        antes de reforçar. Cartas de um jogador eliminado entram na sua mão.
+        <strong>{guide.cards.mandatoryTradeHandSize} ou mais cartas.</strong> Faça um
+        resgate antes de reforçar. Cartas de um jogador eliminado entram na sua mão.
       </p>
     </article>
   );

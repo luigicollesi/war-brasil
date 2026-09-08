@@ -190,7 +190,7 @@ test("atribuição usa regras balanceadas por quantidade de jogadores e persiste
   const assignment = source(
     "src/lib/server/objectives/objective-assignment-service.ts",
   );
-  const rooms = source("src/lib/server/rooms.ts");
+  const startGame = source("src/lib/server/start-game-service.ts");
   const rematch = source("src/lib/server/game-finish-command-service.ts");
 
   assert.match(assignment, /WHERE r\.player_count=\$1/);
@@ -198,8 +198,9 @@ test("atribuição usa regras balanceadas por quantidade de jogadores e persiste
   assert.match(assignment, /objective_rule_id,target_player_id,resolved_params/);
   assert.match(assignment, /const resolvedParams = await resolveAssignmentParams/);
   assert.match(assignment, /JSON\.stringify\(resolvedParams\)/);
-  assert.match(rooms, /await assignObjectives\(client, room\.id, players\)/);
-  assert.match(rematch, /await assignObjectives\(client, roomId, players\)/);
+  assert.match(startGame, /await assignObjectives\(client, roomId, players\)/);
+  assert.match(rematch, /await startGame\(client, room\.id\)/);
+  assert.doesNotMatch(rematch, /assignObjectives\(/);
 });
 
 test("schema migrado é obrigatório e erros de tabela ou coluna não caem no catálogo legado", () => {
@@ -220,7 +221,7 @@ test("avaliação e snapshot usam os parâmetros resolvidos do schema atual", ()
     "src/lib/shared/objectives/objective-presentation.ts",
   );
 
-  assert.match(service, /LEFT JOIN objective_rules r ON r\.id=a\.objective_rule_id/);
+  assert.match(service, /LEFT JOIN catalog\.objective_rules r ON r\.id=a\.objective_rule_id/);
   assert.match(service, /CASE WHEN r\.objective_id=a\.objective_id THEN a\.resolved_params END/);
   assert.match(service, /withObjectiveSchemaCompatibility/);
   assert.match(snapshot, /withObjectiveSchemaCompatibility/);

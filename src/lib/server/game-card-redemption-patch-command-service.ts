@@ -48,7 +48,7 @@ export async function tradeCardsPatchCommand(
       affectedTerritoryIds = (
         await client.query<{ territory_id: number | null }>(
           `SELECT territory_id
-           FROM game_cards
+           FROM game.cards
            WHERE room_id=$1
              AND owner_player_id=$2
              AND zone='hand'

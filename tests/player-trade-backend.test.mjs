@@ -107,7 +107,7 @@ test("recusa publica resultado efêmero sem gravar novo histórico", () => {
   assert.match(notifier, /outcome: "declined"/);
   assert.match(notifier, /outcome: "counter_declined"/);
   assert.match(publisher, /eventType: "trade\.resolution"/);
-  assert.doesNotMatch(notifier, /INSERT INTO|UPDATE game_player_trade_offers/);
+  assert.doesNotMatch(notifier, /INSERT INTO|UPDATE game\.trade_offers/);
 });
 
 test("snapshot revela termos públicos e apenas a própria seleção pendente", () => {

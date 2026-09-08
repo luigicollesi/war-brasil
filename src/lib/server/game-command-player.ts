@@ -16,7 +16,7 @@ export async function resolveCommandPlayerBySession(
   const player = (
     await client.query<CommandPlayer>(
       `SELECT id,turn_position
-       FROM room_players
+       FROM game.players
        WHERE room_id=$1 AND player_session=$2
        FOR UPDATE`,
       [roomId, session],

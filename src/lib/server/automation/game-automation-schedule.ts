@@ -52,7 +52,7 @@ async function loadRoom(client: PoolClient, roomId: string) {
       `SELECT id,status,order_roll_round,initial_territory_presentation_started_at,
               phase,current_player_id,pending_from_territory_id,
               pending_to_territory_id,last_battle
-       FROM game_rooms
+       FROM game.rooms
        WHERE id=$1`,
       [roomId],
     )
@@ -63,7 +63,7 @@ async function loadPlayers(client: PoolClient, roomId: string) {
   return (
     await client.query<SchedulePlayer>(
       `SELECT id,is_bot,bot_next_action_at
-       FROM room_players
+       FROM game.players
        WHERE room_id=$1
        ORDER BY joined_at,id`,
       [roomId],
@@ -76,7 +76,7 @@ async function loadOrderRolls(client: PoolClient, room: ScheduleRoom) {
   return (
     await client.query<ScheduleOrderRoll>(
       `SELECT player_id,roll_round,value,rolled_at
-       FROM game_order_rolls
+       FROM game.order_rolls
        WHERE room_id=$1
        ORDER BY roll_round,rolled_at`,
       [room.id],
@@ -118,7 +118,7 @@ async function clearOtherBotSchedules(
   keepPlayerId: string | null,
 ) {
   await client.query(
-    `UPDATE room_players
+    `UPDATE game.players
      SET bot_next_action_at=NULL
      WHERE room_id=$1
        AND is_bot=TRUE
@@ -134,7 +134,7 @@ async function persistRoomSchedule(
   schedule: GameAutomationSchedule,
 ) {
   await client.query(
-    `UPDATE game_rooms
+    `UPDATE game.rooms
      SET automation_due_at=$2,
          automation_kind=$3,
          automation_claimed_by=NULL,
@@ -282,7 +282,7 @@ export async function reconcileGameAutomationSchedule(
     const actionBaseTimeMs = Math.max(nowMs, releaseTimeMs ?? nowMs);
     dueAt = new Date(actionBaseTimeMs + pickBotDelayMs(actionType));
     await client.query(
-      `UPDATE room_players
+      `UPDATE game.players
        SET bot_next_action_at=$3
        WHERE room_id=$1 AND id=$2 AND is_bot=TRUE`,
       [room.id, actor.id, dueAt],

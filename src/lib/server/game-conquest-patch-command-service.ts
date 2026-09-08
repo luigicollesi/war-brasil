@@ -48,7 +48,7 @@ export async function completeConquestPatchCommand(
           pending_to_territory_id: number | null;
         }>(
           `SELECT pending_from_territory_id,pending_to_territory_id
-           FROM game_rooms
+           FROM game.rooms
            WHERE id=$1`,
           [roomId],
         )

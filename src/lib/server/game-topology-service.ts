@@ -40,7 +40,7 @@ async function loadTopology(client: PoolClient) {
   loadingTopology = client
     .query<ConnectionRow>(
       `SELECT territory_a,territory_b,is_passable,barrier_name,description
-       FROM territory_connections
+       FROM catalog.territory_connections
        ORDER BY territory_a,territory_b`,
     )
     .then((result) => result.rows.map(mapConnection))

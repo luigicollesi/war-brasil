@@ -22,6 +22,7 @@ const guideStyles = [
   "src/app/war-guide-regions.css",
   "src/app/war-guide-sections.css",
   "src/app/war-guide-final-sections.css",
+  "src/app/war-guide-scenes.css",
   "src/app/war-guide-responsive.css",
 ].map(source).join("\n");
 
@@ -55,6 +56,7 @@ test("seções dependem da camada de apresentação e não de serviços ou regra
   const forbiddenImports = [
     /@\/src\/lib\/game-rules/,
     /@\/src\/lib\/game-barrier-rules/,
+    /@\/src\/lib\/game-trade-rules/,
     /@\/src\/lib\/game-command-service/,
     /@\/src\/lib\/game-.*-command-service/,
     /@\/src\/lib\/game-battle-service/,
@@ -71,7 +73,21 @@ test("seções dependem da camada de apresentação e não de serviços ou regra
 
   const main = source("src/components/game-guide/game-quick-guide.tsx");
   assert.match(main, /buildGameGuidePresentation/);
-  assert.doesNotMatch(main, /game-rules|game-barrier-rules|command-service/);
+  assert.doesNotMatch(main, /game-rules|game-barrier-rules|game-trade-rules|command-service/);
+});
+
+test("cenas visuais usam exclusivamente o mapa 2D de produção", () => {
+  const boardScene = source("src/components/game-guide/guide-board-scene.tsx");
+  const setup = source(`${sectionDirectory}/guide-setup-section.tsx`);
+  const allGuideComponents = [
+    boardScene,
+    setup,
+    ...sectionSources.map(({ content }) => content),
+  ].join("\n");
+
+  assert.match(boardScene, /\/war-brasil-42\.production\.svg/);
+  assert.match(setup, /\/war-brasil-42\.production\.svg/);
+  assert.doesNotMatch(allGuideComponents, /25d|2\.5d|mapa-war-brasil-25d/i);
 });
 
 test("estrutura semântica do manual permanece acessível depois da limpeza", () => {
@@ -79,6 +95,7 @@ test("estrutura semântica do manual permanece acessível depois da limpeza", ()
   const flow = source("src/components/game-guide/guide-flow.tsx");
   const stateChange = source("src/components/game-guide/guide-state-change.tsx");
   const connection = source("src/components/game-guide/guide-connection.tsx");
+  const boardScene = source("src/components/game-guide/guide-board-scene.tsx");
   const mapExamples = source("src/components/game-guide/guide-map-examples.tsx");
   const reinforcement = source(`${sectionDirectory}/guide-reinforcement-section.tsx`);
   const barrier = source(`${sectionDirectory}/guide-barrier-section.tsx`);
@@ -93,6 +110,8 @@ test("estrutura semântica do manual permanece acessível depois da limpeza", ()
   assert.match(stateChange, /<figure/);
   assert.match(stateChange, /<figcaption/);
   assert.match(connection, /role="img"/);
+  assert.match(boardScene, /<figure/);
+  assert.match(boardScene, /aria-label/);
   assert.match(mapExamples, /<figure/);
   assert.match(mapExamples, /role="img"/);
   assert.match(reinforcement, /scope="col"/);
@@ -104,8 +123,11 @@ test("responsividade final não referencia estruturas removidas pelo polimento e
   const responsive = source("src/app/war-guide-responsive.css");
   const sections = source("src/app/war-guide-sections.css");
   const finalSections = source("src/app/war-guide-final-sections.css");
+  const scenes = source("src/app/war-guide-scenes.css");
 
   assert.doesNotMatch(responsive, /wb-guide-card-rules|wb-guide-combat-rule|wb-guide-maneuver-barriers/);
   assert.doesNotMatch(sections, /wb-guide-attack-checks|wb-guide-attack-blockers|wb-guide-combat-rule/);
   assert.doesNotMatch(finalSections, /wb-guide-maneuver-barriers|wb-guide-card-combination-note/);
+  assert.match(scenes, /@media \(max-width: 700px\)/);
+  assert.match(scenes, /prefers-reduced-motion/);
 });

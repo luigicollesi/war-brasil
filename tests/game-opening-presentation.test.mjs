@@ -9,7 +9,7 @@ test("abertura usa timeline persistida do backend e renderer único do tabuleiro
     "src/lib/client/map/board-presentation.ts",
     "utf8",
   );
-  const rooms = readFileSync("src/lib/server/rooms.ts", "utf8");
+  const startGame = readFileSync("src/lib/server/start-game-service.ts", "utf8");
 
   assert.match(client, /deriveInitialTerritoryBoardPresentation/);
   assert.match(client, /nextInitialTerritoryPresentationWakeAt/);
@@ -24,9 +24,9 @@ test("abertura usa timeline persistida do backend e renderer único do tabuleiro
   assert.match(board, /Sorteio de Territórios/);
   assert.match(board, /data-initial-territory-title/);
   assert.match(presentation, /titleVisible/);
-  assert.match(rooms, /INITIAL_TERRITORY_SYNC_DELAY_MS/);
+  assert.match(startGame, /INITIAL_TERRITORY_SYNC_DELAY_MS/);
   assert.match(
-    rooms,
+    startGame,
     /NOW\(\) \+ \(\$2::int \* INTERVAL '1 millisecond'\)/,
   );
 });
@@ -51,7 +51,7 @@ test("apresentação inicial preserva o material 2.5d completo", () => {
 });
 
 test("revelação segue a ordem round-robin persistida pelo backend", () => {
-  const rooms = readFileSync("src/lib/server/rooms.ts", "utf8");
+  const startGame = readFileSync("src/lib/server/start-game-service.ts", "utf8");
   const snapshot = readFileSync(
     "src/lib/server/game-snapshot-service.ts",
     "utf8",
@@ -61,8 +61,8 @@ test("revelação segue a ordem round-robin persistida pelo backend", () => {
     "utf8",
   );
 
-  assert.match(rooms, /players\[index % players\.length\]\.id/);
-  assert.match(rooms, /initial_draw_order/);
+  assert.match(startGame, /players\[index % players\.length\]\.id/);
+  assert.match(startGame, /initial_draw_order/);
   assert.match(snapshot, /initial_draw_order/);
   assert.match(snapshot, /territoryDrawOrder/);
   assert.match(presentation, /territoryIds\.slice\(0, revealedCount\)/);
