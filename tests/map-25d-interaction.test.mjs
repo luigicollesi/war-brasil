@@ -19,21 +19,21 @@ const svg = readFileSync("public/mapa-war-brasil-25d.svg", "utf8");
 
 test("visual paths no longer own pointer targeting", () => {
   assert.match(hitGeometry, /surface\.style\.pointerEvents = "none"/);
-  assert.match(hitGeometry, /data\.territoryHit = "true"/);
+  assert.match(hitGeometry, /dataset\.territoryHit = "true"/);
   assert.match(hitGeometry, /pointer-events", "fill"/);
   assert.match(interaction, /\[data-territory-hit="true"\]\[data-territory-id\]/);
 });
 
 test("hit layer contains face and depth surfaces with one semantic territory id", () => {
-  assert.match(hitGeometry, /data\.territorySurface = surface/);
+  assert.match(hitGeometry, /dataset\.territorySurface = surface/);
   assert.match(hitGeometry, /visualSurface\.dataset\.layer \?\? "depth"/);
   assert.match(hitGeometry, /isFace\s*\?\s*"face"/);
-  assert.match(hitGeometry, /data\.territoryId = String\(territoryId\)/);
+  assert.match(hitGeometry, /dataset\.territoryId = String\(territoryId\)/);
   assert.match(interaction, /export function territoryIdFromEvent/);
 });
 
 test("hit z-order follows the actual SVG paint order instead of a duplicated hardcoded order", () => {
-  assert.match(hitGeometry, /data\.mapHitOrder = "visual-paint-order"/);
+  assert.match(hitGeometry, /dataset\.mapHitOrder = "visual-paint-order"/);
   assert.match(
     hitGeometry,
     /boardRoot\.querySelectorAll<SVGPathElement>\([\s\S]*?path\.territory-depth\[data-territory-id\],[\s\S]*?path\.territory\[data-territory-id\]/,
