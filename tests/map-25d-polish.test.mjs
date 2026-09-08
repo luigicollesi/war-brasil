@@ -97,7 +97,7 @@ test("hit geometry is generated once and never falls back to raw visual geometry
   assert.match(hitGeometry, /resolveHitPolygonPath/);
   assert.match(hitGeometry, /safeInsetPolygonPath/);
   assert.match(hitGeometry, /safeScaledPolygonPath/);
-  assert.match(hitGeometry, /data\.hitGeometryStrategy = hit\.strategy/);
+  assert.match(hitGeometry, /dataset\.hitGeometryStrategy = hit\.strategy/);
   assert.doesNotMatch(hitGeometry, /hitGeometryFallback/);
   assert.doesNotMatch(hitGeometry, /d: insetD \?\? sourceD/);
   assert.match(board, /buildTerritoryHitLayer\(mapDocument, root, nextVisualNodes\)/);
