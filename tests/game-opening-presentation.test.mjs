@@ -8,30 +8,30 @@ test("abertura usa título transparente sincronizado pelo startedAt do backend",
     "src/components/initial-territory-draw-presentation.tsx",
     "utf8",
   );
-  const rooms = readFileSync("src/lib/server/rooms.ts", "utf8");
+  const startGame = readFileSync("src/lib/server/start-game-service.ts", "utf8");
 
   assert.match(client, /presentationStartedAt=\{initialPresentationStartedAt\}/);
   assert.match(presentation, /Sorteio de Territórios/);
   assert.match(presentation, /tick < startedAtMs/);
   assert.match(presentation, /border-transparent bg-transparent/);
   assert.match(presentation, /pointer-events-none absolute inset-0/);
-  assert.match(rooms, /INITIAL_TERRITORY_SYNC_DELAY_MS/);
+  assert.match(startGame, /INITIAL_TERRITORY_SYNC_DELAY_MS/);
   assert.match(
-    rooms,
+    startGame,
     /NOW\(\) \+ \(\$2::int \* INTERVAL '1 millisecond'\)/,
   );
 });
 
 test("revelação continua local mas segue a ordem round-robin persistida pelo backend", () => {
-  const rooms = readFileSync("src/lib/server/rooms.ts", "utf8");
+  const startGame = readFileSync("src/lib/server/start-game-service.ts", "utf8");
   const snapshot = readFileSync(
     "src/lib/server/game-snapshot-service.ts",
     "utf8",
   );
   const client = readFileSync("src/components/game-client-v2.tsx", "utf8");
 
-  assert.match(rooms, /players\[index % players\.length\]\.id/);
-  assert.match(rooms, /initial_draw_order/);
+  assert.match(startGame, /players\[index % players\.length\]\.id/);
+  assert.match(startGame, /initial_draw_order/);
   assert.match(snapshot, /initial_draw_order/);
   assert.match(snapshot, /territoryDrawOrder/);
   assert.match(client, /INITIAL_TERRITORY_REVEAL_STEP_MS/);

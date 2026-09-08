@@ -50,7 +50,10 @@ test("servidor usa attackProfile tanto para validar quanto para rolar dados", ()
 
   assert.match(combat, /attackProfile\(attacker\.troops, attackMode\)/);
   assert.match(combat, /attackProfile\(attacker\.troops, battleAttackMode\(battle\)\)/);
-  assert.match(combat, /\{ length: profile\.diceCount \}/);
+  assert.match(
+    combat,
+    /rollCombatDice\(client, \{[\s\S]*?diceCount: profile\.diceCount,[\s\S]*?\}\)/,
+  );
   assert.doesNotMatch(combat, /Math\.min\(3, attacker\.troops - 1\)/);
 });
 
