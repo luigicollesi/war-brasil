@@ -83,7 +83,11 @@ test("opening presentation disables pointer and keyboard hit targets", () => {
   assert.match(hitInteractionState, /path\.ownerDocument\.activeElement === path/);
   assert.match(hitInteractionState, /focusablePath\.blur\?\.\(\)/);
   assert.match(board, /setTerritoryHitInteractionEnabled\(root, !presentationActive\)/);
-  assert.match(board, /setTerritoryHitInteractionEnabled\(root, interactionEnabledRef\.current\)/);
+  assert.match(
+    board,
+    /setTerritoryHitInteractionEnabled\(root, !presentationIsActive\(\)\)/,
+  );
+  assert.doesNotMatch(board, /interactionEnabledRef/);
   assert.match(polish, /data-map-presentation-active="true"/);
   assert.match(polish, /pointer-events: none/);
 });
