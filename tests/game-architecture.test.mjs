@@ -160,10 +160,11 @@ test("estado visual do tabuleiro é derivado da state machine", () => {
   assert.match(source, /scopeKey/);
 });
 
-test("tooltip move por RAF sem setState no pointermove e paths ficam cacheados", () => {
+test("tooltip move por RAF sem setState no pointermove e nós visuais ficam cacheados", () => {
   const source = readFileSync("src/components/interactive-board.tsx", "utf8");
 
-  assert.match(source, /pathsByIdRef/);
+  assert.match(source, /visualNodesByIdRef/);
+  assert.match(source, /materialSignatureRef/);
   assert.match(source, /visualSignatureRef/);
   assert.match(source, /requestAnimationFrame/);
   assert.match(source, /translate3d/);
