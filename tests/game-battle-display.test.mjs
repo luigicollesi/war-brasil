@@ -107,7 +107,7 @@ test("cinematic fullscreen mantém palco leve, responsivo e sem interação", ()
   assert.match(fullscreen, /MOBILE_VIEWPORT_MAX_WIDTH = 767/);
   assert.match(fullscreen, /<perspectiveCamera/);
   assert.match(fullscreen, /CAMERA_HEIGHT = 20/);
-  assert.match(fullscreen, /MOBILE_CAMERA_HEIGHT = 10/);
+  assert.match(fullscreen, /MOBILE_CAMERA_HEIGHT = 16/);
   assert.match(
     fullscreen,
     /const cameraHeight = mobile \? MOBILE_CAMERA_HEIGHT : CAMERA_HEIGHT/,
