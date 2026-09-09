@@ -1,4 +1,7 @@
-import type { TerritoryVisualNodes } from "@/src/lib/client/map/territory-svg-nodes";
+import {
+  applyTerritorySelectionState,
+  type TerritoryVisualNodes,
+} from "@/src/lib/client/map/territory-svg-nodes";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const RUNTIME_STYLE_ID = "war-territory-runtime-style";
@@ -86,12 +89,13 @@ export function ensureTerritoryRuntimeStyles(document: Document) {
 
     .territory.is-selected {
       --territory-stroke-width: 3.4;
-      stroke: var(--territory-region-stroke, #fff9e8);
+      stroke: var(--territory-selection-stroke, #fff9e8);
       stroke-opacity: 1;
     }
 
     .territory.is-selected.is-hovered {
       --territory-stroke-width: 3.55;
+      stroke: var(--territory-selection-stroke, #fff9e8);
       stroke-opacity: 1;
     }
 
@@ -104,6 +108,7 @@ export function ensureTerritoryRuntimeStyles(document: Document) {
 
     .territory.is-selected.is-keyboard-focused {
       --territory-stroke-width: 3.6;
+      stroke: var(--territory-selection-stroke, #fff9e8);
       stroke-opacity: 1;
     }
 
@@ -137,6 +142,8 @@ export function applyTerritoryVisualState(
   face.classList.toggle("is-target-selectable", state.targetSelectable);
   face.classList.toggle("is-selected", state.selected);
   face.classList.toggle("is-opening-highlight", state.openingHighlight);
+
+  applyTerritorySelectionState(nodes, state.selected);
 }
 
 export function applyTerritoryHoverState(
