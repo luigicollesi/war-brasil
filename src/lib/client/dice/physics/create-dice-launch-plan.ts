@@ -7,7 +7,7 @@ import type {
 const UINT32_RANGE = 0x1_0000_0000;
 const FALLBACK_SEED = 0x6d2b79f5;
 const ZERO_OFFSET: DiceVector3 = [0, 0, 0];
-const DICE_LAUNCH_HEIGHT = 10;
+const DICE_LAUNCH_HEIGHT = 6;
 
 function validateDicePhysicsSeed(seed: string) {
   if (!seed.trim()) {
