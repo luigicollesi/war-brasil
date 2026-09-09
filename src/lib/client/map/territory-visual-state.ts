@@ -205,6 +205,17 @@ export function ensureTerritoryRuntimeStyles(document: Document) {
       filter: none;
     }
 
+    .territory.is-hovered {
+      --territory-stroke-width: 1.8;
+      stroke: var(--territory-region-stroke, #fff7df);
+      stroke-opacity: .96;
+      filter: brightness(1.1) saturate(1.1) drop-shadow(0 0 2.5px var(--territory-region-glow, rgba(217, 182, 80, .28)));
+    }
+
+    .territory-depth.is-hovered {
+      filter: brightness(1.055) saturate(1.035);
+    }
+
     .territory.is-available {
       --territory-stroke-width: 1.8;
       stroke: var(--territory-region-stroke, #f2ead2);
@@ -225,17 +236,6 @@ export function ensureTerritoryRuntimeStyles(document: Document) {
 
     .territory-depth.is-target {
       filter: brightness(1.045) saturate(1.035);
-    }
-
-    .territory.is-hovered {
-      --territory-stroke-width: 1.8;
-      stroke: var(--territory-region-stroke, #fff7df);
-      stroke-opacity: .96;
-      filter: brightness(1.1) saturate(1.1) drop-shadow(0 0 2.5px var(--territory-region-glow, rgba(217, 182, 80, .28)));
-    }
-
-    .territory-depth.is-hovered {
-      filter: brightness(1.055) saturate(1.035);
     }
 
     .territory.is-target-selectable {
