@@ -1,30 +1,16 @@
 import {
-  territoryHighlightPalette,
-  type TerritoryHighlightPalette,
+  territorySurfacePalette,
   type TerritoryMaterial,
 } from "@/src/lib/client/map/territory-material";
-import type { PlayerColor } from "@/src/lib/lobby";
 
-const SVG_NS = "http://www.w3.org/2000/svg";
 const EXPECTED_TERRITORY_COUNT = 42;
 const EXPECTED_FACE_STOPS = 5;
 const EXPECTED_SIDE_STOPS = 3;
 const EXPECTED_DEPTH_LAYERS = [1, 2, 3, 4] as const;
 const MASK_REFERENCE = /^url\(#([^)]+)\)$/;
-const HIGHLIGHT_DEFS_ID = "territory-highlight-defs-runtime";
-const HIGHLIGHT_GROUP_ID = "territory-highlights-runtime";
-const PLAYER_COLORS: readonly PlayerColor[] = [
-  "forest",
-  "ocean",
-  "sun",
-  "ruby",
-  "violet",
-  "orange",
-];
 
 export type TerritoryVisualNodes = {
   face: SVGPathElement;
-  highlight: SVGPathElement;
   faceStops: SVGStopElement[];
   sideStops: SVGStopElement[];
   depths: SVGPathElement[];
@@ -47,10 +33,6 @@ function maskId(path: SVGPathElement) {
   return reference ? MASK_REFERENCE.exec(reference)?.[1] ?? null : null;
 }
 
-function highlightGradientId(color: PlayerColor) {
-  return `territory-highlight-${color}`;
-}
-
 function applyFaceStops(
   nodes: TerritoryVisualNodes,
   colors: readonly [string, string, string, string, string],
@@ -70,130 +52,32 @@ function applyBaseFaceMaterial(
   nodes.bevelDark?.setAttribute("stroke", material.rim);
 }
 
-function appendHighlightStop(
-  document: Document,
-  gradient: SVGRadialGradientElement,
-  offset: string,
-  color: string,
-  opacity: string,
-) {
-  const stop = document.createElementNS(SVG_NS, "stop");
-  stop.setAttribute("offset", offset);
-  stop.setAttribute("stop-color", color);
-  stop.setAttribute("stop-opacity", opacity);
-  gradient.appendChild(stop);
-}
-
-function appendHighlightGradient(
-  document: Document,
-  defs: SVGDefsElement,
-  color: PlayerColor,
-  palette: TerritoryHighlightPalette,
-) {
-  const gradient = document.createElementNS(SVG_NS, "radialGradient");
-  gradient.id = highlightGradientId(color);
-  gradient.setAttribute("gradientUnits", "objectBoundingBox");
-  gradient.setAttribute("cx", ".24");
-  gradient.setAttribute("cy", ".18");
-  gradient.setAttribute("fx", ".31");
-  gradient.setAttribute("fy", ".20");
-  gradient.setAttribute("r", ".88");
-  gradient.setAttribute(
-    "gradientTransform",
-    "translate(.5 .5) rotate(-22) scale(1.35 .68) translate(-.5 -.5)",
-  );
-
-  appendHighlightStop(document, gradient, "0%", palette.soft, "0");
-  appendHighlightStop(document, gradient, "22%", palette.soft, ".02");
-  appendHighlightStop(document, gradient, "38%", palette.soft, ".10");
-  appendHighlightStop(document, gradient, "49%", palette.peak, ".70");
-  appendHighlightStop(document, gradient, "58%", palette.peak, ".32");
-  appendHighlightStop(document, gradient, "71%", palette.soft, ".08");
-  appendHighlightStop(document, gradient, "88%", palette.soft, "0");
-  appendHighlightStop(document, gradient, "100%", palette.soft, "0");
-  defs.appendChild(gradient);
-}
-
-function ensureTerritoryHighlightGradients(document: Document) {
-  if (document.getElementById(HIGHLIGHT_DEFS_ID)) return;
-
-  const defs = document.createElementNS(SVG_NS, "defs");
-  defs.id = HIGHLIGHT_DEFS_ID;
-  for (const color of PLAYER_COLORS) {
-    appendHighlightGradient(
-      document,
-      defs,
-      color,
-      territoryHighlightPalette(color),
-    );
-  }
-  document.documentElement.prepend(defs);
-}
-
-function ensureHighlightGroup(
-  document: Document,
-  faces: readonly SVGPathElement[],
-) {
-  const existing = document.querySelector<SVGGElement>(`#${HIGHLIGHT_GROUP_ID}`);
-  if (existing) return existing;
-
-  const group = document.createElementNS(SVG_NS, "g");
-  group.id = HIGHLIGHT_GROUP_ID;
-  group.setAttribute("aria-hidden", "true");
-  group.style.pointerEvents = "none";
-
-  const faceRoot = faces[0]?.parentElement;
-  if (!faceRoot) {
-    throw new Error("Invalid 2.5D map visual contract: territory face root is missing");
-  }
-  faceRoot.appendChild(group);
-  return group;
-}
-
-function ensureTerritoryHighlightOverlay(
-  document: Document,
-  group: SVGGElement,
-  face: SVGPathElement,
+function applySurfacePalette(
   id: number,
-) {
-  const selector = `path.territory-highlight[data-territory-id="${id}"]`;
-  const existing = group.querySelector<SVGPathElement>(selector);
-  if (existing) return existing;
-
-  const highlight = document.createElementNS(SVG_NS, "path");
-  highlight.classList.add("territory-highlight");
-  highlight.dataset.territoryId = String(id);
-  highlight.setAttribute("d", face.getAttribute("d") ?? "");
-  highlight.setAttribute("fill", "none");
-  highlight.setAttribute("opacity", "0");
-  highlight.setAttribute("pointer-events", "none");
-
-  for (const attribute of ["transform", "fill-rule", "clip-rule"] as const) {
-    const value = face.getAttribute(attribute);
-    if (value) highlight.setAttribute(attribute, value);
-  }
-
-  group.appendChild(highlight);
-  return highlight;
-}
-
-function applyHighlightPalette(
   nodes: TerritoryVisualNodes,
-  color: PlayerColor | null,
+  material: TerritoryMaterial,
 ) {
-  if (!color) {
-    nodes.highlight.setAttribute("fill", "none");
-    nodes.highlight.dataset.playerColor = "";
-    nodes.face.style.removeProperty("--territory-highlight-edge");
-    nodes.face.style.removeProperty("--territory-highlight-edge-strong");
+  const face = nodes.face;
+  face.style.setProperty("--territory-base-fill", `url(#face-grad-${id})`);
+
+  if (!material.playerColor) {
+    face.style.removeProperty("--territory-highlight-fill");
+    face.style.removeProperty("--territory-hover-fill");
+    face.style.removeProperty("--territory-highlight-hover-fill");
+    face.style.removeProperty("--territory-highlight-edge");
+    face.style.removeProperty("--territory-highlight-edge-strong");
     return;
   }
 
-  const palette = territoryHighlightPalette(color);
-  nodes.highlight.setAttribute("fill", `url(#${highlightGradientId(color)})`);
-  nodes.highlight.dataset.playerColor = color;
-  nodes.face.style.setProperty("--territory-highlight-edge", palette.edge);
-  nodes.face.style.setProperty(
+  const palette = territorySurfacePalette(material.playerColor);
+  face.style.setProperty("--territory-highlight-fill", palette.highlight);
+  face.style.setProperty("--territory-hover-fill", palette.hover);
+  face.style.setProperty(
+    "--territory-highlight-hover-fill",
+    palette.highlightedHover,
+  );
+  face.style.setProperty("--territory-highlight-edge", palette.edge);
+  face.style.setProperty(
     "--territory-highlight-edge-strong",
     palette.edgeStrong,
   );
@@ -262,9 +146,6 @@ export function validateTerritoryVisualRegistry(
     if (Number(nodes.face.dataset.id) !== id || Number(nodes.face.dataset.territoryId) !== id) {
       issues.push(`territory ${id}: face data identifiers are inconsistent`);
     }
-    if (Number(nodes.highlight.dataset.territoryId) !== id) {
-      issues.push(`territory ${id}: highlight overlay data identifier is inconsistent`);
-    }
     if (nodes.faceStops.length !== EXPECTED_FACE_STOPS) {
       issues.push(
         `territory ${id}: expected ${EXPECTED_FACE_STOPS} face gradient stops, received ${nodes.faceStops.length}`,
@@ -313,8 +194,6 @@ export function collectTerritoryVisualNodes(
   faces: readonly SVGPathElement[],
 ): Map<number, TerritoryVisualNodes> {
   const result = new Map<number, TerritoryVisualNodes>();
-  ensureTerritoryHighlightGradients(document);
-  const highlightGroup = ensureHighlightGroup(document, faces);
 
   for (const face of faces) {
     const id = Number(face.dataset.id);
@@ -334,12 +213,6 @@ export function collectTerritoryVisualNodes(
 
     result.set(id, {
       face,
-      highlight: ensureTerritoryHighlightOverlay(
-        document,
-        highlightGroup,
-        face,
-        id,
-      ),
       faceStops: faceGradient
         ? Array.from(faceGradient.querySelectorAll<SVGStopElement>("stop"))
         : [],
@@ -377,7 +250,7 @@ export function applyTerritoryMaterial(
 ) {
   nodes.face.dataset.playerColor = material.playerColor ?? "";
   applyBaseFaceMaterial(nodes, material);
-  applyHighlightPalette(nodes, material.playerColor);
+  applySurfacePalette(id, nodes, material);
 
   nodes.sideStops.forEach((stop, index) => {
     const color = material.side[index];
