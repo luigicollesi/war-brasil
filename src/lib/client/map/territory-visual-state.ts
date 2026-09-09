@@ -3,16 +3,17 @@ import type { TerritoryVisualNodes } from "@/src/lib/client/map/territory-svg-no
 const SVG_NS = "http://www.w3.org/2000/svg";
 const RUNTIME_STYLE_ID = "war-territory-runtime-style";
 
-const regionBorders: Record<string, { stroke: string }> = {
-  norte: { stroke: "#67f58b" },
-  nordeste: { stroke: "#63b4ff" },
-  "centro-oeste": { stroke: "#ffd84d" },
-  sudeste: { stroke: "#ff6262" },
-  sul: { stroke: "#ff9a3d" },
+const regionBorders: Record<string, { stroke: string; glow: string }> = {
+  norte: { stroke: "#67f58b", glow: "rgba(103,245,139,.9)" },
+  nordeste: { stroke: "#63b4ff", glow: "rgba(99,180,255,.9)" },
+  "centro-oeste": { stroke: "#ffd84d", glow: "rgba(255,216,77,.9)" },
+  sudeste: { stroke: "#ff6262", glow: "rgba(255,98,98,.9)" },
+  sul: { stroke: "#ff9a3d", glow: "rgba(255,154,61,.9)" },
 };
 
 const fallbackRegionBorder = {
   stroke: "#fff1bd",
+  glow: "rgba(255,241,189,.82)",
 };
 
 export type TerritoryVisualState = {
@@ -51,6 +52,12 @@ export function ensureTerritoryRuntimeStyles(document: Document) {
       --territory-stroke-width: 1.7;
       stroke: var(--territory-region-stroke, #fff7df);
       stroke-opacity: .9;
+    }
+
+    /* Compatibility selector for the 2.5D visual contract. Depth layers stay
+       static: interaction no longer toggles this class or applies effects. */
+    .territory-depth.is-hovered {
+      filter: none;
     }
 
     .territory.is-available {
@@ -123,6 +130,7 @@ export function applyTerritoryVisualState(
   face.style.removeProperty("stroke-opacity");
   face.style.removeProperty("filter");
   face.style.setProperty("--territory-region-stroke", regionStyle.stroke);
+  face.style.setProperty("--territory-region-glow", regionStyle.glow);
 
   face.classList.toggle("is-available", state.available);
   face.classList.toggle("is-target", state.target);
