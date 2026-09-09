@@ -60,6 +60,14 @@
     0 30px 84px rgba(0, 0, 0, 0.38) !important;
 }
 
+/* No desktop a grade de cartas usa o espaço realmente disponível antes de
+   criar uma área rolável. Mãos grandes continuam limitadas à viewport. */
+@media (min-width: 768px) {
+  .game-modal-surface.game-card-modal > .overflow-y-auto {
+    max-height: calc(100dvh - 14rem) !important;
+  }
+}
+
 /* Combate: a borda também comunica atacante vermelho -> defensor azul,
    mas se desfaz antes de tocar o backdrop. */
 .game-runtime div[class~="fixed"][class~="inset-0"][class~="z-40"][class~="pointer-events-none"] > section {
