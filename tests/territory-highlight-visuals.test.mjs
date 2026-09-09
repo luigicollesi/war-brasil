@@ -75,14 +75,15 @@ test("every highlight reason resolves through one precedence chain", () => {
     visualStateSource.indexOf("export function resolveTerritoryHighlightKind"),
     visualStateSource.indexOf("function refreshTerritoryHighlightState"),
   );
-  const order = [
-    "is-opening-highlight",
-    "is-selected",
-    "is-target-selectable",
-    "is-target",
-    "is-available",
-    "is-hovered",
-  ].map((token) => resolver.indexOf(token));
+  const orderedLines = [
+    'if (face.classList.contains("is-opening-highlight")) return "opening";',
+    'if (face.classList.contains("is-selected")) return "selected";',
+    'if (face.classList.contains("is-target-selectable")) return "target";',
+    'if (face.classList.contains("is-target")) return "target-blocked";',
+    'if (face.classList.contains("is-available")) return "available";',
+    'if (face.classList.contains("is-hovered")) return "hover";',
+  ];
+  const order = orderedLines.map((line) => resolver.indexOf(line));
   assert.ok(order.every((index) => index >= 0));
   for (let index = 1; index < order.length; index += 1) {
     assert.ok(order[index - 1] < order[index]);
