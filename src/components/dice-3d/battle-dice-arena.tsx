@@ -103,7 +103,7 @@ function BattleDiceSidePresentation({
   textures: DiceFaceTextureSet;
   onPhysicsError: () => void;
 }) {
-  const [seed] = useState(() => rollSeed(battle, side, values));
+  const seed = rollSeed(battle, side, values);
   const activeStage =
     side === "attack" ? "show_attacker_result" : "show_defender_result";
 
