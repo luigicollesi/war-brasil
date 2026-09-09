@@ -65,6 +65,7 @@ const managedHistory = [
   "027-normalize-schema-table-names.sql",
   "028-normalize-rooms-phase-constraint.sql",
   "029-adaptive-combat-dice.sql",
+  "030-repair-adaptive-dice-state-schema.sql",
 ];
 
 function urlForDatabase(name) {
@@ -467,7 +468,7 @@ async function assertLegacyRoomRollout(connectionString) {
 if (!databaseUrl) {
   test("migrations de banco exigem DATABASE_URL", { skip: true }, () => {});
 } else {
-  test("026-029 migram banco v025, preservam catálogos e são idempotentes", async () => {
+  test("026-030 migram banco v025, preservam catálogos e são idempotentes", async () => {
     await withTemporaryDatabase("legacy", async (connectionString) => {
       await applySql(connectionString, "tests/fixtures/db/schema-v025.sql");
       await applySql(
