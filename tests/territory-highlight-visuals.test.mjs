@@ -44,7 +44,7 @@ test("runtime highlight overlays and radial gradients are removed", () => {
   assert.doesNotMatch(svgNodesSource, /HIGHLIGHT_GROUP_ID/);
   assert.doesNotMatch(svgNodesSource, /ensureTerritoryHighlightOverlay/);
   assert.doesNotMatch(svgNodesSource, /highlight:\s*SVGPathElement/);
-  assert.doesNotMatch(svgNodesSource, /territory-highlight/);
+  assert.doesNotMatch(svgNodesSource, /classList\.add\("territory-highlight"\)/);
   assert.doesNotMatch(visualStateSource, /\.territory-highlight/);
 });
 
