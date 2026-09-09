@@ -69,7 +69,10 @@ export function ensureTerritoryRuntimeStyles(document: Document) {
 
     /* Neutralize native asset hover/filter rules. Semantic state is resolved
        into data-highlight-kind and rendered by the lightweight state layer. */
-    .territory:hover,
+    .territory:hover {
+      filter: none;
+    }
+
     .territory[data-highlight-kind] {
       filter: none;
     }
