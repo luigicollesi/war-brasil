@@ -7,9 +7,10 @@ export type TerritoryMaterial = {
   rim: string;
 };
 
-export type TerritoryHighlightPalette = {
-  soft: string;
-  peak: string;
+export type TerritorySurfacePalette = {
+  highlight: string;
+  hover: string;
+  highlightedHover: string;
   edge: string;
   edgeStrong: string;
 };
@@ -53,45 +54,49 @@ const TERRITORY_MATERIALS: Record<PlayerColor, TerritoryMaterial> = {
   },
 };
 
-// Curved state-layer colors stay chromatic instead of passing through white.
-// Values are intentionally static so interaction never performs color math.
-const TERRITORY_HIGHLIGHT_PALETTES: Record<
-  PlayerColor,
-  TerritoryHighlightPalette
-> = {
+// Interaction colors are static by design. Highlight keeps the metallic top
+// tone from the previous treatment, while both hover variants are deliberately
+// more vibrant so pointer feedback stays obvious without filters or overlays.
+const TERRITORY_SURFACE_PALETTES: Record<PlayerColor, TerritorySurfacePalette> = {
   forest: {
-    soft: "#86d2a5",
-    peak: "#b9e9ca",
+    highlight: "#86d2a5",
+    hover: "#62c88b",
+    highlightedHover: "#a4e6bd",
     edge: "#8fdaad",
     edgeStrong: "#c3efd1",
   },
   ocean: {
-    soft: "#82bfe8",
-    peak: "#b8dcf3",
+    highlight: "#82bfe8",
+    hover: "#55aeee",
+    highlightedHover: "#a2d5f4",
     edge: "#8bc8ed",
     edgeStrong: "#c3e4f6",
   },
   sun: {
-    soft: "#e7c552",
-    peak: "#f3df8b",
+    highlight: "#e7c552",
+    hover: "#f0c62e",
+    highlightedHover: "#f3dd76",
     edge: "#edcf64",
     edgeStrong: "#f6e59e",
   },
   ruby: {
-    soft: "#e6817f",
-    peak: "#f1aaa4",
+    highlight: "#e6817f",
+    hover: "#ee625f",
+    highlightedHover: "#f1a09b",
     edge: "#ea8d89",
     edgeStrong: "#f4b6af",
   },
   violet: {
-    soft: "#b68bd8",
-    peak: "#d4b7e9",
+    highlight: "#b68bd8",
+    hover: "#ad67df",
+    highlightedHover: "#cda7e7",
     edge: "#bf98df",
     edgeStrong: "#dcc5ed",
   },
   orange: {
-    soft: "#e99453",
-    peak: "#f2ba84",
+    highlight: "#e99453",
+    hover: "#f18336",
+    highlightedHover: "#f2af72",
     edge: "#eda061",
     edgeStrong: "#f5c393",
   },
@@ -108,10 +113,10 @@ export function territoryMaterial(color: PlayerColor): TerritoryMaterial {
   return TERRITORY_MATERIALS[color];
 }
 
-export function territoryHighlightPalette(
+export function territorySurfacePalette(
   color: PlayerColor,
-): TerritoryHighlightPalette {
-  return TERRITORY_HIGHLIGHT_PALETTES[color];
+): TerritorySurfacePalette {
+  return TERRITORY_SURFACE_PALETTES[color];
 }
 
 export function neutralTerritoryMaterial(): TerritoryMaterial {
