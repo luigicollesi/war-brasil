@@ -19,6 +19,13 @@ function transformedBounds(bounds, transform) {
   };
 }
 
+function assertClose(actual, expected, epsilon = 1e-9) {
+  assert.ok(
+    Math.abs(actual - expected) <= epsilon,
+    `expected ${actual} to be within ${epsilon} of ${expected}`,
+  );
+}
+
 test("highlight expands small and large territories by the same absolute amount", () => {
   const small = { x: 20, y: 30, width: 50, height: 40 };
   const large = { x: 100, y: 150, width: 400, height: 320 };
@@ -39,15 +46,15 @@ test("highlight expands small and large territories by the same absolute amount"
   const smallResult = transformedBounds(small, smallTransform);
   const largeResult = transformedBounds(large, largeTransform);
 
-  assert.equal(smallResult.left, small.x - 4);
-  assert.equal(smallResult.right, small.x + small.width + 4);
-  assert.equal(smallResult.top, small.y - 4);
-  assert.equal(smallResult.bottom, small.y + small.height + 4);
+  assertClose(smallResult.left, small.x - 4);
+  assertClose(smallResult.right, small.x + small.width + 4);
+  assertClose(smallResult.top, small.y - 4);
+  assertClose(smallResult.bottom, small.y + small.height + 4);
 
-  assert.equal(largeResult.left, large.x - 4);
-  assert.equal(largeResult.right, large.x + large.width + 4);
-  assert.equal(largeResult.top, large.y - 4);
-  assert.equal(largeResult.bottom, large.y + large.height + 4);
+  assertClose(largeResult.left, large.x - 4);
+  assertClose(largeResult.right, large.x + large.width + 4);
+  assertClose(largeResult.top, large.y - 4);
+  assertClose(largeResult.bottom, large.y + large.height + 4);
 
   assert.ok(
     smallTransform.scaleX > largeTransform.scaleX,
@@ -65,10 +72,10 @@ test("highlight compensates the SVG screen scale to preserve pixel growth", () =
   });
   const result = transformedBounds(bounds, transform);
 
-  assert.equal((bounds.x - result.left) * 2, 4);
-  assert.equal((result.right - (bounds.x + bounds.width)) * 2, 4);
-  assert.equal((bounds.y - result.top) * 4, 4);
-  assert.equal((result.bottom - (bounds.y + bounds.height)) * 4, 4);
+  assertClose((bounds.x - result.left) * 2, 4);
+  assertClose((result.right - (bounds.x + bounds.width)) * 2, 4);
+  assertClose((bounds.y - result.top) * 4, 4);
+  assertClose((result.bottom - (bounds.y + bounds.height)) * 4, 4);
 });
 
 test("runtime highlight grows the complete 2.5d piece and keeps hit geometry untouched", () => {
