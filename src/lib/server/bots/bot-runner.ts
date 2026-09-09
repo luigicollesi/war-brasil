@@ -24,9 +24,10 @@ import {
   executeTradeCards,
 } from "@/src/lib/game-troop-command-service";
 import { RoomError } from "@/src/lib/rooms";
-import type { BotAction, BotActionType } from "./bot-action";
+import type { BotAction } from "./bot-action";
 import { pickBotDelayMs } from "./bot-delay";
 import { requiredActorId } from "./bot-required-actor";
+import { scheduledBotActionType } from "./bot-schedule";
 import { loadBotStrategicState } from "./bot-state-service";
 import type { BotStrategicState } from "./bot-state";
 import { chooseStrategicBotAction } from "./bot-strategy";
@@ -116,32 +117,6 @@ async function orderRollState(
   };
 }
 
-function scheduledActionType(room: AutomationRoom): BotActionType | null {
-  if (room.status === "order_roll") return "roll_order";
-  if (room.status !== "playing") return null;
-
-  const battle = isBattle(room.last_battle) ? room.last_battle : null;
-  if (
-    battle?.stage === "awaiting_attacker_roll" ||
-    battle?.stage === "awaiting_defender_roll"
-  ) {
-    return "roll_battle";
-  }
-
-  if (
-    room.pending_from_territory_id !== null &&
-    room.pending_to_territory_id !== null
-  ) {
-    return "complete_conquest";
-  }
-
-  if (room.phase === "cards") return "finish_cards";
-  if (room.phase === "reinforcement") return "reinforce";
-  if (room.phase === "attack") return "attack";
-  if (room.phase === "maneuver") return "maneuver";
-  return null;
-}
-
 async function chooseDueAction(
   client: PoolClient,
   room: AutomationRoom,
@@ -158,7 +133,7 @@ async function chooseDueAction(
     return { type: "roll_battle" };
   }
 
-  if (room.phase === "cards") return { type: "finish_cards" };
+  if (room.phase === "trade") return { type: "finish_cards" };
 
   const pendingConquest =
     room.pending_from_territory_id !== null &&
@@ -356,7 +331,13 @@ export async function advanceBotAutomation(
   const actor = players.find((player) => player.id === actorId);
   if (!actor?.is_bot) return { changed: false, kind: "none" };
 
-  const delayAction = scheduledActionType(room);
+  const delayAction = scheduledBotActionType({
+    status: room.status,
+    phase: room.phase,
+    pendingFromTerritoryId: room.pending_from_territory_id,
+    pendingToTerritoryId: room.pending_to_territory_id,
+    battleStage: battle?.stage ?? null,
+  });
   if (!delayAction) return { changed: false, kind: "none" };
 
   const releaseTimeMs =
