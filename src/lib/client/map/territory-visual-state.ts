@@ -2,32 +2,19 @@ import type { TerritoryVisualNodes } from "@/src/lib/client/map/territory-svg-no
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const RUNTIME_STYLE_ID = "war-territory-runtime-style";
-const HIGHLIGHT_EXPANSION_PX = 4;
-const HOVER_EXPANSION_PX = 2;
-const MIN_SCREEN_SCALE = 1e-6;
 
 const regionBorders: Record<string, { stroke: string; glow: string }> = {
-  norte: { stroke: "#55d075", glow: "rgba(85,208,117,.72)" },
-  nordeste: { stroke: "#55a8ff", glow: "rgba(85,168,255,.72)" },
-  "centro-oeste": { stroke: "#f4c542", glow: "rgba(244,197,66,.72)" },
-  sudeste: { stroke: "#ef5555", glow: "rgba(239,85,85,.72)" },
-  sul: { stroke: "#f08a35", glow: "rgba(240,138,53,.72)" },
+  norte: { stroke: "#67f58b", glow: "rgba(103,245,139,.9)" },
+  nordeste: { stroke: "#63b4ff", glow: "rgba(99,180,255,.9)" },
+  "centro-oeste": { stroke: "#ffd84d", glow: "rgba(255,216,77,.9)" },
+  sudeste: { stroke: "#ff6262", glow: "rgba(255,98,98,.9)" },
+  sul: { stroke: "#ff9a3d", glow: "rgba(255,154,61,.9)" },
 };
 
 const fallbackRegionBorder = {
-  stroke: "#e4dcc0",
-  glow: "rgba(228,220,192,.55)",
+  stroke: "#fff1bd",
+  glow: "rgba(255,241,189,.82)",
 };
-
-const strongExpansionClasses = [
-  "is-available",
-  "is-target",
-  "is-target-selectable",
-  "is-selected",
-  "is-opening-highlight",
-] as const;
-
-const baseTransforms = new WeakMap<SVGGraphicsElement, string | null>();
 
 export type TerritoryVisualState = {
   available: boolean;
@@ -36,141 +23,6 @@ export type TerritoryVisualState = {
   selected: boolean;
   openingHighlight: boolean;
 };
-
-export type TerritoryExpansionTransform = {
-  scaleX: number;
-  scaleY: number;
-  translateX: number;
-  translateY: number;
-};
-
-type TerritoryExpansionInput = {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  screenScaleX: number;
-  screenScaleY: number;
-  expansionPx: number;
-};
-
-export function computeTerritoryExpansionTransform({
-  x,
-  y,
-  width,
-  height,
-  screenScaleX,
-  screenScaleY,
-  expansionPx,
-}: TerritoryExpansionInput): TerritoryExpansionTransform {
-  if (
-    expansionPx <= 0 ||
-    width <= 0 ||
-    height <= 0 ||
-    !Number.isFinite(width) ||
-    !Number.isFinite(height)
-  ) {
-    return { scaleX: 1, scaleY: 1, translateX: 0, translateY: 0 };
-  }
-
-  const safeScaleX = Math.max(Math.abs(screenScaleX), MIN_SCREEN_SCALE);
-  const safeScaleY = Math.max(Math.abs(screenScaleY), MIN_SCREEN_SCALE);
-  const expansionX = expansionPx / safeScaleX;
-  const expansionY = expansionPx / safeScaleY;
-  const scaleX = (width + expansionX * 2) / width;
-  const scaleY = (height + expansionY * 2) / height;
-  const centerX = x + width / 2;
-  const centerY = y + height / 2;
-
-  return {
-    scaleX,
-    scaleY,
-    translateX: centerX * (1 - scaleX),
-    translateY: centerY * (1 - scaleY),
-  };
-}
-
-function visualElements(nodes: TerritoryVisualNodes): SVGGraphicsElement[] {
-  return [
-    ...nodes.depths,
-    nodes.deepRim,
-    nodes.bevelDark,
-    nodes.bevelLight,
-    nodes.face,
-  ].filter((node): node is SVGPathElement => node !== null);
-}
-
-function rememberBaseTransform(element: SVGGraphicsElement) {
-  if (!baseTransforms.has(element)) {
-    baseTransforms.set(element, element.getAttribute("transform"));
-  }
-  return baseTransforms.get(element) ?? null;
-}
-
-function restoreBaseTransform(element: SVGGraphicsElement) {
-  const baseTransform = rememberBaseTransform(element);
-  if (baseTransform === null) {
-    element.removeAttribute("transform");
-  } else {
-    element.setAttribute("transform", baseTransform);
-  }
-}
-
-function formatTransformNumber(value: number) {
-  return Number(value.toFixed(6)).toString();
-}
-
-function expansionPixels(face: SVGPathElement) {
-  if (strongExpansionClasses.some((className) => face.classList.contains(className))) {
-    return HIGHLIGHT_EXPANSION_PX;
-  }
-  if (
-    face.classList.contains("is-hovered") ||
-    face.classList.contains("is-keyboard-focused")
-  ) {
-    return HOVER_EXPANSION_PX;
-  }
-  return 0;
-}
-
-export function refreshTerritoryVisualExpansion(nodes: TerritoryVisualNodes) {
-  const elements = visualElements(nodes);
-  const expansionPx = expansionPixels(nodes.face);
-
-  if (expansionPx <= 0) {
-    for (const element of elements) restoreBaseTransform(element);
-    return;
-  }
-
-  // Measure without the previous runtime transform so repeated hover/state updates
-  // never compound the scale and every territory keeps the same pixel expansion.
-  restoreBaseTransform(nodes.face);
-  const bounds = nodes.face.getBBox();
-  const screenMatrix = nodes.face.getScreenCTM();
-  if (!screenMatrix || bounds.width <= 0 || bounds.height <= 0) {
-    for (const element of elements) restoreBaseTransform(element);
-    return;
-  }
-
-  const transform = computeTerritoryExpansionTransform({
-    x: bounds.x,
-    y: bounds.y,
-    width: bounds.width,
-    height: bounds.height,
-    screenScaleX: Math.hypot(screenMatrix.a, screenMatrix.b),
-    screenScaleY: Math.hypot(screenMatrix.c, screenMatrix.d),
-    expansionPx,
-  });
-  const runtimeTransform = `matrix(${formatTransformNumber(transform.scaleX)} 0 0 ${formatTransformNumber(transform.scaleY)} ${formatTransformNumber(transform.translateX)} ${formatTransformNumber(transform.translateY)})`;
-
-  for (const element of elements) {
-    const baseTransform = rememberBaseTransform(element);
-    element.setAttribute(
-      "transform",
-      baseTransform ? `${runtimeTransform} ${baseTransform}` : runtimeTransform,
-    );
-  }
-}
 
 export function ensureTerritoryRuntimeStyles(document: Document) {
   if (document.getElementById(RUNTIME_STYLE_ID)) return;
@@ -183,16 +35,16 @@ export function ensureTerritoryRuntimeStyles(document: Document) {
     .territory-deep-rim,
     .territory-bevel-light,
     .territory-bevel-dark {
-      transition: transform .16s ease, filter .14s ease;
+      transition: filter .13s ease;
     }
 
     .territory {
       --territory-stroke-width: .9;
       stroke: var(--territory-region-stroke, #e4dcc0);
-      stroke-opacity: .44;
+      stroke-opacity: .42;
       stroke-width: var(--territory-render-stroke-width, var(--territory-stroke-width));
       filter: none;
-      transition: transform .16s ease, filter .14s ease, stroke .14s ease, stroke-opacity .14s ease, stroke-width .14s ease;
+      transition: filter .13s ease, stroke .13s ease, stroke-opacity .13s ease, stroke-width .13s ease;
     }
 
     /* The asset has legacy :hover rules. Neutralize browser-native hover so
@@ -201,93 +53,94 @@ export function ensureTerritoryRuntimeStyles(document: Document) {
     .territory:hover {
       --territory-stroke-width: .9;
       stroke: var(--territory-region-stroke, #e4dcc0);
-      stroke-opacity: .44;
+      stroke-opacity: .42;
       filter: none;
     }
 
     .territory.is-hovered {
       --territory-stroke-width: 1.8;
       stroke: var(--territory-region-stroke, #fff7df);
-      stroke-opacity: .96;
-      filter: brightness(1.1) saturate(1.1) drop-shadow(0 0 2.5px var(--territory-region-glow, rgba(217, 182, 80, .28)));
+      stroke-opacity: .94;
+      filter: brightness(1.12) saturate(1.18) drop-shadow(0 0 3px var(--territory-region-glow, rgba(217, 182, 80, .4)));
     }
 
     .territory-depth.is-hovered {
-      filter: brightness(1.055) saturate(1.035);
+      filter: brightness(1.06) saturate(1.08);
     }
 
     .territory.is-available {
-      --territory-stroke-width: 1.8;
-      stroke: var(--territory-region-stroke, #f2ead2);
-      stroke-opacity: .9;
-      filter: brightness(1.14) saturate(1.15) drop-shadow(0 0 3.5px var(--territory-region-glow, rgba(217, 182, 80, .32)));
+      --territory-stroke-width: 2.2;
+      stroke: var(--territory-region-stroke, #fff1bd);
+      stroke-opacity: 1;
+      filter: brightness(1.22) saturate(1.35) drop-shadow(0 0 3px var(--territory-region-glow, rgba(217, 182, 80, .58))) drop-shadow(0 0 6px var(--territory-region-glow, rgba(217, 182, 80, .42)));
     }
 
     .territory-depth.is-available {
-      filter: brightness(1.055) saturate(1.04);
+      filter: brightness(1.09) saturate(1.12);
     }
 
     .territory.is-target {
-      --territory-stroke-width: 1.7;
-      stroke: var(--territory-region-stroke, #e8d8aa);
-      stroke-opacity: .84;
-      filter: brightness(1.11) saturate(1.11) drop-shadow(0 0 3px var(--territory-region-glow, rgba(217, 182, 80, .28)));
+      --territory-stroke-width: 2.15;
+      stroke: var(--territory-region-stroke, #fff1bd);
+      stroke-opacity: 1;
+      filter: brightness(1.19) saturate(1.3) drop-shadow(0 0 3px var(--territory-region-glow, rgba(217, 182, 80, .54))) drop-shadow(0 0 5px var(--territory-region-glow, rgba(217, 182, 80, .38)));
     }
 
     .territory-depth.is-target {
-      filter: brightness(1.045) saturate(1.035);
+      filter: brightness(1.085) saturate(1.1);
     }
 
     .territory.is-target-selectable {
-      --territory-stroke-width: 2.25;
-      stroke: var(--territory-region-stroke, #fff0b8);
+      --territory-stroke-width: 2.8;
+      stroke: var(--territory-region-stroke, #fff6d6);
       stroke-opacity: 1;
-      filter: brightness(1.18) saturate(1.2) drop-shadow(0 0 5.5px var(--territory-region-glow, rgba(217, 182, 80, .5)));
+      filter: brightness(1.32) saturate(1.55) drop-shadow(0 0 4px var(--territory-region-glow, rgba(217, 182, 80, .72))) drop-shadow(0 0 9px var(--territory-region-glow, rgba(217, 182, 80, .56)));
     }
 
     .territory-depth.is-target-selectable {
-      filter: brightness(1.075) saturate(1.055);
+      filter: brightness(1.13) saturate(1.18);
     }
 
     .territory.is-opening-highlight {
-      --territory-stroke-width: 2.3;
-      stroke: var(--territory-region-stroke, #fff7df);
+      --territory-stroke-width: 2.9;
+      stroke: var(--territory-region-stroke, #fff8df);
       stroke-opacity: 1;
-      filter: brightness(1.18) saturate(1.19) drop-shadow(0 0 5.5px var(--territory-region-glow, rgba(255, 247, 223, .48)));
+      filter: brightness(1.34) saturate(1.58) drop-shadow(0 0 4px var(--territory-region-glow, rgba(255, 247, 223, .74))) drop-shadow(0 0 9px var(--territory-region-glow, rgba(255, 247, 223, .58)));
     }
 
     .territory-depth.is-opening-highlight {
-      filter: brightness(1.075) saturate(1.055);
+      filter: brightness(1.14) saturate(1.19);
     }
 
     .territory.is-selected {
-      --territory-stroke-width: 2.8;
-      stroke: var(--territory-region-stroke, #fff2bd);
+      --territory-stroke-width: 3.4;
+      stroke: var(--territory-region-stroke, #fff9e8);
       stroke-opacity: 1;
-      filter: brightness(1.22) saturate(1.24) drop-shadow(0 0 7px var(--territory-region-glow, rgba(217, 182, 80, .62)));
+      filter: brightness(1.4) saturate(1.7) drop-shadow(0 0 5px var(--territory-region-glow, rgba(217, 182, 80, .82))) drop-shadow(0 0 11px var(--territory-region-glow, rgba(217, 182, 80, .66)));
     }
 
     .territory-depth.is-selected {
-      filter: brightness(1.09) saturate(1.065);
+      filter: brightness(1.17) saturate(1.22);
     }
 
     .territory-depth.is-selected.is-hovered {
-      filter: brightness(1.105) saturate(1.075);
+      filter: brightness(1.19) saturate(1.25);
     }
 
     .territory.is-selected.is-hovered {
-      filter: brightness(1.24) saturate(1.26) drop-shadow(0 0 7.5px var(--territory-region-glow, rgba(217, 182, 80, .68)));
+      filter: brightness(1.43) saturate(1.74) drop-shadow(0 0 5px var(--territory-region-glow, rgba(217, 182, 80, .86))) drop-shadow(0 0 12px var(--territory-region-glow, rgba(217, 182, 80, .7)));
     }
 
     .territory.is-keyboard-focused {
       outline: none;
-      stroke: var(--territory-region-stroke, #fff7df);
+      --territory-stroke-width: 2.6;
+      stroke: var(--territory-region-stroke, #fff8df);
       stroke-opacity: 1;
-      filter: brightness(1.16) saturate(1.14) drop-shadow(0 0 4px var(--territory-region-glow, rgba(255, 247, 223, .44)));
+      filter: brightness(1.28) saturate(1.42) drop-shadow(0 0 4px var(--territory-region-glow, rgba(255, 247, 223, .64))) drop-shadow(0 0 7px var(--territory-region-glow, rgba(255, 247, 223, .48)));
     }
 
     .territory.is-selected.is-keyboard-focused {
-      filter: brightness(1.24) saturate(1.26) drop-shadow(0 0 7.5px var(--territory-region-glow, rgba(217, 182, 80, .68)));
+      filter: brightness(1.43) saturate(1.74) drop-shadow(0 0 5px var(--territory-region-glow, rgba(217, 182, 80, .86))) drop-shadow(0 0 12px var(--territory-region-glow, rgba(217, 182, 80, .7)));
     }
 
     @media (prefers-reduced-motion: reduce) {
@@ -332,8 +185,6 @@ export function applyTerritoryVisualState(
     depth.classList.toggle("is-selected", state.selected);
     depth.classList.toggle("is-opening-highlight", state.openingHighlight);
   }
-
-  refreshTerritoryVisualExpansion(nodes);
 }
 
 export function applyTerritoryHoverState(
@@ -344,7 +195,6 @@ export function applyTerritoryHoverState(
   for (const depth of nodes.depths) {
     depth.classList.toggle("is-hovered", hovered);
   }
-  refreshTerritoryVisualExpansion(nodes);
 }
 
 export function applyTerritoryKeyboardFocusState(
@@ -352,5 +202,4 @@ export function applyTerritoryKeyboardFocusState(
   focused: boolean,
 ) {
   nodes.face.classList.toggle("is-keyboard-focused", focused);
-  refreshTerritoryVisualExpansion(nodes);
 }
