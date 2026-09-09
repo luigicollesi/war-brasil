@@ -134,7 +134,7 @@ test("cinematic de combate deriva resultado do stage e bloqueia toda interação
   assert.match(styles, /touch-action: none/);
 });
 
-test("cinematic inicia replay local do zero, mantém a trajetória e aproxima a câmera apenas no celular", () => {
+test("cinematic inicia replay local do zero, mantém a trajetória e enquadra a queda sem distorção excessiva", () => {
   const fullscreen = readFileSync(
     "src/components/dice-3d/fullscreen-dice-cinematic.tsx",
     "utf8",
@@ -159,7 +159,7 @@ test("cinematic inicia replay local do zero, mantém a trajetória e aproxima a 
   assert.match(fullscreen, /<perspectiveCamera/);
   assert.match(fullscreen, /MOBILE_VIEWPORT_MAX_WIDTH = 767/);
   assert.match(fullscreen, /CAMERA_HEIGHT = 20/);
-  assert.match(fullscreen, /MOBILE_CAMERA_HEIGHT = 10/);
+  assert.match(fullscreen, /MOBILE_CAMERA_HEIGHT = 16/);
   assert.match(
     fullscreen,
     /const cameraHeight = mobile \? MOBILE_CAMERA_HEIGHT : CAMERA_HEIGHT/,
@@ -171,12 +171,13 @@ test("cinematic inicia replay local do zero, mantém a trajetória e aproxima a 
   assert.match(fullscreen, /position=\{\[0, cameraHeight, 0\]\}/);
   assert.match(fullscreen, /rotation=\{\[-Math\.PI \/ 2, 0, 0\]\}/);
   assert.match(fullscreen, /planeGeometry args=\{\[6\.8, 6\.8\]\}/);
-  assert.match(launchPlan, /DICE_LAUNCH_HEIGHT = 10/);
+  assert.match(launchPlan, /DICE_LAUNCH_HEIGHT = 6/);
   assert.match(launchPlan, /DICE_LAUNCH_HEIGHT - index \* 0\.16 - next\(\) \* 0\.28/);
   assert.match(launchPlan, /signed\(next, 0\.72\)/);
   assert.match(launchPlan, /signed\(next, 10\)/);
   assert.doesNotMatch(launchPlan, /mobile|viewport|screen|portrait/i);
   assert.match(predetermined, /initialElapsedMs=\{initialElapsedMs\}/);
+  assert.match(predetermined, /physicalIdentity/);
   assert.match(replay, /initialElapsedMs = 0/);
   assert.match(replay, /sampleTrajectoryState/);
   assert.match(replay, /elapsedSeconds = useRef\(initialReplaySeconds\)/);
@@ -212,4 +213,27 @@ test("modal de combate reutiliza território carregado, nome do SVG e resultado 
     /\.battle-dice-grid\s*\{[\s\S]*?flex-direction:\s*column/,
   );
   assert.match(polish, /width: clamp\(62px, 20vw, 82px\)/);
+});
+
+test("modal de cartas no desktop só rola quando a grade realmente excede a viewport", () => {
+  const mandatoryTrade = readFileSync(
+    "src/components/mandatory-card-trade-modal.tsx",
+    "utf8",
+  );
+  const turnPanel = readFileSync("src/components/game-turn-panel.tsx", "utf8");
+  const safeLayout = readFileSync(
+    "src/app/game/[roomId]/game-safe-layout.css",
+    "utf8",
+  );
+
+  assert.match(mandatoryTrade, /game-card-modal/);
+  assert.match(mandatoryTrade, /overflow-y-auto/);
+  assert.match(turnPanel, /game-card-modal/);
+  assert.match(turnPanel, /overflow-y-auto/);
+  assert.match(safeLayout, /@media \(min-width: 768px\)/);
+  assert.match(
+    safeLayout,
+    /\.game-modal-surface\.game-card-modal > \.overflow-y-auto\s*\{[\s\S]*?max-height: calc\(100dvh - 14rem\) !important/,
+  );
+  assert.doesNotMatch(safeLayout, /overflow-y:\s*scroll/);
 });
