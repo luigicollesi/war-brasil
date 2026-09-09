@@ -24,70 +24,103 @@ test("territory highlighting never changes SVG geometry or size", () => {
   assert.doesNotMatch(visualStateSource, /getScreenCTM\(\)/);
   assert.doesNotMatch(visualStateSource, /setAttribute\(\s*["']transform["']/);
   assert.doesNotMatch(visualStateSource, /transition:\s*transform/);
+  assert.doesNotMatch(svgNodesSource, /setAttribute\(\s*["']transform["']/);
 });
 
 test("dynamic territory states avoid expensive SVG filters", () => {
-  assert.doesNotMatch(visualStateSource, /brightness\(/);
-  assert.doesNotMatch(visualStateSource, /saturate\(/);
-  assert.doesNotMatch(visualStateSource, /drop-shadow\(/);
+  for (const source of [visualStateSource, svgNodesSource]) {
+    assert.doesNotMatch(source, /brightness\(/);
+    assert.doesNotMatch(source, /saturate\(/);
+    assert.doesNotMatch(source, /drop-shadow\(/);
+    assert.doesNotMatch(source, /feGaussianBlur/);
+    assert.doesNotMatch(source, /feSpecularLighting/);
+  }
   assert.doesNotMatch(visualStateSource, /transition:\s*filter/);
-  assert.doesNotMatch(svgNodesSource, /brightness\(/);
-  assert.doesNotMatch(svgNodesSource, /saturate\(/);
-  assert.doesNotMatch(svgNodesSource, /drop-shadow\(/);
 });
 
-test("semantic states use lightweight stroke contrast", () => {
-  assert.match(
-    visualStateSource,
-    /\.territory\.is-hovered[\s\S]*--territory-stroke-width:\s*1\.7[\s\S]*stroke-opacity:\s*\.9/,
-  );
-  assert.match(
-    visualStateSource,
-    /\.territory\.is-available[\s\S]*--territory-stroke-width:\s*2\.1[\s\S]*stroke-opacity:\s*\.96/,
-  );
-  assert.match(
-    visualStateSource,
-    /\.territory\.is-target-selectable[\s\S]*--territory-stroke-width:\s*2\.8[\s\S]*stroke-opacity:\s*1/,
-  );
-  assert.match(
-    visualStateSource,
-    /\.territory\.is-selected[\s\S]*--territory-stroke-width:\s*3\.4[\s\S]*stroke:\s*var\(--territory-selection-stroke,[\s\S]*stroke-opacity:\s*1/,
-  );
-  assert.match(
-    visualStateSource,
-    /transition:\s*stroke \.1s ease, stroke-opacity \.1s ease, stroke-width \.1s ease/,
-  );
+test("six shared radial gradients create a curved chromatic state layer", () => {
+  assert.match(svgNodesSource, /createElementNS\(SVG_NS, "radialGradient"\)/);
+  assert.match(svgNodesSource, /gradientUnits", "objectBoundingBox"/);
+  assert.match(svgNodesSource, /gradientTransform/);
+  assert.match(svgNodesSource, /rotate\(-22\)/);
+  assert.match(svgNodesSource, /scale\(1\.35 \.68\)/);
+  assert.match(svgNodesSource, /stop-opacity/);
+  assert.match(svgNodesSource, /"49%", palette\.peak, "\.70"/);
+  for (const color of ["forest", "ocean", "sun", "ruby", "violet", "orange"]) {
+    assert.match(svgNodesSource, new RegExp(`territory-highlight-\\$\\{color\\}`));
+    assert.match(materialSource, new RegExp(`${color}:`));
+  }
 });
 
-test("regional highlight palette stays vivid without dynamic depth effects", () => {
-  assert.match(visualStateSource, /norte: \{ stroke: "#67f58b"/);
-  assert.match(visualStateSource, /nordeste: \{ stroke: "#63b4ff"/);
-  assert.match(visualStateSource, /"centro-oeste": \{ stroke: "#ffd84d"/);
-  assert.match(visualStateSource, /sudeste: \{ stroke: "#ff6262"/);
-  assert.match(visualStateSource, /sul: \{ stroke: "#ff9a3d"/);
+test("highlight palettes remain hardcoded and chromatic instead of white", () => {
+  assert.match(materialSource, /const TERRITORY_HIGHLIGHT_PALETTES/);
+  assert.match(materialSource, /forest:[\s\S]*#86d2a5[\s\S]*#b9e9ca/);
+  assert.match(materialSource, /ocean:[\s\S]*#82bfe8[\s\S]*#b8dcf3/);
+  assert.match(materialSource, /sun:[\s\S]*#e7c552[\s\S]*#f3df8b/);
+  assert.match(materialSource, /ruby:[\s\S]*#e6817f[\s\S]*#f1aaa4/);
+  assert.match(materialSource, /violet:[\s\S]*#b68bd8[\s\S]*#d4b7e9/);
+  assert.match(materialSource, /orange:[\s\S]*#e99453[\s\S]*#f2ba84/);
+  const highlightPalette = materialSource.slice(
+    materialSource.indexOf("const TERRITORY_HIGHLIGHT_PALETTES"),
+    materialSource.indexOf("const NEUTRAL_TERRITORY_MATERIAL"),
+  );
+  assert.doesNotMatch(highlightPalette, /#fff(?:fff)?\b/i);
+  assert.doesNotMatch(materialSource, /SELECTED_TERRITORY_MATERIALS/);
+  assert.doesNotMatch(materialSource, /selectedTerritoryMaterial/);
+});
+
+test("every highlight reason resolves through one precedence chain", () => {
+  assert.match(visualStateSource, /export function resolveTerritoryHighlightKind/);
+  const resolver = visualStateSource.slice(
+    visualStateSource.indexOf("export function resolveTerritoryHighlightKind"),
+    visualStateSource.indexOf("function refreshTerritoryHighlightState"),
+  );
+  const order = [
+    "is-opening-highlight",
+    "is-selected",
+    "is-target-selectable",
+    "is-target",
+    "is-available",
+    "is-hovered",
+  ].map((token) => resolver.indexOf(token));
+  assert.ok(order.every((index) => index >= 0));
+  for (let index = 1; index < order.length; index += 1) {
+    assert.ok(order[index - 1] < order[index]);
+  }
+  assert.match(visualStateSource, /nodes\.face\.dataset\.highlightKind = kind/);
+  assert.match(visualStateSource, /nodes\.highlight\.dataset\.highlightKind = kind/);
+});
+
+test("state intensity is lightweight and only overlay opacity transitions", () => {
+  assert.match(visualStateSource, /data-highlight-kind="hover"[\s\S]*1\.45/);
+  assert.match(visualStateSource, /data-highlight-kind="available"[\s\S]*1\.8/);
+  assert.match(visualStateSource, /data-highlight-kind="target-blocked"[\s\S]*stroke-dasharray: 5 3/);
+  assert.match(visualStateSource, /data-highlight-kind="target"[\s\S]*2\.2/);
+  assert.match(visualStateSource, /data-highlight-kind="selected"[\s\S]*2\.7/);
+  assert.match(visualStateSource, /data-highlight-kind="opening"[\s\S]*2\.4/);
+  assert.match(visualStateSource, /\.territory-highlight[\s\S]*transition: opacity \.1s ease-out/);
+  assert.doesNotMatch(visualStateSource, /transition:\s*stroke/);
+  assert.doesNotMatch(visualStateSource, /transition:\s*stroke-width/);
+});
+
+test("highlight overlay is non-interactive and depth layers remain static", () => {
+  assert.match(svgNodesSource, /classList\.add\("territory-highlight"\)/);
+  assert.match(svgNodesSource, /pointer-events", "none"/);
+  assert.match(svgNodesSource, /highlightGroup/);
+  assert.match(svgNodesSource, /applyHighlightPalette\(nodes, material\.playerColor\)/);
   assert.doesNotMatch(
     visualStateSource,
     /nodes\.depths[\s\S]*classList\.toggle\("is-/,
   );
 });
 
-test("all six playable colors have hardcoded metallic selected palettes", () => {
-  assert.match(materialSource, /const SELECTED_TERRITORY_MATERIALS/);
-  assert.match(materialSource, /forest:[\s\S]*#c7f6da[\s\S]*#d8ffea[\s\S]*edgeLight: "#d9ffe8"[\s\S]*edgeDark: "#183b2c"/);
-  assert.match(materialSource, /ocean:[\s\S]*#d3eeff[\s\S]*#dff4ff[\s\S]*edgeLight: "#e0f6ff"[\s\S]*edgeDark: "#143a62"/);
-  assert.match(materialSource, /sun:[\s\S]*#fff2a6[\s\S]*#fff7c9[\s\S]*edgeLight: "#fff6bf"[\s\S]*edgeDark: "#61470c"/);
-  assert.match(materialSource, /ruby:[\s\S]*#ffd0cc[\s\S]*#ffe3df[\s\S]*edgeLight: "#ffe0dc"[\s\S]*edgeDark: "#5a1f24"/);
-  assert.match(materialSource, /violet:[\s\S]*#e8d8ff[\s\S]*#f0e5ff[\s\S]*edgeLight: "#f0e4ff"[\s\S]*edgeDark: "#37204f"/);
-  assert.match(materialSource, /orange:[\s\S]*#ffe0be[\s\S]*#ffe9d3[\s\S]*edgeLight: "#ffe6ca"[\s\S]*edgeDark: "#592b0f"/);
-});
-
-test("selected material changes only lightweight paint properties and restores base face", () => {
-  assert.match(svgNodesSource, /function applyFaceStops/);
-  assert.match(svgNodesSource, /function applySelectedFaceMaterial/);
-  assert.match(svgNodesSource, /--territory-selection-stroke/);
-  assert.match(svgNodesSource, /nodes\.deepRim\?\.setAttribute\("stroke", material\.edgeDark\)/);
-  assert.match(svgNodesSource, /nodes\.bevelDark\?\.setAttribute\("stroke", material\.edgeDark\)/);
-  assert.match(svgNodesSource, /applyBaseFaceMaterial\(nodes, territoryMaterial\(color\)\)/);
-  assert.match(visualStateSource, /applyTerritorySelectionState\(nodes, state\.selected\)/);
-  assert.doesNotMatch(svgNodesSource, /setAttribute\(\s*["']transform["']/);
+test("regional resting borders remain available while highlighted borders use owner color", () => {
+  assert.match(visualStateSource, /norte: \{ stroke: "#67f58b"/);
+  assert.match(visualStateSource, /nordeste: \{ stroke: "#63b4ff"/);
+  assert.match(visualStateSource, /"centro-oeste": \{ stroke: "#ffd84d"/);
+  assert.match(visualStateSource, /sudeste: \{ stroke: "#ff6262"/);
+  assert.match(visualStateSource, /sul: \{ stroke: "#ff9a3d"/);
+  assert.match(visualStateSource, /--territory-highlight-edge-strong/);
+  assert.match(svgNodesSource, /--territory-highlight-edge/);
+  assert.match(svgNodesSource, /--territory-highlight-edge-strong/);
 });

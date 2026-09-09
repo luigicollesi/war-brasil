@@ -7,10 +7,11 @@ export type TerritoryMaterial = {
   rim: string;
 };
 
-export type TerritorySelectionMaterial = {
-  face: readonly [string, string, string, string, string];
-  edgeLight: string;
-  edgeDark: string;
+export type TerritoryHighlightPalette = {
+  soft: string;
+  peak: string;
+  edge: string;
+  edgeStrong: string;
 };
 
 const TERRITORY_MATERIALS: Record<PlayerColor, TerritoryMaterial> = {
@@ -52,39 +53,47 @@ const TERRITORY_MATERIALS: Record<PlayerColor, TerritoryMaterial> = {
   },
 };
 
-const SELECTED_TERRITORY_MATERIALS: Record<
+// Curved state-layer colors stay chromatic instead of passing through white.
+// Values are intentionally static so interaction never performs color math.
+const TERRITORY_HIGHLIGHT_PALETTES: Record<
   PlayerColor,
-  TerritorySelectionMaterial
+  TerritoryHighlightPalette
 > = {
   forest: {
-    face: ["#c7f6da", "#6bc492", "#d8ffea", "#3e8f67", "#1f4a36"],
-    edgeLight: "#d9ffe8",
-    edgeDark: "#183b2c",
+    soft: "#86d2a5",
+    peak: "#b9e9ca",
+    edge: "#8fdaad",
+    edgeStrong: "#c3efd1",
   },
   ocean: {
-    face: ["#d3eeff", "#6bb7ea", "#dff4ff", "#347fc0", "#183f69"],
-    edgeLight: "#e0f6ff",
-    edgeDark: "#143a62",
+    soft: "#82bfe8",
+    peak: "#b8dcf3",
+    edge: "#8bc8ed",
+    edgeStrong: "#c3e4f6",
   },
   sun: {
-    face: ["#fff2a6", "#e4bc42", "#fff7c9", "#c28c1d", "#65490e"],
-    edgeLight: "#fff6bf",
-    edgeDark: "#61470c",
+    soft: "#e7c552",
+    peak: "#f3df8b",
+    edge: "#edcf64",
+    edgeStrong: "#f6e59e",
   },
   ruby: {
-    face: ["#ffd0cc", "#e97873", "#ffe3df", "#b84043", "#652126"],
-    edgeLight: "#ffe0dc",
-    edgeDark: "#5a1f24",
+    soft: "#e6817f",
+    peak: "#f1aaa4",
+    edge: "#ea8d89",
+    edgeStrong: "#f4b6af",
   },
   violet: {
-    face: ["#e8d8ff", "#b38ae0", "#f0e5ff", "#7547a3", "#40265f"],
-    edgeLight: "#f0e4ff",
-    edgeDark: "#37204f",
+    soft: "#b68bd8",
+    peak: "#d4b7e9",
+    edge: "#bf98df",
+    edgeStrong: "#dcc5ed",
   },
   orange: {
-    face: ["#ffe0be", "#ef9a56", "#ffe9d3", "#c96129", "#6a3212"],
-    edgeLight: "#ffe6ca",
-    edgeDark: "#592b0f",
+    soft: "#e99453",
+    peak: "#f2ba84",
+    edge: "#eda061",
+    edgeStrong: "#f5c393",
   },
 };
 
@@ -99,10 +108,10 @@ export function territoryMaterial(color: PlayerColor): TerritoryMaterial {
   return TERRITORY_MATERIALS[color];
 }
 
-export function selectedTerritoryMaterial(
+export function territoryHighlightPalette(
   color: PlayerColor,
-): TerritorySelectionMaterial {
-  return SELECTED_TERRITORY_MATERIALS[color];
+): TerritoryHighlightPalette {
+  return TERRITORY_HIGHLIGHT_PALETTES[color];
 }
 
 export function neutralTerritoryMaterial(): TerritoryMaterial {

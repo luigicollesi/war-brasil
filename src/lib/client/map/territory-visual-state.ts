@@ -1,7 +1,4 @@
-import {
-  applyTerritorySelectionState,
-  type TerritoryVisualNodes,
-} from "@/src/lib/client/map/territory-svg-nodes";
+import type { TerritoryVisualNodes } from "@/src/lib/client/map/territory-svg-nodes";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const RUNTIME_STYLE_ID = "war-territory-runtime-style";
@@ -27,6 +24,33 @@ export type TerritoryVisualState = {
   openingHighlight: boolean;
 };
 
+export type TerritoryHighlightKind =
+  | "none"
+  | "hover"
+  | "available"
+  | "target-blocked"
+  | "target"
+  | "selected"
+  | "opening";
+
+export function resolveTerritoryHighlightKind(
+  face: SVGPathElement,
+): TerritoryHighlightKind {
+  if (face.classList.contains("is-opening-highlight")) return "opening";
+  if (face.classList.contains("is-selected")) return "selected";
+  if (face.classList.contains("is-target-selectable")) return "target";
+  if (face.classList.contains("is-target")) return "target-blocked";
+  if (face.classList.contains("is-available")) return "available";
+  if (face.classList.contains("is-hovered")) return "hover";
+  return "none";
+}
+
+function refreshTerritoryHighlightState(nodes: TerritoryVisualNodes) {
+  const kind = resolveTerritoryHighlightKind(nodes.face);
+  nodes.face.dataset.highlightKind = kind;
+  nodes.highlight.dataset.highlightKind = kind;
+}
+
 export function ensureTerritoryRuntimeStyles(document: Document) {
   if (document.getElementById(RUNTIME_STYLE_ID)) return;
 
@@ -38,82 +62,93 @@ export function ensureTerritoryRuntimeStyles(document: Document) {
       stroke: var(--territory-region-stroke, #e4dcc0);
       stroke-opacity: .42;
       stroke-width: var(--territory-render-stroke-width, var(--territory-stroke-width));
+      stroke-dasharray: none;
       filter: none;
-      transition: stroke .1s ease, stroke-opacity .1s ease, stroke-width .1s ease;
+      transition: none;
     }
 
-    /* The asset has legacy :hover rules. Keep hover presentation under the
-       semantic interaction layer without invoking SVG filters. */
-    .territory:hover {
-      --territory-stroke-width: .9;
-      stroke: var(--territory-region-stroke, #e4dcc0);
-      stroke-opacity: .42;
+    /* Neutralize native asset hover/filter rules. Semantic state is resolved
+       into data-highlight-kind and rendered by the lightweight state layer. */
+    .territory:hover,
+    .territory[data-highlight-kind] {
       filter: none;
     }
 
-    .territory.is-hovered {
-      --territory-stroke-width: 1.7;
-      stroke: var(--territory-region-stroke, #fff7df);
-      stroke-opacity: .9;
+    .territory-highlight {
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity .1s ease-out;
+    }
+
+    .territory[data-highlight-kind="hover"] {
+      --territory-stroke-width: 1.45;
+      stroke: var(--territory-highlight-edge, var(--territory-region-stroke, #fff7df));
+      stroke-opacity: .78;
+    }
+    .territory-highlight[data-highlight-kind="hover"] { opacity: .10; }
+
+    .territory[data-highlight-kind="available"] {
+      --territory-stroke-width: 1.8;
+      stroke: var(--territory-highlight-edge, var(--territory-region-stroke, #fff1bd));
+      stroke-opacity: .88;
+    }
+    .territory-highlight[data-highlight-kind="available"] { opacity: .18; }
+
+    .territory[data-highlight-kind="target-blocked"] {
+      --territory-stroke-width: 1.8;
+      stroke: var(--territory-highlight-edge, var(--territory-region-stroke, #fff1bd));
+      stroke-opacity: .72;
+      stroke-dasharray: 5 3;
+    }
+    .territory-highlight[data-highlight-kind="target-blocked"] { opacity: .13; }
+
+    .territory[data-highlight-kind="target"] {
+      --territory-stroke-width: 2.2;
+      stroke: var(--territory-highlight-edge, var(--territory-region-stroke, #fff6d6));
+      stroke-opacity: 1;
+    }
+    .territory-highlight[data-highlight-kind="target"] { opacity: .28; }
+
+    .territory[data-highlight-kind="selected"] {
+      --territory-stroke-width: 2.7;
+      stroke: var(--territory-highlight-edge-strong, var(--territory-highlight-edge, #fff9e8));
+      stroke-opacity: 1;
+    }
+    .territory-highlight[data-highlight-kind="selected"] { opacity: .38; }
+
+    .territory[data-highlight-kind="selected"].is-hovered {
+      --territory-stroke-width: 2.9;
+    }
+
+    .territory[data-highlight-kind="opening"] {
+      --territory-stroke-width: 2.4;
+      stroke: var(--territory-highlight-edge-strong, var(--territory-highlight-edge, #fff8df));
+      stroke-opacity: 1;
+    }
+    .territory-highlight[data-highlight-kind="opening"] { opacity: .32; }
+
+    .territory.is-keyboard-focused {
+      outline: none;
+      stroke: var(--territory-highlight-edge-strong, var(--territory-highlight-edge, #fff8df));
+      stroke-opacity: 1;
+    }
+    .territory[data-highlight-kind="none"].is-keyboard-focused,
+    .territory[data-highlight-kind="hover"].is-keyboard-focused {
+      --territory-stroke-width: 1.8;
+    }
+    .territory-highlight[data-highlight-kind="none"].is-keyboard-focused,
+    .territory-highlight[data-highlight-kind="hover"].is-keyboard-focused {
+      opacity: .12;
     }
 
     /* Compatibility selector for the 2.5D visual contract. Depth layers stay
-       static: interaction no longer toggles this class or applies effects. */
+       static and never receive semantic state classes. */
     .territory-depth.is-hovered {
       filter: none;
     }
 
-    .territory.is-available {
-      --territory-stroke-width: 2.1;
-      stroke: var(--territory-region-stroke, #fff1bd);
-      stroke-opacity: .96;
-    }
-
-    .territory.is-target {
-      --territory-stroke-width: 2.25;
-      stroke: var(--territory-region-stroke, #fff1bd);
-      stroke-opacity: 1;
-    }
-
-    .territory.is-target-selectable {
-      --territory-stroke-width: 2.8;
-      stroke: var(--territory-region-stroke, #fff6d6);
-      stroke-opacity: 1;
-    }
-
-    .territory.is-opening-highlight {
-      --territory-stroke-width: 2.9;
-      stroke: var(--territory-region-stroke, #fff8df);
-      stroke-opacity: 1;
-    }
-
-    .territory.is-selected {
-      --territory-stroke-width: 3.4;
-      stroke: var(--territory-selection-stroke, #fff9e8);
-      stroke-opacity: 1;
-    }
-
-    .territory.is-selected.is-hovered {
-      --territory-stroke-width: 3.55;
-      stroke: var(--territory-selection-stroke, #fff9e8);
-      stroke-opacity: 1;
-    }
-
-    .territory.is-keyboard-focused {
-      outline: none;
-      --territory-stroke-width: 2.7;
-      stroke: var(--territory-region-stroke, #fff8df);
-      stroke-opacity: 1;
-    }
-
-    .territory.is-selected.is-keyboard-focused {
-      --territory-stroke-width: 3.6;
-      stroke: var(--territory-selection-stroke, #fff9e8);
-      stroke-opacity: 1;
-    }
-
     @media (prefers-reduced-motion: reduce) {
-      .territory {
+      .territory-highlight {
         transition: none;
       }
     }
@@ -133,6 +168,7 @@ export function applyTerritoryVisualState(
   face.style.removeProperty("stroke");
   face.style.removeProperty("stroke-width");
   face.style.removeProperty("stroke-opacity");
+  face.style.removeProperty("stroke-dasharray");
   face.style.removeProperty("filter");
   face.style.setProperty("--territory-region-stroke", regionStyle.stroke);
   face.style.setProperty("--territory-region-glow", regionStyle.glow);
@@ -142,8 +178,7 @@ export function applyTerritoryVisualState(
   face.classList.toggle("is-target-selectable", state.targetSelectable);
   face.classList.toggle("is-selected", state.selected);
   face.classList.toggle("is-opening-highlight", state.openingHighlight);
-
-  applyTerritorySelectionState(nodes, state.selected);
+  refreshTerritoryHighlightState(nodes);
 }
 
 export function applyTerritoryHoverState(
@@ -151,6 +186,7 @@ export function applyTerritoryHoverState(
   hovered: boolean,
 ) {
   nodes.face.classList.toggle("is-hovered", hovered);
+  refreshTerritoryHighlightState(nodes);
 }
 
 export function applyTerritoryKeyboardFocusState(
@@ -158,4 +194,6 @@ export function applyTerritoryKeyboardFocusState(
   focused: boolean,
 ) {
   nodes.face.classList.toggle("is-keyboard-focused", focused);
+  nodes.highlight.classList.toggle("is-keyboard-focused", focused);
+  refreshTerritoryHighlightState(nodes);
 }
