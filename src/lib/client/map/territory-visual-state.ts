@@ -73,6 +73,10 @@ export function ensureTerritoryRuntimeStyles(document: Document) {
       filter: none;
     }
 
+    .territory.is-hovered {
+      filter: none;
+    }
+
     .territory[data-highlight-kind] {
       filter: none;
     }
