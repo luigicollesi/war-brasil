@@ -26,7 +26,7 @@ test("agenda reutiliza exatamente os relógios de apresentação existentes", ()
   assert.equal(orderRollPresentationDueAt(false, start), null);
   assert.equal(
     battlePresentationDueAt("show_attacker_result", start)?.toISOString(),
-    "2026-09-04T00:00:03.000Z",
+    "2026-09-04T00:00:03.400Z",
   );
   assert.equal(
     battlePresentationDueAt("show_comparison", start)?.toISOString(),
@@ -45,6 +45,16 @@ test("agendamento de bot deriva somente do estado atual da partida", () => {
       battleStage: null,
     }),
     "roll_order",
+  );
+  assert.equal(
+    scheduledBotActionType({
+      status: "playing",
+      phase: "trade",
+      pendingFromTerritoryId: null,
+      pendingToTerritoryId: null,
+      battleStage: null,
+    }),
+    "finish_cards",
   );
   assert.equal(
     scheduledBotActionType({
