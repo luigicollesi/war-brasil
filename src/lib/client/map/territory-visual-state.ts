@@ -97,7 +97,7 @@ function visualElements(nodes: TerritoryVisualNodes): SVGGraphicsElement[] {
     nodes.bevelDark,
     nodes.bevelLight,
     nodes.face,
-  ].filter((node): node is SVGGraphicsElement => node !== null);
+  ].filter((node): node is SVGPathElement => node !== null);
 }
 
 function rememberBaseTransform(element: SVGGraphicsElement) {
