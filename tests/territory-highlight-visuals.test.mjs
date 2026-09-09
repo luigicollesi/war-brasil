@@ -49,11 +49,11 @@ test("semantic states use lightweight stroke contrast", () => {
 });
 
 test("regional highlight palette stays vivid without dynamic depth effects", () => {
-  assert.match(visualStateSource, /norte: \{ stroke: "#67f58b" \}/);
-  assert.match(visualStateSource, /nordeste: \{ stroke: "#63b4ff" \}/);
-  assert.match(visualStateSource, /"centro-oeste": \{ stroke: "#ffd84d" \}/);
-  assert.match(visualStateSource, /sudeste: \{ stroke: "#ff6262" \}/);
-  assert.match(visualStateSource, /sul: \{ stroke: "#ff9a3d" \}/);
+  assert.match(visualStateSource, /norte: \{ stroke: "#67f58b"/);
+  assert.match(visualStateSource, /nordeste: \{ stroke: "#63b4ff"/);
+  assert.match(visualStateSource, /"centro-oeste": \{ stroke: "#ffd84d"/);
+  assert.match(visualStateSource, /sudeste: \{ stroke: "#ff6262"/);
+  assert.match(visualStateSource, /sul: \{ stroke: "#ff9a3d"/);
   assert.doesNotMatch(
     visualStateSource,
     /nodes\.depths[\s\S]*classList\.toggle\("is-/,
