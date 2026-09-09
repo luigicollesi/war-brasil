@@ -1,4 +1,10 @@
-import type { TerritoryMaterial } from "@/src/lib/client/map/territory-material";
+import {
+  selectedTerritoryMaterial,
+  territoryMaterial,
+  type TerritoryMaterial,
+  type TerritorySelectionMaterial,
+} from "@/src/lib/client/map/territory-material";
+import type { PlayerColor } from "@/src/lib/lobby";
 
 const EXPECTED_TERRITORY_COUNT = 42;
 const EXPECTED_FACE_STOPS = 5;
@@ -28,6 +34,36 @@ function depthLayer(path: SVGPathElement) {
 function maskId(path: SVGPathElement) {
   const reference = path.getAttribute("mask")?.trim();
   return reference ? MASK_REFERENCE.exec(reference)?.[1] ?? null : null;
+}
+
+function applyFaceStops(
+  nodes: TerritoryVisualNodes,
+  colors: readonly [string, string, string, string, string],
+) {
+  nodes.faceStops.forEach((stop, index) => {
+    const color = colors[index];
+    if (color) stop.setAttribute("stop-color", color);
+  });
+}
+
+function applyBaseFaceMaterial(
+  nodes: TerritoryVisualNodes,
+  material: TerritoryMaterial,
+) {
+  applyFaceStops(nodes, material.face);
+  nodes.deepRim?.setAttribute("stroke", material.rim);
+  nodes.bevelDark?.setAttribute("stroke", material.rim);
+  nodes.face.style.removeProperty("--territory-selection-stroke");
+}
+
+function applySelectedFaceMaterial(
+  nodes: TerritoryVisualNodes,
+  material: TerritorySelectionMaterial,
+) {
+  applyFaceStops(nodes, material.face);
+  nodes.deepRim?.setAttribute("stroke", material.edgeDark);
+  nodes.bevelDark?.setAttribute("stroke", material.edgeDark);
+  nodes.face.style.setProperty("--territory-selection-stroke", material.edgeLight);
 }
 
 function validateMaskContract(
@@ -190,15 +226,28 @@ export function collectTerritoryVisualNodes(
   return result;
 }
 
+export function applyTerritorySelectionState(
+  nodes: TerritoryVisualNodes,
+  selected: boolean,
+) {
+  const color = nodes.face.dataset.playerColor as PlayerColor | undefined;
+  if (!color) return;
+
+  if (selected) {
+    applySelectedFaceMaterial(nodes, selectedTerritoryMaterial(color));
+    return;
+  }
+
+  applyBaseFaceMaterial(nodes, territoryMaterial(color));
+}
+
 export function applyTerritoryMaterial(
   id: number,
   nodes: TerritoryVisualNodes,
   material: TerritoryMaterial,
 ) {
-  nodes.faceStops.forEach((stop, index) => {
-    const color = material.face[index];
-    if (color) stop.setAttribute("stop-color", color);
-  });
+  nodes.face.dataset.playerColor = material.playerColor ?? "";
+  applyBaseFaceMaterial(nodes, material);
 
   nodes.sideStops.forEach((stop, index) => {
     const color = material.side[index];
@@ -218,11 +267,15 @@ export function applyTerritoryMaterial(
     }
   }
 
-  nodes.deepRim?.setAttribute("stroke", material.rim);
-  nodes.bevelDark?.setAttribute("stroke", material.rim);
-
   nodes.face.style.removeProperty("fill");
   nodes.face.style.removeProperty("fill-opacity");
   nodes.face.setAttribute("fill", `url(#face-grad-${id})`);
   nodes.face.setAttribute("fill-opacity", "1");
+
+  if (material.playerColor && nodes.face.classList.contains("is-selected")) {
+    applySelectedFaceMaterial(
+      nodes,
+      selectedTerritoryMaterial(material.playerColor),
+    );
+  }
 }
