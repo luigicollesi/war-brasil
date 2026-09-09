@@ -134,8 +134,8 @@ function ensureHighlightGroup(
   document: Document,
   faces: readonly SVGPathElement[],
 ) {
-  const existing = document.getElementById(HIGHLIGHT_GROUP_ID);
-  if (existing?.tagName.toLowerCase() === "g") return existing as SVGGElement;
+  const existing = document.querySelector<SVGGElement>(`#${HIGHLIGHT_GROUP_ID}`);
+  if (existing) return existing;
 
   const group = document.createElementNS(SVG_NS, "g");
   group.id = HIGHLIGHT_GROUP_ID;
