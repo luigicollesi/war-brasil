@@ -20,23 +20,7 @@ import type {
 import { DicePreSimulation } from "./dice-pre-simulation";
 import { DiceTrajectoryReplay } from "./dice-trajectory-replay";
 
-export function PredeterminedDiceRoll({
-  values,
-  seed,
-  textures,
-  preparingFallback = null,
-  failureFallback = null,
-  launchOffset,
-  playbackDurationMs,
-  initialElapsedMs,
-  visualScale = 1,
-  dockPositions,
-  dockScale,
-  dockDurationMs,
-  skipAnimation,
-  onComplete,
-  onError,
-}: {
+type PredeterminedDiceRollProps = {
   values: readonly DiceValue[];
   seed: string;
   textures: DiceFaceTextureSet;
@@ -52,7 +36,25 @@ export function PredeterminedDiceRoll({
   skipAnimation?: boolean;
   onComplete?: () => void;
   onError?: () => void;
-}) {
+};
+
+function PredeterminedDiceRollInstance({
+  values,
+  seed,
+  textures,
+  preparingFallback = null,
+  failureFallback = null,
+  launchOffset,
+  playbackDurationMs,
+  initialElapsedMs,
+  visualScale = 1,
+  dockPositions,
+  dockScale,
+  dockDurationMs,
+  skipAnimation,
+  onComplete,
+  onError,
+}: PredeterminedDiceRollProps) {
   const [roll, setRoll] = useState<PredeterminedRoll | null>(null);
   const [failed, setFailed] = useState(false);
   const geometry = useMemo(
@@ -112,4 +114,14 @@ export function PredeterminedDiceRoll({
       onComplete={onComplete}
     />
   );
+}
+
+export function PredeterminedDiceRoll(props: PredeterminedDiceRollProps) {
+  const physicalIdentity = [
+    props.seed,
+    props.values.join("-"),
+    props.launchOffset?.join(",") ?? "0,0,0",
+  ].join(":");
+
+  return <PredeterminedDiceRollInstance key={physicalIdentity} {...props} />;
 }
