@@ -89,8 +89,14 @@ export function ensureTerritoryRuntimeStyles(document: Document) {
 
     /* The embedded asset still has native hover rules. Interaction owns the
        surface fill and keeps legacy filter effects disabled. */
-    .territory:hover,
-    .territory.is-hovered,
+    .territory:hover {
+      filter: none;
+    }
+
+    .territory.is-hovered {
+      filter: none;
+    }
+
     .territory[data-surface-state] {
       filter: none;
     }
