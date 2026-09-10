@@ -1,9 +1,10 @@
-import { copyFile, mkdir, mkdtemp, readdir, rm } from "node:fs/promises";
+import { copyFile, mkdir, mkdtemp, readFile, readdir, rm } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { getCpgArtifactIdentity } from "./cpg-artifact-identity.mjs";
+import { fingerprintFile } from "./cpg-source.mjs";
 
 const scriptFile = fileURLToPath(import.meta.url);
 const repoRoot = path.resolve(path.dirname(scriptFile), "../..");
@@ -33,6 +34,49 @@ export function selectArtifact(artifacts, expectedName) {
     .sort((left, right) =>
       Date.parse(right?.created_at ?? 0) - Date.parse(left?.created_at ?? 0)
     )[0] ?? null;
+}
+
+export function validateArtifactMetadata(metadata, identity, actualCpgSha256) {
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    return "build.json must contain a JSON object";
+  }
+  if (metadata.schemaVersion !== 3) {
+    return `unsupported build metadata schema: ${String(metadata.schemaVersion)}`;
+  }
+  if (metadata.generator !== "joern") {
+    return `unexpected generator: ${String(metadata.generator)}`;
+  }
+  if (metadata.version !== identity.joernVersion) {
+    return "Joern version does not match the requested artifact identity";
+  }
+  if (metadata.sourceFingerprint !== identity.sourceFingerprint) {
+    return "source fingerprint does not match the requested artifact identity";
+  }
+  if (metadata.configFingerprint !== identity.configFingerprint) {
+    return "configuration fingerprint does not match the requested artifact identity";
+  }
+  if (metadata.generatorFingerprint !== identity.generatorFingerprint) {
+    return "generator fingerprint does not match the requested artifact identity";
+  }
+  if (metadata.joernLockFingerprint !== identity.joernLockFingerprint) {
+    return "Joern lock fingerprint does not match the requested artifact identity";
+  }
+  if (!/^[a-f0-9]{64}$/.test(metadata.cpgSha256 ?? "")) {
+    return "build metadata does not contain a valid cpg.bin SHA-256";
+  }
+  if (metadata.cpgSha256 !== actualCpgSha256) {
+    return "cpg.bin checksum does not match build metadata";
+  }
+  if (!Number.isInteger(metadata.fileCount) || metadata.fileCount < 1) {
+    return "build metadata contains an invalid source file count";
+  }
+  if (!metadata.fileHashes || typeof metadata.fileHashes !== "object" || Array.isArray(metadata.fileHashes)) {
+    return "build metadata does not contain source file hashes";
+  }
+  if (!metadata.generatorFileHashes || typeof metadata.generatorFileHashes !== "object" || Array.isArray(metadata.generatorFileHashes)) {
+    return "build metadata does not contain generator file hashes";
+  }
+  return null;
 }
 
 async function findFile(root, basename, depth = 0) {
@@ -129,6 +173,19 @@ async function main() {
     const downloadedMetadata = await findFile(tempDir, "build.json");
     if (!downloadedCpg || !downloadedMetadata) {
       fail("Downloaded artifact does not contain both cpg.bin and build.json.");
+    }
+
+    let metadata;
+    try {
+      metadata = JSON.parse(await readFile(downloadedMetadata, "utf8"));
+    } catch {
+      fail("Downloaded build.json is not valid JSON.");
+    }
+
+    const downloadedCpgSha256 = await fingerprintFile(downloadedCpg);
+    const metadataError = validateArtifactMetadata(metadata, identity, downloadedCpgSha256);
+    if (metadataError) {
+      fail(`Downloaded artifact failed metadata/integrity validation: ${metadataError}.`);
     }
 
     const outputDir = path.join(repoRoot, ".context/cpg");

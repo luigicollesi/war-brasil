@@ -50,10 +50,11 @@ jobs:
         run: node scripts/context/cpg-artifact-identity.mjs --github-output "$GITHUB_OUTPUT"
 
       - name: Restore pinned Joern runtime
+        id: joern-cache
         uses: actions/cache@v6
         with:
-          path: .context/cache/joern
-          key: joern-${{ runner.os }}-${{ runner.arch }}-${{ steps.identity.outputs.joern_version }}-${{ steps.identity.outputs.joern_lock }}
+          path: .context/cache/joern/${{ steps.identity.outputs.joern_version }}
+          key: joern-runtime-v2-${{ runner.os }}-${{ runner.arch }}-${{ steps.identity.outputs.joern_version }}-${{ steps.identity.outputs.joern_lock }}
 
       - name: Restore generated CPG
         id: cpg-cache
@@ -62,16 +63,26 @@ jobs:
           path: .context/cpg
           key: cpg-${{ runner.os }}-${{ runner.arch }}-${{ steps.identity.outputs.fingerprint }}
 
+      - name: Validate restored CPG cache
+        id: cpg-cache-validation
+        if: steps.cpg-cache.outputs.cache-hit == 'true'
+        continue-on-error: true
+        run: npm run context:cpg:status -- --check
+
       - name: Build CPG
-        if: steps.cpg-cache.outputs.cache-hit != 'true'
+        if: steps.cpg-cache.outputs.cache-hit != 'true' || steps.cpg-cache-validation.outcome != 'success' || steps.joern-cache.outputs.cache-hit != 'true'
         env:
           CPG_BOOTSTRAP_JOERN: "1"
         run: npm run context:cpg:build
 
-      - name: Validate CPG freshness
+      - name: Validate CPG freshness and integrity
         run: npm run context:cpg:status -- --check
 
+      - name: Smoke test CPG navigation
+        run: npm run context:cpg:smoke
+
       - name: Upload CPG artifact
+        if: steps.cpg-cache.outputs.cache-hit != 'true'
         uses: actions/upload-artifact@v7
         with:
           name: ${{ steps.identity.outputs.artifact_name }}

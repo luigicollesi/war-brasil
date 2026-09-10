@@ -4,7 +4,7 @@ This file is the compact AI-facing map for code navigation. Source code remains 
 
 ## Current graph state
 
-No generated `cpg.bin` is committed to Git. GitHub Actions publishes a CPG artifact keyed by the effective source/config/Joern fingerprints. A fresh checkout should run `npm run context:cpg:status`; when the graph is `MISSING` or `STALE`, `npm run context:cpg:restore` can recover an exact non-expired CI artifact when authenticated GitHub CLI access is available. Do not infer live call/data-flow relationships from this document alone.
+No generated `cpg.bin` is committed to Git. On a generated-CPG cache miss, GitHub Actions publishes one CPG artifact keyed by the effective source/config/generator/Joern fingerprints; cache hits are still integrity-checked and smoke-tested but are not republished. `build.json` binds the artifact to the SHA-256 of `cpg.bin`. A fresh checkout should run `npm run context:cpg:status`; when the graph is `MISSING` or `STALE`, `npm run context:cpg:restore` can recover an exact non-expired CI artifact when authenticated GitHub CLI access is available, validating fingerprints and checksum before installation. Do not infer live call/data-flow relationships from this document alone.
 
 ## Runtime map
 

@@ -21,7 +21,9 @@ Repository documentation, agent skills, GitHub workflows, static assets and map 
 
 `.context/cpg/` and `.context/cache/` are generated and ignored by Git. Source code is always the source of truth; generated graph data must never be edited manually.
 
-The source staging manifest records SHA-256 fingerprints for the selected source contents and the effective CPG configuration. The CPG build metadata also records the pinned Joern lock fingerprint. These values allow agents and CI to detect stale graphs even when the file names have not changed.
+The source staging manifest records SHA-256 fingerprints for the selected source contents and the effective CPG configuration. The CPG build metadata also records the graph-generator implementation fingerprint, pinned Joern lock fingerprint and SHA-256 of `cpg.bin`. These values let agents and CI detect source drift, tooling drift and graph corruption independently.
+
+`generatorFiles` in `cpg.config.json` is the explicit authority list for code that changes how the graph artifact is produced. Query, slice, restore and smoke-test tooling is deliberately outside that fingerprint because changing how a graph is consumed must not invalidate the graph itself.
 
 ## Build and status commands
 
@@ -43,7 +45,9 @@ Or explicitly bootstrap the pinned Joern release into the ignored cache before b
 CPG_BOOTSTRAP_JOERN=1 npm run context:cpg:build
 ```
 
-Check whether the generated graph matches the current source, configuration and Joern lock:
+The release archive is checksum-verified, extracted and then removed. Only the extracted pinned runtime is eligible for the CI runtime cache.
+
+Check whether the generated graph matches the current source, configuration, generator implementation and Joern lock, and whether `cpg.bin` still matches its recorded checksum:
 
 ```bash
 npm run context:cpg:status
@@ -63,27 +67,29 @@ npm run context:cpg:status -- --check
 
 Status meanings:
 
-- `CURRENT`: the CPG exists and its source/config/tool fingerprints match the current repository state.
-- `STALE`: a CPG exists, but indexed source, configuration, metadata schema or the pinned Joern definition changed.
+- `CURRENT`: the CPG exists, its integrity checksum matches, and its source/config/generator/tool fingerprints match the current repository state.
+- `STALE`: a CPG exists, but indexed source, configuration, generator implementation, metadata schema, pinned Joern definition or graph checksum changed.
 - `MISSING`: `cpg.bin` or its build metadata is absent or unusable.
 
-The stored commit SHA is informational. A commit that changes only files outside the CPG scope does not invalidate a graph; content fingerprints are the authority for freshness.
+The stored commit SHA is informational. A commit that changes only files outside the CPG authority does not invalidate a graph; content fingerprints are the authority for freshness.
 
 ## GitHub Actions cache and artifacts
 
-`.github/workflows/cpg.yml` runs separately from the normal test workflow. It is triggered by pushes to `dev` when CPG-relevant source, configuration, build tooling, or the workflow itself changes, and it can also be started manually where GitHub allows `workflow_dispatch`.
+`.github/workflows/cpg.yml` runs separately from the normal test workflow. It is triggered by pushes to `dev` when CPG-relevant source, configuration, build/query tooling, or the workflow itself changes, and it can also be started manually where GitHub allows `workflow_dispatch`.
 
 The workflow:
 
 1. prepares the canonical source set;
-2. computes a combined artifact fingerprint from source, configuration and the pinned Joern lock;
-3. restores the pinned Joern runtime from GitHub Actions cache when available;
+2. computes a combined artifact fingerprint from source, configuration, generator implementation and the pinned Joern lock;
+3. restores only the extracted pinned Joern runtime from GitHub Actions cache when available;
 4. restores an exact CPG cache when available;
-5. otherwise builds the graph with the pinned Joern release;
-6. requires `context:cpg:status -- --check` to pass;
-7. uploads `cpg.bin` and `build.json` as a named workflow artifact.
+5. validates a restored CPG cache before allowing generation to be skipped;
+6. rebuilds when the CPG cache is absent/invalid or the pinned Joern runtime cache is absent;
+7. requires the final freshness and integrity check to pass;
+8. smoke-tests symbol lookup, call-graph navigation, usages and data-flow slicing against the real graph;
+9. on a generated-CPG cache miss, uploads `cpg.bin` and `build.json` exactly once as a named workflow artifact; valid cache hits are not republished.
 
-The Joern runtime and CPG caches use exact fingerprint keys with no broad restore prefix. This avoids silently treating a stale graph as reusable. The generated CPG is never committed by the workflow.
+The Joern runtime and CPG caches use exact fingerprint keys with no broad restore prefix. The runtime cache uses a versioned key namespace so the former archive-plus-runtime cache cannot be reused. The generated CPG is never committed by the workflow.
 
 The artifact name is deterministic:
 
@@ -97,7 +103,7 @@ This allows a fresh agent session to recover the exact graph without downloading
 npm run context:cpg:restore
 ```
 
-The restore command computes the current artifact identity, finds a non-expired exact-name GitHub Actions artifact, downloads it, installs only `cpg.bin` and `build.json`, and then requires the normal freshness check to pass. If no exact artifact exists or the artifact expired, build locally instead.
+The restore command computes the current artifact identity, finds a non-expired exact-name GitHub Actions artifact, downloads it, validates the metadata fingerprints and `cpg.bin` SHA-256 before installation, installs only `cpg.bin` and `build.json`, and then requires the normal freshness and integrity check to pass. If no exact artifact exists, it expired, or pre-install validation fails, build locally instead.
 
 ## Query commands
 
@@ -155,4 +161,10 @@ The query and slice layers refuse to run when the graph is `MISSING` or `STALE`.
 
 `JOERN_BIN` may point directly to the `joern` executable and `JOERN_SLICE_BIN` may point directly to `joern-slice`. `JOERN_HOME` may point to a Joern installation directory. When none are supplied, the commands reuse the pinned Joern runtime under `.context/cache/joern/` if it was bootstrapped during a CPG build.
 
-The CI workflow provisions JDK 21, which is the runtime currently recommended by Joern. If local Joern execution fails before analysis begins, verify the local Java runtime before treating the CPG as invalid.
+Run the same finite navigation smoke test used by CI with:
+
+```bash
+npm run context:cpg:smoke
+```
+
+The CI workflow provisions JDK 21. If local Joern execution fails before analysis begins, verify the local Java runtime before treating the CPG as invalid.
