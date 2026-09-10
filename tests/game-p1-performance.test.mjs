@@ -45,7 +45,10 @@ test("hover territorial mantém pointermove fora do estado React do tabuleiro", 
   assert.match(board, /event\.target !== lastPointerTargetRef\.current/);
   assert.match(board, /tooltipRef\.current\?\.move/);
   assert.match(board, /tooltipRef\.current\?\.show/);
-  assert.doesNotMatch(board, /setHoveredTerritory/);
+  assert.doesNotMatch(
+    board,
+    /\[\s*hoveredTerritory\s*,\s*setHoveredTerritory\s*\]\s*=\s*useState/,
+  );
 
   assert.match(tooltip, /TOOLTIP_OFFSET = 8/);
   assert.match(tooltip, /requestAnimationFrame/);

@@ -47,7 +47,12 @@ test("apresentação inicial preserva o material 2.5d completo", () => {
   assert.match(board, /openingHighlight/);
   assert.match(board, /effectivePresentation/);
   assert.match(material, /NEUTRAL_TERRITORY_MATERIAL/);
-  assert.match(visualState, /is-opening-highlight/);
+  assert.match(visualState, /if \(state\.openingHighlight\) return "opening"/);
+  assert.match(
+    visualState,
+    /new WeakMap<SVGPathElement, TerritoryRuntimeVisualState>/,
+  );
+  assert.doesNotMatch(visualState, /classList\.toggle\("is-opening-highlight"/);
 });
 
 test("revelação segue a ordem round-robin persistida pelo backend", () => {

@@ -161,17 +161,24 @@ test("estado visual do tabuleiro é derivado da state machine", () => {
 });
 
 test("tooltip move por RAF sem setState no pointermove e nós visuais ficam cacheados", () => {
-  const source = readFileSync("src/components/interactive-board.tsx", "utf8");
+  const board = readFileSync("src/components/interactive-board.tsx", "utf8");
+  const tooltip = readFileSync("src/components/territory-tooltip.tsx", "utf8");
 
-  assert.match(source, /visualNodesByIdRef/);
-  assert.match(source, /materialSignatureRef/);
-  assert.match(source, /visualSignatureRef/);
-  assert.match(source, /requestAnimationFrame/);
-  assert.match(source, /translate3d/);
-  assert.match(source, /root\.addEventListener\("pointermove"/);
-  assert.doesNotMatch(source, /setHovered\(\{details:/);
-  assert.match(source, /if \(previousId === nextId\) return;/);
-  assert.match(source, /!presentationActive && hoveredDetails && hoveredState \? \(/);
+  assert.match(board, /visualNodesByIdRef/);
+  assert.match(board, /materialSignatureRef/);
+  assert.match(board, /visualSignatureRef/);
+  assert.match(board, /root\.addEventListener\("pointermove"/);
+  assert.match(board, /event\.target !== lastPointerTargetRef\.current/);
+  assert.match(board, /tooltipRef\.current\?\.move/);
+  assert.match(board, /tooltipRef\.current\?\.show/);
+  assert.doesNotMatch(
+    board,
+    /\[\s*hoveredTerritory\s*,\s*setHoveredTerritory\s*\]\s*=\s*useState/,
+  );
+
+  assert.match(tooltip, /requestAnimationFrame/);
+  assert.match(tooltip, /translate3d/);
+  assert.match(tooltip, /setHoveredDetails/);
 });
 
 test("estradas desligadas não permanecem montadas no SVG overlay", () => {

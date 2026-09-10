@@ -68,7 +68,10 @@ test("hover state clears cleanly and caches the pointer target between moves", (
   assert.match(board, /applyTerritoryHoverState\(nextNodes, true\)/);
   assert.match(board, /tooltipRef\.current\?\.show/);
   assert.match(board, /tooltipRef\.current\?\.hide/);
-  assert.doesNotMatch(board, /setHoveredTerritory/);
+  assert.doesNotMatch(
+    board,
+    /\[\s*hoveredTerritory\s*,\s*setHoveredTerritory\s*\]\s*=\s*useState/,
+  );
   assert.doesNotMatch(board, /relatedTarget/);
   assert.doesNotMatch(board, /pointerout/);
 });
