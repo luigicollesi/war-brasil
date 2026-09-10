@@ -66,6 +66,20 @@ test("overlay separa lançamento 3D fullscreen do resultado 2D estático", () =>
   assert.doesNotMatch(staticResults, /rolling=|rollAnimation=/);
 });
 
+test("modal de combate cresce pelo conteúdo no desktop e só rola quando a viewport é baixa", () => {
+  const css = source("src/app/game/[roomId]/game-battle-dice-polish.css");
+
+  assert.match(
+    css,
+    /\.battle-modal\s*\{[\s\S]*?width:\s*min\(100%, 42rem\)[\s\S]*?max-width:\s*42rem !important[\s\S]*?max-height:\s*none[\s\S]*?overflow:\s*clip/,
+  );
+  assert.match(css, /@media \(min-width: 768px\) and \(max-height: 680px\)/);
+  assert.match(
+    css,
+    /@media \(min-width: 768px\) and \(max-height: 680px\)[\s\S]*?\.battle-modal\s*\{[\s\S]*?overflow-y:\s*auto/,
+  );
+});
+
 test("resultado estático recupera no celular o layout legível do main", () => {
   const css = source("src/app/game/[roomId]/game-battle-dice-polish.css");
 

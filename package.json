@@ -3,10 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "node scripts/dev.mjs",
+    "dev": "node scripts/generate-region-outlines.mjs && node scripts/dev.mjs",
     "db:migrate": "node scripts/prepare-dev-db.mjs",
     "db:prepare:dev": "node scripts/prepare-dev-db.mjs",
-    "build": "next build",
+    "map:regions": "node scripts/generate-region-outlines.mjs",
+    "build": "node scripts/generate-region-outlines.mjs && next build",
     "start": "next start",
     "lint": "eslint --max-warnings=0",
     "test:compile": "tsc -p tsconfig.test.json",

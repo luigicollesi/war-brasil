@@ -5,16 +5,14 @@ import {
   deriveInitialTerritoryBoardPresentation,
   nextInitialTerritoryPresentationWakeAt,
 } from "../.test-build/client/map/board-presentation.js";
-import {
-  insetPolygonPath,
-  resolveHitPolygonPath,
-  safeInsetPolygonPath,
-  safeScaledPolygonPath,
-} from "../.test-build/client/map/territory-hit-geometry.js";
 
 const START = "2026-09-06T12:00:00.000Z";
 const START_MS = Date.parse(START);
 const MAP_SVG = readFileSync("public/mapa-war-brasil-25d.svg", "utf8");
+const HIT_SOURCE = readFileSync(
+  "src/lib/client/map/territory-hit-geometry.ts",
+  "utf8",
+);
 
 function attribute(tag, name) {
   return new RegExp(`\\b${name}="([^"]*)"`).exec(tag)?.[1] ?? null;
@@ -28,36 +26,34 @@ function mapPathTags() {
   return [...MAP_SVG.matchAll(/<path\b[^>]*>/g)].map((match) => match[0]);
 }
 
-test("hit geometry erodes a polygon instead of relying on masked visual pixels", () => {
-  assert.equal(
-    insetPolygonPath("M 0 0 L 10 0 L 10 10 L 0 10 Z", 1),
-    "M 1 1 L 9 1 L 9 9 L 1 9 Z",
-  );
-  assert.equal(
-    safeInsetPolygonPath("M 0 0 L 10 0 L 10 10 L 0 10 Z", 1),
-    "M 1 1 L 9 1 L 9 9 L 1 9 Z",
-  );
+test("runtime uses each painted top face directly instead of generating hit polygons", () => {
+  assert.match(HIT_SOURCE, /export function buildTerritoryHitLayer/);
+  assert.match(HIT_SOURCE, /face\.dataset\.territoryHit = "true"/);
+  assert.match(HIT_SOURCE, /face\.dataset\.territorySurface = "face"/);
+  assert.match(HIT_SOURCE, /face\.style\.pointerEvents = "fill"/);
+  assert.match(HIT_SOURCE, /result\.set\(id, \{ face, depths: \[\] \}\)/);
+
+  for (const removedGeometry of [
+    "parsePolygonPath",
+    "insetPolygonPath",
+    "safeInsetPolygonPath",
+    "safeScaledPolygonPath",
+    "resolveHitPolygonPath",
+    "createHitPath",
+  ]) {
+    assert.doesNotMatch(HIT_SOURCE, new RegExp(removedGeometry));
+  }
+  assert.doesNotMatch(HIT_SOURCE, /createElementNS\(/);
 });
 
-test("hit geometry supports relative M/L polygons used by generated assets", () => {
-  assert.equal(
-    insetPolygonPath("m 0 0 l 10 0 l 0 10 l -10 0 z", 1),
-    "M 1 1 L 9 1 L 9 9 L 1 9 Z",
+test("decorative 2.5d layers never compete with top faces for pointer targeting", () => {
+  assert.match(HIT_SOURCE, /for \(const depth of nodes\.depths\)/);
+  assert.match(HIT_SOURCE, /depth\.style\.pointerEvents = "none"/);
+  assert.match(
+    HIT_SOURCE,
+    /\[nodes\.deepRim, nodes\.bevelLight, nodes\.bevelDark\]/,
   );
-});
-
-test("unsafe self-intersecting hit geometry is rejected", () => {
-  assert.equal(
-    safeInsetPolygonPath("M 0 0 L 10 10 L 0 10 L 10 0 Z", 1),
-    null,
-  );
-});
-
-test("scaled fallback remains conservative for concave polygons", () => {
-  const source = "M 0 0 L 20 0 L 20 8 L 12 8 L 12 20 L 0 20 Z";
-  const scaled = safeScaledPolygonPath(source, 2);
-  assert.ok(scaled);
-  assert.notEqual(scaled, source);
+  assert.match(HIT_SOURCE, /decoration\.style\.pointerEvents = "none"/);
 });
 
 test("asset preserves the 42 canonical face ids and four depth layers", () => {
@@ -92,27 +88,19 @@ test("asset preserves the 42 canonical face ids and four depth layers", () => {
   assert.match(MAP_SVG, /data-body-inset="1\.05"/);
 });
 
-test("every real face and depth can build a conservative hit polygon", () => {
+test("every canonical top face and depth keeps valid source geometry", () => {
   const tags = mapPathTags();
   const faces = tags.filter((tag) => hasClass(tag, "territory"));
   const depths = tags.filter((tag) => hasClass(tag, "territory-depth"));
-  const topInset = Number(/data-top-inset="([^"]+)"/.exec(MAP_SVG)?.[1]);
-  const bodyInset = Number(/data-body-inset="([^"]+)"/.exec(MAP_SVG)?.[1]);
 
   assert.equal(faces.length, 42);
   assert.equal(depths.length, 42 * 4);
-  assert.ok(Number.isFinite(topInset) && topInset > 0);
-  assert.ok(Number.isFinite(bodyInset) && bodyInset > 0);
 
   for (const tag of faces) {
     const id = Number(attribute(tag, "data-territory-id"));
     const d = attribute(tag, "d");
     assert.ok(Number.isInteger(id) && id >= 1 && id <= 42);
     assert.ok(d, `territory ${id} face is missing d`);
-    assert.ok(
-      resolveHitPolygonPath(d, topInset),
-      `territory ${id} face has no conservative hit geometry`,
-    );
   }
 
   for (const tag of depths) {
@@ -121,14 +109,10 @@ test("every real face and depth can build a conservative hit polygon", () => {
     const d = attribute(tag, "d");
     assert.ok(Number.isInteger(id) && id >= 1 && id <= 42);
     assert.ok(d, `territory ${id} ${layer} is missing d`);
-    assert.ok(
-      resolveHitPolygonPath(d, bodyInset),
-      `territory ${id} ${layer} has no conservative hit geometry`,
-    );
   }
 });
 
-test("Brasília 40 keeps conservative target geometry on its tiny face and all depth layers", () => {
+test("Brasília 40 keeps one real top-face hit target and all visual depth layers", () => {
   const tags = mapPathTags();
   const face = tags.find(
     (tag) =>
@@ -139,29 +123,12 @@ test("Brasília 40 keeps conservative target geometry on its tiny face and all d
       hasClass(tag, "territory-depth") &&
       attribute(tag, "data-territory-id") === "40",
   );
-  const topInset = Number(/data-top-inset="([^"]+)"/.exec(MAP_SVG)?.[1]);
-  const bodyInset = Number(/data-body-inset="([^"]+)"/.exec(MAP_SVG)?.[1]);
 
   assert.ok(face, "territory 40 face is missing");
+  assert.ok(attribute(face, "d"), "territory 40 face is missing geometry");
   assert.equal(depths.length, 4);
-
-  const faceD = attribute(face, "d");
-  assert.ok(faceD);
-  const faceHit = resolveHitPolygonPath(faceD, topInset);
-  assert.ok(faceHit, "territory 40 face has no conservative hit geometry");
-  assert.notEqual(faceHit.d, faceD, "territory 40 face must never fall back to raw geometry");
-
   for (const depth of depths) {
-    const layer = attribute(depth, "data-layer");
-    const depthD = attribute(depth, "d");
-    assert.ok(depthD, `territory 40 ${layer} is missing d`);
-    const depthHit = resolveHitPolygonPath(depthD, bodyInset);
-    assert.ok(depthHit, `territory 40 ${layer} has no conservative hit geometry`);
-    assert.notEqual(
-      depthHit.d,
-      depthD,
-      `territory 40 ${layer} must never fall back to raw geometry`,
-    );
+    assert.ok(attribute(depth, "d"), `territory 40 ${attribute(depth, "data-layer")} is missing d`);
   }
 });
 

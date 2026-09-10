@@ -1,5 +1,5 @@
 const HIT_TARGET_SELECTOR =
-  '[data-map-hit-layer="true"] [data-territory-hit="true"]';
+  '[data-territory-hit="true"][data-territory-id]';
 
 export function setTerritoryHitInteractionEnabled(
   boardRoot: Element,

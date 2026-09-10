@@ -36,6 +36,7 @@ test("dynamic territory states avoid expensive SVG filters", () => {
     assert.doesNotMatch(source, /feSpecularLighting/);
   }
   assert.doesNotMatch(visualStateSource, /transition:\s*filter/);
+  assert.match(visualStateSource, /filter: none !important;/);
 });
 
 test("runtime highlight overlays and radial gradients are removed", () => {
@@ -66,58 +67,52 @@ test("six surface palettes are hardcoded with metallic highlight and two hover v
   assert.doesNotMatch(materialSource, /selectedTerritoryMaterial/);
 });
 
-test("semantic state remains separate from the four surface states", () => {
+test("semantic state stays in memory and remains separate from four surface states", () => {
+  assert.match(visualStateSource, /new WeakMap<SVGPathElement, TerritoryRuntimeVisualState>/);
+  assert.match(visualStateSource, /function semanticStateFromVisualState/);
+  assert.match(visualStateSource, /if \(state\.openingHighlight\) return "opening"/);
+  assert.match(visualStateSource, /if \(state\.selected\) return "selected"/);
+  assert.match(visualStateSource, /if \(state\.targetSelectable\) return "target"/);
+  assert.match(visualStateSource, /if \(state\.target\) return "target-blocked"/);
+  assert.match(visualStateSource, /if \(state\.available\) return "available"/);
   assert.match(visualStateSource, /export function resolveTerritorySemanticState/);
   assert.match(visualStateSource, /export function resolveTerritorySurfaceState/);
-
-  const semanticResolver = visualStateSource.slice(
-    visualStateSource.indexOf("export function resolveTerritorySemanticState"),
-    visualStateSource.indexOf("export function resolveTerritorySurfaceState"),
-  );
-  const orderedLines = [
-    'if (face.classList.contains("is-opening-highlight")) return "opening";',
-    'if (face.classList.contains("is-selected")) return "selected";',
-    'if (face.classList.contains("is-target-selectable")) return "target";',
-    'if (face.classList.contains("is-target")) return "target-blocked";',
-    'if (face.classList.contains("is-available")) return "available";',
-  ];
-  const order = orderedLines.map((line) => semanticResolver.indexOf(line));
-  assert.ok(order.every((index) => index >= 0));
-  for (let index = 1; index < order.length; index += 1) {
-    assert.ok(order[index - 1] < order[index]);
-  }
-
-  const surfaceResolver = visualStateSource.slice(
-    visualStateSource.indexOf("export function resolveTerritorySurfaceState"),
-    visualStateSource.indexOf("function refreshTerritoryVisualState"),
-  );
-  assert.match(surfaceResolver, /const highlighted = semanticState !== "none"/);
-  assert.match(surfaceResolver, /if \(highlighted && hovered\) return "highlighted-hover"/);
-  assert.match(surfaceResolver, /if \(highlighted\) return "highlighted"/);
-  assert.match(surfaceResolver, /if \(hovered\) return "hover"/);
-  assert.match(surfaceResolver, /return "normal"/);
-  assert.match(visualStateSource, /dataset\.semanticState = semanticState/);
-  assert.match(visualStateSource, /dataset\.surfaceState = resolveTerritorySurfaceState/);
+  assert.match(visualStateSource, /const highlighted = semanticState !== "none"/);
+  assert.match(visualStateSource, /state\?\.hovered \|\| state\?\.keyboardFocused/);
+  assert.match(visualStateSource, /if \(highlighted && hovered\) return "highlighted-hover"/);
+  assert.match(visualStateSource, /if \(highlighted\) return "highlighted"/);
+  assert.match(visualStateSource, /if \(hovered\) return "hover"/);
+  assert.doesNotMatch(visualStateSource, /dataset\.semanticState/);
+  assert.doesNotMatch(visualStateSource, /dataset\.surfaceState/);
 });
 
-test("all gameplay highlights share one face fill while hover has contextual fills", () => {
-  assert.match(visualStateSource, /data-surface-state="hover"[\s\S]*--territory-hover-fill/);
-  assert.match(visualStateSource, /data-surface-state="highlighted"[\s\S]*--territory-highlight-fill/);
-  assert.match(visualStateSource, /data-surface-state="highlighted-hover"[\s\S]*--territory-highlight-hover-fill/);
+test("all gameplay interaction writes collapse to one face fill variable", () => {
+  assert.match(visualStateSource, /SURFACE_FILL_PROPERTY = "--territory-state-fill"/);
+  assert.match(visualStateSource, /function fillForSurfaceState/);
+  assert.match(visualStateSource, /--territory-hover-fill/);
+  assert.match(visualStateSource, /--territory-highlight-fill/);
+  assert.match(visualStateSource, /--territory-highlight-hover-fill/);
+  assert.match(visualStateSource, /face\.style\.setProperty\(SURFACE_FILL_PROPERTY, nextFill\)/);
+  assert.match(
+    visualStateSource,
+    /fill: var\(\$\{SURFACE_FILL_PROPERTY\}, var\(--territory-base-fill\)\) !important/,
+  );
+  assert.doesNotMatch(visualStateSource, /classList\.toggle\("is-/);
   assert.match(svgNodesSource, /--territory-base-fill/);
   assert.match(svgNodesSource, /--territory-highlight-fill/);
   assert.match(svgNodesSource, /--territory-hover-fill/);
   assert.match(svgNodesSource, /--territory-highlight-hover-fill/);
-  assert.match(svgNodesSource, /face\.setAttribute\("fill", `url\(#face-grad-\$\{id\}\)`\)/);
 });
 
-test("semantic borders distinguish reasons without changing the surface palette", () => {
-  assert.match(visualStateSource, /data-semantic-state="available"[\s\S]*1\.8/);
-  assert.match(visualStateSource, /data-semantic-state="target-blocked"[\s\S]*stroke-dasharray: 5 3/);
-  assert.match(visualStateSource, /data-semantic-state="target"[\s\S]*2\.2/);
-  assert.match(visualStateSource, /data-semantic-state="selected"[\s\S]*2\.7/);
-  assert.match(visualStateSource, /data-semantic-state="opening"[\s\S]*2\.4/);
-  assert.match(visualStateSource, /data-semantic-state="selected"\]\.is-hovered[\s\S]*2\.9/);
+test("semantic reasons no longer rewrite borders, dash arrays, or opacity", () => {
+  assert.match(visualStateSource, /stroke: var\(--territory-region-stroke, #e4dcc0\)/);
+  assert.match(visualStateSource, /stroke-opacity: \.42/);
+  assert.match(visualStateSource, /stroke-width: var\(--territory-render-stroke-width, \.9\)/);
+  assert.match(visualStateSource, /stroke-dasharray: none/);
+  assert.doesNotMatch(visualStateSource, /data-semantic-state=/);
+  assert.doesNotMatch(visualStateSource, /stroke-dasharray: 5 3/);
+  assert.doesNotMatch(visualStateSource, /classList\.toggle\("is-selected"/);
+  assert.doesNotMatch(visualStateSource, /classList\.toggle\("is-target"/);
 });
 
 test("surface interaction does not animate or rewrite 2.5D material layers", () => {
@@ -133,13 +128,12 @@ test("surface interaction does not animate or rewrite 2.5D material layers", () 
   );
 });
 
-test("regional resting borders remain while active borders use owner colors", () => {
-  assert.match(visualStateSource, /norte: \{ stroke: "#67f58b"/);
-  assert.match(visualStateSource, /nordeste: \{ stroke: "#63b4ff"/);
-  assert.match(visualStateSource, /"centro-oeste": \{ stroke: "#ffd84d"/);
-  assert.match(visualStateSource, /sudeste: \{ stroke: "#ff6262"/);
-  assert.match(visualStateSource, /sul: \{ stroke: "#ff9a3d"/);
-  assert.match(visualStateSource, /--territory-highlight-edge-strong/);
-  assert.match(svgNodesSource, /--territory-highlight-edge/);
-  assert.match(svgNodesSource, /--territory-highlight-edge-strong/);
+test("regional borders are static and independent from active state", () => {
+  assert.match(visualStateSource, /data-region="norte"[\s\S]*#67f58b/);
+  assert.match(visualStateSource, /data-region="nordeste"[\s\S]*#63b4ff/);
+  assert.match(visualStateSource, /data-region="centro-oeste"[\s\S]*#ffd84d/);
+  assert.match(visualStateSource, /data-region="sudeste"[\s\S]*#ff6262/);
+  assert.match(visualStateSource, /data-region="sul"[\s\S]*#ff9a3d/);
+  assert.doesNotMatch(visualStateSource, /--territory-highlight-edge/);
+  assert.doesNotMatch(visualStateSource, /--territory-highlight-edge-strong/);
 });

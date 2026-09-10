@@ -18,6 +18,7 @@ export function TemporalAnomalyModal({
       eyebrow={presentation.eyebrow}
       title={presentation.title}
       tone="event"
+      scrollMode="viewport"
       className="temporal-anomaly-modal w-full max-w-2xl p-6 sm:p-8"
       onClose={onClose}
     >

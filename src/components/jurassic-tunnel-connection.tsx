@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useState } from "react";
 import type { TerritoryAnchor } from "@/src/lib/territory-geometry";
 
 const MAX_CURVE = 70;
 
-export function JurassicTunnelConnection({
+function JurassicTunnelConnectionComponent({
   from,
   to,
   targetName,
@@ -87,3 +87,5 @@ export function JurassicTunnelConnection({
     </svg>
   );
 }
+
+export const JurassicTunnelConnection = memo(JurassicTunnelConnectionComponent);

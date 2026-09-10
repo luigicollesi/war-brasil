@@ -17,29 +17,33 @@ const visualState = readFileSync(
 );
 const svg = readFileSync("public/mapa-war-brasil-25d.svg", "utf8");
 
-test("visual paths no longer own pointer targeting", () => {
-  assert.match(hitGeometry, /surface\.style\.pointerEvents = "none"/);
-  assert.match(hitGeometry, /dataset\.territoryHit = "true"/);
-  assert.match(hitGeometry, /pointer-events", "fill"/);
+test("painted top faces own pointer targeting directly", () => {
+  assert.match(hitGeometry, /face\.dataset\.territoryHit = "true"/);
+  assert.match(hitGeometry, /face\.dataset\.territoryId = String\(id\)/);
+  assert.match(hitGeometry, /face\.dataset\.territorySurface = "face"/);
+  assert.match(hitGeometry, /face\.style\.pointerEvents = "fill"/);
   assert.match(interaction, /\[data-territory-hit="true"\]\[data-territory-id\]/);
 });
 
-test("hit layer contains face and depth surfaces with one semantic territory id", () => {
-  assert.match(hitGeometry, /dataset\.territorySurface = surface/);
-  assert.match(hitGeometry, /visualSurface\.dataset\.layer \?\? "depth"/);
-  assert.match(hitGeometry, /isFace\s*\?\s*"face"/);
-  assert.match(hitGeometry, /dataset\.territoryId = String\(territoryId\)/);
-  assert.match(interaction, /export function territoryIdFromEvent/);
-});
-
-test("hit z-order follows the actual SVG paint order instead of a duplicated hardcoded order", () => {
-  assert.match(hitGeometry, /dataset\.mapHitOrder = "visual-paint-order"/);
+test("2.5d depth and bevel surfaces never intercept interaction", () => {
+  assert.match(hitGeometry, /for \(const depth of nodes\.depths\)/);
+  assert.match(hitGeometry, /depth\.style\.pointerEvents = "none"/);
   assert.match(
     hitGeometry,
-    /boardRoot\.querySelectorAll<SVGPathElement>\([\s\S]*?path\.territory-depth\[data-territory-id\],[\s\S]*?path\.territory\[data-territory-id\]/,
+    /\[nodes\.deepRim, nodes\.bevelLight, nodes\.bevelDark\]/,
   );
-  assert.match(hitGeometry, /for \(const visualSurface of visualSurfaces\)/);
-  assert.doesNotMatch(hitGeometry, /for \(const depthIndex of \[3, 2, 1, 0\]\)/);
+  assert.match(hitGeometry, /decoration\.style\.pointerEvents = "none"/);
+  assert.match(hitGeometry, /result\.set\(id, \{ face, depths: \[\] \}\)/);
+});
+
+test("interaction no longer duplicates or recalculates territory geometry", () => {
+  assert.match(hitGeometry, /LEGACY_HIT_LAYER_SELECTOR/);
+  assert.match(hitGeometry, /boardRoot\.querySelector\(LEGACY_HIT_LAYER_SELECTOR\)\?\.remove\(\)/);
+  assert.doesNotMatch(hitGeometry, /createElementNS\(/);
+  assert.doesNotMatch(hitGeometry, /resolveHitPolygonPath/);
+  assert.doesNotMatch(hitGeometry, /safeInsetPolygonPath/);
+  assert.doesNotMatch(hitGeometry, /safeScaledPolygonPath/);
+  assert.doesNotMatch(hitGeometry, /getBBox\(\)/);
 });
 
 test("masked visual pixels are not probed at runtime anymore", () => {
@@ -55,28 +59,36 @@ test("masked visual pixels are not probed at runtime anymore", () => {
   }
 });
 
-test("hover state is semantic and clears on null or board leave", () => {
-  assert.match(board, /setHoveredTerritoryId\(id\)/);
-  assert.match(board, /const pointerLeave = \(\) => setHoveredTerritoryId\(null\)/);
+test("hover state clears cleanly and caches the pointer target between moves", () => {
+  assert.match(board, /setHoveredTerritoryId\(territoryIdFromEvent\(event, root\)\)/);
+  assert.match(board, /event\.target !== lastPointerTargetRef\.current/);
+  assert.match(board, /lastPointerTargetRef\.current = event\.target/);
+  assert.match(board, /lastPointerTargetRef\.current = null/);
   assert.match(board, /applyTerritoryHoverState\(previousNodes, false\)/);
   assert.match(board, /applyTerritoryHoverState\(nextNodes, true\)/);
+  assert.match(board, /tooltipRef\.current\?\.show/);
+  assert.match(board, /tooltipRef\.current\?\.hide/);
+  assert.doesNotMatch(board, /setHoveredTerritory/);
   assert.doesNotMatch(board, /relatedTarget/);
   assert.doesNotMatch(board, /pointerout/);
 });
 
-test("native SVG hover is neutralized and semantic class owns highlighting", () => {
-  assert.match(visualState, /\.territory:hover\s*\{[\s\S]*?filter: none;/);
-  assert.match(visualState, /\.territory\.is-hovered/);
-  assert.match(visualState, /\.territory-depth\.is-hovered/);
+test("native SVG hover is neutralized while runtime fill owns highlighting", () => {
+  assert.match(visualState, /\.territory:hover,/);
+  assert.match(visualState, /filter: none !important;/);
+  assert.match(visualState, /--territory-state-fill/);
+  assert.match(visualState, /syncTerritorySurfaceFill/);
+  assert.doesNotMatch(visualState, /classList\.toggle\("is-hovered"/);
+  assert.doesNotMatch(visualState, /dataset\.surfaceState/);
 });
 
-test("keyboard stays one focus target per territory", () => {
-  assert.match(hitGeometry, /keyboard: isFace/);
-  assert.match(hitGeometry, /path\.setAttribute\("role", "button"\)/);
-  assert.match(hitGeometry, /path\.setAttribute\("tabindex", "0"\)/);
-  assert.match(hitGeometry, /path\.setAttribute\("aria-hidden", "true"\)/);
+test("keyboard remains one focus target per territory on the real face", () => {
+  assert.match(hitGeometry, /face\.setAttribute\("role", "button"\)/);
+  assert.match(hitGeometry, /face\.setAttribute\("tabindex", "0"\)/);
+  assert.match(hitGeometry, /face\.setAttribute\("aria-label"/);
   assert.match(board, /root\.addEventListener\("keydown"/);
   assert.match(board, /applyTerritoryKeyboardFocusState/);
+  assert.doesNotMatch(hitGeometry, /keyboard: isFace/);
 });
 
 test("interaction is scoped to board-v2 instead of the whole embedded document", () => {
