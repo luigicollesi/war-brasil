@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { memo, useMemo } from "react";
 import { createRoadCurve } from "@/src/lib/road-geometry";
 import { roadsFromConnections } from "@/src/lib/road-network";
 import type { TerritoryConnection } from "@/src/lib/territory-connections";
@@ -14,7 +14,7 @@ type RoadNetworkProps = {
   targetTerritoryIds?: number[];
 };
 
-export function RoadNetwork({
+function RoadNetworkComponent({
   connections,
   anchors,
   visible,
@@ -109,3 +109,5 @@ export function RoadNetwork({
     </svg>
   );
 }
+
+export const RoadNetwork = memo(RoadNetworkComponent);
