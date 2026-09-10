@@ -47,7 +47,7 @@ const CLICK_SUPPRESSION_MS = 450;
 const STROKE_EPSILON = 0.001;
 const MOBILE_MAP_QUERY = "(max-width: 767px)";
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
-const TERRITORY_BASE_STROKE_PROPERTY = "--territory-stroke-width";
+const TERRITORY_BASE_STROKE = 0.9;
 const TERRITORY_RENDER_STROKE_PROPERTY = "--territory-render-stroke-width";
 
 function midpoint(a: PointerSample, b: PointerSample) {
@@ -321,7 +321,7 @@ export function MapZoomController() {
           return;
         }
         const svg = root as unknown as SVGSVGElement;
-        const territoryRoot = svg.querySelector("#territories");
+        const territoryRoot = svg.querySelector<SVGGElement>("#territories");
         cacheTerritoryBounds(territoryRoot);
 
         svg.style.touchAction = "none";
@@ -346,77 +346,37 @@ export function MapZoomController() {
 
         setGestureActive(false);
 
-        const baseStrokeByPath = new WeakMap<SVGPathElement, number>();
-        const classSignatureByPath = new WeakMap<SVGPathElement, string>();
-
-        const readBaseStroke = (path: SVGPathElement) => {
-          const classSignature = path.getAttribute("class") ?? "";
-          const cached = baseStrokeByPath.get(path);
-          if (
-            cached !== undefined &&
-            classSignatureByPath.get(path) === classSignature
-          ) {
-            return cached;
-          }
-
-          const view = path.ownerDocument.defaultView;
-          const computed = view?.getComputedStyle(path);
-          const semanticStroke = computed
-            ?.getPropertyValue(TERRITORY_BASE_STROKE_PROPERTY)
-            .trim();
-          const parsed = Number.parseFloat(
-            semanticStroke || computed?.strokeWidth || "",
-          );
-
-          if (!Number.isFinite(parsed) || parsed <= 0) return undefined;
-
-          baseStrokeByPath.set(path, parsed);
-          classSignatureByPath.set(path, classSignature);
-          return parsed;
-        };
+        let lastRenderedStroke: number | null = null;
 
         applyTerritoryStrokeScale = () => {
           if (!territoryRoot) return;
-          const mobile = window.matchMedia(MOBILE_MAP_QUERY).matches;
 
-          for (const path of territoryRoot.querySelectorAll<SVGPathElement>(
-            "path.territory",
-          )) {
-            if (!mobile) {
-              path.style.removeProperty(TERRITORY_RENDER_STROKE_PROPERTY);
-              continue;
+          if (!window.matchMedia(MOBILE_MAP_QUERY).matches) {
+            if (lastRenderedStroke !== null) {
+              territoryRoot.style.removeProperty(TERRITORY_RENDER_STROKE_PROPERTY);
+              lastRenderedStroke = null;
             }
-
-            const baseStroke = readBaseStroke(path);
-            if (baseStroke === undefined) continue;
-
-            const nextStroke = mapStrokeWidthForScale(baseStroke, viewport.scale);
-            const currentRenderedStroke = Number.parseFloat(
-              path.style.getPropertyValue(TERRITORY_RENDER_STROKE_PROPERTY),
-            );
-
-            if (
-              Number.isFinite(currentRenderedStroke) &&
-              Math.abs(currentRenderedStroke - nextStroke) <= STROKE_EPSILON
-            ) {
-              continue;
-            }
-
-            path.style.setProperty(
-              TERRITORY_RENDER_STROKE_PROPERTY,
-              String(nextStroke),
-            );
+            return;
           }
+
+          const nextStroke = mapStrokeWidthForScale(
+            TERRITORY_BASE_STROKE,
+            viewport.scale,
+          );
+          if (
+            lastRenderedStroke !== null &&
+            Math.abs(lastRenderedStroke - nextStroke) <= STROKE_EPSILON
+          ) {
+            return;
+          }
+
+          territoryRoot.style.setProperty(
+            TERRITORY_RENDER_STROKE_PROPERTY,
+            String(nextStroke),
+          );
+          lastRenderedStroke = nextStroke;
         };
 
-        const strokeObserver = territoryRoot
-          ? new MutationObserver(() => applyTerritoryStrokeScale())
-          : null;
-        strokeObserver?.observe(territoryRoot as Element, {
-          attributes: true,
-          subtree: true,
-          attributeFilter: ["class"],
-        });
         applyTerritoryStrokeScale();
 
         const pointers = new Map<number, PointerSample>();
@@ -620,16 +580,10 @@ export function MapZoomController() {
         detachSvg = () => {
           setGestureActive(false);
           presentationObserver.disconnect();
-          strokeObserver?.disconnect();
           applyTerritoryStrokeScale = () => {};
           territoryBoundsById.clear();
-          if (territoryRoot) {
-            for (const path of territoryRoot.querySelectorAll<SVGPathElement>(
-              "path.territory",
-            )) {
-              path.style.removeProperty(TERRITORY_RENDER_STROKE_PROPERTY);
-            }
-          }
+          territoryRoot?.style.removeProperty(TERRITORY_RENDER_STROKE_PROPERTY);
+          lastRenderedStroke = null;
           svg.removeEventListener("pointerdown", onPointerDown);
           svg.removeEventListener("pointermove", onPointerMove);
           svg.removeEventListener("pointerup", finishPointer);
