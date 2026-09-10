@@ -177,6 +177,7 @@ test("Túnel Jurássico participa da cadeia de manobra", () => {
     new Set([3, 20, 21]),
   );
 });
+
 test("backend da manobra recalcula a melhor rota usando a topologia efetiva", () => {
   const source = readFileSync("src/lib/server/game-maneuver-command-service.ts", "utf8");
   assert.match(source, /bestTerritoryRoute/);
@@ -252,21 +253,27 @@ test("último dado do sorteio permanece visível antes de avançar", () => {
   assert.doesNotMatch(rollOrderDie, /status='playing'/);
 });
 
-test("territórios mantêm borda brilhante conforme a região", () => {
-  const source = readFileSync(
+test("regiões usam contornos de silhueta em vez de bordas por território", () => {
+  const visualState = readFileSync(
     "src/lib/client/map/territory-visual-state.ts",
     "utf8",
   );
-  assert.match(source, /const regionBorders/);
-  assert.match(source, /norte:/);
-  assert.match(source, /nordeste:/);
-  assert.match(source, /"centro-oeste":/);
-  assert.match(source, /sudeste:/);
-  assert.match(source, /sul:/);
-  assert.match(source, /--territory-region-stroke/);
-  assert.match(source, /--territory-region-glow/);
-  assert.match(source, /regionStyle\.stroke/);
-  assert.match(source, /regionStyle\.glow/);
+  const generator = readFileSync(
+    "scripts/generate-region-outlines.mjs",
+    "utf8",
+  );
+
+  assert.doesNotMatch(visualState, /const regionBorders/);
+  assert.doesNotMatch(visualState, /--territory-region-stroke/);
+  assert.match(visualState, /stroke:\s*#d9d2bd/);
+  assert.match(generator, /const REGION_COLORS/);
+  assert.match(generator, /norte:\s*"#67f58b"/);
+  assert.match(generator, /nordeste:\s*"#63b4ff"/);
+  assert.match(generator, /"centro-oeste":\s*"#ffd84d"/);
+  assert.match(generator, /sudeste:\s*"#ff6262"/);
+  assert.match(generator, /sul:\s*"#ff9a3d"/);
+  assert.match(generator, /id="region-shape-\$\{region\}"/);
+  assert.match(generator, /class="region-outline" data-region="\$\{region\}"/);
 });
 
 test("Túnel Jurássico usa curva derivada das geometrias calculadas do SVG", () => {
