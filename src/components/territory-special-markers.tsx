@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { MapTargetHint } from "@/src/lib/game-interaction";
 import {
   fitTerritoryMarkerSize,
@@ -22,7 +23,7 @@ function markerAsset(target: MapTargetHint) {
   return null;
 }
 
-export function TerritorySpecialMarkers({
+function TerritorySpecialMarkersComponent({
   targets,
   geometries,
 }: TerritorySpecialMarkersProps) {
@@ -63,3 +64,5 @@ export function TerritorySpecialMarkers({
     </svg>
   );
 }
+
+export const TerritorySpecialMarkers = memo(TerritorySpecialMarkersComponent);
