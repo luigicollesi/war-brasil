@@ -17,8 +17,30 @@ Tests are intentionally excluded from the initial CPG to keep the graph focused 
 
 Repository documentation, agent skills, GitHub workflows, static assets and map reference images are outside the CPG roots and therefore are not indexed.
 
+## CPG generator
+
+Joern is pinned in `joern.lock.json`. The generator stages only the configured source files and invokes the JavaScript/TypeScript frontend through `joern-parse`.
+
+If a compatible Joern installation already exists:
+
+```bash
+JOERN_HOME=/path/to/joern ./scripts/context/build-cpg.sh
+```
+
+To download the pinned official distribution into the ignored cache:
+
+```bash
+CPG_BOOTSTRAP_JOERN=1 ./scripts/context/build-cpg.sh
+```
+
+The official Joern distribution is large, so bootstrap is opt-in. Downloaded archives are SHA-256 verified and cached under `.context/cache/joern/`.
+
+The bootstrap path supports Linux and macOS on x86_64 and arm64. Other environments may provide a compatible installation through `JOERN_HOME`.
+
 ## Generated data
 
-`.context/cpg/` and `.context/cache/` are generated and ignored by Git. Source code is always the source of truth; generated graph data must never be edited manually.
+`.context/cpg/` and `.context/cache/` are generated and ignored by Git. The generated graph is written to `.context/cpg/cpg.bin`; build metadata is written beside it.
 
-The CPG generator and query commands will be added in the next integration phase.
+Source code is always the source of truth. Generated graph data must never be edited manually.
+
+CPG query helpers and stale-graph detection are intentionally left for the next integration phases.

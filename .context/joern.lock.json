@@ -1,0 +1,22 @@
+{
+  "version": "v4.0.625",
+  "release": "https://github.com/joernio/joern/releases/tag/v4.0.625",
+  "assets": {
+    "linux-x86_64": {
+      "name": "joern-cli-linux-x86_64.zip",
+      "sha256": "522f63d44e41f52ead5fbf404c1e55b04d1c37bf48b33415435c6b08bb453943"
+    },
+    "linux-arm64": {
+      "name": "joern-cli-linux-arm64.zip",
+      "sha256": "a5daf5f32a5a2cd3d380b0bd3fab39def3cdd3e5f87a084f0e74fbeced9b256b"
+    },
+    "macos-x86_64": {
+      "name": "joern-cli-macos-x86_64.zip",
+      "sha256": "98e03066cc630121656c715e6bd72da3364152f2680608441dbdd37392d96469"
+    },
+    "macos-arm64": {
+      "name": "joern-cli-macos-arm64.zip",
+      "sha256": "86ae415d1be580681c74f08ff66579e5d1a7d6b81fb0cc5b9de61dcca9b59e5d"
+    }
+  }
+}

@@ -27,6 +27,12 @@
     "**/*.test.*",
     "**/*.spec.*"
   ],
+  "supportFiles": [
+    "package.json",
+    "tsconfig.json",
+    "next.config.ts",
+    "realtime/package.json"
+  ],
   "generated": {
     "cpgDirectory": ".context/cpg",
     "cacheDirectory": ".context/cache"
