@@ -49,19 +49,19 @@ assert.ok(
 const usages = runJson(
   "usages slice",
   "scripts/context/cpg-slice.mjs",
-  ["usages", "debugId", "--method", "roomErrorResponse"]
+  ["usages", "error", "--method", "roomErrorResponse"]
 );
 assert.equal(usages.command, "usages");
-assert.equal(usages.query, "debugId");
-assert.ok(usages.matchCount > 0, "debugId must have at least one usage in roomErrorResponse");
+assert.equal(usages.query, "error");
+assert.ok(usages.matchCount > 0, "roomErrorResponse parameter 'error' must have at least one usage slice");
 
 const dataflow = runJson(
   "dataflow slice",
   "scripts/context/cpg-slice.mjs",
-  ["dataflow", "debugId", "--depth", "2", "--method", "roomErrorResponse"]
+  ["dataflow", "error", "--depth", "2", "--method", "roomErrorResponse"]
 );
 assert.equal(dataflow.command, "dataflow");
-assert.equal(dataflow.sink, "debugId");
-assert.ok(dataflow.nodeCount > 0, "debugId data-flow slice must contain at least one node");
+assert.equal(dataflow.sink, "error");
+assert.ok(dataflow.nodeCount > 0, "roomErrorResponse parameter 'error' must produce a non-empty data-flow slice");
 
 console.log("CPG smoke tests passed: symbol, call graph, usages and dataflow.");

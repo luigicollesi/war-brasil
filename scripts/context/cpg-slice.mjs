@@ -8,6 +8,7 @@ import { resolveJoernTool } from "./joern-runtime.mjs";
 const scriptFile = fileURLToPath(import.meta.url);
 const repoRoot = path.resolve(path.dirname(scriptFile), "../..");
 const supportedModes = new Set(["usages", "dataflow"]);
+const emptySliceMarker = "Empty slice, no file generated.";
 
 function fail(message) {
   console.error(`CPG slice error: ${message}`);
@@ -30,6 +31,35 @@ function optionValue(args, index, name) {
   const value = args[index + 1];
   if (!value || value.startsWith("--")) fail(`${name} requires a value`);
   return value;
+}
+
+function compactProcessOutput(value) {
+  const normalized = String(value ?? "").trim().replace(/\s+/g, " ");
+  if (!normalized) return "<empty>";
+  return normalized.length <= 800 ? normalized : `${normalized.slice(0, 800)}…`;
+}
+
+export function emptySliceForMode(mode) {
+  if (mode === "usages") return { objectSlices: [], userDefinedTypes: [] };
+  if (mode === "dataflow") return { nodes: [], edges: [] };
+  throw new Error(`Unsupported slice mode: ${mode}`);
+}
+
+export function interpretMissingSliceOutput(mode, stdout = "", stderr = "") {
+  const combined = `${stdout}\n${stderr}`;
+  return combined.includes(emptySliceMarker) ? emptySliceForMode(mode) : null;
+}
+
+export function formatMissingSliceDiagnostic({ mode, query, method, file, stdout, stderr }) {
+  return [
+    "joern-slice completed without producing JSON and did not report an empty slice.",
+    `mode=${mode}`,
+    `query=${query}`,
+    `method=${method ?? "<none>"}`,
+    `file=${file ?? "<none>"}`,
+    `stdout=${compactProcessOutput(stdout)}`,
+    `stderr=${compactProcessOutput(stderr)}`
+  ].join(" ");
 }
 
 export function filterUsageResult(raw, query, includeSource = false) {
@@ -211,13 +241,26 @@ async function main() {
     }
 
     const rawText = await readFile(outputFile, "utf8").catch(() => null);
-    if (!rawText) fail("joern-slice completed without producing output");
-
     let raw;
-    try {
-      raw = JSON.parse(rawText);
-    } catch {
-      fail(`joern-slice produced invalid JSON: ${rawText.slice(0, 500)}`);
+
+    if (!rawText) {
+      raw = interpretMissingSliceOutput(mode, sliceRun.stdout, sliceRun.stderr);
+      if (!raw) {
+        fail(formatMissingSliceDiagnostic({
+          mode,
+          query,
+          method,
+          file,
+          stdout: sliceRun.stdout,
+          stderr: sliceRun.stderr
+        }));
+      }
+    } else {
+      try {
+        raw = JSON.parse(rawText);
+      } catch {
+        fail(`joern-slice produced invalid JSON: ${rawText.slice(0, 500)}`);
+      }
     }
 
     const result = mode === "usages"

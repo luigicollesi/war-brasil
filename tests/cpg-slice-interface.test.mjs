@@ -2,7 +2,13 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
-import { filterUsageResult, summarizeDataflowResult } from "../scripts/context/cpg-slice.mjs";
+import {
+  emptySliceForMode,
+  filterUsageResult,
+  formatMissingSliceDiagnostic,
+  interpretMissingSliceOutput,
+  summarizeDataflowResult
+} from "../scripts/context/cpg-slice.mjs";
 
 const repoRoot = process.cwd();
 const sliceCli = path.join(repoRoot, "scripts/context/cpg-slice.mjs");
@@ -74,4 +80,44 @@ test("dataflow result reports graph size without changing the slice", () => {
   assert.equal(result.nodeCount, 2);
   assert.equal(result.edgeCount, 1);
   assert.equal(result.slice, raw);
+});
+
+test("Joern empty-slice marker becomes a valid empty result for both slice modes", () => {
+  const usages = interpretMissingSliceOutput(
+    "usages",
+    "Empty slice, no file generated.\n",
+    ""
+  );
+  assert.deepEqual(usages, emptySliceForMode("usages"));
+  assert.deepEqual(filterUsageResult(usages, "missing"), {
+    command: "usages",
+    query: "missing",
+    matchCount: 0,
+    methods: []
+  });
+
+  const dataflow = interpretMissingSliceOutput(
+    "dataflow",
+    "",
+    "Empty slice, no file generated."
+  );
+  assert.deepEqual(dataflow, { nodes: [], edges: [] });
+  assert.equal(summarizeDataflowResult(dataflow).nodeCount, 0);
+});
+
+test("missing JSON without Joern's empty marker remains an actionable error", () => {
+  assert.equal(interpretMissingSliceOutput("usages", "Usage: joern-slice", "bad option"), null);
+  const diagnostic = formatMissingSliceDiagnostic({
+    mode: "usages",
+    query: "debugId",
+    method: "roomErrorResponse",
+    file: null,
+    stdout: "Usage: joern-slice\n".repeat(100),
+    stderr: "Unknown option"
+  });
+  assert.match(diagnostic, /mode=usages/);
+  assert.match(diagnostic, /query=debugId/);
+  assert.match(diagnostic, /method=roomErrorResponse/);
+  assert.match(diagnostic, /Unknown option/);
+  assert.ok(diagnostic.length < 2000);
 });
