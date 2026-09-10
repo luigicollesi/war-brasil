@@ -30,10 +30,12 @@ function disableDecorativePointerEvents(nodes: TerritoryVisualNodes) {
  * while preserving the existing delegated-event contract.
  */
 export function buildTerritoryHitLayer(
-  _document: Document,
+  document: Document,
   boardRoot: Element,
   territories: ReadonlyMap<number, TerritoryVisualNodes>,
 ): Map<number, TerritoryHitNodes> {
+  // Keep the existing public signature until the caller is simplified too.
+  void document;
   boardRoot.querySelector(LEGACY_HIT_LAYER_SELECTOR)?.remove();
 
   const result = new Map<number, TerritoryHitNodes>();
