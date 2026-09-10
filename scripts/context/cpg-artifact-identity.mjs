@@ -2,30 +2,38 @@ import { appendFile, readFile } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
-import { fingerprintJsonFile, getCpgSourceState, sha256 } from "./cpg-source.mjs";
+import {
+  fingerprintJsonFile,
+  getCpgGeneratorState,
+  getCpgSourceState,
+  sha256
+} from "./cpg-source.mjs";
 
 const scriptFile = fileURLToPath(import.meta.url);
 
 export async function getCpgArtifactIdentity(repoRoot) {
   const absoluteRoot = path.resolve(repoRoot);
   const state = await getCpgSourceState(absoluteRoot);
+  const generator = await getCpgGeneratorState(absoluteRoot, state.config);
   const lockPath = path.join(absoluteRoot, ".context/joern.lock.json");
   const lock = JSON.parse(await readFile(lockPath, "utf8"));
   const joernLockFingerprint = await fingerprintJsonFile(lockPath);
   const fingerprint = sha256([
-    "war-brasil-cpg-artifact-v1",
+    "war-brasil-cpg-artifact-v2",
     state.sourceFingerprint,
     state.configFingerprint,
+    generator.generatorFingerprint,
     joernLockFingerprint,
     lock.version ?? ""
   ].join("\0"));
 
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     fingerprint,
     artifactName: `cpg-${fingerprint}`,
     sourceFingerprint: state.sourceFingerprint,
     configFingerprint: state.configFingerprint,
+    generatorFingerprint: generator.generatorFingerprint,
     joernLockFingerprint,
     joernVersion: lock.version ?? null
   };
@@ -46,6 +54,7 @@ async function main() {
         `artifact_name=${identity.artifactName}`,
         `source=${identity.sourceFingerprint}`,
         `config=${identity.configFingerprint}`,
+        `generator=${identity.generatorFingerprint}`,
         `joern_lock=${identity.joernLockFingerprint}`,
         `joern_version=${identity.joernVersion ?? ""}`
       ].join("\n") + "\n"

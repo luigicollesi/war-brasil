@@ -67,14 +67,18 @@ bootstrap_joern() {
   install_dir="$CACHE_ROOT/joern/$JOERN_VERSION"
 
   mkdir -p "$CACHE_ROOT/joern"
+  rm -f "$archive.part"
   if [[ ! -f "$archive" ]]; then
-    printf 'Downloading pinned Joern %s (%s). This release is large and is cached after the first download.\n' "$JOERN_VERSION" "$key" >&2
+    printf 'Downloading pinned Joern %s (%s). The verified archive is removed after extraction.\n' "$JOERN_VERSION" "$key" >&2
     curl --fail --location --retry 3 --output "$archive.part" "$url"
     mv "$archive.part" "$archive"
   fi
 
   actual="$(sha256sum "$archive" | awk '{print $1}')"
-  [[ "$actual" == "$checksum" ]] || fail "Joern archive checksum mismatch for $asset"
+  if [[ "$actual" != "$checksum" ]]; then
+    rm -f "$archive"
+    fail "Joern archive checksum mismatch for $asset"
+  fi
 
   rm -rf "$install_dir"
   mkdir -p "$install_dir"
@@ -83,6 +87,8 @@ bootstrap_joern() {
   local parser
   parser="$(resolve_cached_joern || true)"
   [[ -n "$parser" ]] || fail "joern-parse was not found after extracting $asset"
+
+  rm -f "$archive"
   printf '%s' "$parser"
 }
 
@@ -122,6 +128,7 @@ GIT_HEAD="$(git -C "$REPO_ROOT" rev-parse HEAD)"
 node "$REPO_ROOT/scripts/context/write-cpg-build-metadata.mjs" \
   "$REPO_ROOT" \
   "$SOURCE_DIR/.manifest.json" \
+  "$OUTPUT_FILE" \
   "$OUTPUT_DIR/build.json" \
   "$JOERN_VERSION" \
   "$GIT_HEAD"

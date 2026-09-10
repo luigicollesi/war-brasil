@@ -34,6 +34,12 @@
     "next.config.ts",
     "realtime/package.json"
   ],
+  "generatorFiles": [
+    "scripts/context/cpg-source.mjs",
+    "scripts/context/prepare-cpg-source.mjs",
+    "scripts/context/build-cpg.sh",
+    "scripts/context/write-cpg-build-metadata.mjs"
+  ],
   "generated": {
     "cpgDirectory": ".context/cpg",
     "cacheDirectory": ".context/cache"

@@ -8,6 +8,7 @@ import { resolveJoernTool } from "./joern-runtime.mjs";
 const scriptFile = fileURLToPath(import.meta.url);
 const repoRoot = path.resolve(path.dirname(scriptFile), "../..");
 const supportedModes = new Set(["usages", "dataflow"]);
+const emptySliceMarker = "Empty slice, no file generated.";
 
 function fail(message) {
   console.error(`CPG slice error: ${message}`);
@@ -26,28 +27,75 @@ function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function normalizePath(value) {
+  return String(value ?? "").replaceAll("\\", "/").replace(/^\.\//, "");
+}
+
 function optionValue(args, index, name) {
   const value = args[index + 1];
   if (!value || value.startsWith("--")) fail(`${name} requires a value`);
   return value;
 }
 
-export function filterUsageResult(raw, query, includeSource = false) {
+function compactProcessOutput(value) {
+  const normalized = String(value ?? "").trim().replace(/\s+/g, " ");
+  if (!normalized) return "<empty>";
+  return normalized.length <= 800 ? normalized : `${normalized.slice(0, 800)}…`;
+}
+
+export function emptySliceForMode(mode) {
+  if (mode === "usages") return { objectSlices: [], userDefinedTypes: [] };
+  if (mode === "dataflow") return { nodes: [], edges: [] };
+  throw new Error(`Unsupported slice mode: ${mode}`);
+}
+
+export function interpretMissingSliceOutput(mode, stdout = "", stderr = "") {
+  const combined = `${stdout}\n${stderr}`;
+  return combined.includes(emptySliceMarker) ? emptySliceForMode(mode) : null;
+}
+
+export function formatMissingSliceDiagnostic({ mode, query, method, file, stdout, stderr }) {
+  return [
+    "joern-slice completed without producing JSON and did not report an empty slice.",
+    `mode=${mode}`,
+    `query=${query}`,
+    `method=${method ?? "<none>"}`,
+    `file=${file ?? "<none>"}`,
+    `stdout=${compactProcessOutput(stdout)}`,
+    `stderr=${compactProcessOutput(stderr)}`
+  ].join(" ");
+}
+
+export function matchesMethodScope(fullName, requestedMethod) {
+  if (!requestedMethod) return true;
+  const full = String(fullName ?? "");
+  if (full === requestedMethod) return true;
+  const escaped = escapeRegex(requestedMethod);
+  return new RegExp(`(?:^|[.:/$])${escaped}(?:$|[:(<])`).test(full);
+}
+
+export function matchesFileScope(fileName, requestedFile) {
+  if (!requestedFile) return true;
+  const candidate = normalizePath(fileName);
+  const requested = normalizePath(requestedFile);
+  return candidate === requested || candidate.endsWith(`/${requested}`);
+}
+
+export function filterUsageResult(raw, query, includeSource = false, scope = {}) {
   const methods = Array.isArray(raw?.objectSlices) ? raw.objectSlices : [];
   const resultMethods = [];
   let matchCount = 0;
-
   for (const method of methods) {
+    if (!matchesMethodScope(method?.fullName, scope.method)) continue;
+    if (!matchesFileScope(method?.fileName, scope.file)) continue;
     const slices = Array.isArray(method?.slices) ? method.slices : [];
     const matches = slices.filter((slice) => {
       const targetName = slice?.targetObj?.name;
       const definedByName = slice?.definedBy?.name;
       return targetName === query || definedByName === query;
     });
-
     if (matches.length === 0) continue;
     matchCount += matches.length;
-
     const compact = {
       fullName: method.fullName ?? "",
       fileName: method.fileName ?? "",
@@ -58,25 +106,85 @@ export function filterUsageResult(raw, query, includeSource = false) {
     if (includeSource && typeof method.code === "string") compact.code = method.code;
     resultMethods.push(compact);
   }
+  return { command: "usages", query, matchCount, methods: resultMethods };
+}
 
+export function filterFallbackUsages(raw, includeSource = false, scope = {}) {
+  const usages = Array.isArray(raw?.usages) ? raw.usages : [];
+  const grouped = new Map();
+  let matchCount = 0;
+  for (const usage of usages) {
+    if (!matchesMethodScope(usage?.methodFullName, scope.method)) continue;
+    if (!matchesFileScope(usage?.file, scope.file)) continue;
+    matchCount += 1;
+    const key = `${usage?.methodFullName ?? ""}\0${usage?.file ?? ""}`;
+    if (!grouped.has(key)) {
+      grouped.set(key, {
+        fullName: usage?.methodFullName ?? "",
+        fileName: usage?.file ?? "",
+        lineNumber: usage?.line ?? null,
+        columnNumber: usage?.column ?? null,
+        usages: []
+      });
+    }
+    const method = grouped.get(key);
+    method.usages.push({
+      id: usage?.id ?? null,
+      code: usage?.code ?? "",
+      lineNumber: usage?.line ?? null,
+      columnNumber: usage?.column ?? null,
+      call: usage?.call ?? "",
+      callCode: usage?.callCode ?? ""
+    });
+    if (includeSource && typeof usage?.methodCode === "string") method.code = usage.methodCode;
+  }
   return {
     command: "usages",
-    query,
+    query: raw?.query ?? "",
     matchCount,
-    methods: resultMethods
+    declarationCount: raw?.declarationCount ?? 0,
+    methods: [...grouped.values()]
+  };
+}
+
+export function filterDataflowScope(raw, scope = {}) {
+  const nodes = Array.isArray(raw?.nodes) ? raw.nodes : [];
+  const edges = Array.isArray(raw?.edges) ? raw.edges : [];
+  if (!scope.method && !scope.file) return { ...raw, nodes, edges };
+  const anchorIds = new Set(nodes.filter((node) =>
+    matchesMethodScope(node?.parentMethod, scope.method) && matchesFileScope(node?.parentFile, scope.file)
+  ).map((node) => node.id));
+  if (anchorIds.size === 0) return { ...raw, nodes: [], edges: [] };
+  const adjacency = new Map();
+  const connect = (left, right) => {
+    if (!adjacency.has(left)) adjacency.set(left, new Set());
+    adjacency.get(left).add(right);
+  };
+  for (const edge of edges) {
+    connect(edge.src, edge.dst);
+    connect(edge.dst, edge.src);
+  }
+  const keepIds = new Set(anchorIds);
+  const queue = [...anchorIds];
+  for (let index = 0; index < queue.length; index += 1) {
+    const current = queue[index];
+    for (const neighbor of adjacency.get(current) ?? []) {
+      if (keepIds.has(neighbor)) continue;
+      keepIds.add(neighbor);
+      queue.push(neighbor);
+    }
+  }
+  return {
+    ...raw,
+    nodes: nodes.filter((node) => keepIds.has(node.id)),
+    edges: edges.filter((edge) => keepIds.has(edge.src) && keepIds.has(edge.dst))
   };
 }
 
 export function summarizeDataflowResult(raw, metadata = {}) {
   const nodes = Array.isArray(raw?.nodes) ? raw.nodes : [];
   const edges = Array.isArray(raw?.edges) ? raw.edges : [];
-  return {
-    command: "dataflow",
-    ...metadata,
-    nodeCount: nodes.length,
-    edgeCount: edges.length,
-    slice: raw
-  };
+  return { command: "dataflow", ...metadata, nodeCount: nodes.length, edgeCount: edges.length, slice: raw };
 }
 
 async function ensureCurrentCpg() {
@@ -86,21 +194,43 @@ async function ensureCurrentCpg() {
     encoding: "utf8",
     maxBuffer: 16 * 1024 * 1024
   });
-
-  if (statusRun.status !== 0 && !statusRun.stdout) {
-    fail(statusRun.stderr.trim() || "Unable to determine CPG status");
-  }
-
+  if (statusRun.status !== 0 && !statusRun.stdout) fail(statusRun.stderr.trim() || "Unable to determine CPG status");
   let status;
-  try {
-    status = JSON.parse(statusRun.stdout);
-  } catch {
-    fail(`Unable to parse CPG status: ${statusRun.stdout || statusRun.stderr}`);
-  }
-
+  try { status = JSON.parse(statusRun.stdout); } catch { fail(`Unable to parse CPG status: ${statusRun.stdout || statusRun.stderr}`); }
   if (status.status !== "CURRENT") {
     const reasons = status.reasons?.length ? ` (${status.reasons.join(", ")})` : "";
     fail(`CPG is ${status.status}${reasons}. Run npm run context:cpg:build before slicing it.`);
+  }
+}
+
+async function runUsagesFallback(query, includeSource, scope, cacheRoot, cpgFile) {
+  let joern;
+  try { joern = await resolveJoernTool(repoRoot, "joern", "JOERN_BIN"); }
+  catch (error) { fail(error instanceof Error ? error.message : String(error)); }
+
+  const tempRoot = path.join(cacheRoot, "queries");
+  await mkdir(tempRoot, { recursive: true });
+  const tempDir = await mkdtemp(path.join(tempRoot, "usages-fallback-"));
+  const outputFile = path.join(tempDir, "result.json");
+  const queryScript = path.join(repoRoot, "scripts/context/joern/query.sc");
+  try {
+    const queryRun = spawnSync(joern, [
+      "--script", queryScript,
+      "--param", `cpgFile=${cpgFile}`,
+      "--param", "mode=usages",
+      "--param", `symbol=${query}`,
+      "--param", "target=",
+      "--param", "depth=1",
+      "--param", `outFile=${outputFile}`
+    ], { cwd: repoRoot, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+    if (queryRun.status !== 0) fail(queryRun.stderr.trim() || queryRun.stdout.trim() || `Joern usages fallback exited with code ${queryRun.status}`);
+    const text = await readFile(outputFile, "utf8").catch(() => null);
+    if (!text) fail("Joern usages fallback completed without producing output");
+    let raw;
+    try { raw = JSON.parse(text); } catch { fail(`Joern usages fallback produced invalid JSON: ${text.slice(0, 500)}`); }
+    return filterFallbackUsages(raw, includeSource, scope);
+  } finally {
+    await rm(tempDir, { recursive: true, force: true });
   }
 }
 
@@ -110,10 +240,8 @@ async function main() {
     usage();
     process.exit(args.length === 0 ? 1 : 0);
   }
-
   const mode = args.shift();
   if (!supportedModes.has(mode)) fail(`Unsupported slice mode: ${mode}`);
-
   const query = args.shift();
   if (!query || query.startsWith("--")) fail(`${mode} requires a ${mode === "usages" ? "variable" : "sink"}`);
 
@@ -124,7 +252,6 @@ async function main() {
   let includeSource = false;
   let excludeOperators = false;
   let endAtExternalMethod = false;
-
   for (let index = 0; index < args.length; index += 1) {
     const arg = args[index];
     switch (arg) {
@@ -135,28 +262,13 @@ async function main() {
         index += 1;
         break;
       }
-      case "--method":
-        method = optionValue(args, index, "--method");
-        index += 1;
-        break;
-      case "--file":
-        file = optionValue(args, index, "--file");
-        index += 1;
-        break;
-      case "--regex":
-        regex = true;
-        break;
-      case "--include-source":
-        includeSource = true;
-        break;
-      case "--exclude-operators":
-        excludeOperators = true;
-        break;
-      case "--end-at-external-method":
-        endAtExternalMethod = true;
-        break;
-      default:
-        fail(`Unexpected argument: ${arg}`);
+      case "--method": method = optionValue(args, index, "--method"); index += 1; break;
+      case "--file": file = optionValue(args, index, "--file"); index += 1; break;
+      case "--regex": regex = true; break;
+      case "--include-source": includeSource = true; break;
+      case "--exclude-operators": excludeOperators = true; break;
+      case "--end-at-external-method": endAtExternalMethod = true; break;
+      default: fail(`Unexpected argument: ${arg}`);
     }
   }
 
@@ -166,71 +278,44 @@ async function main() {
   if (mode === "dataflow" && excludeOperators) fail("--exclude-operators is only supported by usages");
 
   await ensureCurrentCpg();
+  const cpgFile = path.join(repoRoot, ".context/cpg/cpg.bin");
+  const cacheRoot = path.join(repoRoot, ".context/cache");
 
-  let joernSlice;
-  try {
-    joernSlice = await resolveJoernTool(repoRoot, "joern-slice", "JOERN_SLICE_BIN");
-  } catch (error) {
-    fail(error instanceof Error ? error.message : String(error));
+  if (mode === "usages") {
+    const result = await runUsagesFallback(query, includeSource, { method, file }, cacheRoot, cpgFile);
+    process.stdout.write(`${JSON.stringify({ ...result, filters: { method, file, includeSource, excludeOperators }, engine: "cpgql" }, null, 2)}\n`);
+    return;
   }
 
-  const cpgFile = path.join(repoRoot, ".context/cpg/cpg.bin");
-  const cacheRoot = path.join(repoRoot, ".context/cache/slices");
-  await mkdir(cacheRoot, { recursive: true });
-  const tempDir = await mkdtemp(path.join(cacheRoot, `${mode}-`));
-  const outputFile = path.join(tempDir, "result.json");
+  let joernSlice;
+  try { joernSlice = await resolveJoernTool(repoRoot, "joern-slice", "JOERN_SLICE_BIN"); }
+  catch (error) { fail(error instanceof Error ? error.message : String(error)); }
 
+  const sliceCacheRoot = path.join(cacheRoot, "slices");
+  await mkdir(sliceCacheRoot, { recursive: true });
+  const tempDir = await mkdtemp(path.join(sliceCacheRoot, `${mode}-`));
+  const outputFile = path.join(tempDir, "slices.json");
   try {
-    const sliceArgs = [mode === "dataflow" ? "data-flow" : "usages", "--out", outputFile];
-
-    if (method) {
-      const methodFilter = `^${escapeRegex(method)}$`;
-      sliceArgs.push("--method-name-filter", methodFilter);
-    }
-    if (file) sliceArgs.push("--file-filter", file);
-
-    if (mode === "usages") {
-      if (!includeSource) sliceArgs.push("--exclude-source");
-      if (excludeOperators) sliceArgs.push("--exclude-operators");
-    } else {
-      const sinkFilter = regex ? query : `.*${escapeRegex(query)}.*`;
-      sliceArgs.push("--slice-depth", String(depth), "--sink-filter", sinkFilter);
-      if (endAtExternalMethod) sliceArgs.push("--end-at-external-method");
-    }
-
+    const sinkFilter = regex ? query : `.*${escapeRegex(query)}.*`;
+    const sliceArgs = ["data-flow", "--slice-depth", String(depth), "--sink-filter", sinkFilter];
+    if (endAtExternalMethod) sliceArgs.push("--end-at-external-method");
     sliceArgs.push(cpgFile);
-
-    const sliceRun = spawnSync(joernSlice, sliceArgs, {
-      cwd: repoRoot,
-      encoding: "utf8",
-      maxBuffer: 128 * 1024 * 1024
-    });
-
-    if (sliceRun.status !== 0) {
-      fail(sliceRun.stderr.trim() || sliceRun.stdout.trim() || `joern-slice exited with code ${sliceRun.status}`);
-    }
-
+    const sliceRun = spawnSync(joernSlice, sliceArgs, { cwd: tempDir, encoding: "utf8", maxBuffer: 128 * 1024 * 1024 });
+    if (sliceRun.status !== 0) fail(sliceRun.stderr.trim() || sliceRun.stdout.trim() || `joern-slice exited with code ${sliceRun.status}`);
     const rawText = await readFile(outputFile, "utf8").catch(() => null);
-    if (!rawText) fail("joern-slice completed without producing output");
-
     let raw;
-    try {
-      raw = JSON.parse(rawText);
-    } catch {
-      fail(`joern-slice produced invalid JSON: ${rawText.slice(0, 500)}`);
+    if (!rawText) {
+      raw = interpretMissingSliceOutput(mode, sliceRun.stdout, sliceRun.stderr);
+      if (!raw) fail(formatMissingSliceDiagnostic({ mode, query, method, file, stdout: sliceRun.stdout, stderr: sliceRun.stderr }));
+    } else {
+      try { raw = JSON.parse(rawText); } catch { fail(`joern-slice produced invalid JSON: ${rawText.slice(0, 500)}`); }
     }
-
-    const result = mode === "usages"
-      ? {
-          ...filterUsageResult(raw, query, includeSource),
-          filters: { method, file, includeSource, excludeOperators }
-        }
-      : summarizeDataflowResult(raw, {
-          sink: query,
-          depth,
-          filters: { method, file, regex, endAtExternalMethod }
-        });
-
+    const result = summarizeDataflowResult(filterDataflowScope(raw, { method, file }), {
+      sink: query,
+      depth,
+      filters: { method, file, regex, endAtExternalMethod },
+      engine: "joern-slice"
+    });
     process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   } finally {
     await rm(tempDir, { recursive: true, force: true });

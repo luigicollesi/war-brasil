@@ -1,4 +1,4 @@
-import io.shiftleft.codepropertygraph.generated.nodes.Method
+import io.shiftleft.codepropertygraph.generated.nodes.{Identifier, Method}
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
 import scala.collection.mutable
@@ -43,6 +43,24 @@ import scala.collection.mutable
       .sortBy(method => (method.filename, method.lineNumber.getOrElse(Int.MaxValue), method.fullName))
       .map(method => methodJson(method))
       .mkString("[", ",", "]")
+
+  def usageJson(node: Identifier): String = {
+    val method = node.method
+    val parentCall = node.inCall.headOption
+    val fields = mutable.ArrayBuffer(
+      s"\"id\":${node.id}",
+      s"\"code\":${jsonString(node.code)}",
+      s"\"line\":${optionalInt(node.lineNumber)}",
+      s"\"column\":${optionalInt(node.columnNumber)}",
+      s"\"method\":${jsonString(method.name)}",
+      s"\"methodFullName\":${jsonString(method.fullName)}",
+      s"\"methodCode\":${jsonString(method.code)}",
+      s"\"file\":${jsonString(method.filename)}",
+      s"\"call\":${jsonString(parentCall.map(_.name).getOrElse(""))}",
+      s"\"callCode\":${jsonString(parentCall.map(_.code).getOrElse(""))}"
+    )
+    fields.mkString("{", ",", "}")
+  }
 
   val allMethods = cpg.method.filter(method => !method.isExternal).l.distinctBy(_.id)
   val byId = allMethods.map(method => method.id -> method).toMap
@@ -138,6 +156,17 @@ import scala.collection.mutable
         case None => "null"
       }
       s"{\"command\":\"path\",\"from\":${jsonString(symbol)},\"to\":${jsonString(target)},\"maxDepth\":$maxDepth,\"fromMatches\":${methodsJson(roots)},\"toMatches\":${methodsJson(targets)},\"path\":$pathJson}"
+
+    case "usages" =>
+      val identifiers = cpg.identifier.nameExact(symbol).l
+      val locals = cpg.local.nameExact(symbol).l
+      val params = cpg.method.parameter.nameExact(symbol).l
+      val identifierJson = identifiers
+        .sortBy(node => (node.method.filename, node.lineNumber.getOrElse(Int.MaxValue), node.id))
+        .map(usageJson)
+        .mkString("[", ",", "]")
+      val declarationCount = locals.size + params.size
+      s"{\"command\":\"usages\",\"query\":${jsonString(symbol)},\"declarationCount\":$declarationCount,\"usageCount\":${identifiers.size},\"usages\":$identifierJson}"
 
     case other =>
       throw new IllegalArgumentException(s"Unsupported CPG query mode: $other")

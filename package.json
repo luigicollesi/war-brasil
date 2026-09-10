@@ -25,6 +25,7 @@
     "context:cpg:path": "node scripts/context/cpg-query.mjs path",
     "context:cpg:usages": "node scripts/context/cpg-slice.mjs usages",
     "context:cpg:dataflow": "node scripts/context/cpg-slice.mjs dataflow",
+    "context:cpg:smoke": "node scripts/context/cpg-smoke.mjs",
     "realtime:install": "npm --prefix realtime ci",
     "realtime:start": "npm --prefix realtime start",
     "realtime:test": "npm --prefix realtime test",

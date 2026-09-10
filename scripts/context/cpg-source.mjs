@@ -49,6 +49,10 @@ export function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
 }
 
+export async function fingerprintFile(filePath) {
+  return sha256(await readFile(filePath));
+}
+
 export async function fingerprintJsonFile(filePath) {
   const parsed = JSON.parse(await readFile(filePath, "utf8"));
   return sha256(canonicalJson(parsed));
@@ -61,6 +65,48 @@ export async function loadCpgConfig(repoRoot) {
     config,
     configPath,
     configFingerprint: sha256(canonicalJson(config))
+  };
+}
+
+function resolveRepoFile(repoRoot, relativePath) {
+  const absolute = path.resolve(repoRoot, relativePath);
+  const relative = path.relative(repoRoot, absolute);
+  if (relative.startsWith("..") || path.isAbsolute(relative)) {
+    throw new Error(`CPG generator file escapes repository root: ${relativePath}`);
+  }
+  return absolute;
+}
+
+export async function getCpgGeneratorState(repoRoot, configOverride = null) {
+  const absoluteRepoRoot = path.resolve(repoRoot);
+  const config = configOverride ?? (await loadCpgConfig(absoluteRepoRoot)).config;
+  const files = [...new Set((config.generatorFiles ?? []).map(normalize))].sort();
+
+  if (files.length === 0) {
+    throw new Error("CPG generatorFiles is empty. Define the graph-authority tooling in .context/cpg.config.json.");
+  }
+
+  const fileHashes = {};
+  const aggregate = createHash("sha256");
+  for (const relativePath of files) {
+    const absolutePath = resolveRepoFile(absoluteRepoRoot, relativePath);
+    const fileStat = await stat(absolutePath).catch(() => null);
+    if (!fileStat?.isFile()) {
+      throw new Error(`CPG generator file is missing: ${relativePath}`);
+    }
+
+    const fileHash = await fingerprintFile(absolutePath);
+    fileHashes[relativePath] = fileHash;
+    aggregate.update(relativePath);
+    aggregate.update("\0");
+    aggregate.update(fileHash);
+    aggregate.update("\n");
+  }
+
+  return {
+    generatorFingerprint: aggregate.digest("hex"),
+    generatorFiles: files,
+    generatorFileHashes: fileHashes
   };
 }
 
@@ -97,8 +143,8 @@ export async function getCpgSourceState(repoRoot) {
     }
   }
 
-  for (const root of config.roots ?? []) {
-    await walk(root);
+  for (const sourceRoot of config.roots ?? []) {
+    await walk(sourceRoot);
   }
   for (const supportFile of config.supportFiles ?? []) {
     await maybeAddFile(supportFile);

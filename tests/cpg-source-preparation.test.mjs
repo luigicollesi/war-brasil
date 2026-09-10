@@ -77,5 +77,10 @@ test("CPG build script is valid bash and keeps bootstrap diagnostics off stdout"
   assert.equal(result.status, 0, result.stderr || result.stdout);
 
   const source = await readFile(buildScript, "utf8");
-  assert.match(source, /cached after the first download\.\\n' "\$JOERN_VERSION" "\$key" >&2/);
+  assert.match(
+    source,
+    /The verified archive is removed after extraction\.\\n' "\$JOERN_VERSION" "\$key" >&2/
+  );
+  assert.match(source, /rm -f "\$archive\.part"/);
+  assert.match(source, /rm -f "\$archive"\s*\n\s*printf '%s' "\$parser"/);
 });
