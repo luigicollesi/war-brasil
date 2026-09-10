@@ -5,8 +5,7 @@
      container enquanto a viewport desktop tem espaço suficiente. */
   .game-modal-surface[data-game-modal-scroll="content"] {
     max-height: none !important;
-    overflow-x: clip !important;
-    overflow-y: visible !important;
+    overflow: clip !important;
     overscroll-behavior: auto !important;
   }
 
@@ -15,7 +14,7 @@
   .game-modal-surface[data-game-modal-scroll="content"].game-card-modal
     > .overflow-y-auto {
     max-height: none !important;
-    overflow-y: visible !important;
+    overflow: visible !important;
   }
 }
 
