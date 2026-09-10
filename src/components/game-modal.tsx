@@ -9,6 +9,7 @@ import {
 } from "react";
 
 type GameModalTone = "default" | "barrier" | "event";
+type GameModalScrollMode = "content" | "viewport";
 
 type GameModalProps = {
   eyebrow?: string;
@@ -17,6 +18,7 @@ type GameModalProps = {
   tone?: GameModalTone;
   className?: string;
   onClose?: () => void;
+  scrollMode?: GameModalScrollMode;
 };
 
 const FOCUSABLE_SELECTOR = [
@@ -35,6 +37,7 @@ export function GameModal({
   tone = "default",
   className = "",
   onClose,
+  scrollMode = "content",
 }: GameModalProps) {
   const titleId = useId();
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -99,6 +102,7 @@ export function GameModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
+        data-game-modal-scroll={scrollMode}
         tabIndex={-1}
         className={`game-modal-surface game-modal--${tone} ${className}`}
       >
