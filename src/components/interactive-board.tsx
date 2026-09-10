@@ -381,9 +381,11 @@ export function InteractiveBoard({
     }
     if (!rect) return;
 
+    // Pointer coordinates from the embedded SVG are already local to the
+    // object viewport, which matches the map surface dimensions.
     tooltipRef.current?.move({
-      x: event.clientX - rect.left,
-      y: event.clientY - rect.top,
+      x: event.clientX,
+      y: event.clientY,
       surfaceWidth: rect.width,
       surfaceHeight: rect.height,
     });
