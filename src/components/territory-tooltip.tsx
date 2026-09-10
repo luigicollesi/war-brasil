@@ -2,6 +2,7 @@
 
 import {
   forwardRef,
+  useCallback,
   useEffect,
   useImperativeHandle,
   useMemo,
@@ -98,7 +99,7 @@ export const TerritoryTooltip = forwardRef<
     [targetHints],
   );
 
-  const applyPosition = () => {
+  const applyPosition = useCallback(() => {
     const tooltip = tooltipRef.current;
     const position = positionRef.current;
     if (!tooltip || !position) return;
@@ -118,23 +119,35 @@ export const TerritoryTooltip = forwardRef<
 
     nextX = Math.max(
       TOOLTIP_EDGE_GAP,
-      Math.min(nextX, Math.max(TOOLTIP_EDGE_GAP, surfaceWidth - width - TOOLTIP_EDGE_GAP)),
+      Math.min(
+        nextX,
+        Math.max(
+          TOOLTIP_EDGE_GAP,
+          surfaceWidth - width - TOOLTIP_EDGE_GAP,
+        ),
+      ),
     );
     nextY = Math.max(
       TOOLTIP_EDGE_GAP,
-      Math.min(nextY, Math.max(TOOLTIP_EDGE_GAP, surfaceHeight - height - TOOLTIP_EDGE_GAP)),
+      Math.min(
+        nextY,
+        Math.max(
+          TOOLTIP_EDGE_GAP,
+          surfaceHeight - height - TOOLTIP_EDGE_GAP,
+        ),
+      ),
     );
 
     tooltip.style.transform = `translate3d(${Math.round(nextX)}px, ${Math.round(nextY)}px, 0)`;
-  };
+  }, []);
 
-  const schedulePosition = () => {
+  const schedulePosition = useCallback(() => {
     if (frameRef.current) return;
     frameRef.current = requestAnimationFrame(() => {
       frameRef.current = 0;
       applyPosition();
     });
-  };
+  }, [applyPosition]);
 
   useImperativeHandle(
     ref,
@@ -152,7 +165,7 @@ export const TerritoryTooltip = forwardRef<
         schedulePosition();
       },
     }),
-    [],
+    [schedulePosition],
   );
 
   useEffect(() => {
@@ -160,11 +173,15 @@ export const TerritoryTooltip = forwardRef<
     if (!tooltip) return;
 
     const observer = new ResizeObserver((entries) => {
-      const rect = entries[0]?.contentRect;
-      if (rect) {
+      const entry = entries[0];
+      const borderBox = entry?.borderBoxSize?.[0];
+      const rect = entry?.contentRect;
+      if (borderBox || rect) {
         sizeRef.current = {
-          width: rect.width || DEFAULT_TOOLTIP_WIDTH,
-          height: rect.height || DEFAULT_TOOLTIP_HEIGHT,
+          width:
+            borderBox?.inlineSize || rect?.width || DEFAULT_TOOLTIP_WIDTH,
+          height:
+            borderBox?.blockSize || rect?.height || DEFAULT_TOOLTIP_HEIGHT,
         };
       }
       schedulePosition();
@@ -173,7 +190,7 @@ export const TerritoryTooltip = forwardRef<
     schedulePosition();
 
     return () => observer.disconnect();
-  }, [hoveredDetails]);
+  }, [hoveredDetails, schedulePosition]);
 
   useEffect(
     () => () => {
