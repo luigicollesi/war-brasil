@@ -1,11 +1,25 @@
 @media (max-width: 700px) {
-  /* Labels sobre o mapa precisam de contraste real no viewport reduzido. */
+  /* No mobile, textos sobre ilustrações usam superfícies claras e tinta escura. */
   .wb-guide-map-territory-name {
-    fill: #fff8e8;
-    stroke: #06140f;
-    stroke-opacity: 1;
-    stroke-width: 2px;
-    paint-order: stroke fill;
+    fill: #050505;
+    stroke: none;
+    font-size: 17px;
+    font-weight: 900;
+    paint-order: normal;
+  }
+
+  .wb-guide-map-barrier-label rect {
+    fill: #f3efe4;
+    stroke: #9b781f;
+    stroke-width: 1.5px;
+  }
+
+  .wb-guide-map-barrier-label text {
+    fill: #050505;
+    stroke: none;
+    font-size: 11px;
+    font-weight: 900;
+    paint-order: normal;
   }
 
   /* "Leia o mapa": afasta os nomes da estrada e dos marcadores. */
@@ -26,11 +40,39 @@
   }
 
   .wb-guide-map-frame--reading .wb-guide-map-troop-markers text {
-    fill: #17201c;
+    fill: #000;
     stroke: none;
-    font-size: 19px;
+    font-size: 22px;
     font-weight: 900;
     paint-order: normal;
+  }
+
+  .wb-guide-reading-troop {
+    background: #f3efe4;
+    color: #000;
+  }
+
+  /* Marcadores do tabuleiro: fundo claro para nomes e números pretos. */
+  .wb-guide-board-scene-marker {
+    background: #f3efe4;
+    border-color: rgba(5, 5, 5, .28);
+    box-shadow: 0 8px 18px rgba(0, 0, 0, .2);
+  }
+
+  .wb-guide-board-scene-marker b,
+  .wb-guide-board-scene-marker small {
+    color: #050505;
+  }
+
+  .wb-guide-board-scene-marker em,
+  .wb-guide-board-scene-arrow-label {
+    background: #f3efe4;
+    color: #050505;
+  }
+
+  .wb-guide-board-scene-arrow-label[data-kind="attack"],
+  .wb-guide-board-scene-arrow-label[data-kind="move"] {
+    color: #050505;
   }
 
   /* Mantém número, nome e estrada em áreas distintas no mapa reduzido. */
