@@ -23,7 +23,7 @@ Repository documentation, agent skills, GitHub workflows, static assets and map 
 
 The source staging manifest records SHA-256 fingerprints for the selected source contents and the effective CPG configuration. The CPG build metadata also records the pinned Joern lock fingerprint. These values allow agents and CI to detect stale graphs even when the file names have not changed.
 
-## Commands
+## Build and status commands
 
 Prepare the exact source set without requiring Joern:
 
@@ -68,3 +68,36 @@ Status meanings:
 - `MISSING`: `cpg.bin` or its build metadata is absent or unusable.
 
 The stored commit SHA is informational. A commit that changes only files outside the CPG scope does not invalidate a graph; content fingerprints are the authority for freshness.
+
+## Query commands
+
+Queries require a `CURRENT` CPG. They return compact JSON intended for agents and scripts. Symbol matching is exact against Joern method `name` or `fullName`; run the symbol query first when a name may be ambiguous.
+
+Find method definitions represented by a symbol:
+
+```bash
+npm run context:cpg:symbol -- GameMap
+```
+
+Find direct callers or callees:
+
+```bash
+npm run context:cpg:callers -- resolveAttack
+npm run context:cpg:callees -- resolveAttack
+```
+
+Inspect bounded upstream and downstream call-graph impact. The default depth is 2 and the accepted range is 1-20:
+
+```bash
+npm run context:cpg:impact -- resolveAttack --depth 3
+```
+
+Find the shortest directed call-graph path between two symbols. The default maximum depth is 8:
+
+```bash
+npm run context:cpg:path -- RealtimeClient GameMap --depth 10
+```
+
+The query layer refuses to run when the graph is `MISSING` or `STALE`. Rebuild first instead of using stale structural information.
+
+`JOERN_BIN` may point directly to the `joern` executable. `JOERN_HOME` may point to a Joern installation directory. When neither is supplied, queries reuse the pinned Joern runtime under `.context/cache/joern/` if it was bootstrapped during a CPG build.
