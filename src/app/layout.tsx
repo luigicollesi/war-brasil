@@ -11,6 +11,7 @@ import "./war-guide-sections.css";
 import "./war-guide-final-sections.css";
 import "./war-guide-scenes.css";
 import "./war-guide-responsive.css";
+import "./war-guide-mobile-map.css";
 
 const interfaceFont = Inter({
   variable: "--font-wb-ui",
