@@ -1,3 +1,0 @@
-source=/home/luigi/.cache/codex-openai/plugins/plugins/mixpanel-headless/skills/mixpanelyst
-repository=https://github.com/openai/plugins.git
-ref=main

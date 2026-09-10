@@ -1,3 +1,0 @@
-source=/home/luigi/.cache/codex-openai/plugins/plugins/wix/skills/wix-manage
-repository=https://github.com/openai/plugins.git
-ref=main

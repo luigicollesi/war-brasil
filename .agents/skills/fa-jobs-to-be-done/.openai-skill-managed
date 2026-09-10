@@ -1,3 +1,0 @@
-source=/home/luigi/.cache/codex-openai/plugins/plugins/dnb-finance-analytics/skills/fa-jobs-to-be-done
-repository=https://github.com/openai/plugins.git
-ref=main

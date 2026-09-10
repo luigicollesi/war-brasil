@@ -1,3 +1,0 @@
-source=/home/luigi/.cache/codex-openai/plugins/plugins/gmail/skills/gmail-inbox-triage
-repository=https://github.com/openai/plugins.git
-ref=main

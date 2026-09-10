@@ -1,3 +1,0 @@
-source=/home/luigi/.cache/codex-openai/plugins/plugins/game-studio/skills/game-playtest
-repository=https://github.com/openai/plugins.git
-ref=main

@@ -1,3 +1,0 @@
-source=/home/luigi/.cache/codex-openai/plugins/plugins/google-calendar/skills/google-calendar-group-scheduler
-repository=https://github.com/openai/plugins.git
-ref=main

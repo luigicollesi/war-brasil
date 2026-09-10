@@ -1,3 +1,0 @@
-source=/home/luigi/.cache/codex-openai/plugins/plugins/chronograph-lp/skills/chronograph-cashflow-forecast
-repository=https://github.com/openai/plugins.git
-ref=main

@@ -1,3 +1,0 @@
-source=/home/luigi/.cache/codex-openai/plugins/plugins/ngs-analysis/skills/ngs-dna-germline-variants
-repository=https://github.com/openai/plugins.git
-ref=main

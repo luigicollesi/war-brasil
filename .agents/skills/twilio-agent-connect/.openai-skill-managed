@@ -1,3 +1,0 @@
-source=/home/luigi/.cache/codex-openai/plugins/plugins/twilio-developer-kit/skills/twilio-agent-connect
-repository=https://github.com/openai/plugins.git
-ref=main

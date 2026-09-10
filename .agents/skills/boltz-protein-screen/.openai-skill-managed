@@ -1,3 +1,0 @@
-source=/home/luigi/.cache/codex-openai/plugins/plugins/boltz-api-cli/skills/boltz-protein-screen
-repository=https://github.com/openai/plugins.git
-ref=main

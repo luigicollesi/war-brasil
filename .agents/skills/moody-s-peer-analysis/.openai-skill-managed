@@ -1,3 +1,0 @@
-source=/home/luigi/.cache/codex-openai/plugins/plugins/moody-s/skills/moody-s-peer-analysis
-repository=https://github.com/openai/plugins.git
-ref=main

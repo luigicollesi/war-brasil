@@ -1,3 +1,0 @@
-source=/home/luigi/.cache/codex-openai/plugins/plugins/coderabbit/skills/coderabbit-review
-repository=https://github.com/openai/plugins.git
-ref=main

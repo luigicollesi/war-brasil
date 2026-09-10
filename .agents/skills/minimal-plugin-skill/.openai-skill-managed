@@ -1,3 +1,0 @@
-source=/home/luigi/.cache/codex-openai/plugins/plugins/plugin-eval/fixtures/minimal-plugin/skills/minimal-plugin-skill
-repository=https://github.com/openai/plugins.git
-ref=main

@@ -1,3 +1,0 @@
-source=/home/luigi/.cache/codex-openai/plugins/plugins/life-science-research/skills/quickgo-skill
-repository=https://github.com/openai/plugins.git
-ref=main

@@ -1,3 +1,0 @@
-source=/home/luigi/.cache/codex-openai/plugins/plugins/render/skills/render-private-services
-repository=https://github.com/openai/plugins.git
-ref=main

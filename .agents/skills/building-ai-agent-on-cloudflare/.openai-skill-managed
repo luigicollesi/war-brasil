@@ -1,3 +1,0 @@
-source=/home/luigi/.cache/codex-openai/plugins/plugins/cloudflare/skills/building-ai-agent-on-cloudflare
-repository=https://github.com/openai/plugins.git
-ref=main
