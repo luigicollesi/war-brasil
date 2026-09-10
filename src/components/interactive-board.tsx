@@ -12,6 +12,11 @@ import {
   type TerritoryArrowKind,
 } from "@/src/components/territory-arrow";
 import { TerritorySpecialMarkers } from "@/src/components/territory-special-markers";
+import {
+  TerritoryTooltip,
+  type TerritoryTooltipDetails,
+  type TerritoryTooltipHandle,
+} from "@/src/components/territory-tooltip";
 import type { BoardPresentationState } from "@/src/lib/client/map/board-presentation";
 import { NORMAL_BOARD_PRESENTATION } from "@/src/lib/client/map/board-presentation";
 import {
@@ -37,10 +42,6 @@ import {
   applyTerritoryVisualState,
   ensureTerritoryRuntimeStyles,
 } from "@/src/lib/client/map/territory-visual-state";
-import {
-  barrierAttackSummary,
-  barrierManeuverSummary,
-} from "@/src/lib/game-barrier-presentation";
 import { TERRITORY_METADATA } from "@/src/lib/game-config";
 import type { GamePhase } from "@/src/lib/game-contract";
 import type { MapTargetHint } from "@/src/lib/game-interaction";
@@ -53,10 +54,7 @@ import {
   type MapViewportTransform,
 } from "@/src/lib/game-map-viewport";
 import type { PlayerColor } from "@/src/lib/lobby";
-import {
-  findTerritoryConnection,
-  type TerritoryConnection,
-} from "@/src/lib/territory-connections";
+import type { TerritoryConnection } from "@/src/lib/territory-connections";
 import type { TerritoryGeometry } from "@/src/lib/territory-geometry";
 import { territoryGeometryFromPath } from "@/src/lib/territory-svg-geometry";
 
@@ -66,18 +64,6 @@ export type BoardTerritory = {
   ownerName: string;
   ownerColor: PlayerColor;
   troops: number;
-};
-
-type TerritoryDetails = {
-  id: number;
-  name: string;
-  region: string;
-  state: string;
-};
-
-type HoveredTerritory = {
-  id: number;
-  details: TerritoryDetails;
 };
 
 type MapArrow = {
@@ -98,12 +84,11 @@ type InteractiveBoardProps = {
   presentation?: BoardPresentationState;
 };
 
-const regionLabels: Record<string, string> = {
-  norte: "Norte",
-  nordeste: "Nordeste",
-  "centro-oeste": "Centro-Oeste",
-  sudeste: "Sudeste",
-  sul: "Sul",
+type SurfaceRect = {
+  left: number;
+  top: number;
+  width: number;
+  height: number;
 };
 
 function preferredTroopMarkerRadius(troops: number) {
@@ -255,7 +240,7 @@ function MobileTroopCanvas({
   );
 }
 
-function readTerritory(path: SVGPathElement): TerritoryDetails {
+function readTerritory(path: SVGPathElement): TerritoryTooltipDetails {
   return {
     id: Number(path.dataset.id),
     name: path.dataset.name ?? "Território",
@@ -277,13 +262,13 @@ export function InteractiveBoard({
 }: InteractiveBoardProps) {
   const boardRef = useRef<HTMLObjectElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const tooltipRef = useRef<HTMLDivElement>(null);
+  const tooltipRef = useRef<TerritoryTooltipHandle>(null);
+  const surfaceRectRef = useRef<SurfaceRect | null>(null);
+  const lastPointerTargetRef = useRef<EventTarget | null>(null);
   const visualNodesByIdRef = useRef(new Map<number, TerritoryVisualNodes>());
   const materialSignatureRef = useRef(new Map<number, string>());
   const visualSignatureRef = useRef(new Map<number, string>());
   const cleanupBoardRef = useRef<(() => void) | null>(null);
-  const pointerRef = useRef({ x: 0, y: 0 });
-  const tooltipFrameRef = useRef(0);
   const hoveredTerritoryRef = useRef<number | null>(null);
   const onSelectRef = useRef(onSelect);
   const gestureActiveRef = useRef(false);
@@ -291,17 +276,11 @@ export function InteractiveBoard({
     new Map(),
   );
   const [mapTopInset, setMapTopInset] = useState(4);
-  const [hoveredTerritory, setHoveredTerritory] =
-    useState<HoveredTerritory | null>(null);
   const roadsVisible = useRoadVisibility();
   const troopsVisible = useTroopVisibility();
   const effectivePresentation = presentation;
   const presentationActive = effectivePresentation.mode !== "normal";
 
-  const territoryById = useMemo(
-    () => new Map(territories.map((territory) => [territory.territoryId, territory])),
-    [territories],
-  );
   const targetById = useMemo(
     () => new Map(targetHints.map((target) => [target.territoryId, target])),
     [targetHints],
@@ -336,6 +315,35 @@ export function InteractiveBoard({
     onSelectRef.current = onSelect;
   }, [onSelect]);
 
+  const updateSurfaceRect = useCallback(() => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) {
+      surfaceRectRef.current = null;
+      return;
+    }
+    surfaceRectRef.current = {
+      left: rect.left,
+      top: rect.top,
+      width: rect.width,
+      height: rect.height,
+    };
+  }, []);
+
+  useEffect(() => {
+    const surface = containerRef.current;
+    if (!surface) return;
+
+    updateSurfaceRect();
+    const observer = new ResizeObserver(updateSurfaceRect);
+    observer.observe(surface);
+    window.addEventListener("resize", updateSurfaceRect);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateSurfaceRect);
+    };
+  }, [updateSurfaceRect]);
+
   const clearHoveredTerritory = useCallback(() => {
     const previousId = hoveredTerritoryRef.current;
     if (previousId !== null) {
@@ -343,7 +351,8 @@ export function InteractiveBoard({
       if (previousNodes) applyTerritoryHoverState(previousNodes, false);
     }
     hoveredTerritoryRef.current = null;
-    setHoveredTerritory(null);
+    lastPointerTargetRef.current = null;
+    tooltipRef.current?.hide();
   }, []);
 
   useEffect(() => {
@@ -360,27 +369,23 @@ export function InteractiveBoard({
   useEffect(
     () => () => {
       cleanupBoardRef.current?.();
-      if (tooltipFrameRef.current) cancelAnimationFrame(tooltipFrameRef.current);
     },
     [],
   );
 
   function scheduleTooltipPosition(event: PointerEvent) {
-    const rect = containerRef.current?.getBoundingClientRect();
+    let rect = surfaceRectRef.current;
+    if (!rect) {
+      updateSurfaceRect();
+      rect = surfaceRectRef.current;
+    }
     if (!rect) return;
 
-    pointerRef.current = {
-      x: event.clientX - rect.left + 14,
-      y: event.clientY - rect.top + 14,
-    };
-
-    if (tooltipFrameRef.current) return;
-    tooltipFrameRef.current = requestAnimationFrame(() => {
-      tooltipFrameRef.current = 0;
-      const tooltip = tooltipRef.current;
-      if (!tooltip) return;
-      const { x, y } = pointerRef.current;
-      tooltip.style.transform = `translate3d(${x}px, ${y}px, 0)`;
+    tooltipRef.current?.move({
+      x: event.clientX - rect.left,
+      y: event.clientY - rect.top,
+      surfaceWidth: rect.width,
+      surfaceHeight: rect.height,
     });
   }
 
@@ -394,6 +399,7 @@ export function InteractiveBoard({
     const presentationIsActive = () =>
       surface.dataset.mapPresentationActive === "true";
 
+    updateSurfaceRect();
     root.setAttribute("data-map-interaction-root", "true");
 
     const paths = Array.from(
@@ -420,7 +426,8 @@ export function InteractiveBoard({
     materialSignatureRef.current.clear();
     visualSignatureRef.current.clear();
     hoveredTerritoryRef.current = null;
-    setHoveredTerritory(null);
+    lastPointerTargetRef.current = null;
+    tooltipRef.current?.hide();
     setGeometries(nextGeometries);
 
     const topInset = Number(mapDocument.documentElement.getAttribute("data-top-inset"));
@@ -437,23 +444,20 @@ export function InteractiveBoard({
 
       if (nextId === null) {
         hoveredTerritoryRef.current = null;
-        setHoveredTerritory(null);
+        tooltipRef.current?.hide();
         return;
       }
 
       const nextNodes = visualNodesByIdRef.current.get(nextId);
       if (!nextNodes) {
         hoveredTerritoryRef.current = null;
-        setHoveredTerritory(null);
+        tooltipRef.current?.hide();
         return;
       }
 
       hoveredTerritoryRef.current = nextId;
       applyTerritoryHoverState(nextNodes, true);
-      setHoveredTerritory({
-        id: nextId,
-        details: readTerritory(nextNodes.face),
-      });
+      tooltipRef.current?.show(readTerritory(nextNodes.face));
     };
 
     const click = (event: Event) => {
@@ -474,15 +478,25 @@ export function InteractiveBoard({
 
     const syncPointerHover = (event: Event) => {
       if (presentationIsActive() || gestureActiveRef.current) {
+        lastPointerTargetRef.current = null;
         setHoveredTerritoryId(null);
         return;
       }
-      const id = territoryIdFromEvent(event, root);
-      setHoveredTerritoryId(id);
-      if (id !== null) scheduleTooltipPosition(event as PointerEvent);
+
+      if (event.target !== lastPointerTargetRef.current) {
+        lastPointerTargetRef.current = event.target;
+        setHoveredTerritoryId(territoryIdFromEvent(event, root));
+      }
+
+      if (hoveredTerritoryRef.current !== null) {
+        scheduleTooltipPosition(event as PointerEvent);
+      }
     };
 
-    const pointerLeave = () => setHoveredTerritoryId(null);
+    const pointerLeave = () => {
+      lastPointerTargetRef.current = null;
+      setHoveredTerritoryId(null);
+    };
 
     const focusIn = (event: Event) => {
       const id = territoryIdFromEvent(event, root);
@@ -502,7 +516,10 @@ export function InteractiveBoard({
       const detail = (event as CustomEvent<unknown>).detail;
       if (!isMapGestureState(detail)) return;
       gestureActiveRef.current = detail.active;
-      if (detail.active) setHoveredTerritoryId(null);
+      if (detail.active) {
+        lastPointerTargetRef.current = null;
+        setHoveredTerritoryId(null);
+      }
     };
 
     root.addEventListener("click", click);
@@ -597,40 +614,6 @@ export function InteractiveBoard({
     effectivePresentation,
   ]);
 
-  const hoveredTerritoryId = hoveredTerritory?.id ?? null;
-  const hoveredDetails = hoveredTerritory?.details;
-  const hoveredState =
-    hoveredTerritoryId === null
-      ? undefined
-      : territoryById.get(hoveredTerritoryId);
-  const hoveredTargetHint =
-    hoveredTerritoryId === null ? undefined : targetById.get(hoveredTerritoryId);
-  const hoveredBarrierSummary =
-    hoveredTargetHint?.kind === "barrier-attack"
-      ? barrierAttackSummary({
-          barrierName: hoveredTargetHint.barrierName,
-          selectable: hoveredTargetHint.selectable,
-          minimumTroops: hoveredTargetHint.minimumTroops,
-        })
-      : hoveredTargetHint?.kind === "barrier-maneuver"
-        ? barrierManeuverSummary({
-            barrierName: hoveredTargetHint.barrierName,
-            selectable: hoveredTargetHint.selectable,
-            minimumTroops: hoveredTargetHint.minimumTroops,
-            troopLoss: hoveredTargetHint.troopLoss,
-          })
-        : null;
-  const relevantConnection =
-    hoveredTerritoryId !== null &&
-    selectedTerritoryId !== null &&
-    selectedTerritoryId !== undefined &&
-    selectedTerritoryId !== hoveredTerritoryId
-      ? findTerritoryConnection(
-          connections,
-          selectedTerritoryId,
-          hoveredTerritoryId,
-        )
-      : undefined;
   const from = arrow ? geometries.get(arrow.fromTerritoryId) : undefined;
   const to = arrow ? geometries.get(arrow.toTerritoryId) : undefined;
   const jurassicTunnel = connections.find(
@@ -769,47 +752,14 @@ export function InteractiveBoard({
           <TerritoryArrow from={from} to={to} kind={arrow.kind} />
         ) : null}
 
-        {!presentationActive && hoveredDetails && hoveredState ? (
-          <div
+        {!presentationActive ? (
+          <TerritoryTooltip
             ref={tooltipRef}
-            className="game-territory-tooltip"
-            style={{ left: 0, top: 0 }}
-          >
-            <p className="flex items-center gap-2 font-semibold">
-              <span
-                aria-hidden="true"
-                className="inline-block h-2.5 w-2.5 shrink-0 rounded-full border border-white/30"
-                style={{
-                  backgroundColor: territoryMaterial(hoveredState.ownerColor).face[2],
-                }}
-              />
-              {hoveredDetails.name}
-            </p>
-            <p className="mt-1 text-[#c8d9d1]">
-              {hoveredState.ownerName} ·{" "}
-              {regionLabels[hoveredDetails.region] ?? hoveredDetails.region}
-            </p>
-            <p className="mt-1 font-semibold text-[#e8c35e]">
-              {hoveredState.troops} tropas
-            </p>
-            {hoveredBarrierSummary ? (
-              <div
-                className="game-tooltip-barrier mt-2 border-t border-white/15 pt-2"
-                data-blocked={hoveredBarrierSummary.blocked}
-              >
-                <p className="font-semibold">▣ {hoveredBarrierSummary.name}</p>
-                <p className="mt-1 text-xs">{hoveredBarrierSummary.detail}</p>
-              </div>
-            ) : relevantConnection?.exists ? (
-              <p className="mt-2 border-t border-white/15 pt-2 text-[#ffd6a1]">
-                {relevantConnection.barrierName === "Túnel Jurássico"
-                  ? "Túnel Jurássico"
-                  : relevantConnection.passable
-                    ? "Fronteira militar disponível"
-                    : relevantConnection.barrierName ?? "Fronteira bloqueada"}
-              </p>
-            ) : null}
-          </div>
+            territories={territories}
+            targetHints={targetHints}
+            connections={connections}
+            selectedTerritoryId={selectedTerritoryId}
+          />
         ) : null}
       </div>
     </div>
