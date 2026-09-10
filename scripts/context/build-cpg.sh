@@ -68,7 +68,7 @@ bootstrap_joern() {
 
   mkdir -p "$CACHE_ROOT/joern"
   if [[ ! -f "$archive" ]]; then
-    printf 'Downloading pinned Joern %s (%s). This release is large and is cached after the first download.\n' "$JOERN_VERSION" "$key"
+    printf 'Downloading pinned Joern %s (%s). This release is large and is cached after the first download.\n' "$JOERN_VERSION" "$key" >&2
     curl --fail --location --retry 3 --output "$archive.part" "$url"
     mv "$archive.part" "$archive"
   fi
