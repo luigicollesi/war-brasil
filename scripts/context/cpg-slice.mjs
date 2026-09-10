@@ -283,6 +283,9 @@ async function main() {
     const sliceArgs = [mode === "dataflow" ? "data-flow" : "usages"];
 
     if (mode === "usages") {
+      // Directed lookups must keep locals/parameters even when the JS frontend does
+      // not count an associated call. The CLI filters the requested target afterwards.
+      sliceArgs.push("--min-num-calls", "0");
       if (!includeSource) sliceArgs.push("--exclude-source");
       if (excludeOperators) sliceArgs.push("--exclude-operators");
     } else {

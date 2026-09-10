@@ -49,7 +49,10 @@ export function selectUsageProbe(raw) {
       }
 
       if (!dataflowCall) {
-        const calls = Array.isArray(slice?.argToCalls) ? slice.argToCalls : [];
+        const calls = [
+          ...(Array.isArray(slice?.argToCalls) ? slice.argToCalls : []),
+          ...(Array.isArray(slice?.invokedCalls) ? slice.invokedCalls : [])
+        ];
         const call = calls.find((candidate) => isStableCallName(candidate?.callName));
         if (call) dataflowCall = call.callName;
       }
@@ -68,7 +71,7 @@ async function readRawUsageSlice() {
   const tempDir = await mkdtemp(path.join(cacheRoot, "usages-"));
 
   try {
-    const result = spawnSync(joernSlice, ["usages", "--exclude-source", cpgFile], {
+    const result = spawnSync(joernSlice, ["usages", "--min-num-calls", "0", "--exclude-source", cpgFile], {
       cwd: tempDir,
       encoding: "utf8",
       maxBuffer: 128 * 1024 * 1024
@@ -120,7 +123,7 @@ async function main() {
   const rawUsage = await readRawUsageSlice();
   const probe = selectUsageProbe(rawUsage);
   assert.ok(probe.usage, "generated usage slice must expose at least one variable or parameter target");
-  assert.ok(probe.dataflowCall, "generated usage slice must expose at least one normal argument call for data-flow probing");
+  assert.ok(probe.dataflowCall, "generated usage slice must expose at least one normal call for data-flow probing");
 
   const usages = runJson(
     "usages slice",
