@@ -54,6 +54,7 @@ import scala.collection.mutable
       s"\"column\":${optionalInt(node.columnNumber)}",
       s"\"method\":${jsonString(method.map(_.name).getOrElse(""))}",
       s"\"methodFullName\":${jsonString(method.map(_.fullName).getOrElse(""))}",
+      s"\"methodCode\":${jsonString(method.map(_.code).getOrElse(""))}",
       s"\"file\":${jsonString(method.map(_.filename).getOrElse(""))}",
       s"\"call\":${jsonString(parentCall.map(_.name).getOrElse(""))}",
       s"\"callCode\":${jsonString(parentCall.map(_.code).getOrElse(""))}"
@@ -160,7 +161,10 @@ import scala.collection.mutable
       val identifiers = cpg.identifier.nameExact(symbol).l
       val locals = cpg.local.nameExact(symbol).l
       val params = cpg.method.parameter.nameExact(symbol).l
-      val identifierJson = identifiers.sortBy(node => (node.method.headOption.map(_.filename).getOrElse(""), node.lineNumber.getOrElse(Int.MaxValue), node.id)).map(usageJson).mkString("[", ",", "]")
+      val identifierJson = identifiers
+        .sortBy(node => (node.method.headOption.map(_.filename).getOrElse(""), node.lineNumber.getOrElse(Int.MaxValue), node.id))
+        .map(usageJson)
+        .mkString("[", ",", "]")
       val declarationCount = locals.size + params.size
       s"{\"command\":\"usages\",\"query\":${jsonString(symbol)},\"declarationCount\":$declarationCount,\"usageCount\":${identifiers.size},\"usages\":$identifierJson}"
 
