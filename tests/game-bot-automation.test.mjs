@@ -6,6 +6,7 @@ import {
   requiredActorId,
 } from "../.test-build/bots/bot-required-actor.js";
 import { botDelayRange } from "../.test-build/bots/bot-delay.js";
+import { scheduledBotActionType } from "../.test-build/bots/bot-schedule.js";
 import {
   eligibleOrderPlayerIds,
   nextOrderRollPlayerId,
@@ -129,6 +130,42 @@ test("delays de bot são curtos, positivos e centralizados para todas as ações
   }
 });
 
+test("agendamento preserva prioridade entre batalha, conquista e fase do turno", () => {
+  const trade = {
+    status: "playing",
+    phase: "trade",
+    pendingFromTerritoryId: null,
+    pendingToTerritoryId: null,
+    battleStage: null,
+  };
+
+  assert.equal(scheduledBotActionType(trade), "finish_cards");
+  assert.equal(
+    scheduledBotActionType({
+      ...trade,
+      pendingFromTerritoryId: 12,
+      pendingToTerritoryId: 13,
+    }),
+    "complete_conquest",
+  );
+  assert.equal(
+    scheduledBotActionType({
+      ...trade,
+      pendingFromTerritoryId: 12,
+      pendingToTerritoryId: 13,
+      battleStage: "awaiting_defender_roll",
+    }),
+    "roll_battle",
+  );
+  assert.equal(
+    scheduledBotActionType({
+      ...trade,
+      status: "order_roll",
+    }),
+    "roll_order",
+  );
+});
+
 test("runner é request-driven, executa regra compartilhada e não cria loop servidor", () => {
   const runner = readFileSync("src/lib/server/bots/bot-runner.ts", "utf8");
 
@@ -142,6 +179,19 @@ test("runner é request-driven, executa regra compartilhada e não cria loop ser
   assert.doesNotMatch(
     runner,
     /reinforceCommand|attackCommand|maneuverCommand|rollBattleDiceCommand|phaseCommand/,
+  );
+});
+
+test("runner executa a mesma prioridade que foi agendada", () => {
+  const runner = readFileSync("src/lib/server/bots/bot-runner.ts", "utf8");
+
+  assert.match(runner, /scheduledAction: BotAction\["type"\]/);
+  assert.match(runner, /scheduledAction === "finish_cards"/);
+  assert.match(runner, /scheduledAction === "complete_conquest"/);
+  assert.match(runner, /chooseDueAction\(client, room, actor, delayAction\)/);
+  assert.doesNotMatch(
+    runner,
+    /if \(room\.phase === "trade"\) return \{ type: "finish_cards" \};/,
   );
 });
 
