@@ -7,6 +7,7 @@ import test from "node:test";
 
 const repoRoot = process.cwd();
 const prepareScript = path.join(repoRoot, "scripts/context/prepare-cpg-source.mjs");
+const buildScript = path.join(repoRoot, "scripts/context/build-cpg.sh");
 const repoConfig = path.join(repoRoot, ".context/cpg.config.json");
 
 async function exists(filePath) {
@@ -68,10 +69,13 @@ test("CPG source staging keeps runtime code and excludes tests/context tooling",
   }
 });
 
-test("CPG build script is valid bash", () => {
-  const result = spawnSync("bash", ["-n", path.join(repoRoot, "scripts/context/build-cpg.sh")], {
+test("CPG build script is valid bash and keeps bootstrap diagnostics off stdout", async () => {
+  const result = spawnSync("bash", ["-n", buildScript], {
     cwd: repoRoot,
     encoding: "utf8"
   });
   assert.equal(result.status, 0, result.stderr || result.stdout);
+
+  const source = await readFile(buildScript, "utf8");
+  assert.match(source, /cached after the first download\.\\n' "\$JOERN_VERSION" "\$key" >&2/);
 });
