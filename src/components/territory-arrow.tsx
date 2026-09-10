@@ -1,6 +1,6 @@
 "use client";
 
-import { useId } from "react";
+import { memo, useId } from "react";
 import type { TerritoryAnchor } from "@/src/lib/territory-geometry";
 import { territoryGeometryFromPath } from "@/src/lib/territory-svg-geometry";
 
@@ -14,7 +14,7 @@ export function getTerritoryAnchor(pathElement: SVGPathElement): TerritoryAnchor
   return territoryGeometryFromPath(pathElement);
 }
 
-export function TerritoryArrow({
+function TerritoryArrowComponent({
   from,
   to,
   kind,
@@ -69,3 +69,5 @@ export function TerritoryArrow({
     </svg>
   );
 }
+
+export const TerritoryArrow = memo(TerritoryArrowComponent);
