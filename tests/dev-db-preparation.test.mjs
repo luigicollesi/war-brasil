@@ -28,7 +28,10 @@ const schemaNamingMigration = readFileSync(
 );
 
 test("ambiente dev prepara migrations gerenciadas antes de subir Next e realtime", () => {
-  assert.equal(packageJson.scripts.dev, "node scripts/dev.mjs");
+  assert.match(
+    packageJson.scripts.dev,
+    /^node scripts\/generate-region-outlines\.mjs && node scripts\/dev\.mjs$/,
+  );
   assert.equal(
     packageJson.scripts["db:prepare:dev"],
     "node scripts/prepare-dev-db.mjs",
