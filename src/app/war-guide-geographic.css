@@ -575,7 +575,10 @@
   }
 
   .wb-guide-map-territory-name {
-    font-size: 13px;
+    font-size: 14px;
+    letter-spacing: .02em;
+    paint-order: stroke fill;
+    stroke-width: 1.5px;
   }
 
   .wb-guide-reading-tunnel {
