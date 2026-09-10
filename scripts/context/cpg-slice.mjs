@@ -27,6 +27,10 @@ function escapeRegex(value) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
+function normalizePath(value) {
+  return String(value ?? "").replaceAll("\\", "/").replace(/^\.\//, "");
+}
+
 function optionValue(args, index, name) {
   const value = args[index + 1];
   if (!value || value.startsWith("--")) fail(`${name} requires a value`);
@@ -62,12 +66,30 @@ export function formatMissingSliceDiagnostic({ mode, query, method, file, stdout
   ].join(" ");
 }
 
-export function filterUsageResult(raw, query, includeSource = false) {
+export function matchesMethodScope(fullName, requestedMethod) {
+  if (!requestedMethod) return true;
+  const full = String(fullName ?? "");
+  if (full === requestedMethod) return true;
+  const escaped = escapeRegex(requestedMethod);
+  return new RegExp(`(?:^|[.:/$])${escaped}(?:$|[:(<])`).test(full);
+}
+
+export function matchesFileScope(fileName, requestedFile) {
+  if (!requestedFile) return true;
+  const candidate = normalizePath(fileName);
+  const requested = normalizePath(requestedFile);
+  return candidate === requested || candidate.endsWith(`/${requested}`);
+}
+
+export function filterUsageResult(raw, query, includeSource = false, scope = {}) {
   const methods = Array.isArray(raw?.objectSlices) ? raw.objectSlices : [];
   const resultMethods = [];
   let matchCount = 0;
 
   for (const method of methods) {
+    if (!matchesMethodScope(method?.fullName, scope.method)) continue;
+    if (!matchesFileScope(method?.fileName, scope.file)) continue;
+
     const slices = Array.isArray(method?.slices) ? method.slices : [];
     const matches = slices.filter((slice) => {
       const targetName = slice?.targetObj?.name;
@@ -94,6 +116,50 @@ export function filterUsageResult(raw, query, includeSource = false) {
     query,
     matchCount,
     methods: resultMethods
+  };
+}
+
+export function filterDataflowScope(raw, scope = {}) {
+  const nodes = Array.isArray(raw?.nodes) ? raw.nodes : [];
+  const edges = Array.isArray(raw?.edges) ? raw.edges : [];
+  if (!scope.method && !scope.file) return { ...raw, nodes, edges };
+
+  const anchorIds = new Set(
+    nodes
+      .filter((node) =>
+        matchesMethodScope(node?.parentMethod, scope.method) &&
+        matchesFileScope(node?.parentFile, scope.file)
+      )
+      .map((node) => node.id)
+  );
+
+  if (anchorIds.size === 0) return { ...raw, nodes: [], edges: [] };
+
+  const adjacency = new Map();
+  const connect = (left, right) => {
+    if (!adjacency.has(left)) adjacency.set(left, new Set());
+    adjacency.get(left).add(right);
+  };
+  for (const edge of edges) {
+    connect(edge.src, edge.dst);
+    connect(edge.dst, edge.src);
+  }
+
+  const keepIds = new Set(anchorIds);
+  const queue = [...anchorIds];
+  for (let index = 0; index < queue.length; index += 1) {
+    const current = queue[index];
+    for (const neighbor of adjacency.get(current) ?? []) {
+      if (keepIds.has(neighbor)) continue;
+      keepIds.add(neighbor);
+      queue.push(neighbor);
+    }
+  }
+
+  return {
+    ...raw,
+    nodes: nodes.filter((node) => keepIds.has(node.id)),
+    edges: edges.filter((edge) => keepIds.has(edge.src) && keepIds.has(edge.dst))
   };
 }
 
@@ -208,16 +274,13 @@ async function main() {
   const cacheRoot = path.join(repoRoot, ".context/cache/slices");
   await mkdir(cacheRoot, { recursive: true });
   const tempDir = await mkdtemp(path.join(cacheRoot, `${mode}-`));
-  const outputFile = path.join(tempDir, "result.json");
+  const outputFile = path.join(tempDir, "slices.json");
 
   try {
-    const sliceArgs = [mode === "dataflow" ? "data-flow" : "usages", "--out", outputFile];
-
-    if (method) {
-      const methodFilter = `^${escapeRegex(method)}$`;
-      sliceArgs.push("--method-name-filter", methodFilter);
-    }
-    if (file) sliceArgs.push("--file-filter", file);
+    // Joern v4.0.625 resets shared CLI options when a slice subcommand is selected.
+    // Run in an isolated cwd so its default slices.json is deterministic, and apply
+    // shared method/file filters after parsing the JSON instead of trusting the CLI.
+    const sliceArgs = [mode === "dataflow" ? "data-flow" : "usages"];
 
     if (mode === "usages") {
       if (!includeSource) sliceArgs.push("--exclude-source");
@@ -231,7 +294,7 @@ async function main() {
     sliceArgs.push(cpgFile);
 
     const sliceRun = spawnSync(joernSlice, sliceArgs, {
-      cwd: repoRoot,
+      cwd: tempDir,
       encoding: "utf8",
       maxBuffer: 128 * 1024 * 1024
     });
@@ -265,10 +328,10 @@ async function main() {
 
     const result = mode === "usages"
       ? {
-          ...filterUsageResult(raw, query, includeSource),
+          ...filterUsageResult(raw, query, includeSource, { method, file }),
           filters: { method, file, includeSource, excludeOperators }
         }
-      : summarizeDataflowResult(raw, {
+      : summarizeDataflowResult(filterDataflowScope(raw, { method, file }), {
           sink: query,
           depth,
           filters: { method, file, regex, endAtExternalMethod }

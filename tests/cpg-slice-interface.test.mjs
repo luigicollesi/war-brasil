@@ -4,9 +4,12 @@ import { spawnSync } from "node:child_process";
 import test from "node:test";
 import {
   emptySliceForMode,
+  filterDataflowScope,
   filterUsageResult,
   formatMissingSliceDiagnostic,
   interpretMissingSliceOutput,
+  matchesFileScope,
+  matchesMethodScope,
   summarizeDataflowResult
 } from "../scripts/context/cpg-slice.mjs";
 
@@ -43,12 +46,12 @@ test("CPG slice CLI rejects mode-specific flags early", () => {
   assert.match(dataflow.stderr, /--include-source is only supported by usages/);
 });
 
-test("usage result keeps only the requested variable and omits source by default", () => {
+test("usage result keeps only the requested variable and applies method/file scope", () => {
   const raw = {
     objectSlices: [
       {
         code: "function render(selectedTerritory) { return selectedTerritory; }",
-        fullName: "render",
+        fullName: "src/render.ts:<module>.render",
         fileName: "src/render.ts",
         lineNumber: 1,
         columnNumber: 1,
@@ -56,19 +59,56 @@ test("usage result keeps only the requested variable and omits source by default
           { targetObj: { name: "selectedTerritory" }, definedBy: { name: "selectedTerritory" }, invokedCalls: [] },
           { targetObj: { name: "other" }, definedBy: { name: "other" }, invokedCalls: [] }
         ]
+      },
+      {
+        code: "function other(selectedTerritory) { return selectedTerritory; }",
+        fullName: "src/other.ts:<module>.other",
+        fileName: "/tmp/staging/src/other.ts",
+        slices: [
+          { targetObj: { name: "selectedTerritory" }, definedBy: { name: "selectedTerritory" }, invokedCalls: [] }
+        ]
       }
     ],
     userDefinedTypes: []
   };
 
-  const result = filterUsageResult(raw, "selectedTerritory");
+  const result = filterUsageResult(raw, "selectedTerritory", false, {
+    method: "render",
+    file: "src/render.ts"
+  });
   assert.equal(result.matchCount, 1);
   assert.equal(result.methods.length, 1);
   assert.equal(result.methods[0].slices.length, 1);
   assert.equal("code" in result.methods[0], false);
 
-  const withSource = filterUsageResult(raw, "selectedTerritory", true);
+  const withSource = filterUsageResult(raw, "selectedTerritory", true, { method: "render" });
   assert.match(withSource.methods[0].code, /selectedTerritory/);
+  assert.equal(matchesMethodScope("src/render.ts:<module>.render", "render"), true);
+  assert.equal(matchesMethodScope("src/render.ts:<module>.render", "other"), false);
+  assert.equal(matchesFileScope("/tmp/staging/src/render.ts", "src/render.ts"), true);
+});
+
+test("dataflow scope preserves the connected interprocedural component", () => {
+  const raw = {
+    nodes: [
+      { id: 1, parentMethod: "src/api.ts:<module>.handler", parentFile: "src/api.ts" },
+      { id: 2, parentMethod: "src/service.ts:<module>.service", parentFile: "src/service.ts" },
+      { id: 3, parentMethod: "src/other.ts:<module>.other", parentFile: "src/other.ts" },
+      { id: 4, parentMethod: "src/unrelated.ts:<module>.unrelated", parentFile: "src/unrelated.ts" }
+    ],
+    edges: [
+      { src: 2, dst: 1, label: "REACHING_DEF" },
+      { src: 3, dst: 2, label: "REACHING_DEF" }
+    ]
+  };
+
+  const scoped = filterDataflowScope(raw, { method: "handler", file: "src/api.ts" });
+  assert.deepEqual(scoped.nodes.map((node) => node.id).sort(), [1, 2, 3]);
+  assert.equal(scoped.edges.length, 2);
+
+  const missing = filterDataflowScope(raw, { method: "doesNotExist" });
+  assert.deepEqual(missing.nodes, []);
+  assert.deepEqual(missing.edges, []);
 });
 
 test("dataflow result reports graph size without changing the slice", () => {
