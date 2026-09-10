@@ -85,3 +85,10 @@ test("desktop cursor-follow tooltip stays isolated and close to the pointer", ()
   assert.match(tooltipSource, /className="game-territory-tooltip"/);
   assert.match(cssSource, /@media \(max-width: 767px\)/);
 });
+
+test("desktop tooltip uses embedded SVG client coordinates on both axes", () => {
+  assert.match(boardSource, /x:\s*event\.clientX,/);
+  assert.match(boardSource, /y:\s*event\.clientY,/);
+  assert.doesNotMatch(boardSource, /event\.clientX\s*-\s*rect\.left/);
+  assert.doesNotMatch(boardSource, /event\.clientY\s*-\s*rect\.top/);
+});
