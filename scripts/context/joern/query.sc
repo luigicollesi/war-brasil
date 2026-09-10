@@ -45,17 +45,17 @@ import scala.collection.mutable
       .mkString("[", ",", "]")
 
   def usageJson(node: Identifier): String = {
-    val method = node.method.headOption
+    val method = node.method
     val parentCall = node.inCall.headOption
     val fields = mutable.ArrayBuffer(
       s"\"id\":${node.id}",
       s"\"code\":${jsonString(node.code)}",
       s"\"line\":${optionalInt(node.lineNumber)}",
       s"\"column\":${optionalInt(node.columnNumber)}",
-      s"\"method\":${jsonString(method.map(_.name).getOrElse(""))}",
-      s"\"methodFullName\":${jsonString(method.map(_.fullName).getOrElse(""))}",
-      s"\"methodCode\":${jsonString(method.map(_.code).getOrElse(""))}",
-      s"\"file\":${jsonString(method.map(_.filename).getOrElse(""))}",
+      s"\"method\":${jsonString(method.name)}",
+      s"\"methodFullName\":${jsonString(method.fullName)}",
+      s"\"methodCode\":${jsonString(method.code)}",
+      s"\"file\":${jsonString(method.filename)}",
       s"\"call\":${jsonString(parentCall.map(_.name).getOrElse(""))}",
       s"\"callCode\":${jsonString(parentCall.map(_.code).getOrElse(""))}"
     )
@@ -162,7 +162,7 @@ import scala.collection.mutable
       val locals = cpg.local.nameExact(symbol).l
       val params = cpg.method.parameter.nameExact(symbol).l
       val identifierJson = identifiers
-        .sortBy(node => (node.method.headOption.map(_.filename).getOrElse(""), node.lineNumber.getOrElse(Int.MaxValue), node.id))
+        .sortBy(node => (node.method.filename, node.lineNumber.getOrElse(Int.MaxValue), node.id))
         .map(usageJson)
         .mkString("[", ",", "]")
       val declarationCount = locals.size + params.size
