@@ -31,14 +31,21 @@ const page = readFileSync("src/app/game/[roomId]/page.tsx", "utf8");
 const polish = readFileSync("src/app/game/[roomId]/map-25d-polish.css", "utf8");
 const svg = readFileSync("public/mapa-war-brasil-25d.svg", "utf8");
 
-test("zoom separa stroke semântico do stroke compensado de renderização", () => {
-  assert.match(visualState, /--territory-stroke-width/);
+test("zoom compensates one inherited static territory stroke", () => {
   assert.match(visualState, /--territory-render-stroke-width/);
-  assert.match(zoom, /TERRITORY_BASE_STROKE_PROPERTY/);
+  assert.match(zoom, /TERRITORY_BASE_STROKE = 0\.9/);
   assert.match(zoom, /TERRITORY_RENDER_STROKE_PROPERTY/);
-  assert.match(zoom, /getComputedStyle\(path\)/);
-  assert.match(zoom, /getPropertyValue\(TERRITORY_BASE_STROKE_PROPERTY\)/);
-  assert.match(zoom, /path\.style\.removeProperty\(TERRITORY_RENDER_STROKE_PROPERTY\)/);
+  assert.match(zoom, /let lastRenderedStroke: number \| null = null/);
+  assert.match(
+    zoom,
+    /territoryRoot\.style\.setProperty\([\s\S]*?TERRITORY_RENDER_STROKE_PROPERTY/,
+  );
+  assert.match(
+    zoom,
+    /territoryRoot\.style\.removeProperty\(TERRITORY_RENDER_STROKE_PROPERTY\)/,
+  );
+  assert.doesNotMatch(zoom, /getComputedStyle\(path\)/);
+  assert.doesNotMatch(zoom, /strokeObserver/);
 });
 
 test("visual readiness is an explicit event instead of a class timing hack", () => {
@@ -92,14 +99,15 @@ test("opening presentation disables pointer and keyboard hit targets", () => {
   assert.match(polish, /pointer-events: none/);
 });
 
-test("hit geometry is generated once and never falls back to raw visual geometry", () => {
+test("interaction reuses canonical face geometry instead of generating a hit layer", () => {
   assert.match(hitGeometry, /export function buildTerritoryHitLayer/);
-  assert.match(hitGeometry, /resolveHitPolygonPath/);
-  assert.match(hitGeometry, /safeInsetPolygonPath/);
-  assert.match(hitGeometry, /safeScaledPolygonPath/);
-  assert.match(hitGeometry, /dataset\.hitGeometryStrategy = hit\.strategy/);
-  assert.doesNotMatch(hitGeometry, /hitGeometryFallback/);
-  assert.doesNotMatch(hitGeometry, /d: insetD \?\? sourceD/);
+  assert.match(hitGeometry, /face\.dataset\.territoryHit = "true"/);
+  assert.match(hitGeometry, /face\.style\.pointerEvents = "fill"/);
+  assert.match(hitGeometry, /depth\.style\.pointerEvents = "none"/);
+  assert.doesNotMatch(hitGeometry, /resolveHitPolygonPath/);
+  assert.doesNotMatch(hitGeometry, /safeInsetPolygonPath/);
+  assert.doesNotMatch(hitGeometry, /safeScaledPolygonPath/);
+  assert.doesNotMatch(hitGeometry, /createElementNS\(/);
   assert.match(board, /buildTerritoryHitLayer\(mapDocument, root, nextVisualNodes\)/);
 });
 
@@ -111,7 +119,7 @@ test("registry ainda valida integralmente o contrato visual dos 42 territórios"
   assert.match(nodes, /validateTerritoryVisualRegistry/);
 });
 
-test("test compile inclui os módulos client novos do mapa 2.5d", () => {
+test("test compile inclui os módulos client do mapa 2.5d", () => {
   for (const file of [
     "board-presentation.ts",
     "map-runtime-events.ts",
