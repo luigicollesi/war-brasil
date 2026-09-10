@@ -59,11 +59,16 @@ test("masked visual pixels are not probed at runtime anymore", () => {
   }
 });
 
-test("hover state clears on null or board leave without pointerout churn", () => {
-  assert.match(board, /setHoveredTerritoryId\(id\)/);
-  assert.match(board, /const pointerLeave = \(\) => setHoveredTerritoryId\(null\)/);
+test("hover state clears cleanly and caches the pointer target between moves", () => {
+  assert.match(board, /setHoveredTerritoryId\(territoryIdFromEvent\(event, root\)\)/);
+  assert.match(board, /event\.target !== lastPointerTargetRef\.current/);
+  assert.match(board, /lastPointerTargetRef\.current = event\.target/);
+  assert.match(board, /lastPointerTargetRef\.current = null/);
   assert.match(board, /applyTerritoryHoverState\(previousNodes, false\)/);
   assert.match(board, /applyTerritoryHoverState\(nextNodes, true\)/);
+  assert.match(board, /tooltipRef\.current\?\.show/);
+  assert.match(board, /tooltipRef\.current\?\.hide/);
+  assert.doesNotMatch(board, /setHoveredTerritory/);
   assert.doesNotMatch(board, /relatedTarget/);
   assert.doesNotMatch(board, /pointerout/);
 });
