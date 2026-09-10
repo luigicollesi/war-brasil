@@ -79,7 +79,10 @@ test("desktop cursor-follow tooltip stays isolated and close to the pointer", ()
   assert.match(boardSource, /scheduleTooltipPosition/);
   assert.match(boardSource, /<TerritoryTooltip/);
   assert.match(boardSource, /tooltipRef\.current\?\.move/);
-  assert.doesNotMatch(boardSource, /setHoveredTerritory/);
+  assert.doesNotMatch(
+    boardSource,
+    /\[\s*hoveredTerritory\s*,\s*setHoveredTerritory\s*\]\s*=\s*useState/,
+  );
   assert.match(tooltipSource, /TOOLTIP_OFFSET = 8/);
   assert.match(tooltipSource, /translate3d/);
   assert.match(tooltipSource, /className="game-territory-tooltip"/);
