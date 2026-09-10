@@ -2,6 +2,7 @@ import type { TerritoryVisualNodes } from "@/src/lib/client/map/territory-svg-no
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const RUNTIME_STYLE_ID = "war-territory-runtime-style";
+const SURFACE_FILL_PROPERTY = "--territory-state-fill";
 
 export type TerritoryVisualState = {
   available: boolean;
@@ -25,25 +26,53 @@ export type TerritorySurfaceState =
   | "highlighted"
   | "highlighted-hover";
 
+type TerritoryRuntimeVisualState = {
+  semanticState: TerritorySemanticState;
+  hovered: boolean;
+  keyboardFocused: boolean;
+  surfaceState: TerritorySurfaceState;
+};
+
+const runtimeStateByFace = new WeakMap<SVGPathElement, TerritoryRuntimeVisualState>();
+
+function runtimeState(face: SVGPathElement): TerritoryRuntimeVisualState {
+  const existing = runtimeStateByFace.get(face);
+  if (existing) return existing;
+
+  const initial: TerritoryRuntimeVisualState = {
+    semanticState: "none",
+    hovered: false,
+    keyboardFocused: false,
+    surfaceState: "normal",
+  };
+  runtimeStateByFace.set(face, initial);
+  return initial;
+}
+
+function semanticStateFromVisualState(
+  state: TerritoryVisualState,
+): TerritorySemanticState {
+  if (state.openingHighlight) return "opening";
+  if (state.selected) return "selected";
+  if (state.targetSelectable) return "target";
+  if (state.target) return "target-blocked";
+  if (state.available) return "available";
+  return "none";
+}
+
 export function resolveTerritorySemanticState(
   face: SVGPathElement,
 ): TerritorySemanticState {
-  if (face.classList.contains("is-opening-highlight")) return "opening";
-  if (face.classList.contains("is-selected")) return "selected";
-  if (face.classList.contains("is-target-selectable")) return "target";
-  if (face.classList.contains("is-target")) return "target-blocked";
-  if (face.classList.contains("is-available")) return "available";
-  return "none";
+  return runtimeStateByFace.get(face)?.semanticState ?? "none";
 }
 
 export function resolveTerritorySurfaceState(
   face: SVGPathElement,
   semanticState = resolveTerritorySemanticState(face),
 ): TerritorySurfaceState {
+  const state = runtimeStateByFace.get(face);
   const highlighted = semanticState !== "none";
-  const hovered =
-    face.classList.contains("is-hovered") ||
-    face.classList.contains("is-keyboard-focused");
+  const hovered = Boolean(state?.hovered || state?.keyboardFocused);
 
   if (highlighted && hovered) return "highlighted-hover";
   if (highlighted) return "highlighted";
@@ -51,13 +80,31 @@ export function resolveTerritorySurfaceState(
   return "normal";
 }
 
-function refreshTerritoryVisualState(nodes: TerritoryVisualNodes) {
-  const semanticState = resolveTerritorySemanticState(nodes.face);
-  nodes.face.dataset.semanticState = semanticState;
-  nodes.face.dataset.surfaceState = resolveTerritorySurfaceState(
-    nodes.face,
-    semanticState,
-  );
+function fillForSurfaceState(surfaceState: TerritorySurfaceState) {
+  if (surfaceState === "highlighted-hover") {
+    return "var(--territory-highlight-hover-fill, var(--territory-highlight-fill, var(--territory-base-fill)))";
+  }
+  if (surfaceState === "highlighted") {
+    return "var(--territory-highlight-fill, var(--territory-base-fill))";
+  }
+  if (surfaceState === "hover") {
+    return "var(--territory-hover-fill, var(--territory-base-fill))";
+  }
+  return "var(--territory-base-fill)";
+}
+
+function syncTerritorySurfaceFill(face: SVGPathElement) {
+  const state = runtimeState(face);
+  const surfaceState = resolveTerritorySurfaceState(face, state.semanticState);
+  if (state.surfaceState === surfaceState && face.style.getPropertyValue(SURFACE_FILL_PROPERTY)) {
+    return;
+  }
+
+  state.surfaceState = surfaceState;
+  const nextFill = fillForSurfaceState(surfaceState);
+  if (face.style.getPropertyValue(SURFACE_FILL_PROPERTY) !== nextFill) {
+    face.style.setProperty(SURFACE_FILL_PROPERTY, nextFill);
+  }
 }
 
 export function ensureTerritoryRuntimeStyles(document: Document) {
@@ -66,16 +113,18 @@ export function ensureTerritoryRuntimeStyles(document: Document) {
   const style = document.createElementNS(SVG_NS, "style");
   style.id = RUNTIME_STYLE_ID;
   style.textContent = `
-    .territory {
+    .territory,
+    .territory:hover,
+    .territory:focus {
+      fill: var(${SURFACE_FILL_PROPERTY}, var(--territory-base-fill)) !important;
       stroke: var(--territory-region-stroke, #e4dcc0);
       stroke-opacity: .42;
       stroke-width: var(--territory-render-stroke-width, .9);
       stroke-dasharray: none;
-      filter: none;
+      filter: none !important;
       transition: none;
     }
 
-    /* Region borders are static. Gameplay state only changes the face fill. */
     .territory[data-region="norte"] {
       --territory-region-stroke: #67f58b;
     }
@@ -96,30 +145,7 @@ export function ensureTerritoryRuntimeStyles(document: Document) {
       --territory-region-stroke: #ff9a3d;
     }
 
-    /* The embedded asset still has native hover rules. Interaction owns the
-       surface fill and keeps legacy filter effects disabled. */
-    .territory:hover,
-    .territory.is-hovered,
-    .territory.is-keyboard-focused,
-    .territory[data-surface-state] {
-      filter: none;
-    }
-
-    .territory[data-surface-state="hover"] {
-      fill: var(--territory-hover-fill, var(--territory-base-fill));
-    }
-
-    .territory[data-surface-state="highlighted"] {
-      fill: var(--territory-highlight-fill, var(--territory-base-fill));
-    }
-
-    .territory[data-surface-state="highlighted-hover"] {
-      fill: var(--territory-highlight-hover-fill, var(--territory-highlight-fill, var(--territory-base-fill)));
-    }
-
-    /* Compatibility selector for the 2.5D visual contract. Depth layers stay
-       static and never receive semantic state classes. */
-    .territory-depth.is-hovered {
+    .territory-depth {
       filter: none;
     }
   `;
@@ -131,28 +157,27 @@ export function applyTerritoryVisualState(
   nodes: TerritoryVisualNodes,
   state: TerritoryVisualState,
 ) {
-  const face = nodes.face;
-
-  face.classList.toggle("is-available", state.available);
-  face.classList.toggle("is-target", state.target);
-  face.classList.toggle("is-target-selectable", state.targetSelectable);
-  face.classList.toggle("is-selected", state.selected);
-  face.classList.toggle("is-opening-highlight", state.openingHighlight);
-  refreshTerritoryVisualState(nodes);
+  const runtime = runtimeState(nodes.face);
+  runtime.semanticState = semanticStateFromVisualState(state);
+  syncTerritorySurfaceFill(nodes.face);
 }
 
 export function applyTerritoryHoverState(
   nodes: TerritoryVisualNodes,
   hovered: boolean,
 ) {
-  nodes.face.classList.toggle("is-hovered", hovered);
-  refreshTerritoryVisualState(nodes);
+  const runtime = runtimeState(nodes.face);
+  if (runtime.hovered === hovered) return;
+  runtime.hovered = hovered;
+  syncTerritorySurfaceFill(nodes.face);
 }
 
 export function applyTerritoryKeyboardFocusState(
   nodes: TerritoryVisualNodes,
   focused: boolean,
 ) {
-  nodes.face.classList.toggle("is-keyboard-focused", focused);
-  refreshTerritoryVisualState(nodes);
+  const runtime = runtimeState(nodes.face);
+  if (runtime.keyboardFocused === focused) return;
+  runtime.keyboardFocused = focused;
+  syncTerritorySurfaceFill(nodes.face);
 }
