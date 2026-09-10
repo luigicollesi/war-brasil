@@ -12,7 +12,7 @@ test("modais comuns usam content-fit no desktop", () => {
   assert.match(modal, /data-game-modal-scroll=\{scrollMode\}/);
   assert.match(layout, /data-game-modal-scroll="content"/);
   assert.match(layout, /max-height:\s*none\s*!important/);
-  assert.match(layout, /overflow-y:\s*visible\s*!important/);
+  assert.match(layout, /overflow:\s*clip\s*!important/);
 });
 
 test("scroll aparece somente como fallback de viewport desktop baixa", () => {
@@ -24,6 +24,7 @@ test("scroll aparece somente como fallback de viewport desktop baixa", () => {
 test("grades de cartas não criam viewport interno no desktop", () => {
   assert.match(layout, /\.game-card-modal[\s\S]*?> \.overflow-y-auto/);
   assert.match(layout, /\.game-card-modal[\s\S]*?max-height:\s*none\s*!important/);
+  assert.match(layout, /\.game-card-modal[\s\S]*?overflow:\s*visible\s*!important/);
 });
 
 test("anomalia preserva sua política de viewport rolável", () => {
