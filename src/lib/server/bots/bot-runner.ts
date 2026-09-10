@@ -121,21 +121,14 @@ async function chooseDueAction(
   client: PoolClient,
   room: AutomationRoom,
   player: AutomationPlayer,
+  scheduledAction: BotAction["type"],
 ): Promise<BotAction | null> {
-  if (room.status === "order_roll") return { type: "roll_order" };
-  if (room.status !== "playing") return null;
-
-  const battle = isBattle(room.last_battle) ? room.last_battle : null;
-  if (
-    battle?.stage === "awaiting_attacker_roll" ||
-    battle?.stage === "awaiting_defender_roll"
-  ) {
-    return { type: "roll_battle" };
-  }
-
-  if (room.phase === "trade") return { type: "finish_cards" };
+  if (scheduledAction === "roll_order") return { type: "roll_order" };
+  if (scheduledAction === "roll_battle") return { type: "roll_battle" };
+  if (scheduledAction === "finish_cards") return { type: "finish_cards" };
 
   const pendingConquest =
+    scheduledAction === "complete_conquest" &&
     room.pending_from_territory_id !== null &&
     room.pending_to_territory_id !== null
       ? {
@@ -149,11 +142,11 @@ async function chooseDueAction(
 
   // Fallbacks de liveness preservam o comportamento mínimo da Fase 2 caso uma
   // heurística futura não consiga pontuar um estado que ainda exige ação.
-  if (pendingConquest) {
-    return { type: "complete_conquest", troops: 1 };
+  if (scheduledAction === "complete_conquest") {
+    return pendingConquest ? { type: "complete_conquest", troops: 1 } : null;
   }
 
-  if (room.phase === "reinforcement" && room.reinforcements_remaining > 0) {
+  if (scheduledAction === "reinforce" && room.reinforcements_remaining > 0) {
     const firstOwned = state.territories
       .filter((territory) => territory.ownerPlayerId === player.id)
       .sort((a, b) => a.territoryId - b.territoryId)[0];
@@ -166,8 +159,8 @@ async function chooseDueAction(
       : null;
   }
 
-  if (room.phase === "attack") return { type: "finish_attack" };
-  if (room.phase === "maneuver") return { type: "end_turn" };
+  if (scheduledAction === "attack") return { type: "finish_attack" };
+  if (scheduledAction === "maneuver") return { type: "end_turn" };
   return null;
 }
 
@@ -364,7 +357,7 @@ export async function advanceBotAutomation(
     return { changed: false, kind: "none" };
   }
 
-  const action = await chooseDueAction(client, room, actor);
+  const action = await chooseDueAction(client, room, actor, delayAction);
   if (!action) {
     await client.query(
       `UPDATE game.players
