@@ -42,6 +42,25 @@ test("mapa mantém pointermove fora do estado React", () => {
   assert.doesNotMatch(source, /setHovered\(\{details:/);
 });
 
+test("overlays estáveis do mapa são memoizados contra rerenders de hover", () => {
+  const road = readFileSync("src/components/road-network.tsx", "utf8");
+  const markers = readFileSync(
+    "src/components/territory-special-markers.tsx",
+    "utf8",
+  );
+  const arrow = readFileSync("src/components/territory-arrow.tsx", "utf8");
+  const tunnel = readFileSync(
+    "src/components/jurassic-tunnel-connection.tsx",
+    "utf8",
+  );
+
+  assert.match(road, /import \{ memo, useMemo \} from "react"/);
+  assert.match(road, /export const RoadNetwork = memo\(RoadNetworkComponent\)/);
+  assert.match(markers, /export const TerritorySpecialMarkers = memo\(TerritorySpecialMarkersComponent\)/);
+  assert.match(arrow, /export const TerritoryArrow = memo\(TerritoryArrowComponent\)/);
+  assert.match(tunnel, /export const JurassicTunnelConnection = memo\(JurassicTunnelConnectionComponent\)/);
+});
+
 test("sincronização de conexão não cria polling de health no browser", () => {
   const indicator = readFileSync(
     "src/components/server-connection-indicator.tsx",
