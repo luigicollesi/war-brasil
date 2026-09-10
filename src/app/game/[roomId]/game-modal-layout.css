@@ -1,0 +1,30 @@
+/* Política única para altura/scroll dos modais durante a partida. */
+
+@media (min-width: 768px) {
+  /* Modais comuns crescem pela altura intrínseca. Não criamos um scroll
+     container enquanto a viewport desktop tem espaço suficiente. */
+  .game-modal-surface[data-game-modal-scroll="content"] {
+    max-height: none !important;
+    overflow-x: clip !important;
+    overflow-y: visible !important;
+    overscroll-behavior: auto !important;
+  }
+
+  /* Grades de cartas não devem impor um segundo viewport de 55vh no desktop.
+     Se a tela for realmente baixa, o modal inteiro assume o scroll abaixo. */
+  .game-modal-surface[data-game-modal-scroll="content"].game-card-modal
+    > .overflow-y-auto {
+    max-height: none !important;
+    overflow-y: visible !important;
+  }
+}
+
+/* Fallback para notebooks/janelas desktop realmente baixas. */
+@media (min-width: 768px) and (max-height: 680px) {
+  .game-modal-surface[data-game-modal-scroll="content"] {
+    max-height: calc(100dvh - 32px) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain !important;
+  }
+}
