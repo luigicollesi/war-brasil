@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "roots": [
+    "src",
+    "realtime",
+    "worker",
+    "scripts"
+  ],
+  "extensions": [
+    ".ts",
+    ".tsx",
+    ".js",
+    ".jsx",
+    ".mjs",
+    ".cjs"
+  ],
+  "exclude": [
+    "**/node_modules/**",
+    "**/.next/**",
+    "**/coverage/**",
+    "**/out/**",
+    "**/build/**",
+    "**/.test-build/**",
+    "tests/**",
+    "realtime/test/**",
+    "worker/test/**",
+    "**/*.test.*",
+    "**/*.spec.*"
+  ],
+  "generated": {
+    "cpgDirectory": ".context/cpg",
+    "cacheDirectory": ".context/cache"
+  }
+}

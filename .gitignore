@@ -21,6 +21,10 @@ node_modules/
 # production
 /build
 
+# generated code-context artifacts
+/.context/cpg/
+/.context/cache/
+
 # misc
 .DS_Store
 *.pem
