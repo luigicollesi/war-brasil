@@ -56,7 +56,10 @@ test("CPG source staging keeps runtime code and excludes tests", async () => {
 
     const manifest = JSON.parse(await readFile(path.join(output, ".manifest.json"), "utf8"));
     assert.ok(manifest.fileCount >= 4);
-    assert.equal(typeof manifest.pathFingerprint, "string");
+    assert.equal(manifest.schemaVersion, 2);
+    assert.equal(typeof manifest.sourceFingerprint, "string");
+    assert.equal(typeof manifest.configFingerprint, "string");
+    assert.equal(typeof manifest.fileHashes["src/game/engine.ts"], "string");
   } finally {
     await rm(fixture, { recursive: true, force: true });
   }

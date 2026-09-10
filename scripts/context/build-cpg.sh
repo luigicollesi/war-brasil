@@ -4,10 +4,6 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 CONFIG="$REPO_ROOT/.context/cpg.config.json"
 LOCK="$REPO_ROOT/.context/joern.lock.json"
-CACHE_ROOT="$REPO_ROOT/.context/cache"
-SOURCE_DIR="$CACHE_ROOT/cpg-source"
-OUTPUT_DIR="$REPO_ROOT/.context/cpg"
-OUTPUT_FILE="$OUTPUT_DIR/cpg.bin"
 
 fail() {
   printf 'CPG build error: %s\n' "$*" >&2
@@ -20,7 +16,14 @@ command -v git >/dev/null 2>&1 || fail "Git is required."
 [[ -f "$LOCK" ]] || fail "Missing $LOCK"
 
 JOERN_VERSION="$(node -e 'const fs=require("fs");const p=process.argv[1];process.stdout.write(JSON.parse(fs.readFileSync(p,"utf8")).version)' "$LOCK")"
+CACHE_REL="$(node -e 'const fs=require("fs");const p=process.argv[1];const c=JSON.parse(fs.readFileSync(p,"utf8"));process.stdout.write(c.generated?.cacheDirectory||".context/cache")' "$CONFIG")"
+OUTPUT_REL="$(node -e 'const fs=require("fs");const p=process.argv[1];const c=JSON.parse(fs.readFileSync(p,"utf8"));process.stdout.write(c.generated?.cpgDirectory||".context/cpg")' "$CONFIG")"
 [[ -n "$JOERN_VERSION" ]] || fail "Joern version is missing from $LOCK"
+
+CACHE_ROOT="$REPO_ROOT/$CACHE_REL"
+SOURCE_DIR="$CACHE_ROOT/cpg-source"
+OUTPUT_DIR="$REPO_ROOT/$OUTPUT_REL"
+OUTPUT_FILE="$OUTPUT_DIR/cpg.bin"
 
 platform_key() {
   local os arch
@@ -104,9 +107,9 @@ resolve_joern_parse() {
   fail "Pinned Joern $JOERN_VERSION is not cached. Set CPG_BOOTSTRAP_JOERN=1 to download it, or set JOERN_HOME to a compatible installation."
 }
 
+node "$REPO_ROOT/scripts/context/prepare-cpg-source.mjs" "$REPO_ROOT" "$SOURCE_DIR"
 JOERN_PARSE="$(resolve_joern_parse)"
 
-node "$REPO_ROOT/scripts/context/prepare-cpg-source.mjs" "$REPO_ROOT" "$SOURCE_DIR"
 rm -rf "$OUTPUT_DIR"
 mkdir -p "$OUTPUT_DIR"
 
@@ -116,10 +119,11 @@ printf 'Generating CPG with Joern %s...\n' "$JOERN_VERSION"
 [[ -s "$OUTPUT_FILE" ]] || fail "Joern completed without producing a non-empty $OUTPUT_FILE"
 
 GIT_HEAD="$(git -C "$REPO_ROOT" rev-parse HEAD)"
-node - <<'NODE' "$OUTPUT_DIR/build.json" "$JOERN_VERSION" "$GIT_HEAD"
-const fs = require("node:fs");
-const [output, version, commit] = process.argv.slice(2);
-fs.writeFileSync(output, `${JSON.stringify({ generator: "joern", version, commit, createdAt: new Date().toISOString() }, null, 2)}\n`);
-NODE
+node "$REPO_ROOT/scripts/context/write-cpg-build-metadata.mjs" \
+  "$REPO_ROOT" \
+  "$SOURCE_DIR/.manifest.json" \
+  "$OUTPUT_DIR/build.json" \
+  "$JOERN_VERSION" \
+  "$GIT_HEAD"
 
 printf 'CPG generated at %s\n' "${OUTPUT_FILE#$REPO_ROOT/}"
