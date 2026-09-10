@@ -1,4 +1,4 @@
-import io.shiftleft.codepropertygraph.generated.nodes.{Method, StoredNode}
+import io.shiftleft.codepropertygraph.generated.nodes.{Identifier, Method}
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
 import scala.collection.mutable
@@ -44,7 +44,7 @@ import scala.collection.mutable
       .map(method => methodJson(method))
       .mkString("[", ",", "]")
 
-  def usageJson(node: StoredNode): String = {
+  def usageJson(node: Identifier): String = {
     val method = node.method.headOption
     val parentCall = node.inCall.headOption
     val fields = mutable.ArrayBuffer(
