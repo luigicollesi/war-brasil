@@ -39,7 +39,9 @@ test("runner decide somente após o delay vencer e usa executores compartilhados
   const runner = source("src/lib/server/bots/bot-runner.ts");
   const delayCheck = runner.indexOf("actor.bot_next_action_at.getTime() > nowMs");
   const loadState = runner.indexOf("loadBotStrategicState");
-  const dueChoice = runner.lastIndexOf("chooseDueAction(client, room, actor)");
+  const dueChoice = runner.lastIndexOf(
+    "chooseDueAction(client, room, actor, delayAction)",
+  );
 
   assert.ok(delayCheck >= 0);
   assert.ok(dueChoice > delayCheck);
