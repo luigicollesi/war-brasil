@@ -117,32 +117,12 @@ export function ensureTerritoryRuntimeStyles(document: Document) {
     .territory:hover,
     .territory:focus {
       fill: var(${SURFACE_FILL_PROPERTY}, var(--territory-base-fill)) !important;
-      stroke: var(--territory-region-stroke, #e4dcc0);
-      stroke-opacity: .42;
+      stroke: #d9d2bd;
+      stroke-opacity: .3;
       stroke-width: var(--territory-render-stroke-width, .9);
       stroke-dasharray: none;
       filter: none !important;
       transition: none;
-    }
-
-    .territory[data-region="norte"] {
-      --territory-region-stroke: #67f58b;
-    }
-
-    .territory[data-region="nordeste"] {
-      --territory-region-stroke: #63b4ff;
-    }
-
-    .territory[data-region="centro-oeste"] {
-      --territory-region-stroke: #ffd84d;
-    }
-
-    .territory[data-region="sudeste"] {
-      --territory-region-stroke: #ff6262;
-    }
-
-    .territory[data-region="sul"] {
-      --territory-region-stroke: #ff9a3d;
     }
 
     .territory-depth {
