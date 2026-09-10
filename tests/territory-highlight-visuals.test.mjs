@@ -14,6 +14,10 @@ const svgNodesSource = readFileSync(
   "src/lib/client/map/territory-svg-nodes.ts",
   "utf8",
 );
+const regionOutlineSource = readFileSync(
+  "scripts/generate-region-outlines.mjs",
+  "utf8",
+);
 
 test("territory highlighting never changes SVG geometry or size", () => {
   assert.doesNotMatch(visualStateSource, /HIGHLIGHT_EXPANSION_PX/);
@@ -105,10 +109,11 @@ test("all gameplay interaction writes collapse to one face fill variable", () =>
 });
 
 test("semantic reasons no longer rewrite borders, dash arrays, or opacity", () => {
-  assert.match(visualStateSource, /stroke: var\(--territory-region-stroke, #e4dcc0\)/);
-  assert.match(visualStateSource, /stroke-opacity: \.42/);
+  assert.match(visualStateSource, /stroke:\s*#d9d2bd/);
+  assert.match(visualStateSource, /stroke-opacity:\s*\.3/);
   assert.match(visualStateSource, /stroke-width: var\(--territory-render-stroke-width, \.9\)/);
   assert.match(visualStateSource, /stroke-dasharray: none/);
+  assert.doesNotMatch(visualStateSource, /--territory-region-stroke/);
   assert.doesNotMatch(visualStateSource, /data-semantic-state=/);
   assert.doesNotMatch(visualStateSource, /stroke-dasharray: 5 3/);
   assert.doesNotMatch(visualStateSource, /classList\.toggle\("is-selected"/);
@@ -128,12 +133,16 @@ test("surface interaction does not animate or rewrite 2.5D material layers", () 
   );
 });
 
-test("regional borders are static and independent from active state", () => {
-  assert.match(visualStateSource, /data-region="norte"[\s\S]*#67f58b/);
-  assert.match(visualStateSource, /data-region="nordeste"[\s\S]*#63b4ff/);
-  assert.match(visualStateSource, /data-region="centro-oeste"[\s\S]*#ffd84d/);
-  assert.match(visualStateSource, /data-region="sudeste"[\s\S]*#ff6262/);
-  assert.match(visualStateSource, /data-region="sul"[\s\S]*#ff9a3d/);
+test("regional borders are static group silhouettes independent from active territory state", () => {
+  assert.match(regionOutlineSource, /norte:\s*"#67f58b"/);
+  assert.match(regionOutlineSource, /nordeste:\s*"#63b4ff"/);
+  assert.match(regionOutlineSource, /"centro-oeste":\s*"#ffd84d"/);
+  assert.match(regionOutlineSource, /sudeste:\s*"#ff6262"/);
+  assert.match(regionOutlineSource, /sul:\s*"#ff9a3d"/);
+  assert.match(regionOutlineSource, /id="region-shape-\$\{region\}"/);
+  assert.match(regionOutlineSource, /class="region-outline" data-region="\$\{region\}"/);
+  assert.match(regionOutlineSource, /pointer-events="none"/);
+  assert.doesNotMatch(visualStateSource, /\.territory\[data-region=/);
   assert.doesNotMatch(visualStateSource, /--territory-highlight-edge/);
   assert.doesNotMatch(visualStateSource, /--territory-highlight-edge-strong/);
 });
