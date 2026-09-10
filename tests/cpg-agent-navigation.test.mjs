@@ -14,6 +14,7 @@ test("AGENTS requires progressive CPG context acquisition", async () => {
 
   assert.match(agents, /docs\/ai\/cpg-summary\.md/);
   assert.match(agents, /context:cpg:status/);
+  assert.match(agents, /context:cpg:restore/);
   assert.match(agents, /Do not load or dump the complete CPG/i);
   assert.match(agents, /Source code is always the source of truth/i);
   assert.match(agents, /STALE.*MISSING/s);
@@ -23,6 +24,7 @@ test("AI CPG summary documents all public navigation commands", async () => {
   const summary = await read("docs/ai/cpg-summary.md");
   const commands = [
     "context:cpg:status",
+    "context:cpg:restore",
     "context:cpg:symbol",
     "context:cpg:callers",
     "context:cpg:callees",
@@ -37,6 +39,6 @@ test("AI CPG summary documents all public navigation commands", async () => {
   }
 
   assert.match(summary, /PostgreSQL is the sole authority/i);
-  assert.match(summary, /graph.*MISSING/i);
+  assert.match(summary, /artifact.*MISSING|MISSING.*artifact/is);
   assert.match(summary, /Do not infer live call\/data-flow relationships/i);
 });

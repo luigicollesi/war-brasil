@@ -16,6 +16,7 @@
     "context:cpg:prepare": "node scripts/context/prepare-cpg-source.mjs",
     "context:cpg:build": "bash scripts/context/build-cpg.sh",
     "context:cpg:status": "node scripts/context/cpg-status.mjs",
+    "context:cpg:restore": "node scripts/context/restore-cpg-artifact.mjs",
     "context:cpg:symbol": "node scripts/context/cpg-query.mjs symbol",
     "context:cpg:callers": "node scripts/context/cpg-query.mjs callers",
     "context:cpg:callees": "node scripts/context/cpg-query.mjs callees",

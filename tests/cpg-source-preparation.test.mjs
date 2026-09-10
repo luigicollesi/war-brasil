@@ -18,7 +18,7 @@ async function exists(filePath) {
   }
 }
 
-test("CPG source staging keeps runtime code and excludes tests", async () => {
+test("CPG source staging keeps runtime code and excludes tests/context tooling", async () => {
   const fixture = await mkdtemp(path.join(os.tmpdir(), "war-brasil-cpg-"));
   const output = path.join(fixture, ".context/cache/cpg-source");
 
@@ -28,7 +28,7 @@ test("CPG source staging keeps runtime code and excludes tests", async () => {
     await mkdir(path.join(fixture, "src/game"), { recursive: true });
     await mkdir(path.join(fixture, "realtime/test"), { recursive: true });
     await mkdir(path.join(fixture, "worker/test"), { recursive: true });
-    await mkdir(path.join(fixture, "scripts"), { recursive: true });
+    await mkdir(path.join(fixture, "scripts/context"), { recursive: true });
 
     await writeFile(path.join(fixture, "src/game/engine.ts"), "export const engine = true;\n");
     await writeFile(path.join(fixture, "src/game/engine.test.ts"), "export const testOnly = true;\n");
@@ -37,6 +37,7 @@ test("CPG source staging keeps runtime code and excludes tests", async () => {
     await writeFile(path.join(fixture, "worker/server.mjs"), "export const worker = true;\n");
     await writeFile(path.join(fixture, "worker/test/server.test.mjs"), "export const testOnly = true;\n");
     await writeFile(path.join(fixture, "scripts/dev.mjs"), "export const script = true;\n");
+    await writeFile(path.join(fixture, "scripts/context/internal.mjs"), "export const contextTool = true;\n");
     await writeFile(path.join(fixture, "package.json"), "{}\n");
     await writeFile(path.join(fixture, "tsconfig.json"), "{}\n");
 
@@ -53,6 +54,7 @@ test("CPG source staging keeps runtime code and excludes tests", async () => {
     assert.equal(await exists(path.join(output, "src/game/engine.test.ts")), false);
     assert.equal(await exists(path.join(output, "realtime/test/server.test.mjs")), false);
     assert.equal(await exists(path.join(output, "worker/test/server.test.mjs")), false);
+    assert.equal(await exists(path.join(output, "scripts/context/internal.mjs")), false);
 
     const manifest = JSON.parse(await readFile(path.join(output, ".manifest.json"), "utf8"));
     assert.ok(manifest.fileCount >= 4);
@@ -60,6 +62,7 @@ test("CPG source staging keeps runtime code and excludes tests", async () => {
     assert.equal(typeof manifest.sourceFingerprint, "string");
     assert.equal(typeof manifest.configFingerprint, "string");
     assert.equal(typeof manifest.fileHashes["src/game/engine.ts"], "string");
+    assert.equal("scripts/context/internal.mjs" in manifest.fileHashes, false);
   } finally {
     await rm(fixture, { recursive: true, force: true });
   }

@@ -24,6 +24,7 @@
     "tests/**",
     "realtime/test/**",
     "worker/test/**",
+    "scripts/context/**",
     "**/*.test.*",
     "**/*.spec.*"
   ],

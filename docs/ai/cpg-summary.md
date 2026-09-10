@@ -4,7 +4,7 @@ This file is the compact AI-facing map for code navigation. Source code remains 
 
 ## Current graph state
 
-No generated `cpg.bin` is committed to Git. A fresh checkout should treat the graph as `MISSING` until it is built locally or restored by automation. Do not infer live call/data-flow relationships from this document alone.
+No generated `cpg.bin` is committed to Git. GitHub Actions publishes a CPG artifact keyed by the effective source/config/Joern fingerprints. A fresh checkout should run `npm run context:cpg:status`; when the graph is `MISSING` or `STALE`, `npm run context:cpg:restore` can recover an exact non-expired CI artifact when authenticated GitHub CLI access is available. Do not infer live call/data-flow relationships from this document alone.
 
 ## Runtime map
 
@@ -17,7 +17,7 @@ No generated `cpg.bin` is committed to Git. A fresh checkout should treat the gr
 - `src/lib/*.ts` — some legacy compatibility reexports; new logic belongs in `client/`, `server/` or `shared/`.
 - `realtime/` — realtime gateway/delivery process; it is not authoritative game state.
 - `worker/` — durable automatic game progression driven from persisted scheduling state.
-- `scripts/` — finite development/database/context tooling.
+- `scripts/` — finite development/database tooling. `scripts/context/` implements the CPG infrastructure itself and is intentionally excluded from the graph to avoid self-indexing.
 
 ## Architectural invariants
 
@@ -64,6 +64,7 @@ Use the smallest useful context and expand only when needed:
 task
   -> this summary
   -> context:cpg:status
+  -> restore exact CI artifact when useful/available
   -> symbol query
   -> callers/callees/impact/path or usages/dataflow
   -> relevant source files
@@ -74,6 +75,7 @@ Commands:
 
 ```bash
 npm run context:cpg:status
+npm run context:cpg:restore
 npm run context:cpg:symbol -- <symbol>
 npm run context:cpg:callers -- <symbol>
 npm run context:cpg:callees -- <symbol>
@@ -83,7 +85,7 @@ npm run context:cpg:usages -- <variable>
 npm run context:cpg:dataflow -- <sink> --depth 8
 ```
 
-If status is `STALE` or `MISSING`, do not rely on graph queries. Inspect the source directly or rebuild the graph when the task justifies the cost.
+If status is `STALE` or `MISSING`, do not rely on graph queries. Prefer restoring the exact CI artifact when authenticated GitHub access is available. If no matching artifact exists or it expired, inspect source directly or rebuild the graph when the task justifies the cost.
 
 ## Deeper architecture references
 

@@ -1,0 +1,83 @@
+name: CPG
+
+on:
+  push:
+    branches:
+      - dev
+    paths:
+      - "src/**"
+      - "realtime/**"
+      - "worker/**"
+      - "scripts/**"
+      - "package.json"
+      - "tsconfig.json"
+      - "tsconfig.*.json"
+      - "next.config.*"
+      - ".context/cpg.config.json"
+      - ".context/joern.lock.json"
+      - ".github/workflows/cpg.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cpg-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cpg:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - name: Prepare CPG source
+        run: npm run context:cpg:prepare
+
+      - name: Calculate CPG identity
+        id: identity
+        run: node scripts/context/cpg-artifact-identity.mjs --github-output "$GITHUB_OUTPUT"
+
+      - name: Restore pinned Joern runtime
+        uses: actions/cache@v6
+        with:
+          path: .context/cache/joern
+          key: joern-${{ runner.os }}-${{ runner.arch }}-${{ steps.identity.outputs.joern_version }}-${{ steps.identity.outputs.joern_lock }}
+
+      - name: Restore generated CPG
+        id: cpg-cache
+        uses: actions/cache@v6
+        with:
+          path: .context/cpg
+          key: cpg-${{ runner.os }}-${{ runner.arch }}-${{ steps.identity.outputs.fingerprint }}
+
+      - name: Build CPG
+        if: steps.cpg-cache.outputs.cache-hit != 'true'
+        env:
+          CPG_BOOTSTRAP_JOERN: "1"
+        run: npm run context:cpg:build
+
+      - name: Validate CPG freshness
+        run: npm run context:cpg:status -- --check
+
+      - name: Upload CPG artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ steps.identity.outputs.artifact_name }}
+          path: |
+            .context/cpg/cpg.bin
+            .context/cpg/build.json
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0

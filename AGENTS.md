@@ -15,7 +15,7 @@ Use progressive context retrieval instead of broadly scanning the repository.
 3. If the CPG is `CURRENT`, query only what the task needs with `context:cpg:symbol`, `callers`, `callees`, `impact`, `path`, `usages`, or `dataflow`.
 4. Use graph results to identify the relevant source files, then inspect those files before editing.
 5. Expand context iteratively. Do not load or dump the complete CPG into model context.
-6. If the CPG is `STALE` or `MISSING`, do not trust graph relationships. Inspect source directly or rebuild the CPG only when the task justifies the cost.
+6. If the CPG is `STALE` or `MISSING`, do not trust graph relationships. Prefer `npm run context:cpg:restore` when an authenticated GitHub CLI is available and graph retrieval is useful; otherwise inspect source directly or rebuild the CPG only when the task justifies the cost.
 7. Source code is always the source of truth. ADRs document architectural decisions; generated CPG data is derived and must never be edited manually.
 
 ## Project maintenance

@@ -13,7 +13,7 @@ The initial graph covers application/runtime code under:
 - `worker/`
 - `scripts/`
 
-Tests are intentionally excluded from the initial CPG to keep the graph focused on production/runtime relationships. They remain available to agents as source and may be indexed separately later if useful.
+Tests are intentionally excluded from the initial CPG to keep the graph focused on production/runtime relationships. `scripts/context/` is also excluded because it implements the graph tooling itself; indexing it would make tooling-only changes invalidate the application graph. Tests and context tooling remain available to agents as source.
 
 Repository documentation, agent skills, GitHub workflows, static assets and map reference images are outside the CPG roots and therefore are not indexed.
 
@@ -69,6 +69,36 @@ Status meanings:
 
 The stored commit SHA is informational. A commit that changes only files outside the CPG scope does not invalidate a graph; content fingerprints are the authority for freshness.
 
+## GitHub Actions cache and artifacts
+
+`.github/workflows/cpg.yml` runs separately from the normal test workflow. It is triggered by pushes to `dev` when CPG-relevant source, configuration, build tooling, or the workflow itself changes, and it can also be started manually where GitHub allows `workflow_dispatch`.
+
+The workflow:
+
+1. prepares the canonical source set;
+2. computes a combined artifact fingerprint from source, configuration and the pinned Joern lock;
+3. restores the pinned Joern runtime from GitHub Actions cache when available;
+4. restores an exact CPG cache when available;
+5. otherwise builds the graph with the pinned Joern release;
+6. requires `context:cpg:status -- --check` to pass;
+7. uploads `cpg.bin` and `build.json` as a named workflow artifact.
+
+The Joern runtime and CPG caches use exact fingerprint keys with no broad restore prefix. This avoids silently treating a stale graph as reusable. The generated CPG is never committed by the workflow.
+
+The artifact name is deterministic:
+
+```text
+cpg-<combined fingerprint>
+```
+
+This allows a fresh agent session to recover the exact graph without downloading unrelated artifacts. With an authenticated GitHub CLI:
+
+```bash
+npm run context:cpg:restore
+```
+
+The restore command computes the current artifact identity, finds a non-expired exact-name GitHub Actions artifact, downloads it, installs only `cpg.bin` and `build.json`, and then requires the normal freshness check to pass. If no exact artifact exists or the artifact expired, build locally instead.
+
 ## Query commands
 
 Queries require a `CURRENT` CPG. They return compact JSON intended for agents and scripts. Symbol matching is exact against Joern method `name` or `fullName`; run the symbol query first when a name may be ambiguous.
@@ -121,8 +151,8 @@ npm run context:cpg:dataflow -- selectedTerritory --depth 5 --method GameMap
 
 By default the sink text is escaped and matched as a literal substring. Use `--regex` only when a regular-expression sink filter is intentional. `--file` and `--method` can narrow expensive slices, and `--end-at-external-method` can constrain data-flow slices to paths ending at external methods.
 
-The query and slice layers refuse to run when the graph is `MISSING` or `STALE`. Rebuild first instead of using stale structural information.
+The query and slice layers refuse to run when the graph is `MISSING` or `STALE`. Restore or rebuild first instead of using stale structural information.
 
 `JOERN_BIN` may point directly to the `joern` executable and `JOERN_SLICE_BIN` may point directly to `joern-slice`. `JOERN_HOME` may point to a Joern installation directory. When none are supplied, the commands reuse the pinned Joern runtime under `.context/cache/joern/` if it was bootstrapped during a CPG build.
 
-Joern currently documents known classpath issues for `joern-slice` on Java versions later than 17. If slicing fails before analysis begins, verify the Java runtime before treating the CPG as invalid.
+The CI workflow provisions JDK 21, which is the runtime currently recommended by Joern. If local Joern execution fails before analysis begins, verify the local Java runtime before treating the CPG as invalid.
