@@ -5,6 +5,7 @@ import test from "node:test";
 import {
   emptySliceForMode,
   filterDataflowScope,
+  filterFallbackUsages,
   filterUsageResult,
   formatMissingSliceDiagnostic,
   interpretMissingSliceOutput,
@@ -46,7 +47,7 @@ test("CPG slice CLI rejects mode-specific flags early", () => {
   assert.match(dataflow.stderr, /--include-source is only supported by usages/);
 });
 
-test("usage result keeps only the requested variable and applies method/file scope", () => {
+test("legacy usage result keeps only the requested variable and applies method/file scope", () => {
   const raw = {
     objectSlices: [
       {
@@ -88,6 +89,64 @@ test("usage result keeps only the requested variable and applies method/file sco
   assert.equal(matchesFileScope("/tmp/staging/src/render.ts", "src/render.ts"), true);
 });
 
+test("CPGQL usages fallback groups identifier references and preserves scope/source controls", () => {
+  const raw = {
+    command: "usages",
+    query: "debugId",
+    declarationCount: 1,
+    usageCount: 3,
+    usages: [
+      {
+        id: 1,
+        code: "debugId",
+        line: 10,
+        column: 3,
+        method: "roomErrorResponse",
+        methodFullName: "src/lib/api-response.ts::program:roomErrorResponse",
+        methodCode: "function roomErrorResponse() { const debugId = makeId(); return debugId; }",
+        file: "src/lib/api-response.ts",
+        call: "<operator>.assignment",
+        callCode: "debugId = makeId()"
+      },
+      {
+        id: 2,
+        code: "debugId",
+        line: 11,
+        column: 10,
+        method: "roomErrorResponse",
+        methodFullName: "src/lib/api-response.ts::program:roomErrorResponse",
+        methodCode: "function roomErrorResponse() { const debugId = makeId(); return debugId; }",
+        file: "src/lib/api-response.ts",
+        call: "noStoreJson",
+        callCode: "noStoreJson({ debugId })"
+      },
+      {
+        id: 3,
+        code: "debugId",
+        line: 20,
+        column: 5,
+        method: "other",
+        methodFullName: "src/other.ts::program:other",
+        methodCode: "function other(debugId) { return debugId; }",
+        file: "src/other.ts",
+        call: "<operator>.assignment",
+        callCode: "value = debugId"
+      }
+    ]
+  };
+
+  const result = filterFallbackUsages(raw, true, {
+    method: "roomErrorResponse",
+    file: "src/lib/api-response.ts"
+  });
+  assert.equal(result.query, "debugId");
+  assert.equal(result.declarationCount, 1);
+  assert.equal(result.matchCount, 2);
+  assert.equal(result.methods.length, 1);
+  assert.equal(result.methods[0].usages.length, 2);
+  assert.match(result.methods[0].code, /roomErrorResponse/);
+});
+
 test("dataflow scope preserves the connected interprocedural component", () => {
   const raw = {
     nodes: [
@@ -123,11 +182,7 @@ test("dataflow result reports graph size without changing the slice", () => {
 });
 
 test("Joern empty-slice marker becomes a valid empty result for both slice modes", () => {
-  const usages = interpretMissingSliceOutput(
-    "usages",
-    "Empty slice, no file generated.\n",
-    ""
-  );
+  const usages = interpretMissingSliceOutput("usages", "Empty slice, no file generated.\n", "");
   assert.deepEqual(usages, emptySliceForMode("usages"));
   assert.deepEqual(filterUsageResult(usages, "missing"), {
     command: "usages",
@@ -136,11 +191,7 @@ test("Joern empty-slice marker becomes a valid empty result for both slice modes
     methods: []
   });
 
-  const dataflow = interpretMissingSliceOutput(
-    "dataflow",
-    "",
-    "Empty slice, no file generated."
-  );
+  const dataflow = interpretMissingSliceOutput("dataflow", "", "Empty slice, no file generated.");
   assert.deepEqual(dataflow, { nodes: [], edges: [] });
   assert.equal(summarizeDataflowResult(dataflow).nodeCount, 0);
 });
