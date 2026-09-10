@@ -18,6 +18,10 @@ const boardSource = readFileSync(
   new URL("../src/components/interactive-board.tsx", import.meta.url),
   "utf8",
 );
+const tooltipSource = readFileSync(
+  new URL("../src/components/territory-tooltip.tsx", import.meta.url),
+  "utf8",
+);
 
 test("game page mounts the mobile territory info controller and stylesheet", () => {
   assert.match(pageSource, /MobileTerritoryInfoController/);
@@ -71,10 +75,13 @@ test("mobile territory info never reserves map or command hub layout space", () 
   assert.doesNotMatch(controllerSource, /style\.setProperty/);
 });
 
-test("desktop cursor-follow tooltip implementation remains present", () => {
+test("desktop cursor-follow tooltip stays isolated and close to the pointer", () => {
   assert.match(boardSource, /scheduleTooltipPosition/);
-  assert.match(boardSource, /translate3d\(\$\{x\}px, \$\{y\}px, 0\)/);
-  assert.match(boardSource, /className="game-territory-tooltip"/);
-  assert.match(boardSource, /setHoveredTerritory\(null\)/);
+  assert.match(boardSource, /<TerritoryTooltip/);
+  assert.match(boardSource, /tooltipRef\.current\?\.move/);
+  assert.doesNotMatch(boardSource, /setHoveredTerritory/);
+  assert.match(tooltipSource, /TOOLTIP_OFFSET = 8/);
+  assert.match(tooltipSource, /translate3d/);
+  assert.match(tooltipSource, /className="game-territory-tooltip"/);
   assert.match(cssSource, /@media \(max-width: 767px\)/);
 });
