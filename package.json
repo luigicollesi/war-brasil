@@ -21,6 +21,8 @@
     "context:cpg:callees": "node scripts/context/cpg-query.mjs callees",
     "context:cpg:impact": "node scripts/context/cpg-query.mjs impact",
     "context:cpg:path": "node scripts/context/cpg-query.mjs path",
+    "context:cpg:usages": "node scripts/context/cpg-slice.mjs usages",
+    "context:cpg:dataflow": "node scripts/context/cpg-slice.mjs dataflow",
     "realtime:install": "npm --prefix realtime ci",
     "realtime:start": "npm --prefix realtime start",
     "realtime:test": "npm --prefix realtime test",

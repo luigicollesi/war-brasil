@@ -98,6 +98,31 @@ Find the shortest directed call-graph path between two symbols. The default maxi
 npm run context:cpg:path -- RealtimeClient GameMap --depth 10
 ```
 
-The query layer refuses to run when the graph is `MISSING` or `STALE`. Rebuild first instead of using stale structural information.
+## Slice commands
 
-`JOERN_BIN` may point directly to the `joern` executable. `JOERN_HOME` may point to a Joern installation directory. When neither is supplied, queries reuse the pinned Joern runtime under `.context/cache/joern/` if it was bootstrapped during a CPG build.
+Slices also require a `CURRENT` CPG and use Joern's `joern-slice` utility. They are intended for questions that the call graph alone cannot answer.
+
+Describe how a local variable or parameter is used. The output is post-filtered to the exact requested variable and method source is omitted by default to keep context small:
+
+```bash
+npm run context:cpg:usages -- selectedTerritory
+npm run context:cpg:usages -- selectedTerritory --method GameMap
+npm run context:cpg:usages -- selectedTerritory --file src/components/GameMap.tsx
+```
+
+Use `--include-source` only when the surrounding method body is useful, and `--exclude-operators` when operator calls add noise.
+
+Create a backwards interprocedural data-flow slice starting from call arguments whose code contains the requested sink text. The default depth is 8 and the accepted range is 1-20:
+
+```bash
+npm run context:cpg:dataflow -- selectedTerritory
+npm run context:cpg:dataflow -- selectedTerritory --depth 5 --method GameMap
+```
+
+By default the sink text is escaped and matched as a literal substring. Use `--regex` only when a regular-expression sink filter is intentional. `--file` and `--method` can narrow expensive slices, and `--end-at-external-method` can constrain data-flow slices to paths ending at external methods.
+
+The query and slice layers refuse to run when the graph is `MISSING` or `STALE`. Rebuild first instead of using stale structural information.
+
+`JOERN_BIN` may point directly to the `joern` executable and `JOERN_SLICE_BIN` may point directly to `joern-slice`. `JOERN_HOME` may point to a Joern installation directory. When none are supplied, the commands reuse the pinned Joern runtime under `.context/cache/joern/` if it was bootstrapped during a CPG build.
+
+Joern currently documents known classpath issues for `joern-slice` on Java versions later than 17. If slicing fails before analysis begins, verify the Java runtime before treating the CPG as invalid.

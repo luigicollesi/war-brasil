@@ -1,9 +1,9 @@
-import { constants } from "node:fs";
-import { access, mkdir, mkdtemp, readFile, readdir, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { resolveJoernTool } from "./joern-runtime.mjs";
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const supportedModes = new Set(["symbol", "callers", "callees", "impact", "path"]);
@@ -70,55 +70,16 @@ if (status.status !== "CURRENT") {
   fail(`CPG is ${status.status}${reasons}. Run npm run context:cpg:build before querying it.`);
 }
 
-const lockPath = path.join(repoRoot, ".context/joern.lock.json");
-const lock = JSON.parse(await readFile(lockPath, "utf8"));
-const cacheRoot = path.join(repoRoot, ".context/cache");
-
-async function isExecutable(filePath) {
-  try {
-    await access(filePath, constants.X_OK);
-    return true;
-  } catch {
-    return false;
-  }
+let joern;
+try {
+  joern = await resolveJoernTool(repoRoot, "joern", "JOERN_BIN");
+} catch (error) {
+  fail(error instanceof Error ? error.message : String(error));
 }
 
-async function findExecutable(root, name, maxDepth = 3, currentDepth = 0) {
-  if (!root || currentDepth > maxDepth) return null;
-  const direct = path.join(root, name);
-  if (await isExecutable(direct)) return direct;
-
-  const entries = await readdir(root, { withFileTypes: true }).catch(() => []);
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
-    const found = await findExecutable(path.join(root, entry.name), name, maxDepth, currentDepth + 1);
-    if (found) return found;
-  }
-  return null;
-}
-
-async function resolveJoern() {
-  if (process.env.JOERN_BIN) {
-    const candidate = path.resolve(process.env.JOERN_BIN);
-    if (await isExecutable(candidate)) return candidate;
-    fail(`JOERN_BIN is not executable: ${candidate}`);
-  }
-
-  if (process.env.JOERN_HOME) {
-    const candidate = await findExecutable(path.resolve(process.env.JOERN_HOME), "joern");
-    if (candidate) return candidate;
-    fail(`joern was not found under JOERN_HOME=${process.env.JOERN_HOME}`);
-  }
-
-  const cached = await findExecutable(path.join(cacheRoot, "joern", lock.version), "joern");
-  if (cached) return cached;
-
-  fail(`Joern ${lock.version} runtime is not available. Set JOERN_HOME/JOERN_BIN or bootstrap it with CPG_BOOTSTRAP_JOERN=1 npm run context:cpg:build.`);
-}
-
-const joern = await resolveJoern();
 const queryScript = path.join(repoRoot, "scripts/context/joern/query.sc");
 const cpgFile = path.join(repoRoot, ".context/cpg/cpg.bin");
+const cacheRoot = path.join(repoRoot, ".context/cache");
 await mkdir(path.join(cacheRoot, "queries"), { recursive: true });
 const tempDir = await mkdtemp(path.join(cacheRoot, "queries", `${mode}-`));
 const outputFile = path.join(tempDir, "result.json");
