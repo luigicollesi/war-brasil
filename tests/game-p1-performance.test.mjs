@@ -32,14 +32,28 @@ test("manobra reutiliza topologia base cacheada através do serviço efetivo sem
   assert.match(topology, /FROM catalog\.territory_connections/);
 });
 
-test("mapa mantém pointermove fora do estado React", () => {
-  const source = readFileSync("src/components/interactive-board.tsx", "utf8");
+test("hover territorial mantém pointermove fora do estado React do tabuleiro", () => {
+  const board = readFileSync("src/components/interactive-board.tsx", "utf8");
+  const tooltip = readFileSync("src/components/territory-tooltip.tsx", "utf8");
+  const polish = readFileSync(
+    "src/app/game/[roomId]/map-25d-polish.css",
+    "utf8",
+  );
 
-  assert.match(source, /requestAnimationFrame/);
-  assert.match(source, /tooltip\.style\.transform/);
-  assert.match(source, /visualNodesByIdRef/);
-  assert.match(source, /visualSignatureRef/);
-  assert.doesNotMatch(source, /setHovered\(\{details:/);
+  assert.match(board, /surfaceRectRef/);
+  assert.match(board, /new ResizeObserver\(updateSurfaceRect\)/);
+  assert.match(board, /event\.target !== lastPointerTargetRef\.current/);
+  assert.match(board, /tooltipRef\.current\?\.move/);
+  assert.match(board, /tooltipRef\.current\?\.show/);
+  assert.doesNotMatch(board, /setHoveredTerritory/);
+
+  assert.match(tooltip, /TOOLTIP_OFFSET = 8/);
+  assert.match(tooltip, /requestAnimationFrame/);
+  assert.match(tooltip, /translate3d/);
+  assert.match(tooltip, /ResizeObserver/);
+
+  assert.match(polish, /backdrop-filter: none/);
+  assert.match(polish, /contain: layout style/);
 });
 
 test("overlays estáveis do mapa são memoizados contra rerenders de hover", () => {
