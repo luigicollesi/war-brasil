@@ -121,7 +121,7 @@ export function OperationsConsole() {
       </div>
 
       <div className={styles.machineBody}>
-        <div className={styles.mapBay} data-map-bay aria-hidden="true">
+        <div className={styles.mapBay} data-map-bay="" aria-hidden="true">
           <div className={styles.crown}>
             <span
               className={`${styles.ring} ${styles.ringTerritory}`}
@@ -136,7 +136,7 @@ export function OperationsConsole() {
               data-ring="conflict"
             />
           </div>
-          <div className={styles.mapPlate} data-map-plate>
+          <div className={styles.mapPlate} data-map-plate="">
             <Image
               src="/war-brasil-42.production.svg"
               alt=""
@@ -147,7 +147,7 @@ export function OperationsConsole() {
           </div>
           <div className={styles.axisVertical} />
           <div className={styles.axisHorizontal} />
-          <div className={styles.mapReadout} data-map-readout>
+          <div className={styles.mapReadout} data-map-readout="">
             <span>42 placas</span>
             <span>geometria canônica</span>
           </div>
