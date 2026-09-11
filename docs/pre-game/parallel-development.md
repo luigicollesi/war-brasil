@@ -75,13 +75,16 @@ O mock MUST:
 
 ## Estratégia de integração
 
-1. congelar contrato público mínimo da `foundation`;
-2. publicar tipos/stubs necessários;
-3. páginas avançam em paralelo contra o contrato;
-4. integrar `foundation` primeiro;
-5. integrar cada página separadamente, passando seus evals;
-6. executar avaliação cruzada de transições e regressões;
-7. validar a matriz `traceability.md` após todas as integrações.
+1. mergear/aprovar primeiro esta documentação em `dev`;
+2. criar todas as branches de implementação a partir do mesmo `dev` atualizado;
+3. congelar o contrato público mínimo da `foundation`;
+4. publicar tipos/stubs necessários;
+5. páginas avançam em paralelo contra o contrato;
+6. integrar `foundation` primeiro;
+7. antes de integrar cada página, sincronizar sua branch com o `dev` mais recente e resolver conflitos conscientemente;
+8. integrar cada página separadamente, passando seus evals;
+9. executar avaliação cruzada de transições e regressões;
+10. validar a matriz `traceability.md` após todas as integrações.
 
 ## Evitar conflitos
 
@@ -105,6 +108,12 @@ Mudança breaking no contrato compartilhado MUST:
 2. atualizar `manifest.json`/docs quando necessário;
 3. identificar trilhas impactadas;
 4. evitar merge até consumidores ativos estarem reconciliados.
+
+## Política de merge
+
+Cada PR de implementação MUST estar atualizado com `dev` antes do merge e MUST passar seu próprio EVAL no estado integrado, não apenas no estado anterior da branch.
+
+Integração da Foundation não autoriza merge automático das páginas: cada trilha precisa provar compatibilidade com a versão efetivamente integrada do contrato.
 
 ## Evidência mínima de PR
 
