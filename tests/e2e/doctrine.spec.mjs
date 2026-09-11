@@ -36,8 +36,6 @@ function chapterLink(page, slug) {
   );
 }
 
-test.describe.configure({ mode: "serial" });
-
 test("todos os capítulos abrem diretamente no DOM", async ({ page }) => {
   for (const slug of CHAPTERS) {
     await page.goto(chapterUrl(slug), { waitUntil: "domcontentloaded" });
@@ -107,10 +105,20 @@ test("reduced-motion mantém conteúdo e reduz transições ornamentais", async 
   await expect(page.locator('[data-doctrine-chapter="cartas"]')).toBeVisible();
   await expect(page.getByRole("figure")).toBeVisible();
 
-  const transitionDuration = await chapterLink(page, "ataque").evaluate(
-    (element) => getComputedStyle(element).transitionDuration,
-  );
-  expect(transitionDuration).toMatch(/0\.001ms|0s/);
+  const maxTransitionMs = await chapterLink(page, "ataque").evaluate((element) => {
+    const durations = getComputedStyle(element).transitionDuration
+      .split(",")
+      .map((duration) => duration.trim())
+      .map((duration) =>
+        duration.endsWith("ms")
+          ? Number.parseFloat(duration)
+          : Number.parseFloat(duration) * 1000,
+      );
+
+    return Math.max(...durations);
+  });
+
+  expect(maxTransitionMs).toBeLessThanOrEqual(0.01);
 });
 
 test("conteúdo essencial permanece disponível quando WebGL falha", async ({ page }) => {
