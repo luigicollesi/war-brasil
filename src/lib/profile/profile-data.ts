@@ -12,7 +12,8 @@ export type ProfileSource =
   | "local-static"
   | "authenticated-user"
   | "match-history"
-  | "progression-system";
+  | "progression-system"
+  | "evaluation-fixture";
 
 export type ProfileIdentity = {
   displayName: string;
@@ -107,38 +108,110 @@ export const PROFILE_STATE_COPY: Record<
   },
 };
 
+const LOCAL_IDENTITY: ProfileIdentity = {
+  displayName: "Luigi",
+  source: "local-static",
+  sourceLabel: "Perfil local temporário",
+};
+
+function unavailableSection<T>(data: T, unavailableReason: string): ProfileSection<T> {
+  return {
+    availability: "unavailable",
+    source: null,
+    unavailableReason,
+    data,
+  };
+}
+
+function unavailableProfileSections() {
+  return {
+    progression: unavailableSection<ProfileProgression | null>(
+      null,
+      "Sistema de progressão ainda não integrado.",
+    ),
+    statistics: unavailableSection<ReadonlyArray<ProfileStatistic>>(
+      [],
+      "Estatísticas ainda não possuem contrato de dados do perfil.",
+    ),
+    history: unavailableSection<ProfileHistory>(
+      { campaigns: [], hasMore: false },
+      "Histórico de partidas ainda não está conectado ao perfil.",
+    ),
+    achievements: unavailableSection<ReadonlyArray<ProfileAchievement>>(
+      [],
+      "Conquistas ainda não possuem sistema de origem.",
+    ),
+  };
+}
+
 const LOCAL_PROFILE: ProfileSnapshot = {
   state: "partial-data",
-  identity: {
-    displayName: "Luigi",
-    source: "local-static",
-    sourceLabel: "Perfil local temporário",
-  },
-  progression: {
-    availability: "unavailable",
-    source: null,
-    unavailableReason: "Sistema de progressão ainda não integrado.",
-    data: null,
-  },
-  statistics: {
-    availability: "unavailable",
-    source: null,
-    unavailableReason: "Estatísticas ainda não possuem contrato de dados do perfil.",
-    data: [],
-  },
-  history: {
-    availability: "unavailable",
-    source: null,
-    unavailableReason: "Histórico de partidas ainda não está conectado ao perfil.",
-    data: { campaigns: [], hasMore: false },
-  },
-  achievements: {
-    availability: "unavailable",
-    source: null,
-    unavailableReason: "Conquistas ainda não possuem sistema de origem.",
-    data: [],
-  },
+  identity: LOCAL_IDENTITY,
+  ...unavailableProfileSections(),
 };
+
+type ProfileEvaluationState = Exclude<ProfileState, "loading">;
+
+const PROFILE_EVALUATION_STATES = new Set<ProfileEvaluationState>([
+  "guest",
+  "loaded",
+  "empty-history",
+  "partial-data",
+  "no-progression-system",
+  "error",
+]);
+
+function isProfileEvaluationState(value: string): value is ProfileEvaluationState {
+  return PROFILE_EVALUATION_STATES.has(value as ProfileEvaluationState);
+}
+
+/**
+ * Deterministic visual-evaluation fixtures.
+ *
+ * They are opt-in through PROFILE_EVAL_MODE=1 and are never selected by URL,
+ * cookies or browser input. Fixtures intentionally avoid competitive numbers,
+ * ranks and achievements; their only purpose is to exercise structural states.
+ */
+function createEvaluationSnapshot(state: ProfileEvaluationState): ProfileSnapshot {
+  const base: ProfileSnapshot = {
+    state,
+    identity: LOCAL_IDENTITY,
+    ...unavailableProfileSections(),
+  };
+
+  if (state === "guest" || state === "error") {
+    return {
+      ...base,
+      identity: null,
+    };
+  }
+
+  if (state === "empty-history") {
+    return {
+      ...base,
+      history: {
+        availability: "empty",
+        source: "evaluation-fixture",
+        data: { campaigns: [], hasMore: false },
+      },
+    };
+  }
+
+  return base;
+}
+
+function getEvaluationStateFromEnvironment(): ProfileEvaluationState | null {
+  if (process.env.PROFILE_EVAL_MODE !== "1") {
+    return null;
+  }
+
+  const requestedState = process.env.PROFILE_EVAL_STATE;
+  if (!requestedState || !isProfileEvaluationState(requestedState)) {
+    return null;
+  }
+
+  return requestedState;
+}
 
 /**
  * Stable boundary between profile rendering and identity persistence.
@@ -149,5 +222,10 @@ const LOCAL_PROFILE: ProfileSnapshot = {
  * future backend does not need to load an unlimited campaign archive at once.
  */
 export async function getCurrentProfileSnapshot(): Promise<ProfileSnapshot> {
+  const evaluationState = getEvaluationStateFromEnvironment();
+  if (evaluationState) {
+    return createEvaluationSnapshot(evaluationState);
+  }
+
   return LOCAL_PROFILE;
 }
