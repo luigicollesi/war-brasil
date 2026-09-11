@@ -1,4 +1,5 @@
 import Image from "next/image";
+import polish from "./command-home-polish.module.css";
 import styles from "./command-home.module.css";
 
 export function CommandHomeFallback() {
@@ -40,13 +41,13 @@ export function CommandHomeFallback() {
             </div>
           </div>
 
-          <div className={styles.crown}>
+          <div className={`${styles.crown} ${polish.viewportBounded}`}>
             <span className={`${styles.orbit} ${styles.orbitTerritory}`} />
             <span className={`${styles.orbit} ${styles.orbitCommand}`} />
             <span className={`${styles.orbit} ${styles.orbitConflict}`} />
           </div>
 
-          <div className={styles.domainTable}>
+          <div className={`${styles.domainTable} ${polish.viewportBounded}`}>
             <span className={styles.tableOuterRing} />
             <span className={styles.tableInnerRing} />
             <span className={styles.tableAxis} />
