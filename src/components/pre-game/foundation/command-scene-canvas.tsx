@@ -198,8 +198,10 @@ function readCanonicalTerritoryId(path: { userData?: Record<string, unknown> }, 
 
 function BrazilTerritoryAssembly({
   intent,
+  onReady,
 }: {
   intent: NormalizedCommandSceneIntent;
+  onReady: () => void;
 }) {
   const svg = useLoader(SVGLoader, "/war-brasil-42.production.svg");
   const assemblyRef = useRef<Group>(null);
@@ -262,6 +264,10 @@ function BrazilTerritoryAssembly({
       });
     });
   }, [svg]);
+
+  useEffect(() => {
+    onReady();
+  }, [onReady, plates]);
 
   useEffect(() => {
     return () => {
@@ -445,9 +451,11 @@ function SceneFallbackGeometry() {
 function CommandSceneWorld({
   intent,
   reducedMotion,
+  onReady,
 }: {
   intent: NormalizedCommandSceneIntent;
   reducedMotion: boolean;
+  onReady: () => void;
 }) {
   const conflictIntensity = intent.conflictLevel * 5.2;
 
@@ -470,7 +478,7 @@ function CommandSceneWorld({
       <SceneInsignia intent={intent} />
       <StrategicGlobe intent={intent} reducedMotion={reducedMotion} />
       <Suspense fallback={<SceneFallbackGeometry />}>
-        <BrazilTerritoryAssembly intent={intent} />
+        <BrazilTerritoryAssembly intent={intent} onReady={onReady} />
       </Suspense>
     </>
   );
@@ -496,12 +504,15 @@ export function CommandSceneCanvas({
       }}
       onCreated={({ gl }) => {
         gl.setClearColor(COMMAND_FOUNDATION_TOKENS.color.void, 1);
-        onReady();
       }}
     >
       <fog attach="fog" args={[COMMAND_FOUNDATION_TOKENS.color.void, 11.5, 19]} />
       <WebGLContextGuard onUnavailable={onUnavailable} />
-      <CommandSceneWorld intent={intent} reducedMotion={reducedMotion} />
+      <CommandSceneWorld
+        intent={intent}
+        reducedMotion={reducedMotion}
+        onReady={onReady}
+      />
     </Canvas>
   );
 }
