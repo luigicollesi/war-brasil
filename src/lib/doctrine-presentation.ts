@@ -57,6 +57,21 @@ export function isDoctrineChapterSlug(value: string | null | undefined): value i
 export function buildDoctrinePresentation() {
   const guide = buildGameGuidePresentation();
 
+  const objectiveFormats = [
+    {
+      title: "DOMÍNIO",
+      description: "Controlar territórios, regiões ou uma combinação dos dois.",
+    },
+    {
+      title: "FORTIFICAÇÃO",
+      description: "Sustentar a quantidade exigida de territórios com força mínima.",
+    },
+    {
+      title: "ELIMINAÇÃO",
+      description: "Neutralizar o alvo atribuído quando esse formato estiver ativo.",
+    },
+  ] as const;
+
   const chapters: readonly DoctrineChapter[] = [
     {
       slug: "preparacao",
@@ -109,9 +124,9 @@ export function buildDoctrinePresentation() {
         "A manobra encerra o reposicionamento estratégico do turno.",
       ],
       metrics: [
-        { label: "Fase 1", value: "Reforços" },
-        { label: "Fase 2", value: "Ataque" },
-        { label: "Fase 3", value: "Manobra" },
+        { label: "Fase 1", value: "Reforços", detail: "Converter controle em capacidade." },
+        { label: "Fase 2", value: "Ataque", detail: "Projetar força através das conexões." },
+        { label: "Fase 3", value: "Manobra", detail: "Recompor a linha para o próximo ciclo." },
       ],
       visual: "turn",
     },
@@ -266,6 +281,7 @@ export function buildDoctrinePresentation() {
 
   return {
     chapters,
+    objectiveFormats,
     combatExample: guide.combat.example,
     cards: {
       tradeValues: guide.cards.tradeValues,
@@ -277,11 +293,24 @@ export function buildDoctrinePresentation() {
       baseExample: guide.reinforcement.baseExample,
       territoryExample: guide.reinforcement.territoryExample,
     },
+    conquest: {
+      minimumMove: guide.conquest.minimumMove,
+      minimumTroopsLeftAtOrigin: guide.conquest.minimumTroopsLeftAtOrigin,
+    },
+    maneuver: {
+      minimumTroopsLeftAtOrigin: guide.maneuver.minimumTroopsLeftAtOrigin,
+      movableBeforeReceiving: guide.maneuver.example.movableBeforeReceiving,
+      movableAfterReceiving: guide.maneuver.example.movableAfterReceiving,
+    },
     barrier: {
       attackDiceBands: guide.attack.barrierDiceBands,
       attackerLossPerComparison: guide.attack.barrierLossPerComparison,
       maneuverLoss: guide.maneuver.barrierLoss,
       blockedBarrierCount: guide.maneuver.blockedBarrierCount,
+    },
+    anomalies: {
+      eventCount: EVENT_COUNT,
+      minimumTroopsAfterRemoval: guide.anomalies.minimumTroopsAfterRemoval,
     },
   };
 }
