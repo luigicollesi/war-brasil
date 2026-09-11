@@ -68,40 +68,43 @@ function CameraDirector({
   intent: NormalizedCommandSceneIntent;
   reducedMotion: boolean;
 }) {
-  const { camera, invalidate } = useThree();
+  const invalidate = useThree((state) => state.invalidate);
   const pose = useMemo(() => resolveCommandCameraPose(intent), [intent]);
   const desiredPosition = useMemo(() => new Vector3(...pose.camera), [pose.camera]);
   const desiredTarget = useMemo(() => new Vector3(...pose.target), [pose.target]);
   const currentTarget = useRef(desiredTarget.clone());
 
   useEffect(() => {
-    if (!reducedMotion) return;
-    camera.position.copy(desiredPosition);
-    currentTarget.current.copy(desiredTarget);
-    camera.lookAt(desiredTarget);
-    if (camera instanceof PerspectiveCamera) {
-      camera.fov = pose.fov;
-      camera.updateProjectionMatrix();
-    }
     invalidate();
-  }, [camera, desiredPosition, desiredTarget, invalidate, pose.fov, reducedMotion]);
+  }, [desiredPosition, desiredTarget, invalidate, pose.fov, reducedMotion]);
 
-  useFrame((_, delta) => {
-    if (reducedMotion) return;
+  useFrame((state, delta) => {
+    const activeCamera = state.camera;
+
+    if (reducedMotion) {
+      activeCamera.position.copy(desiredPosition);
+      currentTarget.current.copy(desiredTarget);
+      activeCamera.lookAt(desiredTarget);
+      if (activeCamera instanceof PerspectiveCamera) {
+        activeCamera.fov = pose.fov;
+        activeCamera.updateProjectionMatrix();
+      }
+      return;
+    }
 
     const alpha = 1 - Math.exp(-COMMAND_FOUNDATION_TOKENS.motion.cameraDamping * delta);
-    camera.position.lerp(desiredPosition, alpha);
+    activeCamera.position.lerp(desiredPosition, alpha);
     currentTarget.current.lerp(desiredTarget, alpha);
-    camera.lookAt(currentTarget.current);
+    activeCamera.lookAt(currentTarget.current);
 
-    if (camera instanceof PerspectiveCamera) {
-      camera.fov = MathUtils.damp(
-        camera.fov,
+    if (activeCamera instanceof PerspectiveCamera) {
+      activeCamera.fov = MathUtils.damp(
+        activeCamera.fov,
         pose.fov,
         COMMAND_FOUNDATION_TOKENS.motion.cameraDamping,
         delta,
       );
-      camera.updateProjectionMatrix();
+      activeCamera.updateProjectionMatrix();
     }
   });
 
