@@ -84,6 +84,18 @@ A cena 3D SHOULD ser compartilhada e persistente quando a arquitetura permitir. 
 
 O conteúdo crítico da rota MUST existir independentemente do 3D. WebGL é progressive enhancement.
 
+## Referências de engenharia
+
+As escolhas de qualidade são ancoradas em fontes oficiais, detalhadas também em `quality-standard.md` e `manifest.json`:
+
+- BCP 14 / RFC 2119 + RFC 8174 para linguagem normativa;
+- WCAG 2.2 para acessibilidade;
+- documentação oficial do Next.js para boundaries Server/Client e lazy loading;
+- documentação do React Three Fiber para estratégias de performance;
+- documentação oficial do Playwright para visual regression determinística quando essa camada for adicionada.
+
+Essas referências orientam engenharia; não substituem medições e contratos reais do projeto.
+
 ## Regra contra omissão
 
 Qualquer remoção ou substituição de uma ideia marcada `CORE` em `traceability.md` MUST aparecer explicitamente no PR com justificativa e atualização da matriz. Ausência silenciosa é falha de implementação, mesmo que CI e score estejam verdes.
