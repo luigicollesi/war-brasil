@@ -7,6 +7,14 @@ const styles = readFileSync("src/components/lobby-client.module.css", "utf8");
 const identity = readFileSync("src/app/war-identity.css", "utf8");
 const sync = readFileSync("src/hooks/use-lobby-sync.ts", "utf8");
 const rooms = readFileSync("src/lib/server/rooms.ts", "utf8");
+const foundationScene = readFileSync(
+  "src/components/pre-game/foundation/command-scene.tsx",
+  "utf8",
+);
+const foundationRuntime = readFileSync(
+  "src/components/pre-game/foundation/pre-game-command-runtime.tsx",
+  "utf8",
+);
 
 test("lobby usa o snapshot vigente como fonte de verdade e assentos estáveis", () => {
   assert.match(lobby, /const \{ snapshot, error: syncError, isLoading, refresh \} = useLobbySync\(code\)/);
@@ -51,14 +59,13 @@ test("ação crítica de ready permanece fora da cena e fixa à viewport", () =>
   assert.doesNotMatch(lobby, /useThree|Camera|camera\./);
 });
 
-test("Lobby emite somente intenção declarativa para a Foundation oficial", () => {
-  assert.match(lobby, /CommandShell, type CommandSceneIntent/);
-  assert.match(lobby, /mode: "lobby"/);
+test("Lobby publica diretiva sem criar um segundo CommandShell ou renderer", () => {
+  assert.match(lobby, /useCommandSceneDirective/);
   assert.match(lobby, /focus: "table"/);
-  assert.match(lobby, /conflictLevel: startAuthorized \? 3 : allReady \? 1 : 0/);
-  assert.match(lobby, /orbitalAlignment: startAuthorized \? 1 : 0/);
-  assert.match(lobby, /<CommandShell intent=\{sceneIntent\}/);
-  assert.doesNotMatch(lobby, /@react-three|from "three"|CommandSceneCanvas|useThree/);
+  assert.match(lobby, /conflictLevel: sceneStartAuthorized \? 3 : sceneAllReady \? 1 : 0/);
+  assert.match(lobby, /orbitalAlignment: sceneStartAuthorized \? 1 : 0/);
+  assert.match(foundationRuntime, /<CommandShell intent=\{intent\}>/);
+  assert.doesNotMatch(lobby, /<CommandShell|CommandSceneIntent|@react-three|from "three"|CommandSceneCanvas|useThree/);
 });
 
 test("código da operação permanece copiável, selecionável e com recuperação local", () => {
@@ -98,9 +105,10 @@ test("configuração local mantém agrupamento semântico e controles no DOM", (
   assert.match(lobby, /Pronto para batalha/);
 });
 
-test("fallback HTML não depende de WebGL e respeita reduced motion", () => {
-  assert.doesNotMatch(lobby, /Canvas|useThree|@react-three/);
-  assert.match(lobby, /war-brasil-42\.production\.svg/);
+test("fallback pertence à Foundation e Lobby não depende de WebGL", () => {
+  assert.doesNotMatch(lobby, /Canvas|useThree|@react-three|war-brasil-42\.production\.svg/);
+  assert.match(foundationScene, /war-brasil-42\.production\.svg/);
+  assert.match(foundationScene, /data-webgl=\{webglState\}/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(styles, /transition: none/);
 });
