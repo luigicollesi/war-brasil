@@ -7,15 +7,6 @@ export {
   CommandStatus,
 } from "./command-primitives";
 export {
-  PreGameCommandRuntime,
-  useCommandSceneDirective,
-} from "./pre-game-command-runtime";
-export type { CommandSceneDirective } from "./pre-game-command-runtime";
-export {
-  resolvePreGameSceneIntent,
-  resolvePreGameSceneMode,
-} from "./pre-game-route-intent";
-export {
   COMMAND_SCENE_FOCUSES,
   COMMAND_SCENE_MODES,
   COMMAND_SCENE_MODE_LABELS,
