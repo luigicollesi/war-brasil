@@ -48,6 +48,14 @@ test("read model da Doutrina deriva mecânicas das autoridades do jogo", () => {
   assert.equal(doctrine.barrier.attackerLossPerComparison, 3);
   assert.equal(doctrine.barrier.maneuverLoss, 1);
   assert.equal(doctrine.barrier.blockedBarrierCount, 2);
+  assert.equal(doctrine.conquest.minimumTroopsLeftAtOrigin, 1);
+  assert.equal(doctrine.conquest.minimumMove, 1);
+  assert.equal(doctrine.maneuver.minimumTroopsLeftAtOrigin, 1);
+  assert.equal(doctrine.anomalies.eventCount, 38);
+  assert.deepEqual(
+    doctrine.objectiveFormats.map((format) => format.title),
+    ["DOMÍNIO", "FORTIFICAÇÃO", "ELIMINAÇÃO"],
+  );
   assert.match(events.lede, /38 estados de evento/);
 
   const presentationSource = source("src/lib/doctrine-presentation.ts");
@@ -115,14 +123,20 @@ test("orquestração cliente permanece pequena e delega as demonstrações", () 
   assert.doesNotMatch(experience, /DoctrineMark|styles\.topbar|GameDie|GuideBoardScene|TerritoryCardArtwork/);
 });
 
-test("demonstrações reutilizam mapa, dados e cartas reais com equivalente textual", () => {
+test("demonstrações reutilizam assets reais e recebem mecânicas pelo read model", () => {
   const demos = source("src/components/doctrine/doctrine-demo.tsx");
 
   assert.match(demos, /GuideBoardScene/);
   assert.match(demos, /GameDie/);
   assert.match(demos, /TerritoryCardArtwork/);
+  assert.match(demos, /presentation\.objectiveFormats/);
+  assert.match(demos, /chapter\.metrics/);
+  assert.match(demos, /presentation\.conquest/);
+  assert.match(demos, /presentation\.maneuver/);
+  assert.match(demos, /presentation\.anomalies/);
   assert.match(demos, /<figcaption>/);
   assert.match(demos, /ariaLabel=/);
+  assert.doesNotMatch(demos, /const\s+types\s*=|const\s+phases\s*=/);
   assert.doesNotMatch(demos, /Canvas|@react-three|three\//i);
 });
 
