@@ -1,0 +1,35 @@
+.stationState {
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.stationState[data-status="idle"][data-interaction="create-focus"],
+.stationState[data-status="idle"][data-interaction="join-focus"],
+.stationState[data-status="idle"][data-interaction="typing-code"] {
+  border-color: rgba(240, 200, 90, .42);
+  box-shadow:
+    0 38px 90px rgba(0, 0, 0, .38),
+    inset 0 0 0 1px rgba(214, 169, 62, .07),
+    inset 0 1px 0 rgba(255, 255, 255, .035);
+}
+
+.stationState[data-state="create-error"],
+.stationState[data-state="join-error"],
+.stationState[data-state="invalid-code"],
+.stationState[data-state="network-error"] {
+  border-color: rgba(164, 38, 44, .58);
+}
+
+.stationState[data-state="creating"],
+.stationState[data-state="joining"] {
+  border-color: rgba(240, 200, 90, .5);
+}
+
+.stationState[data-state="success-transition"] {
+  border-color: rgba(116, 182, 135, .56);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stationState {
+    transition: none !important;
+  }
+}

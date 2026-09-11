@@ -1,0 +1,24 @@
+.frame {
+  position: relative;
+  z-index: 1;
+  min-height: 100dvh;
+}
+
+.frame :global(.wb-shell) {
+  min-height: 100dvh;
+  background: transparent;
+}
+
+.frame :global(.wb-shell)::before {
+  opacity: .1;
+}
+
+.frame :global(.wb-header) {
+  background: rgb(5 20 15 / 58%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .frame :global(.wb-header) {
+    backdrop-filter: none;
+  }
+}

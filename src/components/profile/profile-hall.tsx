@@ -1,0 +1,376 @@
+import Link from "next/link";
+import type { ReactNode } from "react";
+import { CommandInsignia } from "@/src/components/pre-game/foundation";
+import type {
+  ProfileAchievement,
+  ProfileCampaign,
+  ProfileSnapshot,
+  ProfileState,
+} from "@/src/lib/profile/profile-data";
+import { PROFILE_STATE_COPY } from "@/src/lib/profile/profile-data";
+import { ProfileEnvironmentState } from "./profile-environment-state";
+import styles from "./profile-hall.module.css";
+import stateStyles from "./profile-state.module.css";
+
+type ProfileHallProps = {
+  snapshot: ProfileSnapshot;
+};
+
+type RecordFixtureProps = {
+  label: string;
+  title: string;
+  motif: "archive" | "medals" | "rank";
+  availability: "available" | "empty" | "unavailable";
+  unavailableReason?: string;
+  children?: ReactNode;
+};
+
+function initialsFrom(displayName: string) {
+  return displayName
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toLocaleUpperCase("pt-BR"))
+    .join("") || "WB";
+}
+
+function StateSeal({ state }: { state: ProfileState }) {
+  const copy = PROFILE_STATE_COPY[state];
+
+  return (
+    <div
+      className={`${styles.stateSeal} ${stateStyles.stateSealTone}`}
+      data-state={state}
+      role="status"
+      aria-label={copy.label}
+    >
+      <span className={styles.stateLamp} aria-hidden="true" />
+      <span>{copy.label}</span>
+    </div>
+  );
+}
+
+function EmptyMotif({ motif }: { motif: RecordFixtureProps["motif"] }) {
+  return (
+    <div className={`${styles.fixtureObject} ${styles[`fixtureObject_${motif}`]}`} aria-hidden="true">
+      {motif === "medals" ? (
+        <>
+          <span />
+          <span />
+          <span />
+        </>
+      ) : motif === "archive" ? (
+        <>
+          <i />
+          <i />
+          <i />
+          <i />
+        </>
+      ) : (
+        <span className={styles.rankDash}>—</span>
+      )}
+    </div>
+  );
+}
+
+function RecordFixture({
+  label,
+  title,
+  motif,
+  availability,
+  unavailableReason,
+  children,
+}: RecordFixtureProps) {
+  const index = motif === "rank" ? "01" : motif === "archive" ? "02" : "03";
+  const titleId = `${motif}-title`;
+
+  return (
+    <section className={styles.fixture} data-availability={availability} aria-labelledby={titleId}>
+      <div className={styles.fixtureHeader}>
+        <span className={styles.fixtureIndex} aria-hidden="true">{index}</span>
+        <div>
+          <p>{label}</p>
+          <h2 id={titleId}>{title}</h2>
+        </div>
+      </div>
+
+      {availability === "available" ? children : <EmptyMotif motif={motif} />}
+
+      {availability === "unavailable" ? (
+        <>
+          <p className={styles.fixtureReason}>
+            {unavailableReason ?? "Este registro ainda não possui uma fonte de dados disponível."}
+          </p>
+          <span className={styles.unavailableTag}>Indisponível — sem fonte real</span>
+        </>
+      ) : null}
+
+      {availability === "empty" ? (
+        <>
+          <p className={styles.fixtureReason}>A fonte está disponível, mas ainda não há registros.</p>
+          <span className={styles.emptyTag}>Arquivo disponível — sem registros</span>
+        </>
+      ) : null}
+    </section>
+  );
+}
+
+function CampaignList({ campaigns, hasMore }: { campaigns: ReadonlyArray<ProfileCampaign>; hasMore: boolean }) {
+  return (
+    <div className={styles.ledger}>
+      <ol>
+        {campaigns.map((campaign) => (
+          <li key={`${campaign.title}-${campaign.summary}`}>
+            <strong>{campaign.title}</strong>
+            <span>{campaign.summary}</span>
+          </li>
+        ))}
+      </ol>
+      {hasMore ? <p>Há registros adicionais; a fonte deve fornecê-los progressivamente.</p> : null}
+    </div>
+  );
+}
+
+function AchievementList({ achievements }: { achievements: ReadonlyArray<ProfileAchievement> }) {
+  return (
+    <div className={styles.ledger}>
+      <ol>
+        {achievements.map((achievement) => (
+          <li key={`${achievement.name}-${achievement.description}`}>
+            <strong>{achievement.name}</strong>
+            <span>{achievement.description}</span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+function StatisticsLedger({ statistics }: { statistics: ProfileSnapshot["statistics"] }) {
+  if (statistics.availability === "unavailable") {
+    return (
+      <div className={stateStyles.statisticsState} data-availability="unavailable">
+        <span aria-hidden="true" />
+        <p>Estatísticas competitivas sem fonte disponível.</p>
+      </div>
+    );
+  }
+
+  if (statistics.availability === "empty" || statistics.data.length === 0) {
+    return (
+      <div className={stateStyles.statisticsState} data-availability="empty">
+        <span aria-hidden="true" />
+        <p>Fonte disponível, sem estatísticas registradas.</p>
+      </div>
+    );
+  }
+
+  return (
+    <dl className={styles.statisticsLedger} aria-label="Estatísticas verificadas">
+      {statistics.data.map((statistic) => (
+        <div key={`${statistic.label}-${statistic.value}`}>
+          <dt>{statistic.label}</dt>
+          <dd>{statistic.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
+function EvaluationNotice() {
+  return (
+    <aside
+      className={styles.integrityRail}
+      data-evaluation-fixture="true"
+      aria-label="Fixture de avaliação"
+    >
+      <div>
+        <span className={styles.integrityMark} aria-hidden="true">E</span>
+        <div>
+          <p>Modo de avaliação visual</p>
+          <strong>Os registros deste cenário são sintéticos e existem apenas para validar a PROFILE.</strong>
+        </div>
+      </div>
+      <p>
+        O modo normal não recebe estes registros: ele continua exibindo somente fontes reais ou
+        estados explicitamente indisponíveis.
+      </p>
+    </aside>
+  );
+}
+
+function NonIdentityState({ snapshot }: ProfileHallProps) {
+  const copy = PROFILE_STATE_COPY[snapshot.state];
+
+  return (
+    <main
+      className={styles.page}
+      data-profile-state={snapshot.state}
+      data-scene-fallback="html"
+      data-evaluation-fixture={snapshot.isEvaluationFixture || undefined}
+    >
+      <div className="wb-shell-inner">
+        <section className={styles.standaloneState} aria-labelledby="profile-state-title">
+          <StateSeal state={snapshot.state} />
+          <p className="wb-kicker">Salão de Comando</p>
+          <h1 id="profile-state-title">{copy.title}</h1>
+          <p>{copy.description}</p>
+          <ProfileEnvironmentState />
+          {snapshot.isEvaluationFixture ? (
+            <span className={styles.sourceBadge}>Fixture de avaliação ativa</span>
+          ) : null}
+          <Link className="wb-button wb-button--secondary" href="/">
+            Retornar ao comando
+          </Link>
+        </section>
+      </div>
+    </main>
+  );
+}
+
+export function ProfileHall({ snapshot }: ProfileHallProps) {
+  if (!snapshot.identity) {
+    return <NonIdentityState snapshot={snapshot} />;
+  }
+
+  const copy = PROFILE_STATE_COPY[snapshot.state];
+  const progressionAvailable =
+    snapshot.progression.availability === "available" && snapshot.progression.data !== null;
+  const historyAvailability =
+    snapshot.history.availability === "available" && snapshot.history.data.campaigns.length === 0
+      ? "empty"
+      : snapshot.history.availability;
+  const achievementsAvailability =
+    snapshot.achievements.availability === "available" && snapshot.achievements.data.length === 0
+      ? "empty"
+      : snapshot.achievements.availability;
+
+  return (
+    <main
+      className={styles.page}
+      data-profile-state={snapshot.state}
+      data-scene-fallback="html"
+      data-evaluation-fixture={snapshot.isEvaluationFixture || undefined}
+    >
+      <div className={styles.ambientGrid} aria-hidden="true" />
+      <div className="wb-shell-inner">
+        <section className={styles.heading} aria-labelledby="profile-title">
+          <div>
+            <p className="wb-kicker">Arquivo de identidade operacional</p>
+            <h1 id="profile-title">Salão de Comando</h1>
+            <ProfileEnvironmentState />
+          </div>
+          <StateSeal state={snapshot.state} />
+        </section>
+
+        {snapshot.isEvaluationFixture ? <EvaluationNotice /> : null}
+
+        <section className={styles.hall} aria-label="Identidade do comandante">
+          <div className={styles.wallLeft} aria-hidden="true">
+            <span>COMANDO</span>
+            <i />
+            <span>BRASIL</span>
+          </div>
+
+          <div className={styles.identityStage}>
+            <div className={styles.insigniaMount}>
+              <span className={styles.mountLight} aria-hidden="true" />
+              <CommandInsignia
+                monogram={initialsFrom(snapshot.identity.displayName)}
+                label={snapshot.identity.displayName}
+                status={
+                  snapshot.isEvaluationFixture
+                    ? "Fixture de avaliação"
+                    : snapshot.identity.sourceLabel
+                }
+              />
+            </div>
+
+            <div className={styles.identityCopy}>
+              <p className={styles.overline}>Identidade pública</p>
+              <h2>{snapshot.identity.displayName}</h2>
+              <div className={styles.sourceRow}>
+                <span className={styles.sourceBadge}>{snapshot.identity.sourceLabel}</span>
+                {snapshot.isEvaluationFixture ? (
+                  <span className={styles.sourceBadge}>Dados estruturais sintéticos</span>
+                ) : (
+                  <span>Substituição prevista: provedor de usuário autenticado</span>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <aside className={styles.registryPlate} aria-label="Estado do registro">
+            <span className={styles.plateNumber}>REG / 01</span>
+            <p>{copy.label}</p>
+            <strong>{copy.title}</strong>
+            <span>{copy.description}</span>
+            <StatisticsLedger statistics={snapshot.statistics} />
+          </aside>
+        </section>
+
+        <div className={styles.brassLine} aria-hidden="true"><span /></div>
+
+        <section className={styles.records} aria-label="Registros do perfil">
+          <RecordFixture
+            motif="rank"
+            label="Patente e progressão"
+            title="Autoridade registrada"
+            availability={snapshot.progression.availability}
+            unavailableReason={snapshot.progression.unavailableReason}
+          >
+            {progressionAvailable ? (
+              <div className={styles.ledgerSingle}>
+                <strong>{snapshot.progression.data?.title}</strong>
+                {snapshot.progression.data?.detail ? <span>{snapshot.progression.data.detail}</span> : null}
+              </div>
+            ) : null}
+          </RecordFixture>
+
+          <RecordFixture
+            motif="archive"
+            label="Campanhas e histórico"
+            title="Arquivo de campanhas"
+            availability={historyAvailability}
+            unavailableReason={snapshot.history.unavailableReason}
+          >
+            {snapshot.history.availability === "available" && snapshot.history.data.campaigns.length > 0 ? (
+              <CampaignList campaigns={snapshot.history.data.campaigns} hasMore={snapshot.history.data.hasMore} />
+            ) : null}
+          </RecordFixture>
+
+          <RecordFixture
+            motif="medals"
+            label="Honrarias"
+            title="Parede de reconhecimento"
+            availability={achievementsAvailability}
+            unavailableReason={snapshot.achievements.unavailableReason}
+          >
+            {snapshot.achievements.availability === "available" && snapshot.achievements.data.length > 0 ? (
+              <AchievementList achievements={snapshot.achievements.data} />
+            ) : null}
+          </RecordFixture>
+        </section>
+
+        <section className={styles.integrityRail} aria-label="Integridade dos dados">
+          <div>
+            <span className={styles.integrityMark} aria-hidden="true">✓</span>
+            <div>
+              <p>Integridade do arquivo</p>
+              <strong>
+                {snapshot.isEvaluationFixture
+                  ? "Fixture ativa: nenhum registro sintético representa dados reais do usuário."
+                  : "Nenhuma patente, ranking, estatística ou conquista foi simulada."}
+              </strong>
+            </div>
+          </div>
+          <p>
+            {snapshot.isEvaluationFixture
+              ? "O cenário existe apenas para regressão visual e validação dos estados exigidos pelo EVAL."
+              : "Estatísticas competitivas permanecem fora da composição até existir uma fonte de verdade no produto."}
+          </p>
+        </section>
+      </div>
+    </main>
+  );
+}
