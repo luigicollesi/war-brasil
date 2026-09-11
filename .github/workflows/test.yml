@@ -48,3 +48,49 @@ jobs:
       - run: npm run build
         env:
           DATABASE_URL: postgresql://war:war@127.0.0.1:5432/war_ci
+      - name: Prepare isolated Lobby E2E database
+        run: node scripts/e2e/prepare-lobby-db.mjs
+        env:
+          DATABASE_URL: postgresql://war:war@127.0.0.1:5432/war_ci
+          LOBBY_E2E_DATABASE_URL: postgresql://war:war@127.0.0.1:5432/war_lobby_e2e
+      - name: Install pinned Playwright runtime
+        run: |
+          mkdir -p .e2e-runtime
+          npm install --prefix .e2e-runtime --no-save --no-package-lock playwright@1.63.0
+          ./.e2e-runtime/node_modules/.bin/playwright install --with-deps chromium
+      - name: Run Lobby multi-client E2E
+        run: |
+          npm start > /tmp/war-brasil-e2e.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+
+          READY=0
+          for attempt in {1..60}; do
+            if curl --fail --silent http://localhost:3000/matchmaking > /dev/null; then
+              READY=1
+              break
+            fi
+            sleep 1
+          done
+
+          if [ "$READY" -ne 1 ]; then
+            cat /tmp/war-brasil-e2e.log
+            exit 1
+          fi
+
+          npm run test:e2e:lobby
+        env:
+          DATABASE_URL: postgresql://war:war@127.0.0.1:5432/war_lobby_e2e
+          LOBBY_E2E_DATABASE_URL: postgresql://war:war@127.0.0.1:5432/war_lobby_e2e
+          LOBBY_E2E_BASE_URL: http://localhost:3000
+          PLAYWRIGHT_RUNTIME_DIR: .e2e-runtime/node_modules/playwright
+      - name: Upload Lobby EVAL evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lobby-eval-evidence
+          path: |
+            test-results/lobby-eval
+            /tmp/war-brasil-e2e.log
+          if-no-files-found: warn
+          retention-days: 14
