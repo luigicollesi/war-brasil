@@ -22,7 +22,7 @@ function canonicalTerritoryIds() {
   );
 }
 
-test("Foundation publica contrato declarativo pequeno sem coordenadas de câmera", () => {
+test("Foundation publica contrato declarativo pequeno sem coordenadas de câmera ou viewport", () => {
   for (const mode of ["entrance", "operations", "lobby", "doctrine", "profile"]) {
     assert.ok(contract.includes(`"${mode}"`), `modo ausente: ${mode}`);
   }
@@ -34,7 +34,7 @@ test("Foundation publica contrato declarativo pequeno sem coordenadas de câmera
   assert.match(contract, /conflictLevel\?: CommandConflictLevel/);
   assert.match(contract, /territoryExplode\?: number/);
   assert.match(contract, /orbitalAlignment\?: CommandOrbitalAlignment/);
-  assert.doesNotMatch(contract, /quaternion|cameraPosition|cameraTarget|\bx:\s*number|\by:\s*number|\bz:\s*number/);
+  assert.doesNotMatch(contract, /quaternion|cameraPosition|cameraTarget|viewport|compact|\bx:\s*number|\by:\s*number|\bz:\s*number/);
   assert.match(presets, /resolveCommandCameraPose/);
 });
 
@@ -59,6 +59,20 @@ test("renderer é único, reduz motion/loops e reage a perda do contexto WebGL",
   assert.doesNotMatch(canvas, /shadowMap|castShadow|receiveShadow/);
 });
 
+test("composição compacta é interna, determinística e não comprime o desktop", () => {
+  assert.match(scene, /useMediaQuery\("\(max-width: 760px\)"\)/);
+  assert.match(scene, /data-compact-scene=\{compactScene \? "true" : "false"\}/);
+  assert.match(scene, /compact=\{compactScene\}/);
+  assert.match(presets, /COMPACT_MODE_PRESETS/);
+  assert.match(presets, /COMPACT_FOCUS_TARGETS/);
+  assert.match(presets, /compact = false/);
+  assert.match(canvas, /const DESKTOP_LAYOUT: SceneLayout/);
+  assert.match(canvas, /const COMPACT_LAYOUT: SceneLayout/);
+  assert.match(canvas, /objectScale: 0\.82/);
+  assert.match(canvas, /<ArchitecturalRails compact=\{compact\} \/>/);
+  assert.match(canvas, /if \(compact\) return null/);
+});
+
 test("Brasil 2.5D deriva somente do SVG canônico e mantém os 42 ids únicos", () => {
   const ids = canonicalTerritoryIds();
   assert.equal(ids.length, 42);
@@ -79,6 +93,15 @@ test("Brasil 2.5D deriva somente do SVG canônico e mantém os 42 ids únicos", 
   assert.doesNotMatch(canvas, /position-x=\{.*territoryExplode|position-y=\{.*territoryExplode/);
 });
 
+test("territórios cenográficos não expõem seleção acidental antes de existir interação", () => {
+  const start = canvas.indexOf("function BrazilTerritoryAssembly");
+  const end = canvas.indexOf("function OrbitalCrown");
+  const assembly = canvas.slice(start, end);
+
+  assert.ok(start >= 0 && end > start);
+  assert.doesNotMatch(assembly, /onClick=|onPointer|onTouch|onKeyDown|tabIndex/);
+});
+
 test("Mesa, Globo e Coroa Orbital permanecem objetos de assinatura identificáveis", () => {
   assert.match(canvas, /name="StrategicGlobe"/);
   assert.match(canvas, /name="DomainTable"/);
@@ -97,7 +120,7 @@ test("fallback 2D permanece visível até o Brasil 3D estar realmente pronto", (
   assert.match(scene, /fallbackCrownRingB/);
   assert.match(scene, /fallbackCrownRingC/);
   assert.match(scene, /sceneFailed \? "fallback"/);
-  assert.match(canvas, /<BrazilTerritoryAssembly intent=\{intent\} onReady=\{onReady\} \/>/);
+  assert.match(canvas, /<BrazilTerritoryAssembly[\s\S]*?onReady=\{onReady\}[\s\S]*?\/>/);
   assert.match(canvas, /useEffect\(\(\) => \{\s*onReady\(\);/);
   assert.doesNotMatch(canvas, /onCreated=\{\(\{ gl \}\) => \{[\s\S]*?onReady\(\)/);
   assert.match(css, /\.canvasLayer \{[\s\S]*?opacity: 0/);
