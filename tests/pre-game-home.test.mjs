@@ -15,6 +15,10 @@ const styles = readFileSync(
   "src/components/pre-game/home/command-home.module.css",
   "utf8",
 );
+const polish = readFileSync(
+  "src/components/pre-game/home/command-home-polish.module.css",
+  "utf8",
+);
 const svg = readFileSync("public/war-brasil-42.production.svg", "utf8");
 
 test("HOME preserva metadata, canonical e structured data existentes", () => {
@@ -96,8 +100,22 @@ test("mobile possui composição própria sem overflow horizontal nem ação dep
   assert.match(styles, /@media \(max-width: 720px\)/);
   assert.match(styles, /\.destinationRail \{\s*grid-template-columns: 1fr;/);
   assert.match(styles, /\.destination \{\s*min-height: 64px;/);
+  assert.match(polish, /\.viewportBounded \{[\s\S]*max-width: 96vw;/);
+  assert.match(polish, /\.destinationTouchTarget \{\s*min-height: 68px;/);
+  assert.match(polish, /\.skipTouchTarget \{[\s\S]*min-height: 44px;/);
+  assert.match(polish, /env\(safe-area-inset-bottom\)/);
+  assert.match(fallback, /polish\.viewportBounded/);
+  assert.match(home, /polish\.destinationTouchTarget/);
+  assert.match(home, /polish\.touchControl/);
   assert.match(home, /onFocus=\{\(\) => setDestinationFocus\(destination\.id\)\}/);
   assert.match(home, /onClick=\{\(\) => setTransitioningTo\(destination\.id\)\}/);
+});
+
+test("mobile coarse pointer não depende de hover para feedback ou acionamento", () => {
+  assert.match(polish, /@media \(hover: none\) and \(pointer: coarse\)/);
+  assert.match(polish, /touch-action: manipulation/);
+  assert.match(home, /href=\{destination\.href\}/);
+  assert.match(home, /ENTRAR NO COMANDO/);
 });
 
 test("vermelho de conflito é introduzido apenas no foco de Operações", () => {
