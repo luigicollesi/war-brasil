@@ -60,15 +60,30 @@ test("read model da Doutrina deriva mecânicas das autoridades do jogo", () => {
   );
 });
 
-test("/rules resolve deep-link no servidor sem depender de Canvas", () => {
+test("/rules resolve deep-link no servidor dentro da Foundation sem depender de Canvas", () => {
   const page = source("src/app/rules/page.tsx");
 
   assert.match(page, /await searchParams/);
   assert.match(page, /isDoctrineChapterSlug/);
   assert.match(page, /buildDoctrinePresentation/);
+  assert.match(page, /<CommandShell/);
+  assert.match(page, /intent=\{DOCTRINE_SCENE_INTENT\}/);
+  assert.match(page, /sectionLabel="DOUTRINA"/);
   assert.match(page, /<DoctrineExperience/);
   assert.match(page, /canonical: "\/rules"/);
   assert.doesNotMatch(page, /Canvas|@react-three|three\//i);
+});
+
+test("Doutrina emite somente intenção semântica para a Foundation", () => {
+  const intent = source("src/components/doctrine/doctrine-scene-intent.ts");
+  const page = source("src/app/rules/page.tsx");
+
+  assert.match(intent, /mode: "doctrine"/);
+  assert.match(intent, /focus: "brazil"/);
+  assert.match(intent, /territoryExplode: 0\.18/);
+  assert.match(intent, /satisfies CommandSceneIntent/);
+  assert.doesNotMatch(intent, /camera|quaternion|fov|position|\bx:|\by:|\bz:/i);
+  assert.doesNotMatch(page, /CommandScene|CameraDirector|@react-three|three\//i);
 });
 
 test("índice usa links reais e troca de capítulo preserva foco e scroll", () => {
@@ -81,6 +96,9 @@ test("índice usa links reais e troca de capítulo preserva foco e scroll", () =
   assert.match(experience, /popstate/);
   assert.match(experience, /aria-current=\{active \? "location"/);
   assert.match(experience, /aria-label="Capítulos da Doutrina"/);
+  assert.match(experience, /aria-live="polite"/);
+  assert.match(experience, /aria-atomic="true"/);
+  assert.match(experience, /Capítulo \{activeChapter\.number\}/);
   assert.match(experience, /ANTERIOR/);
   assert.match(experience, /PRÓXIMO/);
   assert.match(experience, /prefetch=\{false\}/);
@@ -93,7 +111,8 @@ test("orquestração cliente permanece pequena e delega as demonstrações", () 
   );
 
   assert.match(experience, /DoctrineChapterDemo/);
-  assert.doesNotMatch(experience, /GameDie|GuideBoardScene|TerritoryCardArtwork/);
+  assert.match(experience, /foundationIntegrated/);
+  assert.doesNotMatch(experience, /DoctrineMark|styles\.topbar|GameDie|GuideBoardScene|TerritoryCardArtwork/);
 });
 
 test("demonstrações reutilizam mapa, dados e cartas reais com equivalente textual", () => {
@@ -107,9 +126,12 @@ test("demonstrações reutilizam mapa, dados e cartas reais com equivalente text
   assert.doesNotMatch(demos, /Canvas|@react-three|three\//i);
 });
 
-test("layout da Doutrina recompõe mobile e respeita reduced motion", () => {
+test("layout da Doutrina recompõe mobile, preserva a cena compartilhada e respeita reduced motion", () => {
   const css = source(
     "src/components/doctrine/doctrine-experience.module.css",
+  );
+  const integrationCss = source(
+    "src/components/doctrine/doctrine-foundation-integration.module.css",
   );
 
   assert.match(css, /@media \(max-width: 760px\)/);
@@ -118,4 +140,7 @@ test("layout da Doutrina recompõe mobile e respeita reduced motion", () => {
   assert.match(css, /overflow-x: clip/);
   assert.match(css, /\.chapterNav[\s\S]*overflow-x: auto/);
   assert.match(css, /min-height: 44px/);
+  assert.match(integrationCss, /rgb\(5 10 8 \/ 68%\)/);
+  assert.match(integrationCss, /@media \(max-width: 760px\)/);
+  assert.match(integrationCss, /@media \(prefers-reduced-motion: reduce\)/);
 });
