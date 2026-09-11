@@ -1,0 +1,66 @@
+.environmentState {
+  display: flex;
+  margin-top: .8rem;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .45rem .6rem;
+  color: #87978f;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: .58rem;
+  font-weight: 700;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.environmentState > span {
+  display: inline-flex;
+  min-height: 1.7rem;
+  align-items: center;
+  gap: .4rem;
+  border: 1px solid rgba(214, 169, 62, .12);
+  padding: .28rem .48rem;
+  background: rgba(5, 17, 13, .46);
+}
+
+.environmentState > span::before {
+  content: "";
+  width: .32rem;
+  height: .32rem;
+  border: 1px solid rgba(214, 169, 62, .48);
+  transform: rotate(45deg);
+}
+
+.motionReduced {
+  display: none !important;
+}
+
+@media (max-width: 640px) {
+  .environmentState {
+    width: 100%;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .environmentState > span {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motionDefault {
+    display: none !important;
+  }
+
+  .motionReduced {
+    display: inline-flex !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .environmentState > span,
+  .environmentState > span::before {
+    border-color: CanvasText;
+  }
+}
