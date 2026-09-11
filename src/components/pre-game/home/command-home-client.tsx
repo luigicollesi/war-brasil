@@ -89,7 +89,10 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
   const [ceremonyPhase, setCeremonyPhase] = useState<CeremonyPhase>("earth");
   const [repeatVisit, setRepeatVisit] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
-  const [destinationFocus, setDestinationFocus] = useState<DestinationId | null>(null);
+  const [keyboardDestinationFocus, setKeyboardDestinationFocus] =
+    useState<DestinationId | null>(null);
+  const [pointerDestinationFocus, setPointerDestinationFocus] =
+    useState<DestinationId | null>(null);
   const [transitioningTo, setTransitioningTo] = useState<DestinationId | null>(null);
 
   const reducedMotion = useSyncExternalStore(
@@ -101,6 +104,7 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
   const visitMode: VisitMode = reducedMotion ? "reduced" : repeatVisit ? "repeat" : "first";
   const effectiveCeremonyPhase: CeremonyPhase =
     visitMode === "first" ? ceremonyPhase : "stable";
+  const destinationFocus = keyboardDestinationFocus ?? pointerDestinationFocus;
 
   useEffect(() => {
     const wasSeen = wasRitualSeenThisSession();
@@ -139,12 +143,17 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
 
   const enterCommand = () => {
     setCeremonyPhase("stable");
-    setDestinationFocus(null);
+    setKeyboardDestinationFocus(null);
+    setPointerDestinationFocus(null);
     setCommandOpen(true);
   };
 
-  const clearFocus = (destination: DestinationId) => {
-    setDestinationFocus((current) => (current === destination ? null : current));
+  const clearKeyboardFocus = (destination: DestinationId) => {
+    setKeyboardDestinationFocus((current) => (current === destination ? null : current));
+  };
+
+  const clearPointerFocus = (destination: DestinationId) => {
+    setPointerDestinationFocus((current) => (current === destination ? null : current));
   };
 
   const homeState: HomeState = transitioningTo
@@ -174,6 +183,7 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
         id="home-command"
         className={`${styles.commandDock} ${polish.commandDockSafe}`}
         aria-label="Acesso ao comando"
+        tabIndex={-1}
       >
         {!commandOpen ? (
           <div className={styles.authorization}>
@@ -223,10 +233,10 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
                   className={`${styles.destination} ${polish.touchControl} ${polish.destinationTouchTarget}`}
                   data-destination={destination.id}
                   onClick={() => setTransitioningTo(destination.id)}
-                  onFocus={() => setDestinationFocus(destination.id)}
-                  onBlur={() => clearFocus(destination.id)}
-                  onPointerEnter={() => setDestinationFocus(destination.id)}
-                  onPointerLeave={() => clearFocus(destination.id)}
+                  onFocus={() => setKeyboardDestinationFocus(destination.id)}
+                  onBlur={() => clearKeyboardFocus(destination.id)}
+                  onPointerEnter={() => setPointerDestinationFocus(destination.id)}
+                  onPointerLeave={() => clearPointerFocus(destination.id)}
                 >
                   <span className={styles.destinationIndex} aria-hidden="true">
                     {destination.index}
