@@ -2,22 +2,19 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-const css = readFileSync("src/app/war-guide-geographic.css", "utf8");
+const geographicCss = readFileSync("src/app/war-guide-geographic.css", "utf8");
+const mobileMapCss = readFileSync("src/app/war-guide-mobile-map.css", "utf8");
 
-test("mobile guide map labels keep a thin outline for readability", () => {
-  const mobileStart = css.indexOf("@media (max-width: 700px)");
-  assert.ok(mobileStart >= 0, "mobile guide breakpoint is missing");
-
-  const mobileCss = css.slice(mobileStart);
+test("mobile guide map labels override the legacy light-label styling", () => {
   assert.match(
-    mobileCss,
-    /\.wb-guide-map-territory-name\s*\{[\s\S]*?font-size:\s*14px;[\s\S]*?letter-spacing:\s*\.02em;[\s\S]*?paint-order:\s*stroke fill;[\s\S]*?stroke-width:\s*1\.5px;/,
+    mobileMapCss,
+    /\.wb-guide-map-territory-name\s*\{[\s\S]*?fill:\s*#050505;[\s\S]*?stroke:\s*none;[\s\S]*?font-size:\s*17px;/,
   );
 });
 
 test("desktop guide map labels preserve the established styling", () => {
-  const mobileStart = css.indexOf("@media (max-width: 700px)");
-  const desktopCss = css.slice(0, mobileStart);
+  const mobileStart = geographicCss.indexOf("@media (max-width: 700px)");
+  const desktopCss = mobileStart >= 0 ? geographicCss.slice(0, mobileStart) : geographicCss;
 
   assert.match(
     desktopCss,
