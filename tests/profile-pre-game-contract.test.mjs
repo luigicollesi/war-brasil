@@ -32,28 +32,50 @@ test("renderização diferencia ausência de dado real e mantém equivalentes te
   assert.doesNotMatch(hall, /@react-three\/fiber|\bthree\b|Canvas/);
 });
 
+test("PROFILE consome somente a API pública da Foundation", () => {
+  const shell = source("src/components/profile/profile-command-shell.tsx");
+  const hall = source("src/components/profile/profile-hall.tsx");
+  const page = source("src/app/profile/page.tsx");
+
+  assert.match(shell, /from "@\/src\/components\/pre-game\/foundation"/);
+  assert.match(shell, /mode: "profile"/);
+  assert.match(shell, /focus: "insignia"/);
+  assert.match(hall, /CommandInsignia/);
+  assert.match(hall, /from "@\/src\/components\/pre-game\/foundation"/);
+  assert.doesNotMatch(hall, /\.\/command-insignia/);
+  assert.doesNotMatch(`${shell}\n${hall}\n${page}`, /@react-three\/fiber|command-scene-canvas|\bthree\b|Canvas/);
+});
+
 test("profile possui loading, erro, mobile e reduced-motion explícitos", () => {
   const loading = source("src/app/profile/loading.tsx");
   const error = source("src/app/profile/error.tsx");
   const boundary = source("src/components/profile/profile-boundary-state.tsx");
   const boundaryCss = source("src/components/profile/profile-boundary-state.module.css");
   const hallCss = source("src/components/profile/profile-hall.module.css");
-  const insigniaCss = source("src/components/profile/command-insignia.module.css");
   const environment = source("src/components/profile/profile-environment-state.tsx");
   const environmentCss = source("src/components/profile/profile-environment-state.module.css");
 
   assert.match(loading, /sem valores simulados/);
   assert.match(error, /Nenhum dado fictício será exibido/);
+  assert.match(loading, /ProfileCommandShell/);
+  assert.match(error, /ProfileCommandShell/);
   assert.match(boundary, /aria-busy=\{isLoading \|\| undefined\}/);
   assert.match(boundary, /data-scene-fallback="html"/);
   assert.match(boundaryCss, /@media \(max-width: 480px\)/);
   assert.match(boundaryCss, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(hallCss, /@media \(max-width: 640px\)/);
   assert.match(hallCss, /@media \(prefers-reduced-motion: reduce\)/);
-  assert.match(insigniaCss, /@media \(prefers-reduced-motion: reduce\)/);
-  assert.match(environment, /Cena funcional HTML\/2D ativa/);
+  assert.match(environment, /Conteúdo funcional independente de WebGL/);
   assert.match(environment, /Movimento reduzido ativo/);
   assert.match(environmentCss, /@media \(prefers-reduced-motion: reduce\)/);
+});
+
+test("WarShell fica transparente apenas dentro da Foundation da PROFILE", () => {
+  const shellCss = source("src/components/profile/profile-command-shell.module.css");
+
+  assert.match(shellCss, /:global\(\.wb-shell\)/);
+  assert.match(shellCss, /background: transparent/);
+  assert.match(shellCss, /:global\(\.wb-header\)/);
 });
 
 test("rota força resolução em request-time antes de consultar o perfil", () => {
