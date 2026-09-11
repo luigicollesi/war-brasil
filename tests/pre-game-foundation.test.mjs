@@ -12,6 +12,7 @@ const shell = source("src/components/pre-game/foundation/command-shell.tsx");
 const scene = source("src/components/pre-game/foundation/command-scene.tsx");
 const canvas = source("src/components/pre-game/foundation/command-scene-canvas.tsx");
 const primitives = source("src/components/pre-game/foundation/command-primitives.tsx");
+const publicIndex = source("src/components/pre-game/foundation/index.ts");
 const css = source("src/components/pre-game/foundation/command-foundation.module.css");
 const evalFixtures = source("src/components/pre-game/foundation/eval-fixtures.ts");
 const svg = source("public/war-brasil-42.production.svg");
@@ -37,6 +38,7 @@ test("Foundation publica contrato declarativo pequeno sem coordenadas de câmera
   assert.match(contract, /orbitalAlignment\?: CommandOrbitalAlignment/);
   assert.doesNotMatch(contract, /quaternion|cameraPosition|cameraTarget|viewport|compact|\bx:\s*number|\by:\s*number|\bz:\s*number/);
   assert.match(presets, /resolveCommandCameraPose/);
+  assert.doesNotMatch(publicIndex, /command-scene-canvas|export \{ CommandScene \}/);
 });
 
 test("CommandShell mantém um único host de cena e conteúdo funcional separado do WebGL", () => {
@@ -50,12 +52,15 @@ test("CommandShell mantém um único host de cena e conteúdo funcional separado
   assert.match(scene, /SceneErrorBoundary/);
 });
 
-test("renderer é único, reduz motion/loops e reage a perda do contexto WebGL", () => {
+test("renderer é único, reduced-motion é determinístico e perda de WebGL degrada", () => {
   assert.equal((canvas.match(/<Canvas\b/g) ?? []).length, 1);
   assert.match(canvas, /frameloop=\{reducedMotion \? "demand" : "always"\}/);
   assert.match(scene, /prefers-reduced-motion: reduce/);
   assert.match(canvas, /webglcontextlost/);
   assert.match(canvas, /if \(reducedMotion\) return/);
+  assert.match(canvas, /globeRef\.current\.rotation\.y = 0/);
+  assert.match(canvas, /commandRef\.current\.rotation\.z = aligned \? 0 : 0\.08/);
+  assert.match(canvas, /conflictRef\.current\.rotation\.z = aligned \? 0 : -0\.11/);
   assert.match(canvas, /dpr=\{\[1, maxDpr\]\}/);
   assert.doesNotMatch(canvas, /shadowMap|castShadow|receiveShadow/);
 });
@@ -73,6 +78,7 @@ test("composição compacta é interna, determinística e cobre mobile/tablet do
   assert.match(canvas, /objectScale: 0\.82/);
   assert.match(canvas, /<ArchitecturalRails compact=\{compact\} \/>/);
   assert.match(canvas, /if \(compact\) return null/);
+  assert.match(css, /@media \(max-width: 900px\)/);
 });
 
 test("fixtures de avaliação preservam os viewports e estados visuais normativos", () => {
