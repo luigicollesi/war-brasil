@@ -1,5 +1,6 @@
 "use client";
 
+import { ProfileBoundaryState } from "@/src/components/profile/profile-boundary-state";
 import { WarShell } from "@/src/components/war-shell";
 
 type ProfileErrorProps = {
@@ -12,19 +13,17 @@ export default function ProfileError({ error, reset }: ProfileErrorProps) {
 
   return (
     <WarShell title="Salão de Comando" backHref="/" backLabel="Início">
-      <main className="wb-page">
-        <div className="wb-shell-inner">
-          <p className="wb-kicker">Arquivo indisponível</p>
-          <h1 className="wb-page-title">O registro não pôde ser aberto.</h1>
-          <p className="wb-page-lead">
-            Nenhum dado fictício será exibido para preencher a ausência do perfil. Tente consultar
-            a fonte novamente.
-          </p>
-          <button className="wb-button wb-button--secondary mt-7" type="button" onClick={reset}>
+      <ProfileBoundaryState
+        variant="error"
+        eyebrow="Arquivo indisponível"
+        title="O registro não pôde ser aberto"
+        description="Nenhum dado fictício será exibido para preencher a ausência do perfil. A falha permanece isolada ao arquivo do comandante."
+        action={
+          <button className="wb-button wb-button--secondary" type="button" onClick={reset}>
             Tentar novamente
           </button>
-        </div>
-      </main>
+        }
+      />
     </WarShell>
   );
 }
