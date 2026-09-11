@@ -42,11 +42,11 @@ test("HOME preserva metadata, canonical e structured data existentes", () => {
   assert.match(page, /<CommandHomeContent \/>/);
 });
 
-test("HOME consome somente o contrato público da Foundation", () => {
-  assert.match(home, /import \{ CommandShell \} from "\.\.\/foundation"/);
-  assert.match(intent, /import type \{ CommandSceneIntent \} from "\.\.\/foundation"/);
-  assert.match(foundationIndex, /export \{ CommandShell \}/);
-  assert.match(foundationIndex, /CommandSceneIntent/);
+test("HOME consome somente o contrato público do runtime Foundation", () => {
+  assert.match(home, /import \{ useCommandSceneDirective \} from "\.\.\/foundation"/);
+  assert.match(intent, /import type \{ CommandSceneDirective \} from "\.\.\/foundation"/);
+  assert.match(foundationIndex, /useCommandSceneDirective/);
+  assert.match(foundationIndex, /CommandSceneDirective/);
 
   const homeSources = `${home}\n${content}\n${intent}`;
   assert.doesNotMatch(homeSources, /@react-three\/fiber/);
@@ -55,13 +55,14 @@ test("HOME consome somente o contrato público da Foundation", () => {
   assert.doesNotMatch(homeSources, /scene-presets/);
   assert.doesNotMatch(homeSources, /CameraDirector/);
   assert.doesNotMatch(homeSources, /<Canvas/);
+  assert.doesNotMatch(homeSources, /<CommandShell/);
 
   assert.match(fallbackMarker, /HOME_FALLBACK_OWNER = "Foundation CommandShell"/);
   assert.doesNotMatch(fallbackMarker, /next\/image|<Image|war-brasil-42|globe|domainTable|orbit/i);
   assert.equal(existsSync(legacyPolishPath), false);
 });
 
-test("HOME substitui o hero legado pela entrada de comando sobre CommandShell", () => {
+test("HOME substitui o hero legado e publica intenção no runtime persistente", () => {
   assert.doesNotMatch(page, /GameQuickGuide/);
   assert.doesNotMatch(page, /HomeTerritoryMap/);
   assert.doesNotMatch(page, /WarShell/);
@@ -70,7 +71,7 @@ test("HOME substitui o hero legado pela entrada de comando sobre CommandShell", 
   assert.match(home, /ENTRAR NO COMANDO/);
   assert.match(home, /data-home-state=\{homeState\}/);
   assert.match(home, /data-scene="foundation"/);
-  assert.match(home, /<CommandShell intent=\{sceneIntent\} sectionLabel="ENTRADA">/);
+  assert.match(home, /useCommandSceneDirective\(sceneIntent\)/);
 });
 
 test("HOME expõe os três destinos como links DOM com as rotas do spec", () => {
@@ -92,12 +93,13 @@ test("adapter cobre Terra, Brasil, Mesa e autorização sem coordenadas", () => 
   assert.match(intent, /focus: "table"/);
   assert.match(intent, /orbitalAlignment: 1/);
   assert.doesNotMatch(intent, /\b(?:x|y|z|fov|quaternion|camera|material)\s*:/i);
+  assert.doesNotMatch(intent, /\bmode\s*:/);
 });
 
-test("adapter mapeia focos dos destinos para intents semânticos", () => {
-  assert.match(intent, /operations:[\s\S]*mode: "operations"[\s\S]*conflictLevel: 1[\s\S]*territoryExplode: 0\.08/);
-  assert.match(intent, /doctrine:[\s\S]*mode: "doctrine"[\s\S]*territoryExplode: 0\.12/);
-  assert.match(intent, /profile:[\s\S]*mode: "profile"[\s\S]*focus: "insignia"/);
+test("adapter mapeia focos dos destinos para diretivas semânticas", () => {
+  assert.match(intent, /operations:[\s\S]*conflictLevel: 1[\s\S]*territoryExplode: 0\.08/);
+  assert.match(intent, /doctrine:[\s\S]*territoryExplode: 0\.12/);
+  assert.match(intent, /profile:[\s\S]*focus: "insignia"/);
   assert.match(intent, /transitioningTo \?\? destinationFocus/);
 });
 
