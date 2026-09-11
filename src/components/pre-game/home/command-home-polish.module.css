@@ -1,0 +1,58 @@
+.root {
+  max-width: 100%;
+}
+
+@supports (min-height: 100dvh) {
+  .root {
+    min-height: 100dvh;
+  }
+}
+
+.viewportBounded {
+  max-width: 96vw;
+  box-sizing: border-box;
+}
+
+.commandDockSafe {
+  box-sizing: border-box;
+  padding-bottom: max(12px, env(safe-area-inset-bottom));
+}
+
+.touchControl {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.skipTouchTarget {
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 720px) {
+  .commandDockSafe {
+    padding-bottom: max(16px, env(safe-area-inset-bottom));
+  }
+
+  .destinationTouchTarget {
+    min-height: 68px;
+  }
+
+  .skipTouchTarget {
+    min-height: 44px;
+    padding-inline: 12px;
+  }
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .touchControl:hover {
+    transform: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .touchControl {
+    scroll-behavior: auto;
+  }
+}
