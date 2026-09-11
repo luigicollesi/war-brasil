@@ -39,6 +39,8 @@ test("profile possui loading, erro, mobile e reduced-motion explícitos", () => 
   const boundaryCss = source("src/components/profile/profile-boundary-state.module.css");
   const hallCss = source("src/components/profile/profile-hall.module.css");
   const insigniaCss = source("src/components/profile/command-insignia.module.css");
+  const environment = source("src/components/profile/profile-environment-state.tsx");
+  const environmentCss = source("src/components/profile/profile-environment-state.module.css");
 
   assert.match(loading, /sem valores simulados/);
   assert.match(error, /Nenhum dado fictício será exibido/);
@@ -49,6 +51,22 @@ test("profile possui loading, erro, mobile e reduced-motion explícitos", () => 
   assert.match(hallCss, /@media \(max-width: 640px\)/);
   assert.match(hallCss, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(insigniaCss, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(environment, /Cena funcional HTML\/2D ativa/);
+  assert.match(environment, /Movimento reduzido ativo/);
+  assert.match(environmentCss, /@media \(prefers-reduced-motion: reduce\)/);
+});
+
+test("rota força resolução em request-time antes de consultar o perfil", () => {
+  const profilePage = source("src/app/profile/page.tsx");
+
+  assert.match(profilePage, /import \{ connection \} from "next\/server"/);
+  assert.match(profilePage, /await connection\(\);\s*\n\s*const snapshot = await getCurrentProfileSnapshot\(\)/);
+});
+
+test("profile-data participa do test:compile", () => {
+  const testConfig = source("tsconfig.test.json");
+
+  assert.match(testConfig, /src\/lib\/profile\/profile-data\.ts/);
 });
 
 test("estados de avaliação são opt-in no servidor e não podem ser escolhidos pela URL", () => {
