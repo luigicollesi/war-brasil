@@ -94,7 +94,7 @@ function CommandSceneFallback({ intent }: { intent: ReturnType<typeof normalizeC
             alt=""
             fill
             unoptimized
-            sizes="(max-width: 760px) 72vw, 46vw"
+            sizes="(max-width: 900px) 72vw, 46vw"
           />
         </div>
       </div>
@@ -109,7 +109,7 @@ export function CommandScene({ intent, className }: CommandSceneProps) {
   );
   const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const coarsePointer = useMediaQuery("(pointer: coarse)");
-  const compactScene = useMediaQuery("(max-width: 760px)");
+  const compactScene = useMediaQuery("(max-width: 900px)");
   const maxDpr =
     reducedMotion || coarsePointer || compactScene
       ? COMMAND_FOUNDATION_TOKENS.scene.maxReducedDpr
