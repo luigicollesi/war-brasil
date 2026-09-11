@@ -13,6 +13,7 @@ const scene = source("src/components/pre-game/foundation/command-scene.tsx");
 const canvas = source("src/components/pre-game/foundation/command-scene-canvas.tsx");
 const primitives = source("src/components/pre-game/foundation/command-primitives.tsx");
 const css = source("src/components/pre-game/foundation/command-foundation.module.css");
+const evalFixtures = source("src/components/pre-game/foundation/eval-fixtures.ts");
 const svg = source("public/war-brasil-42.production.svg");
 const pkg = JSON.parse(source("package.json"));
 
@@ -72,6 +73,25 @@ test("composição compacta é interna, determinística e cobre mobile/tablet do
   assert.match(canvas, /objectScale: 0\.82/);
   assert.match(canvas, /<ArchitecturalRails compact=\{compact\} \/>/);
   assert.match(canvas, /if \(compact\) return null/);
+});
+
+test("fixtures de avaliação preservam os viewports e estados visuais normativos", () => {
+  for (const viewport of ["390, height: 844", "768, height: 1024", "1440, height: 900", "1920, height: 1080"]) {
+    assert.ok(evalFixtures.includes(`width: ${viewport}`), `viewport ausente: ${viewport}`);
+  }
+  for (const state of [
+    "entrance-idle",
+    "operations-focus",
+    "lobby",
+    "doctrine",
+    "profile",
+    "conflict-authorized",
+    "reduced-motion",
+    "fallback",
+  ]) {
+    assert.ok(evalFixtures.includes(`"${state}"`) || evalFixtures.includes(`${state}:`), `estado ausente: ${state}`);
+  }
+  assert.doesNotMatch(evalFixtures, /Math\.random|Date\.now|performance\.now/);
 });
 
 test("Brasil 2.5D deriva somente do SVG canônico e mantém os 42 ids únicos", () => {
