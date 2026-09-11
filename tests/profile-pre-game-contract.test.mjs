@@ -46,7 +46,7 @@ test("PROFILE consome somente a API pública da Foundation", () => {
   assert.doesNotMatch(`${shell}\n${hall}\n${page}`, /@react-three\/fiber|command-scene-canvas|\bthree\b|Canvas/);
 });
 
-test("profile possui loading, erro, mobile e reduced-motion explícitos", () => {
+test("profile possui loading, erro, mobile, fallback e reduced-motion explícitos", () => {
   const loading = source("src/app/profile/loading.tsx");
   const error = source("src/app/profile/error.tsx");
   const boundary = source("src/components/profile/profile-boundary-state.tsx");
@@ -65,8 +65,12 @@ test("profile possui loading, erro, mobile e reduced-motion explícitos", () => 
   assert.match(boundaryCss, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(hallCss, /@media \(max-width: 640px\)/);
   assert.match(hallCss, /@media \(prefers-reduced-motion: reduce\)/);
-  assert.match(environment, /Conteúdo funcional independente de WebGL/);
+  assert.match(environment, /Fallback 2D ativo durante preparação da cena/);
+  assert.match(environment, /Cena 3D disponível; conteúdo HTML preservado/);
+  assert.match(environment, /Fallback 2D ativo; conteúdo HTML preservado/);
   assert.match(environment, /Movimento reduzido ativo/);
+  assert.match(environmentCss, /data-webgl=\"ready\"/);
+  assert.match(environmentCss, /data-webgl=\"fallback\"/);
   assert.match(environmentCss, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
