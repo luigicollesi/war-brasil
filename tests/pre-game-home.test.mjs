@@ -107,8 +107,16 @@ test("mobile possui composição própria sem overflow horizontal nem ação dep
   assert.match(fallback, /polish\.viewportBounded/);
   assert.match(home, /polish\.destinationTouchTarget/);
   assert.match(home, /polish\.touchControl/);
-  assert.match(home, /onFocus=\{\(\) => setDestinationFocus\(destination\.id\)\}/);
+  assert.match(home, /tabIndex=\{-1\}/);
   assert.match(home, /onClick=\{\(\) => setTransitioningTo\(destination\.id\)\}/);
+});
+
+test("foco de teclado tem prioridade sobre intenção efêmera do ponteiro", () => {
+  assert.match(home, /keyboardDestinationFocus \?\? pointerDestinationFocus/);
+  assert.match(home, /onFocus=\{\(\) => setKeyboardDestinationFocus\(destination\.id\)\}/);
+  assert.match(home, /onBlur=\{\(\) => clearKeyboardFocus\(destination\.id\)\}/);
+  assert.match(home, /onPointerEnter=\{\(\) => setPointerDestinationFocus\(destination\.id\)\}/);
+  assert.match(home, /onPointerLeave=\{\(\) => clearPointerFocus\(destination\.id\)\}/);
 });
 
 test("mobile coarse pointer não depende de hover para feedback ou acionamento", () => {
