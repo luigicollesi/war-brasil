@@ -7,6 +7,7 @@ const operationsTypes = readFileSync("src/components/operations-types.ts", "utf8
 const operationsRequest = readFileSync("src/components/operations-request.ts", "utf8");
 const createRoom = readFileSync("src/components/create-room-button.tsx", "utf8");
 const joinRoom = readFileSync("src/components/join-room-form.tsx", "utf8");
+const serverRooms = readFileSync("src/lib/server/rooms.ts", "utf8");
 const states = readFileSync(
   "src/app/matchmaking/operations-states.module.css",
   "utf8",
@@ -47,13 +48,16 @@ test("Operations usa tabs horizontais com painel alcançável por teclado", () =
   assert.doesNotMatch(operations, /ArrowUp|ArrowDown/);
 });
 
-test("Localizar operação preserva input único, paste e classificação de código inválido", () => {
+test("Localizar operação preserva normalização vigente e usa exemplo compatível com o servidor", () => {
   assert.equal((joinRoom.match(/<input/g) ?? []).length, 1);
   assert.match(joinRoom, /value=\{roomCode\}/);
+  assert.match(joinRoom, /\.trim\(\)[\s\S]*\.toLowerCase\(\)[\s\S]*\.replace\(\/\[\^a-z0-9-\]\//);
+  assert.match(joinRoom, /placeholder="A7C9K2"/);
   assert.match(joinRoom, /inputMode="text"/);
   assert.match(joinRoom, /enterKeyHint="go"/);
   assert.match(joinRoom, /response\.status === 404 \|\| response\.status === 422/);
   assert.match(joinRoom, /onStatusChange\?\.\("invalid-code"\)/);
+  assert.match(serverRooms, /\^\[A-Z0-9\]\{6\}\$/);
   assert.doesNotMatch(joinRoom, /maxLength=/);
 });
 

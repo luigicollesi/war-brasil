@@ -126,7 +126,7 @@ export function JoinRoomForm({
             onInteractionChange?.("typing-code");
             if (!requestInFlightRef.current) onStatusChange?.("idle");
           }}
-          placeholder="BRASIL-42"
+          placeholder="A7C9K2"
           inputMode="text"
           enterKeyHint="go"
           autoComplete="off"
