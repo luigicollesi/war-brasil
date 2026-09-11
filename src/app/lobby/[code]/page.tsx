@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { LobbyClient } from "@/src/components/lobby-client";
-import { WarShell } from "@/src/components/war-shell";
 
 type LobbyPageProps = {
   params: Promise<{ code: string }>;
@@ -14,14 +14,11 @@ export default async function LobbyPage({ params }: LobbyPageProps) {
   const { code } = await params;
 
   return (
-    <WarShell
-      backHref="/matchmaking"
-      backLabel="Operações"
-      title="Sala de Comando"
-    >
-      <main className="wb-shell-inner wb-lobby-shell">
-        <LobbyClient code={code} />
-      </main>
-    </WarShell>
+    <main className="wb-shell-inner wb-lobby-shell">
+      <Link href="/matchmaking" className="wb-ghost-link">
+        ← Operações
+      </Link>
+      <LobbyClient code={code} />
+    </main>
   );
 }
