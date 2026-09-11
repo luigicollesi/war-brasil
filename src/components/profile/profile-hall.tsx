@@ -167,6 +167,28 @@ function StatisticsLedger({ statistics }: { statistics: ProfileSnapshot["statist
   );
 }
 
+function EvaluationNotice() {
+  return (
+    <aside
+      className={styles.integrityRail}
+      data-evaluation-fixture="true"
+      aria-label="Fixture de avaliação"
+    >
+      <div>
+        <span className={styles.integrityMark} aria-hidden="true">E</span>
+        <div>
+          <p>Modo de avaliação visual</p>
+          <strong>Os registros deste cenário são sintéticos e existem apenas para validar a PROFILE.</strong>
+        </div>
+      </div>
+      <p>
+        O modo normal não recebe estes registros: ele continua exibindo somente fontes reais ou
+        estados explicitamente indisponíveis.
+      </p>
+    </aside>
+  );
+}
+
 function NonIdentityState({ snapshot }: ProfileHallProps) {
   const copy = PROFILE_STATE_COPY[snapshot.state];
 
@@ -175,6 +197,7 @@ function NonIdentityState({ snapshot }: ProfileHallProps) {
       className={styles.page}
       data-profile-state={snapshot.state}
       data-scene-fallback="html"
+      data-evaluation-fixture={snapshot.isEvaluationFixture || undefined}
     >
       <div className="wb-shell-inner">
         <section className={styles.standaloneState} aria-labelledby="profile-state-title">
@@ -182,6 +205,9 @@ function NonIdentityState({ snapshot }: ProfileHallProps) {
           <p className="wb-kicker">Salão de Comando</p>
           <h1 id="profile-state-title">{copy.title}</h1>
           <p>{copy.description}</p>
+          {snapshot.isEvaluationFixture ? (
+            <span className={styles.sourceBadge}>Fixture de avaliação ativa</span>
+          ) : null}
           <Link className="wb-button wb-button--secondary" href="/">
             Retornar ao comando
           </Link>
@@ -213,6 +239,7 @@ export function ProfileHall({ snapshot }: ProfileHallProps) {
       className={styles.page}
       data-profile-state={snapshot.state}
       data-scene-fallback="html"
+      data-evaluation-fixture={snapshot.isEvaluationFixture || undefined}
     >
       <div className={styles.ambientGrid} aria-hidden="true" />
       <div className="wb-shell-inner">
@@ -223,6 +250,8 @@ export function ProfileHall({ snapshot }: ProfileHallProps) {
           </div>
           <StateSeal state={snapshot.state} />
         </section>
+
+        {snapshot.isEvaluationFixture ? <EvaluationNotice /> : null}
 
         <section className={styles.hall} aria-label="Identidade do comandante">
           <div className={styles.wallLeft} aria-hidden="true">
@@ -242,7 +271,11 @@ export function ProfileHall({ snapshot }: ProfileHallProps) {
               <h2>{snapshot.identity.displayName}</h2>
               <div className={styles.sourceRow}>
                 <span className={styles.sourceBadge}>{snapshot.identity.sourceLabel}</span>
-                <span>Substituição prevista: provedor de usuário autenticado</span>
+                {snapshot.isEvaluationFixture ? (
+                  <span className={styles.sourceBadge}>Dados estruturais sintéticos</span>
+                ) : (
+                  <span>Substituição prevista: provedor de usuário autenticado</span>
+                )}
               </div>
             </div>
           </div>
@@ -304,12 +337,17 @@ export function ProfileHall({ snapshot }: ProfileHallProps) {
             <span className={styles.integrityMark} aria-hidden="true">✓</span>
             <div>
               <p>Integridade do arquivo</p>
-              <strong>Nenhuma patente, ranking, estatística ou conquista foi simulada.</strong>
+              <strong>
+                {snapshot.isEvaluationFixture
+                  ? "Fixture ativa: nenhum registro sintético representa dados reais do usuário."
+                  : "Nenhuma patente, ranking, estatística ou conquista foi simulada."}
+              </strong>
             </div>
           </div>
           <p>
-            Estatísticas competitivas permanecem fora da composição até existir uma fonte de
-            verdade no produto.
+            {snapshot.isEvaluationFixture
+              ? "O cenário existe apenas para regressão visual e validação dos estados exigidos pelo EVAL."
+              : "Estatísticas competitivas permanecem fora da composição até existir uma fonte de verdade no produto."}
           </p>
         </section>
       </div>
