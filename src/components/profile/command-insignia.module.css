@@ -1,0 +1,127 @@
+.insignia {
+  --insignia-size: clamp(14rem, 27vw, 22rem);
+  position: relative;
+  display: grid;
+  width: var(--insignia-size);
+  aspect-ratio: 1;
+  place-items: center;
+  isolation: isolate;
+  border-radius: 50%;
+  color: #d9ad51;
+  background:
+    radial-gradient(circle at 45% 38%, rgba(240, 200, 90, .12), transparent 29%),
+    radial-gradient(circle at 50% 50%, #172a22 0 42%, #09140f 43% 57%, #27332c 58% 59%, #080e0b 60% 100%);
+  box-shadow:
+    0 34px 70px rgba(0, 0, 0, .46),
+    inset 0 0 0 1px rgba(255, 255, 255, .08),
+    inset 0 -18px 36px rgba(0, 0, 0, .46);
+}
+
+.insignia::before,
+.insignia::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.insignia::before {
+  inset: 4.5%;
+  border: 1px solid rgba(222, 182, 93, .38);
+  box-shadow:
+    inset 0 0 0 6px rgba(0, 0, 0, .23),
+    0 0 0 1px rgba(255, 255, 255, .025);
+}
+
+.insignia::after {
+  inset: 17%;
+  border: 1px dashed rgba(222, 182, 93, .2);
+}
+
+.outerRing,
+.middleRing,
+.crosshair {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.outerRing {
+  inset: 8%;
+  border: 8px double rgba(146, 114, 49, .48);
+  transform: rotate(14deg);
+  animation: insignia-drift 26s linear infinite;
+}
+
+.middleRing {
+  inset: 23%;
+  border: 1px solid rgba(236, 196, 99, .42);
+  box-shadow: 0 0 28px rgba(214, 169, 62, .06);
+}
+
+.crosshair {
+  inset: 12%;
+  border-radius: 0;
+  background:
+    linear-gradient(90deg, transparent 49.8%, rgba(214,169,62,.14) 50%, transparent 50.2%),
+    linear-gradient(transparent 49.8%, rgba(214,169,62,.14) 50%, transparent 50.2%);
+  mask-image: radial-gradient(circle, transparent 0 34%, #000 35% 100%);
+}
+
+.shield {
+  position: relative;
+  z-index: 2;
+  width: 42%;
+  filter: drop-shadow(0 14px 18px rgba(0, 0, 0, .48));
+}
+
+.shield svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  color: #17271f;
+  stroke: #dfb65d;
+  stroke-width: 1.8;
+  paint-order: stroke fill;
+}
+
+.initials {
+  position: absolute;
+  z-index: 3;
+  top: 45%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #f0d080;
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: clamp(2.4rem, 6vw, 4rem);
+  font-weight: 800;
+  letter-spacing: .05em;
+  line-height: 1;
+  text-shadow: 0 2px 0 #4b3515, 0 8px 18px rgba(0, 0, 0, .42);
+}
+
+.axisMark {
+  position: absolute;
+  z-index: 3;
+  bottom: 21%;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(240, 208, 128, .64);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: .62rem;
+  font-weight: 700;
+  letter-spacing: .32em;
+}
+
+@keyframes insignia-drift {
+  to { transform: rotate(374deg); }
+}
+
+@media (max-width: 640px) {
+  .insignia { --insignia-size: min(72vw, 17rem); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .outerRing { animation: none; transform: rotate(14deg); }
+}
