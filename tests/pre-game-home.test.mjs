@@ -56,14 +56,14 @@ test("HOME expõe os três destinos como links DOM com as rotas do spec", () => 
   assert.match(home, /aria-label="Destinos do comando"/);
 });
 
-test("ritual é pulável, repetição de sessão e reduced-motion chegam ao estado estável", () => {
+test("ritual é pulável e repeat/reduced-motion derivam estado estável sem efeito cascata", () => {
   assert.match(home, /Pular ritual/);
+  assert.match(home, /useSyncExternalStore/);
   assert.match(home, /sessionStorage\.getItem\(HOME_RITUAL_SESSION_KEY\)/);
   assert.match(home, /sessionStorage\.setItem\(HOME_RITUAL_SESSION_KEY, "1"\)/);
   assert.match(home, /\(prefers-reduced-motion: reduce\)/);
-  assert.match(home, /setVisitMode\("reduced"\)/);
-  assert.match(home, /setVisitMode\("repeat"\)/);
-  assert.match(home, /setCeremonyPhase\("stable"\)/);
+  assert.match(home, /const visitMode: VisitMode = reducedMotion \? "reduced" : repeatVisit \? "repeat" : "first"/);
+  assert.match(home, /visitMode === "first" \? ceremonyPhase : "stable"/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
