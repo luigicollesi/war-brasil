@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { CommandHomeClient } from "@/src/components/pre-game/home/command-home-client";
-import { CommandHomeFallback } from "@/src/components/pre-game/home/command-home-fallback";
+import { CommandHomeContent } from "@/src/components/pre-game/home/command-home-content";
 import { getSiteUrl } from "@/src/lib/site-url";
 
 const HOME_TITLE = "WAR Brasil — Jogo de estratégia no mapa do Brasil";
@@ -96,7 +96,7 @@ export default function Home() {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
       <CommandHomeClient>
-        <CommandHomeFallback />
+        <CommandHomeContent />
       </CommandHomeClient>
     </>
   );

@@ -3,12 +3,15 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useEffect, useState, useSyncExternalStore } from "react";
-import polish from "./command-home-polish.module.css";
+import { CommandShell } from "../foundation";
+import {
+  getHomeSceneIntent,
+  type HomeCeremonyPhase,
+  type HomeDestinationId,
+} from "./command-home-scene-intent";
 import styles from "./command-home.module.css";
 
-type CeremonyPhase = "earth" | "brazil" | "table" | "stable";
 type VisitMode = "first" | "repeat" | "reduced";
-type DestinationId = "operations" | "doctrine" | "profile";
 type HomeState =
   | "boot"
   | "awaiting-entry"
@@ -17,7 +20,7 @@ type HomeState =
   | "transitioning";
 
 type Destination = {
-  id: DestinationId;
+  id: HomeDestinationId;
   href: string;
   index: string;
   label: string;
@@ -81,19 +84,20 @@ function markRitualSeen() {
   try {
     sessionStorage.setItem(HOME_RITUAL_SESSION_KEY, "1");
   } catch {
-    // The ritual remains functional when session storage is unavailable.
+    // Session storage is an enhancement; the Home remains functional without it.
   }
 }
 
 export function CommandHomeClient({ children }: CommandHomeClientProps) {
-  const [ceremonyPhase, setCeremonyPhase] = useState<CeremonyPhase>("earth");
+  const [ceremonyPhase, setCeremonyPhase] = useState<HomeCeremonyPhase>("earth");
   const [repeatVisit, setRepeatVisit] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const [keyboardDestinationFocus, setKeyboardDestinationFocus] =
-    useState<DestinationId | null>(null);
+    useState<HomeDestinationId | null>(null);
   const [pointerDestinationFocus, setPointerDestinationFocus] =
-    useState<DestinationId | null>(null);
-  const [transitioningTo, setTransitioningTo] = useState<DestinationId | null>(null);
+    useState<HomeDestinationId | null>(null);
+  const [transitioningTo, setTransitioningTo] =
+    useState<HomeDestinationId | null>(null);
 
   const reducedMotion = useSyncExternalStore(
     subscribeReducedMotion,
@@ -101,10 +105,20 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
     getServerReducedMotionSnapshot,
   );
 
-  const visitMode: VisitMode = reducedMotion ? "reduced" : repeatVisit ? "repeat" : "first";
-  const effectiveCeremonyPhase: CeremonyPhase =
+  const visitMode: VisitMode = reducedMotion
+    ? "reduced"
+    : repeatVisit
+      ? "repeat"
+      : "first";
+  const effectiveCeremonyPhase: HomeCeremonyPhase =
     visitMode === "first" ? ceremonyPhase : "stable";
   const destinationFocus = keyboardDestinationFocus ?? pointerDestinationFocus;
+  const sceneIntent = getHomeSceneIntent({
+    ceremonyPhase: effectiveCeremonyPhase,
+    commandOpen,
+    destinationFocus,
+    transitioningTo,
+  });
 
   useEffect(() => {
     const wasSeen = wasRitualSeenThisSession();
@@ -148,12 +162,16 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
     setCommandOpen(true);
   };
 
-  const clearKeyboardFocus = (destination: DestinationId) => {
-    setKeyboardDestinationFocus((current) => (current === destination ? null : current));
+  const clearKeyboardFocus = (destination: HomeDestinationId) => {
+    setKeyboardDestinationFocus((current) =>
+      current === destination ? null : current,
+    );
   };
 
-  const clearPointerFocus = (destination: DestinationId) => {
-    setPointerDestinationFocus((current) => (current === destination ? null : current));
+  const clearPointerFocus = (destination: HomeDestinationId) => {
+    setPointerDestinationFocus((current) =>
+      current === destination ? null : current,
+    );
   };
 
   const homeState: HomeState = transitioningTo
@@ -167,96 +185,104 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
           : "awaiting-entry";
 
   return (
-    <main
-      className={`${styles.root} ${polish.root}`}
-      data-home-state={homeState}
-      data-scene="fallback"
-      data-ceremony={effectiveCeremonyPhase}
-      data-visit={visitMode}
-      data-command-open={commandOpen ? "true" : "false"}
-      data-destination-focus={destinationFocus ?? "none"}
-      data-transitioning-to={transitioningTo ?? "none"}
-    >
-      {children}
-
-      <section
-        id="home-command"
-        className={`${styles.commandDock} ${polish.commandDockSafe}`}
-        aria-label="Acesso ao comando"
-        tabIndex={-1}
+    <CommandShell intent={sceneIntent} sectionLabel="ENTRADA">
+      <main
+        className={styles.root}
+        data-home-state={homeState}
+        data-scene="foundation"
+        data-ceremony={effectiveCeremonyPhase}
+        data-visit={visitMode}
+        data-command-open={commandOpen ? "true" : "false"}
+        data-destination-focus={destinationFocus ?? "none"}
+        data-transitioning-to={transitioningTo ?? "none"}
       >
-        {!commandOpen ? (
-          <div className={styles.authorization}>
-            <button
-              type="button"
-              className={`${styles.enterButton} ${polish.touchControl}`}
-              onClick={enterCommand}
-            >
-              <span className={styles.enterButtonCode} aria-hidden="true">A-01</span>
-              <span>ENTRAR NO COMANDO</span>
-              <span className={styles.enterButtonArrow} aria-hidden="true">→</span>
-            </button>
+        {children}
 
-            <div className={styles.authorizationMeta}>
-              <span>ACESSO OPERACIONAL DISPONÍVEL</span>
-              {effectiveCeremonyPhase !== "stable" && visitMode === "first" ? (
-                <button
-                  type="button"
-                  className={`${styles.skipCeremony} ${polish.touchControl} ${polish.skipTouchTarget}`}
-                  onClick={skipCeremony}
-                >
-                  Pular ritual
-                </button>
-              ) : (
-                <span className={styles.ritualState}>
-                  {visitMode === "reduced"
-                    ? "MOVIMENTO REDUZIDO"
-                    : visitMode === "repeat"
-                      ? "RETORNO RECONHECIDO"
-                      : "MESA ESTABILIZADA"}
+        <section
+          id="home-command"
+          className={styles.commandDock}
+          aria-label="Acesso ao comando"
+          tabIndex={-1}
+        >
+          {!commandOpen ? (
+            <div className={styles.authorization}>
+              <button
+                type="button"
+                className={styles.enterButton}
+                onClick={enterCommand}
+              >
+                <span className={styles.enterButtonCode} aria-hidden="true">
+                  A-01
                 </span>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className={styles.openCommand}>
-            <div className={styles.commandStatus} role="status">
-              <span className={styles.commandStatusMark} aria-hidden="true" />
-              COMANDO AUTORIZADO
-            </div>
+                <span>ENTRAR NO COMANDO</span>
+                <span className={styles.enterButtonArrow} aria-hidden="true">
+                  →
+                </span>
+              </button>
 
-            <nav className={styles.destinationRail} aria-label="Destinos do comando">
-              {DESTINATIONS.map((destination) => (
-                <Link
-                  key={destination.id}
-                  href={destination.href}
-                  className={`${styles.destination} ${polish.touchControl} ${polish.destinationTouchTarget}`}
-                  data-destination={destination.id}
-                  onClick={() => setTransitioningTo(destination.id)}
-                  onFocus={() => setKeyboardDestinationFocus(destination.id)}
-                  onBlur={() => clearKeyboardFocus(destination.id)}
-                  onPointerEnter={() => setPointerDestinationFocus(destination.id)}
-                  onPointerLeave={() => clearPointerFocus(destination.id)}
-                >
-                  <span className={styles.destinationIndex} aria-hidden="true">
-                    {destination.index}
+              <div className={styles.authorizationMeta}>
+                <span>ACESSO OPERACIONAL DISPONÍVEL</span>
+                {effectiveCeremonyPhase !== "stable" && visitMode === "first" ? (
+                  <button
+                    type="button"
+                    className={styles.skipCeremony}
+                    onClick={skipCeremony}
+                  >
+                    Pular ritual
+                  </button>
+                ) : (
+                  <span className={styles.ritualState}>
+                    {visitMode === "reduced"
+                      ? "MOVIMENTO REDUZIDO"
+                      : visitMode === "repeat"
+                        ? "RETORNO RECONHECIDO"
+                        : "MESA ESTABILIZADA"}
                   </span>
-                  <span className={styles.destinationCopy}>
-                    <strong>{destination.label}</strong>
-                    <span>{destination.detail}</span>
-                  </span>
-                  <span className={styles.destinationArrow} aria-hidden="true">↗</span>
-                </Link>
-              ))}
-            </nav>
-          </div>
-        )}
-      </section>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className={styles.openCommand}>
+              <div className={styles.commandStatus} role="status">
+                <span className={styles.commandStatusMark} aria-hidden="true" />
+                COMANDO AUTORIZADO
+              </div>
 
-      <footer className={styles.footer} aria-hidden="true">
-        <span>DOMÍNIO TERRITORIAL // BRASIL</span>
-        <span>PROTOCOLO 42-T</span>
-      </footer>
-    </main>
+              <nav className={styles.destinationRail} aria-label="Destinos do comando">
+                {DESTINATIONS.map((destination) => (
+                  <Link
+                    key={destination.id}
+                    href={destination.href}
+                    className={styles.destination}
+                    data-destination={destination.id}
+                    onClick={() => setTransitioningTo(destination.id)}
+                    onFocus={() => setKeyboardDestinationFocus(destination.id)}
+                    onBlur={() => clearKeyboardFocus(destination.id)}
+                    onPointerEnter={() => setPointerDestinationFocus(destination.id)}
+                    onPointerLeave={() => clearPointerFocus(destination.id)}
+                  >
+                    <span className={styles.destinationIndex} aria-hidden="true">
+                      {destination.index}
+                    </span>
+                    <span className={styles.destinationCopy}>
+                      <strong>{destination.label}</strong>
+                      <span>{destination.detail}</span>
+                    </span>
+                    <span className={styles.destinationArrow} aria-hidden="true">
+                      ↗
+                    </span>
+                  </Link>
+                ))}
+              </nav>
+            </div>
+          )}
+        </section>
+
+        <footer className={styles.footer} aria-hidden="true">
+          <span>DOMÍNIO TERRITORIAL // BRASIL</span>
+          <span>PROTOCOLO 42-T</span>
+        </footer>
+      </main>
+    </CommandShell>
   );
 }

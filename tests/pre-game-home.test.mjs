@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 const page = readFileSync("src/app/page.tsx", "utf8");
@@ -7,7 +7,15 @@ const home = readFileSync(
   "src/components/pre-game/home/command-home-client.tsx",
   "utf8",
 );
-const fallback = readFileSync(
+const content = readFileSync(
+  "src/components/pre-game/home/command-home-content.tsx",
+  "utf8",
+);
+const intent = readFileSync(
+  "src/components/pre-game/home/command-home-scene-intent.ts",
+  "utf8",
+);
+const fallbackMarker = readFileSync(
   "src/components/pre-game/home/command-home-fallback.tsx",
   "utf8",
 );
@@ -15,11 +23,13 @@ const styles = readFileSync(
   "src/components/pre-game/home/command-home.module.css",
   "utf8",
 );
-const polish = readFileSync(
-  "src/components/pre-game/home/command-home-polish.module.css",
+const foundationIndex = readFileSync(
+  "src/components/pre-game/foundation/index.ts",
   "utf8",
 );
-const svg = readFileSync("public/war-brasil-42.production.svg", "utf8");
+
+const legacyPolishPath =
+  "src/components/pre-game/home/command-home-polish.module.css";
 
 test("HOME preserva metadata, canonical e structured data existentes", () => {
   assert.match(page, /export const metadata: Metadata/);
@@ -29,24 +39,38 @@ test("HOME preserva metadata, canonical e structured data existentes", () => {
   assert.match(page, /application\/ld\+json/);
   assert.match(page, /"@type": "WebApplication"/);
   assert.match(page, /<CommandHomeClient>/);
-  assert.match(page, /<CommandHomeFallback \/>/);
+  assert.match(page, /<CommandHomeContent \/>/);
 });
 
-test("HOME substitui o hero legado pela entrada de comando", () => {
+test("HOME consome somente o contrato público da Foundation", () => {
+  assert.match(home, /import \{ CommandShell \} from "\.\.\/foundation"/);
+  assert.match(intent, /import type \{ CommandSceneIntent \} from "\.\.\/foundation"/);
+  assert.match(foundationIndex, /export \{ CommandShell \}/);
+  assert.match(foundationIndex, /CommandSceneIntent/);
+
+  const homeSources = `${home}\n${content}\n${intent}`;
+  assert.doesNotMatch(homeSources, /@react-three\/fiber/);
+  assert.doesNotMatch(homeSources, /from "three"/);
+  assert.doesNotMatch(homeSources, /command-scene-canvas/);
+  assert.doesNotMatch(homeSources, /scene-presets/);
+  assert.doesNotMatch(homeSources, /CameraDirector/);
+  assert.doesNotMatch(homeSources, /<Canvas/);
+
+  assert.match(fallbackMarker, /HOME_FALLBACK_OWNER = "Foundation CommandShell"/);
+  assert.doesNotMatch(fallbackMarker, /next\/image|<Image|war-brasil-42|globe|domainTable|orbit/i);
+  assert.equal(existsSync(legacyPolishPath), false);
+});
+
+test("HOME substitui o hero legado pela entrada de comando sobre CommandShell", () => {
   assert.doesNotMatch(page, /GameQuickGuide/);
   assert.doesNotMatch(page, /HomeTerritoryMap/);
   assert.doesNotMatch(page, /WarShell/);
+  assert.match(content, /WAR/);
+  assert.match(content, /BRASIL/);
   assert.match(home, /ENTRAR NO COMANDO/);
   assert.match(home, /data-home-state=\{homeState\}/);
-  assert.match(home, /data-scene="fallback"/);
-});
-
-test("fallback visual permanece server-rendered e fora da fronteira interativa", () => {
-  assert.doesNotMatch(fallback, /"use client"/);
-  assert.doesNotMatch(home, /next\/image/);
-  assert.match(page, /CommandHomeFallback/);
-  assert.match(home, /children: ReactNode/);
-  assert.match(home, /\{children\}/);
+  assert.match(home, /data-scene="foundation"/);
+  assert.match(home, /<CommandShell intent=\{sceneIntent\} sectionLabel="ENTRADA">/);
 });
 
 test("HOME expõe os três destinos como links DOM com as rotas do spec", () => {
@@ -60,55 +84,52 @@ test("HOME expõe os três destinos como links DOM com as rotas do spec", () => 
   assert.match(home, /aria-label="Destinos do comando"/);
 });
 
-test("ritual é pulável e repeat/reduced-motion derivam estado estável sem efeito cascata", () => {
+test("adapter cobre Terra, Brasil, Mesa e autorização sem coordenadas", () => {
+  assert.match(intent, /ceremonyPhase === "earth"/);
+  assert.match(intent, /focus: "earth"/);
+  assert.match(intent, /ceremonyPhase === "brazil"/);
+  assert.match(intent, /focus: "brazil"/);
+  assert.match(intent, /focus: "table"/);
+  assert.match(intent, /orbitalAlignment: 1/);
+  assert.doesNotMatch(intent, /\b(?:x|y|z|fov|quaternion|camera|material)\s*:/i);
+});
+
+test("adapter mapeia focos dos destinos para intents semânticos", () => {
+  assert.match(intent, /operations:[\s\S]*mode: "operations"[\s\S]*conflictLevel: 1[\s\S]*territoryExplode: 0\.08/);
+  assert.match(intent, /doctrine:[\s\S]*mode: "doctrine"[\s\S]*territoryExplode: 0\.12/);
+  assert.match(intent, /profile:[\s\S]*mode: "profile"[\s\S]*focus: "insignia"/);
+  assert.match(intent, /transitioningTo \?\? destinationFocus/);
+});
+
+test("ritual é pulável e repeat/reduced-motion derivam estado estável", () => {
   assert.match(home, /Pular ritual/);
   assert.match(home, /useSyncExternalStore/);
   assert.match(home, /sessionStorage\.getItem\(HOME_RITUAL_SESSION_KEY\)/);
   assert.match(home, /sessionStorage\.setItem\(HOME_RITUAL_SESSION_KEY, "1"\)/);
   assert.match(home, /\(prefers-reduced-motion: reduce\)/);
-  assert.match(home, /const visitMode: VisitMode = reducedMotion \? "reduced" : repeatVisit \? "repeat" : "first"/);
   assert.match(home, /visitMode === "first" \? ceremonyPhase : "stable"/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
-test("cerimônia Terra -> Brasil -> Mesa não é dependência da ação principal", () => {
-  assert.match(home, /type CeremonyPhase = "earth" \| "brazil" \| "table" \| "stable"/);
+test("cerimônia Terra -> Brasil -> Mesa não bloqueia a ação principal", () => {
+  assert.match(home, /useState<HomeCeremonyPhase>\("earth"\)/);
   assert.match(home, /if \(current === "earth"\) return "brazil"/);
   assert.match(home, /if \(current === "brazil"\) return "table"/);
   assert.match(home, /if \(current === "table"\) return "stable"/);
   assert.match(home, /const enterCommand = \(\) =>/);
-  assert.doesNotMatch(home, /@react-three\/fiber/);
-  assert.doesNotMatch(fallback, /@react-three\/fiber/);
-  assert.doesNotMatch(home, /<Canvas/);
-  assert.doesNotMatch(fallback, /<Canvas/);
+  assert.match(home, /onClick=\{enterCommand\}/);
 });
 
-test("fallback visual reutiliza exatamente o SVG territorial canônico de 42 territórios", () => {
-  assert.match(fallback, /src="\/war-brasil-42\.production\.svg"/);
-  assert.match(fallback, /preload/);
-  assert.match(fallback, /unoptimized/);
-
-  const territories = svg.match(
-    /<path\b(?=[^>]*\bclass="[^"]*\bterritory\b[^"]*")(?=[^>]*\bdata-name="[^"]+")[^>]*>/g,
-  );
-
-  assert.equal(territories?.length, 42);
-});
-
-test("mobile possui composição própria sem overflow horizontal nem ação dependente de hover", () => {
-  assert.match(styles, /overflow-x: clip/);
-  assert.match(styles, /@media \(max-width: 720px\)/);
-  assert.match(styles, /\.destinationRail \{\s*grid-template-columns: 1fr;/);
-  assert.match(styles, /\.destination \{\s*min-height: 64px;/);
-  assert.match(polish, /\.viewportBounded \{[\s\S]*max-width: 96vw;/);
-  assert.match(polish, /\.destinationTouchTarget \{\s*min-height: 68px;/);
-  assert.match(polish, /\.skipTouchTarget \{[\s\S]*min-height: 44px;/);
-  assert.match(polish, /env\(safe-area-inset-bottom\)/);
-  assert.match(fallback, /polish\.viewportBounded/);
-  assert.match(home, /polish\.destinationTouchTarget/);
-  assert.match(home, /polish\.touchControl/);
+test("mobile possui composição própria, safe-area e alvos touch grandes", () => {
+  assert.match(styles, /overflow: hidden/);
+  assert.match(styles, /@media \(max-width: 900px\)/);
+  assert.match(styles, /\.destinationRail \{[\s\S]*grid-template-columns: 1fr;/);
+  assert.match(styles, /\.destination \{[\s\S]*min-height: 68px;/);
+  assert.match(styles, /\.skipCeremony \{[\s\S]*min-height: 44px;/);
+  assert.match(styles, /env\(safe-area-inset-bottom\)/);
+  assert.match(styles, /touch-action: manipulation/);
+  assert.match(styles, /@media \(hover: none\) and \(pointer: coarse\)/);
   assert.match(home, /tabIndex=\{-1\}/);
-  assert.match(home, /onClick=\{\(\) => setTransitioningTo\(destination\.id\)\}/);
 });
 
 test("foco de teclado tem prioridade sobre intenção efêmera do ponteiro", () => {
@@ -119,15 +140,8 @@ test("foco de teclado tem prioridade sobre intenção efêmera do ponteiro", () 
   assert.match(home, /onPointerLeave=\{\(\) => clearPointerFocus\(destination\.id\)\}/);
 });
 
-test("mobile coarse pointer não depende de hover para feedback ou acionamento", () => {
-  assert.match(polish, /@media \(hover: none\) and \(pointer: coarse\)/);
-  assert.match(polish, /touch-action: manipulation/);
-  assert.match(home, /href=\{destination\.href\}/);
-  assert.match(home, /ENTRAR NO COMANDO/);
-});
-
-test("vermelho de conflito é introduzido apenas no foco de Operações", () => {
-  assert.match(styles, /data-destination-focus="operations"/);
-  assert.match(styles, /rgba\(127, 25, 30, \.12\)/);
-  assert.match(styles, /orbitConflict/);
+test("vermelho local permanece restrito ao destino Operações", () => {
+  assert.match(styles, /destination\[data-destination="operations"\]/);
+  assert.match(styles, /rgb\(139 32 38 \/ 12%\)/);
+  assert.doesNotMatch(styles, /pulse|pulsing/i);
 });
