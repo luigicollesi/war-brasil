@@ -27,6 +27,7 @@ const MAP_SCALE = COMMAND_FOUNDATION_TOKENS.scene.mapScale;
 const MAP_HALF_EXTENT = (MAP_VIEWBOX_SIZE * MAP_SCALE) / 2;
 const MAP_CENTER_X = 0.72;
 const MAP_CENTER_Y = -0.28;
+const CANONICAL_TERRITORY_COUNT = 42;
 const PLATE_TONES = ["#26352a", "#2d3d30", "#223027", "#344437"] as const;
 
 type CommandSceneCanvasProps = {
@@ -39,7 +40,7 @@ type CommandSceneCanvasProps = {
 
 type TerritoryPlate = {
   id: string;
-  territoryIndex: number;
+  territoryId: number;
   geometry: ExtrudeGeometry;
   edges: EdgesGeometry;
 };
@@ -179,6 +180,22 @@ function DomainTable() {
   );
 }
 
+function readCanonicalTerritoryId(path: { userData?: Record<string, unknown> }, pathIndex: number) {
+  const node = path.userData?.node as SVGElement | undefined;
+  const rawId = node?.getAttribute("data-id");
+  const territoryId = Number(rawId);
+
+  if (
+    !Number.isInteger(territoryId) ||
+    territoryId < 1 ||
+    territoryId > CANONICAL_TERRITORY_COUNT
+  ) {
+    throw new Error(`Território canônico inválido no path ${pathIndex + 1}: ${rawId ?? "ausente"}`);
+  }
+
+  return territoryId;
+}
+
 function BrazilTerritoryAssembly({
   intent,
 }: {
@@ -209,9 +226,21 @@ function BrazilTerritoryAssembly({
   );
 
   const plates = useMemo<TerritoryPlate[]>(() => {
+    const territoryIds = svg.paths.map(readCanonicalTerritoryId);
+    const uniqueIds = new Set(territoryIds);
+
+    if (
+      territoryIds.length !== CANONICAL_TERRITORY_COUNT ||
+      uniqueIds.size !== CANONICAL_TERRITORY_COUNT ||
+      !Array.from({ length: CANONICAL_TERRITORY_COUNT }, (_, index) => index + 1).every((id) =>
+        uniqueIds.has(id),
+      )
+    ) {
+      throw new Error("O mapa da Foundation deve conter exatamente os territórios canônicos 1–42.");
+    }
+
     return svg.paths.flatMap((path, pathIndex) => {
-      const node = path.userData?.node as SVGElement | undefined;
-      const territoryId = node?.getAttribute("data-territory-id") ?? String(pathIndex + 1);
+      const territoryId = territoryIds[pathIndex];
 
       return SVGLoader.createShapes(path).map((shape, shapeIndex) => {
         const geometry = new ExtrudeGeometry(shape, {
@@ -226,7 +255,7 @@ function BrazilTerritoryAssembly({
 
         return {
           id: `${territoryId}-${shapeIndex}`,
-          territoryIndex: pathIndex,
+          territoryId,
           geometry,
           edges: new EdgesGeometry(geometry, 30),
         };
@@ -257,14 +286,14 @@ function BrazilTerritoryAssembly({
         position={[-MAP_HALF_EXTENT, MAP_HALF_EXTENT, 0]}
       >
         {plates.map((plate) => {
-          const separation =
-            intent.territoryExplode * ((plate.territoryIndex % 3) * 2.1);
+          const territoryIndex = plate.territoryId - 1;
+          const separation = intent.territoryExplode * ((territoryIndex % 3) * 2.1);
           return (
             <group key={plate.id} position-z={separation}>
               <mesh geometry={plate.geometry}>
                 <primitive
                   attach="material"
-                  object={materials[plate.territoryIndex % materials.length]}
+                  object={materials[territoryIndex % materials.length]}
                 />
               </mesh>
               <lineSegments geometry={plate.edges} material={edgeMaterial} />
