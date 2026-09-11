@@ -5,6 +5,10 @@ import test from "node:test";
 const identity = readFileSync("src/app/war-identity.css", "utf8");
 const layout = readFileSync("src/app/layout.tsx", "utf8");
 const home = readFileSync("src/app/page.tsx", "utf8");
+const homeFallback = readFileSync(
+  "src/components/pre-game/home/command-home-fallback.tsx",
+  "utf8",
+);
 const matchmaking = readFileSync("src/app/matchmaking/page.tsx", "utf8");
 const lobbyPage = readFileSync("src/app/lobby/[code]/page.tsx", "utf8");
 const lobby = readFileSync("src/components/lobby-client.tsx", "utf8");
@@ -21,9 +25,12 @@ test("identidade centraliza a paleta e tipografia do pré-jogo", () => {
   assert.match(layout, /Inter/);
 });
 
-test("Home, matchmaking e lobby compartilham WarShell", () => {
+test("Home usa entrada própria enquanto matchmaking e lobby preservam WarShell legado", () => {
   assert.match(shell, /wb-shell/);
-  assert.match(home, /<WarShell immersive>/);
+  assert.match(home, /<CommandHomeClient>/);
+  assert.match(home, /<CommandHomeFallback \/>/);
+  assert.match(homeFallback, /INSTALAÇÃO DE COMANDO/);
+  assert.doesNotMatch(home, /<WarShell/);
   assert.match(matchmaking, /<WarShell/);
   assert.match(lobbyPage, /<WarShell/);
 });
