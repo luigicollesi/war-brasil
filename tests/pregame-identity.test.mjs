@@ -42,14 +42,14 @@ test("matchmaking usa composição contínua em vez de cards independentes", () 
   assert.doesNotMatch(matchmaking, /Nesta versão inicial|etapas futuras|demonstrativos/);
 });
 
-test("lobby usa seis posições, Mesa da Foundation e ready rail", () => {
+test("lobby usa seis posições e delega a Mesa para a Foundation", () => {
   assert.match(lobby, /6 - players\.length/);
   assert.match(lobby, /useCommandSceneDirective/);
   assert.match(lobby, /focus: "table"/);
+  assert.match(lobby, /sceneStartAuthorized/);
+  assert.match(lobby, /sceneAllReady/);
   assert.doesNotMatch(lobby, /war-brasil-42\.production\.svg|wb-lobby-map/);
   assert.match(foundationScene, /war-brasil-42\.production\.svg/);
-  assert.match(lobby, /wb-ready-rail/);
-  assert.match(lobby, /Pronto para batalha/);
   assert.match(lobby, /Sala sincronizada/);
   assert.doesNotMatch(lobby, /Atualiza a cada 1 s/);
 });
