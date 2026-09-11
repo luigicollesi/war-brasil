@@ -27,7 +27,7 @@ function StateSeal({ state }: { state: ProfileState }) {
   const copy = PROFILE_STATE_COPY[state];
 
   return (
-    <div className={styles.stateSeal} role="status">
+    <div className={styles.stateSeal} data-state={state} role="status" aria-label={copy.label}>
       <span className={styles.stateLamp} aria-hidden="true" />
       <span>{copy.label}</span>
     </div>
@@ -69,7 +69,7 @@ function RecordFixture({
   const titleId = `${motif}-title`;
 
   return (
-    <section className={styles.fixture} aria-labelledby={titleId}>
+    <section className={styles.fixture} data-availability={availability} aria-labelledby={titleId}>
       <div className={styles.fixtureHeader}>
         <span className={styles.fixtureIndex} aria-hidden="true">{index}</span>
         <div>
@@ -131,8 +131,22 @@ function AchievementList({ achievements }: { achievements: ReadonlyArray<Profile
 }
 
 function StatisticsLedger({ statistics }: { statistics: ProfileSnapshot["statistics"] }) {
-  if (statistics.availability !== "available" || statistics.data.length === 0) {
-    return null;
+  if (statistics.availability === "unavailable") {
+    return (
+      <div className={styles.statisticsState} data-availability="unavailable">
+        <span aria-hidden="true" />
+        <p>Estatísticas competitivas sem fonte disponível.</p>
+      </div>
+    );
+  }
+
+  if (statistics.availability === "empty" || statistics.data.length === 0) {
+    return (
+      <div className={styles.statisticsState} data-availability="empty">
+        <span aria-hidden="true" />
+        <p>Fonte disponível, sem estatísticas registradas.</p>
+      </div>
+    );
   }
 
   return (
@@ -151,12 +165,16 @@ function NonIdentityState({ snapshot }: ProfileHallProps) {
   const copy = PROFILE_STATE_COPY[snapshot.state];
 
   return (
-    <main className={styles.page}>
+    <main
+      className={styles.page}
+      data-profile-state={snapshot.state}
+      data-scene-fallback="html"
+    >
       <div className="wb-shell-inner">
-        <section className={styles.standaloneState}>
+        <section className={styles.standaloneState} aria-labelledby="profile-state-title">
           <StateSeal state={snapshot.state} />
           <p className="wb-kicker">Salão de Comando</p>
-          <h1>{copy.title}</h1>
+          <h1 id="profile-state-title">{copy.title}</h1>
           <p>{copy.description}</p>
           <Link className="wb-button wb-button--secondary" href="/">
             Retornar ao comando
