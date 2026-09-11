@@ -8,6 +8,7 @@ import type {
 } from "@/src/lib/profile/profile-data";
 import { PROFILE_STATE_COPY } from "@/src/lib/profile/profile-data";
 import { CommandInsignia } from "./command-insignia";
+import { ProfileEnvironmentState } from "./profile-environment-state";
 import styles from "./profile-hall.module.css";
 import stateStyles from "./profile-state.module.css";
 
@@ -205,6 +206,7 @@ function NonIdentityState({ snapshot }: ProfileHallProps) {
           <p className="wb-kicker">Salão de Comando</p>
           <h1 id="profile-state-title">{copy.title}</h1>
           <p>{copy.description}</p>
+          <ProfileEnvironmentState />
           {snapshot.isEvaluationFixture ? (
             <span className={styles.sourceBadge}>Fixture de avaliação ativa</span>
           ) : null}
@@ -247,6 +249,7 @@ export function ProfileHall({ snapshot }: ProfileHallProps) {
           <div>
             <p className="wb-kicker">Arquivo de identidade operacional</p>
             <h1 id="profile-title">Salão de Comando</h1>
+            <ProfileEnvironmentState />
           </div>
           <StateSeal state={snapshot.state} />
         </section>
