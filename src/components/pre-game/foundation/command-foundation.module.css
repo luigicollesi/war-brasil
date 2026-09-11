@@ -27,6 +27,12 @@
 
 .canvasLayer {
   z-index: 2;
+  opacity: 0;
+  transition: opacity 260ms ease;
+}
+
+.sceneHost[data-webgl="ready"] .canvasLayer {
+  opacity: 1;
 }
 
 .sceneFallback {
@@ -464,6 +470,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .canvasLayer,
   .sceneFallback,
   .fallbackGlobe {
     transition: none;
