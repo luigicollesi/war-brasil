@@ -36,6 +36,7 @@ Uma trilha só pode ser considerada concluída quando:
 - `prefers-reduced-motion: reduce` mantém conteúdo e função equivalentes;
 - falha/ausência de WebGL mantém a rota funcional;
 - não há regressão dos contratos funcionais existentes;
+- conceitos `CORE` aplicáveis em `traceability.md` continuam presentes;
 - evidências do PR permitem reproduzir a avaliação.
 
 ## Evidência mínima
@@ -81,13 +82,30 @@ Diretrizes:
 
 - conteúdo crítico MUST NOT aguardar WebGL;
 - o renderer SHOULD ser carregado de forma lazy quando isso reduz custo inicial sem quebrar continuidade;
+- Server Components SHOULD permanecer como padrão para conteúdo que não precisa de interatividade no cliente;
+- Client Components SHOULD ficar restritos às fronteiras realmente interativas;
 - geometria, materiais e objetos estáveis SHOULD ser reutilizados;
 - cenas majoritariamente estáticas SHOULD reduzir renderização contínua quando possível;
 - DPR SHOULD ser limitado/adaptativo;
 - efeitos caros MUST ter fallback/degradação.
 
-Referências: https://nextjs.org/docs/app/guides/lazy-loading e https://r3f.docs.pmnd.rs/advanced/scaling-performance
+Referências oficiais:
+
+- Next.js lazy loading: https://nextjs.org/docs/app/guides/lazy-loading
+- Next.js Server/Client Components: https://nextjs.org/docs/app/getting-started/server-and-client-components
+- React Three Fiber performance: https://r3f.docs.pmnd.rs/advanced/scaling-performance
 
 ## Score
 
 O score não compensa BLOCKER falhando. Cada categoria deve receber nota acompanhada de uma frase de justificativa e evidência. Uma implementação com >=85 mas que omita um conceito marcado `CORE` em `traceability.md` falha a avaliação.
+
+## Regra de credibilidade
+
+Specs MUST distinguir claramente:
+
+- comportamento já existente e que precisa ser preservado;
+- requisito novo desta iniciativa;
+- exemplo de direção visual;
+- possibilidade futura/opcional.
+
+Nenhum exemplo visual pode ser tratado como regra de negócio. Nenhuma ideia histórica não confirmada pode ser promovida silenciosamente a funcionalidade ativa.
