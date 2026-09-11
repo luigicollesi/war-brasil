@@ -14,6 +14,9 @@ Objetivo: impedir que o redesign seja tecnicamente correto, porém incompleto. C
 | 2.5D perceptível sem deformar ou espalhar o mapa | CORE | `foundation/SPEC.md` | screenshots e inspeção geométrica |
 | Fronteiras muito visíveis e leitura territorial clara | CORE | `foundation/SPEC.md` | avaliação em desktop/mobile e estados de foco |
 | Hit-area lógica/semântica independente da face visual quando necessário | CORE | `foundation/SPEC.md` | teclado/touch/hover sem alterar geometria canônica |
+| Ordem/identidade territorial permanece estável durante apresentação | CORE | `foundation/SPEC.md` | comparação estrutural + interação |
+| Zoom/transformação visual não degrada espessura/leitura das fronteiras | CORE | `foundation/SPEC.md` | visual/interaction em estados de aproximação |
+| Gestos mobile evitam seleção acidental do território | CORE | `foundation/SPEC.md` | interação touch/gesture |
 | Coroa Orbital com três aros: Território, Comando e Conflito | CORE | `visual-language.md`, `foundation/SPEC.md` | idle e alinhamento cerimonial |
 | Insígnia de Comando recorrente | CORE | `visual-language.md`, Lobby, Perfil | estados de jogador/ready/perfil |
 | Cena compartilhada e persistente | CORE | `foundation/SPEC.md`, `parallel-development.md` | sequência de rotas sem múltiplos renderers/remount visual |
