@@ -8,6 +8,12 @@ import styles from "./command-home.module.css";
 type CeremonyPhase = "earth" | "brazil" | "table" | "stable";
 type VisitMode = "first" | "repeat" | "reduced";
 type DestinationId = "operations" | "doctrine" | "profile";
+type HomeState =
+  | "boot"
+  | "awaiting-entry"
+  | "command-open"
+  | "destination-focus"
+  | "transitioning";
 
 type Destination = {
   id: DestinationId;
@@ -59,6 +65,7 @@ export function CommandHomeClient() {
   const [visitMode, setVisitMode] = useState<VisitMode>("first");
   const [commandOpen, setCommandOpen] = useState(false);
   const [destinationFocus, setDestinationFocus] = useState<DestinationId | null>(null);
+  const [transitioningTo, setTransitioningTo] = useState<DestinationId | null>(null);
 
   useEffect(() => {
     const motionQuery = window.matchMedia(REDUCED_MOTION_QUERY);
@@ -117,13 +124,26 @@ export function CommandHomeClient() {
     setDestinationFocus((current) => (current === destination ? null : current));
   };
 
+  const homeState: HomeState = transitioningTo
+    ? "transitioning"
+    : commandOpen && destinationFocus
+      ? "destination-focus"
+      : commandOpen
+        ? "command-open"
+        : ceremonyPhase === "earth"
+          ? "boot"
+          : "awaiting-entry";
+
   return (
     <main
       className={styles.root}
+      data-home-state={homeState}
+      data-scene="fallback"
       data-ceremony={ceremonyPhase}
       data-visit={visitMode}
       data-command-open={commandOpen ? "true" : "false"}
       data-destination-focus={destinationFocus ?? "none"}
+      data-transitioning-to={transitioningTo ?? "none"}
     >
       <div className={styles.environment} aria-hidden="true">
         <div className={styles.environmentGrid} />
@@ -136,7 +156,9 @@ export function CommandHomeClient() {
         </a>
 
         <div className={styles.brandLockup} aria-label="WAR Brasil">
-          <span className={styles.brandMonogram} aria-hidden="true">WB</span>
+          <span className={styles.brandMonogram} aria-hidden="true">
+            <span>WB</span>
+          </span>
           <span className={styles.brandText}>
             <strong>WAR</strong>
             <span>BRASIL</span>
@@ -176,7 +198,7 @@ export function CommandHomeClient() {
                 alt=""
                 width={1200}
                 height={1200}
-                priority
+                preload
                 sizes="(max-width: 720px) 78vw, 620px"
                 className={styles.brazilMap}
               />
@@ -238,6 +260,7 @@ export function CommandHomeClient() {
                   href={destination.href}
                   className={styles.destination}
                   data-destination={destination.id}
+                  onClick={() => setTransitioningTo(destination.id)}
                   onFocus={() => setDestinationFocus(destination.id)}
                   onBlur={() => clearPointerFocus(destination.id)}
                   onPointerEnter={() => setDestinationFocus(destination.id)}
