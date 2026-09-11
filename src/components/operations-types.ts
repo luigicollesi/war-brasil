@@ -1,10 +1,12 @@
 export type OperationStatus =
   | "idle"
-  | "pending"
+  | "creating"
+  | "create-error"
+  | "joining"
   | "invalid-code"
   | "network-error"
-  | "error"
-  | "success";
+  | "join-error"
+  | "success-transition";
 
 export type OperationInteraction =
   | "idle"

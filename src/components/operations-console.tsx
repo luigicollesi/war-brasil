@@ -12,6 +12,7 @@ import styles from "@/src/app/matchmaking/operations.module.css";
 import stateStyles from "@/src/app/matchmaking/operations-states.module.css";
 
 type Mode = "create" | "join";
+type VisualStatus = "idle" | "pending" | "error" | "success";
 
 const MODES: Array<{ mode: Mode; index: string; label: string; summary: string }> = [
   {
@@ -28,29 +29,32 @@ const MODES: Array<{ mode: Mode; index: string; label: string; summary: string }
   },
 ];
 
-function statusLabel(
-  status: OperationStatus,
-  interaction: OperationInteraction,
-  mode: Mode,
-) {
-  if (status === "pending") {
-    return mode === "create"
-      ? "Autorizando nova operação"
-      : "Localizando operação existente";
-  }
+function statusLabel(status: OperationStatus, interaction: OperationInteraction) {
+  if (status === "creating") return "Autorizando nova operação";
+  if (status === "joining") return "Localizando operação existente";
   if (status === "invalid-code") return "Código de operação inválido";
-  if (status === "network-error") return "Falha de comunicação — retry disponível";
-  if (status === "error") return "Ação interrompida — revisão necessária";
-  if (status === "success") return "Operação autorizada";
+  if (status === "network-error") return "Falha de comunicação — tente novamente";
+  if (status === "create-error") return "Nova operação não autorizada — retry disponível";
+  if (status === "join-error") return "Operação não localizada — retry disponível";
+  if (status === "success-transition") return "Operação autorizada — abrindo lobby";
   if (interaction === "typing-code") return "Código em edição";
   if (interaction === "create-focus") return "Protocolo 01 selecionado";
   if (interaction === "join-focus") return "Protocolo 02 selecionado";
   return "Estação disponível";
 }
 
-function visualStatus(status: OperationStatus) {
-  if (status === "invalid-code" || status === "network-error") return "error";
-  return status;
+function visualStatus(status: OperationStatus): VisualStatus {
+  if (status === "creating" || status === "joining") return "pending";
+  if (
+    status === "invalid-code" ||
+    status === "network-error" ||
+    status === "create-error" ||
+    status === "join-error"
+  ) {
+    return "error";
+  }
+  if (status === "success-transition") return "success";
+  return "idle";
 }
 
 export function OperationsConsole() {
@@ -62,10 +66,10 @@ export function OperationsConsole() {
 
   const activeStatus = mode === "create" ? createStatus : joinStatus;
   const commandLocked =
-    createStatus === "pending" ||
-    createStatus === "success" ||
-    joinStatus === "pending" ||
-    joinStatus === "success";
+    createStatus === "creating" ||
+    createStatus === "success-transition" ||
+    joinStatus === "joining" ||
+    joinStatus === "success-transition";
 
   function selectMode(nextMode: Mode, focus = false) {
     if (commandLocked && nextMode !== mode) return;
@@ -104,7 +108,8 @@ export function OperationsConsole() {
       data-status={visualStatus(activeStatus)}
       data-state={activeStatus}
       data-interaction={interaction}
-      aria-busy={activeStatus === "pending"}
+      data-scene-state="scene-fallback"
+      aria-busy={activeStatus === "creating" || activeStatus === "joining"}
       aria-labelledby="operations-station-title"
     >
       <div className={styles.stationTopline}>
@@ -265,7 +270,7 @@ export function OperationsConsole() {
             aria-atomic="true"
           >
             <span className={styles.statusLamp} aria-hidden="true" />
-            <span>{statusLabel(activeStatus, interaction, mode)}</span>
+            <span>{statusLabel(activeStatus, interaction)}</span>
             <span className={styles.statusMode}>
               {mode === "create" ? "PROTOCOLO 01" : "PROTOCOLO 02"}
             </span>

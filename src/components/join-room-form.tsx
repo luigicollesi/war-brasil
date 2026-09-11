@@ -46,9 +46,9 @@ export function JoinRoomForm({
     requestInFlightRef.current = true;
     setError("");
     setIsJoining(true);
-    onStatusChange?.("pending");
+    onStatusChange?.("joining");
 
-    let failureStatus: OperationStatus = "error";
+    let failureStatus: OperationStatus = "join-error";
 
     try {
       const response = await fetchOperationsRequest("/api/rooms/join", {
@@ -85,7 +85,7 @@ export function JoinRoomForm({
         throw new Error("A resposta da sala é inválida.");
       }
 
-      onStatusChange?.("success");
+      onStatusChange?.("success-transition");
       router.push(`/lobby/${encodeURIComponent(data.room.code)}`);
     } catch (requestError) {
       requestInFlightRef.current = false;

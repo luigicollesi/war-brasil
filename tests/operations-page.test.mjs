@@ -12,16 +12,29 @@ const states = readFileSync(
   "utf8",
 );
 
-test("Operations modela os estados exigidos pelo spec sem acoplar negócio à cena", () => {
-  assert.match(operationsTypes, /"invalid-code"/);
-  assert.match(operationsTypes, /"network-error"/);
+test("Operations expõe os estados semânticos exigidos pelo spec", () => {
+  for (const state of [
+    "creating",
+    "create-error",
+    "joining",
+    "invalid-code",
+    "network-error",
+    "success-transition",
+  ]) {
+    assert.match(operationsTypes, new RegExp(`"${state}"`));
+  }
+
   assert.match(operationsTypes, /"create-focus"/);
   assert.match(operationsTypes, /"join-focus"/);
   assert.match(operationsTypes, /"typing-code"/);
   assert.match(operations, /data-interaction=\{interaction\}/);
   assert.match(operations, /data-state=\{activeStatus\}/);
+  assert.match(operations, /data-scene-state="scene-fallback"/);
+  assert.match(states, /data-state="creating"/);
+  assert.match(states, /data-state="joining"/);
   assert.match(states, /data-state="invalid-code"/);
   assert.match(states, /data-state="network-error"/);
+  assert.match(states, /data-state="success-transition"/);
 });
 
 test("Operations usa tabs horizontais com painel alcançável por teclado", () => {
@@ -44,18 +57,33 @@ test("Localizar operação preserva input único, paste e classificação de có
   assert.doesNotMatch(joinRoom, /maxLength=/);
 });
 
-test("Falha de rede e timeout são recuperáveis e distintos de erro de código", () => {
+test("Falha de rede e timeout são recuperáveis e distintos de erro funcional", () => {
   assert.match(operationsRequest, /class OperationsRequestError extends Error/);
   assert.match(operationsRequest, /"timeout"/);
   assert.match(operationsRequest, /"network"/);
   assert.match(createRoom, /instanceof OperationsRequestError/);
+  assert.match(createRoom, /"create-error"/);
   assert.match(joinRoom, /failureStatus = "network-error"/);
-  assert.match(operations, /Falha de comunicação — retry disponível/);
+  assert.match(joinRoom, /"join-error"/);
+  assert.match(operations, /Falha de comunicação — tente novamente/);
 });
 
-test("Create e Join mantêm endpoints e destinos funcionais vigentes", () => {
+test("Create e Join mantêm endpoints, proteção de duplicidade e destinos vigentes", () => {
   assert.match(createRoom, /fetchOperationsRequest\("\/api\/rooms"/);
   assert.match(joinRoom, /fetchOperationsRequest\("\/api\/rooms\/join"/);
+  assert.match(createRoom, /requestInFlightRef\.current/);
+  assert.match(joinRoom, /requestInFlightRef\.current/);
+  assert.match(createRoom, /onStatusChange\?\.\("creating"\)/);
+  assert.match(joinRoom, /onStatusChange\?\.\("joining"\)/);
+  assert.match(createRoom, /onStatusChange\?\.\("success-transition"\)/);
+  assert.match(joinRoom, /onStatusChange\?\.\("success-transition"\)/);
   assert.match(createRoom, /router\.push\(`\/lobby\/\$\{encodeURIComponent\(data\.room\.code\)\}`\)/);
   assert.match(joinRoom, /router\.push\(`\/lobby\/\$\{encodeURIComponent\(data\.room\.code\)\}`\)/);
+});
+
+test("Operations mantém fallback 2D e reduced-motion sem depender de WebGL", () => {
+  assert.match(operations, /war-brasil-42\.production\.svg/);
+  assert.match(operations, /data-scene-state="scene-fallback"/);
+  assert.match(states, /prefers-reduced-motion: reduce/);
+  assert.doesNotMatch(operations, /@react-three|three\/|<Canvas|WebGLRenderer/);
 });

@@ -31,7 +31,7 @@ export function CreateRoomButton({
     requestInFlightRef.current = true;
     setError("");
     setIsCreating(true);
-    onStatusChange?.("pending");
+    onStatusChange?.("creating");
 
     try {
       const response = await fetchOperationsRequest("/api/rooms", {
@@ -62,7 +62,7 @@ export function CreateRoomButton({
         throw new Error("A sala foi criada, mas a resposta é inválida.");
       }
 
-      onStatusChange?.("success");
+      onStatusChange?.("success-transition");
       router.push(`/lobby/${encodeURIComponent(data.room.code)}`);
     } catch (requestError) {
       requestInFlightRef.current = false;
@@ -75,7 +75,7 @@ export function CreateRoomButton({
       onStatusChange?.(
         requestError instanceof OperationsRequestError
           ? "network-error"
-          : "error",
+          : "create-error",
       );
     }
   }
