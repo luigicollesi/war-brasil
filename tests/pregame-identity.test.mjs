@@ -9,6 +9,10 @@ const matchmaking = readFileSync("src/app/matchmaking/page.tsx", "utf8");
 const lobbyPage = readFileSync("src/app/lobby/[code]/page.tsx", "utf8");
 const lobby = readFileSync("src/components/lobby-client.tsx", "utf8");
 const shell = readFileSync("src/components/war-shell.tsx", "utf8");
+const foundationScene = readFileSync(
+  "src/components/pre-game/foundation/command-scene.tsx",
+  "utf8",
+);
 
 test("identidade centraliza a paleta e tipografia do pré-jogo", () => {
   assert.match(identity, /--wb-bg:/);
@@ -38,9 +42,12 @@ test("matchmaking usa composição contínua em vez de cards independentes", () 
   assert.doesNotMatch(matchmaking, /Nesta versão inicial|etapas futuras|demonstrativos/);
 });
 
-test("lobby usa sala de comando com seis posições, mapa e ready rail", () => {
+test("lobby usa seis posições, Mesa da Foundation e ready rail", () => {
   assert.match(lobby, /6 - players\.length/);
-  assert.match(lobby, /wb-lobby-map/);
+  assert.match(lobby, /useCommandSceneDirective/);
+  assert.match(lobby, /focus: "table"/);
+  assert.doesNotMatch(lobby, /war-brasil-42\.production\.svg|wb-lobby-map/);
+  assert.match(foundationScene, /war-brasil-42\.production\.svg/);
   assert.match(lobby, /wb-ready-rail/);
   assert.match(lobby, /Pronto para batalha/);
   assert.match(lobby, /Sala sincronizada/);
