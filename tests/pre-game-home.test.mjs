@@ -7,6 +7,10 @@ const home = readFileSync(
   "src/components/pre-game/home/command-home-client.tsx",
   "utf8",
 );
+const fallback = readFileSync(
+  "src/components/pre-game/home/command-home-fallback.tsx",
+  "utf8",
+);
 const styles = readFileSync(
   "src/components/pre-game/home/command-home.module.css",
   "utf8",
@@ -20,7 +24,8 @@ test("HOME preserva metadata, canonical e structured data existentes", () => {
   assert.match(page, /twitter:/);
   assert.match(page, /application\/ld\+json/);
   assert.match(page, /"@type": "WebApplication"/);
-  assert.match(page, /<CommandHomeClient \/>/);
+  assert.match(page, /<CommandHomeClient>/);
+  assert.match(page, /<CommandHomeFallback \/>/);
 });
 
 test("HOME substitui o hero legado pela entrada de comando", () => {
@@ -30,6 +35,14 @@ test("HOME substitui o hero legado pela entrada de comando", () => {
   assert.match(home, /ENTRAR NO COMANDO/);
   assert.match(home, /data-home-state=\{homeState\}/);
   assert.match(home, /data-scene="fallback"/);
+});
+
+test("fallback visual permanece server-rendered e fora da fronteira interativa", () => {
+  assert.doesNotMatch(fallback, /"use client"/);
+  assert.doesNotMatch(home, /next\/image/);
+  assert.match(page, /CommandHomeFallback/);
+  assert.match(home, /children: ReactNode/);
+  assert.match(home, /\{children\}/);
 });
 
 test("HOME expõe os três destinos como links DOM com as rotas do spec", () => {
@@ -61,11 +74,15 @@ test("cerimônia Terra -> Brasil -> Mesa não é dependência da ação principa
   assert.match(home, /if \(current === "table"\) return "stable"/);
   assert.match(home, /const enterCommand = \(\) =>/);
   assert.doesNotMatch(home, /@react-three\/fiber/);
+  assert.doesNotMatch(fallback, /@react-three\/fiber/);
   assert.doesNotMatch(home, /<Canvas/);
+  assert.doesNotMatch(fallback, /<Canvas/);
 });
 
 test("fallback visual reutiliza exatamente o SVG territorial canônico de 42 territórios", () => {
-  assert.match(home, /src="\/war-brasil-42\.production\.svg"/);
+  assert.match(fallback, /src="\/war-brasil-42\.production\.svg"/);
+  assert.match(fallback, /preload/);
+  assert.match(fallback, /unoptimized/);
 
   const territories = svg.match(
     /<path\b(?=[^>]*\bclass="[^"]*\bterritory\b[^"]*")(?=[^>]*\bdata-name="[^"]+")[^>]*>/g,
