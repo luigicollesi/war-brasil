@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
-import { CommandShell } from "@/src/components/pre-game/foundation";
+import { ProfileCommandShell } from "@/src/components/profile/profile-command-shell";
 import { ProfileHall } from "@/src/components/profile/profile-hall";
 import { WarShell } from "@/src/components/war-shell";
 import { getCurrentProfileSnapshot } from "@/src/lib/profile/profile-data";
@@ -23,11 +23,7 @@ export default async function ProfilePage() {
   const snapshot = await getCurrentProfileSnapshot();
 
   return (
-    <CommandShell
-      intent={{ mode: "profile", focus: "insignia", conflictLevel: 0 }}
-      chrome={false}
-      sectionLabel="Salão de Comando"
-    >
+    <ProfileCommandShell>
       <WarShell
         title="Salão de Comando"
         backHref="/"
@@ -40,6 +36,6 @@ export default async function ProfilePage() {
       >
         <ProfileHall snapshot={snapshot} />
       </WarShell>
-    </CommandShell>
+    </ProfileCommandShell>
   );
 }
