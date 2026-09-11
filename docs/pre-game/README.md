@@ -36,6 +36,20 @@ A infraestrutura compartilhada fica em `foundation/`.
 
 As palavras normativas em maiúsculas seguem BCP 14 conforme `quality-standard.md`.
 
+## Ordem de leitura obrigatória para agentes
+
+Antes de implementar qualquer trilha:
+
+1. ler `quality-standard.md`;
+2. localizar os conceitos `CORE` aplicáveis em `traceability.md`;
+3. ler `visual-language.md`;
+4. ler `parallel-development.md`;
+5. ler `foundation/SPEC.md`;
+6. ler `SPEC.md` e `EVAL.md` da trilha;
+7. confrontar o spec com o código atual antes de modificar comportamento existente.
+
+Nenhum `SPEC.md` isolado representa todo o redesign.
+
 ## Regra de completude
 
 Uma trilha só está concluída quando:
@@ -73,3 +87,5 @@ O conteúdo crítico da rota MUST existir independentemente do 3D. WebGL é prog
 ## Regra contra omissão
 
 Qualquer remoção ou substituição de uma ideia marcada `CORE` em `traceability.md` MUST aparecer explicitamente no PR com justificativa e atualização da matriz. Ausência silenciosa é falha de implementação, mesmo que CI e score estejam verdes.
+
+A garantia aqui é processual: a matriz cobre as ideias conhecidas e recuperadas até esta revisão. Se uma decisão nova ou uma ideia histórica adicional for recuperada posteriormente, ela MUST ser adicionada a `traceability.md` antes ou junto da implementação. Isso evita afirmar completude absoluta sem evidência e mantém o sistema auditável.
