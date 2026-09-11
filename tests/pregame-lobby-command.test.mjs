@@ -23,9 +23,12 @@ test("ready permanece confirmado pelo servidor e perceptível sem depender de co
   assert.match(styles, /\.station\[data-ready="true"\] \.insignia/);
 });
 
-test("código da operação permanece copiável e selecionável", () => {
+test("código da operação permanece copiável, selecionável e com recuperação local", () => {
   assert.match(lobby, /navigator\.clipboard\.writeText\(code\.toUpperCase\(\)\)/);
   assert.match(lobby, /aria-label=\{`Copiar código da sala \$\{roomCode\}`\}/);
+  assert.match(lobby, /scope: "copy"/);
+  assert.match(lobby, /Cópia automática indisponível/);
+  assert.match(lobby, /Compartilhe este código para convocar outros comandos/);
   assert.match(styles, /user-select: all/);
 });
 
@@ -45,6 +48,16 @@ test("briefing representa seis postos e degrada para composição mobile própri
   assert.match(styles, /@media \(max-width: 900px\)/);
   assert.match(styles, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
   assert.match(styles, /@media \(max-width: 640px\)[\s\S]*?grid-template-columns: 1fr/);
+  assert.match(lobby, /max-sm:flex max-sm:flex-col/);
+  assert.match(lobby, /briefingStage\} max-sm:order-4/);
+  assert.match(lobby, /localConsole\} max-sm:order-3/);
+});
+
+test("configuração local mantém agrupamento semântico e controles no DOM", () => {
+  assert.match(lobby, /<fieldset[^>]*styles\.colorEditor/);
+  assert.match(lobby, /<legend className="wb-label">Cor da facção<\/legend>/);
+  assert.match(lobby, /<input[\s\S]*?id="faction-name"/);
+  assert.match(lobby, /Pronto para batalha/);
 });
 
 test("fallback HTML não depende de WebGL e respeita reduced motion", () => {
