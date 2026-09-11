@@ -1,4 +1,4 @@
-import type { Metadata, Viewport } from "next";
+import type { Metadata } from "next";
 import { Barlow_Condensed, Geist_Mono, Inter } from "next/font/google";
 import { getSiteUrl } from "@/src/lib/site-url";
 import "./globals.css";
@@ -12,7 +12,6 @@ import "./war-guide-final-sections.css";
 import "./war-guide-scenes.css";
 import "./war-guide-responsive.css";
 import "./war-guide-mobile-map.css";
-import "./browser-color-scheme.css";
 
 const interfaceFont = Inter({
   variable: "--font-wb-ui",
@@ -29,11 +28,6 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
-
-export const viewport: Viewport = {
-  colorScheme: "dark",
-  themeColor: "#071a15",
-};
 
 export const metadata: Metadata = {
   metadataBase: getSiteUrl(),
