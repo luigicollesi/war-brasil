@@ -2,15 +2,25 @@
 
 import { FormEvent, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { fetchOperationsRequest } from "@/src/components/operations-request";
-
-type OperationStatus = "idle" | "pending" | "error" | "success";
+import {
+  fetchOperationsRequest,
+  OperationsRequestError,
+} from "@/src/components/operations-request";
+import type {
+  OperationInteractionChange,
+  OperationStatus,
+  OperationStatusChange,
+} from "@/src/components/operations-types";
 
 type JoinRoomFormProps = {
-  onStatusChange?: (status: OperationStatus) => void;
+  onStatusChange?: OperationStatusChange;
+  onInteractionChange?: OperationInteractionChange;
 };
 
-export function JoinRoomForm({ onStatusChange }: JoinRoomFormProps) {
+export function JoinRoomForm({
+  onStatusChange,
+  onInteractionChange,
+}: JoinRoomFormProps) {
   const router = useRouter();
   const requestInFlightRef = useRef(false);
   const [roomCode, setRoomCode] = useState("");
@@ -29,7 +39,7 @@ export function JoinRoomForm({ onStatusChange }: JoinRoomFormProps) {
 
     if (!normalizedCode) {
       setError("Informe o código da sala.");
-      onStatusChange?.("error");
+      onStatusChange?.("invalid-code");
       return;
     }
 
@@ -37,6 +47,8 @@ export function JoinRoomForm({ onStatusChange }: JoinRoomFormProps) {
     setError("");
     setIsJoining(true);
     onStatusChange?.("pending");
+
+    let failureStatus: OperationStatus = "error";
 
     try {
       const response = await fetchOperationsRequest("/api/rooms/join", {
@@ -47,6 +59,10 @@ export function JoinRoomForm({ onStatusChange }: JoinRoomFormProps) {
       const data: unknown = await response.json();
 
       if (!response.ok) {
+        if (response.status === 404 || response.status === 422) {
+          failureStatus = "invalid-code";
+        }
+
         const message =
           typeof data === "object" &&
           data !== null &&
@@ -79,7 +95,12 @@ export function JoinRoomForm({ onStatusChange }: JoinRoomFormProps) {
           : "Não foi possível entrar na sala.",
       );
       setIsJoining(false);
-      onStatusChange?.("error");
+
+      if (requestError instanceof OperationsRequestError) {
+        failureStatus = "network-error";
+      }
+
+      onStatusChange?.(failureStatus);
     }
   }
 
@@ -93,12 +114,21 @@ export function JoinRoomForm({ onStatusChange }: JoinRoomFormProps) {
           id="room-code"
           name="roomCode"
           value={roomCode}
+          onFocus={() => onInteractionChange?.("typing-code")}
+          onBlur={() => {
+            if (!requestInFlightRef.current) {
+              onInteractionChange?.("join-focus");
+            }
+          }}
           onChange={(event) => {
             setRoomCode(event.target.value);
             setError("");
+            onInteractionChange?.("typing-code");
             if (!requestInFlightRef.current) onStatusChange?.("idle");
           }}
           placeholder="BRASIL-42"
+          inputMode="text"
+          enterKeyHint="go"
           autoComplete="off"
           spellCheck={false}
           aria-invalid={Boolean(error)}
@@ -107,6 +137,7 @@ export function JoinRoomForm({ onStatusChange }: JoinRoomFormProps) {
         />
         <button
           type="submit"
+          onFocus={() => onInteractionChange?.("join-focus")}
           disabled={isJoining}
           className="wb-button wb-button--secondary"
         >
@@ -116,8 +147,6 @@ export function JoinRoomForm({ onStatusChange }: JoinRoomFormProps) {
       <p
         id="room-code-hint"
         className="mt-3 min-h-5 text-xs text-[var(--wb-text-muted)]"
-        role="status"
-        aria-live="polite"
       >
         {isJoining
           ? "Validando o código e preparando acesso ao lobby."

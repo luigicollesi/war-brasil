@@ -2,15 +2,24 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { fetchOperationsRequest } from "@/src/components/operations-request";
-
-type OperationStatus = "idle" | "pending" | "error" | "success";
+import {
+  fetchOperationsRequest,
+  OperationsRequestError,
+} from "@/src/components/operations-request";
+import type {
+  OperationInteractionChange,
+  OperationStatusChange,
+} from "@/src/components/operations-types";
 
 type CreateRoomButtonProps = {
-  onStatusChange?: (status: OperationStatus) => void;
+  onStatusChange?: OperationStatusChange;
+  onInteractionChange?: OperationInteractionChange;
 };
 
-export function CreateRoomButton({ onStatusChange }: CreateRoomButtonProps) {
+export function CreateRoomButton({
+  onStatusChange,
+  onInteractionChange,
+}: CreateRoomButtonProps) {
   const router = useRouter();
   const requestInFlightRef = useRef(false);
   const [error, setError] = useState("");
@@ -63,7 +72,11 @@ export function CreateRoomButton({ onStatusChange }: CreateRoomButtonProps) {
           : "Não foi possível criar a sala.",
       );
       setIsCreating(false);
-      onStatusChange?.("error");
+      onStatusChange?.(
+        requestError instanceof OperationsRequestError
+          ? "network-error"
+          : "error",
+      );
     }
   }
 
@@ -72,16 +85,16 @@ export function CreateRoomButton({ onStatusChange }: CreateRoomButtonProps) {
       <button
         type="button"
         onClick={createRoom}
+        onFocus={() => onInteractionChange?.("create-focus")}
+        onBlur={() => {
+          if (!requestInFlightRef.current) onInteractionChange?.("idle");
+        }}
         disabled={isCreating}
         className="wb-button wb-button--primary w-full sm:w-auto"
       >
         {isCreating ? "Autorizando operação…" : "Autorizar nova operação"}
       </button>
-      <p
-        className="mt-3 min-h-5 text-xs text-[var(--wb-text-muted)]"
-        role="status"
-        aria-live="polite"
-      >
+      <p className="mt-3 min-h-5 text-xs text-[var(--wb-text-muted)]">
         {isCreating ? "Criando sala e preparando acesso ao lobby." : ""}
       </p>
       {error ? (

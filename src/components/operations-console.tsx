@@ -4,10 +4,14 @@ import Image from "next/image";
 import { KeyboardEvent, useRef, useState } from "react";
 import { CreateRoomButton } from "@/src/components/create-room-button";
 import { JoinRoomForm } from "@/src/components/join-room-form";
+import type {
+  OperationInteraction,
+  OperationStatus,
+} from "@/src/components/operations-types";
 import styles from "@/src/app/matchmaking/operations.module.css";
+import stateStyles from "@/src/app/matchmaking/operations-states.module.css";
 
 type Mode = "create" | "join";
-type OperationStatus = "idle" | "pending" | "error" | "success";
 
 const MODES: Array<{ mode: Mode; index: string; label: string; summary: string }> = [
   {
@@ -24,15 +28,34 @@ const MODES: Array<{ mode: Mode; index: string; label: string; summary: string }
   },
 ];
 
-function statusLabel(status: OperationStatus) {
-  if (status === "pending") return "Comando em processamento";
+function statusLabel(
+  status: OperationStatus,
+  interaction: OperationInteraction,
+  mode: Mode,
+) {
+  if (status === "pending") {
+    return mode === "create"
+      ? "Autorizando nova operação"
+      : "Localizando operação existente";
+  }
+  if (status === "invalid-code") return "Código de operação inválido";
+  if (status === "network-error") return "Falha de comunicação — retry disponível";
   if (status === "error") return "Ação interrompida — revisão necessária";
   if (status === "success") return "Operação autorizada";
+  if (interaction === "typing-code") return "Código em edição";
+  if (interaction === "create-focus") return "Protocolo 01 selecionado";
+  if (interaction === "join-focus") return "Protocolo 02 selecionado";
   return "Estação disponível";
+}
+
+function visualStatus(status: OperationStatus) {
+  if (status === "invalid-code" || status === "network-error") return "error";
+  return status;
 }
 
 export function OperationsConsole() {
   const [mode, setMode] = useState<Mode>("create");
+  const [interaction, setInteraction] = useState<OperationInteraction>("idle");
   const [createStatus, setCreateStatus] = useState<OperationStatus>("idle");
   const [joinStatus, setJoinStatus] = useState<OperationStatus>("idle");
   const tabsRef = useRef<Array<HTMLButtonElement | null>>([]);
@@ -48,6 +71,7 @@ export function OperationsConsole() {
     if (commandLocked && nextMode !== mode) return;
 
     setMode(nextMode);
+    setInteraction(nextMode === "create" ? "create-focus" : "join-focus");
     if (focus) {
       const index = MODES.findIndex((item) => item.mode === nextMode);
       tabsRef.current[index]?.focus();
@@ -75,9 +99,12 @@ export function OperationsConsole() {
 
   return (
     <section
-      className={styles.station}
+      className={`${styles.station} ${stateStyles.stationState}`}
       data-mode={mode}
-      data-status={activeStatus}
+      data-status={visualStatus(activeStatus)}
+      data-state={activeStatus}
+      data-interaction={interaction}
+      aria-busy={activeStatus === "pending"}
       aria-labelledby="operations-station-title"
     >
       <div className={styles.stationTopline}>
@@ -94,13 +121,22 @@ export function OperationsConsole() {
       </div>
 
       <div className={styles.machineBody}>
-        <div className={styles.mapBay} aria-hidden="true">
+        <div className={styles.mapBay} data-map-bay aria-hidden="true">
           <div className={styles.crown}>
-            <span className={`${styles.ring} ${styles.ringTerritory}`} />
-            <span className={`${styles.ring} ${styles.ringCommand}`} />
-            <span className={`${styles.ring} ${styles.ringConflict}`} />
+            <span
+              className={`${styles.ring} ${styles.ringTerritory}`}
+              data-ring="territory"
+            />
+            <span
+              className={`${styles.ring} ${styles.ringCommand}`}
+              data-ring="command"
+            />
+            <span
+              className={`${styles.ring} ${styles.ringConflict}`}
+              data-ring="conflict"
+            />
           </div>
-          <div className={styles.mapPlate}>
+          <div className={styles.mapPlate} data-map-plate>
             <Image
               src="/war-brasil-42.production.svg"
               alt=""
@@ -111,7 +147,7 @@ export function OperationsConsole() {
           </div>
           <div className={styles.axisVertical} />
           <div className={styles.axisHorizontal} />
-          <div className={styles.mapReadout}>
+          <div className={styles.mapReadout} data-map-readout>
             <span>42 placas</span>
             <span>geometria canônica</span>
           </div>
@@ -123,7 +159,12 @@ export function OperationsConsole() {
             <p className={styles.commandSequence}>AUTORIZAÇÃO // 01—02</p>
           </div>
 
-          <div className={styles.modeRail} role="tablist" aria-label="Modo de operação">
+          <div
+            className={styles.modeRail}
+            role="tablist"
+            aria-label="Modo de operação"
+            aria-orientation="horizontal"
+          >
             {MODES.map((item, index) => {
               const selected = mode === item.mode;
               const tabId = `operations-${item.mode}-tab`;
@@ -145,6 +186,13 @@ export function OperationsConsole() {
                   disabled={disabled}
                   className={`${styles.modeTab} disabled:cursor-not-allowed disabled:opacity-40`}
                   onClick={() => selectMode(item.mode)}
+                  onFocus={() => {
+                    if (!commandLocked || selected) {
+                      setInteraction(
+                        item.mode === "create" ? "create-focus" : "join-focus",
+                      );
+                    }
+                  }}
                   onKeyDown={(event) => handleTabKeyDown(event, index)}
                 >
                   <span className={styles.modeIndex}>{item.index}</span>
@@ -163,6 +211,7 @@ export function OperationsConsole() {
               id="operations-create-panel"
               role="tabpanel"
               aria-labelledby="operations-create-tab"
+              tabIndex={0}
               hidden={mode !== "create"}
               className={styles.modePanel}
             >
@@ -182,13 +231,17 @@ export function OperationsConsole() {
                   <dd>Lobby de preparação</dd>
                 </div>
               </dl>
-              <CreateRoomButton onStatusChange={setCreateStatus} />
+              <CreateRoomButton
+                onStatusChange={setCreateStatus}
+                onInteractionChange={setInteraction}
+              />
             </section>
 
             <section
               id="operations-join-panel"
               role="tabpanel"
               aria-labelledby="operations-join-tab"
+              tabIndex={0}
               hidden={mode !== "join"}
               className={styles.modePanel}
             >
@@ -198,13 +251,21 @@ export function OperationsConsole() {
                 Informe o identificador transmitido pelo anfitrião. A entrada
                 usa o mesmo código da sala e mantém sua digitação em caso de erro.
               </p>
-              <JoinRoomForm onStatusChange={setJoinStatus} />
+              <JoinRoomForm
+                onStatusChange={setJoinStatus}
+                onInteractionChange={setInteraction}
+              />
             </section>
           </div>
 
-          <div className={styles.stationStatus} role="status" aria-live="polite">
+          <div
+            className={styles.stationStatus}
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+          >
             <span className={styles.statusLamp} aria-hidden="true" />
-            <span>{statusLabel(activeStatus)}</span>
+            <span>{statusLabel(activeStatus, interaction, mode)}</span>
             <span className={styles.statusMode}>
               {mode === "create" ? "PROTOCOLO 01" : "PROTOCOLO 02"}
             </span>
