@@ -33,13 +33,16 @@ test("identidade centraliza a paleta e tipografia do pré-jogo legado", () => {
   assert.match(layout, /Inter/);
 });
 
-test("Home usa CommandShell enquanto matchmaking e lobby preservam WarShell legado", () => {
+test("Home publica intenção no runtime persistente enquanto outras trilhas permanecem isoladas nesta branch", () => {
   assert.match(shell, /wb-shell/);
+  assert.match(layout, /<PreGameCommandRuntime>\{children\}<\/PreGameCommandRuntime>/);
   assert.match(home, /<CommandHomeClient>/);
   assert.match(home, /<CommandHomeContent \/>/);
-  assert.match(homeClient, /<CommandShell intent=\{sceneIntent\}/);
+  assert.match(homeClient, /useCommandSceneDirective\(sceneIntent\)/);
+  assert.doesNotMatch(homeClient, /<CommandShell/);
   assert.match(homeContent, /AUTORIDADE TERRITORIAL/);
-  assert.match(foundation, /export \{ CommandShell \}/);
+  assert.match(foundation, /PreGameCommandRuntime/);
+  assert.match(foundation, /useCommandSceneDirective/);
   assert.doesNotMatch(home, /<WarShell/);
   assert.match(matchmaking, /<WarShell/);
   assert.match(lobbyPage, /<WarShell/);
