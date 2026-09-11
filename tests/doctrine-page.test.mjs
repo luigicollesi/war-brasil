@@ -68,30 +68,36 @@ test("read model da Doutrina deriva mecânicas das autoridades do jogo", () => {
   );
 });
 
-test("/rules resolve deep-link no servidor dentro da Foundation sem depender de Canvas", () => {
+test("/rules resolve deep-link no servidor dentro do runtime Foundation sem depender de Canvas", () => {
   const page = source("src/app/rules/page.tsx");
+  const layout = source("src/app/layout.tsx");
+  const routes = source(
+    "src/components/pre-game/foundation/pre-game-route-intent.ts",
+  );
 
   assert.match(page, /await searchParams/);
   assert.match(page, /isDoctrineChapterSlug/);
   assert.match(page, /buildDoctrinePresentation/);
-  assert.match(page, /<CommandShell/);
-  assert.match(page, /intent=\{DOCTRINE_SCENE_INTENT\}/);
-  assert.match(page, /sectionLabel="DOUTRINA"/);
   assert.match(page, /<DoctrineExperience/);
   assert.match(page, /canonical: "\/rules"/);
+  assert.match(layout, /<PreGameCommandRuntime>\{children\}<\/PreGameCommandRuntime>/);
+  assert.match(routes, /"\/rules": "doctrine"/);
+  assert.doesNotMatch(page, /<CommandShell|DOCTRINE_SCENE_INTENT/);
   assert.doesNotMatch(page, /Canvas|@react-three|three\//i);
 });
 
-test("Doutrina emite somente intenção semântica para a Foundation", () => {
-  const intent = source("src/components/doctrine/doctrine-scene-intent.ts");
-  const page = source("src/app/rules/page.tsx");
+test("Doutrina emite somente diretiva visual e deixa mode com a rota", () => {
+  const experience = source(
+    "src/components/doctrine/doctrine-experience.tsx",
+  );
 
-  assert.match(intent, /mode: "doctrine"/);
-  assert.match(intent, /focus: "brazil"/);
-  assert.match(intent, /territoryExplode: 0\.18/);
-  assert.match(intent, /satisfies CommandSceneIntent/);
-  assert.doesNotMatch(intent, /camera|quaternion|fov|position|\bx:|\by:|\bz:/i);
-  assert.doesNotMatch(page, /CommandScene|CameraDirector|@react-three|three\//i);
+  assert.match(experience, /useCommandSceneDirective/);
+  assert.match(experience, /focus: "brazil"/);
+  assert.match(experience, /territoryExplode: 0\.18/);
+  assert.match(experience, /orbitalAlignment: 0/);
+  assert.doesNotMatch(experience, /\bmode\s*:/);
+  assert.doesNotMatch(experience, /camera|quaternion|fov|position|\bx:|\by:|\bz:/i);
+  assert.doesNotMatch(experience, /CommandScene|CameraDirector|@react-three|three\//i);
 });
 
 test("índice usa links reais e troca de capítulo preserva foco e scroll", () => {
