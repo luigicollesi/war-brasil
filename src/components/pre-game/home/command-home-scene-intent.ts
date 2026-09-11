@@ -1,4 +1,4 @@
-import type { CommandSceneIntent } from "../foundation";
+import type { CommandSceneDirective } from "../foundation";
 
 export type HomeCeremonyPhase = "earth" | "brazil" | "table" | "stable";
 export type HomeDestinationId = "operations" | "doctrine" | "profile";
@@ -10,23 +10,22 @@ type HomeSceneIntentInput = Readonly<{
   transitioningTo: HomeDestinationId | null;
 }>;
 
-const DESTINATION_INTENTS: Readonly<Record<HomeDestinationId, CommandSceneIntent>> = {
+const DESTINATION_INTENTS: Readonly<
+  Record<HomeDestinationId, CommandSceneDirective>
+> = {
   operations: {
-    mode: "operations",
     focus: "brazil",
     conflictLevel: 1,
     territoryExplode: 0.08,
     orbitalAlignment: 1,
   },
   doctrine: {
-    mode: "doctrine",
     focus: "brazil",
     conflictLevel: 0,
     territoryExplode: 0.12,
     orbitalAlignment: 0,
   },
   profile: {
-    mode: "profile",
     focus: "insignia",
     conflictLevel: 0,
     territoryExplode: 0,
@@ -39,7 +38,7 @@ export function getHomeSceneIntent({
   commandOpen,
   destinationFocus,
   transitioningTo,
-}: HomeSceneIntentInput): CommandSceneIntent {
+}: HomeSceneIntentInput): CommandSceneDirective {
   const activeDestination = transitioningTo ?? destinationFocus;
 
   if (commandOpen && activeDestination) {
@@ -48,7 +47,6 @@ export function getHomeSceneIntent({
 
   if (commandOpen) {
     return {
-      mode: "entrance",
       focus: "table",
       conflictLevel: 0,
       territoryExplode: 0,
@@ -58,7 +56,6 @@ export function getHomeSceneIntent({
 
   if (ceremonyPhase === "earth") {
     return {
-      mode: "entrance",
       focus: "earth",
       conflictLevel: 0,
       territoryExplode: 0,
@@ -68,7 +65,6 @@ export function getHomeSceneIntent({
 
   if (ceremonyPhase === "brazil") {
     return {
-      mode: "entrance",
       focus: "brazil",
       conflictLevel: 0,
       territoryExplode: 0,
@@ -77,7 +73,6 @@ export function getHomeSceneIntent({
   }
 
   return {
-    mode: "entrance",
     focus: "table",
     conflictLevel: 0,
     territoryExplode: 0,
