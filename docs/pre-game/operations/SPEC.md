@@ -3,48 +3,113 @@
 **Rota:** `/matchmaking`  
 **Cena:** `operations`
 
+Segue `../quality-standard.md`, `../visual-language.md` e `../traceability.md`.
+
 ## Fantasia
 
-A Mesa deixa de ser símbolo e torna-se máquina. Entrar em matchmaking significa **autorizar ou localizar uma operação militar**.
+A Mesa deixa de ser símbolo e torna-se máquina. Matchmaking significa **autorizar uma nova operação** ou **localizar uma operação existente**.
+
+As duas ações MUST parecer modos da mesma estação de comando, não dois cards independentes.
 
 ## Contratos funcionais preservados
 
-Reutilizar o comportamento já existente de `CreateRoomButton` e `JoinRoomForm` ou seus contratos equivalentes. O redesign não pode alterar silenciosamente criação de sala, formato aceito de código, erros ou navegação resultante.
+O redesign MUST reutilizar o comportamento de `CreateRoomButton` e `JoinRoomForm` ou seus contratos equivalentes.
 
-## Ações
+MUST NOT alterar silenciosamente:
+
+- endpoint/semântica de criação;
+- formato/normalização do código;
+- mensagens/condições de erro relevantes;
+- destino após sucesso;
+- idempotência/proteção contra submissão duplicada;
+- qualquer contrato realtime/banco.
+
+Mudanças funcionais exigem spec próprio.
+
+## Modos
 
 ### Nova Operação
 
-Cria uma nova sala. Visualmente, a Mesa destrava e pode gerar uma placa/selo de operação.
+Cria uma nova sala. A Mesa MAY destravar, alinhar mecanismos e gerar uma placa/selo de operação, mas a animação MUST NOT atrasar o redirect funcional.
+
+Durante criação:
+
+- desabilitar submissão duplicada quando necessário;
+- informar estado assíncrono em texto;
+- fornecer recuperação em erro;
+- continuar funcional sem 3D.
 
 ### Localizar Operação
 
-Recebe o código existente. O input pode ser apresentado como cifrador de caracteres, mas deve continuar sendo um campo acessível, colável e compatível com teclado/autofill quando pertinente.
+Recebe o código de sala existente.
 
-## Layout
+O campo MUST ser um controle semanticamente correto, com label/nome acessível, teclado normal, paste e seleção de texto.
 
-Evitar dois cards SaaS lado a lado. As duas ações devem parecer **dois modos da mesma máquina**.
+A apresentação MAY segmentar caracteres visualmente como cifrador, mas SHOULD preferir um único input real em vez de múltiplos inputs que prejudiquem colagem, seleção, autofill ou leitores de tela.
 
-O Brasil pode separar placas alguns milímetros; a Coroa Orbital alinha-se parcialmente; linhas vermelhas surgem apenas durante o estado de operação.
+Normalização/validação MUST seguir o comportamento existente, não a estética nova.
+
+## Composição
+
+- Mesa em estado operacional;
+- Brasil MAY separar placas levemente sem perder geografia/fronteiras;
+- Coroa Orbital MAY alinhar parcialmente;
+- vermelho aparece como sinal de operação, erro ou conflito, não preenchimento decorativo constante;
+- create/join compartilham arquitetura visual e mudam o estado da mesma máquina.
+
+Foco de um modo SHOULD alterar a cena de forma contida, sem causar layout shift no formulário.
 
 ## Estados
 
-`idle`, `create-focus`, `creating`, `create-error`, `join-focus`, `typing-code`, `joining`, `invalid-code`, `network-error`, `reduced-motion`.
+- `idle`
+- `create-focus`
+- `creating`
+- `create-error`
+- `join-focus`
+- `typing-code`
+- `joining`
+- `invalid-code`
+- `network-error`
+- `success-transition`
+- `reduced-motion`
+- `scene-fallback`
 
-Todos os estados assíncronos têm feedback textual; motion não substitui status.
+Todo estado assíncrono MUST possuir feedback textual. Motion/3D nunca substituem status.
+
+## Erros e recuperação
+
+Erro MUST:
+
+- explicar que a operação não foi concluída;
+- preservar o código digitado quando isso não criar risco funcional;
+- liberar retry;
+- não deixar loading eterno;
+- não depender apenas de vermelho.
 
 ## Mobile
 
-O cifrador visual não cria seis inputs independentes se isso prejudicar colar código, acessibilidade ou teclado. Pode haver um único input semanticamente correto com representação visual segmentada.
+MUST:
+
+- manter input e CTAs acessíveis por touch;
+- aceitar paste de código completo;
+- não abrir teclado inadequado sem necessidade;
+- evitar dois painéis comprimidos lado a lado;
+- não exigir foco/hover na cena para escolher modo.
+
+Create/Join MAY virar seleção vertical/alternada, desde que continuem claramente dois modos da mesma máquina.
 
 ## Não fazer
 
-- mudar endpoints ou protocolo de salas por causa do redesign;
-- esconder erro dentro da cena 3D;
-- usar animação longa antes do redirect ao lobby;
-- bloquear criação por asset 3D não carregado;
-- transformar create/join em dois cards genéricos.
+MUST NOT:
+
+- mudar API/protocolo para facilitar o visual;
+- esconder erros na cena 3D;
+- usar animação longa antes do redirect;
+- bloquear criação/join por asset 3D;
+- criar seis inputs apenas por estética;
+- transformar os modos em cards SaaS genéricos;
+- duplicar lógica de validação apenas na camada visual.
 
 ## Definition of Done
 
-Create/join preservam comportamento existente, a página parece uma estação de autorização e passa `operations/EVAL.md`.
+Create/Join preservam exatamente o contrato funcional vigente; a página parece uma estação de autorização, funciona com teclado/touch/fallback e passa `EVAL.md`.
