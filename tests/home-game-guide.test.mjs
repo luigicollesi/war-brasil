@@ -40,11 +40,16 @@ test("apresentação do manual expõe os dados necessários sem regra visual par
   assert.ok(guide.maneuver.example.movableBeforeReceiving > guide.maneuver.example.movableAfterReceiving);
 });
 
-test("home usa brasão e leva ao Manual de Campo", () => {
+test("home direciona Doutrina ao manual sem embutir o guia legado", () => {
   const page = source("src/app/page.tsx");
-  assert.match(page, /src="\/icone\.png"/);
-  assert.match(page, /href="#manual"/);
-  assert.match(page, /<GameQuickGuide \/>/);
+  const home = source("src/components/pre-game/home/command-home-client.tsx");
+  const fallback = source("src/components/pre-game/home/command-home-fallback.tsx");
+
+  assert.match(fallback, /WAR Brasil/);
+  assert.match(home, /href: "\/rules"/);
+  assert.match(home, /label: "DOUTRINA"/);
+  assert.doesNotMatch(page, /href="#manual"/);
+  assert.doesNotMatch(page, /<GameQuickGuide \/>/);
 });
 
 test("GameQuickGuide orquestra as quinze seções na ordem planejada", () => {
