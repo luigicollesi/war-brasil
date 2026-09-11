@@ -6,9 +6,9 @@ import {
   Component,
   type ReactNode,
   useCallback,
-  useEffect,
   useMemo,
   useState,
+  useSyncExternalStore,
 } from "react";
 import styles from "./command-foundation.module.css";
 import { COMMAND_FOUNDATION_TOKENS } from "./foundation-tokens";
@@ -55,37 +55,19 @@ class SceneErrorBoundary extends Component<
   }
 }
 
-function useReducedMotion() {
-  const [reducedMotion, setReducedMotion] = useState(false);
+function useMediaQuery(query: string) {
+  const subscribe = useCallback(
+    (onStoreChange: () => void) => {
+      const media = window.matchMedia(query);
+      media.addEventListener("change", onStoreChange);
+      return () => media.removeEventListener("change", onStoreChange);
+    },
+    [query],
+  );
+  const getSnapshot = useCallback(() => window.matchMedia(query).matches, [query]);
+  const getServerSnapshot = useCallback(() => false, []);
 
-  useEffect(() => {
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const sync = () => setReducedMotion(media.matches);
-    sync();
-    media.addEventListener("change", sync);
-    return () => media.removeEventListener("change", sync);
-  }, []);
-
-  return reducedMotion;
-}
-
-function useAdaptiveMaxDpr() {
-  const [maxDpr, setMaxDpr] = useState(1.25);
-
-  useEffect(() => {
-    const deviceMemory = (
-      navigator as Navigator & { deviceMemory?: number }
-    ).deviceMemory;
-    const coarsePointer = window.matchMedia("(pointer: coarse)").matches;
-    const constrainedDevice = coarsePointer || (deviceMemory !== undefined && deviceMemory <= 4);
-    const cap = constrainedDevice
-      ? COMMAND_FOUNDATION_TOKENS.scene.maxReducedDpr
-      : COMMAND_FOUNDATION_TOKENS.scene.maxDesktopDpr;
-
-    setMaxDpr(Math.max(1, Math.min(window.devicePixelRatio || 1, cap)));
-  }, []);
-
-  return maxDpr;
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }
 
 function CommandSceneFallback({ intent }: { intent: ReturnType<typeof normalizeCommandSceneIntent> }) {
@@ -125,8 +107,12 @@ export function CommandScene({ intent, className }: CommandSceneProps) {
     () => normalizeCommandSceneIntent(intent),
     [intent],
   );
-  const reducedMotion = useReducedMotion();
-  const maxDpr = useAdaptiveMaxDpr();
+  const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
+  const coarsePointer = useMediaQuery("(pointer: coarse)");
+  const maxDpr =
+    reducedMotion || coarsePointer
+      ? COMMAND_FOUNDATION_TOKENS.scene.maxReducedDpr
+      : COMMAND_FOUNDATION_TOKENS.scene.maxDesktopDpr;
   const [sceneReady, setSceneReady] = useState(false);
   const [sceneFailed, setSceneFailed] = useState(false);
 
