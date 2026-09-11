@@ -36,6 +36,8 @@ type SceneErrorBoundaryState = {
   failed: boolean;
 };
 
+let cachedWebGLAvailability: boolean | undefined;
+
 class SceneErrorBoundary extends Component<
   SceneErrorBoundaryProps,
   SceneErrorBoundaryState
@@ -68,6 +70,33 @@ function useMediaQuery(query: string) {
   const getServerSnapshot = useCallback(() => false, []);
 
   return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+}
+
+function detectWebGLAvailability() {
+  if (cachedWebGLAvailability !== undefined) return cachedWebGLAvailability;
+
+  try {
+    const canvas = document.createElement("canvas");
+    cachedWebGLAvailability = Boolean(
+      canvas.getContext("webgl2") ?? canvas.getContext("webgl"),
+    );
+  } catch {
+    cachedWebGLAvailability = false;
+  }
+
+  return cachedWebGLAvailability;
+}
+
+function subscribeWebGLAvailability() {
+  return () => undefined;
+}
+
+function useWebGLAvailability() {
+  return useSyncExternalStore(
+    subscribeWebGLAvailability,
+    detectWebGLAvailability,
+    () => true,
+  );
 }
 
 function CommandSceneFallback({ intent }: { intent: ReturnType<typeof normalizeCommandSceneIntent> }) {
@@ -110,6 +139,7 @@ export function CommandScene({ intent, className }: CommandSceneProps) {
   const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const coarsePointer = useMediaQuery("(pointer: coarse)");
   const compactScene = useMediaQuery("(max-width: 900px)");
+  const webglAvailable = useWebGLAvailability();
   const maxDpr =
     reducedMotion || coarsePointer || compactScene
       ? COMMAND_FOUNDATION_TOKENS.scene.maxReducedDpr
@@ -127,7 +157,8 @@ export function CommandScene({ intent, className }: CommandSceneProps) {
     setSceneFailed(true);
   }, []);
 
-  const webglState = sceneFailed ? "fallback" : sceneReady ? "ready" : "loading";
+  const sceneUnavailable = sceneFailed || !webglAvailable;
+  const webglState = sceneUnavailable ? "fallback" : sceneReady ? "ready" : "loading";
 
   return (
     <div
@@ -139,7 +170,7 @@ export function CommandScene({ intent, className }: CommandSceneProps) {
       aria-hidden="true"
     >
       <CommandSceneFallback intent={normalizedIntent} />
-      {!sceneFailed ? (
+      {!sceneUnavailable ? (
         <div className={styles.canvasLayer}>
           <SceneErrorBoundary onError={handleUnavailable}>
             <CommandSceneCanvas
