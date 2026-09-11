@@ -50,7 +50,7 @@ test("guest de avaliação remove identidade sem inventar autenticação", async
   });
 });
 
-test("loaded de avaliação exercita todas as seções disponíveis", async () => {
+test("loaded de avaliação exercita todas as seções com histórico em janela limitada", async () => {
   await withProfileEnvironment("loaded", async () => {
     const snapshot = await getCurrentProfileSnapshot();
 
@@ -60,8 +60,8 @@ test("loaded de avaliação exercita todas as seções disponíveis", async () =
     assert.equal(snapshot.statistics.availability, "available");
     assert.equal(snapshot.history.availability, "available");
     assert.equal(snapshot.achievements.availability, "available");
+    assert.equal(snapshot.history.data.campaigns.length, 3);
     assert.equal(snapshot.history.data.hasMore, true);
-    assert.ok(snapshot.history.data.campaigns.length > 0);
     assert.ok(snapshot.achievements.data.length > 0);
   });
 });
@@ -75,6 +75,7 @@ test("empty-history esvazia somente o arquivo de campanhas", async () => {
     assert.equal(snapshot.statistics.availability, "available");
     assert.equal(snapshot.history.availability, "empty");
     assert.deepEqual(snapshot.history.data.campaigns, []);
+    assert.equal(snapshot.history.data.hasMore, false);
     assert.equal(snapshot.achievements.availability, "available");
   });
 });
