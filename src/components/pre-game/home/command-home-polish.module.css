@@ -1,5 +1,6 @@
 .root {
   max-width: 100%;
+  color-scheme: dark;
 }
 
 @supports (min-height: 100dvh) {
