@@ -68,20 +68,12 @@ function getServerReducedMotionSnapshot() {
   return false;
 }
 
-function subscribeRepeatVisit() {
-  return () => {};
-}
-
-function getRepeatVisitSnapshot() {
+function wasRitualSeenThisSession() {
   try {
     return sessionStorage.getItem(HOME_RITUAL_SESSION_KEY) === "1";
   } catch {
     return false;
   }
-}
-
-function getServerRepeatVisitSnapshot() {
-  return false;
 }
 
 function markRitualSeen() {
@@ -94,6 +86,7 @@ function markRitualSeen() {
 
 export function CommandHomeClient({ children }: CommandHomeClientProps) {
   const [ceremonyPhase, setCeremonyPhase] = useState<CeremonyPhase>("earth");
+  const [repeatVisit, setRepeatVisit] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const [destinationFocus, setDestinationFocus] = useState<DestinationId | null>(null);
   const [transitioningTo, setTransitioningTo] = useState<DestinationId | null>(null);
@@ -103,18 +96,22 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
     getReducedMotionSnapshot,
     getServerReducedMotionSnapshot,
   );
-  const repeatVisit = useSyncExternalStore(
-    subscribeRepeatVisit,
-    getRepeatVisitSnapshot,
-    getServerRepeatVisitSnapshot,
-  );
 
   const visitMode: VisitMode = reducedMotion ? "reduced" : repeatVisit ? "repeat" : "first";
   const effectiveCeremonyPhase: CeremonyPhase =
     visitMode === "first" ? ceremonyPhase : "stable";
 
   useEffect(() => {
+    const wasSeen = wasRitualSeenThisSession();
     markRitualSeen();
+
+    if (!wasSeen) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      setRepeatVisit(true);
+    });
+
+    return () => window.cancelAnimationFrame(frame);
   }, []);
 
   useEffect(() => {
