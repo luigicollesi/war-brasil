@@ -1,12 +1,7 @@
 "use client";
 
 import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
-import {
-  Suspense,
-  useEffect,
-  useMemo,
-  useRef,
-} from "react";
+import { Suspense, useEffect, useMemo, useRef } from "react";
 import {
   EdgesGeometry,
   ExtrudeGeometry,
@@ -25,14 +20,42 @@ import { resolveCommandCameraPose } from "./scene-presets";
 const MAP_VIEWBOX_SIZE = 1254;
 const MAP_SCALE = COMMAND_FOUNDATION_TOKENS.scene.mapScale;
 const MAP_HALF_EXTENT = (MAP_VIEWBOX_SIZE * MAP_SCALE) / 2;
-const MAP_CENTER_X = 0.72;
-const MAP_CENTER_Y = -0.28;
 const CANONICAL_TERRITORY_COUNT = 42;
 const PLATE_TONES = ["#26352a", "#2d3d30", "#223027", "#344437"] as const;
+
+type Position3 = [number, number, number];
+
+type SceneLayout = {
+  center: Position3;
+  objectScale: number;
+  globePosition: Position3;
+  globeScale: number;
+  insigniaPosition: Position3;
+  insigniaScale: number;
+};
+
+const DESKTOP_LAYOUT: SceneLayout = {
+  center: [0.72, -0.28, 0],
+  objectScale: 1,
+  globePosition: [-2.8, 0.74, 0.15],
+  globeScale: 1,
+  insigniaPosition: [2.95, 1.08, 0.14],
+  insigniaScale: 1,
+};
+
+const COMPACT_LAYOUT: SceneLayout = {
+  center: [1.05, 0.55, 0],
+  objectScale: 0.82,
+  globePosition: [-1.35, 1.85, 0.15],
+  globeScale: 0.72,
+  insigniaPosition: [2.4, 1.65, 0.14],
+  insigniaScale: 0.82,
+};
 
 type CommandSceneCanvasProps = {
   intent: NormalizedCommandSceneIntent;
   reducedMotion: boolean;
+  compact: boolean;
   maxDpr: number;
   onReady: () => void;
   onUnavailable: () => void;
@@ -65,12 +88,17 @@ function WebGLContextGuard({ onUnavailable }: { onUnavailable: () => void }) {
 function CameraDirector({
   intent,
   reducedMotion,
+  compact,
 }: {
   intent: NormalizedCommandSceneIntent;
   reducedMotion: boolean;
+  compact: boolean;
 }) {
   const invalidate = useThree((state) => state.invalidate);
-  const pose = useMemo(() => resolveCommandCameraPose(intent), [intent]);
+  const pose = useMemo(
+    () => resolveCommandCameraPose(intent, compact),
+    [compact, intent],
+  );
   const desiredPosition = useMemo(() => new Vector3(...pose.camera), [pose.camera]);
   const desiredTarget = useMemo(() => new Vector3(...pose.target), [pose.target]);
   const currentTarget = useRef(desiredTarget.clone());
@@ -115,9 +143,11 @@ function CameraDirector({
 function StrategicGlobe({
   intent,
   reducedMotion,
+  layout,
 }: {
   intent: NormalizedCommandSceneIntent;
   reducedMotion: boolean;
+  layout: SceneLayout;
 }) {
   const globeRef = useRef<Group>(null);
   const visible = intent.mode === "entrance" || intent.focus === "earth";
@@ -130,7 +160,12 @@ function StrategicGlobe({
   if (!visible) return null;
 
   return (
-    <group ref={globeRef} name="StrategicGlobe" position={[-2.8, 0.74, 0.15]}>
+    <group
+      ref={globeRef}
+      name="StrategicGlobe"
+      position={layout.globePosition}
+      scale={layout.globeScale}
+    >
       <mesh>
         <sphereGeometry args={[1.26, 28, 20]} />
         <meshStandardMaterial
@@ -157,9 +192,13 @@ function StrategicGlobe({
   );
 }
 
-function DomainTable() {
+function DomainTable({ layout }: { layout: SceneLayout }) {
   return (
-    <group name="DomainTable" position={[MAP_CENTER_X, MAP_CENTER_Y, -0.38]}>
+    <group
+      name="DomainTable"
+      position={[layout.center[0], layout.center[1], -0.38]}
+      scale={layout.objectScale}
+    >
       <mesh rotation={[Math.PI / 2, 0, 0]}>
         <cylinderGeometry args={[4.58, 4.76, 0.34, 96]} />
         <meshStandardMaterial color="#101713" roughness={0.75} metalness={0.4} />
@@ -180,7 +219,10 @@ function DomainTable() {
   );
 }
 
-function readCanonicalTerritoryId(path: { userData?: Record<string, unknown> }, pathIndex: number) {
+function readCanonicalTerritoryId(
+  path: { userData?: Record<string, unknown> },
+  pathIndex: number,
+) {
   const node = path.userData?.node as SVGElement | undefined;
   const rawId = node?.getAttribute("data-id");
   const territoryId = Number(rawId);
@@ -190,7 +232,9 @@ function readCanonicalTerritoryId(path: { userData?: Record<string, unknown> }, 
     territoryId < 1 ||
     territoryId > CANONICAL_TERRITORY_COUNT
   ) {
-    throw new Error(`Território canônico inválido no path ${pathIndex + 1}: ${rawId ?? "ausente"}`);
+    throw new Error(
+      `Território canônico inválido no path ${pathIndex + 1}: ${rawId ?? "ausente"}`,
+    );
   }
 
   return territoryId;
@@ -198,13 +242,14 @@ function readCanonicalTerritoryId(path: { userData?: Record<string, unknown> }, 
 
 function BrazilTerritoryAssembly({
   intent,
+  layout,
   onReady,
 }: {
   intent: NormalizedCommandSceneIntent;
+  layout: SceneLayout;
   onReady: () => void;
 }) {
   const svg = useLoader(SVGLoader, "/war-brasil-42.production.svg");
-  const assemblyRef = useRef<Group>(null);
   const materials = useMemo(
     () =>
       PLATE_TONES.map(
@@ -222,7 +267,7 @@ function BrazilTerritoryAssembly({
       new LineBasicMaterial({
         color: "#d0aa57",
         transparent: true,
-        opacity: 0.74,
+        opacity: 0.78,
       }),
     [],
   );
@@ -238,7 +283,9 @@ function BrazilTerritoryAssembly({
         uniqueIds.has(id),
       )
     ) {
-      throw new Error("O mapa da Foundation deve conter exatamente os territórios canônicos 1–42.");
+      throw new Error(
+        "O mapa da Foundation deve conter exatamente os territórios canônicos 1–42.",
+      );
     }
 
     return svg.paths.flatMap((path, pathIndex) => {
@@ -282,10 +329,10 @@ function BrazilTerritoryAssembly({
 
   return (
     <group
-      ref={assemblyRef}
       name="BrazilTerritoryAssembly"
-      position={[MAP_CENTER_X, MAP_CENTER_Y, 0.08]}
+      position={[layout.center[0], layout.center[1], 0.08]}
       rotation={[-0.095, 0.035, -0.028]}
+      scale={layout.objectScale}
     >
       <group
         scale={[MAP_SCALE, -MAP_SCALE, MAP_SCALE]}
@@ -294,6 +341,7 @@ function BrazilTerritoryAssembly({
         {plates.map((plate) => {
           const territoryIndex = plate.territoryId - 1;
           const separation = intent.territoryExplode * ((territoryIndex % 3) * 2.1);
+
           return (
             <group key={plate.id} position-z={separation}>
               <mesh geometry={plate.geometry}>
@@ -314,9 +362,11 @@ function BrazilTerritoryAssembly({
 function OrbitalCrown({
   intent,
   reducedMotion,
+  layout,
 }: {
   intent: NormalizedCommandSceneIntent;
   reducedMotion: boolean;
+  layout: SceneLayout;
 }) {
   const territoryRef = useRef<Group>(null);
   const commandRef = useRef<Group>(null);
@@ -349,7 +399,11 @@ function OrbitalCrown({
   const conflictOpacity = 0.08 + intent.conflictLevel * 0.13;
 
   return (
-    <group name="OrbitalCrown" position={[MAP_CENTER_X, MAP_CENTER_Y, 0.02]}>
+    <group
+      name="OrbitalCrown"
+      position={layout.center}
+      scale={layout.objectScale}
+    >
       <group ref={territoryRef} name="OrbitalCrown-Territory" rotation={[0.04, 0.08, 0]}>
         <mesh>
           <torusGeometry args={[4.02, 0.021, 8, 128]} />
@@ -392,13 +446,21 @@ function OrbitalCrown({
   );
 }
 
-function SceneInsignia({ intent }: { intent: NormalizedCommandSceneIntent }) {
+function SceneInsignia({
+  intent,
+  layout,
+}: {
+  intent: NormalizedCommandSceneIntent;
+  layout: SceneLayout;
+}) {
   const emphasized = intent.mode === "profile" || intent.focus === "insignia";
+  const scale = layout.insigniaScale * (emphasized ? 1 : 0.72);
+
   return (
     <group
       name="CommandInsignia"
-      position={[2.95, 1.08, 0.14]}
-      scale={emphasized ? 1 : 0.72}
+      position={layout.insigniaPosition}
+      scale={scale}
     >
       <mesh>
         <cylinderGeometry args={[0.48, 0.48, 0.08, 32]} />
@@ -420,7 +482,9 @@ function SceneInsignia({ intent }: { intent: NormalizedCommandSceneIntent }) {
   );
 }
 
-function ArchitecturalRails() {
+function ArchitecturalRails({ compact }: { compact: boolean }) {
+  if (compact) return null;
+
   return (
     <group name="CommandArchitecture" position={[0, 0, -0.55]}>
       <mesh position={[5.05, -1.4, 0]}>
@@ -439,9 +503,12 @@ function ArchitecturalRails() {
   );
 }
 
-function SceneFallbackGeometry() {
+function SceneFallbackGeometry({ layout }: { layout: SceneLayout }) {
   return (
-    <mesh position={[MAP_CENTER_X, MAP_CENTER_Y, 0]}>
+    <mesh
+      position={[layout.center[0], layout.center[1], 0]}
+      scale={layout.objectScale}
+    >
       <ringGeometry args={[3.75, 3.78, 96]} />
       <meshBasicMaterial color="#876d3f" transparent opacity={0.28} />
     </mesh>
@@ -451,17 +518,24 @@ function SceneFallbackGeometry() {
 function CommandSceneWorld({
   intent,
   reducedMotion,
+  compact,
   onReady,
 }: {
   intent: NormalizedCommandSceneIntent;
   reducedMotion: boolean;
+  compact: boolean;
   onReady: () => void;
 }) {
+  const layout = compact ? COMPACT_LAYOUT : DESKTOP_LAYOUT;
   const conflictIntensity = intent.conflictLevel * 5.2;
 
   return (
     <>
-      <CameraDirector intent={intent} reducedMotion={reducedMotion} />
+      <CameraDirector
+        intent={intent}
+        reducedMotion={reducedMotion}
+        compact={compact}
+      />
       <ambientLight color="#869187" intensity={1.15} />
       <directionalLight color="#eee1c2" intensity={2.35} position={[-5, 5, 8]} />
       <pointLight color="#c18f4c" intensity={18} distance={14} position={[5.4, 3.2, 5]} />
@@ -472,13 +546,25 @@ function CommandSceneWorld({
         position={[-3.8, -2.8, 3.3]}
       />
 
-      <ArchitecturalRails />
-      <DomainTable />
-      <OrbitalCrown intent={intent} reducedMotion={reducedMotion} />
-      <SceneInsignia intent={intent} />
-      <StrategicGlobe intent={intent} reducedMotion={reducedMotion} />
-      <Suspense fallback={<SceneFallbackGeometry />}>
-        <BrazilTerritoryAssembly intent={intent} onReady={onReady} />
+      <ArchitecturalRails compact={compact} />
+      <DomainTable layout={layout} />
+      <OrbitalCrown
+        intent={intent}
+        reducedMotion={reducedMotion}
+        layout={layout}
+      />
+      <SceneInsignia intent={intent} layout={layout} />
+      <StrategicGlobe
+        intent={intent}
+        reducedMotion={reducedMotion}
+        layout={layout}
+      />
+      <Suspense fallback={<SceneFallbackGeometry layout={layout} />}>
+        <BrazilTerritoryAssembly
+          intent={intent}
+          layout={layout}
+          onReady={onReady}
+        />
       </Suspense>
     </>
   );
@@ -487,14 +573,26 @@ function CommandSceneWorld({
 export function CommandSceneCanvas({
   intent,
   reducedMotion,
+  compact,
   maxDpr,
   onReady,
   onUnavailable,
 }: CommandSceneCanvasProps) {
+  const initialPose = resolveCommandCameraPose(intent, compact);
+
   return (
     <Canvas
       className="command-foundation-canvas"
-      camera={{ position: [-0.8, 0.8, 11.7], fov: 38, near: 0.1, far: 40 }}
+      camera={{
+        position: [
+          initialPose.camera[0],
+          initialPose.camera[1],
+          initialPose.camera[2],
+        ],
+        fov: initialPose.fov,
+        near: 0.1,
+        far: 40,
+      }}
       dpr={[1, maxDpr]}
       frameloop={reducedMotion ? "demand" : "always"}
       gl={{
@@ -511,6 +609,7 @@ export function CommandSceneCanvas({
       <CommandSceneWorld
         intent={intent}
         reducedMotion={reducedMotion}
+        compact={compact}
         onReady={onReady}
       />
     </Canvas>
