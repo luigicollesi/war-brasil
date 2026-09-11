@@ -5,12 +5,24 @@ import test from "node:test";
 const identity = readFileSync("src/app/war-identity.css", "utf8");
 const layout = readFileSync("src/app/layout.tsx", "utf8");
 const home = readFileSync("src/app/page.tsx", "utf8");
+const homeClient = readFileSync(
+  "src/components/pre-game/home/command-home-client.tsx",
+  "utf8",
+);
+const homeContent = readFileSync(
+  "src/components/pre-game/home/command-home-content.tsx",
+  "utf8",
+);
+const foundation = readFileSync(
+  "src/components/pre-game/foundation/index.ts",
+  "utf8",
+);
 const matchmaking = readFileSync("src/app/matchmaking/page.tsx", "utf8");
 const lobbyPage = readFileSync("src/app/lobby/[code]/page.tsx", "utf8");
 const lobby = readFileSync("src/components/lobby-client.tsx", "utf8");
 const shell = readFileSync("src/components/war-shell.tsx", "utf8");
 
-test("identidade centraliza a paleta e tipografia do pré-jogo", () => {
+test("identidade centraliza a paleta e tipografia do pré-jogo legado", () => {
   assert.match(identity, /--wb-bg:/);
   assert.match(identity, /--wb-gold:/);
   assert.match(identity, /--wb-blue:/);
@@ -21,9 +33,17 @@ test("identidade centraliza a paleta e tipografia do pré-jogo", () => {
   assert.match(layout, /Inter/);
 });
 
-test("Home, matchmaking e lobby compartilham WarShell", () => {
+test("Home publica intenção no runtime persistente enquanto outras trilhas permanecem isoladas nesta branch", () => {
   assert.match(shell, /wb-shell/);
-  assert.match(home, /<WarShell immersive>/);
+  assert.match(layout, /<PreGameCommandRuntime>\{children\}<\/PreGameCommandRuntime>/);
+  assert.match(home, /<CommandHomeClient>/);
+  assert.match(home, /<CommandHomeContent \/>/);
+  assert.match(homeClient, /useCommandSceneDirective\(sceneIntent\)/);
+  assert.doesNotMatch(homeClient, /<CommandShell/);
+  assert.match(homeContent, /AUTORIDADE TERRITORIAL/);
+  assert.match(foundation, /PreGameCommandRuntime/);
+  assert.match(foundation, /useCommandSceneDirective/);
+  assert.doesNotMatch(home, /<WarShell/);
   assert.match(matchmaking, /<WarShell/);
   assert.match(lobbyPage, /<WarShell/);
 });
@@ -44,7 +64,7 @@ test("lobby usa sala de comando com seis posições, mapa e ready rail", () => {
   assert.doesNotMatch(lobby, /Atualiza a cada 1 s/);
 });
 
-test("ações principais usam os primitivos visuais compartilhados", () => {
+test("ações principais usam os primitivos visuais compartilhados legados onde ainda aplicável", () => {
   assert.match(identity, /\.wb-button--primary/);
   assert.match(identity, /\.wb-field/);
   assert.match(identity, /\.wb-status/);

@@ -6,15 +6,13 @@ const component = readFileSync(
   "src/components/home-territory-map.tsx",
   "utf8",
 );
-const page = readFileSync("src/app/page.tsx", "utf8");
 const svg = readFileSync("public/war-brasil-42.production.svg", "utf8");
 
-test("home reutiliza os nomes canônicos presentes no SVG do mapa", () => {
+test("helper de mapa reutiliza os nomes canônicos presentes no SVG", () => {
   assert.match(svg, /class="territory[^\"]*"[^>]*data-name="Amazonas Ocidental"/);
   assert.match(svg, /data-name="Acre"/);
   assert.match(component, /\.territory\[data-name\]/);
   assert.match(component, /territory\?\.dataset\.name/);
-  assert.match(page, /<HomeTerritoryMap \/>/);
 });
 
 test("desktop exibe o território por hover e mobile mantém o nome por cinco segundos", () => {
