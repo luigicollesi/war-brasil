@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { MouseEvent } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { DoctrineChapterDemo } from "@/src/components/doctrine/doctrine-demo";
+import { useCommandSceneDirective } from "@/src/components/pre-game/foundation";
 import {
   isDoctrineChapterSlug,
   type DoctrineChapter,
@@ -59,6 +60,13 @@ export function DoctrineExperience({
     activeIndex >= 0 && activeIndex < presentation.chapters.length - 1
       ? presentation.chapters[activeIndex + 1]
       : null;
+
+  useCommandSceneDirective({
+    focus: "brazil",
+    conflictLevel: 0,
+    territoryExplode: 0.18,
+    orbitalAlignment: 0,
+  });
 
   useEffect(() => {
     const onPopState = () => {
