@@ -92,6 +92,12 @@ A representação MAY usar face inset, corpo quase canônico, extrusão, bevel, 
 
 Quando reutilizar a geometria do mapa interativo existente, a geometria canônica SHOULD continuar disponível como camada lógica/hit-map para teclado, touch e pointer.
 
+A ordem/identidade territorial MUST permanecer estável entre estados visuais. Um território não pode trocar de identidade, índice semântico ou vizinhança porque a apresentação mudou.
+
+Se zoom ou aproximação de câmera alterar a escala aparente do mapa, a implementação SHOULD compensar stroke/borda quando necessário para que fronteiras continuem perceptíveis. Zoom não pode transformar a leitura territorial em manchas sem separação.
+
+Gestos touch MUST distinguir intenção de pan/scroll/zoom de seleção quando houver interação territorial. Movimento do dedo não deve disparar seleção acidental como efeito colateral.
+
 ## Objetos de assinatura
 
 ### StrategicGlobe
@@ -150,7 +156,8 @@ MUST:
 - manter ação primária em região touch acessível;
 - não depender de hover;
 - não forçar a perspectiva 3D quando ela prejudicar conteúdo;
-- preservar mapa/objeto como atmosfera/foco sem sobrepor texto funcional.
+- preservar mapa/objeto como atmosfera/foco sem sobrepor texto funcional;
+- evitar seleção territorial acidental durante gesto de navegação/scroll quando territórios forem interativos.
 
 SHOULD usar layout fluido/mobile-first antes de hardcode por aparelho.
 
