@@ -2,6 +2,13 @@
   "version": 2,
   "initiative": "pre-game-command-experience",
   "sourceBranch": "dev",
+  "projectContext": {
+    "next": "16.3.4",
+    "react": "19.2.8",
+    "reactThreeFiber": "9.7.0",
+    "three": "0.185.1",
+    "tailwind": "4.x"
+  },
   "documents": {
     "qualityStandard": "quality-standard.md",
     "traceability": "traceability.md",
@@ -16,6 +23,7 @@
     "accessibility": "https://www.w3.org/TR/WCAG22/",
     "visualRegression": "https://playwright.dev/docs/test-snapshots",
     "nextLazyLoading": "https://nextjs.org/docs/app/guides/lazy-loading",
+    "nextServerClient": "https://nextjs.org/docs/app/getting-started/server-and-client-components",
     "r3fPerformance": "https://r3f.docs.pmnd.rs/advanced/scaling-performance"
   },
   "qualityGate": {
