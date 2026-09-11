@@ -32,7 +32,7 @@ type LobbyPendingAction =
   | null;
 
 type LobbyActionError = {
-  scope: "profile" | "bot" | "copy";
+  scope: "profile" | "ready" | "bot" | "copy";
   message: string;
 } | null;
 
@@ -77,7 +77,12 @@ export function LobbyClient({ code }: LobbyClientProps) {
       const data = (await response.json()) as RoomUpdateResponse;
 
       if (!response.ok) {
-        throw new Error(data.error ?? "Não foi possível salvar suas escolhas.");
+        throw new Error(
+          data.error ??
+            (action === "ready"
+              ? "Não foi possível atualizar sua prontidão."
+              : "Não foi possível salvar suas escolhas."),
+        );
       }
 
       if (data.room?.status !== "waiting" && data.room?.id) {
@@ -88,11 +93,13 @@ export function LobbyClient({ code }: LobbyClientProps) {
       await refresh();
     } catch (requestError) {
       setActionError({
-        scope: "profile",
+        scope: action,
         message:
           requestError instanceof Error
             ? requestError.message
-            : "Não foi possível salvar suas escolhas.",
+            : action === "ready"
+              ? "Não foi possível atualizar sua prontidão."
+              : "Não foi possível salvar suas escolhas.",
       });
     } finally {
       setPendingAction(null);
@@ -177,7 +184,8 @@ export function LobbyClient({ code }: LobbyClientProps) {
       setCopied(false);
       setActionError({
         scope: "copy",
-        message: "Cópia automática indisponível. Selecione o código acima e copie manualmente.",
+        message:
+          "Cópia automática indisponível. Selecione o código acima e copie manualmente.",
       });
     }
   }
@@ -230,10 +238,12 @@ export function LobbyClient({ code }: LobbyClientProps) {
   const allReady = players.length >= 2 && readyPlayers === players.length;
   const emptySlots = Array.from({ length: Math.max(0, 6 - players.length) });
   const actionPending = pendingAction !== null;
+  const readyPending = pendingAction === "ready";
   const roomCode = room.code.toUpperCase();
   const reconnecting = Boolean(syncError);
   const startAuthorized = room.status !== "waiting";
   const copyError = actionError?.scope === "copy" ? actionError.message : null;
+  const readyError = actionError?.scope === "ready" ? actionError.message : null;
   const tableStatus = startAuthorized
     ? "CONFLITO AUTORIZADO"
     : allReady
@@ -278,7 +288,8 @@ export function LobbyClient({ code }: LobbyClientProps) {
             >
               {copied
                 ? `Código ${roomCode} copiado.`
-                : copyError ?? "Compartilhe este código para convocar outros comandos."}
+                : copyError ??
+                  "Compartilhe este código para convocar outros comandos."}
             </p>
           </div>
 
@@ -295,7 +306,11 @@ export function LobbyClient({ code }: LobbyClientProps) {
       </header>
 
       {syncError ? (
-        <div className={`${styles.networkNotice} max-sm:order-2`} role="status" aria-live="polite">
+        <div
+          className={`${styles.networkNotice} max-sm:order-2`}
+          role="status"
+          aria-live="polite"
+        >
           <span>
             Conexão instável. A última formação confirmada permanece visível enquanto
             novas tentativas de sincronização acontecem automaticamente.
@@ -336,7 +351,9 @@ export function LobbyClient({ code }: LobbyClientProps) {
             <div className={styles.tableReadout} aria-hidden="true">
               <strong>42 territórios</strong>
               <span>•</span>
-              <span>{readyPlayers}/{players.length} comandos prontos</span>
+              <span>
+                {readyPlayers}/{players.length} comandos prontos
+              </span>
             </div>
           </div>
           <p className={styles.authorization} role="status" aria-live="polite">
@@ -402,7 +419,11 @@ export function LobbyClient({ code }: LobbyClientProps) {
         </ol>
       </section>
 
-      <section className={`${styles.localConsole} max-sm:order-3`} aria-labelledby="my-faction-title">
+      <section
+        className={`${styles.localConsole} max-sm:order-3`}
+        aria-labelledby="my-faction-title"
+        aria-busy={pendingAction === "profile"}
+      >
         <div className={styles.consoleIntro}>
           <p className="wb-section-title">Sua estação</p>
           <h2 id="my-faction-title" className={styles.consoleTitle}>
@@ -414,7 +435,9 @@ export function LobbyClient({ code }: LobbyClientProps) {
               : "Defina sua identificação operacional antes de confirmar prontidão."}
           </p>
           {canManageBots ? (
-            <p className={styles.consoleStatus}>Você controla a composição de bots desta sala.</p>
+            <p className={styles.consoleStatus}>
+              Você controla a composição de bots desta sala.
+            </p>
           ) : null}
         </div>
 
@@ -447,7 +470,9 @@ export function LobbyClient({ code }: LobbyClientProps) {
             </div>
           </form>
 
-          <fieldset className={`wb-faction-editor ${styles.colorEditor} min-w-0 border-0 p-0`}>
+          <fieldset
+            className={`wb-faction-editor ${styles.colorEditor} min-w-0 border-0 p-0`}
+          >
             <legend className="wb-label">Cor da facção</legend>
             <div className={`wb-color-grid ${styles.colorGrid}`}>
               {PLAYER_COLORS.map((color) => {
@@ -518,6 +543,7 @@ export function LobbyClient({ code }: LobbyClientProps) {
       <section
         className={`wb-ready-rail ${styles.readyRail} max-sm:order-5`}
         aria-label="Preparação da partida"
+        aria-busy={readyPending}
       >
         <div className={`wb-shell-inner wb-ready-inner ${styles.readyInner}`}>
           <div className={`wb-ready-progress ${styles.readyCopy}`}>
@@ -539,16 +565,26 @@ export function LobbyClient({ code }: LobbyClientProps) {
                       ? "Seu comando está pronto"
                       : "Aguardando sua confirmação"}
               </p>
-              <p className={styles.readyDetail}>
-                {startAuthorized
-                  ? "Transferindo autoridade para o tabuleiro."
-                  : `${readyPlayers} de ${players.length} prontos · estado confirmado pelo servidor`}
+              <p className={styles.readyDetail} aria-live="polite">
+                {readyPending
+                  ? "Solicitação enviada · aguardando confirmação do servidor"
+                  : startAuthorized
+                    ? "Transferindo autoridade para o tabuleiro."
+                    : `${readyPlayers} de ${players.length} prontos · estado confirmado pelo servidor`}
               </p>
               <div className="wb-ready-progress-dots mt-2" aria-hidden="true">
                 {players.map((player) => (
-                  <span key={player.id} data-ready={player.isReady ? "true" : "false"} />
+                  <span
+                    key={player.id}
+                    data-ready={player.isReady ? "true" : "false"}
+                  />
                 ))}
               </div>
+              {readyError ? (
+                <p className="wb-error" role="alert">
+                  {readyError}
+                </p>
+              ) : null}
             </div>
           </div>
 
@@ -559,8 +595,9 @@ export function LobbyClient({ code }: LobbyClientProps) {
             className={`wb-button ${me.isReady ? "wb-button--secondary" : "wb-button--primary"}`}
             aria-pressed={me.isReady}
             aria-describedby="ready-status"
+            aria-busy={readyPending}
           >
-            {pendingAction === "ready"
+            {readyPending
               ? "Confirmando…"
               : allReady
                 ? "Preparando…"
@@ -605,7 +642,13 @@ function PlayerStation({
           POSTO {String(slot).padStart(2, "0")}
         </span>
         <span className="wb-player-state">
-          {localHost ? "COMANDO" : player.isBot ? "BOT" : player.isMe ? "VOCÊ" : "ATIVO"}
+          {localHost
+            ? "COMANDO"
+            : player.isBot
+              ? "BOT"
+              : player.isMe
+                ? "VOCÊ"
+                : "ATIVO"}
         </span>
       </div>
 
@@ -615,7 +658,11 @@ function PlayerStation({
           <p className={styles.stationName}>{player.factionName}</p>
           <p className={styles.stationMeta}>
             {color?.label ?? "Facção"}
-            {player.isBot ? " · unidade automatizada" : player.isMe ? " · sua estação" : ""}
+            {player.isBot
+              ? " · unidade automatizada"
+              : player.isMe
+                ? " · sua estação"
+                : ""}
           </p>
         </div>
       </div>
