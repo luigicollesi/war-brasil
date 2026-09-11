@@ -8,6 +8,16 @@
     "visualLanguage": "visual-language.md",
     "parallelDevelopment": "parallel-development.md"
   },
+  "references": {
+    "requirementsLanguage": [
+      "https://www.rfc-editor.org/info/rfc2119/",
+      "https://www.rfc-editor.org/info/rfc8174/"
+    ],
+    "accessibility": "https://www.w3.org/TR/WCAG22/",
+    "visualRegression": "https://playwright.dev/docs/test-snapshots",
+    "nextLazyLoading": "https://nextjs.org/docs/app/guides/lazy-loading",
+    "r3fPerformance": "https://r3f.docs.pmnd.rs/advanced/scaling-performance"
+  },
   "qualityGate": {
     "minimumScore": 85,
     "blockersMustPass": true,
