@@ -67,11 +67,15 @@ test("Brasil 2.5D deriva somente do SVG canônico e mantém os 42 ids únicos", 
 
   assert.match(svg, /id="territory-1"[^>]*data-id="1"/);
   assert.match(svg, /id="territory-42"[^>]*data-id="42"/);
+  assert.match(canvas, /CANONICAL_TERRITORY_COUNT = 42/);
+  assert.match(canvas, /getAttribute\("data-id"\)/);
   assert.match(canvas, /useLoader\(SVGLoader, "\/war-brasil-42\.production\.svg"\)/);
   assert.match(canvas, /SVGLoader\.createShapes/);
   assert.match(canvas, /new ExtrudeGeometry/);
   assert.match(canvas, /new EdgesGeometry/);
   assert.match(canvas, /BrazilTerritoryAssembly/);
+  assert.match(canvas, /territoryId: number/);
+  assert.doesNotMatch(canvas, /data-territory-id|String\(pathIndex \+ 1\)/);
   assert.doesNotMatch(canvas, /position-x=\{.*territoryExplode|position-y=\{.*territoryExplode/);
 });
 
