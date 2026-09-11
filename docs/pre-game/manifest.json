@@ -1,0 +1,100 @@
+{
+  "version": 2,
+  "initiative": "pre-game-command-experience",
+  "sourceBranch": "dev",
+  "projectContext": {
+    "next": "16.3.4",
+    "react": "19.2.8",
+    "reactThreeFiber": "9.7.0",
+    "three": "0.185.1",
+    "tailwind": "4.x"
+  },
+  "documents": {
+    "qualityStandard": "quality-standard.md",
+    "traceability": "traceability.md",
+    "visualLanguage": "visual-language.md",
+    "parallelDevelopment": "parallel-development.md"
+  },
+  "references": {
+    "requirementsLanguage": [
+      "https://www.rfc-editor.org/info/rfc2119/",
+      "https://www.rfc-editor.org/info/rfc8174/"
+    ],
+    "accessibility": "https://www.w3.org/TR/WCAG22/",
+    "visualRegression": "https://playwright.dev/docs/test-snapshots",
+    "nextLazyLoading": "https://nextjs.org/docs/app/guides/lazy-loading",
+    "nextServerClient": "https://nextjs.org/docs/app/getting-started/server-and-client-components",
+    "r3fPerformance": "https://r3f.docs.pmnd.rs/advanced/scaling-performance"
+  },
+  "qualityGate": {
+    "minimumScore": 85,
+    "blockersMustPass": true,
+    "coreTraceabilityMustPass": true,
+    "desktopAndMobileRequired": true,
+    "reducedMotionRequired": true,
+    "webglFallbackRequired": true,
+    "commands": [
+      "npm test",
+      "npm run lint",
+      "npm run build"
+    ]
+  },
+  "sharedContracts": [
+    "foundation-contract",
+    "canonical-42-territories",
+    "single-scene-intent-api",
+    "business-state-isolation"
+  ],
+  "tracks": [
+    {
+      "id": "foundation",
+      "route": null,
+      "dependsOn": [],
+      "spec": "foundation/SPEC.md",
+      "eval": "foundation/EVAL.md",
+      "suggestedBranch": "feature/pre-game-foundation"
+    },
+    {
+      "id": "home",
+      "route": "/",
+      "dependsOn": ["foundation-contract"],
+      "spec": "home/SPEC.md",
+      "eval": "home/EVAL.md",
+      "suggestedBranch": "feature/pre-game-home"
+    },
+    {
+      "id": "operations",
+      "route": "/matchmaking",
+      "dependsOn": ["foundation-contract"],
+      "preserves": ["room-create", "room-join"],
+      "spec": "operations/SPEC.md",
+      "eval": "operations/EVAL.md",
+      "suggestedBranch": "feature/pre-game-operations"
+    },
+    {
+      "id": "lobby",
+      "route": "/lobby/[code]",
+      "dependsOn": ["foundation-contract"],
+      "preserves": ["realtime", "ready", "start-condition", "room-code"],
+      "spec": "lobby/SPEC.md",
+      "eval": "lobby/EVAL.md",
+      "suggestedBranch": "feature/pre-game-lobby"
+    },
+    {
+      "id": "doctrine",
+      "route": "/rules",
+      "dependsOn": ["foundation-contract", "active-game-rules"],
+      "spec": "doctrine/SPEC.md",
+      "eval": "doctrine/EVAL.md",
+      "suggestedBranch": "feature/pre-game-doctrine"
+    },
+    {
+      "id": "profile",
+      "route": "/profile",
+      "dependsOn": ["foundation-contract", "available-profile-data"],
+      "spec": "profile/SPEC.md",
+      "eval": "profile/EVAL.md",
+      "suggestedBranch": "feature/pre-game-profile"
+    }
+  ]
+}
