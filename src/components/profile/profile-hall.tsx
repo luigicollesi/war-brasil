@@ -1,8 +1,8 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import type {
   ProfileAchievement,
   ProfileCampaign,
-  ProfileSection,
   ProfileSnapshot,
   ProfileState,
 } from "@/src/lib/profile/profile-data";
@@ -20,7 +20,7 @@ type RecordFixtureProps = {
   motif: "archive" | "medals" | "rank";
   availability: "available" | "empty" | "unavailable";
   unavailableReason?: string;
-  children?: React.ReactNode;
+  children?: ReactNode;
 };
 
 function StateSeal({ state }: { state: ProfileState }) {
@@ -165,10 +165,6 @@ function NonIdentityState({ snapshot }: ProfileHallProps) {
       </div>
     </main>
   );
-}
-
-function sectionIsEmpty<T>(section: ProfileSection<T>) {
-  return section.availability === "empty";
 }
 
 export function ProfileHall({ snapshot }: ProfileHallProps) {
