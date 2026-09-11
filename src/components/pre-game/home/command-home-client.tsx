@@ -3,6 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useEffect, useState, useSyncExternalStore } from "react";
+import polish from "./command-home-polish.module.css";
 import styles from "./command-home.module.css";
 
 type CeremonyPhase = "earth" | "brazil" | "table" | "stable";
@@ -158,7 +159,7 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
 
   return (
     <main
-      className={styles.root}
+      className={`${styles.root} ${polish.root}`}
       data-home-state={homeState}
       data-scene="fallback"
       data-ceremony={effectiveCeremonyPhase}
@@ -169,10 +170,18 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
     >
       {children}
 
-      <section id="home-command" className={styles.commandDock} aria-label="Acesso ao comando">
+      <section
+        id="home-command"
+        className={`${styles.commandDock} ${polish.commandDockSafe}`}
+        aria-label="Acesso ao comando"
+      >
         {!commandOpen ? (
           <div className={styles.authorization}>
-            <button type="button" className={styles.enterButton} onClick={enterCommand}>
+            <button
+              type="button"
+              className={`${styles.enterButton} ${polish.touchControl}`}
+              onClick={enterCommand}
+            >
               <span className={styles.enterButtonCode} aria-hidden="true">A-01</span>
               <span>ENTRAR NO COMANDO</span>
               <span className={styles.enterButtonArrow} aria-hidden="true">→</span>
@@ -181,7 +190,11 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
             <div className={styles.authorizationMeta}>
               <span>ACESSO OPERACIONAL DISPONÍVEL</span>
               {effectiveCeremonyPhase !== "stable" && visitMode === "first" ? (
-                <button type="button" className={styles.skipCeremony} onClick={skipCeremony}>
+                <button
+                  type="button"
+                  className={`${styles.skipCeremony} ${polish.touchControl} ${polish.skipTouchTarget}`}
+                  onClick={skipCeremony}
+                >
                   Pular ritual
                 </button>
               ) : (
@@ -207,7 +220,7 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
                 <Link
                   key={destination.id}
                   href={destination.href}
-                  className={styles.destination}
+                  className={`${styles.destination} ${polish.touchControl} ${polish.destinationTouchTarget}`}
                   data-destination={destination.id}
                   onClick={() => setTransitioningTo(destination.id)}
                   onFocus={() => setDestinationFocus(destination.id)}
