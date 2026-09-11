@@ -150,7 +150,14 @@ function StrategicGlobe({
   layout: SceneLayout;
 }) {
   const globeRef = useRef<Group>(null);
+  const invalidate = useThree((state) => state.invalidate);
   const visible = intent.mode === "entrance" || intent.focus === "earth";
+
+  useEffect(() => {
+    if (!reducedMotion || !globeRef.current) return;
+    globeRef.current.rotation.y = 0;
+    invalidate();
+  }, [invalidate, reducedMotion]);
 
   useFrame(({ clock }) => {
     if (!globeRef.current || reducedMotion || !visible) return;
@@ -371,13 +378,17 @@ function OrbitalCrown({
   const territoryRef = useRef<Group>(null);
   const commandRef = useRef<Group>(null);
   const conflictRef = useRef<Group>(null);
+  const invalidate = useThree((state) => state.invalidate);
 
   useEffect(() => {
-    if (!reducedMotion || !intent.orbitalAlignment) return;
-    for (const ref of [territoryRef, commandRef, conflictRef]) {
-      if (ref.current) ref.current.rotation.z = 0;
-    }
-  }, [intent.orbitalAlignment, reducedMotion]);
+    if (!reducedMotion) return;
+    const aligned = intent.orbitalAlignment === 1;
+
+    if (territoryRef.current) territoryRef.current.rotation.z = 0;
+    if (commandRef.current) commandRef.current.rotation.z = aligned ? 0 : 0.08;
+    if (conflictRef.current) conflictRef.current.rotation.z = aligned ? 0 : -0.11;
+    invalidate();
+  }, [intent.orbitalAlignment, invalidate, reducedMotion]);
 
   useFrame(({ clock }) => {
     if (reducedMotion) return;
