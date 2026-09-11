@@ -136,7 +136,11 @@ test("conteúdo essencial permanece disponível quando WebGL falha", async ({ pa
   await expect(page.locator('[data-doctrine-chapter="barreiras-conexoes"]')).toBeVisible();
   await expect(page.locator("#chapter-title")).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Capítulos da Doutrina" })).toBeVisible();
-  await expect(page.getByRole("figure")).toBeVisible();
+  await expect(
+    page.getByRole("figure", {
+      name: "Demonstração do efeito de uma barreira em uma conexão",
+    }),
+  ).toBeVisible();
 });
 
 test("deep-link continua ensinando com JavaScript desabilitado", async ({ browser }) => {
