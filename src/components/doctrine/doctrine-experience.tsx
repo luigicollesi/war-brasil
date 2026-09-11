@@ -1,6 +1,7 @@
 "use client";
 
-import type { MouseEvent } from "react";
+import Link from "next/link";
+import type { MouseEvent, ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { GameDie } from "@/src/components/game-die";
 import { GuideBoardScene } from "@/src/components/game-guide/guide-board-scene";
@@ -57,8 +58,8 @@ function DemoFrame({
   caption,
 }: {
   label: string;
-  children: React.ReactNode;
-  caption: React.ReactNode;
+  children: ReactNode;
+  caption: ReactNode;
 }) {
   return (
     <figure className={styles.demoFrame} aria-label={label}>
@@ -141,7 +142,7 @@ function TurnDemo() {
   return (
     <DemoFrame
       label="Fluxo de um turno"
-      caption="As fases existem para impedir que reforço, conflito e reposicionamento se misturem em uma única ação ambígua."
+      caption="As fases separam logística, conflito e reposicionamento para que cada decisão tenha uma responsabilidade clara."
     >
       <div className={styles.phaseRail}>
         {phases.map(([number, title, text], index) => (
@@ -171,7 +172,7 @@ function ReinforcementDemo({ presentation }: { presentation: DoctrinePresentatio
             { key: "reinforce-a", label: "Goiás", troops: 4, x: 47, y: 55, tone: "ally", selected: true },
             { key: "reinforce-b", label: "Bahia", troops: 5, x: 62, y: 49, tone: "ally", selected: true },
           ]}
-          caption="Distribua o saldo de reforços entre territórios próprios antes de avançar para o conflito."
+          caption="Distribua o saldo entre territórios próprios antes de avançar para o conflito."
         />
         <div className={styles.reinforcementReadout}>
           <span>SALDO</span>
@@ -271,7 +272,7 @@ function ConquestDemo() {
               label: "OCUPAR",
             },
           ]}
-          caption="O território conquistado deixa de ser vazio e passa a integrar sua linha imediatamente."
+          caption="A nova fronteira passa a integrar sua linha imediatamente."
         />
       </div>
     </DemoFrame>
@@ -301,7 +302,7 @@ function ManeuverDemo() {
               label: "MANOBRA",
             },
           ]}
-          caption="A movimentação redistribui força: não produz novas tropas."
+          caption="A manobra redistribui força: não produz novas tropas."
         />
       </div>
     </DemoFrame>
@@ -331,7 +332,7 @@ function BarrierDemo({ presentation }: { presentation: DoctrinePresentation }) {
               label: "BARREIRA",
             },
           ]}
-          caption="A conexão continua sendo conhecida; o perfil da travessia é que muda."
+          caption="A conexão permanece conhecida; o perfil da travessia é que muda."
         />
         <div className={styles.barrierBands}>
           {presentation.barrier.attackDiceBands.map((band) => (
@@ -358,9 +359,24 @@ function CardsDemo({ presentation }: { presentation: DoctrinePresentation }) {
     >
       <div className={styles.cardsStage}>
         <div className={styles.cardFan} aria-hidden="true">
-          <TerritoryCardArtwork territoryId={18} symbol="gold" sizes="132px" className={styles.doctrineCard} />
-          <TerritoryCardArtwork territoryId={23} symbol="water" sizes="132px" className={styles.doctrineCard} />
-          <TerritoryCardArtwork territoryId={14} symbol="leaf" sizes="132px" className={styles.doctrineCard} />
+          <TerritoryCardArtwork
+            territoryId={18}
+            symbol="gold"
+            sizes="132px"
+            className={styles.doctrineCard}
+          />
+          <TerritoryCardArtwork
+            territoryId={23}
+            symbol="water"
+            sizes="132px"
+            className={styles.doctrineCard}
+          />
+          <TerritoryCardArtwork
+            territoryId={14}
+            symbol="leaf"
+            sizes="132px"
+            className={styles.doctrineCard}
+          />
         </div>
         <div className={styles.tradeProgression}>
           <span>RESGATE PESSOAL</span>
@@ -483,14 +499,19 @@ export function DoctrineExperience({
   useEffect(() => {
     const onPopState = () => {
       const slug = new URLSearchParams(window.location.search).get("chapter");
-      setActiveSlug(isDoctrineChapterSlug(slug) ? slug : presentation.chapters[0].slug);
+      setActiveSlug(
+        isDoctrineChapterSlug(slug) ? slug : presentation.chapters[0].slug,
+      );
     };
 
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, [presentation.chapters]);
 
-  function selectChapter(event: MouseEvent<HTMLAnchorElement>, slug: DoctrineChapterSlug) {
+  function selectChapter(
+    event: MouseEvent<HTMLAnchorElement>,
+    slug: DoctrineChapterSlug,
+  ) {
     if (shouldUseNativeNavigation(event)) return;
     event.preventDefault();
     if (slug === activeSlug) return;
@@ -503,13 +524,13 @@ export function DoctrineExperience({
     <main className={styles.page} data-doctrine-chapter={activeChapter.slug}>
       <div className={styles.ambientGrid} aria-hidden="true" />
       <header className={styles.topbar}>
-        <a href="/" className={styles.brand} aria-label="Voltar para WAR Brasil">
+        <Link href="/" className={styles.brand} aria-label="Voltar para WAR Brasil">
           <DoctrineMark />
           <span>
             <b>WAR BRASIL</b>
             <small>ARQUIVO DE COMANDO</small>
           </span>
-        </a>
+        </Link>
         <div className={styles.status} aria-label="Status da Doutrina">
           <span>PROTOCOLO</span>
           <b>DOUTRINA</b>
@@ -525,23 +546,27 @@ export function DoctrineExperience({
             <small>{String(presentation.chapters.length).padStart(2, "0")} REGISTROS</small>
           </div>
           <h1 id="doctrine-index-title">DOUTRINA</h1>
-          <p>Protocolos operacionais para compreender a máquina antes de entrar em combate.</p>
+          <p>
+            Protocolos operacionais para compreender a máquina antes de entrar em
+            combate.
+          </p>
 
           <nav className={styles.chapterNav} aria-label="Capítulos da Doutrina">
             {presentation.chapters.map((chapter) => {
               const active = chapter.slug === activeChapter.slug;
               return (
-                <a
+                <Link
                   key={chapter.slug}
                   href={chapterHref(chapter.slug)}
                   onClick={(event) => selectChapter(event, chapter.slug)}
                   aria-current={active ? "location" : undefined}
                   data-active={active ? "true" : "false"}
+                  scroll={false}
                 >
                   <span>{chapter.number}</span>
                   <b>{chapter.eyebrow}</b>
                   <i aria-hidden="true" />
-                </a>
+                </Link>
               );
             })}
           </nav>
@@ -588,32 +613,36 @@ export function DoctrineExperience({
 
           <nav className={styles.prevNext} aria-label="Navegação entre capítulos">
             {previousChapter ? (
-              <a
+              <Link
                 href={chapterHref(previousChapter.slug)}
                 onClick={(event) => selectChapter(event, previousChapter.slug)}
+                scroll={false}
               >
                 <span>← ANTERIOR</span>
                 <b>{previousChapter.eyebrow}</b>
-              </a>
+              </Link>
             ) : (
               <span className={styles.navPlaceholder} aria-hidden="true" />
             )}
+
             <a className={styles.backToIndex} href="#doctrine-index-title">
               ÍNDICE
             </a>
+
             {nextChapter ? (
-              <a
+              <Link
                 href={chapterHref(nextChapter.slug)}
                 onClick={(event) => selectChapter(event, nextChapter.slug)}
+                scroll={false}
               >
                 <span>PRÓXIMO →</span>
                 <b>{nextChapter.eyebrow}</b>
-              </a>
+              </Link>
             ) : (
-              <a href="/" className={styles.returnCommand}>
+              <Link href="/" className={styles.returnCommand}>
                 <span>ENCERRAR</span>
                 <b>Voltar ao comando</b>
-              </a>
+              </Link>
             )}
           </nav>
         </section>
