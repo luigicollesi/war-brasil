@@ -1,0 +1,471 @@
+.shell {
+  position: relative;
+  isolation: isolate;
+  min-height: 100dvh;
+  overflow: hidden;
+  background: var(--command-void, #070a08);
+  color: var(--command-ivory, #eee8da);
+  color-scheme: dark;
+}
+
+.sceneHost {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  overflow: hidden;
+  background: var(--command-void, #070a08);
+  pointer-events: none;
+}
+
+.canvasLayer,
+.canvasLayer :global(.command-foundation-canvas) {
+  position: absolute !important;
+  inset: 0;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.canvasLayer {
+  z-index: 2;
+}
+
+.sceneFallback {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  overflow: hidden;
+  opacity: 1;
+  background:
+    radial-gradient(circle at 68% 48%, rgb(157 121 59 / 11%), transparent 31%),
+    radial-gradient(circle at 44% 85%, rgb(139 32 38 / 7%), transparent 28%),
+    var(--command-void, #070a08);
+  transition: opacity 260ms ease;
+}
+
+.sceneHost[data-webgl="ready"] .sceneFallback {
+  opacity: 0;
+}
+
+.fallbackTable {
+  position: absolute;
+  top: 50%;
+  left: 68%;
+  width: min(62vw, 760px);
+  aspect-ratio: 1;
+  border: 1px solid rgb(208 170 87 / 24%);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgb(28 42 32 / 96%) 0 62%, rgb(14 21 16 / 98%) 62.5% 72%, transparent 72.5%),
+    radial-gradient(circle, transparent 0 74%, rgb(157 121 59 / 18%) 74.5% 75%, transparent 75.5%);
+  box-shadow:
+    0 50px 100px rgb(0 0 0 / 45%),
+    inset 0 0 70px rgb(0 0 0 / 45%);
+  transform: translate(-50%, -50%) perspective(900px) rotateX(5deg) rotateZ(-2deg);
+}
+
+.fallbackTableRim,
+.fallbackCrownRingA,
+.fallbackCrownRingB,
+.fallbackCrownRingC {
+  position: absolute;
+  inset: 8%;
+  border: 1px solid rgb(208 170 87 / 35%);
+  border-radius: 50%;
+}
+
+.fallbackTableRim {
+  inset: 12%;
+  border-width: 2px;
+  border-color: rgb(157 121 59 / 52%);
+}
+
+.fallbackCrownRingA {
+  inset: 6%;
+  border-color: rgb(103 132 105 / 38%);
+  transform: rotateX(64deg) rotateZ(18deg);
+}
+
+.fallbackCrownRingB {
+  inset: 3%;
+  border-color: rgb(208 170 87 / 34%);
+  transform: rotateY(68deg) rotateZ(-12deg);
+}
+
+.fallbackCrownRingC {
+  inset: 0;
+  border-color: rgb(139 32 38 / 20%);
+  transform: rotateX(69deg) rotateY(10deg) rotateZ(34deg);
+}
+
+.fallbackBrazil {
+  position: absolute;
+  inset: 17%;
+  opacity: 0.82;
+  filter: sepia(0.42) saturate(0.64) brightness(0.72) contrast(1.14);
+}
+
+.fallbackGlobe {
+  position: absolute;
+  top: 27%;
+  left: 22%;
+  width: min(22vw, 290px);
+  aspect-ratio: 1;
+  border: 1px solid rgb(208 170 87 / 28%);
+  border-radius: 50%;
+  background:
+    repeating-radial-gradient(circle, transparent 0 17%, rgb(208 170 87 / 8%) 17.4% 17.7%, transparent 18%),
+    radial-gradient(circle at 38% 34%, rgb(54 70 56 / 70%), rgb(20 31 24 / 58%) 58%, transparent 72%);
+  box-shadow: inset -22px -20px 42px rgb(0 0 0 / 56%);
+  opacity: 0.72;
+  transform: translate(-50%, -50%);
+  transition: opacity 260ms ease, transform 260ms ease;
+}
+
+.fallbackGlobe[data-visible="false"] {
+  opacity: 0.12;
+  transform: translate(-50%, -50%) scale(0.72);
+}
+
+.fallbackGlobe span {
+  position: absolute;
+  inset: 12%;
+  border: 1px solid rgb(208 170 87 / 18%);
+  border-radius: 50%;
+}
+
+.fallbackGlobe span:nth-child(1) {
+  transform: rotateX(70deg);
+}
+
+.fallbackGlobe span:nth-child(2) {
+  transform: rotateY(70deg);
+}
+
+.fallbackGlobe span:nth-child(3) {
+  inset: 24% 4%;
+}
+
+.atmosphere {
+  position: absolute;
+  z-index: var(--command-z-atmosphere, 2);
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgb(5 8 6 / 80%) 0%, rgb(5 8 6 / 38%) 28%, transparent 54%),
+    linear-gradient(180deg, rgb(3 5 4 / 42%) 0%, transparent 22%, transparent 73%, rgb(3 5 4 / 72%) 100%);
+}
+
+.atmosphere::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0.12;
+  background-image:
+    linear-gradient(rgb(238 232 218 / 7%) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(238 232 218 / 5%) 1px, transparent 1px);
+  background-size: 88px 88px;
+  mask-image: linear-gradient(90deg, transparent 14%, #000 62%, #000);
+}
+
+.shellChrome {
+  position: absolute;
+  z-index: var(--command-z-chrome, 20);
+  top: clamp(20px, 3.4vw, 48px);
+  right: clamp(24px, 4vw, 64px);
+  left: clamp(24px, 4vw, 64px);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  pointer-events: none;
+}
+
+.brandLockup {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  text-transform: uppercase;
+}
+
+.brandSeal {
+  display: grid;
+  width: 43px;
+  height: 43px;
+  place-items: center;
+  border: 1px solid rgb(208 170 87 / 56%);
+  background: linear-gradient(145deg, rgb(157 121 59 / 18%), rgb(16 23 19 / 58%));
+  clip-path: polygon(0 0, 82% 0, 100% 18%, 100% 100%, 18% 100%, 0 82%);
+  color: var(--command-ivory, #eee8da);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.brandLockup small,
+.brandLockup strong {
+  display: block;
+}
+
+.brandLockup small {
+  color: rgb(238 232 218 / 43%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.5rem;
+  letter-spacing: 0.19em;
+}
+
+.brandLockup strong {
+  margin-top: 3px;
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: 0.92rem;
+  letter-spacing: 0.12em;
+}
+
+.modeRail {
+  display: grid;
+  justify-items: end;
+  gap: 4px;
+  padding-right: 12px;
+  border-right: 2px solid rgb(208 170 87 / 58%);
+  text-transform: uppercase;
+}
+
+.modeRail span {
+  color: rgb(208 170 87 / 55%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.48rem;
+  letter-spacing: 0.16em;
+}
+
+.modeRail strong {
+  color: rgb(238 232 218 / 78%);
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.13em;
+}
+
+.shellContent {
+  position: relative;
+  z-index: var(--command-z-content, 10);
+  min-height: 100dvh;
+}
+
+.commandLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: rgb(238 232 218 / 62%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+}
+
+.commandLabel[data-tone="authority"] {
+  color: var(--command-brass-bright, #d0aa57);
+}
+
+.commandLabel[data-tone="conflict"] {
+  color: #d17b7f;
+}
+
+.commandLabel[data-tone="positive"] {
+  color: #90b496;
+}
+
+.commandDivider {
+  display: block;
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, rgb(208 170 87 / 45%), rgb(238 232 218 / 8%) 70%, transparent);
+}
+
+.commandStatus {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: rgb(238 232 218 / 62%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.commandStatus i {
+  width: 7px;
+  height: 7px;
+  border: 1px solid currentColor;
+  background: currentColor;
+  transform: rotate(45deg);
+}
+
+.commandStatus[data-tone="authority"] {
+  color: var(--command-brass-bright, #d0aa57);
+}
+
+.commandStatus[data-tone="conflict"] {
+  color: #cf6f74;
+}
+
+.commandStatus[data-tone="positive"] {
+  color: #88b292;
+}
+
+.commandPanel {
+  position: relative;
+  padding: clamp(18px, 2.2vw, 30px);
+  border: 1px solid rgb(238 232 218 / 10%);
+  border-left: 2px solid rgb(208 170 87 / 46%);
+  background: linear-gradient(112deg, rgb(10 16 12 / 83%), rgb(10 16 12 / 49%));
+  backdrop-filter: blur(var(--command-panel-blur, 8px));
+  clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 13px, 100% 100%, 0 100%);
+}
+
+.panelEyebrow {
+  display: block;
+  color: rgb(208 170 87 / 62%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.52rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.panelTitle {
+  margin: 5px 0 0;
+  color: var(--command-ivory, #eee8da);
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: clamp(1.5rem, 2.5vw, 2.5rem);
+  line-height: 0.95;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.insignia {
+  display: inline-grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 12px;
+  color: var(--command-ivory, #eee8da);
+}
+
+.insigniaMedallion {
+  position: relative;
+  display: grid;
+  width: 58px;
+  height: 58px;
+  place-items: center;
+  border: 1px solid rgb(208 170 87 / 52%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(52 70 56 / 76%), rgb(16 23 19 / 92%) 72%);
+  box-shadow: inset 0 0 0 5px rgb(157 121 59 / 9%);
+}
+
+.insigniaMedallion::before,
+.insigniaMedallion::after,
+.insigniaMedallion i {
+  content: "";
+  position: absolute;
+  border: 1px solid rgb(208 170 87 / 24%);
+  border-radius: 50%;
+}
+
+.insigniaMedallion::before {
+  inset: 5px;
+}
+
+.insigniaMedallion::after {
+  inset: 11px;
+}
+
+.insigniaMedallion i {
+  inset: 16px;
+  border-radius: 0;
+  transform: rotate(45deg);
+}
+
+.insigniaMedallion strong {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: 0.84rem;
+  letter-spacing: 0.06em;
+}
+
+.insigniaCopy strong,
+.insigniaCopy small {
+  display: block;
+}
+
+.insigniaCopy strong {
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: 0.82rem;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.insigniaCopy small {
+  margin-top: 4px;
+  color: rgb(238 232 218 / 45%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.49rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.insignia[data-tone="conflict"] .insigniaMedallion {
+  border-color: rgb(181 49 55 / 62%);
+  box-shadow: inset 0 0 24px rgb(139 32 38 / 18%);
+}
+
+.insignia[data-tone="positive"] .insigniaMedallion {
+  border-color: rgb(125 168 133 / 58%);
+}
+
+@media (max-width: 760px) {
+  .fallbackTable {
+    top: 39%;
+    left: 58%;
+    width: min(82vw, 620px);
+    opacity: 0.74;
+  }
+
+  .fallbackGlobe {
+    top: 21%;
+    left: 20%;
+    width: min(32vw, 180px);
+    opacity: 0.46;
+  }
+
+  .atmosphere {
+    background: linear-gradient(180deg, rgb(5 8 6 / 42%), rgb(5 8 6 / 28%) 38%, rgb(5 8 6 / 82%) 78%, #070a08);
+  }
+
+  .shellChrome {
+    top: 18px;
+    right: 18px;
+    left: 18px;
+  }
+
+  .brandSeal {
+    width: 38px;
+    height: 38px;
+  }
+
+  .brandLockup small {
+    display: none;
+  }
+
+  .modeRail span {
+    display: none;
+  }
+
+  .commandPanel {
+    backdrop-filter: blur(4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sceneFallback,
+  .fallbackGlobe {
+    transition: none;
+  }
+}
