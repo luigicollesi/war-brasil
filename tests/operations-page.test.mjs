@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
+const page = readFileSync("src/app/matchmaking/page.tsx", "utf8");
 const operations = readFileSync("src/components/operations-console.tsx", "utf8");
 const operationsTypes = readFileSync("src/components/operations-types.ts", "utf8");
 const operationsRequest = readFileSync("src/components/operations-request.ts", "utf8");
@@ -10,6 +11,10 @@ const joinRoom = readFileSync("src/components/join-room-form.tsx", "utf8");
 const serverRooms = readFileSync("src/lib/server/rooms.ts", "utf8");
 const states = readFileSync(
   "src/app/matchmaking/operations-states.module.css",
+  "utf8",
+);
+const responsive = readFileSync(
+  "src/app/matchmaking/operations-responsive.module.css",
   "utf8",
 );
 
@@ -90,4 +95,15 @@ test("Operations mantém fallback 2D e reduced-motion sem depender de WebGL", ()
   assert.match(operations, /data-scene-state="scene-fallback"/);
   assert.match(states, /prefers-reduced-motion: reduce/);
   assert.doesNotMatch(operations, /@react-three|three\/|<Canvas|WebGLRenderer/);
+});
+
+test("Operations recompõe a cena em viewport móvel baixo sem comprimir controles", () => {
+  assert.match(page, /responsiveStyles\.pageAdaptive/);
+  assert.match(operations, /responsiveStyles\.stationAdaptive/);
+  assert.match(responsive, /max-width: 720px/);
+  assert.match(responsive, /max-height: 640px/);
+  assert.match(responsive, /\[data-map-bay\]/);
+  assert.match(responsive, /min-height: 116px/);
+  assert.match(responsive, /input\[name="roomCode"\]/);
+  assert.match(responsive, /scroll-margin-block: 24vh/);
 });

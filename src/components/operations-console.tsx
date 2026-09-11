@@ -9,6 +9,7 @@ import type {
   OperationStatus,
 } from "@/src/components/operations-types";
 import styles from "@/src/app/matchmaking/operations.module.css";
+import responsiveStyles from "@/src/app/matchmaking/operations-responsive.module.css";
 import stateStyles from "@/src/app/matchmaking/operations-states.module.css";
 
 type Mode = "create" | "join";
@@ -103,7 +104,7 @@ export function OperationsConsole() {
 
   return (
     <section
-      className={`${styles.station} ${stateStyles.stationState}`}
+      className={`${styles.station} ${stateStyles.stationState} ${responsiveStyles.stationAdaptive}`}
       data-mode={mode}
       data-status={visualStatus(activeStatus)}
       data-state={activeStatus}

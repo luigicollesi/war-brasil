@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { OperationsConsole } from "@/src/components/operations-console";
 import { WarShell } from "@/src/components/war-shell";
+import responsiveStyles from "./operations-responsive.module.css";
 import styles from "./operations.module.css";
 
 export const metadata: Metadata = {
@@ -11,7 +12,7 @@ export const metadata: Metadata = {
 export default function MatchmakingPage() {
   return (
     <WarShell backHref="/" backLabel="Início" title="Central de Operações">
-      <main className={`wb-shell-inner ${styles.page}`}>
+      <main className={`wb-shell-inner ${styles.page} ${responsiveStyles.pageAdaptive}`}>
         <header className={styles.intro}>
           <div>
             <p className={styles.eyebrow}>MESA DE DOMÍNIO · MODO OPERACIONAL</p>
