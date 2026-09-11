@@ -1,230 +1,309 @@
 # PLAN — Operações
 
 **Branch:** `feature/pre-game-operations`  
-**Base:** `dev@2083579396e108349d6983e40120aaccf5d1d1dd`  
+**Base atual:** `dev@2083579396e108349d6983e40120aaccf5d1d1dd`  
 **Rota:** `/matchmaking`  
-**Cena:** `operations`
+**Cena:** `operations`  
+**Objetivo:** fechar o EVAL de Operations sem alterar API, banco, realtime ou regras de jogo.
 
-Este plano implementa `SPEC.md` e mede sucesso por `EVAL.md`, sem alterar protocolo, banco, realtime ou regras de jogo.
+## 1. Estado atual
 
-## 1. Leitura da implementação atual
+A implementação local da página já cobre a maior parte do comportamento e da composição 2D:
 
-A rota já preserva a separação correta entre página e interações: `src/app/matchmaking/page.tsx` é Server Component e delega criação/entrada a `CreateRoomButton` e `JoinRoomForm`.
+- `/matchmaking` continua Server Component;
+- `OperationsConsole` concentra somente interação local;
+- Create/Join aparecem como dois modos da mesma estação;
+- endpoints e redirects vigentes foram preservados;
+- proteção síncrona contra double-submit existe em Create e Join;
+- timeout/rede são tratados com `AbortController` e retry;
+- input de código continua sendo um único `<input>` real;
+- código digitado permanece após erro;
+- estados semânticos do SPEC estão representados (`creating`, `create-error`, `joining`, `invalid-code`, `network-error`, `success-transition` + interações de foco/digitação);
+- mobile possui recomposição própria para viewport baixo/teclado aberto;
+- reduced-motion e fallback 2D existem sem dependência de WebGL;
+- o diff contra `dev` não toca API, banco ou realtime;
+- Vercel está verde no HEAD `11335deb3a951880acd135783ea9fe82bf0ffdbf`.
 
-Contratos atuais que ficam congelados:
+O déficit atual está principalmente em **prova dos blockers**, integração com a Foundation real e validação visual/manual reproduzível.
 
-- criação: `POST /api/rooms`;
-- entrada: `POST /api/rooms/join` com `{ code }`;
-- normalização vigente: `trim() -> lowercase -> remove caracteres fora de [a-z0-9-]`;
-- sucesso: `router.push('/lobby/' + encodeURIComponent(room.code))`;
-- mensagens de erro vindas da API continuam tendo precedência;
-- sessão, banco e realtime permanecem intocados.
+## 2. Dependência Foundation
 
-Gaps encontrados em relação ao EVAL:
+A Foundation já publicou em `feature/pre-game-foundation`:
 
-1. o visual atual ainda lê como duas ações paralelas separadas, não como dois modos da mesma máquina (`OPS-12`);
-2. criação já bloqueia double-submit, entrada ainda não (`OPS-08`);
-3. entrada não possui feedback textual durante envio (`OPS-04` / score de estados assíncronos);
-4. `fetch` não possui recuperação explícita para request que não resolve; o estado pendente pode permanecer indefinido em cenário de timeout (`OPS-04`);
-5. a composição atual não materializa Mesa/Brasil/Coroa como estação operacional (`OPS-11` / integração Foundation);
-6. a branch deve continuar utilizável antes da Foundation 3D estar integrada, sem criar renderer concorrente.
+- `CommandShell`;
+- `CommandSceneIntent`;
+- `CommandScene` privado/lazy;
+- fallback 2D;
+- Brasil canônico de 42 territórios;
+- Mesa de Domínio;
+- Coroa Orbital;
+- DPR/adaptação mobile;
+- reduced-motion.
 
-## 2. Conceito de interface — Mesa de Autorização
+O contrato público real é pequeno e declarativo:
 
-A tela deixa de ser uma grade de cards e vira um único console físico de comando.
+```ts
+type CommandSceneIntent = {
+  mode: "entrance" | "operations" | "lobby" | "doctrine" | "profile";
+  focus?: "earth" | "brazil" | "table" | "insignia" | "none";
+  conflictLevel?: 0 | 1 | 2 | 3;
+  territoryExplode?: number;
+  orbitalAlignment?: 0 | 1;
+};
+```
 
-### Desktop
-
-Uma composição única em três planos:
-
-1. **ambiente** — carvão/verde profundo, textura discreta e iluminação radial;
-2. **máquina** — uma grande Mesa de Autorização central, com trilho mecânico que alterna `NOVA OPERAÇÃO` e `LOCALIZAR OPERAÇÃO`;
-3. **UI funcional** — painel DOM legível sobre a máquina, sempre independente de WebGL.
-
-Os dois modos compartilham a mesma moldura, telemetria, status e área de ação. Trocar modo altera conteúdo/estado da máquina em 120–320 ms, sem deslocar o formulário principal e sem desmontar estado útil.
-
-Direção visual:
-
-- verde/carvão como massa estrutural;
-- latão/dourado apenas em comando, foco e decisão;
-- vermelho somente em erro/conflito;
-- marfim para leitura;
-- metal escuro, parafusos/chanfros, trilhos, placas e relés discretos;
-- nenhuma estética de card SaaS, vidro neon/ciano, armas, soldados ou explosões.
-
-### Mobile 390x844
-
-Não comprimir o desktop. Usar:
-
-- cabeçalho compacto;
-- seletor de modos em largura total;
-- apenas um painel funcional visível por vez;
-- input e CTA com alvo touch >= 44 px;
-- área visual da Mesa reduzida a atmosfera, sem empurrar o formulário abaixo da dobra de forma crítica;
-- teclado de texto normal para o código alfanumérico;
-- paste de código completo preservado.
-
-## 3. Arquitetura React / Next.js
-
-### Server boundary
-
-`src/app/matchmaking/page.tsx` continua Server Component. Ele fornece metadata e composição estática.
-
-### Client boundary mínima
-
-Criar `OperationsConsole` como Client Component pequeno responsável somente por:
-
-- modo ativo (`create | join`);
-- foco visual local;
-- semântica do seletor de modos;
-- preservação de conteúdo dos dois painéis ao alternar.
-
-`CreateRoomButton` e `JoinRoomForm` continuam responsáveis pelos próprios requests. Nenhum estado de negócio entra em Three.js/cena.
-
-### Foundation
-
-A trilha Operations **não** implementará Canvas, CameraDirector, Brasil 3D, Mesa 3D ou Coroa Orbital.
-
-Quando `feature/pre-game-foundation` publicar o contrato definitivo, a rota consumirá apenas intenção declarativa equivalente a:
+O preset de avaliação de Operations da Foundation usa:
 
 ```ts
 {
-  mode: 'operations',
-  focus: 'table',
-  conflictLevel: 0 | 1,
-  orbitalAlignment: 0 | 1,
+  mode: "operations",
+  focus: "brazil",
+  conflictLevel: 0,
+  territoryExplode: 0.08,
+  orbitalAlignment: 0,
 }
 ```
 
-Até a integração, a página terá composição 2D/CSS completa e funcional. Nenhum mock 3D definitivo será criado.
+**Regra de integração:** não copiar código da Foundation nem integrar sua branch diretamente. Conforme `parallel-development.md`, Foundation deve entrar primeiro em `dev`; depois Operations sincroniza com `dev` e consome somente o barrel público.
 
-## 4. Estados e máquina de UI
+## 3. Mapa dos BLOCKERs
 
-Estados visuais/funcionais mapeados ao SPEC:
+| Gate | Estado | Falta concreta |
+| --- | --- | --- |
+| OPS-01 Create → lobby correto | PARCIAL | contrato preservado, falta prova de execução real |
+| OPS-02 Join válido → lobby correto | PARCIAL | contrato preservado, falta prova de execução real |
+| OPS-03 Código inválido recuperável | PARCIAL | DOM/estado implementados, falta cenário real documentado |
+| OPS-04 Rede/timeout sem loading eterno | PARCIAL | timeout e liberação implementados, falta prova controlada |
+| OPS-05 teclado/seleção/paste | PARCIAL | input nativo correto, falta interaction/manual evidence |
+| OPS-06 WebGL/reduced-motion | PARCIAL | fallback local existe; precisa ser revalidado após Foundation |
+| OPS-07 sem mudança API/realtime/DB | FORTE | diff atual comprova isolamento; revalidar após sync |
+| OPS-08 double-submit | PARCIAL | `useRef` síncrono + disabled existem; falta prova de 1 request |
+| OPS-09 normalização vigente | FORTE/PARCIAL | código vigente preservado e servidor conferido; falta teste comportamental puro |
+| OPS-10 erro preserva input/retry | PARCIAL | estado preservado por implementação; falta cenário real |
+| OPS-11 Brasil/Foundation | BLOQUEADO | aguardar Foundation em `dev` e integrar contrato público |
+| OPS-12 mesma máquina, não cards | PARCIAL | arquitetura visual implementada; falta revisão visual final integrada |
 
-- `idle`: estação em repouso;
-- `create-focus`: modo criação selecionado;
-- `creating`: CTA desabilitado + texto `Autorizando operação…`;
-- `create-error`: erro textual + retry;
-- `join-focus`: modo localizar selecionado;
-- `typing-code`: input ativo sem layout shift;
-- `joining`: submit desabilitado + texto `Localizando operação…`;
-- `invalid-code`: erro textual associado ao campo, valor preservado;
-- `network-error`: mensagem de falha + retry, sem loading preso;
-- `success-transition`: redirect imediato; animação não é await;
-- `reduced-motion`: mesmos conteúdos/estados sem deslocamentos/loops não essenciais;
-- `scene-fallback`: DOM completo sem WebGL.
+Nenhum gate deve ser marcado como aprovado apenas por inspeção quando o EVAL pede interaction/e2e/manual/visual.
 
-A troca create/join preserva o código digitado (`OPS-S7`). Os painéis permanecem montados e o painel inativo fica semanticamente indisponível/oculto, evitando perda de estado.
+## 4. Estratégia técnica
 
-## 5. Robustez dos requests
+### Princípio 1 — manter Server/Client boundary mínima
 
-### Create
+`src/app/matchmaking/page.tsx` permanece Server Component. `OperationsConsole` continua sendo a menor fronteira cliente que possui estado de UI.
 
-Manter endpoint e parsing atuais. Preservar `isCreating` como trava contra double-click. Expor estado assíncrono por texto e `aria-busy`.
+Não transformar `CommandShell` inteiro em estado cliente apenas para animar a cena. O intent inicial de Operations pode ser estático e serializável; os estados de foco/erro continuam mudando a estação DOM local. Isso mantém o bundle cliente menor e evita acoplar estado de negócio/cena.
 
-### Join
+### Princípio 2 — Foundation substitui assinatura visual duplicada
 
-Adicionar `isJoining` e bloquear submit repetido enquanto o request estiver ativo. O código digitado nunca é limpo por erro.
+Após Foundation entrar em `dev`:
 
-### Timeout/rede
+1. trocar o shell legado de Operations por `CommandShell` público;
+2. enviar o intent canônico de Operations (`mode: operations`, `focus: brazil`, `territoryExplode: 0.08`);
+3. remover da página qualquer Brasil/Coroa local que duplique os objetos de assinatura pertencentes à Foundation;
+4. manter na página apenas a Mesa de Autorização DOM, modos, formulários, telemetria e feedback funcional;
+5. não importar `CommandScene`, Canvas, Three, CameraDirector ou CSS interno da Foundation.
 
-Adicionar cancelamento de UI com `AbortController`/`AbortSignal` em um helper local reutilizado por create/join, com timeout explícito e mensagem recuperável. Isso é uma proteção da camada de interação; não muda endpoint, payload ou contrato do servidor.
+O fallback passa a ser responsabilidade do `CommandShell/CommandScene`; a página deve continuar funcional se a camada de cena permanecer somente no fallback.
 
-O helper deve limpar timer/sinal em `finally`, distinguir abort/timeout de resposta HTTP e sempre liberar o estado pending.
+### Princípio 3 — comportamento testável sem duplicar regra
 
-## 6. Semântica e acessibilidade
+Extrair somente funções puras da camada de UI quando isso permitir teste comportamental real, sem criar uma segunda validação.
 
-- seletor de modos com semântica de tabs (`tablist`, `tab`, `tabpanel`) e estados `aria-selected`/`aria-controls`;
-- suporte a click/touch e teclado; setas entre tabs se a implementação adotar o padrão completo;
-- input continua sendo **um único `<input>` real**;
-- `<label>` visível/associado ao código;
-- foco visível com contraste independente da iluminação;
-- pending comunicado por texto e `role="status"`/`aria-live="polite"`;
-- erros mantêm `role="alert"` e `aria-describedby`;
-- erro nunca depende apenas de vermelho: ícone/label/texto indicam falha;
-- `prefers-reduced-motion: reduce` remove transforms, loops e transições ornamentais;
-- cena decorativa fora da árvore de acessibilidade.
+Candidato:
 
-## 7. Styling e performance
+`src/lib/client/operations/room-code.ts`
 
-Sem dependências novas.
+```ts
+export function normalizeOperationsRoomCode(value: string) {
+  return value.trim().toLowerCase().replace(/[^a-z0-9-]/g, "");
+}
+```
 
-- reutilizar tokens/primitives publicados pela Foundation quando integrarem;
-- manter estilos específicos de Operations locais à rota/componente para reduzir conflitos de branches paralelas;
-- usar Tailwind 4 para layout/estados simples e CSS local apenas para materialidade/pseudo-elementos complexos;
-- evitar filtros/blur grandes em elementos animados;
-- animar preferencialmente `transform`/`opacity`;
-- não renderizar 3D próprio;
-- nenhuma ação crítica aguarda asset, WebGL ou animação;
-- page permanece Server Component e somente a fronteira interativa hidrata.
+O `JoinRoomForm` usa essa função; `tsconfig.test.json` compila o helper; `tests/operations-page.test.mjs` testa entradas/saídas reais em `.test-build`.
 
-## 8. Arquivos previstos
+Isso cobre a normalização vigente como comportamento, não apenas regex sobre código-fonte.
 
-Escopo próprio da trilha:
+Não replicar a validação autoritativa `/^[A-Z0-9]{6}$/` do servidor no cliente. O servidor continua sendo fonte de verdade para validade do código.
 
-- `src/app/matchmaking/page.tsx` — nova composição sem alterar rota;
-- `src/components/operations-console.tsx` — modo/foco e estrutura da estação;
-- `src/components/create-room-button.tsx` — status/timeout sem mudar contrato;
-- `src/components/join-room-form.tsx` — pending, double-submit e status;
-- `src/app/matchmaking/operations.module.css` — materialidade/layout local, se necessário;
-- testes focados em Operations sob `tests/`.
+### Princípio 4 — não adicionar framework de E2E só para esta trilha
 
-Arquivos compartilhados da Foundation (`CommandShell`, cena, tokens globais, renderer, geometria) não devem ser editados nesta branch.
+O projeto não possui Playwright/Cypress hoje. Não adicionar dependência e lockfile churn apenas para Operations.
 
-## 9. Validação por EVAL
+Automatizar o que cabe no runner Node atual e fechar o restante com roteiro manual reproduzível no preview/PR. Se o projeto adotar Playwright de forma compartilhada, migrar os cenários visuais para `toHaveScreenshot()` no mesmo ambiente usado pela CI.
 
-### BLOCKERs
+## 5. Fases de implementação restantes
 
-- `OPS-01/02`: regressão dos redirects create/join;
-- `OPS-03/10`: erro inválido preserva input e retry;
-- `OPS-04`: network rejection + timeout liberam pending;
-- `OPS-05`: input único testado com type/select/paste;
-- `OPS-06`: reduced-motion e ausência de WebGL;
-- `OPS-07`: diff confirma zero mudança em API/realtime/banco;
-- `OPS-08`: clique/submit repetido produz no máximo um request ativo;
-- `OPS-09`: normalização atual fica coberta por regressão;
-- `OPS-11`: validar contra Foundation após sincronização com `dev`;
-- `OPS-12`: revisão visual desktop/mobile confirma uma máquina única.
+### Fase A — fortalecer regressão funcional local
 
-### Visual regression
+**Objetivo:** substituir asserções frágeis de texto-fonte por testes de comportamento onde possível.
 
-Capturar 1440x900 e 390x844 nos estados exigidos pelo EVAL:
+Mudanças previstas:
 
-`idle`, `create-focus`, `creating`, `typing-code`, `invalid-code`, `network-error`, `reduced-motion`, `fallback`.
+- criar helper puro de normalização de código em `src/lib/client/operations/`;
+- usar o helper no `JoinRoomForm` sem mudar o resultado vigente;
+- incluir o helper em `tsconfig.test.json`;
+- adicionar casos reais: trim, uppercase recebido do usuário, caracteres inválidos, hífen e vazio;
+- manter testes de inspeção apenas para endpoints/redirects/import boundaries.
 
-Até Playwright existir no repositório, não adicionar framework apenas para esta página. Usar testes Node existentes + roteiro manual reproduzível. Quando Playwright for integrado ao projeto, migrar esses cenários para screenshots determinísticos.
+Gate principal: OPS-09.
 
-### Checks antes de merge
+### Fase B — documentação executável dos cenários OPS-S1..S10
+
+**Objetivo:** tornar a validação manual reproduzível em vez de subjetiva.
+
+Adicionar em `docs/pre-game/operations/` um checklist de evidência contendo para cada cenário:
+
+- pré-condição;
+- ação;
+- estado esperado;
+- evidência a capturar;
+- viewport;
+- resultado PASS/FAIL.
+
+Cobrir explicitamente:
+
+- create normal;
+- join digitado;
+- paste completo;
+- inválido → corrigir → retry;
+- network failure/timeout → retry;
+- double-click/double-submit;
+- alternar modos preservando código;
+- reduced-motion;
+- fallback WebGL;
+- 390x844 com teclado aberto.
+
+Gates principais: OPS-01..10.
+
+### Fase C — integrar Foundation depois do merge em `dev`
+
+**Pré-condição obrigatória:** PR da Foundation mergeado em `dev`.
+
+Passos:
+
+1. sincronizar `feature/pre-game-operations` com o `dev` novo;
+2. resolver conflitos sem reformatar arquivos compartilhados;
+3. importar apenas de `@/src/components/pre-game/foundation`;
+4. trocar `WarShell` por `CommandShell` no nível Server Component;
+5. aplicar intent `operations-focus` equivalente;
+6. remover Brasil/Coroa/fallback visual duplicados de `OperationsConsole`;
+7. adaptar CSS local para funcionar sobre os tokens/chrome da Foundation, sem importar CSS interno;
+8. preservar navegação de retorno como elemento DOM próprio da página se `CommandShell` não oferecer esse controle;
+9. confirmar que Create/Join continuam independentes do carregamento da cena.
+
+Gates principais: OPS-06, OPS-11, OPS-12.
+
+### Fase D — polish visual integrado
+
+**Objetivo:** ajustar Operations olhando a composição final real, não o mock 2D isolado.
+
+Validar e corrigir:
+
+- hierarquia entre cena Foundation e painel funcional;
+- legibilidade com iluminação extrema;
+- ausência de Brasil/Coroa duplicados;
+- vermelho restrito a erro/conflito;
+- foco sem layout shift;
+- mapa/fronteiras legíveis em 1440x900 e 390x844;
+- CTA e input não cobertos pela cena;
+- mobile com teclado aberto;
+- targets touch confortáveis (o código atual usa ~52 px, acima do mínimo WCAG 2.2 de 24x24 px);
+- reduced-motion sem perda de conteúdo ou função.
+
+Gates principais: OPS-05, OPS-06, OPS-11, OPS-12.
+
+### Fase E — validação automatizada oficial
+
+Como o workflow principal roda em PR, abrir PR draft de Operations **somente quando a implementação integrada estiver pronta para avaliação**.
+
+Executar/observar:
 
 ```bash
-npm test
+npm ci
+npm --prefix realtime ci
 npm run lint
+npm test
 npm run build
 ```
 
-Além disso, sincronizar com `dev` depois da Foundation e executar novamente os gates no estado integrado.
+Também conferir que o diff final continua sem alterações em:
 
-## 10. Ordem de implementação
+- `src/app/api/**`;
+- contratos realtime;
+- migrations/schema;
+- `package.json`/lockfile, salvo decisão explícita externa a esta trilha.
 
-1. congelar contratos atuais com testes de regressão;
-2. adicionar pending/double-submit/timeout sem mudar visual;
-3. criar `OperationsConsole` e alternância acessível preservando estado;
-4. construir composição 2D de alta fidelidade da Mesa de Autorização;
-5. fazer mobile próprio e reduced-motion;
-6. integrar o contrato público da Foundation, sem acessar internals Three.js;
-7. executar checks + cenários OPS-S1..S10;
-8. capturar evidências desktop/mobile e revisar score >= 85 + todos BLOCKERs.
+Gate: Definition of Done comum + OPS-07.
 
-## 11. Referências técnicas
+### Fase F — evidência visual/manual e score final
 
-- Next.js — Server/Client Components: https://nextjs.org/docs/app/getting-started/server-and-client-components
-- Next.js — Lazy Loading: https://nextjs.org/docs/app/guides/lazy-loading
-- Tailwind CSS — Responsive Design: https://tailwindcss.com/docs/responsive-design
-- Tailwind CSS — states / `prefers-reduced-motion`: https://tailwindcss.com/docs/hover-focus-and-other-states
-- WCAG 2.2: https://www.w3.org/TR/WCAG22/
-- WAI — Error Identification: https://www.w3.org/WAI/WCAG22/Understanding/error-identification
+Capturar nos dois viewports obrigatórios:
 
-## Decisão de integração
+- 1440x900;
+- 390x844.
 
-A implementação pode avançar agora em comportamento, DOM, responsividade e fallback 2D. A integração visual com Mesa/Brasil/Coroa 3D deve ocorrer **depois que a Foundation publicar/mergear o contrato real**, evitando uma segunda cena ou API incompatível.
+Estados:
+
+- idle;
+- create-focus;
+- creating;
+- typing-code;
+- invalid-code;
+- network-error;
+- reduced-motion;
+- fallback.
+
+Registrar score por categoria do `EVAL.md`; aprovação exige >=85 **e todos os blockers verdes**.
+
+## 6. Arquivos que Operations pode tocar
+
+Esperados:
+
+- `src/app/matchmaking/page.tsx`;
+- `src/app/matchmaking/*.module.css`;
+- `src/components/operations-console.tsx`;
+- `src/components/operations-types.ts`;
+- `src/components/operations-request.ts`;
+- `src/components/create-room-button.tsx`;
+- `src/components/join-room-form.tsx`;
+- `src/lib/client/operations/*` para helpers puros testáveis;
+- `tests/operations-page.test.mjs`;
+- `tsconfig.test.json` apenas para compilar helper local;
+- `docs/pre-game/operations/*` para evidência/planejamento.
+
+Após Foundation estar em `dev`, Operations pode **consumir** `src/components/pre-game/foundation/index.ts`, mas não editar internals da Foundation nesta branch.
+
+## 7. Não fazer
+
+- não criar outro renderer/Canvas;
+- não copiar `CommandScene`/Mesa/Brasil/Coroa para Operations;
+- não mover validação autoritativa do servidor para o cliente;
+- não alterar endpoints/payload/redirect;
+- não adicionar Playwright/Cypress/UI kit/animation library só para esta página;
+- não transformar toda a rota em Client Component;
+- não mergear Foundation dentro de Operations antes dela chegar a `dev`;
+- não marcar gate manual/visual como aprovado sem evidência reproduzível.
+
+## 8. Ordem recomendada
+
+1. **Fase A** — regressão funcional pura e barata;
+2. **Fase B** — roteiro de evidência OPS-S1..S10;
+3. aguardar Foundation entrar em `dev`;
+4. **Fase C** — sync + integração do contrato público;
+5. **Fase D** — polish visual sobre a cena real;
+6. **Fase E** — PR draft + CI completo;
+7. **Fase F** — evidência visual/manual + score final;
+8. somente então considerar Operations pronta para merge.
+
+## 9. Critério de saída
+
+Operations estará concluída quando:
+
+- OPS-01..OPS-12 tiverem evidência apropriada;
+- score >=85/100;
+- GitHub Actions estiver verde no HEAD integrado;
+- Vercel/preview estiver funcional;
+- desktop/mobile/reduced-motion/fallback tiverem evidência;
+- a página consumir a Foundation efetivamente presente em `dev`;
+- não houver Brasil/Coroa/renderer concorrente local;
+- diff final continuar isolado do backend/multiplayer.
