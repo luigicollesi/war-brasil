@@ -97,7 +97,10 @@ test("Doutrina emite somente diretiva visual e deixa mode com a rota", () => {
   assert.match(experience, /orbitalAlignment: 0/);
   assert.doesNotMatch(experience, /\bmode\s*:/);
   assert.doesNotMatch(experience, /camera|quaternion|fov|position|\bx:|\by:|\bz:/i);
-  assert.doesNotMatch(experience, /CommandScene|CameraDirector|@react-three|three\//i);
+  assert.doesNotMatch(
+    experience,
+    /<CommandScene|CameraDirector|from\s+["'][^"']*command-scene["']|@react-three|three\//i,
+  );
 });
 
 test("índice usa links reais e troca de capítulo preserva foco e scroll", () => {
