@@ -10,6 +10,7 @@ import {
   type DoctrineChapterSlug,
   type DoctrinePresentation,
 } from "@/src/lib/doctrine-presentation";
+import integration from "./doctrine-foundation-integration.module.css";
 import styles from "./doctrine-experience.module.css";
 
 function chapterHref(slug: DoctrineChapterSlug) {
@@ -23,16 +24,6 @@ function shouldUseNativeNavigation(event: MouseEvent<HTMLAnchorElement>) {
     event.ctrlKey ||
     event.shiftKey ||
     event.altKey
-  );
-}
-
-function DoctrineMark() {
-  return (
-    <div className={styles.mark} aria-hidden="true">
-      <span />
-      <b>WB</b>
-      <span />
-    </div>
   );
 }
 
@@ -94,24 +85,14 @@ export function DoctrineExperience({
   }
 
   return (
-    <main className={styles.page} data-doctrine-chapter={activeChapter.slug}>
+    <main
+      className={`${styles.page} ${integration.foundationIntegrated}`}
+      data-doctrine-chapter={activeChapter.slug}
+    >
+      <p className="sr-only" aria-live="polite" aria-atomic="true">
+        Capítulo {activeChapter.number}: {activeChapter.title}
+      </p>
       <div className={styles.ambientGrid} aria-hidden="true" />
-
-      <header className={styles.topbar}>
-        <Link href="/" className={styles.brand} aria-label="Voltar para WAR Brasil">
-          <DoctrineMark />
-          <span>
-            <b>WAR BRASIL</b>
-            <small>ARQUIVO DE COMANDO</small>
-          </span>
-        </Link>
-        <div className={styles.status} aria-label="Status da Doutrina">
-          <span>PROTOCOLO</span>
-          <b>DOUTRINA</b>
-          <i aria-hidden="true" />
-          <small>ONLINE</small>
-        </div>
-      </header>
 
       <div className={styles.shell}>
         <aside className={styles.indexPanel} aria-labelledby="doctrine-index-title">
