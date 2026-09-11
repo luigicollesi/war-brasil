@@ -53,13 +53,7 @@ function SetupDemo() {
   );
 }
 
-function ObjectivesDemo() {
-  const types = [
-    ["DOMÍNIO", "Controlar territórios ou regiões."],
-    ["FORTIFICAÇÃO", "Sustentar forças mínimas em posições-chave."],
-    ["ELIMINAÇÃO", "Neutralizar um alvo quando o objetivo exigir."],
-  ] as const;
-
+function ObjectivesDemo({ presentation }: { presentation: DoctrinePresentation }) {
   return (
     <DemoFrame
       label="Demonstração dos formatos de objetivo"
@@ -73,12 +67,12 @@ function ObjectivesDemo() {
           <span />
         </div>
         <div className={styles.objectiveList}>
-          {types.map(([title, text], index) => (
-            <div key={title}>
+          {presentation.objectiveFormats.map((format, index) => (
+            <div key={format.title}>
               <b>{String(index + 1).padStart(2, "0")}</b>
               <span>
-                <strong>{title}</strong>
-                <small>{text}</small>
+                <strong>{format.title}</strong>
+                <small>{format.description}</small>
               </span>
             </div>
           ))}
@@ -88,25 +82,19 @@ function ObjectivesDemo() {
   );
 }
 
-function TurnDemo() {
-  const phases = [
-    ["01", "REFORÇAR", "Converter controle em capacidade."],
-    ["02", "ATACAR", "Projetar força através das conexões."],
-    ["03", "MANOBRAR", "Recompor a linha para o próximo ciclo."],
-  ] as const;
-
+function TurnDemo({ chapter }: { chapter: DoctrineChapter }) {
   return (
     <DemoFrame
       label="Fluxo de um turno"
       caption="As fases separam logística, conflito e reposicionamento para que cada decisão tenha uma responsabilidade clara."
     >
       <div className={styles.phaseRail}>
-        {phases.map(([number, title, text], index) => (
-          <div key={title} className={styles.phaseStep}>
-            <span>{number}</span>
-            <strong>{title}</strong>
-            <small>{text}</small>
-            {index < phases.length - 1 ? <i aria-hidden="true">→</i> : null}
+        {chapter.metrics.map((phase, index) => (
+          <div key={phase.label} className={styles.phaseStep}>
+            <span>{String(index + 1).padStart(2, "0")}</span>
+            <strong>{phase.value.toUpperCase()}</strong>
+            <small>{phase.detail}</small>
+            {index < chapter.metrics.length - 1 ? <i aria-hidden="true">→</i> : null}
           </div>
         ))}
       </div>
@@ -205,19 +193,22 @@ function AttackDemo({ presentation }: { presentation: DoctrinePresentation }) {
   );
 }
 
-function ConquestDemo() {
+function ConquestDemo({ presentation }: { presentation: DoctrinePresentation }) {
+  const originTroops = presentation.conquest.minimumTroopsLeftAtOrigin + 2;
+  const targetTroops = presentation.conquest.minimumMove;
+
   return (
     <DemoFrame
       label="Demonstração de transferência de tropas após conquista"
-      caption="A conquista só se completa quando o novo território recebe tropas e a origem permanece ocupada."
+      caption={`A conquista só se completa quando o novo território recebe ao menos ${presentation.conquest.minimumMove} tropa e a origem preserva ${presentation.conquest.minimumTroopsLeftAtOrigin}.`}
     >
       <div className={styles.boardShell}>
         <GuideBoardScene
           compact
           ariaLabel="Tropas se deslocando da origem para um território recém-conquistado"
           markers={[
-            { key: "conquest-origin", label: "Origem", troops: 3, x: 42, y: 48, tone: "ally" },
-            { key: "conquest-target", label: "Conquistado", troops: 2, x: 61, y: 53, tone: "ally", selected: true },
+            { key: "conquest-origin", label: "Origem", troops: originTroops, x: 42, y: 48, tone: "ally" },
+            { key: "conquest-target", label: "Conquistado", troops: targetTroops, x: 61, y: 53, tone: "ally", selected: true },
           ]}
           arrows={[
             {
@@ -235,18 +226,22 @@ function ConquestDemo() {
   );
 }
 
-function ManeuverDemo() {
+function ManeuverDemo({ presentation }: { presentation: DoctrinePresentation }) {
+  const originTroops =
+    presentation.maneuver.minimumTroopsLeftAtOrigin +
+    presentation.maneuver.movableBeforeReceiving;
+
   return (
     <DemoFrame
       label="Demonstração de manobra entre territórios aliados"
-      caption="A seta representa uma rota válida entre territórios próprios. Tropas recebidas nessa fase não podem iniciar outro deslocamento no mesmo turno."
+      caption={`A seta representa uma rota válida entre territórios próprios. Neste exemplo, ${presentation.maneuver.movableBeforeReceiving} tropas estão móveis antes de receber reforço de manobra; tropas recebidas não podem iniciar outro deslocamento no mesmo turno.`}
     >
       <div className={styles.boardShell}>
         <GuideBoardScene
           compact
           ariaLabel="Movimentação de tropas entre dois territórios aliados conectados"
           markers={[
-            { key: "move-origin", label: "Reserva", troops: 5, x: 43, y: 56, tone: "ally", selected: true },
+            { key: "move-origin", label: "Reserva", troops: originTroops, x: 43, y: 56, tone: "ally", selected: true },
             { key: "move-target", label: "Fronteira", troops: 3, x: 62, y: 48, tone: "ally", moved: true },
           ]}
           arrows={[
@@ -349,11 +344,11 @@ function CardsDemo({ presentation }: { presentation: DoctrinePresentation }) {
   );
 }
 
-function EventsDemo() {
+function EventsDemo({ presentation }: { presentation: DoctrinePresentation }) {
   return (
     <DemoFrame
       label="Demonstração conceitual do sistema de anomalias"
-      caption="O evento selecionado altera a partida por regras já resolvidas pela engine. A interface apenas materializa o efeito e seu alcance."
+      caption={`O catálogo vigente contém ${presentation.anomalies.eventCount} estados de evento. A interface materializa o efeito resolvido pela engine e preserva ao menos ${presentation.anomalies.minimumTroopsAfterRemoval} tropa em território ocupado quando a anomalia remove forças.`}
     >
       <div className={styles.eventStage}>
         <div className={styles.eventGraph} aria-hidden="true">
@@ -411,23 +406,23 @@ export function DoctrineChapterDemo({
     case "setup":
       return <SetupDemo />;
     case "objectives":
-      return <ObjectivesDemo />;
+      return <ObjectivesDemo presentation={presentation} />;
     case "turn":
-      return <TurnDemo />;
+      return <TurnDemo chapter={chapter} />;
     case "reinforcement":
       return <ReinforcementDemo presentation={presentation} />;
     case "attack":
       return <AttackDemo presentation={presentation} />;
     case "conquest":
-      return <ConquestDemo />;
+      return <ConquestDemo presentation={presentation} />;
     case "maneuver":
-      return <ManeuverDemo />;
+      return <ManeuverDemo presentation={presentation} />;
     case "barriers":
       return <BarrierDemo presentation={presentation} />;
     case "cards":
       return <CardsDemo presentation={presentation} />;
     case "events":
-      return <EventsDemo />;
+      return <EventsDemo presentation={presentation} />;
     case "victory":
       return <VictoryDemo />;
   }
