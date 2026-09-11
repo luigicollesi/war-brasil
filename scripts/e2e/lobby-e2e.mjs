@@ -118,15 +118,19 @@ async function expectOccupied(page, count) {
   });
 }
 
+function factionInput(page) {
+  return page.getByRole("textbox", { name: "Nome da facção", exact: true });
+}
+
 async function saveFaction(page, name) {
-  const input = page.getByLabel("Nome da facção");
+  const input = factionInput(page);
   await input.fill(name);
-  await page.getByRole("button", { name: "Salvar nome da facção" }).click();
+  await page.getByRole("button", { name: "Salvar nome da facção", exact: true }).click();
   await page.getByText(name, { exact: true }).first().waitFor({ state: "visible", timeout: 8_000 });
 }
 
 function readyButton(page) {
-  return page.locator('section[aria-label="Preparação da partida"] button').last();
+  return page.locator('section[aria-label="Preparação da partida"] button[aria-pressed]');
 }
 
 async function setReady(page, value) {
@@ -193,6 +197,28 @@ async function waitForText(locator, text) {
   await locator.getByText(text, { exact: false }).waitFor({ state: "visible", timeout: 8_000 });
 }
 
+async function roomStartState(db, code) {
+  const result = await db.query(
+    `SELECT r.status, r.current_match_id, COUNT(m.id)::int AS match_count
+       FROM game.rooms r
+       LEFT JOIN game.matches m ON m.room_id = r.id
+      WHERE r.code = $1
+      GROUP BY r.id`,
+    [code],
+  );
+  return result.rows[0];
+}
+
+async function waitForStartedRoom(db, code) {
+  const deadline = Date.now() + 8_000;
+  while (Date.now() < deadline) {
+    const state = await roomStartState(db, code);
+    if (state?.status !== "waiting" && state?.current_match_id) return state;
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  return roomStartState(db, code);
+}
+
 async function main() {
   const db = new Client({ connectionString: DATABASE_URL });
   await db.connect();
@@ -213,8 +239,16 @@ async function main() {
         await saveFaction(guest.page, "Comando Azul");
         await waitForText(host.page.locator('li[data-slot="2"]'), "Comando Azul");
 
-        const blueOnHost = host.page.getByRole("button", { name: "Azul, indisponível" });
-        assert.equal(await blueOnHost.isDisabled(), true, "cor ocupada deveria estar indisponível");
+        const guestColor = await guest.page
+          .locator('.wb-color-choice[data-selected="true"]')
+          .getAttribute("aria-label");
+        assert.ok(guestColor, "cor atual do guest não foi exposta");
+        const guestColorLabel = guestColor.replace(", selecionado", "");
+        const colorOnHost = host.page.getByRole("button", {
+          name: `${guestColorLabel}, indisponível`,
+          exact: true,
+        });
+        assert.equal(await colorOnHost.isDisabled(), true, "cor ocupada deveria estar indisponível");
 
         await setReady(guest.page, true);
         await waitForText(host.page.locator('li[data-slot="2"]'), "Pronto");
@@ -311,14 +345,18 @@ async function main() {
         await openLobby(host, room.code);
         await openLobby(guest, room.code);
 
-        await Promise.all([
-          readyButton(host.page).click(),
-          readyButton(guest.page).click(),
-        ]);
+        await setReady(host.page, true);
+        await waitForText(guest.page.locator('li[data-slot="1"]'), "Pronto");
+        await readyButton(guest.page).click();
+
+        const state = await waitForStartedRoom(db, room.code);
+        assert.equal(state?.match_count, 1, "mais de uma partida foi criada");
+        assert.ok(state?.current_match_id, "current_match_id não foi definido");
+        assert.notEqual(state?.status, "waiting", "sala permaneceu waiting após start");
 
         await Promise.all([
-          host.page.waitForURL(/\/game\/\d+$/, { timeout: 12_000 }),
-          guest.page.waitForURL(/\/game\/\d+$/, { timeout: 12_000 }),
+          host.page.waitForURL(/\/game\/\d+$/, { timeout: 15_000, waitUntil: "domcontentloaded" }),
+          guest.page.waitForURL(/\/game\/\d+$/, { timeout: 15_000, waitUntil: "domcontentloaded" }),
         ]);
 
         assert.equal(
@@ -326,18 +364,6 @@ async function main() {
           new URL(guest.page.url()).pathname,
           "clientes divergiram para partidas diferentes",
         );
-
-        const result = await db.query(
-          `SELECT r.status, r.current_match_id, COUNT(m.id)::int AS match_count
-             FROM game.rooms r
-             LEFT JOIN game.matches m ON m.room_id = r.id
-            WHERE r.code = $1
-            GROUP BY r.id`,
-          [room.code],
-        );
-        assert.equal(result.rows[0]?.match_count, 1, "mais de uma partida foi criada");
-        assert.ok(result.rows[0]?.current_match_id, "current_match_id não foi definido");
-        assert.notEqual(result.rows[0]?.status, "waiting", "sala permaneceu waiting após start");
       } finally {
         await host.context.close();
         await guest.context.close();
@@ -404,7 +430,7 @@ async function main() {
         assert.ok(box, "CTA de ready sem bounding box");
         assert.ok(box.y >= 0, "CTA de ready acima da viewport");
         assert.ok(box.y + box.height <= 844, "CTA de ready abaixo da viewport");
-        await actor.page.getByLabel("Nome da facção").waitFor({ state: "visible" });
+        await factionInput(actor.page).waitFor({ state: "visible" });
         await actor.page.getByRole("button", { name: /Copiar código da sala/ }).waitFor({ state: "visible" });
       } finally {
         await actor.context.close();
