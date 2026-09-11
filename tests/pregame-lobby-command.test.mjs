@@ -4,6 +4,7 @@ import test from "node:test";
 
 const lobby = readFileSync("src/components/lobby-client.tsx", "utf8");
 const styles = readFileSync("src/components/lobby-client.module.css", "utf8");
+const identity = readFileSync("src/app/war-identity.css", "utf8");
 const sync = readFileSync("src/hooks/use-lobby-sync.ts", "utf8");
 const rooms = readFileSync("src/lib/server/rooms.ts", "utf8");
 
@@ -41,6 +42,13 @@ test("ready pendente não antecipa estado e falha aparece junto da ação", () =
   assert.match(lobby, /const readyError = actionError\?\.scope === "ready"/);
   assert.match(lobby, /aria-busy=\{readyPending\}/);
   assert.doesNotMatch(lobby, /set.*Ready/);
+});
+
+test("ação crítica de ready permanece fora da cena e fixa à viewport", () => {
+  assert.match(lobby, /className=\{`wb-ready-rail \$\{styles\.readyRail\}/);
+  assert.match(lobby, /aria-label="Preparação da partida"/);
+  assert.match(identity, /\.wb-ready-rail\s*\{[\s\S]*?position:\s*fixed/);
+  assert.doesNotMatch(lobby, /useThree|Camera|camera\./);
 });
 
 test("código da operação permanece copiável, selecionável e com recuperação local", () => {
