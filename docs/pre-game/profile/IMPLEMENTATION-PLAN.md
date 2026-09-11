@@ -1,56 +1,69 @@
 # Plano técnico — PROFILE / Salão de Comando
 
-Branch de implementação: `feature/pre-game-profile`.
+Branch: `feature/pre-game-profile`  
+Rota: `/profile`  
+Cena: `profile`
 
 ## Objetivo
 
-Implementar `/profile` como um Salão de Comando orientado a identidade e prestígio, sem transformar a tela em dashboard e sem inventar progressão competitiva. Nesta etapa, somente a identidade pública usa uma fonte local estática e explicitamente identificada. O contrato de dados foi desenhado para ser substituído por um provedor de usuário autenticado no futuro sem refazer a camada visual.
+Implementar o Perfil como um **Salão de Comando** orientado a identidade, prestígio e memória, sem dashboard KPI e sem inventar progressão competitiva. Nesta etapa, somente a identidade pública local possui fonte disponível; os demais dados permanecem honestamente indisponíveis até existirem contratos reais.
 
-## Fontes de verdade avaliadas
+## Fonte de verdade
 
-Ordem aplicada conforme `../quality-standard.md`:
+Precedência aplicada:
 
-1. contratos/código atuais do produto;
-2. `SPEC.md` e `EVAL.md` desta trilha;
-3. `../visual-language.md` e Foundation;
-4. decisões deste plano.
+1. contratos/código atuais;
+2. `SPEC.md` / `EVAL.md` da PROFILE;
+3. `../quality-standard.md`, `../traceability.md` e `../visual-language.md`;
+4. Foundation compartilhada já integrada em `dev`.
 
-Constatações do código-base na criação da branch:
+A PROFILE não altera regra de jogo, banco, realtime, autenticação ou schema.
 
-- Next.js `16.3.4`, React `19.2.8` e Tailwind CSS `4.x`;
-- App Router em `src/app`;
-- `WarShell`, tokens `--wb-*` e fontes já fornecem a base de identidade;
-- não existia primitive de Insígnia de Comando no `dev`, portanto a PROFILE usa uma implementação 2D isolada e substituível em vez de depender de uma branch paralela;
-- não existe autenticação/progressão de perfil utilizável como fonte de verdade nesta etapa.
+## Estado de integração
 
-## Pesquisa técnica aplicada
+A branch está sincronizada com a Foundation integrada em `dev` e consome somente seu barrel público.
 
-Referências consultadas antes da implementação:
+### Foundation
 
-- Next.js — Server/Client Components: manter Server Components como padrão para reduzir JavaScript no cliente;
-- Next.js/Tailwind — responsividade mobile-first;
-- W3C WCAG 2.2 — foco visível, sem dependência de hover e alvos de interação adequados;
-- W3C C39 / `prefers-reduced-motion` — remover motion não essencial quando solicitado pelo usuário.
+`src/components/profile/profile-command-shell.tsx` emite apenas intenção semântica:
 
-A implementação não adiciona Three/WebGL. O HTML/CSS é o fallback funcional completo; uma cena compartilhada futura pode atuar apenas como progressive enhancement.
+```ts
+{ mode: "profile", focus: "insignia", conflictLevel: 0 }
+```
 
-## Arquitetura
+A página não importa `three`, `@react-three/fiber`, `Canvas`, câmera ou renderer. `CommandShell` é o único dono da cena e `CommandInsignia` é a primitive compartilhada usada pela identidade.
 
-### Boundary de dados
+`WarShell` continua responsável pela navegação vigente, mas fica transparente somente dentro do wrapper da PROFILE para permitir que a cena/fallback da Foundation permaneça visível.
 
-`src/lib/profile/profile-data.ts`
+Loading e error boundary usam o mesmo `ProfileCommandShell`; portanto a fantasia espacial não desaparece durante carregamento ou falha.
 
-`getCurrentProfileSnapshot()` é a única boundary consumida pela rota. Hoje retorna `LOCAL_PROFILE`; futuramente deve delegar para sessão/autenticação e serviços de perfil.
+## Boundary de dados
 
-O componente recebe um `ProfileSnapshot` com disponibilidade e origem por seção. Ausência é representada como `unavailable` ou `empty`, nunca como zero/número fictício.
+`src/lib/profile/profile-data.ts` define `ProfileSnapshot` e `getCurrentProfileSnapshot()`.
 
-Histórico usa `{ campaigns, hasMore }`, deixando explícito que um provider futuro deve retornar uma janela limitada em vez de carregar todo o arquivo.
+Fluxo normal atual:
 
-O snapshot também informa `isEvaluationFixture`. Esse campo é `false` no fluxo normal e `true` somente nos cenários opt-in do EVAL, permitindo que a UI rotule de forma explícita qualquer registro sintético.
+| Conteúdo | Origem | Estado |
+| --- | --- | --- |
+| nome `Luigi` | `local-static` | disponível, marcado como temporário |
+| progressão | nenhuma | `unavailable` |
+| estatísticas | nenhuma | `unavailable` |
+| histórico | nenhuma | `unavailable` |
+| conquistas | nenhuma | `unavailable` |
 
-### Harness determinístico do EVAL
+A UI nunca converte ausência em zero, patente, ranking, medalha ou outro valor competitivo fictício.
 
-Os estados visuais são selecionáveis apenas no servidor:
+O histórico possui contrato `{ campaigns, hasMore }`; provedores futuros devem retornar uma janela limitada. O cenário de avaliação completo usa exatamente três campanhas e `hasMore: true` para provar esse comportamento sem criar paginação fictícia de backend.
+
+## Request-time e futura autenticação
+
+`/profile` executa `await connection()` antes da boundary de dados. Isso impede prerenderização de um perfil dependente de identidade e torna o harness de avaliação determinístico no servidor.
+
+Quando login existir, somente `getCurrentProfileSnapshot()` deve ser substituído por um adapter autenticado. Componentes visuais não devem consumir shape bruto de sessão, tokens ou SDK de autenticação.
+
+## Harness determinístico do EVAL
+
+Fixtures são opt-in exclusivamente por ambiente de servidor:
 
 ```bash
 PROFILE_EVAL_MODE=1 PROFILE_EVAL_STATE=guest npm run dev
@@ -61,98 +74,103 @@ PROFILE_EVAL_MODE=1 PROFILE_EVAL_STATE=no-progression-system npm run dev
 PROFILE_EVAL_MODE=1 PROFILE_EVAL_STATE=error npm run dev
 ```
 
-Não existe query string, cookie ou controle de navegador para selecionar fixture.
+Não existe query string, cookie ou controle público para selecionar fixtures.
 
-- `loaded`: todas as áreas estruturais ficam disponíveis com conteúdo sintético claramente rotulado e sem números competitivos;
+- `guest`: sem identidade;
+- `partial-data`: identidade + seções indisponíveis;
+- `loaded`: todas as áreas estruturais disponíveis com conteúdo explicitamente sintético;
 - `empty-history`: demais áreas disponíveis, histórico vazio;
-- `no-progression-system`: demais áreas disponíveis, progressão explicitamente indisponível;
-- `partial-data`: identidade local e demais fontes indisponíveis;
-- `guest`: nenhuma identidade;
-- `error`: `getCurrentProfileSnapshot()` lança uma exceção controlada e exercita o `error.tsx` real do App Router.
+- `no-progression-system`: demais áreas disponíveis, progressão ausente;
+- `error`: lança `PROFILE_EVAL_ERROR` e exercita o `error.tsx` real.
 
-As fixtures nunca se apresentam como dados reais: a própria página exibe aviso de modo de avaliação e marca os registros estruturais como sintéticos.
+Todo conteúdo `evaluation-fixture` é rotulado na própria interface e nunca se apresenta como dado real.
 
-### UI
+## Estados de ambiente
 
-- `src/app/profile/page.tsx`: Server Component e metadata;
-- `src/app/profile/loading.tsx`: loading textual explícito;
-- `src/app/profile/error.tsx`: error boundary recuperável, sem dados falsos;
-- `src/components/profile/profile-boundary-state.tsx`: Salão físico para loading/erro;
-- `src/components/profile/profile-hall.tsx`: composição semântica do Salão;
-- `src/components/profile/command-insignia.tsx`: Insígnia 2D temporária e independente de WebGL;
-- CSS Modules locais: arquitetura/materialidade, mobile e reduced-motion sem contaminar estilos globais.
+A PROFILE possui texto explícito indicando que o conteúdo crítico é **independente de WebGL**. A Foundation controla Canvas/fallback sem exigir que a página manipule renderer.
 
-## Direção visual
+`prefers-reduced-motion: reduce` remove motion não essencial e troca a indicação textual de movimento padrão para movimento reduzido. O conteúdo e a hierarquia permanecem presentes.
 
-Composição em três planos:
+## UI / materialidade
 
-1. arquitetura em carvão/verde profundo;
-2. Insígnia monumental como objeto central;
-3. registros HTML legíveis por cima da cena.
+- carvão/verde profundo como massa;
+- dourado restrito a autoridade e detalhes físicos;
+- vermelho não é estado padrão;
+- Insígnia compartilhada como objeto de identidade;
+- placas/arquivos/honrarias em vez de cards KPI;
+- loading/error representados por um cofre de arquivo físico;
+- objetos decorativos fora da árvore acessível;
+- nomes, estados, campanhas e honrarias continuam em HTML.
 
-Dourado aparece como autoridade/metal. Vermelho não é usado no estado normal. Progressão, arquivo e honrarias são tratados como placas/fixtures físicos, e não como cards KPI.
+No mobile (<640px), a composição vira fluxo vertical e remove elementos de perspectiva secundários.
 
-No mobile, a perspectiva lateral é removida e a sala vira uma sequência vertical: Insígnia → identidade → estado → registros → integridade.
+## Testes implementados
 
-Loading e erro permanecem dentro da fantasia do Salão: o boundary usa um cofre/arquivo físico central em vez de cair numa tela genérica.
+### Contract / inspection
 
-## Auditoria de dados atual
+`tests/profile-pre-game-contract.test.mjs` protege:
 
-| Conteúdo | Valor atual | Origem | Política |
-| --- | --- | --- | --- |
-| nome público | `Luigi` | `local-static` | explicitamente marcado como perfil local temporário |
-| patente/progressão | não exibida | nenhuma | `unavailable` |
-| estatísticas | não exibidas | nenhuma | `unavailable` |
-| histórico | não exibido | nenhuma | `unavailable` |
-| conquistas | não exibidas | nenhuma | `unavailable` |
+- ausência de dados competitivos inventados;
+- equivalentes textuais;
+- loading/error/mobile/reduced-motion;
+- request-time via `connection()`;
+- harness não controlável por URL;
+- integração somente via API pública da Foundation;
+- ausência de imports diretos de renderer/Three;
+- Insígnia compartilhada;
+- transparência do `WarShell` limitada à PROFILE.
 
-Não existem placeholders numéricos competitivos no fluxo normal.
+### Boundary comportamental
 
-Conteúdo marcado `evaluation-fixture` existe exclusivamente para regressão/evidência do EVAL e é identificado visualmente como sintético.
+`src/lib/profile/profile-data.ts` participa de `npm run test:compile`.
 
-## Cobertura do EVAL
+`tests/profile-data.test.mjs` importa a saída compilada e valida de fato:
 
-- `PRO-01`: fluxo normal não simula estatística/patente/ranking/conquista; fixtures do EVAL são opt-in e rotuladas como sintéticas;
-- `PRO-02`: tipos/copy para `guest`, `loading`, `loaded`, `empty-history`, `partial-data`, `no-progression-system`, `error`; loading/error usam boundaries reais do App Router;
-- `PRO-03`: UI não recebe/exibe ID interno, token ou payload bruto;
-- `PRO-04`: toda informação existe em HTML/CSS, sem WebGL;
-- `PRO-05`: layout próprio abaixo de 640px e nenhuma ação depende de hover;
-- `PRO-06`: `prefers-reduced-motion` desativa animação da Insígnia e transitions não essenciais;
-- `PRO-07`: cada seção carrega `source`/`availability`; ausência é rotulada e fixtures são identificadas separadamente;
-- `PRO-08`: nenhum login foi inventado; o perfil local apenas documenta a futura substituição;
-- `PRO-09`: contrato de histórico é limitado e possui `hasMore`; cenário `loaded` exercita continuação progressiva;
-- `PRO-10`: Insígnia é 2D, responsiva e permanece identificável sem cena;
-- `PRO-11`: conquistas são renderizadas com nome e descrição em HTML;
-- `PRO-12`: estados vazios usam fixtures físicos do Salão, não widgets quebrados.
+- fluxo normal;
+- `guest`;
+- `loaded`;
+- `empty-history`;
+- `no-progression-system`;
+- `partial-data`;
+- `error`;
+- estado inválido;
+- janela de histórico limitada a 3 itens com continuação explícita.
 
-### Cenários
+## Cobertura PRO-01…PRO-12
 
-| EVAL | Cobertura |
+| Gate | Implementação atual |
 | --- | --- |
-| `PRO-S1` | `PROFILE_EVAL_STATE=guest` |
-| `PRO-S2` | fluxo normal / `partial-data` |
-| `PRO-S3` | `PROFILE_EVAL_STATE=loaded` |
-| `PRO-S4` | `PROFILE_EVAL_STATE=empty-history` |
-| `PRO-S5` | `PROFILE_EVAL_STATE=no-progression-system` |
-| `PRO-S6` | `PROFILE_EVAL_STATE=error`, passando pelo error boundary real |
-| `PRO-S7` | contrato `hasMore` + janela visível limitada; backend real ainda não existe |
-| `PRO-S8` | `prefers-reduced-motion: reduce` |
-| `PRO-S9` | HTML/CSS completo sem dependência de WebGL |
-| `PRO-S10` | breakpoint mobile dedicado, alvo de regressão 390x844 |
+| PRO-01 | fluxo normal não cria rank/stat/achievement; fixture é marcada |
+| PRO-02 | estados de dados + boundaries loading/error explícitos |
+| PRO-03 | snapshot não expõe IDs/tokens/payload bruto |
+| PRO-04 | conteúdo crítico é HTML; Foundation provê fallback |
+| PRO-05 | composição mobile dedicada e sem dependência de hover |
+| PRO-06 | reduced-motion preserva conteúdo e possui estado textual |
+| PRO-07 | cada seção possui `source`/`availability` |
+| PRO-08 | nenhum fluxo de login foi criado |
+| PRO-09 | histórico possui janela + `hasMore` |
+| PRO-10 | `CommandInsignia` canônica da Foundation |
+| PRO-11 | honrarias renderizam nome + descrição em HTML |
+| PRO-12 | vazio continua representado como arquivo físico do Salão |
 
-## Integração futura com login
+## O que ainda falta para Definition of Done
 
-Trocar somente a implementação de `getCurrentProfileSnapshot()` por um adapter autenticado. A UI não deve importar SDK de autenticação nem shape bruto de sessão. O adapter deve mapear identidade, progressão, estatísticas, histórico paginado e conquistas para `ProfileSnapshot`, mantendo `source` e `availability` auditáveis.
+A implementação funcional está pronta para os gates automatizados existentes, mas a trilha ainda **não deve ser declarada concluída** até existir evidência dos itens abaixo:
 
-Quando a primitive compartilhada de Insígnia da Foundation existir em `dev`, substituir `CommandInsignia` local pela primitive canônica sem mudar a hierarquia da página.
+1. `npm test` completo;
+2. `npm run lint` completo;
+3. `npm run build` no HEAD atual;
+4. regressão visual em 1440x900 e 390x844 para:
+   - `guest`;
+   - `partial-data`;
+   - `loaded`;
+   - `empty-history`;
+   - `no-progression-system`;
+   - `error`;
+   - `reduced-motion`;
+   - fallback sem WebGL;
+5. teclado/foco visível;
+6. touch em 390x844;
+7. score final do `EVAL.md` >= 85 com todos os blockers verdes.
 
-## Evidência ainda necessária antes de merge
-
-Conforme `quality-standard.md`, a conclusão final ainda depende de:
-
-- `npm test` completo;
-- `npm run lint` completo;
-- captura determinística 1440x900 e 390x844 dos estados exigidos;
-- inspeção manual de teclado/touch e `prefers-reduced-motion`.
-
-O deploy Vercel é usado como evidência de compilação/build da aplicação, mas não substitui os gates locais de teste e lint.
+O workflow atual do repositório executa lint/test/build quando houver PR contra `dev`. Não abrir PR ou fazer merge automaticamente nesta branch.
