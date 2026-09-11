@@ -38,7 +38,11 @@ export function OperationsConsole() {
   const tabsRef = useRef<Array<HTMLButtonElement | null>>([]);
 
   const activeStatus = mode === "create" ? createStatus : joinStatus;
-  const commandLocked = createStatus === "pending" || joinStatus === "pending";
+  const commandLocked =
+    createStatus === "pending" ||
+    createStatus === "success" ||
+    joinStatus === "pending" ||
+    joinStatus === "success";
 
   function selectMode(nextMode: Mode, focus = false) {
     if (commandLocked && nextMode !== mode) return;

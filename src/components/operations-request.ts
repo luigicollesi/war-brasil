@@ -22,6 +22,12 @@ export async function fetchOperationsRequest(
       );
     }
 
+    if (error instanceof TypeError) {
+      throw new Error(
+        "Não foi possível concluir a operação por falha de rede. Verifique sua conexão e tente novamente.",
+      );
+    }
+
     throw error;
   } finally {
     window.clearTimeout(timeoutId);
