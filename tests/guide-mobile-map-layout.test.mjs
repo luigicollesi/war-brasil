@@ -5,10 +5,10 @@ import test from "node:test";
 const mobileMapCss = readFileSync("src/app/war-guide-mobile-map.css", "utf8");
 const layout = readFileSync("src/app/layout.tsx", "utf8");
 
-test("mobile guide labels use light fill with a dark outline", () => {
+test("mobile guide labels use dark ink without a contrasting stroke", () => {
   assert.match(
     mobileMapCss,
-    /\.wb-guide-map-territory-name\s*\{[\s\S]*?fill:\s*#fff8e8;[\s\S]*?stroke:\s*#06140f;[\s\S]*?stroke-opacity:\s*1;[\s\S]*?stroke-width:\s*2px;[\s\S]*?paint-order:\s*stroke fill;/,
+    /\.wb-guide-map-territory-name\s*\{[\s\S]*?fill:\s*#050505;[\s\S]*?stroke:\s*none;[\s\S]*?font-size:\s*17px;[\s\S]*?font-weight:\s*900;[\s\S]*?paint-order:\s*normal;/,
   );
 });
 
@@ -19,7 +19,18 @@ test("Leia o mapa mirrors the mobile troop counter contrast", () => {
   );
   assert.match(
     mobileMapCss,
-    /\.wb-guide-map-frame--reading \.wb-guide-map-troop-markers text\s*\{[\s\S]*?fill:\s*#17201c;[\s\S]*?stroke:\s*none;[\s\S]*?font-size:\s*19px;/,
+    /\.wb-guide-map-frame--reading \.wb-guide-map-troop-markers text\s*\{[\s\S]*?fill:\s*#000;[\s\S]*?stroke:\s*none;[\s\S]*?font-size:\s*22px;/,
+  );
+});
+
+test("mobile barrier label keeps a light surface with dark text", () => {
+  assert.match(
+    mobileMapCss,
+    /\.wb-guide-map-barrier-label rect\s*\{[\s\S]*?fill:\s*#f3efe4;[\s\S]*?stroke:\s*#9b781f;/,
+  );
+  assert.match(
+    mobileMapCss,
+    /\.wb-guide-map-barrier-label text\s*\{[\s\S]*?fill:\s*#050505;[\s\S]*?stroke:\s*none;/,
   );
 });
 
