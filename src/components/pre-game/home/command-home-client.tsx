@@ -1,7 +1,7 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import styles from "./command-home.module.css";
 
@@ -21,6 +21,10 @@ type Destination = {
   index: string;
   label: string;
   detail: string;
+};
+
+type CommandHomeClientProps = {
+  children: ReactNode;
 };
 
 const HOME_RITUAL_SESSION_KEY = "war-brasil:pre-game-home-ritual-seen";
@@ -60,7 +64,7 @@ function safelyReadRepeatVisit() {
   }
 }
 
-export function CommandHomeClient() {
+export function CommandHomeClient({ children }: CommandHomeClientProps) {
   const [ceremonyPhase, setCeremonyPhase] = useState<CeremonyPhase>("earth");
   const [visitMode, setVisitMode] = useState<VisitMode>("first");
   const [commandOpen, setCommandOpen] = useState(false);
@@ -120,7 +124,7 @@ export function CommandHomeClient() {
     setCommandOpen(true);
   };
 
-  const clearPointerFocus = (destination: DestinationId) => {
+  const clearFocus = (destination: DestinationId) => {
     setDestinationFocus((current) => (current === destination ? null : current));
   };
 
@@ -145,80 +149,7 @@ export function CommandHomeClient() {
       data-destination-focus={destinationFocus ?? "none"}
       data-transitioning-to={transitioningTo ?? "none"}
     >
-      <div className={styles.environment} aria-hidden="true">
-        <div className={styles.environmentGrid} />
-        <div className={styles.environmentVignette} />
-      </div>
-
-      <header className={styles.header}>
-        <a href="#home-command" className={styles.skipToCommand}>
-          Ir para o comando
-        </a>
-
-        <div className={styles.brandLockup} aria-label="WAR Brasil">
-          <span className={styles.brandMonogram} aria-hidden="true">
-            <span>WB</span>
-          </span>
-          <span className={styles.brandText}>
-            <strong>WAR</strong>
-            <span>BRASIL</span>
-          </span>
-        </div>
-
-        <div className={styles.headerTelemetry} aria-hidden="true">
-          <span>INSTALAÇÃO DE COMANDO</span>
-          <span>SETOR BR / 42T</span>
-        </div>
-      </header>
-
-      <section className={styles.stage} aria-labelledby="home-title">
-        <div className={styles.scene} aria-hidden="true">
-          <div className={styles.globeShell}>
-            <div className={styles.globe}>
-              <span className={styles.globeMeridian} />
-              <span className={styles.globeLatitude} />
-              <span className={styles.globeSignal} />
-            </div>
-          </div>
-
-          <div className={styles.crown}>
-            <span className={`${styles.orbit} ${styles.orbitTerritory}`} />
-            <span className={`${styles.orbit} ${styles.orbitCommand}`} />
-            <span className={`${styles.orbit} ${styles.orbitConflict}`} />
-          </div>
-
-          <div className={styles.domainTable}>
-            <span className={styles.tableOuterRing} />
-            <span className={styles.tableInnerRing} />
-            <span className={styles.tableAxis} />
-            <div className={styles.brazilAssembly}>
-              <div className={styles.mapUnderlay} />
-              <Image
-                src="/war-brasil-42.production.svg"
-                alt=""
-                width={1200}
-                height={1200}
-                preload
-                sizes="(max-width: 720px) 78vw, 620px"
-                className={styles.brazilMap}
-              />
-            </div>
-          </div>
-
-          <div className={styles.foundationRail} />
-        </div>
-
-        <div className={styles.identity}>
-          <p className={styles.kicker}>AUTORIDADE TERRITORIAL / BRASIL</p>
-          <h1 id="home-title" className={styles.title}>
-            <span>WAR</span>
-            <strong>BRASIL</strong>
-          </h1>
-          <p className={styles.subtitle}>
-            Quarenta e dois territórios. Uma mesa de domínio. Uma ordem de comando.
-          </p>
-        </div>
-      </section>
+      {children}
 
       <section id="home-command" className={styles.commandDock} aria-label="Acesso ao comando">
         {!commandOpen ? (
@@ -262,9 +193,9 @@ export function CommandHomeClient() {
                   data-destination={destination.id}
                   onClick={() => setTransitioningTo(destination.id)}
                   onFocus={() => setDestinationFocus(destination.id)}
-                  onBlur={() => clearPointerFocus(destination.id)}
+                  onBlur={() => clearFocus(destination.id)}
                   onPointerEnter={() => setDestinationFocus(destination.id)}
-                  onPointerLeave={() => clearPointerFocus(destination.id)}
+                  onPointerLeave={() => clearFocus(destination.id)}
                 >
                   <span className={styles.destinationIndex} aria-hidden="true">
                     {destination.index}
