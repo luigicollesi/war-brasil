@@ -9,6 +9,7 @@ import type {
 import { PROFILE_STATE_COPY } from "@/src/lib/profile/profile-data";
 import { CommandInsignia } from "./command-insignia";
 import styles from "./profile-hall.module.css";
+import stateStyles from "./profile-state.module.css";
 
 type ProfileHallProps = {
   snapshot: ProfileSnapshot;
@@ -27,7 +28,12 @@ function StateSeal({ state }: { state: ProfileState }) {
   const copy = PROFILE_STATE_COPY[state];
 
   return (
-    <div className={styles.stateSeal} data-state={state} role="status" aria-label={copy.label}>
+    <div
+      className={`${styles.stateSeal} ${stateStyles.stateSealTone}`}
+      data-state={state}
+      role="status"
+      aria-label={copy.label}
+    >
       <span className={styles.stateLamp} aria-hidden="true" />
       <span>{copy.label}</span>
     </div>
@@ -133,7 +139,7 @@ function AchievementList({ achievements }: { achievements: ReadonlyArray<Profile
 function StatisticsLedger({ statistics }: { statistics: ProfileSnapshot["statistics"] }) {
   if (statistics.availability === "unavailable") {
     return (
-      <div className={styles.statisticsState} data-availability="unavailable">
+      <div className={stateStyles.statisticsState} data-availability="unavailable">
         <span aria-hidden="true" />
         <p>Estatísticas competitivas sem fonte disponível.</p>
       </div>
@@ -142,7 +148,7 @@ function StatisticsLedger({ statistics }: { statistics: ProfileSnapshot["statist
 
   if (statistics.availability === "empty" || statistics.data.length === 0) {
     return (
-      <div className={styles.statisticsState} data-availability="empty">
+      <div className={stateStyles.statisticsState} data-availability="empty">
         <span aria-hidden="true" />
         <p>Fonte disponível, sem estatísticas registradas.</p>
       </div>
