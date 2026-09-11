@@ -146,7 +146,8 @@ test("fallback 2D permanece visível até o Brasil 3D estar realmente pronto", (
   assert.match(scene, /fallbackCrownRingA/);
   assert.match(scene, /fallbackCrownRingB/);
   assert.match(scene, /fallbackCrownRingC/);
-  assert.match(scene, /sceneFailed \? "fallback"/);
+  assert.match(scene, /const sceneUnavailable = sceneFailed \|\| !webglAvailable;/);
+  assert.match(scene, /const webglState = sceneUnavailable \? "fallback" : sceneReady \? "ready" : "loading";/);
   assert.match(canvas, /<BrazilTerritoryAssembly[\s\S]*?onReady=\{onReady\}[\s\S]*?\/>/);
   assert.match(canvas, /useEffect\(\(\) => \{\s*onReady\(\);/);
   assert.doesNotMatch(canvas, /onCreated=\{\(\{ gl \}\) => \{[\s\S]*?onReady\(\)/);
