@@ -90,13 +90,18 @@ test("Mesa, Globo e Coroa Orbital permanecem objetos de assinatura identificáve
   assert.match(canvas, /name="CommandInsignia"/);
 });
 
-test("fallback 2D preserva Brasil/Mesa/Coroa sem depender de Canvas", () => {
+test("fallback 2D permanece visível até o Brasil 3D estar realmente pronto", () => {
   assert.match(scene, /war-brasil-42\.production\.svg/);
   assert.match(scene, /fallbackTable/);
   assert.match(scene, /fallbackCrownRingA/);
   assert.match(scene, /fallbackCrownRingB/);
   assert.match(scene, /fallbackCrownRingC/);
   assert.match(scene, /sceneFailed \? "fallback"/);
+  assert.match(canvas, /<BrazilTerritoryAssembly intent=\{intent\} onReady=\{onReady\} \/>/);
+  assert.match(canvas, /useEffect\(\(\) => \{\s*onReady\(\);/);
+  assert.doesNotMatch(canvas, /onCreated=\{\(\{ gl \}\) => \{[\s\S]*?onReady\(\)/);
+  assert.match(css, /\.canvasLayer \{[\s\S]*?opacity: 0/);
+  assert.match(css, /\.sceneHost\[data-webgl="ready"\] \.canvasLayer/);
   assert.match(css, /\.sceneHost\[data-webgl="ready"\] \.sceneFallback/);
 });
 
