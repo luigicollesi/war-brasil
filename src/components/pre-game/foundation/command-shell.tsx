@@ -1,5 +1,3 @@
-"use client";
-
 import type { CSSProperties, ReactNode } from "react";
 import styles from "./command-foundation.module.css";
 import { CommandScene } from "./command-scene";
@@ -71,7 +69,7 @@ export function CommandShell({
             </span>
           </div>
           <div className={styles.modeRail}>
-            <span>FUNDAÇÃO // 01</span>
+            <span>SISTEMA // COMANDO</span>
             <strong>{modeLabel}</strong>
           </div>
         </div>
