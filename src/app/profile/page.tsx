@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
+import { CommandShell } from "@/src/components/pre-game/foundation";
 import { ProfileHall } from "@/src/components/profile/profile-hall";
 import { WarShell } from "@/src/components/war-shell";
 import { getCurrentProfileSnapshot } from "@/src/lib/profile/profile-data";
@@ -22,17 +23,23 @@ export default async function ProfilePage() {
   const snapshot = await getCurrentProfileSnapshot();
 
   return (
-    <WarShell
-      title="Salão de Comando"
-      backHref="/"
-      backLabel="Início"
-      actions={
-        <Link href="/matchmaking" className="wb-ghost-link">
-          Operações
-        </Link>
-      }
+    <CommandShell
+      intent={{ mode: "profile", focus: "insignia", conflictLevel: 0 }}
+      chrome={false}
+      sectionLabel="Salão de Comando"
     >
-      <ProfileHall snapshot={snapshot} />
-    </WarShell>
+      <WarShell
+        title="Salão de Comando"
+        backHref="/"
+        backLabel="Início"
+        actions={
+          <Link href="/matchmaking" className="wb-ghost-link">
+            Operações
+          </Link>
+        }
+      >
+        <ProfileHall snapshot={snapshot} />
+      </WarShell>
+    </CommandShell>
   );
 }
