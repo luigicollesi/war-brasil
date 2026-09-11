@@ -426,7 +426,7 @@
   border-color: rgb(125 168 133 / 58%);
 }
 
-@media (max-width: 760px) {
+@media (max-width: 900px) {
   .fallbackTable {
     top: 39%;
     left: 58%;
