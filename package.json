@@ -14,7 +14,7 @@
     "test:run": "node --test \"tests/*.test.mjs\"",
     "test": "npm run test:compile && npm run test:run && npm run worker:test",
     "test:db": "node --test \"tests/integration/*.test.mjs\"",
-    "test:e2e:lobby": "node scripts/e2e/lobby-e2e.cjs",
+    "test:e2e:lobby": "node scripts/e2e/lobby-e2e.mjs",
     "context:cpg:prepare": "node scripts/context/prepare-cpg-source.mjs",
     "context:cpg:build": "bash scripts/context/build-cpg.sh",
     "context:cpg:status": "node scripts/context/cpg-status.mjs",
