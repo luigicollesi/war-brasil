@@ -23,6 +23,9 @@ Avaliar conforme `../quality-standard.md`. Falha em qualquer `BLOCKER` reprova i
 | FND-15 | Coroa Orbital preserva três funções identificáveis: Território, Comando, Conflito | inspection + visual |
 | FND-16 | Terra/Globo, Mesa e Brasil possuem estados finais determinísticos e não são dependência funcional | visual + fallback test |
 | FND-17 | efeitos não introduzem flicker/pulsação agressiva | manual/visual |
+| FND-18 | zoom/aproximação não faz fronteiras desaparecerem nem altera identidade territorial | interaction + visual |
+| FND-19 | gesto mobile de scroll/pan/zoom não dispara seleção territorial acidental | touch/e2e |
+| FND-20 | identidade/ordem semântica dos territórios permanece estável entre estados visuais | automated/structural inspection |
 
 ## Score / 100
 
@@ -54,7 +57,7 @@ Validar 42 territórios, fronteiras/identidades e comportamento visual em repous
 
 ### FND-S4 — Interação territorial
 
-Quando houver interação, validar pointer, teclado e touch. Extrusão/inset/bevel não pode reduzir indevidamente a área lógica de seleção.
+Quando houver interação, validar pointer, teclado e touch. Extrusão/inset/bevel não pode reduzir indevidamente a área lógica de seleção. Zoom deve preservar fronteiras e gestos touch não podem selecionar território por acidente.
 
 ### FND-S5 — Device fraco/degradação
 
