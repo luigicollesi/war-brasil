@@ -32,7 +32,9 @@ Pages não importam Three.js nem recebem coordenadas.
 
 ## Brasil canônico
 
-A cena carrega exclusivamente `/war-brasil-42.production.svg` via `SVGLoader`. Cada path canônico vira uma placa extrudada, mantendo X/Y do SVG. `territoryExplode` só introduz separação mínima no eixo Z; não espalha territórios no plano e não altera fronteiras ou identidade. Edges douradas mantêm as fronteiras perceptíveis.
+A cena carrega exclusivamente `/war-brasil-42.production.svg` via `SVGLoader`. Cada path territorial precisa declarar seu `data-id` canônico entre 1 e 42; ausência, duplicação ou lacuna faz a montagem 3D falhar para o error boundary, mantendo o fallback 2D funcional. Não existe fallback semântico por posição do path.
+
+Cada path canônico vira uma placa extrudada, mantendo X/Y do SVG. `territoryExplode` só introduz separação mínima no eixo Z; não espalha territórios no plano e não altera fronteiras ou identidade. Materiais e separação visual também derivam do ID territorial estável, e não da ordem física do elemento no arquivo. `EdgesGeometry` mantém as fronteiras perceptíveis.
 
 O fallback usa o mesmo SVG, evitando uma segunda geometria territorial.
 
@@ -50,12 +52,13 @@ O fallback usa o mesmo SVG, evitando uma segunda geometria territorial.
 - DPR é limitado a 1.5 desktop e 1.1 em pointer coarse/memória restrita.
 - geometrias do SVG e materiais são memoizados e descartados no unmount.
 - sem sombras dinâmicas ou pós-processamento.
+- preferências `prefers-reduced-motion` e pointer coarse são lidas por `useSyncExternalStore`, sem efeito de sincronização que provoque render em cascata.
 - `prefers-reduced-motion` troca para `frameloop="demand"`, congela idle loops e aplica câmera diretamente ao estado final.
 - `useFrame` altera apenas objetos Three/câmera, nunca React state.
 
 ## Fallback e falhas
 
-Fallback 2D renderiza imediatamente Mesa, Brasil e três aros antes do chunk 3D. Se a cena lançar erro ou o contexto WebGL for perdido, o Canvas é removido e o fallback permanece. Conteúdo/ações pertencem ao DOM acima da cena e continuam intactos.
+Fallback 2D renderiza imediatamente Mesa, Brasil e três aros antes do chunk 3D. Se a cena lançar erro, a identidade territorial do SVG estiver inválida ou o contexto WebGL for perdido, o Canvas é removido e o fallback permanece. Conteúdo/ações pertencem ao DOM acima da cena e continuam intactos.
 
 ## Rastreabilidade FND
 
@@ -63,12 +66,12 @@ Fallback 2D renderiza imediatamente Mesa, Brasil e três aros antes do chunk 3D.
 | --- | --- |
 | FND-01 | conteúdo fica em `shellContent`; fallback independe do Canvas |
 | FND-02 | um `CommandScene`/Canvas sem `key` por mode; intent por props |
-| FND-03 | matchMedia + demand frameloop + CameraDirector snap |
+| FND-03 | `useSyncExternalStore` + demand frameloop + CameraDirector snap |
 | FND-04 | package/lockfile não são alterados |
 | FND-05 | CI obrigatório antes de merge |
 | FND-06 | Foundation não expõe ação baseada em hover |
 | FND-07 | vignette/atmosphere DOM protege contraste do conteúdo |
-| FND-08 | teste estrutural exige exatamente ids 1..42 |
+| FND-08 | teste estrutural e runtime exigem exatamente `data-id` 1..42 |
 | FND-09 | mesma geometria SVG; explode somente em Z |
 | FND-10 | sem alteração X/Y por explode |
 | FND-11 | `EdgesGeometry` + material de borda compartilhado |
@@ -80,7 +83,7 @@ Fallback 2D renderiza imediatamente Mesa, Brasil e três aros antes do chunk 3D.
 | FND-17 | sem flicker/pulse; idle somente rotações muito lentas |
 | FND-18 | câmera não altera geometria; edges permanecem no assembly |
 | FND-19 | Foundation não seleciona território; gestos não disparam ação territorial |
-| FND-20 | path order/id vêm diretamente do SVG canônico |
+| FND-20 | identidade vem de `data-id`; ordem física dos paths não é fonte semântica |
 
 ## Pesquisa aplicada
 
