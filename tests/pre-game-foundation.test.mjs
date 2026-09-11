@@ -59,10 +59,11 @@ test("renderer é único, reduz motion/loops e reage a perda do contexto WebGL",
   assert.doesNotMatch(canvas, /shadowMap|castShadow|receiveShadow/);
 });
 
-test("composição compacta é interna, determinística e não comprime o desktop", () => {
-  assert.match(scene, /useMediaQuery\("\(max-width: 760px\)"\)/);
+test("composição compacta é interna, determinística e cobre mobile/tablet do EVAL", () => {
+  assert.match(scene, /useMediaQuery\("\(max-width: 900px\)"\)/);
   assert.match(scene, /data-compact-scene=\{compactScene \? "true" : "false"\}/);
   assert.match(scene, /compact=\{compactScene\}/);
+  assert.match(scene, /sizes="\(max-width: 900px\) 72vw, 46vw"/);
   assert.match(presets, /COMPACT_MODE_PRESETS/);
   assert.match(presets, /COMPACT_FOCUS_TARGETS/);
   assert.match(presets, /compact = false/);
