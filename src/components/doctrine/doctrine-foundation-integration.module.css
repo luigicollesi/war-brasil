@@ -1,0 +1,22 @@
+.foundationIntegrated {
+  padding-top: clamp(78px, 7vw, 104px);
+  background:
+    linear-gradient(90deg, rgb(5 10 8 / 96%) 0%, rgb(5 10 8 / 90%) 28%, rgb(5 10 8 / 76%) 58%, rgb(5 10 8 / 68%) 100%),
+    radial-gradient(circle at 72% 18%, rgb(76 103 72 / 16%), transparent 28rem),
+    radial-gradient(circle at 18% 82%, rgb(148 49 45 / 7%), transparent 30rem) !important;
+}
+
+@media (max-width: 760px) {
+  .foundationIntegrated {
+    padding-top: 88px;
+    background:
+      linear-gradient(180deg, rgb(5 10 8 / 94%) 0%, rgb(5 10 8 / 88%) 48%, rgb(5 10 8 / 82%) 100%),
+      radial-gradient(circle at 70% 12%, rgb(76 103 72 / 12%), transparent 22rem) !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .foundationIntegrated {
+    scroll-behavior: auto;
+  }
+}
