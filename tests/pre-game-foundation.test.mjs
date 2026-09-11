@@ -17,7 +17,7 @@ const svg = source("public/war-brasil-42.production.svg");
 const pkg = JSON.parse(source("package.json"));
 
 function canonicalTerritoryIds() {
-  return [...svg.matchAll(/<path\b[^>]*class="[^"]*territory[^"]*"[^>]*data-territory-id="(\d+)"[^>]*>/g)].map(
+  return [...svg.matchAll(/<path\b[^>]*class="[^"]*territory[^"]*"[^>]*data-id="(\d+)"[^>]*>/g)].map(
     (match) => Number(match[1]),
   );
 }
@@ -65,6 +65,8 @@ test("Brasil 2.5D deriva somente do SVG canônico e mantém os 42 ids únicos", 
   assert.equal(new Set(ids).size, 42);
   assert.deepEqual([...ids].sort((a, b) => a - b), Array.from({ length: 42 }, (_, index) => index + 1));
 
+  assert.match(svg, /id="territory-1"[^>]*data-id="1"/);
+  assert.match(svg, /id="territory-42"[^>]*data-id="42"/);
   assert.match(canvas, /useLoader\(SVGLoader, "\/war-brasil-42\.production\.svg"\)/);
   assert.match(canvas, /SVGLoader\.createShapes/);
   assert.match(canvas, /new ExtrudeGeometry/);
