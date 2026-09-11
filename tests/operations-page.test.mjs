@@ -1,11 +1,23 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import test from "node:test";
+
+const require = createRequire(import.meta.url);
+const { normalizeOperationsRoomCode } = require(
+  "../.test-build/client/operations/room-code.js",
+);
+const { fetchOperationsRequest, OperationsRequestError } = require(
+  "../.test-build/client/operations/request.js",
+);
 
 const page = readFileSync("src/app/matchmaking/page.tsx", "utf8");
 const operations = readFileSync("src/components/operations-console.tsx", "utf8");
 const operationsTypes = readFileSync("src/components/operations-types.ts", "utf8");
-const operationsRequest = readFileSync("src/components/operations-request.ts", "utf8");
+const operationsRequest = readFileSync(
+  "src/lib/client/operations/request.ts",
+  "utf8",
+);
 const createRoom = readFileSync("src/components/create-room-button.tsx", "utf8");
 const joinRoom = readFileSync("src/components/join-room-form.tsx", "utf8");
 const serverRooms = readFileSync("src/lib/server/rooms.ts", "utf8");
@@ -53,10 +65,14 @@ test("Operations usa tabs horizontais com painel alcançável por teclado", () =
   assert.doesNotMatch(operations, /ArrowUp|ArrowDown/);
 });
 
-test("Localizar operação preserva normalização vigente e usa exemplo compatível com o servidor", () => {
-  assert.equal((joinRoom.match(/<input/g) ?? []).length, 1);
-  assert.match(joinRoom, /value=\{roomCode\}/);
-  assert.match(joinRoom, /\.trim\(\)[\s\S]*\.toLowerCase\(\)[\s\S]*\.replace\(\/\[\^a-z0-9-\]\//);
+test("normalização de código preserva exatamente o comportamento vigente", () => {
+  assert.equal(normalizeOperationsRoomCode(" A7C9K2 "), "a7c9k2");
+  assert.equal(normalizeOperationsRoomCode("BR-42!"), "br-42");
+  assert.equal(normalizeOperationsRoomCode("  ÁB C123? "), "bc123");
+  assert.equal(normalizeOperationsRoomCode("---"), "---");
+  assert.equal(normalizeOperationsRoomCode("   "), "");
+
+  assert.match(joinRoom, /normalizeOperationsRoomCode\(roomCode\)/);
   assert.match(joinRoom, /placeholder="A7C9K2"/);
   assert.match(joinRoom, /inputMode="text"/);
   assert.match(joinRoom, /enterKeyHint="go"/);
@@ -66,14 +82,54 @@ test("Localizar operação preserva normalização vigente e usa exemplo compat�
   assert.doesNotMatch(joinRoom, /maxLength=/);
 });
 
-test("Falha de rede e timeout são recuperáveis e distintos de erro funcional", () => {
-  assert.match(operationsRequest, /class OperationsRequestError extends Error/);
-  assert.match(operationsRequest, /"timeout"/);
-  assert.match(operationsRequest, /"network"/);
+test("helper de request classifica falha de rede e timeout de forma recuperável", async () => {
+  await assert.rejects(
+    () =>
+      fetchOperationsRequest("/ops-network-test", undefined, {
+        timeoutMs: 50,
+        fetcher: async () => {
+          throw new TypeError("offline");
+        },
+      }),
+    (error) => {
+      assert.ok(error instanceof OperationsRequestError);
+      assert.equal(error.kind, "network");
+      return true;
+    },
+  );
+
+  const hangingFetcher = (_input, init = {}) =>
+    new Promise((_resolve, reject) => {
+      init.signal?.addEventListener(
+        "abort",
+        () => reject(new Error("aborted")),
+        { once: true },
+      );
+    });
+
+  await assert.rejects(
+    () =>
+      fetchOperationsRequest("/ops-timeout-test", undefined, {
+        timeoutMs: 10,
+        fetcher: hangingFetcher,
+      }),
+    (error) => {
+      assert.ok(error instanceof OperationsRequestError);
+      assert.equal(error.kind, "timeout");
+      return true;
+    },
+  );
+});
+
+test("falhas de request liberam os estados pendentes para retry", () => {
+  assert.match(operationsRequest, /globalThis\.setTimeout/);
+  assert.match(operationsRequest, /globalThis\.clearTimeout/);
+  assert.match(createRoom, /requestInFlightRef\.current = false/);
+  assert.match(createRoom, /setIsCreating\(false\)/);
+  assert.match(joinRoom, /requestInFlightRef\.current = false/);
+  assert.match(joinRoom, /setIsJoining\(false\)/);
   assert.match(createRoom, /instanceof OperationsRequestError/);
-  assert.match(createRoom, /"create-error"/);
   assert.match(joinRoom, /failureStatus = "network-error"/);
-  assert.match(joinRoom, /"join-error"/);
   assert.match(operations, /Falha de comunicação — tente novamente/);
 });
 

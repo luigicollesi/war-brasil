@@ -2,6 +2,11 @@ const OPERATIONS_REQUEST_TIMEOUT_MS = 15_000;
 
 export type OperationsRequestFailureKind = "timeout" | "network";
 
+type OperationsRequestOptions = {
+  timeoutMs?: number;
+  fetcher?: typeof fetch;
+};
+
 export class OperationsRequestError extends Error {
   readonly kind: OperationsRequestFailureKind;
 
@@ -15,15 +20,15 @@ export class OperationsRequestError extends Error {
 export async function fetchOperationsRequest(
   input: RequestInfo | URL,
   init?: RequestInit,
+  options: OperationsRequestOptions = {},
 ) {
   const controller = new AbortController();
-  const timeoutId = window.setTimeout(
-    () => controller.abort(),
-    OPERATIONS_REQUEST_TIMEOUT_MS,
-  );
+  const timeoutMs = options.timeoutMs ?? OPERATIONS_REQUEST_TIMEOUT_MS;
+  const fetcher = options.fetcher ?? fetch;
+  const timeoutId = globalThis.setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    return await fetch(input, {
+    return await fetcher(input, {
       ...init,
       signal: controller.signal,
     });
@@ -44,6 +49,6 @@ export async function fetchOperationsRequest(
 
     throw error;
   } finally {
-    window.clearTimeout(timeoutId);
+    globalThis.clearTimeout(timeoutId);
   }
 }

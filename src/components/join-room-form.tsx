@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import {
   fetchOperationsRequest,
   OperationsRequestError,
-} from "@/src/components/operations-request";
+} from "@/src/lib/client/operations/request";
+import { normalizeOperationsRoomCode } from "@/src/lib/client/operations/room-code";
 import type {
   OperationInteractionChange,
   OperationStatus,
@@ -32,10 +33,7 @@ export function JoinRoomForm({
 
     if (requestInFlightRef.current) return;
 
-    const normalizedCode = roomCode
-      .trim()
-      .toLowerCase()
-      .replace(/[^a-z0-9-]/g, "");
+    const normalizedCode = normalizeOperationsRoomCode(roomCode);
 
     if (!normalizedCode) {
       setError("Informe o código da sala.");

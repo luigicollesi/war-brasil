@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   fetchOperationsRequest,
   OperationsRequestError,
-} from "@/src/components/operations-request";
+} from "@/src/lib/client/operations/request";
 import type {
   OperationInteractionChange,
   OperationStatusChange,
