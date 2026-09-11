@@ -23,6 +23,16 @@ test("ready permanece confirmado pelo servidor e perceptível sem depender de co
   assert.match(styles, /\.station\[data-ready="true"\] \.insignia/);
 });
 
+test("ready pendente não antecipa estado e falha aparece junto da ação", () => {
+  assert.match(lobby, /scope: "profile" \| "ready" \| "bot" \| "copy"/);
+  assert.match(lobby, /scope: action/);
+  assert.match(lobby, /const readyPending = pendingAction === "ready"/);
+  assert.match(lobby, /aguardando confirmação do servidor/);
+  assert.match(lobby, /const readyError = actionError\?\.scope === "ready"/);
+  assert.match(lobby, /aria-busy=\{readyPending\}/);
+  assert.doesNotMatch(lobby, /set.*Ready/);
+});
+
 test("código da operação permanece copiável, selecionável e com recuperação local", () => {
   assert.match(lobby, /navigator\.clipboard\.writeText\(code\.toUpperCase\(\)\)/);
   assert.match(lobby, /aria-label=\{`Copiar código da sala \$\{roomCode\}`\}/);
