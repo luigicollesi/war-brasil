@@ -3,10 +3,13 @@
 import { WarShell } from "@/src/components/war-shell";
 
 type ProfileErrorProps = {
+  error: Error & { digest?: string };
   reset: () => void;
 };
 
-export default function ProfileError({ reset }: ProfileErrorProps) {
+export default function ProfileError({ error, reset }: ProfileErrorProps) {
+  void error;
+
   return (
     <WarShell title="Salão de Comando" backHref="/" backLabel="Início">
       <main className="wb-page">

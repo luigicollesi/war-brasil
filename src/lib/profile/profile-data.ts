@@ -27,9 +27,24 @@ export type ProfileSection<T> = {
   data: T;
 };
 
+export type ProfileProgression = {
+  title: string;
+  detail?: string;
+};
+
+export type ProfileStatistic = {
+  label: string;
+  value: string;
+};
+
 export type ProfileCampaign = {
   title: string;
   summary: string;
+};
+
+export type ProfileHistory = {
+  campaigns: ReadonlyArray<ProfileCampaign>;
+  hasMore: boolean;
 };
 
 export type ProfileAchievement = {
@@ -40,9 +55,9 @@ export type ProfileAchievement = {
 export type ProfileSnapshot = {
   state: ProfileState;
   identity: ProfileIdentity | null;
-  progression: ProfileSection<null>;
-  statistics: ProfileSection<ReadonlyArray<never>>;
-  history: ProfileSection<ReadonlyArray<ProfileCampaign>>;
+  progression: ProfileSection<ProfileProgression | null>;
+  statistics: ProfileSection<ReadonlyArray<ProfileStatistic>>;
+  history: ProfileSection<ProfileHistory>;
   achievements: ProfileSection<ReadonlyArray<ProfileAchievement>>;
 };
 
@@ -115,7 +130,7 @@ const LOCAL_PROFILE: ProfileSnapshot = {
     availability: "unavailable",
     source: null,
     unavailableReason: "Histórico de partidas ainda não está conectado ao perfil.",
-    data: [],
+    data: { campaigns: [], hasMore: false },
   },
   achievements: {
     availability: "unavailable",
@@ -126,9 +141,12 @@ const LOCAL_PROFILE: ProfileSnapshot = {
 };
 
 /**
- * Boundary intentionally kept independent from rendering.
- * Replace this implementation with the future authenticated profile provider;
+ * Stable boundary between profile rendering and identity persistence.
+ * Replace this local implementation with the future authenticated provider;
  * consumers should continue receiving the same ProfileSnapshot contract.
+ *
+ * History is intentionally bounded by the provider contract (`hasMore`) so a
+ * future backend does not need to load an unlimited campaign archive at once.
  */
 export async function getCurrentProfileSnapshot(): Promise<ProfileSnapshot> {
   return LOCAL_PROFILE;

@@ -1,5 +1,11 @@
 import Link from "next/link";
-import type { ProfileSection, ProfileSnapshot, ProfileState } from "@/src/lib/profile/profile-data";
+import type {
+  ProfileAchievement,
+  ProfileCampaign,
+  ProfileSection,
+  ProfileSnapshot,
+  ProfileState,
+} from "@/src/lib/profile/profile-data";
 import { PROFILE_STATE_COPY } from "@/src/lib/profile/profile-data";
 import { CommandInsignia } from "./command-insignia";
 import styles from "./profile-hall.module.css";
@@ -8,11 +14,13 @@ type ProfileHallProps = {
   snapshot: ProfileSnapshot;
 };
 
-type EmptyFixtureProps = {
+type RecordFixtureProps = {
   label: string;
   title: string;
-  reason: string;
-  motif?: "archive" | "medals" | "rank";
+  motif: "archive" | "medals" | "rank";
+  availability: "available" | "empty" | "unavailable";
+  unavailableReason?: string;
+  children?: React.ReactNode;
 };
 
 function StateSeal({ state }: { state: ProfileState }) {
@@ -26,44 +34,117 @@ function StateSeal({ state }: { state: ProfileState }) {
   );
 }
 
-function EmptyFixture({ label, title, reason, motif = "archive" }: EmptyFixtureProps) {
+function EmptyMotif({ motif }: { motif: RecordFixtureProps["motif"] }) {
   return (
-    <section className={styles.fixture} aria-labelledby={`${motif}-title`}>
+    <div className={`${styles.fixtureObject} ${styles[`fixtureObject_${motif}`]}`} aria-hidden="true">
+      {motif === "medals" ? (
+        <>
+          <span />
+          <span />
+          <span />
+        </>
+      ) : motif === "archive" ? (
+        <>
+          <i />
+          <i />
+          <i />
+          <i />
+        </>
+      ) : (
+        <span className={styles.rankDash}>—</span>
+      )}
+    </div>
+  );
+}
+
+function RecordFixture({
+  label,
+  title,
+  motif,
+  availability,
+  unavailableReason,
+  children,
+}: RecordFixtureProps) {
+  const index = motif === "rank" ? "01" : motif === "archive" ? "02" : "03";
+  const titleId = `${motif}-title`;
+
+  return (
+    <section className={styles.fixture} aria-labelledby={titleId}>
       <div className={styles.fixtureHeader}>
-        <span className={styles.fixtureIndex} aria-hidden="true">0{motif === "rank" ? 1 : motif === "archive" ? 2 : 3}</span>
+        <span className={styles.fixtureIndex} aria-hidden="true">{index}</span>
         <div>
           <p>{label}</p>
-          <h2 id={`${motif}-title`}>{title}</h2>
+          <h2 id={titleId}>{title}</h2>
         </div>
       </div>
 
-      <div className={`${styles.fixtureObject} ${styles[`fixtureObject_${motif}`]}`} aria-hidden="true">
-        {motif === "medals" ? (
-          <>
-            <span />
-            <span />
-            <span />
-          </>
-        ) : motif === "archive" ? (
-          <>
-            <i />
-            <i />
-            <i />
-            <i />
-          </>
-        ) : (
-          <span className={styles.rankDash}>—</span>
-        )}
-      </div>
+      {availability === "available" ? children : <EmptyMotif motif={motif} />}
 
-      <p className={styles.fixtureReason}>{reason}</p>
-      <span className={styles.unavailableTag}>Indisponível — sem fonte real</span>
+      {availability === "unavailable" ? (
+        <>
+          <p className={styles.fixtureReason}>
+            {unavailableReason ?? "Este registro ainda não possui uma fonte de dados disponível."}
+          </p>
+          <span className={styles.unavailableTag}>Indisponível — sem fonte real</span>
+        </>
+      ) : null}
+
+      {availability === "empty" ? (
+        <>
+          <p className={styles.fixtureReason}>A fonte está disponível, mas ainda não há registros.</p>
+          <span className={styles.emptyTag}>Arquivo disponível — sem registros</span>
+        </>
+      ) : null}
     </section>
   );
 }
 
-function availabilityReason<T>(section: ProfileSection<T>, fallback: string) {
-  return section.unavailableReason ?? fallback;
+function CampaignList({ campaigns, hasMore }: { campaigns: ReadonlyArray<ProfileCampaign>; hasMore: boolean }) {
+  return (
+    <div className={styles.ledger}>
+      <ol>
+        {campaigns.map((campaign) => (
+          <li key={`${campaign.title}-${campaign.summary}`}>
+            <strong>{campaign.title}</strong>
+            <span>{campaign.summary}</span>
+          </li>
+        ))}
+      </ol>
+      {hasMore ? <p>Há registros adicionais; a fonte deve fornecê-los progressivamente.</p> : null}
+    </div>
+  );
+}
+
+function AchievementList({ achievements }: { achievements: ReadonlyArray<ProfileAchievement> }) {
+  return (
+    <div className={styles.ledger}>
+      <ol>
+        {achievements.map((achievement) => (
+          <li key={`${achievement.name}-${achievement.description}`}>
+            <strong>{achievement.name}</strong>
+            <span>{achievement.description}</span>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+function StatisticsLedger({ statistics }: { statistics: ProfileSnapshot["statistics"] }) {
+  if (statistics.availability !== "available" || statistics.data.length === 0) {
+    return null;
+  }
+
+  return (
+    <dl className={styles.statisticsLedger} aria-label="Estatísticas verificadas">
+      {statistics.data.map((statistic) => (
+        <div key={`${statistic.label}-${statistic.value}`}>
+          <dt>{statistic.label}</dt>
+          <dd>{statistic.value}</dd>
+        </div>
+      ))}
+    </dl>
+  );
 }
 
 function NonIdentityState({ snapshot }: ProfileHallProps) {
@@ -86,15 +167,33 @@ function NonIdentityState({ snapshot }: ProfileHallProps) {
   );
 }
 
+function sectionIsEmpty<T>(section: ProfileSection<T>) {
+  return section.availability === "empty";
+}
+
 export function ProfileHall({ snapshot }: ProfileHallProps) {
   if (!snapshot.identity) {
     return <NonIdentityState snapshot={snapshot} />;
   }
 
   const copy = PROFILE_STATE_COPY[snapshot.state];
+  const progressionAvailable =
+    snapshot.progression.availability === "available" && snapshot.progression.data !== null;
+  const historyAvailability =
+    snapshot.history.availability === "available" && snapshot.history.data.campaigns.length === 0
+      ? "empty"
+      : snapshot.history.availability;
+  const achievementsAvailability =
+    snapshot.achievements.availability === "available" && snapshot.achievements.data.length === 0
+      ? "empty"
+      : snapshot.achievements.availability;
 
   return (
-    <main className={styles.page} data-profile-state={snapshot.state}>
+    <main
+      className={styles.page}
+      data-profile-state={snapshot.state}
+      data-scene-fallback="html"
+    >
       <div className={styles.ambientGrid} aria-hidden="true" />
       <div className="wb-shell-inner">
         <section className={styles.heading} aria-labelledby="profile-title">
@@ -133,41 +232,51 @@ export function ProfileHall({ snapshot }: ProfileHallProps) {
             <p>{copy.label}</p>
             <strong>{copy.title}</strong>
             <span>{copy.description}</span>
+            <StatisticsLedger statistics={snapshot.statistics} />
           </aside>
         </section>
 
-        <div className={styles.brassLine} aria-hidden="true">
-          <span />
-        </div>
+        <div className={styles.brassLine} aria-hidden="true"><span /></div>
 
         <section className={styles.records} aria-label="Registros do perfil">
-          <EmptyFixture
+          <RecordFixture
             motif="rank"
             label="Patente e progressão"
-            title="Autoridade sem fabricação"
-            reason={availabilityReason(
-              snapshot.progression,
-              "Nenhum sistema de progressão está conectado a este perfil.",
-            )}
-          />
-          <EmptyFixture
+            title="Autoridade registrada"
+            availability={snapshot.progression.availability}
+            unavailableReason={snapshot.progression.unavailableReason}
+          >
+            {progressionAvailable ? (
+              <div className={styles.ledgerSingle}>
+                <strong>{snapshot.progression.data?.title}</strong>
+                {snapshot.progression.data?.detail ? <span>{snapshot.progression.data.detail}</span> : null}
+              </div>
+            ) : null}
+          </RecordFixture>
+
+          <RecordFixture
             motif="archive"
             label="Campanhas e histórico"
             title="Arquivo de campanhas"
-            reason={availabilityReason(
-              snapshot.history,
-              "Nenhum histórico de partidas está conectado a este perfil.",
-            )}
-          />
-          <EmptyFixture
+            availability={historyAvailability}
+            unavailableReason={snapshot.history.unavailableReason}
+          >
+            {snapshot.history.availability === "available" && snapshot.history.data.campaigns.length > 0 ? (
+              <CampaignList campaigns={snapshot.history.data.campaigns} hasMore={snapshot.history.data.hasMore} />
+            ) : null}
+          </RecordFixture>
+
+          <RecordFixture
             motif="medals"
             label="Honrarias"
             title="Parede de reconhecimento"
-            reason={availabilityReason(
-              snapshot.achievements,
-              "Nenhum sistema de conquistas está conectado a este perfil.",
-            )}
-          />
+            availability={achievementsAvailability}
+            unavailableReason={snapshot.achievements.unavailableReason}
+          >
+            {snapshot.achievements.availability === "available" && snapshot.achievements.data.length > 0 ? (
+              <AchievementList achievements={snapshot.achievements.data} />
+            ) : null}
+          </RecordFixture>
         </section>
 
         <section className={styles.integrityRail} aria-label="Integridade dos dados">
