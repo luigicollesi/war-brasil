@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import styles from "./command-home.module.css";
 
 type CeremonyPhase = "earth" | "brazil" | "table" | "stable";
@@ -54,46 +54,67 @@ const DESTINATIONS: Destination[] = [
   },
 ];
 
-function safelyReadRepeatVisit() {
+function subscribeReducedMotion(onStoreChange: () => void) {
+  const mediaQuery = window.matchMedia(REDUCED_MOTION_QUERY);
+  mediaQuery.addEventListener("change", onStoreChange);
+  return () => mediaQuery.removeEventListener("change", onStoreChange);
+}
+
+function getReducedMotionSnapshot() {
+  return window.matchMedia(REDUCED_MOTION_QUERY).matches;
+}
+
+function getServerReducedMotionSnapshot() {
+  return false;
+}
+
+function subscribeRepeatVisit() {
+  return () => {};
+}
+
+function getRepeatVisitSnapshot() {
   try {
-    const repeatVisit = sessionStorage.getItem(HOME_RITUAL_SESSION_KEY) === "1";
-    sessionStorage.setItem(HOME_RITUAL_SESSION_KEY, "1");
-    return repeatVisit;
+    return sessionStorage.getItem(HOME_RITUAL_SESSION_KEY) === "1";
   } catch {
     return false;
   }
 }
 
+function getServerRepeatVisitSnapshot() {
+  return false;
+}
+
+function markRitualSeen() {
+  try {
+    sessionStorage.setItem(HOME_RITUAL_SESSION_KEY, "1");
+  } catch {
+    // The ritual remains functional when session storage is unavailable.
+  }
+}
+
 export function CommandHomeClient({ children }: CommandHomeClientProps) {
   const [ceremonyPhase, setCeremonyPhase] = useState<CeremonyPhase>("earth");
-  const [visitMode, setVisitMode] = useState<VisitMode>("first");
   const [commandOpen, setCommandOpen] = useState(false);
   const [destinationFocus, setDestinationFocus] = useState<DestinationId | null>(null);
   const [transitioningTo, setTransitioningTo] = useState<DestinationId | null>(null);
 
+  const reducedMotion = useSyncExternalStore(
+    subscribeReducedMotion,
+    getReducedMotionSnapshot,
+    getServerReducedMotionSnapshot,
+  );
+  const repeatVisit = useSyncExternalStore(
+    subscribeRepeatVisit,
+    getRepeatVisitSnapshot,
+    getServerRepeatVisitSnapshot,
+  );
+
+  const visitMode: VisitMode = reducedMotion ? "reduced" : repeatVisit ? "repeat" : "first";
+  const effectiveCeremonyPhase: CeremonyPhase =
+    visitMode === "first" ? ceremonyPhase : "stable";
+
   useEffect(() => {
-    const motionQuery = window.matchMedia(REDUCED_MOTION_QUERY);
-    const repeatVisit = safelyReadRepeatVisit();
-
-    if (motionQuery.matches) {
-      setVisitMode("reduced");
-      setCeremonyPhase("stable");
-    } else if (repeatVisit) {
-      setVisitMode("repeat");
-      setCeremonyPhase("stable");
-    }
-
-    const handleMotionPreference = (event: MediaQueryListEvent) => {
-      if (!event.matches) return;
-      setVisitMode("reduced");
-      setCeremonyPhase("stable");
-    };
-
-    motionQuery.addEventListener("change", handleMotionPreference);
-
-    return () => {
-      motionQuery.removeEventListener("change", handleMotionPreference);
-    };
+    markRitualSeen();
   }, []);
 
   useEffect(() => {
@@ -134,7 +155,7 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
       ? "destination-focus"
       : commandOpen
         ? "command-open"
-        : ceremonyPhase === "earth"
+        : effectiveCeremonyPhase === "earth"
           ? "boot"
           : "awaiting-entry";
 
@@ -143,7 +164,7 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
       className={styles.root}
       data-home-state={homeState}
       data-scene="fallback"
-      data-ceremony={ceremonyPhase}
+      data-ceremony={effectiveCeremonyPhase}
       data-visit={visitMode}
       data-command-open={commandOpen ? "true" : "false"}
       data-destination-focus={destinationFocus ?? "none"}
@@ -162,7 +183,7 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
 
             <div className={styles.authorizationMeta}>
               <span>ACESSO OPERACIONAL DISPONÍVEL</span>
-              {ceremonyPhase !== "stable" && visitMode === "first" ? (
+              {effectiveCeremonyPhase !== "stable" && visitMode === "first" ? (
                 <button type="button" className={styles.skipCeremony} onClick={skipCeremony}>
                   Pular ritual
                 </button>
