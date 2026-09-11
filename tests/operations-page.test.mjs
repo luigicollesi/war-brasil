@@ -29,6 +29,18 @@ const responsive = readFileSync(
   "src/app/matchmaking/operations-responsive.module.css",
   "utf8",
 );
+const integrationStyles = readFileSync(
+  "src/app/matchmaking/operations-foundation.module.css",
+  "utf8",
+);
+const foundationBarrel = readFileSync(
+  "src/components/pre-game/foundation/index.ts",
+  "utf8",
+);
+const foundationScene = readFileSync(
+  "src/components/pre-game/foundation/command-scene.tsx",
+  "utf8",
+);
 
 test("Operations expõe os estados semânticos exigidos pelo spec", () => {
   for (const state of [
@@ -47,7 +59,6 @@ test("Operations expõe os estados semânticos exigidos pelo spec", () => {
   assert.match(operationsTypes, /"typing-code"/);
   assert.match(operations, /data-interaction=\{interaction\}/);
   assert.match(operations, /data-state=\{activeStatus\}/);
-  assert.match(operations, /data-scene-state="scene-fallback"/);
   assert.match(states, /data-state="creating"/);
   assert.match(states, /data-state="joining"/);
   assert.match(states, /data-state="invalid-code"/);
@@ -146,20 +157,39 @@ test("Create e Join mantêm endpoints, proteção de duplicidade e destinos vige
   assert.match(joinRoom, /router\.push\(`\/lobby\/\$\{encodeURIComponent\(data\.room\.code\)\}`\)/);
 });
 
-test("Operations mantém fallback 2D e reduced-motion sem depender de WebGL", () => {
-  assert.match(operations, /war-brasil-42\.production\.svg/);
-  assert.match(operations, /data-scene-state="scene-fallback"/);
-  assert.match(states, /prefers-reduced-motion: reduce/);
-  assert.doesNotMatch(operations, /@react-three|three\/|<Canvas|WebGLRenderer/);
+test("Operations consome somente o contrato público da Foundation", () => {
+  assert.match(page, /<CommandShell/);
+  assert.match(page, /mode:\s*"operations"/);
+  assert.match(page, /focus:\s*"brazil"/);
+  assert.match(page, /territoryExplode:\s*0\.08/);
+  assert.match(foundationBarrel, /CommandShell/);
+  assert.match(foundationBarrel, /CommandSceneIntent/);
+  assert.match(foundationScene, /CommandSceneFallback/);
+  assert.match(foundationScene, /war-brasil-42\.production\.svg/);
+  assert.doesNotMatch(page, /WarShell/);
+  assert.doesNotMatch(page, /command-scene|command-scene-canvas/);
+  assert.doesNotMatch(
+    operations,
+    /next\/image|war-brasil-42|data-ring|data-map-plate|@react-three|three\/|<Canvas|WebGLRenderer/,
+  );
 });
 
-test("Operations recompõe a cena em viewport móvel baixo sem comprimir controles", () => {
+test("Operations recompõe a interface em mobile sem comprimir controles", () => {
   assert.match(page, /responsiveStyles\.pageAdaptive/);
   assert.match(operations, /responsiveStyles\.stationAdaptive/);
   assert.match(responsive, /max-width: 720px/);
   assert.match(responsive, /max-height: 640px/);
-  assert.match(responsive, /\[data-map-bay\]/);
-  assert.match(responsive, /min-height: 116px/);
   assert.match(responsive, /input\[name="roomCode"\]/);
   assert.match(responsive, /scroll-margin-block: 24vh/);
+  assert.match(integrationStyles, /max-width: 900px/);
+  assert.match(integrationStyles, /foundationStation/);
+  assert.match(integrationStyles, /margin-top: 18px/);
+});
+
+test("Operations preserva reduced-motion e fallback pela Foundation", () => {
+  assert.match(states, /prefers-reduced-motion: reduce/);
+  assert.match(integrationStyles, /prefers-reduced-motion: reduce/);
+  assert.match(foundationScene, /prefers-reduced-motion: reduce/);
+  assert.match(foundationScene, /data-webgl=\{webglState\}/);
+  assert.doesNotMatch(operations, /WebGLRenderer|<Canvas/);
 });

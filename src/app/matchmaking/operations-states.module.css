@@ -1,60 +1,35 @@
-.stationState[data-status="idle"][data-interaction="create-focus"] [data-ring="command"],
-.stationState[data-status="idle"][data-interaction="join-focus"] [data-ring="territory"],
-.stationState[data-status="idle"][data-interaction="typing-code"] [data-ring="territory"] {
-  border-color: rgba(240, 200, 90, .7);
+.stationState {
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.stationState[data-status="idle"][data-interaction="create-focus"],
+.stationState[data-status="idle"][data-interaction="join-focus"],
+.stationState[data-status="idle"][data-interaction="typing-code"] {
+  border-color: rgba(240, 200, 90, .42);
   box-shadow:
-    inset 0 0 28px rgba(214, 169, 62, .055),
-    0 0 24px rgba(214, 169, 62, .055);
+    0 38px 90px rgba(0, 0, 0, .38),
+    inset 0 0 0 1px rgba(214, 169, 62, .07),
+    inset 0 1px 0 rgba(255, 255, 255, .035);
 }
 
-.stationState[data-status="idle"][data-interaction="create-focus"] [data-map-plate] {
-  filter:
-    sepia(.24)
-    saturate(.74)
-    brightness(.96)
-    drop-shadow(0 24px 28px rgba(0, 0, 0, .4));
+.stationState[data-state="create-error"],
+.stationState[data-state="join-error"],
+.stationState[data-state="invalid-code"],
+.stationState[data-state="network-error"] {
+  border-color: rgba(164, 38, 44, .58);
 }
 
-.stationState[data-status="idle"][data-interaction="join-focus"] [data-map-plate],
-.stationState[data-status="idle"][data-interaction="typing-code"] [data-map-plate] {
-  filter:
-    sepia(.18)
-    saturate(.78)
-    brightness(.98)
-    drop-shadow(0 24px 30px rgba(0, 0, 0, .4));
+.stationState[data-state="creating"],
+.stationState[data-state="joining"] {
+  border-color: rgba(240, 200, 90, .5);
 }
 
-.stationState[data-status="idle"][data-interaction="typing-code"] [data-map-readout] {
-  color: rgba(238, 232, 218, .74);
-}
-
-.stationState[data-state="create-error"] [data-ring="conflict"],
-.stationState[data-state="join-error"] [data-ring="conflict"],
-.stationState[data-state="invalid-code"] [data-ring="conflict"],
-.stationState[data-state="network-error"] [data-ring="conflict"] {
-  border-color: rgba(164, 38, 44, .72);
-  box-shadow:
-    inset 0 0 30px rgba(164, 38, 44, .065),
-    0 0 24px rgba(164, 38, 44, .05);
-}
-
-.stationState[data-state="creating"] [data-ring="command"],
-.stationState[data-state="joining"] [data-ring="territory"] {
-  border-color: rgba(240, 200, 90, .68);
-}
-
-.stationState[data-state="success-transition"] [data-ring="command"] {
-  border-color: rgba(116, 182, 135, .72);
-}
-
-.stationState[data-state="network-error"] [data-map-readout]::before {
-  content: "COMUNICAÇÃO INTERROMPIDA · ";
-  color: rgba(244, 170, 160, .72);
+.stationState[data-state="success-transition"] {
+  border-color: rgba(116, 182, 135, .56);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .stationState [data-ring],
-  .stationState [data-map-plate] {
+  .stationState {
     transition: none !important;
   }
 }

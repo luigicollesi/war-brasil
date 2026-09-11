@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { KeyboardEvent, useRef, useState } from "react";
 import { CreateRoomButton } from "@/src/components/create-room-button";
 import { JoinRoomForm } from "@/src/components/join-room-form";
@@ -11,6 +10,7 @@ import type {
 import styles from "@/src/app/matchmaking/operations.module.css";
 import responsiveStyles from "@/src/app/matchmaking/operations-responsive.module.css";
 import stateStyles from "@/src/app/matchmaking/operations-states.module.css";
+import foundationStyles from "@/src/app/matchmaking/operations-foundation.module.css";
 
 type Mode = "create" | "join";
 type VisualStatus = "idle" | "pending" | "error" | "success";
@@ -104,12 +104,11 @@ export function OperationsConsole() {
 
   return (
     <section
-      className={`${styles.station} ${stateStyles.stationState} ${responsiveStyles.stationAdaptive}`}
+      className={`${styles.station} ${stateStyles.stationState} ${responsiveStyles.stationAdaptive} ${foundationStyles.foundationStation}`}
       data-mode={mode}
       data-status={visualStatus(activeStatus)}
       data-state={activeStatus}
       data-interaction={interaction}
-      data-scene-state="scene-fallback"
       aria-busy={activeStatus === "creating" || activeStatus === "joining"}
       aria-labelledby="operations-station-title"
     >
@@ -126,40 +125,8 @@ export function OperationsConsole() {
         </div>
       </div>
 
-      <div className={styles.machineBody}>
-        <div className={styles.mapBay} data-map-bay="" aria-hidden="true">
-          <div className={styles.crown}>
-            <span
-              className={`${styles.ring} ${styles.ringTerritory}`}
-              data-ring="territory"
-            />
-            <span
-              className={`${styles.ring} ${styles.ringCommand}`}
-              data-ring="command"
-            />
-            <span
-              className={`${styles.ring} ${styles.ringConflict}`}
-              data-ring="conflict"
-            />
-          </div>
-          <div className={styles.mapPlate} data-map-plate="">
-            <Image
-              src="/war-brasil-42.production.svg"
-              alt=""
-              fill
-              sizes="(max-width: 820px) 58vw, 36vw"
-              priority={false}
-            />
-          </div>
-          <div className={styles.axisVertical} />
-          <div className={styles.axisHorizontal} />
-          <div className={styles.mapReadout} data-map-readout="">
-            <span>42 placas</span>
-            <span>geometria canônica</span>
-          </div>
-        </div>
-
-        <div className={styles.commandBay}>
+      <div className={`${styles.machineBody} ${foundationStyles.foundationBody}`}>
+        <div className={`${styles.commandBay} ${foundationStyles.foundationCommandBay}`}>
           <div className={styles.commandHeading}>
             <p className={styles.commandEyebrow}>Selecione o protocolo de entrada</p>
             <p className={styles.commandSequence}>AUTORIZAÇÃO // 01—02</p>
