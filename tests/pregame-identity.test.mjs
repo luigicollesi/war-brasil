@@ -27,11 +27,12 @@ test("identidade centraliza a paleta e tipografia do pré-jogo", () => {
   assert.match(layout, /Inter/);
 });
 
-test("matchmaking consome CommandShell e preserva os shells legados ainda não migrados", () => {
+test("matchmaking usa runtime Foundation persistente e preserva shells das trilhas ainda isoladas", () => {
   assert.match(shell, /wb-shell/);
+  assert.match(layout, /<PreGameCommandRuntime>\{children\}<\/PreGameCommandRuntime>/);
   assert.match(home, /<WarShell immersive>/);
-  assert.match(matchmaking, /<CommandShell/);
-  assert.doesNotMatch(matchmaking, /<WarShell/);
+  assert.doesNotMatch(matchmaking, /<CommandShell|<WarShell/);
+  assert.match(operations, /useCommandSceneDirective/);
   assert.match(lobbyPage, /<WarShell/);
 });
 
