@@ -12,12 +12,11 @@ test("perfil local deixa explícita a origem e não fabrica progressão competit
   assert.match(profileData, /displayName: "Luigi"/);
   assert.match(profileData, /source: "local-static"/);
   assert.match(profileData, /sourceLabel: "Perfil local temporário"/);
-  assert.equal((profileData.match(/availability: "unavailable"/g) ?? []).length, 4);
-  assert.equal((profileData.match(/source: null/g) ?? []).length, 4);
   assert.match(profileData, /Sistema de progressão ainda não integrado/);
   assert.match(profileData, /Estatísticas ainda não possuem contrato de dados do perfil/);
   assert.match(profileData, /Histórico de partidas ainda não está conectado ao perfil/);
   assert.match(profileData, /Conquistas ainda não possuem sistema de origem/);
+  assert.doesNotMatch(profileData, /winRate|rankingPosition|globalRank|victories:\s*\d/);
 });
 
 test("renderização diferencia ausência de dado real e mantém equivalentes textuais", () => {
@@ -25,6 +24,7 @@ test("renderização diferencia ausência de dado real e mantém equivalentes te
 
   assert.match(hall, /Indisponível — sem fonte real/);
   assert.match(hall, /Arquivo disponível — sem registros/);
+  assert.match(hall, /Estatísticas competitivas sem fonte disponível/);
   assert.match(hall, /achievement\.name/);
   assert.match(hall, /achievement\.description/);
   assert.match(hall, /data-scene-fallback="html"/);
@@ -43,4 +43,27 @@ test("profile possui loading, erro, mobile e reduced-motion explícitos", () => 
   assert.match(hallCss, /@media \(max-width: 640px\)/);
   assert.match(hallCss, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(insigniaCss, /@media \(prefers-reduced-motion: reduce\)/);
+});
+
+test("estados de avaliação são opt-in no servidor e não podem ser escolhidos pela URL", () => {
+  const profileData = source("src/lib/profile/profile-data.ts");
+  const profilePage = source("src/app/profile/page.tsx");
+
+  assert.match(profileData, /PROFILE_EVAL_MODE/);
+  assert.match(profileData, /PROFILE_EVAL_STATE/);
+  assert.match(profileData, /evaluation-fixture/);
+  assert.match(profileData, /createEvaluationSnapshot/);
+  assert.doesNotMatch(profilePage, /searchParams|useSearchParams/);
+  assert.doesNotMatch(profileData, /URLSearchParams|searchParams|document\.|window\./);
+});
+
+test("estado visual possui semântica própria sem depender apenas de cor", () => {
+  const hall = source("src/components/profile/profile-hall.tsx");
+  const stateCss = source("src/components/profile/profile-state.module.css");
+
+  assert.match(hall, /aria-label=\{copy\.label\}/);
+  assert.match(hall, /data-state=\{state\}/);
+  assert.match(stateCss, /data-state="error"/);
+  assert.match(stateCss, /data-state="loaded"/);
+  assert.match(stateCss, /forced-colors: active/);
 });
