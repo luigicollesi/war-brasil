@@ -30,8 +30,26 @@
   transform: rotate(45deg);
 }
 
+.webglReady,
+.webglFallback,
 .motionReduced {
   display: none !important;
+}
+
+:global([data-command-scene-mode="profile"]:has([data-webgl="ready"])) .webglLoading {
+  display: none;
+}
+
+:global([data-command-scene-mode="profile"]:has([data-webgl="ready"])) .webglReady {
+  display: inline-flex !important;
+}
+
+:global([data-command-scene-mode="profile"]:has([data-webgl="fallback"])) .webglLoading {
+  display: none;
+}
+
+:global([data-command-scene-mode="profile"]:has([data-webgl="fallback"])) .webglFallback {
+  display: inline-flex !important;
 }
 
 @media (max-width: 640px) {
