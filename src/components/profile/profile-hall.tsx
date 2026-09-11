@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { CommandInsignia } from "@/src/components/pre-game/foundation";
 import type {
   ProfileAchievement,
   ProfileCampaign,
@@ -7,7 +8,6 @@ import type {
   ProfileState,
 } from "@/src/lib/profile/profile-data";
 import { PROFILE_STATE_COPY } from "@/src/lib/profile/profile-data";
-import { CommandInsignia } from "./command-insignia";
 import { ProfileEnvironmentState } from "./profile-environment-state";
 import styles from "./profile-hall.module.css";
 import stateStyles from "./profile-state.module.css";
@@ -24,6 +24,15 @@ type RecordFixtureProps = {
   unavailableReason?: string;
   children?: ReactNode;
 };
+
+function initialsFrom(displayName: string) {
+  return displayName
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toLocaleUpperCase("pt-BR"))
+    .join("") || "WB";
+}
 
 function StateSeal({ state }: { state: ProfileState }) {
   const copy = PROFILE_STATE_COPY[state];
@@ -266,7 +275,15 @@ export function ProfileHall({ snapshot }: ProfileHallProps) {
           <div className={styles.identityStage}>
             <div className={styles.insigniaMount}>
               <span className={styles.mountLight} aria-hidden="true" />
-              <CommandInsignia displayName={snapshot.identity.displayName} />
+              <CommandInsignia
+                monogram={initialsFrom(snapshot.identity.displayName)}
+                label={snapshot.identity.displayName}
+                status={
+                  snapshot.isEvaluationFixture
+                    ? "Fixture de avaliação"
+                    : snapshot.identity.sourceLabel
+                }
+              />
             </div>
 
             <div className={styles.identityCopy}>
