@@ -242,11 +242,11 @@ export function LobbyClient({ code }: LobbyClientProps) {
 
   return (
     <div
-      className={styles.lobby}
+      className={`${styles.lobby} max-sm:flex max-sm:flex-col`}
       data-connection-state={reconnecting ? "reconnecting" : "connected"}
       data-start-authorized={startAuthorized ? "true" : "false"}
     >
-      <header className={`wb-lobby-heading ${styles.masthead}`}>
+      <header className={`wb-lobby-heading ${styles.masthead} max-sm:order-1`}>
         <div>
           <p className="wb-kicker">Briefing de alto comando</p>
           <h1 className={styles.title}>Conselho de operação</h1>
@@ -272,7 +272,7 @@ export function LobbyClient({ code }: LobbyClientProps) {
               </button>
             </div>
             <p
-              className={`${styles.codeFeedback}${copyError ? ` ${styles.codeFeedbackError}` : ""}`}
+              className={`mt-1 max-w-sm text-[10px] leading-4 ${copyError ? "text-[#f4aaa0]" : "text-[var(--wb-text-muted)]"}`}
               aria-live="polite"
               aria-atomic="true"
             >
@@ -295,7 +295,7 @@ export function LobbyClient({ code }: LobbyClientProps) {
       </header>
 
       {syncError ? (
-        <div className={styles.networkNotice} role="status" aria-live="polite">
+        <div className={`${styles.networkNotice} max-sm:order-2`} role="status" aria-live="polite">
           <span>
             Conexão instável. A última formação confirmada permanece visível enquanto
             novas tentativas de sincronização acontecem automaticamente.
@@ -311,7 +311,7 @@ export function LobbyClient({ code }: LobbyClientProps) {
       ) : null}
 
       <section
-        className={styles.briefingStage}
+        className={`${styles.briefingStage} max-sm:order-4`}
         aria-labelledby="lobby-stations-title"
         data-all-ready={allReady ? "true" : "false"}
         data-start-authorized={startAuthorized ? "true" : "false"}
@@ -402,7 +402,7 @@ export function LobbyClient({ code }: LobbyClientProps) {
         </ol>
       </section>
 
-      <section className={styles.localConsole} aria-labelledby="my-faction-title">
+      <section className={`${styles.localConsole} max-sm:order-3`} aria-labelledby="my-faction-title">
         <div className={styles.consoleIntro}>
           <p className="wb-section-title">Sua estação</p>
           <h2 id="my-faction-title" className={styles.consoleTitle}>
@@ -447,7 +447,7 @@ export function LobbyClient({ code }: LobbyClientProps) {
             </div>
           </form>
 
-          <fieldset className={`wb-faction-editor ${styles.colorEditor}`}>
+          <fieldset className={`wb-faction-editor ${styles.colorEditor} min-w-0 border-0 p-0`}>
             <legend className="wb-label">Cor da facção</legend>
             <div className={`wb-color-grid ${styles.colorGrid}`}>
               {PLAYER_COLORS.map((color) => {
@@ -516,7 +516,7 @@ export function LobbyClient({ code }: LobbyClientProps) {
       </section>
 
       <section
-        className={`wb-ready-rail ${styles.readyRail}`}
+        className={`wb-ready-rail ${styles.readyRail} max-sm:order-5`}
         aria-label="Preparação da partida"
       >
         <div className={`wb-shell-inner wb-ready-inner ${styles.readyInner}`}>
