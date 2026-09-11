@@ -54,7 +54,10 @@ test("read model da Doutrina deriva mecânicas das autoridades do jogo", () => {
   assert.match(presentationSource, /buildGameGuidePresentation/);
   assert.match(presentationSource, /EVENT_COUNT/);
   assert.match(presentationSource, /JURASSIC_TUNNEL_SOURCE_ID/);
-  assert.doesNotMatch(presentationSource, /const\s+(?:MIN_TERRITORY_TROOPS|MANDATORY_TRADE_HAND_SIZE|OWNED_TERRITORY_CARD_BONUS)\s*=/);
+  assert.doesNotMatch(
+    presentationSource,
+    /const\s+(?:MIN_TERRITORY_TROOPS|MANDATORY_TRADE_HAND_SIZE|OWNED_TERRITORY_CARD_BONUS)\s*=/,
+  );
 });
 
 test("/rules resolve deep-link no servidor sem depender de Canvas", () => {
@@ -80,20 +83,28 @@ test("índice usa links reais e troca de capítulo preserva foco e scroll", () =
   assert.match(experience, /aria-label="Capítulos da Doutrina"/);
   assert.match(experience, /ANTERIOR/);
   assert.match(experience, /PRÓXIMO/);
+  assert.match(experience, /prefetch=\{false\}/);
   assert.doesNotMatch(experience, /scrollIntoView|scrollTo|\.focus\(/);
 });
 
-test("demonstrações reutilizam mapa, dados e cartas reais com equivalente textual", () => {
+test("orquestração cliente permanece pequena e delega as demonstrações", () => {
   const experience = source(
     "src/components/doctrine/doctrine-experience.tsx",
   );
 
-  assert.match(experience, /GuideBoardScene/);
-  assert.match(experience, /GameDie/);
-  assert.match(experience, /TerritoryCardArtwork/);
-  assert.match(experience, /<figcaption>/);
-  assert.match(experience, /ariaLabel=/);
-  assert.doesNotMatch(experience, /Canvas|@react-three|three\//i);
+  assert.match(experience, /DoctrineChapterDemo/);
+  assert.doesNotMatch(experience, /GameDie|GuideBoardScene|TerritoryCardArtwork/);
+});
+
+test("demonstrações reutilizam mapa, dados e cartas reais com equivalente textual", () => {
+  const demos = source("src/components/doctrine/doctrine-demo.tsx");
+
+  assert.match(demos, /GuideBoardScene/);
+  assert.match(demos, /GameDie/);
+  assert.match(demos, /TerritoryCardArtwork/);
+  assert.match(demos, /<figcaption>/);
+  assert.match(demos, /ariaLabel=/);
+  assert.doesNotMatch(demos, /Canvas|@react-three|three\//i);
 });
 
 test("layout da Doutrina recompõe mobile e respeita reduced motion", () => {
