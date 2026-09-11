@@ -34,12 +34,17 @@ test("renderização diferencia ausência de dado real e mantém equivalentes te
 test("profile possui loading, erro, mobile e reduced-motion explícitos", () => {
   const loading = source("src/app/profile/loading.tsx");
   const error = source("src/app/profile/error.tsx");
+  const boundary = source("src/components/profile/profile-boundary-state.tsx");
+  const boundaryCss = source("src/components/profile/profile-boundary-state.module.css");
   const hallCss = source("src/components/profile/profile-hall.module.css");
   const insigniaCss = source("src/components/profile/command-insignia.module.css");
 
-  assert.match(loading, /aria-busy="true"/);
   assert.match(loading, /sem valores simulados/);
   assert.match(error, /Nenhum dado fictício será exibido/);
+  assert.match(boundary, /aria-busy=\{isLoading \|\| undefined\}/);
+  assert.match(boundary, /data-scene-fallback="html"/);
+  assert.match(boundaryCss, /@media \(max-width: 480px\)/);
+  assert.match(boundaryCss, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(hallCss, /@media \(max-width: 640px\)/);
   assert.match(hallCss, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(insigniaCss, /@media \(prefers-reduced-motion: reduce\)/);
