@@ -36,10 +36,17 @@ test("PROFILE consome somente a API pública da Foundation", () => {
   const shell = source("src/components/profile/profile-command-shell.tsx");
   const hall = source("src/components/profile/profile-hall.tsx");
   const page = source("src/app/profile/page.tsx");
+  const layout = source("src/app/layout.tsx");
+  const routeIntent = source(
+    "src/components/pre-game/foundation/pre-game-route-intent.ts",
+  );
 
   assert.match(shell, /from "@\/src\/components\/pre-game\/foundation"/);
-  assert.match(shell, /mode: "profile"/);
+  assert.match(shell, /useCommandSceneDirective/);
+  assert.doesNotMatch(shell, /\bmode\s*:/);
   assert.match(shell, /focus: "insignia"/);
+  assert.match(routeIntent, /"\/profile": "profile"/);
+  assert.match(layout, /<PreGameCommandRuntime>\{children\}<\/PreGameCommandRuntime>/);
   assert.match(hall, /CommandInsignia/);
   assert.match(hall, /from "@\/src\/components\/pre-game\/foundation"/);
   assert.doesNotMatch(hall, /\.\/command-insignia/);
