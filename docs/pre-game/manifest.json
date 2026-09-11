@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "initiative": "pre-game-command-experience",
+  "sourceBranch": "dev",
+  "qualityGate": {
+    "minimumScore": 85,
+    "blockersMustPass": true,
+    "commands": ["npm test", "npm run lint", "npm run build"]
+  },
+  "tracks": [
+    {"id":"foundation","route":null,"dependsOn":[],"spec":"foundation/SPEC.md","eval":"foundation/EVAL.md","suggestedBranch":"feature/pre-game-foundation"},
+    {"id":"home","route":"/","dependsOn":["foundation-contract"],"spec":"home/SPEC.md","eval":"home/EVAL.md","suggestedBranch":"feature/pre-game-home"},
+    {"id":"operations","route":"/matchmaking","dependsOn":["foundation-contract"],"spec":"operations/SPEC.md","eval":"operations/EVAL.md","suggestedBranch":"feature/pre-game-operations"},
+    {"id":"lobby","route":"/lobby/[code]","dependsOn":["foundation-contract"],"spec":"lobby/SPEC.md","eval":"lobby/EVAL.md","suggestedBranch":"feature/pre-game-lobby"},
+    {"id":"doctrine","route":"/rules","dependsOn":["foundation-contract"],"spec":"doctrine/SPEC.md","eval":"doctrine/EVAL.md","suggestedBranch":"feature/pre-game-doctrine"},
+    {"id":"profile","route":"/profile","dependsOn":["foundation-contract"],"spec":"profile/SPEC.md","eval":"profile/EVAL.md","suggestedBranch":"feature/pre-game-profile"}
+  ]
+}
