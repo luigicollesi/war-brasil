@@ -9,7 +9,7 @@
   background: transparent;
 }
 
-.frame :global(.wb-shell::before) {
+.frame :global(.wb-shell)::before {
   opacity: .1;
 }
 
