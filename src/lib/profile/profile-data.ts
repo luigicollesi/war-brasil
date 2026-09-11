@@ -207,6 +207,7 @@ const LOCAL_PROFILE: ProfileSnapshot = {
 };
 
 type ProfileEvaluationState = Exclude<ProfileState, "loading">;
+type ProfileRenderableEvaluationState = Exclude<ProfileEvaluationState, "error">;
 
 const PROFILE_EVALUATION_STATES = new Set<ProfileEvaluationState>([
   "guest",
@@ -228,7 +229,7 @@ function isProfileEvaluationState(value: string): value is ProfileEvaluationStat
  * cookies or browser input. Synthetic records are explicitly marked as fixtures
  * and avoid competitive numbers or real-looking rank names.
  */
-function createEvaluationSnapshot(state: ProfileEvaluationState): ProfileSnapshot {
+function createEvaluationSnapshot(state: ProfileRenderableEvaluationState): ProfileSnapshot {
   const base: ProfileSnapshot = {
     state,
     identity: LOCAL_IDENTITY,
@@ -236,7 +237,7 @@ function createEvaluationSnapshot(state: ProfileEvaluationState): ProfileSnapsho
     isEvaluationFixture: true,
   };
 
-  if (state === "guest" || state === "error") {
+  if (state === "guest") {
     return {
       ...base,
       identity: null,
@@ -294,6 +295,11 @@ function getEvaluationStateFromEnvironment(): ProfileEvaluationState | null {
  */
 export async function getCurrentProfileSnapshot(): Promise<ProfileSnapshot> {
   const evaluationState = getEvaluationStateFromEnvironment();
+
+  if (evaluationState === "error") {
+    throw new Error("PROFILE_EVAL_ERROR");
+  }
+
   if (evaluationState) {
     return createEvaluationSnapshot(evaluationState);
   }
