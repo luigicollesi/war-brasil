@@ -109,8 +109,9 @@ export function CommandScene({ intent, className }: CommandSceneProps) {
   );
   const reducedMotion = useMediaQuery("(prefers-reduced-motion: reduce)");
   const coarsePointer = useMediaQuery("(pointer: coarse)");
+  const compactScene = useMediaQuery("(max-width: 760px)");
   const maxDpr =
-    reducedMotion || coarsePointer
+    reducedMotion || coarsePointer || compactScene
       ? COMMAND_FOUNDATION_TOKENS.scene.maxReducedDpr
       : COMMAND_FOUNDATION_TOKENS.scene.maxDesktopDpr;
   const [sceneReady, setSceneReady] = useState(false);
@@ -134,6 +135,7 @@ export function CommandScene({ intent, className }: CommandSceneProps) {
       data-scene-mode={normalizedIntent.mode}
       data-webgl={webglState}
       data-reduced-motion={reducedMotion ? "true" : "false"}
+      data-compact-scene={compactScene ? "true" : "false"}
       aria-hidden="true"
     >
       <CommandSceneFallback intent={normalizedIntent} />
@@ -143,6 +145,7 @@ export function CommandScene({ intent, className }: CommandSceneProps) {
             <CommandSceneCanvas
               intent={normalizedIntent}
               reducedMotion={reducedMotion}
+              compact={compactScene}
               maxDpr={maxDpr}
               onReady={handleReady}
               onUnavailable={handleUnavailable}
