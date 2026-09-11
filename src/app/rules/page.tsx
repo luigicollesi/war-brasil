@@ -1,7 +1,5 @@
 import type { Metadata } from "next";
 import { DoctrineExperience } from "@/src/components/doctrine/doctrine-experience";
-import { DOCTRINE_SCENE_INTENT } from "@/src/components/doctrine/doctrine-scene-intent";
-import { CommandShell } from "@/src/components/pre-game/foundation";
 import {
   buildDoctrinePresentation,
   isDoctrineChapterSlug,
@@ -33,11 +31,9 @@ export default async function RulesPage({ searchParams }: RulesPageProps) {
     : presentation.chapters[0].slug;
 
   return (
-    <CommandShell intent={DOCTRINE_SCENE_INTENT} sectionLabel="DOUTRINA">
-      <DoctrineExperience
-        presentation={presentation}
-        initialChapter={initialChapter}
-      />
-    </CommandShell>
+    <DoctrineExperience
+      presentation={presentation}
+      initialChapter={initialChapter}
+    />
   );
 }
