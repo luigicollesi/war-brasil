@@ -235,7 +235,7 @@ export function buildDoctrinePresentation() {
       principles: [
         "Eventos podem alterar conexão, território, ataque ou outras condições temporárias previstas pela engine.",
         "A interface deve apresentar o efeito resolvido; ela não decide nem inventa a consequência.",
-        "Ao remover tropas por evento, a regra preserva o mínimo de uma tropa em território ocupado.",
+        `Ao remover tropas por evento, a regra preserva o mínimo de ${guide.anomalies.minimumTroopsAfterRemoval} tropa em território ocupado.`,
       ],
       metrics: [
         { label: "Estados do catálogo", value: String(EVENT_COUNT) },
