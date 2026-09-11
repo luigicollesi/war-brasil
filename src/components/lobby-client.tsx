@@ -32,7 +32,7 @@ type LobbyPendingAction =
   | null;
 
 type LobbyActionError = {
-  scope: "profile" | "bot";
+  scope: "profile" | "bot" | "copy";
   message: string;
 } | null;
 
@@ -163,6 +163,8 @@ export function LobbyClient({ code }: LobbyClientProps) {
   }
 
   async function copyRoomCode() {
+    setActionError(null);
+
     try {
       if (!navigator.clipboard) {
         throw new Error("Clipboard API indisponível");
@@ -172,9 +174,10 @@ export function LobbyClient({ code }: LobbyClientProps) {
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1600);
     } catch {
+      setCopied(false);
       setActionError({
-        scope: "profile",
-        message: "Não foi possível copiar automaticamente. Selecione o código e copie manualmente.",
+        scope: "copy",
+        message: "Cópia automática indisponível. Selecione o código acima e copie manualmente.",
       });
     }
   }
@@ -230,6 +233,7 @@ export function LobbyClient({ code }: LobbyClientProps) {
   const roomCode = room.code.toUpperCase();
   const reconnecting = Boolean(syncError);
   const startAuthorized = room.status !== "waiting";
+  const copyError = actionError?.scope === "copy" ? actionError.message : null;
   const tableStatus = startAuthorized
     ? "CONFLITO AUTORIZADO"
     : allReady
@@ -267,6 +271,15 @@ export function LobbyClient({ code }: LobbyClientProps) {
                 {copied ? "Copiado" : "Copiar"}
               </button>
             </div>
+            <p
+              className={`${styles.codeFeedback}${copyError ? ` ${styles.codeFeedbackError}` : ""}`}
+              aria-live="polite"
+              aria-atomic="true"
+            >
+              {copied
+                ? `Código ${roomCode} copiado.`
+                : copyError ?? "Compartilhe este código para convocar outros comandos."}
+            </p>
           </div>
 
           <div
@@ -278,10 +291,6 @@ export function LobbyClient({ code }: LobbyClientProps) {
             <span className={styles.connectionLamp} aria-hidden="true" />
             {reconnecting ? "Reconectando ao comando" : "Sala sincronizada"}
           </div>
-
-          <span className="sr-only" role="status" aria-live="polite">
-            {copied ? `Código ${roomCode} copiado.` : ""}
-          </span>
         </div>
       </header>
 
@@ -438,8 +447,8 @@ export function LobbyClient({ code }: LobbyClientProps) {
             </div>
           </form>
 
-          <div className={`wb-faction-editor ${styles.colorEditor}`}>
-            <p className="wb-label">Cor da facção</p>
+          <fieldset className={`wb-faction-editor ${styles.colorEditor}`}>
+            <legend className="wb-label">Cor da facção</legend>
             <div className={`wb-color-grid ${styles.colorGrid}`}>
               {PLAYER_COLORS.map((color) => {
                 const takenByAnotherPlayer = players.some(
@@ -490,7 +499,7 @@ export function LobbyClient({ code }: LobbyClientProps) {
               {colorByValue(me.color)?.label ?? "Cor atual"} selecionado. Cores ocupadas
               permanecem indisponíveis. Alterar nome ou cor remove seu status de pronto.
             </p>
-          </div>
+          </fieldset>
         </div>
 
         {actionError?.scope === "bot" ? (
