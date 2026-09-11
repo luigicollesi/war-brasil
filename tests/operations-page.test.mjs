@@ -157,13 +157,14 @@ test("Create e Join mantêm endpoints, proteção de duplicidade e destinos vige
   assert.match(joinRoom, /router\.push\(`\/lobby\/\$\{encodeURIComponent\(data\.room\.code\)\}`\)/);
 });
 
-test("Operations consome somente o contrato público da Foundation", () => {
-  assert.match(page, /<CommandShell/);
-  assert.match(page, /mode:\s*"operations"/);
-  assert.match(page, /focus:\s*"brazil"/);
-  assert.match(page, /territoryExplode:\s*0\.08/);
-  assert.match(foundationBarrel, /CommandShell/);
-  assert.match(foundationBarrel, /CommandSceneIntent/);
+test("Operations consome o runtime Foundation sem renderer próprio", () => {
+  assert.doesNotMatch(page, /<CommandShell|CommandSceneIntent|mode:\s*"operations"/);
+  assert.match(operations, /useCommandSceneDirective\(sceneDirective\(mode, activeStatus\)\)/);
+  assert.match(operations, /focus: "brazil"/);
+  assert.match(operations, /territoryExplode: mode === "join" \? 0\.1 : 0\.08/);
+  assert.match(operations, /orbitalAlignment: visual === "success" \? 1 : 0/);
+  assert.match(foundationBarrel, /useCommandSceneDirective/);
+  assert.match(foundationBarrel, /CommandSceneDirective/);
   assert.match(foundationScene, /CommandSceneFallback/);
   assert.match(foundationScene, /war-brasil-42\.production\.svg/);
   assert.doesNotMatch(page, /WarShell/);
