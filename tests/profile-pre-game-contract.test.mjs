@@ -76,6 +76,16 @@ test("cenários loaded, empty-history e no-progression são estruturalmente dist
   assert.match(profileData, /hasMore: true/);
 });
 
+test("cenário error passa pelo error boundary real do Next", () => {
+  const profileData = source("src/lib/profile/profile-data.ts");
+  const error = source("src/app/profile/error.tsx");
+
+  assert.match(profileData, /evaluationState === "error"/);
+  assert.match(profileData, /throw new Error\("PROFILE_EVAL_ERROR"\)/);
+  assert.match(error, /ProfileBoundaryState/);
+  assert.match(error, /reset=|onClick=\{reset\}/);
+});
+
 test("fixtures sintéticas são rotuladas na interface e não se apresentam como dados reais", () => {
   const hall = source("src/components/profile/profile-hall.tsx");
 
