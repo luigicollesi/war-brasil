@@ -60,6 +60,7 @@ export type ProfileSnapshot = {
   statistics: ProfileSection<ReadonlyArray<ProfileStatistic>>;
   history: ProfileSection<ProfileHistory>;
   achievements: ProfileSection<ReadonlyArray<ProfileAchievement>>;
+  isEvaluationFixture: boolean;
 };
 
 export const PROFILE_STATE_COPY: Record<
@@ -123,6 +124,14 @@ function unavailableSection<T>(data: T, unavailableReason: string): ProfileSecti
   };
 }
 
+function availableEvaluationSection<T>(data: T): ProfileSection<T> {
+  return {
+    availability: "available",
+    source: "evaluation-fixture",
+    data,
+  };
+}
+
 function unavailableProfileSections() {
   return {
     progression: unavailableSection<ProfileProgression | null>(
@@ -144,10 +153,57 @@ function unavailableProfileSections() {
   };
 }
 
+function evaluationAvailableSections({ emptyHistory = false }: { emptyHistory?: boolean } = {}) {
+  return {
+    progression: availableEvaluationSection<ProfileProgression | null>({
+      title: "Progressão carregada — fixture",
+      detail: "Conteúdo sintético usado somente para validar a composição com progressão disponível.",
+    }),
+    statistics: availableEvaluationSection<ReadonlyArray<ProfileStatistic>>([
+      { label: "Estado da fonte", value: "Fixture carregada" },
+      { label: "Integridade", value: "Somente avaliação" },
+    ]),
+    history: emptyHistory
+      ? {
+          availability: "empty" as const,
+          source: "evaluation-fixture" as const,
+          data: { campaigns: [], hasMore: false },
+        }
+      : availableEvaluationSection<ProfileHistory>({
+          campaigns: [
+            {
+              title: "Campanha de avaliação Alfa",
+              summary: "Entrada sintética para validar densidade e hierarquia do arquivo de campanhas.",
+            },
+            {
+              title: "Campanha de avaliação Bravo",
+              summary: "Registro estrutural sem representar uma partida real do usuário.",
+            },
+            {
+              title: "Campanha de avaliação Charlie",
+              summary: "Última entrada visível antes da continuação progressiva do arquivo.",
+            },
+          ],
+          hasMore: true,
+        }),
+    achievements: availableEvaluationSection<ReadonlyArray<ProfileAchievement>>([
+      {
+        name: "Honraria de avaliação",
+        description: "Registro sintético usado para validar nome e descrição textual de uma honraria.",
+      },
+      {
+        name: "Distinção de interface",
+        description: "Fixture sem valor competitivo ou vínculo com a identidade real exibida.",
+      },
+    ]),
+  };
+}
+
 const LOCAL_PROFILE: ProfileSnapshot = {
   state: "partial-data",
   identity: LOCAL_IDENTITY,
   ...unavailableProfileSections(),
+  isEvaluationFixture: false,
 };
 
 type ProfileEvaluationState = Exclude<ProfileState, "loading">;
@@ -169,14 +225,15 @@ function isProfileEvaluationState(value: string): value is ProfileEvaluationStat
  * Deterministic visual-evaluation fixtures.
  *
  * They are opt-in through PROFILE_EVAL_MODE=1 and are never selected by URL,
- * cookies or browser input. Fixtures intentionally avoid competitive numbers,
- * ranks and achievements; their only purpose is to exercise structural states.
+ * cookies or browser input. Synthetic records are explicitly marked as fixtures
+ * and avoid competitive numbers or real-looking rank names.
  */
 function createEvaluationSnapshot(state: ProfileEvaluationState): ProfileSnapshot {
   const base: ProfileSnapshot = {
     state,
     identity: LOCAL_IDENTITY,
     ...unavailableProfileSections(),
+    isEvaluationFixture: true,
   };
 
   if (state === "guest" || state === "error") {
@@ -186,14 +243,28 @@ function createEvaluationSnapshot(state: ProfileEvaluationState): ProfileSnapsho
     };
   }
 
+  if (state === "loaded") {
+    return {
+      ...base,
+      ...evaluationAvailableSections(),
+    };
+  }
+
   if (state === "empty-history") {
     return {
       ...base,
-      history: {
-        availability: "empty",
-        source: "evaluation-fixture",
-        data: { campaigns: [], hasMore: false },
-      },
+      ...evaluationAvailableSections({ emptyHistory: true }),
+    };
+  }
+
+  if (state === "no-progression-system") {
+    return {
+      ...base,
+      ...evaluationAvailableSections(),
+      progression: unavailableSection<ProfileProgression | null>(
+        null,
+        "Sistema de progressão intencionalmente ausente neste cenário de avaliação.",
+      ),
     };
   }
 
