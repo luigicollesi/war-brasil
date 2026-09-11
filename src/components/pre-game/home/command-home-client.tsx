@@ -3,7 +3,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { CommandShell } from "../foundation";
+import { useCommandSceneDirective } from "../foundation";
 import {
   getHomeSceneIntent,
   type HomeCeremonyPhase,
@@ -120,6 +120,8 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
     transitioningTo,
   });
 
+  useCommandSceneDirective(sceneIntent);
+
   useEffect(() => {
     const wasSeen = wasRitualSeenThisSession();
     markRitualSeen();
@@ -185,104 +187,102 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
           : "awaiting-entry";
 
   return (
-    <CommandShell intent={sceneIntent} sectionLabel="ENTRADA">
-      <main
-        className={styles.root}
-        data-home-state={homeState}
-        data-scene="foundation"
-        data-ceremony={effectiveCeremonyPhase}
-        data-visit={visitMode}
-        data-command-open={commandOpen ? "true" : "false"}
-        data-destination-focus={destinationFocus ?? "none"}
-        data-transitioning-to={transitioningTo ?? "none"}
+    <main
+      className={styles.root}
+      data-home-state={homeState}
+      data-scene="foundation"
+      data-ceremony={effectiveCeremonyPhase}
+      data-visit={visitMode}
+      data-command-open={commandOpen ? "true" : "false"}
+      data-destination-focus={destinationFocus ?? "none"}
+      data-transitioning-to={transitioningTo ?? "none"}
+    >
+      {children}
+
+      <section
+        id="home-command"
+        className={styles.commandDock}
+        aria-label="Acesso ao comando"
+        tabIndex={-1}
       >
-        {children}
+        {!commandOpen ? (
+          <div className={styles.authorization}>
+            <button
+              type="button"
+              className={styles.enterButton}
+              onClick={enterCommand}
+            >
+              <span className={styles.enterButtonCode} aria-hidden="true">
+                A-01
+              </span>
+              <span>ENTRAR NO COMANDO</span>
+              <span className={styles.enterButtonArrow} aria-hidden="true">
+                →
+              </span>
+            </button>
 
-        <section
-          id="home-command"
-          className={styles.commandDock}
-          aria-label="Acesso ao comando"
-          tabIndex={-1}
-        >
-          {!commandOpen ? (
-            <div className={styles.authorization}>
-              <button
-                type="button"
-                className={styles.enterButton}
-                onClick={enterCommand}
-              >
-                <span className={styles.enterButtonCode} aria-hidden="true">
-                  A-01
+            <div className={styles.authorizationMeta}>
+              <span>ACESSO OPERACIONAL DISPONÍVEL</span>
+              {effectiveCeremonyPhase !== "stable" && visitMode === "first" ? (
+                <button
+                  type="button"
+                  className={styles.skipCeremony}
+                  onClick={skipCeremony}
+                >
+                  Pular ritual
+                </button>
+              ) : (
+                <span className={styles.ritualState}>
+                  {visitMode === "reduced"
+                    ? "MOVIMENTO REDUZIDO"
+                    : visitMode === "repeat"
+                      ? "RETORNO RECONHECIDO"
+                      : "MESA ESTABILIZADA"}
                 </span>
-                <span>ENTRAR NO COMANDO</span>
-                <span className={styles.enterButtonArrow} aria-hidden="true">
-                  →
-                </span>
-              </button>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div className={styles.openCommand}>
+            <div className={styles.commandStatus} role="status">
+              <span className={styles.commandStatusMark} aria-hidden="true" />
+              COMANDO AUTORIZADO
+            </div>
 
-              <div className={styles.authorizationMeta}>
-                <span>ACESSO OPERACIONAL DISPONÍVEL</span>
-                {effectiveCeremonyPhase !== "stable" && visitMode === "first" ? (
-                  <button
-                    type="button"
-                    className={styles.skipCeremony}
-                    onClick={skipCeremony}
-                  >
-                    Pular ritual
-                  </button>
-                ) : (
-                  <span className={styles.ritualState}>
-                    {visitMode === "reduced"
-                      ? "MOVIMENTO REDUZIDO"
-                      : visitMode === "repeat"
-                        ? "RETORNO RECONHECIDO"
-                        : "MESA ESTABILIZADA"}
+            <nav className={styles.destinationRail} aria-label="Destinos do comando">
+              {DESTINATIONS.map((destination) => (
+                <Link
+                  key={destination.id}
+                  href={destination.href}
+                  className={styles.destination}
+                  data-destination={destination.id}
+                  onClick={() => setTransitioningTo(destination.id)}
+                  onFocus={() => setKeyboardDestinationFocus(destination.id)}
+                  onBlur={() => clearKeyboardFocus(destination.id)}
+                  onPointerEnter={() => setPointerDestinationFocus(destination.id)}
+                  onPointerLeave={() => clearPointerFocus(destination.id)}
+                >
+                  <span className={styles.destinationIndex} aria-hidden="true">
+                    {destination.index}
                   </span>
-                )}
-              </div>
-            </div>
-          ) : (
-            <div className={styles.openCommand}>
-              <div className={styles.commandStatus} role="status">
-                <span className={styles.commandStatusMark} aria-hidden="true" />
-                COMANDO AUTORIZADO
-              </div>
+                  <span className={styles.destinationCopy}>
+                    <strong>{destination.label}</strong>
+                    <span>{destination.detail}</span>
+                  </span>
+                  <span className={styles.destinationArrow} aria-hidden="true">
+                    ↗
+                  </span>
+                </Link>
+              ))}
+            </nav>
+          </div>
+        )}
+      </section>
 
-              <nav className={styles.destinationRail} aria-label="Destinos do comando">
-                {DESTINATIONS.map((destination) => (
-                  <Link
-                    key={destination.id}
-                    href={destination.href}
-                    className={styles.destination}
-                    data-destination={destination.id}
-                    onClick={() => setTransitioningTo(destination.id)}
-                    onFocus={() => setKeyboardDestinationFocus(destination.id)}
-                    onBlur={() => clearKeyboardFocus(destination.id)}
-                    onPointerEnter={() => setPointerDestinationFocus(destination.id)}
-                    onPointerLeave={() => clearPointerFocus(destination.id)}
-                  >
-                    <span className={styles.destinationIndex} aria-hidden="true">
-                      {destination.index}
-                    </span>
-                    <span className={styles.destinationCopy}>
-                      <strong>{destination.label}</strong>
-                      <span>{destination.detail}</span>
-                    </span>
-                    <span className={styles.destinationArrow} aria-hidden="true">
-                      ↗
-                    </span>
-                  </Link>
-                ))}
-              </nav>
-            </div>
-          )}
-        </section>
-
-        <footer className={styles.footer} aria-hidden="true">
-          <span>DOMÍNIO TERRITORIAL // BRASIL</span>
-          <span>PROTOCOLO 42-T</span>
-        </footer>
-      </main>
-    </CommandShell>
+      <footer className={styles.footer} aria-hidden="true">
+        <span>DOMÍNIO TERRITORIAL // BRASIL</span>
+        <span>PROTOCOLO 42-T</span>
+      </footer>
+    </main>
   );
 }
