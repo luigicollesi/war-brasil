@@ -21,11 +21,14 @@ test("identidade centraliza a paleta e tipografia do pré-jogo", () => {
   assert.match(layout, /Inter/);
 });
 
-test("Home, matchmaking e lobby compartilham WarShell", () => {
+test("Lobby usa runtime Foundation persistente sem segundo WarShell", () => {
   assert.match(shell, /wb-shell/);
+  assert.match(layout, /<PreGameCommandRuntime>\{children\}<\/PreGameCommandRuntime>/);
   assert.match(home, /<WarShell immersive>/);
   assert.match(matchmaking, /<WarShell/);
-  assert.match(lobbyPage, /<WarShell/);
+  assert.doesNotMatch(lobbyPage, /<WarShell/);
+  assert.match(lobbyPage, /<LobbyClient code=\{code\} \/>/);
+  assert.match(lobby, /useCommandSceneDirective/);
 });
 
 test("matchmaking usa composição contínua em vez de cards independentes", () => {
