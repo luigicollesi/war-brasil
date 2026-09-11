@@ -3,6 +3,10 @@
 import { KeyboardEvent, useRef, useState } from "react";
 import { CreateRoomButton } from "@/src/components/create-room-button";
 import { JoinRoomForm } from "@/src/components/join-room-form";
+import {
+  useCommandSceneDirective,
+  type CommandSceneDirective,
+} from "@/src/components/pre-game/foundation";
 import type {
   OperationInteraction,
   OperationStatus,
@@ -58,6 +62,25 @@ function visualStatus(status: OperationStatus): VisualStatus {
   return "idle";
 }
 
+function sceneDirective(
+  mode: Mode,
+  status: OperationStatus,
+): CommandSceneDirective {
+  const visual = visualStatus(status);
+
+  return {
+    focus: "brazil",
+    conflictLevel:
+      visual === "error" || visual === "success"
+        ? 2
+        : visual === "pending"
+          ? 1
+          : 0,
+    territoryExplode: mode === "join" ? 0.1 : 0.08,
+    orbitalAlignment: visual === "success" ? 1 : 0,
+  };
+}
+
 export function OperationsConsole() {
   const [mode, setMode] = useState<Mode>("create");
   const [interaction, setInteraction] = useState<OperationInteraction>("idle");
@@ -71,6 +94,8 @@ export function OperationsConsole() {
     createStatus === "success-transition" ||
     joinStatus === "joining" ||
     joinStatus === "success-transition";
+
+  useCommandSceneDirective(sceneDirective(mode, activeStatus));
 
   function selectMode(nextMode: Mode, focus = false) {
     if (commandLocked && nextMode !== mode) return;
