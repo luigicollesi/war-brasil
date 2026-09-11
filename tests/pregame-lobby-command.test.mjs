@@ -15,6 +15,16 @@ test("lobby usa o snapshot vigente como fonte de verdade e assentos estáveis", 
   assert.doesNotMatch(lobby, /setPlayers|setReadyPlayers|setStations|useReducer/);
 });
 
+test("entrada, saída e ready continuam sincronizados sem reload manual", () => {
+  assert.match(sync, /const POLLING_INTERVAL_MS = 1_000/);
+  assert.match(sync, /if \(inFlight\) return inFlight/);
+  assert.match(sync, /setSnapshot\(data as LobbySnapshot\)/);
+  assert.match(sync, /window\.setTimeout\(\(\) => void poll\(\), POLLING_INTERVAL_MS\)/);
+  assert.match(sync, /const refresh = useCallback\(\(\) => refreshRef\.current\(\), \[\]\)/);
+  assert.match(lobby, /await refresh\(\)/);
+  assert.doesNotMatch(lobby, /location\.reload|window\.location\.reload/);
+});
+
 test("ready permanece confirmado pelo servidor e perceptível sem depender de cor", () => {
   assert.match(lobby, /await refresh\(\)/);
   assert.match(lobby, /aria-pressed=\{me\.isReady\}/);
