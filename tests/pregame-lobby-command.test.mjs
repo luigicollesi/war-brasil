@@ -51,6 +51,16 @@ test("ação crítica de ready permanece fora da cena e fixa à viewport", () =>
   assert.doesNotMatch(lobby, /useThree|Camera|camera\./);
 });
 
+test("Lobby emite somente intenção declarativa para a Foundation oficial", () => {
+  assert.match(lobby, /CommandShell, type CommandSceneIntent/);
+  assert.match(lobby, /mode: "lobby"/);
+  assert.match(lobby, /focus: "table"/);
+  assert.match(lobby, /conflictLevel: startAuthorized \? 3 : allReady \? 1 : 0/);
+  assert.match(lobby, /orbitalAlignment: startAuthorized \? 1 : 0/);
+  assert.match(lobby, /<CommandShell intent=\{sceneIntent\}/);
+  assert.doesNotMatch(lobby, /@react-three|from "three"|CommandSceneCanvas|useThree/);
+});
+
 test("código da operação permanece copiável, selecionável e com recuperação local", () => {
   assert.match(lobby, /navigator\.clipboard\.writeText\(code\.toUpperCase\(\)\)/);
   assert.match(lobby, /aria-label=\{`Copiar código da sala \$\{roomCode\}`\}/);
@@ -89,7 +99,7 @@ test("configuração local mantém agrupamento semântico e controles no DOM", (
 });
 
 test("fallback HTML não depende de WebGL e respeita reduced motion", () => {
-  assert.doesNotMatch(lobby, /three|Canvas|useThree|@react-three/);
+  assert.doesNotMatch(lobby, /Canvas|useThree|@react-three/);
   assert.match(lobby, /war-brasil-42\.production\.svg/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(styles, /transition: none/);
