@@ -1,15 +1,16 @@
+"use client";
+
 import type { ReactNode } from "react";
-import { CommandShell } from "@/src/components/pre-game/foundation";
+import { useCommandSceneDirective } from "@/src/components/pre-game/foundation";
 import styles from "./profile-command-shell.module.css";
 
 export function ProfileCommandShell({ children }: { children: ReactNode }) {
-  return (
-    <CommandShell
-      intent={{ mode: "profile", focus: "insignia", conflictLevel: 0 }}
-      chrome={false}
-      sectionLabel="Salão de Comando"
-    >
-      <div className={styles.frame}>{children}</div>
-    </CommandShell>
-  );
+  useCommandSceneDirective({
+    focus: "insignia",
+    conflictLevel: 0,
+    territoryExplode: 0,
+    orbitalAlignment: 1,
+  });
+
+  return <div className={styles.frame}>{children}</div>;
 }
