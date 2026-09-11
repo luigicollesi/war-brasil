@@ -38,8 +38,11 @@ export function OperationsConsole() {
   const tabsRef = useRef<Array<HTMLButtonElement | null>>([]);
 
   const activeStatus = mode === "create" ? createStatus : joinStatus;
+  const commandLocked = createStatus === "pending" || joinStatus === "pending";
 
   function selectMode(nextMode: Mode, focus = false) {
+    if (commandLocked && nextMode !== mode) return;
+
     setMode(nextMode);
     if (focus) {
       const index = MODES.findIndex((item) => item.mode === nextMode);
@@ -50,9 +53,9 @@ export function OperationsConsole() {
   function handleTabKeyDown(event: KeyboardEvent<HTMLButtonElement>, index: number) {
     let nextIndex = index;
 
-    if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+    if (event.key === "ArrowRight") {
       nextIndex = (index + 1) % MODES.length;
-    } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+    } else if (event.key === "ArrowLeft") {
       nextIndex = (index - 1 + MODES.length) % MODES.length;
     } else if (event.key === "Home") {
       nextIndex = 0;
@@ -121,6 +124,7 @@ export function OperationsConsole() {
               const selected = mode === item.mode;
               const tabId = `operations-${item.mode}-tab`;
               const panelId = `operations-${item.mode}-panel`;
+              const disabled = commandLocked && !selected;
 
               return (
                 <button
@@ -134,7 +138,8 @@ export function OperationsConsole() {
                   aria-selected={selected}
                   aria-controls={panelId}
                   tabIndex={selected ? 0 : -1}
-                  className={styles.modeTab}
+                  disabled={disabled}
+                  className={`${styles.modeTab} disabled:cursor-not-allowed disabled:opacity-40`}
                   onClick={() => selectMode(item.mode)}
                   onKeyDown={(event) => handleTabKeyDown(event, index)}
                 >

@@ -55,6 +55,16 @@ test("operações preserva requests, normalização e protege submissões repeti
   assert.match(joinRoom, /value=\{roomCode\}/);
   assert.match(operationsRequest, /AbortController/);
   assert.match(operationsRequest, /15_000/);
+  assert.match(operations, /commandLocked/);
+  assert.match(operations, /disabled=\{disabled\}/);
+});
+
+test("operações segue teclado horizontal de tabs e não captura scroll vertical", () => {
+  assert.match(operations, /ArrowRight/);
+  assert.match(operations, /ArrowLeft/);
+  assert.match(operations, /Home/);
+  assert.match(operations, /End/);
+  assert.doesNotMatch(operations, /ArrowUp|ArrowDown/);
 });
 
 test("operações explicita reduced-motion e foco visível", () => {
