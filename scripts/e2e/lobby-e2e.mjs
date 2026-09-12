@@ -197,6 +197,18 @@ async function waitForText(locator, text) {
   await locator.getByText(text, { exact: false }).waitFor({ state: "visible", timeout: 8_000 });
 }
 
+async function roomPlayerNames(db, code) {
+  const result = await db.query(
+    `SELECT p.faction_name
+       FROM game.players p
+       JOIN game.rooms r ON r.id = p.room_id
+      WHERE r.code = $1
+      ORDER BY p.joined_at ASC, p.id ASC`,
+    [code],
+  );
+  return result.rows.map((row) => row.faction_name);
+}
+
 async function roomStartState(db, code) {
   const result = await db.query(
     `SELECT r.status, r.current_match_id, COUNT(m.id)::int AS match_count
@@ -320,14 +332,44 @@ async function main() {
           await patchMe(actor, room.code, { factionName: `Comando ${String(index).padStart(2, "0")}` });
         }
 
+        const expectedSet = Array.from(
+          { length: 6 },
+          (_, index) => `Comando ${String(index + 1).padStart(2, "0")}`,
+        );
+        const authoritativeOrder = await roomPlayerNames(db, room.code);
+        assert.equal(authoritativeOrder.length, 6, "banco deveria conter seis jogadores");
+        assert.deepEqual(
+          [...authoritativeOrder].sort(),
+          [...expectedSet].sort(),
+          "nomes persistidos no banco divergiram dos seis comandos configurados",
+        );
+
         await openLobby(host, room.code);
+        const snapshotResponse = await apiJson(host.page, `/api/rooms/${room.code}`);
+        assert.equal(snapshotResponse.status, 200, JSON.stringify(snapshotResponse.body));
+        assert.deepEqual(
+          snapshotResponse.body?.players?.map((player) => player.factionName),
+          authoritativeOrder,
+          "snapshot da API divergiu da ordem autoritativa da sala",
+        );
+
         await expectOccupied(host.page, 6);
-        for (let slot = 1; slot <= 6; slot += 1) {
+        for (const [index, factionName] of authoritativeOrder.entries()) {
           await waitForText(
-            host.page.locator(`li[data-slot="${slot}"]`),
-            `Comando ${String(slot).padStart(2, "0")}`,
+            host.page.locator(`li[data-slot="${index + 1}"]`),
+            factionName,
           );
         }
+
+        const initialStations = await host.page.locator('li[data-slot]').allTextContents();
+        await new Promise((resolve) => setTimeout(resolve, 1_200));
+        const stableStations = await host.page.locator('li[data-slot]').allTextContents();
+        assert.deepEqual(
+          stableStations,
+          initialStations,
+          "postos mudaram de posição sem alteração de membership",
+        );
+
         await captureDesktopMobile(host.page, "6-players");
       } finally {
         await Promise.all(actors.map((actor) => actor.context.close()));
@@ -350,7 +392,7 @@ async function main() {
         await readyButton(guest.page).click();
 
         const state = await waitForStartedRoom(db, room.code);
-        assert.equal(state?.match_count, 1, "mais de uma partida foi criada");
+        assert.equal(state?.match_count, 1, "partida deveria ser criada exatamente uma vez");
         assert.ok(state?.current_match_id, "current_match_id não foi definido");
         assert.notEqual(state?.status, "waiting", "sala permaneceu waiting após start");
 
