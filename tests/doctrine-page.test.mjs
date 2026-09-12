@@ -139,7 +139,9 @@ test("índice usa links reais, preserva foco/scroll e anima somente a superfíci
   assert.match(experience, /ANTERIOR/);
   assert.match(experience, /PRÓXIMO/);
   assert.match(experience, /prefetch=\{false\}/);
-  assert.doesNotMatch(experience, /scrollIntoView|scrollTo|\.focus\(/);
+  assert.doesNotMatch(experience, /scrollIntoView\s*\(|\bscrollTo\s*\(|\.focus\s*\(/);
+  assert.match(experience, /nav\.scrollTop/);
+  assert.match(experience, /nav\.scrollLeft/);
 });
 
 test("orquestração cliente permanece pequena e delega as demonstrações", () => {
