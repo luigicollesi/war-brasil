@@ -13,9 +13,9 @@ export const metadata: Metadata = {
 
 const lobbyLayoutStyle = {
   paddingTop: "var(--command-content-top, 96px)",
-  paddingBottom: "calc(9rem + env(safe-area-inset-bottom))",
+  paddingBottom: "calc(2rem + env(safe-area-inset-bottom))",
   scrollPaddingTop: "var(--command-content-top, 96px)",
-  scrollPaddingBottom: "calc(9rem + env(safe-area-inset-bottom))",
+  scrollPaddingBottom: "calc(2rem + env(safe-area-inset-bottom))",
 } satisfies CSSProperties;
 
 export default async function LobbyPage({ params }: LobbyPageProps) {
