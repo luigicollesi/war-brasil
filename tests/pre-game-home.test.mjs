@@ -27,6 +27,18 @@ const foundationIndex = readFileSync(
   "src/components/pre-game/foundation/index.ts",
   "utf8",
 );
+const runtime = readFileSync(
+  "src/components/pre-game/foundation/pre-game-command-runtime.tsx",
+  "utf8",
+);
+const presets = readFileSync(
+  "src/components/pre-game/foundation/scene-presets.ts",
+  "utf8",
+);
+const scene = readFileSync(
+  "src/components/pre-game/foundation/command-scene-canvas.tsx",
+  "utf8",
+);
 
 const legacyPolishPath =
   "src/components/pre-game/home/command-home-polish.module.css";
@@ -43,9 +55,11 @@ test("HOME preserva metadata, canonical e structured data existentes", () => {
 });
 
 test("HOME consome somente o contrato público do runtime Foundation", () => {
-  assert.match(home, /import \{ useCommandSceneDirective \} from "\.\.\/foundation"/);
+  assert.match(home, /useCommandSceneDirective/);
+  assert.match(home, /useCommandSceneState/);
   assert.match(intent, /import type \{ CommandSceneDirective \} from "\.\.\/foundation"/);
   assert.match(foundationIndex, /useCommandSceneDirective/);
+  assert.match(foundationIndex, /useCommandSceneState/);
   assert.match(foundationIndex, /CommandSceneDirective/);
 
   const homeSources = `${home}\n${content}\n${intent}`;
@@ -68,10 +82,13 @@ test("HOME substitui o hero legado e publica intenção no runtime persistente",
   assert.doesNotMatch(page, /WarShell/);
   assert.match(content, /WAR/);
   assert.match(content, /BRASIL/);
+  assert.doesNotMatch(content, /Ir para o comando/);
   assert.match(home, /ENTRAR NO COMANDO/);
   assert.match(home, /data-home-state=\{homeState\}/);
   assert.match(home, /data-scene="foundation"/);
+  assert.match(home, /data-scene-state=\{sceneState\}/);
   assert.match(home, /useCommandSceneDirective\(sceneIntent\)/);
+  assert.match(runtime, /showModeRail=\{pathname !== "\/"\}/);
 });
 
 test("HOME expõe os três destinos como links DOM com as rotas do spec", () => {
@@ -109,17 +126,35 @@ test("ritual é pulável e repeat/reduced-motion derivam estado estável", () =>
   assert.match(home, /sessionStorage\.getItem\(HOME_RITUAL_SESSION_KEY\)/);
   assert.match(home, /sessionStorage\.setItem\(HOME_RITUAL_SESSION_KEY, "1"\)/);
   assert.match(home, /\(prefers-reduced-motion: reduce\)/);
-  assert.match(home, /visitMode === "first" \? ceremonyPhase : "stable"/);
+  assert.match(home, /visitMode === "first" && ritualActive \? ceremonyPhase : "stable"/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
-test("cerimônia Terra -> Brasil -> Mesa não bloqueia a ação principal", () => {
+test("cerimônia Terra -> Brasil -> Mesa começa apenas quando a Foundation está pronta", () => {
   assert.match(home, /useState<HomeCeremonyPhase>\("earth"\)/);
-  assert.match(home, /if \(current === "earth"\) return "brazil"/);
-  assert.match(home, /if \(current === "brazil"\) return "table"/);
-  assert.match(home, /if \(current === "table"\) return "stable"/);
+  assert.match(home, /const sceneState = useCommandSceneState\(\)/);
+  assert.match(home, /if \(sceneState === "fallback"\)/);
+  assert.match(home, /if \(sceneState !== "ready"\) return/);
+  assert.match(home, /HOME_CEREMONY_TIMELINE\.brazil/);
+  assert.match(home, /HOME_CEREMONY_TIMELINE\.table/);
+  assert.match(home, /HOME_CEREMONY_TIMELINE\.stable/);
+  assert.match(home, /setCeremonyPhase\("brazil"\)/);
+  assert.match(home, /setCeremonyPhase\("table"\)/);
+  assert.match(home, /setCeremonyPhase\("stable"\)/);
   assert.match(home, /const enterCommand = \(\) =>/);
+  assert.match(home, /setRitualActive\(false\)/);
   assert.match(home, /onClick=\{enterCommand\}/);
+});
+
+test("entrada possui poses próprias e objetos interpolados sem salto", () => {
+  assert.match(presets, /ENTRANCE_FOCUS_PRESETS/);
+  assert.match(presets, /COMPACT_ENTRANCE_FOCUS_PRESETS/);
+  assert.match(presets, /intent\.mode === "entrance"/);
+  assert.match(scene, /MathUtils\.damp/);
+  assert.match(scene, /targetSeparation/);
+  assert.match(scene, /targetScale/);
+  assert.match(scene, /intent\.focus === "earth"/);
+  assert.doesNotMatch(scene, /intent\.mode === "entrance" \|\| intent\.focus === "earth"/);
 });
 
 test("mobile possui composição própria, safe-area e alvos touch grandes", () => {
