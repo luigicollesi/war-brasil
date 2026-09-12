@@ -204,6 +204,23 @@ async function waitForText(locator, text) {
   await locator.getByText(text, { exact: false }).waitFor({ state: "visible", timeout: 8_000 });
 }
 
+async function assertPersistentScene(page, mode, probe = "foundation-persistent-canvas") {
+  await page.locator(`[data-command-scene-mode="${mode}"]`).waitFor({
+    state: "attached",
+    timeout: 10_000,
+  });
+  const canvas = page.locator("canvas.command-foundation-canvas");
+  await canvas.waitFor({ state: "attached", timeout: 10_000 });
+  const marker = await canvas.getAttribute("data-foundation-persistence-probe");
+  if (marker === null) {
+    await canvas.evaluate((element, value) => {
+      element.setAttribute("data-foundation-persistence-probe", value);
+    }, probe);
+  } else {
+    assert.equal(marker, probe, `Canvas da cena ${mode} foi remontado`);
+  }
+}
+
 async function roomStartState(db, code) {
   const result = await db.query(
     `SELECT r.status, r.current_match_id, COUNT(m.id)::int AS match_count
@@ -232,6 +249,45 @@ async function main() {
   const browser = await playwright.chromium.launch({ headless: true });
 
   try {
+    await step("FND-02/13 Canvas persiste entre Operations, Lobby, Home, Doctrine e Profile", async () => {
+      const actor = await createActor(browser);
+      try {
+        await assertPersistentScene(actor.page, "operations");
+
+        await actor.page.getByRole("button", { name: "Autorizar nova operação", exact: true }).click();
+        await actor.page.waitForURL(/\/lobby\/[A-Z0-9]{6}$/, { timeout: 10_000 });
+        await assertPersistentScene(actor.page, "lobby");
+
+        await actor.page.getByRole("link", { name: /Operações/ }).first().click();
+        await actor.page.waitForURL(/\/matchmaking$/, { timeout: 10_000 });
+        await assertPersistentScene(actor.page, "operations");
+
+        await actor.page.getByRole("link", { name: /Início/ }).first().click();
+        await actor.page.waitForURL((url) => url.pathname === "/", { timeout: 10_000 });
+        await assertPersistentScene(actor.page, "entrance");
+
+        await actor.page.getByRole("button", { name: "ENTRAR NO COMANDO", exact: true }).click();
+        await actor.page.getByRole("link", { name: /DOUTRINA/ }).click();
+        await actor.page.waitForURL(/\/rules(?:\?|$)/, { timeout: 10_000 });
+        await assertPersistentScene(actor.page, "doctrine");
+
+        await actor.page.goBack({ waitUntil: "domcontentloaded" });
+        await actor.page.waitForURL((url) => url.pathname === "/", { timeout: 10_000 });
+        await assertPersistentScene(actor.page, "entrance");
+
+        await actor.page.getByRole("button", { name: "ENTRAR NO COMANDO", exact: true }).click();
+        await actor.page.getByRole("link", { name: /COMANDO/ }).click();
+        await actor.page.waitForURL(/\/profile$/, { timeout: 10_000 });
+        await assertPersistentScene(actor.page, "profile");
+
+        await actor.page.getByRole("link", { name: /Início/ }).first().click();
+        await actor.page.waitForURL((url) => url.pathname === "/", { timeout: 10_000 });
+        await assertPersistentScene(actor.page, "entrance");
+      } finally {
+        await actor.context.close();
+      }
+    });
+
     await step("LOB-01/02/03/05/06/09 sincronização, regras, reconnect e copy", async () => {
       const host = await createActor(browser);
       const guest = await createActor(browser);
