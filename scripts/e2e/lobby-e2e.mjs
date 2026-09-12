@@ -24,6 +24,7 @@ if (!DATABASE_URL) {
 mkdirSync(ARTIFACT_DIR, { recursive: true });
 
 const failures = [];
+const foundationDeprecations = [];
 
 async function step(name, callback) {
   process.stdout.write(`\n[lobby-e2e] ${name} ... `);
@@ -57,6 +58,12 @@ async function createActor(browser, options = {}) {
   }
 
   const page = await context.newPage();
+  page.on("console", (message) => {
+    const text = message.text();
+    if (/SVGLoader:\s*createShapes\(\) is deprecated/i.test(text)) {
+      foundationDeprecations.push(text);
+    }
+  });
   await page.goto(`${BASE_URL}/matchmaking`, { waitUntil: "domcontentloaded" });
   return { context, page };
 }
@@ -439,6 +446,13 @@ async function main() {
   } finally {
     await browser.close();
     await db.end();
+  }
+
+  if (foundationDeprecations.length > 0) {
+    failures.push({
+      name: "Foundation não emite APIs depreciadas no browser",
+      error: new Error([...new Set(foundationDeprecations)].join("\n")),
+    });
   }
 
   if (failures.length > 0) {
