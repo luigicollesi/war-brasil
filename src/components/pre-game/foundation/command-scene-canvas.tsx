@@ -151,27 +151,71 @@ function StrategicGlobe({
 }) {
   const globeRef = useRef<Group>(null);
   const invalidate = useThree((state) => state.invalidate);
-  const visible = intent.mode === "entrance" || intent.focus === "earth";
+  const focused = intent.focus === "earth";
+  const recessedPosition = useMemo<Position3>(
+    () => [
+      layout.globePosition[0] - (layout.globeScale < 0.9 ? 0.55 : 0.9),
+      layout.globePosition[1] + 0.18,
+      layout.globePosition[2] - 1.15,
+    ],
+    [layout.globePosition, layout.globeScale],
+  );
+  const targetPosition = focused ? layout.globePosition : recessedPosition;
+  const targetScale = layout.globeScale * (focused ? 1 : 0.24);
 
   useEffect(() => {
     if (!reducedMotion || !globeRef.current) return;
+    globeRef.current.position.set(...targetPosition);
+    globeRef.current.scale.setScalar(targetScale);
     globeRef.current.rotation.y = 0;
     invalidate();
-  }, [invalidate, reducedMotion]);
+  }, [invalidate, reducedMotion, targetPosition, targetScale]);
 
-  useFrame(({ clock }) => {
-    if (!globeRef.current || reducedMotion || !visible) return;
-    globeRef.current.rotation.y = clock.getElapsedTime() * 0.025;
+  useFrame(({ clock }, delta) => {
+    const globe = globeRef.current;
+    if (!globe || reducedMotion) return;
+
+    globe.position.x = MathUtils.damp(
+      globe.position.x,
+      targetPosition[0],
+      COMMAND_FOUNDATION_TOKENS.motion.objectDamping,
+      delta,
+    );
+    globe.position.y = MathUtils.damp(
+      globe.position.y,
+      targetPosition[1],
+      COMMAND_FOUNDATION_TOKENS.motion.objectDamping,
+      delta,
+    );
+    globe.position.z = MathUtils.damp(
+      globe.position.z,
+      targetPosition[2],
+      COMMAND_FOUNDATION_TOKENS.motion.objectDamping,
+      delta,
+    );
+    const scale = MathUtils.damp(
+      globe.scale.x,
+      targetScale,
+      COMMAND_FOUNDATION_TOKENS.motion.objectDamping,
+      delta,
+    );
+    globe.scale.setScalar(scale);
+    globe.rotation.y = focused
+      ? clock.getElapsedTime() * 0.025
+      : MathUtils.damp(
+          globe.rotation.y,
+          0.18,
+          COMMAND_FOUNDATION_TOKENS.motion.objectDamping,
+          delta,
+        );
   });
-
-  if (!visible) return null;
 
   return (
     <group
       ref={globeRef}
       name="StrategicGlobe"
-      position={layout.globePosition}
-      scale={layout.globeScale}
+      position={targetPosition}
+      scale={targetScale}
     >
       <mesh>
         <sphereGeometry args={[1.26, 28, 20]} />
@@ -250,13 +294,17 @@ function readCanonicalTerritoryId(
 function BrazilTerritoryAssembly({
   intent,
   layout,
+  reducedMotion,
   onReady,
 }: {
   intent: NormalizedCommandSceneIntent;
   layout: SceneLayout;
+  reducedMotion: boolean;
   onReady: () => void;
 }) {
   const svg = useLoader(SVGLoader, "/war-brasil-42.production.svg");
+  const plateRefs = useRef<Array<Group | null>>([]);
+  const invalidate = useThree((state) => state.invalidate);
   const materials = useMemo(
     () =>
       PLATE_TONES.map(
@@ -324,6 +372,33 @@ function BrazilTerritoryAssembly({
   }, [onReady, plates]);
 
   useEffect(() => {
+    if (!reducedMotion) return;
+    for (const [plateIndex, plate] of plates.entries()) {
+      const group = plateRefs.current[plateIndex];
+      if (!group) continue;
+      const territoryIndex = plate.territoryId - 1;
+      group.position.z = intent.territoryExplode * ((territoryIndex % 3) * 2.1);
+    }
+    invalidate();
+  }, [intent.territoryExplode, invalidate, plates, reducedMotion]);
+
+  useFrame((_, delta) => {
+    if (reducedMotion) return;
+    for (const [plateIndex, plate] of plates.entries()) {
+      const group = plateRefs.current[plateIndex];
+      if (!group) continue;
+      const territoryIndex = plate.territoryId - 1;
+      const targetSeparation = intent.territoryExplode * ((territoryIndex % 3) * 2.1);
+      group.position.z = MathUtils.damp(
+        group.position.z,
+        targetSeparation,
+        COMMAND_FOUNDATION_TOKENS.motion.objectDamping,
+        delta,
+      );
+    }
+  });
+
+  useEffect(() => {
     return () => {
       for (const plate of plates) {
         plate.geometry.dispose();
@@ -345,12 +420,20 @@ function BrazilTerritoryAssembly({
         scale={[MAP_SCALE, -MAP_SCALE, MAP_SCALE]}
         position={[-MAP_HALF_EXTENT, MAP_HALF_EXTENT, 0]}
       >
-        {plates.map((plate) => {
+        {plates.map((plate, plateIndex) => {
           const territoryIndex = plate.territoryId - 1;
-          const separation = intent.territoryExplode * ((territoryIndex % 3) * 2.1);
+          const initialSeparation = reducedMotion
+            ? intent.territoryExplode * ((territoryIndex % 3) * 2.1)
+            : 0;
 
           return (
-            <group key={plate.id} position-z={separation}>
+            <group
+              key={plate.id}
+              ref={(node) => {
+                plateRefs.current[plateIndex] = node;
+              }}
+              position-z={initialSeparation}
+            >
               <mesh geometry={plate.geometry}>
                 <primitive
                   attach="material"
@@ -390,20 +473,36 @@ function OrbitalCrown({
     invalidate();
   }, [intent.orbitalAlignment, invalidate, reducedMotion]);
 
-  useFrame(({ clock }) => {
+  useFrame(({ clock }, delta) => {
     if (reducedMotion) return;
     const elapsed = clock.getElapsedTime();
     const aligned = intent.orbitalAlignment === 1;
     const baseSpeed = COMMAND_FOUNDATION_TOKENS.motion.crownTurnsPerSecond * Math.PI * 2;
+    const damping = COMMAND_FOUNDATION_TOKENS.motion.objectDamping;
 
     if (territoryRef.current) {
-      territoryRef.current.rotation.z = aligned ? 0 : elapsed * baseSpeed;
+      territoryRef.current.rotation.z = MathUtils.damp(
+        territoryRef.current.rotation.z,
+        aligned ? 0 : elapsed * baseSpeed,
+        damping,
+        delta,
+      );
     }
     if (commandRef.current) {
-      commandRef.current.rotation.z = aligned ? 0 : -elapsed * baseSpeed * 0.72;
+      commandRef.current.rotation.z = MathUtils.damp(
+        commandRef.current.rotation.z,
+        aligned ? 0 : 0.08 - elapsed * baseSpeed * 0.72,
+        damping,
+        delta,
+      );
     }
     if (conflictRef.current) {
-      conflictRef.current.rotation.z = aligned ? 0 : elapsed * baseSpeed * 0.48;
+      conflictRef.current.rotation.z = MathUtils.damp(
+        conflictRef.current.rotation.z,
+        aligned ? 0 : -0.11 + elapsed * baseSpeed * 0.48,
+        damping,
+        delta,
+      );
     }
   });
 
@@ -459,19 +558,42 @@ function OrbitalCrown({
 
 function SceneInsignia({
   intent,
+  reducedMotion,
   layout,
 }: {
   intent: NormalizedCommandSceneIntent;
+  reducedMotion: boolean;
   layout: SceneLayout;
 }) {
+  const insigniaRef = useRef<Group>(null);
+  const invalidate = useThree((state) => state.invalidate);
   const emphasized = intent.mode === "profile" || intent.focus === "insignia";
-  const scale = layout.insigniaScale * (emphasized ? 1 : 0.72);
+  const targetScale = layout.insigniaScale * (emphasized ? 1 : 0.72);
+  const baseScale = layout.insigniaScale * 0.72;
+
+  useEffect(() => {
+    if (!reducedMotion || !insigniaRef.current) return;
+    insigniaRef.current.scale.setScalar(targetScale);
+    invalidate();
+  }, [invalidate, reducedMotion, targetScale]);
+
+  useFrame((_, delta) => {
+    if (reducedMotion || !insigniaRef.current) return;
+    const scale = MathUtils.damp(
+      insigniaRef.current.scale.x,
+      targetScale,
+      COMMAND_FOUNDATION_TOKENS.motion.objectDamping,
+      delta,
+    );
+    insigniaRef.current.scale.setScalar(scale);
+  });
 
   return (
     <group
+      ref={insigniaRef}
       name="CommandInsignia"
       position={layout.insigniaPosition}
-      scale={scale}
+      scale={baseScale}
     >
       <mesh>
         <cylinderGeometry args={[0.48, 0.48, 0.08, 32]} />
@@ -564,7 +686,11 @@ function CommandSceneWorld({
         reducedMotion={reducedMotion}
         layout={layout}
       />
-      <SceneInsignia intent={intent} layout={layout} />
+      <SceneInsignia
+        intent={intent}
+        reducedMotion={reducedMotion}
+        layout={layout}
+      />
       <StrategicGlobe
         intent={intent}
         reducedMotion={reducedMotion}
@@ -574,6 +700,7 @@ function CommandSceneWorld({
         <BrazilTerritoryAssembly
           intent={intent}
           layout={layout}
+          reducedMotion={reducedMotion}
           onReady={onReady}
         />
       </Suspense>
