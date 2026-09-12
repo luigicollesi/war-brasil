@@ -6,12 +6,16 @@ function source(path) {
   return readFileSync(path, "utf8");
 }
 
-test("perfil local deixa explícita a origem e não fabrica progressão competitiva", () => {
+test("perfil sem identidade real permanece guest e não fabrica identidade ou progressão", () => {
   const profileData = source("src/lib/profile/profile-data.ts");
 
-  assert.match(profileData, /displayName: "Luigi"/);
-  assert.match(profileData, /source: "local-static"/);
-  assert.match(profileData, /sourceLabel: "Perfil local temporário"/);
+  assert.match(profileData, /const GUEST_PROFILE: ProfileSnapshot = \{/);
+  assert.match(profileData, /state: "guest"/);
+  assert.match(profileData, /identity: null/);
+  assert.match(profileData, /return GUEST_PROFILE/);
+  assert.doesNotMatch(profileData, /displayName: "Luigi"/);
+  assert.match(profileData, /EVALUATION_IDENTITY/);
+  assert.match(profileData, /Identidade sintética de avaliação/);
   assert.match(profileData, /isEvaluationFixture: false/);
   assert.match(profileData, /Sistema de progressão ainda não integrado/);
   assert.match(profileData, /Estatísticas ainda não possuem contrato de dados do perfil/);
