@@ -212,13 +212,20 @@ async function assertPersistentScene(page, mode, probe = "foundation-persistent-
   const canvas = page.locator("canvas.command-foundation-canvas");
   await canvas.waitFor({ state: "attached", timeout: 10_000 });
   const marker = await canvas.getAttribute("data-foundation-persistence-probe");
-  if (marker === null) {
+  const initialized = await page.evaluate(() =>
+    sessionStorage.getItem("foundation-persistence-probe-initialized") === "1",
+  );
+
+  if (!initialized) {
+    assert.equal(marker, null, "probe de persistência já existia antes da inicialização");
     await canvas.evaluate((element, value) => {
       element.setAttribute("data-foundation-persistence-probe", value);
+      sessionStorage.setItem("foundation-persistence-probe-initialized", "1");
     }, probe);
-  } else {
-    assert.equal(marker, probe, `Canvas da cena ${mode} foi remontado`);
+    return;
   }
+
+  assert.equal(marker, probe, `Canvas da cena ${mode} foi remontado`);
 }
 
 async function roomStartState(db, code) {
@@ -271,7 +278,7 @@ async function main() {
         await actor.page.waitForURL(/\/rules(?:\?|$)/, { timeout: 10_000 });
         await assertPersistentScene(actor.page, "doctrine");
 
-        await actor.page.goBack({ waitUntil: "domcontentloaded" });
+        await actor.page.goBack();
         await actor.page.waitForURL((url) => url.pathname === "/", { timeout: 10_000 });
         await assertPersistentScene(actor.page, "entrance");
 
