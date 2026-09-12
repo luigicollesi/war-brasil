@@ -30,13 +30,4 @@
     min-height: 48px;
     box-shadow: 0 16px 36px rgba(0, 0, 0, 0.42);
   }
-
-  /* While the commander edits identity, return the action to document flow so
-   * it can never sit above the focused form or its submit controls. */
-  .wb-lobby-shell:has(.wb-faction-editor:focus-within)
-    .wb-ready-rail > .wb-ready-inner > .wb-button {
-    position: static;
-    width: 100%;
-    max-width: none;
-  }
 }
