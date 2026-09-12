@@ -10,12 +10,15 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
+import { installDice3DDependencyWarningFilter } from "@/src/lib/client/dice/install-3d-dependency-warning-filter";
 import styles from "./command-foundation.module.css";
 import { COMMAND_FOUNDATION_TOKENS } from "./foundation-tokens";
 import {
   normalizeCommandSceneIntent,
   type CommandSceneIntent,
 } from "./scene-contract";
+
+installDice3DDependencyWarningFilter();
 
 const CommandSceneCanvas = dynamic(
   () => import("./command-scene-canvas").then((module) => module.CommandSceneCanvas),
@@ -123,6 +126,7 @@ function CommandSceneFallback({ intent }: { intent: ReturnType<typeof normalizeC
             alt=""
             fill
             unoptimized
+            loading="eager"
             sizes="(max-width: 900px) 72vw, 46vw"
           />
         </div>
