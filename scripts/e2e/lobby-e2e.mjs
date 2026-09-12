@@ -409,6 +409,7 @@ async function main() {
         });
         await waitForText(host.page.locator('li[data-slot="1"]'), "Comando Verde Offline");
 
+        await sessionCookie(guest);
         const guestSnapshot = await apiJson(guest.page, `/api/rooms/${room.code}`);
         assert.equal(guestSnapshot.status, 200, JSON.stringify(guestSnapshot.body));
         const guestPlayerId = guestSnapshot.body?.me?.id;
