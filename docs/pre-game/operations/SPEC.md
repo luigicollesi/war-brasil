@@ -7,13 +7,44 @@ Segue `../quality-standard.md`, `../visual-language.md` e `../traceability.md`.
 
 ## Fantasia
 
-A Mesa deixa de ser símbolo e torna-se máquina. Matchmaking significa **autorizar uma nova operação** ou **localizar uma operação existente**.
+A Central de Operações apresenta primeiro **como o comandante quer entrar no conflito**.
 
-As duas ações MUST parecer modos da mesma estação de comando, não dois cards independentes.
+Existem dois protocolos de jogo:
 
-## Contratos funcionais preservados
+1. **Jogo Clássico** — pareamento automático futuro, visível porém indisponível nesta fase;
+2. **Sala Personalizada** — protocolo operacional atual, com criação de sala ou entrada por código.
 
-O redesign MUST reutilizar o comportamento de `CreateRoomButton` e `JoinRoomForm` ou seus contratos equivalentes.
+A interface MUST parecer uma única estação de comando, não um conjunto de cards SaaS independentes.
+
+## Hierarquia funcional
+
+```text
+Matchmaking
+├── Jogo Clássico
+│   └── Encontrar partida [disabled / em breve]
+└── Sala Personalizada
+    ├── Criar sala
+    └── Entrar em sala
+```
+
+### Jogo Clássico
+
+Nesta fase é somente apresentação visual.
+
+MUST:
+
+- permanecer visível como opção futura;
+- comunicar claramente `Em breve` / `Indisponível`;
+- manter o CTA de encontrar partida desabilitado;
+- não disparar request, navegação, mutação ou efeito colateral.
+
+MUST NOT implementar matchmaking automático implicitamente dentro desta entrega.
+
+### Sala Personalizada
+
+É o sistema funcional vigente.
+
+MUST reutilizar o comportamento de `CreateRoomButton` e `JoinRoomForm` ou seus contratos equivalentes.
 
 MUST NOT alterar silenciosamente:
 
@@ -26,38 +57,55 @@ MUST NOT alterar silenciosamente:
 
 Mudanças funcionais exigem spec próprio.
 
-## Modos
+## Criar sala
 
-### Nova Operação
-
-Cria uma nova sala. A Mesa MAY destravar, alinhar mecanismos e gerar uma placa/selo de operação, mas a animação MUST NOT atrasar o redirect funcional.
+Cria uma nova sala e segue para o lobby.
 
 Durante criação:
 
 - desabilitar submissão duplicada quando necessário;
 - informar estado assíncrono em texto;
 - fornecer recuperação em erro;
-- continuar funcional sem 3D.
+- continuar funcional sem 3D;
+- animação visual MUST NOT atrasar o redirect funcional.
 
-### Localizar Operação
+## Entrar em sala
 
 Recebe o código de sala existente.
 
 O campo MUST ser um controle semanticamente correto, com label/nome acessível, teclado normal, paste e seleção de texto.
 
-A apresentação MAY segmentar caracteres visualmente como cifrador, mas SHOULD preferir um único input real em vez de múltiplos inputs que prejudiquem colagem, seleção, autofill ou leitores de tela.
+A apresentação MAY estilizar o código como cifrador, mas SHOULD manter um único input real em vez de múltiplos inputs.
 
-Normalização/validação MUST seguir o comportamento existente, não a estética nova.
+Normalização/validação MUST seguir o comportamento existente.
 
-## Composição
+## Composição e viewport
 
-- Mesa em estado operacional;
-- Brasil MAY separar placas levemente sem perder geografia/fronteiras;
-- Coroa Orbital MAY alinhar parcialmente;
-- vermelho aparece como sinal de operação, erro ou conflito, não preenchimento decorativo constante;
-- create/join compartilham arquitetura visual e mudam o estado da mesma máquina.
+A rota MUST funcionar como uma cena full-viewport direta, sem exigir scroll no estado normal.
 
-Foco de um modo SHOULD alterar a cena de forma contida, sem causar layout shift no formulário.
+MUST:
+
+- usar o espaço disponível do viewport como orçamento de layout;
+- manter ações principais, input e status dentro da área visível;
+- reduzir espaçamentos e conteúdo secundário em alturas menores antes de comprimir controles;
+- evitar layout shift ao alternar `Criar sala` / `Entrar em sala`;
+- manter `Jogo Clássico` e `Sala Personalizada` perceptíveis na mesma cena;
+- preservar Brasil/Mesa/Coroa da Foundation como fundo persistente.
+
+O conteúdo MAY compactar progressivamente em telas baixas, inclusive escondendo descrições secundárias, desde que informação funcional, erros e CTAs continuem acessíveis.
+
+## Motion
+
+A entrada da rota SHOULD continuar a transição visual da Foundation e ser mais suave que uma troca brusca de página.
+
+SHOULD usar prioritariamente `opacity` e `transform`.
+
+MUST:
+
+- respeitar `prefers-reduced-motion`;
+- não usar animação longa antes de redirect;
+- não bloquear create/join por asset 3D ou animação;
+- evitar animação que altere medidas do layout durante entrada.
 
 ## Estados
 
@@ -93,23 +141,27 @@ MUST:
 - manter input e CTAs acessíveis por touch;
 - aceitar paste de código completo;
 - não abrir teclado inadequado sem necessidade;
-- evitar dois painéis comprimidos lado a lado;
-- não exigir foco/hover na cena para escolher modo.
-
-Create/Join MAY virar seleção vertical/alternada, desde que continuem claramente dois modos da mesma máquina.
+- não exigir hover para escolher ação;
+- compactar a cena por altura quando o teclado reduzir o viewport;
+- priorizar controles funcionais sobre textos decorativos.
 
 ## Não fazer
 
 MUST NOT:
 
 - mudar API/protocolo para facilitar o visual;
+- implementar matchmaking clássico nesta entrega;
 - esconder erros na cena 3D;
 - usar animação longa antes do redirect;
 - bloquear criação/join por asset 3D;
 - criar seis inputs apenas por estética;
-- transformar os modos em cards SaaS genéricos;
+- transformar os protocolos em cards SaaS genéricos;
 - duplicar lógica de validação apenas na camada visual.
 
 ## Definition of Done
 
-Create/Join preservam exatamente o contrato funcional vigente; a página parece uma estação de autorização, funciona com teclado/touch/fallback e passa `EVAL.md`.
+- Jogo Clássico aparece com CTA realmente desabilitado e sem efeito colateral;
+- Sala Personalizada preserva exatamente os contratos funcionais vigentes;
+- a rota cabe no viewport normal sem scroll;
+- create/join funcionam com teclado, touch, fallback e reduced-motion;
+- a página passa `EVAL.md`.
