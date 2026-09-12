@@ -204,6 +204,18 @@ async function waitForText(locator, text) {
   await locator.getByText(text, { exact: false }).waitFor({ state: "visible", timeout: 8_000 });
 }
 
+async function roomPlayerNames(db, code) {
+  const result = await db.query(
+    `SELECT p.faction_name
+       FROM game.players p
+       JOIN game.rooms r ON r.id = p.room_id
+      WHERE r.code = $1
+      ORDER BY p.joined_at ASC, p.id ASC`,
+    [code],
+  );
+  return result.rows.map((row) => row.faction_name);
+}
+
 async function assertPersistentScene(page, mode, probe = "foundation-persistent-scene") {
   const shell = page.locator(`[data-command-scene-mode="${mode}"]`);
   await shell.waitFor({ state: "attached", timeout: 10_000 });
@@ -401,14 +413,44 @@ async function main() {
           await patchMe(actor, room.code, { factionName: `Comando ${String(index).padStart(2, "0")}` });
         }
 
+        const expectedSet = Array.from(
+          { length: 6 },
+          (_, index) => `Comando ${String(index + 1).padStart(2, "0")}`,
+        );
+        const authoritativeOrder = await roomPlayerNames(db, room.code);
+        assert.equal(authoritativeOrder.length, 6, "banco deveria conter seis jogadores");
+        assert.deepEqual(
+          [...authoritativeOrder].sort(),
+          [...expectedSet].sort(),
+          "nomes persistidos no banco divergiram dos seis comandos configurados",
+        );
+
         await openLobby(host, room.code);
+        const snapshotResponse = await apiJson(host.page, `/api/rooms/${room.code}`);
+        assert.equal(snapshotResponse.status, 200, JSON.stringify(snapshotResponse.body));
+        assert.deepEqual(
+          snapshotResponse.body?.players?.map((player) => player.factionName),
+          authoritativeOrder,
+          "snapshot da API divergiu da ordem autoritativa da sala",
+        );
+
         await expectOccupied(host.page, 6);
-        for (let slot = 1; slot <= 6; slot += 1) {
+        for (const [index, factionName] of authoritativeOrder.entries()) {
           await waitForText(
-            host.page.locator(`li[data-slot="${slot}"]`),
-            `Comando ${String(slot).padStart(2, "0")}`,
+            host.page.locator(`li[data-slot="${index + 1}"]`),
+            factionName,
           );
         }
+
+        const initialStations = await host.page.locator('li[data-slot]').allTextContents();
+        await new Promise((resolve) => setTimeout(resolve, 1_200));
+        const stableStations = await host.page.locator('li[data-slot]').allTextContents();
+        assert.deepEqual(
+          stableStations,
+          initialStations,
+          "postos mudaram de posição sem alteração de membership",
+        );
+
         await captureDesktopMobile(host.page, "6-players");
       } finally {
         await Promise.all(actors.map((actor) => actor.context.close()));
