@@ -9,7 +9,7 @@
 }
 
 .sceneHost {
-  position: absolute;
+  position: fixed;
   z-index: 0;
   inset: 0;
   overflow: hidden;
@@ -152,7 +152,7 @@
 }
 
 .atmosphere {
-  position: absolute;
+  position: fixed;
   z-index: var(--command-z-atmosphere, 2);
   inset: 0;
   pointer-events: none;
@@ -174,7 +174,7 @@
 }
 
 .shellChrome {
-  position: absolute;
+  position: fixed;
   z-index: var(--command-z-chrome, 20);
   top: clamp(20px, 3.4vw, 48px);
   right: clamp(24px, 4vw, 64px);
