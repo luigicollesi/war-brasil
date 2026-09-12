@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { GameDie } from "@/src/components/game-die";
 import { GuideBoardScene } from "@/src/components/game-guide/guide-board-scene";
+import { GuideTradeScene } from "@/src/components/game-guide/guide-trade-scene";
 import { TerritoryCardArtwork } from "@/src/components/territory-card-artwork";
 import type {
   DoctrineChapter,
@@ -86,7 +87,7 @@ function TurnDemo({ chapter }: { chapter: DoctrineChapter }) {
   return (
     <DemoFrame
       label="Fluxo de um turno"
-      caption="As fases separam logística, conflito e reposicionamento para que cada decisão tenha uma responsabilidade clara."
+      caption="Trocas antecedem a mobilização quando a fase está disponível; depois vêm reforços, conflito e reposicionamento."
     >
       <div className={styles.phaseRail}>
         {chapter.metrics.map((phase, index) => (
@@ -97,6 +98,26 @@ function TurnDemo({ chapter }: { chapter: DoctrineChapter }) {
             {index < chapter.metrics.length - 1 ? <i aria-hidden="true">→</i> : null}
           </div>
         ))}
+      </div>
+    </DemoFrame>
+  );
+}
+
+function TradeDemo({ presentation }: { presentation: DoctrinePresentation }) {
+  return (
+    <DemoFrame
+      label="Demonstração da fase de Trocas entre jogadores"
+      caption={`Negociação não gera tropas. O jogador da vez pode fazer até ${presentation.playerTrade.offerLimitPerTurn} ofertas; os demais humanos ativos podem sinalizar até ${presentation.playerTrade.signalLimitPerTurn} cartas por turno.`}
+    >
+      <div className={styles.playerTradeStage}>
+        <GuideTradeScene
+          offerLimit={presentation.playerTrade.offerLimitPerTurn}
+          signalLimit={presentation.playerTrade.signalLimitPerTurn}
+        />
+        <div className={styles.tradeDoctrineNote}>
+          <span>NEGOCIAÇÃO ≠ RESGATE</span>
+          <strong>Cartas mudam de dono. Tropas só vêm do resgate de uma combinação válida.</strong>
+        </div>
       </div>
     </DemoFrame>
   );
@@ -306,7 +327,7 @@ function CardsDemo({ presentation }: { presentation: DoctrinePresentation }) {
   return (
     <DemoFrame
       label="Demonstração de cartas de território e resgate"
-      caption={`Os resgates seguem progressão pessoal. Com ${presentation.cards.mandatoryTradeHandSize} ou mais cartas, uma troca válida é obrigatória antes de reforçar.`}
+      caption={`Resgates seguem progressão pessoal. Com ${presentation.cards.mandatoryTradeHandSize} ou mais cartas, um resgate válido é obrigatório antes de reforçar; isso não é a negociação entre jogadores.`}
     >
       <div className={styles.cardsStage}>
         <div className={styles.cardFan} aria-hidden="true">
@@ -409,6 +430,8 @@ export function DoctrineChapterDemo({
       return <ObjectivesDemo presentation={presentation} />;
     case "turn":
       return <TurnDemo chapter={chapter} />;
+    case "trade":
+      return <TradeDemo presentation={presentation} />;
     case "reinforcement":
       return <ReinforcementDemo presentation={presentation} />;
     case "attack":
