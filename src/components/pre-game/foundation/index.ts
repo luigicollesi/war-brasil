@@ -12,7 +12,6 @@ export {
   useCommandSceneState,
 } from "./pre-game-command-runtime";
 export type { CommandSceneDirective } from "./pre-game-command-runtime";
-export type { CommandSceneState } from "./command-scene";
 export {
   resolvePreGameSceneIntent,
   resolvePreGameSceneMode,
@@ -30,6 +29,7 @@ export type {
   CommandSceneFocus,
   CommandSceneIntent,
   CommandSceneMode,
+  CommandSceneState,
   NormalizedCommandSceneIntent,
 } from "./scene-contract";
 export { COMMAND_FOUNDATION_TOKENS } from "./foundation-tokens";
