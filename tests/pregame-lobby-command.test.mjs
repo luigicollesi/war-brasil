@@ -5,6 +5,8 @@ import test from "node:test";
 const lobby = readFileSync("src/components/lobby-client.tsx", "utf8");
 const styles = readFileSync("src/components/lobby-client.module.css", "utf8");
 const identity = readFileSync("src/app/war-identity.css", "utf8");
+const readyRail = readFileSync("src/app/lobby-ready-rail.css", "utf8");
+const layout = readFileSync("src/app/layout.tsx", "utf8");
 const sync = readFileSync("src/hooks/use-lobby-sync.ts", "utf8");
 const syncCoordinator = readFileSync(
   "src/lib/client/lobby-sync-coordinator.ts",
@@ -62,10 +64,18 @@ test("ready pendente não antecipa estado e falha aparece junto da ação", () =
   assert.doesNotMatch(lobby, /set.*Ready/);
 });
 
-test("ação crítica de ready permanece fora da cena e fixa à viewport", () => {
+test("ação crítica de ready permanece fora da cena sem cobrir o editor", () => {
   assert.match(lobby, /className=\{`wb-ready-rail \$\{styles\.readyRail\}/);
   assert.match(lobby, /aria-label="Preparação da partida"/);
   assert.match(identity, /\.wb-ready-rail\s*\{[\s\S]*?position:\s*fixed/);
+  assert.match(readyRail, /\.wb-ready-rail\s*\{[\s\S]*?position:\s*sticky/);
+  assert.match(readyRail, /pointer-events:\s*auto/);
+  assert.doesNotMatch(readyRail, /pointer-events:\s*none/);
+  assert.ok(
+    layout.indexOf('import "./lobby-ready-rail.css"') >
+      layout.indexOf('import "./war-identity.css"'),
+    "override da ready rail deve carregar depois do estilo legado",
+  );
   assert.doesNotMatch(lobby, /useThree|Camera|camera\./);
 });
 
