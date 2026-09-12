@@ -2,8 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { LobbySnapshot } from "@/src/lib/lobby";
+import { createLobbySyncCoordinator } from "@/src/lib/client/lobby-sync-coordinator";
 
 const POLLING_INTERVAL_MS = 1_000;
+const REQUEST_TIMEOUT_MS = 4_000;
 
 export function useLobbySync(code: string) {
   const [snapshot, setSnapshot] = useState<LobbySnapshot | null>(null);
@@ -14,75 +16,75 @@ export function useLobbySync(code: string) {
   useEffect(() => {
     let isActive = true;
     let requestController: AbortController | null = null;
-    let timeoutId = 0;
-    let inFlight: Promise<void> | null = null;
+    let pollTimeoutId = 0;
 
-    function sync() {
-      if (inFlight) return inFlight;
+    const coordinator = createLobbySyncCoordinator(async () => {
+      const controller = new AbortController();
+      requestController = controller;
+      let requestTimedOut = false;
+      const requestTimeoutId = window.setTimeout(() => {
+        requestTimedOut = true;
+        controller.abort();
+      }, REQUEST_TIMEOUT_MS);
 
-      const run = (async () => {
-        const controller = new AbortController();
-        requestController = controller;
+      try {
+        const response = await fetch(`/api/rooms/${encodeURIComponent(code)}`, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        const data: unknown = await response.json();
 
-        try {
-          const response = await fetch(`/api/rooms/${encodeURIComponent(code)}`, {
-            cache: "no-store",
-            signal: controller.signal,
-          });
-          const data: unknown = await response.json();
+        if (!response.ok) {
+          const message =
+            typeof data === "object" &&
+            data !== null &&
+            "error" in data &&
+            typeof data.error === "string"
+              ? data.error
+              : "Não foi possível atualizar a lobby.";
+          throw new Error(message);
+        }
 
-          if (!response.ok) {
-            const message =
-              typeof data === "object" &&
-              data !== null &&
-              "error" in data &&
-              typeof data.error === "string"
-                ? data.error
-                : "Não foi possível atualizar a lobby.";
-            throw new Error(message);
-          }
+        if (isActive) {
+          setSnapshot(data as LobbySnapshot);
+          setError("");
+        }
+      } catch (requestError) {
+        const aborted =
+          requestError instanceof DOMException && requestError.name === "AbortError";
 
-          if (isActive) {
-            setSnapshot(data as LobbySnapshot);
-            setError("");
-          }
-        } catch (requestError) {
-          const aborted =
-            requestError instanceof DOMException && requestError.name === "AbortError";
-
-          if (isActive && !aborted) {
-            setError(
-              requestError instanceof Error
+        if (isActive && (!aborted || requestTimedOut)) {
+          setError(
+            requestTimedOut
+              ? "A sincronização demorou além do esperado. Tentando novamente."
+              : requestError instanceof Error
                 ? requestError.message
                 : "Não foi possível atualizar a lobby.",
-            );
-          }
-        } finally {
-          if (isActive) setIsLoading(false);
-          if (requestController === controller) requestController = null;
+          );
         }
-      })();
-
-      const tracked = run.finally(() => {
-        if (inFlight === tracked) inFlight = null;
-      });
-      inFlight = tracked;
-      return tracked;
-    }
+      } finally {
+        window.clearTimeout(requestTimeoutId);
+        if (isActive) setIsLoading(false);
+        if (requestController === controller) requestController = null;
+      }
+    });
 
     async function poll() {
-      await sync();
+      await coordinator.sync();
       if (isActive) {
-        timeoutId = window.setTimeout(() => void poll(), POLLING_INTERVAL_MS);
+        pollTimeoutId = window.setTimeout(() => void poll(), POLLING_INTERVAL_MS);
       }
     }
 
-    refreshRef.current = sync;
+    // Refresh disparado por uma mutação precisa observar um GET iniciado depois
+    // da mutação. Reaproveitar um polling já em voo pode devolver um snapshot
+    // anterior ao commit e atrasar a convergência visual da sala.
+    refreshRef.current = coordinator.refreshAfterCurrent;
     void poll();
 
     return () => {
       isActive = false;
-      window.clearTimeout(timeoutId);
+      window.clearTimeout(pollTimeoutId);
       requestController?.abort();
       refreshRef.current = async () => {};
     };

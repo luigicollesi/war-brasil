@@ -2,23 +2,26 @@
   position: relative;
   z-index: 1;
   min-height: 100dvh;
+  padding-top: var(--command-content-top, 96px);
 }
 
-.frame :global(.wb-shell) {
-  min-height: 100dvh;
-  background: transparent;
+.utilityNav {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  width: min(100% - (var(--command-content-inline, 24px) * 2), 1280px);
+  margin: 0 auto;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
 
-.frame :global(.wb-shell)::before {
-  opacity: .1;
-}
+@media (max-width: 640px) {
+  .frame {
+    padding-top: var(--command-content-top, 88px);
+  }
 
-.frame :global(.wb-header) {
-  background: rgb(5 20 15 / 58%);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .frame :global(.wb-header) {
-    backdrop-filter: none;
+  .utilityNav {
+    width: calc(100% - (var(--command-content-inline, 20px) * 2));
   }
 }

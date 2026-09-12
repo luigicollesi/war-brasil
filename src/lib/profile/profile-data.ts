@@ -109,10 +109,10 @@ export const PROFILE_STATE_COPY: Record<
   },
 };
 
-const LOCAL_IDENTITY: ProfileIdentity = {
-  displayName: "Luigi",
+const EVALUATION_IDENTITY: ProfileIdentity = {
+  displayName: "Comandante de avaliação",
   source: "local-static",
-  sourceLabel: "Perfil local temporário",
+  sourceLabel: "Identidade sintética de avaliação",
 };
 
 function unavailableSection<T>(data: T, unavailableReason: string): ProfileSection<T> {
@@ -199,9 +199,9 @@ function evaluationAvailableSections({ emptyHistory = false }: { emptyHistory?: 
   };
 }
 
-const LOCAL_PROFILE: ProfileSnapshot = {
-  state: "partial-data",
-  identity: LOCAL_IDENTITY,
+const GUEST_PROFILE: ProfileSnapshot = {
+  state: "guest",
+  identity: null,
   ...unavailableProfileSections(),
   isEvaluationFixture: false,
 };
@@ -232,7 +232,7 @@ function isProfileEvaluationState(value: string): value is ProfileEvaluationStat
 function createEvaluationSnapshot(state: ProfileRenderableEvaluationState): ProfileSnapshot {
   const base: ProfileSnapshot = {
     state,
-    identity: LOCAL_IDENTITY,
+    identity: EVALUATION_IDENTITY,
     ...unavailableProfileSections(),
     isEvaluationFixture: true,
   };
@@ -287,7 +287,7 @@ function getEvaluationStateFromEnvironment(): ProfileEvaluationState | null {
 
 /**
  * Stable boundary between profile rendering and identity persistence.
- * Replace this local implementation with the future authenticated provider;
+ * Replace the guest implementation with the future authenticated provider;
  * consumers should continue receiving the same ProfileSnapshot contract.
  *
  * History is intentionally bounded by the provider contract (`hasMore`) so a
@@ -304,5 +304,5 @@ export async function getCurrentProfileSnapshot(): Promise<ProfileSnapshot> {
     return createEvaluationSnapshot(evaluationState);
   }
 
-  return LOCAL_PROFILE;
+  return GUEST_PROFILE;
 }

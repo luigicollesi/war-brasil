@@ -1,5 +1,6 @@
 .foundationIntegrated {
-  padding-top: clamp(78px, 7vw, 104px);
+  padding-top: var(--command-content-top, clamp(78px, 7vw, 104px));
+  padding-bottom: var(--command-content-bottom, 24px);
   background:
     linear-gradient(90deg, rgb(5 10 8 / 96%) 0%, rgb(5 10 8 / 90%) 28%, rgb(5 10 8 / 76%) 58%, rgb(5 10 8 / 68%) 100%),
     radial-gradient(circle at 72% 18%, rgb(76 103 72 / 16%), transparent 28rem),
@@ -8,7 +9,7 @@
 
 @media (max-width: 760px) {
   .foundationIntegrated {
-    padding-top: 88px;
+    padding-top: var(--command-content-top, 88px);
     background:
       linear-gradient(180deg, rgb(5 10 8 / 94%) 0%, rgb(5 10 8 / 88%) 48%, rgb(5 10 8 / 82%) 100%),
       radial-gradient(circle at 70% 12%, rgb(76 103 72 / 12%), transparent 22rem) !important;

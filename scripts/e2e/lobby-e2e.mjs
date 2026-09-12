@@ -16,6 +16,7 @@ const DATABASE_URL = process.env.LOBBY_E2E_DATABASE_URL;
 const ARTIFACT_DIR = path.resolve(
   process.env.LOBBY_E2E_ARTIFACT_DIR ?? "test-results/lobby-eval",
 );
+const LOBBY_CONVERGENCE_TIMEOUT_MS = 15_000;
 
 if (!DATABASE_URL) {
   throw new Error("LOBBY_E2E_DATABASE_URL é obrigatória.");
@@ -24,6 +25,7 @@ if (!DATABASE_URL) {
 mkdirSync(ARTIFACT_DIR, { recursive: true });
 
 const failures = [];
+const foundationDeprecations = [];
 
 async function step(name, callback) {
   process.stdout.write(`\n[lobby-e2e] ${name} ... `);
@@ -57,6 +59,12 @@ async function createActor(browser, options = {}) {
   }
 
   const page = await context.newPage();
+  page.on("console", (message) => {
+    const text = message.text();
+    if (/SVGLoader:\s*createShapes\(\) is deprecated/i.test(text)) {
+      foundationDeprecations.push(text);
+    }
+  });
   await page.goto(`${BASE_URL}/matchmaking`, { waitUntil: "domcontentloaded" });
   return { context, page };
 }
@@ -114,7 +122,7 @@ async function openLobby(actor, code) {
 async function expectOccupied(page, count) {
   await page.getByRole("heading", { name: `${count}/6 postos ocupados` }).waitFor({
     state: "visible",
-    timeout: 8_000,
+    timeout: LOBBY_CONVERGENCE_TIMEOUT_MS,
   });
 }
 
@@ -126,7 +134,10 @@ async function saveFaction(page, name) {
   const input = factionInput(page);
   await input.fill(name);
   await page.getByRole("button", { name: "Salvar nome da facção", exact: true }).click();
-  await page.getByText(name, { exact: true }).first().waitFor({ state: "visible", timeout: 8_000 });
+  await page.getByText(name, { exact: true }).first().waitFor({
+    state: "visible",
+    timeout: LOBBY_CONVERGENCE_TIMEOUT_MS,
+  });
 }
 
 function readyButton(page) {
@@ -146,7 +157,7 @@ async function setReady(page, value) {
       return candidate?.getAttribute("aria-pressed") === String(expected);
     },
     { expected: value },
-    { timeout: 8_000 },
+    { timeout: LOBBY_CONVERGENCE_TIMEOUT_MS },
   );
 }
 
@@ -194,7 +205,69 @@ async function captureDesktopMobile(page, name) {
 }
 
 async function waitForText(locator, text) {
-  await locator.getByText(text, { exact: false }).waitFor({ state: "visible", timeout: 8_000 });
+  await locator.getByText(text, { exact: false }).waitFor({
+    state: "visible",
+    timeout: LOBBY_CONVERGENCE_TIMEOUT_MS,
+  });
+}
+
+async function roomPlayerNames(db, code) {
+  const result = await db.query(
+    `SELECT p.faction_name
+       FROM game.players p
+       JOIN game.rooms r ON r.id = p.room_id
+      WHERE r.code = $1
+      ORDER BY p.joined_at ASC, p.id ASC`,
+    [code],
+  );
+  return result.rows.map((row) => row.faction_name);
+}
+
+async function expectStationOrder(page, expectedNames) {
+  try {
+    await page.waitForFunction(
+      (names) =>
+        names.every((name, index) => {
+          const station = document.querySelector(`li[data-slot="${index + 1}"]`);
+          return station?.textContent?.includes(name) ?? false;
+        }),
+      expectedNames,
+      { timeout: LOBBY_CONVERGENCE_TIMEOUT_MS },
+    );
+  } catch (error) {
+    const actual = await page.locator("li[data-slot]").allTextContents();
+    throw new Error(
+      `postos não convergiram para a ordem autoritativa. esperado=${JSON.stringify(expectedNames)} atual=${JSON.stringify(actual)}`,
+      { cause: error },
+    );
+  }
+}
+
+async function assertPersistentScene(page, mode, probe = "foundation-persistent-scene") {
+  const shell = page.locator(`[data-command-scene-mode="${mode}"]`);
+  await shell.waitFor({ state: "attached", timeout: 10_000 });
+
+  const sceneHost = shell.locator("[data-webgl]").first();
+  await sceneHost.waitFor({ state: "attached", timeout: 10_000 });
+
+  const canvasCount = await shell.locator("canvas.command-foundation-canvas").count();
+  assert.ok(canvasCount <= 1, `mais de um Canvas da Foundation em ${mode}`);
+
+  const marker = await sceneHost.getAttribute("data-foundation-persistence-probe");
+  const initialized = await page.evaluate(() =>
+    sessionStorage.getItem("foundation-persistence-probe-initialized") === "1",
+  );
+
+  if (!initialized) {
+    assert.equal(marker, null, "probe de persistência já existia antes da inicialização");
+    await sceneHost.evaluate((element, value) => {
+      element.setAttribute("data-foundation-persistence-probe", value);
+      sessionStorage.setItem("foundation-persistence-probe-initialized", "1");
+    }, probe);
+    return;
+  }
+
+  assert.equal(marker, probe, `host da cena ${mode} foi remontado`);
 }
 
 async function roomStartState(db, code) {
@@ -225,6 +298,45 @@ async function main() {
   const browser = await playwright.chromium.launch({ headless: true });
 
   try {
+    await step("FND-02/13 host da cena persiste entre Operations, Lobby, Home, Doctrine e Profile", async () => {
+      const actor = await createActor(browser);
+      try {
+        await assertPersistentScene(actor.page, "operations");
+
+        await actor.page.getByRole("button", { name: "Autorizar nova operação", exact: true }).click();
+        await actor.page.waitForURL(/\/lobby\/[A-Z0-9]{6}$/, { timeout: 10_000 });
+        await assertPersistentScene(actor.page, "lobby");
+
+        await actor.page.getByRole("link", { name: /Operações/ }).first().click();
+        await actor.page.waitForURL(/\/matchmaking$/, { timeout: 10_000 });
+        await assertPersistentScene(actor.page, "operations");
+
+        await actor.page.getByRole("link", { name: /Início/ }).first().click();
+        await actor.page.waitForURL((url) => url.pathname === "/", { timeout: 10_000 });
+        await assertPersistentScene(actor.page, "entrance");
+
+        await actor.page.getByRole("button", { name: "ENTRAR NO COMANDO", exact: true }).click();
+        await actor.page.getByRole("link", { name: /DOUTRINA/ }).click();
+        await actor.page.waitForURL(/\/rules(?:\?|$)/, { timeout: 10_000 });
+        await assertPersistentScene(actor.page, "doctrine");
+
+        await actor.page.goBack();
+        await actor.page.waitForURL((url) => url.pathname === "/", { timeout: 10_000 });
+        await assertPersistentScene(actor.page, "entrance");
+
+        await actor.page.getByRole("button", { name: "ENTRAR NO COMANDO", exact: true }).click();
+        await actor.page.getByRole("link", { name: /COMANDO/ }).click();
+        await actor.page.waitForURL(/\/profile$/, { timeout: 10_000 });
+        await assertPersistentScene(actor.page, "profile");
+
+        await actor.page.getByRole("link", { name: /Início/ }).first().click();
+        await actor.page.waitForURL((url) => url.pathname === "/", { timeout: 10_000 });
+        await assertPersistentScene(actor.page, "entrance");
+      } finally {
+        await actor.context.close();
+      }
+    });
+
     await step("LOB-01/02/03/05/06/09 sincronização, regras, reconnect e copy", async () => {
       const host = await createActor(browser);
       const guest = await createActor(browser);
@@ -275,27 +387,51 @@ async function main() {
           timeout: 3_000,
         });
 
-        const roomEndpoint = `**/api/rooms/${room.code}`;
+        const roomEndpoint = `${BASE_URL}/api/rooms/${room.code}`;
         await host.page.route(roomEndpoint, (route) => route.abort());
+        await factionInput(host.page).fill("Comando Verde Offline");
+        await host.page.getByRole("button", { name: "Salvar nome da facção", exact: true }).click();
         await host.page.getByText("Reconectando ao comando", { exact: true }).waitFor({
           state: "visible",
-          timeout: 5_000,
+          timeout: 8_000,
         });
         await captureDesktopMobile(host.page, "reconnecting");
         await host.page.unroute(roomEndpoint);
-        await host.page.getByRole("button", { name: "Sincronizar agora" }).click();
-        await host.page.getByText("Sala sincronizada", { exact: true }).waitFor({
-          state: "visible",
-          timeout: 5_000,
-        });
 
-        const guestSession = await sessionCookie(guest);
-        await db.query(
+        const synced = host.page.getByText("Sala sincronizada", { exact: true });
+        const retry = host.page.getByRole("button", { name: "Sincronizar agora" });
+        if (!(await synced.isVisible().catch(() => false)) && await retry.isVisible().catch(() => false)) {
+          await retry.click({ timeout: 2_000 }).catch(() => undefined);
+        }
+        await synced.waitFor({
+          state: "visible",
+          timeout: LOBBY_CONVERGENCE_TIMEOUT_MS,
+        });
+        await waitForText(host.page.locator('li[data-slot="1"]'), "Comando Verde Offline");
+
+        await sessionCookie(guest);
+        const guestSnapshot = await apiJson(guest.page, `/api/rooms/${room.code}`);
+        assert.equal(guestSnapshot.status, 200, JSON.stringify(guestSnapshot.body));
+        const guestPlayerId = guestSnapshot.body?.me?.id;
+        assert.ok(guestPlayerId, "snapshot do guest não expôs o jogador local");
+
+        const removedGuest = await db.query(
           `DELETE FROM game.players
-            WHERE player_session = $1
-              AND room_id = (SELECT id FROM game.rooms WHERE code = $2)`,
-          [guestSession, room.code],
+            WHERE id = $1
+              AND room_id = (SELECT id FROM game.rooms WHERE code = $2)
+            RETURNING id`,
+          [guestPlayerId, room.code],
         );
+        assert.equal(removedGuest.rowCount, 1, "simulação de saída não removeu exatamente um jogador");
+
+        const authoritativeAfterExit = await apiJson(host.page, `/api/rooms/${room.code}`);
+        assert.equal(authoritativeAfterExit.status, 200, JSON.stringify(authoritativeAfterExit.body));
+        assert.equal(
+          authoritativeAfterExit.body?.players?.length,
+          1,
+          "API autoritativa ainda expõe o jogador removido",
+        );
+
         await expectOccupied(host.page, 1);
         await waitForText(host.page.locator('li[data-slot="2"]'), "Aguardando jogador");
         await captureDesktopMobile(host.page, "1-player");
@@ -320,14 +456,39 @@ async function main() {
           await patchMe(actor, room.code, { factionName: `Comando ${String(index).padStart(2, "0")}` });
         }
 
+        const expectedSet = Array.from(
+          { length: 6 },
+          (_, index) => `Comando ${String(index + 1).padStart(2, "0")}`,
+        );
+        const authoritativeOrder = await roomPlayerNames(db, room.code);
+        assert.equal(authoritativeOrder.length, 6, "banco deveria conter seis jogadores");
+        assert.deepEqual(
+          [...authoritativeOrder].sort(),
+          [...expectedSet].sort(),
+          "nomes persistidos no banco divergiram dos seis comandos configurados",
+        );
+
         await openLobby(host, room.code);
+        const snapshotResponse = await apiJson(host.page, `/api/rooms/${room.code}`);
+        assert.equal(snapshotResponse.status, 200, JSON.stringify(snapshotResponse.body));
+        assert.deepEqual(
+          snapshotResponse.body?.players?.map((player) => player.factionName),
+          authoritativeOrder,
+          "snapshot da API divergiu da ordem autoritativa da sala",
+        );
+
         await expectOccupied(host.page, 6);
-        for (let slot = 1; slot <= 6; slot += 1) {
-          await waitForText(
-            host.page.locator(`li[data-slot="${slot}"]`),
-            `Comando ${String(slot).padStart(2, "0")}`,
-          );
-        }
+        await expectStationOrder(host.page, authoritativeOrder);
+
+        const initialStations = await host.page.locator('li[data-slot]').allTextContents();
+        await new Promise((resolve) => setTimeout(resolve, 1_200));
+        const stableStations = await host.page.locator('li[data-slot]').allTextContents();
+        assert.deepEqual(
+          stableStations,
+          initialStations,
+          "postos mudaram de posição sem alteração de membership",
+        );
+
         await captureDesktopMobile(host.page, "6-players");
       } finally {
         await Promise.all(actors.map((actor) => actor.context.close()));
@@ -439,6 +600,13 @@ async function main() {
   } finally {
     await browser.close();
     await db.end();
+  }
+
+  if (foundationDeprecations.length > 0) {
+    failures.push({
+      name: "Foundation não emite APIs depreciadas no browser",
+      error: new Error([...new Set(foundationDeprecations)].join("\n")),
+    });
   }
 
   if (failures.length > 0) {

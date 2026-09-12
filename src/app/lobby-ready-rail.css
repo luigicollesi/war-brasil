@@ -1,0 +1,37 @@
+/*
+ * Keep the readiness summary in document flow. The mobile CTA is the only
+ * viewport-persistent piece: a compact control instead of a full-width overlay,
+ * so editable Lobby controls remain reachable and visible.
+ */
+.wb-ready-rail {
+  position: sticky;
+  right: auto;
+  bottom: 0;
+  left: auto;
+  margin-top: clamp(20px, 3vw, 32px);
+  padding-bottom: env(safe-area-inset-bottom);
+  pointer-events: auto;
+}
+
+@media (max-width: 640px) {
+  .wb-ready-rail {
+    position: relative;
+    bottom: auto;
+    /* The legacy global rail adds backdrop-filter, which makes this element a
+       containing block for fixed descendants. Disable it so the compact CTA
+       is fixed to the viewport rather than to the rail at the end of the page. */
+    backdrop-filter: none;
+  }
+
+  .wb-ready-rail > .wb-ready-inner > .wb-button {
+    position: fixed;
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    z-index: 40;
+    width: auto;
+    min-width: 176px;
+    max-width: calc(100vw - 24px);
+    min-height: 48px;
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.42);
+  }
+}

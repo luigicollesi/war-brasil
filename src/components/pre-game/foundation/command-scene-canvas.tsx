@@ -298,7 +298,7 @@ function BrazilTerritoryAssembly({
     return svg.paths.flatMap((path, pathIndex) => {
       const territoryId = territoryIds[pathIndex];
 
-      return SVGLoader.createShapes(path).map((shape, shapeIndex) => {
+      return path.toShapes().map((shape, shapeIndex) => {
         const geometry = new ExtrudeGeometry(shape, {
           depth: 14,
           bevelEnabled: true,

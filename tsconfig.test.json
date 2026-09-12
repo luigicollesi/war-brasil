@@ -53,6 +53,7 @@
     "src/lib/client/map/territory-visual-state.ts",
     "src/lib/client/operations/room-code.ts",
     "src/lib/client/operations/request.ts",
+    "src/lib/client/lobby-sync-coordinator.ts",
     "src/lib/client/game-automation-driver.ts",
     "src/lib/client/sync/revision-coordinator.ts",
     "src/lib/client/sync/game-poll-scheduler.ts",

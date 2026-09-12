@@ -6,12 +6,16 @@ function source(path) {
   return readFileSync(path, "utf8");
 }
 
-test("perfil local deixa explícita a origem e não fabrica progressão competitiva", () => {
+test("perfil sem identidade real permanece guest e não fabrica identidade ou progressão", () => {
   const profileData = source("src/lib/profile/profile-data.ts");
 
-  assert.match(profileData, /displayName: "Luigi"/);
-  assert.match(profileData, /source: "local-static"/);
-  assert.match(profileData, /sourceLabel: "Perfil local temporário"/);
+  assert.match(profileData, /const GUEST_PROFILE: ProfileSnapshot = \{/);
+  assert.match(profileData, /state: "guest"/);
+  assert.match(profileData, /identity: null/);
+  assert.match(profileData, /return GUEST_PROFILE/);
+  assert.doesNotMatch(profileData, /displayName: "Luigi"/);
+  assert.match(profileData, /EVALUATION_IDENTITY/);
+  assert.match(profileData, /Identidade sintética de avaliação/);
   assert.match(profileData, /isEvaluationFixture: false/);
   assert.match(profileData, /Sistema de progressão ainda não integrado/);
   assert.match(profileData, /Estatísticas ainda não possuem contrato de dados do perfil/);
@@ -33,24 +37,31 @@ test("renderização diferencia ausência de dado real e mantém equivalentes te
 });
 
 test("PROFILE consome somente a API pública da Foundation", () => {
-  const shell = source("src/components/profile/profile-command-shell.tsx");
+  const bridge = source("src/components/profile/profile-command-shell.tsx");
   const hall = source("src/components/profile/profile-hall.tsx");
   const page = source("src/app/profile/page.tsx");
+  const loading = source("src/app/profile/loading.tsx");
+  const error = source("src/app/profile/error.tsx");
   const layout = source("src/app/layout.tsx");
   const routeIntent = source(
     "src/components/pre-game/foundation/pre-game-route-intent.ts",
   );
 
-  assert.match(shell, /from "@\/src\/components\/pre-game\/foundation"/);
-  assert.match(shell, /useCommandSceneDirective/);
-  assert.doesNotMatch(shell, /\bmode\s*:/);
-  assert.match(shell, /focus: "insignia"/);
+  assert.match(bridge, /from "@\/src\/components\/pre-game\/foundation"/);
+  assert.match(bridge, /export function ProfileSceneBridge/);
+  assert.match(bridge, /useCommandSceneDirective/);
+  assert.doesNotMatch(bridge, /\bmode\s*:/);
+  assert.match(bridge, /focus: "insignia"/);
   assert.match(routeIntent, /"\/profile": "profile"/);
   assert.match(layout, /<PreGameCommandRuntime>\{children\}<\/PreGameCommandRuntime>/);
   assert.match(hall, /CommandInsignia/);
   assert.match(hall, /from "@\/src\/components\/pre-game\/foundation"/);
   assert.doesNotMatch(hall, /\.\/command-insignia/);
-  assert.doesNotMatch(`${shell}\n${hall}\n${page}`, /@react-three\/fiber|command-scene-canvas|\bthree\b|Canvas/);
+  assert.match(page, /<ProfileSceneBridge>/);
+  assert.match(loading, /<ProfileSceneBridge>/);
+  assert.match(error, /<ProfileSceneBridge>/);
+  assert.doesNotMatch(`${bridge}\n${hall}\n${page}\n${loading}\n${error}`, /@react-three\/fiber|command-scene-canvas|\bthree\b|Canvas/);
+  assert.doesNotMatch(`${page}\n${loading}\n${error}`, /WarShell/);
 });
 
 test("profile possui loading, erro, mobile, fallback e reduced-motion explícitos", () => {
@@ -64,8 +75,8 @@ test("profile possui loading, erro, mobile, fallback e reduced-motion explícito
 
   assert.match(loading, /sem valores simulados/);
   assert.match(error, /Nenhum dado fictício será exibido/);
-  assert.match(loading, /ProfileCommandShell/);
-  assert.match(error, /ProfileCommandShell/);
+  assert.match(loading, /ProfileSceneBridge/);
+  assert.match(error, /ProfileSceneBridge/);
   assert.match(boundary, /aria-busy=\{isLoading \|\| undefined\}/);
   assert.match(boundary, /data-scene-fallback="html"/);
   assert.match(boundaryCss, /@media \(max-width: 480px\)/);
@@ -81,12 +92,14 @@ test("profile possui loading, erro, mobile, fallback e reduced-motion explícito
   assert.match(environmentCss, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
-test("WarShell fica transparente apenas dentro da Foundation da PROFILE", () => {
-  const shellCss = source("src/components/profile/profile-command-shell.module.css");
+test("ponte do PROFILE respeita o clearance da Foundation sem duplicar chrome", () => {
+  const bridge = source("src/components/profile/profile-command-shell.tsx");
+  const bridgeCss = source("src/components/profile/profile-command-shell.module.css");
 
-  assert.match(shellCss, /:global\(\.wb-shell\)/);
-  assert.match(shellCss, /background: transparent/);
-  assert.match(shellCss, /:global\(\.wb-header\)/);
+  assert.match(bridgeCss, /var\(--command-content-top/);
+  assert.match(bridgeCss, /var\(--command-content-inline/);
+  assert.match(bridge, /aria-label="Navegação do perfil"/);
+  assert.doesNotMatch(bridgeCss, /:global\(\.wb-shell\)|:global\(\.wb-header\)/);
 });
 
 test("rota força resolução em request-time antes de consultar o perfil", () => {
