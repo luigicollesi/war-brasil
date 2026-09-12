@@ -3,7 +3,10 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { useEffect, useState, useSyncExternalStore } from "react";
-import { useCommandSceneDirective } from "../foundation";
+import {
+  useCommandSceneDirective,
+  useCommandSceneState,
+} from "../foundation";
 import {
   getHomeSceneIntent,
   type HomeCeremonyPhase,
@@ -33,6 +36,11 @@ type CommandHomeClientProps = {
 
 const HOME_RITUAL_SESSION_KEY = "war-brasil:pre-game-home-ritual-seen";
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
+const HOME_CEREMONY_TIMELINE = Object.freeze({
+  brazil: 420,
+  table: 1180,
+  stable: 2050,
+});
 
 const DESTINATIONS: Destination[] = [
   {
@@ -90,6 +98,7 @@ function markRitualSeen() {
 
 export function CommandHomeClient({ children }: CommandHomeClientProps) {
   const [ceremonyPhase, setCeremonyPhase] = useState<HomeCeremonyPhase>("earth");
+  const [ritualActive, setRitualActive] = useState(true);
   const [repeatVisit, setRepeatVisit] = useState(false);
   const [commandOpen, setCommandOpen] = useState(false);
   const [keyboardDestinationFocus, setKeyboardDestinationFocus] =
@@ -104,6 +113,7 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
     getReducedMotionSnapshot,
     getServerReducedMotionSnapshot,
   );
+  const sceneState = useCommandSceneState();
 
   const visitMode: VisitMode = reducedMotion
     ? "reduced"
@@ -111,7 +121,7 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
       ? "repeat"
       : "first";
   const effectiveCeremonyPhase: HomeCeremonyPhase =
-    visitMode === "first" ? ceremonyPhase : "stable";
+    visitMode === "first" && ritualActive ? ceremonyPhase : "stable";
   const destinationFocus = keyboardDestinationFocus ?? pointerDestinationFocus;
   const sceneIntent = getHomeSceneIntent({
     ceremonyPhase: effectiveCeremonyPhase,
@@ -130,35 +140,51 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
 
     const frame = window.requestAnimationFrame(() => {
       setRepeatVisit(true);
+      setRitualActive(false);
     });
 
     return () => window.cancelAnimationFrame(frame);
   }, []);
 
   useEffect(() => {
-    if (visitMode !== "first" || ceremonyPhase === "stable") return;
+    if (visitMode !== "first" || !ritualActive) return;
 
-    const delay =
-      ceremonyPhase === "earth" ? 460 : ceremonyPhase === "brazil" ? 520 : 560;
+    if (sceneState === "fallback") {
+      setCeremonyPhase("stable");
+      setRitualActive(false);
+      return;
+    }
 
-    const timer = window.setTimeout(() => {
-      setCeremonyPhase((current) => {
-        if (current === "earth") return "brazil";
-        if (current === "brazil") return "table";
-        if (current === "table") return "stable";
-        return current;
-      });
-    }, delay);
+    if (sceneState !== "ready") return;
 
-    return () => window.clearTimeout(timer);
-  }, [ceremonyPhase, visitMode]);
+    const brazilTimer = window.setTimeout(
+      () => setCeremonyPhase("brazil"),
+      HOME_CEREMONY_TIMELINE.brazil,
+    );
+    const tableTimer = window.setTimeout(
+      () => setCeremonyPhase("table"),
+      HOME_CEREMONY_TIMELINE.table,
+    );
+    const stableTimer = window.setTimeout(() => {
+      setCeremonyPhase("stable");
+      setRitualActive(false);
+    }, HOME_CEREMONY_TIMELINE.stable);
+
+    return () => {
+      window.clearTimeout(brazilTimer);
+      window.clearTimeout(tableTimer);
+      window.clearTimeout(stableTimer);
+    };
+  }, [ritualActive, sceneState, visitMode]);
 
   const skipCeremony = () => {
     setCeremonyPhase("stable");
+    setRitualActive(false);
   };
 
   const enterCommand = () => {
     setCeremonyPhase("stable");
+    setRitualActive(false);
     setKeyboardDestinationFocus(null);
     setPointerDestinationFocus(null);
     setCommandOpen(true);
@@ -191,6 +217,7 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
       className={styles.root}
       data-home-state={homeState}
       data-scene="foundation"
+      data-scene-state={sceneState}
       data-ceremony={effectiveCeremonyPhase}
       data-visit={visitMode}
       data-command-open={commandOpen ? "true" : "false"}
@@ -237,7 +264,9 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
                     ? "MOVIMENTO REDUZIDO"
                     : visitMode === "repeat"
                       ? "RETORNO RECONHECIDO"
-                      : "MESA ESTABILIZADA"}
+                      : sceneState === "fallback"
+                        ? "MODO TÁTICO 2D"
+                        : "MESA ESTABILIZADA"}
                 </span>
               )}
             </div>
