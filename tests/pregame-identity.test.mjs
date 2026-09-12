@@ -11,6 +11,10 @@ const homeClient = readFileSync(
 );
 const matchmaking = readFileSync("src/app/matchmaking/page.tsx", "utf8");
 const operations = readFileSync("src/components/operations-console.tsx", "utf8");
+const operationsStyles = readFileSync(
+  "src/app/matchmaking/operations.module.css",
+  "utf8",
+);
 const createRoom = readFileSync("src/components/create-room-button.tsx", "utf8");
 const joinRoom = readFileSync("src/components/join-room-form.tsx", "utf8");
 const operationsRequest = readFileSync("src/lib/client/operations/request.ts", "utf8");
@@ -53,14 +57,29 @@ test("Home, Operations e Lobby compartilham o runtime Foundation persistente", (
   assert.match(foundation, /useCommandSceneDirective/);
 });
 
-test("Operations usa uma estação com dois modos em vez de cards independentes", () => {
+test("Operations separa jogo clássico bloqueado de sala personalizada operacional", () => {
   assert.match(matchmaking, /<OperationsConsole \/>/);
+  assert.match(operations, /data-game-mode="classic"/);
+  assert.match(operations, /Jogo clássico/);
+  assert.match(operations, /Encontrar partida/);
+  assert.match(operations, /type="button"[\s\S]*?disabled[\s\S]*?classicButton/);
+  assert.match(operations, /data-game-mode="custom"/);
+  assert.match(operations, /Sala personalizada/);
   assert.match(operations, /role="tablist"/);
   assert.match(operations, /role="tabpanel"/);
-  assert.match(operations, /Nova operação/);
-  assert.match(operations, /Localizar operação/);
+  assert.match(operations, /Criar sala/);
+  assert.match(operations, /Entrar em sala/);
   assert.doesNotMatch(matchmaking, /wb-matchmaking-grid|wb-matchmaking-separator/);
   assert.doesNotMatch(operations, /war-brasil-42\.production\.svg/);
+});
+
+test("Matchmaking mantém a estação dentro da viewport e reduz movimento quando solicitado", () => {
+  assert.match(operationsStyles, /height:\s*100dvh/);
+  assert.match(operationsStyles, /overflow:\s*hidden/);
+  assert.match(operationsStyles, /@media \(max-height: 700px\)/);
+  assert.match(operationsStyles, /@media \(max-width: 640px\) and \(max-height: 580px\)/);
+  assert.match(operationsStyles, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(operationsStyles, /stationEnter/);
 });
 
 test("Operations preserva requests, normalização e proteção contra submissão repetida", () => {

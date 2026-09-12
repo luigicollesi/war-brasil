@@ -12,40 +12,43 @@ import type {
   OperationStatus,
 } from "@/src/components/operations-types";
 import styles from "@/src/app/matchmaking/operations.module.css";
-import responsiveStyles from "@/src/app/matchmaking/operations-responsive.module.css";
 import stateStyles from "@/src/app/matchmaking/operations-states.module.css";
-import foundationStyles from "@/src/app/matchmaking/operations-foundation.module.css";
 
-type Mode = "create" | "join";
+type EntryMode = "create" | "join";
 type VisualStatus = "idle" | "pending" | "error" | "success";
 
-const MODES: Array<{ mode: Mode; index: string; label: string; summary: string }> = [
+const ENTRY_MODES: Array<{
+  mode: EntryMode;
+  index: string;
+  label: string;
+  summary: string;
+}> = [
   {
     mode: "create",
     index: "01",
-    label: "Nova operação",
-    summary: "Autorizar sala",
+    label: "Criar sala",
+    summary: "Abrir operação",
   },
   {
     mode: "join",
     index: "02",
-    label: "Localizar operação",
+    label: "Entrar em sala",
     summary: "Usar código",
   },
 ];
 
 function statusLabel(status: OperationStatus, interaction: OperationInteraction) {
-  if (status === "creating") return "Autorizando nova operação";
-  if (status === "joining") return "Localizando operação existente";
-  if (status === "invalid-code") return "Código de operação inválido";
+  if (status === "creating") return "Criando sala personalizada";
+  if (status === "joining") return "Localizando sala existente";
+  if (status === "invalid-code") return "Código da sala inválido";
   if (status === "network-error") return "Falha de comunicação — tente novamente";
-  if (status === "create-error") return "Nova operação não autorizada — retry disponível";
-  if (status === "join-error") return "Operação não localizada — retry disponível";
-  if (status === "success-transition") return "Operação autorizada — abrindo lobby";
+  if (status === "create-error") return "Sala não criada — retry disponível";
+  if (status === "join-error") return "Sala não localizada — retry disponível";
+  if (status === "success-transition") return "Acesso autorizado — abrindo lobby";
   if (interaction === "typing-code") return "Código em edição";
-  if (interaction === "create-focus") return "Protocolo 01 selecionado";
-  if (interaction === "join-focus") return "Protocolo 02 selecionado";
-  return "Estação disponível";
+  if (interaction === "create-focus") return "Criar sala selecionado";
+  if (interaction === "join-focus") return "Entrar em sala selecionado";
+  return "Sala personalizada disponível";
 }
 
 function visualStatus(status: OperationStatus): VisualStatus {
@@ -63,7 +66,7 @@ function visualStatus(status: OperationStatus): VisualStatus {
 }
 
 function sceneDirective(
-  mode: Mode,
+  mode: EntryMode,
   status: OperationStatus,
 ): CommandSceneDirective {
   const visual = visualStatus(status);
@@ -82,7 +85,7 @@ function sceneDirective(
 }
 
 export function OperationsConsole() {
-  const [mode, setMode] = useState<Mode>("create");
+  const [mode, setMode] = useState<EntryMode>("create");
   const [interaction, setInteraction] = useState<OperationInteraction>("idle");
   const [createStatus, setCreateStatus] = useState<OperationStatus>("idle");
   const [joinStatus, setJoinStatus] = useState<OperationStatus>("idle");
@@ -97,13 +100,14 @@ export function OperationsConsole() {
 
   useCommandSceneDirective(sceneDirective(mode, activeStatus));
 
-  function selectMode(nextMode: Mode, focus = false) {
+  function selectMode(nextMode: EntryMode, focus = false) {
     if (commandLocked && nextMode !== mode) return;
 
     setMode(nextMode);
     setInteraction(nextMode === "create" ? "create-focus" : "join-focus");
+
     if (focus) {
-      const index = MODES.findIndex((item) => item.mode === nextMode);
+      const index = ENTRY_MODES.findIndex((item) => item.mode === nextMode);
       tabsRef.current[index]?.focus();
     }
   }
@@ -112,24 +116,24 @@ export function OperationsConsole() {
     let nextIndex = index;
 
     if (event.key === "ArrowRight") {
-      nextIndex = (index + 1) % MODES.length;
+      nextIndex = (index + 1) % ENTRY_MODES.length;
     } else if (event.key === "ArrowLeft") {
-      nextIndex = (index - 1 + MODES.length) % MODES.length;
+      nextIndex = (index - 1 + ENTRY_MODES.length) % ENTRY_MODES.length;
     } else if (event.key === "Home") {
       nextIndex = 0;
     } else if (event.key === "End") {
-      nextIndex = MODES.length - 1;
+      nextIndex = ENTRY_MODES.length - 1;
     } else {
       return;
     }
 
     event.preventDefault();
-    selectMode(MODES[nextIndex].mode, true);
+    selectMode(ENTRY_MODES[nextIndex].mode, true);
   }
 
   return (
     <section
-      className={`${styles.station} ${stateStyles.stationState} ${responsiveStyles.stationAdaptive} ${foundationStyles.foundationStation}`}
+      className={`${styles.station} ${stateStyles.stationState}`}
       data-mode={mode}
       data-status={visualStatus(activeStatus)}
       data-state={activeStatus}
@@ -139,31 +143,74 @@ export function OperationsConsole() {
     >
       <div className={styles.stationTopline}>
         <div>
-          <p className={styles.machineCode}>MESA-01 · SETOR OPERACIONAL</p>
+          <p className={styles.machineCode}>MESA-01 · SELEÇÃO DE PARTIDA</p>
           <h2 id="operations-station-title" className={styles.machineTitle}>
-            Mesa de autorização
+            Protocolos de entrada
           </h2>
         </div>
         <div className={styles.systemState} aria-hidden="true">
           <span className={styles.systemLamp} />
-          circuito pronto
+          sistema operacional
         </div>
       </div>
 
-      <div className={`${styles.machineBody} ${foundationStyles.foundationBody}`}>
-        <div className={`${styles.commandBay} ${foundationStyles.foundationCommandBay}`}>
-          <div className={styles.commandHeading}>
-            <p className={styles.commandEyebrow}>Selecione o protocolo de entrada</p>
-            <p className={styles.commandSequence}>AUTORIZAÇÃO // 01—02</p>
+      <div className={styles.machineBody}>
+        <section
+          className={styles.classicMode}
+          data-game-mode="classic"
+          aria-labelledby="classic-mode-title"
+        >
+          <div className={styles.modeHeader}>
+            <span className={styles.gameModeIndex}>01</span>
+            <span className={styles.lockedBadge}>Em breve</span>
           </div>
+
+          <div className={styles.gameModeCopy}>
+            <p className={styles.gameModeEyebrow}>Pareamento automático</p>
+            <h3 id="classic-mode-title">Jogo clássico</h3>
+            <p className={styles.classicDescription}>
+              Entre em uma fila pública e encontre automaticamente outros
+              comandantes para uma partida com regras clássicas.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            disabled
+            className={styles.classicButton}
+            aria-describedby="classic-mode-status"
+          >
+            <span>Encontrar partida</span>
+            <small id="classic-mode-status">Indisponível</small>
+          </button>
+        </section>
+
+        <section
+          className={styles.customMode}
+          data-game-mode="custom"
+          aria-labelledby="custom-mode-title"
+        >
+          <header className={styles.customHeader}>
+            <div>
+              <div className={styles.customHeadingLine}>
+                <span className={styles.gameModeIndex}>02</span>
+                <span className={styles.activeBadge}>Disponível</span>
+              </div>
+              <p className={styles.gameModeEyebrow}>Controle da operação</p>
+              <h3 id="custom-mode-title">Sala personalizada</h3>
+            </div>
+            <p className={styles.customDescription}>
+              Crie sua própria sala ou use o código enviado por outro comandante.
+            </p>
+          </header>
 
           <div
             className={styles.modeRail}
             role="tablist"
-            aria-label="Modo de operação"
+            aria-label="Ação da sala personalizada"
             aria-orientation="horizontal"
           >
-            {MODES.map((item, index) => {
+            {ENTRY_MODES.map((item, index) => {
               const selected = mode === item.mode;
               const tabId = `operations-${item.mode}-tab`;
               const panelId = `operations-${item.mode}-panel`;
@@ -182,7 +229,7 @@ export function OperationsConsole() {
                   aria-controls={panelId}
                   tabIndex={selected ? 0 : -1}
                   disabled={disabled}
-                  className={`${styles.modeTab} disabled:cursor-not-allowed disabled:opacity-40`}
+                  className={styles.modeTab}
                   onClick={() => selectMode(item.mode)}
                   onFocus={() => {
                     if (!commandLocked || selected) {
@@ -213,22 +260,12 @@ export function OperationsConsole() {
               hidden={mode !== "create"}
               className={styles.modePanel}
             >
-              <div className={styles.orderNumber}>PROTOCOLO 01</div>
-              <h3>Autorizar nova operação</h3>
+              <div className={styles.orderNumber}>PROTOCOLO PERSONALIZADO // 01</div>
+              <h4>Criar nova sala</h4>
               <p>
-                Abra uma sala, assuma o posto de anfitrião e reúna os demais
-                comandantes antes da distribuição territorial.
+                Abra uma operação para 2–6 jogadores e siga direto para o lobby
+                de preparação.
               </p>
-              <dl className={styles.telemetry}>
-                <div>
-                  <dt>Capacidade</dt>
-                  <dd>2–6 jogadores</dd>
-                </div>
-                <div>
-                  <dt>Destino</dt>
-                  <dd>Lobby de preparação</dd>
-                </div>
-              </dl>
               <CreateRoomButton
                 onStatusChange={setCreateStatus}
                 onInteractionChange={setInteraction}
@@ -243,11 +280,10 @@ export function OperationsConsole() {
               hidden={mode !== "join"}
               className={styles.modePanel}
             >
-              <div className={styles.orderNumber}>PROTOCOLO 02</div>
-              <h3>Localizar operação existente</h3>
+              <div className={styles.orderNumber}>PROTOCOLO PERSONALIZADO // 02</div>
+              <h4>Entrar com código</h4>
               <p>
-                Informe o identificador transmitido pelo anfitrião. A entrada
-                usa o mesmo código da sala e mantém sua digitação em caso de erro.
+                Cole ou digite o identificador compartilhado pelo anfitrião.
               </p>
               <JoinRoomForm
                 onStatusChange={setJoinStatus}
@@ -265,10 +301,10 @@ export function OperationsConsole() {
             <span className={styles.statusLamp} aria-hidden="true" />
             <span>{statusLabel(activeStatus, interaction)}</span>
             <span className={styles.statusMode}>
-              {mode === "create" ? "PROTOCOLO 01" : "PROTOCOLO 02"}
+              {mode === "create" ? "CRIAR SALA" : "ENTRAR EM SALA"}
             </span>
           </div>
-        </div>
+        </section>
       </div>
     </section>
   );
