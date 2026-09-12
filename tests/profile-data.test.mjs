@@ -25,13 +25,12 @@ async function withProfileEnvironment(state, run) {
   }
 }
 
-test("perfil normal retorna apenas identidade local e dados indisponíveis", async () => {
+test("perfil normal permanece guest enquanto não existe fonte real de identidade", async () => {
   await withProfileEnvironment(null, async () => {
     const snapshot = await getCurrentProfileSnapshot();
 
-    assert.equal(snapshot.state, "partial-data");
-    assert.equal(snapshot.identity?.displayName, "Luigi");
-    assert.equal(snapshot.identity?.source, "local-static");
+    assert.equal(snapshot.state, "guest");
+    assert.equal(snapshot.identity, null);
     assert.equal(snapshot.isEvaluationFixture, false);
     assert.equal(snapshot.progression.availability, "unavailable");
     assert.equal(snapshot.statistics.availability, "unavailable");
@@ -112,11 +111,12 @@ test("error de avaliação exercita o boundary real", async () => {
   });
 });
 
-test("estado inválido não ativa fixture", async () => {
+test("estado inválido não ativa fixture e retorna o fallback guest real", async () => {
   await withProfileEnvironment("estado-invalido", async () => {
     const snapshot = await getCurrentProfileSnapshot();
 
-    assert.equal(snapshot.state, "partial-data");
+    assert.equal(snapshot.state, "guest");
+    assert.equal(snapshot.identity, null);
     assert.equal(snapshot.isEvaluationFixture, false);
   });
 });
