@@ -1,6 +1,6 @@
 import type { CSSProperties, ReactNode } from "react";
 import styles from "./command-foundation.module.css";
-import { CommandScene } from "./command-scene";
+import { CommandScene, type CommandSceneState } from "./command-scene";
 import { COMMAND_FOUNDATION_TOKENS } from "./foundation-tokens";
 import {
   COMMAND_SCENE_MODE_LABELS,
@@ -13,8 +13,10 @@ type CommandShellProps = {
   children: ReactNode;
   className?: string;
   chrome?: boolean;
+  showModeRail?: boolean;
   sectionLabel?: string;
   style?: CSSProperties;
+  onSceneStateChange?: (state: CommandSceneState) => void;
 };
 
 function foundationStyle(style?: CSSProperties): CSSProperties {
@@ -48,8 +50,10 @@ export function CommandShell({
   children,
   className,
   chrome = true,
+  showModeRail = true,
   sectionLabel,
   style,
+  onSceneStateChange,
 }: CommandShellProps) {
   const normalizedIntent = normalizeCommandSceneIntent(intent);
   const modeLabel = sectionLabel ?? COMMAND_SCENE_MODE_LABELS[normalizedIntent.mode];
@@ -60,7 +64,7 @@ export function CommandShell({
       style={foundationStyle(style)}
       data-command-scene-mode={normalizedIntent.mode}
     >
-      <CommandScene intent={normalizedIntent} />
+      <CommandScene intent={normalizedIntent} onStateChange={onSceneStateChange} />
       <div className={styles.atmosphere} aria-hidden="true" />
       {chrome ? (
         <div className={styles.shellChrome} aria-hidden="true">
@@ -71,10 +75,12 @@ export function CommandShell({
               <strong>WAR BRASIL</strong>
             </span>
           </div>
-          <div className={styles.modeRail}>
-            <span>SISTEMA // COMANDO</span>
-            <strong>{modeLabel}</strong>
-          </div>
+          {showModeRail ? (
+            <div className={styles.modeRail}>
+              <span>SISTEMA // COMANDO</span>
+              <strong>{modeLabel}</strong>
+            </div>
+          ) : null}
         </div>
       ) : null}
       <div className={styles.shellContent}>{children}</div>
