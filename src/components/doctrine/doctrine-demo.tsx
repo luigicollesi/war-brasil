@@ -8,6 +8,7 @@ import type {
   DoctrinePresentation,
 } from "@/src/lib/doctrine-presentation";
 import styles from "./doctrine-experience.module.css";
+import ux from "./doctrine-ux-enhancements.module.css";
 
 function DemoFrame({
   label,
@@ -89,7 +90,7 @@ function TurnDemo({ chapter }: { chapter: DoctrineChapter }) {
       label="Fluxo de um turno"
       caption="Trocas antecedem a mobilização quando a fase está disponível; depois vêm reforços, conflito e reposicionamento."
     >
-      <div className={styles.phaseRail}>
+      <div className={`${styles.phaseRail} ${ux.phaseRail}`}>
         {chapter.metrics.map((phase, index) => (
           <div key={phase.label} className={styles.phaseStep}>
             <span>{String(index + 1).padStart(2, "0")}</span>
@@ -109,12 +110,12 @@ function TradeDemo({ presentation }: { presentation: DoctrinePresentation }) {
       label="Demonstração da fase de Trocas entre jogadores"
       caption={`Negociação não gera tropas. O jogador da vez pode fazer até ${presentation.playerTrade.offerLimitPerTurn} ofertas; os demais humanos ativos podem sinalizar até ${presentation.playerTrade.signalLimitPerTurn} cartas por turno.`}
     >
-      <div className={styles.playerTradeStage}>
+      <div className={ux.playerTradeStage}>
         <GuideTradeScene
           offerLimit={presentation.playerTrade.offerLimitPerTurn}
           signalLimit={presentation.playerTrade.signalLimitPerTurn}
         />
-        <div className={styles.tradeDoctrineNote}>
+        <div className={ux.tradeDoctrineNote}>
           <span>NEGOCIAÇÃO ≠ RESGATE</span>
           <strong>Cartas mudam de dono. Tropas só vêm do resgate de uma combinação válida.</strong>
         </div>
