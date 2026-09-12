@@ -13,6 +13,9 @@ const routeIntent = source(
 const commandShell = source(
   "src/components/pre-game/foundation/command-shell.tsx",
 );
+const commandCss = source(
+  "src/components/pre-game/foundation/command-foundation.module.css",
+);
 const homePage = source("src/app/page.tsx");
 const homeClient = source(
   "src/components/pre-game/home/command-home-client.tsx",
@@ -85,6 +88,13 @@ test("mode pertence à rota e clientes publicam somente diretivas semânticas", 
     assert.match(client, /useCommandSceneDirective/, `${name} não publica scene directive`);
     assert.doesNotMatch(client, /\bmode\s*:\s*"(?:entrance|operations|lobby|doctrine|profile)"/, `${name} declarou mode local`);
   }
+});
+
+test("Foundation mantém renderer, atmosfera e chrome presos ao viewport", () => {
+  assert.match(commandCss, /\.sceneHost\s*\{[\s\S]*?position: fixed;/);
+  assert.match(commandCss, /\.atmosphere\s*\{[\s\S]*?position: fixed;/);
+  assert.match(commandCss, /\.shellChrome\s*\{[\s\S]*?position: fixed;/);
+  assert.match(commandCss, /\.shellContent\s*\{[\s\S]*?min-height: 100dvh;/);
 });
 
 test("Foundation fornece clearances e páginas longas os consomem", () => {
