@@ -6,6 +6,10 @@ const lobby = readFileSync("src/components/lobby-client.tsx", "utf8");
 const styles = readFileSync("src/components/lobby-client.module.css", "utf8");
 const identity = readFileSync("src/app/war-identity.css", "utf8");
 const sync = readFileSync("src/hooks/use-lobby-sync.ts", "utf8");
+const syncCoordinator = readFileSync(
+  "src/lib/client/lobby-sync-coordinator.ts",
+  "utf8",
+);
 const rooms = readFileSync("src/lib/server/rooms.ts", "utf8");
 const foundationScene = readFileSync(
   "src/components/pre-game/foundation/command-scene.tsx",
@@ -26,7 +30,13 @@ test("lobby usa o snapshot vigente como fonte de verdade e assentos estáveis", 
 
 test("entrada, saída e ready continuam sincronizados sem reload manual", () => {
   assert.match(sync, /const POLLING_INTERVAL_MS = 1_000/);
-  assert.match(sync, /if \(inFlight\) return inFlight/);
+  assert.match(sync, /createLobbySyncCoordinator/);
+  assert.match(sync, /coordinator\.sync\(\)/);
+  assert.match(sync, /refreshRef\.current = coordinator\.refreshAfterCurrent/);
+  assert.match(syncCoordinator, /if \(inFlight\) return inFlight/);
+  assert.match(syncCoordinator, /const current = inFlight/);
+  assert.match(syncCoordinator, /await current/);
+  assert.match(syncCoordinator, /return sync\(\)/);
   assert.match(sync, /setSnapshot\(data as LobbySnapshot\)/);
   assert.match(sync, /window\.setTimeout\(\(\) => void poll\(\), POLLING_INTERVAL_MS\)/);
   assert.match(sync, /const refresh = useCallback\(\(\) => refreshRef\.current\(\), \[\]\)/);
