@@ -9,8 +9,10 @@ export {
 export {
   PreGameCommandRuntime,
   useCommandSceneDirective,
+  useCommandSceneState,
 } from "./pre-game-command-runtime";
 export type { CommandSceneDirective } from "./pre-game-command-runtime";
+export type { CommandSceneState } from "./command-scene";
 export {
   resolvePreGameSceneIntent,
   resolvePreGameSceneMode,
