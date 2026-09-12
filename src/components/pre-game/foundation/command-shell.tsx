@@ -36,6 +36,9 @@ function foundationStyle(style?: CSSProperties): CSSProperties {
     "--command-z-atmosphere": depth.atmosphere,
     "--command-z-content": depth.content,
     "--command-z-chrome": depth.chrome,
+    "--command-content-top": "clamp(88px, 10vw, 124px)",
+    "--command-content-inline": "clamp(20px, 4vw, 64px)",
+    "--command-content-bottom": "max(24px, env(safe-area-inset-bottom))",
     ...style,
   } as CSSProperties;
 }
