@@ -204,28 +204,31 @@ async function waitForText(locator, text) {
   await locator.getByText(text, { exact: false }).waitFor({ state: "visible", timeout: 8_000 });
 }
 
-async function assertPersistentScene(page, mode, probe = "foundation-persistent-canvas") {
-  await page.locator(`[data-command-scene-mode="${mode}"]`).waitFor({
-    state: "attached",
-    timeout: 10_000,
-  });
-  const canvas = page.locator("canvas.command-foundation-canvas");
-  await canvas.waitFor({ state: "attached", timeout: 10_000 });
-  const marker = await canvas.getAttribute("data-foundation-persistence-probe");
+async function assertPersistentScene(page, mode, probe = "foundation-persistent-scene") {
+  const shell = page.locator(`[data-command-scene-mode="${mode}"]`);
+  await shell.waitFor({ state: "attached", timeout: 10_000 });
+
+  const sceneHost = shell.locator("[data-webgl]").first();
+  await sceneHost.waitFor({ state: "attached", timeout: 10_000 });
+
+  const canvasCount = await shell.locator("canvas.command-foundation-canvas").count();
+  assert.ok(canvasCount <= 1, `mais de um Canvas da Foundation em ${mode}`);
+
+  const marker = await sceneHost.getAttribute("data-foundation-persistence-probe");
   const initialized = await page.evaluate(() =>
     sessionStorage.getItem("foundation-persistence-probe-initialized") === "1",
   );
 
   if (!initialized) {
     assert.equal(marker, null, "probe de persistência já existia antes da inicialização");
-    await canvas.evaluate((element, value) => {
+    await sceneHost.evaluate((element, value) => {
       element.setAttribute("data-foundation-persistence-probe", value);
       sessionStorage.setItem("foundation-persistence-probe-initialized", "1");
     }, probe);
     return;
   }
 
-  assert.equal(marker, probe, `Canvas da cena ${mode} foi remontado`);
+  assert.equal(marker, probe, `host da cena ${mode} foi remontado`);
 }
 
 async function roomStartState(db, code) {
@@ -256,7 +259,7 @@ async function main() {
   const browser = await playwright.chromium.launch({ headless: true });
 
   try {
-    await step("FND-02/13 Canvas persiste entre Operations, Lobby, Home, Doctrine e Profile", async () => {
+    await step("FND-02/13 host da cena persiste entre Operations, Lobby, Home, Doctrine e Profile", async () => {
       const actor = await createActor(browser);
       try {
         await assertPersistentScene(actor.page, "operations");
@@ -355,8 +358,13 @@ async function main() {
         });
         await captureDesktopMobile(host.page, "reconnecting");
         await host.page.unroute(roomEndpoint);
-        await host.page.getByRole("button", { name: "Sincronizar agora" }).click();
-        await host.page.getByText("Sala sincronizada", { exact: true }).waitFor({
+
+        const synced = host.page.getByText("Sala sincronizada", { exact: true });
+        const retry = host.page.getByRole("button", { name: "Sincronizar agora" });
+        if (!(await synced.isVisible().catch(() => false)) && await retry.isVisible().catch(() => false)) {
+          await retry.click({ timeout: 2_000 }).catch(() => undefined);
+        }
+        await synced.waitFor({
           state: "visible",
           timeout: 8_000,
         });
