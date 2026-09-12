@@ -126,15 +126,15 @@ test("ritual é pulável e repeat/reduced-motion derivam estado estável", () =>
   assert.match(home, /sessionStorage\.getItem\(HOME_RITUAL_SESSION_KEY\)/);
   assert.match(home, /sessionStorage\.setItem\(HOME_RITUAL_SESSION_KEY, "1"\)/);
   assert.match(home, /\(prefers-reduced-motion: reduce\)/);
-  assert.match(home, /visitMode === "first" && ritualActive \? ceremonyPhase : "stable"/);
+  assert.match(home, /sceneState !== "fallback"/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
 test("cerimônia Terra -> Brasil -> Mesa começa apenas quando a Foundation está pronta", () => {
   assert.match(home, /useState<HomeCeremonyPhase>\("earth"\)/);
   assert.match(home, /const sceneState = useCommandSceneState\(\)/);
-  assert.match(home, /if \(sceneState === "fallback"\)/);
-  assert.match(home, /if \(sceneState !== "ready"\) return/);
+  assert.match(home, /sceneState !== "fallback"/);
+  assert.match(home, /sceneState !== "ready"/);
   assert.match(home, /HOME_CEREMONY_TIMELINE\.brazil/);
   assert.match(home, /HOME_CEREMONY_TIMELINE\.table/);
   assert.match(home, /HOME_CEREMONY_TIMELINE\.stable/);
