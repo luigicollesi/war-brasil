@@ -42,6 +42,8 @@ const HOME_CEREMONY_TIMELINE = Object.freeze({
   stable: 2050,
 });
 
+let ritualSeenInRuntime = false;
+
 const DESTINATIONS: Destination[] = [
   {
     id: "operations",
@@ -81,6 +83,8 @@ function getServerReducedMotionSnapshot() {
 }
 
 function wasRitualSeenThisSession() {
+  if (ritualSeenInRuntime) return true;
+
   try {
     return sessionStorage.getItem(HOME_RITUAL_SESSION_KEY) === "1";
   } catch {
@@ -89,6 +93,8 @@ function wasRitualSeenThisSession() {
 }
 
 function markRitualSeen() {
+  ritualSeenInRuntime = true;
+
   try {
     sessionStorage.setItem(HOME_RITUAL_SESSION_KEY, "1");
   } catch {
@@ -98,8 +104,8 @@ function markRitualSeen() {
 
 export function CommandHomeClient({ children }: CommandHomeClientProps) {
   const [ceremonyPhase, setCeremonyPhase] = useState<HomeCeremonyPhase>("earth");
-  const [ritualActive, setRitualActive] = useState(true);
-  const [repeatVisit, setRepeatVisit] = useState(false);
+  const [ritualActive, setRitualActive] = useState(() => !ritualSeenInRuntime);
+  const [repeatVisit, setRepeatVisit] = useState(() => ritualSeenInRuntime);
   const [commandOpen, setCommandOpen] = useState(false);
   const [keyboardDestinationFocus, setKeyboardDestinationFocus] =
     useState<HomeDestinationId | null>(null);
@@ -138,7 +144,7 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
     const wasSeen = wasRitualSeenThisSession();
     markRitualSeen();
 
-    if (!wasSeen) return;
+    if (!wasSeen || repeatVisit) return;
 
     const frame = window.requestAnimationFrame(() => {
       setRepeatVisit(true);
@@ -146,7 +152,7 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, []);
+  }, [repeatVisit]);
 
   useEffect(() => {
     if (
