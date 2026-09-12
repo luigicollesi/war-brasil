@@ -143,6 +143,9 @@ test("Mesa, Globo e Coroa Orbital permanecem objetos de assinatura identificáve
 
 test("fallback 2D permanece visível até o Brasil 3D estar realmente pronto", () => {
   assert.match(scene, /war-brasil-42\.production\.svg/);
+  assert.match(scene, /loading="eager"/);
+  assert.match(scene, /installDice3DDependencyWarningFilter/);
+  assert.match(scene, /installDice3DDependencyWarningFilter\(\);/);
   assert.match(scene, /fallbackTable/);
   assert.match(scene, /fallbackCrownRingA/);
   assert.match(scene, /fallbackCrownRingB/);
