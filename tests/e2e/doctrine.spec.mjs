@@ -8,6 +8,7 @@ const CHAPTERS = [
   "preparacao",
   "objetivos",
   "turno",
+  "trocas",
   "reforcos",
   "ataque",
   "conquista",
@@ -21,6 +22,7 @@ const CHAPTERS = [
 const VISUAL_CHAPTERS = [
   "preparacao",
   "objetivos",
+  "trocas",
   "ataque",
   "cartas",
   "barreiras-conexoes",
@@ -43,6 +45,20 @@ test("todos os capítulos abrem diretamente no DOM", async ({ page }) => {
     await expect(page.getByRole("navigation", { name: "Capítulos da Doutrina" })).toBeVisible();
     await expect(page.locator("#chapter-title")).not.toBeEmpty();
   }
+});
+
+test("Trocas precede Reforços e explica negociação sem confundir com resgate", async ({ page }) => {
+  await page.goto(chapterUrl("turno"), { waitUntil: "domcontentloaded" });
+  const phases = await page.locator('dl[aria-label^="Dados-chave"] dd').allTextContents();
+  expect(phases).toEqual(["Trocas", "Reforços", "Ataque", "Manobra"]);
+
+  await chapterLink(page, "trocas").click();
+  await expect(page.locator('[data-doctrine-chapter="trocas"]')).toBeVisible();
+  await expect(page.getByText("NEGOCIAÇÃO ≠ RESGATE")).toBeVisible();
+  await expect(page.getByText(/Negociação não gera tropas/i)).toBeVisible();
+  await expect(
+    page.getByRole("figure", { name: "Demonstração da fase de Trocas entre jogadores" }),
+  ).toBeVisible();
 });
 
 test("navegação por teclado preserva foco, posição e histórico", async ({ page }) => {
@@ -68,7 +84,30 @@ test("navegação por teclado preserva foco, posição e histórico", async ({ p
   await expect(page.locator('[data-doctrine-chapter="objetivos"]')).toBeVisible();
 });
 
-test("mobile 390x844 aceita touch e não cria overflow horizontal da viewport", async ({ browser }) => {
+test("índice desktop acompanha a viewport durante a leitura", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(chapterUrl("trocas"), { waitUntil: "domcontentloaded" });
+
+  const index = page.locator('aside[aria-labelledby="doctrine-index-title"]');
+  const before = await index.boundingBox();
+  expect(before).not.toBeNull();
+
+  await page.evaluate(() => {
+    window.scrollTo(0, Math.min(650, document.documentElement.scrollHeight - window.innerHeight));
+  });
+  await expect(index).toBeVisible();
+
+  const after = await index.boundingBox();
+  expect(after).not.toBeNull();
+  expect(after.y).toBeGreaterThanOrEqual(0);
+  expect(after.y).toBeLessThan(160);
+  expect(after.y + after.height).toBeLessThanOrEqual(901);
+
+  const active = chapterLink(page, "trocas");
+  await expect(active).toHaveAttribute("aria-current", "location");
+});
+
+test("mobile 390x844 aceita touch, mantém índice acessível e não cria overflow horizontal", async ({ browser }) => {
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
     hasTouch: true,
@@ -79,6 +118,9 @@ test("mobile 390x844 aceita touch e não cria overflow horizontal da viewport", 
   await page.goto(chapterUrl("preparacao"), { waitUntil: "domcontentloaded" });
   await chapterLink(page, "ataque").tap();
   await expect(page.locator('[data-doctrine-chapter="ataque"]')).toBeVisible();
+
+  await page.evaluate(() => window.scrollTo(0, 500));
+  await expect(page.getByRole("navigation", { name: "Capítulos da Doutrina" })).toBeVisible();
 
   const reflow = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,
@@ -98,7 +140,7 @@ test("mobile 390x844 aceita touch e não cria overflow horizontal da viewport", 
   await context.close();
 });
 
-test("reduced-motion mantém conteúdo e reduz transições ornamentais", async ({ page }) => {
+test("reduced-motion mantém conteúdo e remove a transição de capítulo", async ({ page }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
   await page.goto(chapterUrl("cartas"), { waitUntil: "domcontentloaded" });
 
@@ -119,6 +161,18 @@ test("reduced-motion mantém conteúdo e reduz transições ornamentais", async 
   });
 
   expect(maxTransitionMs).toBeLessThanOrEqual(0.01);
+
+  const viewTransitionName = await page
+    .locator('[aria-labelledby="chapter-title"] > div')
+    .first()
+    .evaluate((element) => getComputedStyle(element).viewTransitionName);
+  expect(viewTransitionName).toBe("none");
+
+  const scrollBefore = await page.evaluate(() => window.scrollY);
+  await chapterLink(page, "trocas").click();
+  await expect(page.locator('[data-doctrine-chapter="trocas"]')).toBeVisible();
+  const scrollAfter = await page.evaluate(() => window.scrollY);
+  expect(Math.abs(scrollAfter - scrollBefore)).toBeLessThanOrEqual(1);
 });
 
 test("conteúdo essencial permanece disponível quando WebGL falha", async ({ page }) => {
@@ -147,10 +201,11 @@ test("deep-link continua ensinando com JavaScript desabilitado", async ({ browse
   const context = await browser.newContext({ javaScriptEnabled: false });
   const page = await context.newPage();
 
-  await page.goto(chapterUrl("ataque"), { waitUntil: "domcontentloaded" });
-  await expect(page.locator('[data-doctrine-chapter="ataque"]')).toBeVisible();
+  await page.goto(chapterUrl("trocas"), { waitUntil: "domcontentloaded" });
+  await expect(page.locator('[data-doctrine-chapter="trocas"]')).toBeVisible();
   await expect(page.locator("#chapter-title")).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Capítulos da Doutrina" })).toBeVisible();
+  await expect(page.getByText("NEGOCIAÇÃO ≠ RESGATE")).toBeVisible();
 
   await context.close();
 });

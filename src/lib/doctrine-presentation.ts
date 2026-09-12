@@ -8,6 +8,7 @@ export const DOCTRINE_CHAPTER_SLUGS = [
   "preparacao",
   "objetivos",
   "turno",
+  "trocas",
   "reforcos",
   "ataque",
   "conquista",
@@ -38,6 +39,7 @@ export type DoctrineChapter = {
     | "setup"
     | "objectives"
     | "turn"
+    | "trade"
     | "reinforcement"
     | "attack"
     | "conquest"
@@ -117,29 +119,48 @@ export function buildDoctrinePresentation() {
       number: "03",
       eyebrow: "Ciclo",
       title: "Cada turno é uma sequência de decisões irreversíveis.",
-      lede: "O fluxo operacional separa preparação, conflito e reposicionamento para que cada fase tenha uma responsabilidade clara.",
+      lede: "A rodada separa negociação, logística, conflito e reposicionamento. Jogadores humanos com cartas entram primeiro na fase de Trocas; sem cartas, o turno segue diretamente para Reforços.",
       principles: [
-        "Reforce antes de atacar; o saldo de reforços precisa ser alocado.",
-        "Ataques são opcionais e podem se repetir enquanto houver origens válidas.",
-        "A manobra encerra o reposicionamento estratégico do turno.",
+        "Trocas entre jogadores acontecem antes dos reforços e são uma negociação de cartas, não uma forma de gerar tropas.",
+        "Reforços são obrigatórios; ataques e manobra são decisões opcionais dentro das condições vigentes.",
+        "A manobra encerra o reposicionamento estratégico do turno antes da vez passar adiante.",
       ],
       metrics: [
-        { label: "Fase 1", value: "Reforços", detail: "Converter controle em capacidade." },
-        { label: "Fase 2", value: "Ataque", detail: "Projetar força através das conexões." },
-        { label: "Fase 3", value: "Manobra", detail: "Recompor a linha para o próximo ciclo." },
+        { label: "Fase 1", value: "Trocas", detail: "Condicional · humano com cartas." },
+        { label: "Fase 2", value: "Reforços", detail: "Obrigatório · converter controle em capacidade." },
+        { label: "Fase 3", value: "Ataque", detail: "Opcional · projetar força pelas conexões." },
+        { label: "Fase 4", value: "Manobra", detail: "Opcional · recompor a linha." },
       ],
       visual: "turn",
     },
     {
-      slug: "reforcos",
+      slug: "trocas",
       number: "04",
+      eyebrow: "Negociação",
+      title: "Troque informação e cartas antes de mobilizar tropas.",
+      lede: `O jogador humano da vez pode negociar com outro humano ativo antes dos reforços. Há até ${guide.playerTrade.offerLimitPerTurn} ofertas por turno; os demais humanos podem emitir até ${guide.playerTrade.signalLimitPerTurn} sinalizações de carta.`,
+      principles: [
+        "A oferta pode pedir uma carta de território específico, de um símbolo ou um coringa; bots não participam da negociação.",
+        "O destinatário pode aceitar, recusar ou fazer uma contraoferta. Uma negociação pendente precisa ser resolvida ou cancelada antes de seguir para os reforços.",
+        "Depois que os termos são aceitos, cada lado entrega uma carta compatível. Negociação não concede tropas — resgatar uma combinação de cartas é uma mecânica separada.",
+      ],
+      metrics: [
+        { label: "Ofertas do turno", value: String(guide.playerTrade.offerLimitPerTurn) },
+        { label: "Sinalizações", value: String(guide.playerTrade.signalLimitPerTurn) },
+        { label: "Participantes", value: "humanos ativos" },
+      ],
+      visual: "trade",
+    },
+    {
+      slug: "reforcos",
+      number: "05",
       eyebrow: "Logística",
       title: "Controle território para ampliar sua capacidade de guerra.",
-      lede: `O reforço base é metade dos territórios controlados, arredondada para baixo, respeitando o mínimo de ${guide.reinforcement.minimum} tropas. Regiões completas e cartas aumentam esse total.`,
+      lede: `O reforço base é metade dos territórios controlados, arredondada para baixo, respeitando o mínimo de ${guide.reinforcement.minimum} tropas. Regiões completas e resgates de cartas aumentam esse total.`,
       principles: [
         `Com ${guide.reinforcement.territoryExample} territórios, o exemplo vigente gera ${guide.reinforcement.baseExample} tropas de reforço base.`,
         "Dominar uma região inteira soma o bônus regional correspondente.",
-        "Trocas obrigatórias de cartas acontecem antes da alocação normal de reforços.",
+        "Resgates obrigatórios de cartas são resolvidos antes de concluir a alocação normal de reforços.",
       ],
       metrics: [
         { label: "Mínimo", value: `${guide.reinforcement.minimum} tropas` },
@@ -156,7 +177,7 @@ export function buildDoctrinePresentation() {
     },
     {
       slug: "ataque",
-      number: "05",
+      number: "06",
       eyebrow: "Conflito",
       title: "Ataque exige conexão, superioridade e uma tropa deixada para trás.",
       lede: `Um ataque normal parte de um território próprio com pelo menos ${guide.attack.normalMinimumTroops} tropas para um território inimigo conectado. A quantidade de dados depende da força na origem.`,
@@ -173,7 +194,7 @@ export function buildDoctrinePresentation() {
     },
     {
       slug: "conquista",
-      number: "06",
+      number: "07",
       eyebrow: "Ocupação",
       title: "Vencer a batalha ainda exige ocupar o território.",
       lede: `Quando a defesa chega a zero, o atacante precisa transferir tropas para o território conquistado e manter pelo menos ${guide.conquest.minimumTroopsLeftAtOrigin} tropa na origem.`,
@@ -191,7 +212,7 @@ export function buildDoctrinePresentation() {
     },
     {
       slug: "movimentacao",
-      number: "07",
+      number: "08",
       eyebrow: "Manobra",
       title: "Reposicione força sem criar tropas novas.",
       lede: `Na manobra, só tropas elegíveis podem sair da origem. O território precisa preservar ${guide.maneuver.minimumTroopsLeftAtOrigin} tropa e tropas recebidas durante a fase não podem ser movidas novamente.`,
@@ -209,7 +230,7 @@ export function buildDoctrinePresentation() {
     },
     {
       slug: "barreiras-conexoes",
-      number: "08",
+      number: "09",
       eyebrow: "Terreno",
       title: "O mapa tem atrito: nem toda conexão custa o mesmo.",
       lede: `Barreiras naturais alteram ataque e movimento. Um ataque através de barreira só fica disponível a partir de ${guide.attack.barrierMinimumTroops} tropas e cada comparação perdida pelo atacante custa ${guide.attack.barrierLossPerComparison} tropas.`,
@@ -226,10 +247,10 @@ export function buildDoctrinePresentation() {
     },
     {
       slug: "cartas",
-      number: "09",
+      number: "10",
       eyebrow: "Reserva",
-      title: "Cartas convertem conquista em capacidade futura.",
-      lede: `Conquistar ao menos um território no turno rende ${guide.cards.cardsPerConqueringTurn} carta ao fim dele. Combinações válidas podem ser resgatadas durante o reforço para receber tropas.`,
+      title: "Resgates convertem combinações de cartas em capacidade militar.",
+      lede: `Conquistar ao menos um território no turno rende ${guide.cards.cardsPerConqueringTurn} carta ao fim dele. Uma combinação válida pode ser resgatada por tropas; isso é diferente da negociação entre jogadores da fase de Trocas.`,
       principles: [
         "Três símbolos iguais ou um de cada símbolo formam uma combinação válida; o coringa substitui símbolos.",
         `Com ${guide.cards.mandatoryTradeHandSize} ou mais cartas, o resgate é obrigatório antes de reforçar.`,
@@ -243,7 +264,7 @@ export function buildDoctrinePresentation() {
     },
     {
       slug: "anomalias",
-      number: "10",
+      number: "11",
       eyebrow: "Anomalias",
       title: "Eventos mudam o tabuleiro; não mudam a fonte da regra.",
       lede: `O build atual possui um catálogo ativo de ${EVENT_COUNT} estados de evento conectados por um grafo ponderado. Cada anomalia aplica efeitos definidos pela engine e pela topologia vigente.`,
@@ -261,7 +282,7 @@ export function buildDoctrinePresentation() {
     },
     {
       slug: "vitoria",
-      number: "11",
+      number: "12",
       eyebrow: "Fim de operação",
       title: "A partida termina quando a missão deixa de ser hipótese.",
       lede: "A vitória é avaliada contra o objetivo atribuído ao jogador. Domínio visual do mapa, quantidade de tropas ou cartas não substituem a condição explícita da missão.",
@@ -282,6 +303,10 @@ export function buildDoctrinePresentation() {
   return {
     chapters,
     objectiveFormats,
+    playerTrade: {
+      offerLimitPerTurn: guide.playerTrade.offerLimitPerTurn,
+      signalLimitPerTurn: guide.playerTrade.signalLimitPerTurn,
+    },
     combatExample: guide.combat.example,
     cards: {
       tradeValues: guide.cards.tradeValues,
