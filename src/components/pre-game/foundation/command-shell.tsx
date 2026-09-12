@@ -1,11 +1,12 @@
 import type { CSSProperties, ReactNode } from "react";
 import styles from "./command-foundation.module.css";
-import { CommandScene, type CommandSceneState } from "./command-scene";
+import { CommandScene } from "./command-scene";
 import { COMMAND_FOUNDATION_TOKENS } from "./foundation-tokens";
 import {
   COMMAND_SCENE_MODE_LABELS,
   normalizeCommandSceneIntent,
   type CommandSceneIntent,
+  type CommandSceneState,
 } from "./scene-contract";
 
 type CommandShellProps = {
