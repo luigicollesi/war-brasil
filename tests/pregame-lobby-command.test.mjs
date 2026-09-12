@@ -84,7 +84,8 @@ test("Lobby publica diretiva sem criar um segundo CommandShell ou renderer", () 
   assert.match(lobby, /focus: "table"/);
   assert.match(lobby, /conflictLevel: sceneStartAuthorized \? 3 : sceneAllReady \? 1 : 0/);
   assert.match(lobby, /orbitalAlignment: sceneStartAuthorized \? 1 : 0/);
-  assert.match(foundationRuntime, /<CommandShell intent=\{intent\}>/);
+  assert.equal((foundationRuntime.match(/<CommandShell\b/g) ?? []).length, 1);
+  assert.match(foundationRuntime, /<CommandShell[\s\S]*?intent=\{intent\}[\s\S]*?>/);
   assert.doesNotMatch(lobby, /<CommandShell|CommandSceneIntent|@react-three|from "three"|CommandSceneCanvas|useThree/);
 });
 
