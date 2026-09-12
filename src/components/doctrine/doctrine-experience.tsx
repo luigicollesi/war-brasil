@@ -13,6 +13,7 @@ import {
 } from "@/src/lib/doctrine-presentation";
 import integration from "./doctrine-foundation-integration.module.css";
 import styles from "./doctrine-experience.module.css";
+import ux from "./doctrine-ux-enhancements.module.css";
 
 type ChapterDirection = "forward" | "backward";
 
@@ -157,7 +158,10 @@ export function DoctrineExperience({
       <div className={styles.ambientGrid} aria-hidden="true" />
 
       <div className={styles.shell}>
-        <aside className={styles.indexPanel} aria-labelledby="doctrine-index-title">
+        <aside
+          className={`${styles.indexPanel} ${ux.indexPanel}`}
+          aria-labelledby="doctrine-index-title"
+        >
           <div className={styles.indexHeader}>
             <span>WB / DTR</span>
             <small>
@@ -172,7 +176,7 @@ export function DoctrineExperience({
 
           <nav
             ref={chapterNavRef}
-            className={styles.chapterNav}
+            className={`${styles.chapterNav} ${ux.chapterNav}`}
             aria-label="Capítulos da Doutrina"
           >
             {presentation.chapters.map((chapter) => {
@@ -203,7 +207,7 @@ export function DoctrineExperience({
         </aside>
 
         <section className={styles.content} aria-labelledby="chapter-title">
-          <div className={styles.chapterSurface}>
+          <div className={ux.chapterSurface}>
             <header className={styles.chapterHeader}>
               <div className={styles.chapterCode}>
                 <span>CAPÍTULO {activeChapter.number}</span>
