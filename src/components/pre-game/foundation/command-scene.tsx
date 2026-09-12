@@ -17,6 +17,7 @@ import { COMMAND_FOUNDATION_TOKENS } from "./foundation-tokens";
 import {
   normalizeCommandSceneIntent,
   type CommandSceneIntent,
+  type CommandSceneState,
 } from "./scene-contract";
 
 installDice3DDependencyWarningFilter();
@@ -25,8 +26,6 @@ const CommandSceneCanvas = dynamic(
   () => import("./command-scene-canvas").then((module) => module.CommandSceneCanvas),
   { ssr: false, loading: () => null },
 );
-
-export type CommandSceneState = "loading" | "ready" | "fallback";
 
 type CommandSceneProps = {
   intent: CommandSceneIntent;
