@@ -121,7 +121,9 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
       ? "repeat"
       : "first";
   const effectiveCeremonyPhase: HomeCeremonyPhase =
-    visitMode === "first" && ritualActive ? ceremonyPhase : "stable";
+    visitMode === "first" && ritualActive && sceneState !== "fallback"
+      ? ceremonyPhase
+      : "stable";
   const destinationFocus = keyboardDestinationFocus ?? pointerDestinationFocus;
   const sceneIntent = getHomeSceneIntent({
     ceremonyPhase: effectiveCeremonyPhase,
@@ -147,15 +149,13 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
   }, []);
 
   useEffect(() => {
-    if (visitMode !== "first" || !ritualActive) return;
-
-    if (sceneState === "fallback") {
-      setCeremonyPhase("stable");
-      setRitualActive(false);
+    if (
+      visitMode !== "first" ||
+      !ritualActive ||
+      sceneState !== "ready"
+    ) {
       return;
     }
-
-    if (sceneState !== "ready") return;
 
     const brazilTimer = window.setTimeout(
       () => setCeremonyPhase("brazil"),
