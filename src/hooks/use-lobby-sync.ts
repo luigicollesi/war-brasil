@@ -5,6 +5,7 @@ import type { LobbySnapshot } from "@/src/lib/lobby";
 import { createLobbySyncCoordinator } from "@/src/lib/client/lobby-sync-coordinator";
 
 const POLLING_INTERVAL_MS = 1_000;
+const REQUEST_TIMEOUT_MS = 4_000;
 
 export function useLobbySync(code: string) {
   const [snapshot, setSnapshot] = useState<LobbySnapshot | null>(null);
@@ -15,11 +16,16 @@ export function useLobbySync(code: string) {
   useEffect(() => {
     let isActive = true;
     let requestController: AbortController | null = null;
-    let timeoutId = 0;
+    let pollTimeoutId = 0;
 
     const coordinator = createLobbySyncCoordinator(async () => {
       const controller = new AbortController();
       requestController = controller;
+      let requestTimedOut = false;
+      const requestTimeoutId = window.setTimeout(() => {
+        requestTimedOut = true;
+        controller.abort();
+      }, REQUEST_TIMEOUT_MS);
 
       try {
         const response = await fetch(`/api/rooms/${encodeURIComponent(code)}`, {
@@ -47,14 +53,17 @@ export function useLobbySync(code: string) {
         const aborted =
           requestError instanceof DOMException && requestError.name === "AbortError";
 
-        if (isActive && !aborted) {
+        if (isActive && (!aborted || requestTimedOut)) {
           setError(
-            requestError instanceof Error
-              ? requestError.message
-              : "Não foi possível atualizar a lobby.",
+            requestTimedOut
+              ? "A sincronização demorou além do esperado. Tentando novamente."
+              : requestError instanceof Error
+                ? requestError.message
+                : "Não foi possível atualizar a lobby.",
           );
         }
       } finally {
+        window.clearTimeout(requestTimeoutId);
         if (isActive) setIsLoading(false);
         if (requestController === controller) requestController = null;
       }
@@ -63,7 +72,7 @@ export function useLobbySync(code: string) {
     async function poll() {
       await coordinator.sync();
       if (isActive) {
-        timeoutId = window.setTimeout(() => void poll(), POLLING_INTERVAL_MS);
+        pollTimeoutId = window.setTimeout(() => void poll(), POLLING_INTERVAL_MS);
       }
     }
 
@@ -75,7 +84,7 @@ export function useLobbySync(code: string) {
 
     return () => {
       isActive = false;
-      window.clearTimeout(timeoutId);
+      window.clearTimeout(pollTimeoutId);
       requestController?.abort();
       refreshRef.current = async () => {};
     };
