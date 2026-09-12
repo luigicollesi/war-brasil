@@ -345,19 +345,22 @@ async function main() {
           timeout: 3_000,
         });
 
-        const roomEndpoint = `**/api/rooms/${room.code}`;
+        const roomEndpoint = `${BASE_URL}/api/rooms/${room.code}`;
         await host.page.route(roomEndpoint, (route) => route.abort());
+        await factionInput(host.page).fill("Comando Verde Offline");
+        await host.page.getByRole("button", { name: "Salvar nome da facção", exact: true }).click();
         await host.page.getByText("Reconectando ao comando", { exact: true }).waitFor({
           state: "visible",
-          timeout: 5_000,
+          timeout: 8_000,
         });
         await captureDesktopMobile(host.page, "reconnecting");
         await host.page.unroute(roomEndpoint);
         await host.page.getByRole("button", { name: "Sincronizar agora" }).click();
         await host.page.getByText("Sala sincronizada", { exact: true }).waitFor({
           state: "visible",
-          timeout: 5_000,
+          timeout: 8_000,
         });
+        await waitForText(host.page.locator('li[data-slot="1"]'), "Comando Verde Offline");
 
         const guestSession = await sessionCookie(guest);
         await db.query(
