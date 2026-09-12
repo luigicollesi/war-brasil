@@ -1,12 +1,21 @@
 /*
- * The Lobby ready rail is intentionally viewport-fixed, but its informational
- * surface must never swallow pointer input meant for the scrollable editor.
- * Only the rail's own CTA participates in pointer hit-testing.
+ * Keep the readiness action visually persistent near the end of the Lobby without
+ * removing it from document flow. A fixed full-width rail can cover editable
+ * controls and make otherwise-visible buttons impossible to click or focus.
  */
 .wb-ready-rail {
-  pointer-events: none;
+  position: sticky;
+  right: auto;
+  bottom: 0;
+  left: auto;
+  margin-top: clamp(20px, 3vw, 32px);
+  padding-bottom: env(safe-area-inset-bottom);
+  pointer-events: auto;
 }
 
-.wb-ready-rail .wb-ready-inner > .wb-button {
-  pointer-events: auto;
+@media (max-width: 640px) {
+  .wb-ready-rail {
+    position: relative;
+    bottom: auto;
+  }
 }
