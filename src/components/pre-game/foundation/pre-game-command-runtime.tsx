@@ -11,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 import { CommandShell } from "./command-shell";
+import type { CommandSceneState } from "./command-scene";
 import { resolvePreGameSceneIntent } from "./pre-game-route-intent";
 import type {
   CommandConflictLevel,
@@ -37,6 +38,7 @@ type PublishSceneDirective = (
 ) => () => void;
 
 const SceneDirectiveContext = createContext<PublishSceneDirective | null>(null);
+const SceneStateContext = createContext<CommandSceneState | null>(null);
 
 function mergeSceneIntent(
   routeIntent: CommandSceneIntent,
@@ -59,6 +61,7 @@ export function PreGameCommandRuntime({ children }: { children: ReactNode }) {
     [pathname],
   );
   const [registration, setRegistration] = useState<DirectiveRegistration | null>(null);
+  const [sceneState, setSceneState] = useState<CommandSceneState>("loading");
 
   const publishDirective = useCallback<PublishSceneDirective>(
     (directive) => {
@@ -85,9 +88,17 @@ export function PreGameCommandRuntime({ children }: { children: ReactNode }) {
   if (!intent) return <>{children}</>;
 
   return (
-    <SceneDirectiveContext.Provider value={publishDirective}>
-      <CommandShell intent={intent}>{children}</CommandShell>
-    </SceneDirectiveContext.Provider>
+    <SceneStateContext.Provider value={sceneState}>
+      <SceneDirectiveContext.Provider value={publishDirective}>
+        <CommandShell
+          intent={intent}
+          showModeRail={pathname !== "/"}
+          onSceneStateChange={setSceneState}
+        >
+          {children}
+        </CommandShell>
+      </SceneDirectiveContext.Provider>
+    </SceneStateContext.Provider>
   );
 }
 
@@ -121,4 +132,14 @@ export function useCommandSceneDirective(
 
     return publishDirective(stableDirective);
   }, [enabled, publishDirective, stableDirective]);
+}
+
+export function useCommandSceneState() {
+  const sceneState = useContext(SceneStateContext);
+  if (!sceneState) {
+    throw new Error(
+      "useCommandSceneState deve ser usado dentro de PreGameCommandRuntime.",
+    );
+  }
+  return sceneState;
 }
