@@ -1,0 +1,38 @@
+/*
+ * Fixed Lobby readiness controls must never make the command console
+ * unreachable. The page keeps enough scroll range for the fixed rail and the
+ * rail itself only captures pointer input on its interactive controls.
+ */
+html:has(.wb-ready-rail) {
+  scroll-padding-bottom: 132px;
+}
+
+body:has(.wb-ready-rail) {
+  padding-bottom: 116px;
+}
+
+.wb-ready-rail {
+  pointer-events: none;
+}
+
+.wb-ready-rail :where(button, a, input, select, textarea, [role="button"]) {
+  pointer-events: auto;
+}
+
+.wb-faction-editor {
+  scroll-margin-bottom: 132px;
+}
+
+@media (max-width: 640px) {
+  html:has(.wb-ready-rail) {
+    scroll-padding-bottom: 164px;
+  }
+
+  body:has(.wb-ready-rail) {
+    padding-bottom: 148px;
+  }
+
+  .wb-faction-editor {
+    scroll-margin-bottom: 164px;
+  }
+}
