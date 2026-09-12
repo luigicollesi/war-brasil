@@ -19,6 +19,7 @@ export const COMMAND_SCENE_FOCUSES = [
 export type CommandSceneFocus = (typeof COMMAND_SCENE_FOCUSES)[number];
 export type CommandConflictLevel = 0 | 1 | 2 | 3;
 export type CommandOrbitalAlignment = 0 | 1;
+export type CommandSceneState = "loading" | "ready" | "fallback";
 
 export type CommandSceneIntent = Readonly<{
   mode: CommandSceneMode;
