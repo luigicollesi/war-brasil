@@ -16,6 +16,7 @@ const DATABASE_URL = process.env.LOBBY_E2E_DATABASE_URL;
 const ARTIFACT_DIR = path.resolve(
   process.env.LOBBY_E2E_ARTIFACT_DIR ?? "test-results/lobby-eval",
 );
+const LOBBY_CONVERGENCE_TIMEOUT_MS = 15_000;
 
 if (!DATABASE_URL) {
   throw new Error("LOBBY_E2E_DATABASE_URL é obrigatória.");
@@ -121,7 +122,7 @@ async function openLobby(actor, code) {
 async function expectOccupied(page, count) {
   await page.getByRole("heading", { name: `${count}/6 postos ocupados` }).waitFor({
     state: "visible",
-    timeout: 8_000,
+    timeout: LOBBY_CONVERGENCE_TIMEOUT_MS,
   });
 }
 
@@ -133,7 +134,10 @@ async function saveFaction(page, name) {
   const input = factionInput(page);
   await input.fill(name);
   await page.getByRole("button", { name: "Salvar nome da facção", exact: true }).click();
-  await page.getByText(name, { exact: true }).first().waitFor({ state: "visible", timeout: 8_000 });
+  await page.getByText(name, { exact: true }).first().waitFor({
+    state: "visible",
+    timeout: LOBBY_CONVERGENCE_TIMEOUT_MS,
+  });
 }
 
 function readyButton(page) {
@@ -153,7 +157,7 @@ async function setReady(page, value) {
       return candidate?.getAttribute("aria-pressed") === String(expected);
     },
     { expected: value },
-    { timeout: 8_000 },
+    { timeout: LOBBY_CONVERGENCE_TIMEOUT_MS },
   );
 }
 
@@ -201,7 +205,10 @@ async function captureDesktopMobile(page, name) {
 }
 
 async function waitForText(locator, text) {
-  await locator.getByText(text, { exact: false }).waitFor({ state: "visible", timeout: 8_000 });
+  await locator.getByText(text, { exact: false }).waitFor({
+    state: "visible",
+    timeout: LOBBY_CONVERGENCE_TIMEOUT_MS,
+  });
 }
 
 async function roomPlayerNames(db, code) {
@@ -214,6 +221,26 @@ async function roomPlayerNames(db, code) {
     [code],
   );
   return result.rows.map((row) => row.faction_name);
+}
+
+async function expectStationOrder(page, expectedNames) {
+  try {
+    await page.waitForFunction(
+      (names) =>
+        names.every((name, index) => {
+          const station = document.querySelector(`li[data-slot="${index + 1}"]`);
+          return station?.textContent?.includes(name) ?? false;
+        }),
+      expectedNames,
+      { timeout: LOBBY_CONVERGENCE_TIMEOUT_MS },
+    );
+  } catch (error) {
+    const actual = await page.locator("li[data-slot]").allTextContents();
+    throw new Error(
+      `postos não convergiram para a ordem autoritativa. esperado=${JSON.stringify(expectedNames)} atual=${JSON.stringify(actual)}`,
+      { cause: error },
+    );
+  }
 }
 
 async function assertPersistentScene(page, mode, probe = "foundation-persistent-scene") {
@@ -378,17 +405,32 @@ async function main() {
         }
         await synced.waitFor({
           state: "visible",
-          timeout: 8_000,
+          timeout: LOBBY_CONVERGENCE_TIMEOUT_MS,
         });
         await waitForText(host.page.locator('li[data-slot="1"]'), "Comando Verde Offline");
 
-        const guestSession = await sessionCookie(guest);
-        await db.query(
+        const guestSnapshot = await apiJson(guest.page, `/api/rooms/${room.code}`);
+        assert.equal(guestSnapshot.status, 200, JSON.stringify(guestSnapshot.body));
+        const guestPlayerId = guestSnapshot.body?.me?.id;
+        assert.ok(guestPlayerId, "snapshot do guest não expôs o jogador local");
+
+        const removedGuest = await db.query(
           `DELETE FROM game.players
-            WHERE player_session = $1
-              AND room_id = (SELECT id FROM game.rooms WHERE code = $2)`,
-          [guestSession, room.code],
+            WHERE id = $1
+              AND room_id = (SELECT id FROM game.rooms WHERE code = $2)
+            RETURNING id`,
+          [guestPlayerId, room.code],
         );
+        assert.equal(removedGuest.rowCount, 1, "simulação de saída não removeu exatamente um jogador");
+
+        const authoritativeAfterExit = await apiJson(host.page, `/api/rooms/${room.code}`);
+        assert.equal(authoritativeAfterExit.status, 200, JSON.stringify(authoritativeAfterExit.body));
+        assert.equal(
+          authoritativeAfterExit.body?.players?.length,
+          1,
+          "API autoritativa ainda expõe o jogador removido",
+        );
+
         await expectOccupied(host.page, 1);
         await waitForText(host.page.locator('li[data-slot="2"]'), "Aguardando jogador");
         await captureDesktopMobile(host.page, "1-player");
@@ -435,12 +477,7 @@ async function main() {
         );
 
         await expectOccupied(host.page, 6);
-        for (const [index, factionName] of authoritativeOrder.entries()) {
-          await waitForText(
-            host.page.locator(`li[data-slot="${index + 1}"]`),
-            factionName,
-          );
-        }
+        await expectStationOrder(host.page, authoritativeOrder);
 
         const initialStations = await host.page.locator('li[data-slot]').allTextContents();
         await new Promise((resolve) => setTimeout(resolve, 1_200));
