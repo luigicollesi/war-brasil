@@ -1,0 +1,179 @@
+.indexPanel {
+  top: var(--command-content-top, clamp(78px, 7vw, 104px));
+  height: calc(
+    100dvh - var(--command-content-top, clamp(78px, 7vw, 104px)) -
+      var(--command-content-bottom, 24px)
+  );
+  min-height: 0;
+  max-height: calc(
+    100dvh - var(--command-content-top, clamp(78px, 7vw, 104px)) -
+      var(--command-content-bottom, 24px)
+  );
+  overflow: hidden;
+}
+
+.chapterNav {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+}
+
+.chapterSurface {
+  view-transition-name: doctrine-chapter;
+  contain: layout paint;
+}
+
+.phaseRail {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.playerTradeStage {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  align-content: center;
+  gap: 18px;
+  min-height: 430px;
+  padding: 26px;
+}
+
+.playerTradeStage :global(.wb-guide-trade-scene) {
+  margin-top: 0;
+}
+
+.playerTradeStage :global(.wb-guide-trade-stage) {
+  margin-inline: auto;
+  width: min(100%, 720px);
+}
+
+.tradeDoctrineNote {
+  display: grid;
+  gap: 5px;
+  width: min(100%, 720px);
+  margin-inline: auto;
+  padding: 12px 14px;
+  border-left: 2px solid var(--d-gold-bright);
+  background: linear-gradient(90deg, rgba(205, 180, 107, 0.1), transparent 84%);
+}
+
+.tradeDoctrineNote span {
+  color: var(--d-gold-bright);
+  font: 700 8px/1 var(--font-geist-mono), monospace;
+  letter-spacing: 0.12em;
+}
+
+.tradeDoctrineNote strong {
+  color: var(--d-ink);
+  font: 700 12px/1.45 var(--font-wb-display), sans-serif;
+  letter-spacing: 0.025em;
+}
+
+:global(html[data-doctrine-direction="forward"]::view-transition-old(doctrine-chapter)) {
+  animation: doctrine-exit-forward 180ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+:global(html[data-doctrine-direction="forward"]::view-transition-new(doctrine-chapter)) {
+  animation: doctrine-enter-forward 220ms cubic-bezier(0, 0, 0.2, 1) both;
+}
+
+:global(html[data-doctrine-direction="backward"]::view-transition-old(doctrine-chapter)) {
+  animation: doctrine-exit-backward 180ms cubic-bezier(0.4, 0, 1, 1) both;
+}
+
+:global(html[data-doctrine-direction="backward"]::view-transition-new(doctrine-chapter)) {
+  animation: doctrine-enter-backward 220ms cubic-bezier(0, 0, 0.2, 1) both;
+}
+
+@keyframes doctrine-exit-forward {
+  to {
+    opacity: 0;
+    transform: translateX(-8px) scale(0.997);
+  }
+}
+
+@keyframes doctrine-enter-forward {
+  from {
+    opacity: 0;
+    transform: translateX(12px) scale(0.997);
+  }
+}
+
+@keyframes doctrine-exit-backward {
+  to {
+    opacity: 0;
+    transform: translateX(8px) scale(0.997);
+  }
+}
+
+@keyframes doctrine-enter-backward {
+  from {
+    opacity: 0;
+    transform: translateX(-12px) scale(0.997);
+  }
+}
+
+@media (max-width: 1080px) {
+  .phaseRail {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .indexPanel {
+    position: sticky;
+    z-index: 10;
+    top: var(--command-content-top, 88px);
+    height: auto;
+    min-height: 0;
+    max-height: none;
+    padding: 8px 16px 6px;
+    border-right: 0;
+    border-bottom: 1px solid var(--d-line);
+    background: rgba(7, 13, 10, 0.96);
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.24);
+    backdrop-filter: blur(14px);
+  }
+
+  .indexPanel > div:first-child,
+  .indexPanel > p,
+  .indexPanel > div:last-child {
+    display: none;
+  }
+
+  .indexPanel h1 {
+    margin: 0 0 5px;
+    font-size: 18px;
+    line-height: 1;
+    letter-spacing: 0.08em;
+  }
+
+  .chapterNav {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-gutter: auto;
+  }
+
+  .phaseRail {
+    grid-template-columns: 1fr;
+  }
+
+  .playerTradeStage {
+    min-height: 360px;
+    padding: 18px;
+  }
+}
+
+@media (max-width: 420px) {
+  .playerTradeStage {
+    min-height: 330px;
+    padding: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chapterSurface {
+    view-transition-name: none;
+  }
+}
