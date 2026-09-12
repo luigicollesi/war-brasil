@@ -22,7 +22,6 @@
 
 .chapterSurface {
   view-transition-name: doctrine-chapter;
-  contain: layout paint;
 }
 
 .phaseRail {
