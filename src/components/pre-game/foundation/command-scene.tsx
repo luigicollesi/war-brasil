@@ -6,6 +6,7 @@ import {
   Component,
   type ReactNode,
   useCallback,
+  useEffect,
   useMemo,
   useState,
   useSyncExternalStore,
@@ -25,9 +26,12 @@ const CommandSceneCanvas = dynamic(
   { ssr: false, loading: () => null },
 );
 
+export type CommandSceneState = "loading" | "ready" | "fallback";
+
 type CommandSceneProps = {
   intent: CommandSceneIntent;
   className?: string;
+  onStateChange?: (state: CommandSceneState) => void;
 };
 
 type SceneErrorBoundaryProps = {
@@ -103,7 +107,7 @@ function useWebGLAvailability() {
 }
 
 function CommandSceneFallback({ intent }: { intent: ReturnType<typeof normalizeCommandSceneIntent> }) {
-  const globeVisible = intent.mode === "entrance" || intent.focus === "earth";
+  const globeVisible = intent.focus === "earth";
 
   return (
     <div className={styles.sceneFallback} aria-hidden="true">
@@ -135,7 +139,7 @@ function CommandSceneFallback({ intent }: { intent: ReturnType<typeof normalizeC
   );
 }
 
-export function CommandScene({ intent, className }: CommandSceneProps) {
+export function CommandScene({ intent, className, onStateChange }: CommandSceneProps) {
   const normalizedIntent = useMemo(
     () => normalizeCommandSceneIntent(intent),
     [intent],
@@ -162,7 +166,15 @@ export function CommandScene({ intent, className }: CommandSceneProps) {
   }, []);
 
   const sceneUnavailable = sceneFailed || !webglAvailable;
-  const webglState = sceneUnavailable ? "fallback" : sceneReady ? "ready" : "loading";
+  const webglState: CommandSceneState = sceneUnavailable
+    ? "fallback"
+    : sceneReady
+      ? "ready"
+      : "loading";
+
+  useEffect(() => {
+    onStateChange?.(webglState);
+  }, [onStateChange, webglState]);
 
   return (
     <div
