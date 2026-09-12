@@ -289,6 +289,8 @@ async function main() {
 
         const roomEndpoint = `**/api/rooms/${room.code}`;
         await host.page.route(roomEndpoint, (route) => route.abort());
+        await factionInput(host.page).fill("Comando Verde III");
+        await host.page.getByRole("button", { name: "Salvar nome da facção", exact: true }).click();
         await host.page.getByText("Reconectando ao comando", { exact: true }).waitFor({
           state: "visible",
           timeout: 5_000,
@@ -297,6 +299,10 @@ async function main() {
         await host.page.unroute(roomEndpoint);
         await host.page.getByRole("button", { name: "Sincronizar agora" }).click();
         await host.page.getByText("Sala sincronizada", { exact: true }).waitFor({
+          state: "visible",
+          timeout: 5_000,
+        });
+        await host.page.getByText("Comando Verde III", { exact: true }).first().waitFor({
           state: "visible",
           timeout: 5_000,
         });
