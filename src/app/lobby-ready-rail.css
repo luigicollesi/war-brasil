@@ -17,6 +17,10 @@
   .wb-ready-rail {
     position: relative;
     bottom: auto;
+    /* The legacy global rail adds backdrop-filter, which makes this element a
+       containing block for fixed descendants. Disable it so the compact CTA
+       is fixed to the viewport rather than to the rail at the end of the page. */
+    backdrop-filter: none;
   }
 
   .wb-ready-rail > .wb-ready-inner > .wb-button {
