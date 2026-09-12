@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import type { MouseEvent } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DoctrineChapterDemo } from "@/src/components/doctrine/doctrine-demo";
 import { useCommandSceneDirective } from "@/src/components/pre-game/foundation";
 import {
@@ -82,22 +82,25 @@ export function DoctrineExperience({
     orbitalAlignment: 0,
   });
 
-  function transitionToChapter(slug: DoctrineChapterSlug, direction: ChapterDirection) {
-    if (slug === activeSlug) return;
+  const transitionToChapter = useCallback(
+    (slug: DoctrineChapterSlug, direction: ChapterDirection) => {
+      if (slug === activeSlug) return;
 
-    const apply = () => setActiveSlug(slug);
-    const transitionDocument = document as TransitionDocument;
-    if (prefersReducedMotion() || !transitionDocument.startViewTransition) {
-      apply();
-      return;
-    }
+      const apply = () => setActiveSlug(slug);
+      const transitionDocument = document as TransitionDocument;
+      if (prefersReducedMotion() || !transitionDocument.startViewTransition) {
+        apply();
+        return;
+      }
 
-    document.documentElement.dataset.doctrineDirection = direction;
-    const transition = transitionDocument.startViewTransition(apply);
-    void transition.finished.finally(() => {
-      delete document.documentElement.dataset.doctrineDirection;
-    });
-  }
+      document.documentElement.dataset.doctrineDirection = direction;
+      const transition = transitionDocument.startViewTransition(apply);
+      void transition.finished.finally(() => {
+        delete document.documentElement.dataset.doctrineDirection;
+      });
+    },
+    [activeSlug],
+  );
 
   useEffect(() => {
     const onPopState = () => {
@@ -113,7 +116,7 @@ export function DoctrineExperience({
 
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
-  }, [activeIndex, activeSlug, presentation.chapters]);
+  }, [activeIndex, presentation.chapters, transitionToChapter]);
 
   useEffect(() => {
     const nav = chapterNavRef.current;
