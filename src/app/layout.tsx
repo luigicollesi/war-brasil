@@ -4,6 +4,7 @@ import { PreGameCommandRuntime } from "@/src/components/pre-game/foundation";
 import { getSiteUrl } from "@/src/lib/site-url";
 import "./globals.css";
 import "./war-identity.css";
+import "./lobby-safe-area.css";
 import "./war-guide.css";
 import "./war-guide-primitives.css";
 import "./war-guide-geographic.css";
