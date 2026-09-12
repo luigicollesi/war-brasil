@@ -88,10 +88,68 @@ const COMPACT_FOCUS_TARGETS: Readonly<
   none: null,
 };
 
+const ENTRANCE_FOCUS_PRESETS: Readonly<
+  Partial<Record<CommandSceneFocus, SceneModePreset>>
+> = {
+  earth: {
+    camera: [-1.9, 1.3, 12.6],
+    target: FOCUS_TARGETS.earth!,
+    fov: 42,
+  },
+  brazil: {
+    camera: [-0.2, 1.65, 10.8],
+    target: FOCUS_TARGETS.brazil!,
+    fov: 36,
+  },
+  table: {
+    camera: [0.55, 2.35, 10.2],
+    target: FOCUS_TARGETS.table!,
+    fov: 33,
+  },
+  insignia: {
+    camera: [2.8, 2, 10.4],
+    target: FOCUS_TARGETS.insignia!,
+    fov: 34,
+  },
+};
+
+const COMPACT_ENTRANCE_FOCUS_PRESETS: Readonly<
+  Partial<Record<CommandSceneFocus, SceneModePreset>>
+> = {
+  earth: {
+    camera: [-0.9, 2.1, 15.8],
+    target: COMPACT_FOCUS_TARGETS.earth!,
+    fov: 45,
+  },
+  brazil: {
+    camera: [0.6, 2.2, 14.9],
+    target: COMPACT_FOCUS_TARGETS.brazil!,
+    fov: 41,
+  },
+  table: {
+    camera: [1, 2.8, 14.4],
+    target: COMPACT_FOCUS_TARGETS.table!,
+    fov: 39,
+  },
+  insignia: {
+    camera: [2.2, 2.5, 14.5],
+    target: COMPACT_FOCUS_TARGETS.insignia!,
+    fov: 39,
+  },
+};
+
 export function resolveCommandCameraPose(
   intent: NormalizedCommandSceneIntent,
   compact = false,
 ): CommandCameraPose {
+  if (intent.mode === "entrance") {
+    const entrancePresets = compact
+      ? COMPACT_ENTRANCE_FOCUS_PRESETS
+      : ENTRANCE_FOCUS_PRESETS;
+    const entrancePose = entrancePresets[intent.focus];
+    if (entrancePose) return entrancePose;
+  }
+
   const presets = compact ? COMPACT_MODE_PRESETS : MODE_PRESETS;
   const focusTargets = compact ? COMPACT_FOCUS_TARGETS : FOCUS_TARGETS;
   const mode = presets[intent.mode];
