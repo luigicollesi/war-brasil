@@ -11,13 +11,13 @@ import {
   type ReactNode,
 } from "react";
 import { CommandShell } from "./command-shell";
-import type { CommandSceneState } from "./command-scene";
 import { resolvePreGameSceneIntent } from "./pre-game-route-intent";
 import type {
   CommandConflictLevel,
   CommandOrbitalAlignment,
   CommandSceneFocus,
   CommandSceneIntent,
+  CommandSceneState,
 } from "./scene-contract";
 
 export type CommandSceneDirective = Readonly<{
