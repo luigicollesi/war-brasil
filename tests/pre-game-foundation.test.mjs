@@ -11,6 +11,7 @@ const presets = source("src/components/pre-game/foundation/scene-presets.ts");
 const shell = source("src/components/pre-game/foundation/command-shell.tsx");
 const scene = source("src/components/pre-game/foundation/command-scene.tsx");
 const canvas = source("src/components/pre-game/foundation/command-scene-canvas.tsx");
+const genesisPass = source("src/components/pre-game/foundation/territory-genesis-pass.tsx");
 const primitives = source("src/components/pre-game/foundation/command-primitives.tsx");
 const publicIndex = source("src/components/pre-game/foundation/index.ts");
 const css = source("src/components/pre-game/foundation/command-foundation.module.css");
@@ -116,7 +117,7 @@ test("Brasil 2.5D deriva somente do SVG canônico e mantém os 42 ids únicos", 
   assert.match(canvas, /new ExtrudeGeometry/);
   assert.match(canvas, /new EdgesGeometry/);
   assert.match(canvas, /BrazilTerritoryAssembly/);
-  assert.match(canvas, /territoryId: number/);
+  assert.match(genesisPass, /territoryId: number/);
   assert.doesNotMatch(canvas, /data-territory-id|String\(pathIndex \+ 1\)/);
   assert.doesNotMatch(canvas, /position-x=\{.*territoryExplode|position-y=\{.*territoryExplode/);
 });
@@ -141,7 +142,7 @@ test("Mesa, Globo e Coroa Orbital permanecem objetos de assinatura identificáve
   assert.match(canvas, /name="CommandInsignia"/);
 });
 
-test("fallback 2D permanece visível até o Brasil 3D estar realmente pronto", () => {
+test("fallback 2D permanece visível até a cena estável e lifecycle intermediário é explícito", () => {
   assert.match(scene, /war-brasil-42\.production\.svg/);
   assert.match(scene, /loading="eager"/);
   assert.match(scene, /installDice3DDependencyWarningFilter/);
@@ -150,11 +151,14 @@ test("fallback 2D permanece visível até o Brasil 3D estar realmente pronto", (
   assert.match(scene, /fallbackCrownRingA/);
   assert.match(scene, /fallbackCrownRingB/);
   assert.match(scene, /fallbackCrownRingC/);
+  assert.match(scene, /const \[scenePhase, setScenePhase\] = useState<CommandSceneState>\("loading"\)/);
   assert.match(scene, /const sceneUnavailable = sceneFailed \|\| !webglAvailable;/);
-  assert.match(scene, /const webglState: CommandSceneState = sceneUnavailable[\s\S]*?\? "fallback"[\s\S]*?: sceneReady[\s\S]*?\? "ready"[\s\S]*?: "loading";/);
-  assert.match(canvas, /<BrazilTerritoryAssembly[\s\S]*?onReady=\{onReady\}[\s\S]*?\/>/);
-  assert.match(canvas, /useEffect\(\(\) => \{\s*onReady\(\);/);
-  assert.doesNotMatch(canvas, /onCreated=\{\(\{ gl \}\) => \{[\s\S]*?onReady\(\)/);
+  assert.match(scene, /const webglState: CommandSceneState = sceneUnavailable \? "fallback" : scenePhase;/);
+  assert.match(scene, /onScenePhaseChange=\{handleScenePhaseChange\}/);
+  assert.match(canvas, /gl\.compileAsync\(scene, camera\)/);
+  assert.match(canvas, /onScenePhaseChange\("primed"\)/);
+  assert.match(canvas, /onScenePhaseChange\("ready"\)/);
+  assert.doesNotMatch(canvas, /onCreated=\{\(\{ gl \}\) => \{[\s\S]*?onScenePhaseChange\("ready"\)/);
   assert.match(css, /\.canvasLayer \{[\s\S]*?opacity: 0/);
   assert.match(css, /\.sceneHost\[data-webgl="ready"\] \.canvasLayer/);
   assert.match(css, /\.sceneHost\[data-webgl="ready"\] \.sceneFallback/);
