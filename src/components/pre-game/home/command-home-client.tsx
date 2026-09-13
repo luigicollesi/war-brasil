@@ -4,6 +4,7 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import {
+  COMMAND_ENTRANCE_DURATION_MS,
   useCommandSceneDirective,
   useCommandSceneState,
 } from "../foundation";
@@ -16,7 +17,7 @@ import "./command-home-intro.module.css";
 import styles from "./command-home.module.css";
 
 type VisitMode = "first" | "repeat" | "reduced";
-type HomeTransitionState = "holding" | "running" | "complete";
+type HomeTransitionState = "preparing" | "running" | "complete";
 type HomeState =
   | "boot"
   | "awaiting-entry"
@@ -38,9 +39,6 @@ type CommandHomeClientProps = {
 
 const HOME_RITUAL_SESSION_KEY = "war-brasil:pre-game-home-ritual-seen";
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
-const HOME_INTRO_DELAY_MS = 500;
-const HOME_INTRO_DURATION_MS = 1000;
-const HOME_INTRO_COMPLETE_MS = HOME_INTRO_DELAY_MS + HOME_INTRO_DURATION_MS;
 
 let ritualSeenInRuntime = false;
 
@@ -106,6 +104,7 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
   const [ceremonyPhase, setCeremonyPhase] = useState<HomeCeremonyPhase>("brazil");
   const [ritualActive, setRitualActive] = useState(() => !ritualSeenInRuntime);
   const [repeatVisit, setRepeatVisit] = useState(() => ritualSeenInRuntime);
+  const [entranceStartedAtMs, setEntranceStartedAtMs] = useState<number | null>(null);
   const [commandOpen, setCommandOpen] = useState(false);
   const [keyboardDestinationFocus, setKeyboardDestinationFocus] =
     useState<HomeDestinationId | null>(null);
@@ -133,17 +132,18 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
   const homeTransition: HomeTransitionState =
     visitMode !== "first" || !ritualActive || sceneState === "fallback"
       ? "complete"
-      : effectiveCeremonyPhase === "brazil"
-        ? "holding"
-        : effectiveCeremonyPhase === "table"
-          ? "running"
-          : "complete";
+      : entranceStartedAtMs === null
+        ? "preparing"
+        : "running";
   const destinationFocus = keyboardDestinationFocus ?? pointerDestinationFocus;
   const sceneIntent = getHomeSceneIntent({
     ceremonyPhase: effectiveCeremonyPhase,
     commandOpen,
     destinationFocus,
     transitioningTo,
+    entranceStartedAtMs:
+      homeTransition === "running" ? entranceStartedAtMs : null,
+    entranceDurationMs: COMMAND_ENTRANCE_DURATION_MS,
   });
 
   useCommandSceneDirective(sceneIntent);
@@ -157,6 +157,7 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
     const frame = window.requestAnimationFrame(() => {
       setRepeatVisit(true);
       setRitualActive(false);
+      setEntranceStartedAtMs(null);
     });
 
     return () => window.cancelAnimationFrame(frame);
@@ -166,34 +167,35 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
     if (
       visitMode !== "first" ||
       !ritualActive ||
-      sceneState !== "ready"
+      sceneState !== "ready" ||
+      entranceStartedAtMs !== null
     ) {
       return;
     }
 
-    const transitionTimer = window.setTimeout(
-      () => setCeremonyPhase("table"),
-      HOME_INTRO_DELAY_MS,
-    );
+    const startedAt = performance.now();
+    setEntranceStartedAtMs(startedAt);
+    setCeremonyPhase("table");
+
     const stableTimer = window.setTimeout(() => {
       setCeremonyPhase("stable");
       setRitualActive(false);
-    }, HOME_INTRO_COMPLETE_MS);
+      setEntranceStartedAtMs(null);
+    }, COMMAND_ENTRANCE_DURATION_MS);
 
-    return () => {
-      window.clearTimeout(transitionTimer);
-      window.clearTimeout(stableTimer);
-    };
-  }, [ritualActive, sceneState, visitMode]);
+    return () => window.clearTimeout(stableTimer);
+  }, [entranceStartedAtMs, ritualActive, sceneState, visitMode]);
 
   const skipCeremony = () => {
     setCeremonyPhase("stable");
     setRitualActive(false);
+    setEntranceStartedAtMs(null);
   };
 
   const enterCommand = () => {
     setCeremonyPhase("stable");
     setRitualActive(false);
+    setEntranceStartedAtMs(null);
     setKeyboardDestinationFocus(null);
     setPointerDestinationFocus(null);
     setCommandOpen(true);
@@ -217,7 +219,7 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
       ? "destination-focus"
       : commandOpen
         ? "command-open"
-        : homeTransition === "holding"
+        : homeTransition === "preparing"
           ? "boot"
           : "awaiting-entry";
 
