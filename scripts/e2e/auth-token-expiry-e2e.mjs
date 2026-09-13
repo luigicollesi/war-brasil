@@ -94,25 +94,27 @@ function actionUrl(message) {
   return match[0];
 }
 
-async function verificationIds(db) {
-  const result = await db.query(`SELECT id::text AS id FROM auth.verification`);
-  return new Set(result.rows.map((row) => row.id));
+async function verificationWatermark(db) {
+  const result = await db.query(`SELECT clock_timestamp() AS watermark`);
+  assert.ok(result.rows[0]?.watermark, "PostgreSQL não retornou watermark temporal");
+  return result.rows[0].watermark;
 }
 
-async function expireRowsCreatedSince(db, before) {
-  const after = await verificationIds(db);
-  const created = [...after].filter((id) => !before.has(id));
-  assert.ok(created.length > 0, "ação auth não criou linha de verification expirável");
-
+async function expireVerificationRowsIssuedSince(db, watermark) {
   const result = await db.query(
     `UPDATE auth.verification
         SET "expiresAt" = NOW() - INTERVAL '1 minute',
             "updatedAt" = NOW()
-      WHERE id = ANY($1::uuid[])
+      WHERE GREATEST("createdAt", "updatedAt") >= $1
+        AND "expiresAt" > NOW()
       RETURNING id`,
-    [created],
+    [watermark],
   );
-  assert.equal(result.rowCount, created.length, "nem todos os tokens novos foram expirados");
+
+  assert.ok(
+    (result.rowCount ?? 0) >= 1,
+    "ação auth não deixou token de verification ativo após o watermark",
+  );
 }
 
 async function isVerified(db, email) {
@@ -152,13 +154,13 @@ try {
     const identity = `${process.pid}-${Date.now()}`;
 
     const expiredVerificationEmail = `expired-verify-${identity}@e2e.war-brasil.test`;
-    const beforeVerification = await verificationIds(db);
+    const verificationIssuedAfter = await verificationWatermark(db);
     await register(page, expiredVerificationEmail);
     const verificationMessage = await waitForEmail(
       expiredVerificationEmail,
       "Verificação de email",
     );
-    await expireRowsCreatedSince(db, beforeVerification);
+    await expireVerificationRowsIssuedSince(db, verificationIssuedAfter);
 
     await page.goto(actionUrl(verificationMessage), { waitUntil: "domcontentloaded" });
     assert.equal(
@@ -183,7 +185,7 @@ try {
     await page.goto(actionUrl(validVerification), { waitUntil: "domcontentloaded" });
     assert.equal(await isVerified(db, resetEmail), true, "fixture de reset não foi verificada");
 
-    const beforeReset = await verificationIds(db);
+    const resetIssuedAfter = await verificationWatermark(db);
     const requestReset = await apiJson(page, "/api/auth/request-password-reset", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -198,7 +200,7 @@ try {
     const rawResetUrl = actionUrl(resetMessage);
     const expiredResetToken = tokenFromResetActionUrl(rawResetUrl);
     assert.ok(expiredResetToken, "URL de reset não expôs token Better Auth na ação server-side");
-    await expireRowsCreatedSince(db, beforeReset);
+    await expireVerificationRowsIssuedSince(db, resetIssuedAfter);
 
     const expiredReset = await apiJson(page, "/api/auth/reset-password", {
       method: "POST",
