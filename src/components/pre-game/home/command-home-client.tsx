@@ -4,7 +4,6 @@ import Link from "next/link";
 import type { ReactNode } from "react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import {
-  COMMAND_ENTRANCE_DURATION_MS,
   useCommandSceneDirective,
   useCommandSceneState,
 } from "../foundation";
@@ -17,7 +16,7 @@ import "./command-home-intro.module.css";
 import styles from "./command-home.module.css";
 
 type VisitMode = "first" | "reduced";
-type HomeTransitionState = "preparing" | "running" | "complete";
+type HomeTransitionState = "preparing" | "primed" | "running" | "complete";
 type HomeState =
   | "boot"
   | "awaiting-entry"
@@ -78,9 +77,8 @@ function getServerReducedMotionSnapshot() {
 }
 
 export function CommandHomeClient({ children }: CommandHomeClientProps) {
-  const [ceremonyPhase, setCeremonyPhase] = useState<HomeCeremonyPhase>("brazil");
+  const [ceremonyPhase, setCeremonyPhase] = useState<HomeCeremonyPhase>("primed");
   const [ritualActive, setRitualActive] = useState(true);
-  const [entranceStartedAtMs, setEntranceStartedAtMs] = useState<number | null>(null);
   const [commandOpen, setCommandOpen] = useState(false);
   const [keyboardDestinationFocus, setKeyboardDestinationFocus] =
     useState<HomeDestinationId | null>(null);
@@ -104,9 +102,13 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
   const homeTransition: HomeTransitionState =
     visitMode !== "first" || !ritualActive || sceneState === "fallback"
       ? "complete"
-      : entranceStartedAtMs === null
+      : sceneState === "loading"
         ? "preparing"
-        : "running";
+        : sceneState === "primed"
+          ? "primed"
+          : sceneState === "playing" || sceneState === "settling"
+            ? "running"
+            : "complete";
   const destinationFocus = keyboardDestinationFocus ?? pointerDestinationFocus;
   const sceneIntent = getHomeSceneIntent({
     ceremonyPhase: effectiveCeremonyPhase,
@@ -121,44 +123,44 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
     if (
       visitMode !== "first" ||
       !ritualActive ||
-      sceneState !== "ready" ||
-      entranceStartedAtMs !== null
+      ceremonyPhase !== "primed" ||
+      sceneState !== "primed"
     ) {
       return;
     }
 
     const frame = window.requestAnimationFrame(() => {
-      setEntranceStartedAtMs(performance.now());
-      setCeremonyPhase("table");
+      setCeremonyPhase("playing");
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [entranceStartedAtMs, ritualActive, sceneState, visitMode]);
+  }, [ceremonyPhase, ritualActive, sceneState, visitMode]);
 
   useEffect(() => {
-    if (entranceStartedAtMs === null || visitMode !== "first" || !ritualActive) {
+    if (
+      visitMode !== "first" ||
+      !ritualActive ||
+      ceremonyPhase === "stable" ||
+      sceneState !== "ready"
+    ) {
       return;
     }
 
-    const stableTimer = window.setTimeout(() => {
-      setCeremonyPhase("stable");
-      setRitualActive(false);
-      setEntranceStartedAtMs(null);
-    }, COMMAND_ENTRANCE_DURATION_MS);
-
-    return () => window.clearTimeout(stableTimer);
-  }, [entranceStartedAtMs, ritualActive, visitMode]);
-
-  const skipCeremony = () => {
     setCeremonyPhase("stable");
     setRitualActive(false);
-    setEntranceStartedAtMs(null);
+  }, [ceremonyPhase, ritualActive, sceneState, visitMode]);
+
+  const settleCeremony = () => {
+    setCeremonyPhase("stable");
+    setRitualActive(false);
+  };
+
+  const skipCeremony = () => {
+    settleCeremony();
   };
 
   const enterCommand = () => {
-    setCeremonyPhase("stable");
-    setRitualActive(false);
-    setEntranceStartedAtMs(null);
+    settleCeremony();
     setKeyboardDestinationFocus(null);
     setPointerDestinationFocus(null);
     setCommandOpen(true);
@@ -182,7 +184,7 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
       ? "destination-focus"
       : commandOpen
         ? "command-open"
-        : homeTransition === "preparing"
+        : homeTransition === "preparing" || homeTransition === "primed"
           ? "boot"
           : "awaiting-entry";
 
@@ -191,6 +193,7 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
       className={styles.root}
       data-home-state={homeState}
       data-home-transition={homeTransition}
+      data-home-opening-phase={sceneState}
       data-scene="foundation"
       data-scene-state={sceneState}
       data-ceremony={effectiveCeremonyPhase}
