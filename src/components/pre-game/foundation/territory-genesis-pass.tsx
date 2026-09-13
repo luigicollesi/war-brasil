@@ -38,6 +38,9 @@ import {
 const GENESIS_RING_CENTER = 627;
 const GENESIS_RING_INNER_RADIUS = 846;
 const GENESIS_RING_OUTER_RADIUS = 862;
+const PROFILE_ORBIT_A_SWEEP = 0.72;
+const PROFILE_ORBIT_B_SWEEP = 0.56;
+const PROFILE_ORBIT_C_SWEEP = 0.64;
 
 export type TerritoryGenesisPlate = Readonly<{
   id: string;
@@ -62,6 +65,21 @@ type StoredMaterialState<TMaterial extends MeshStandardMaterial | LineBasicMater
 type StoredCommandRingState = StoredMaterialState<MeshStandardMaterial> & {
   object: Mesh;
   rotationZ: number;
+  finalOpacity: number;
+};
+
+type StoredProfileOrbit = {
+  object: Group;
+  finalRotation: readonly [number, number, number];
+};
+
+type StoredProfileOrbState = {
+  object: Group;
+  finalScale: number;
+  finalVisible: boolean;
+  orbitA: StoredProfileOrbit | null;
+  orbitB: StoredProfileOrbit | null;
+  orbitC: StoredProfileOrbit | null;
 };
 
 function belongsToGenesisPass(object: Object3D) {
@@ -73,11 +91,38 @@ function belongsToGenesisPass(object: Object3D) {
   return false;
 }
 
+function readProfileOrbit(scene: Scene, name: string): StoredProfileOrbit | null {
+  const object = scene.getObjectByName(name);
+  if (!(object instanceof Group)) return null;
+  return {
+    object,
+    finalRotation: [object.rotation.x, object.rotation.y, object.rotation.z],
+  };
+}
+
 function createSceneTargetsController() {
   let finalSurfaces: StoredMaterialState<MeshStandardMaterial>[] = [];
   let finalEdges: StoredMaterialState<LineBasicMaterial>[] = [];
   let commandRing: StoredCommandRingState | null = null;
+  let profileOrb: StoredProfileOrbState | null = null;
   let finalSurfaceVisible = true;
+
+  const restoreProfileOrb = () => {
+    if (!profileOrb) return;
+
+    profileOrb.object.visible = profileOrb.finalVisible;
+    profileOrb.object.scale.setScalar(profileOrb.finalScale);
+
+    if (profileOrb.orbitA) {
+      profileOrb.orbitA.object.rotation.set(...profileOrb.orbitA.finalRotation);
+    }
+    if (profileOrb.orbitB) {
+      profileOrb.orbitB.object.rotation.set(...profileOrb.orbitB.finalRotation);
+    }
+    if (profileOrb.orbitC) {
+      profileOrb.orbitC.object.rotation.set(...profileOrb.orbitC.finalRotation);
+    }
+  };
 
   const restore = () => {
     for (const state of finalSurfaces) {
@@ -91,10 +136,11 @@ function createSceneTargetsController() {
     }
     if (commandRing) {
       commandRing.object.rotation.z = commandRing.rotationZ;
-      commandRing.material.opacity = commandRing.opacity;
+      commandRing.material.opacity = commandRing.finalOpacity;
       commandRing.material.transparent = commandRing.transparent;
       commandRing.material.needsUpdate = true;
     }
+    restoreProfileOrb();
     finalSurfaceVisible = true;
   };
 
@@ -104,6 +150,7 @@ function createSceneTargetsController() {
       finalSurfaces = [];
       finalEdges = [];
       commandRing = null;
+      profileOrb = null;
 
       const plateGeometries = new Set(plates.map((plate) => plate.geometry));
       const edgeGeometries = new Set(plates.map((plate) => plate.edges));
@@ -142,25 +189,39 @@ function createSceneTargetsController() {
         transparent: material.transparent,
       }));
 
-      const domainTable = scene.getObjectByName("DomainTable");
-      domainTable?.traverse((object) => {
-        if (
-          commandRing ||
-          !(object instanceof Mesh) ||
-          !(object.geometry instanceof RingGeometry) ||
-          !(object.material instanceof MeshStandardMaterial)
-        ) {
-          return;
-        }
-
+      const ringObject = scene.getObjectByName("DomainTable-GoldenRing");
+      if (
+        ringObject instanceof Mesh &&
+        ringObject.geometry instanceof RingGeometry &&
+        ringObject.material instanceof MeshStandardMaterial
+      ) {
+        const declaredFinalOpacity = Number(ringObject.userData.finalOpacity);
         commandRing = {
-          object,
-          material: object.material,
-          opacity: object.material.opacity,
-          transparent: object.material.transparent,
-          rotationZ: object.rotation.z,
+          object: ringObject,
+          material: ringObject.material,
+          opacity: ringObject.material.opacity,
+          transparent: ringObject.material.transparent,
+          rotationZ: ringObject.rotation.z,
+          finalOpacity: Number.isFinite(declaredFinalOpacity)
+            ? declaredFinalOpacity
+            : 1,
         };
-      });
+      }
+
+      const profileObject = scene.getObjectByName("CommandInsignia");
+      if (profileObject instanceof Group) {
+        const declaredFinalScale = Number(profileObject.userData.openingFinalScale);
+        profileOrb = {
+          object: profileObject,
+          finalScale: Number.isFinite(declaredFinalScale)
+            ? declaredFinalScale
+            : profileObject.scale.x,
+          finalVisible: true,
+          orbitA: readProfileOrbit(scene, "ProfileOrb-OrbitA"),
+          orbitB: readProfileOrbit(scene, "ProfileOrb-OrbitB"),
+          orbitC: readProfileOrbit(scene, "ProfileOrb-OrbitC"),
+        };
+      }
     },
 
     prime() {
@@ -178,6 +239,22 @@ function createSceneTargetsController() {
         commandRing.material.transparent = true;
         commandRing.material.opacity = 0;
         commandRing.material.needsUpdate = true;
+      }
+      if (profileOrb) {
+        profileOrb.object.visible = true;
+        profileOrb.object.scale.setScalar(0.001);
+        if (profileOrb.orbitA) {
+          const [x, y, z] = profileOrb.orbitA.finalRotation;
+          profileOrb.orbitA.object.rotation.set(x, y - PROFILE_ORBIT_A_SWEEP, z);
+        }
+        if (profileOrb.orbitB) {
+          const [x, y, z] = profileOrb.orbitB.finalRotation;
+          profileOrb.orbitB.object.rotation.set(x - PROFILE_ORBIT_B_SWEEP, y, z);
+        }
+        if (profileOrb.orbitC) {
+          const [x, y, z] = profileOrb.orbitC.finalRotation;
+          profileOrb.orbitC.object.rotation.set(x, y, z + PROFILE_ORBIT_C_SWEEP);
+        }
       }
       finalSurfaceVisible = false;
     },
@@ -197,7 +274,40 @@ function createSceneTargetsController() {
       }
       if (commandRing) {
         commandRing.object.rotation.z = commandRing.rotationZ + Math.PI * 2 * progress;
-        commandRing.material.opacity = commandRing.opacity * progress;
+        commandRing.material.opacity = commandRing.finalOpacity * progress;
+      }
+    },
+
+    setProfileProgress(progress: number) {
+      if (!profileOrb) return;
+
+      profileOrb.object.scale.setScalar(
+        Math.max(0.001, profileOrb.finalScale * progress),
+      );
+
+      if (profileOrb.orbitA) {
+        const [x, y, z] = profileOrb.orbitA.finalRotation;
+        profileOrb.orbitA.object.rotation.set(
+          x,
+          y - PROFILE_ORBIT_A_SWEEP * (1 - progress),
+          z,
+        );
+      }
+      if (profileOrb.orbitB) {
+        const [x, y, z] = profileOrb.orbitB.finalRotation;
+        profileOrb.orbitB.object.rotation.set(
+          x - PROFILE_ORBIT_B_SWEEP * (1 - progress),
+          y,
+          z,
+        );
+      }
+      if (profileOrb.orbitC) {
+        const [x, y, z] = profileOrb.orbitC.finalRotation;
+        profileOrb.orbitC.object.rotation.set(
+          x,
+          y,
+          z + PROFILE_ORBIT_C_SWEEP * (1 - progress),
+        );
       }
     },
 
@@ -314,9 +424,14 @@ export function TerritoryGenesisPass({
       globalProgress,
       COMMAND_ENTRANCE_RECIPE.cues.genesis,
     );
+    const profileProgress = sampleContinuousOpeningCue(
+      globalProgress,
+      COMMAND_ENTRANCE_RECIPE.cues.profileActivation,
+    );
 
     for (const handle of handles) handle.setProgress(genesisProgress);
     sceneTargets.setGenesisProgress(genesisProgress);
+    sceneTargets.setProfileProgress(profileProgress);
     ringSweep.setProgress(genesisProgress);
     if (ringSweepRef.current) {
       ringSweepRef.current.rotation.z = Math.PI * 2 * genesisProgress;
