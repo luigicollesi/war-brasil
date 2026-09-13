@@ -1,4 +1,4 @@
-import type { FormEvent } from "react";
+import type { CSSProperties, FormEvent } from "react";
 import { PLAYER_COLORS, type LobbyPlayer } from "@/src/lib/lobby";
 import styles from "./lobby-station-panel.module.css";
 
@@ -24,6 +24,17 @@ export function LobbyStationPanel({
   onColorChange,
 }: LobbyStationPanelProps) {
   const currentColor = PLAYER_COLORS.find((color) => color.value === me.color);
+  const commandMark =
+    me.factionName
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part[0] ?? "")
+      .join("")
+      .toUpperCase() || "WB";
+  const credentialStyle = {
+    "--command-color": currentColor?.hex ?? "#d6a93e",
+  } as CSSProperties;
 
   return (
     <section
@@ -31,17 +42,43 @@ export function LobbyStationPanel({
       className={styles.console}
       aria-labelledby="my-faction-title"
       aria-busy={pendingAction === "profile"}
+      style={credentialStyle}
     >
       <div className={styles.consoleIntro}>
-        <p className="wb-section-title">Sua estação</p>
-        <h2 id="my-faction-title" className={styles.consoleTitle}>Insígnia de Comando</h2>
+        <div>
+          <p className="wb-section-title">Sua estação</p>
+          <h2 id="my-faction-title" className={styles.consoleTitle}>Credencial de Comando</h2>
+        </div>
+        <span className={styles.clearance} data-ready={me.isReady ? "true" : "false"}>
+          {me.isReady ? "NÍVEL // PRONTO" : "NÍVEL // CONFIGURAÇÃO"}
+        </span>
+      </div>
+
+      <div className={styles.commandCredential} aria-label={`Credencial da facção ${me.factionName}`}>
+        <div className={styles.credentialSeal} aria-hidden="true">
+          <span>{commandMark}</span>
+        </div>
+        <div className={styles.credentialIdentity}>
+          <span className={styles.credentialLabel}>ASSINATURA TÁTICA</span>
+          <strong>{me.factionName}</strong>
+          <span>{currentColor?.label ?? "Cor de comando"} · POSTO LOCAL</span>
+        </div>
+        <div className={styles.credentialTelemetry} aria-hidden="true">
+          <span />
+          <span />
+          <span />
+          <small>{canManageBots ? "HOST" : "LINK"}</small>
+        </div>
+      </div>
+
+      <div className={styles.stationMessage}>
         <p className={styles.consoleStatus}>
           {me.isReady
             ? "Comando confirmado. Alterar identidade revoga a prontidão."
             : "Defina sua identificação antes de confirmar prontidão."}
         </p>
         {canManageBots ? (
-          <p className={styles.hostStatus}>Comando da sala · gerenciamento de bots ativo</p>
+          <p className={styles.hostStatus}>Autoridade da sala · gerenciamento de bots ativo</p>
         ) : null}
       </div>
 
