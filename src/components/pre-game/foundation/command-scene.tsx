@@ -105,7 +105,11 @@ function useWebGLAvailability() {
   );
 }
 
-function CommandSceneFallback({ intent }: { intent: ReturnType<typeof normalizeCommandSceneIntent> }) {
+function CommandSceneFallback({
+  intent,
+}: {
+  intent: ReturnType<typeof normalizeCommandSceneIntent>;
+}) {
   const globeVisible = intent.focus === "earth";
 
   return (
@@ -151,25 +155,21 @@ export function CommandScene({ intent, className, onStateChange }: CommandSceneP
     reducedMotion || coarsePointer || compactScene
       ? COMMAND_FOUNDATION_TOKENS.scene.maxReducedDpr
       : COMMAND_FOUNDATION_TOKENS.scene.maxDesktopDpr;
-  const [sceneReady, setSceneReady] = useState(false);
+  const [scenePhase, setScenePhase] = useState<CommandSceneState>("loading");
   const [sceneFailed, setSceneFailed] = useState(false);
 
-  const handleReady = useCallback(() => {
+  const handleScenePhaseChange = useCallback((state: CommandSceneState) => {
     setSceneFailed(false);
-    setSceneReady(true);
+    setScenePhase(state);
   }, []);
 
   const handleUnavailable = useCallback(() => {
-    setSceneReady(false);
     setSceneFailed(true);
+    setScenePhase("fallback");
   }, []);
 
   const sceneUnavailable = sceneFailed || !webglAvailable;
-  const webglState: CommandSceneState = sceneUnavailable
-    ? "fallback"
-    : sceneReady
-      ? "ready"
-      : "loading";
+  const webglState: CommandSceneState = sceneUnavailable ? "fallback" : scenePhase;
 
   useEffect(() => {
     onStateChange?.(webglState);
@@ -194,7 +194,7 @@ export function CommandScene({ intent, className, onStateChange }: CommandSceneP
               reducedMotion={reducedMotion}
               compact={compactScene}
               maxDpr={maxDpr}
-              onReady={handleReady}
+              onScenePhaseChange={handleScenePhaseChange}
               onUnavailable={handleUnavailable}
             />
           </SceneErrorBoundary>
