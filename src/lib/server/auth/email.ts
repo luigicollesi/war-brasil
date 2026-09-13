@@ -16,6 +16,15 @@ function escapeHtml(value: string) {
     .replace(/'/g, "&#39;");
 }
 
+export function isNonDeliverableAuthAddress(value: string) {
+  const normalized = value.trim().toLowerCase();
+  const atIndex = normalized.lastIndexOf("@");
+  if (atIndex < 0) return true;
+
+  const domain = normalized.slice(atIndex + 1);
+  return domain === "invalid" || domain.endsWith(".invalid");
+}
+
 function buildActionEmail({
   actionLabel,
   description,
@@ -99,6 +108,10 @@ export function buildPasswordResetEmail(url: string) {
 }
 
 export async function sendAuthEmail(message: AuthEmailMessage) {
+  if (isNonDeliverableAuthAddress(message.to)) {
+    return;
+  }
+
   if (process.env.CI === "true" || process.env.NODE_ENV !== "production") {
     console.info(
       `[auth-email] delivery=sink subject=${JSON.stringify(message.subject)}`,
@@ -112,6 +125,10 @@ export async function sendAuthEmail(message: AuthEmailMessage) {
 }
 
 export function dispatchAuthEmail(message: AuthEmailMessage) {
+  if (isNonDeliverableAuthAddress(message.to)) {
+    return;
+  }
+
   void sendAuthEmail(message).catch((error: unknown) => {
     const reason = error instanceof Error ? error.message : "erro desconhecido";
     console.error(`[auth-email] delivery=failed reason=${reason}`);
