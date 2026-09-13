@@ -68,6 +68,7 @@ export function TerritoryGenesisPass({
     }
 
     const forcedProgress = readOpeningSeek(COMMAND_ENTRANCE_RECIPE.id);
+    const isSeekHold = forcedProgress !== null;
     const globalProgress =
       forcedProgress ??
       resolveOpeningProgress(
@@ -82,8 +83,13 @@ export function TerritoryGenesisPass({
 
     for (const handle of handles) handle.setProgress(materialProgress);
 
-    const nextPhase: CommandSceneState =
-      globalProgress >= 1
+    // A forced seek is intentionally a hold: even at 1.00 the transient pass
+    // remains mounted so evals can capture intro-100 before post-cleanup.
+    const nextPhase: CommandSceneState = isSeekHold
+      ? globalProgress >= COMMAND_ENTRANCE_RECIPE.settlingStart
+        ? "settling"
+        : "playing"
+      : globalProgress >= 1
         ? "ready"
         : globalProgress >= COMMAND_ENTRANCE_RECIPE.settlingStart
           ? "settling"
@@ -94,7 +100,7 @@ export function TerritoryGenesisPass({
       onScenePhaseChange(nextPhase);
     }
 
-    if (globalProgress >= 1) {
+    if (!isSeekHold && globalProgress >= 1) {
       completedRef.current = true;
     }
   });
