@@ -44,8 +44,19 @@ export function LobbyReadyDock({
         ? `${readyPlayers} de ${players.length} prontos · aguardando servidor`
         : `${readyPlayers} de ${players.length} prontos · estado confirmado`;
 
+  const authorizationSlots = Array.from({ length: 6 }, (_, index) => {
+    const player = players[index];
+    const state = !player ? "empty" : player.isReady ? "ready" : "configuring";
+    return { player, state, slot: index + 1 };
+  });
+
   return (
-    <section className={styles.dock} aria-label="Preparação da partida" aria-busy={readyPending}>
+    <section
+      className={styles.dock}
+      aria-label="Preparação da partida"
+      aria-busy={readyPending}
+      data-start-authorized={startAuthorized ? "true" : "false"}
+    >
       <div className={styles.readyCopy}>
         <span
           className={styles.readyInsignia}
@@ -53,6 +64,7 @@ export function LobbyReadyDock({
           aria-hidden="true"
         />
         <div className={styles.readyText}>
+          <p className={styles.railLabel}>PROTOCOLO // AUTORIZAÇÃO DE CONFLITO</p>
           <p
             id="ready-status"
             className={`${styles.readyTitle}${startAuthorized ? ` ${styles.startAuthorized}` : ""}`}
@@ -63,11 +75,20 @@ export function LobbyReadyDock({
             {detail}
           </p>
         </div>
-        <div className={styles.readyDots} aria-hidden="true">
-          {players.map((player) => (
-            <span key={player.id} data-ready={player.isReady ? "true" : "false"} />
-          ))}
-        </div>
+      </div>
+
+      <div className={styles.authorizationRail} aria-label={`${readyPlayers} de ${players.length} comandos prontos`}>
+        {authorizationSlots.map(({ player, state, slot }) => (
+          <span
+            key={player?.id ?? `empty-${slot}`}
+            className={styles.authorizationCell}
+            data-state={state}
+            title={player ? `${player.factionName}: ${player.isReady ? "pronto" : "configurando"}` : `Posto ${slot}: vazio`}
+          >
+            <small>{String(slot).padStart(2, "0")}</small>
+            <i aria-hidden="true" />
+          </span>
+        ))}
       </div>
 
       <button
@@ -78,13 +99,16 @@ export function LobbyReadyDock({
         aria-pressed={me.isReady}
         aria-describedby="ready-status"
       >
-        {readyPending
-          ? "Confirmando…"
-          : allReady
-            ? "Preparando…"
-            : me.isReady
-              ? "Cancelar pronto"
-              : "Pronto para batalha"}
+        <span className={styles.buttonPrefix} aria-hidden="true">AUTH</span>
+        <span>
+          {readyPending
+            ? "Confirmando…"
+            : allReady
+              ? "Preparando…"
+              : me.isReady
+                ? "Cancelar pronto"
+                : "Pronto para batalha"}
+        </span>
       </button>
     </section>
   );
