@@ -62,7 +62,7 @@ export function LobbyCommandWorkspace({
   onRemoveBot,
   onToggleReady,
 }: LobbyCommandWorkspaceProps) {
-  const [mobilePanel, setMobilePanel] = useState<MobileLobbyPanel>("formation");
+  const [mobilePanel, setMobilePanel] = useState<MobileLobbyPanel>("station");
 
   return (
     <div
@@ -73,11 +73,11 @@ export function LobbyCommandWorkspace({
       data-mobile-panel={mobilePanel}
     >
       <header className={styles.commandBar}>
-        <PreGameBackButton href="/matchmaking" />
+        <PreGameBackButton href="/matchmaking" label="Voltar para Operações" />
 
         <div className={styles.commandHeading}>
-          <p className="wb-kicker">Sala de guerra · fase 00</p>
-          <h1 className={styles.title}>Comando de mobilização</h1>
+          <p className="wb-kicker">Sala de guerra · comando de mobilização</p>
+          <h1 className={styles.title}>Conselho de operação</h1>
         </div>
 
         <div className={styles.operationIdentity}>
@@ -108,7 +108,7 @@ export function LobbyCommandWorkspace({
           <span className={styles.phaseBadge}>MOBILIZAÇÃO // 00</span>
           <div className={styles.connection} role="status" aria-live="polite" aria-atomic="true">
             <span className={styles.connectionLamp} aria-hidden="true" />
-            {reconnecting ? "Reconectando" : "Sala sincronizada"}
+            {reconnecting ? "Reconectando ao comando" : "Sala sincronizada"}
           </div>
           <p className={styles.occupancy}>
             <strong>{players.length}/6</strong> postos · <strong>{readyPlayers}</strong> prontos
