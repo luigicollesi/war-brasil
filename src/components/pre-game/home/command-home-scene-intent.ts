@@ -18,18 +18,21 @@ const DESTINATION_INTENTS: Readonly<
     conflictLevel: 1,
     territoryExplode: 0.08,
     orbitalAlignment: 1,
+    entranceState: "settled",
   },
   doctrine: {
     focus: "brazil",
     conflictLevel: 0,
     territoryExplode: 0.12,
     orbitalAlignment: 0,
+    entranceState: "settled",
   },
   profile: {
     focus: "insignia",
     conflictLevel: 0,
     territoryExplode: 0,
     orbitalAlignment: 1,
+    entranceState: "settled",
   },
 };
 
@@ -51,6 +54,7 @@ export function getHomeSceneIntent({
       conflictLevel: 0,
       territoryExplode: 0,
       orbitalAlignment: 1,
+      entranceState: "settled",
     };
   }
 
@@ -60,6 +64,7 @@ export function getHomeSceneIntent({
       conflictLevel: 0,
       territoryExplode: 0,
       orbitalAlignment: 0,
+      entranceState: "initial",
     };
   }
 
@@ -69,6 +74,17 @@ export function getHomeSceneIntent({
       conflictLevel: 0,
       territoryExplode: 0,
       orbitalAlignment: 0,
+      entranceState: "initial",
+    };
+  }
+
+  if (ceremonyPhase === "table") {
+    return {
+      focus: "table",
+      conflictLevel: 0,
+      territoryExplode: 0,
+      orbitalAlignment: 0,
+      entranceState: "running",
     };
   }
 
@@ -77,5 +93,6 @@ export function getHomeSceneIntent({
     conflictLevel: 0,
     territoryExplode: 0,
     orbitalAlignment: 0,
+    entranceState: "settled",
   };
 }

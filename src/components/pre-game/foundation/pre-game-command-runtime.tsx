@@ -14,6 +14,7 @@ import { CommandShell } from "./command-shell";
 import { resolvePreGameSceneIntent } from "./pre-game-route-intent";
 import type {
   CommandConflictLevel,
+  CommandEntranceState,
   CommandOrbitalAlignment,
   CommandSceneFocus,
   CommandSceneIntent,
@@ -25,6 +26,7 @@ export type CommandSceneDirective = Readonly<{
   conflictLevel?: CommandConflictLevel;
   territoryExplode?: number;
   orbitalAlignment?: CommandOrbitalAlignment;
+  entranceState?: CommandEntranceState;
 }>;
 
 type DirectiveRegistration = Readonly<{
@@ -113,9 +115,11 @@ export function useCommandSceneDirective(
       conflictLevel: directive.conflictLevel,
       territoryExplode: directive.territoryExplode,
       orbitalAlignment: directive.orbitalAlignment,
+      entranceState: directive.entranceState,
     }),
     [
       directive.conflictLevel,
+      directive.entranceState,
       directive.focus,
       directive.orbitalAlignment,
       directive.territoryExplode,

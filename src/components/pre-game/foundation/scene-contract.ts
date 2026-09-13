@@ -16,7 +16,10 @@ export const COMMAND_SCENE_FOCUSES = [
   "none",
 ] as const;
 
+export const COMMAND_ENTRANCE_STATES = ["initial", "running", "settled"] as const;
+
 export type CommandSceneFocus = (typeof COMMAND_SCENE_FOCUSES)[number];
+export type CommandEntranceState = (typeof COMMAND_ENTRANCE_STATES)[number];
 export type CommandConflictLevel = 0 | 1 | 2 | 3;
 export type CommandOrbitalAlignment = 0 | 1;
 export type CommandSceneState = "loading" | "ready" | "fallback";
@@ -27,6 +30,7 @@ export type CommandSceneIntent = Readonly<{
   conflictLevel?: CommandConflictLevel;
   territoryExplode?: number;
   orbitalAlignment?: CommandOrbitalAlignment;
+  entranceState?: CommandEntranceState;
 }>;
 
 export type NormalizedCommandSceneIntent = Readonly<{
@@ -35,6 +39,7 @@ export type NormalizedCommandSceneIntent = Readonly<{
   conflictLevel: CommandConflictLevel;
   territoryExplode: number;
   orbitalAlignment: CommandOrbitalAlignment;
+  entranceState: CommandEntranceState;
 }>;
 
 const DEFAULT_FOCUS_BY_MODE: Readonly<Record<CommandSceneMode, CommandSceneFocus>> = {
@@ -51,6 +56,7 @@ export const DEFAULT_COMMAND_SCENE_INTENT: NormalizedCommandSceneIntent = {
   conflictLevel: 0,
   territoryExplode: 0,
   orbitalAlignment: 0,
+  entranceState: "initial",
 };
 
 export function normalizeCommandSceneIntent(
@@ -66,6 +72,8 @@ export function normalizeCommandSceneIntent(
     conflictLevel: intent.conflictLevel ?? 0,
     territoryExplode: explode,
     orbitalAlignment: intent.orbitalAlignment ?? 0,
+    entranceState:
+      intent.entranceState ?? (intent.mode === "entrance" ? "initial" : "settled"),
   };
 }
 

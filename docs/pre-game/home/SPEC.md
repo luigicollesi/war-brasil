@@ -7,9 +7,9 @@ Segue `../quality-standard.md`, `../visual-language.md` e os conceitos `CORE` ap
 
 ## Fantasia
 
-A primeira tela é um **ritual de autorização**. O usuário descobre uma instalação de comando, a escala do território e a Mesa de Domínio antes de receber os destinos principais.
+A Home é um **ritual de materialização da Mesa de Domínio**. A tela nasce do preto absoluto e a própria representação operacional do Brasil se forma diante do usuário até chegar ao estado normal já aprovado da Foundation.
 
-A Home MUST evitar a estrutura de hero tradicional e MUST continuar imediatamente utilizável.
+A Home MUST evitar hero tradicional e MUST continuar funcional quando motion/WebGL estiverem reduzidos ou indisponíveis.
 
 ## Objetivos do usuário
 
@@ -19,107 +19,106 @@ O jogador MUST conseguir:
 - iniciar o caminho para uma partida;
 - acessar Doutrina/Regras;
 - acessar Perfil/Comando;
-- pular qualquer introdução ornamental;
+- pular a introdução;
 - usar a página mesmo sem WebGL/motion.
 
 ## Sequência principal
 
-1. primeira carga apresenta imediatamente o Brasil canônico colorido, deslocado para o lado direito, com CTA funcional;
-2. enquanto o WebGL prepara em segundo plano, a composição inicial MUST permanecer estável e utilizável;
-3. quando a Foundation estiver pronta, a tela inteira MUST executar uma transformação contínua de **3000 ms** até o estado operacional;
-4. o Brasil MUST deslocar-se suavemente da direita ao centro enquanto perde protagonismo cromático e passa a integrar a Mesa de Domínio;
-5. marca, chrome, atmosfera, CTA, telemetria e rodapé MUST transformar posição/opacidade gradualmente durante a mesma coreografia; nenhum elemento principal pode surgir em um único frame;
-6. o fallback 2D e o Canvas 3D MUST sobrepor-se durante o handoff, preservando o Brasil como âncora visual contínua;
-7. ao entrar, revelar `OPERAÇÕES`, `DOUTRINA` e `COMANDO` como destinos da mesma instalação;
-8. `OPERAÇÕES` -> `/matchmaking`;
-9. `DOUTRINA` -> `/rules`;
-10. `COMANDO` -> `/profile`.
+1. a primeira pintura visual da HOME MUST ser preta;
+2. a Foundation/WebGL pode preparar atrás do preto pelo tempo necessário;
+3. quando a Foundation sinalizar `ready`, inicia uma única coreografia de **3000 ms**;
+4. o próprio `BrazilTerritoryAssembly` da cena 3D MUST surgir com as cores canônicas lidas de `/war-brasil-42.production.svg`;
+5. esse mesmo assembly MUST iniciar deslocado à direita e comprimido em perspectiva;
+6. a entrada usa oscilação de `rotateY` + escala não uniforme para produzir compressão/descompressão, e não um spin convencional;
+7. durante a mesma timeline, o assembly se move para sua posição operacional, cresce e interpola as cores canônicas para os materiais verde-escuros já usados pela Foundation;
+8. atmosfera, identidade, chrome, CTA, telemetria e rodapé MUST materializar por opacidade e deslocamento, sem pop-in;
+9. aos 3000 ms, posição, rotação, escala, materiais, câmera e composição MUST coincidir com o estado final existente em `dev`, sem redesign da tela final;
+10. `OPERAÇÕES` -> `/matchmaking`, `DOUTRINA` -> `/rules`, `COMANDO` -> `/profile`.
 
-A cerimônia MUST ser pulável em qualquer momento. Em visita repetida da mesma sessão SHOULD iniciar diretamente no estado estável. `prefers-reduced-motion` MUST começar no estado estável ou usar transição sem deslocamento espacial relevante.
+A cerimônia MUST ser pulável. Enquanto `prefers-reduced-motion` não estiver ativo, a cerimônia SHOULD executar a cada nova montagem da HOME para manter o comportamento observável e testável. Reduced motion MUST começar diretamente no estado estável ou sem deslocamento espacial relevante.
+
+## Regra de mapa único
+
+Na execução WebGL normal existe **um único Brasil visível durante a abertura**: o `BrazilTerritoryAssembly` que também permanece como mapa operacional após a intro.
+
+MUST NOT existir:
+
+- um SVG de entrada sobreposto ao mapa 3D;
+- crossfade perceptível entre mapa 2D e mapa 3D;
+- troca de um asset colorido por outro asset verde;
+- uma composição final alternativa à usada atualmente em `dev`.
+
+O fallback 2D permanece exclusivamente como contingência quando WebGL estiver indisponível; ele não participa visualmente da intro WebGL normal.
 
 ## Coreografia cinematográfica
 
-A entrada da primeira visita possui um único relógio lógico de **3 segundos**, iniciado somente depois que a Foundation sinaliza que a cena necessária para o handoff está pronta.
+A timeline de 3000 ms é única. A HOME publica apenas estados semânticos `initial`, `running` e `settled`; coordenadas e timing interno do mapa pertencem à Foundation.
 
-O primeiro frame MUST conter o Brasil colorido já visível e deslocado à direita. A interface periférica MAY começar com presença visual muito baixa, porém seus principais elementos MUST já existir no layout para que a sensação seja de transformação, não de montagem progressiva de uma nova tela.
+Durante `running`:
 
-Durante os 3000 ms:
-
-- movimento espacial SHOULD usar uma curva expressiva sem bounce/overshoot;
+- o mapa começa invisível sobre preto e ganha opacidade gradualmente;
+- a deformação usa rotação em Y alternada e escala X/Y não uniforme, simulando compressão/descompressão;
+- a trajetória converge continuamente para a posição, rotação e escala finais do `BrazilTerritoryAssembly` atual;
+- cores dos territórios interpolam dos fills canônicos para `PLATE_TONES`;
+- roughness, metalness e bordas convergem para os valores normais da Foundation;
 - DOM crítico SHOULD privilegiar `transform` e `opacity`;
-- o escurecimento SHOULD ocorrer preferencialmente por composição/camadas, evitando animações caras de `filter` no caminho crítico;
-- o Canvas pode permanecer visualmente encoberto no início enquanto assume a pose final atrás do fallback;
-- o handoff 2D -> 3D SHOULD acontecer apenas quando as duas representações estiverem visualmente próximas;
-- no instante final, a cena MUST coincidir com o estado normal de `awaiting-entry`, sem salto de posição, opacidade ou escala.
+- nada deve aparecer em um único frame.
 
-Carregamento de WebGL não conta como parte dos três segundos: recursos podem preparar pelo tempo necessário antes da coreografia começar. Falha de WebGL MUST cair para a composição 2D funcional sem tentar executar uma transição incompleta.
+No estado `settled`, a Foundation MUST definir explicitamente os mesmos valores finais usados antes da intro, evitando erro acumulado ou diferença causada pela interpolação.
 
-## Terra, Brasil e Mesa
+## Estado final imutável
 
-A Terra serve para comunicar escala e MUST recuar após a revelação do Brasil quando fizer parte de uma variação futura da cerimônia. Não pode ser o único diferencial visual.
+A animação é uma **entrada para a HOME atual**, não um redesign da HOME.
 
-Na coreografia atual, o Brasil é a âncora inicial. Ele MUST aparecer como unidade territorial de 42 placas canônicas e terminar integrado à Mesa de Domínio. A Mesa é protagonista arquitetônica, não background.
+O estado após a intro MUST preservar:
 
-A Coroa Orbital SHOULD estar presente em movimento ambiente lento; seu alinhamento completo é reservado a autorização/conflito.
+- câmera/preset `table` existente;
+- `DomainTable`;
+- `OrbitalCrown`;
+- `StrategicGlobe` recuado;
+- `CommandInsignia`;
+- `BrazilTerritoryAssembly` com os materiais militares atuais;
+- identidade, CTA, footer, chrome e atmosfera nas posições atuais de `dev`.
+
+Qualquer alteração perceptível do layout final em relação ao baseline de `dev` reprova a implementação.
 
 ## Navegação espacial
 
-Após `ENTRAR NO COMANDO`, os três destinos SHOULD parecer setores/mecanismos da mesma Mesa, não cards independentes.
+Após `ENTRAR NO COMANDO`, os três destinos SHOULD parecer setores/mecanismos da mesma Mesa, não cards independentes. A navegação real MUST continuar baseada em controles DOM acessíveis; a cena acompanha a intenção.
 
-Foco em `OPERAÇÕES` MAY introduzir tensão/vermelho e separação territorial leve. `DOUTRINA` SHOULD tender à leitura/análise. `COMANDO` SHOULD orientar a Insígnia/prestígio.
+## Desktop e mobile
 
-A navegação real MUST continuar baseada em controles DOM acessíveis; a cena acompanha a intenção.
-
-## Desktop
-
-- Mesa/Brasil dominam a composição;
-- UI textual é mínima e hierárquica;
-- vermelho é praticamente ausente antes de Operações;
-- nenhum painel grande compete com o objeto de comando;
-- CTA principal permanece inequívoco.
-
-## Mobile
-
-Mobile MUST ser recomposto:
-
-- Brasil/Mesa como foco superior/central;
-- deslocamento inicial do Brasil para a direita deve ser menor que no desktop para não recortar a leitura do mapa;
-- CTA principal em região confortável de touch;
-- três destinos com alvos grandes e labels persistentes;
-- sem hover/parallax obrigatórios;
-- câmera pode ser simplificada se melhorar legibilidade.
+Desktop MUST preservar a Mesa/Brasil como protagonista. Mobile MUST manter a composição já existente, safe areas, alvos touch e nenhuma dependência de hover. O deslocamento inicial do mapa pode ser menor no mobile, mas o frame final MUST continuar idêntico ao estado mobile de `dev`.
 
 ## Estados
 
-- `boot` / preparação;
+- `boot` / preto e preparação;
+- `initial` / mapa preparado mas ainda não executando;
+- `running` / coreografia de 3000 ms;
+- `settled` / Foundation normal;
 - `awaiting-entry`;
 - `command-open`;
 - `destination-focus`;
 - `transitioning`;
-- `repeat-visit`;
 - `reduced-motion`;
 - `scene-fallback`.
 
-Todo estado MUST possuir saída funcional e estado final determinístico.
-
 ## SEO e conteúdo
 
-Preservar metadata/structured data relevantes já existentes: indexabilidade, title, description, canonical/OpenGraph aplicáveis e representação WebApplication. O redesign MUST NOT esconder todo conteúdo relevante atrás de Canvas.
+Preservar metadata/structured data relevantes já existentes. O redesign MUST NOT esconder todo conteúdo relevante atrás de Canvas.
 
 ## Não fazer
 
 MUST NOT:
 
-- usar hero com texto à esquerda + imagem à direita como estrutura principal;
-- mostrar três cards grandes como navegação principal;
-- fazer do globo o protagonista permanente;
-- exigir intro antes de oferecer skip/ação;
-- criar elementos principais apenas no meio da animação, causando aparição súbita;
-- trocar fallback por Canvas em um único frame perceptível;
+- substituir o estado final de `dev`;
+- usar dois mapas visíveis para simular transformação;
+- usar apenas fade-out de uma tela + fade-in de outra;
+- usar spin 2D/360° convencional como gesto principal;
+- criar elementos principais no meio da animação causando pop-in;
 - manter vermelho pulsando continuamente;
-- inserir marketing longo acima da dobra;
-- fazer link/CTA existir apenas como mesh 3D.
+- fazer CTA/link existir apenas como mesh 3D.
 
 ## Definition of Done
 
-O primeiro contato transforma continuamente o Brasil colorido na Mesa de Domínio em três segundos, sem saltos perceptíveis, preservando ação imediata, acessibilidade, fallbacks e todos os destinos. `EVAL.md` passa integralmente.
+Do preto absoluto, o próprio mapa operacional surge colorido, comprime/descomprime, move-se e militariza até chegar exatamente ao estado final da HOME em `dev`, em 3000 ms, sem mapa duplicado, pop-in ou salto no último frame. `EVAL.md` passa integralmente.
