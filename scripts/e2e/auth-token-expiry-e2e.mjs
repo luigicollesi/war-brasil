@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHmac } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -14,14 +15,19 @@ const playwright = await import(
 const BASE_URL = process.env.LOBBY_E2E_BASE_URL ?? "http://localhost:3000";
 const DATABASE_URL = process.env.LOBBY_E2E_DATABASE_URL ?? process.env.DATABASE_URL;
 const EMAIL_SINK_DIR = process.env.AUTH_EMAIL_SINK_DIR;
+const BETTER_AUTH_SECRET = process.env.BETTER_AUTH_SECRET;
 const PASSWORD = "WarBrasil-Expiry-E2E-2026!";
 const NEW_PASSWORD = "WarBrasil-Expiry-New-E2E-2026!";
+const EXPECTED_TOKEN_TTL_SECONDS = 60 * 60;
 
 if (!DATABASE_URL) {
   throw new Error("DATABASE_URL é obrigatória para o E2E temporal de auth.");
 }
 if (!EMAIL_SINK_DIR) {
   throw new Error("AUTH_EMAIL_SINK_DIR é obrigatória para o E2E temporal de auth.");
+}
+if (!BETTER_AUTH_SECRET) {
+  throw new Error("BETTER_AUTH_SECRET é obrigatória para o E2E temporal de auth.");
 }
 
 async function apiJson(page, url, init = {}) {
@@ -94,26 +100,50 @@ function actionUrl(message) {
   return match[0];
 }
 
-async function verificationWatermark(db) {
-  const result = await db.query(`SELECT clock_timestamp() AS watermark`);
-  assert.ok(result.rows[0]?.watermark, "PostgreSQL não retornou watermark temporal");
-  return result.rows[0].watermark;
+function verificationTokenFromActionUrl(value) {
+  const token = new URL(value).searchParams.get("token");
+  assert.ok(token, "URL de verification não contém token");
+  return token;
 }
 
-async function expireVerificationRowsIssuedSince(db, watermark) {
+function decodeJwtPayload(token) {
+  const parts = token.split(".");
+  assert.equal(parts.length, 3, "verification token deveria ser JWT compacto");
+  return JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
+}
+
+function signExpiredVerificationJwt(email) {
+  const now = Math.floor(Date.now() / 1000);
+  const header = Buffer.from(JSON.stringify({ alg: "HS256" })).toString("base64url");
+  const payload = Buffer.from(
+    JSON.stringify({
+      email: email.toLowerCase(),
+      iat: now - 2 * EXPECTED_TOKEN_TTL_SECONDS,
+      exp: now - EXPECTED_TOKEN_TTL_SECONDS,
+    }),
+  ).toString("base64url");
+  const signingInput = `${header}.${payload}`;
+  const signature = createHmac("sha256", BETTER_AUTH_SECRET)
+    .update(signingInput)
+    .digest("base64url");
+  return `${signingInput}.${signature}`;
+}
+
+async function expireResetToken(db, token) {
   const result = await db.query(
     `UPDATE auth.verification
         SET "expiresAt" = NOW() - INTERVAL '1 minute',
             "updatedAt" = NOW()
-      WHERE GREATEST("createdAt", "updatedAt") >= $1
+      WHERE identifier = $1
         AND "expiresAt" > NOW()
       RETURNING id`,
-    [watermark],
+    [`reset-password:${token}`],
   );
 
-  assert.ok(
-    (result.rowCount ?? 0) >= 1,
-    "ação auth não deixou token de verification ativo após o watermark",
+  assert.equal(
+    result.rowCount,
+    1,
+    "token de password reset não encontrou exatamente uma verification ativa",
   );
 }
 
@@ -154,19 +184,38 @@ try {
     const identity = `${process.pid}-${Date.now()}`;
 
     const expiredVerificationEmail = `expired-verify-${identity}@e2e.war-brasil.test`;
-    const verificationIssuedAfter = await verificationWatermark(db);
     await register(page, expiredVerificationEmail);
     const verificationMessage = await waitForEmail(
       expiredVerificationEmail,
       "Verificação de email",
     );
-    await expireVerificationRowsIssuedSince(db, verificationIssuedAfter);
+    const liveVerificationToken = verificationTokenFromActionUrl(
+      actionUrl(verificationMessage),
+    );
+    const livePayload = decodeJwtPayload(liveVerificationToken);
+    assert.equal(
+      livePayload.exp - livePayload.iat,
+      EXPECTED_TOKEN_TTL_SECONDS,
+      "verification JWT real não possui TTL de 1 hora",
+    );
+    assert.equal(
+      livePayload.email,
+      expiredVerificationEmail,
+      "verification JWT real não pertence ao email esperado",
+    );
 
-    await page.goto(actionUrl(verificationMessage), { waitUntil: "domcontentloaded" });
+    const expiredVerificationToken = signExpiredVerificationJwt(
+      expiredVerificationEmail,
+    );
+    const expiredVerificationUrl = new URL("/api/auth/verify-email", BASE_URL);
+    expiredVerificationUrl.searchParams.set("token", expiredVerificationToken);
+    expiredVerificationUrl.searchParams.set("callbackURL", "/?auth=email-verified");
+
+    await page.goto(expiredVerificationUrl.href, { waitUntil: "domcontentloaded" });
     assert.equal(
       await isVerified(db, expiredVerificationEmail),
       false,
-      "token de verification expirado verificou a conta",
+      "verification JWT autenticamente assinado mas expirado verificou a conta",
     );
 
     const expiredVerificationSignIn = await signIn(
@@ -185,7 +234,6 @@ try {
     await page.goto(actionUrl(validVerification), { waitUntil: "domcontentloaded" });
     assert.equal(await isVerified(db, resetEmail), true, "fixture de reset não foi verificada");
 
-    const resetIssuedAfter = await verificationWatermark(db);
     const requestReset = await apiJson(page, "/api/auth/request-password-reset", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -200,7 +248,7 @@ try {
     const rawResetUrl = actionUrl(resetMessage);
     const expiredResetToken = tokenFromResetActionUrl(rawResetUrl);
     assert.ok(expiredResetToken, "URL de reset não expôs token Better Auth na ação server-side");
-    await expireVerificationRowsIssuedSince(db, resetIssuedAfter);
+    await expireResetToken(db, expiredResetToken);
 
     const expiredReset = await apiJson(page, "/api/auth/reset-password", {
       method: "POST",
@@ -229,7 +277,7 @@ try {
     );
 
     console.log(
-      "[auth-token-expiry-e2e] verification e password reset expirados falharam fechados.",
+      "[auth-token-expiry-e2e] TTL real de verification e expiração de verification/reset falharam fechados.",
     );
   } finally {
     await context.close();
