@@ -33,9 +33,6 @@ jobs:
           --health-retries 5
     env:
       DATABASE_URL: postgresql://war:war@127.0.0.1:5432/war_auth_schema
-      BETTER_AUTH_SECRET: schema-bootstrap-only-secret-not-for-production-2026
-      BETTER_AUTH_URL: http://localhost:3000
-      AUTH_ALLOWED_HOSTS: localhost:3000
     steps:
       - uses: actions/checkout@v7
         with:
@@ -49,12 +46,12 @@ jobs:
       - name: Create isolated auth schema
         run: psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c 'CREATE SCHEMA IF NOT EXISTS auth;'
       - name: Generate Better Auth 1.7.4 SQL
-        run: npx --yes auth@1.7.4 generate --config src/lib/server/auth/auth.ts --output /tmp/better-auth-schema.sql --yes
+        run: npx --yes auth@1.7.4 generate --config src/lib/server/auth/schema-config.ts --output /tmp/better-auth-schema.sql --yes
       - name: Build managed migration
         run: |
           {
             echo '-- Better Auth 1.7.4 core schema for War-Brasil.'
-            echo '-- Generated from src/lib/server/auth/auth.ts; do not hand-edit schema shape without regenerating.'
+            echo '-- Generated from src/lib/server/auth/schema-config.ts; regenerate before changing the Better Auth core shape.'
             echo 'CREATE SCHEMA IF NOT EXISTS auth;'
             echo 'SET search_path TO auth;'
             cat /tmp/better-auth-schema.sql
