@@ -7,18 +7,36 @@ const auth = readFileSync("src/lib/server/auth/auth.ts", "utf8");
 const environment = readFileSync("src/lib/server/auth/environment.ts", "utf8");
 const authPool = readFileSync("src/lib/server/auth/auth-pool.ts", "utf8");
 const authGuard = readFileSync("src/lib/server/auth/auth-guard.ts", "utf8");
+const commandAccess = readFileSync(
+  "src/lib/server/auth/command-access.ts",
+  "utf8",
+);
+const commandAccessRoute = readFileSync(
+  "src/app/api/auth/command-access/route.ts",
+  "utf8",
+);
 const authClient = readFileSync("src/lib/client/auth-client.ts", "utf8");
 const authRoute = readFileSync("src/app/api/auth/[...all]/route.ts", "utf8");
 const proxy = readFileSync("src/proxy.ts", "utf8");
 const email = readFileSync("src/lib/server/auth/email.ts", "utf8");
 const appleSecret = readFileSync("src/lib/server/auth/apple-client-secret.ts", "utf8");
 const envExample = readFileSync(".env.example", "utf8");
+const home = readFileSync(
+  "src/components/pre-game/home/command-home-client.tsx",
+  "utf8",
+);
+const onboarding = readFileSync(
+  "src/components/auth/command-onboarding-modal.tsx",
+  "utf8",
+);
 
 const authSources = [
   auth,
   environment,
   authPool,
   authGuard,
+  commandAccess,
+  commandAccessRoute,
   authClient,
   authRoute,
   proxy,
@@ -37,6 +55,7 @@ test("auth de servidor permanece server-only e usa schema PostgreSQL dedicado", 
   assert.match(environment, /^import "server-only";/m);
   assert.match(authPool, /^import "server-only";/m);
   assert.match(authGuard, /^import "server-only";/m);
+  assert.match(commandAccess, /^import "server-only";/m);
   assert.match(authPool, /options: "-c search_path=auth"/);
   assert.match(auth, /database: authPool/);
   assert.match(auth, /generateId: "uuid"/);
@@ -98,6 +117,7 @@ test("cookies/sessão têm cache curto, mas backend sensível força validação
 test("Proxy deixa apenas Home pública e não substitui backend auth", () => {
   assert.match(proxy, /pathname === "\/"/);
   assert.match(proxy, /api\/auth/);
+  assert.match(proxy, /api\/internal/);
   assert.match(proxy, /auth\.api\.getSession/);
   assert.match(proxy, /authentication_required/);
   assert.match(proxy, /status: 401/);
@@ -151,4 +171,41 @@ test("validador de produção exige segredo forte e configuração dos três OAu
   assert.match(environment, /APPLE_PRIVATE_KEY/);
   assert.match(environment, /DISCORD_CLIENT_ID/);
   assert.match(environment, /DISCORD_CLIENT_SECRET/);
+});
+
+test("completude do Comando é lida de profile.commanders no servidor", () => {
+  assert.match(commandAccess, /FROM profile\.commanders/);
+  assert.match(commandAccess, /session\.user\.id/);
+  assert.match(commandAccess, /profileComplete: Boolean\(handle && displayName\)/);
+  assert.match(commandAccessRoute, /getAuthenticatedSession\(request\)/);
+  assert.match(commandAccessRoute, /getCommandAccessState\(session\)/);
+  assert.match(commandAccessRoute, /authenticationRequiredResponse/);
+});
+
+test("onboarding grava somente para a conta da sessão e trata handle concorrente", () => {
+  assert.match(commandAccess, /INSERT INTO profile\.commanders\(user_id, handle, display_name\)/);
+  assert.match(commandAccess, /\[session\.user\.id, handle, displayName\]/);
+  assert.match(commandAccess, /error\.code === "23505"/);
+  assert.match(commandAccessRoute, /validateCommanderIdentity\(input\)/);
+  assert.match(commandAccessRoute, /status: 409/);
+  assert.doesNotMatch(commandAccessRoute, /body\?\.userId|body\?\.user_id/);
+});
+
+test("Home nunca abre o Comando apenas pela sessão client; sempre consulta o gate server-side", () => {
+  assert.match(home, /"onboarding"/);
+  assert.match(home, /fetch\("\/api\/auth\/command-access"/);
+  assert.match(home, /applyCommandAccess/);
+  assert.match(home, /payload\.profileComplete/);
+  assert.match(home, /setOnboardingOpen\(true\)/);
+  assert.doesNotMatch(home, /authClient\.getSession/);
+  assert.doesNotMatch(home, /if \(authSession\) \{\s*setCommandOpen\(true\)/);
+});
+
+test("onboarding coleta somente identidade pública e conclui pelo endpoint autenticado", () => {
+  assert.match(onboarding, /name="displayName"/);
+  assert.match(onboarding, /name="handle"/);
+  assert.match(onboarding, /fetch\("\/api\/auth\/command-access"/);
+  assert.match(onboarding, /method: "PUT"/);
+  assert.doesNotMatch(onboarding, /name="email"|name="userId"|name="user_id"/);
+  assert.match(onboarding, /aria-modal="true"/);
 });
