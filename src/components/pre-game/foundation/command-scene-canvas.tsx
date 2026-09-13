@@ -119,7 +119,11 @@ type TerritoryPlate = {
 };
 
 function smoothstepWindow(value: number, start: number, end: number) {
-  const progress = MathUtils.clamp((value - start) / Math.max(end - start, 0.0001), 0, 1);
+  const progress = MathUtils.clamp(
+    (value - start) / Math.max(end - start, 0.0001),
+    0,
+    1,
+  );
   return progress * progress * (3 - 2 * progress);
 }
 
@@ -470,9 +474,15 @@ function BrazilTerritoryAssembly({
       }),
     [introEnabled],
   );
+  const edgeMaterialRef = useRef(edgeMaterial);
+
+  useEffect(() => {
+    edgeMaterialRef.current = edgeMaterial;
+  }, [edgeMaterial]);
 
   useLayoutEffect(() => {
     const assembly = assemblyRef.current;
+    const activeEdgeMaterial = edgeMaterialRef.current;
     if (!assembly) return;
 
     const finalize = () => {
@@ -489,8 +499,8 @@ function BrazilTerritoryAssembly({
           material.needsUpdate = true;
         }
       });
-      edgeMaterial.color.copy(EDGE_FINAL_COLOR);
-      edgeMaterial.opacity = 0.78;
+      activeEdgeMaterial.color.copy(EDGE_FINAL_COLOR);
+      activeEdgeMaterial.opacity = 0.78;
     };
 
     if (!introEnabled || intent.entranceState === "settled") {
@@ -522,12 +532,11 @@ function BrazilTerritoryAssembly({
           material.needsUpdate = true;
         }
       });
-      edgeMaterial.color.copy(EDGE_INTRO_COLOR);
-      edgeMaterial.opacity = 0;
+      activeEdgeMaterial.color.copy(EDGE_INTRO_COLOR);
+      activeEdgeMaterial.opacity = 0;
       invalidate();
     }
   }, [
-    edgeMaterial,
     intent.entranceState,
     introEnabled,
     invalidate,
@@ -553,6 +562,7 @@ function BrazilTerritoryAssembly({
 
   useFrame((_, delta) => {
     const assembly = assemblyRef.current;
+    const activeEdgeMaterial = edgeMaterialRef.current;
 
     if (
       assembly &&
@@ -605,12 +615,13 @@ function BrazilTerritoryAssembly({
         );
         material.opacity = reveal;
       });
-      edgeMaterial.color.lerpColors(
+      activeEdgeMaterial.color.lerpColors(
         EDGE_INTRO_COLOR,
         EDGE_FINAL_COLOR,
         militarize,
       );
-      edgeMaterial.opacity = reveal * MathUtils.lerp(0.92, 0.78, militarize);
+      activeEdgeMaterial.opacity =
+        reveal * MathUtils.lerp(0.92, 0.78, militarize);
 
       if (progress >= 1) {
         introCompleteRef.current = true;
@@ -626,8 +637,8 @@ function BrazilTerritoryAssembly({
           material.transparent = false;
           material.needsUpdate = true;
         });
-        edgeMaterial.color.copy(EDGE_FINAL_COLOR);
-        edgeMaterial.opacity = 0.78;
+        activeEdgeMaterial.color.copy(EDGE_FINAL_COLOR);
+        activeEdgeMaterial.opacity = 0.78;
       }
     }
 
