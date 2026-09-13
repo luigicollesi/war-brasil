@@ -41,7 +41,7 @@ Materiais SHOULD responder à luz de forma legível e contida. Reflexo não pode
 
 ### Terra / Globo Estratégico
 
-A Terra representa escala antes do comando. Na entrada, MAY aparecer como estágio inicial do ritual `Terra -> Brasil -> Mesa`, mas MUST NOT virar o protagonista permanente nem um globo sci-fi genérico.
+A Terra representa escala estratégica e continuidade da instalação. MAY aparecer em aberturas ou transições quando tiver função narrativa clara, mas não é estágio obrigatório de toda cerimônia e MUST NOT virar o protagonista permanente nem um globo sci-fi genérico.
 
 ### Mesa de Domínio
 
@@ -96,25 +96,51 @@ A UI MUST permanecer legível mesmo se a cena estiver mais clara, escura ou desf
 
 ## Motion
 
-Três velocidades semânticas:
-
-- **ambiente**: 8–30 s; quase imperceptível;
-- **interface**: 120–320 ms;
-- **cerimônia/câmera**: 350–900 ms.
-
 Movimento MUST comunicar causa: entrada, seleção, foco, prontidão, autorização ou transição. Não animar elementos apenas para manter a tela ocupada.
+
+Faixas semânticas de referência:
+
+- **microinteração mecânica**: 120–320 ms;
+- **foco/transição local de cena**: 280–900 ms;
+- **assentamento cerimonial composto**: 700–1400 ms;
+- **opening ritual excepcional**: 1800–3600 ms, somente quando existe uma coreografia narrativa explícita e `opening-animation-standard.md` é seguido;
+- **ambiente idle**: 8–30 s, quase imperceptível.
+
+Essas faixas descrevem função, não obrigam duração exata. Uma abertura longa não deve ser construída pela soma de delays artificiais; deve ter uma timeline única e justificativa visual.
+
+### Motion mecânico
 
 Microinterações SHOULD ser mecânicas: encaixe, trava, giro curto, alinhamento, pressão, abertura, leitura de relé. Evitar bounce/cartoon, elasticidade exagerada e partículas constantes.
 
+### Aberturas complexas
+
+Aberturas com múltiplos tracks MUST seguir `opening-animation-standard.md`.
+
+Princípios visuais:
+
+- transformar objetos existentes em vez de trocá-los;
+- preferir materialização, iluminação, revelação de superfície e alinhamento a grandes viagens de câmera;
+- manter um objeto protagonista por vez;
+- escalonar interface periférica para que ela não concorra com o gesto principal;
+- chegar a um estado final que exista independentemente da animação;
+- evitar fade global como substituto de coreografia;
+- evitar glitch, scanline e holograma ciano como atalhos para “tecnologia”.
+
+Uma abertura MAY ser longa; nenhum movimento individual precisa durar a abertura inteira.
+
+### Reduced motion
+
 `prefers-reduced-motion: reduce` MUST remover movimentos de câmera, parallax, loops não essenciais e transições espaciais sem remover conteúdo, estado ou ação.
 
-Nenhum efeito deve piscar/pulsar de forma agressiva. Vermelho pode intensificar conflito, mas não deve operar como estrobo.
+Aberturas ornamentais complexas SHOULD entrar diretamente no estado estável. Nenhum efeito deve piscar/pulsar de forma agressiva. Vermelho pode intensificar conflito, mas não deve operar como estrobo.
 
 ## Transições entre áreas
 
 As transições SHOULD preservar continuidade espacial: a mesma sala, mesa e Brasil mudam de função em vez de parecer que uma página totalmente nova foi carregada.
 
 A continuidade visual MUST NOT bloquear navegação, criar atraso artificial ou exigir que o renderer permaneça disponível para completar a rota.
+
+Quando uma transição entre áreas se tornar uma coreografia longa/multitrack, ela passa a obedecer também a `opening-animation-standard.md` ou a um contrato equivalente explicitamente documentado.
 
 ## Som
 
