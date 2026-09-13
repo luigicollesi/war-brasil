@@ -16,6 +16,10 @@ const gameSnapshot = readFileSync(
   "utf8",
 );
 const lobbyClient = readFileSync("src/components/lobby-client.tsx", "utf8");
+const lobbyFormation = readFileSync(
+  "src/components/lobby-formation-panel.tsx",
+  "utf8",
+);
 
 test("schema e migration identificam bots e versionam o catálogo de facções", () => {
   for (const source of [migration, schema]) {
@@ -108,17 +112,19 @@ test("rotas de lobby delegam criação e remoção ao domínio", () => {
 });
 
 test("lobby oferece controles de bot somente quando o servidor autoriza", () => {
-  assert.match(lobbyClient, /canManageBots/);
-  assert.match(lobbyClient, /\+ Bot/);
-  assert.match(lobbyClient, /player\.isBot && canManageBots/);
+  assert.match(lobbyClient, /canManageBots=\{canManageBots\}/);
+  assert.match(lobbyClient, /onAddBot=\{\(\) => void addBot\(\)\}/);
+  assert.match(lobbyClient, /onRemoveBot=\{removeBot\}/);
   assert.match(lobbyClient, /\/bots/);
   assert.match(lobbyClient, /method: "DELETE"/);
+  assert.match(lobbyFormation, /\+ Bot/);
+  assert.match(lobbyFormation, /player\.isBot && canManageBots/);
 });
 
 test("lobby mostra adicionar bot somente na primeira vaga vazia", () => {
-  assert.match(lobbyClient, /emptySlots\.map\(\(_, index\) =>/);
-  assert.match(lobbyClient, /canManageBots && index === 0/);
-  assert.match(lobbyClient, /aria-label="Adicionar bot na próxima vaga"/);
+  assert.match(lobbyFormation, /emptySlots\.map\(\(_, index\) =>/);
+  assert.match(lobbyFormation, /canManageBots && index === 0/);
+  assert.match(lobbyFormation, /aria-label="Adicionar bot na próxima vaga"/);
 });
 
 test("migration da fase 1 permanece independente do scheduler da fase 2", () => {
