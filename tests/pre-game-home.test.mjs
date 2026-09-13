@@ -111,7 +111,8 @@ test("Genesis é pass transitório sobre as mesmas geometrias e não um segundo 
   assert.match(genesisPass, /geometry=\{plate\.geometry\}/);
   assert.match(genesisPass, /name="HomeGenesisPass"/);
   assert.match(genesisPass, /entranceState !== "playing"/);
-  assert.match(genesisPass, /onScenePhaseChange\("ready"\)/);
+  assert.match(genesisPass, /globalProgress >= 1[\s\S]*?\? "ready"/);
+  assert.match(genesisPass, /onScenePhaseChange\(nextPhase\)/);
   assert.doesNotMatch(sceneHost, /EntranceBrazilMap|command-entrance-map/);
   assert.equal(existsSync(experimentalEntranceMapPath), false);
 });
