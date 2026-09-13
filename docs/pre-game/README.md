@@ -29,10 +29,11 @@ A infraestrutura compartilhada fica em `foundation/`.
 1. `quality-standard.md` — interpretação de MUST/SHOULD/MAY, evidências e Definition of Done comum.
 2. `traceability.md` — matriz que impede omissão das ideias centrais do redesign.
 3. `visual-language.md` — identidade, materiais, cor, objetos de assinatura e motion.
-4. `parallel-development.md` — ownership e fronteiras para implementação simultânea.
-5. `foundation/SPEC.md` + `foundation/EVAL.md` — contrato da cena compartilhada.
-6. `SPEC.md` + `EVAL.md` da trilha em desenvolvimento.
-7. `manifest.json` — índice machine-readable para agentes.
+4. `opening-animation-standard.md` — lifecycle, timeline, priming, GPU/DOM ownership, determinismo, cleanup e eval de aberturas complexas.
+5. `parallel-development.md` — ownership e fronteiras para implementação simultânea.
+6. `foundation/SPEC.md` + `foundation/EVAL.md` — contrato da cena compartilhada.
+7. `SPEC.md` + `EVAL.md` da trilha em desenvolvimento.
+8. `manifest.json` — índice machine-readable para agentes.
 
 As palavras normativas em maiúsculas seguem BCP 14 conforme `quality-standard.md`.
 
@@ -43,10 +44,11 @@ Antes de implementar qualquer trilha:
 1. ler `quality-standard.md`;
 2. localizar os conceitos `CORE` aplicáveis em `traceability.md`;
 3. ler `visual-language.md`;
-4. ler `parallel-development.md`;
-5. ler `foundation/SPEC.md`;
-6. ler `SPEC.md` e `EVAL.md` da trilha;
-7. confrontar o spec com o código atual antes de modificar comportamento existente.
+4. se a trilha possuir abertura/transição complexa, ler `opening-animation-standard.md`;
+5. ler `parallel-development.md`;
+6. ler `foundation/SPEC.md`;
+7. ler `SPEC.md` e `EVAL.md` da trilha;
+8. confrontar o spec com o código atual antes de modificar comportamento existente.
 
 Nenhum `SPEC.md` isolado representa todo o redesign.
 
@@ -62,7 +64,8 @@ Uma trilha só está concluída quando:
 - teclado/touch foram verificados quando aplicável;
 - `prefers-reduced-motion` possui comportamento equivalente e funcional;
 - falha/ausência de WebGL não impede conteúdo ou ação principal;
-- o PR fornece evidência reproduzível para os critérios avaliados.
+- o PR fornece evidência reproduzível para os critérios avaliados;
+- aberturas complexas, quando existirem, passam também pelo contrato de `opening-animation-standard.md`.
 
 ## Contratos que o redesign não pode alterar silenciosamente
 
@@ -78,7 +81,7 @@ O trabalho pré-jogo MUST NOT mudar, sem spec separado:
 
 ## Stack
 
-Não adicionar outra stack de renderização sem necessidade explícita. O projeto já possui Next.js, React, Tailwind CSS, Three.js e React Three Fiber.
+Não adicionar outra stack de renderização ou animação sem necessidade explícita. O projeto já possui Next.js, React, Tailwind CSS, Three.js, React Three Fiber, CSS Animations e Web Animations API do navegador.
 
 A cena 3D SHOULD ser compartilhada e persistente quando a arquitetura permitir. Páginas solicitam **intenção de cena**; não controlam diretamente câmera, luz, renderer ou internals Three.js.
 
@@ -86,12 +89,14 @@ O conteúdo crítico da rota MUST existir independentemente do 3D. WebGL é prog
 
 ## Referências de engenharia
 
-As escolhas de qualidade são ancoradas em fontes oficiais, detalhadas também em `quality-standard.md` e `manifest.json`:
+As escolhas de qualidade são ancoradas em fontes oficiais, detalhadas também em `quality-standard.md`, `opening-animation-standard.md` e `manifest.json`:
 
 - BCP 14 / RFC 2119 + RFC 8174 para linguagem normativa;
 - WCAG 2.2 para acessibilidade;
 - documentação oficial do Next.js para boundaries Server/Client e lazy loading;
-- documentação do React Three Fiber para estratégias de performance;
+- documentação do React Three Fiber para frame loop e estratégias de performance;
+- documentação oficial do Three.js para materiais/shaders e precompilação;
+- Web Animations API/`requestAnimationFrame` para coreografias DOM;
 - documentação oficial do Playwright para visual regression determinística quando essa camada for adicionada.
 
 Essas referências orientam engenharia; não substituem medições e contratos reais do projeto.
