@@ -118,10 +118,12 @@ async function authenticateActor(page) {
 }
 
 async function createActor(browser, options = {}) {
+  const nextActorIp = `203.0.113.${actorSequence + 1}`;
   const context = await browser.newContext({
     viewport: options.viewport ?? { width: 1440, height: 900 },
     reducedMotion: options.reducedMotion ?? "no-preference",
     permissions: ["clipboard-read", "clipboard-write"],
+    extraHTTPHeaders: { "x-forwarded-for": nextActorIp },
   });
 
   if (options.disableWebgl) {
