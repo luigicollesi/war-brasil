@@ -108,6 +108,14 @@ async function signIn(page, email) {
   return networkResponse;
 }
 
+async function signOut(page) {
+  return apiJson(page, "/api/auth/sign-out", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+}
+
 async function getSession(page) {
   const response = await apiJson(page, "/api/auth/get-session");
   assert.equal(response.status, 200, JSON.stringify(response.body));
@@ -218,7 +226,7 @@ try {
     await signIn(page, email);
     assert.ok((await getSession(page))?.user, "novo login não restaurou sessão");
 
-    const logout = await apiJson(page, "/api/auth/sign-out", { method: "POST" });
+    const logout = await signOut(page);
     assert.equal(logout.status, 200, JSON.stringify(logout.body));
     assert.equal((await getSession(page))?.user ?? null, null, "logout não removeu sessão");
 
