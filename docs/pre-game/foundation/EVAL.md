@@ -1,6 +1,6 @@
 # EVAL — Pre-game Foundation
 
-Avaliar conforme `../quality-standard.md`. Falha em qualquer `BLOCKER` reprova independentemente do score.
+Avaliar conforme `../quality-standard.md`. Aberturas complexas usam também `../opening-animation-standard.md`. Falha em qualquer `BLOCKER` reprova independentemente do score.
 
 ## Gates BLOCKER
 
@@ -26,6 +26,10 @@ Avaliar conforme `../quality-standard.md`. Falha em qualquer `BLOCKER` reprova i
 | FND-18 | zoom/aproximação não faz fronteiras desaparecerem nem altera identidade territorial | interaction + visual |
 | FND-19 | gesto mobile de scroll/pan/zoom não dispara seleção territorial acidental | touch/e2e |
 | FND-20 | identidade/ordem semântica dos territórios permanece estável entre estados visuais | automated/structural inspection |
+| FND-21 | runtime compartilhado de opening mantém `progress` fora de React state por frame e usa clock monotônico único | source inspection |
+| FND-22 | Foundation permite priming/prewarm antes do primeiro frame de opening quando necessário | source + browser/profile |
+| FND-23 | adapters de opening que tocam Three.js ficam na fronteira Foundation; página não acessa refs privadas de câmera/material/mesh | dependency/source inspection |
+| FND-24 | recursos transitórios de opening possuem cleanup determinístico sem destruir geometria/material compartilhado | source + profiler/inspection |
 
 ## Score / 100
 
@@ -71,6 +75,19 @@ Sem WebGL: composição 2D coerente, conteúdo completo e nenhuma tela vazia/spi
 
 Forçar estados com vermelho/conflito e estados escuros/claros. Texto, foco e fronteiras continuam legíveis.
 
+### FND-S8 — Opening runtime
+
+Executar uma opening de teste/consumer com lifecycle `loading -> primed -> playing -> settling -> settled`, skip e unmount durante `playing`.
+
+Validar:
+
+- um único clock normalizado;
+- nenhum `setState` por frame;
+- primed frame antes do progresso;
+- cleanup em `settled` e unmount;
+- nenhum renderer/geometry duplicado;
+- `progress=1` e `post-cleanup` convergem ao mesmo estado estável.
+
 ## Visual regression
 
 Capturar estados estáveis em:
@@ -82,7 +99,7 @@ Capturar estados estáveis em:
 
 Estados mínimos: `entrance-idle`, `operations-focus`, `lobby`, `doctrine`, `profile`, `reduced-motion`, `fallback`, `conflict-authorized`.
 
-Snapshots MUST congelar aleatoriedade/animações conforme `../quality-standard.md`. Quando Playwright for adotado, usar comparação oficial de screenshots em ambiente de CI estável.
+Snapshots MUST congelar aleatoriedade/animações conforme `../quality-standard.md`. Openings complexas devem usar seek determinístico conforme `../opening-animation-standard.md`; não depender de sleep real para checkpoints. Quando Playwright for adotado, usar comparação oficial de screenshots em ambiente de CI estável.
 
 ## Gate de rastreabilidade
 
