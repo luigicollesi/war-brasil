@@ -102,13 +102,15 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
   const homeTransition: HomeTransitionState =
     visitMode !== "first" || !ritualActive || sceneState === "fallback"
       ? "complete"
-      : sceneState === "loading"
-        ? "preparing"
-        : sceneState === "primed"
-          ? "primed"
-          : sceneState === "playing" || sceneState === "settling"
-            ? "running"
-            : "complete";
+      : ceremonyPhase === "playing"
+        ? "running"
+        : sceneState === "loading"
+          ? "preparing"
+          : sceneState === "primed"
+            ? "primed"
+            : sceneState === "playing" || sceneState === "settling"
+              ? "running"
+              : "complete";
   const destinationFocus = keyboardDestinationFocus ?? pointerDestinationFocus;
   const sceneIntent = getHomeSceneIntent({
     ceremonyPhase: effectiveCeremonyPhase,
@@ -146,8 +148,12 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
       return;
     }
 
-    setCeremonyPhase("stable");
-    setRitualActive(false);
+    const frame = window.requestAnimationFrame(() => {
+      setCeremonyPhase("stable");
+      setRitualActive(false);
+    });
+
+    return () => window.cancelAnimationFrame(frame);
   }, [ceremonyPhase, ritualActive, sceneState, visitMode]);
 
   const settleCeremony = () => {
