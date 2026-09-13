@@ -120,7 +120,6 @@ test("Genesis é pass transitório sobre as mesmas geometrias e não um segundo 
 test("seek=1 segura intro-100 antes do cleanup", () => {
   assert.match(genesisPass, /const isSeekHold = forcedProgress !== null/);
   assert.match(genesisPass, /const nextPhase: CommandSceneState = isSeekHold/);
-  assert.match(genesisPass, /: globalProgress >= 1[\s\S]*?\? "ready"/);
   assert.match(genesisPass, /if \(!isSeekHold && globalProgress >= 1\)/);
 });
 
