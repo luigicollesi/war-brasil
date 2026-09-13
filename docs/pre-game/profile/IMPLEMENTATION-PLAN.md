@@ -8,15 +8,18 @@ Cena: `profile`
 
 Transformar a PROFILE em um **Quartel do Comandante**: uma tela de jogo pessoal, assimétrica e espacial, que reúne identidade, economia, social, histórico e personalização sem assumir formato de dashboard web.
 
-## Arquitetura
+## Arquitetura atual
 
 A implementação V2 preserva o App Router e a Foundation já integrada em `dev`.
 
 - `page.tsx` permanece Server Component e resolve o snapshot em request-time;
-- `ProfileCommandHub` é a pequena boundary cliente responsável apenas por estação ativa, seleção local, busca social e diretivas de cena;
+- `ProfileCommandHub` é a boundary cliente responsável por estação ativa, seleção local e diretivas de cena;
+- Rede de Comando, Livro de Campanha e Intendência são componentes especializados separados;
+- busca social mantém estado e request apenas dentro de `ProfileNetworkStation`;
 - a PROFILE consome somente `useCommandSceneDirective()` da API pública da Foundation;
 - Three.js, Canvas, câmera e renderer continuam privados da Foundation;
-- loading/error continuam usando os boundaries existentes durante a migração.
+- loading/error continuam usando `ProfileBoundaryState` e `ProfileSceneBridge`;
+- a antiga V1 (`ProfileHall`, `profile-data.ts` e estados auxiliares) foi removida para evitar duas fontes de verdade.
 
 ## Modelo de produto
 
@@ -25,12 +28,12 @@ Cinco sistemas orbitam a Mesa de Comando:
 1. **Dossiê do Comandante** — retrato, nome, handle, título e presença;
 2. **Tesouraria** — moeda comum e moeda premium;
 3. **Rede de Comando** — amigos, solicitações, contatos recentes e busca;
-4. **Livro de Campanha** — operações recentes com continuação explícita;
+4. **Livro de Campanha** — partidas recentes, participantes e continuação explícita;
 5. **Intendência** — vitrine de itens cosméticos sem checkout fictício.
 
 ## Boundary V2
 
-Arquivos:
+Arquivos de dados:
 
 - `profile-command-contract.ts` — tipos públicos da PROFILE V2;
 - `profile-local-fixture.ts` — dados temporários explicitamente `local-static`;
@@ -38,6 +41,18 @@ Arquivos:
 - `/api/profile/commanders/search` — busca sob demanda sem carregar diretório na página.
 
 `getCurrentProfileCommandSnapshot()` é o único ponto de entrada da rota. Providers futuros de autenticação, wallet, social, histórico e storefront devem substituir a implementação sem vazar payloads específicos para os componentes.
+
+## Componentes V2
+
+`src/components/profile/command-quarters/` contém:
+
+- `profile-command-hub.tsx` — controller visual e composição das estações;
+- `profile-network-station.tsx` — roster, sinais recebidos, recentes e busca;
+- `profile-campaign-station.tsx` — janela de partidas + participantes do registro selecionado;
+- `profile-quartermaster-station.tsx` — vitrine da Intendência;
+- `profile-command-format.ts` — formatação e labels compartilhados;
+- `profile-command-hub.module.css` — composição principal desktop/mobile;
+- `profile-command-refinements.module.css` — refinamentos incrementais sem inflar o controller.
 
 ## Estado local inicial
 
@@ -47,7 +62,8 @@ O fluxo normal usa fixture local para permitir implementar e avaliar toda a tela
 - título: `Estrategista do Sul`;
 - moedas: Créditos de Campanha + Reserva de Comando;
 - roster social limitado;
-- três operações recentes + `hasMore`/cursor;
+- solicitações e contatos recentes;
+- três partidas recentes + `hasMore`/cursor;
 - três itens em destaque da Intendência.
 
 Toda seção declara `source: "local-static"`; esse conteúdo não deve ser apresentado como dado remoto persistido.
@@ -68,7 +84,7 @@ Nenhuma coordenada, FOV ou objeto Three entra na PROFILE.
 
 Alvo: `1440x900`.
 
-A primeira composição usa:
+A composição usa:
 
 - Dossiê à esquerda;
 - Mesa de Comando no centro;
@@ -91,22 +107,29 @@ A mesma arquitetura vira **Terminal de Campo**:
 - nenhuma ação depende de hover;
 - Mesa de Comando aparece como estação da Tesouraria e como contexto visual reduzido.
 
-## Busca social
+## Rede de Comando
 
-Busca é separada do snapshot principal. A UI consulta `/api/profile/commanders/search?q=...` somente após entrada explícita do usuário.
+Busca é separada do snapshot principal. `ProfileNetworkStation` consulta `/api/profile/commanders/search?q=...` somente após entrada explícita do usuário.
 
-A implementação local:
+A implementação atual:
 
-- exige pelo menos 2 caracteres;
-- limita a 8 resultados;
-- retorna somente campos públicos do contrato;
+- mostra amigos e presença;
+- mostra solicitações recebidas sem fingir aceitação persistente;
+- mostra jogadores encontrados em partidas recentes;
+- exige pelo menos 2 caracteres para busca;
+- limita o input a 64 caracteres;
+- limita o provider local a 8 resultados;
+- responde com `Cache-Control: private, no-store`;
+- usa `aria-live` para resultado vazio/erro;
 - não carrega o diretório completo no browser.
 
-Persistência de amizade ainda não é implementada nesta fase.
+Persistência de amizade continua fora desta fase até existir contrato real de backend.
 
-## Histórico
+## Livro de Campanha
 
-A V2 mantém três operações na janela inicial e `hasMore: true` + cursor. Isso protege o design contra histórico ilimitado e prepara paginação real futura.
+A V2 mantém três partidas na janela inicial e `hasMore: true` + cursor. O registro selecionado expõe participantes e identifica quais já pertencem à Rede de Comando, sem criar ação de amizade falsa.
+
+Isso protege o design contra histórico ilimitado e prepara paginação real futura.
 
 ## Intendência
 
@@ -116,7 +139,7 @@ A V2 mantém três operações na janela inicial e `hasMore: true` + cursor. Iss
 
 `PROFILE_EVAL_MODE=1` + `PROFILE_EVAL_STATE` continua sendo o único mecanismo de fixture.
 
-Estados V2 previstos/implementados:
+Estados V2 implementados:
 
 - `guest`;
 - `loaded`;
@@ -133,7 +156,7 @@ Reduced-motion e fallback continuam pertencendo ao ambiente/Foundation.
 
 ### Fase 0 — contrato
 
-Concluída nesta branch:
+Concluída:
 
 - nova SPEC;
 - novo EVAL;
@@ -141,18 +164,18 @@ Concluída nesta branch:
 
 ### Fase 1 — dados V2
 
-Concluída nesta primeira implementação:
+Concluída:
 
 - contrato V2;
 - fixture local isolada;
 - boundary de snapshot;
 - busca sob demanda;
 - `test:compile` atualizado;
-- testes comportamentais iniciais.
+- testes comportamentais da V2.
 
 ### Fase 2 — composição do Quartel
 
-Primeiro corte implementado:
+Concluída no primeiro corte:
 
 - `ProfileCommandHub`;
 - cinco estações;
@@ -163,36 +186,59 @@ Primeiro corte implementado:
 
 ### Fase 3 — refinamento social
 
-Próximos passos:
+Implementada parcialmente:
 
-- solicitações detalhadas;
-- contatos recentes expandidos;
-- serviço de mutações sociais sem backend real até contrato existir;
-- feedback completo de busca/erro.
+- roster com presença;
+- solicitações recebidas;
+- contatos recentes;
+- busca com estado vazio/erro e `aria-live`;
+- endpoint `private, no-store` e input limitado.
 
-### Fase 4 — Dossiê da Operação
+Pendente para backend futuro:
 
-- abrir detalhes da partida;
-- participantes e relações sociais;
-- conectar jogador recente a partir da operação.
+- aceitar/rejeitar solicitação;
+- adicionar/remover amigo;
+- bloquear/favoritar;
+- persistência real.
+
+### Fase 4 — Dossiê da partida
+
+Implementada parcialmente:
+
+- seleção de registro recente;
+- participantes;
+- relação com a Rede de Comando;
+- janela limitada com continuação.
+
+Pendente para fonte real:
+
+- detalhes completos da partida;
+- paginação real;
+- navegação para perfil público de outro jogador.
 
 ### Fase 5 — Intendência avançada
 
+Pendente:
+
 - ficha de item;
 - artwork real;
-- categorias;
+- categorias completas;
 - integração futura com `/store` sem checkout nesta trilha.
 
 ### Fase 6 — validação
 
+Pendente como evidência completa:
+
 - lint;
 - testes;
-- build;
+- build do HEAD atual;
 - 1440x900 e 390x844;
 - teclado/touch;
 - reduced-motion;
 - fallback WebGL;
 - score EVAL >= 85 e todos os blockers verdes.
+
+Observação: um build anterior da V2 ficou verde no Vercel; builds subsequentes podem ser bloqueados pelo limite externo de deploy e não devem ser confundidos com erro de compilação.
 
 ## Fora de escopo desta branch
 
