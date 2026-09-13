@@ -12,7 +12,8 @@ export type ProfileCommandState =
   | "loaded"
   | "partial-data"
   | "empty-history"
-  | "empty-social";
+  | "empty-social"
+  | "empty-storefront";
 
 export type ProfileCommandAvailability = "available" | "empty" | "unavailable";
 
