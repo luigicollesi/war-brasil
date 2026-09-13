@@ -7,6 +7,7 @@ const auth = readFileSync("src/lib/server/auth/auth.ts", "utf8");
 const environment = readFileSync("src/lib/server/auth/environment.ts", "utf8");
 const authPool = readFileSync("src/lib/server/auth/auth-pool.ts", "utf8");
 const authGuard = readFileSync("src/lib/server/auth/auth-guard.ts", "utf8");
+const requestOrigin = readFileSync("src/lib/server/auth/request-origin.ts", "utf8");
 const commandAccess = readFileSync(
   "src/lib/server/auth/command-access.ts",
   "utf8",
@@ -17,6 +18,7 @@ const commandAccessRoute = readFileSync(
 );
 const authClient = readFileSync("src/lib/client/auth-client.ts", "utf8");
 const authRoute = readFileSync("src/app/api/auth/[...all]/route.ts", "utf8");
+const registerRoute = readFileSync("src/app/api/auth/register/route.ts", "utf8");
 const proxy = readFileSync("src/proxy.ts", "utf8");
 const email = readFileSync("src/lib/server/auth/email.ts", "utf8");
 const appleSecret = readFileSync("src/lib/server/auth/apple-client-secret.ts", "utf8");
@@ -39,10 +41,12 @@ const authSources = [
   environment,
   authPool,
   authGuard,
+  requestOrigin,
   commandAccess,
   commandAccessRoute,
   authClient,
   authRoute,
+  registerRoute,
   proxy,
   email,
   appleSecret,
@@ -59,6 +63,7 @@ test("auth de servidor permanece server-only e usa schema PostgreSQL dedicado", 
   assert.match(environment, /^import "server-only";/m);
   assert.match(authPool, /^import "server-only";/m);
   assert.match(authGuard, /^import "server-only";/m);
+  assert.match(requestOrigin, /^import "server-only";/m);
   assert.match(commandAccess, /^import "server-only";/m);
   assert.match(authPool, /options: "-c search_path=auth"/);
   assert.match(auth, /database: authPool/);
@@ -133,12 +138,25 @@ test("Proxy deixa apenas Home pública e não substitui backend auth", () => {
 
 test("handler e client usam integrações oficiais Better Auth para Next e React", () => {
   assert.match(authRoute, /toNextJsHandler/);
-  assert.match(authRoute, /export const \{ GET, POST \}/);
+  assert.match(authRoute, /export const GET = handlers\.GET/);
+  assert.match(authRoute, /export async function POST/);
+  assert.match(authRoute, /rejectUntrustedAuthMutationOrigin\(request\)/);
   assert.match(authClient, /createAuthClient/);
   assert.match(authClient, /useSession/);
   assert.match(authClient, /signIn/);
   assert.match(authClient, /signOut/);
   assert.match(authClient, /signUp/);
+});
+
+test("mutações auth browser são first-party e só callbacks de provider aceitam POST externo", () => {
+  assert.match(requestOrigin, /EXTERNAL_POST_CALLBACK_PREFIX = "\/api\/auth\/callback\/"/);
+  assert.match(requestOrigin, /request\.method !== "POST"/);
+  assert.match(requestOrigin, /headers\.get\("origin"\)/);
+  assert.match(requestOrigin, /headers\.get\("referer"\)/);
+  assert.match(requestOrigin, /environment\.baseUrl/);
+  assert.match(requestOrigin, /status: 403/);
+  assert.match(registerRoute, /rejectUntrustedAuthMutationOrigin\(request\)/);
+  assert.doesNotMatch(requestOrigin, /trustedProxyHeaders|x-forwarded-host|x-forwarded-proto/i);
 });
 
 test("nenhuma variável auth server-only é publicada com NEXT_PUBLIC", () => {
