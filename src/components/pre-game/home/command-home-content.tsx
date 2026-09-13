@@ -2,7 +2,11 @@ import styles from "./command-home.module.css";
 
 export function CommandHomeContent() {
   return (
-    <section className={styles.identity} aria-labelledby="home-title">
+    <section
+      className={styles.identity}
+      data-home-identity
+      aria-labelledby="home-title"
+    >
       <p className={styles.kicker}>AUTORIDADE TERRITORIAL / BRASIL</p>
       <h1 id="home-title" className={styles.title}>
         <span>WAR</span>
