@@ -19,7 +19,8 @@ const lobbyLayoutStyles = [workspaceStyles, formationStyles, stationStyles, read
 
 test("Matchmaking e Lobby usam retorno explícito sem depender do histórico", () => {
   assert.match(matchmaking, /<PreGameBackButton href="\/" \/>/);
-  assert.match(workspace, /<PreGameBackButton href="\/matchmaking" \/>/);
+  assert.match(workspace, /<PreGameBackButton href="\/matchmaking"/);
+  assert.match(workspace, /label="Voltar para Operações"/);
   assert.match(lobbyClient, /<PreGameBackButton href="\/matchmaking" \/>/);
   assert.match(backButton, /<Link href=\{href\}/);
   assert.doesNotMatch(backButton, /router\.back|history\.back/);
