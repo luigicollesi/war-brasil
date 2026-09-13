@@ -7,7 +7,7 @@ import { LobbyCommandWorkspace } from "@/src/components/lobby-command-workspace"
 import { PreGameBackButton } from "@/src/components/pre-game-back-button";
 import { useCommandSceneDirective } from "@/src/components/pre-game/foundation";
 import { useLobbySync } from "@/src/hooks/use-lobby-sync";
-import styles from "./lobby-client.module.css";
+import styles from "./lobby-client-state.module.css";
 
 type LobbyClientProps = {
   code: string;
