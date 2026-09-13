@@ -12,9 +12,11 @@ import {
   type HomeCeremonyPhase,
   type HomeDestinationId,
 } from "./command-home-scene-intent";
+import "./command-home-intro.module.css";
 import styles from "./command-home.module.css";
 
 type VisitMode = "first" | "repeat" | "reduced";
+type HomeTransitionState = "holding" | "running" | "complete";
 type HomeState =
   | "boot"
   | "awaiting-entry"
@@ -36,11 +38,9 @@ type CommandHomeClientProps = {
 
 const HOME_RITUAL_SESSION_KEY = "war-brasil:pre-game-home-ritual-seen";
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
-const HOME_CEREMONY_TIMELINE = Object.freeze({
-  brazil: 420,
-  table: 1180,
-  stable: 2050,
-});
+const HOME_INTRO_DELAY_MS = 500;
+const HOME_INTRO_DURATION_MS = 1000;
+const HOME_INTRO_COMPLETE_MS = HOME_INTRO_DELAY_MS + HOME_INTRO_DURATION_MS;
 
 let ritualSeenInRuntime = false;
 
@@ -103,7 +103,7 @@ function markRitualSeen() {
 }
 
 export function CommandHomeClient({ children }: CommandHomeClientProps) {
-  const [ceremonyPhase, setCeremonyPhase] = useState<HomeCeremonyPhase>("earth");
+  const [ceremonyPhase, setCeremonyPhase] = useState<HomeCeremonyPhase>("brazil");
   const [ritualActive, setRitualActive] = useState(() => !ritualSeenInRuntime);
   const [repeatVisit, setRepeatVisit] = useState(() => ritualSeenInRuntime);
   const [commandOpen, setCommandOpen] = useState(false);
@@ -130,6 +130,14 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
     visitMode === "first" && ritualActive && sceneState !== "fallback"
       ? ceremonyPhase
       : "stable";
+  const homeTransition: HomeTransitionState =
+    visitMode !== "first" || !ritualActive || sceneState === "fallback"
+      ? "complete"
+      : effectiveCeremonyPhase === "brazil"
+        ? "holding"
+        : effectiveCeremonyPhase === "table"
+          ? "running"
+          : "complete";
   const destinationFocus = keyboardDestinationFocus ?? pointerDestinationFocus;
   const sceneIntent = getHomeSceneIntent({
     ceremonyPhase: effectiveCeremonyPhase,
@@ -163,22 +171,17 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
       return;
     }
 
-    const brazilTimer = window.setTimeout(
-      () => setCeremonyPhase("brazil"),
-      HOME_CEREMONY_TIMELINE.brazil,
-    );
-    const tableTimer = window.setTimeout(
+    const transitionTimer = window.setTimeout(
       () => setCeremonyPhase("table"),
-      HOME_CEREMONY_TIMELINE.table,
+      HOME_INTRO_DELAY_MS,
     );
     const stableTimer = window.setTimeout(() => {
       setCeremonyPhase("stable");
       setRitualActive(false);
-    }, HOME_CEREMONY_TIMELINE.stable);
+    }, HOME_INTRO_COMPLETE_MS);
 
     return () => {
-      window.clearTimeout(brazilTimer);
-      window.clearTimeout(tableTimer);
+      window.clearTimeout(transitionTimer);
       window.clearTimeout(stableTimer);
     };
   }, [ritualActive, sceneState, visitMode]);
@@ -214,7 +217,7 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
       ? "destination-focus"
       : commandOpen
         ? "command-open"
-        : effectiveCeremonyPhase === "earth"
+        : homeTransition === "holding"
           ? "boot"
           : "awaiting-entry";
 
@@ -222,6 +225,7 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
     <main
       className={styles.root}
       data-home-state={homeState}
+      data-home-transition={homeTransition}
       data-scene="foundation"
       data-scene-state={sceneState}
       data-ceremony={effectiveCeremonyPhase}
@@ -235,6 +239,7 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
       <section
         id="home-command"
         className={styles.commandDock}
+        data-home-command-dock
         aria-label="Acesso ao comando"
         tabIndex={-1}
       >
@@ -314,7 +319,7 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
         )}
       </section>
 
-      <footer className={styles.footer} aria-hidden="true">
+      <footer className={styles.footer} data-home-footer aria-hidden="true">
         <span>DOMÍNIO TERRITORIAL // BRASIL</span>
         <span>PROTOCOLO 42-T</span>
       </footer>
