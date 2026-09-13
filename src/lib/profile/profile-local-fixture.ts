@@ -4,6 +4,7 @@ import type {
 } from "./profile-command-contract";
 
 export const LOCAL_PROFILE_COMMAND_SNAPSHOT: ProfileCommandSnapshot = {
+  state: "loaded",
   identity: {
     availability: "available",
     source: "local-static",
