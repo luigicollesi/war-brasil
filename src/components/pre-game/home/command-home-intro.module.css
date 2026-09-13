@@ -80,7 +80,9 @@
 
 /* Each transform-bearing track has one continuous movement segment. Holding the
    initial pose before its cue is allowed; once movement starts no intermediate
-   keyframe can decelerate and restart the same property. */
+   keyframe can decelerate and restart the same property. The final UI motion is
+   intentionally delayed until the map Genesis and golden-ring invocation are
+   almost complete, so the Profile Orb and command controls settle together. */
 @keyframes homeAtmosphereIn {
   0%, 30% {
     opacity: 0;
@@ -93,7 +95,7 @@
 }
 
 @keyframes homeChromeIn {
-  0%, 44% {
+  0%, 66% {
     opacity: 0;
     transform: translateY(-18px);
   }
@@ -104,7 +106,7 @@
 }
 
 @keyframes homeIdentitySettle {
-  0%, 50% {
+  0%, 72% {
     opacity: 0;
     transform: translateX(calc(-50% + 34px)) translateY(-22px) scale(.975);
   }
@@ -115,7 +117,7 @@
 }
 
 @keyframes homeIdentityDetail {
-  0%, 56% {
+  0%, 76% {
     opacity: 0;
     transform: translateY(-7px);
   }
@@ -126,7 +128,7 @@
 }
 
 @keyframes homeCommandSettle {
-  0%, 62% {
+  0%, 80% {
     opacity: .14;
     transform: translateX(calc(50% + 42px)) translateY(24px) scale(.975);
   }
@@ -137,7 +139,7 @@
 }
 
 @keyframes homeFooterSettle {
-  0%, 70% {
+  0%, 88% {
     opacity: 0;
     transform: translateY(12px);
   }
