@@ -7,6 +7,7 @@ import {
 import { getPlayerSession } from "@/src/lib/player-session";
 import { RoomError } from "@/src/lib/rooms";
 import { signalPlayerTradeCard } from "@/src/lib/server/game-player-trade-service";
+import { assertAuthenticatedPlayerSeat } from "@/server/auth/player-seat-guard";
 
 export async function POST(
   request: NextRequest,
@@ -21,6 +22,7 @@ export async function POST(
     if (!session) {
       throw new RoomError("Entre em uma sala antes de jogar.", 401);
     }
+    await assertAuthenticatedPlayerSeat(request, session, { roomId });
     if (process.env.GAME_REALTIME_ENABLED !== "true") {
       throw new RoomError(
         "A sinalização de posse está indisponível porque o canal realtime não está ativo.",
