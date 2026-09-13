@@ -50,16 +50,21 @@ export function TerritoryGenesisPass({
       ),
     [plates],
   );
+  const handlesRef = useRef(handles);
+
+  useEffect(() => {
+    handlesRef.current = handles;
+  }, [handles]);
 
   useEffect(() => {
     if (entranceState !== "primed") return;
     startedAtRef.current = null;
     emittedPhaseRef.current = null;
     completedRef.current = false;
-    handles.forEach((handle) => {
+    for (const handle of handlesRef.current) {
       handle.progress.value = 0;
-    });
-  }, [entranceState, handles]);
+    }
+  }, [entranceState]);
 
   useFrame(() => {
     if (entranceState !== "playing" || completedRef.current) return;
@@ -82,7 +87,7 @@ export function TerritoryGenesisPass({
       COMMAND_ENTRANCE_RECIPE.cues.materialization,
     );
 
-    for (const handle of handles) {
+    for (const handle of handlesRef.current) {
       handle.progress.value = materialProgress;
     }
 
