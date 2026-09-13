@@ -24,6 +24,7 @@ const PROFILE_COMMAND_EVALUATION_STATES = new Set<ProfileCommandEvaluationState>
   "partial-data",
   "empty-history",
   "empty-social",
+  "empty-storefront",
   "wallet-unavailable",
   "error",
 ]);
@@ -129,6 +130,18 @@ function createEvaluationSnapshot(state: Exclude<ProfileCommandEvaluationState, 
         availability: "empty",
         source: "evaluation-fixture",
         data: { matches: [], hasMore: false, nextCursor: null },
+      },
+    };
+  }
+
+  if (state === "empty-storefront") {
+    return {
+      ...full,
+      state: "empty-storefront",
+      storefront: {
+        availability: "empty",
+        source: "evaluation-fixture",
+        data: { featuredItems: [] },
       },
     };
   }
