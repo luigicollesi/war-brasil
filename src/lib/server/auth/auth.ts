@@ -8,7 +8,10 @@ import {
   buildVerificationEmail,
   dispatchAuthEmail,
 } from "./email";
-import { readAuthServerEnvironment } from "./environment";
+import {
+  assertAuthRuntimeConfiguration,
+  readAuthServerEnvironment,
+} from "./environment";
 
 const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
 const SESSION_UPDATE_AGE_SECONDS = 24 * 60 * 60;
@@ -24,6 +27,12 @@ const AUTH_EMAIL_ACTION_WINDOW_SECONDS = 10 * 60;
 const AUTH_EMAIL_ACTION_MAX = 3;
 
 const environment = readAuthServerEnvironment();
+const isControlledCiHarness =
+  process.env.CI === "true" && Boolean(process.env.AUTH_EMAIL_SINK_DIR?.trim());
+
+if (process.env.NODE_ENV === "production" && !isControlledCiHarness) {
+  assertAuthRuntimeConfiguration(environment);
+}
 
 function resolveBaseUrl() {
   if (environment.allowedHosts.length > 0) {
