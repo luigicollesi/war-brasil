@@ -2,14 +2,14 @@
 
 ## Meta
 
-Permitir desenvolvimento simultâneo sem criar múltiplas implementações concorrentes da cena 3D, câmera, tokens, geometria territorial ou contratos multiplayer.
+Permitir desenvolvimento simultâneo sem criar múltiplas implementações concorrentes da cena 3D, câmera, tokens, geometria territorial, runtime de opening ou contratos multiplayer.
 
-Toda trilha MUST ler `quality-standard.md` e `traceability.md` antes de implementar.
+Toda trilha MUST ler `quality-standard.md` e `traceability.md` antes de implementar. Trilhas com abertura/transição complexa MUST ler também `opening-animation-standard.md`.
 
 ## Trilhas
 
-- `foundation`: CommandShell, cena persistente, Terra/Globo, Mesa, Brasil 42 placas, Coroa Orbital, tokens, primitives, CameraDirector e contratos.
-- `home`: entrada e ritual inicial.
+- `foundation`: CommandShell, cena persistente, Terra/Globo, Mesa, Brasil 42 placas, Coroa Orbital, tokens, primitives, CameraDirector, runtime mínimo de opening e contratos.
+- `home`: entrada, Genesis cartográfica e ritual inicial.
 - `operations`: criar/localizar operação.
 - `lobby`: briefing e prontidão multiplayer.
 - `doctrine`: regras/tutoriais interativos.
@@ -35,14 +35,20 @@ type CommandSceneIntent = {
   conflictLevel?: 0 | 1 | 2 | 3;
   territoryExplode?: number;
   orbitalAlignment?: 0 | 1;
+  opening?: {
+    id: string;
+    lifecycle: "loading" | "primed" | "playing" | "settling" | "settled";
+  };
 };
 ```
 
-O shape final MAY mudar durante a Foundation, mas a API pública MUST continuar pequena, declarativa, serializável quando possível e independente de coordenadas/câmera/material.
+O shape final MAY mudar durante a Foundation. O exemplo acima não congela nomes de campos; congela responsabilidades: a API pública MUST continuar pequena, declarativa, serializável quando possível e independente de coordenadas/câmera/material/progresso por frame.
+
+`progress` por frame MUST NOT atravessar React/scene intent. O runtime de opening e os adaptadores da cena compartilham refs/controladores internos.
 
 ## Ownership
 
-Uma trilha de página pode editar sua rota, componentes e estilos locais.
+Uma trilha de página pode editar sua rota, componentes, estilos locais e recipe semântico da sua abertura.
 
 Pertencem à `foundation`:
 
@@ -52,7 +58,21 @@ Pertencem à `foundation`:
 - geometria/apresentação compartilhada do Brasil;
 - Terra/Globo, Mesa e Coroa Orbital;
 - tokens globais e primitives compartilhadas;
-- contrato público de scene intent.
+- contrato público de scene intent;
+- lifecycle/clock compartilhável para opening quando a animação cruza DOM e cena;
+- priming/prewarm hooks necessários ao renderer;
+- adaptadores que mutam internals Three.js compartilhados;
+- cleanup de recursos transitórios pertencentes ao renderer.
+
+Pertencem à trilha/página:
+
+- intenção narrativa da abertura;
+- duração e cue windows do seu recipe;
+- coreografia DOM local;
+- decisão de skip/bypass ligada à UX da página;
+- EVAL e checkpoints visuais específicos.
+
+Se uma abertura precisar transformar material/cena compartilhada, a página MUST solicitar um adapter/track mínimo à Foundation ou uma extensão declarativa do contrato; MUST NOT buscar refs privadas do Canvas.
 
 Se uma página precisar de comportamento compartilhado, SHOULD solicitar extensão mínima do contrato. MUST NOT acessar internals para “ganhar velocidade”.
 
@@ -72,6 +92,8 @@ O mock MUST:
 - não introduzir uma segunda API;
 - não ser mergeado como implementação definitiva da cena;
 - permitir testar navegação, layout, estados e acessibilidade sem bloquear a trilha pela entrega do 3D.
+
+Para uma opening complexa, o mock MAY implementar apenas lifecycle e cue windows DOM; não deve simular uma segunda engine 3D.
 
 ## Estratégia de integração
 
@@ -96,11 +118,15 @@ MUST NOT:
 - alterar APIs/realtime para resolver problema visual;
 - adicionar UI kit, animation library ou segundo renderer sem decisão explícita;
 - duplicar geometria territorial “parecida” para uma página;
-- criar scene state que replique estado de negócio.
+- criar scene state que replique estado de negócio;
+- criar um runtime/timeline de opening diferente em cada página quando o comportamento é compartilhável;
+- fazer uma página manipular diretamente shader/câmera/material compartilhado fora da fronteira Foundation.
 
 ## Dependências entre trilhas
 
 `foundation-contract` é dependência de interface, não de implementação completa. Home/Operations/Lobby/Doctrine/Profile SHOULD conseguir avançar após os tipos/contratos mínimos estarem estáveis.
+
+`opening-choreography-protocol` é dependência somente das trilhas que adotam opening complexa. Uma página sem opening longa não precisa instanciar esse runtime.
 
 Mudança breaking no contrato compartilhado MUST:
 
@@ -122,6 +148,7 @@ Cada PR de página MUST trazer:
 - referência ao spec e IDs dos evals atendidos;
 - referência aos conceitos `CORE` aplicáveis de `traceability.md`;
 - screenshots desktop/mobile dos estados principais;
+- para openings complexas, checkpoints determinísticos e `post-cleanup`;
 - lista de arquivos compartilhados tocados, idealmente vazia;
 - resultado de testes/lint/build;
 - justificativa para qualquer `SHOULD` não seguido;
