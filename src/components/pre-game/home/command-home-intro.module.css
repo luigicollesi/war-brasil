@@ -1,9 +1,9 @@
-:global([data-command-scene-mode="entrance"]:has([data-visit="first"]) [data-command-chrome]),
-:global([data-command-scene-mode="entrance"]:has([data-visit="first"]) [data-command-atmosphere]),
-:global([data-command-scene-mode="entrance"]:has([data-visit="first"]) [data-command-fallback]),
-:global([data-command-scene-mode="entrance"]:has([data-visit="first"]) [data-command-canvas-layer]),
-:global([data-command-scene-mode="entrance"]:has([data-visit="first"]) [data-command-fallback-table]),
-:global([data-command-scene-mode="entrance"]:has([data-visit="first"]) [data-command-fallback-brazil]),
+:global([data-command-scene-mode="entrance"]:has([data-visit="first"]) > :nth-child(2)),
+:global([data-command-scene-mode="entrance"]:has([data-visit="first"]) > :nth-child(3)),
+:global([data-command-scene-mode="entrance"]:has([data-visit="first"]) > :first-child > :first-child),
+:global([data-command-scene-mode="entrance"]:has([data-visit="first"]) > :first-child > :nth-child(2)),
+:global([data-command-scene-mode="entrance"]:has([data-visit="first"]) > :first-child > :first-child > :nth-child(2)),
+:global([data-command-scene-mode="entrance"]:has([data-visit="first"]) > :first-child > :first-child > :nth-child(2) > :last-child),
 :global([data-command-scene-mode="entrance"]:has([data-visit="first"]) [data-home-identity]),
 :global([data-command-scene-mode="entrance"]:has([data-visit="first"]) [data-home-command-dock]),
 :global([data-command-scene-mode="entrance"]:has([data-visit="first"]) [data-home-footer]) {
@@ -11,33 +11,33 @@
   transition-timing-function: cubic-bezier(.22, .78, .2, 1);
 }
 
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="holding"][data-visit="first"]) [data-command-canvas-layer]) {
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="holding"][data-visit="first"]) > :first-child > :nth-child(2)) {
   opacity: 0 !important;
 }
 
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="holding"][data-visit="first"]) [data-command-fallback]) {
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="holding"][data-visit="first"]) > :first-child > :first-child) {
   opacity: 1 !important;
 }
 
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="holding"][data-visit="first"]) [data-command-fallback-table]) {
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="holding"][data-visit="first"]) > :first-child > :first-child > :nth-child(2)) {
   left: 72%;
   transform: translate(-50%, -50%) perspective(900px) rotateX(5deg) rotateZ(-2deg) scale(1.025);
 }
 
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="holding"][data-visit="first"]) [data-command-fallback-table] > span) {
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="holding"][data-visit="first"]) > :first-child > :first-child > :nth-child(2) > span) {
   opacity: .08;
 }
 
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="holding"][data-visit="first"]) [data-command-fallback-brazil]) {
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="holding"][data-visit="first"]) > :first-child > :first-child > :nth-child(2) > :last-child) {
   opacity: 1;
   filter: saturate(1.22) brightness(1.04) contrast(1.03);
 }
 
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="holding"][data-visit="first"]) [data-command-atmosphere]) {
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="holding"][data-visit="first"]) > :nth-child(2)) {
   opacity: .18;
 }
 
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="holding"][data-visit="first"]) [data-command-chrome]) {
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="holding"][data-visit="first"]) > :nth-child(3)) {
   opacity: 0;
   transform: translateY(-14px);
 }
@@ -57,34 +57,34 @@
   transform: translateY(10px);
 }
 
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) [data-command-canvas-layer]) {
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) > :first-child > :nth-child(2)) {
   opacity: 1 !important;
 }
 
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) [data-command-fallback]) {
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) > :first-child > :first-child) {
   opacity: 0 !important;
 }
 
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) [data-command-fallback-table]) {
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) > :first-child > :first-child > :nth-child(2)) {
   left: 50%;
   transform: translate(-50%, -50%) perspective(900px) rotateX(5deg) rotateZ(-2deg) scale(1);
 }
 
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) [data-command-fallback-table] > span) {
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) > :first-child > :first-child > :nth-child(2) > span) {
   opacity: 1;
   transition: opacity 1000ms cubic-bezier(.22, .78, .2, 1);
 }
 
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) [data-command-fallback-brazil]) {
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) > :first-child > :first-child > :nth-child(2) > :last-child) {
   opacity: .7;
   filter: sepia(.42) saturate(.58) brightness(.62) contrast(1.14);
 }
 
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) [data-command-atmosphere]) {
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) > :nth-child(2)) {
   opacity: 1;
 }
 
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) [data-command-chrome]) {
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) > :nth-child(3)) {
   opacity: 1;
   transform: translateY(0);
 }
@@ -105,19 +105,19 @@
 }
 
 @media (max-width: 900px) {
-  :global([data-command-scene-mode="entrance"]:has([data-home-transition="holding"][data-visit="first"]) [data-command-fallback-table]) {
+  :global([data-command-scene-mode="entrance"]:has([data-home-transition="holding"][data-visit="first"]) > :first-child > :first-child > :nth-child(2)) {
     left: 63%;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :global([data-command-scene-mode="entrance"] [data-command-chrome]),
-  :global([data-command-scene-mode="entrance"] [data-command-atmosphere]),
-  :global([data-command-scene-mode="entrance"] [data-command-fallback]),
-  :global([data-command-scene-mode="entrance"] [data-command-canvas-layer]),
-  :global([data-command-scene-mode="entrance"] [data-command-fallback-table]),
-  :global([data-command-scene-mode="entrance"] [data-command-fallback-table] > span),
-  :global([data-command-scene-mode="entrance"] [data-command-fallback-brazil]),
+  :global([data-command-scene-mode="entrance"] > :nth-child(2)),
+  :global([data-command-scene-mode="entrance"] > :nth-child(3)),
+  :global([data-command-scene-mode="entrance"] > :first-child > :first-child),
+  :global([data-command-scene-mode="entrance"] > :first-child > :nth-child(2)),
+  :global([data-command-scene-mode="entrance"] > :first-child > :first-child > :nth-child(2)),
+  :global([data-command-scene-mode="entrance"] > :first-child > :first-child > :nth-child(2) > span),
+  :global([data-command-scene-mode="entrance"] > :first-child > :first-child > :nth-child(2) > :last-child),
   :global([data-home-identity]),
   :global([data-home-command-dock]),
   :global([data-home-footer]) {
