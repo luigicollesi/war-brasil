@@ -18,6 +18,7 @@ const sceneHost = readFileSync("src/components/pre-game/foundation/command-scene
 const shell = readFileSync("src/components/pre-game/foundation/command-shell.tsx", "utf8");
 const entranceTimeline = readFileSync("src/components/pre-game/foundation/entrance-timeline.ts", "utf8");
 const openingTimeline = readFileSync("src/components/pre-game/foundation/opening-timeline.ts", "utf8");
+const territoryIngress = readFileSync("src/components/pre-game/foundation/territory-ingress.ts", "utf8");
 const genesisPass = readFileSync("src/components/pre-game/foundation/territory-genesis-pass.tsx", "utf8");
 const genesisMaterial = readFileSync("src/components/pre-game/foundation/territory-genesis-material.ts", "utf8");
 
@@ -41,7 +42,8 @@ test("HOME consome somente contrato público e não controla progresso por frame
   assert.match(home, /useCommandSceneState/);
   assert.match(intent, /import type \{ CommandSceneDirective \} from "\.\.\/foundation"/);
   assert.match(foundationIndex, /COMMAND_ENTRANCE_RECIPE/);
-  assert.match(foundationIndex, /sampleOpeningCue/);
+  assert.match(foundationIndex, /sampleContinuousOpeningCue/);
+  assert.match(foundationIndex, /smootherOpeningProgress/);
   assert.doesNotMatch(home, /performance\.now|setTimeout|COMMAND_ENTRANCE_DURATION_MS/);
   assert.doesNotMatch(runtime, /entranceStartedAtMs|entranceDurationMs/);
 
@@ -80,16 +82,30 @@ test("Foundation modela primed, playing e settling sem progresso em React state"
   assert.doesNotMatch(home, /useState<[^>]*progress|setProgress/i);
 });
 
-test("timeline compartilhada é única, normalizada e seekable", () => {
+test("timeline compartilhada é única, normalizada, contínua e seekable", () => {
   assert.match(entranceTimeline, /COMMAND_ENTRANCE_DURATION_MS = 3000/);
   assert.match(entranceTimeline, /id: "home-genesis"/);
-  assert.match(entranceTimeline, /settlingStart: 0\.86/);
-  assert.match(entranceTimeline, /materialization: \{ start: 0\.16, end: 0\.82 \}/);
+  assert.match(entranceTimeline, /settlingStart: 0\.88/);
+  assert.match(entranceTimeline, /territoryIngress: \{ start: 0, end: 0\.44 \}/);
+  assert.match(entranceTimeline, /genesis: \{ start: 0\.44, end: 0\.96 \}/);
   assert.match(openingTimeline, /resolveOpeningProgress/);
-  assert.match(openingTimeline, /sampleOpeningCue/);
+  assert.match(openingTimeline, /sampleContinuousOpeningCue/);
+  assert.match(openingTimeline, /smootherOpeningProgress/);
   assert.match(openingTimeline, /__WAR_OPENING_SEEK__/);
   assert.match(openingTimeline, /deterministicOpeningSeed/);
   assert.doesNotMatch(openingTimeline, /setTimeout/);
+});
+
+test("ingresso territorial é radial, center-out, contínuo e determinístico", () => {
+  assert.match(territoryIngress, /buildTerritoryIngressDescriptors/);
+  assert.match(territoryIngress, /territoryBounds = new Map<number, Box3>/);
+  assert.match(territoryIngress, /radialRank/);
+  assert.match(territoryIngress, /Math\.pow\(radialRank, 1\.35\)/);
+  assert.match(territoryIngress, /startSpread = cueSpan \* 0\.32/);
+  assert.match(territoryIngress, /sampleTerritoryIngress/);
+  assert.match(territoryIngress, /smootherOpeningProgress/);
+  assert.match(territoryIngress, /deterministicOpeningSeed\(territoryId\)/);
+  assert.doesNotMatch(territoryIngress, /Math\.random|setTimeout/);
 });
 
 test("BrazilTerritoryAssembly preserva literalmente a pose final de dev", () => {
@@ -117,6 +133,32 @@ test("Genesis é pass transitório sobre as mesmas geometrias e não um segundo 
   assert.equal(existsSync(experimentalEntranceMapPath), false);
 });
 
+test("mesmo território move todas as suas shapes com um único descritor", () => {
+  assert.match(genesisPass, /descriptors\.get\(plate\.territoryId\)/);
+  assert.match(genesisPass, /sampleTerritoryIngress\(globalProgress, descriptor\)/);
+  assert.match(genesisPass, /mesh\.position\.set\(/);
+  assert.match(genesisPass, /descriptor\.spawn\[0\] \* remaining/);
+  assert.doesNotMatch(genesisPass, /assembly\.position|assembly\.rotation|assembly\.scale/);
+});
+
+test("Genesis e anel dourado compartilham uma única curva contínua", () => {
+  assert.match(genesisPass, /sampleContinuousOpeningCue\([\s\S]*COMMAND_ENTRANCE_RECIPE\.cues\.genesis/);
+  assert.match(genesisPass, /handle\.setProgress\(genesisProgress\)/);
+  assert.match(genesisPass, /sceneTargets\.setGenesisProgress\(genesisProgress\)/);
+  assert.match(genesisPass, /ringSweep\.setProgress\(genesisProgress\)/);
+  assert.match(genesisPass, /Math\.PI \* 2 \* genesisProgress/);
+  assert.match(genesisPass, /name="GenesisRingSweep"/);
+  assert.match(genesisPass, /scene\.getObjectByName\("DomainTable"\)/);
+  assert.match(genesisPass, /object\.geometry instanceof RingGeometry/);
+});
+
+test("assentamento é fase semântica e não reinicia a interpolação visual", () => {
+  assert.match(genesisPass, /Settling is semantic only/);
+  assert.match(genesisPass, /globalProgress >= COMMAND_ENTRANCE_RECIPE\.settlingStart/);
+  assert.doesNotMatch(genesisPass, /sampleOpeningCue\([\s\S]*cues\.settling/);
+  assert.doesNotMatch(genesisPass, /MathUtils\.damp/);
+});
+
 test("seek=1 segura intro-100 antes do cleanup", () => {
   assert.match(genesisPass, /const isSeekHold = forcedProgress !== null/);
   assert.match(genesisPass, /const nextPhase: CommandSceneState = isSeekHold/);
@@ -139,7 +181,7 @@ test("progresso Genesis vive em useFrame sem setState ou alocação aleatória",
   assert.match(genesisPass, /useFrame/);
   assert.match(genesisPass, /performance\.now\(\)/);
   assert.match(genesisPass, /resolveOpeningProgress/);
-  assert.match(genesisPass, /sampleOpeningCue/);
+  assert.match(genesisPass, /sampleContinuousOpeningCue/);
   assert.match(genesisPass, /readOpeningSeek/);
   assert.doesNotMatch(genesisPass, /setState|useState|Math\.random|setTimeout/);
 });
