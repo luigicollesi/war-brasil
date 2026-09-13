@@ -67,6 +67,7 @@ export function LobbyCommandWorkspace({
   return (
     <div
       className={styles.lobby}
+      data-lobby-layout="war-table"
       data-connection-state={reconnecting ? "reconnecting" : "connected"}
       data-start-authorized={startAuthorized ? "true" : "false"}
       data-mobile-panel={mobilePanel}
@@ -75,12 +76,12 @@ export function LobbyCommandWorkspace({
         <PreGameBackButton href="/matchmaking" />
 
         <div className={styles.commandHeading}>
-          <p className="wb-kicker">Briefing de alto comando</p>
-          <h1 className={styles.title}>Conselho de operação</h1>
+          <p className="wb-kicker">Sala de guerra · fase 00</p>
+          <h1 className={styles.title}>Comando de mobilização</h1>
         </div>
 
         <div className={styles.operationIdentity}>
-          <p className={styles.codeLabel}>Código da operação</p>
+          <p className={styles.codeLabel}>Chave da operação</p>
           <div className={styles.codeLine}>
             <code className={styles.roomCode}>{roomCode}</code>
             <button
@@ -104,6 +105,7 @@ export function LobbyCommandWorkspace({
         </div>
 
         <div className={styles.commandStatus}>
+          <span className={styles.phaseBadge}>MOBILIZAÇÃO // 00</span>
           <div className={styles.connection} role="status" aria-live="polite" aria-atomic="true">
             <span className={styles.connectionLamp} aria-hidden="true" />
             {reconnecting ? "Reconectando" : "Sala sincronizada"}
