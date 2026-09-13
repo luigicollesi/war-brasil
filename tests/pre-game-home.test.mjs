@@ -23,6 +23,10 @@ const styles = readFileSync(
   "src/components/pre-game/home/command-home.module.css",
   "utf8",
 );
+const introStyles = readFileSync(
+  "src/components/pre-game/home/command-home-intro.module.css",
+  "utf8",
+);
 const foundationIndex = readFileSync(
   "src/components/pre-game/foundation/index.ts",
   "utf8",
@@ -85,6 +89,7 @@ test("HOME substitui o hero legado e publica intenção no runtime persistente",
   assert.doesNotMatch(content, /Ir para o comando/);
   assert.match(home, /ENTRAR NO COMANDO/);
   assert.match(home, /data-home-state=\{homeState\}/);
+  assert.match(home, /data-home-transition=\{homeTransition\}/);
   assert.match(home, /data-scene="foundation"/);
   assert.match(home, /data-scene-state=\{sceneState\}/);
   assert.match(home, /useCommandSceneDirective\(sceneIntent\)/);
@@ -128,25 +133,46 @@ test("ritual é pulável e repeat/reduced-motion derivam estado estável", () =>
   assert.match(home, /\(prefers-reduced-motion: reduce\)/);
   assert.match(home, /sceneState !== "fallback"/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(introStyles, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
-test("cerimônia Terra -> Brasil -> Mesa começa apenas quando a Foundation está pronta", () => {
-  assert.match(home, /useState<HomeCeremonyPhase>\("earth"\)/);
+test("entrada segura mapa colorido por 500ms e conclui o settle em 1000ms", () => {
+  assert.match(home, /useState<HomeCeremonyPhase>\("brazil"\)/);
   assert.match(home, /const sceneState = useCommandSceneState\(\)/);
   assert.match(home, /sceneState !== "fallback"/);
   assert.match(home, /sceneState !== "ready"/);
-  assert.match(home, /HOME_CEREMONY_TIMELINE\.brazil/);
-  assert.match(home, /HOME_CEREMONY_TIMELINE\.table/);
-  assert.match(home, /HOME_CEREMONY_TIMELINE\.stable/);
-  assert.match(home, /setCeremonyPhase\("brazil"\)/);
+  assert.match(home, /HOME_INTRO_DELAY_MS = 500/);
+  assert.match(home, /HOME_INTRO_DURATION_MS = 1000/);
+  assert.match(
+    home,
+    /HOME_INTRO_COMPLETE_MS = HOME_INTRO_DELAY_MS \+ HOME_INTRO_DURATION_MS/,
+  );
   assert.match(home, /setCeremonyPhase\("table"\)/);
   assert.match(home, /setCeremonyPhase\("stable"\)/);
+  assert.match(home, /homeTransition === "holding"/);
+  assert.match(home, /effectiveCeremonyPhase === "brazil"/);
+  assert.match(home, /effectiveCeremonyPhase === "table"/);
   assert.match(home, /const enterCommand = \(\) =>/);
   assert.match(home, /setRitualActive\(false\)/);
   assert.match(home, /onClick=\{enterCommand\}/);
 });
 
-test("entrada possui poses próprias e objetos interpolados sem salto", () => {
+test("entrada move o mapa da direita ao centro enquanto escurece e revela a interface", () => {
+  assert.match(introStyles, /transition-duration: 1000ms/);
+  assert.match(introStyles, /left: 72%/);
+  assert.match(introStyles, /left: 50%/);
+  assert.match(introStyles, /saturate\(1\.22\) brightness\(1\.04\)/);
+  assert.match(introStyles, /sepia\(\.42\) saturate\(\.58\) brightness\(\.62\)/);
+  assert.match(introStyles, /data-home-identity/);
+  assert.match(introStyles, /data-home-command-dock/);
+  assert.match(introStyles, /data-home-footer/);
+  assert.match(introStyles, /data-command-scene-mode="entrance"/);
+  assert.match(content, /data-home-identity/);
+  assert.match(home, /data-home-command-dock/);
+  assert.match(home, /data-home-footer/);
+});
+
+test("entrada mantém poses e objetos 3D interpolados sem salto após o settle", () => {
   assert.match(presets, /ENTRANCE_FOCUS_PRESETS/);
   assert.match(presets, /COMPACT_ENTRANCE_FOCUS_PRESETS/);
   assert.match(presets, /intent\.mode === "entrance"/);
@@ -167,6 +193,7 @@ test("mobile possui composição própria, safe-area e alvos touch grandes", () 
   assert.match(styles, /touch-action: manipulation/);
   assert.match(styles, /@media \(hover: none\) and \(pointer: coarse\)/);
   assert.match(home, /tabIndex=\{-1\}/);
+  assert.match(introStyles, /left: 63%/);
 });
 
 test("foco de teclado tem prioridade sobre intenção efêmera do ponteiro", () => {
