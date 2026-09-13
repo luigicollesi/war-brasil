@@ -44,7 +44,9 @@ export {
   deterministicOpeningSeed,
   readOpeningSeek,
   resolveOpeningProgress,
+  sampleContinuousOpeningCue,
   sampleOpeningCue,
+  smootherOpeningProgress,
   smoothOpeningProgress,
 } from "./opening-timeline";
 export type {
