@@ -4,26 +4,27 @@
 **Owner:** trilha `foundation`  
 **Escopo:** infraestrutura compartilhada do pré-jogo; nenhuma regra de jogo.
 
-Este documento usa a linguagem normativa definida em `../quality-standard.md`.
+Este documento usa a linguagem normativa definida em `../quality-standard.md`. Aberturas complexas seguem também `../opening-animation-standard.md`.
 
 ## Objetivo
 
 Criar a base que faz todas as páginas parecerem partes da mesma instalação de comando, preservando continuidade espacial, identidade territorial e isolamento entre estado visual e estado de negócio.
 
-A Foundation MUST permitir desenvolvimento das páginas sem que cada trilha recrie renderer, câmera, mapa, tokens ou lógica de transição.
+A Foundation MUST permitir desenvolvimento das páginas sem que cada trilha recrie renderer, câmera, mapa, tokens, runtime de opening ou lógica de transição.
 
 ## Entregáveis
 
 1. `CommandShell`: casca semântica/responsiva do pré-jogo.
 2. `CommandScene`: host 3D compartilhado com fallback 2D.
 3. `CameraDirector`: traduz intenção semântica em câmera/transição.
-4. `StrategicGlobe`: Terra/Globo usado no ritual de entrada quando aplicável.
+4. `StrategicGlobe`: Terra/Globo usado quando a narrativa da cena exigir escala estratégica.
 5. `DomainTable`: Mesa de Domínio.
 6. `BrazilTerritoryAssembly`: apresentação física dos 42 territórios.
 7. `OrbitalCrown`: três aros — Território, Comando e Conflito.
 8. primitives 2D: tipografia, command labels, divisores, status, painéis mínimos e insígnias.
 9. tokens: cor, spacing, depth, material, motion, blur e z-index.
 10. contrato público de `CommandSceneIntent` ou equivalente.
+11. runtime mínimo de opening/choreography quando uma animação cruza DOM e internals compartilhados da cena: lifecycle, clock normalizado, priming/prewarm hooks e cleanup.
 
 Nomes podem mudar durante implementação; responsabilidades não.
 
@@ -33,7 +34,7 @@ Nomes podem mudar durante implementação; responsabilidades não.
 
 Estado visual MUST permanecer separado de estado de negócio.
 
-Hover, foco, câmera, luz, orbital alignment, explode visual e efeitos MUST NOT:
+Hover, foco, câmera, luz, orbital alignment, explode visual, opening progress e efeitos MUST NOT:
 
 - provocar refetch de dados de negócio;
 - recriar lobby/matchmaking;
@@ -49,6 +50,21 @@ SHOULD manter conteúdo/casca estática em Server Components quando apropriado e
 Dentro da experiência pré-jogo, SHOULD existir um único host persistente de cena. Troca de modo MUST preferir atualização declarativa do mesmo ambiente a desmontar/recriar Canvas.
 
 Se a arquitetura de rotas tornar persistência literal inviável, a implementação MUST preservar continuidade visual e evitar múltiplos renderers simultâneos, flashes ou remounts que afetem estado funcional.
+
+### Runtime de opening
+
+A Foundation não deve virar um editor genérico de timelines. Ela fornece apenas a infraestrutura comum necessária para openings que cruzam a cena compartilhada.
+
+MUST:
+
+- expor lifecycle semântico, não coordenadas/valores por frame;
+- manter `progress` fora de React state por frame;
+- permitir priming antes do primeiro frame animado;
+- permitir cleanup determinístico;
+- permitir seek interno de teste quando a abertura específica exigir;
+- preservar o estado final independentemente do efeito temporário.
+
+Páginas MAY definir recipes com duração/cue windows e coreografia DOM local. Adapters que mutam câmera, materiais, meshes ou uniforms compartilhados pertencem à Foundation.
 
 ## Contrato de cena
 
@@ -73,6 +89,8 @@ Focos mínimos previstos:
 O CameraDirector é o único responsável por traduzir intenção em posições de câmera e SHOULD centralizar também a coordenação de luz, vermelho de conflito e movimento dos aros.
 
 Páginas MUST NOT enviar XYZ, quaternion, FOV ou parâmetros de material como parte do contrato normal.
+
+Quando uma página solicita opening complexa, o contrato público MAY identificar `opening.id`/lifecycle, mas MUST NOT transportar `progress` a cada frame.
 
 ## Contrato do Brasil de 42 territórios
 
@@ -102,7 +120,7 @@ Gestos touch MUST distinguir intenção de pan/scroll/zoom de seleção quando h
 
 ### StrategicGlobe
 
-Serve à escala inicial `Terra -> Brasil`. MUST poder desaparecer/recuar após cumprir seu papel. Não é requisito funcional de navegação.
+Representa escala estratégica quando o spec da cena justificar seu uso. MUST poder desaparecer/recuar após cumprir seu papel. Não é requisito funcional de navegação nem estágio obrigatório de toda abertura.
 
 ### DomainTable
 
@@ -128,13 +146,16 @@ MUST:
 - permitir skip/reduced-motion quando a transição for ornamental;
 - ter estado final determinístico para visual regression.
 
+Aberturas complexas/multitrack MUST usar `../opening-animation-standard.md`. O estado final deve existir fora da timeline temporária; `progress=1` e `post-cleanup` devem convergir visualmente.
+
 ## Performance
 
 MUST:
 
 - não bloquear conteúdo por carregamento 3D;
 - possuir fallback quando WebGL falhar;
-- não criar renderer concorrente por página.
+- não criar renderer concorrente por página;
+- não atualizar React state por frame para controlar opening/scene animation.
 
 SHOULD:
 
@@ -143,7 +164,8 @@ SHOULD:
 - reduzir loops ambientais ou renderizar sob demanda quando a cena estiver estática;
 - evitar sombras dinâmicas caras como requisito visual;
 - lazy-load código/asset pesado quando isso não prejudicar continuidade;
-- degradar efeitos antes de degradar legibilidade/interação.
+- degradar efeitos antes de degradar legibilidade/interação;
+- pré-compilar shaders/materiais transitórios quando primeira utilização produzir stutter perceptível.
 
 Não fixar metas artificiais de FPS/bundle sem baseline medida; seguir `quality-standard.md`.
 
@@ -198,8 +220,9 @@ MUST NOT:
 - substituir o mapa lógico do jogo pelo asset cenográfico;
 - criar uma segunda geometria territorial incompatível;
 - espalhar/deformar territórios apenas para “parecer 3D”;
-- usar animação como requisito para compreender estado.
+- usar animação como requisito para compreender estado;
+- criar engines/timelines concorrentes por página para efeitos que pertencem à cena compartilhada.
 
 ## Definition of Done
 
-Contrato público estável, todos os modos renderizáveis isoladamente, Brasil de 42 territórios validado, fallback funcional e todos os gates de `EVAL.md` aprovados conforme `quality-standard.md`.
+Contrato público estável, todos os modos renderizáveis isoladamente, Brasil de 42 territórios validado, fallback funcional, runtime de opening compatível com `opening-animation-standard.md` quando utilizado e todos os gates de `EVAL.md` aprovados conforme `quality-standard.md`.
