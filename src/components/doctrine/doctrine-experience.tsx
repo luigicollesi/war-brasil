@@ -160,7 +160,7 @@ export function DoctrineExperience({
       </p>
       <div className={styles.ambientGrid} aria-hidden="true" />
 
-      <div className={styles.shell}>
+      <div className={`${styles.shell} ${ux.shell}`}>
         <aside
           className={`${styles.indexPanel} ${ux.indexPanel}`}
           aria-labelledby="doctrine-index-title"
@@ -171,7 +171,20 @@ export function DoctrineExperience({
               {String(presentation.chapters.length).padStart(2, "0")} REGISTROS
             </small>
           </div>
-          <h1 id="doctrine-index-title">DOUTRINA</h1>
+
+          <div className={ux.indexTitleRow}>
+            <h1 id="doctrine-index-title">DOUTRINA</h1>
+            <Link
+              href="/"
+              className={ux.backButton}
+              aria-label="Voltar ao comando"
+              prefetch={false}
+            >
+              <span aria-hidden="true">←</span>
+              VOLTAR
+            </Link>
+          </div>
+
           <p>
             Protocolos operacionais para compreender a máquina antes de entrar em
             combate.
@@ -209,7 +222,10 @@ export function DoctrineExperience({
           </div>
         </aside>
 
-        <section className={styles.content} aria-labelledby="chapter-title">
+        <section
+          className={`${styles.content} ${ux.content}`}
+          aria-labelledby="chapter-title"
+        >
           <div className={ux.chapterSurface}>
             <header className={styles.chapterHeader}>
               <div className={styles.chapterCode}>
