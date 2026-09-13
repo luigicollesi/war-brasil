@@ -18,7 +18,7 @@ Em caso de conflito, usar esta precedência:
 
 1. regras e contratos funcionais já implementados no código, banco e realtime;
 2. `SPEC.md` da trilha;
-3. `visual-language.md` e `foundation/SPEC.md`;
+3. `visual-language.md`, `opening-animation-standard.md` quando aplicável e `foundation/SPEC.md`;
 4. decisões de implementação registradas no PR;
 5. exemplos ilustrativos do spec.
 
@@ -39,6 +39,8 @@ Uma trilha só pode ser considerada concluída quando:
 - conceitos `CORE` aplicáveis em `traceability.md` continuam presentes;
 - evidências do PR permitem reproduzir a avaliação.
 
+Quando a trilha contém uma abertura complexa/multitrack, também MUST satisfazer `opening-animation-standard.md`.
+
 ## Evidência mínima
 
 Cada gate deve apontar para ao menos uma evidência adequada:
@@ -55,6 +57,8 @@ Cada gate deve apontar para ao menos uma evidência adequada:
 Quando Playwright for introduzido, preferir `expect(page).toHaveScreenshot()` ou equivalente oficial. Baselines MUST ser gerados e comparados no mesmo ambiente de navegador/SO usado pela CI, porque renderização pode variar entre ambientes.
 
 Snapshots MUST congelar ou desabilitar animações, relógios, aleatoriedade, partículas e dados não determinísticos. Estados visuais importantes devem ser capturados separadamente; não usar um único screenshot como prova de toda a experiência.
+
+Para abertura complexa, não basta “desabilitar animações”: a implementação MUST possuir seek determinístico conforme `opening-animation-standard.md`, permitindo capturar checkpoints intermediários de forma reproduzível. O último frame da timeline e o estado pós-cleanup devem ser avaliados separadamente.
 
 Referência: https://playwright.dev/docs/test-snapshots
 
@@ -89,11 +93,22 @@ Diretrizes:
 - DPR SHOULD ser limitado/adaptativo;
 - efeitos caros MUST ter fallback/degradação.
 
+Para animações complexas:
+
+- React state MUST NOT ser atualizado a cada frame;
+- lógica por frame SHOULD usar refs/uniforms e permanecer curta;
+- clocks independentes e cadeias de timers SHOULD ser evitados;
+- shaders/materiais de abertura SHOULD ser preparados antes do primeiro frame quando compilação tardia causar stutter;
+- recursos transitórios MUST ter lifecycle/cleanup explícito;
+- determinismo visual vale mais que aleatoriedade estética em estados avaliados por snapshot.
+
 Referências oficiais:
 
 - Next.js lazy loading: https://nextjs.org/docs/app/guides/lazy-loading
 - Next.js Server/Client Components: https://nextjs.org/docs/app/getting-started/server-and-client-components
 - React Three Fiber performance: https://r3f.docs.pmnd.rs/advanced/scaling-performance
+- React Three Fiber performance pitfalls: https://r3f.docs.pmnd.rs/advanced/pitfalls
+- Three.js WebGLRenderer/compileAsync: https://threejs.org/docs/pages/WebGLRenderer.html
 
 ## Score
 
