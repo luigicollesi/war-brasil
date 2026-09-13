@@ -37,6 +37,8 @@ const physicalTables = new Map([
       "territory_connections",
     ],
   ],
+  ["auth", ["account", "session", "user", "verification"]],
+  ["profile", ["commanders"]],
   ["ops", ["command_receipts", "pgmigrations"]],
 ]);
 
@@ -66,6 +68,8 @@ const managedHistory = [
   "028-normalize-rooms-phase-constraint.sql",
   "029-adaptive-combat-dice.sql",
   "030-repair-adaptive-dice-state-schema.sql",
+  "031-auth-foundation.sql",
+  "032-profile-identity-game-binding.sql",
 ];
 
 function urlForDatabase(name) {
@@ -235,6 +239,57 @@ async function assertAdaptiveDiceSchema(client) {
   assert.equal(triggerNames.has("matches_dice_profile_immutable"), true);
 }
 
+async function assertAuthProfileSchema(client) {
+  const playerColumns = await client.query(`
+    SELECT column_name
+    FROM information_schema.columns
+    WHERE table_schema='game' AND table_name='players'
+  `);
+  const playerColumnNames = new Set(
+    playerColumns.rows.map((row) => row.column_name),
+  );
+  for (const name of [
+    "user_id",
+    "display_name_snapshot",
+    "handle_snapshot",
+  ]) {
+    assert.equal(playerColumnNames.has(name), true, name);
+  }
+
+  const roomColumns = await client.query(`
+    SELECT column_name
+    FROM information_schema.columns
+    WHERE table_schema='game' AND table_name='rooms'
+  `);
+  const roomColumnNames = new Set(roomColumns.rows.map((row) => row.column_name));
+  assert.equal(roomColumnNames.has("match_mode"), true, "match_mode");
+  assert.equal(roomColumnNames.has("finished_at"), true, "finished_at");
+
+  const constraints = await client.query(`
+    SELECT c.conname
+    FROM pg_constraint c
+    WHERE c.conrelid IN ('game.players'::regclass, 'game.rooms'::regclass)
+  `);
+  const constraintNames = new Set(constraints.rows.map((row) => row.conname));
+  assert.equal(constraintNames.has("players_user_id_fkey"), true);
+  assert.equal(constraintNames.has("rooms_match_mode_check"), true);
+
+  const indexes = await client.query(`
+    SELECT indexname
+    FROM pg_indexes
+    WHERE schemaname IN ('game', 'profile')
+  `);
+  const indexNames = new Set(indexes.rows.map((row) => row.indexname));
+  for (const name of [
+    "players_room_user_uq",
+    "players_user_room_idx",
+    "commanders_handle_normalized_uq",
+    "commanders_display_name_normalized_idx",
+  ]) {
+    assert.equal(indexNames.has(name), true, name);
+  }
+}
+
 async function assertOrganizedDatabase(connectionString) {
   const client = new Client({ connectionString });
   await client.connect();
@@ -243,7 +298,7 @@ async function assertOrganizedDatabase(connectionString) {
       SELECT n.nspname AS schema_name, c.relname AS relation_name, c.relkind
       FROM pg_class c
       JOIN pg_namespace n ON n.oid = c.relnamespace
-      WHERE n.nspname IN ('game', 'catalog', 'ops', 'public')
+      WHERE n.nspname IN ('game', 'catalog', 'auth', 'profile', 'ops', 'public')
         AND c.relkind IN ('r', 'p', 'v')
       ORDER BY n.nspname, c.relname
     `);
@@ -279,6 +334,7 @@ async function assertOrganizedDatabase(connectionString) {
     assert.deepEqual(history.rows.map((row) => row.name), managedHistory);
 
     await assertAdaptiveDiceSchema(client);
+    await assertAuthProfileSchema(client);
 
     const room = await client.query(
       "INSERT INTO public.game_rooms(code) VALUES('MIGRATION') RETURNING id, revision",
@@ -355,6 +411,7 @@ async function assertOrganizedDatabase(connectionString) {
       "rooms_current_player_fkey",
       "rooms_winner_player_fkey",
       "rooms_current_match_fkey",
+      "rooms_match_mode_check",
     ]) {
       assert.equal(roomConstraintNames.has(name), true, name);
     }
@@ -384,7 +441,7 @@ async function assertOrganizedDatabase(connectionString) {
     const indexes = await client.query(`
       SELECT schemaname, indexname
       FROM pg_indexes
-      WHERE schemaname IN ('game', 'ops')
+      WHERE schemaname IN ('game', 'profile', 'ops')
     `);
     const indexNames = new Set(indexes.rows.map((row) => row.indexname));
     for (const name of [
@@ -393,6 +450,10 @@ async function assertOrganizedDatabase(connectionString) {
       "territories_room_owner_idx",
       "trade_offers_one_active_idx",
       "command_receipts_room_created_idx",
+      "players_room_user_uq",
+      "players_user_room_idx",
+      "commanders_handle_normalized_uq",
+      "commanders_display_name_normalized_idx",
     ]) {
       assert.equal(indexNames.has(name), true, name);
     }
@@ -468,7 +529,7 @@ async function assertLegacyRoomRollout(connectionString) {
 if (!databaseUrl) {
   test("migrations de banco exigem DATABASE_URL", { skip: true }, () => {});
 } else {
-  test("026-030 migram banco v025, preservam catálogos e são idempotentes", async () => {
+  test("026-032 migram banco v025, preservam catálogos e são idempotentes", async () => {
     await withTemporaryDatabase("legacy", async (connectionString) => {
       await applySql(connectionString, "tests/fixtures/db/schema-v025.sql");
       await applySql(
