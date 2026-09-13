@@ -12,6 +12,9 @@ export class AuthenticationRequiredError extends Error {
 export async function getAuthenticatedSession(request: Request) {
   return auth.api.getSession({
     headers: request.headers,
+    query: {
+      disableCookieCache: true,
+    },
   });
 }
 
