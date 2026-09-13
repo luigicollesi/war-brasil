@@ -62,7 +62,7 @@ jobs:
           mkdir -p .e2e-runtime
           npm install --prefix .e2e-runtime --no-save --no-package-lock playwright@1.63.0
           ./.e2e-runtime/node_modules/.bin/playwright install --with-deps chromium
-      - name: Run Lobby multi-client E2E
+      - name: Run Auth rate-limit and Lobby multi-client E2E
         run: |
           npm start > /tmp/war-brasil-e2e.log 2>&1 &
           SERVER_PID=$!
@@ -82,6 +82,7 @@ jobs:
             exit 1
           fi
 
+          node scripts/e2e/auth-rate-limit-e2e.mjs
           npm run test:e2e:lobby
         env:
           DATABASE_URL: postgresql://war:war@127.0.0.1:5432/war_lobby_e2e
