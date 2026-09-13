@@ -24,21 +24,41 @@ O jogador MUST conseguir:
 
 ## Sequência principal
 
-1. primeira carga apresenta composição estável e CTA acessível imediatamente;
-2. cerimônia curta MAY revelar `Terra -> Brasil -> Mesa de Domínio`;
-3. marca WAR Brasil e `ENTRAR NO COMANDO` recebem prioridade;
-4. ao entrar, revelar `OPERAÇÕES`, `DOUTRINA` e `COMANDO` como destinos da mesma instalação;
-5. `OPERAÇÕES` -> `/matchmaking`;
-6. `DOUTRINA` -> `/rules`;
-7. `COMANDO` -> `/profile`.
+1. primeira carga apresenta imediatamente o Brasil canônico colorido, deslocado para o lado direito, com CTA funcional;
+2. enquanto o WebGL prepara em segundo plano, a composição inicial MUST permanecer estável e utilizável;
+3. quando a Foundation estiver pronta, a tela inteira MUST executar uma transformação contínua de **3000 ms** até o estado operacional;
+4. o Brasil MUST deslocar-se suavemente da direita ao centro enquanto perde protagonismo cromático e passa a integrar a Mesa de Domínio;
+5. marca, chrome, atmosfera, CTA, telemetria e rodapé MUST transformar posição/opacidade gradualmente durante a mesma coreografia; nenhum elemento principal pode surgir em um único frame;
+6. o fallback 2D e o Canvas 3D MUST sobrepor-se durante o handoff, preservando o Brasil como âncora visual contínua;
+7. ao entrar, revelar `OPERAÇÕES`, `DOUTRINA` e `COMANDO` como destinos da mesma instalação;
+8. `OPERAÇÕES` -> `/matchmaking`;
+9. `DOUTRINA` -> `/rules`;
+10. `COMANDO` -> `/profile`.
 
-A cerimônia MUST ser pulável. Em visita repetida da mesma sessão SHOULD iniciar de forma reduzida. `prefers-reduced-motion` MUST começar no estado estável ou usar transição sem deslocamento espacial relevante.
+A cerimônia MUST ser pulável em qualquer momento. Em visita repetida da mesma sessão SHOULD iniciar diretamente no estado estável. `prefers-reduced-motion` MUST começar no estado estável ou usar transição sem deslocamento espacial relevante.
+
+## Coreografia cinematográfica
+
+A entrada da primeira visita possui um único relógio lógico de **3 segundos**, iniciado somente depois que a Foundation sinaliza que a cena necessária para o handoff está pronta.
+
+O primeiro frame MUST conter o Brasil colorido já visível e deslocado à direita. A interface periférica MAY começar com presença visual muito baixa, porém seus principais elementos MUST já existir no layout para que a sensação seja de transformação, não de montagem progressiva de uma nova tela.
+
+Durante os 3000 ms:
+
+- movimento espacial SHOULD usar uma curva expressiva sem bounce/overshoot;
+- DOM crítico SHOULD privilegiar `transform` e `opacity`;
+- o escurecimento SHOULD ocorrer preferencialmente por composição/camadas, evitando animações caras de `filter` no caminho crítico;
+- o Canvas pode permanecer visualmente encoberto no início enquanto assume a pose final atrás do fallback;
+- o handoff 2D -> 3D SHOULD acontecer apenas quando as duas representações estiverem visualmente próximas;
+- no instante final, a cena MUST coincidir com o estado normal de `awaiting-entry`, sem salto de posição, opacidade ou escala.
+
+Carregamento de WebGL não conta como parte dos três segundos: recursos podem preparar pelo tempo necessário antes da coreografia começar. Falha de WebGL MUST cair para a composição 2D funcional sem tentar executar uma transição incompleta.
 
 ## Terra, Brasil e Mesa
 
-A Terra serve para comunicar escala e MUST recuar após a revelação do Brasil. Não pode ser o único diferencial visual.
+A Terra serve para comunicar escala e MUST recuar após a revelação do Brasil quando fizer parte de uma variação futura da cerimônia. Não pode ser o único diferencial visual.
 
-O Brasil MUST aparecer como unidade territorial física de 42 placas canônicas, encaixadas em repouso. A Mesa é protagonista arquitetônica, não background.
+Na coreografia atual, o Brasil é a âncora inicial. Ele MUST aparecer como unidade territorial de 42 placas canônicas e terminar integrado à Mesa de Domínio. A Mesa é protagonista arquitetônica, não background.
 
 A Coroa Orbital SHOULD estar presente em movimento ambiente lento; seu alinhamento completo é reservado a autorização/conflito.
 
@@ -63,6 +83,7 @@ A navegação real MUST continuar baseada em controles DOM acessíveis; a cena a
 Mobile MUST ser recomposto:
 
 - Brasil/Mesa como foco superior/central;
+- deslocamento inicial do Brasil para a direita deve ser menor que no desktop para não recortar a leitura do mapa;
 - CTA principal em região confortável de touch;
 - três destinos com alvos grandes e labels persistentes;
 - sem hover/parallax obrigatórios;
@@ -70,14 +91,14 @@ Mobile MUST ser recomposto:
 
 ## Estados
 
-- `boot`
-- `awaiting-entry`
-- `command-open`
-- `destination-focus`
-- `transitioning`
-- `repeat-visit`
-- `reduced-motion`
-- `scene-fallback`
+- `boot` / preparação;
+- `awaiting-entry`;
+- `command-open`;
+- `destination-focus`;
+- `transitioning`;
+- `repeat-visit`;
+- `reduced-motion`;
+- `scene-fallback`.
 
 Todo estado MUST possuir saída funcional e estado final determinístico.
 
@@ -93,10 +114,12 @@ MUST NOT:
 - mostrar três cards grandes como navegação principal;
 - fazer do globo o protagonista permanente;
 - exigir intro antes de oferecer skip/ação;
+- criar elementos principais apenas no meio da animação, causando aparição súbita;
+- trocar fallback por Canvas em um único frame perceptível;
 - manter vermelho pulsando continuamente;
 - inserir marketing longo acima da dobra;
 - fazer link/CTA existir apenas como mesh 3D.
 
 ## Definition of Done
 
-O primeiro contato produz ritual, escala e autoridade sem atrasar o usuário; todos os destinos e fallbacks funcionam e `EVAL.md` passa integralmente.
+O primeiro contato transforma continuamente o Brasil colorido na Mesa de Domínio em três segundos, sem saltos perceptíveis, preservando ação imediata, acessibilidade, fallbacks e todos os destinos. `EVAL.md` passa integralmente.
