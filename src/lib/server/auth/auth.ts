@@ -14,6 +14,14 @@ const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
 const SESSION_UPDATE_AGE_SECONDS = 24 * 60 * 60;
 const SESSION_COOKIE_CACHE_SECONDS = 5 * 60;
 const AUTH_TOKEN_TTL_SECONDS = 60 * 60;
+const AUTH_RATE_LIMIT_WINDOW_SECONDS = 60;
+const AUTH_RATE_LIMIT_MAX = 100;
+const CREDENTIAL_LOGIN_WINDOW_SECONDS = 60;
+const CREDENTIAL_LOGIN_MAX = 5;
+const CREDENTIAL_SIGNUP_WINDOW_SECONDS = 10 * 60;
+const CREDENTIAL_SIGNUP_MAX = 5;
+const AUTH_EMAIL_ACTION_WINDOW_SECONDS = 10 * 60;
+const AUTH_EMAIL_ACTION_MAX = 3;
 
 const environment = readAuthServerEnvironment();
 
@@ -82,6 +90,31 @@ export const auth = betterAuth({
   ...(resolveBaseUrl() ? { baseURL: resolveBaseUrl() } : {}),
   ...(environment.secret ? { secret: environment.secret } : {}),
   trustedOrigins: ["https://appleid.apple.com"],
+  rateLimit: {
+    enabled: true,
+    window: AUTH_RATE_LIMIT_WINDOW_SECONDS,
+    max: AUTH_RATE_LIMIT_MAX,
+    storage: "database",
+    modelName: "rateLimit",
+    customRules: {
+      "/sign-in/email": {
+        window: CREDENTIAL_LOGIN_WINDOW_SECONDS,
+        max: CREDENTIAL_LOGIN_MAX,
+      },
+      "/sign-up/email": {
+        window: CREDENTIAL_SIGNUP_WINDOW_SECONDS,
+        max: CREDENTIAL_SIGNUP_MAX,
+      },
+      "/send-verification-email": {
+        window: AUTH_EMAIL_ACTION_WINDOW_SECONDS,
+        max: AUTH_EMAIL_ACTION_MAX,
+      },
+      "/request-password-reset": {
+        window: AUTH_EMAIL_ACTION_WINDOW_SECONDS,
+        max: AUTH_EMAIL_ACTION_MAX,
+      },
+    },
+  },
   socialProviders: {
     ...googleProvider,
     ...appleProvider,
