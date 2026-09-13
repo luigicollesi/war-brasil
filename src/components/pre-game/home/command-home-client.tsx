@@ -1,13 +1,19 @@
 "use client";
 
-import { authClient, useSession } from "@/client/auth-client";
+import { useSession } from "@/client/auth-client";
 import {
   CommandAuthModal,
   type CommandAuthMode,
 } from "@/components/auth/command-auth-modal";
+import { CommandOnboardingModal } from "@/components/auth/command-onboarding-modal";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import {
   useCommandSceneDirective,
   useCommandSceneState,
@@ -27,6 +33,7 @@ type HomeState =
   | "awaiting-entry"
   | "auth-check"
   | "auth-modal"
+  | "onboarding"
   | "command-open"
   | "destination-focus"
   | "transitioning";
@@ -37,6 +44,16 @@ type Destination = {
   index: string;
   label: string;
   detail: string;
+};
+
+type CommandAccessResponse = {
+  authenticated?: boolean;
+  profileComplete?: boolean;
+  profile?: {
+    handle?: string | null;
+    displayName?: string | null;
+  };
+  suggestedDisplayName?: string | null;
 };
 
 type CommandHomeClientProps = {
@@ -99,6 +116,11 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
     useState<CommandAuthMode>("login");
   const [authModalNotice, setAuthModalNotice] = useState("");
   const [authResetToken, setAuthResetToken] = useState<string | null>(null);
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const [onboardingHandle, setOnboardingHandle] = useState<string | null>(null);
+  const [onboardingDisplayName, setOnboardingDisplayName] = useState<
+    string | null
+  >(null);
   const {
     data: authSession,
     isPending: authSessionPending,
@@ -138,6 +160,77 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
   });
 
   useCommandSceneDirective(sceneIntent);
+
+  const openAuthModal = useCallback(
+    (mode: CommandAuthMode = "login", notice = "") => {
+      setOnboardingOpen(false);
+      setAuthModalMode(mode);
+      setAuthModalNotice(notice);
+      setAuthResetToken(null);
+      setAuthModalOpen(true);
+    },
+    [],
+  );
+
+  const applyCommandAccess = useCallback((payload: CommandAccessResponse) => {
+    if (payload.authenticated && payload.profileComplete) {
+      setOnboardingOpen(false);
+      setCommandOpen(true);
+      return "command-open" as const;
+    }
+
+    if (payload.authenticated) {
+      setCommandOpen(false);
+      setOnboardingHandle(payload.profile?.handle ?? null);
+      setOnboardingDisplayName(
+        payload.profile?.displayName ?? payload.suggestedDisplayName ?? null,
+      );
+      setOnboardingOpen(true);
+      return "onboarding" as const;
+    }
+
+    return "unauthenticated" as const;
+  }, []);
+
+  const checkCommandAccess = useCallback(
+    async (openLoginOnUnauthorized = true) => {
+      setAuthChecking(true);
+      try {
+        const response = await fetch("/api/auth/command-access", {
+          method: "GET",
+          cache: "no-store",
+          headers: { Accept: "application/json" },
+        });
+
+        if (response.status === 401) {
+          setCommandOpen(false);
+          setOnboardingOpen(false);
+          if (openLoginOnUnauthorized) {
+            openAuthModal("login");
+          }
+          return "unauthenticated" as const;
+        }
+
+        if (!response.ok) {
+          throw new Error("command_access_unavailable");
+        }
+
+        const payload = (await response.json()) as CommandAccessResponse;
+        return applyCommandAccess(payload);
+      } catch {
+        setCommandOpen(false);
+        setOnboardingOpen(false);
+        openAuthModal(
+          "login",
+          "Não foi possível validar uma sessão salva. Entre novamente para continuar.",
+        );
+        return "error" as const;
+      } finally {
+        setAuthChecking(false);
+      }
+    },
+    [applyCommandAccess, openAuthModal],
+  );
 
   useEffect(() => {
     if (
@@ -202,8 +295,15 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
         setCeremonyPhase("stable");
         setRitualActive(false);
         setAuthModalOpen(false);
-        setCommandOpen(true);
-        window.history.replaceState({}, "", "/");
+        void checkCommandAccess(false).then((result) => {
+          if (result === "unauthenticated") {
+            openAuthModal(
+              "login",
+              "A sessão retornada não pôde ser validada. Entre novamente.",
+            );
+          }
+          window.history.replaceState({}, "", "/");
+        });
         return;
       }
 
@@ -218,7 +318,12 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [authSession, authSessionPending]);
+  }, [
+    authSession,
+    authSessionPending,
+    checkCommandAccess,
+    openAuthModal,
+  ]);
 
   const settleCeremony = () => {
     setCeremonyPhase("stable");
@@ -229,47 +334,11 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
     settleCeremony();
   };
 
-  const openAuthModal = (
-    mode: CommandAuthMode = "login",
-    notice = "",
-  ) => {
-    setAuthModalMode(mode);
-    setAuthModalNotice(notice);
-    setAuthResetToken(null);
-    setAuthModalOpen(true);
-  };
-
   const enterCommand = () => {
     settleCeremony();
     setKeyboardDestinationFocus(null);
     setPointerDestinationFocus(null);
-    setAuthChecking(true);
-
-    void (async () => {
-      try {
-        if (authSession) {
-          setCommandOpen(true);
-          return;
-        }
-
-        const { data, error } = await authClient.getSession();
-
-        if (data && !error) {
-          await refetchAuthSession();
-          setCommandOpen(true);
-          return;
-        }
-
-        openAuthModal("login");
-      } catch {
-        openAuthModal(
-          "login",
-          "Não foi possível validar uma sessão salva. Entre novamente para continuar.",
-        );
-      } finally {
-        setAuthChecking(false);
-      }
-    })();
+    void checkCommandAccess();
   };
 
   const handleAuthenticated = async () => {
@@ -277,7 +346,30 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
     setAuthModalOpen(false);
     setAuthModalNotice("");
     setAuthResetToken(null);
-    setCommandOpen(true);
+
+    const result = await checkCommandAccess(false);
+    if (result === "unauthenticated") {
+      openAuthModal(
+        "login",
+        "A autenticação não gerou uma sessão válida. Tente entrar novamente.",
+      );
+      return;
+    }
+
+    window.history.replaceState({}, "", "/");
+  };
+
+  const handleOnboardingCompleted = async () => {
+    setOnboardingOpen(false);
+    const result = await checkCommandAccess(false);
+
+    if (result !== "command-open") {
+      if (result === "unauthenticated") {
+        openAuthModal("login", "Sua sessão expirou. Entre novamente para continuar.");
+      }
+      return;
+    }
+
     window.history.replaceState({}, "", "/");
   };
 
@@ -295,17 +387,19 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
 
   const homeState: HomeState = transitioningTo
     ? "transitioning"
-    : authModalOpen
-      ? "auth-modal"
-      : authChecking
-        ? "auth-check"
-        : commandOpen && destinationFocus
-          ? "destination-focus"
-          : commandOpen
-            ? "command-open"
-            : homeTransition === "preparing" || homeTransition === "primed"
-              ? "boot"
-              : "awaiting-entry";
+    : onboardingOpen
+      ? "onboarding"
+      : authModalOpen
+        ? "auth-modal"
+        : authChecking
+          ? "auth-check"
+          : commandOpen && destinationFocus
+            ? "destination-focus"
+            : commandOpen
+              ? "command-open"
+              : homeTransition === "preparing" || homeTransition === "primed"
+                ? "boot"
+                : "awaiting-entry";
 
   return (
     <main
@@ -319,6 +413,7 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
       data-visit={visitMode}
       data-command-open={commandOpen ? "true" : "false"}
       data-authenticated={authSession ? "true" : "false"}
+      data-profile-onboarding={onboardingOpen ? "true" : "false"}
       data-auth-checking={authChecking ? "true" : "false"}
       data-destination-focus={destinationFocus ?? "none"}
       data-transitioning-to={transitioningTo ?? "none"}
@@ -433,6 +528,15 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
         }}
         onAuthenticated={handleAuthenticated}
       />
+
+      {onboardingOpen ? (
+        <CommandOnboardingModal
+          initialDisplayName={onboardingDisplayName}
+          initialHandle={onboardingHandle}
+          onClose={() => setOnboardingOpen(false)}
+          onCompleted={handleOnboardingCompleted}
+        />
+      ) : null}
     </main>
   );
 }
