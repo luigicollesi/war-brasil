@@ -109,7 +109,7 @@ function CommandSceneFallback({ intent }: { intent: ReturnType<typeof normalizeC
   const globeVisible = intent.focus === "earth";
 
   return (
-    <div className={styles.sceneFallback} aria-hidden="true">
+    <div className={styles.sceneFallback} data-command-fallback aria-hidden="true">
       <div
         className={styles.fallbackGlobe}
         data-visible={globeVisible ? "true" : "false"}
@@ -118,12 +118,12 @@ function CommandSceneFallback({ intent }: { intent: ReturnType<typeof normalizeC
         <span />
         <span />
       </div>
-      <div className={styles.fallbackTable}>
+      <div className={styles.fallbackTable} data-command-fallback-table>
         <span className={styles.fallbackTableRim} />
         <span className={styles.fallbackCrownRingA} />
         <span className={styles.fallbackCrownRingB} />
         <span className={styles.fallbackCrownRingC} />
-        <div className={styles.fallbackBrazil}>
+        <div className={styles.fallbackBrazil} data-command-fallback-brazil>
           <Image
             src="/war-brasil-42.production.svg"
             alt=""
@@ -178,6 +178,7 @@ export function CommandScene({ intent, className, onStateChange }: CommandSceneP
   return (
     <div
       className={[styles.sceneHost, className].filter(Boolean).join(" ")}
+      data-command-scene
       data-scene-mode={normalizedIntent.mode}
       data-webgl={webglState}
       data-reduced-motion={reducedMotion ? "true" : "false"}
@@ -186,7 +187,7 @@ export function CommandScene({ intent, className, onStateChange }: CommandSceneP
     >
       <CommandSceneFallback intent={normalizedIntent} />
       {!sceneUnavailable ? (
-        <div className={styles.canvasLayer}>
+        <div className={styles.canvasLayer} data-command-canvas-layer>
           <SceneErrorBoundary onError={handleUnavailable}>
             <CommandSceneCanvas
               intent={normalizedIntent}

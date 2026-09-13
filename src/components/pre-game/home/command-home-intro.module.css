@@ -1,126 +1,265 @@
-:global([data-command-scene-mode="entrance"]:has([data-visit="first"]) > :nth-child(2)),
-:global([data-command-scene-mode="entrance"]:has([data-visit="first"]) > :nth-child(3)),
-:global([data-command-scene-mode="entrance"]:has([data-visit="first"]) > :first-child > :first-child),
-:global([data-command-scene-mode="entrance"]:has([data-visit="first"]) > :first-child > :nth-child(2)),
-:global([data-command-scene-mode="entrance"]:has([data-visit="first"]) > :first-child > :first-child > :nth-child(2)),
-:global([data-command-scene-mode="entrance"]:has([data-visit="first"]) > :first-child > :first-child > :nth-child(2) > :last-child),
-:global([data-command-scene-mode="entrance"]:has([data-visit="first"]) [data-home-identity]),
-:global([data-command-scene-mode="entrance"]:has([data-visit="first"]) [data-home-command-dock]),
-:global([data-command-scene-mode="entrance"]:has([data-visit="first"]) [data-home-footer]) {
-  transition-duration: 1000ms;
-  transition-timing-function: cubic-bezier(.22, .78, .2, 1);
+:global([data-command-scene-mode="entrance"]:has([data-visit="first"])) {
+  --home-intro-map-shift: 22vw;
+  --home-intro-map-shift-mid: 15.8vw;
+  --home-intro-map-shift-late: 5.3vw;
+  --home-intro-duration: 3000ms;
+  --home-intro-easing: cubic-bezier(.4, .14, .3, 1);
 }
 
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="holding"][data-visit="first"]) > :first-child > :nth-child(2)) {
-  opacity: 0 !important;
-}
-
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="holding"][data-visit="first"]) > :first-child > :first-child) {
+/* Preparation may last as long as WebGL needs. Every layer already exists. */
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="preparing"][data-visit="first"]) [data-command-fallback]) {
   opacity: 1 !important;
+  transition: none !important;
 }
 
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="holding"][data-visit="first"]) > :first-child > :first-child > :nth-child(2)) {
-  left: 72%;
-  transform: translate(-50%, -50%) perspective(900px) rotateX(5deg) rotateZ(-2deg) scale(1.025);
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="preparing"][data-visit="first"]) [data-command-canvas-layer]) {
+  opacity: 0 !important;
+  transition: none !important;
 }
 
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="holding"][data-visit="first"]) > :first-child > :first-child > :nth-child(2) > span) {
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="preparing"][data-visit="first"]) [data-command-fallback-table]) {
+  left: 50%;
+  transform: translate(calc(-50% + var(--home-intro-map-shift)), -50%) perspective(900px) rotateX(5deg) rotateZ(-2deg) scale(1.035);
+}
+
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="preparing"][data-visit="first"]) [data-command-fallback-table] > span) {
   opacity: .08;
 }
 
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="holding"][data-visit="first"]) > :first-child > :first-child > :nth-child(2) > :last-child) {
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="preparing"][data-visit="first"]) [data-command-fallback-brazil]) {
   opacity: 1;
-  filter: saturate(1.22) brightness(1.04) contrast(1.03);
+  filter: none !important;
 }
 
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="holding"][data-visit="first"]) > :nth-child(2)) {
-  opacity: .18;
-}
-
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="holding"][data-visit="first"]) > :nth-child(3)) {
+:global([data-command-fallback-brazil])::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 45% 38%, rgb(27 52 31 / 8%), rgb(3 9 5 / 42%) 78%),
+    linear-gradient(rgb(17 32 21 / 16%), rgb(5 10 7 / 54%));
   opacity: 0;
-  transform: translateY(-14px);
 }
 
-:global([data-home-transition="holding"][data-visit="first"] [data-home-identity]) {
-  opacity: 0;
-  transform: translateX(-50%) translateY(-18px) scale(.985);
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="preparing"][data-visit="first"]) [data-command-atmosphere]) {
+  opacity: .12;
+  transform: scale(1.015);
 }
 
-:global([data-home-transition="holding"][data-visit="first"] [data-home-command-dock]) {
-  opacity: 0;
-  transform: translateX(50%) translateY(18px);
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="preparing"][data-visit="first"]) [data-command-chrome]) {
+  opacity: .04;
+  transform: translateY(-16px);
 }
 
-:global([data-home-transition="holding"][data-visit="first"] [data-home-footer]) {
-  opacity: 0;
+:global([data-home-transition="preparing"][data-visit="first"] [data-home-identity]) {
+  opacity: .06;
+  transform: translateX(calc(-50% + 28px)) translateY(-18px) scale(.985);
+}
+
+:global([data-home-transition="preparing"][data-visit="first"] [data-home-command-dock]) {
+  opacity: .04;
+  transform: translateX(calc(50% + 34px)) translateY(20px) scale(.985);
+}
+
+:global([data-home-transition="preparing"][data-visit="first"] [data-home-footer]) {
+  opacity: .04;
   transform: translateY(10px);
 }
 
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) > :first-child > :nth-child(2)) {
-  opacity: 1 !important;
-}
-
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) > :first-child > :first-child) {
+/* One continuous three-second choreography; Canvas only takes over near the end. */
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) [data-command-fallback]) {
   opacity: 0 !important;
+  animation: homeFallbackRelease var(--home-intro-duration) var(--home-intro-easing) both;
+  transition: none !important;
 }
 
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) > :first-child > :first-child > :nth-child(2)) {
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) [data-command-canvas-layer]) {
+  opacity: 1 !important;
+  animation: homeCanvasTakeover var(--home-intro-duration) var(--home-intro-easing) both;
+  transition: none !important;
+}
+
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) [data-command-fallback-table]) {
   left: 50%;
-  transform: translate(-50%, -50%) perspective(900px) rotateX(5deg) rotateZ(-2deg) scale(1);
+  animation: homeMapJourney var(--home-intro-duration) var(--home-intro-easing) both;
 }
 
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) > :first-child > :first-child > :nth-child(2) > span) {
-  opacity: 1;
-  transition: opacity 1000ms cubic-bezier(.22, .78, .2, 1);
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) [data-command-fallback-table] > span) {
+  animation: homeTableStructure var(--home-intro-duration) var(--home-intro-easing) both;
 }
 
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) > :first-child > :first-child > :nth-child(2) > :last-child) {
-  opacity: .7;
-  filter: sepia(.42) saturate(.58) brightness(.62) contrast(1.14);
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) [data-command-fallback-brazil]) {
+  filter: none !important;
+  animation: homeMapPresence var(--home-intro-duration) var(--home-intro-easing) both;
 }
 
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) > :nth-child(2)) {
-  opacity: 1;
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) [data-command-fallback-brazil])::after {
+  animation: homeMapShade var(--home-intro-duration) var(--home-intro-easing) both;
 }
 
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) > :nth-child(3)) {
-  opacity: 1;
-  transform: translateY(0);
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) [data-command-atmosphere]) {
+  animation: homeAtmosphereIn var(--home-intro-duration) var(--home-intro-easing) both;
+}
+
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) [data-command-chrome]) {
+  animation: homeChromeIn var(--home-intro-duration) var(--home-intro-easing) both;
 }
 
 :global([data-home-transition="running"][data-visit="first"] [data-home-identity]) {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0) scale(1);
+  animation: homeIdentitySettle var(--home-intro-duration) var(--home-intro-easing) both;
+}
+
+:global([data-home-transition="running"][data-visit="first"] [data-home-identity] > *) {
+  animation: homeIdentityDetail var(--home-intro-duration) var(--home-intro-easing) both;
 }
 
 :global([data-home-transition="running"][data-visit="first"] [data-home-command-dock]) {
-  opacity: 1;
-  transform: translateX(50%) translateY(0);
+  animation: homeCommandSettle var(--home-intro-duration) var(--home-intro-easing) both;
 }
 
 :global([data-home-transition="running"][data-visit="first"] [data-home-footer]) {
-  opacity: 1;
-  transform: translateY(0);
+  animation: homeFooterSettle var(--home-intro-duration) var(--home-intro-easing) both;
+}
+
+@keyframes homeMapJourney {
+  0% {
+    transform: translate(calc(-50% + var(--home-intro-map-shift)), -50%) perspective(900px) rotateX(5deg) rotateZ(-2deg) scale(1.035);
+  }
+  32% {
+    transform: translate(calc(-50% + var(--home-intro-map-shift-mid)), -50%) perspective(900px) rotateX(5deg) rotateZ(-2deg) scale(1.026);
+  }
+  68% {
+    transform: translate(calc(-50% + var(--home-intro-map-shift-late)), -50%) perspective(900px) rotateX(5deg) rotateZ(-2deg) scale(1.008);
+  }
+  100% {
+    transform: translate(-50%, -50%) perspective(900px) rotateX(5deg) rotateZ(-2deg) scale(1);
+  }
+}
+
+@keyframes homeMapPresence {
+  0%, 45% { opacity: 1; }
+  72% { opacity: .9; }
+  92% { opacity: .38; }
+  100% { opacity: 0; }
+}
+
+@keyframes homeMapShade {
+  0%, 22% { opacity: 0; }
+  56% { opacity: .22; }
+  82% { opacity: .56; }
+  100% { opacity: .72; }
+}
+
+@keyframes homeTableStructure {
+  0% { opacity: .08; }
+  38% { opacity: .18; }
+  72% { opacity: .7; }
+  100% { opacity: 1; }
+}
+
+@keyframes homeFallbackRelease {
+  0%, 56% { opacity: 1; }
+  76% { opacity: .82; }
+  92% { opacity: .18; }
+  100% { opacity: 0; }
+}
+
+@keyframes homeCanvasTakeover {
+  0%, 50% { opacity: 0; }
+  68% { opacity: .16; }
+  84% { opacity: .72; }
+  100% { opacity: 1; }
+}
+
+@keyframes homeAtmosphereIn {
+  0% { opacity: .12; transform: scale(1.015); }
+  46% { opacity: .42; }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@keyframes homeChromeIn {
+  0% { opacity: .04; transform: translateY(-16px); }
+  34% { opacity: .18; transform: translateY(-11px); }
+  72% { opacity: .74; transform: translateY(-3px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes homeIdentitySettle {
+  0% {
+    opacity: .06;
+    transform: translateX(calc(-50% + 28px)) translateY(-18px) scale(.985);
+  }
+  34% {
+    opacity: .24;
+    transform: translateX(calc(-50% + 18px)) translateY(-12px) scale(.99);
+  }
+  72% {
+    opacity: .78;
+    transform: translateX(calc(-50% + 5px)) translateY(-3px) scale(.998);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+@keyframes homeIdentityDetail {
+  0% { opacity: .14; transform: translateY(-5px); }
+  28% { opacity: .22; }
+  66% { opacity: .82; transform: translateY(-1px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes homeCommandSettle {
+  0% {
+    opacity: .04;
+    transform: translateX(calc(50% + 34px)) translateY(20px) scale(.985);
+  }
+  42% {
+    opacity: .19;
+    transform: translateX(calc(50% + 22px)) translateY(13px) scale(.99);
+  }
+  78% {
+    opacity: .76;
+    transform: translateX(calc(50% + 5px)) translateY(3px) scale(.998);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(50%) translateY(0) scale(1);
+  }
+}
+
+@keyframes homeFooterSettle {
+  0% { opacity: .04; transform: translateY(10px); }
+  48% { opacity: .16; transform: translateY(7px); }
+  82% { opacity: .72; transform: translateY(2px); }
+  100% { opacity: 1; transform: translateY(0); }
 }
 
 @media (max-width: 900px) {
-  :global([data-command-scene-mode="entrance"]:has([data-home-transition="holding"][data-visit="first"]) > :first-child > :first-child > :nth-child(2)) {
-    left: 63%;
+  :global([data-command-scene-mode="entrance"]:has([data-visit="first"])) {
+    --home-intro-map-shift: 13vw;
+    --home-intro-map-shift-mid: 9.4vw;
+    --home-intro-map-shift-late: 3.1vw;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :global([data-command-scene-mode="entrance"] > :nth-child(2)),
-  :global([data-command-scene-mode="entrance"] > :nth-child(3)),
-  :global([data-command-scene-mode="entrance"] > :first-child > :first-child),
-  :global([data-command-scene-mode="entrance"] > :first-child > :nth-child(2)),
-  :global([data-command-scene-mode="entrance"] > :first-child > :first-child > :nth-child(2)),
-  :global([data-command-scene-mode="entrance"] > :first-child > :first-child > :nth-child(2) > span),
-  :global([data-command-scene-mode="entrance"] > :first-child > :first-child > :nth-child(2) > :last-child),
+  :global([data-command-scene-mode="entrance"] [data-command-fallback]),
+  :global([data-command-scene-mode="entrance"] [data-command-canvas-layer]),
+  :global([data-command-scene-mode="entrance"] [data-command-fallback-table]),
+  :global([data-command-scene-mode="entrance"] [data-command-fallback-table] > span),
+  :global([data-command-scene-mode="entrance"] [data-command-fallback-brazil]),
+  :global([data-command-scene-mode="entrance"] [data-command-fallback-brazil])::after,
+  :global([data-command-scene-mode="entrance"] [data-command-atmosphere]),
+  :global([data-command-scene-mode="entrance"] [data-command-chrome]),
   :global([data-home-identity]),
+  :global([data-home-identity] > *),
   :global([data-home-command-dock]),
   :global([data-home-footer]) {
+    animation: none !important;
     transition: none !important;
   }
 }
