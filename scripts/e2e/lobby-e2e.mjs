@@ -17,6 +17,7 @@ const ARTIFACT_DIR = path.resolve(
   process.env.LOBBY_E2E_ARTIFACT_DIR ?? "test-results/lobby-eval",
 );
 const LOBBY_CONVERGENCE_TIMEOUT_MS = 15_000;
+const E2E_PASSWORD = "WarBrasil-E2E-2026!";
 
 if (!DATABASE_URL) {
   throw new Error("LOBBY_E2E_DATABASE_URL é obrigatória.");
@@ -26,6 +27,7 @@ mkdirSync(ARTIFACT_DIR, { recursive: true });
 
 const failures = [];
 const foundationDeprecations = [];
+let actorSequence = 0;
 
 async function step(name, callback) {
   process.stdout.write(`\n[lobby-e2e] ${name} ... `);
@@ -37,6 +39,82 @@ async function step(name, callback) {
     console.log("falhou");
     console.error(error);
   }
+}
+
+async function apiJson(page, url, init = {}) {
+  return page.evaluate(
+    async ({ url: requestUrl, init: requestInit }) => {
+      const response = await fetch(requestUrl, requestInit);
+      let body = null;
+      try {
+        body = await response.json();
+      } catch {
+        body = null;
+      }
+      return { status: response.status, body };
+    },
+    { url, init },
+  );
+}
+
+async function verifyE2eEmail(email) {
+  const db = new Client({ connectionString: DATABASE_URL });
+  await db.connect();
+  try {
+    const result = await db.query(
+      `UPDATE auth."user"
+          SET "emailVerified" = TRUE,
+              "updatedAt" = NOW()
+        WHERE email = $1
+        RETURNING id`,
+      [email],
+    );
+    assert.equal(result.rowCount, 1, `conta E2E não encontrada para ${email}`);
+  } finally {
+    await db.end();
+  }
+}
+
+async function authenticateActor(page) {
+  actorSequence += 1;
+  const identity = `${process.pid}-${actorSequence}`;
+  const email = `lobby-${identity}@e2e.war-brasil.test`;
+  const handle = `lobby_${identity}`;
+  const displayName = `Comandante E2E ${actorSequence}`;
+
+  await page.goto(`${BASE_URL}/`, { waitUntil: "domcontentloaded" });
+
+  const registration = await apiJson(page, "/api/auth/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email,
+      password: E2E_PASSWORD,
+      termsAccepted: true,
+    }),
+  });
+  assert.equal(registration.status, 200, JSON.stringify(registration.body));
+
+  await verifyE2eEmail(email);
+
+  const signIn = await apiJson(page, "/api/auth/sign-in/email", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email,
+      password: E2E_PASSWORD,
+      rememberMe: true,
+    }),
+  });
+  assert.equal(signIn.status, 200, JSON.stringify(signIn.body));
+
+  const onboarding = await apiJson(page, "/api/auth/command-access", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ handle, displayName }),
+  });
+  assert.equal(onboarding.status, 200, JSON.stringify(onboarding.body));
+  assert.equal(onboarding.body?.profileComplete, true);
 }
 
 async function createActor(browser, options = {}) {
@@ -65,24 +143,9 @@ async function createActor(browser, options = {}) {
       foundationDeprecations.push(text);
     }
   });
+  await authenticateActor(page);
   await page.goto(`${BASE_URL}/matchmaking`, { waitUntil: "domcontentloaded" });
   return { context, page };
-}
-
-async function apiJson(page, url, init = {}) {
-  return page.evaluate(
-    async ({ url: requestUrl, init: requestInit }) => {
-      const response = await fetch(requestUrl, requestInit);
-      let body = null;
-      try {
-        body = await response.json();
-      } catch {
-        body = null;
-      }
-      return { status: response.status, body };
-    },
-    { url, init },
-  );
 }
 
 async function createRoom(actor) {
