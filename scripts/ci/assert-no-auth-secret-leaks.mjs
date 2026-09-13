@@ -2,6 +2,8 @@ import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import path from "node:path";
 
 const SENTINELS = [
+  ["DATABASE_URL", process.env.DATABASE_URL],
+  ["DATABASE_PASSWORD", process.env.DB_PASSWORD_SENTINEL],
   ["BETTER_AUTH_SECRET", process.env.BETTER_AUTH_SECRET],
   ["GOOGLE_CLIENT_SECRET", process.env.GOOGLE_CLIENT_SECRET],
   ["APPLE_PRIVATE_KEY", process.env.APPLE_PRIVATE_KEY],
@@ -9,9 +11,9 @@ const SENTINELS = [
   ["EMAIL_TRANSPORT_SECRET", process.env.EMAIL_TRANSPORT_SECRET],
 ].filter(([, value]) => typeof value === "string" && value.length > 0);
 
-if (SENTINELS.length !== 5) {
+if (SENTINELS.length !== 7) {
   throw new Error(
-    "Leak scan exige os cinco sentinels falsos de autenticação no ambiente de CI.",
+    "Leak scan exige sentinels falsos completos de banco e autenticação no ambiente de CI.",
   );
 }
 
