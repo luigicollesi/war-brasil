@@ -9,9 +9,13 @@ const workspace = readFileSync("src/components/lobby-command-workspace.tsx", "ut
 const workspaceStyles = readFileSync("src/components/lobby-command-workspace.module.css", "utf8");
 const formation = readFileSync("src/components/lobby-formation-panel.tsx", "utf8");
 const formationStyles = readFileSync("src/components/lobby-formation-panel.module.css", "utf8");
+const station = readFileSync("src/components/lobby-station-panel.tsx", "utf8");
 const stationStyles = readFileSync("src/components/lobby-station-panel.module.css", "utf8");
+const ready = readFileSync("src/components/lobby-ready-dock.tsx", "utf8");
 const readyStyles = readFileSync("src/components/lobby-ready-dock.module.css", "utf8");
 const backButton = readFileSync("src/components/pre-game-back-button.tsx", "utf8");
+
+const lobbyLayoutStyles = [workspaceStyles, formationStyles, stationStyles, readyStyles].join("\n");
 
 test("Matchmaking e Lobby usam retorno explícito sem depender do histórico", () => {
   assert.match(matchmaking, /<PreGameBackButton href="\/" \/>/);
@@ -31,25 +35,58 @@ test("Lobby usa 100dvh como orçamento e impede crescimento da página", () => {
   assert.match(workspaceStyles, /@media \(max-width: 720px\)/);
   assert.match(workspaceStyles, /@media \(max-height: 680px\)/);
   assert.match(workspaceStyles, /@media \(max-width: 720px\) and \(max-height: 580px\)/);
+  assert.doesNotMatch(lobbyLayoutStyles, /overflow-y:\s*(?:auto|scroll)/);
 });
 
-test("Formação mantém seis postos dentro de uma grade de altura estável", () => {
+test("Formação desktop é uma mesa de guerra Brasil com seis postos estáveis", () => {
+  assert.match(workspace, /data-lobby-layout="war-table"/);
+  assert.match(formation, /data-tactical-nexus="brasil"/);
+  assert.match(formation, /\/war-brasil-42\.production\.svg/);
   assert.match(formation, /6 - players\.length/);
   assert.match(formation, /\{players\.length\}\/6 postos ocupados/);
-  assert.match(formationStyles, /grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(formationStyles, /grid-template-columns:\s*minmax\(0, 1fr\) minmax\(180px, \.82fr\) minmax\(0, 1fr\)/);
   assert.match(formationStyles, /grid-template-rows:\s*repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.match(formationStyles, /\.stationField > :nth-child\(1\)/);
+  assert.match(formationStyles, /\.stationField > :nth-child\(6\)/);
   assert.match(formationStyles, /min-height:\s*0/);
   assert.match(formationStyles, /overflow:\s*hidden/);
 });
 
-test("Mobile alterna apenas apresentação e mantém ready no fluxo", () => {
+test("Mobile remove o nexus literal e recompõe seis postos em 2x3", () => {
+  assert.match(formationStyles, /@media \(max-width: 720px\)[\s\S]*?\.tacticalNexus[\s\S]*?display:\s*none/);
+  assert.match(formationStyles, /grid-template-columns:\s*repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(formationStyles, /grid-template-rows:\s*repeat\(3, minmax\(0, 1fr\)\)/);
   assert.match(workspace, /type MobileLobbyPanel = "formation" \| "station"/);
   assert.match(workspace, /data-mobile-panel=\{mobilePanel\}/);
   assert.match(workspace, /role="tablist"/);
   assert.match(workspace, />\s*Formação\s*/);
   assert.match(workspace, />\s*Sua estação\s*/);
-  assert.match(stationStyles, /min-height:\s*0/);
+});
+
+test("Credencial local mantém controles reais no DOM e compacta antes deles", () => {
+  assert.match(station, /className=\{styles\.commandCredential\}/);
+  assert.match(station, /id="faction-name"/);
+  assert.match(station, /className=\{styles\.colorEditor\}/);
+  assert.match(stationStyles, /@media \(max-width: 720px\) and \(max-height: 580px\)/);
+  assert.match(stationStyles, /\.commandCredential,[\s\S]*?display:\s*none/);
+  assert.match(stationStyles, /\.identityControls[\s\S]*?gap:/);
+});
+
+test("Ready é trilho de autorização no fluxo e continua derivado de players", () => {
+  assert.match(ready, /Array\.from\(\{ length: 6 \}/);
+  assert.match(ready, /player\.isReady \? "ready" : "configuring"/);
+  assert.match(ready, /className=\{styles\.authorizationRail\}/);
+  assert.match(ready, /aria-pressed=\{me\.isReady\}/);
   assert.doesNotMatch(readyStyles, /position:\s*fixed/);
+  assert.match(readyStyles, /grid-template-columns:\s*repeat\(6, minmax\(26px, 1fr\)\)/);
+  assert.match(readyStyles, /@media \(max-height: 580px\)/);
+});
+
+test("Motion decorativo respeita prefers-reduced-motion", () => {
+  assert.match(formationStyles, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(formationStyles, /\.nexusOrbit,[\s\S]*?animation:\s*none/);
+  assert.match(stationStyles, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(readyStyles, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
 test("LobbyClient continua controlador único dos contratos funcionais", () => {
@@ -59,4 +96,7 @@ test("LobbyClient continua controlador único dos contratos funcionais", () => {
   assert.match(lobbyClient, /method: "DELETE"/);
   assert.match(lobbyClient, /router\.replace\(`\/game\/\$\{snapshot\.room\.id\}`\)/);
   assert.doesNotMatch(workspace, /fetch\(|useLobbySync|router\.replace/);
+  assert.doesNotMatch(formation, /fetch\(|useLobbySync/);
+  assert.doesNotMatch(station, /fetch\(|useLobbySync/);
+  assert.doesNotMatch(ready, /fetch\(|useLobbySync/);
 });
