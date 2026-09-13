@@ -117,6 +117,12 @@ test("Genesis é pass transitório sobre as mesmas geometrias e não um segundo 
   assert.equal(existsSync(experimentalEntranceMapPath), false);
 });
 
+test("seek=1 segura intro-100 antes do cleanup", () => {
+  assert.match(genesisPass, /const isSeekHold = forcedProgress !== null/);
+  assert.match(genesisPass, /isSeekHold[\s\S]*?"settling"[\s\S]*?: globalProgress >= 1[\s\S]*?"ready"/);
+  assert.match(genesisPass, /if \(!isSeekHold && globalProgress >= 1\)/);
+});
+
 test("material Genesis usa GPU, coordenadas locais e seed territorial determinístico", () => {
   assert.match(genesisMaterial, /onBeforeCompile/);
   assert.match(genesisMaterial, /uGenesisProgress/);
