@@ -66,9 +66,9 @@ export function CommandShell({
       data-command-scene-mode={normalizedIntent.mode}
     >
       <CommandScene intent={normalizedIntent} onStateChange={onSceneStateChange} />
-      <div className={styles.atmosphere} aria-hidden="true" />
+      <div className={styles.atmosphere} data-command-atmosphere aria-hidden="true" />
       {chrome ? (
-        <div className={styles.shellChrome} aria-hidden="true">
+        <div className={styles.shellChrome} data-command-chrome aria-hidden="true">
           <div className={styles.brandLockup}>
             <span className={styles.brandSeal}>WB</span>
             <span>
