@@ -1,6 +1,6 @@
 import type { CommandSceneDirective } from "../foundation";
 
-export type HomeCeremonyPhase = "earth" | "brazil" | "table" | "stable";
+export type HomeCeremonyPhase = "primed" | "playing" | "stable";
 export type HomeDestinationId = "operations" | "doctrine" | "profile";
 
 type HomeSceneIntentInput = Readonly<{
@@ -58,41 +58,16 @@ export function getHomeSceneIntent({
     };
   }
 
-  if (ceremonyPhase === "earth") {
-    return {
-      focus: "earth",
-      conflictLevel: 0,
-      territoryExplode: 0,
-      orbitalAlignment: 0,
-      entranceState: "initial",
-    };
-  }
-
-  if (ceremonyPhase === "brazil") {
-    return {
-      focus: "brazil",
-      conflictLevel: 0,
-      territoryExplode: 0,
-      orbitalAlignment: 0,
-      entranceState: "initial",
-    };
-  }
-
-  if (ceremonyPhase === "table") {
-    return {
-      focus: "table",
-      conflictLevel: 0,
-      territoryExplode: 0,
-      orbitalAlignment: 0,
-      entranceState: "running",
-    };
-  }
-
   return {
     focus: "table",
     conflictLevel: 0,
     territoryExplode: 0,
     orbitalAlignment: 0,
-    entranceState: "settled",
+    entranceState:
+      ceremonyPhase === "stable"
+        ? "settled"
+        : ceremonyPhase === "playing"
+          ? "playing"
+          : "primed",
   };
 }
