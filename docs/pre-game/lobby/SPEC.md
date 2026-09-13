@@ -7,9 +7,11 @@ Segue `../quality-standard.md`, `../visual-language.md` e `../traceability.md`.
 
 ## Fantasia
 
-A sala é um **briefing cerimonial de alto comando**. O jogador deve enxergar a formação da operação, configurar sua própria estação e confirmar prontidão sem navegar por uma página longa.
+A sala é uma **sala de guerra cerimonial de alto comando**. O jogador deve enxergar a formação da operação, configurar sua própria estação e confirmar prontidão sem navegar por uma página longa.
 
 A composição MUST transmitir preparação coletiva sem comprometer a confiabilidade do fluxo realtime.
+
+A referência de experiência é diegética: a interface deve parecer parte de uma máquina militar/estratégica, e não um dashboard SaaS composto por cards independentes.
 
 ## Fonte de verdade
 
@@ -46,15 +48,15 @@ A rota MUST funcionar como uma **estação de comando de uma única viewport**.
 A estrutura principal é:
 
 ```text
-Sala de Comando
+Sala de Guerra
 ├── barra de comando
 │   ├── Voltar
-│   ├── código/copiar
+│   ├── chave/copiar
 │   └── conexão/ocupação
 ├── workspace
-│   ├── Formação da operação
-│   └── Sua estação
-└── dock de prontidão
+│   ├── Formação / Mesa de Guerra Brasil
+│   └── Credencial da estação local
+└── trilho de autorização / ready
 ```
 
 MUST:
@@ -63,11 +65,29 @@ MUST:
 - manter o shell com `min-height: 0` e sem scroll de página em estado normal;
 - manter código, configuração e ready dentro da viewport;
 - evitar `min-height` acumulativo que force crescimento vertical;
-- manter o dock de prontidão no fluxo da composição, sem depender de uma barra `fixed` sobrepondo conteúdo;
+- manter prontidão no fluxo da composição, sem depender de uma barra `fixed` sobrepondo conteúdo;
 - reduzir primeiro conteúdo explicativo/ornamental em alturas baixas;
-- preservar erros e ações críticas.
+- preservar erros e ações críticas;
+- adicionar complexidade prioritariamente por composição horizontal, camadas, linhas, telemetria e overlays contidos, nunca empilhando novas seções verticais;
+- MUST NOT usar `overflow-y: auto` ou `overflow-y: scroll` como solução para acomodar a sala normal.
 
-## Formação
+## Identidade visual da sala de guerra
+
+A sala MUST preservar a linguagem War Brasil: verde militar profundo, vermelho de conflito e dourado/latão de autoridade e prestígio.
+
+Desktop SHOULD usar três objetos visuais principais:
+
+1. **Mesa de Guerra Brasil** — objeto estratégico central da formação;
+2. **Credencial de Comando** — identidade visual do jogador local;
+3. **Trilho de Autorização** — leitura coletiva dos seis canais de ready.
+
+A estética SHOULD usar geometrias militares angulares, trilhos, conectores, marcações técnicas, projeção/holograma e superfícies metálicas discretas em vez de grandes cards arredondados.
+
+Vermelho SHOULD permanecer reservado para falha, alerta e `CONFLITO AUTORIZADO`; estados normais usam verde militar, branco quente e latão.
+
+Animações ornamentais MUST ser leves, preferencialmente `transform`/`opacity`, e MUST respeitar `prefers-reduced-motion`.
+
+## Formação / Mesa de Guerra Brasil
 
 A formação representa até seis postos simultaneamente.
 
@@ -80,9 +100,16 @@ MUST:
 - permitir que o host adicione/remova bots pelos contratos vigentes;
 - representar ready por texto/forma, não somente por cor.
 
-Desktop SHOULD usar os seis postos dentro de uma área compacta associada à Mesa/Brasil da Foundation.
+No desktop:
 
-## Sua estação
+- os seis postos SHOULD ocupar duas alas laterais estáveis, três à esquerda e três à direita;
+- o centro SHOULD ser uma Mesa de Guerra com o mapa do Brasil como âncora visual;
+- conexões visuais entre postos e mesa MAY reagir ao estado ready, sem criar estado funcional adicional;
+- o mapa central é decorativo e MUST NOT ser necessário para entender ou operar a sala.
+
+No mobile, a Mesa de Guerra central MAY desaparecer completamente para liberar orçamento de viewport. Os seis postos MUST então recompor-se em matriz compacta `2×3`.
+
+## Sua estação / Credencial de Comando
 
 A estação local MUST manter acessíveis:
 
@@ -93,13 +120,23 @@ A estação local MUST manter acessíveis:
 - feedback de erro;
 - informação de que alterar identidade revoga ready quando aplicável.
 
+A identidade atual SHOULD possuir uma credencial/insígnia visível derivada do nome e cor confirmados pelo servidor.
+
+A credencial é ornamental/identitária e MUST ser compactada ou removida antes dos controles em viewport baixo.
+
 A UI MUST NOT alterar regras ou endpoints para caber no novo layout.
 
-## Ready
+## Ready / Trilho de Autorização
 
 O controle de prontidão MUST permanecer continuamente alcançável no shell da sala.
 
 Ready/unready visual MUST reagir ao estado realtime confirmado, não antecipar um estado que o servidor ainda não aceitou como verdade definitiva.
+
+O dock SHOULD representar os seis postos como canais de autorização derivados exclusivamente de `players`:
+
+- vazio;
+- configurando;
+- pronto.
 
 Ao ficar pronto, a Insígnia de Comando MAY alinhar-se mecanicamente e adotar estado de autoridade.
 
@@ -117,8 +154,9 @@ Mobile MUST:
 - manter `Voltar`, código/copiar e status essenciais no topo;
 - manter o CTA de ready visível no dock inferior;
 - manter input e cores alcançáveis por touch;
-- compactar descrições e metadados quando a altura disponível cair;
-- não transformar a rota em uma lista vertical longa.
+- compactar primeiro mapa central, credencial, descrições e metadados quando a altura disponível cair;
+- não transformar a rota em uma lista vertical longa;
+- não introduzir scroll interno de painel como fallback normal.
 
 Viewports-alvo mínimos de regressão: `390x844` e `390x580`.
 
@@ -143,7 +181,8 @@ Quando as condições vigentes de início forem satisfeitas, a cena MAY executar
 1. Coroa Orbital alinha seus aros;
 2. vermelho aumenta brevemente;
 3. Mesa/Brasil entram em estado de autorização;
-4. navegação para o jogo acontece uma única vez.
+4. trilho de autorização assume estado de conflito;
+5. navegação para o jogo acontece uma única vez.
 
 A cerimônia MUST NOT criar uma segunda condição de start nem atrasar a navegação de modo relevante. Se a rota mudar antes do fim da animação, a animação é descartável.
 
@@ -171,7 +210,8 @@ MUST:
 - fornecer foco visível;
 - não depender da posição dos postos para indicar ordem/importância;
 - não depender apenas de cor para host, facção ou prontidão quando houver risco de ambiguidade;
-- manter labels/nomes acessíveis de copiar código, salvar facção e ready.
+- manter labels/nomes acessíveis de copiar código, salvar facção e ready;
+- tratar mapa/holograma puramente ornamental como decorativo para tecnologias assistivas.
 
 Atualizações realtime importantes SHOULD ser expostas de modo acessível sem produzir anúncios excessivos.
 
@@ -184,13 +224,14 @@ MUST NOT:
 - bloquear/ocultar copiar código;
 - usar `history.back()` como única navegação de retorno;
 - tratar Voltar como saída destrutiva da sala;
-- exigir 3D para entender membros/status;
+- exigir 3D ou o holograma Brasil para entender membros/status;
 - criar ordenação visual instável a cada evento;
 - reintroduzir barra de ready `fixed` que cubra conteúdo;
-- permitir scroll de página como solução principal para acomodar a composição;
+- permitir scroll de página como solução para acomodar a composição;
+- permitir scroll interno como solução normal para excesso de ornamento;
 - atrasar start para concluir animação;
 - modificar condição de start por estética.
 
 ## Definition of Done
 
-De 2 a 6 jogadores conseguem entrar, configurar-se, ficar prontos, reconectar e iniciar com a mesma confiabilidade do fluxo vigente; Matchmaking e Lobby possuem retorno explícito; o Lobby permanece contido em uma viewport desktop/mobile normal; e `EVAL.md` passa integralmente.
+De 2 a 6 jogadores conseguem entrar, configurar-se, ficar prontos, reconectar e iniciar com a mesma confiabilidade do fluxo vigente; Matchmaking e Lobby possuem retorno explícito; o Lobby apresenta Mesa de Guerra Brasil, Credencial de Comando e Trilho de Autorização sem criar estado paralelo; permanece contido em uma viewport desktop/mobile normal; e `EVAL.md` passa integralmente.
