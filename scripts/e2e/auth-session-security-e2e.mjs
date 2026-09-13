@@ -257,3 +257,5 @@ try {
   await db.end();
   await browser.close();
 }
+
+await import("./auth-token-expiry-e2e.mjs");
