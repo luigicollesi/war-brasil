@@ -1,11 +1,12 @@
 :global([data-command-scene-mode="entrance"]:has([data-visit="first"])) {
   --home-intro-duration: 3000ms;
-  --home-intro-easing: cubic-bezier(.4, .14, .3, 1);
+  --home-intro-easing: cubic-bezier(.22, .58, .21, 1);
 }
 
 /* While WebGL is preparing, keep the Foundation void visible without showing a
-   second 2D Brazil. The first actual Brazil paint must come from the primed
-   Genesis pass. */
+   second 2D Brazil. The first actual Brazil paint comes from the primed
+   Genesis pass, with canonical territories staged at deterministic offscreen
+   origins before the center-out convergence begins. */
 :global([data-command-scene-mode="entrance"]:has([data-home-transition="preparing"][data-visit="first"]) [data-command-fallback]),
 :global([data-command-scene-mode="entrance"]:has([data-home-transition="primed"][data-visit="first"]) [data-command-fallback]),
 :global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) [data-command-fallback]) {
@@ -13,8 +14,9 @@
   transition: none !important;
 }
 
-/* Canvas visibility is invariant throughout Genesis. There is no global fade
-   hiding the map transformation. */
+/* Canvas visibility is invariant throughout the opening. Spatial convergence,
+   Genesis and the command-ring invocation remain visible instead of being
+   hidden behind a global canvas fade. */
 :global([data-command-scene-mode="entrance"]:has([data-home-transition="preparing"][data-visit="first"]) [data-command-canvas-layer]),
 :global([data-command-scene-mode="entrance"]:has([data-home-transition="primed"][data-visit="first"]) [data-command-canvas-layer]),
 :global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) [data-command-canvas-layer]) {
@@ -22,8 +24,6 @@
   transition: none !important;
 }
 
-/* Primed is a real, paintable frame: canonical colored Brazil in the final
-   spatial pose, before choreography begins. */
 :global([data-command-scene-mode="entrance"]:has([data-home-transition="preparing"][data-visit="first"]) [data-command-atmosphere]),
 :global([data-command-scene-mode="entrance"]:has([data-home-transition="primed"][data-visit="first"]) [data-command-atmosphere]),
 :global([data-command-scene-mode="entrance"]:has([data-home-transition="preparing"][data-visit="first"]) [data-command-chrome]),
@@ -78,33 +78,35 @@
   animation: homeFooterSettle var(--home-intro-duration) var(--home-intro-easing) both;
 }
 
+/* Each transform-bearing track has one continuous movement segment. Holding the
+   initial pose before its cue is allowed; once movement starts no intermediate
+   keyframe can decelerate and restart the same property. */
 @keyframes homeAtmosphereIn {
-  0%, 28% { opacity: 0; transform: scale(1.025); }
-  48% { opacity: .16; }
-  68% { opacity: .48; }
-  88% { opacity: .86; }
-  100% { opacity: 1; transform: scale(1); }
+  0%, 30% {
+    opacity: 0;
+    transform: scale(1.025);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 @keyframes homeChromeIn {
-  0%, 40% { opacity: 0; transform: translateY(-18px); }
-  58% { opacity: .22; transform: translateY(-12px); }
-  80% { opacity: .72; transform: translateY(-4px); }
-  100% { opacity: 1; transform: translateY(0); }
+  0%, 44% {
+    opacity: 0;
+    transform: translateY(-18px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes homeIdentitySettle {
-  0%, 40% {
+  0%, 50% {
     opacity: 0;
     transform: translateX(calc(-50% + 34px)) translateY(-22px) scale(.975);
-  }
-  56% {
-    opacity: .14;
-    transform: translateX(calc(-50% + 25px)) translateY(-16px) scale(.982);
-  }
-  76% {
-    opacity: .64;
-    transform: translateX(calc(-50% + 11px)) translateY(-7px) scale(.992);
   }
   100% {
     opacity: 1;
@@ -113,24 +115,20 @@
 }
 
 @keyframes homeIdentityDetail {
-  0%, 46% { opacity: 0; transform: translateY(-7px); }
-  62% { opacity: .2; }
-  82% { opacity: .78; transform: translateY(-2px); }
-  100% { opacity: 1; transform: translateY(0); }
+  0%, 56% {
+    opacity: 0;
+    transform: translateY(-7px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @keyframes homeCommandSettle {
-  0%, 50% {
+  0%, 62% {
     opacity: .14;
     transform: translateX(calc(50% + 42px)) translateY(24px) scale(.975);
-  }
-  66% {
-    opacity: .28;
-    transform: translateX(calc(50% + 29px)) translateY(17px) scale(.983);
-  }
-  86% {
-    opacity: .78;
-    transform: translateX(calc(50% + 9px)) translateY(5px) scale(.995);
   }
   100% {
     opacity: 1;
@@ -139,10 +137,14 @@
 }
 
 @keyframes homeFooterSettle {
-  0%, 58% { opacity: 0; transform: translateY(12px); }
-  74% { opacity: .22; transform: translateY(8px); }
-  92% { opacity: .76; transform: translateY(2px); }
-  100% { opacity: 1; transform: translateY(0); }
+  0%, 70% {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
