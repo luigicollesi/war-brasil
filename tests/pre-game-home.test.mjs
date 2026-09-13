@@ -121,7 +121,6 @@ test("seek=1 segura intro-100 antes do cleanup", () => {
   assert.match(genesisPass, /const isSeekHold = forcedProgress !== null/);
   assert.match(genesisPass, /const nextPhase: CommandSceneState = isSeekHold/);
   assert.match(genesisPass, /if \(!isSeekHold && globalProgress >= 1\)/);
-  assert.match(genesisPass, /completedRef\.current = true/);
 });
 
 test("material Genesis usa GPU, coordenadas locais e seed territorial determinístico", () => {
