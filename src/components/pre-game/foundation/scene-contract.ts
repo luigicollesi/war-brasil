@@ -16,13 +16,19 @@ export const COMMAND_SCENE_FOCUSES = [
   "none",
 ] as const;
 
-export const COMMAND_ENTRANCE_STATES = ["initial", "running", "settled"] as const;
+export const COMMAND_ENTRANCE_STATES = ["primed", "playing", "settled"] as const;
 
 export type CommandSceneFocus = (typeof COMMAND_SCENE_FOCUSES)[number];
 export type CommandEntranceState = (typeof COMMAND_ENTRANCE_STATES)[number];
 export type CommandConflictLevel = 0 | 1 | 2 | 3;
 export type CommandOrbitalAlignment = 0 | 1;
-export type CommandSceneState = "loading" | "ready" | "fallback";
+export type CommandSceneState =
+  | "loading"
+  | "primed"
+  | "playing"
+  | "settling"
+  | "ready"
+  | "fallback";
 
 export type CommandSceneIntent = Readonly<{
   mode: CommandSceneMode;
@@ -43,7 +49,7 @@ export type NormalizedCommandSceneIntent = Readonly<{
 }>;
 
 const DEFAULT_FOCUS_BY_MODE: Readonly<Record<CommandSceneMode, CommandSceneFocus>> = {
-  entrance: "earth",
+  entrance: "table",
   operations: "brazil",
   lobby: "table",
   doctrine: "brazil",
@@ -52,11 +58,11 @@ const DEFAULT_FOCUS_BY_MODE: Readonly<Record<CommandSceneMode, CommandSceneFocus
 
 export const DEFAULT_COMMAND_SCENE_INTENT: NormalizedCommandSceneIntent = {
   mode: "entrance",
-  focus: "earth",
+  focus: "table",
   conflictLevel: 0,
   territoryExplode: 0,
   orbitalAlignment: 0,
-  entranceState: "initial",
+  entranceState: "primed",
 };
 
 export function normalizeCommandSceneIntent(
@@ -73,7 +79,7 @@ export function normalizeCommandSceneIntent(
     territoryExplode: explode,
     orbitalAlignment: intent.orbitalAlignment ?? 0,
     entranceState:
-      intent.entranceState ?? (intent.mode === "entrance" ? "initial" : "settled"),
+      intent.entranceState ?? (intent.mode === "entrance" ? "primed" : "settled"),
   };
 }
 
