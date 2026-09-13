@@ -13,6 +13,7 @@ import {
 } from "@/src/lib/game-sync-contract";
 import { getPlayerSession } from "@/src/lib/player-session";
 import { RoomError } from "@/src/lib/rooms";
+import { assertAuthenticatedPlayerSeat } from "@/server/auth/player-seat-guard";
 
 export async function POST(
   request: NextRequest,
@@ -31,6 +32,7 @@ export async function POST(
     if (!/^\d+$/.test(roomId)) {
       throw new RoomError("Partida não encontrada.", 404);
     }
+    await assertAuthenticatedPlayerSeat(request, session, { roomId });
 
     body = await readJsonObject(request);
     const expectedRevision = parseGameRevision(
