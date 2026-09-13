@@ -2,17 +2,24 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { type FormEvent, type ReactNode, useMemo, useState } from "react";
+import { type ReactNode, useMemo, useState } from "react";
 import { useCommandSceneDirective } from "@/src/components/pre-game/foundation";
 import type {
-  CommanderSearchResult,
   MatchSummary,
-  PlayerPresence,
   ProfileCommandSnapshot,
   ProfileCommandStation,
   StoreItemPreview,
 } from "@/src/lib/profile/profile-command-contract";
+import { ProfileCampaignStation } from "./profile-campaign-station";
+import {
+  formatBalance,
+  initialsFrom,
+  PRESENCE_COPY,
+} from "./profile-command-format";
 import styles from "./profile-command-hub.module.css";
+import refinementStyles from "./profile-command-refinements.module.css";
+import { ProfileNetworkStation } from "./profile-network-station";
+import { ProfileQuartermasterStation } from "./profile-quartermaster-station";
 
 const STATIONS: ReadonlyArray<{
   id: ProfileCommandStation;
@@ -58,40 +65,6 @@ const SCENE_DIRECTIVES = {
     orbitalAlignment: 1,
   },
 } as const;
-
-const PRESENCE_COPY: Readonly<Record<PlayerPresence, string>> = {
-  online: "Disponível",
-  "in-lobby": "Em sala",
-  "in-match": "Em partida",
-  offline: "Offline",
-};
-
-function initialsFrom(value: string) {
-  return (
-    value
-      .trim()
-      .split(/\s+/)
-      .slice(0, 2)
-      .map((part) => part.charAt(0).toLocaleUpperCase("pt-BR"))
-      .join("") || "WB"
-  );
-}
-
-function formatBalance(value: number) {
-  return new Intl.NumberFormat("pt-BR").format(value);
-}
-
-function formatOperationDate(value: string) {
-  const date = new Date(value);
-  return new Intl.DateTimeFormat("pt-BR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  })
-    .format(date)
-    .replace(" de ", " ")
-    .toLocaleUpperCase("pt-BR");
-}
 
 function Portrait({
   src,
@@ -187,9 +160,20 @@ function TreasuryReadout({
     return (
       <span className={styles.walletCompact}>
         {currencies.map((currency) => (
-          <span key={currency.currency} data-currency={currency.currency}>
+          <span
+            key={currency.currency}
+            data-currency={currency.currency}
+            className={[
+              refinementStyles.walletCurrencyCompact,
+              currency.currency === "command-reserve"
+                ? refinementStyles.walletCurrencyPremium
+                : "",
+            ]
+              .filter(Boolean)
+              .join(" ")}
+          >
             <span className={styles.currencySymbol} aria-hidden="true">{currency.symbol}</span>
-            <span>
+            <span className={refinementStyles.walletCurrencyCopy}>
               <small>{currency.shortLabel}</small>
               <strong>{formatBalance(currency.balance)}</strong>
             </span>
@@ -242,218 +226,6 @@ function DossierStation({ snapshot }: { snapshot: ProfileCommandSnapshot }) {
   );
 }
 
-function NetworkStation({
-  snapshot,
-  query,
-  onQueryChange,
-  results,
-  searching,
-  searchAttempted,
-  searchFailed,
-  onSearch,
-}: {
-  snapshot: ProfileCommandSnapshot;
-  query: string;
-  onQueryChange: (value: string) => void;
-  results: ReadonlyArray<CommanderSearchResult>;
-  searching: boolean;
-  searchAttempted: boolean;
-  searchFailed: boolean;
-  onSearch: (event: FormEvent<HTMLFormElement>) => void;
-}) {
-  const social = snapshot.social.data;
-
-  if (snapshot.social.availability === "unavailable") {
-    return (
-      <div className={styles.unavailableState}>
-        <span>REDE FORA DE SERVIÇO</span>
-        <small>{snapshot.social.unavailableReason}</small>
-      </div>
-    );
-  }
-
-  return (
-    <div className={styles.networkContent}>
-      <div className={styles.rosterMeta}>
-        <span>{social.friends.filter((friend) => friend.presence !== "offline").length} online</span>
-        <span>{social.totalFriends} contatos</span>
-        <span>{social.incomingRequests.length} sinais</span>
-      </div>
-
-      {snapshot.social.availability === "empty" ? (
-        <div className={styles.emptyState}>
-          <strong>Nenhum comandante conectado</strong>
-          <span>A Central de Comunicações continua disponível para busca.</span>
-        </div>
-      ) : (
-        <ul className={styles.friendList} aria-label="Amigos na Rede de Comando">
-          {social.friends.slice(0, 4).map((friend) => (
-            <li key={friend.handle}>
-              <span className={styles.presenceDot} data-presence={friend.presence} aria-hidden="true" />
-              <span>
-                <strong>{friend.displayName}</strong>
-                <small>{friend.contextLabel}</small>
-              </span>
-              <em>{PRESENCE_COPY[friend.presence]}</em>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <form className={styles.searchForm} onSubmit={onSearch}>
-        <label htmlFor="commander-search">Localizar comandante</label>
-        <div>
-          <input
-            id="commander-search"
-            value={query}
-            onChange={(event) => onQueryChange(event.target.value)}
-            placeholder="callsign / nome"
-            autoComplete="off"
-          />
-          <button type="submit" disabled={query.trim().length < 2 || searching}>
-            {searching ? "Rastreando" : "Rastrear"}
-          </button>
-        </div>
-      </form>
-
-      {results.length > 0 ? (
-        <ul className={styles.searchResults} aria-label="Comandantes encontrados">
-          {results.map((result) => (
-            <li key={result.handle}>
-              <span className={styles.searchMonogram} aria-hidden="true">
-                {initialsFrom(result.displayName)}
-              </span>
-              <span>
-                <strong>{result.displayName}</strong>
-                <small>@{result.handle} · {result.mutualContacts} contatos em comum</small>
-              </span>
-            </li>
-          ))}
-        </ul>
-      ) : searchAttempted && !searching ? (
-        <p className={styles.searchFeedback} role="status">
-          {searchFailed
-            ? "Falha ao consultar a Central de Comunicações."
-            : "Nenhum comandante localizado para este sinal."}
-        </p>
-      ) : null}
-    </div>
-  );
-}
-
-function CampaignStation({
-  snapshot,
-  selected,
-  onSelect,
-}: {
-  snapshot: ProfileCommandSnapshot;
-  selected: string | null;
-  onSelect: (operationCode: string) => void;
-}) {
-  const history = snapshot.history.data;
-
-  if (snapshot.history.availability === "unavailable") {
-    return (
-      <div className={styles.unavailableState}>
-        <span>ARQUIVO INDISPONÍVEL</span>
-        <small>{snapshot.history.unavailableReason}</small>
-      </div>
-    );
-  }
-
-  if (snapshot.history.availability === "empty" || history.matches.length === 0) {
-    return (
-      <div className={styles.emptyState}>
-        <strong>Nenhuma operação registrada</strong>
-        <span>O Livro de Campanha está disponível e aguarda a primeira operação.</span>
-      </div>
-    );
-  }
-
-  return (
-    <div className={styles.campaignContent}>
-      <ol className={styles.operationList}>
-        {history.matches.map((match) => (
-          <li key={match.operationCode}>
-            <button
-              type="button"
-              onClick={() => onSelect(match.operationCode)}
-              data-selected={selected === match.operationCode ? "true" : "false"}
-            >
-              <span>
-                <small>{formatOperationDate(match.playedAt)}</small>
-                <strong>{match.operationCode}</strong>
-              </span>
-              <em data-result={match.result}>
-                {match.result === "victory" ? "Vitória" : "Derrota"}
-              </em>
-              <span>
-                <small>{match.mode === "classic" ? "Clássico" : "Personalizada"}</small>
-                <strong>{match.durationMinutes} min</strong>
-              </span>
-            </button>
-          </li>
-        ))}
-      </ol>
-      {history.hasMore ? <p className={styles.moreRecords}>Arquivo possui operações adicionais.</p> : null}
-    </div>
-  );
-}
-
-function QuartermasterStation({
-  snapshot,
-  selectedSlug,
-  onSelect,
-}: {
-  snapshot: ProfileCommandSnapshot;
-  selectedSlug: string | null;
-  onSelect: (item: StoreItemPreview) => void;
-}) {
-  const items = snapshot.storefront.data.featuredItems;
-
-  if (snapshot.storefront.availability === "unavailable") {
-    return (
-      <div className={styles.unavailableState}>
-        <span>INTENDÊNCIA INDISPONÍVEL</span>
-        <small>{snapshot.storefront.unavailableReason}</small>
-      </div>
-    );
-  }
-
-  if (snapshot.storefront.availability === "empty" || items.length === 0) {
-    return (
-      <div className={styles.emptyState}>
-        <strong>Nenhuma remessa ativa</strong>
-        <span>A Intendência permanece operacional sem produtos em destaque.</span>
-      </div>
-    );
-  }
-
-  return (
-    <div className={styles.storeContent}>
-      {items.slice(0, 3).map((item) => (
-        <button
-          key={item.slug}
-          type="button"
-          className={styles.storeItem}
-          data-selected={selectedSlug === item.slug ? "true" : "false"}
-          onClick={() => onSelect(item)}
-        >
-          <span className={styles.storeArtwork} aria-hidden="true">
-            {item.category.slice(0, 2).toLocaleUpperCase("pt-BR")}
-          </span>
-          <span>
-            <small>{item.category}</small>
-            <strong>{item.name}</strong>
-          </span>
-          <em>{item.price.currency === "command-reserve" ? "◆" : "◈"} {formatBalance(item.price.amount)}</em>
-        </button>
-      ))}
-      <p className={styles.storeDisclaimer}>Vitrine local · nenhuma compra é persistida nesta etapa.</p>
-    </div>
-  );
-}
-
 function CommandTable({
   snapshot,
   activeStation,
@@ -482,7 +254,9 @@ function CommandTable({
       return {
         kicker: "Tesouraria aberta",
         title: "Reservas de campanha",
-        detail: wallet ? `${wallet.common.symbol} ${formatBalance(wallet.common.balance)} · ${wallet.premium.symbol} ${formatBalance(wallet.premium.balance)}` : "Sem saldo disponível",
+        detail: wallet
+          ? `${wallet.common.symbol} ${formatBalance(wallet.common.balance)} · ${wallet.premium.symbol} ${formatBalance(wallet.premium.balance)}`
+          : "Sem saldo disponível",
         glyph: "¤",
       };
     }
@@ -491,7 +265,10 @@ function CommandTable({
       return {
         kicker: "Rede operacional",
         title: "Linhas de comando",
-        detail: `${snapshot.social.data.totalFriends} contatos registrados`,
+        detail:
+          snapshot.social.availability === "unavailable"
+            ? "Rede sem fonte disponível"
+            : `${snapshot.social.data.totalFriends} contatos registrados`,
         glyph: "⌁",
       };
     }
@@ -502,7 +279,9 @@ function CommandTable({
         title: selectedOperation?.operationCode ?? "Livro de Campanha",
         detail: selectedOperation
           ? `${selectedOperation.result === "victory" ? "Vitória" : "Derrota"} · ${selectedOperation.durationMinutes} min`
-          : `${snapshot.history.data.matches.length} operações recentes`,
+          : snapshot.history.availability === "unavailable"
+            ? "Histórico sem fonte disponível"
+            : `${snapshot.history.data.matches.length} registros recentes`,
         glyph: "BR",
       };
     }
@@ -512,7 +291,9 @@ function CommandTable({
       title: selectedItem?.name ?? "Remessas em destaque",
       detail: selectedItem
         ? `${selectedItem.price.currency === "command-reserve" ? "◆" : "◈"} ${formatBalance(selectedItem.price.amount)}`
-        : `${snapshot.storefront.data.featuredItems.length} itens em vitrine`,
+        : snapshot.storefront.availability === "unavailable"
+          ? "Vitrine sem fonte disponível"
+          : `${snapshot.storefront.data.featuredItems.length} itens em vitrine`,
       glyph: "▣",
     };
   }, [activeStation, identity, selectedItem, selectedOperation, snapshot, wallet]);
@@ -544,11 +325,6 @@ function CommandTable({
 
 export function ProfileCommandHub({ snapshot }: { snapshot: ProfileCommandSnapshot }) {
   const [activeStation, setActiveStation] = useState<ProfileCommandStation>("dossier");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<ReadonlyArray<CommanderSearchResult>>([]);
-  const [searching, setSearching] = useState(false);
-  const [searchAttempted, setSearchAttempted] = useState(false);
-  const [searchFailed, setSearchFailed] = useState(false);
   const [selectedOperationCode, setSelectedOperationCode] = useState<string | null>(
     snapshot.history.data.matches[0]?.operationCode ?? null,
   );
@@ -563,42 +339,19 @@ export function ProfileCommandHub({ snapshot }: { snapshot: ProfileCommandSnapsh
   const selectedItem =
     snapshot.storefront.data.featuredItems.find((item) => item.slug === selectedItemSlug) ?? null;
 
-  async function handleSearch(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    if (searchQuery.trim().length < 2) return;
-
-    setSearching(true);
-    setSearchAttempted(true);
-    setSearchFailed(false);
-    try {
-      const response = await fetch(
-        `/api/profile/commanders/search?q=${encodeURIComponent(searchQuery.trim())}`,
-      );
-      if (!response.ok) throw new Error("COMMANDER_SEARCH_FAILED");
-      const payload = (await response.json()) as { results?: ReadonlyArray<CommanderSearchResult> };
-      setSearchResults(payload.results ?? []);
-    } catch {
-      setSearchResults([]);
-      setSearchFailed(true);
-    } finally {
-      setSearching(false);
-    }
-  }
-
-  function updateSearchQuery(value: string) {
-    setSearchQuery(value);
-    setSearchResults([]);
-    setSearchAttempted(false);
-    setSearchFailed(false);
-  }
-
   if (snapshot.identity.availability === "unavailable" || !snapshot.identity.data) {
     return (
-      <main className={styles.guestState} data-profile-command-state="guest">
+      <main
+        className={styles.guestState}
+        data-profile-command-state="guest"
+        data-scene-fallback="html"
+      >
         <span className={styles.guestMark} aria-hidden="true">WB</span>
         <p>Quartel do Comandante</p>
         <h1>Nenhuma identidade de comando disponível</h1>
-        <span>{snapshot.identity.unavailableReason ?? "A sessão ainda não possui um perfil disponível."}</span>
+        <span>
+          {snapshot.identity.unavailableReason ?? "A sessão ainda não possui um perfil disponível."}
+        </span>
         <Link href="/">Retornar ao comando</Link>
       </main>
     );
@@ -610,6 +363,7 @@ export function ProfileCommandHub({ snapshot }: { snapshot: ProfileCommandSnapsh
       data-profile-command-state={snapshot.state}
       data-active-station={activeStation}
       data-evaluation-fixture={snapshot.isEvaluationFixture || undefined}
+      data-scene-fallback="html"
     >
       <header className={styles.topBar}>
         <div className={styles.topIdentity}>
@@ -630,6 +384,7 @@ export function ProfileCommandHub({ snapshot }: { snapshot: ProfileCommandSnapsh
           data-active={activeStation === "treasury" ? "true" : "false"}
           onClick={() => setActiveStation("treasury")}
           aria-pressed={activeStation === "treasury"}
+          aria-label="Abrir Tesouraria"
         >
           <TreasuryReadout snapshot={snapshot} compact />
         </button>
@@ -662,16 +417,7 @@ export function ProfileCommandHub({ snapshot }: { snapshot: ProfileCommandSnapsh
           className={styles.networkStation}
           onActivate={setActiveStation}
         >
-          <NetworkStation
-            snapshot={snapshot}
-            query={searchQuery}
-            onQueryChange={updateSearchQuery}
-            results={searchResults}
-            searching={searching}
-            searchAttempted={searchAttempted}
-            searchFailed={searchFailed}
-            onSearch={handleSearch}
-          />
+          <ProfileNetworkStation snapshot={snapshot} />
         </StationFrame>
 
         <StationFrame
@@ -682,7 +428,7 @@ export function ProfileCommandHub({ snapshot }: { snapshot: ProfileCommandSnapsh
           className={styles.campaignStation}
           onActivate={setActiveStation}
         >
-          <CampaignStation
+          <ProfileCampaignStation
             snapshot={snapshot}
             selected={selectedOperationCode}
             onSelect={(operationCode) => {
@@ -700,7 +446,7 @@ export function ProfileCommandHub({ snapshot }: { snapshot: ProfileCommandSnapsh
           className={styles.quartermasterStation}
           onActivate={setActiveStation}
         >
-          <QuartermasterStation
+          <ProfileQuartermasterStation
             snapshot={snapshot}
             selectedSlug={selectedItemSlug}
             onSelect={(item) => {
