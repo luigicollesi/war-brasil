@@ -1,4 +1,5 @@
 import { auth } from "@/server/auth/auth";
+import { rejectUntrustedAuthMutationOrigin } from "@/server/auth/request-origin";
 
 const MIN_PASSWORD_LENGTH = 8;
 const MAX_PASSWORD_LENGTH = 128;
@@ -11,6 +12,11 @@ function genericRegistrationResponse() {
 }
 
 export async function POST(request: Request) {
+  const rejected = rejectUntrustedAuthMutationOrigin(request);
+  if (rejected) {
+    return rejected;
+  }
+
   const body = (await request.json().catch(() => null)) as {
     email?: unknown;
     password?: unknown;
