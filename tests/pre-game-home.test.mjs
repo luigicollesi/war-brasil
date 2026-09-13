@@ -37,6 +37,7 @@ test("HOME consome somente o contrato público do runtime Foundation", () => {
   assert.match(intent, /import type \{ CommandSceneDirective \} from "\.\.\/foundation"/);
   assert.match(foundationIndex, /COMMAND_ENTRANCE_DURATION_MS/);
   assert.match(foundationIndex, /CommandSceneDirective/);
+  assert.match(runtime, /entranceStartedAtMs/);
 
   const homeSources = `${home}\n${content}\n${intent}`;
   assert.doesNotMatch(homeSources, /@react-three\/fiber|from "three"|command-scene-canvas|scene-presets|CameraDirector|<Canvas|<CommandShell/);
