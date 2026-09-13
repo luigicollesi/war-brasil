@@ -49,9 +49,9 @@ export function LobbyFormationPanel({
     >
       <div className={styles.stageHeader}>
         <div>
-          <p className={styles.stageEyebrow}>Mesa de domínio</p>
+          <p className={styles.stageEyebrow}>Mesa de domínio · formação da operação</p>
           <h2 id="lobby-stations-title" className={styles.stageTitle}>
-            Formação da operação
+            {players.length}/6 postos ocupados
           </h2>
         </div>
         <p className={styles.authorization} role="status" aria-live="polite">
