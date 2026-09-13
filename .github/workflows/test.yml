@@ -13,15 +13,20 @@ jobs:
   test:
     runs-on: ubuntu-latest
     env:
-      BETTER_AUTH_SECRET: ci-only-war-brasil-auth-secret-not-for-production-2026
+      BETTER_AUTH_SECRET: AUTH_SENTINEL_DO_NOT_SHIP_0123456789ABCDEF
       BETTER_AUTH_URL: http://localhost:3000
       AUTH_ALLOWED_HOSTS: localhost:3000
+      GOOGLE_CLIENT_SECRET: GOOGLE_SENTINEL_DO_NOT_SHIP
+      APPLE_PRIVATE_KEY: APPLE_PRIVATE_KEY_SENTINEL_DO_NOT_SHIP
+      DISCORD_CLIENT_SECRET: DISCORD_SENTINEL_DO_NOT_SHIP
+      EMAIL_TRANSPORT_SECRET: EMAIL_SENTINEL_DO_NOT_SHIP
+      DB_PASSWORD_SENTINEL: DB_SENTINEL_DO_NOT_SHIP_2026
     services:
       postgres:
         image: postgres:18
         env:
           POSTGRES_USER: war
-          POSTGRES_PASSWORD: war
+          POSTGRES_PASSWORD: DB_SENTINEL_DO_NOT_SHIP_2026
           POSTGRES_DB: war_ci
         ports:
           - 5432:5432
@@ -47,16 +52,21 @@ jobs:
       - name: Test database migrations
         run: npm run test:db
         env:
-          DATABASE_URL: postgresql://war:war@127.0.0.1:5432/war_ci
+          DATABASE_URL: postgresql://war:DB_SENTINEL_DO_NOT_SHIP_2026@127.0.0.1:5432/war_ci
       - run: npm run realtime:test
-      - run: npm run build
-        env:
-          DATABASE_URL: postgresql://war:war@127.0.0.1:5432/war_ci
-      - name: Prepare isolated Lobby E2E database
+      - name: Prepare isolated Auth/Lobby E2E database
         run: node scripts/e2e/prepare-lobby-db.mjs
         env:
-          DATABASE_URL: postgresql://war:war@127.0.0.1:5432/war_ci
-          LOBBY_E2E_DATABASE_URL: postgresql://war:war@127.0.0.1:5432/war_lobby_e2e
+          DATABASE_URL: postgresql://war:DB_SENTINEL_DO_NOT_SHIP_2026@127.0.0.1:5432/war_ci
+          LOBBY_E2E_DATABASE_URL: postgresql://war:DB_SENTINEL_DO_NOT_SHIP_2026@127.0.0.1:5432/war_lobby_e2e
+      - name: Build against converged auth schema
+        run: npm run build
+        env:
+          DATABASE_URL: postgresql://war:DB_SENTINEL_DO_NOT_SHIP_2026@127.0.0.1:5432/war_lobby_e2e
+      - name: Scan public build artifacts for auth secret leaks
+        run: node scripts/ci/assert-no-auth-secret-leaks.mjs
+        env:
+          DATABASE_URL: postgresql://war:DB_SENTINEL_DO_NOT_SHIP_2026@127.0.0.1:5432/war_lobby_e2e
       - name: Install pinned Playwright runtime
         run: |
           mkdir -p .e2e-runtime
@@ -85,8 +95,8 @@ jobs:
           node scripts/e2e/auth-rate-limit-e2e.mjs
           npm run test:e2e:lobby
         env:
-          DATABASE_URL: postgresql://war:war@127.0.0.1:5432/war_lobby_e2e
-          LOBBY_E2E_DATABASE_URL: postgresql://war:war@127.0.0.1:5432/war_lobby_e2e
+          DATABASE_URL: postgresql://war:DB_SENTINEL_DO_NOT_SHIP_2026@127.0.0.1:5432/war_lobby_e2e
+          LOBBY_E2E_DATABASE_URL: postgresql://war:DB_SENTINEL_DO_NOT_SHIP_2026@127.0.0.1:5432/war_lobby_e2e
           LOBBY_E2E_BASE_URL: http://localhost:3000
           PLAYWRIGHT_RUNTIME_DIR: .e2e-runtime/node_modules/playwright
       - name: Upload Lobby EVAL evidence
