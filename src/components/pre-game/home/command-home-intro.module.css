@@ -1,260 +1,251 @@
 :global([data-command-scene-mode="entrance"]:has([data-visit="first"])) {
   --home-intro-duration: 3000ms;
   --home-intro-easing: cubic-bezier(.4, .14, .3, 1);
-  --home-map-shift: 24vw;
-  --home-map-shift-1: 21vw;
-  --home-map-shift-2: 16vw;
-  --home-map-shift-3: 10vw;
-  --home-map-shift-4: 4vw;
-  background: #000;
+  --home-map-shift: 23vw;
+  --home-map-shift-mid-a: 18vw;
+  --home-map-shift-mid-b: 10vw;
+  --home-map-shift-late: 3vw;
 }
 
-/* The entrance owns one canonical Brazil map. Canvas stays out of the visual stack. */
-:global([data-command-scene-mode="entrance"] [data-command-canvas-layer]) {
-  opacity: 0 !important;
-  transition: none !important;
-}
-
-:global([data-command-scene-mode="entrance"] [data-command-fallback]) {
-  opacity: 1 !important;
+/*
+ * The real Foundation scene from dev is the destination. While it prepares,
+ * the Home is intentionally pure black. Nothing from the final composition
+ * is replaced or restyled permanently.
+ */
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="preparing"][data-visit="first"]) [data-command-scene]),
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="preparing"][data-visit="first"]) [data-command-fallback]) {
   background: #000 !important;
+}
+
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="preparing"][data-visit="first"]) [data-command-fallback]) {
+  opacity: 1 !important;
   transition: none !important;
 }
 
-:global([data-command-scene-mode="entrance"] [data-command-fallback-table]) {
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) perspective(900px) rotateX(5deg) rotateZ(-2deg);
-}
-
-:global([data-command-scene-mode="entrance"] [data-command-fallback-globe]) {
-  opacity: .1;
-}
-
-/* First paint is absolute black: every visual layer already exists but starts at zero. */
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="preparing"][data-visit="first"]) [data-command-entrance-map]),
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="preparing"][data-visit="first"]) [data-command-canvas-layer]),
 :global([data-command-scene-mode="entrance"]:has([data-home-transition="preparing"][data-visit="first"]) [data-command-fallback-table]),
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="preparing"][data-visit="first"]) [data-command-fallback-globe]),
 :global([data-command-scene-mode="entrance"]:has([data-home-transition="preparing"][data-visit="first"]) [data-command-atmosphere]),
 :global([data-command-scene-mode="entrance"]:has([data-home-transition="preparing"][data-visit="first"]) [data-command-chrome]),
 :global([data-home-transition="preparing"][data-visit="first"] [data-home-identity]),
 :global([data-home-transition="preparing"][data-visit="first"] [data-home-command-dock]),
 :global([data-home-transition="preparing"][data-visit="first"] [data-home-footer]) {
-  opacity: 0;
+  opacity: 0 !important;
+  transition: none !important;
 }
 
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="preparing"][data-visit="first"]) [data-command-entrance-map]) {
-  transform:
-    translate(calc(-50% + var(--home-map-shift)), -50%)
-    perspective(1000px)
-    rotateY(76deg)
-    rotateZ(-7deg)
-    scale(.72, .94);
-}
-
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="preparing"][data-visit="first"]) [data-command-entrance-map])::before,
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="preparing"][data-visit="first"]) [data-command-entrance-map])::after {
-  opacity: 0;
-}
-
-:global([data-home-transition="preparing"][data-visit="first"] [data-home-identity]) {
-  transform: translateX(calc(-50% + 34px)) translateY(-22px) scale(.975);
-}
-
-:global([data-home-transition="preparing"][data-visit="first"] [data-home-command-dock]) {
-  transform: translateX(calc(50% + 42px)) translateY(24px) scale(.975);
-}
-
-:global([data-home-transition="preparing"][data-visit="first"] [data-home-footer]) {
-  transform: translateY(12px);
-}
-
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="preparing"][data-visit="first"]) [data-command-chrome]) {
-  transform: translateY(-18px);
-}
-
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="preparing"][data-visit="first"]) [data-command-atmosphere]) {
-  transform: scale(1.025);
-}
-
-/* One three-second genesis: reveal first, then transform the visible elements into the usable screen. */
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) [data-command-entrance-map]) {
-  animation: homeMapGenesis var(--home-intro-duration) var(--home-intro-easing) both;
-}
-
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) [data-command-entrance-map])::before {
-  animation: homeMapMilitarize var(--home-intro-duration) var(--home-intro-easing) both;
-}
-
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) [data-command-entrance-map])::after {
-  animation: homeMapMetalFinish var(--home-intro-duration) var(--home-intro-easing) both;
+/* The fallback table is only a carrier for the canonical colored SVG during the ritual. */
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) [data-command-fallback]) {
+  opacity: 1 !important;
+  background: #000 !important;
+  animation: homeMapDepthHandoff var(--home-intro-duration) linear both;
+  transition: none !important;
 }
 
 :global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) [data-command-fallback-table]) {
-  animation: homeTableMaterialize var(--home-intro-duration) var(--home-intro-easing) both;
+  top: 50%;
+  left: 50%;
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  animation: homeMapTravel var(--home-intro-duration) var(--home-intro-easing) both;
 }
 
 :global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) [data-command-fallback-table] > span) {
-  animation: homeTableDetail var(--home-intro-duration) var(--home-intro-easing) both;
+  opacity: 0 !important;
 }
 
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) [data-command-fallback-globe]) {
-  animation: homeGlobeMaterialize var(--home-intro-duration) var(--home-intro-easing) both;
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) [data-command-fallback-brazil]) {
+  z-index: 4;
+  isolation: isolate;
+  opacity: 0;
+  filter: none !important;
+  transform-origin: 50% 50%;
+  animation: homeMapCompression var(--home-intro-duration) var(--home-intro-easing) both;
+}
+
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) [data-command-fallback-brazil])::before,
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) [data-command-fallback-brazil])::after {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  pointer-events: none;
+  -webkit-mask: url("/war-brasil-42.production.svg") center / contain no-repeat;
+  mask: url("/war-brasil-42.production.svg") center / contain no-repeat;
+}
+
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) [data-command-fallback-brazil])::before {
+  background:
+    radial-gradient(circle at 42% 30%, rgb(67 91 67 / 94%), transparent 44%),
+    linear-gradient(145deg, #354a38 0%, #25382a 42%, #16261c 100%);
+  opacity: 0;
+  animation: homeMapMilitarize var(--home-intro-duration) var(--home-intro-easing) both;
+}
+
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) [data-command-fallback-brazil])::after {
+  background:
+    linear-gradient(122deg, rgb(215 177 92 / 22%), transparent 25% 72%, rgb(0 0 0 / 44%)),
+    radial-gradient(circle at 50% 48%, transparent 46%, rgb(0 0 0 / 48%) 100%);
+  opacity: 0;
+  mix-blend-mode: multiply;
+  animation: homeMapFinish var(--home-intro-duration) var(--home-intro-easing) both;
+}
+
+/* The original dev Canvas comes in beneath the already-militarized map. */
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) [data-command-canvas-layer]) {
+  opacity: 0 !important;
+  animation: homeDevSceneReveal var(--home-intro-duration) var(--home-intro-easing) both;
+  transition: none !important;
 }
 
 :global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) [data-command-atmosphere]) {
+  opacity: 0;
+  transform: scale(1.025);
   animation: homeAtmosphereIn var(--home-intro-duration) var(--home-intro-easing) both;
 }
 
 :global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) [data-command-chrome]) {
+  opacity: 0;
+  transform: translateY(-18px);
   animation: homeChromeIn var(--home-intro-duration) var(--home-intro-easing) both;
 }
 
 :global([data-home-transition="running"][data-visit="first"] [data-home-identity]) {
+  opacity: 0;
+  transform: translateX(calc(-50% + 34px)) translateY(-22px) scale(.975);
   animation: homeIdentitySettle var(--home-intro-duration) var(--home-intro-easing) both;
 }
 
 :global([data-home-transition="running"][data-visit="first"] [data-home-identity] > *) {
+  opacity: 0;
   animation: homeIdentityDetail var(--home-intro-duration) var(--home-intro-easing) both;
 }
 
 :global([data-home-transition="running"][data-visit="first"] [data-home-command-dock]) {
+  opacity: 0;
+  transform: translateX(calc(50% + 42px)) translateY(24px) scale(.975);
   animation: homeCommandSettle var(--home-intro-duration) var(--home-intro-easing) both;
 }
 
 :global([data-home-transition="running"][data-visit="first"] [data-home-footer]) {
+  opacity: 0;
+  transform: translateY(12px);
   animation: homeFooterSettle var(--home-intro-duration) var(--home-intro-easing) both;
 }
 
-@keyframes homeMapGenesis {
+@keyframes homeMapTravel {
   0% {
-    opacity: 0;
-    transform:
-      translate(calc(-50% + var(--home-map-shift)), -50%)
-      perspective(1000px)
-      rotateY(76deg)
-      rotateZ(-7deg)
-      scale(.72, .94);
-  }
-  8% {
-    opacity: .42;
-    transform:
-      translate(calc(-50% + var(--home-map-shift-1)), -50%)
-      perspective(1000px)
-      rotateY(48deg)
-      rotateZ(-5deg)
-      scale(.76, .98);
-  }
-  18% {
     opacity: 1;
-    transform:
-      translate(calc(-50% + var(--home-map-shift-1)), -50%)
-      perspective(1000px)
-      rotateY(-27deg)
-      rotateZ(3deg)
-      scale(.81, 1.025);
+    transform: translate(calc(-50% + var(--home-map-shift)), -50%) perspective(1000px) rotateX(4deg) rotateZ(-3deg) scale(.86);
   }
-  30% {
-    opacity: 1;
-    transform:
-      translate(calc(-50% + var(--home-map-shift-2)), -50%)
-      perspective(1000px)
-      rotateY(18deg)
-      rotateZ(-2deg)
-      scale(.87, .985);
+  24% {
+    transform: translate(calc(-50% + var(--home-map-shift-mid-a)), -50%) perspective(1000px) rotateX(4.5deg) rotateZ(-2.4deg) scale(.9);
   }
-  43% {
-    opacity: 1;
-    transform:
-      translate(calc(-50% + var(--home-map-shift-3)), -50%)
-      perspective(1000px)
-      rotateY(-8deg)
-      rotateZ(1deg)
-      scale(.93, 1.012);
-  }
-  58% {
-    opacity: 1;
-    transform:
-      translate(calc(-50% + var(--home-map-shift-4)), -50%)
-      perspective(1000px)
-      rotateY(3deg)
-      rotateZ(-.4deg)
-      scale(.98, .997);
+  50% {
+    transform: translate(calc(-50% + var(--home-map-shift-mid-b)), -50%) perspective(1000px) rotateX(5deg) rotateZ(-2deg) scale(.95);
   }
   76% {
-    opacity: 1;
-    transform:
-      translate(calc(-50% + 1.4vw), -50%)
-      perspective(1000px)
-      rotateY(-1deg)
-      rotateZ(.15deg)
-      scale(.996, 1.003);
+    transform: translate(calc(-50% + var(--home-map-shift-late)), -50%) perspective(1000px) rotateX(5deg) rotateZ(-2deg) scale(.99);
   }
   100% {
     opacity: 1;
-    transform: translate(-50%, -50%) perspective(1000px) rotateY(0) rotateZ(0) scale(1);
+    transform: translate(-50%, -50%) perspective(900px) rotateX(5deg) rotateZ(-2deg) scale(1);
+  }
+}
+
+@keyframes homeMapCompression {
+  0% {
+    opacity: 0;
+    transform: perspective(950px) rotateY(82deg) rotateZ(-6deg) scale(.7, .96);
+  }
+  7% {
+    opacity: .32;
+    transform: perspective(950px) rotateY(58deg) rotateZ(-4.5deg) scale(.74, .99);
+  }
+  16% {
+    opacity: .82;
+    transform: perspective(950px) rotateY(25deg) rotateZ(-2deg) scale(.81, 1.035);
+  }
+  24% {
+    opacity: 1;
+    transform: perspective(950px) rotateY(-31deg) rotateZ(2.6deg) scale(.85, 1.055);
+  }
+  35% {
+    opacity: 1;
+    transform: perspective(950px) rotateY(19deg) rotateZ(-1.5deg) scale(.9, .985);
+  }
+  47% {
+    opacity: 1;
+    transform: perspective(950px) rotateY(-10deg) rotateZ(.8deg) scale(.94, 1.02);
+  }
+  60% {
+    opacity: 1;
+    transform: perspective(950px) rotateY(4.5deg) rotateZ(-.35deg) scale(.975, .995);
+  }
+  74% {
+    opacity: 1;
+    transform: perspective(950px) rotateY(-1.5deg) rotateZ(.12deg) scale(.994, 1.004);
+  }
+  88%, 100% {
+    opacity: 1;
+    transform: perspective(950px) rotateY(0) rotateZ(0) scale(1);
   }
 }
 
 @keyframes homeMapMilitarize {
-  0%, 24% { opacity: 0; }
-  42% { opacity: .12; }
-  58% { opacity: .38; }
-  76% { opacity: .7; }
-  90% { opacity: .88; }
-  100% { opacity: .94; }
+  0%, 30% { opacity: 0; }
+  44% { opacity: .12; }
+  60% { opacity: .38; }
+  74% { opacity: .67; }
+  88% { opacity: .88; }
+  100% { opacity: .96; }
 }
 
-@keyframes homeMapMetalFinish {
-  0%, 48% { opacity: 0; }
-  68% { opacity: .14; }
-  84% { opacity: .4; }
-  100% { opacity: .62; }
+@keyframes homeMapFinish {
+  0%, 50% { opacity: 0; }
+  66% { opacity: .12; }
+  82% { opacity: .34; }
+  100% { opacity: .58; }
 }
 
-@keyframes homeTableMaterialize {
-  0%, 28% {
-    opacity: 0;
-    transform: translate(-50%, -50%) perspective(900px) rotateX(5deg) rotateZ(-2deg) scale(.94);
-  }
-  48% { opacity: .18; }
-  70% { opacity: .62; transform: translate(-50%, -50%) perspective(900px) rotateX(5deg) rotateZ(-2deg) scale(.985); }
-  100% { opacity: 1; transform: translate(-50%, -50%) perspective(900px) rotateX(5deg) rotateZ(-2deg) scale(1); }
-}
-
-@keyframes homeTableDetail {
-  0%, 38% { opacity: 0; }
-  58% { opacity: .2; }
-  82% { opacity: .72; }
+@keyframes homeDevSceneReveal {
+  0%, 42% { opacity: 0; }
+  58% { opacity: .08; }
+  72% { opacity: .24; }
+  86% { opacity: .62; }
+  96% { opacity: .92; }
   100% { opacity: 1; }
 }
 
-@keyframes homeGlobeMaterialize {
-  0%, 44% { opacity: 0; transform: translate(-50%, -50%) scale(.64); }
-  70% { opacity: .04; }
-  100% { opacity: .1; transform: translate(-50%, -50%) scale(.72); }
+@keyframes homeMapDepthHandoff {
+  0%, 78% { opacity: 1; }
+  88% { opacity: .96; }
+  94% { opacity: .72; }
+  98% { opacity: .24; }
+  100% { opacity: 0; }
 }
 
 @keyframes homeAtmosphereIn {
-  0%, 30% { opacity: 0; transform: scale(1.025); }
-  52% { opacity: .18; }
-  76% { opacity: .68; }
+  0%, 28% { opacity: 0; transform: scale(1.025); }
+  48% { opacity: .14; }
+  68% { opacity: .44; }
+  86% { opacity: .82; }
   100% { opacity: 1; transform: scale(1); }
 }
 
 @keyframes homeChromeIn {
-  0%, 48% { opacity: 0; transform: translateY(-18px); }
-  66% { opacity: .24; transform: translateY(-11px); }
-  86% { opacity: .78; transform: translateY(-3px); }
+  0%, 46% { opacity: 0; transform: translateY(-18px); }
+  62% { opacity: .2; transform: translateY(-12px); }
+  82% { opacity: .7; transform: translateY(-4px); }
   100% { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes homeIdentitySettle {
-  0%, 42% {
+  0%, 36% {
     opacity: 0;
     transform: translateX(calc(-50% + 34px)) translateY(-22px) scale(.975);
   }
-  58% {
+  54% {
     opacity: .14;
     transform: translateX(calc(-50% + 25px)) translateY(-16px) scale(.982);
   }
@@ -269,23 +260,23 @@
 }
 
 @keyframes homeIdentityDetail {
-  0%, 48% { opacity: 0; transform: translateY(-7px); }
-  64% { opacity: .18; }
-  84% { opacity: .78; transform: translateY(-2px); }
+  0%, 44% { opacity: 0; transform: translateY(-7px); }
+  60% { opacity: .18; }
+  82% { opacity: .76; transform: translateY(-2px); }
   100% { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes homeCommandSettle {
-  0%, 54% {
+  0%, 50% {
     opacity: 0;
     transform: translateX(calc(50% + 42px)) translateY(24px) scale(.975);
   }
-  68% {
+  66% {
     opacity: .18;
     transform: translateX(calc(50% + 29px)) translateY(17px) scale(.983);
   }
-  86% {
-    opacity: .76;
+  84% {
+    opacity: .74;
     transform: translateX(calc(50% + 9px)) translateY(5px) scale(.995);
   }
   100% {
@@ -295,34 +286,32 @@
 }
 
 @keyframes homeFooterSettle {
-  0%, 62% { opacity: 0; transform: translateY(12px); }
-  78% { opacity: .24; transform: translateY(8px); }
+  0%, 60% { opacity: 0; transform: translateY(12px); }
+  76% { opacity: .22; transform: translateY(8px); }
   92% { opacity: .76; transform: translateY(2px); }
   100% { opacity: 1; transform: translateY(0); }
 }
 
 @media (max-width: 900px) {
   :global([data-command-scene-mode="entrance"]:has([data-visit="first"])) {
-    --home-map-shift: 15vw;
-    --home-map-shift-1: 13vw;
-    --home-map-shift-2: 10vw;
-    --home-map-shift-3: 6vw;
-    --home-map-shift-4: 2.5vw;
+    --home-map-shift: 14vw;
+    --home-map-shift-mid-a: 11vw;
+    --home-map-shift-mid-b: 7vw;
+    --home-map-shift-late: 2vw;
   }
 
-  :global([data-command-scene-mode="entrance"] [data-command-fallback-table]) {
+  :global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) [data-command-fallback-table]) {
     top: 39%;
-    left: 50%;
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  :global([data-command-scene-mode="entrance"] [data-command-entrance-map]),
-  :global([data-command-scene-mode="entrance"] [data-command-entrance-map])::before,
-  :global([data-command-scene-mode="entrance"] [data-command-entrance-map])::after,
+  :global([data-command-scene-mode="entrance"] [data-command-fallback]),
+  :global([data-command-scene-mode="entrance"] [data-command-canvas-layer]),
   :global([data-command-scene-mode="entrance"] [data-command-fallback-table]),
-  :global([data-command-scene-mode="entrance"] [data-command-fallback-table] > span),
-  :global([data-command-scene-mode="entrance"] [data-command-fallback-globe]),
+  :global([data-command-scene-mode="entrance"] [data-command-fallback-brazil]),
+  :global([data-command-scene-mode="entrance"] [data-command-fallback-brazil])::before,
+  :global([data-command-scene-mode="entrance"] [data-command-fallback-brazil])::after,
   :global([data-command-scene-mode="entrance"] [data-command-atmosphere]),
   :global([data-command-scene-mode="entrance"] [data-command-chrome]),
   :global([data-home-identity]),

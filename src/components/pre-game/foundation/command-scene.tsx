@@ -12,7 +12,6 @@ import {
   useSyncExternalStore,
 } from "react";
 import { installDice3DDependencyWarningFilter } from "@/src/lib/client/dice/install-3d-dependency-warning-filter";
-import entranceMapStyles from "./command-entrance-map.module.css";
 import styles from "./command-foundation.module.css";
 import { COMMAND_FOUNDATION_TOKENS } from "./foundation-tokens";
 import {
@@ -106,35 +105,14 @@ function useWebGLAvailability() {
   );
 }
 
-function EntranceBrazilMap() {
-  return (
-    <div
-      className={entranceMapStyles.mapStage}
-      data-command-entrance-map
-      aria-hidden="true"
-    >
-      <Image
-        src="/war-brasil-42.production.svg"
-        alt=""
-        fill
-        unoptimized
-        loading="eager"
-        sizes="(max-width: 900px) 74vw, 46vw"
-      />
-    </div>
-  );
-}
-
 function CommandSceneFallback({ intent }: { intent: ReturnType<typeof normalizeCommandSceneIntent> }) {
   const globeVisible = intent.focus === "earth";
-  const entranceOwnsBrazil = intent.mode === "entrance";
 
   return (
     <div className={styles.sceneFallback} data-command-fallback aria-hidden="true">
       <div
         className={styles.fallbackGlobe}
         data-visible={globeVisible ? "true" : "false"}
-        data-command-fallback-globe
       >
         <span />
         <span />
@@ -145,18 +123,16 @@ function CommandSceneFallback({ intent }: { intent: ReturnType<typeof normalizeC
         <span className={styles.fallbackCrownRingA} />
         <span className={styles.fallbackCrownRingB} />
         <span className={styles.fallbackCrownRingC} />
-        {!entranceOwnsBrazil ? (
-          <div className={styles.fallbackBrazil} data-command-fallback-brazil>
-            <Image
-              src="/war-brasil-42.production.svg"
-              alt=""
-              fill
-              unoptimized
-              loading="eager"
-              sizes="(max-width: 900px) 72vw, 46vw"
-            />
-          </div>
-        ) : null}
+        <div className={styles.fallbackBrazil} data-command-fallback-brazil>
+          <Image
+            src="/war-brasil-42.production.svg"
+            alt=""
+            fill
+            unoptimized
+            loading="eager"
+            sizes="(max-width: 900px) 72vw, 46vw"
+          />
+        </div>
       </div>
     </div>
   );
@@ -210,7 +186,6 @@ export function CommandScene({ intent, className, onStateChange }: CommandSceneP
       aria-hidden="true"
     >
       <CommandSceneFallback intent={normalizedIntent} />
-      {normalizedIntent.mode === "entrance" ? <EntranceBrazilMap /> : null}
       {!sceneUnavailable ? (
         <div className={styles.canvasLayer} data-command-canvas-layer>
           <SceneErrorBoundary onError={handleUnavailable}>

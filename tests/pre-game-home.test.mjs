@@ -9,7 +9,6 @@ const intent = readFileSync("src/components/pre-game/home/command-home-scene-int
 const fallbackMarker = readFileSync("src/components/pre-game/home/command-home-fallback.tsx", "utf8");
 const styles = readFileSync("src/components/pre-game/home/command-home.module.css", "utf8");
 const introStyles = readFileSync("src/components/pre-game/home/command-home-intro.module.css", "utf8");
-const entranceMapStyles = readFileSync("src/components/pre-game/foundation/command-entrance-map.module.css", "utf8");
 const foundationIndex = readFileSync("src/components/pre-game/foundation/index.ts", "utf8");
 const runtime = readFileSync("src/components/pre-game/foundation/pre-game-command-runtime.tsx", "utf8");
 const presets = readFileSync("src/components/pre-game/foundation/scene-presets.ts", "utf8");
@@ -19,6 +18,7 @@ const shell = readFileSync("src/components/pre-game/foundation/command-shell.tsx
 const entranceTimeline = readFileSync("src/components/pre-game/foundation/entrance-timeline.ts", "utf8");
 
 const legacyPolishPath = "src/components/pre-game/home/command-home-polish.module.css";
+const experimentalEntranceMapPath = "src/components/pre-game/foundation/command-entrance-map.module.css";
 
 test("HOME preserva metadata, canonical e structured data existentes", () => {
   assert.match(page, /export const metadata: Metadata/);
@@ -69,98 +69,86 @@ test("adapter continua sem coordenadas e publica apenas intenção semântica", 
   assert.doesNotMatch(intent, /\bmode\s*:/);
 });
 
-test("ritual é pulável e repeat/reduced-motion continuam estáveis", () => {
+test("ritual é pulável, reduced-motion é estável e a intro reaparece a cada montagem da HOME", () => {
   assert.match(home, /Pular ritual/);
   assert.match(home, /useSyncExternalStore/);
-  assert.match(home, /sessionStorage\.getItem\(HOME_RITUAL_SESSION_KEY\)/);
-  assert.match(home, /sessionStorage\.setItem\(HOME_RITUAL_SESSION_KEY, "1"\)/);
   assert.match(home, /\(prefers-reduced-motion: reduce\)/);
+  assert.match(home, /sceneState !== "fallback"/);
+  assert.match(home, /sceneState !== "ready"/);
+  assert.doesNotMatch(home, /sessionStorage|ritualSeenInRuntime|repeatVisit|RETORNO RECONHECIDO/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(introStyles, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
-test("entrada usa um único relógio contínuo de 3000ms sem depender do WebGL", () => {
+test("entrada espera a Foundation e usa um único relógio contínuo de 3000ms", () => {
   assert.match(entranceTimeline, /COMMAND_ENTRANCE_DURATION_MS = 3000/);
   assert.match(home, /useState<HomeCeremonyPhase>\("brazil"\)/);
   assert.match(home, /useState<number \| null>\(null\)/);
+  assert.match(home, /sceneState !== "ready"/);
   assert.match(home, /performance\.now\(\)/);
   assert.match(home, /setCeremonyPhase\("table"\)/);
   assert.match(home, /setCeremonyPhase\("stable"\)/);
   assert.match(home, /COMMAND_ENTRANCE_DURATION_MS/);
   assert.match(home, /homeTransition === "preparing"/);
   assert.match(home, /"running"/);
-  assert.doesNotMatch(home, /sceneState !== "ready"|sceneState === "fallback"\s*\?\s*"complete"/);
-  assert.doesNotMatch(home, /HOME_INTRO_DELAY_MS|HOME_INTRO_COMPLETE_MS|HOME_INTRO_DURATION_MS/);
 });
 
-test("entrada mostra um único Brasil canônico do preto ao mapa militar final", () => {
-  assert.match(sceneHost, /function EntranceBrazilMap/);
-  assert.match(sceneHost, /data-command-entrance-map/);
-  assert.match(sceneHost, /entranceOwnsBrazil = intent\.mode === "entrance"/);
-  assert.match(sceneHost, /!entranceOwnsBrazil \?/);
-  assert.match(sceneHost, /normalizedIntent\.mode === "entrance" \? <EntranceBrazilMap \/> : null/);
-  assert.match(entranceMapStyles, /war-brasil-42\.production\.svg/);
-  assert.match(entranceMapStyles, /mask: url\("\/war-brasil-42\.production\.svg"\)/);
-  assert.match(entranceMapStyles, /#314a34/);
-  assert.match(entranceMapStyles, /#132219/);
-});
-
-test("primeiro frame é preto e nenhum elemento principal surge em seco", () => {
-  assert.match(introStyles, /background: #000/);
-  assert.match(introStyles, /data-home-transition="preparing"[\s\S]*opacity: 0/);
-  assert.match(introStyles, /data-command-entrance-map/);
-  assert.match(introStyles, /data-command-fallback-table/);
-  assert.match(introStyles, /data-command-atmosphere/);
-  assert.match(introStyles, /data-command-chrome/);
-  assert.match(introStyles, /data-home-identity/);
-  assert.match(introStyles, /data-home-command-dock/);
-  assert.match(introStyles, /data-home-footer/);
-});
-
-test("mapa aparece por compressão e descompressão antes de se reposicionar", () => {
-  assert.match(introStyles, /@keyframes homeMapGenesis/);
-  assert.match(introStyles, /rotateY\(76deg\)/);
-  assert.match(introStyles, /rotateY\(-27deg\)/);
-  assert.match(introStyles, /rotateY\(18deg\)/);
-  assert.match(introStyles, /rotateY\(-8deg\)/);
-  assert.match(introStyles, /scale\(\.72, \.94\)/);
-  assert.match(introStyles, /18% \{[\s\S]*opacity: 1/);
-  assert.match(introStyles, /100% \{[\s\S]*translate\(-50%, -50%\)/);
-});
-
-test("cor e interface materializam ao redor do mapa em vez de trocar telas", () => {
+test("abertura parte do preto, deforma o Brasil colorido e converge para a cena real do dev", () => {
   assert.match(introStyles, /--home-intro-duration: 3000ms/);
-  assert.match(introStyles, /--home-intro-easing: cubic-bezier\(\.4, \.14, \.3, 1\)/);
+  assert.match(introStyles, /background: #000 !important/);
+  assert.match(introStyles, /homeMapCompression/);
+  assert.match(introStyles, /rotateY\(82deg\)/);
+  assert.match(introStyles, /rotateY\(-31deg\)/);
+  assert.match(introStyles, /homeMapMilitarize/);
+  assert.match(introStyles, /homeDevSceneReveal/);
+  assert.match(introStyles, /homeMapDepthHandoff/);
+  assert.match(introStyles, /data-command-fallback-brazil/);
+  assert.match(introStyles, /data-command-canvas-layer/);
+  assert.doesNotMatch(sceneHost, /EntranceBrazilMap|command-entrance-map/);
+  assert.equal(existsSync(experimentalEntranceMapPath), false);
+});
+
+test("o frame final continua sendo a Foundation original do dev", () => {
+  assert.match(sceneHost, /<CommandSceneFallback intent=\{normalizedIntent\} \/>/);
+  assert.match(sceneHost, /<CommandSceneCanvas/);
+  assert.match(sceneHost, /data-command-fallback-brazil/);
+  assert.match(scene, /PLATE_TONES/);
+  assert.match(scene, /BrazilTerritoryAssembly/);
+  assert.match(scene, /DomainTable/);
+  assert.match(scene, /OrbitalCrown/);
+  assert.match(scene, /StrategicGlobe/);
+  assert.doesNotMatch(scene, /homeMapGenesis|entranceProgress|canonicalFill/);
+});
+
+test("todos os principais elementos da HOME entram dentro da mesma coreografia", () => {
   for (const name of [
+    "homeMapTravel",
+    "homeMapCompression",
     "homeMapMilitarize",
-    "homeMapMetalFinish",
-    "homeTableMaterialize",
-    "homeTableDetail",
+    "homeDevSceneReveal",
+    "homeAtmosphereIn",
+    "homeChromeIn",
     "homeIdentitySettle",
     "homeCommandSettle",
-    "homeChromeIn",
-    "homeAtmosphereIn",
     "homeFooterSettle",
   ]) assert.match(introStyles, new RegExp(name));
-  assert.doesNotMatch(introStyles, /homeFallbackRelease|homeCanvasTakeover/);
-  assert.match(introStyles, /data-command-canvas-layer[\s\S]*opacity: 0 !important/);
-  assert.match(introStyles, /data-command-fallback[\s\S]*opacity: 1 !important/);
-  assert.doesNotMatch(introStyles, /filter:\s*(?:grayscale|sepia|saturate|brightness|contrast)\(/);
+  assert.match(content, /data-home-identity/);
+  assert.match(home, /data-home-command-dock/);
+  assert.match(home, /data-home-footer/);
 });
 
-test("Foundation oferece âncoras semânticas e intro não depende de estrutura posicional", () => {
+test("Foundation oferece âncoras semânticas e intro não depende de estrutura posicional frágil", () => {
   assert.match(sceneHost, /data-command-scene/);
   assert.match(sceneHost, /data-command-fallback/);
   assert.match(sceneHost, /data-command-fallback-table/);
   assert.match(sceneHost, /data-command-fallback-brazil/);
-  assert.match(sceneHost, /data-command-entrance-map/);
   assert.match(sceneHost, /data-command-canvas-layer/);
   assert.match(shell, /data-command-atmosphere/);
   assert.match(shell, /data-command-chrome/);
   assert.doesNotMatch(introStyles, /nth-child|first-child|last-child/);
 });
 
-test("poses 3D continuam disponíveis para as demais experiências da Foundation", () => {
+test("poses 3D continuam exatamente sob responsabilidade da Foundation", () => {
   assert.match(presets, /ENTRANCE_FOCUS_PRESETS/);
   assert.match(presets, /COMPACT_ENTRANCE_FOCUS_PRESETS/);
   assert.match(scene, /MathUtils\.damp/);
@@ -178,8 +166,7 @@ test("mobile preserva composição própria, safe-area e alvos touch", () => {
   assert.match(styles, /env\(safe-area-inset-bottom\)/);
   assert.match(styles, /touch-action: manipulation/);
   assert.match(home, /tabIndex=\{-1\}/);
-  assert.match(introStyles, /--home-map-shift: 15vw/);
-  assert.match(entranceMapStyles, /width: min\(74vw, 520px\)/);
+  assert.match(introStyles, /--home-map-shift: 14vw/);
 });
 
 test("foco de teclado mantém prioridade sobre intenção efêmera do ponteiro", () => {

@@ -16,7 +16,7 @@ import {
 import "./command-home-intro.module.css";
 import styles from "./command-home.module.css";
 
-type VisitMode = "first" | "repeat" | "reduced";
+type VisitMode = "first" | "reduced";
 type HomeTransitionState = "preparing" | "running" | "complete";
 type HomeState =
   | "boot"
@@ -37,10 +37,7 @@ type CommandHomeClientProps = {
   children: ReactNode;
 };
 
-const HOME_RITUAL_SESSION_KEY = "war-brasil:pre-game-home-ritual-seen";
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
-
-let ritualSeenInRuntime = false;
 
 const DESTINATIONS: Destination[] = [
   {
@@ -80,30 +77,9 @@ function getServerReducedMotionSnapshot() {
   return false;
 }
 
-function wasRitualSeenThisSession() {
-  if (ritualSeenInRuntime) return true;
-
-  try {
-    return sessionStorage.getItem(HOME_RITUAL_SESSION_KEY) === "1";
-  } catch {
-    return false;
-  }
-}
-
-function markRitualSeen() {
-  ritualSeenInRuntime = true;
-
-  try {
-    sessionStorage.setItem(HOME_RITUAL_SESSION_KEY, "1");
-  } catch {
-    // Session storage is an enhancement; the Home remains functional without it.
-  }
-}
-
 export function CommandHomeClient({ children }: CommandHomeClientProps) {
   const [ceremonyPhase, setCeremonyPhase] = useState<HomeCeremonyPhase>("brazil");
-  const [ritualActive, setRitualActive] = useState(() => !ritualSeenInRuntime);
-  const [repeatVisit, setRepeatVisit] = useState(() => ritualSeenInRuntime);
+  const [ritualActive, setRitualActive] = useState(true);
   const [entranceStartedAtMs, setEntranceStartedAtMs] = useState<number | null>(null);
   const [commandOpen, setCommandOpen] = useState(false);
   const [keyboardDestinationFocus, setKeyboardDestinationFocus] =
@@ -120,15 +96,13 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
   );
   const sceneState = useCommandSceneState();
 
-  const visitMode: VisitMode = reducedMotion
-    ? "reduced"
-    : repeatVisit
-      ? "repeat"
-      : "first";
+  const visitMode: VisitMode = reducedMotion ? "reduced" : "first";
   const effectiveCeremonyPhase: HomeCeremonyPhase =
-    visitMode === "first" && ritualActive ? ceremonyPhase : "stable";
+    visitMode === "first" && ritualActive && sceneState !== "fallback"
+      ? ceremonyPhase
+      : "stable";
   const homeTransition: HomeTransitionState =
-    visitMode !== "first" || !ritualActive
+    visitMode !== "first" || !ritualActive || sceneState === "fallback"
       ? "complete"
       : entranceStartedAtMs === null
         ? "preparing"
@@ -144,24 +118,10 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
   useCommandSceneDirective(sceneIntent);
 
   useEffect(() => {
-    const wasSeen = wasRitualSeenThisSession();
-    markRitualSeen();
-
-    if (!wasSeen || repeatVisit) return;
-
-    const frame = window.requestAnimationFrame(() => {
-      setRepeatVisit(true);
-      setRitualActive(false);
-      setEntranceStartedAtMs(null);
-    });
-
-    return () => window.cancelAnimationFrame(frame);
-  }, [repeatVisit]);
-
-  useEffect(() => {
     if (
       visitMode !== "first" ||
       !ritualActive ||
+      sceneState !== "ready" ||
       entranceStartedAtMs !== null
     ) {
       return;
@@ -173,7 +133,7 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [entranceStartedAtMs, ritualActive, visitMode]);
+  }, [entranceStartedAtMs, ritualActive, sceneState, visitMode]);
 
   useEffect(() => {
     if (entranceStartedAtMs === null || visitMode !== "first" || !ritualActive) {
@@ -278,11 +238,9 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
                 <span className={styles.ritualState}>
                   {visitMode === "reduced"
                     ? "MOVIMENTO REDUZIDO"
-                    : visitMode === "repeat"
-                      ? "RETORNO RECONHECIDO"
-                      : sceneState === "fallback"
-                        ? "MODO TÁTICO 2D"
-                        : "MESA ESTABILIZADA"}
+                    : sceneState === "fallback"
+                      ? "MODO TÁTICO 2D"
+                      : "MESA ESTABILIZADA"}
                 </span>
               )}
             </div>
