@@ -83,7 +83,7 @@ export function LobbyCommandWorkspace({
         <div className={styles.operationIdentity}>
           <p className={styles.codeLabel}>Chave da operação</p>
           <div className={styles.codeLine}>
-            <code className={styles.roomCode}>{roomCode}</code>
+            <code className={`${styles.roomCode} wb-code-value`}>{roomCode}</code>
             <button
               type="button"
               onClick={onCopyRoomCode}
