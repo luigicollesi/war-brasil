@@ -8,7 +8,7 @@ import {
 export const metadata: Metadata = {
   title: "Doutrina",
   description:
-    "Doutrina oficial do WAR Brasil: preparação, objetivos, reforços, ataque, conquista, movimentação, cartas, barreiras e anomalias.",
+    "Doutrina oficial do WAR Brasil: preparação, objetivos, trocas, reforços, ataque, conquista, movimentação, cartas, barreiras e anomalias.",
   alternates: {
     canonical: "/rules",
   },
