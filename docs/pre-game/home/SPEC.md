@@ -1,124 +1,305 @@
 # SPEC — Home / Entrada no Comando
 
 **Rota:** `/`  
-**Cena:** `entrance`
+**Cena:** `entrance`  
+**Baseline final:** estado estável da Home em `dev`
 
-Segue `../quality-standard.md`, `../visual-language.md` e os conceitos `CORE` aplicáveis em `../traceability.md`.
+Segue `../quality-standard.md`, `../visual-language.md`, `../opening-animation-standard.md` e os conceitos `CORE` aplicáveis em `../traceability.md`.
 
 ## Fantasia
 
-A Home é um **ritual de materialização da Mesa de Domínio**. A tela nasce do preto absoluto e a própria representação operacional do Brasil se forma diante do usuário até chegar ao estado normal já aprovado da Foundation.
+A Home é uma **gênese cartográfica de comando**.
 
-A Home MUST evitar hero tradicional e MUST continuar funcional quando motion/WebGL estiverem reduzidos ou indisponíveis.
+O jogador não assiste a um mapa chegar até a interface. Ele vê o **mesmo Brasil operacional já montado na Mesa**, inicialmente com as cores canônicas do mapa, ser absorvido/materializado pela linguagem militar da Foundation até se tornar exatamente a Home estável já aprovada em `dev`.
+
+A transformação acontece **dentro do objeto**, não pela troca de tela, câmera ou geografia.
 
 ## Objetivos do usuário
 
 O jogador MUST conseguir:
 
-- reconhecer WAR Brasil em poucos segundos;
+- reconhecer imediatamente o Brasil e WAR Brasil;
+- perceber uma abertura clara e intencional, em vez de receber a Home já pronta;
 - iniciar o caminho para uma partida;
 - acessar Doutrina/Regras;
 - acessar Perfil/Comando;
 - pular a introdução;
-- usar a página mesmo sem WebGL/motion.
+- usar a página sem WebGL ou com motion reduzido.
 
-## Sequência principal
+## Invariantes visuais
 
-1. a primeira pintura visual da HOME MUST ser preta;
-2. a Foundation/WebGL pode preparar atrás do preto pelo tempo necessário;
-3. quando a Foundation sinalizar `ready`, inicia uma única coreografia de **3000 ms**;
-4. o próprio `BrazilTerritoryAssembly` da cena 3D MUST surgir com as cores canônicas lidas de `/war-brasil-42.production.svg`;
-5. esse mesmo assembly MUST iniciar deslocado à direita e comprimido em perspectiva;
-6. a entrada usa oscilação de `rotateY` + escala não uniforme para produzir compressão/descompressão, e não um spin convencional;
-7. durante a mesma timeline, o assembly se move para sua posição operacional, cresce e interpola as cores canônicas para os materiais verde-escuros já usados pela Foundation;
-8. atmosfera, identidade, chrome, CTA, telemetria e rodapé MUST materializar por opacidade e deslocamento, sem pop-in;
-9. aos 3000 ms, posição, rotação, escala, materiais, câmera e composição MUST coincidir com o estado final existente em `dev`, sem redesign da tela final;
-10. `OPERAÇÕES` -> `/matchmaking`, `DOUTRINA` -> `/rules`, `COMANDO` -> `/profile`.
+Durante toda a Genesis normal, desde o primeiro frame em que o Brasil é visível até `settled`, os seguintes valores MUST permanecer equivalentes ao baseline final de `dev`:
 
-A cerimônia MUST ser pulável. Enquanto `prefers-reduced-motion` não estiver ativo, a cerimônia SHOULD executar a cada nova montagem da HOME para manter o comportamento observável e testável. Reduced motion MUST começar diretamente no estado estável ou sem deslocamento espacial relevante.
+- câmera/preset `table`;
+- posição global do `BrazilTerritoryAssembly`;
+- rotação global do `BrazilTerritoryAssembly`;
+- escala global do `BrazilTerritoryAssembly`;
+- geometria e fronteiras relativas dos 42 territórios;
+- posição estrutural de `DomainTable`;
+- composição final de `OrbitalCrown`, `StrategicGlobe` recuado e `CommandInsignia`.
 
-## Regra de mapa único
+A Genesis MUST NOT usar viagem lateral, zoom, spin, compressão do conjunto, troca de câmera ou remontagem do Brasil para produzir impacto.
 
-Na execução WebGL normal existe **um único Brasil visível durante a abertura**: o `BrazilTerritoryAssembly` que também permanece como mapa operacional após a intro.
+O impacto visual MUST vir principalmente de **transformação de superfície/material, fronteiras, iluminação local e materialização coordenada da interface**.
 
-MUST NOT existir:
+## Primeiro frame correto
 
-- um SVG de entrada sobreposto ao mapa 3D;
-- crossfade perceptível entre mapa 2D e mapa 3D;
-- troca de um asset colorido por outro asset verde;
-- uma composição final alternativa à usada atualmente em `dev`.
+A rota MAY possuir um estado curto de `loading/priming` enquanto WebGL e shaders são preparados, mas MUST NOT exibir o mapa militar final e depois reiniciar a animação.
 
-O fallback 2D permanece exclusivamente como contingência quando WebGL estiver indisponível; ele não participa visualmente da intro WebGL normal.
+Quando o Brasil aparecer pela primeira vez em motion normal:
 
-## Coreografia cinematográfica
+- MUST estar completo e reconhecível;
+- MUST usar os fills canônicos de `/war-brasil-42.production.svg`;
+- MUST já estar na mesma pose espacial do estado final;
+- MUST possuir os mesmos 42 territórios;
+- MUST ser o mesmo assembly/mesma geometria que continuará após a abertura;
+- MUST começar antes de qualquer militarização perceptível.
 
-A timeline de 3000 ms é única. A HOME publica apenas estados semânticos `initial`, `running` e `settled`; coordenadas e timing interno do mapa pertencem à Foundation.
+A Foundation SHOULD pré-compilar o material/pass temporário antes de liberar esse frame. O início da timeline MUST ocorrer somente após um frame `primed` ter sido solicitado/renderizável conforme `../opening-animation-standard.md`.
 
-Durante `running`:
+## Arquitetura da transformação
 
-- o mapa começa invisível sobre preto e ganha opacidade gradualmente;
-- a deformação usa rotação em Y alternada e escala X/Y não uniforme, simulando compressão/descompressão;
-- a trajetória converge continuamente para a posição, rotação e escala finais do `BrazilTerritoryAssembly` atual;
-- cores dos territórios interpolam dos fills canônicos para `PLATE_TONES`;
-- roughness, metalness e bordas convergem para os valores normais da Foundation;
-- DOM crítico SHOULD privilegiar `transform` e `opacity`;
-- nada deve aparecer em um único frame.
+A Genesis SHOULD usar o padrão:
 
-No estado `settled`, a Foundation MUST definir explicitamente os mesmos valores finais usados antes da intro, evitando erro acumulado ou diferença causada pela interpolação.
+```text
+BrazilTerritoryAssembly
+├── final surface/materials de dev          ← persistentes
+└── HomeGenesisPass                         ← temporário
+    ├── cores canônicas
+    ├── dissolve/materialization field
+    └── border/energy accents transitórios
+```
 
-## Estado final imutável
+A superfície final da Foundation MUST existir independentemente da Genesis.
 
-A animação é uma **entrada para a HOME atual**, não um redesign da HOME.
+O `HomeGenesisPass` MAY compartilhar a geometria canônica/final, mas MUST ser visualmente temporário e removível sem alterar o estado estável.
 
-O estado após a intro MUST preservar:
+Aos `3000 ms`:
 
-- câmera/preset `table` existente;
-- `DomainTable`;
-- `OrbitalCrown`;
-- `StrategicGlobe` recuado;
-- `CommandInsignia`;
-- `BrazilTerritoryAssembly` com os materiais militares atuais;
-- identidade, CTA, footer, chrome e atmosfera nas posições atuais de `dev`.
+```text
+HomeGenesisPass contribution = 0
+```
 
-Qualquer alteração perceptível do layout final em relação ao baseline de `dev` reprova a implementação.
+Após cleanup:
 
-## Navegação espacial
+```text
+Home = baseline estável de dev
+```
 
-Após `ENTRAR NO COMANDO`, os três destinos SHOULD parecer setores/mecanismos da mesma Mesa, não cards independentes. A navegação real MUST continuar baseada em controles DOM acessíveis; a cena acompanha a intenção.
+O resultado final MUST NOT depender de uma cópia de posição, rotação, escala, câmera ou materiais finais armazenada no código específico da Home.
+
+## Timeline
+
+Duração nominal: **3000 ms**.
+
+A timeline MUST ser única, monotônica e normalizada (`0..1`) conforme `../opening-animation-standard.md`.
+
+A Home MUST NOT coordenar a abertura por sequência de `setTimeout`.
+
+### Cue windows de referência
+
+As janelas abaixo são contrato de intenção e MAY receber pequenos ajustes de easing sem mudar a leitura geral:
+
+| Track | Janela aproximada | Intenção |
+| --- | ---: | --- |
+| leitura canônica | `0.00–0.12` | Brasil claramente colorido antes da transformação |
+| ativação territorial | `0.08–0.42` | fronteiras/acentos começam a capturar o mapa |
+| materialização militar | `0.16–0.82` | cores canônicas cedem ao material final |
+| atmosfera/Foundation | `0.28–0.88` | ambiente ganha presença sem trocar composição |
+| identidade/chrome | `0.40–0.92` | interface institucional se materializa |
+| CTA/telemetria/footer | `0.56–0.96` | ação principal se torna dominante |
+| assentamento | `0.86–1.00` | últimos resíduos transitórios desaparecem |
+
+Nenhum track deve causar pop-in no fim de sua janela.
+
+## Materialização territorial
+
+A transformação principal SHOULD ocorrer no GPU por uniforms/shader ou técnica equivalente de custo controlado.
+
+### Campo de Genesis
+
+O efeito deve parecer a superfície colorida sendo **capturada e convertida em material de comando**, não um filtro de fade uniforme.
+
+SHOULD combinar:
+
+- progresso global;
+- coordenadas locais estáveis do mapa/território;
+- offset espacial suave;
+- seed determinístico derivado de `territoryId`;
+- variação local de baixa amplitude;
+- threshold suavizado para evitar serrilhado duro.
+
+O padrão MAY propagar-se a partir da região central do mapa com leve viés direcional, desde que:
+
+- não dependa de screen-space;
+- não mude de desenho ao redimensionar;
+- não destrua a leitura simultânea de vários territórios;
+- não crie aparência de scanner sci-fi/ciano.
+
+### Cores
+
+No início, cada território usa a cor canônica extraída do SVG vigente.
+
+Durante a Genesis, a camada colorida deve desaparecer de forma espacialmente estruturada, revelando os **materiais militares finais já pertencentes à Foundation**.
+
+Preferir revelar a superfície final persistente em vez de recalcular por interpolação uma cópia aproximada do material de `dev`.
+
+### Fronteiras
+
+Fronteiras MUST permanecer espacialmente estáveis e legíveis.
+
+MAY existir uma passagem transitória curta de latão/luz ao longo das fronteiras, com intensidade limitada e sem pulsação contínua. Ao final, a borda MUST ser exatamente a da Foundation.
+
+### Profundidade
+
+A Genesis MUST NOT separar placas nem alterar `position.z` dos territórios para simular fragmentação.
+
+Sensação de profundidade MAY vir de:
+
+- resposta de material;
+- roughness/metalness transitórios na camada de abertura;
+- iluminação/emissive local;
+- noise/dissolve de superfície;
+- normal/edge treatment que não mude a geometria lógica.
+
+## Coreografia da interface
+
+O mapa é o protagonista inicial. Identidade, chrome, atmosfera, CTA, telemetria e footer entram depois em janelas coordenadas.
+
+MUST:
+
+- usar as posições finais já existentes em `dev` como destino;
+- evitar reflow animado quando `opacity`/`transform` resolvem;
+- evitar que todos os elementos apareçam no mesmo frame;
+- manter `ENTRAR NO COMANDO` como ação dominante quando sua janela estiver concluída;
+- não esconder controles focáveis em `opacity: 0` sem ajustar sua disponibilidade interativa.
+
+A coreografia DOM SHOULD usar Web Animations API ou CSS compositor-friendly e compartilhar o mesmo evento de início/duração da timeline principal.
+
+## Lifecycle da Home
+
+Abertura normal:
+
+```text
+loading → primed → playing → settling → settled
+```
+
+Estados funcionais posteriores:
+
+```text
+settled/awaiting-entry → command-open → destination-focus → transitioning
+```
+
+Atalhos:
+
+```text
+skip            → settled
+reduced-motion  → settled
+WebGL failure   → fallback funcional
+```
+
+React MAY refletir mudanças de lifecycle, mas MUST NOT receber `progress` por frame como estado.
+
+## Navegação e interrupção
+
+`ENTRAR NO COMANDO`, `OPERAÇÕES`, `DOUTRINA` e `COMANDO` continuam controles DOM acessíveis.
+
+- `OPERAÇÕES` -> `/matchmaking`;
+- `DOUTRINA` -> `/rules`;
+- `COMANDO` -> `/profile`.
+
+A abertura MUST NOT atrasar navegação funcional esperando os 3000 ms.
+
+Se uma ação exigir sair da abertura, a implementação MUST finalizar/limpar a Genesis de forma segura e executar a ação imediatamente.
+
+## Determinismo e eval
+
+A Home MUST possuir mecanismo interno de `seek`/override para avaliação visual determinística nos progressos:
+
+```text
+0.00 / 0.15 / 0.35 / 0.60 / 0.85 / 1.00 / post-cleanup
+```
+
+O mecanismo não precisa ser API de usuário e não pode mudar o comportamento normal de produção.
+
+Para o mesmo viewport, seed e progresso, a imagem MUST ser reproduzível.
+
+## Performance
+
+MUST:
+
+- não usar `setState` dentro de `useFrame`;
+- não criar dezenas de timers por território;
+- não recriar geometria por frame;
+- não criar renderer/Canvas adicional;
+- não alocar ruído aleatório por frame;
+- liberar materiais/texturas exclusivos da Genesis após cleanup;
+- preservar recursos compartilhados da Foundation.
+
+SHOULD:
+
+- usar um/few uniforms globais para progresso;
+- derivar seeds territorialmente sem estado React;
+- prewarm shader/material da Genesis;
+- reutilizar geometria da Foundation;
+- manter cálculos por frame pequenos e refresh-rate independent.
+
+## Reduced motion
+
+Com `prefers-reduced-motion: reduce`, a Home SHOULD entrar diretamente em `settled`.
+
+MUST NOT executar:
+
+- dissolve espacial prolongado;
+- grandes movimentos de escala/câmera;
+- parallax;
+- pulso repetitivo;
+- animação necessária para compreender a UI.
+
+Conteúdo, hierarquia, CTA e navegação permanecem equivalentes.
+
+## Fallback sem WebGL
+
+O fallback 2D existe como contingência funcional, não como ator da Genesis WebGL.
+
+Quando WebGL falhar:
+
+- conteúdo e navegação MUST permanecer disponíveis;
+- não deve existir tela vazia/spinner infinito;
+- não é necessário imitar a Genesis shader;
+- a composição 2D SHOULD representar diretamente o estado estável.
+
+Na execução WebGL normal, MUST NOT existir crossfade perceptível entre um Brasil 2D e o Brasil 3D para simular transformação.
 
 ## Desktop e mobile
 
-Desktop MUST preservar a Mesa/Brasil como protagonista. Mobile MUST manter a composição já existente, safe areas, alvos touch e nenhuma dependência de hover. O deslocamento inicial do mapa pode ser menor no mobile, mas o frame final MUST continuar idêntico ao estado mobile de `dev`.
+Desktop e mobile usam a mesma lógica de Genesis e seeds.
 
-## Estados
+Mobile MUST preservar o estado final mobile já existente em `dev` e MUST NOT ser apenas desktop escalado.
 
-- `boot` / preto e preparação;
-- `initial` / mapa preparado mas ainda não executando;
-- `running` / coreografia de 3000 ms;
-- `settled` / Foundation normal;
-- `awaiting-entry`;
-- `command-open`;
-- `destination-focus`;
-- `transitioning`;
-- `reduced-motion`;
-- `scene-fallback`.
+Resize/orientation change durante a abertura MUST NOT:
 
-## SEO e conteúdo
-
-Preservar metadata/structured data relevantes já existentes. O redesign MUST NOT esconder todo conteúdo relevante atrás de Canvas.
+- reiniciar a timeline;
+- trocar seeds;
+- reposicionar o Brasil para uma pose intermediária;
+- causar flash do estado final antes de retornar à Genesis.
 
 ## Não fazer
 
 MUST NOT:
 
 - substituir o estado final de `dev`;
-- usar dois mapas visíveis para simular transformação;
-- usar apenas fade-out de uma tela + fade-in de outra;
-- usar spin 2D/360° convencional como gesto principal;
-- criar elementos principais no meio da animação causando pop-in;
-- manter vermelho pulsando continuamente;
-- fazer CTA/link existir apenas como mesh 3D.
+- iniciar mostrando o mapa militar final e depois voltar ao mapa colorido;
+- deslocar o Brasil lateralmente como gesto principal;
+- animar escala/rotação/câmera do assembly durante a Genesis;
+- usar dois mapas visíveis para simular continuidade;
+- trocar asset colorido por asset verde;
+- usar fade global como transformação principal;
+- usar `Math.random()` para a aparência avaliada;
+- coordenar tracks com cadeia de timeouts;
+- manter lógica temporária da abertura como fonte do estado estável;
+- adicionar biblioteca de animação apenas para esta timeline sem justificativa separada.
 
 ## Definition of Done
 
-Do preto absoluto, o próprio mapa operacional surge colorido, comprime/descomprime, move-se e militariza até chegar exatamente ao estado final da HOME em `dev`, em 3000 ms, sem mapa duplicado, pop-in ou salto no último frame. `EVAL.md` passa integralmente.
+A Home abre com o Brasil canônico colorido já na pose operacional. O mesmo objeto é materializado territorialmente até revelar a Foundation militar final. Interface e atmosfera surgem em tracks coordenados. Aos 3000 ms o último frame coincide com o baseline de `dev`; após remover toda infraestrutura Genesis, nada muda visualmente. Skip, reduced-motion, fallback, resize e navegação permanecem funcionais, e todos os gates de `EVAL.md` passam.
