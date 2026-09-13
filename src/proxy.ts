@@ -29,8 +29,8 @@ function authUnavailableResponse() {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // A Home é a única página de produto pública. Endpoints Better Auth são
-  // excluídos pelo matcher para que login/OAuth/verification continuem livres.
+  // A Home é a única página de produto pública. Better Auth e endpoints
+  // machine-to-machine com autenticação própria ficam fora deste matcher.
   if (pathname === "/") {
     return NextResponse.next();
   }
@@ -62,6 +62,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!api/auth(?:/|$)|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|map|woff|woff2|ttf|otf)$).*)",
+    "/((?!api/auth(?:/|$)|api/internal(?:/|$)|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|map|woff|woff2|ttf|otf)$).*)",
   ],
 };
