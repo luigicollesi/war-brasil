@@ -92,6 +92,34 @@ async function createRoom(actor) {
   return response.body.room;
 }
 
+async function createRoomThroughUi(actor) {
+  const responsePromise = actor.page.waitForResponse(
+    (response) => {
+      const url = new URL(response.url());
+      return response.request().method() === "POST" && url.pathname === "/api/rooms";
+    },
+    { timeout: LOBBY_CONVERGENCE_TIMEOUT_MS },
+  );
+
+  await actor.page
+    .getByRole("button", { name: "Autorizar nova operação", exact: true })
+    .click();
+
+  const response = await responsePromise;
+  const body = await response.json();
+  assert.equal(response.status(), 200, JSON.stringify(body));
+  const code = body?.room?.code;
+  assert.match(code ?? "", /^[A-Z0-9]{6}$/);
+
+  await actor.page.waitForFunction(
+    (expectedPath) => window.location.pathname === expectedPath,
+    `/lobby/${code}`,
+    { timeout: LOBBY_CONVERGENCE_TIMEOUT_MS },
+  );
+
+  return body.room;
+}
+
 async function joinRoom(actor, code) {
   const response = await apiJson(actor.page, "/api/rooms/join", {
     method: "POST",
@@ -303,8 +331,7 @@ async function main() {
       try {
         await assertPersistentScene(actor.page, "operations");
 
-        await actor.page.getByRole("button", { name: "Autorizar nova operação", exact: true }).click();
-        await actor.page.waitForURL(/\/lobby\/[A-Z0-9]{6}$/, { timeout: 10_000 });
+        await createRoomThroughUi(actor);
         await assertPersistentScene(actor.page, "lobby");
 
         await actor.page.getByRole("link", { name: /Operações/ }).first().click();
@@ -382,10 +409,17 @@ async function main() {
         });
 
         await host.page.getByRole("button", { name: /Copiar código da sala/ }).click();
-        await host.page.getByText("Copiado", { exact: true }).waitFor({
-          state: "visible",
-          timeout: 3_000,
-        });
+        await host.page.waitForFunction(
+          async (expectedCode) => {
+            try {
+              return (await navigator.clipboard.readText()) === expectedCode;
+            } catch {
+              return false;
+            }
+          },
+          room.code.toUpperCase(),
+          { timeout: LOBBY_CONVERGENCE_TIMEOUT_MS },
+        );
 
         const roomEndpoint = `${BASE_URL}/api/rooms/${room.code}`;
         await host.page.route(roomEndpoint, (route) => route.abort());
