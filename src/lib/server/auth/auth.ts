@@ -1,0 +1,142 @@
+import "server-only";
+
+import { betterAuth } from "better-auth";
+import { generateAppleClientSecret } from "./apple-client-secret";
+import { authPool } from "./auth-pool";
+import {
+  buildPasswordResetEmail,
+  buildVerificationEmail,
+  dispatchAuthEmail,
+} from "./email";
+import { readAuthServerEnvironment } from "./environment";
+
+const SESSION_MAX_AGE_SECONDS = 30 * 24 * 60 * 60;
+const SESSION_UPDATE_AGE_SECONDS = 24 * 60 * 60;
+const SESSION_COOKIE_CACHE_SECONDS = 5 * 60;
+const AUTH_TOKEN_TTL_SECONDS = 60 * 60;
+
+const environment = readAuthServerEnvironment();
+
+function resolveBaseUrl() {
+  if (environment.allowedHosts.length > 0) {
+    return {
+      allowedHosts: environment.allowedHosts,
+      protocol: "auto" as const,
+      ...(environment.baseUrl ? { fallback: environment.baseUrl } : {}),
+    };
+  }
+
+  return environment.baseUrl;
+}
+
+const googleProvider = environment.providerAvailability.google
+  ? {
+      google: {
+        clientId: environment.google.clientId!,
+        clientSecret: environment.google.clientSecret!,
+      },
+    }
+  : {};
+
+const discordProvider = environment.providerAvailability.discord
+  ? {
+      discord: {
+        clientId: environment.discord.clientId!,
+        clientSecret: environment.discord.clientSecret!,
+        scope: ["identify", "email"],
+        mapProfileToUser: (profile: { email?: string | null; id: string }) => ({
+          email:
+            profile.email ?? `${profile.id}@discord.placeholder.invalid`,
+        }),
+      },
+    }
+  : {};
+
+const appleProvider = environment.providerAvailability.apple
+  ? {
+      apple: async () => ({
+        clientId: environment.apple.clientId!,
+        clientSecret: await generateAppleClientSecret({
+          clientId: environment.apple.clientId!,
+          keyId: environment.apple.keyId!,
+          privateKey: environment.apple.privateKey!,
+          teamId: environment.apple.teamId!,
+        }),
+        ...(environment.apple.appBundleIdentifier
+          ? { appBundleIdentifier: environment.apple.appBundleIdentifier }
+          : {}),
+        mapProfileToUser: (profile: {
+          email?: string | null;
+          sub: string;
+        }) => ({
+          email: profile.email ?? `${profile.sub}@apple.placeholder.invalid`,
+        }),
+      }),
+    }
+  : {};
+
+export const auth = betterAuth({
+  appName: "War-Brasil",
+  database: authPool,
+  basePath: "/api/auth",
+  ...(resolveBaseUrl() ? { baseURL: resolveBaseUrl() } : {}),
+  ...(environment.secret ? { secret: environment.secret } : {}),
+  trustedOrigins: ["https://appleid.apple.com"],
+  socialProviders: {
+    ...googleProvider,
+    ...appleProvider,
+    ...discordProvider,
+  },
+  emailAndPassword: {
+    enabled: true,
+    requireEmailVerification: true,
+    autoSignIn: false,
+    minPasswordLength: 8,
+    maxPasswordLength: 128,
+    resetPasswordTokenExpiresIn: AUTH_TOKEN_TTL_SECONDS,
+    revokeSessionsOnPasswordReset: true,
+    sendResetPassword: async ({ user, url }) => {
+      const email = buildPasswordResetEmail(url);
+      dispatchAuthEmail({ ...email, to: user.email });
+    },
+  },
+  emailVerification: {
+    sendOnSignUp: true,
+    sendOnSignIn: false,
+    autoSignInAfterVerification: false,
+    expiresIn: AUTH_TOKEN_TTL_SECONDS,
+    sendVerificationEmail: async ({ user, url }) => {
+      const email = buildVerificationEmail(url);
+      dispatchAuthEmail({ ...email, to: user.email });
+    },
+  },
+  session: {
+    expiresIn: SESSION_MAX_AGE_SECONDS,
+    updateAge: SESSION_UPDATE_AGE_SECONDS,
+    cookieCache: {
+      enabled: true,
+      maxAge: SESSION_COOKIE_CACHE_SECONDS,
+    },
+  },
+  account: {
+    accountLinking: {
+      enabled: true,
+      disableImplicitLinking: true,
+      allowDifferentEmails: true,
+      trustedProviders: [],
+      updateUserInfoOnLink: false,
+      allowUnlinkingAll: false,
+    },
+  },
+  advanced: {
+    cookiePrefix: "war-brasil",
+    disableCSRFCheck: false,
+    disableOriginCheck: false,
+    database: {
+      generateId: "uuid",
+      joins: true,
+    },
+  },
+});
+
+export type AuthSession = typeof auth.$Infer.Session;
