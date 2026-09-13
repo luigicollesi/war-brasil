@@ -40,19 +40,6 @@ const PROVIDERS: Array<{ id: AuthProvider; label: string; mark: string }> = [
   { id: "discord", label: "Continuar com Discord", mark: "D" },
 ];
 
-function normalizeErrorMessage(error: unknown) {
-  if (
-    error &&
-    typeof error === "object" &&
-    "message" in error &&
-    typeof error.message === "string"
-  ) {
-    return error.message;
-  }
-
-  return "Não foi possível concluir a autenticação agora.";
-}
-
 function readFormValue(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value : "";
@@ -78,19 +65,21 @@ export function CommandAuthModal({
       return;
     }
 
-    setMode(initialMode);
-    setMessage(notice);
-    setFieldErrors({});
-
     const dialog = dialogRef.current;
     const previousOverflow = document.body.style.overflow;
+    const frame = window.requestAnimationFrame(() => {
+      setMode(initialMode);
+      setMessage(notice);
+      setFieldErrors({});
 
-    if (dialog && !dialog.open) {
-      dialog.showModal();
-    }
-    document.body.style.overflow = "hidden";
+      if (dialog && !dialog.open) {
+        dialog.showModal();
+      }
+      document.body.style.overflow = "hidden";
+    });
 
     return () => {
+      window.cancelAnimationFrame(frame);
       document.body.style.overflow = previousOverflow;
       if (dialog?.open) {
         dialog.close();
