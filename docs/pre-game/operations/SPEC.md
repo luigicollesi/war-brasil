@@ -20,12 +20,19 @@ A interface MUST parecer uma única estação de comando, não um conjunto de ca
 
 ```text
 Matchmaking
+├── Voltar -> /
 ├── Jogo Clássico
 │   └── Encontrar partida [disabled / em breve]
 └── Sala Personalizada
     ├── Criar sala
     └── Entrar em sala
 ```
+
+## Navegação de retorno
+
+A rota MUST possuir controle explícito `Voltar` para `/`.
+
+O retorno MUST ser determinístico e MUST NOT depender de `history.back()`.
 
 ### Jogo Clássico
 
@@ -86,7 +93,7 @@ A rota MUST funcionar como uma cena full-viewport direta, sem exigir scroll no e
 MUST:
 
 - usar o espaço disponível do viewport como orçamento de layout;
-- manter ações principais, input e status dentro da área visível;
+- manter Voltar, ações principais, input e status dentro da área visível;
 - reduzir espaçamentos e conteúdo secundário em alturas menores antes de comprimir controles;
 - evitar layout shift ao alternar `Criar sala` / `Entrar em sala`;
 - manter `Jogo Clássico` e `Sala Personalizada` perceptíveis na mesma cena;
@@ -138,7 +145,7 @@ Erro MUST:
 
 MUST:
 
-- manter input e CTAs acessíveis por touch;
+- manter Voltar, input e CTAs acessíveis por touch;
 - aceitar paste de código completo;
 - não abrir teclado inadequado sem necessidade;
 - não exigir hover para escolher ação;
@@ -154,6 +161,7 @@ MUST NOT:
 - esconder erros na cena 3D;
 - usar animação longa antes do redirect;
 - bloquear criação/join por asset 3D;
+- usar `history.back()` como única navegação de retorno;
 - criar seis inputs apenas por estética;
 - transformar os protocolos em cards SaaS genéricos;
 - duplicar lógica de validação apenas na camada visual.
@@ -162,6 +170,7 @@ MUST NOT:
 
 - Jogo Clássico aparece com CTA realmente desabilitado e sem efeito colateral;
 - Sala Personalizada preserva exatamente os contratos funcionais vigentes;
+- Voltar leva deterministicamente à rota `/`;
 - a rota cabe no viewport normal sem scroll;
 - create/join funcionam com teclado, touch, fallback e reduced-motion;
 - a página passa `EVAL.md`.
