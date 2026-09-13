@@ -1,13 +1,9 @@
-# PROFILE — EVAL Runbook
+# PROFILE V2 — EVAL Runbook
 
-Branch: `feature/pre-game-profile`  
+Branch: `feature/profile-command-quarters-v2`  
 Rota: `/profile`
 
-Este roteiro produz evidência reproduzível para `EVAL.md`. Ele não altera dados reais e não depende de query string ou mock público.
-
 ## Pré-condições
-
-Antes de captura visual:
 
 ```bash
 npm ci
@@ -17,168 +13,198 @@ npm test
 npm run build
 ```
 
-Se qualquer comando falhar, a evidência visual não substitui o gate técnico.
+Nenhuma evidência visual substitui gate técnico vermelho.
 
-## Estados de dados
-
-O harness é exclusivamente server-side:
+## Estados server-side
 
 ```bash
-# fluxo normal / partial-data
+# fluxo local completo
 npm run dev
 
-# guest
 PROFILE_EVAL_MODE=1 PROFILE_EVAL_STATE=guest npm run dev
-
-# loaded
 PROFILE_EVAL_MODE=1 PROFILE_EVAL_STATE=loaded npm run dev
-
-# empty-history
+PROFILE_EVAL_MODE=1 PROFILE_EVAL_STATE=partial-data npm run dev
+PROFILE_EVAL_MODE=1 PROFILE_EVAL_STATE=wallet-unavailable npm run dev
 PROFILE_EVAL_MODE=1 PROFILE_EVAL_STATE=empty-history npm run dev
-
-# no-progression-system
-PROFILE_EVAL_MODE=1 PROFILE_EVAL_STATE=no-progression-system npm run dev
-
-# error boundary real
+PROFILE_EVAL_MODE=1 PROFILE_EVAL_STATE=empty-social npm run dev
+PROFILE_EVAL_MODE=1 PROFILE_EVAL_STATE=empty-storefront npm run dev
 PROFILE_EVAL_MODE=1 PROFILE_EVAL_STATE=error npm run dev
 ```
 
-Não usar query string, cookie ou edição do snapshot para selecionar estado.
+Não selecionar fixture por query string, cookie ou controle público.
 
 ## Viewports canônicos
-
-Usar os mesmos valores de `foundation/eval-fixtures.ts`:
 
 | Nome | Viewport |
 | --- | --- |
 | desktop | 1440 × 900 |
 | mobile | 390 × 844 |
 
-Mobile deve usar emulação de touch/coarse pointer quando o navegador de teste permitir.
+Mobile deve usar touch/coarse pointer.
 
-## Matriz obrigatória de 16 capturas
+## Estações obrigatórias
 
-Cada linha deve gerar uma captura desktop e uma mobile.
+No cenário `loaded`, capturar e interagir com:
 
-| Estado | Servidor / ambiente | Evidência principal |
-| --- | --- | --- |
-| `guest` | `PROFILE_EVAL_STATE=guest` | ausência de identidade sem login inventado |
-| `partial-data` | fluxo normal | somente identidade local; demais fontes indisponíveis |
-| `loaded` | `PROFILE_EVAL_STATE=loaded` | composição completa; fixture claramente rotulada |
-| `empty-history` | `PROFILE_EVAL_STATE=empty-history` | arquivo disponível e vazio, sem aparência de erro |
-| `no-progression-system` | `PROFILE_EVAL_STATE=no-progression-system` | progressão ausente; demais áreas preservadas |
-| `error` | `PROFILE_EVAL_STATE=error` | `error.tsx` real + retry acessível |
-| `reduced-motion` | `loaded` + `prefers-reduced-motion: reduce` | mesma hierarquia; indicação textual de motion reduzido |
-| `fallback` | `loaded` + WebGL indisponível | fallback 2D Foundation + conteúdo HTML intacto |
+1. `dossier`;
+2. `treasury`;
+3. `network`;
+4. `campaigns`;
+5. `quartermaster`.
 
-Nomes sugeridos:
+Desktop deve manter todas as estações reconhecíveis ao redor da Mesa. Mobile deve exibir somente a estação ativa, com seletor de sistemas no rodapé.
 
-```text
-profile-guest-desktop.png
-profile-guest-mobile.png
-profile-partial-data-desktop.png
-profile-partial-data-mobile.png
-profile-loaded-desktop.png
-profile-loaded-mobile.png
-profile-empty-history-desktop.png
-profile-empty-history-mobile.png
-profile-no-progression-desktop.png
-profile-no-progression-mobile.png
-profile-error-desktop.png
-profile-error-mobile.png
-profile-reduced-motion-desktop.png
-profile-reduced-motion-mobile.png
-profile-fallback-desktop.png
-profile-fallback-mobile.png
-```
+## Estados especiais
 
-## Como validar fallback
+Além das cinco estações, registrar desktop + mobile para:
 
-A captura de fallback só é válida quando a Foundation reportar `data-webgl="fallback"` no host da cena. A própria PROFILE deve exibir:
+- `guest`;
+- `partial-data`;
+- `wallet-unavailable`;
+- `empty-history`;
+- `empty-social`;
+- `empty-storefront`;
+- `error`;
+- `reduced-motion`;
+- `fallback`.
 
-```text
-Fallback 2D ativo; conteúdo HTML preservado
-```
+## Tesouraria
 
-Não considerar como fallback uma captura feita apenas escondendo o Canvas por CSS/DevTools.
+Validar por DOM e visual:
 
-Em um harness de browser automatizado futuro, forçar indisponibilidade de WebGL antes da navegação, por exemplo interceptando `HTMLCanvasElement.getContext` para `webgl`/`webgl2` no init script. Isso deve ocorrer no teste, nunca no código de produção.
+- moeda comum = `campaign-credit`;
+- moeda premium = `command-reserve`;
+- símbolos distintos (`◈` e `◆` no fixture local);
+- labels textuais distintos;
+- saldo indisponível não vira `0`;
+- selecionar carteira ativa `treasury`.
+
+## Rede de Comando
+
+Validar:
+
+- amigos exibem presença em texto;
+- social vazio ainda permite busca;
+- input aceita callsign/nome;
+- menos de 2 caracteres não dispara busca;
+- `mar` retorna resultados no provider local;
+- termo sem correspondência exibe feedback de nenhum sinal;
+- falha de endpoint exibe erro sem derrubar a PROFILE;
+- browser não recebe o diretório completo de comandantes.
+
+Não considerar botão de amizade obrigatório enquanto persistência social não existir.
+
+## Livro de Campanha
+
+Validar:
+
+- exatamente três operações no fixture local inicial;
+- seleção de operação atualiza contexto da Mesa;
+- resultado, modo e duração possuem texto;
+- `hasMore: true`/cursor permanecem no contrato;
+- `empty-history` não parece erro.
+
+## Intendência
+
+Validar:
+
+- até três itens em destaque;
+- categoria, nome e preço visíveis;
+- preço identifica a moeda;
+- seleção altera contexto da Mesa;
+- `empty-storefront` permanece uma estação válida;
+- nenhuma ação/label afirma compra concluída;
+- não existe checkout na PROFILE.
+
+## Dossiê
+
+Validar:
+
+- espaço de retrato/ícone;
+- fallback de monograma quando não há artwork;
+- nome;
+- handle;
+- título cosmético separado de rank;
+- presença textual.
+
+## Foundation / cena
+
+Cada estação deve alterar somente intenção semântica:
+
+- Dossiê → insignia;
+- Tesouraria → table;
+- Rede → table;
+- Campanhas → brazil;
+- Intendência → table.
+
+Falha se a PROFILE importar Three/R3F/Canvas/câmera diretamente.
+
+## Fallback WebGL
+
+Forçar Foundation para `data-webgl="fallback"` sem esconder Canvas manualmente por CSS.
+
+Dossiê, Tesouraria, Rede, Campanhas e Intendência devem continuar utilizáveis porque todo conteúdo funcional está em HTML.
 
 ## Reduced motion
 
-A evidência é válida somente quando:
+Com:
 
 ```js
 matchMedia('(prefers-reduced-motion: reduce)').matches === true
 ```
 
-A PROFILE deve exibir `Movimento reduzido ativo`; conteúdo, ordem e ações devem permanecer equivalentes.
+confirmar:
 
-## Teclado — desktop
+- mudança de estação continua funcionando;
+- conteúdo não desaparece;
+- perspectiva/motion ornamental pode ser reduzido;
+- ordem e ações permanecem equivalentes.
 
-Em 1440×900:
+## Teclado
 
-1. abrir `/profile` sem mouse;
-2. usar `Tab` até `Início`;
-3. continuar até `Operações` quando presente;
-4. no cenário `error`, alcançar `Tentar novamente`;
-5. confirmar foco visual em todos os controles;
-6. confirmar que nenhum conteúdo essencial exige hover.
+Em 1440x900, sem mouse:
 
-Falha se o foco ficar invisível, encoberto ou preso.
+1. alcançar retorno ao comando;
+2. alcançar Tesouraria;
+3. navegar pelos headers das estações;
+4. pesquisar comandante;
+5. selecionar operação;
+6. selecionar item da Intendência;
+7. no erro, alcançar `Tentar novamente`.
 
-## Touch — mobile
+Foco não pode ficar invisível ou preso.
 
-Em 390×844 com touch:
+## Touch
 
-1. abrir cada estado da matriz;
-2. rolar do topo até o último registro;
-3. acionar `Início`, `Operações` e `Tentar novamente` quando aplicáveis;
-4. confirmar ausência de conteúdo cortado horizontalmente;
-5. confirmar que Insígnia, identidade, registros e honrarias permanecem legíveis;
-6. confirmar que nenhuma ação depende de hover/perspectiva.
+Em 390x844:
 
-## Auditoria de dados
+1. alternar as cinco estações pelo seletor inferior;
+2. abrir Tesouraria pelo saldo superior;
+3. pesquisar comandante;
+4. selecionar operação;
+5. selecionar item da Intendência;
+6. confirmar ausência de overflow horizontal;
+7. confirmar que nenhuma informação depende de hover.
 
-No fluxo normal, validar visualmente e por DOM:
+## Integridade de fixture
 
-- `Luigi` com origem `Perfil local temporário`;
-- nenhuma patente real exibida;
-- nenhuma estatística competitiva exibida;
-- nenhum histórico inventado;
-- nenhuma conquista inventada.
+Fluxo normal V2 usa dados `local-static`; EVAL usa `evaluation-fixture`.
 
-Nos cenários de EVAL, confirmar presença de `Modo de avaliação visual` e `Dados estruturais sintéticos` antes de aceitar qualquer registro preenchido como evidência.
+O objetivo é validar a experiência antes dos serviços reais, não fingir backend. O PR deve deixar explícito que:
 
-## Histórico volumoso
+- moeda não é persistida;
+- relações sociais não são persistidas;
+- histórico é fixture local;
+- itens da Intendência são showcase local.
 
-O cenário `loaded` deve mostrar somente três campanhas e informar que existem registros adicionais. O snapshot deve manter `hasMore: true`.
+## Encerramento
 
-O objetivo é provar janela limitada; não criar paginação/backend fictício para o redesign.
+A V2 só está concluída quando:
 
-## Checklist PRO
-
-| Gate | Evidência a anexar |
-| --- | --- |
-| PRO-01 | data review + partial/loaded |
-| PRO-02 | guest/partial/empty/no-progression/error |
-| PRO-03 | inspection do DOM/snapshot |
-| PRO-04 | fallback 2D |
-| PRO-05 | mobile 390×844 + touch |
-| PRO-06 | reduced-motion desktop/mobile |
-| PRO-07 | source/availability + labels de fixture |
-| PRO-08 | guest sem novo fluxo auth |
-| PRO-09 | loaded com 3 campanhas + `hasMore` |
-| PRO-10 | Insígnia desktop/mobile/fallback |
-| PRO-11 | loaded com nome + descrição das honrarias |
-| PRO-12 | empty-history desktop/mobile |
-
-## Critério de encerramento
-
-A PROFILE só pode ser marcada como concluída quando:
-
-- todos os comandos técnicos estiverem verdes;
-- as 16 capturas existirem no mesmo ambiente estável;
-- teclado, touch, reduced-motion e fallback tiverem evidência;
-- todos os PRO-01…PRO-12 estiverem verdes;
-- score final do `EVAL.md` for >= 85/100.
+- lint/test/build verdes;
+- todos os PRO-01…PRO-24 verdes;
+- score >= 85/100;
+- desktop 1440x900 validado;
+- mobile 390x844 validado;
+- teclado/touch/reduced-motion/fallback documentados;
+- nenhuma regressão funcional fora da PROFILE.
