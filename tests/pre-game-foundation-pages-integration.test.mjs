@@ -27,7 +27,11 @@ const operationsCss = source(
 );
 const lobbyPage = source("src/app/lobby/[code]/page.tsx");
 const lobbyClient = source("src/components/lobby-client.tsx");
-const lobbyReadyRailCss = source("src/app/lobby-ready-rail.css");
+const lobbyWorkspace = source("src/components/lobby-command-workspace.tsx");
+const lobbyWorkspaceCss = source(
+  "src/components/lobby-command-workspace.module.css",
+);
+const lobbyReadyCss = source("src/components/lobby-ready-dock.module.css");
 const doctrinePage = source("src/app/rules/page.tsx");
 const doctrineClient = source(
   "src/components/doctrine/doctrine-experience.tsx",
@@ -111,15 +115,17 @@ test("Foundation fornece clearances e páginas longas os consomem", () => {
   assert.match(profileBridgeCss, /var\(--command-content-inline/);
 });
 
-test("Lobby reserva espaço para o chrome e mantém ready no fluxo sem cobrir o editor", () => {
-  assert.match(lobbyPage, /--command-content-top/);
-  assert.match(lobbyPage, /2rem \+ env\(safe-area-inset-bottom\)/);
-  assert.match(lobbyPage, /scrollPaddingBottom/);
-  assert.match(lobbyClient, /aria-label="Preparação da partida"/);
-  assert.match(lobbyReadyRailCss, /\.wb-ready-rail\s*\{[\s\S]*?position:\s*sticky/);
-  assert.match(lobbyReadyRailCss, /pointer-events:\s*auto/);
-  assert.doesNotMatch(lobbyReadyRailCss, /pointer-events:\s*none/);
-  assert.match(lobbyReadyRailCss, /@media \(max-width: 640px\)[\s\S]*?position:\s*relative/);
+test("Lobby reserva o chrome dentro de 100dvh e mantém ready no fluxo sem cobrir o editor", () => {
+  assert.match(lobbyPage, /height: "100dvh"/);
+  assert.match(lobbyPage, /minHeight: 0/);
+  assert.match(lobbyPage, /overflow: "hidden"/);
+  assert.match(lobbyPage, /paddingTop: "var\(--command-content-top, 96px\)"/);
+  assert.match(lobbyPage, /paddingBottom: "max\(10px, env\(safe-area-inset-bottom\)\)"/);
+  assert.match(lobbyWorkspace, /<LobbyReadyDock/);
+  assert.match(lobbyWorkspaceCss, /grid-template-rows:\s*auto minmax\(0, 1fr\) auto/);
+  assert.match(lobbyWorkspaceCss, /overflow:\s*hidden/);
+  assert.doesNotMatch(lobbyReadyCss, /position:\s*fixed/);
+  assert.doesNotMatch(`${lobbyWorkspaceCss}\n${lobbyReadyCss}`, /overflow-y:\s*(?:auto|scroll)/);
 });
 
 test("Profile não reintroduz WarShell em loaded, loading ou error", () => {
