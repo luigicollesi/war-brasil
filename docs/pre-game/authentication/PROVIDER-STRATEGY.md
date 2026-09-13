@@ -2,289 +2,39 @@
 
 **Branch:** `feature/auth-command-access`  
 **Relaciona:** `SPEC.md`, `EVAL.md`, `DATABASE-PLAN.md`.  
-**Objetivo:** escolher provedores de autenticação pela aderência a um jogo multiplataforma, segurança, qualidade da identidade, suporte no Better Auth e custo operacional — não apenas pela conveniência de implementação.
+**Escopo normativo:** somente Google, Apple, Discord e email + senha.
 
-## 1. Decisão resumida
+## 1. Decisão final de launch
 
-### Launch / Tier 1
+O War-Brasil terá exatamente quatro métodos de entrada na primeira versão:
 
-1. **Google** — provider generalista principal;
-2. **Apple** — provider de privacidade/mobile e preparação para distribuição Apple;
-3. **Discord** — provider social nativo do público gamer;
-4. **email + senha** — fallback independente de plataforma/provider.
+| Método | Papel | Launch |
+| --- | --- | --- |
+| **Google** | identidade generalista | **sim** |
+| **Apple** | privacidade + mobile/iOS | **sim** |
+| **Discord** | identidade social gamer | **sim** |
+| **Email + senha** | fallback independente | **sim** |
 
-### Pós-login / Tier 1.5
+Nenhum outro provider faz parte deste escopo. GitHub, Microsoft, Steam, Twitch, Epic, passkeys e demais métodos MUST NOT aparecer no modal, config, env, banco custom ou testes desta implementação.
 
-- **Passkey/WebAuthn** — SHOULD ser oferecido depois que a conta estiver autenticada e o perfil público estiver provisionado, como método de retorno rápido e resistente a phishing.
+Adicionar um quinto método exige mudança explícita de `PROVIDER-STRATEGY.md`, `SPEC.md` e `EVAL.md`.
 
-### Candidatos Tier 2
+## 2. Princípios comuns
 
-- **Microsoft** — excelente candidato quando houver foco Windows/Xbox/Game Pass ou benefício real de identidade Microsoft;
-- **Twitch** — candidato quando houver integração de streaming/comunidade que justifique o provider.
+A conta War-Brasil é a identidade principal. Google, Apple, Discord e credentials são formas de autenticar essa conta.
 
-### Conta vinculada / integração de plataforma
+MUST:
 
-- **Steam** — SHOULD ser tratado primeiro como identidade de plataforma vinculada e, futuramente, SSO específico da distribuição Steam;
-- **Epic/EOS** — somente quando o produto realmente adotar Epic Online Services/Epic Games Store;
-- Xbox/XUID, SteamID e outras identidades de plataforma não substituem automaticamente `auth.user.id`.
+- usar `auth.user.id` como identidade interna;
+- usar provider account ID/subject como identidade externa estável;
+- nunca usar email como bearer credential ou autorização;
+- nunca transformar email do provider em `profile.commanders.handle`;
+- nunca expor provider token no client;
+- manter `profile.commanders` como identidade pública autoritativa do jogo;
+- usar nome/avatar do provider somente como sugestão ou fallback de onboarding;
+- fazer account linking de forma explícita, não por coincidência silenciosa de email.
 
-### Não entra no launch
-
-- **GitHub** — removido do plano inicial. É coerente com ferramentas de desenvolvimento, mas não com a identidade primária de jogador do War-Brasil;
-- Facebook/TikTok/Spotify/Roblox/Kick e outros providers suportados pelo Better Auth não entram sem evidência de audiência/produto que justifique a complexidade adicional.
-
-## 2. Critérios de decisão
-
-Cada provider é avaliado por:
-
-- cobertura provável da audiência;
-- afinidade com jogos/comunidade;
-- suporte oficial/built-in no Better Auth;
-- protocolo moderno e manutenção;
-- existência de identificador estável do provider;
-- confiabilidade/disponibilidade de email;
-- UX em web e possível app nativo futuro;
-- complexidade operacional de secrets/callbacks;
-- valor futuro de account linking;
-- implicações de privacidade/App Store.
-
-Nenhum provider é autorizado a definir o `handle` público do War-Brasil automaticamente. Provider name/avatar MAY inicializar sugestões/fallbacks; `profile.commanders` continua sendo a identidade pública autoritativa do jogo.
-
-## 3. Matriz
-
-| Provider | Launch | Aderência gamer | Better Auth | Email | Observação |
-| --- | --- | --- | --- | --- | --- |
-| Google | **sim** | média | built-in | normalmente confiável | alcance geral, OIDC maduro, baixo atrito |
-| Apple | **sim** | média | built-in | especial | privacidade, web/native; email só é emitido no primeiro consentimento |
-| Discord | **sim** | **alta** | built-in | pode faltar | identidade comunitária gamer; phone-only pode não fornecer email |
-| Email/senha | **sim** | neutra | core | obrigatório | independência de plataforma e recuperação |
-| Passkey | pós-login | neutra | plugin oficial | não depende de email no uso | retorno rápido, WebAuthn, resistente a phishing |
-| Microsoft | fase 2 | alta em PC/Xbox | built-in | normalmente disponível, mas não pressupor | conta Microsoft pode estar ligada ao ecossistema Xbox; dados Xbox exigem integração própria |
-| Steam | link/futuro | **muito alta** | não é built-in OAuth/OIDC | não fornece no OpenID web | Steam web usa OpenID 2.0; excelente para vincular SteamID e ownership |
-| Twitch | fase 2/3 | alta | built-in | usuários sem email podem falhar | útil se streaming/comunidade virar feature real |
-| Epic/EOS | futuro específico | alta | integração específica | depende do fluxo | usar se EOS/EGS virar plataforma do produto |
-| GitHub | **não** | baixa | built-in | pode faltar/ser privado | identidade de desenvolvedor; não justifica espaço no modal do jogo |
-
-## 4. Google
-
-Google é provider Tier 1.
-
-Contrato:
-
-- usar o provider built-in do Better Auth;
-- scopes iniciais: somente identidade básica (`openid`, `email`, `profile` ou equivalente default mínimo);
-- `sub`/provider account ID é a identidade externa estável; email não é bearer credential nem chave de autorização;
-- Google name/avatar MAY ser usados como sugestão/fallback no onboarding, mas não sobrescrevem `profile.commanders` depois de configurado;
-- `GOOGLE_CLIENT_SECRET` é server-only;
-- não pedir scopes de Drive/Calendar/Contacts ou outros serviços no login inicial.
-
-Referências:
-
-- https://better-auth.com/docs/authentication/google
-- https://developers.google.com/identity/openid-connect/openid-connect
-
-## 5. Apple
-
-Apple é provider Tier 1, apesar de ter configuração operacional mais complexa.
-
-Motivos:
-
-- funciona em browser e possui fluxo nativo para ecossistema Apple;
-- melhora a opção de privacidade por permitir relay/private email;
-- prepara o produto para eventual app iOS/iPadOS;
-- se uma futura app App Store usar login social de terceiros para a conta principal, a política Apple exige uma opção equivalente que limite coleta, permita ocultar email e tenha requisitos de privacidade; Sign in with Apple satisfaz naturalmente esse desenho.
-
-Contrato técnico:
-
-- usar provider built-in do Better Auth;
-- configurar Service ID para web;
-- armazenar `APPLE_PRIVATE_KEY` exclusivamente server-side;
-- `APPLE_TEAM_ID`, `APPLE_KEY_ID` e `APPLE_CLIENT_ID` permanecem server-side por política do projeto, mesmo não sendo todos segredos;
-- gerar o Apple client secret JWT dinamicamente no servidor a partir da private key, em vez de manter um JWT manual de longa duração quando possível;
-- respeitar expiração máxima do client secret Apple;
-- adicionar apenas `https://appleid.apple.com` à trusted origin necessária ao provider, sem ampliar origins genericamente;
-- Apple web não funciona com callback `localhost`/HTTP: testes reais do provider usam HTTPS de preview/túnel dedicado;
-- `profile.sub`/provider account ID é a identidade estável; não usar email como provider key.
-
-### Email Apple
-
-Apple pode emitir o email somente no primeiro consentimento e pode fornecer endereço relay privado. Portanto:
-
-- persistir corretamente o email válido recebido na primeira autorização;
-- relay Apple é endereço válido/contatável enquanto ativo e MUST NOT ser tratado como placeholder;
-- sign-ins posteriores MUST continuar funcionando pela conta externa já vinculada mesmo quando o provider não reenviar email;
-- implementação de fallback exigida pela biblioteca não pode sobrescrever silenciosamente um email real previamente persistido.
-
-Referências:
-
-- https://better-auth.com/docs/authentication/apple
-- https://developer.apple.com/sign-in-with-apple/usage-guidelines-for-websites-and-other-platforms/
-- https://developer.apple.com/app-store/review/guidelines/
-
-## 6. Discord
-
-Discord é provider Tier 1 porque fornece uma identidade altamente coerente com comunidade de jogo e possui suporte built-in no Better Auth.
-
-Contrato:
-
-- scopes iniciais limitados a `identify` + `email` quando necessário ao provider;
-- não pedir `guilds`, bot, connections, activities ou scopes comunitários apenas para autenticação;
-- `profile.id`/Discord snowflake é provider account ID; username/global name não são chaves estáveis do War-Brasil;
-- avatar/global name MAY sugerir dados do onboarding, nunca substituir automaticamente identidade pública já configurada.
-
-### Discord sem email
-
-Contas Discord phone-only podem retornar `email = null` mesmo quando o fluxo solicita email.
-
-Se a versão do Better Auth exigir email para criar `auth.user`, o fallback interno:
-
-- MUST ser derivado do provider account ID, não de username;
-- MUST usar domínio reservado `.invalid` ou representação explicitamente não-entregável;
-- MUST ser tratado como **non-contact email**;
-- MUST NOT receber verification, reset, magic-link ou notificações;
-- MUST NOT ser usado para implicit account linking;
-- MUST NOT ser mostrado como email do jogador;
-- MAY disparar onboarding posterior para coleta de email real caso uma funcionalidade realmente exija canal de email.
-
-A ausência de email Discord não impede, por si só, que uma identidade OAuth válida acesse o jogo, desde que as regras da implementação escolhida consigam representar esse estado com segurança.
-
-Referências:
-
-- https://better-auth.com/docs/authentication/discord
-- https://discord.com/developers/docs/topics/oauth2
-- https://docs.discord.com/developers/resources/user
-
-## 7. Microsoft / Xbox
-
-Microsoft é Tier 2, não porque seja tecnicamente inferior, mas para evitar quatro providers visuais no launch sem benefício medido.
-
-Razões para manter preparado:
-
-- Better Auth possui provider Microsoft built-in;
-- contas Microsoft pessoais incluem identidades usadas em serviços como Xbox;
-- Microsoft possui fluxos específicos para websites de títulos Xbox e SSO de jogos.
-
-Limite importante:
-
-**Login Microsoft genérico não equivale a integração Xbox.** Gamertag, gamer picture, XUID, privileges, ownership e Xbox Services exigem APIs/consentimentos/integração de gaming próprios.
-
-Promover Microsoft a Tier 1 quando existir pelo menos um:
-
-- distribuição Windows Store/Game Pass/Xbox;
-- integração de Xbox Services;
-- telemetria real mostrando demanda significativa;
-- necessidade de SSO Microsoft no cliente nativo.
-
-Referências:
-
-- https://better-auth.com/docs/authentication/microsoft
-- https://learn.microsoft.com/en-us/entra/identity-platform/howto-modify-supported-accounts
-- https://learn.microsoft.com/en-us/xbox/gdk/docs/services/fundamentals/s2s-auth-calls/service-authentication/live-website-authentication
-
-## 8. Steam
-
-Steam é estrategicamente valioso, mas não entra no launch web.
-
-A documentação Steamworks oficial para navegador usa **OpenID 2.0** e retorna SteamID de 64 bits. O Generic OAuth do Better Auth é voltado a OAuth 2.0/OIDC; portanto Steam não deve ser encaixado artificialmente como Generic OAuth.
-
-Primeiro uso recomendado:
-
-```text
-War-Brasil account autenticada
-        ↓
-Link Steam
-        ↓
-verificar resposta OpenID / ticket de plataforma
-        ↓
-auth.external_identity(provider='steam', subject=SteamID)
-```
-
-Quando houver distribuição Steam, preferir autenticação/ticket Steamworks adequado ao cliente e backend, podendo eliminar um segundo login percebido pelo usuário.
-
-Steam ownership/VAC/profile APIs são autorização de plataforma e MUST permanecer separadas da sessão principal War-Brasil.
-
-Referência:
-
-- https://partner.steamgames.com/doc/features/auth
-
-## 9. Twitch
-
-Twitch permanece Tier 2/3.
-
-Pontos positivos:
-
-- público gamer;
-- OAuth/OIDC moderno;
-- provider built-in no Better Auth;
-- possui device-code flow útil para alguns clientes de jogo.
-
-Contra:
-
-- menor cobertura geral que Google/Apple;
-- valor é maior quando o produto possui integração real com streaming/comunidade;
-- Better Auth documenta que usuários Twitch sem email não conseguem entrar pelo provider padrão.
-
-Não adicionar no launch apenas para aumentar o número de botões.
-
-Referências:
-
-- https://better-auth.com/docs/authentication/twitch
-- https://dev.twitch.tv/docs/authentication
-
-## 10. Epic / EOS
-
-Epic Account Services/EOS é uma integração de plataforma/cross-play, não uma dependência necessária do login web atual.
-
-Só deve entrar quando War-Brasil realmente usar EOS/EGS ou funcionalidades cross-platform que justifiquem:
-
-- Epic account linking;
-- external identity providers;
-- Connect/Auth interfaces;
-- entitlement/platform integration.
-
-Até lá, adicionar Epic ao modal aumentaria complexidade operacional sem produto correspondente.
-
-Referência:
-
-- https://dev.epicgames.com/documentation/en-us/unreal-engine/online-subsystem-eos-plugin-in-unreal-engine
-
-## 11. Passkeys
-
-Passkey não substitui os providers Tier 1 no primeiro contato, mas SHOULD virar o melhor caminho de retorno depois do onboarding.
-
-Fluxo desejado:
-
-```text
-primeiro login
-Google / Apple / Discord / credentials
-        ↓
-profile.commanders completo
-        ↓
-oferecer "Ativar acesso rápido"
-        ↓
-registrar passkey
-        ↓
-logins futuros podem usar WebAuthn
-```
-
-Regras:
-
-- usar `@better-auth/passkey` quando implementado;
-- RP ID/origin versionados e validados;
-- nenhuma private key WebAuthn sai do authenticator do usuário;
-- passkey não deve ser obrigatória no launch;
-- recuperação de conta continua existindo por outro método vinculado.
-
-Referências:
-
-- https://better-auth.com/docs/plugins/passkey
-- https://www.w3.org/TR/webauthn-3/
-
-## 12. Account linking
-
-A conta War-Brasil é a entidade principal. Providers são credenciais vinculadas.
-
-Configuração inicial desejada do Better Auth:
+Configuração desejada de linking:
 
 ```text
 accountLinking.enabled = true
@@ -295,56 +45,234 @@ accountLinking.updateUserInfoOnLink = false
 accountLinking.allowUnlinkingAll = false
 ```
 
-Motivo:
+Motivos:
 
-- Apple pode usar relay email diferente do Google;
-- Discord pode não possuir email;
-- mesmo email não deve provocar merge silencioso de duas identidades;
-- usuário já autenticado pode vincular explicitamente outro provider;
-- nenhum provider pode reescrever `displayName`, retrato ou handle do jogo após linking.
+- Apple pode fornecer relay diferente do email usado no Google;
+- Discord pode não fornecer email;
+- mesmo email em dois providers não prova que duas credenciais devem ser unidas automaticamente;
+- provider vinculado não pode sobrescrever handle, loadout ou identidade pública já configurados.
 
-O fluxo de login com provider cujo email coincide com conta existente, mas não está vinculado, SHOULD apresentar recuperação/linking explícito em vez de fazer merge silencioso.
+## 3. Google
 
-Referência:
+Google é o provider generalista do launch.
 
-- https://better-auth.com/docs/concepts/users-accounts
+Contrato:
 
-## 13. Provider identity no banco
+- usar provider Google built-in do Better Auth;
+- scopes mínimos de identidade (`openid`, `email`, `profile` ou defaults equivalentes);
+- `sub`/provider account ID é a chave externa estável;
+- nome/avatar podem inicializar sugestão de perfil;
+- não solicitar Drive, Calendar, Contacts ou outros scopes no login;
+- `GOOGLE_CLIENT_SECRET` permanece server-only.
 
-`auth.account`/estrutura Better Auth continua sendo a fonte primária de contas externas suportadas nativamente.
+## 4. Apple
 
-Integrações fora do protocolo/provider padrão (ex.: SteamID futuro) MAY exigir uma tabela explícita de external identities se não puderem ser representadas corretamente em `auth.account` sem distorcer o contrato da biblioteca.
+Apple é provider de launch para privacidade e compatibilidade futura com iOS/iPadOS.
 
-Nunca usar email como chave cross-provider. A chave externa é conceitualmente:
+Contrato:
+
+- usar provider Apple suportado pelo Better Auth;
+- Service ID para fluxo web;
+- `APPLE_PRIVATE_KEY` exclusivamente server-side;
+- `APPLE_TEAM_ID`, `APPLE_KEY_ID` e `APPLE_CLIENT_ID` permanecem server-side pela política do projeto;
+- gerar client secret JWT no servidor quando a integração exigir;
+- callback real deve usar HTTPS; testes do provider não dependem de localhost HTTP;
+- provider subject (`sub`) é a identidade externa, não o email.
+
+### 4.1 Email Apple
+
+Apple pode fornecer email somente no primeiro consentimento e pode usar relay privado.
+
+MUST:
+
+- preservar o email válido/relay recebido na primeira autorização;
+- tratar relay Apple como email real enquanto ativo, não placeholder;
+- permitir logins posteriores quando Apple não reenviar email;
+- nunca substituir email Apple persistido por fallback sintético;
+- nunca usar diferença entre relay e email Google para bloquear linking explícito.
+
+## 5. Discord
+
+Discord é o provider social gamer do launch.
+
+Contrato:
+
+- scopes somente `identify` + `email` quando necessário;
+- não pedir `guilds`, bot, connections, activities ou scopes não necessários ao login;
+- Discord user ID/snowflake é a identidade externa estável;
+- username/global name/avatar são dados apresentacionais e podem mudar;
+- identidade pública do jogo continua em `profile.commanders`.
+
+### 5.1 Discord sem email
+
+Contas phone-only podem não fornecer email.
+
+Se a versão fixada do Better Auth exigir uma string de email para `auth.user`, qualquer representação sintética MUST:
+
+- ser derivada do Discord user ID;
+- usar domínio reservado `.invalid`;
+- ser marcada/tratada como não-entregável;
+- nunca receber verification, password reset ou comunicação;
+- nunca aparecer na PROFILE;
+- nunca participar de linking implícito.
+
+A implementação SHOULD preferir o mecanismo oficial mais recente do Better Auth para providers sem email, caso exista na versão fixada, em vez de criar workaround desnecessário.
+
+## 6. Email + senha
+
+Email + senha é o método independente de provider e segue a experiência do Contrapista para verificação de cadastro.
+
+### 6.1 Fluxo obrigatório
 
 ```text
-(provider_id, provider_subject/account_id)
+CADASTRO EMAIL + SENHA
+        ↓
+validar dados + termos
+        ↓
+Better Auth cria conta credentials não verificada
+        ↓
+enviar email de verificação
+        ↓
+modal mostra "Confira seu email"
+        ↓
+NENHUMA sessão / NENHUM command-open
+        ↓
+usuário abre link de verificação
+        ↓
+Better Auth valida token e marca email verificado
+        ↓
+redirect para Home com resultado de verificação
+        ↓
+usuário faz login normalmente
+        ↓
+profile completo?
+  ├─ não -> onboarding
+  └─ sim -> command-open
 ```
 
-A identidade interna continua:
+A experiência é equivalente ao Contrapista, mas a implementação usa o mecanismo nativo do Better Auth. War-Brasil MUST NOT copiar a tabela custom `email_verification_tokens` nem persistir password hash em uma segunda tabela de pendência.
 
-```text
-auth.user.id
+### 6.2 Configuração Better Auth desejada
+
+A versão fixada deve suportar comportamento equivalente a:
+
+```ts
+emailAndPassword: {
+  enabled: true,
+  requireEmailVerification: true,
+  autoSignIn: false,
+}
+
+emailVerification: {
+  sendOnSignUp: true,
+  sendOnSignIn: false,
+  autoSignInAfterVerification: false,
+  expiresIn: 60 * 60,
+  sendVerificationEmail: sendWarBrasilVerificationEmail,
+}
 ```
 
-## 14. Provider email ≠ identidade pública
+Os nomes/opções exatos MUST ser confirmados contra a versão pinada do Better Auth antes do código final.
 
-Provider email é dado privado de autenticação/contato.
+Normas:
 
-MUST NOT:
+- link válido por **1 hora**;
+- cadastro não abre sessão;
+- clique no link não abre sessão automaticamente;
+- login credentials de email não verificado não pode produzir sessão;
+- após cadastro bem-sucedido, senha sai do estado do formulário;
+- UI permanece em estado `verification-pending` com email mascarado quando útil;
+- botão de reenvio é explícito e rate-limited;
+- reenvio responde de forma não-enumerável;
+- callback final retorna à Home e informa `success`, `invalid` ou `expired` sem incluir token na UI/log.
 
-- virar `profile.commanders.handle`;
-- ser usado na busca pública;
-- aparecer no Lobby/Profile público;
-- ser usado como autorização;
-- ser assumido como igual entre providers;
-- ser usado para merge automático no launch.
+### 6.3 Diferença interna em relação ao Contrapista
 
-A PROFILE pública continua usando `handle`, `displayName`, retrato cosmético/provider fallback e demais contratos definidos em `DATABASE-PLAN.md`.
+Contrapista armazena cadastro pendente (incluindo password hash) em uma tabela própria e só cria o usuário após a confirmação. War-Brasil não repetirá isso.
 
-## 15. Variáveis de ambiente resultantes
+Com Better Auth:
 
-### Launch
+- `auth.user`/credentials podem existir antes da confirmação;
+- `emailVerified = false` é o estado de pendência;
+- Better Auth possui a fonte de verdade do token/verificação;
+- `requireEmailVerification` impede criação de sessão antes da confirmação;
+- nenhum schema paralelo de verification será criado pelo código do War-Brasil.
+
+O efeito de produto permanece o mesmo: conta não verificada não entra no jogo.
+
+## 7. Email transacional
+
+O Contrapista entrega emails via Gmail API. War-Brasil preserva o fluxo, mas não acopla auth ao Gmail.
+
+Criar uma boundary server-only conceitual:
+
+```ts
+sendAuthEmail({
+  to,
+  subject,
+  text,
+  html,
+})
+```
+
+`sendVerificationEmail` do Better Auth chama essa boundary.
+
+O transportador (Resend/SES/SMTP/Gmail ou equivalente) pode ser decidido separadamente sem alterar o fluxo de autenticação.
+
+MUST:
+
+- usar remetente configurado server-side;
+- manter credential do transportador fora do browser;
+- possuir versão HTML e texto simples;
+- não logar URL/token de verificação;
+- usar URL fornecida pelo Better Auth, não construir token custom;
+- em infraestrutura serverless, usar mecanismo seguro de background/wait-until quando necessário para evitar timing leak sem cancelar o envio.
+
+### 7.1 Conteúdo mínimo do email
+
+O email War-Brasil deve manter o padrão de experiência do Contrapista, adaptado visualmente:
+
+- marca War-Brasil;
+- nome/display name quando disponível;
+- texto curto explicando que falta confirmar o email;
+- CTA `VERIFICAR EMAIL`;
+- link textual de fallback;
+- aviso `Link válido por 1 hora`;
+- aviso para ignorar se o cadastro não foi solicitado;
+- versão responsiva e compatível com dark mode quando possível.
+
+## 8. Reenvio
+
+O estado `verification-pending` MUST oferecer reenvio após cooldown visual.
+
+Servidor MUST:
+
+- aplicar rate limit;
+- retornar resposta genérica independentemente de existir conta;
+- não revelar `emailVerified` de terceiros;
+- usar API oficial do Better Auth para disparar novo link;
+- não criar tabela/token paralelo;
+- não enviar para emails sintéticos `.invalid` de Discord.
+
+A UI SHOULD informar somente algo equivalente a:
+
+> Se existir uma conta pendente para esse endereço, enviaremos um novo link de verificação.
+
+## 9. Provider social e email verification
+
+A exigência de verificação descrita na seção 6 é obrigatória para **email + senha**.
+
+Para Google/Apple/Discord:
+
+- usar o sinal de email verificado do provider somente quando a versão/documentação do provider o considera confiável;
+- não forçar o fluxo credentials de verification sobre um OAuth válido sem necessidade;
+- provider account ID continua sendo a prova de identidade externa;
+- Discord sem email usa o tratamento específico da seção 5.1;
+- nenhuma regra social pode transformar email em identidade pública.
+
+## 10. Variáveis de ambiente
+
+### Providers do launch
 
 ```text
 GOOGLE_CLIENT_ID
@@ -354,43 +282,24 @@ APPLE_CLIENT_ID
 APPLE_TEAM_ID
 APPLE_KEY_ID
 APPLE_PRIVATE_KEY
-APPLE_APP_BUNDLE_IDENTIFIER   # somente quando houver fluxo nativo que precise do audience adicional
+# APPLE_APP_BUNDLE_IDENTIFIER apenas se um cliente Apple nativo realmente for implementado
 
 DISCORD_CLIENT_ID
 DISCORD_CLIENT_SECRET
 ```
 
-Todas permanecem server-only pela política do War-Brasil. Apenas os secrets/private key são segredos criptográficos, mas IDs também não precisam ser expostos ao client para o fluxo escolhido.
-
-### Fora do launch
-
-Não criar antecipadamente:
+### Email transacional
 
 ```text
-GITHUB_CLIENT_ID
-GITHUB_CLIENT_SECRET
-MICROSOFT_CLIENT_ID
-MICROSOFT_CLIENT_SECRET
-TWITCH_CLIENT_ID
-TWITCH_CLIENT_SECRET
-STEAM_WEB_API_KEY
-EPIC_*
+AUTH_EMAIL_FROM
+<EMAIL_TRANSPORT_SECRET>
+# ou SMTP_URL quando SMTP for a estratégia escolhida
 ```
 
-Variáveis de um provider entram somente no mesmo PR que habilita o provider e seus gates.
+Todos são server-only por política do projeto. Nenhuma variável específica de auth usa `NEXT_PUBLIC_`.
 
-## 16. Critério para adicionar novo provider
+Não criar variáveis para providers fora deste documento.
 
-Novo provider só entra se houver:
+## 11. Definition of Done
 
-1. caso de produto/audiência explícito;
-2. protocolo e integração revisados;
-3. identificador externo estável documentado;
-4. tratamento de email ausente/privado documentado;
-5. account-linking definido;
-6. env/secrets classificados;
-7. staging test real do callback;
-8. EVAL atualizado;
-9. UI que não vire uma parede de botões.
-
-A quantidade de providers não é métrica de qualidade da autenticação.
+O modal de launch oferece somente Google, Apple, Discord e Email + senha. Credentials exige verificação por link de 1 hora antes de qualquer sessão, seguindo a experiência do Contrapista. OAuth não usa email como chave de autorização. O fluxo de email é provido pelo Better Auth através de uma boundary server-only de entrega, sem tabela/token custom paralelo e sem segredos no client.
