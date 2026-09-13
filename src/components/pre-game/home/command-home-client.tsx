@@ -173,8 +173,12 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
       return;
     }
 
-    setEntranceStartedAtMs(performance.now());
-    setCeremonyPhase("table");
+    const frame = window.requestAnimationFrame(() => {
+      setEntranceStartedAtMs(performance.now());
+      setCeremonyPhase("table");
+    });
+
+    return () => window.cancelAnimationFrame(frame);
   }, [entranceStartedAtMs, ritualActive, sceneState, visitMode]);
 
   useEffect(() => {
