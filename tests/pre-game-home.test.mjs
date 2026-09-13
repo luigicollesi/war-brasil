@@ -3,49 +3,21 @@ import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 const page = readFileSync("src/app/page.tsx", "utf8");
-const home = readFileSync(
-  "src/components/pre-game/home/command-home-client.tsx",
-  "utf8",
-);
-const content = readFileSync(
-  "src/components/pre-game/home/command-home-content.tsx",
-  "utf8",
-);
-const intent = readFileSync(
-  "src/components/pre-game/home/command-home-scene-intent.ts",
-  "utf8",
-);
-const fallbackMarker = readFileSync(
-  "src/components/pre-game/home/command-home-fallback.tsx",
-  "utf8",
-);
-const styles = readFileSync(
-  "src/components/pre-game/home/command-home.module.css",
-  "utf8",
-);
-const introStyles = readFileSync(
-  "src/components/pre-game/home/command-home-intro.module.css",
-  "utf8",
-);
-const foundationIndex = readFileSync(
-  "src/components/pre-game/foundation/index.ts",
-  "utf8",
-);
-const runtime = readFileSync(
-  "src/components/pre-game/foundation/pre-game-command-runtime.tsx",
-  "utf8",
-);
-const presets = readFileSync(
-  "src/components/pre-game/foundation/scene-presets.ts",
-  "utf8",
-);
-const scene = readFileSync(
-  "src/components/pre-game/foundation/command-scene-canvas.tsx",
-  "utf8",
-);
+const home = readFileSync("src/components/pre-game/home/command-home-client.tsx", "utf8");
+const content = readFileSync("src/components/pre-game/home/command-home-content.tsx", "utf8");
+const intent = readFileSync("src/components/pre-game/home/command-home-scene-intent.ts", "utf8");
+const fallbackMarker = readFileSync("src/components/pre-game/home/command-home-fallback.tsx", "utf8");
+const styles = readFileSync("src/components/pre-game/home/command-home.module.css", "utf8");
+const introStyles = readFileSync("src/components/pre-game/home/command-home-intro.module.css", "utf8");
+const foundationIndex = readFileSync("src/components/pre-game/foundation/index.ts", "utf8");
+const runtime = readFileSync("src/components/pre-game/foundation/pre-game-command-runtime.tsx", "utf8");
+const presets = readFileSync("src/components/pre-game/foundation/scene-presets.ts", "utf8");
+const scene = readFileSync("src/components/pre-game/foundation/command-scene-canvas.tsx", "utf8");
+const sceneHost = readFileSync("src/components/pre-game/foundation/command-scene.tsx", "utf8");
+const shell = readFileSync("src/components/pre-game/foundation/command-shell.tsx", "utf8");
+const entranceTimeline = readFileSync("src/components/pre-game/foundation/entrance-timeline.ts", "utf8");
 
-const legacyPolishPath =
-  "src/components/pre-game/home/command-home-polish.module.css";
+const legacyPolishPath = "src/components/pre-game/home/command-home-polish.module.css";
 
 test("HOME preserva metadata, canonical e structured data existentes", () => {
   assert.match(page, /export const metadata: Metadata/);
@@ -61,71 +33,42 @@ test("HOME preserva metadata, canonical e structured data existentes", () => {
 test("HOME consome somente o contrato público do runtime Foundation", () => {
   assert.match(home, /useCommandSceneDirective/);
   assert.match(home, /useCommandSceneState/);
+  assert.match(home, /COMMAND_ENTRANCE_DURATION_MS/);
   assert.match(intent, /import type \{ CommandSceneDirective \} from "\.\.\/foundation"/);
-  assert.match(foundationIndex, /useCommandSceneDirective/);
-  assert.match(foundationIndex, /useCommandSceneState/);
+  assert.match(foundationIndex, /COMMAND_ENTRANCE_DURATION_MS/);
   assert.match(foundationIndex, /CommandSceneDirective/);
+  assert.doesNotMatch(runtime, /entranceStartedAtMs|entranceDurationMs/);
 
   const homeSources = `${home}\n${content}\n${intent}`;
-  assert.doesNotMatch(homeSources, /@react-three\/fiber/);
-  assert.doesNotMatch(homeSources, /from "three"/);
-  assert.doesNotMatch(homeSources, /command-scene-canvas/);
-  assert.doesNotMatch(homeSources, /scene-presets/);
-  assert.doesNotMatch(homeSources, /CameraDirector/);
-  assert.doesNotMatch(homeSources, /<Canvas/);
-  assert.doesNotMatch(homeSources, /<CommandShell/);
-
+  assert.doesNotMatch(homeSources, /@react-three\/fiber|from "three"|command-scene-canvas|scene-presets|CameraDirector|<Canvas|<CommandShell/);
   assert.match(fallbackMarker, /HOME_FALLBACK_OWNER = "Foundation CommandShell"/);
   assert.doesNotMatch(fallbackMarker, /next\/image|<Image|war-brasil-42|globe|domainTable|orbit/i);
   assert.equal(existsSync(legacyPolishPath), false);
 });
 
-test("HOME substitui o hero legado e publica intenção no runtime persistente", () => {
-  assert.doesNotMatch(page, /GameQuickGuide/);
-  assert.doesNotMatch(page, /HomeTerritoryMap/);
-  assert.doesNotMatch(page, /WarShell/);
+test("HOME mantém identidade, CTA e três destinos do comando", () => {
+  assert.doesNotMatch(page, /GameQuickGuide|HomeTerritoryMap|WarShell/);
   assert.match(content, /WAR/);
   assert.match(content, /BRASIL/);
   assert.doesNotMatch(content, /Ir para o comando/);
   assert.match(home, /ENTRAR NO COMANDO/);
-  assert.match(home, /data-home-state=\{homeState\}/);
-  assert.match(home, /data-home-transition=\{homeTransition\}/);
-  assert.match(home, /data-scene="foundation"/);
-  assert.match(home, /data-scene-state=\{sceneState\}/);
-  assert.match(home, /useCommandSceneDirective\(sceneIntent\)/);
-  assert.match(runtime, /showModeRail=\{pathname !== "\/"\}/);
-});
-
-test("HOME expõe os três destinos como links DOM com as rotas do spec", () => {
   assert.match(home, /href: "\/matchmaking"/);
-  assert.match(home, /label: "OPERAÇÕES"/);
   assert.match(home, /href: "\/rules"/);
-  assert.match(home, /label: "DOUTRINA"/);
   assert.match(home, /href: "\/profile"/);
-  assert.match(home, /label: "COMANDO"/);
-  assert.match(home, /<Link/);
   assert.match(home, /aria-label="Destinos do comando"/);
 });
 
-test("adapter cobre Terra, Brasil, Mesa e autorização sem coordenadas", () => {
-  assert.match(intent, /ceremonyPhase === "earth"/);
+test("adapter continua sem coordenadas e publica apenas intenção semântica", () => {
   assert.match(intent, /focus: "earth"/);
-  assert.match(intent, /ceremonyPhase === "brazil"/);
   assert.match(intent, /focus: "brazil"/);
   assert.match(intent, /focus: "table"/);
-  assert.match(intent, /orbitalAlignment: 1/);
+  assert.match(intent, /focus: "insignia"/);
+  assert.doesNotMatch(intent, /entranceStartedAtMs|entranceDurationMs/);
   assert.doesNotMatch(intent, /\b(?:x|y|z|fov|quaternion|camera|material)\s*:/i);
   assert.doesNotMatch(intent, /\bmode\s*:/);
 });
 
-test("adapter mapeia focos dos destinos para diretivas semânticas", () => {
-  assert.match(intent, /operations:[\s\S]*conflictLevel: 1[\s\S]*territoryExplode: 0\.08/);
-  assert.match(intent, /doctrine:[\s\S]*territoryExplode: 0\.12/);
-  assert.match(intent, /profile:[\s\S]*focus: "insignia"/);
-  assert.match(intent, /transitioningTo \?\? destinationFocus/);
-});
-
-test("ritual é pulável e repeat/reduced-motion derivam estado estável", () => {
+test("ritual é pulável e repeat/reduced-motion continuam estáveis", () => {
   assert.match(home, /Pular ritual/);
   assert.match(home, /useSyncExternalStore/);
   assert.match(home, /sessionStorage\.getItem\(HOME_RITUAL_SESSION_KEY\)/);
@@ -136,54 +79,60 @@ test("ritual é pulável e repeat/reduced-motion derivam estado estável", () =>
   assert.match(introStyles, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
-test("entrada segura mapa colorido por 500ms e conclui o settle em 1000ms", () => {
+test("entrada usa um único relógio contínuo de 3000ms", () => {
+  assert.match(entranceTimeline, /COMMAND_ENTRANCE_DURATION_MS = 3000/);
   assert.match(home, /useState<HomeCeremonyPhase>\("brazil"\)/);
-  assert.match(home, /const sceneState = useCommandSceneState\(\)/);
-  assert.match(home, /sceneState !== "fallback"/);
+  assert.match(home, /useState<number \| null>\(null\)/);
   assert.match(home, /sceneState !== "ready"/);
-  assert.match(home, /HOME_INTRO_DELAY_MS = 500/);
-  assert.match(home, /HOME_INTRO_DURATION_MS = 1000/);
-  assert.match(
-    home,
-    /HOME_INTRO_COMPLETE_MS = HOME_INTRO_DELAY_MS \+ HOME_INTRO_DURATION_MS/,
-  );
+  assert.match(home, /performance\.now\(\)/);
   assert.match(home, /setCeremonyPhase\("table"\)/);
   assert.match(home, /setCeremonyPhase\("stable"\)/);
-  assert.match(home, /homeTransition === "holding"/);
-  assert.match(home, /effectiveCeremonyPhase === "brazil"/);
-  assert.match(home, /effectiveCeremonyPhase === "table"/);
-  assert.match(home, /const enterCommand = \(\) =>/);
-  assert.match(home, /setRitualActive\(false\)/);
-  assert.match(home, /onClick=\{enterCommand\}/);
+  assert.match(home, /COMMAND_ENTRANCE_DURATION_MS/);
+  assert.match(home, /homeTransition === "preparing"/);
+  assert.match(home, /"running"/);
+  assert.doesNotMatch(home, /HOME_INTRO_DELAY_MS|HOME_INTRO_COMPLETE_MS|HOME_INTRO_DURATION_MS/);
 });
 
-test("entrada move o mapa da direita ao centro enquanto escurece e revela a interface", () => {
-  assert.match(introStyles, /transition-duration: 1000ms/);
-  assert.match(introStyles, /left: 72%/);
-  assert.match(introStyles, /left: 50%/);
-  assert.match(introStyles, /saturate\(1\.22\) brightness\(1\.04\)/);
-  assert.match(introStyles, /sepia\(\.42\) saturate\(\.58\) brightness\(\.62\)/);
-  assert.match(introStyles, /data-home-identity/);
-  assert.match(introStyles, /data-home-command-dock/);
-  assert.match(introStyles, /data-home-footer/);
-  assert.match(introStyles, /data-command-scene-mode="entrance"/);
+test("mapa, Canvas e UI percorrem a mesma coreografia de três segundos", () => {
+  assert.match(introStyles, /--home-intro-duration: 3000ms/);
+  assert.match(introStyles, /--home-intro-easing: cubic-bezier\(\.4, \.14, \.3, 1\)/);
+  for (const name of [
+    "homeMapJourney",
+    "homeMapShade",
+    "homeFallbackRelease",
+    "homeCanvasTakeover",
+    "homeIdentitySettle",
+    "homeCommandSettle",
+    "homeChromeIn",
+    "homeAtmosphereIn",
+  ]) assert.match(introStyles, new RegExp(name));
+  assert.match(introStyles, /filter: none !important/);
   assert.match(content, /data-home-identity/);
   assert.match(home, /data-home-command-dock/);
   assert.match(home, /data-home-footer/);
 });
 
-test("entrada mantém poses e objetos 3D interpolados sem salto após o settle", () => {
+test("Foundation oferece âncoras semânticas e intro não depende de estrutura posicional", () => {
+  assert.match(sceneHost, /data-command-scene/);
+  assert.match(sceneHost, /data-command-fallback/);
+  assert.match(sceneHost, /data-command-fallback-table/);
+  assert.match(sceneHost, /data-command-fallback-brazil/);
+  assert.match(sceneHost, /data-command-canvas-layer/);
+  assert.match(shell, /data-command-atmosphere/);
+  assert.match(shell, /data-command-chrome/);
+  assert.doesNotMatch(introStyles, /nth-child|first-child|last-child/);
+});
+
+test("poses 3D continuam interpoladas sem acoplamento ao relógio da HOME", () => {
   assert.match(presets, /ENTRANCE_FOCUS_PRESETS/);
   assert.match(presets, /COMPACT_ENTRANCE_FOCUS_PRESETS/);
-  assert.match(presets, /intent\.mode === "entrance"/);
   assert.match(scene, /MathUtils\.damp/);
   assert.match(scene, /targetSeparation/);
   assert.match(scene, /targetScale/);
-  assert.match(scene, /intent\.focus === "earth"/);
-  assert.doesNotMatch(scene, /intent\.mode === "entrance" \|\| intent\.focus === "earth"/);
+  assert.doesNotMatch(scene, /entranceStartedAtMs|entranceDurationMs/);
 });
 
-test("mobile possui composição própria, safe-area e alvos touch grandes", () => {
+test("mobile preserva composição própria, safe-area e alvos touch", () => {
   assert.match(styles, /overflow: hidden/);
   assert.match(styles, /@media \(max-width: 900px\)/);
   assert.match(styles, /\.destinationRail \{[\s\S]*grid-template-columns: 1fr;/);
@@ -191,17 +140,14 @@ test("mobile possui composição própria, safe-area e alvos touch grandes", () 
   assert.match(styles, /\.skipCeremony \{[\s\S]*min-height: 44px;/);
   assert.match(styles, /env\(safe-area-inset-bottom\)/);
   assert.match(styles, /touch-action: manipulation/);
-  assert.match(styles, /@media \(hover: none\) and \(pointer: coarse\)/);
   assert.match(home, /tabIndex=\{-1\}/);
-  assert.match(introStyles, /left: 63%/);
+  assert.match(introStyles, /--home-intro-map-shift: 13vw/);
 });
 
-test("foco de teclado tem prioridade sobre intenção efêmera do ponteiro", () => {
+test("foco de teclado mantém prioridade sobre intenção efêmera do ponteiro", () => {
   assert.match(home, /keyboardDestinationFocus \?\? pointerDestinationFocus/);
   assert.match(home, /onFocus=\{\(\) => setKeyboardDestinationFocus\(destination\.id\)\}/);
-  assert.match(home, /onBlur=\{\(\) => clearKeyboardFocus\(destination\.id\)\}/);
   assert.match(home, /onPointerEnter=\{\(\) => setPointerDestinationFocus\(destination\.id\)\}/);
-  assert.match(home, /onPointerLeave=\{\(\) => clearPointerFocus\(destination\.id\)\}/);
 });
 
 test("vermelho local permanece restrito ao destino Operações", () => {

@@ -1,0 +1,1 @@
+export const COMMAND_ENTRANCE_DURATION_MS = 3000;
