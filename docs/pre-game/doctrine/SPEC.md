@@ -42,9 +42,13 @@ A Doutrina MUST distinguir explicitamente **negociação de cartas entre jogador
 
 ## Modelo de interação
 
-Um índice de capítulos MUST permanecer acessível. Em desktop, SHOULD permanecer visualmente preso à viewport enquanto o conteúdo do capítulo rola, respeitando os clearances da Foundation e sem cobrir o artigo. Se a lista exceder a altura disponível, a rolagem MUST acontecer dentro do próprio índice.
+Um índice de capítulos MUST permanecer acessível e **fixado à viewport durante a leitura**.
 
-Em mobile, o índice MAY assumir uma barra horizontal sticky, drawer ou select acessível, desde que o capítulo atual continue facilmente alcançável.
+Em desktop, o índice MUST permanecer fixado à esquerda, abaixo do chrome da Foundation, sem acompanhar o scroll da página e sem cobrir o artigo. O conteúdo MUST reservar a mesma largura ocupada pelo índice. Se a lista exceder a altura disponível, a rolagem MUST acontecer dentro do próprio índice.
+
+Em mobile, o índice MUST assumir a barra horizontal existente e permanecer fixado no topo útil da página, abaixo do chrome da Foundation. O conteúdo MUST reservar a altura dessa barra para não iniciar escondido sob ela.
+
+O índice MUST oferecer uma ação persistente **Voltar** que retorne ao comando (`/`) em desktop e mobile, sem depender do capítulo ativo.
 
 Selecionar capítulo atualiza conteúdo/demonstração sem scroll inesperado, perda de foco ou reset desnecessário.
 
@@ -87,6 +91,7 @@ View Transition API, motion de entrada e microanimações MUST ser opcionais. Co
 - headings refletem hierarquia dos capítulos;
 - índice usa controles/links semanticamente adequados;
 - capítulo atual é identificável semanticamente;
+- a ação Voltar possui nome acessível e continua alcançável por teclado/touch;
 - exemplos visuais possuem equivalente textual suficiente;
 - dados/ícones não são explicados apenas por cor;
 - mudança de capítulo preserva foco previsível;
@@ -94,7 +99,7 @@ View Transition API, motion de entrada e microanimações MUST ser opcionais. Co
 
 ## Mobile
 
-O índice MAY virar navegação horizontal, drawer ou select acessível. Texto e exemplos MUST permanecer legíveis sem zoom horizontal e nunca ficar sob o Canvas.
+O índice usa navegação horizontal fixada no topo útil da página. Texto e exemplos MUST permanecer legíveis sem zoom horizontal e nunca ficar sob o Canvas ou sob o índice no estado inicial.
 
 Demonstrações MAY simplificar perspectiva/quantidade de objetos no mobile.
 
@@ -103,6 +108,7 @@ Demonstrações MAY simplificar perspectiva/quantidade de objetos no mobile.
 MUST NOT:
 
 - criar texto gigante contínuo sem índice;
+- deixar o índice sair da viewport durante a leitura;
 - duplicar/reinventar lógica de regra na cena;
 - ensinar regra com base apenas em memória/documento antigo;
 - depender de hover;
@@ -115,4 +121,4 @@ MUST NOT:
 
 ## Definition of Done
 
-Um jogador aprende todas as mecânicas vigentes apenas pelo conteúdo HTML; entende a fase de Trocas e sua diferença para resgates; consegue manter o índice como referência enquanto lê; e a troca entre capítulos preserva contexto sem comprometer reduced-motion, foco ou deep-link. A Mesa torna os conceitos concretos sem virar fonte de regra. `EVAL.md` passa integralmente.
+Um jogador aprende todas as mecânicas vigentes apenas pelo conteúdo HTML; entende a fase de Trocas e sua diferença para resgates; mantém o índice permanentemente visível à esquerda no desktop e no topo no mobile; consegue retornar ao comando por uma ação Voltar persistente; e a troca entre capítulos preserva contexto sem comprometer reduced-motion, foco ou deep-link. A Mesa torna os conceitos concretos sem virar fonte de regra. `EVAL.md` passa integralmente.

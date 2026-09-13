@@ -38,6 +38,10 @@ function chapterLink(page, slug) {
   );
 }
 
+function doctrineIndex(page) {
+  return page.locator('aside[aria-labelledby="doctrine-index-title"]');
+}
+
 test("todos os capítulos abrem diretamente no DOM", async ({ page }) => {
   for (const slug of CHAPTERS) {
     await page.goto(chapterUrl(slug), { waitUntil: "domcontentloaded" });
@@ -84,13 +88,18 @@ test("navegação por teclado preserva foco, posição e histórico", async ({ p
   await expect(page.locator('[data-doctrine-chapter="objetivos"]')).toBeVisible();
 });
 
-test("índice desktop acompanha a viewport durante a leitura", async ({ page }) => {
+test("índice desktop permanece fixado à esquerda durante toda a leitura", async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(chapterUrl("trocas"), { waitUntil: "domcontentloaded" });
 
-  const index = page.locator('aside[aria-labelledby="doctrine-index-title"]');
+  const index = doctrineIndex(page);
+  await expect(index).toBeVisible();
+  expect(await index.evaluate((element) => getComputedStyle(element).position)).toBe("fixed");
+
   const before = await index.boundingBox();
   expect(before).not.toBeNull();
+  expect(before.x).toBeGreaterThanOrEqual(-1);
+  expect(before.x).toBeLessThanOrEqual(1);
 
   await page.evaluate(() => {
     window.scrollTo(0, Math.min(650, document.documentElement.scrollHeight - window.innerHeight));
@@ -99,15 +108,33 @@ test("índice desktop acompanha a viewport durante a leitura", async ({ page }) 
 
   const after = await index.boundingBox();
   expect(after).not.toBeNull();
+  expect(Math.abs(after.x - before.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(after.y - before.y)).toBeLessThanOrEqual(1);
   expect(after.y).toBeGreaterThanOrEqual(0);
-  expect(after.y).toBeLessThan(160);
   expect(after.y + after.height).toBeLessThanOrEqual(901);
+
+  const content = page.locator('[aria-labelledby="chapter-title"]');
+  const contentBox = await content.boundingBox();
+  expect(contentBox).not.toBeNull();
+  expect(contentBox.x).toBeGreaterThanOrEqual(before.x + before.width - 1);
 
   const active = chapterLink(page, "trocas");
   await expect(active).toHaveAttribute("aria-current", "location");
 });
 
-test("mobile 390x844 aceita touch, mantém índice acessível e não cria overflow horizontal", async ({ browser }) => {
+test("botão Voltar permanece disponível no índice e retorna ao comando", async ({ page }) => {
+  await page.goto(chapterUrl("trocas"), { waitUntil: "domcontentloaded" });
+
+  const back = page.getByRole("link", { name: "Voltar ao comando" });
+  await expect(back).toBeVisible();
+  await expect(back).toHaveAttribute("href", "/");
+
+  await back.click();
+  await page.waitForURL(`${BASE_URL}/`);
+  expect(new URL(page.url()).pathname).toBe("/");
+});
+
+test("mobile 390x844 mantém índice fixado no topo, aceita touch e não cria overflow horizontal", async ({ browser }) => {
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
     hasTouch: true,
@@ -116,11 +143,26 @@ test("mobile 390x844 aceita touch, mantém índice acessível e não cria overfl
   const page = await context.newPage();
 
   await page.goto(chapterUrl("preparacao"), { waitUntil: "domcontentloaded" });
+  const index = doctrineIndex(page);
+  await expect(index).toBeVisible();
+  expect(await index.evaluate((element) => getComputedStyle(element).position)).toBe("fixed");
+
+  const before = await index.boundingBox();
+  expect(before).not.toBeNull();
+  await expect(page.getByRole("link", { name: "Voltar ao comando" })).toBeVisible();
+
   await chapterLink(page, "ataque").tap();
   await expect(page.locator('[data-doctrine-chapter="ataque"]')).toBeVisible();
 
   await page.evaluate(() => window.scrollTo(0, 500));
   await expect(page.getByRole("navigation", { name: "Capítulos da Doutrina" })).toBeVisible();
+
+  const after = await index.boundingBox();
+  expect(after).not.toBeNull();
+  expect(Math.abs(after.x - before.x)).toBeLessThanOrEqual(1);
+  expect(Math.abs(after.y - before.y)).toBeLessThanOrEqual(1);
+  expect(after.x).toBeGreaterThanOrEqual(-1);
+  expect(after.x + after.width).toBeLessThanOrEqual(391);
 
   const reflow = await page.evaluate(() => ({
     clientWidth: document.documentElement.clientWidth,
@@ -205,6 +247,7 @@ test("deep-link continua ensinando com JavaScript desabilitado", async ({ browse
   await expect(page.locator('[data-doctrine-chapter="trocas"]')).toBeVisible();
   await expect(page.locator("#chapter-title")).toBeVisible();
   await expect(page.getByRole("navigation", { name: "Capítulos da Doutrina" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Voltar ao comando" })).toBeVisible();
   await expect(page.getByText("NEGOCIAÇÃO ≠ RESGATE")).toBeVisible();
 
   await context.close();

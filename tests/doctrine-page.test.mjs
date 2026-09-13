@@ -144,6 +144,18 @@ test("índice usa links reais, preserva foco/scroll e anima somente a superfíci
   assert.match(experience, /nav\.scrollLeft/);
 });
 
+test("Doutrina oferece retorno persistente ao comando dentro do índice", () => {
+  const experience = source(
+    "src/components/doctrine/doctrine-experience.tsx",
+  );
+
+  assert.match(experience, /className=\{ux\.indexTitleRow\}/);
+  assert.match(experience, /className=\{ux\.backButton\}/);
+  assert.match(experience, /aria-label="Voltar ao comando"/);
+  assert.match(experience, /href="\/"/);
+  assert.match(experience, /VOLTaR/i);
+});
+
 test("orquestração cliente permanece pequena e delega as demonstrações", () => {
   const experience = source(
     "src/components/doctrine/doctrine-experience.tsx",
@@ -177,7 +189,7 @@ test("demonstrações reutilizam assets reais e explicam negociação sem confun
   assert.doesNotMatch(demos, /Canvas|@react-three|three\//i);
 });
 
-test("layout da Doutrina mantém índice persistente, recompõe mobile e respeita reduced motion", () => {
+test("layout da Doutrina fixa índice no viewport, recompõe mobile e respeita reduced motion", () => {
   const css = source(
     "src/components/doctrine/doctrine-experience.module.css",
   );
@@ -194,8 +206,13 @@ test("layout da Doutrina mantém índice persistente, recompõe mobile e respeit
   assert.match(css, /overflow-x: clip/);
   assert.match(css, /\.chapterNav[\s\S]*overflow-x: auto/);
   assert.match(css, /min-height: 44px/);
+  assert.match(uxCss, /\.indexPanel\s*\{[\s\S]*position: fixed/);
+  assert.match(uxCss, /left: 0/);
   assert.match(uxCss, /top: var\(--command-content-top/);
   assert.match(uxCss, /100dvh/);
+  assert.match(uxCss, /margin-left: var\(--doctrine-index-width\)/);
+  assert.match(uxCss, /--doctrine-mobile-index-height/);
+  assert.match(uxCss, /padding-top: var\(--doctrine-mobile-index-height\)/);
   assert.match(uxCss, /overflow-y: auto/);
   assert.match(uxCss, /view-transition-name: doctrine-chapter/);
   assert.match(uxCss, /data-doctrine-direction="forward"/);
