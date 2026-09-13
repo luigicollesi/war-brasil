@@ -101,6 +101,18 @@ async function getSession(page) {
   return response.body;
 }
 
+async function activeSessionCount(db, email) {
+  const result = await db.query(
+    `SELECT COUNT(*)::int AS count
+       FROM auth.session s
+       JOIN auth."user" u ON u.id = s."userId"
+      WHERE u.email = $1
+        AND s."expiresAt" > NOW()`,
+    [email],
+  );
+  return result.rows[0]?.count ?? 0;
+}
+
 const browser = await playwright.chromium.launch({ headless: true });
 const db = new Client({ connectionString: DATABASE_URL });
 await db.connect();
@@ -134,6 +146,7 @@ try {
     const initialSignIn = await signIn(page, email, OLD_PASSWORD);
     assert.equal(initialSignIn.status, 200, JSON.stringify(initialSignIn.body));
     assert.ok((await getSession(page))?.user, "login inicial não criou sessão");
+    assert.equal(await activeSessionCount(db, email), 1, "login inicial não persistiu uma sessão ativa");
 
     const requestReset = await apiJson(page, "/api/auth/request-password-reset", {
       method: "POST",
@@ -182,9 +195,27 @@ try {
     assert.equal(reset.status, 200, JSON.stringify(reset.body));
 
     assert.equal(
+      await activeSessionCount(db, email),
+      0,
+      "password reset não revogou a sessão autoritativa no banco",
+    );
+
+    const protectedAfterReset = await apiJson(page, "/api/auth/command-access");
+    assert.equal(
+      protectedAfterReset.status,
+      401,
+      `cache client não pode manter privilégio após reset; recebeu ${protectedAfterReset.status}`,
+    );
+
+    // O cookie cache do Better Auth pode continuar refletindo a identidade antiga
+    // por poucos minutos. Isso não concede privilégio porque os endpoints sensíveis
+    // ignoram o cache. O logout abaixo representa o cleanup executado pelo cliente.
+    const logout = await apiJson(page, "/api/auth/sign-out", { method: "POST" });
+    assert.equal(logout.status, 200, JSON.stringify(logout.body));
+    assert.equal(
       (await getSession(page))?.user ?? null,
       null,
-      "password reset deveria revogar a sessão existente",
+      "logout pós-reset não limpou o estado client residual",
     );
 
     const oldPasswordSignIn = await signIn(page, email, OLD_PASSWORD);
@@ -216,7 +247,7 @@ try {
     assert.ok((await getSession(page))?.user, "senha nova não criou sessão");
 
     console.log(
-      "[auth-password-reset-e2e] reset real, não-enumeração, revogação, senha antiga e replay confirmados.",
+      "[auth-password-reset-e2e] reset real, não-enumeração, revogação autoritativa, cleanup client, senha antiga e replay confirmados.",
     );
   } finally {
     await context.close();
