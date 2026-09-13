@@ -1,0 +1,733 @@
+.stage {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid rgb(214 169 62 / 22%);
+  border-radius: 2px;
+  background:
+    linear-gradient(90deg, rgb(214 169 62 / 3%), transparent 24% 76%, rgb(214 169 62 / 3%)),
+    linear-gradient(rgb(255 255 255 / 1.2%) 1px, transparent 1px) 0 0 / 36px 36px,
+    linear-gradient(90deg, rgb(255 255 255 / 1%) 1px, transparent 1px) 0 0 / 36px 36px,
+    rgb(2 11 8 / 56%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 3%),
+    inset 0 0 80px rgb(0 0 0 / 20%);
+}
+
+.stage::before,
+.stage::after {
+  content: "";
+  position: absolute;
+  z-index: 8;
+  width: 34px;
+  height: 34px;
+  border-color: rgb(225 181 73 / 54%);
+  pointer-events: none;
+}
+
+.stage::before {
+  top: 5px;
+  left: 5px;
+  border-top: 2px solid;
+  border-left: 2px solid;
+}
+
+.stage::after {
+  right: 5px;
+  bottom: 5px;
+  border-right: 2px solid;
+  border-bottom: 2px solid;
+}
+
+.stage[data-start-authorized="true"] {
+  border-color: rgb(159 49 44 / 48%);
+  background:
+    radial-gradient(circle at 50% 54%, rgb(128 22 18 / 12%), transparent 32%),
+    linear-gradient(90deg, rgb(214 169 62 / 3%), transparent 24% 76%, rgb(214 169 62 / 3%)),
+    linear-gradient(rgb(255 255 255 / 1.2%) 1px, transparent 1px) 0 0 / 36px 36px,
+    linear-gradient(90deg, rgb(255 255 255 / 1%) 1px, transparent 1px) 0 0 / 36px 36px,
+    rgb(2 11 8 / 56%);
+}
+
+.stageHeader {
+  position: relative;
+  z-index: 9;
+  display: flex;
+  min-height: 54px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  border-bottom: 1px solid rgb(214 169 62 / 17%);
+  padding: 7px 15px;
+  background:
+    linear-gradient(90deg, rgb(214 169 62 / 7%), transparent 34%),
+    rgb(3 12 9 / 72%);
+  box-shadow: 0 8px 22px rgb(0 0 0 / 15%);
+}
+
+.stageEyebrow {
+  color: var(--wb-gold);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: .47rem;
+  font-weight: 800;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+.stageTitle {
+  margin-top: 2px;
+  color: var(--wb-text);
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: clamp(1.02rem, 1.65vw, 1.42rem);
+  font-weight: 740;
+  letter-spacing: .045em;
+  text-transform: uppercase;
+}
+
+.authorization {
+  max-width: 52%;
+  overflow: hidden;
+  color: var(--wb-text-muted);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: .5rem;
+  font-weight: 760;
+  letter-spacing: .09em;
+  text-align: right;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.stage[data-all-ready="true"] .authorization {
+  color: var(--wb-gold-bright);
+}
+
+.stage[data-start-authorized="true"] .authorization {
+  color: #ef9f9f;
+}
+
+.warTable {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.warTable::before {
+  content: "";
+  position: absolute;
+  inset: 8% 18%;
+  z-index: -1;
+  border: 1px solid rgb(214 169 62 / 6%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgb(40 112 72 / 8%), transparent 61%);
+  box-shadow:
+    0 0 0 26px rgb(214 169 62 / 1.5%),
+    0 0 0 27px rgb(214 169 62 / 4%);
+  pointer-events: none;
+}
+
+.tacticalNexus {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 1;
+  height: min(72%, 300px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+}
+
+.nexusHalo,
+.nexusOrbit,
+.nexusOrbitInner {
+  position: absolute;
+  border-radius: 50%;
+}
+
+.nexusHalo {
+  inset: 2%;
+  border: 1px solid rgb(214 169 62 / 22%);
+  background:
+    radial-gradient(circle, rgb(27 95 59 / 10%) 0 42%, transparent 43%),
+    repeating-conic-gradient(from 15deg, rgb(214 169 62 / 16%) 0 1deg, transparent 1deg 18deg);
+  box-shadow:
+    inset 0 0 36px rgb(38 115 73 / 10%),
+    0 0 42px rgb(0 0 0 / 26%);
+  opacity: .8;
+}
+
+.nexusOrbit {
+  inset: 9%;
+  border: 1px dashed rgb(214 169 62 / 27%);
+  animation: nexusRotate 28s linear infinite;
+}
+
+.nexusOrbit::before,
+.nexusOrbit::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 7px;
+  height: 7px;
+  transform: translateY(-50%) rotate(45deg);
+  border: 1px solid var(--wb-gold);
+  background: rgb(5 17 11 / 94%);
+}
+
+.nexusOrbit::before {
+  left: -4px;
+}
+
+.nexusOrbit::after {
+  right: -4px;
+}
+
+.nexusOrbitInner {
+  inset: 18%;
+  border: 1px solid rgb(86 146 101 / 20%);
+  box-shadow: 0 0 22px rgb(52 139 88 / 8%);
+}
+
+.mapProjector {
+  position: absolute;
+  inset: 21% 24% 24%;
+  overflow: hidden;
+  transform: perspective(420px) rotateX(8deg);
+  filter: drop-shadow(0 0 8px rgb(93 172 112 / 25%));
+}
+
+.brazilMap {
+  object-fit: contain;
+  opacity: .58;
+  mix-blend-mode: screen;
+  filter: sepia(.45) saturate(.65) hue-rotate(58deg) brightness(1.25);
+}
+
+.mapScan {
+  position: absolute;
+  top: -18%;
+  right: 0;
+  left: 0;
+  height: 18%;
+  background: linear-gradient(180deg, transparent, rgb(226 187 92 / 9%), transparent);
+  animation: nexusScan 4.8s ease-in-out infinite;
+}
+
+.nexusReadout {
+  position: absolute;
+  right: 15%;
+  bottom: 6%;
+  left: 15%;
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  border-top: 1px solid rgb(214 169 62 / 23%);
+  padding-top: 7px;
+  font-family: var(--font-geist-mono), monospace;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.nexusReadout span {
+  color: var(--wb-text-muted);
+  font-size: .39rem;
+  font-weight: 700;
+  letter-spacing: .18em;
+}
+
+.nexusReadout strong {
+  color: var(--wb-gold-bright);
+  font-size: .48rem;
+  letter-spacing: .1em;
+}
+
+.stage[data-start-authorized="true"] .nexusHalo,
+.stage[data-start-authorized="true"] .nexusOrbit,
+.stage[data-start-authorized="true"] .nexusOrbitInner {
+  border-color: rgb(195 65 58 / 44%);
+}
+
+.stage[data-start-authorized="true"] .nexusReadout strong {
+  color: #ef9f9f;
+}
+
+.stationField {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  height: 100%;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, .82fr) minmax(0, 1fr);
+  grid-template-rows: repeat(3, minmax(0, 1fr));
+  gap: clamp(6px, 1.15vh, 10px) clamp(24px, 4.3vw, 62px);
+  margin: 0;
+  padding: clamp(10px, 1.7vh, 17px) clamp(11px, 1.5vw, 18px);
+  list-style: none;
+}
+
+.stationField > :nth-child(1),
+.stationField > :nth-child(2),
+.stationField > :nth-child(3) {
+  grid-column: 1;
+}
+
+.stationField > :nth-child(4),
+.stationField > :nth-child(5),
+.stationField > :nth-child(6) {
+  grid-column: 3;
+}
+
+.stationField > :nth-child(1),
+.stationField > :nth-child(4) {
+  grid-row: 1;
+}
+
+.stationField > :nth-child(2),
+.stationField > :nth-child(5) {
+  grid-row: 2;
+}
+
+.stationField > :nth-child(3),
+.stationField > :nth-child(6) {
+  grid-row: 3;
+}
+
+.station {
+  --station-color: #62776c;
+  position: relative;
+  display: grid;
+  min-width: 0;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  align-content: center;
+  overflow: visible;
+  border: 1px solid color-mix(in srgb, var(--station-color) 48%, rgb(214 169 62 / 23%));
+  border-radius: 2px;
+  padding: clamp(7px, 1vh, 10px) clamp(8px, 1vw, 12px);
+  background:
+    linear-gradient(115deg, color-mix(in srgb, var(--station-color) 14%, transparent), transparent 46%),
+    linear-gradient(180deg, rgb(17 27 20 / 94%), rgb(5 11 8 / 93%));
+  box-shadow:
+    inset 0 1px rgb(255 255 255 / 3%),
+    0 10px 24px rgb(0 0 0 / 16%);
+  clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+}
+
+.station::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 10px;
+  width: 34px;
+  height: 2px;
+  background: var(--station-color);
+  box-shadow: 0 0 13px color-mix(in srgb, var(--station-color) 58%, transparent);
+}
+
+.station::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: clamp(18px, 3vw, 48px);
+  height: 1px;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--station-color) 62%, transparent), rgb(214 169 62 / 18%));
+  box-shadow: 0 0 5px color-mix(in srgb, var(--station-color) 20%, transparent);
+  opacity: .55;
+}
+
+.stationField > :nth-child(-n + 3)::after {
+  right: calc(clamp(18px, 3vw, 48px) * -1);
+}
+
+.stationField > :nth-child(n + 4)::after {
+  left: calc(clamp(18px, 3vw, 48px) * -1);
+  transform: rotate(180deg);
+}
+
+.station[data-me="true"] {
+  border-color: rgb(240 200 90 / 66%);
+  box-shadow:
+    inset 0 0 0 1px rgb(240 200 90 / 8%),
+    0 12px 30px rgb(0 0 0 / 20%);
+}
+
+.station[data-ready="true"] {
+  background:
+    linear-gradient(115deg, color-mix(in srgb, var(--station-color) 20%, transparent), transparent 50%),
+    linear-gradient(180deg, rgb(20 38 27 / 95%), rgb(5 12 8 / 94%));
+}
+
+.station[data-ready="true"]::after {
+  opacity: .95;
+}
+
+.stationEmpty {
+  --station-color: #526159;
+  border-style: dashed;
+  background: linear-gradient(180deg, rgb(14 22 17 / 59%), rgb(5 10 7 / 54%));
+  opacity: .48;
+}
+
+.stationEmpty:has(button) {
+  opacity: .78;
+}
+
+.stationTopline,
+.stationStatus {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.stationNumber,
+.stationStatus {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: .44rem;
+  font-weight: 770;
+  letter-spacing: .11em;
+  text-transform: uppercase;
+}
+
+.stationNumber {
+  color: var(--wb-text-muted);
+}
+
+.stationBody {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: 32px minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  padding-block: clamp(4px, .65vh, 7px);
+}
+
+.insignia {
+  position: relative;
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  transform: rotate(45deg);
+  border: 1px solid rgb(208 170 87 / 42%);
+  background: rgb(0 0 0 / 20%);
+  transition:
+    transform 220ms ease,
+    border-color 220ms ease,
+    background 220ms ease;
+}
+
+.insignia::before,
+.insignia::after {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border: 1px solid color-mix(in srgb, var(--station-color) 62%, rgb(255 255 255 / 14%));
+}
+
+.insignia::after {
+  inset: 10px;
+  background: var(--station-color);
+  opacity: .55;
+}
+
+.station[data-ready="true"] .insignia {
+  transform: rotate(0deg);
+  border-color: rgb(240 200 90 / 82%);
+  background: rgb(208 170 87 / 11%);
+}
+
+.station[data-ready="true"] .insignia::before,
+.station[data-ready="true"] .insignia::after {
+  transform: rotate(45deg);
+}
+
+.station[data-ready="true"] .insignia::after {
+  opacity: .95;
+}
+
+.stationIdentity {
+  min-width: 0;
+}
+
+.stationName {
+  overflow: hidden;
+  color: var(--wb-text);
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: clamp(.76rem, 1.14vw, 1rem);
+  font-weight: 720;
+  letter-spacing: .015em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stationMeta {
+  margin-top: 1px;
+  overflow: hidden;
+  color: var(--wb-text-muted);
+  font-size: .43rem;
+  font-weight: 700;
+  letter-spacing: .065em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.stationStatus {
+  color: #b8c7bf;
+}
+
+.station[data-ready="true"] .stationStatus {
+  color: #b8ddc3;
+}
+
+.stationStatusMark {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border: 1px solid currentColor;
+  transform: rotate(45deg);
+}
+
+.station[data-ready="true"] .stationStatusMark {
+  background: currentColor;
+}
+
+.botAction {
+  min-height: 23px !important;
+  padding-inline: 5px !important;
+  font-size: .4rem !important;
+}
+
+@keyframes nexusRotate {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes nexusScan {
+  0%,
+  12% {
+    transform: translateY(0);
+    opacity: 0;
+  }
+
+  24% {
+    opacity: .9;
+  }
+
+  78% {
+    opacity: .45;
+  }
+
+  100% {
+    transform: translateY(650%);
+    opacity: 0;
+  }
+}
+
+@media (max-width: 1100px) {
+  .stationField {
+    grid-template-columns: minmax(0, 1fr) minmax(150px, .7fr) minmax(0, 1fr);
+    column-gap: 22px;
+  }
+
+  .station::after {
+    width: 22px;
+  }
+
+  .stationField > :nth-child(-n + 3)::after {
+    right: -22px;
+  }
+
+  .stationField > :nth-child(n + 4)::after {
+    left: -22px;
+  }
+
+  .tacticalNexus {
+    height: min(66%, 240px);
+  }
+
+  .stationMeta {
+    display: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .stage {
+    height: 100%;
+  }
+
+  .stageHeader {
+    min-height: 44px;
+    padding: 5px 9px;
+  }
+
+  .stageEyebrow {
+    display: none;
+  }
+
+  .stageTitle {
+    font-size: .86rem;
+  }
+
+  .authorization {
+    max-width: 56%;
+    font-size: .43rem;
+  }
+
+  .warTable::before,
+  .tacticalNexus {
+    display: none;
+  }
+
+  .stationField {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: repeat(3, minmax(0, 1fr));
+    gap: 6px;
+    padding: 7px;
+  }
+
+  .stationField > :nth-child(n) {
+    grid-column: auto;
+    grid-row: auto;
+  }
+
+  .station {
+    padding: 7px 8px;
+    clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  }
+
+  .station::after {
+    display: none;
+  }
+
+  .stationBody {
+    grid-template-columns: 27px minmax(0, 1fr);
+    gap: 7px;
+    padding-block: 4px;
+  }
+
+  .insignia {
+    width: 25px;
+    height: 25px;
+  }
+
+  .insignia::before {
+    inset: 4px;
+  }
+
+  .insignia::after {
+    inset: 8px;
+  }
+
+  .stationName {
+    font-size: .75rem;
+  }
+
+  .stationMeta,
+  .stationNumber,
+  .stationStatus {
+    font-size: .4rem;
+  }
+}
+
+@media (max-height: 650px) {
+  .stageHeader {
+    min-height: 42px;
+  }
+
+  .stationField {
+    gap: 5px 20px;
+    padding-block: 6px;
+  }
+
+  .station {
+    padding-block: 5px;
+  }
+
+  .stationBody {
+    padding-block: 2px;
+  }
+
+  .tacticalNexus {
+    height: min(64%, 205px);
+  }
+
+  .nexusReadout {
+    padding-top: 4px;
+  }
+}
+
+@media (max-width: 720px) and (max-height: 580px) {
+  .stageHeader {
+    min-height: 36px;
+  }
+
+  .authorization {
+    display: none;
+  }
+
+  .stationField {
+    gap: 4px;
+    padding: 5px;
+  }
+
+  .station {
+    padding: 4px 6px;
+  }
+
+  .stationBody {
+    grid-template-columns: 21px minmax(0, 1fr);
+    gap: 5px;
+    padding-block: 1px;
+  }
+
+  .insignia {
+    width: 19px;
+    height: 19px;
+  }
+
+  .insignia::before {
+    inset: 3px;
+  }
+
+  .insignia::after {
+    inset: 6px;
+  }
+
+  .stationMeta {
+    display: none;
+  }
+
+  .stationName {
+    font-size: .66rem;
+  }
+
+  .stationNumber,
+  .stationStatus {
+    font-size: .36rem;
+  }
+
+  .botAction {
+    min-height: 20px !important;
+    padding-inline: 3px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nexusOrbit,
+  .mapScan {
+    animation: none;
+  }
+
+  .insignia {
+    transition: none;
+  }
+}

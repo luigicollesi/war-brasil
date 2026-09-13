@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { OperationsConsole } from "@/src/components/operations-console";
+import { PreGameBackButton } from "@/src/components/pre-game-back-button";
 import styles from "./operations.module.css";
 
 export const metadata: Metadata = {
@@ -12,10 +12,7 @@ export default function MatchmakingPage() {
   return (
     <main className={`wb-shell-inner ${styles.page}`}>
       <header className={styles.intro}>
-        <Link href="/" className={styles.backLink}>
-          <span aria-hidden="true">←</span>
-          Início
-        </Link>
+        <PreGameBackButton href="/" label="Voltar ao Início" />
 
         <div className={styles.introCopy}>
           <p className={styles.eyebrow}>CENTRAL DE OPERAÇÕES · ENTRADA NO CONFLITO</p>
