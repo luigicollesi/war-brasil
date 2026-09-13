@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { FormEvent, useMemo, useState } from "react";
+import { type FormEvent, type ReactNode, useMemo, useState } from "react";
 import { useCommandSceneDirective } from "@/src/components/pre-game/foundation";
 import type {
   CommanderSearchResult,
@@ -131,7 +131,7 @@ function StationFrame({
   title: string;
   className?: string;
   onActivate: (station: ProfileCommandStation) => void;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   const active = station === activeStation;
 
@@ -169,6 +169,10 @@ function TreasuryReadout({
   const wallet = snapshot.wallet.data;
 
   if (snapshot.wallet.availability === "unavailable" || !wallet) {
+    if (compact) {
+      return <span className={styles.walletUnavailableCompact}>Tesouraria indisponível</span>;
+    }
+
     return (
       <div className={styles.unavailableState}>
         <span>TESOURARIA INDISPONÍVEL</span>
@@ -177,13 +181,31 @@ function TreasuryReadout({
     );
   }
 
+  const currencies = [wallet.common, wallet.premium];
+
+  if (compact) {
+    return (
+      <span className={styles.walletCompact}>
+        {currencies.map((currency) => (
+          <span key={currency.currency} data-currency={currency.currency}>
+            <span className={styles.currencySymbol} aria-hidden="true">{currency.symbol}</span>
+            <span>
+              <small>{currency.shortLabel}</small>
+              <strong>{formatBalance(currency.balance)}</strong>
+            </span>
+          </span>
+        ))}
+      </span>
+    );
+  }
+
   return (
-    <div className={compact ? styles.walletCompact : styles.walletExpanded}>
-      {[wallet.common, wallet.premium].map((currency) => (
+    <div className={styles.walletExpanded}>
+      {currencies.map((currency) => (
         <div key={currency.currency} data-currency={currency.currency}>
           <span className={styles.currencySymbol} aria-hidden="true">{currency.symbol}</span>
           <span>
-            <small>{compact ? currency.shortLabel : currency.label}</small>
+            <small>{currency.label}</small>
             <strong>{formatBalance(currency.balance)}</strong>
           </span>
         </div>
@@ -226,6 +248,8 @@ function NetworkStation({
   onQueryChange,
   results,
   searching,
+  searchAttempted,
+  searchFailed,
   onSearch,
 }: {
   snapshot: ProfileCommandSnapshot;
@@ -233,6 +257,8 @@ function NetworkStation({
   onQueryChange: (value: string) => void;
   results: ReadonlyArray<CommanderSearchResult>;
   searching: boolean;
+  searchAttempted: boolean;
+  searchFailed: boolean;
   onSearch: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   const social = snapshot.social.data;
@@ -304,6 +330,12 @@ function NetworkStation({
             </li>
           ))}
         </ul>
+      ) : searchAttempted && !searching ? (
+        <p className={styles.searchFeedback} role="status">
+          {searchFailed
+            ? "Falha ao consultar a Central de Comunicações."
+            : "Nenhum comandante localizado para este sinal."}
+        </p>
       ) : null}
     </div>
   );
@@ -515,6 +547,8 @@ export function ProfileCommandHub({ snapshot }: { snapshot: ProfileCommandSnapsh
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<ReadonlyArray<CommanderSearchResult>>([]);
   const [searching, setSearching] = useState(false);
+  const [searchAttempted, setSearchAttempted] = useState(false);
+  const [searchFailed, setSearchFailed] = useState(false);
   const [selectedOperationCode, setSelectedOperationCode] = useState<string | null>(
     snapshot.history.data.matches[0]?.operationCode ?? null,
   );
@@ -534,6 +568,8 @@ export function ProfileCommandHub({ snapshot }: { snapshot: ProfileCommandSnapsh
     if (searchQuery.trim().length < 2) return;
 
     setSearching(true);
+    setSearchAttempted(true);
+    setSearchFailed(false);
     try {
       const response = await fetch(
         `/api/profile/commanders/search?q=${encodeURIComponent(searchQuery.trim())}`,
@@ -543,9 +579,17 @@ export function ProfileCommandHub({ snapshot }: { snapshot: ProfileCommandSnapsh
       setSearchResults(payload.results ?? []);
     } catch {
       setSearchResults([]);
+      setSearchFailed(true);
     } finally {
       setSearching(false);
     }
+  }
+
+  function updateSearchQuery(value: string) {
+    setSearchQuery(value);
+    setSearchResults([]);
+    setSearchAttempted(false);
+    setSearchFailed(false);
   }
 
   if (snapshot.identity.availability === "unavailable" || !snapshot.identity.data) {
@@ -621,9 +665,11 @@ export function ProfileCommandHub({ snapshot }: { snapshot: ProfileCommandSnapsh
           <NetworkStation
             snapshot={snapshot}
             query={searchQuery}
-            onQueryChange={setSearchQuery}
+            onQueryChange={updateSearchQuery}
             results={searchResults}
             searching={searching}
+            searchAttempted={searchAttempted}
+            searchFailed={searchFailed}
             onSearch={handleSearch}
           />
         </StationFrame>
