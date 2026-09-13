@@ -21,6 +21,7 @@ const openingTimeline = readFileSync("src/components/pre-game/foundation/opening
 const territoryIngress = readFileSync("src/components/pre-game/foundation/territory-ingress.ts", "utf8");
 const genesisPass = readFileSync("src/components/pre-game/foundation/territory-genesis-pass.tsx", "utf8");
 const genesisMaterial = readFileSync("src/components/pre-game/foundation/territory-genesis-material.ts", "utf8");
+const profileOrb = readFileSync("src/components/pre-game/foundation/profile-orb-assembly.tsx", "utf8");
 
 const legacyPolishPath = "src/components/pre-game/home/command-home-polish.module.css";
 const experimentalEntranceMapPath =
@@ -87,7 +88,8 @@ test("timeline compartilhada é única, normalizada, contínua e seekable", () =
   assert.match(entranceTimeline, /id: "home-genesis"/);
   assert.match(entranceTimeline, /settlingStart: 0\.88/);
   assert.match(entranceTimeline, /territoryIngress: \{ start: 0, end: 0\.44 \}/);
-  assert.match(entranceTimeline, /genesis: \{ start: 0\.44, end: 0\.96 \}/);
+  assert.match(entranceTimeline, /genesis: \{ start: 0\.44, end: 0\.82 \}/);
+  assert.match(entranceTimeline, /profileActivation: \{ start: 0\.8, end: 0\.99 \}/);
   assert.match(openingTimeline, /resolveOpeningProgress/);
   assert.match(openingTimeline, /sampleContinuousOpeningCue/);
   assert.match(openingTimeline, /smootherOpeningProgress/);
@@ -148,8 +150,39 @@ test("Genesis e anel dourado compartilham uma única curva contínua", () => {
   assert.match(genesisPass, /ringSweep\.setProgress\(genesisProgress\)/);
   assert.match(genesisPass, /Math\.PI \* 2 \* genesisProgress/);
   assert.match(genesisPass, /name="GenesisRingSweep"/);
-  assert.match(genesisPass, /scene\.getObjectByName\("DomainTable"\)/);
-  assert.match(genesisPass, /object\.geometry instanceof RingGeometry/);
+  assert.match(genesisPass, /scene\.getObjectByName\("DomainTable-GoldenRing"\)/);
+  assert.match(scene, /name="DomainTable-GoldenRing"/);
+  assert.match(scene, /userData=\{\{ finalOpacity: 1 \}\}/);
+});
+
+test("anel dourado já nasce invisível no primeiro paint da intro", () => {
+  assert.match(scene, /transparent=\{openingActive\}/);
+  assert.match(scene, /opacity=\{openingActive \? 0 : 1\}/);
+  assert.match(genesisPass, /commandRing\.material\.opacity = 0/);
+  assert.match(genesisPass, /commandRing\.finalOpacity \* progress/);
+});
+
+test("Profile Orb usa esfera translúcida e órbitas planetárias", () => {
+  assert.match(scene, /ProfileOrbAssembly/);
+  assert.match(profileOrb, /name="ProfileOrb-Core"/);
+  assert.match(profileOrb, /<meshPhysicalMaterial/);
+  assert.match(profileOrb, /transmission=\{0\.7\}/);
+  assert.match(profileOrb, /thickness=\{0\.34\}/);
+  assert.match(profileOrb, /name="ProfileOrb-OrbitA"/);
+  assert.match(profileOrb, /name="ProfileOrb-OrbitB"/);
+  assert.match(profileOrb, /name="ProfileOrb-OrbitC"/);
+  assert.match(profileOrb, /orbitARef\.current\.rotation\.y \+= delta \* 0\.2/);
+  assert.match(profileOrb, /orbitBRef\.current\.rotation\.x -= delta \* 0\.14/);
+  assert.match(profileOrb, /orbitCRef\.current\.rotation\.y -= delta \* 0\.09/);
+});
+
+test("Profile Orb só entra na fase final e usa o mesmo relógio global", () => {
+  assert.match(genesisPass, /COMMAND_ENTRANCE_RECIPE\.cues\.profileActivation/);
+  assert.match(genesisPass, /sceneTargets\.setProfileProgress\(profileProgress\)/);
+  assert.match(genesisPass, /profileOrb\.object\.scale\.setScalar/);
+  assert.match(profileOrb, /openingActive/);
+  assert.match(profileOrb, /initialScale = openingActive \? 0\.001 : targetScale/);
+  assert.doesNotMatch(profileOrb, /performance\.now|setTimeout|Math\.random/);
 });
 
 test("assentamento é fase semântica e não reinicia a interpolação visual", () => {
@@ -210,6 +243,7 @@ test("frame estável continua contendo a Foundation original", () => {
   assert.match(scene, /DomainTable/);
   assert.match(scene, /OrbitalCrown/);
   assert.match(scene, /StrategicGlobe/);
+  assert.match(scene, /ProfileOrbAssembly/);
   assert.match(presets, /ENTRANCE_FOCUS_PRESETS/);
   assert.match(presets, /COMPACT_ENTRANCE_FOCUS_PRESETS/);
 });
@@ -225,6 +259,7 @@ test("coreografia periférica usa tracks diferentes sem animar o Canvas", () => 
   ]) {
     assert.match(introStyles, new RegExp(name));
   }
+  assert.match(introStyles, /0%, 80%[\s\S]*homeCommandSettle|homeCommandSettle[\s\S]*0%, 80%/);
   assert.doesNotMatch(introStyles, /@keyframes homeFoundationGenesis/);
   assert.match(content, /data-home-identity/);
   assert.match(home, /data-home-command-dock/);
@@ -246,6 +281,7 @@ test("ritual é pulável, reduced-motion/fallback assentam sem Genesis", () => {
   assert.match(home, /sceneState === "fallback"/);
   assert.match(scene, /!reducedMotion/);
   assert.match(scene, /intent\.entranceState !== "settled"/);
+  assert.match(profileOrb, /if \(!root \|\| reducedMotion \|\| openingActive\) return/);
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(introStyles, /@media \(prefers-reduced-motion: reduce\)/);
 });
