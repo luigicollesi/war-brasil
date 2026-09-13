@@ -34,6 +34,8 @@ type RegisterResponse = {
   errors?: Record<string, string>;
 };
 
+const RESEND_COOLDOWN_MS = 60_000;
+
 const PROVIDERS: Array<{ id: AuthProvider; label: string; mark: string }> = [
   { id: "google", label: "Continuar com Google", mark: "G" },
   { id: "apple", label: "Continuar com Apple", mark: "●" },
@@ -58,6 +60,7 @@ export function CommandAuthModal({
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState(notice);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [resendCoolingDown, setResendCoolingDown] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -86,6 +89,18 @@ export function CommandAuthModal({
       }
     };
   }, [initialMode, notice, open]);
+
+  useEffect(() => {
+    if (!resendCoolingDown) {
+      return;
+    }
+
+    const cooldown = window.setTimeout(() => {
+      setResendCoolingDown(false);
+    }, RESEND_COOLDOWN_MS);
+
+    return () => window.clearTimeout(cooldown);
+  }, [resendCoolingDown]);
 
   const close = () => {
     if (!isPending) {
@@ -140,6 +155,10 @@ export function CommandAuthModal({
           );
           return;
         }
+        if (error.status === 429) {
+          setMessage("Muitas tentativas. Aguarde antes de tentar entrar novamente.");
+          return;
+        }
 
         setMessage("Confira o email e a senha informados.");
         return;
@@ -186,6 +205,7 @@ export function CommandAuthModal({
         return;
       }
 
+      setResendCoolingDown(true);
       setMode("verification");
       setMessage(payload.message ?? "Confira seu email para concluir o cadastro.");
     });
@@ -196,8 +216,12 @@ export function CommandAuthModal({
       changeMode("login");
       return;
     }
+    if (resendCoolingDown) {
+      return;
+    }
 
     setMessage("");
+    setResendCoolingDown(true);
     startTransition(async () => {
       const { error } = await authClient.sendVerificationEmail({
         email,
@@ -205,8 +229,8 @@ export function CommandAuthModal({
       });
 
       setMessage(
-        error
-          ? "Não foi possível solicitar outro link agora. Tente novamente em instantes."
+        error?.status === 429
+          ? "Limite de solicitações atingido. Aguarde antes de pedir outro link."
           : "Se existir uma conta pendente para esse endereço, enviaremos um novo link.",
       );
     });
@@ -227,8 +251,8 @@ export function CommandAuthModal({
       });
 
       setMessage(
-        error
-          ? "Não foi possível solicitar a redefinição agora."
+        error?.status === 429
+          ? "Limite de solicitações atingido. Aguarde antes de tentar novamente."
           : "Se existir uma conta para esse endereço, enviaremos as instruções de redefinição.",
       );
     });
@@ -526,9 +550,13 @@ export function CommandAuthModal({
                 type="button"
                 className={styles.primaryButton}
                 onClick={resendVerification}
-                disabled={isPending}
+                disabled={isPending || resendCoolingDown}
               >
-                {isPending ? "SOLICITANDO..." : "REENVIAR EMAIL"}
+                {isPending
+                  ? "SOLICITANDO..."
+                  : resendCoolingDown
+                    ? "REENVIO DISPONÍVEL EM 60 S"
+                    : "REENVIAR EMAIL"}
               </button>
               <button
                 type="button"
