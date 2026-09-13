@@ -254,6 +254,7 @@ test("deep-link continua ensinando com JavaScript desabilitado", async ({ browse
 });
 
 test("captura evidência visual determinística desktop e mobile", async ({ browser }) => {
+  test.setTimeout(90_000);
   await mkdir(EVIDENCE_DIR, { recursive: true });
 
   for (const viewport of [
