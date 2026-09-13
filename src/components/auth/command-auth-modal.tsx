@@ -287,6 +287,9 @@ export function CommandAuthModal({
         return;
       }
 
+      // Better Auth revoga as sessões autoritativas no reset. O sign-out também
+      // limpa o cookie-cache local para a UI voltar imediatamente ao estado guest.
+      await authClient.signOut();
       setMode("login");
       setMessage("Senha redefinida. Entre novamente para acessar o Comando.");
       window.history.replaceState({}, "", "/");
