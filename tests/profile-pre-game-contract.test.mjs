@@ -6,167 +6,152 @@ function source(path) {
   return readFileSync(path, "utf8");
 }
 
-test("perfil sem identidade real permanece guest e não fabrica identidade ou progressão", () => {
-  const profileData = source("src/lib/profile/profile-data.ts");
+test("PROFILE V2 define as cinco estações do Quartel", () => {
+  const hub = source("src/components/profile/command-quarters/profile-command-hub.tsx");
+  const spec = source("docs/pre-game/profile/SPEC.md");
 
-  assert.match(profileData, /const GUEST_PROFILE: ProfileSnapshot = \{/);
-  assert.match(profileData, /state: "guest"/);
-  assert.match(profileData, /identity: null/);
-  assert.match(profileData, /return GUEST_PROFILE/);
-  assert.doesNotMatch(profileData, /displayName: "Luigi"/);
-  assert.match(profileData, /EVALUATION_IDENTITY/);
-  assert.match(profileData, /Identidade sintética de avaliação/);
-  assert.match(profileData, /isEvaluationFixture: false/);
-  assert.match(profileData, /Sistema de progressão ainda não integrado/);
-  assert.match(profileData, /Estatísticas ainda não possuem contrato de dados do perfil/);
-  assert.match(profileData, /Histórico de partidas ainda não está conectado ao perfil/);
-  assert.match(profileData, /Conquistas ainda não possuem sistema de origem/);
-  assert.doesNotMatch(profileData, /winRate|rankingPosition|globalRank|victories:\s*\d/);
+  for (const station of ["dossier", "treasury", "network", "campaigns", "quartermaster"]) {
+    assert.match(hub, new RegExp(`\\b${station}\\b`));
+  }
+
+  assert.match(spec, /Dossiê do Comandante/);
+  assert.match(spec, /Tesouraria/);
+  assert.match(spec, /Rede de Comando/);
+  assert.match(spec, /Livro de Campanha/);
+  assert.match(spec, /Intendência/);
+  assert.match(spec, /Mesa de Comando/);
 });
 
-test("renderização diferencia ausência de dado real e mantém equivalentes textuais", () => {
-  const hall = source("src/components/profile/profile-hall.tsx");
-
-  assert.match(hall, /Indisponível — sem fonte real/);
-  assert.match(hall, /Arquivo disponível — sem registros/);
-  assert.match(hall, /Estatísticas competitivas sem fonte disponível/);
-  assert.match(hall, /achievement\.name/);
-  assert.match(hall, /achievement\.description/);
-  assert.match(hall, /data-scene-fallback="html"/);
-  assert.doesNotMatch(hall, /@react-three\/fiber|\bthree\b|Canvas/);
-});
-
-test("PROFILE consome somente a API pública da Foundation", () => {
-  const bridge = source("src/components/profile/profile-command-shell.tsx");
-  const hall = source("src/components/profile/profile-hall.tsx");
+test("rota V2 resolve snapshot em request-time", () => {
   const page = source("src/app/profile/page.tsx");
-  const loading = source("src/app/profile/loading.tsx");
-  const error = source("src/app/profile/error.tsx");
-  const layout = source("src/app/layout.tsx");
-  const routeIntent = source(
-    "src/components/pre-game/foundation/pre-game-route-intent.ts",
-  );
 
-  assert.match(bridge, /from "@\/src\/components\/pre-game\/foundation"/);
-  assert.match(bridge, /export function ProfileSceneBridge/);
-  assert.match(bridge, /useCommandSceneDirective/);
-  assert.doesNotMatch(bridge, /\bmode\s*:/);
-  assert.match(bridge, /focus: "insignia"/);
+  assert.match(page, /import \{ connection \} from "next\/server"/);
+  assert.match(page, /getCurrentProfileCommandSnapshot/);
+  assert.match(page, /await connection\(\);\s*\n\s*const snapshot = await getCurrentProfileCommandSnapshot\(\)/);
+  assert.match(page, /<ProfileCommandHub snapshot=\{snapshot\} \/>/);
+  assert.doesNotMatch(page, /searchParams|useSearchParams/);
+});
+
+test("contrato V2 separa identidade, economia, social, histórico e loja", () => {
+  const contract = source("src/lib/profile/profile-command-contract.ts");
+  const fixture = source("src/lib/profile/profile-local-fixture.ts");
+
+  assert.match(contract, /identity: ProfileCommandSection/);
+  assert.match(contract, /wallet: ProfileCommandSection/);
+  assert.match(contract, /social: ProfileCommandSection/);
+  assert.match(contract, /history: ProfileCommandSection/);
+  assert.match(contract, /storefront: ProfileCommandSection/);
+  assert.match(contract, /"campaign-credit" \| "command-reserve"/);
+  assert.match(contract, /title: string \| null/);
+  assert.match(contract, /portrait: CommanderPortrait/);
+  assert.match(fixture, /source: "local-static"/);
+  assert.doesNotMatch(contract, /token|password|secret/i);
+});
+
+test("Tesouraria não usa cor como único diferenciador das moedas", () => {
+  const fixture = source("src/lib/profile/profile-local-fixture.ts");
+  const hub = source("src/components/profile/command-quarters/profile-command-hub.tsx");
+
+  assert.match(fixture, /currency: "campaign-credit"/);
+  assert.match(fixture, /currency: "command-reserve"/);
+  assert.match(fixture, /label: "Créditos de Campanha"/);
+  assert.match(fixture, /label: "Reserva de Comando"/);
+  assert.match(fixture, /symbol: "◈"/);
+  assert.match(fixture, /symbol: "◆"/);
+  assert.match(hub, /currency\.label|currency\.shortLabel/);
+  assert.match(hub, /currency\.symbol/);
+});
+
+test("busca social é sob demanda e fica fora do snapshot principal", () => {
+  const hub = source("src/components/profile/command-quarters/profile-command-hub.tsx");
+  const endpoint = source("src/app/api/profile/commanders/search/route.ts");
+  const provider = source("src/lib/profile/profile-command-data.ts");
+
+  assert.match(hub, /\/api\/profile\/commanders\/search\?q=/);
+  assert.match(endpoint, /searchProfileCommanders/);
+  assert.match(provider, /searchLocalCommanders\(query\)/);
+  assert.match(provider, /Search is intentionally separate from the main snapshot/);
+  assert.doesNotMatch(hub, /LOCAL_COMMANDER_DIRECTORY/);
+});
+
+test("Livro de Campanha mantém janela limitada e continuação", () => {
+  const contract = source("src/lib/profile/profile-command-contract.ts");
+  const fixture = source("src/lib/profile/profile-local-fixture.ts");
+  const hub = source("src/components/profile/command-quarters/profile-command-hub.tsx");
+
+  assert.match(contract, /hasMore: boolean/);
+  assert.match(contract, /nextCursor: string \| null/);
+  assert.match(fixture, /hasMore: true/);
+  assert.match(fixture, /nextCursor: "local-op-0415"/);
+  assert.match(hub, /Arquivo possui operações adicionais/);
+});
+
+test("Intendência é vitrine e não implementa compra falsa", () => {
+  const hub = source("src/components/profile/command-quarters/profile-command-hub.tsx");
+  const contract = source("src/lib/profile/profile-command-contract.ts");
+
+  assert.match(hub, /Vitrine local · nenhuma compra é persistida nesta etapa/);
+  assert.match(contract, /featuredItems/);
+  assert.match(contract, /price:/);
+  assert.doesNotMatch(hub, /Comprar agora|Compra concluída|purchaseItem|checkout/i);
+});
+
+test("PROFILE V2 consome somente a API pública da Foundation", () => {
+  const hub = source("src/components/profile/command-quarters/profile-command-hub.tsx");
+  const layout = source("src/app/layout.tsx");
+  const routeIntent = source("src/components/pre-game/foundation/pre-game-route-intent.ts");
+
+  assert.match(hub, /from "@\/src\/components\/pre-game\/foundation"/);
+  assert.match(hub, /useCommandSceneDirective/);
   assert.match(routeIntent, /"\/profile": "profile"/);
   assert.match(layout, /<PreGameCommandRuntime>\{children\}<\/PreGameCommandRuntime>/);
-  assert.match(hall, /CommandInsignia/);
-  assert.match(hall, /from "@\/src\/components\/pre-game\/foundation"/);
-  assert.doesNotMatch(hall, /\.\/command-insignia/);
-  assert.match(page, /<ProfileSceneBridge>/);
-  assert.match(loading, /<ProfileSceneBridge>/);
-  assert.match(error, /<ProfileSceneBridge>/);
-  assert.doesNotMatch(`${bridge}\n${hall}\n${page}\n${loading}\n${error}`, /@react-three\/fiber|command-scene-canvas|\bthree\b|Canvas/);
-  assert.doesNotMatch(`${page}\n${loading}\n${error}`, /WarShell/);
+  assert.doesNotMatch(hub, /@react-three\/fiber|command-scene-canvas|\bthree\b|Canvas|cameraPosition|\bfov\b/i);
 });
 
-test("profile possui loading, erro, mobile, fallback e reduced-motion explícitos", () => {
+test("desktop e Terminal de Campo mobile possuem composição dedicada", () => {
+  const css = source("src/components/profile/command-quarters/profile-command-hub.module.css");
+
+  assert.match(css, /height: 100dvh/);
+  assert.match(css, /overflow: hidden/);
+  assert.match(css, /@media \(max-width: 760px\)/);
+  assert.match(css, /data-active-station="dossier"/);
+  assert.match(css, /data-active-station="network"/);
+  assert.match(css, /data-active-station="campaigns"/);
+  assert.match(css, /data-active-station="quartermaster"/);
+  assert.match(css, /data-active-station="treasury"/);
+  assert.match(css, /grid-template-columns: repeat\(5, 1fr\)/);
+});
+
+test("reduced-motion e forced-colors permanecem explícitos", () => {
+  const css = source("src/components/profile/command-quarters/profile-command-hub.module.css");
+  const boundaryCss = source("src/components/profile/profile-boundary-state.module.css");
+
+  assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(css, /@media \(forced-colors: active\)/);
+  assert.match(boundaryCss, /@media \(prefers-reduced-motion: reduce\)/);
+});
+
+test("V2 mantém harness de avaliação somente no servidor", () => {
+  const provider = source("src/lib/profile/profile-command-data.ts");
+  const page = source("src/app/profile/page.tsx");
+
+  assert.match(provider, /PROFILE_EVAL_MODE/);
+  assert.match(provider, /PROFILE_EVAL_STATE/);
+  assert.match(provider, /PROFILE_COMMAND_EVAL_ERROR/);
+  assert.match(provider, /"empty-history"/);
+  assert.match(provider, /"empty-social"/);
+  assert.match(provider, /"wallet-unavailable"/);
+  assert.doesNotMatch(provider, /window\.|document\.|URLSearchParams/);
+  assert.doesNotMatch(page, /PROFILE_EVAL_STATE/);
+});
+
+test("loading e error boundary continuam preservados durante o redesign", () => {
   const loading = source("src/app/profile/loading.tsx");
   const error = source("src/app/profile/error.tsx");
   const boundary = source("src/components/profile/profile-boundary-state.tsx");
-  const boundaryCss = source("src/components/profile/profile-boundary-state.module.css");
-  const hallCss = source("src/components/profile/profile-hall.module.css");
-  const environment = source("src/components/profile/profile-environment-state.tsx");
-  const environmentCss = source("src/components/profile/profile-environment-state.module.css");
 
-  assert.match(loading, /sem valores simulados/);
-  assert.match(error, /Nenhum dado fictício será exibido/);
   assert.match(loading, /ProfileSceneBridge/);
   assert.match(error, /ProfileSceneBridge/);
   assert.match(boundary, /aria-busy=\{isLoading \|\| undefined\}/);
-  assert.match(boundary, /data-scene-fallback="html"/);
-  assert.match(boundaryCss, /@media \(max-width: 480px\)/);
-  assert.match(boundaryCss, /@media \(prefers-reduced-motion: reduce\)/);
-  assert.match(hallCss, /@media \(max-width: 640px\)/);
-  assert.match(hallCss, /@media \(prefers-reduced-motion: reduce\)/);
-  assert.match(environment, /Fallback 2D ativo durante preparação da cena/);
-  assert.match(environment, /Cena 3D disponível; conteúdo HTML preservado/);
-  assert.match(environment, /Fallback 2D ativo; conteúdo HTML preservado/);
-  assert.match(environment, /Movimento reduzido ativo/);
-  assert.match(environmentCss, /data-webgl=\"ready\"/);
-  assert.match(environmentCss, /data-webgl=\"fallback\"/);
-  assert.match(environmentCss, /@media \(prefers-reduced-motion: reduce\)/);
-});
-
-test("ponte do PROFILE respeita o clearance da Foundation sem duplicar chrome", () => {
-  const bridge = source("src/components/profile/profile-command-shell.tsx");
-  const bridgeCss = source("src/components/profile/profile-command-shell.module.css");
-
-  assert.match(bridgeCss, /var\(--command-content-top/);
-  assert.match(bridgeCss, /var\(--command-content-inline/);
-  assert.match(bridge, /aria-label="Navegação do perfil"/);
-  assert.doesNotMatch(bridgeCss, /:global\(\.wb-shell\)|:global\(\.wb-header\)/);
-});
-
-test("rota força resolução em request-time antes de consultar o perfil", () => {
-  const profilePage = source("src/app/profile/page.tsx");
-
-  assert.match(profilePage, /import \{ connection \} from "next\/server"/);
-  assert.match(profilePage, /await connection\(\);\s*\n\s*const snapshot = await getCurrentProfileSnapshot\(\)/);
-});
-
-test("profile-data participa do test:compile", () => {
-  const testConfig = source("tsconfig.test.json");
-
-  assert.match(testConfig, /src\/lib\/profile\/profile-data\.ts/);
-});
-
-test("estados de avaliação são opt-in no servidor e não podem ser escolhidos pela URL", () => {
-  const profileData = source("src/lib/profile/profile-data.ts");
-  const profilePage = source("src/app/profile/page.tsx");
-
-  assert.match(profileData, /PROFILE_EVAL_MODE/);
-  assert.match(profileData, /PROFILE_EVAL_STATE/);
-  assert.match(profileData, /evaluation-fixture/);
-  assert.match(profileData, /createEvaluationSnapshot/);
-  assert.match(profileData, /isEvaluationFixture: true/);
-  assert.doesNotMatch(profilePage, /searchParams|useSearchParams/);
-  assert.doesNotMatch(profileData, /URLSearchParams|searchParams|document\.|window\./);
-});
-
-test("cenários loaded, empty-history e no-progression são estruturalmente distintos", () => {
-  const profileData = source("src/lib/profile/profile-data.ts");
-
-  assert.match(profileData, /if \(state === "loaded"\)/);
-  assert.match(profileData, /evaluationAvailableSections\(\)/);
-  assert.match(profileData, /if \(state === "empty-history"\)/);
-  assert.match(profileData, /evaluationAvailableSections\(\{ emptyHistory: true \}\)/);
-  assert.match(profileData, /if \(state === "no-progression-system"\)/);
-  assert.match(profileData, /Sistema de progressão intencionalmente ausente neste cenário de avaliação/);
-  assert.match(profileData, /hasMore: true/);
-});
-
-test("cenário error passa pelo error boundary real do Next", () => {
-  const profileData = source("src/lib/profile/profile-data.ts");
-  const error = source("src/app/profile/error.tsx");
-
-  assert.match(profileData, /evaluationState === "error"/);
-  assert.match(profileData, /throw new Error\("PROFILE_EVAL_ERROR"\)/);
-  assert.match(error, /ProfileBoundaryState/);
   assert.match(error, /reset=|onClick=\{reset\}/);
-});
-
-test("fixtures sintéticas são rotuladas na interface e não se apresentam como dados reais", () => {
-  const hall = source("src/components/profile/profile-hall.tsx");
-
-  assert.match(hall, /data-evaluation-fixture/);
-  assert.match(hall, /Modo de avaliação visual/);
-  assert.match(hall, /registros deste cenário são sintéticos/);
-  assert.match(hall, /Dados estruturais sintéticos/);
-  assert.match(hall, /nenhum registro sintético representa dados reais do usuário/);
-});
-
-test("estado visual possui semântica própria sem depender apenas de cor", () => {
-  const hall = source("src/components/profile/profile-hall.tsx");
-  const stateCss = source("src/components/profile/profile-state.module.css");
-
-  assert.match(hall, /aria-label=\{copy\.label\}/);
-  assert.match(hall, /data-state=\{state\}/);
-  assert.match(stateCss, /data-state="error"/);
-  assert.match(stateCss, /data-state="loaded"/);
-  assert.match(stateCss, /forced-colors: active/);
 });
