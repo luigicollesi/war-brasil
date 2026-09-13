@@ -27,19 +27,19 @@
 }
 
 .indexTitleRow {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
-  gap: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
 }
 
 .backButton {
+  order: -1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 7px;
   min-height: 36px;
-  margin-bottom: 4px;
   padding: 0 11px;
   color: var(--d-gold);
   border: 1px solid rgba(205, 180, 107, 0.2);
@@ -216,6 +216,8 @@
   }
 
   .indexTitleRow {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
     gap: 10px;
   }
@@ -228,8 +230,8 @@
   }
 
   .backButton {
+    order: 0;
     min-height: 30px;
-    margin-bottom: 0;
     padding-inline: 9px;
     font-size: 7px;
   }
