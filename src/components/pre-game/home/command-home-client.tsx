@@ -126,11 +126,9 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
       ? "repeat"
       : "first";
   const effectiveCeremonyPhase: HomeCeremonyPhase =
-    visitMode === "first" && ritualActive && sceneState !== "fallback"
-      ? ceremonyPhase
-      : "stable";
+    visitMode === "first" && ritualActive ? ceremonyPhase : "stable";
   const homeTransition: HomeTransitionState =
-    visitMode !== "first" || !ritualActive || sceneState === "fallback"
+    visitMode !== "first" || !ritualActive
       ? "complete"
       : entranceStartedAtMs === null
         ? "preparing"
@@ -164,7 +162,6 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
     if (
       visitMode !== "first" ||
       !ritualActive ||
-      sceneState !== "ready" ||
       entranceStartedAtMs !== null
     ) {
       return;
@@ -176,7 +173,7 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [entranceStartedAtMs, ritualActive, sceneState, visitMode]);
+  }, [entranceStartedAtMs, ritualActive, visitMode]);
 
   useEffect(() => {
     if (entranceStartedAtMs === null || visitMode !== "first" || !ritualActive) {
