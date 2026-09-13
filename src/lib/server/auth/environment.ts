@@ -48,6 +48,17 @@ function parseAllowedHosts(value: string | undefined) {
     .filter(Boolean);
 }
 
+function isValidProductionBaseUrl(value: string | undefined) {
+  if (!value) return false;
+
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" && Boolean(url.hostname) && !url.username && !url.password;
+  } catch {
+    return false;
+  }
+}
+
 export function readAuthServerEnvironment(): AuthServerEnvironment {
   const googleClientId = readOptional("GOOGLE_CLIENT_ID");
   const googleClientSecret = readOptional("GOOGLE_CLIENT_SECRET");
@@ -98,6 +109,9 @@ export function assertAuthRuntimeConfiguration(
   }
   if (!environment.secret || environment.secret.length < AUTH_SECRET_MIN_LENGTH) {
     missing.push(`BETTER_AUTH_SECRET(>=${AUTH_SECRET_MIN_LENGTH} chars)`);
+  }
+  if (!isValidProductionBaseUrl(environment.baseUrl)) {
+    missing.push("BETTER_AUTH_URL(absolute HTTPS URL)");
   }
   if (!environment.google.clientId) {
     missing.push("GOOGLE_CLIENT_ID");
