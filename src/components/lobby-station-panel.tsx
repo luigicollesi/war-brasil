@@ -97,6 +97,7 @@ export function LobbyStationPanel({
             />
             <button
               type="submit"
+              aria-label="Salvar nome da facção"
               disabled={actionPending}
               className={`wb-button wb-button--ghost ${styles.saveButton}`}
             >
@@ -126,7 +127,7 @@ export function LobbyStationPanel({
                   }
                   disabled={actionPending || occupied || selected}
                   onClick={() => onColorChange(color.value)}
-                  className={styles.colorChoice}
+                  className={`${styles.colorChoice} wb-color-choice`}
                   data-selected={selected ? "true" : "false"}
                 >
                   <span className={styles.colorSwatch} style={{ backgroundColor: color.hex }} />
