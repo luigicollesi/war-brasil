@@ -209,6 +209,7 @@ try {
   await browser.close();
 }
 
-// Este arquivo é o entrypoint de credentials usado pelo CI. Mantemos o reset
-// no mesmo gate para exercitar o lifecycle completo antes dos limites/assentos.
+// Este arquivo é o entrypoint de credentials usado pelo CI. Mantemos reset e
+// sessão no mesmo gate para exercitar o lifecycle completo antes dos limites/assentos.
 await import("./auth-password-reset-e2e.mjs");
+await import("./auth-session-security-e2e.mjs");
