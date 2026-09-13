@@ -122,8 +122,8 @@ test("Lobby reserva espaço para o chrome e mantém ready no fluxo sem cobrir o 
   assert.match(lobbyReadyRailCss, /@media \(max-width: 640px\)[\s\S]*?position:\s*relative/);
 });
 
-test("Profile não reintroduz WarShell em loaded, loading ou error", () => {
-  assert.match(profilePage, /ProfileSceneBridge/);
+test("Profile V2 permanece no runtime Foundation sem reintroduzir WarShell", () => {
+  assert.match(profilePage, /ProfileCommandHub/);
   assert.match(profileLoading, /ProfileSceneBridge/);
   assert.match(profileError, /ProfileSceneBridge/);
   assert.doesNotMatch(`${profilePage}\n${profileLoading}\n${profileError}`, /WarShell/);
