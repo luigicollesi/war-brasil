@@ -38,7 +38,6 @@ import {
 const GENESIS_RING_CENTER = 627;
 const GENESIS_RING_INNER_RADIUS = 846;
 const GENESIS_RING_OUTER_RADIUS = 862;
-const FINAL_EDGE_OPACITY = 0.78;
 
 export type TerritoryGenesisPlate = Readonly<{
   id: string;
@@ -345,7 +344,9 @@ export function TerritoryGenesisPass({
     <group name="HomeGenesisPass" renderOrder={2}>
       {plates.map((plate, index) => {
         const descriptor = descriptors.get(plate.territoryId);
-        const initialPosition = descriptor?.spawn ?? [0, 0, 0];
+        const initialPosition: [number, number, number] = descriptor
+          ? [...descriptor.spawn]
+          : [0, 0, 0];
 
         return (
           <mesh
