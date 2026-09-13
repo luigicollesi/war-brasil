@@ -66,6 +66,18 @@ try {
     const identity = `${process.pid}-${Date.now()}`;
     const email = `origin-${identity}@e2e.war-brasil.test`;
 
+    const forgedRegistration = await externalOriginPost("/api/auth/register", {
+      email: `forged-${identity}@e2e.war-brasil.test`,
+      password: PASSWORD,
+      termsAccepted: true,
+    });
+    assertRejected(forgedRegistration, "Origin externo em cadastro");
+    assert.equal(
+      forgedRegistration.location,
+      null,
+      "cadastro com Origin externo não pode produzir redirect",
+    );
+
     const registration = await apiJson(page, "/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -137,7 +149,7 @@ try {
     );
 
     console.log(
-      "[auth-origin-redirect-e2e] Origin externo e callbacks/redirects externos foram rejeitados.",
+      "[auth-origin-redirect-e2e] cadastro, Origin externo e callbacks/redirects externos foram rejeitados.",
     );
   } finally {
     await context.close();
