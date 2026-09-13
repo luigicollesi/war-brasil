@@ -8,10 +8,11 @@ export const COMMAND_ENTRANCE_RECIPE = {
   settlingStart: 0.88,
   cues: {
     territoryIngress: { start: 0, end: 0.44 },
-    genesis: { start: 0.44, end: 0.96 },
-    atmosphere: { start: 0.3, end: 0.92 },
-    identity: { start: 0.5, end: 0.94 },
-    primaryAction: { start: 0.62, end: 0.98 },
+    genesis: { start: 0.44, end: 0.82 },
+    atmosphere: { start: 0.3, end: 0.94 },
+    identity: { start: 0.72, end: 0.98 },
+    profileActivation: { start: 0.8, end: 0.99 },
+    primaryAction: { start: 0.8, end: 0.99 },
     settling: { start: 0.88, end: 1 },
   },
 } as const satisfies OpeningRecipe<
@@ -19,6 +20,7 @@ export const COMMAND_ENTRANCE_RECIPE = {
   | "genesis"
   | "atmosphere"
   | "identity"
+  | "profileActivation"
   | "primaryAction"
   | "settling"
 >;
