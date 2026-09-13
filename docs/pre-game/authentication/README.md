@@ -5,6 +5,7 @@ Documentos desta trilha:
 - `SPEC.md` — fluxo funcional, segurança, cookies, quatro métodos de autenticação e fronteira server/client;
 - `EVAL.md` — gates de autenticação, verificação de email, providers, secrets, modal, abuso e migrations;
 - `PROVIDER-STRATEGY.md` — contrato estrito de launch para Google, Apple, Discord e Email + senha;
+- `EMAIL-VERIFICATION-FLOW.md` — ciclo detalhado de cadastro credentials → email → confirmação → login, baseado na UX do Contrapista;
 - `DATABASE-PLAN.md` — arquitetura PostgreSQL preparada para substituir as fixtures atuais da PROFILE;
 - `DATABASE-EVAL.md` — gates de integridade, concorrência, history/social/economy e performance do modelo de dados.
 
@@ -55,6 +56,7 @@ Normas centrais:
 - nenhum auto-login após verification;
 - token de 1 hora;
 - reenvio explícito e rate-limited;
+- duplicate signup/reenvio não podem enumerar contas;
 - password reset real;
 - email delivery atrás de boundary server-only `sendAuthEmail()`;
 - nenhuma tabela War-Brasil paralela de pending credentials/verification.
