@@ -12,7 +12,7 @@ export default function MatchmakingPage() {
   return (
     <main className={`wb-shell-inner ${styles.page}`}>
       <header className={styles.intro}>
-        <PreGameBackButton href="/" />
+        <PreGameBackButton href="/" label="Voltar ao Início" />
 
         <div className={styles.introCopy}>
           <p className={styles.eyebrow}>CENTRAL DE OPERAÇÕES · ENTRADA NO CONFLITO</p>
