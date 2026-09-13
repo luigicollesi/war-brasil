@@ -8,7 +8,10 @@ Objetivo: impedir que o redesign seja tecnicamente correto, porém incompleto. C
 | Tecnologia física, pesada e durável | CORE | `visual-language.md`, `foundation/SPEC.md` | materiais, profundidade e motion coerentes |
 | Verde/carvão como massa; dourado como autoridade; vermelho como conflito | CORE | `visual-language.md` | estados idle/focus/conflito comparados |
 | Mesa de Domínio como centro espacial | CORE | `foundation/SPEC.md`, Home, Operações, Lobby, Doutrina | presença e função mudam por modo sem virar background decorativo |
-| Terra/globo → Brasil → Mesa como ritual de entrada | CORE | `foundation/SPEC.md`, `home/SPEC.md` | boot normal, skip, repeat visit, reduced-motion |
+| Home abre com Brasil canônico colorido e o materializa até o estado militar estável | CORE | `home/SPEC.md`, `opening-animation-standard.md` | snapshots 0/.15/.35/.60/.85/1 + comparação pós-cleanup |
+| Aberturas complexas transformam o estado existente e convergem ao baseline; não criam uma segunda composição final | CORE | `opening-animation-standard.md`, specs que adotarem opening | source + visual regression `progress=1` vs `post-cleanup` |
+| Timeline de opening é única, monotônica, determinística e seekable | CORE | `opening-animation-standard.md`, specs que adotarem opening | source + deterministic seek + snapshots repetidos |
+| Terra/Globo Estratégico é objeto de assinatura opcional, não estágio obrigatório de toda abertura | SUPPORTING | `visual-language.md`, `foundation/SPEC.md` | aparece apenas quando houver função narrativa explícita |
 | Brasil físico composto por 42 territórios | CORE | `foundation/SPEC.md` | contagem, identidade territorial e montagem estável |
 | Geometria/fronteiras canônicas preservadas | CORE | `foundation/SPEC.md` | comparação estrutural com asset/camada lógica do mapa |
 | 2.5D perceptível sem deformar ou espalhar o mapa | CORE | `foundation/SPEC.md` | screenshots e inspeção geométrica |
@@ -21,7 +24,7 @@ Objetivo: impedir que o redesign seja tecnicamente correto, porém incompleto. C
 | Insígnia de Comando recorrente | CORE | `visual-language.md`, Lobby, Perfil | estados de jogador/ready/perfil |
 | Cena compartilhada e persistente | CORE | `foundation/SPEC.md`, `parallel-development.md` | sequência de rotas sem múltiplos renderers/remount visual |
 | Páginas emitem intenção; não manipulam câmera/Three internamente | CORE | `parallel-development.md`, `foundation/SPEC.md` | inspeção de imports/ownership |
-| Home como ritual, não hero/site tradicional | CORE | `home/SPEC.md` | awaiting-entry + command-open |
+| Home como ritual, não hero/site tradicional | CORE | `home/SPEC.md` | Genesis + awaiting-entry + command-open |
 | `ENTRAR NO COMANDO` como ação principal | CORE | `home/SPEC.md` | navegação utilizável antes/depois da cerimônia |
 | Operações = autorizar nova operação ou localizar existente | CORE | `operations/SPEC.md` | create/join e estados de erro |
 | Create/Join como dois modos da mesma máquina, não cards | CORE | `operations/SPEC.md` | avaliação visual desktop/mobile |
@@ -37,7 +40,7 @@ Objetivo: impedir que o redesign seja tecnicamente correto, porém incompleto. C
 | Mobile é composição própria, não desktop comprimido | CORE | Foundation + todas as páginas | 390x844 + touch |
 | `prefers-reduced-motion` funcional | CORE | Foundation + todas as páginas | variante estável equivalente |
 | WebGL é enhancement, nunca requisito funcional | CORE | `foundation/SPEC.md` | fallback sem Canvas/WebGL |
-| Performance sem renderer duplicado/flicker | CORE | `foundation/SPEC.md` | profiler/inspeção + sequência de modos |
+| Performance sem renderer duplicado/flicker | CORE | `foundation/SPEC.md`, `opening-animation-standard.md` | profiler/inspeção + sequência de modos |
 | Som opcional e nunca requisito | SUPPORTING | `visual-language.md` | interface completa mutada |
 | Sem armas/soldados/explosões como atalho visual | CORE | `visual-language.md` | revisão visual |
 | Sem dashboard SaaS/cards/hexágonos/neon ciano genérico | CORE | `visual-language.md` | revisão visual |
@@ -45,5 +48,7 @@ Objetivo: impedir que o redesign seja tecnicamente correto, porém incompleto. C
 ## Regra de mudança
 
 Se um conceito `CORE` for removido, substituído ou rebaixado, o PR MUST alterar esta matriz explicitamente e justificar a decisão. Silêncio ou simples ausência no código é considerado omissão.
+
+A antiga obrigação específica `Terra → Brasil → Mesa` foi substituída pela Genesis cartográfica da Home. `StrategicGlobe` permanece como objeto compartilhado de assinatura, mas sua participação em uma abertura passa a depender do spec daquela abertura. Isso evita transformar uma ideia histórica de direção visual em mecanismo obrigatório para todas as cerimônias.
 
 Novas ideias aprovadas devem ser adicionadas aqui antes ou junto da implementação, mantendo rastreabilidade bidirecional entre intenção, spec e avaliação.
