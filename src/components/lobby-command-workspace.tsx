@@ -81,6 +81,7 @@ export function LobbyCommandWorkspace({
         </div>
 
         <div className={styles.operationIdentity}>
+          <h1 className={styles.mobileTitle}>Conselho de operação</h1>
           <p className={styles.codeLabel}>Chave da operação</p>
           <div className={styles.codeLine}>
             <code className={`${styles.roomCode} wb-code-value`}>{roomCode}</code>
