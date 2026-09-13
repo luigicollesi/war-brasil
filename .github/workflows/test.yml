@@ -12,6 +12,10 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      BETTER_AUTH_SECRET: ci-only-war-brasil-auth-secret-not-for-production-2026
+      BETTER_AUTH_URL: http://localhost:3000
+      AUTH_ALLOWED_HOSTS: localhost:3000
     services:
       postgres:
         image: postgres:18
@@ -66,7 +70,7 @@ jobs:
 
           READY=0
           for attempt in {1..60}; do
-            if curl --fail --silent http://localhost:3000/matchmaking > /dev/null; then
+            if curl --fail --silent http://localhost:3000/ > /dev/null; then
               READY=1
               break
             fi
