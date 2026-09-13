@@ -1,6 +1,8 @@
 -- War-Brasil public commander identity and authenticated game-seat binding.
 -- Better Auth remains authoritative for login/session/provider data.
 
+-- Up Migration
+
 CREATE SCHEMA IF NOT EXISTS profile;
 
 CREATE TABLE IF NOT EXISTS profile.commanders (
