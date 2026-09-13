@@ -138,22 +138,6 @@ const COMPACT_ENTRANCE_FOCUS_PRESETS: Readonly<
   },
 };
 
-const CINEMATIC_ENTRANCE_START: CommandCameraPose = {
-  camera: [-1.72, 1.38, 11.75],
-  target: [-0.88, -0.18, 0.08],
-  fov: 37.5,
-};
-
-const COMPACT_CINEMATIC_ENTRANCE_START: CommandCameraPose = {
-  camera: [-0.35, 2.15, 15.2],
-  target: [0.25, 0.5, 0.08],
-  fov: 42.5,
-};
-
-export function resolveCommandEntranceStartPose(compact = false): CommandCameraPose {
-  return compact ? COMPACT_CINEMATIC_ENTRANCE_START : CINEMATIC_ENTRANCE_START;
-}
-
 export function resolveCommandCameraPose(
   intent: NormalizedCommandSceneIntent,
   compact = false,

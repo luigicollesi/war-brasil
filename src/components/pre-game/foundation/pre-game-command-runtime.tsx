@@ -25,8 +25,6 @@ export type CommandSceneDirective = Readonly<{
   conflictLevel?: CommandConflictLevel;
   territoryExplode?: number;
   orbitalAlignment?: CommandOrbitalAlignment;
-  entranceStartedAtMs?: number | null;
-  entranceDurationMs?: number;
 }>;
 
 type DirectiveRegistration = Readonly<{
@@ -115,13 +113,9 @@ export function useCommandSceneDirective(
       conflictLevel: directive.conflictLevel,
       territoryExplode: directive.territoryExplode,
       orbitalAlignment: directive.orbitalAlignment,
-      entranceStartedAtMs: directive.entranceStartedAtMs,
-      entranceDurationMs: directive.entranceDurationMs,
     }),
     [
       directive.conflictLevel,
-      directive.entranceDurationMs,
-      directive.entranceStartedAtMs,
       directive.focus,
       directive.orbitalAlignment,
       directive.territoryExplode,

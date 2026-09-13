@@ -141,9 +141,6 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
     commandOpen,
     destinationFocus,
     transitioningTo,
-    entranceStartedAtMs:
-      homeTransition === "running" ? entranceStartedAtMs : null,
-    entranceDurationMs: COMMAND_ENTRANCE_DURATION_MS,
   });
 
   useCommandSceneDirective(sceneIntent);

@@ -8,8 +8,6 @@ type HomeSceneIntentInput = Readonly<{
   commandOpen: boolean;
   destinationFocus: HomeDestinationId | null;
   transitioningTo: HomeDestinationId | null;
-  entranceStartedAtMs?: number | null;
-  entranceDurationMs?: number;
 }>;
 
 const DESTINATION_INTENTS: Readonly<
@@ -40,8 +38,6 @@ export function getHomeSceneIntent({
   commandOpen,
   destinationFocus,
   transitioningTo,
-  entranceStartedAtMs = null,
-  entranceDurationMs,
 }: HomeSceneIntentInput): CommandSceneDirective {
   const activeDestination = transitioningTo ?? destinationFocus;
 
@@ -58,18 +54,12 @@ export function getHomeSceneIntent({
     };
   }
 
-  const entranceTiming =
-    entranceStartedAtMs === null
-      ? {}
-      : { entranceStartedAtMs, entranceDurationMs };
-
   if (ceremonyPhase === "earth") {
     return {
       focus: "earth",
       conflictLevel: 0,
       territoryExplode: 0,
       orbitalAlignment: 0,
-      ...entranceTiming,
     };
   }
 
@@ -79,7 +69,6 @@ export function getHomeSceneIntent({
       conflictLevel: 0,
       territoryExplode: 0,
       orbitalAlignment: 0,
-      ...entranceTiming,
     };
   }
 
@@ -88,6 +77,5 @@ export function getHomeSceneIntent({
     conflictLevel: 0,
     territoryExplode: 0,
     orbitalAlignment: 0,
-    ...entranceTiming,
   };
 }

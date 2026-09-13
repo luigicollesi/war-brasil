@@ -1,5 +1,3 @@
-import { COMMAND_ENTRANCE_DURATION_MS } from "./entrance-timeline";
-
 export const COMMAND_SCENE_MODES = [
   "entrance",
   "operations",
@@ -29,8 +27,6 @@ export type CommandSceneIntent = Readonly<{
   conflictLevel?: CommandConflictLevel;
   territoryExplode?: number;
   orbitalAlignment?: CommandOrbitalAlignment;
-  entranceStartedAtMs?: number | null;
-  entranceDurationMs?: number;
 }>;
 
 export type NormalizedCommandSceneIntent = Readonly<{
@@ -39,8 +35,6 @@ export type NormalizedCommandSceneIntent = Readonly<{
   conflictLevel: CommandConflictLevel;
   territoryExplode: number;
   orbitalAlignment: CommandOrbitalAlignment;
-  entranceStartedAtMs: number | null;
-  entranceDurationMs: number;
 }>;
 
 const DEFAULT_FOCUS_BY_MODE: Readonly<Record<CommandSceneMode, CommandSceneFocus>> = {
@@ -57,8 +51,6 @@ export const DEFAULT_COMMAND_SCENE_INTENT: NormalizedCommandSceneIntent = {
   conflictLevel: 0,
   territoryExplode: 0,
   orbitalAlignment: 0,
-  entranceStartedAtMs: null,
-  entranceDurationMs: COMMAND_ENTRANCE_DURATION_MS,
 };
 
 export function normalizeCommandSceneIntent(
@@ -67,12 +59,6 @@ export function normalizeCommandSceneIntent(
   const explode = Number.isFinite(intent.territoryExplode)
     ? Math.min(1, Math.max(0, intent.territoryExplode ?? 0))
     : 0;
-  const entranceStartedAtMs = Number.isFinite(intent.entranceStartedAtMs)
-    ? (intent.entranceStartedAtMs ?? null)
-    : null;
-  const entranceDurationMs = Number.isFinite(intent.entranceDurationMs)
-    ? Math.min(10_000, Math.max(250, intent.entranceDurationMs ?? COMMAND_ENTRANCE_DURATION_MS))
-    : COMMAND_ENTRANCE_DURATION_MS;
 
   return {
     mode: intent.mode,
@@ -80,8 +66,6 @@ export function normalizeCommandSceneIntent(
     conflictLevel: intent.conflictLevel ?? 0,
     territoryExplode: explode,
     orbitalAlignment: intent.orbitalAlignment ?? 0,
-    entranceStartedAtMs,
-    entranceDurationMs,
   };
 }
 

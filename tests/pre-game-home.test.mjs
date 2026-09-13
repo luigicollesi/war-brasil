@@ -37,7 +37,7 @@ test("HOME consome somente o contrato público do runtime Foundation", () => {
   assert.match(intent, /import type \{ CommandSceneDirective \} from "\.\.\/foundation"/);
   assert.match(foundationIndex, /COMMAND_ENTRANCE_DURATION_MS/);
   assert.match(foundationIndex, /CommandSceneDirective/);
-  assert.match(runtime, /entranceStartedAtMs/);
+  assert.doesNotMatch(runtime, /entranceStartedAtMs|entranceDurationMs/);
 
   const homeSources = `${home}\n${content}\n${intent}`;
   assert.doesNotMatch(homeSources, /@react-three\/fiber|from "three"|command-scene-canvas|scene-presets|CameraDirector|<Canvas|<CommandShell/);
@@ -58,13 +58,12 @@ test("HOME mantém identidade, CTA e três destinos do comando", () => {
   assert.match(home, /aria-label="Destinos do comando"/);
 });
 
-test("adapter continua sem coordenadas e transporta somente timing semântico", () => {
+test("adapter continua sem coordenadas e publica apenas intenção semântica", () => {
   assert.match(intent, /focus: "earth"/);
   assert.match(intent, /focus: "brazil"/);
   assert.match(intent, /focus: "table"/);
   assert.match(intent, /focus: "insignia"/);
-  assert.match(intent, /entranceStartedAtMs/);
-  assert.match(intent, /entranceDurationMs/);
+  assert.doesNotMatch(intent, /entranceStartedAtMs|entranceDurationMs/);
   assert.doesNotMatch(intent, /\b(?:x|y|z|fov|quaternion|camera|material)\s*:/i);
   assert.doesNotMatch(intent, /\bmode\s*:/);
 });
@@ -82,7 +81,6 @@ test("ritual é pulável e repeat/reduced-motion continuam estáveis", () => {
 
 test("entrada usa um único relógio contínuo de 3000ms", () => {
   assert.match(entranceTimeline, /COMMAND_ENTRANCE_DURATION_MS = 3000/);
-  assert.match(entranceTimeline, /ENTRANCE_EASING/);
   assert.match(home, /useState<HomeCeremonyPhase>\("brazil"\)/);
   assert.match(home, /useState<number \| null>\(null\)/);
   assert.match(home, /sceneState !== "ready"/);
@@ -125,14 +123,13 @@ test("Foundation oferece âncoras semânticas e intro não depende de estrutura 
   assert.doesNotMatch(introStyles, /nth-child|first-child|last-child/);
 });
 
-test("poses 3D continuam interpoladas e possuem pose inicial cinematográfica", () => {
+test("poses 3D continuam interpoladas sem acoplamento ao relógio da HOME", () => {
   assert.match(presets, /ENTRANCE_FOCUS_PRESETS/);
   assert.match(presets, /COMPACT_ENTRANCE_FOCUS_PRESETS/);
-  assert.match(presets, /CINEMATIC_ENTRANCE_START/);
-  assert.match(presets, /resolveCommandEntranceStartPose/);
   assert.match(scene, /MathUtils\.damp/);
   assert.match(scene, /targetSeparation/);
   assert.match(scene, /targetScale/);
+  assert.doesNotMatch(scene, /entranceStartedAtMs|entranceDurationMs/);
 });
 
 test("mobile preserva composição própria, safe-area e alvos touch", () => {
