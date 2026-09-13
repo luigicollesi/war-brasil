@@ -35,4 +35,20 @@ export type {
   NormalizedCommandSceneIntent,
 } from "./scene-contract";
 export { COMMAND_FOUNDATION_TOKENS } from "./foundation-tokens";
-export { COMMAND_ENTRANCE_DURATION_MS } from "./entrance-timeline";
+export {
+  COMMAND_ENTRANCE_DURATION_MS,
+  COMMAND_ENTRANCE_RECIPE,
+} from "./entrance-timeline";
+export {
+  clampOpeningProgress,
+  deterministicOpeningSeed,
+  readOpeningSeek,
+  resolveOpeningProgress,
+  sampleOpeningCue,
+  smoothOpeningProgress,
+} from "./opening-timeline";
+export type {
+  OpeningCueWindow,
+  OpeningRecipe,
+  OpeningRuntimePhase,
+} from "./opening-timeline";
