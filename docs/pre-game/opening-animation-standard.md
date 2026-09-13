@@ -69,19 +69,71 @@ A timeline deve ser dividida em **janelas semânticas**.
 Exemplo:
 
 ```text
-map-material        0.08 → 0.82
-border-activation   0.12 → 0.66
-atmosphere          0.30 → 0.86
-identity            0.42 → 0.92
-primary-action      0.58 → 0.96
-settling            0.86 → 1.00
+spatial-ingress      0.00 → 0.42
+material-invocation  0.42 → 0.92
+atmosphere           0.30 → 0.88
+identity             0.48 → 0.94
+primary-action       0.62 → 0.98
+settling             0.86 → 1.00
 ```
 
 Cada track recebe `localProgress(globalProgress, start, end, easing)`.
 
 Aberturas SHOULD declarar essas janelas em um recipe/configuração pequena e testável, em vez de espalhar números mágicos entre componentes.
 
-### 6. Render-domain ownership
+### 6. Single-property, single-curve
+
+Uma propriedade visual que começa a se mover em uma abertura SHOULD possuir **uma única curva contínua até seu destino**.
+
+MUST NOT encadear duas cue windows diferentes controlando sequencialmente a mesma posição/rotação/escala quando isso produz:
+
+```text
+acelera → desacelera/para → acelera novamente
+```
+
+Quando a propriedade precisa apenas esperar antes de iniciar, o estado inicial MAY permanecer em hold até sua janela; depois que o movimento começou, a curva deve seguir sem reinicialização até o destino.
+
+Para movimentos espaciais com necessidade de assentamento suave, SHOULD usar smootherstep/quintic ou easing equivalente com derivadas suaves nos extremos. O lifecycle `settling` MAY começar enquanto a curva continua, mas MUST NOT iniciar um segundo easing da mesma propriedade.
+
+### 7. Spatial assembly / radial ingress
+
+Quando uma abertura monta um objeto composto a partir de partes, a SPEC MAY declarar um **spatial ingress** reutilizável.
+
+Padrão recomendado para convergência center-out:
+
+1. agrupar geometrias pela unidade semântica estável (`territoryId`, `cardId`, `panelId`, etc.);
+2. calcular centroid/bounds da unidade completa;
+3. calcular distância normalizada ao centro do conjunto;
+4. derivar `start` monotonicamente dessa distância;
+5. gerar origem fora da composição pela direção radial;
+6. interpolar origem → destino em uma única curva;
+7. usar seed determinístico apenas para pequenas variações que não mudem a ordem semântica.
+
+MUST NOT usar ordem de array/asset como substituto da ordem espacial quando a narrativa exige proximidade geográfica.
+
+O stagger SHOULD ser contínuo e com overlap; batches discretos só são permitidos quando a SPEC exige explicitamente leitura por grupos.
+
+Múltiplas geometrias pertencentes à mesma unidade semântica MUST compartilhar o mesmo descritor de movimento para não separar visualmente uma unidade lógica.
+
+### 8. Shared progress for coupled effects
+
+Quando dois efeitos representam o mesmo acontecimento narrativo, SHOULD compartilhar o mesmo progresso local em vez de manter clocks/cues quase iguais.
+
+Exemplo:
+
+```text
+genesisProgress
+├── material reveal
+├── border activation
+├── permanent ring opacity
+└── transient ring sweep rotation
+```
+
+Isso reduz drift e torna seek/snapshot determinístico.
+
+Um efeito auxiliar transitório MAY ser usado para tornar uma transformação perceptível quando o objeto permanente é visualmente simétrico; no cleanup, somente o objeto permanente deve restar.
+
+### 9. Render-domain ownership
 
 Cada tipo de movimento deve usar a camada mais apropriada.
 
@@ -95,7 +147,7 @@ Cada tipo de movimento deve usar a camada mais apropriada.
 
 No `useFrame`, MUST evitar `setState`. Atualizações por frame SHOULD mutar refs, uniforms e propriedades Three diretamente, mantendo cálculos curtos e reutilizando objetos temporários.
 
-### 7. Deterministic procedural motion
+### 10. Deterministic procedural motion
 
 Ruído, ordem territorial, offsets e variações MAY ser procedurais, mas MUST ser determinísticos.
 
@@ -107,7 +159,7 @@ MUST:
 
 MUST NOT usar `Math.random()` por montagem/frame para elementos avaliados por snapshot.
 
-### 8. Complex material transitions
+### 11. Complex material transitions
 
 Para transições de superfície, SHOULD preferir transformação no GPU a dezenas de animações React independentes.
 
@@ -125,7 +177,7 @@ Quando duas superfícies compartilham geometria, a implementação MUST evitar z
 
 Dissolves SHOULD usar threshold suavizado/anti-aliased e ruído estável; padrões em screen-space que mudam ao redimensionar SHOULD ser evitados quando a transformação é percebida como parte do objeto.
 
-### 9. DOM choreography
+### 12. DOM choreography
 
 Tracks DOM que precisam apenas de opacidade/transform SHOULD usar Web Animations API ou CSS compositor-friendly.
 
@@ -133,7 +185,9 @@ Quando sincronização precisa com WebGL for necessária, todos os tracks MUST c
 
 Mudanças de layout (`top`, `left`, `width`, reflow contínuo) SHOULD ser evitadas durante a abertura quando `transform` resolve o mesmo problema.
 
-### 10. Lifecycle padrão
+O princípio `single-property, single-curve` também se aplica ao DOM: keyframes intermediários não devem criar parada/reaceleração não intencional do mesmo transform.
+
+### 13. Lifecycle padrão
 
 Aberturas complexas SHOULD usar o seguinte lifecycle semântico:
 
@@ -146,14 +200,14 @@ loading → primed → playing → settling → settled
 - `loading`: recursos ainda não garantem o primeiro frame correto;
 - `primed`: frame inicial correto e pronto para pintura;
 - `playing`: `0 <= progress < settlingStart`;
-- `settling`: aproximação final, normalmente últimos 10–20%;
+- `settling`: aproximação final sem reiniciar as curvas em andamento;
 - `settled`: abertura removida; estado estável é a única fonte visual;
 - `bypassed`: skip/reduced-motion leva diretamente ao estado estável;
 - `fallback`: WebGL indisponível; conteúdo e ação permanecem funcionais.
 
 React SHOULD observar apenas mudanças de lifecycle. `progress` por frame não deve virar estado React.
 
-### 11. Skip, navigation and interruptions
+### 14. Skip, navigation and interruptions
 
 A abertura é ornamental e MUST NOT bloquear função.
 
@@ -164,13 +218,13 @@ MUST:
 - não atrasar redirect esperando a animação concluir;
 - suportar unmount/route change sem timers órfãos ou recursos GPU transitórios vazando.
 
-### 12. Reduced motion
+### 15. Reduced motion
 
 `prefers-reduced-motion: reduce` MUST remover movimentos espaciais e coreografias não essenciais.
 
 Por padrão, uma abertura puramente ornamental SHOULD entrar diretamente em `settled`. Uma variante reduzida curta MAY existir somente se não depender de pan, zoom, parallax, escala ampla, rotação ou repetição desconfortável.
 
-### 13. Performance and resource lifecycle
+### 16. Performance and resource lifecycle
 
 MUST:
 
@@ -183,28 +237,19 @@ MUST:
 
 SHOULD:
 
+- calcular descritores espaciais no priming/memoization, não por frame;
 - prewarm shaders da abertura;
 - degradar primeiro efeitos secundários, não legibilidade;
 - limitar DPR/adaptar qualidade conforme Foundation;
 - permitir que cenas estáveis reduzam renderização contínua quando aplicável.
 
-### 14. Deterministic seek for evals
+### 17. Deterministic seek for evals
 
 Toda abertura complexa MUST possuir uma forma interna de avaliação determinística capaz de posicionar a coreografia em um progresso normalizado conhecido sem aguardar tempo real.
 
 Esse mecanismo MAY ser um helper de teste, prop interna, controller ou harness; não precisa ser API pública de produção.
 
-Deve ser possível avaliar pelo menos:
-
-```text
-0.00
-0.15
-0.35
-0.60
-0.85
-1.00
-post-cleanup
-```
+Deve ser possível avaliar pelo menos checkpoints suficientes para representar início, transições semânticas, settling, último frame e cleanup.
 
 `progress = 1.00` e `post-cleanup` são estados diferentes de teste: o primeiro valida o último frame da timeline; o segundo valida que remover a infraestrutura temporária não altera visualmente o resultado.
 
@@ -220,7 +265,6 @@ type OpeningRecipe = {
   cues: Record<string, {
     start: number;
     end: number;
-    easing: string;
   }>;
 };
 ```
@@ -238,6 +282,8 @@ A menos que uma SPEC específica justifique explicitamente, MUST NOT:
 - duplicar o layout final dentro do código da abertura;
 - usar aleatoriedade não determinística;
 - usar crossfade entre dois objetos diferentes para fingir continuidade;
+- controlar a mesma propriedade por duas curvas sequenciais que gerem stop/restart;
+- ordenar assembly espacial por índice de array quando a ordem semântica é geométrica;
 - esconder stutter de compilação com um fade sem resolver o priming;
 - adicionar biblioteca de animação apenas para uma timeline que o stack atual já suporta.
 
@@ -246,6 +292,8 @@ A menos que uma SPEC específica justifique explicitamente, MUST NOT:
 - React Three Fiber — performance pitfalls: https://r3f.docs.pmnd.rs/advanced/pitfalls
 - React Three Fiber — scaling/on-demand rendering: https://r3f.docs.pmnd.rs/advanced/scaling-performance
 - React Three Fiber — `useFrame`: https://r3f.docs.pmnd.rs/api/hooks
+- Three.js — `Object3D`: https://threejs.org/docs/pages/Object3D.html
+- Three.js — `Material`: https://threejs.org/docs/pages/Material.html
 - Three.js — `ShaderMaterial`: https://threejs.org/docs/pages/ShaderMaterial.html
 - Three.js — `WebGLRenderer.compileAsync`: https://threejs.org/docs/pages/WebGLRenderer.html
 - MDN — Web Animations API: https://developer.mozilla.org/docs/Web/API/Web_Animations_API
@@ -258,6 +306,8 @@ Uma abertura complexa só está pronta quando:
 
 - primeiro frame intencional é reproduzível;
 - timeline é única e seekable;
+- propriedades não sofrem stop/restart por curvas encadeadas;
+- efeitos semanticamente acoplados compartilham progresso quando aplicável;
 - todos os tracks convergem sem salto;
 - o estado final pós-cleanup é idêntico ao baseline estável;
 - reduced-motion/skip/fallback funcionam;
