@@ -1,176 +1,252 @@
-# Plano técnico — PROFILE / Salão de Comando
+# Plano técnico — PROFILE V2 / Quartel do Comandante
 
-Branch: `feature/pre-game-profile`  
+Branch: `feature/profile-command-quarters-v2`  
 Rota: `/profile`  
 Cena: `profile`
 
 ## Objetivo
 
-Implementar o Perfil como um **Salão de Comando** orientado a identidade, prestígio e memória, sem dashboard KPI e sem inventar progressão competitiva. Nesta etapa, somente a identidade pública local possui fonte disponível; os demais dados permanecem honestamente indisponíveis até existirem contratos reais.
+Transformar a PROFILE em um **Quartel do Comandante**: uma tela de jogo pessoal, assimétrica e espacial, que reúne identidade, economia, social, histórico e personalização sem assumir formato de dashboard web.
 
-## Fonte de verdade
+## Arquitetura atual
 
-Precedência aplicada:
+A implementação V2 preserva o App Router e a Foundation já integrada em `dev`.
 
-1. contratos/código atuais;
-2. `SPEC.md` / `EVAL.md` da PROFILE;
-3. `../quality-standard.md`, `../traceability.md` e `../visual-language.md`;
-4. Foundation compartilhada já integrada em `dev`.
+- `page.tsx` permanece Server Component e resolve o snapshot em request-time;
+- `ProfileCommandHub` é a boundary cliente responsável por estação ativa, seleção local e diretivas de cena;
+- Rede de Comando, Livro de Campanha e Intendência são componentes especializados separados;
+- busca social mantém estado e request apenas dentro de `ProfileNetworkStation`;
+- a PROFILE consome somente `useCommandSceneDirective()` da API pública da Foundation;
+- Three.js, Canvas, câmera e renderer continuam privados da Foundation;
+- loading/error continuam usando `ProfileBoundaryState` e `ProfileSceneBridge`;
+- a antiga V1 (`ProfileHall`, `profile-data.ts` e estados auxiliares) foi removida para evitar duas fontes de verdade.
 
-A PROFILE não altera regra de jogo, banco, realtime, autenticação ou schema.
+## Modelo de produto
 
-## Estado de integração
+Cinco sistemas orbitam a Mesa de Comando:
 
-A branch está sincronizada com a Foundation integrada em `dev` e consome somente seu barrel público.
+1. **Dossiê do Comandante** — retrato, nome, handle, título e presença;
+2. **Tesouraria** — moeda comum e moeda premium;
+3. **Rede de Comando** — amigos, solicitações, contatos recentes e busca;
+4. **Livro de Campanha** — partidas recentes, participantes e continuação explícita;
+5. **Intendência** — vitrine de itens cosméticos sem checkout fictício.
 
-### Foundation
+## Boundary V2
 
-`src/components/profile/profile-command-shell.tsx` emite apenas intenção semântica:
+Arquivos de dados:
 
-```ts
-{ mode: "profile", focus: "insignia", conflictLevel: 0 }
-```
+- `profile-command-contract.ts` — tipos públicos da PROFILE V2;
+- `profile-local-fixture.ts` — dados temporários explicitamente `local-static`;
+- `profile-command-data.ts` — boundary estável para snapshot e busca;
+- `/api/profile/commanders/search` — busca sob demanda sem carregar diretório na página.
 
-A página não importa `three`, `@react-three/fiber`, `Canvas`, câmera ou renderer. `CommandShell` é o único dono da cena e `CommandInsignia` é a primitive compartilhada usada pela identidade.
+`getCurrentProfileCommandSnapshot()` é o único ponto de entrada da rota. Providers futuros de autenticação, wallet, social, histórico e storefront devem substituir a implementação sem vazar payloads específicos para os componentes.
 
-`WarShell` continua responsável pela navegação vigente, mas fica transparente somente dentro do wrapper da PROFILE para permitir que a cena/fallback da Foundation permaneça visível.
+## Componentes V2
 
-Loading e error boundary usam o mesmo `ProfileCommandShell`; portanto a fantasia espacial não desaparece durante carregamento ou falha.
+`src/components/profile/command-quarters/` contém:
 
-## Boundary de dados
+- `profile-command-hub.tsx` — controller visual e composição das estações;
+- `profile-network-station.tsx` — roster, sinais recebidos, recentes e busca;
+- `profile-campaign-station.tsx` — janela de partidas + participantes do registro selecionado;
+- `profile-quartermaster-station.tsx` — vitrine da Intendência;
+- `profile-command-format.ts` — formatação e labels compartilhados;
+- `profile-command-hub.module.css` — composição principal desktop/mobile;
+- `profile-command-refinements.module.css` — refinamentos incrementais sem inflar o controller.
 
-`src/lib/profile/profile-data.ts` define `ProfileSnapshot` e `getCurrentProfileSnapshot()`.
+## Estado local inicial
 
-Fluxo normal atual:
+O fluxo normal usa fixture local para permitir implementar e avaliar toda a tela antes dos serviços reais:
 
-| Conteúdo | Origem | Estado |
-| --- | --- | --- |
-| nome `Luigi` | `local-static` | disponível, marcado como temporário |
-| progressão | nenhuma | `unavailable` |
-| estatísticas | nenhuma | `unavailable` |
-| histórico | nenhuma | `unavailable` |
-| conquistas | nenhuma | `unavailable` |
+- identidade: `Luigi`;
+- título: `Estrategista do Sul`;
+- moedas: Créditos de Campanha + Reserva de Comando;
+- roster social limitado;
+- solicitações e contatos recentes;
+- três partidas recentes + `hasMore`/cursor;
+- três itens em destaque da Intendência.
 
-A UI nunca converte ausência em zero, patente, ranking, medalha ou outro valor competitivo fictício.
+Toda seção declara `source: "local-static"`; esse conteúdo não deve ser apresentado como dado remoto persistido.
 
-O histórico possui contrato `{ campaigns, hasMore }`; provedores futuros devem retornar uma janela limitada. O cenário de avaliação completo usa exatamente três campanhas e `hasMore: true` para provar esse comportamento sem criar paginação fictícia de backend.
+## Cena por estação
 
-## Request-time e futura autenticação
+A V2 controla somente intenção semântica:
 
-`/profile` executa `await connection()` antes da boundary de dados. Isso impede prerenderização de um perfil dependente de identidade e torna o harness de avaliação determinístico no servidor.
+- `dossier` → `focus: insignia`;
+- `treasury` → `focus: table`;
+- `network` → `focus: table` + alinhamento orbital;
+- `campaigns` → `focus: brazil` + explode leve;
+- `quartermaster` → `focus: table`.
 
-Quando login existir, somente `getCurrentProfileSnapshot()` deve ser substituído por um adapter autenticado. Componentes visuais não devem consumir shape bruto de sessão, tokens ou SDK de autenticação.
+Nenhuma coordenada, FOV ou objeto Three entra na PROFILE.
 
-## Harness determinístico do EVAL
+## Desktop
 
-Fixtures são opt-in exclusivamente por ambiente de servidor:
+Alvo: `1440x900`.
 
-```bash
-PROFILE_EVAL_MODE=1 PROFILE_EVAL_STATE=guest npm run dev
-PROFILE_EVAL_MODE=1 PROFILE_EVAL_STATE=partial-data npm run dev
-PROFILE_EVAL_MODE=1 PROFILE_EVAL_STATE=loaded npm run dev
-PROFILE_EVAL_MODE=1 PROFILE_EVAL_STATE=empty-history npm run dev
-PROFILE_EVAL_MODE=1 PROFILE_EVAL_STATE=no-progression-system npm run dev
-PROFILE_EVAL_MODE=1 PROFILE_EVAL_STATE=error npm run dev
-```
+A composição usa:
 
-Não existe query string, cookie ou controle público para selecionar fixtures.
+- Dossiê à esquerda;
+- Mesa de Comando no centro;
+- Rede de Comando à direita;
+- Livro de Campanha na base esquerda/central;
+- Intendência na base direita;
+- Tesouraria compacta no chrome da PROFILE e expandida na Mesa quando ativa.
 
-- `guest`: sem identidade;
-- `partial-data`: identidade + seções indisponíveis;
-- `loaded`: todas as áreas estruturais disponíveis com conteúdo explicitamente sintético;
-- `empty-history`: demais áreas disponíveis, histórico vazio;
-- `no-progression-system`: demais áreas disponíveis, progressão ausente;
-- `error`: lança `PROFILE_EVAL_ERROR` e exercita o `error.tsx` real.
+Uso principal cabe em `100dvh`; listas volumosas rolam dentro da estação.
 
-Todo conteúdo `evaluation-fixture` é rotulado na própria interface e nunca se apresenta como dado real.
+## Mobile
 
-## Estados de ambiente
+Alvo: `390x844`.
 
-A PROFILE possui texto explícito indicando que o conteúdo crítico é **independente de WebGL**. A Foundation controla Canvas/fallback sem exigir que a página manipule renderer.
+A mesma arquitetura vira **Terminal de Campo**:
 
-`prefers-reduced-motion: reduce` remove motion não essencial e troca a indicação textual de movimento padrão para movimento reduzido. O conteúdo e a hierarquia permanecem presentes.
+- uma estação expandida por vez;
+- identidade + carteira permanecem no topo;
+- seletor inferior com os cinco sistemas;
+- nenhuma ação depende de hover;
+- Mesa de Comando aparece como estação da Tesouraria e como contexto visual reduzido.
 
-## UI / materialidade
+## Rede de Comando
 
-- carvão/verde profundo como massa;
-- dourado restrito a autoridade e detalhes físicos;
-- vermelho não é estado padrão;
-- Insígnia compartilhada como objeto de identidade;
-- placas/arquivos/honrarias em vez de cards KPI;
-- loading/error representados por um cofre de arquivo físico;
-- objetos decorativos fora da árvore acessível;
-- nomes, estados, campanhas e honrarias continuam em HTML.
+Busca é separada do snapshot principal. `ProfileNetworkStation` consulta `/api/profile/commanders/search?q=...` somente após entrada explícita do usuário.
 
-No mobile (<640px), a composição vira fluxo vertical e remove elementos de perspectiva secundários.
+A implementação atual:
 
-## Testes implementados
+- mostra amigos e presença;
+- mostra solicitações recebidas sem fingir aceitação persistente;
+- mostra jogadores encontrados em partidas recentes;
+- exige pelo menos 2 caracteres para busca;
+- limita o input a 64 caracteres;
+- limita o provider local a 8 resultados;
+- responde com `Cache-Control: private, no-store`;
+- usa `aria-live` para resultado vazio/erro;
+- não carrega o diretório completo no browser.
 
-### Contract / inspection
+Persistência de amizade continua fora desta fase até existir contrato real de backend.
 
-`tests/profile-pre-game-contract.test.mjs` protege:
+## Livro de Campanha
 
-- ausência de dados competitivos inventados;
-- equivalentes textuais;
-- loading/error/mobile/reduced-motion;
-- request-time via `connection()`;
-- harness não controlável por URL;
-- integração somente via API pública da Foundation;
-- ausência de imports diretos de renderer/Three;
-- Insígnia compartilhada;
-- transparência do `WarShell` limitada à PROFILE.
+A V2 mantém três partidas na janela inicial e `hasMore: true` + cursor. O registro selecionado expõe participantes e identifica quais já pertencem à Rede de Comando, sem criar ação de amizade falsa.
 
-### Boundary comportamental
+Isso protege o design contra histórico ilimitado e prepara paginação real futura.
 
-`src/lib/profile/profile-data.ts` participa de `npm run test:compile`.
+## Intendência
 
-`tests/profile-data.test.mjs` importa a saída compilada e valida de fato:
+É apenas showcase. Cada item possui categoria, artwork/fallback e preço com currency id. Nenhum campo `owned`, `purchased`, checkout ou mutação de wallet existe nesta etapa.
 
-- fluxo normal;
+## EVAL server-side
+
+`PROFILE_EVAL_MODE=1` + `PROFILE_EVAL_STATE` continua sendo o único mecanismo de fixture.
+
+Estados V2 implementados:
+
 - `guest`;
 - `loaded`;
-- `empty-history`;
-- `no-progression-system`;
 - `partial-data`;
-- `error`;
-- estado inválido;
-- janela de histórico limitada a 3 itens com continuação explícita.
+- `wallet-unavailable`;
+- `empty-history`;
+- `empty-social`;
+- `empty-storefront`;
+- `error`.
 
-## Cobertura PRO-01…PRO-12
+Reduced-motion e fallback continuam pertencendo ao ambiente/Foundation.
 
-| Gate | Implementação atual |
-| --- | --- |
-| PRO-01 | fluxo normal não cria rank/stat/achievement; fixture é marcada |
-| PRO-02 | estados de dados + boundaries loading/error explícitos |
-| PRO-03 | snapshot não expõe IDs/tokens/payload bruto |
-| PRO-04 | conteúdo crítico é HTML; Foundation provê fallback |
-| PRO-05 | composição mobile dedicada e sem dependência de hover |
-| PRO-06 | reduced-motion preserva conteúdo e possui estado textual |
-| PRO-07 | cada seção possui `source`/`availability` |
-| PRO-08 | nenhum fluxo de login foi criado |
-| PRO-09 | histórico possui janela + `hasMore` |
-| PRO-10 | `CommandInsignia` canônica da Foundation |
-| PRO-11 | honrarias renderizam nome + descrição em HTML |
-| PRO-12 | vazio continua representado como arquivo físico do Salão |
+## Fases
 
-## O que ainda falta para Definition of Done
+### Fase 0 — contrato
 
-A implementação funcional está pronta para os gates automatizados existentes, mas a trilha ainda **não deve ser declarada concluída** até existir evidência dos itens abaixo:
+Concluída:
 
-1. `npm test` completo;
-2. `npm run lint` completo;
-3. `npm run build` no HEAD atual;
-4. regressão visual em 1440x900 e 390x844 para:
-   - `guest`;
-   - `partial-data`;
-   - `loaded`;
-   - `empty-history`;
-   - `no-progression-system`;
-   - `error`;
-   - `reduced-motion`;
-   - fallback sem WebGL;
-5. teclado/foco visível;
-6. touch em 390x844;
-7. score final do `EVAL.md` >= 85 com todos os blockers verdes.
+- nova SPEC;
+- novo EVAL;
+- branch dedicada derivada de `dev`.
 
-O workflow atual do repositório executa lint/test/build quando houver PR contra `dev`. Não abrir PR ou fazer merge automaticamente nesta branch.
+### Fase 1 — dados V2
+
+Concluída:
+
+- contrato V2;
+- fixture local isolada;
+- boundary de snapshot;
+- busca sob demanda;
+- `test:compile` atualizado;
+- testes comportamentais da V2.
+
+### Fase 2 — composição do Quartel
+
+Concluída no primeiro corte:
+
+- `ProfileCommandHub`;
+- cinco estações;
+- Mesa de Comando central;
+- composição desktop 100dvh;
+- Terminal de Campo mobile;
+- cena reativa via Foundation.
+
+### Fase 3 — refinamento social
+
+Implementada parcialmente:
+
+- roster com presença;
+- solicitações recebidas;
+- contatos recentes;
+- busca com estado vazio/erro e `aria-live`;
+- endpoint `private, no-store` e input limitado.
+
+Pendente para backend futuro:
+
+- aceitar/rejeitar solicitação;
+- adicionar/remover amigo;
+- bloquear/favoritar;
+- persistência real.
+
+### Fase 4 — Dossiê da partida
+
+Implementada parcialmente:
+
+- seleção de registro recente;
+- participantes;
+- relação com a Rede de Comando;
+- janela limitada com continuação.
+
+Pendente para fonte real:
+
+- detalhes completos da partida;
+- paginação real;
+- navegação para perfil público de outro jogador.
+
+### Fase 5 — Intendência avançada
+
+Pendente:
+
+- ficha de item;
+- artwork real;
+- categorias completas;
+- integração futura com `/store` sem checkout nesta trilha.
+
+### Fase 6 — validação
+
+Pendente como evidência completa:
+
+- lint;
+- testes;
+- build do HEAD atual;
+- 1440x900 e 390x844;
+- teclado/touch;
+- reduced-motion;
+- fallback WebGL;
+- score EVAL >= 85 e todos os blockers verdes.
+
+Observação: um build anterior da V2 ficou verde no Vercel; builds subsequentes podem ser bloqueados pelo limite externo de deploy e não devem ser confundidos com erro de compilação.
+
+## Fora de escopo desta branch
+
+- autenticação real;
+- banco social;
+- compra/checkout;
+- persistência de moeda;
+- sistema de rank/patente;
+- alteração de regras do jogo;
+- mudanças em realtime;
+- mudanças diretas na implementação Three da Foundation.

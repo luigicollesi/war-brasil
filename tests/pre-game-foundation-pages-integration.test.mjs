@@ -128,8 +128,8 @@ test("Lobby reserva o chrome dentro de 100dvh e mantém ready no fluxo sem cobri
   assert.doesNotMatch(`${lobbyWorkspaceCss}\n${lobbyReadyCss}`, /overflow-y:\s*(?:auto|scroll)/);
 });
 
-test("Profile não reintroduz WarShell em loaded, loading ou error", () => {
-  assert.match(profilePage, /ProfileSceneBridge/);
+test("Profile V2 permanece no runtime Foundation sem reintroduzir WarShell", () => {
+  assert.match(profilePage, /ProfileCommandHub/);
   assert.match(profileLoading, /ProfileSceneBridge/);
   assert.match(profileError, /ProfileSceneBridge/);
   assert.doesNotMatch(`${profilePage}\n${profileLoading}\n${profileError}`, /WarShell/);

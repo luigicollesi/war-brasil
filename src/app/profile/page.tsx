@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
-import { ProfileSceneBridge } from "@/src/components/profile/profile-command-shell";
-import { ProfileHall } from "@/src/components/profile/profile-hall";
-import { getCurrentProfileSnapshot } from "@/src/lib/profile/profile-data";
+import { ProfileCommandHub } from "@/src/components/profile/command-quarters/profile-command-hub";
+import { getCurrentProfileCommandSnapshot } from "@/src/lib/profile/profile-command-data";
 
 export const metadata: Metadata = {
-  title: "Perfil — Salão de Comando",
-  description: "Identidade e registros do comandante no WAR Brasil.",
+  title: "Quartel do Comandante",
+  description: "Identidade, rede, campanhas e Intendência do comandante no WAR Brasil.",
   robots: {
     index: false,
     follow: false,
@@ -14,15 +13,8 @@ export const metadata: Metadata = {
 };
 
 export default async function ProfilePage() {
-  // The profile is identity-bound and must be resolved at request time. This also
-  // keeps the opt-in visual-evaluation harness deterministic without exposing a
-  // URL-controlled mock state.
   await connection();
-  const snapshot = await getCurrentProfileSnapshot();
+  const snapshot = await getCurrentProfileCommandSnapshot();
 
-  return (
-    <ProfileSceneBridge>
-      <ProfileHall snapshot={snapshot} />
-    </ProfileSceneBridge>
-  );
+  return <ProfileCommandHub snapshot={snapshot} />;
 }
