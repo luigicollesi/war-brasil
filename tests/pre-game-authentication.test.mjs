@@ -29,6 +29,10 @@ const onboarding = readFileSync(
   "src/components/auth/command-onboarding-modal.tsx",
   "utf8",
 );
+const rooms = readFileSync("src/lib/server/rooms.ts", "utf8");
+const createRoomRoute = readFileSync("src/app/api/rooms/route.ts", "utf8");
+const joinRoomRoute = readFileSync("src/app/api/rooms/join/route.ts", "utf8");
+const lobbyE2e = readFileSync("scripts/e2e/lobby-e2e.mjs", "utf8");
 
 const authSources = [
   auth,
@@ -208,4 +212,31 @@ test("onboarding coleta somente identidade pública e conclui pelo endpoint aute
   assert.match(onboarding, /method: "PUT"/);
   assert.doesNotMatch(onboarding, /name="email"|name="userId"|name="user_id"/);
   assert.match(onboarding, /aria-modal="true"/);
+});
+
+test("create/join vinculam conta e snapshot público ao assento na transação", () => {
+  assert.match(rooms, /type AuthenticatedPlayerIdentity/);
+  assert.match(rooms, /user_id,\s*display_name_snapshot,\s*handle_snapshot/);
+  assert.match(rooms, /identity\?\.userId \?\? null/);
+  assert.match(rooms, /attachIdentityToExistingSeat/);
+  assert.match(rooms, /existingBySession\.user_id !== identity\.userId/);
+  assert.match(rooms, /SET player_session = \$1/);
+
+  for (const route of [createRoomRoute, joinRoomRoute]) {
+    assert.match(route, /getAuthenticatedSession\(request\)/);
+    assert.match(route, /getCommandAccessState\(accountSession\)/);
+    assert.match(route, /profileComplete/);
+    assert.match(route, /userId: accountSession\.user\.id/);
+    assert.match(route, /displayName: access\.profile\.displayName/);
+    assert.match(route, /handle: access\.profile\.handle/);
+  }
+});
+
+test("Lobby E2E usa sessão Better Auth real e não bypass de CI", () => {
+  assert.match(lobbyE2e, /\/api\/auth\/register/);
+  assert.match(lobbyE2e, /UPDATE auth\."user"/);
+  assert.match(lobbyE2e, /\/api\/auth\/sign-in\/email/);
+  assert.match(lobbyE2e, /\/api\/auth\/command-access/);
+  assert.match(lobbyE2e, /profileComplete/);
+  assert.doesNotMatch(lobbyE2e, /AUTH_BYPASS|SKIP_AUTH|DISABLE_AUTH/);
 });
