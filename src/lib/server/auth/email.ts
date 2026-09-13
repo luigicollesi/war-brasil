@@ -1,10 +1,18 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+
 export type AuthEmailMessage = {
   html: string;
   subject: string;
   text: string;
   to: string;
+};
+
+type AuthEmailSinkMessage = AuthEmailMessage & {
+  capturedAt: string;
 };
 
 function escapeHtml(value: string) {
@@ -107,8 +115,35 @@ export function buildPasswordResetEmail(url: string) {
   });
 }
 
+async function captureAuthEmailForTest(message: AuthEmailMessage) {
+  const sinkDirectory = process.env.AUTH_EMAIL_SINK_DIR?.trim();
+  if (!sinkDirectory) return false;
+
+  if (process.env.NODE_ENV === "production" && process.env.CI !== "true") {
+    throw new Error("AUTH_EMAIL_SINK_DIR é permitido apenas em desenvolvimento/testes.");
+  }
+
+  const payload: AuthEmailSinkMessage = {
+    ...message,
+    capturedAt: new Date().toISOString(),
+  };
+
+  await mkdir(sinkDirectory, { recursive: true });
+  const filename = `${Date.now()}-${randomUUID()}.json`;
+  await writeFile(
+    path.join(sinkDirectory, filename),
+    `${JSON.stringify(payload)}\n`,
+    { encoding: "utf8", mode: 0o600 },
+  );
+  return true;
+}
+
 export async function sendAuthEmail(message: AuthEmailMessage) {
   if (isNonDeliverableAuthAddress(message.to)) {
+    return;
+  }
+
+  if (await captureAuthEmailForTest(message)) {
     return;
   }
 

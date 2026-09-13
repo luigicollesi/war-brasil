@@ -21,6 +21,7 @@ jobs:
       DISCORD_CLIENT_SECRET: DISCORD_SENTINEL_DO_NOT_SHIP
       EMAIL_TRANSPORT_SECRET: EMAIL_SENTINEL_DO_NOT_SHIP
       DB_PASSWORD_SENTINEL: DB_SENTINEL_DO_NOT_SHIP_2026
+      AUTH_EMAIL_SINK_DIR: /tmp/war-brasil-auth-email-sink
     services:
       postgres:
         image: postgres:18
@@ -74,9 +75,11 @@ jobs:
           ./.e2e-runtime/node_modules/.bin/playwright install --with-deps chromium
       - name: Run Auth boundary and Lobby multi-client E2E
         run: |
+          rm -rf "$AUTH_EMAIL_SINK_DIR"
+          mkdir -p "$AUTH_EMAIL_SINK_DIR"
           npm start > /tmp/war-brasil-e2e.log 2>&1 &
           SERVER_PID=$!
-          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          trap 'kill "$SERVER_PID" 2>/dev/null || true; rm -rf "$AUTH_EMAIL_SINK_DIR"' EXIT
 
           READY=0
           for attempt in {1..60}; do
@@ -92,6 +95,7 @@ jobs:
             exit 1
           fi
 
+          node scripts/e2e/auth-credentials-verification-e2e.mjs
           node scripts/e2e/auth-rate-limit-e2e.mjs
           node scripts/e2e/auth-seat-boundary-e2e.mjs
           npm run test:e2e:lobby
