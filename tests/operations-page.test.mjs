@@ -25,12 +25,8 @@ const states = readFileSync(
   "src/app/matchmaking/operations-states.module.css",
   "utf8",
 );
-const responsive = readFileSync(
-  "src/app/matchmaking/operations-responsive.module.css",
-  "utf8",
-);
-const integrationStyles = readFileSync(
-  "src/app/matchmaking/operations-foundation.module.css",
+const operationsStyles = readFileSync(
+  "src/app/matchmaking/operations.module.css",
   "utf8",
 );
 const foundationBarrel = readFileSync(
@@ -176,20 +172,24 @@ test("Operations consome o runtime Foundation sem renderer próprio", () => {
 });
 
 test("Operations recompõe a interface em mobile sem comprimir controles", () => {
-  assert.match(page, /responsiveStyles\.pageAdaptive/);
-  assert.match(operations, /responsiveStyles\.stationAdaptive/);
-  assert.match(responsive, /max-width: 720px/);
-  assert.match(responsive, /max-height: 640px/);
-  assert.match(responsive, /input\[name="roomCode"\]/);
-  assert.match(responsive, /scroll-margin-block: 24vh/);
-  assert.match(integrationStyles, /max-width: 900px/);
-  assert.match(integrationStyles, /foundationStation/);
-  assert.match(integrationStyles, /margin-top: 18px/);
+  assert.match(page, /styles\.page/);
+  assert.match(operations, /styles\.station/);
+  assert.match(operationsStyles, /height:\s*100dvh/);
+  assert.match(operationsStyles, /overflow:\s*hidden/);
+  assert.match(operationsStyles, /@media \(max-width: 640px\)/);
+  assert.match(operationsStyles, /@media \(max-height: 700px\)/);
+  assert.match(
+    operationsStyles,
+    /@media \(max-width: 640px\) and \(max-height: 580px\)/,
+  );
+  assert.match(operationsStyles, /\.modePanel :global\(\.wb-button\)/);
+  assert.match(operationsStyles, /\.modePanel :global\(\.wb-field\)/);
+  assert.match(operationsStyles, /min-height:\s*38px/);
 });
 
 test("Operations preserva reduced-motion e fallback pela Foundation", () => {
   assert.match(states, /prefers-reduced-motion: reduce/);
-  assert.match(integrationStyles, /prefers-reduced-motion: reduce/);
+  assert.match(operationsStyles, /prefers-reduced-motion: reduce/);
   assert.match(foundationScene, /prefers-reduced-motion: reduce/);
   assert.match(foundationScene, /data-webgl=\{webglState\}/);
   assert.doesNotMatch(operations, /WebGLRenderer|<Canvas/);
