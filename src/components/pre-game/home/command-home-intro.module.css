@@ -3,33 +3,43 @@
   --home-intro-easing: cubic-bezier(.4, .14, .3, 1);
 }
 
-/* Absolute-black preparation. The real dev Canvas is already mounted behind it. */
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="preparing"][data-visit="first"]) [data-command-scene]),
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="preparing"][data-visit="first"]) [data-command-fallback]) {
-  background: #000 !important;
-}
-
+/* While WebGL is preparing, keep the Foundation void visible without showing a
+   second 2D Brazil. The first actual Brazil paint must come from the primed
+   Genesis pass. */
 :global([data-command-scene-mode="entrance"]:has([data-home-transition="preparing"][data-visit="first"]) [data-command-fallback]),
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="preparing"][data-visit="first"]) [data-command-canvas-layer]),
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="preparing"][data-visit="first"]) [data-command-atmosphere]),
-:global([data-command-scene-mode="entrance"]:has([data-home-transition="preparing"][data-visit="first"]) [data-command-chrome]),
-:global([data-home-transition="preparing"][data-visit="first"] [data-home-identity]),
-:global([data-home-transition="preparing"][data-visit="first"] [data-home-command-dock]),
-:global([data-home-transition="preparing"][data-visit="first"] [data-home-footer]) {
-  opacity: 0 !important;
-  transition: none !important;
-}
-
-/* During the ritual only the real 3D scene is visible; the 2D fallback never competes with it. */
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="primed"][data-visit="first"]) [data-command-fallback]),
 :global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) [data-command-fallback]) {
   opacity: 0 !important;
-  background: #000 !important;
   transition: none !important;
 }
 
+/* Canvas visibility is invariant throughout Genesis. There is no global fade
+   hiding the map transformation. */
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="preparing"][data-visit="first"]) [data-command-canvas-layer]),
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="primed"][data-visit="first"]) [data-command-canvas-layer]),
 :global([data-command-scene-mode="entrance"]:has([data-home-transition="running"][data-visit="first"]) [data-command-canvas-layer]) {
+  opacity: 1 !important;
+  transition: none !important;
+}
+
+/* Primed is a real, paintable frame: canonical colored Brazil in the final
+   spatial pose, before choreography begins. */
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="preparing"][data-visit="first"]) [data-command-atmosphere]),
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="primed"][data-visit="first"]) [data-command-atmosphere]),
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="preparing"][data-visit="first"]) [data-command-chrome]),
+:global([data-command-scene-mode="entrance"]:has([data-home-transition="primed"][data-visit="first"]) [data-command-chrome]),
+:global([data-home-transition="preparing"][data-visit="first"] [data-home-identity]),
+:global([data-home-transition="primed"][data-visit="first"] [data-home-identity]),
+:global([data-home-transition="preparing"][data-visit="first"] [data-home-footer]),
+:global([data-home-transition="primed"][data-visit="first"] [data-home-footer]) {
   opacity: 0 !important;
-  animation: homeFoundationGenesis var(--home-intro-duration) var(--home-intro-easing) both;
+  transition: none !important;
+}
+
+:global([data-home-transition="preparing"][data-visit="first"] [data-home-command-dock]),
+:global([data-home-transition="primed"][data-visit="first"] [data-home-command-dock]) {
+  opacity: .14;
+  transform: translateX(calc(50% + 42px)) translateY(24px) scale(.975);
   transition: none !important;
 }
 
@@ -57,7 +67,7 @@
 }
 
 :global([data-home-transition="running"][data-visit="first"] [data-home-command-dock]) {
-  opacity: 0;
+  opacity: .14;
   transform: translateX(calc(50% + 42px)) translateY(24px) scale(.975);
   animation: homeCommandSettle var(--home-intro-duration) var(--home-intro-easing) both;
 }
@@ -68,40 +78,32 @@
   animation: homeFooterSettle var(--home-intro-duration) var(--home-intro-easing) both;
 }
 
-@keyframes homeFoundationGenesis {
-  0%, 3% { opacity: 0; }
-  8% { opacity: .24; }
-  16% { opacity: .62; }
-  26% { opacity: .88; }
-  38%, 100% { opacity: 1; }
-}
-
 @keyframes homeAtmosphereIn {
-  0%, 24% { opacity: 0; transform: scale(1.025); }
-  44% { opacity: .12; }
-  66% { opacity: .42; }
-  84% { opacity: .8; }
+  0%, 28% { opacity: 0; transform: scale(1.025); }
+  48% { opacity: .16; }
+  68% { opacity: .48; }
+  88% { opacity: .86; }
   100% { opacity: 1; transform: scale(1); }
 }
 
 @keyframes homeChromeIn {
-  0%, 44% { opacity: 0; transform: translateY(-18px); }
-  60% { opacity: .2; transform: translateY(-12px); }
-  80% { opacity: .7; transform: translateY(-4px); }
+  0%, 40% { opacity: 0; transform: translateY(-18px); }
+  58% { opacity: .22; transform: translateY(-12px); }
+  80% { opacity: .72; transform: translateY(-4px); }
   100% { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes homeIdentitySettle {
-  0%, 34% {
+  0%, 40% {
     opacity: 0;
     transform: translateX(calc(-50% + 34px)) translateY(-22px) scale(.975);
   }
-  52% {
+  56% {
     opacity: .14;
     transform: translateX(calc(-50% + 25px)) translateY(-16px) scale(.982);
   }
-  74% {
-    opacity: .62;
+  76% {
+    opacity: .64;
     transform: translateX(calc(-50% + 11px)) translateY(-7px) scale(.992);
   }
   100% {
@@ -111,23 +113,23 @@
 }
 
 @keyframes homeIdentityDetail {
-  0%, 42% { opacity: 0; transform: translateY(-7px); }
-  58% { opacity: .18; }
-  80% { opacity: .76; transform: translateY(-2px); }
+  0%, 46% { opacity: 0; transform: translateY(-7px); }
+  62% { opacity: .2; }
+  82% { opacity: .78; transform: translateY(-2px); }
   100% { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes homeCommandSettle {
-  0%, 48% {
-    opacity: 0;
+  0%, 50% {
+    opacity: .14;
     transform: translateX(calc(50% + 42px)) translateY(24px) scale(.975);
   }
-  64% {
-    opacity: .18;
+  66% {
+    opacity: .28;
     transform: translateX(calc(50% + 29px)) translateY(17px) scale(.983);
   }
-  84% {
-    opacity: .74;
+  86% {
+    opacity: .78;
     transform: translateX(calc(50% + 9px)) translateY(5px) scale(.995);
   }
   100% {
