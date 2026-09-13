@@ -7,6 +7,13 @@ export type ProfileCommandSource =
   | "storefront-service"
   | "evaluation-fixture";
 
+export type ProfileCommandState =
+  | "guest"
+  | "loaded"
+  | "partial-data"
+  | "empty-history"
+  | "empty-social";
+
 export type ProfileCommandAvailability = "available" | "empty" | "unavailable";
 
 export type ProfileCommandSection<T> = Readonly<{
@@ -118,6 +125,7 @@ export type StoreShowcase = Readonly<{
 }>;
 
 export type ProfileCommandSnapshot = Readonly<{
+  state: ProfileCommandState;
   identity: ProfileCommandSection<CommanderIdentity | null>;
   wallet: ProfileCommandSection<PlayerWallet | null>;
   social: ProfileCommandSection<PlayerSocialSnapshot>;
