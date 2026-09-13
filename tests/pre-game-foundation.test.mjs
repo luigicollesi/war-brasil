@@ -11,6 +11,7 @@ const presets = source("src/components/pre-game/foundation/scene-presets.ts");
 const shell = source("src/components/pre-game/foundation/command-shell.tsx");
 const scene = source("src/components/pre-game/foundation/command-scene.tsx");
 const canvas = source("src/components/pre-game/foundation/command-scene-canvas.tsx");
+const profileOrb = source("src/components/pre-game/foundation/profile-orb-assembly.tsx");
 const genesisPass = source("src/components/pre-game/foundation/territory-genesis-pass.tsx");
 const primitives = source("src/components/pre-game/foundation/command-primitives.tsx");
 const publicIndex = source("src/components/pre-game/foundation/index.ts");
@@ -131,7 +132,7 @@ test("territórios cenográficos não expõem seleção acidental antes de exist
   assert.doesNotMatch(assembly, /onClick=|onPointer|onTouch|onKeyDown|tabIndex/);
 });
 
-test("Mesa, Globo e Coroa Orbital permanecem objetos de assinatura identificáveis", () => {
+test("Mesa, Globo, Coroa Orbital e Orbe de Perfil permanecem objetos de assinatura identificáveis", () => {
   assert.match(canvas, /name="StrategicGlobe"/);
   assert.match(canvas, /name="DomainTable"/);
   assert.match(canvas, /name="BrazilTerritoryAssembly"/);
@@ -139,7 +140,9 @@ test("Mesa, Globo e Coroa Orbital permanecem objetos de assinatura identificáve
   assert.match(canvas, /name="OrbitalCrown-Territory"/);
   assert.match(canvas, /name="OrbitalCrown-Command"/);
   assert.match(canvas, /name="OrbitalCrown-Conflict"/);
-  assert.match(canvas, /name="CommandInsignia"/);
+  assert.match(canvas, /<ProfileOrbAssembly/);
+  assert.match(profileOrb, /name="CommandInsignia"/);
+  assert.match(profileOrb, /name="ProfileOrbAssembly"/);
 });
 
 test("fallback 2D permanece visível até a cena estável e lifecycle intermediário é explícito", () => {
