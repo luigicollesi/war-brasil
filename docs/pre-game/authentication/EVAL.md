@@ -1,322 +1,429 @@
 # EVAL — Authentication / Command Access
 
-Avaliar conforme `SPEC.md`, `../quality-standard.md` e os contratos server/client do projeto.
+Avaliar conforme `SPEC.md`, `PROVIDER-STRATEGY.md`, `DATABASE-PLAN.md`, `../quality-standard.md` e os contratos server/client do projeto.
 
-Aprovação exige **todos os BLOCKERs** abaixo. Score visual/UX não compensa falha de segurança.
+Aprovação exige **todos os BLOCKERs aplicáveis**. Score de UX não compensa falha de segurança/provider.
 
 ## 1. Gates BLOCKER — fluxo funcional
 
 | ID | Critério | Evidência mínima |
 | --- | --- | --- |
 | AUTH-01 | `ENTRAR NO COMANDO` reusa sessão válida sem abrir modal | e2e |
-| AUTH-02 | sessão ausente abre modal de autenticação | e2e |
-| AUTH-03 | sessão expirada/revogada não abre o comando | integration/e2e |
-| AUTH-04 | cookie `war_brasil_player` sozinho não autentica conta | integration |
-| AUTH-05 | login email/senha correto fecha modal e abre comando | e2e |
-| AUTH-06 | credenciais inválidas não revelam se email existe | e2e + response inspection |
-| AUTH-07 | Google OAuth retorna para a aplicação e produz sessão válida | provider test/manual staging |
-| AUTH-08 | GitHub OAuth retorna para a aplicação e produz sessão válida | provider test/manual staging |
-| AUTH-09 | cancelamento/erro OAuth retorna a estado recuperável sem quebrar Home | e2e/manual |
-| AUTH-10 | logout invalida sessão e recursos protegidos deixam de autorizar | integration/e2e |
+| AUTH-02 | sessão ausente abre modal | e2e |
+| AUTH-03 | sessão expirada/revogada não abre comando | integration/e2e |
+| AUTH-04 | `war_brasil_player` sozinho não autentica conta | integration |
+| AUTH-05 | credentials corretas fecham modal e avançam | e2e |
+| AUTH-06 | credentials inválidas não enumeram email | e2e/response |
+| AUTH-07 | usuário autenticado com profile completo chega a `command-open` | e2e |
+| AUTH-08 | usuário autenticado com profile incompleto vai para onboarding | e2e |
+| AUTH-09 | erro/cancelamento OAuth é recuperável | e2e/manual |
+| AUTH-10 | logout invalida recursos protegidos | integration/e2e |
 | AUTH-11 | `/rules` permanece público | e2e |
-| AUTH-12 | `/matchmaking`, `/profile`, lobby e game exigem conta conforme rollout definido | e2e |
-| AUTH-13 | API protegida chamada diretamente sem sessão retorna 401/403 apropriado | integration |
-| AUTH-14 | navegação/redirect de auth não depende da Genesis, WebGL ou motion | e2e reduced/fallback |
+| AUTH-12 | matchmaking/profile/lobby/game seguem rollout protegido | e2e |
+| AUTH-13 | API protegida sem sessão retorna 401/403 | integration |
+| AUTH-14 | auth funciona sem depender de Genesis/WebGL/motion | reduced/fallback e2e |
 
-## 2. Gates BLOCKER — conta x assento
-
-| ID | Critério | Evidência mínima |
-| --- | --- | --- |
-| AUTH-15 | `auth user` e `player_session` são entidades distintas | schema + source |
-| AUTH-16 | `game.players.user_id` é nullable apenas durante rollout/bots e referencia usuário auth | migration test |
-| AUTH-17 | nova entrada autenticada em sala persiste `user_id` do usuário correto | integration |
-| AUTH-18 | mesma conta não ocupa dois assentos na mesma sala | constraint/integration |
-| AUTH-19 | conta A + `player_session` de B não autoriza comandos do assento B | integration adversarial |
-| AUTH-20 | bots permanecem sem identidade de conta | integration |
-| AUTH-21 | realtime ticket só é emitido após validação de conta + assento quando a integração chegar a essa fase | integration |
-
-## 3. Gates BLOCKER — cookies e sessão
+## 2. Gates BLOCKER — providers de launch
 
 | ID | Critério | Evidência mínima |
 | --- | --- | --- |
-| AUTH-22 | cookie de sessão de auth é `HttpOnly` | `Set-Cookie` inspection |
-| AUTH-23 | cookie de sessão é `Secure` em produção | prod-like integration |
-| AUTH-24 | cookie usa `SameSite=Lax` ou política mais restritiva compatível | header inspection |
-| AUTH-25 | cookie é host-only por padrão; não existe domain amplo sem SPEC novo | header/source |
-| AUTH-26 | token de sessão não aparece em `localStorage`, `sessionStorage` ou IndexedDB | browser inspection |
-| AUTH-27 | token de sessão não é serializado em HTML/RSC/props do client | build/e2e inspection |
-| AUTH-28 | sessão revogada no servidor deixa de autorizar após janela de cache definida | integration temporal |
-| AUTH-29 | duração/cache de sessão são constantes versionadas em código, não env arbitrária | source inspection |
+| AUTH-15 | modal de launch oferece Google, Apple, Discord e credentials | DOM/e2e |
+| AUTH-16 | GitHub não aparece no modal nem na config de launch | static/DOM |
+| AUTH-17 | Google callback produz sessão válida | staging/provider test |
+| AUTH-18 | Apple callback produz sessão válida | staging/provider test |
+| AUTH-19 | Discord callback produz sessão válida | staging/provider test |
+| AUTH-20 | provider button order/hierarchy segue SPEC sem parede de providers | visual/DOM |
+| AUTH-21 | Microsoft/Twitch/Steam/Epic não aparecem sem feature/provider PR específico | static/DOM |
 
-## 4. Gates BLOCKER — fronteira server/client
+## 3. Google — gates específicos
 
 | ID | Critério | Evidência mínima |
 | --- | --- | --- |
-| AUTH-30 | instância Better Auth server-side vive em módulo `server-only` ou barreira equivalente | source |
-| AUTH-31 | nenhum módulo `"use client"` importa auth server, DB pool ou secret config | static test |
-| AUTH-32 | auth client não lê `process.env` de autenticação | static test |
-| AUTH-33 | nenhuma variável `NEXT_PUBLIC_*` específica de auth é introduzida | static test |
-| AUTH-34 | `DATABASE_URL` não é importada/referenciada por módulo client | source/build |
-| AUTH-35 | OAuth client secrets não existem em client bundle | production bundle scan |
-| AUTH-36 | auth secret(s) não existem em client bundle | production bundle scan |
-| AUTH-37 | email provider/SMTP secrets não existem em client bundle | production bundle scan |
-| AUTH-38 | realtime/worker signing secrets não vazam por integração de auth | production bundle scan |
+| AUTH-22 | Google usa provider built-in Better Auth | source |
+| AUTH-23 | scopes iniciais são somente identidade básica | source/provider config |
+| AUTH-24 | Drive/Calendar/Contacts não são pedidos no login | consent screen/source |
+| AUTH-25 | provider subject/accountId é usado como identidade externa, não email | integration/schema |
+| AUTH-26 | name/avatar Google não sobrescrevem profile público já configurado | integration |
 
-## 5. Matriz de ambiente obrigatória
+## 4. Apple — gates específicos
 
-O build/config validator MUST classificar explicitamente as variáveis abaixo.
+| ID | Critério | Evidência mínima |
+| --- | --- | --- |
+| AUTH-27 | Apple usa provider built-in Better Auth | source |
+| AUTH-28 | Apple web usa Service ID/callback correto | staging/provider config |
+| AUTH-29 | teste Apple real usa HTTPS válido; não depende de localhost HTTP | staging |
+| AUTH-30 | `APPLE_PRIVATE_KEY` nunca cruza server boundary | bundle/leak scan |
+| AUTH-31 | client-secret JWT Apple é gerado/renovável server-side | source/config |
+| AUTH-32 | client-secret JWT respeita limite de expiração Apple | config/unit |
+| AUTH-33 | `appleid.apple.com` é a única origin adicional introduzida pelo provider Apple | config test |
+| AUTH-34 | primeiro consentimento persiste email retornado | provider integration |
+| AUTH-35 | relay/private email Apple é aceito como email real/contatável | provider integration |
+| AUTH-36 | segundo login Apple funciona quando email não é reenviado | provider regression |
+| AUTH-37 | fallback sintético nunca sobrescreve email real Apple já persistido | integration |
+| AUTH-38 | provider `sub/accountId` permanece chave externa estável | schema/integration |
 
-### Server-only
+## 5. Discord — gates específicos
+
+| ID | Critério | Evidência mínima |
+| --- | --- | --- |
+| AUTH-39 | Discord usa provider built-in Better Auth | source |
+| AUTH-40 | scopes limitados a identidade básica necessária | source/consent |
+| AUTH-41 | `guilds`, bot, activities, connections não são pedidos no login | source/consent |
+| AUTH-42 | Discord snowflake/accountId é identidade externa; username não é chave | integration |
+| AUTH-43 | conta Discord com email funciona normalmente | provider integration |
+| AUTH-44 | conta Discord sem email possui comportamento definido e não quebra silenciosamente | integration/fixture |
+| AUTH-45 | fallback interno de email, se necessário, usa domínio `.invalid`/não-entregável | unit/source |
+| AUTH-46 | placeholder Discord não recebe verification/reset/magic-link | integration |
+| AUTH-47 | placeholder Discord nunca aparece na UI | e2e/network |
+| AUTH-48 | placeholder Discord não participa de implicit linking | adversarial integration |
+| AUTH-49 | username/global name/avatar Discord não sobrescrevem profile público configurado | integration |
+
+## 6. Account linking — gates
+
+| ID | Critério | Evidência mínima |
+| --- | --- | --- |
+| AUTH-50 | account linking está habilitado somente como ação explícita autenticada | source/e2e |
+| AUTH-51 | implicit same-email linking está desabilitado | config test |
+| AUTH-52 | `trustedProviders` permanece vazio | config/static |
+| AUTH-53 | different-email linking só ocorre por usuário já autenticado | integration |
+| AUTH-54 | link Apple relay + Google real pode ser feito explicitamente | integration |
+| AUTH-55 | link Discord sem email pode ser feito explicitamente quando seguro | integration |
+| AUTH-56 | linking não altera handle/displayName/loadout | integration |
+| AUTH-57 | usuário não consegue desvincular o último método de acesso | integration |
+| AUTH-58 | login por provider não vinculado com email coincidente não faz merge silencioso | adversarial integration |
+| AUTH-59 | provider account key é `(providerId, accountId/subject)`, não email | schema/source |
+
+## 7. Providers posteriores / platform identities
+
+| ID | Critério | Evidência mínima |
+| --- | --- | --- |
+| AUTH-60 | GitHub não possui env/config operacional no launch | repo/config |
+| AUTH-61 | Microsoft só entra após SPEC/EVAL/provider PR | source |
+| AUTH-62 | integração Microsoft futura não é tratada como Xbox/XUID automaticamente | architecture review |
+| AUTH-63 | Steam não é configurado via Generic OAuth como se fosse OAuth2/OIDC | static/architecture |
+| AUTH-64 | SteamID futuro é tratado como platform identity/link, não email | architecture/schema |
+| AUTH-65 | Twitch não entra sem caso de produto explícito | source |
+| AUTH-66 | Epic/EOS não entra sem integração de plataforma correspondente | source |
+
+## 8. Passkey — gates quando habilitada
+
+Os gates AUTH-67–AUTH-72 são BLOCKER somente no PR que habilitar passkeys.
+
+| ID | Critério | Evidência mínima |
+| --- | --- | --- |
+| AUTH-67 | usa plugin oficial Better Auth/WebAuthn | source |
+| AUTH-68 | RP ID/origin são explícitos e corretos | config/e2e |
+| AUTH-69 | passkey é registrada após identidade interna autenticada | e2e |
+| AUTH-70 | passkey não é o único caminho de recovery | product/e2e |
+| AUTH-71 | challenge não é persistido/exposto fora do fluxo esperado | security inspection |
+| AUTH-72 | login por passkey não altera identidade pública/profile | integration |
+
+## 9. Conta x assento
+
+| ID | Critério | Evidência mínima |
+| --- | --- | --- |
+| AUTH-73 | `auth.user` e `player_session` são entidades distintas | schema/source |
+| AUTH-74 | `game.players.user_id` referencia auth user conforme rollout | migration |
+| AUTH-75 | nova entrada autenticada persiste user correto | integration |
+| AUTH-76 | mesma conta não ocupa dois seats da mesma sala | constraint/integration |
+| AUTH-77 | conta A + seat B não autoriza B | adversarial integration |
+| AUTH-78 | bots permanecem sem conta | integration |
+| AUTH-79 | realtime ticket exige conta + seat quando rollout chegar | integration |
+
+## 10. Cookies e sessão
+
+| ID | Critério | Evidência mínima |
+| --- | --- | --- |
+| AUTH-80 | auth cookie é HttpOnly | header inspection |
+| AUTH-81 | auth cookie é Secure em produção | prod-like test |
+| AUTH-82 | SameSite segue policy do SPEC | header |
+| AUTH-83 | cookie é host-only por padrão | header/source |
+| AUTH-84 | token não aparece em localStorage/sessionStorage/IndexedDB | browser |
+| AUTH-85 | token não aparece em HTML/RSC/props | build/e2e |
+| AUTH-86 | sessão revogada deixa de autorizar | temporal integration |
+| AUTH-87 | duração/cache são versionados em código | source |
+
+## 11. Fronteira server/client
+
+| ID | Critério | Evidência mínima |
+| --- | --- | --- |
+| AUTH-88 | Better Auth server vive atrás de `server-only` | source |
+| AUTH-89 | módulos `use client` não importam auth server/DB/secret config | static |
+| AUTH-90 | auth client não lê env auth | static |
+| AUTH-91 | não existe `NEXT_PUBLIC_*` específico de auth | static |
+| AUTH-92 | DB URL não entra em módulo/client bundle | source/build |
+| AUTH-93 | OAuth/provider secrets não entram no client | bundle scan |
+| AUTH-94 | Apple private key/client-secret JWT não entram no client | bundle scan |
+| AUTH-95 | realtime/worker signing secrets não vazam | bundle scan |
+
+## 12. Matriz de ambiente obrigatória
+
+### Server-only launch
 
 ```text
 DATABASE_URL
 BETTER_AUTH_SECRET
-BETTER_AUTH_SECRETS            (quando rotação for usada)
+BETTER_AUTH_SECRETS            # se rotação usada
 BETTER_AUTH_URL
+
 GOOGLE_CLIENT_ID
 GOOGLE_CLIENT_SECRET
-GITHUB_CLIENT_ID
-GITHUB_CLIENT_SECRET
-AUTH_ALLOWED_HOSTS             (quando multi-host for usado)
-AUTH_EMAIL_FROM                (quando email transacional for habilitado)
-<EMAIL_PROVIDER>_API_KEY       (provider escolhido)
-SMTP_URL                       (se SMTP for escolhido)
+
+APPLE_CLIENT_ID
+APPLE_TEAM_ID
+APPLE_KEY_ID
+APPLE_PRIVATE_KEY
+APPLE_APP_BUNDLE_IDENTIFIER   # somente se fluxo nativo exigir
+
+DISCORD_CLIENT_ID
+DISCORD_CLIENT_SECRET
+
+AUTH_ALLOWED_HOSTS             # se multi-host
+AUTH_EMAIL_FROM                # se email transacional
+<EMAIL_PROVIDER>_API_KEY / SMTP_URL
 ```
 
-### Auth-specific public env allowlist
+### MUST NOT existir no launch
+
+```text
+GITHUB_CLIENT_ID
+GITHUB_CLIENT_SECRET
+MICROSOFT_CLIENT_ID
+MICROSOFT_CLIENT_SECRET
+TWITCH_CLIENT_ID
+TWITCH_CLIENT_SECRET
+STEAM_WEB_API_KEY
+EPIC_*
+```
+
+### Public auth env allowlist
 
 ```text
 EMPTY
 ```
 
-Qualquer `NEXT_PUBLIC_*` novo com significado de autenticação reprova até o SPEC/EVAL ser deliberadamente alterado.
-
-## 6. Gates BLOCKER — validação de env
+## 13. Validação de env
 
 | ID | Critério | Evidência mínima |
 | --- | --- | --- |
-| AUTH-39 | produção falha cedo sem `BETTER_AUTH_SECRET`/estratégia de secrets válida | config test |
-| AUTH-40 | secret possui mínimo de 32 caracteres e teste rejeita placeholder óbvio em produção | config test |
-| AUTH-41 | produção falha cedo sem origem auth canônica/estratégia multi-host válida | config test |
-| AUTH-42 | Google habilitado exige ID + secret; config parcial falha cedo | config test |
-| AUTH-43 | GitHub habilitado exige ID + secret; config parcial falha cedo | config test |
-| AUTH-44 | email habilitado exige remetente + segredo do provider | config test |
-| AUTH-45 | `.env.example` contém placeholders, nunca credenciais reais | repo inspection |
-| AUTH-46 | `.env`, `.env.local` e arquivos reais de produção permanecem ignorados pelo Git | gitignore test |
-| AUTH-47 | auth não usa `NEXT_PUBLIC_SITE_URL` como fonte autoritativa quando `BETTER_AUTH_URL` existe | source test |
+| AUTH-96 | produção falha cedo sem Better Auth secret válido | config test |
+| AUTH-97 | secret mínimo >= 32 chars e placeholder óbvio rejeitado | config test |
+| AUTH-98 | produção falha cedo sem origem auth canônica válida | config test |
+| AUTH-99 | Google parcial (ID sem secret ou vice-versa) falha cedo | config test |
+| AUTH-100 | Apple parcial (client/team/key/private-key inconsistente) falha cedo | config test |
+| AUTH-101 | Discord parcial falha cedo | config test |
+| AUTH-102 | email transacional habilitado exige sender + provider secret | config test |
+| AUTH-103 | `.env.example` contém placeholders, não secrets | repo inspection |
+| AUTH-104 | env reais continuam ignorados pelo Git | gitignore |
+| AUTH-105 | auth não usa `NEXT_PUBLIC_SITE_URL` como autoridade quando `BETTER_AUTH_URL` existe | source |
+| AUTH-106 | Apple private key não está committed como `.p8` | repo scan |
 
-## 7. Gates BLOCKER — secret leakage test
+## 14. Secret leakage build test
 
-CI MUST possuir um teste de build com valores-sentinela que nunca correspondam a secrets reais.
-
-Exemplo conceitual:
+CI MUST compilar com sentinels falsos:
 
 ```text
-BETTER_AUTH_SECRET=AUTH_SENTINEL_NEVER_SHIP_...
-GOOGLE_CLIENT_SECRET=GOOGLE_SECRET_SENTINEL_...
-GITHUB_CLIENT_SECRET=GITHUB_SECRET_SENTINEL_...
-DATABASE_URL=postgresql://sentinel:sentinel@...
-EMAIL_PROVIDER_API_KEY=EMAIL_SECRET_SENTINEL_...
+BETTER_AUTH_SECRET=AUTH_SENTINEL_NEVER_SHIP
+GOOGLE_CLIENT_SECRET=GOOGLE_SENTINEL_NEVER_SHIP
+APPLE_PRIVATE_KEY=APPLE_PRIVATE_KEY_SENTINEL_NEVER_SHIP
+DISCORD_CLIENT_SECRET=DISCORD_SENTINEL_NEVER_SHIP
+DATABASE_URL=postgresql://sentinel:sentinel@host/db
+EMAIL_PROVIDER_API_KEY=EMAIL_SENTINEL_NEVER_SHIP
 ```
 
-Depois de `next build`, o teste MUST verificar ausência dos valores-sentinela em:
-
-- `.next/static/**`;
-- chunks/client manifests relevantes;
-- HTML estático gerado;
-- payloads RSC/flight materializados pelo harness;
-- source maps públicos, se habilitados.
-
-MUST NOT imprimir o valor completo do sentinel/secret em logs em caso de falha; o teste deve reportar somente `secret class + artifact path`.
+Escanear `.next/static`, chunks, client manifests, HTML, RSC/Flight e source maps públicos.
 
 | ID | Critério | Evidência mínima |
 | --- | --- | --- |
-| AUTH-48 | sentinel de auth secret ausente de artefatos client | CI build scan |
-| AUTH-49 | sentinel de DB credential ausente de artefatos client | CI build scan |
-| AUTH-50 | sentinels OAuth secrets ausentes de artefatos client | CI build scan |
-| AUTH-51 | sentinel de email secret ausente de artefatos client | CI build scan |
-| AUTH-52 | falha do leak scanner não ecoa o segredo | test of test/log inspection |
+| AUTH-107 | Better Auth sentinel ausente do client | CI scan |
+| AUTH-108 | DB sentinel ausente | CI scan |
+| AUTH-109 | Google secret sentinel ausente | CI scan |
+| AUTH-110 | Apple private-key sentinel ausente | CI scan |
+| AUTH-111 | Discord secret sentinel ausente | CI scan |
+| AUTH-112 | email secret sentinel ausente | CI scan |
+| AUTH-113 | leak scanner não ecoa secret no erro | test-of-test |
 
-## 8. Gates BLOCKER — payload seguro
-
-| ID | Critério | Evidência mínima |
-| --- | --- | --- |
-| AUTH-53 | sessão client não contém password hash | network inspection |
-| AUTH-54 | sessão client não contém OAuth access token | network inspection |
-| AUTH-55 | sessão client não contém OAuth refresh token | network inspection |
-| AUTH-56 | sessão client não contém provider ID token | network inspection |
-| AUTH-57 | sessão client não contém DB/provider secret | network inspection |
-| AUTH-58 | user ID exposto não é aceito isoladamente como autorização | adversarial integration |
-| AUTH-59 | email só aparece em superfícies autenticadas que realmente precisam dele | UI/network inspection |
-
-## 9. Gates BLOCKER — OAuth/origin/redirect
+## 15. Payload seguro
 
 | ID | Critério | Evidência mínima |
 | --- | --- | --- |
-| AUTH-60 | callback Google corresponde à origem configurada | staging/provider test |
-| AUTH-61 | callback GitHub corresponde à origem configurada | staging/provider test |
-| AUTH-62 | origin não confiável em mutation de auth é rejeitada | adversarial integration |
-| AUTH-63 | callback/`returnTo` externo arbitrário é rejeitado | adversarial integration |
-| AUTH-64 | localhost não consta nos trusted origins de produção | prod config test |
-| AUTH-65 | `trustedProxyHeaders` não é habilitado sem contrato infra explícito | source/config test |
-| AUTH-66 | cross-subdomain cookies permanecem desligados na primeira versão | source/header |
-| AUTH-67 | scopes OAuth são mínimos e versionados em código | source inspection |
-| AUTH-68 | account linking permissivo/trusted provider não é ativado silenciosamente | source inspection |
+| AUTH-114 | sessão client não contém password hash | network |
+| AUTH-115 | sessão client não contém OAuth access token | network |
+| AUTH-116 | sessão client não contém refresh token | network |
+| AUTH-117 | sessão client não contém provider ID token | network |
+| AUTH-118 | sessão client não contém Apple key/JWT/provider secret | network |
+| AUTH-119 | user ID não é aceito isoladamente como autorização | adversarial |
+| AUTH-120 | email só aparece onde necessário | UI/network |
+| AUTH-121 | `.invalid` nunca aparece como email real | UI/network |
 
-## 10. Gates BLOCKER — senha, cadastro e reset
-
-| ID | Critério | Evidência mínima |
-| --- | --- | --- |
-| AUTH-69 | senha não é persistida/logada em texto puro | source/log test |
-| AUTH-70 | validação de senha existe no servidor | integration |
-| AUTH-71 | email é normalizado no servidor | integration |
-| AUTH-72 | conta credentials exige verificação de email conforme policy final | integration |
-| AUTH-73 | token de reset é expirável e de uso único | integration |
-| AUTH-74 | reset de senha responde de forma não enumerável para email inexistente | adversarial e2e |
-| AUTH-75 | verification/reset tokens não aparecem em logs | log inspection |
-| AUTH-76 | falha de email não vaza stack/API key/provider detail ao browser | integration |
-
-## 11. Gates BLOCKER — rate limit e abuso
+## 16. OAuth/origin/redirect
 
 | ID | Critério | Evidência mínima |
 | --- | --- | --- |
-| AUTH-77 | login possui rate limit | integration |
-| AUTH-78 | cadastro possui rate limit | integration |
-| AUTH-79 | reset/verification possui rate limit | integration |
-| AUTH-80 | excesso retorna `429` recuperável | integration |
-| AUTH-81 | rate-limit não depende de IP header facilmente spoofável | source/infra test |
-| AUTH-82 | produção multi-instância não depende de contador local inconsistente quando consistency for requerida | architecture/source |
+| AUTH-122 | callback Google corresponde à origem configurada | staging |
+| AUTH-123 | callback Apple corresponde à origem configurada | staging |
+| AUTH-124 | callback Discord corresponde à origem configurada | staging |
+| AUTH-125 | origin não confiável em mutation é rejeitada | adversarial |
+| AUTH-126 | callback/returnTo externo arbitrário é rejeitado | adversarial |
+| AUTH-127 | localhost não está em trusted origins de produção | config |
+| AUTH-128 | `trustedProxyHeaders` não é habilitado sem infra explícita | source/config |
+| AUTH-129 | cross-subdomain cookies continuam off | source/header |
+| AUTH-130 | scopes são mínimos/versionados em código | source |
+| AUTH-131 | `appleid.apple.com` não abre wildcard/broad trust | config |
 
-## 12. Gates BLOCKER — logs e erros
-
-| ID | Critério | Evidência mínima |
-| --- | --- | --- |
-| AUTH-83 | `Cookie`/`Authorization` são redigidos | log test |
-| AUTH-84 | senha/hash/token OAuth/reset/verification são redigidos | log test |
-| AUTH-85 | erros client não retornam SQL/connection string/stack | integration |
-| AUTH-86 | debug ID pode existir sem carregar secret/PII desnecessário | response/log inspection |
-
-## 13. Gates BLOCKER — modal e acessibilidade
+## 17. Senha, cadastro e reset
 
 | ID | Critério | Evidência mínima |
 | --- | --- | --- |
-| AUTH-87 | modal possui semântica de dialog e label acessível | a11y/e2e |
-| AUTH-88 | foco fica preso no modal enquanto aberto | keyboard e2e |
-| AUTH-89 | fechar modal restaura foco a `ENTRAR NO COMANDO` | keyboard e2e |
-| AUTH-90 | Escape fecha quando não há operação irreversível/pending que o impeça | keyboard e2e |
-| AUTH-91 | mobile 390x844 não possui overflow horizontal | visual/e2e |
-| AUTH-92 | pending desabilita double-submit | e2e |
-| AUTH-93 | modal funciona com WebGL indisponível | fallback e2e |
-| AUTH-94 | modal funciona em reduced-motion | reduced e2e |
+| AUTH-132 | senha não é persistida/logada em texto puro | source/log |
+| AUTH-133 | validação de senha existe no servidor | integration |
+| AUTH-134 | email credentials é normalizado no servidor | integration |
+| AUTH-135 | credentials seguem verificação de email definida | integration |
+| AUTH-136 | reset token é expirável/single-use | integration |
+| AUTH-137 | reset é não-enumerável para email inexistente | adversarial |
+| AUTH-138 | reset/verification tokens não aparecem em logs | log |
+| AUTH-139 | envio de email rejeita placeholder `.invalid` | integration |
 
-## 14. Gates BLOCKER — migrations
+## 18. Rate limit e abuso
 
 | ID | Critério | Evidência mínima |
 | --- | --- | --- |
-| AUTH-95 | schema `auth` é criado por migration gerenciada, não request runtime | migration/source |
-| AUTH-96 | clean install cria schema/tabelas esperadas | `npm run test:db` |
-| AUTH-97 | upgrade de baseline existente preserva salas/jogadores | migration integration |
-| AUTH-98 | migration pode rodar novamente conforme política de idempotência do projeto | migration integration |
-| AUTH-99 | rollback/down migration, se o padrão da pasta exigir, não deixa FK inválida | migration integration |
-| AUTH-100 | schema gerado pelo Better Auth e migration aplicada são revisados para a versão fixada | source/CI contract |
+| AUTH-140 | login possui rate limit | integration |
+| AUTH-141 | cadastro possui rate limit | integration |
+| AUTH-142 | reset/verification possui rate limit | integration |
+| AUTH-143 | excesso retorna 429 recuperável | integration |
+| AUTH-144 | rate-limit não confia em IP header spoofável | source/infra |
+| AUTH-145 | multi-instância não usa contador local inconsistente quando consistência é necessária | architecture |
 
-## 15. Testes adversariais obrigatórios
+## 19. Logs e erros
 
-### AUTH-A1 — Cookie de assento não é login
+| ID | Critério | Evidência mínima |
+| --- | --- | --- |
+| AUTH-146 | Cookie/Authorization são redigidos | log test |
+| AUTH-147 | senha/hash/OAuth/reset/verification são redigidos | log test |
+| AUTH-148 | Apple private key/client-secret JWT são redigidos | log test |
+| AUTH-149 | erros client não retornam SQL/stack/connection string | integration |
+| AUTH-150 | debug ID não carrega secret/PII desnecessário | inspection |
 
-1. Limpar sessão auth.
-2. Manter `war_brasil_player` válido.
-3. Clicar `ENTRAR NO COMANDO`.
-4. Esperado: modal de auth.
+## 20. Modal e acessibilidade
 
-### AUTH-A2 — User ID não é credencial
+| ID | Critério | Evidência mínima |
+| --- | --- | --- |
+| AUTH-151 | modal possui dialog semantics e label | a11y/e2e |
+| AUTH-152 | foco fica preso no modal | keyboard |
+| AUTH-153 | fechar restaura foco ao CTA | keyboard |
+| AUTH-154 | Escape funciona quando apropriado | keyboard |
+| AUTH-155 | mobile 390x844 sem overflow horizontal | visual/e2e |
+| AUTH-156 | pending impede double-submit | e2e |
+| AUTH-157 | modal funciona sem WebGL | fallback |
+| AUTH-158 | modal funciona em reduced-motion | reduced |
+| AUTH-159 | botões de provider possuem labels textuais claros | a11y/DOM |
 
-1. Descobrir ID legítimo de conta via própria sessão/UI.
-2. Enviar request protegido com esse ID no body/header, sem sessão auth.
-3. Esperado: 401.
+## 21. Migrations
 
-### AUTH-A3 — Seat swapping
+| ID | Critério | Evidência mínima |
+| --- | --- | --- |
+| AUTH-160 | schema auth vem de migration gerenciada | migration/source |
+| AUTH-161 | clean install cria schema/tabelas esperadas | db test |
+| AUTH-162 | upgrade preserva salas/jogadores | migration integration |
+| AUTH-163 | idempotência segue política do projeto | migration integration |
+| AUTH-164 | rollback/down não deixa FK inválida quando exigido | migration |
+| AUTH-165 | schema Better Auth corresponde à versão fixada | source/CI |
 
-1. Autenticar conta A.
-2. Obter `player_session`/contexto de seat B em fixture de teste.
-3. Executar comando como A usando B.
-4. Esperado: 403/authorization failure.
+## 22. Testes adversariais obrigatórios
 
-### AUTH-A4 — Open redirect
+### AUTH-A1 — seat cookie não é login
 
-Tentar callbacks como:
+Manter `war_brasil_player`, limpar auth, clicar CTA. Esperado: modal.
+
+### AUTH-A2 — user ID não é credencial
+
+Enviar ID legítimo sem sessão. Esperado: 401.
+
+### AUTH-A3 — seat swapping
+
+Conta A tenta comando do seat B. Esperado: 403.
+
+### AUTH-A4 — open redirect
+
+Testar destinos externos/encoded (`https://evil.example`, `//evil.example`, versões encoded). Esperado: rejeição/normalização interna.
+
+### AUTH-A5 — untrusted Origin
+
+Mutation com `Origin: https://evil.example`. Esperado: rejeição.
+
+### AUTH-A6 — credential stuffing
+
+Exceder limite de logins inválidos. Esperado: 429 sem enumeração.
+
+### AUTH-A7 — same-email implicit merge
+
+Criar conta por provider A e tentar provider B com mesmo email sem linking autenticado. Esperado: **nenhum merge silencioso**.
+
+### AUTH-A8 — Apple relay mismatch
+
+Conta Apple usa relay; sessão autenticada vincula Google com email real diferente. Esperado: linking explícito permitido, sem duplicar/reescrever profile.
+
+### AUTH-A9 — Discord sem email
+
+Provider retorna ID válido e `email=null`. Esperado: comportamento definido; nenhum placeholder visível/enviado/linkado implicitamente.
+
+### AUTH-A10 — Apple repeat login
+
+Primeiro callback fornece email; callback posterior não fornece. Esperado: mesma conta, email real preservado.
+
+## 23. Inspeção estática obrigatória
 
 ```text
-https://evil.example
-//evil.example
-/%2f%2fevil.example
-https:%2f%2fevil.example
-```
-
-Esperado: rejeição ou normalização para destino interno permitido.
-
-### AUTH-A5 — Origin não confiável
-
-Mutation de auth com `Origin: https://evil.example`.
-
-Esperado: rejeitada.
-
-### AUTH-A6 — Credential stuffing básico
-
-Repetir login inválido acima do limite configurado.
-
-Esperado: 429 sem indicar existência de usuário.
-
-## 16. Inspeção estática obrigatória
-
-```text
+[ ] launch providers = google, apple, discord + credentials
+[ ] github ausente da config/UI/env de launch
+[ ] microsoft/twitch/steam/epic ausentes sem feature específica
 [ ] não existe NEXT_PUBLIC_BETTER_AUTH_*
-[ ] não existe NEXT_PUBLIC_GOOGLE_CLIENT_SECRET
-[ ] não existe NEXT_PUBLIC_GITHUB_CLIENT_SECRET
+[ ] não existe NEXT_PUBLIC_*_CLIENT_SECRET
 [ ] não existe NEXT_PUBLIC_DATABASE_URL
-[ ] client auth não lê process.env
-[ ] módulos use client não importam src/lib/auth/server
-[ ] módulos use client não importam pool PostgreSQL
+[ ] client auth não lê process.env de auth
+[ ] use client não importa auth/server ou DB pool
 [ ] server auth possui server-only boundary
-[ ] nenhum segredo real está commitado
-[ ] .env.example contém somente placeholders
-[ ] trustedProxyHeaders continua false/ausente
-[ ] crossSubDomainCookies continua false/ausente
-[ ] callback/returnTo possui allowlist interna
-[ ] session payload não possui provider tokens
+[ ] APPLE_PRIVATE_KEY não aparece em arquivo committed/p8
+[ ] trustedProviders = []
+[ ] disableImplicitLinking = true
+[ ] updateUserInfoOnLink = false
+[ ] allowUnlinkingAll = false
+[ ] scopes Google/Discord são mínimos
+[ ] Steam não usa Generic OAuth como adaptação fictícia
+[ ] session payload não contém provider tokens
 ```
 
-## 17. Inspeção dinâmica obrigatória
-
-No navegador e harness de rede:
+## 24. Inspeção dinâmica obrigatória
 
 ```text
-[ ] document.cookie não revela cookie de sessão auth
-[ ] localStorage não possui auth token
-[ ] sessionStorage não possui auth token
-[ ] IndexedDB não possui auth token custom
-[ ] /api/auth/session/get-session não retorna tokens sensíveis
+[ ] document.cookie não revela auth cookie
+[ ] localStorage/sessionStorage/IndexedDB não possuem auth token custom
+[ ] get-session não retorna tokens sensíveis
 [ ] Set-Cookie possui HttpOnly
 [ ] produção possui Secure
 [ ] logout remove/invalida acesso
 [ ] reload restaura sessão válida
-[ ] sessão revogada não volta por estado React stale
+[ ] revogação não volta por estado React stale
+[ ] Apple first/repeat sign-in convergem para mesma conta
+[ ] Discord no-email não exibe placeholder
+[ ] linking explícito preserva profile.commanders
 ```
 
-## 18. Score de UX / 100
+## 25. Score UX / 100
 
-Aplicado somente após todos os BLOCKERs de segurança passarem:
+Aplicado apenas após todos os blockers:
 
-- 25 — fluxo Home → sessão/modal → comando sem atrito;
-- 20 — qualidade desktop/mobile do modal;
-- 15 — estados loading/error/retry claros;
-- 15 — acessibilidade teclado/foco;
-- 10 — OAuth/callback sem flashes ou navegação confusa;
-- 10 — integração visual com Foundation;
-- 5 — observabilidade segura e mensagens úteis.
+- 25 — fluxo Home → sessão/modal → comando;
+- 20 — provider choice/ordem sem poluição visual;
+- 15 — desktop/mobile do modal;
+- 15 — loading/error/retry claros;
+- 10 — acessibilidade teclado/foco;
+- 10 — callbacks sem flashes/navegação confusa;
+- 5 — observabilidade segura.
 
-Aprovação UX: **>= 85**, além dos blockers.
+Aprovação UX: **>= 85** + blockers.
 
-## 19. Definition of Done
+## 26. Definition of Done
 
-A implementação passa os 100 gates aplicáveis deste EVAL, os testes adversariais, o leak scan de build, migrations e browser tests. Nenhuma credencial ou secret cruza a fronteira client, nenhuma rota protegida depende somente da Home para segurança, e o fluxo de autenticação permanece funcional com reload, reduced-motion, fallback WebGL e logout.
+A implementação passa os gates aplicáveis, incluindo provider tests reais em staging para Google/Apple/Discord, testes de Apple sem email em relogin, Discord sem email, explicit account linking, leak scan de Google/Apple/Discord/DB/auth secrets, migrations e browser tests. GitHub não reaparece por herança do Contrapista; Steam/Microsoft/Twitch/Epic permanecem fora até caso de produto e SPEC próprios.
