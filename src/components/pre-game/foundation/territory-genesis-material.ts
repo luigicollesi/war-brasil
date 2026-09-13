@@ -7,15 +7,15 @@ import { deterministicOpeningSeed } from "./opening-timeline";
 
 export type TerritoryGenesisMaterialHandle = Readonly<{
   material: MeshStandardMaterial;
-  progress: { value: number };
+  setProgress: (value: number) => void;
 }>;
 
 export function createTerritoryGenesisMaterial(
   color: ColorRepresentation,
   territoryId: number,
 ): TerritoryGenesisMaterialHandle {
-  const progress = { value: 0 };
-  const seed = { value: deterministicOpeningSeed(territoryId) };
+  const progressUniform = { value: 0 };
+  const seedUniform = { value: deterministicOpeningSeed(territoryId) };
   const material = new MeshStandardMaterial({
     color: new Color(color),
     roughness: 0.52,
@@ -30,8 +30,8 @@ export function createTerritoryGenesisMaterial(
 
   material.customProgramCacheKey = () => "war-home-territory-genesis-v1";
   material.onBeforeCompile = (shader) => {
-    shader.uniforms.uGenesisProgress = progress;
-    shader.uniforms.uGenesisSeed = seed;
+    shader.uniforms.uGenesisProgress = progressUniform;
+    shader.uniforms.uGenesisSeed = seedUniform;
 
     shader.vertexShader = shader.vertexShader
       .replace(
@@ -88,5 +88,10 @@ if (genesisMask < 0.5) discard;
       );
   };
 
-  return { material, progress };
+  return {
+    material,
+    setProgress(value) {
+      progressUniform.value = value;
+    },
+  };
 }
