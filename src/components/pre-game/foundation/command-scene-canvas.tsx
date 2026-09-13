@@ -1,7 +1,7 @@
 "use client";
 
 import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
-import { Suspense, useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef } from "react";
 import {
   Color,
   EdgesGeometry,
@@ -14,62 +14,22 @@ import {
   Vector3,
 } from "three";
 import { SVGLoader } from "three/addons/loaders/SVGLoader.js";
-import { COMMAND_ENTRANCE_DURATION_MS } from "./entrance-timeline";
 import { COMMAND_FOUNDATION_TOKENS } from "./foundation-tokens";
-import type { NormalizedCommandSceneIntent } from "./scene-contract";
+import type {
+  CommandSceneState,
+  NormalizedCommandSceneIntent,
+} from "./scene-contract";
 import { resolveCommandCameraPose } from "./scene-presets";
+import {
+  TerritoryGenesisPass,
+  type TerritoryGenesisPlate,
+} from "./territory-genesis-pass";
 
 const MAP_VIEWBOX_SIZE = 1254;
 const MAP_SCALE = COMMAND_FOUNDATION_TOKENS.scene.mapScale;
 const MAP_HALF_EXTENT = (MAP_VIEWBOX_SIZE * MAP_SCALE) / 2;
 const CANONICAL_TERRITORY_COUNT = 42;
 const PLATE_TONES = ["#26352a", "#2d3d30", "#223027", "#344437"] as const;
-const EDGE_INTRO_COLOR = new Color("#ffffff");
-const EDGE_FINAL_COLOR = new Color("#d0aa57");
-const HOME_MAP_ROTATION_Y = [
-  [0, 1.43],
-  [0.16, 0.44],
-  [0.24, -0.54],
-  [0.35, 0.33],
-  [0.47, -0.17],
-  [0.6, 0.075],
-  [0.74, -0.025],
-  [1, 0.035],
-] as const;
-const HOME_MAP_ROTATION_Z = [
-  [0, -0.13],
-  [0.2, -0.07],
-  [0.32, 0.025],
-  [0.48, -0.05],
-  [0.66, -0.018],
-  [1, -0.028],
-] as const;
-const HOME_MAP_SCALE_X = [
-  [0, 0.68],
-  [0.16, 0.76],
-  [0.24, 0.84],
-  [0.35, 0.89],
-  [0.47, 0.94],
-  [0.6, 0.975],
-  [0.76, 0.994],
-  [1, 1],
-] as const;
-const HOME_MAP_SCALE_Y = [
-  [0, 0.94],
-  [0.16, 1.03],
-  [0.24, 1.055],
-  [0.35, 0.985],
-  [0.47, 1.02],
-  [0.6, 0.995],
-  [0.76, 1.004],
-  [1, 1],
-] as const;
-const HOME_MAP_SCALE_Z = [
-  [0, 0.72],
-  [0.3, 0.84],
-  [0.6, 0.95],
-  [1, 1],
-] as const;
 
 type Position3 = [number, number, number];
 
@@ -105,45 +65,11 @@ type CommandSceneCanvasProps = {
   reducedMotion: boolean;
   compact: boolean;
   maxDpr: number;
-  onReady: () => void;
+  onScenePhaseChange: (state: CommandSceneState) => void;
   onUnavailable: () => void;
 };
 
-type TerritoryPlate = {
-  id: string;
-  territoryId: number;
-  geometry: ExtrudeGeometry;
-  edges: EdgesGeometry;
-  initialColor: Color;
-  finalColor: Color;
-};
-
-function smoothstepWindow(value: number, start: number, end: number) {
-  const progress = MathUtils.clamp(
-    (value - start) / Math.max(end - start, 0.0001),
-    0,
-    1,
-  );
-  return progress * progress * (3 - 2 * progress);
-}
-
-function sampleKeyframes(
-  value: number,
-  frames: ReadonlyArray<readonly [number, number]>,
-) {
-  if (value <= frames[0][0]) return frames[0][1];
-
-  for (let index = 1; index < frames.length; index += 1) {
-    const previous = frames[index - 1];
-    const current = frames[index];
-    if (value <= current[0]) {
-      const progress = (value - previous[0]) / (current[0] - previous[0]);
-      return MathUtils.lerp(previous[1], current[1], progress);
-    }
-  }
-
-  return frames[frames.length - 1][1];
-}
+type TerritoryPlate = TerritoryGenesisPlate;
 
 function WebGLContextGuard({ onUnavailable }: { onUnavailable: () => void }) {
   const { gl } = useThree();
@@ -382,24 +308,90 @@ function readCanonicalFill(
   return fill;
 }
 
+function ScenePrimer({
+  enabled,
+  onPrimed,
+}: {
+  enabled: boolean;
+  onPrimed: () => void;
+}) {
+  const { gl, scene, camera, invalidate } = useThree();
+
+  useEffect(() => {
+    if (!enabled) return;
+    let cancelled = false;
+    let firstFrame = 0;
+    let secondFrame = 0;
+
+    const prime = async () => {
+      try {
+        await gl.compileAsync(scene, camera);
+      } catch {
+        // Compilation warm-up is an optimization; rendering remains the fallback.
+      }
+      if (cancelled) return;
+
+      invalidate();
+      firstFrame = window.requestAnimationFrame(() => {
+        invalidate();
+        secondFrame = window.requestAnimationFrame(() => {
+          if (!cancelled) onPrimed();
+        });
+      });
+    };
+
+    void prime();
+
+    return () => {
+      cancelled = true;
+      if (firstFrame) window.cancelAnimationFrame(firstFrame);
+      if (secondFrame) window.cancelAnimationFrame(secondFrame);
+    };
+  }, [camera, enabled, gl, invalidate, onPrimed, scene]);
+
+  return null;
+}
+
 function BrazilTerritoryAssembly({
   intent,
   layout,
   reducedMotion,
-  onReady,
+  onScenePhaseChange,
 }: {
   intent: NormalizedCommandSceneIntent;
   layout: SceneLayout;
   reducedMotion: boolean;
-  onReady: () => void;
+  onScenePhaseChange: (state: CommandSceneState) => void;
 }) {
   const svg = useLoader(SVGLoader, "/war-brasil-42.production.svg");
-  const assemblyRef = useRef<Group>(null);
   const plateRefs = useRef<Array<Group | null>>([]);
-  const introStartedAtRef = useRef<number | null>(null);
-  const introCompleteRef = useRef(false);
   const invalidate = useThree((state) => state.invalidate);
-  const introEnabled = intent.mode === "entrance" && !reducedMotion;
+  const introEnabled =
+    intent.mode === "entrance" &&
+    !reducedMotion &&
+    intent.entranceState !== "settled";
+
+  const materials = useMemo(
+    () =>
+      PLATE_TONES.map(
+        (color) =>
+          new MeshStandardMaterial({
+            color,
+            roughness: COMMAND_FOUNDATION_TOKENS.material.plateRoughness,
+            metalness: COMMAND_FOUNDATION_TOKENS.material.plateMetalness,
+          }),
+      ),
+    [],
+  );
+  const edgeMaterial = useMemo(
+    () =>
+      new LineBasicMaterial({
+        color: "#d0aa57",
+        transparent: true,
+        opacity: 0.78,
+      }),
+    [],
+  );
 
   const plates = useMemo<TerritoryPlate[]>(() => {
     const territoryIds = svg.paths.map(readCanonicalTerritoryId);
@@ -419,10 +411,7 @@ function BrazilTerritoryAssembly({
 
     return svg.paths.flatMap((path, pathIndex) => {
       const territoryId = territoryIds[pathIndex];
-      const initialColor = new Color(readCanonicalFill(path, pathIndex));
-      const finalColor = new Color(
-        PLATE_TONES[(territoryId - 1) % PLATE_TONES.length],
-      );
+      const canonicalColor = new Color(readCanonicalFill(path, pathIndex));
 
       return path.toShapes().map((shape, shapeIndex) => {
         const geometry = new ExtrudeGeometry(shape, {
@@ -440,114 +429,18 @@ function BrazilTerritoryAssembly({
           territoryId,
           geometry,
           edges: new EdgesGeometry(geometry, 30),
-          initialColor: initialColor.clone(),
-          finalColor: finalColor.clone(),
+          canonicalColor: canonicalColor.clone(),
         };
       });
     });
   }, [svg]);
 
-  const materials = useMemo(
-    () =>
-      plates.map(
-        (plate) =>
-          new MeshStandardMaterial({
-            color: introEnabled ? plate.initialColor : plate.finalColor,
-            roughness: introEnabled
-              ? 0.5
-              : COMMAND_FOUNDATION_TOKENS.material.plateRoughness,
-            metalness: introEnabled
-              ? 0.05
-              : COMMAND_FOUNDATION_TOKENS.material.plateMetalness,
-            transparent: introEnabled,
-            opacity: introEnabled ? 0 : 1,
-          }),
-      ),
-    [introEnabled, plates],
-  );
-  const edgeMaterial = useMemo(
-    () =>
-      new LineBasicMaterial({
-        color: introEnabled ? EDGE_INTRO_COLOR : EDGE_FINAL_COLOR,
-        transparent: true,
-        opacity: introEnabled ? 0 : 0.78,
-      }),
-    [introEnabled],
-  );
-  const edgeMaterialRef = useRef(edgeMaterial);
-
   useEffect(() => {
-    edgeMaterialRef.current = edgeMaterial;
-  }, [edgeMaterial]);
-
-  useLayoutEffect(() => {
-    const assembly = assemblyRef.current;
-    const activeEdgeMaterial = edgeMaterialRef.current;
-    if (!assembly) return;
-
-    const finalize = () => {
-      assembly.position.set(layout.center[0], layout.center[1], 0.08);
-      assembly.rotation.set(-0.095, 0.035, -0.028);
-      assembly.scale.setScalar(layout.objectScale);
-      materials.forEach((material, index) => {
-        material.color.copy(plates[index].finalColor);
-        material.roughness = COMMAND_FOUNDATION_TOKENS.material.plateRoughness;
-        material.metalness = COMMAND_FOUNDATION_TOKENS.material.plateMetalness;
-        material.opacity = 1;
-        if (material.transparent) {
-          material.transparent = false;
-          material.needsUpdate = true;
-        }
-      });
-      activeEdgeMaterial.color.copy(EDGE_FINAL_COLOR);
-      activeEdgeMaterial.opacity = 0.78;
-    };
-
-    if (!introEnabled || intent.entranceState === "settled") {
-      introStartedAtRef.current = null;
-      introCompleteRef.current = true;
-      finalize();
-      invalidate();
-      return;
-    }
-
-    if (intent.entranceState === "initial") {
-      const offset = layout.objectScale < 0.9 ? 1.85 : 3.2;
-      introStartedAtRef.current = null;
-      introCompleteRef.current = false;
-      assembly.position.set(layout.center[0] + offset, layout.center[1] + 0.12, 0.08);
-      assembly.rotation.set(-0.055, HOME_MAP_ROTATION_Y[0][1], HOME_MAP_ROTATION_Z[0][1]);
-      assembly.scale.set(
-        layout.objectScale * HOME_MAP_SCALE_X[0][1],
-        layout.objectScale * HOME_MAP_SCALE_Y[0][1],
-        layout.objectScale * HOME_MAP_SCALE_Z[0][1],
-      );
-      materials.forEach((material, index) => {
-        material.color.copy(plates[index].initialColor);
-        material.roughness = 0.5;
-        material.metalness = 0.05;
-        material.opacity = 0;
-        if (!material.transparent) {
-          material.transparent = true;
-          material.needsUpdate = true;
-        }
-      });
-      activeEdgeMaterial.color.copy(EDGE_INTRO_COLOR);
-      activeEdgeMaterial.opacity = 0;
-      invalidate();
-    }
-  }, [
-    intent.entranceState,
-    introEnabled,
-    invalidate,
-    layout,
-    materials,
-    plates,
-  ]);
-
-  useEffect(() => {
-    onReady();
-  }, [onReady, plates]);
+    if (introEnabled) return;
+    invalidate();
+    const frame = window.requestAnimationFrame(() => onScenePhaseChange("ready"));
+    return () => window.cancelAnimationFrame(frame);
+  }, [introEnabled, invalidate, onScenePhaseChange]);
 
   useEffect(() => {
     if (!reducedMotion) return;
@@ -561,87 +454,6 @@ function BrazilTerritoryAssembly({
   }, [intent.territoryExplode, invalidate, plates, reducedMotion]);
 
   useFrame((_, delta) => {
-    const assembly = assemblyRef.current;
-    const activeEdgeMaterial = edgeMaterialRef.current;
-
-    if (
-      assembly &&
-      introEnabled &&
-      !introCompleteRef.current &&
-      intent.entranceState === "running"
-    ) {
-      if (introStartedAtRef.current === null) {
-        introStartedAtRef.current = performance.now();
-      }
-
-      const progress = MathUtils.clamp(
-        (performance.now() - introStartedAtRef.current) /
-          COMMAND_ENTRANCE_DURATION_MS,
-        0,
-        1,
-      );
-      const spatial = smoothstepWindow(progress, 0.02, 0.92);
-      const reveal = smoothstepWindow(progress, 0, 0.2);
-      const militarize = smoothstepWindow(progress, 0.34, 0.9);
-      const offset = layout.objectScale < 0.9 ? 1.85 : 3.2;
-
-      assembly.position.x = layout.center[0] + offset * (1 - spatial);
-      assembly.position.y = layout.center[1] + 0.12 * (1 - spatial);
-      assembly.position.z = 0.08;
-      assembly.rotation.x = MathUtils.lerp(-0.055, -0.095, spatial);
-      assembly.rotation.y = sampleKeyframes(progress, HOME_MAP_ROTATION_Y);
-      assembly.rotation.z = sampleKeyframes(progress, HOME_MAP_ROTATION_Z);
-      assembly.scale.set(
-        layout.objectScale * sampleKeyframes(progress, HOME_MAP_SCALE_X),
-        layout.objectScale * sampleKeyframes(progress, HOME_MAP_SCALE_Y),
-        layout.objectScale * sampleKeyframes(progress, HOME_MAP_SCALE_Z),
-      );
-
-      materials.forEach((material, index) => {
-        material.color.lerpColors(
-          plates[index].initialColor,
-          plates[index].finalColor,
-          militarize,
-        );
-        material.roughness = MathUtils.lerp(
-          0.5,
-          COMMAND_FOUNDATION_TOKENS.material.plateRoughness,
-          militarize,
-        );
-        material.metalness = MathUtils.lerp(
-          0.05,
-          COMMAND_FOUNDATION_TOKENS.material.plateMetalness,
-          militarize,
-        );
-        material.opacity = reveal;
-      });
-      activeEdgeMaterial.color.lerpColors(
-        EDGE_INTRO_COLOR,
-        EDGE_FINAL_COLOR,
-        militarize,
-      );
-      activeEdgeMaterial.opacity =
-        reveal * MathUtils.lerp(0.92, 0.78, militarize);
-
-      if (progress >= 1) {
-        introCompleteRef.current = true;
-        introStartedAtRef.current = null;
-        assembly.position.set(layout.center[0], layout.center[1], 0.08);
-        assembly.rotation.set(-0.095, 0.035, -0.028);
-        assembly.scale.setScalar(layout.objectScale);
-        materials.forEach((material, index) => {
-          material.color.copy(plates[index].finalColor);
-          material.roughness = COMMAND_FOUNDATION_TOKENS.material.plateRoughness;
-          material.metalness = COMMAND_FOUNDATION_TOKENS.material.plateMetalness;
-          material.opacity = 1;
-          material.transparent = false;
-          material.needsUpdate = true;
-        });
-        activeEdgeMaterial.color.copy(EDGE_FINAL_COLOR);
-        activeEdgeMaterial.opacity = 0.78;
-      }
-    }
-
     if (reducedMotion) return;
     for (const [plateIndex, plate] of plates.entries()) {
       const group = plateRefs.current[plateIndex];
@@ -657,19 +469,25 @@ function BrazilTerritoryAssembly({
     }
   });
 
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       for (const plate of plates) {
         plate.geometry.dispose();
         plate.edges.dispose();
       }
       for (const material of materials) material.dispose();
       edgeMaterial.dispose();
-    };
-  }, [edgeMaterial, materials, plates]);
+    },
+    [edgeMaterial, materials, plates],
+  );
 
   return (
-    <group ref={assemblyRef} name="BrazilTerritoryAssembly">
+    <group
+      name="BrazilTerritoryAssembly"
+      position={[layout.center[0], layout.center[1], 0.08]}
+      rotation={[-0.095, 0.035, -0.028]}
+      scale={layout.objectScale}
+    >
       <group
         scale={[MAP_SCALE, -MAP_SCALE, MAP_SCALE]}
         position={[-MAP_HALF_EXTENT, MAP_HALF_EXTENT, 0]}
@@ -689,13 +507,29 @@ function BrazilTerritoryAssembly({
               position-z={initialSeparation}
             >
               <mesh geometry={plate.geometry}>
-                <primitive attach="material" object={materials[plateIndex]} />
+                <primitive
+                  attach="material"
+                  object={materials[territoryIndex % materials.length]}
+                />
               </mesh>
               <lineSegments geometry={plate.edges} material={edgeMaterial} />
             </group>
           );
         })}
+
+        {introEnabled ? (
+          <TerritoryGenesisPass
+            plates={plates}
+            entranceState={intent.entranceState}
+            onScenePhaseChange={onScenePhaseChange}
+          />
+        ) : null}
       </group>
+
+      <ScenePrimer
+        enabled={introEnabled && intent.entranceState === "primed"}
+        onPrimed={() => onScenePhaseChange("primed")}
+      />
     </group>
   );
 }
@@ -717,7 +551,6 @@ function OrbitalCrown({
   useEffect(() => {
     if (!reducedMotion) return;
     const aligned = intent.orbitalAlignment === 1;
-
     if (territoryRef.current) territoryRef.current.rotation.z = 0;
     if (commandRef.current) commandRef.current.rotation.z = aligned ? 0 : 0.08;
     if (conflictRef.current) conflictRef.current.rotation.z = aligned ? 0 : -0.11;
@@ -760,33 +593,17 @@ function OrbitalCrown({
   const conflictOpacity = 0.08 + intent.conflictLevel * 0.13;
 
   return (
-    <group
-      name="OrbitalCrown"
-      position={layout.center}
-      scale={layout.objectScale}
-    >
+    <group name="OrbitalCrown" position={layout.center} scale={layout.objectScale}>
       <group ref={territoryRef} name="OrbitalCrown-Territory" rotation={[0.04, 0.08, 0]}>
         <mesh>
           <torusGeometry args={[4.02, 0.021, 8, 128]} />
-          <meshStandardMaterial
-            color="#61745f"
-            metalness={0.7}
-            roughness={0.42}
-            transparent
-            opacity={0.7}
-          />
+          <meshStandardMaterial color="#61745f" metalness={0.7} roughness={0.42} transparent opacity={0.7} />
         </mesh>
       </group>
       <group ref={commandRef} name="OrbitalCrown-Command" rotation={[-0.12, 0.18, 0.08]}>
         <mesh>
           <torusGeometry args={[4.26, 0.016, 8, 128]} />
-          <meshStandardMaterial
-            color="#d0aa57"
-            metalness={0.82}
-            roughness={0.34}
-            transparent
-            opacity={0.62}
-          />
+          <meshStandardMaterial color="#d0aa57" metalness={0.82} roughness={0.34} transparent opacity={0.62} />
         </mesh>
       </group>
       <group ref={conflictRef} name="OrbitalCrown-Conflict" rotation={[0.17, -0.14, -0.11]}>
@@ -889,10 +706,7 @@ function ArchitecturalRails({ compact }: { compact: boolean }) {
 
 function SceneFallbackGeometry({ layout }: { layout: SceneLayout }) {
   return (
-    <mesh
-      position={[layout.center[0], layout.center[1], 0]}
-      scale={layout.objectScale}
-    >
+    <mesh position={[layout.center[0], layout.center[1], 0]} scale={layout.objectScale}>
       <ringGeometry args={[3.75, 3.78, 96]} />
       <meshBasicMaterial color="#876d3f" transparent opacity={0.28} />
     </mesh>
@@ -903,23 +717,19 @@ function CommandSceneWorld({
   intent,
   reducedMotion,
   compact,
-  onReady,
+  onScenePhaseChange,
 }: {
   intent: NormalizedCommandSceneIntent;
   reducedMotion: boolean;
   compact: boolean;
-  onReady: () => void;
+  onScenePhaseChange: (state: CommandSceneState) => void;
 }) {
   const layout = compact ? COMPACT_LAYOUT : DESKTOP_LAYOUT;
   const conflictIntensity = intent.conflictLevel * 5.2;
 
   return (
     <>
-      <CameraDirector
-        intent={intent}
-        reducedMotion={reducedMotion}
-        compact={compact}
-      />
+      <CameraDirector intent={intent} reducedMotion={reducedMotion} compact={compact} />
       <ambientLight color="#869187" intensity={1.15} />
       <directionalLight color="#eee1c2" intensity={2.35} position={[-5, 5, 8]} />
       <pointLight color="#c18f4c" intensity={18} distance={14} position={[5.4, 3.2, 5]} />
@@ -932,27 +742,15 @@ function CommandSceneWorld({
 
       <ArchitecturalRails compact={compact} />
       <DomainTable layout={layout} />
-      <OrbitalCrown
-        intent={intent}
-        reducedMotion={reducedMotion}
-        layout={layout}
-      />
-      <SceneInsignia
-        intent={intent}
-        reducedMotion={reducedMotion}
-        layout={layout}
-      />
-      <StrategicGlobe
-        intent={intent}
-        reducedMotion={reducedMotion}
-        layout={layout}
-      />
+      <OrbitalCrown intent={intent} reducedMotion={reducedMotion} layout={layout} />
+      <SceneInsignia intent={intent} reducedMotion={reducedMotion} layout={layout} />
+      <StrategicGlobe intent={intent} reducedMotion={reducedMotion} layout={layout} />
       <Suspense fallback={<SceneFallbackGeometry layout={layout} />}>
         <BrazilTerritoryAssembly
           intent={intent}
           layout={layout}
           reducedMotion={reducedMotion}
-          onReady={onReady}
+          onScenePhaseChange={onScenePhaseChange}
         />
       </Suspense>
     </>
@@ -964,7 +762,7 @@ export function CommandSceneCanvas({
   reducedMotion,
   compact,
   maxDpr,
-  onReady,
+  onScenePhaseChange,
   onUnavailable,
 }: CommandSceneCanvasProps) {
   const initialPose = resolveCommandCameraPose(intent, compact);
@@ -973,11 +771,7 @@ export function CommandSceneCanvas({
     <Canvas
       className="command-foundation-canvas"
       camera={{
-        position: [
-          initialPose.camera[0],
-          initialPose.camera[1],
-          initialPose.camera[2],
-        ],
+        position: [initialPose.camera[0], initialPose.camera[1], initialPose.camera[2]],
         fov: initialPose.fov,
         near: 0.1,
         far: 40,
@@ -999,7 +793,7 @@ export function CommandSceneCanvas({
         intent={intent}
         reducedMotion={reducedMotion}
         compact={compact}
-        onReady={onReady}
+        onScenePhaseChange={onScenePhaseChange}
       />
     </Canvas>
   );
