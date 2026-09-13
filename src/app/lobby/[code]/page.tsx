@@ -1,6 +1,5 @@
 import type { CSSProperties } from "react";
 import type { Metadata } from "next";
-import Link from "next/link";
 import { LobbyClient } from "@/src/components/lobby-client";
 
 type LobbyPageProps = {
@@ -12,23 +11,19 @@ export const metadata: Metadata = {
 };
 
 const lobbyLayoutStyle = {
+  height: "100dvh",
+  minHeight: 0,
+  boxSizing: "border-box",
+  overflow: "hidden",
   paddingTop: "var(--command-content-top, 96px)",
-  paddingBottom: "calc(2rem + env(safe-area-inset-bottom))",
-  scrollPaddingTop: "var(--command-content-top, 96px)",
-  scrollPaddingBottom: "calc(2rem + env(safe-area-inset-bottom))",
+  paddingBottom: "max(10px, env(safe-area-inset-bottom))",
 } satisfies CSSProperties;
 
 export default async function LobbyPage({ params }: LobbyPageProps) {
   const { code } = await params;
 
   return (
-    <main
-      className="wb-shell-inner wb-lobby-shell"
-      style={lobbyLayoutStyle}
-    >
-      <Link href="/matchmaking" className="wb-ghost-link">
-        ← Operações
-      </Link>
+    <main className="wb-shell-inner" style={lobbyLayoutStyle}>
       <LobbyClient code={code} />
     </main>
   );
