@@ -15,6 +15,7 @@ import {
 } from "three";
 import { SVGLoader } from "three/addons/loaders/SVGLoader.js";
 import { COMMAND_FOUNDATION_TOKENS } from "./foundation-tokens";
+import { ProfileOrbAssembly } from "./profile-orb-assembly";
 import type {
   CommandSceneState,
   NormalizedCommandSceneIntent,
@@ -246,7 +247,13 @@ function StrategicGlobe({
   );
 }
 
-function DomainTable({ layout }: { layout: SceneLayout }) {
+function DomainTable({
+  layout,
+  openingActive,
+}: {
+  layout: SceneLayout;
+  openingActive: boolean;
+}) {
   return (
     <group
       name="DomainTable"
@@ -257,12 +264,18 @@ function DomainTable({ layout }: { layout: SceneLayout }) {
         <cylinderGeometry args={[4.58, 4.76, 0.34, 96]} />
         <meshStandardMaterial color="#101713" roughness={0.75} metalness={0.4} />
       </mesh>
-      <mesh position={[0, 0, 0.18]}>
+      <mesh
+        name="DomainTable-GoldenRing"
+        position={[0, 0, 0.18]}
+        userData={{ finalOpacity: 1 }}
+      >
         <ringGeometry args={[4.42, 4.54, 96]} />
         <meshStandardMaterial
           color="#98763c"
           roughness={0.4}
           metalness={COMMAND_FOUNDATION_TOKENS.material.brassMetalness}
+          transparent={openingActive}
+          opacity={openingActive ? 0 : 1}
         />
       </mesh>
       <mesh position={[0, 0, 0.17]}>
@@ -633,53 +646,13 @@ function SceneInsignia({
   reducedMotion: boolean;
   layout: SceneLayout;
 }) {
-  const insigniaRef = useRef<Group>(null);
-  const invalidate = useThree((state) => state.invalidate);
-  const emphasized = intent.mode === "profile" || intent.focus === "insignia";
-  const targetScale = layout.insigniaScale * (emphasized ? 1 : 0.72);
-  const baseScale = layout.insigniaScale * 0.72;
-
-  useEffect(() => {
-    if (!reducedMotion || !insigniaRef.current) return;
-    insigniaRef.current.scale.setScalar(targetScale);
-    invalidate();
-  }, [invalidate, reducedMotion, targetScale]);
-
-  useFrame((_, delta) => {
-    if (reducedMotion || !insigniaRef.current) return;
-    const scale = MathUtils.damp(
-      insigniaRef.current.scale.x,
-      targetScale,
-      COMMAND_FOUNDATION_TOKENS.motion.objectDamping,
-      delta,
-    );
-    insigniaRef.current.scale.setScalar(scale);
-  });
-
   return (
-    <group
-      ref={insigniaRef}
-      name="CommandInsignia"
+    <ProfileOrbAssembly
+      intent={intent}
+      reducedMotion={reducedMotion}
       position={layout.insigniaPosition}
-      scale={baseScale}
-    >
-      <mesh>
-        <cylinderGeometry args={[0.48, 0.48, 0.08, 32]} />
-        <meshStandardMaterial color="#242f27" metalness={0.58} roughness={0.48} />
-      </mesh>
-      <mesh position={[0, 0, 0.055]}>
-        <torusGeometry args={[0.34, 0.025, 8, 48]} />
-        <meshStandardMaterial color="#c49a4b" metalness={0.82} roughness={0.32} />
-      </mesh>
-      <mesh position={[0, 0, 0.07]}>
-        <boxGeometry args={[0.34, 0.055, 0.035]} />
-        <meshStandardMaterial color="#eee8da" metalness={0.18} roughness={0.5} />
-      </mesh>
-      <mesh position={[0, 0, 0.071]} rotation={[0, 0, Math.PI / 2]}>
-        <boxGeometry args={[0.22, 0.055, 0.035]} />
-        <meshStandardMaterial color="#eee8da" metalness={0.18} roughness={0.5} />
-      </mesh>
-    </group>
+      scale={layout.insigniaScale}
+    />
   );
 }
 
@@ -726,6 +699,10 @@ function CommandSceneWorld({
 }) {
   const layout = compact ? COMPACT_LAYOUT : DESKTOP_LAYOUT;
   const conflictIntensity = intent.conflictLevel * 5.2;
+  const openingActive =
+    intent.mode === "entrance" &&
+    !reducedMotion &&
+    intent.entranceState !== "settled";
 
   return (
     <>
@@ -741,7 +718,7 @@ function CommandSceneWorld({
       />
 
       <ArchitecturalRails compact={compact} />
-      <DomainTable layout={layout} />
+      <DomainTable layout={layout} openingActive={openingActive} />
       <OrbitalCrown intent={intent} reducedMotion={reducedMotion} layout={layout} />
       <SceneInsignia intent={intent} reducedMotion={reducedMotion} layout={layout} />
       <StrategicGlobe intent={intent} reducedMotion={reducedMotion} layout={layout} />
