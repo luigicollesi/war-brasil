@@ -37,7 +37,7 @@ const physicalTables = new Map([
       "territory_connections",
     ],
   ],
-  ["auth", ["account", "session", "user", "verification"]],
+  ["auth", ["account", "rateLimit", "session", "user", "verification"]],
   ["profile", ["commanders"]],
   ["ops", ["command_receipts", "pgmigrations"]],
 ]);
@@ -70,6 +70,7 @@ const managedHistory = [
   "030-repair-adaptive-dice-state-schema.sql",
   "031-auth-foundation.sql",
   "032-profile-identity-game-binding.sql",
+  "033-auth-rate-limit.sql",
 ];
 
 function urlForDatabase(name) {
@@ -288,6 +289,20 @@ async function assertAuthProfileSchema(client) {
   ]) {
     assert.equal(indexNames.has(name), true, name);
   }
+
+  const rateLimitColumns = await client.query(`
+    SELECT column_name, data_type
+    FROM information_schema.columns
+    WHERE table_schema='auth' AND table_name='rateLimit'
+    ORDER BY column_name
+  `);
+  const rateLimitColumnTypes = new Map(
+    rateLimitColumns.rows.map((row) => [row.column_name, row.data_type]),
+  );
+  assert.equal(rateLimitColumnTypes.get("id"), "uuid");
+  assert.equal(rateLimitColumnTypes.get("key"), "text");
+  assert.equal(rateLimitColumnTypes.get("count"), "integer");
+  assert.equal(rateLimitColumnTypes.get("lastRequest"), "bigint");
 }
 
 async function assertOrganizedDatabase(connectionString) {
@@ -529,7 +544,7 @@ async function assertLegacyRoomRollout(connectionString) {
 if (!databaseUrl) {
   test("migrations de banco exigem DATABASE_URL", { skip: true }, () => {});
 } else {
-  test("026-032 migram banco v025, preservam catálogos e são idempotentes", async () => {
+  test("026-033 migram banco v025, preservam catálogos e são idempotentes", async () => {
     await withTemporaryDatabase("legacy", async (connectionString) => {
       await applySql(connectionString, "tests/fixtures/db/schema-v025.sql");
       await applySql(
