@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { CSSProperties } from "react";
 import { PLAYER_COLORS, type LobbyPlayer } from "@/src/lib/lobby";
 import styles from "./lobby-formation-panel.module.css";
@@ -49,7 +50,7 @@ export function LobbyFormationPanel({
     >
       <div className={styles.stageHeader}>
         <div>
-          <p className={styles.stageEyebrow}>Mesa de domínio · formação da operação</p>
+          <p className={styles.stageEyebrow}>Mesa de guerra · teatro nacional</p>
           <h2 id="lobby-stations-title" className={styles.stageTitle}>
             {players.length}/6 postos ocupados
           </h2>
@@ -59,60 +60,82 @@ export function LobbyFormationPanel({
         </p>
       </div>
 
-      <ol className={styles.stationField} aria-label="Postos de comando da sala">
-        {players.map((player, index) => (
-          <PlayerStation
-            key={player.id}
-            player={player}
-            slot={index + 1}
-            canManageBots={canManageBots}
-            isRemoving={pendingAction === `remove-bot:${player.id}`}
-            actionPending={actionPending}
-            onRemoveBot={onRemoveBot}
-          />
-        ))}
+      <div className={styles.warTable} data-tactical-nexus="brasil">
+        <div className={styles.tacticalNexus} aria-hidden="true">
+          <span className={styles.nexusHalo} />
+          <span className={styles.nexusOrbit} />
+          <span className={styles.nexusOrbitInner} />
+          <div className={styles.mapProjector}>
+            <Image
+              src="/war-brasil-42.production.svg"
+              alt=""
+              fill
+              sizes="(max-width: 720px) 1px, 300px"
+              className={styles.brazilMap}
+            />
+            <span className={styles.mapScan} />
+          </div>
+          <div className={styles.nexusReadout}>
+            <span>TEATRO // BRASIL</span>
+            <strong>{startAuthorized ? "AUTORIZADO" : `${readyPlayers}/${players.length} SINCRONIZADOS`}</strong>
+          </div>
+        </div>
 
-        {emptySlots.map((_, index) => {
-          const isNextBotSlot = canManageBots && index === 0;
-          const slot = players.length + index + 1;
+        <ol className={styles.stationField} aria-label="Postos de comando da sala">
+          {players.map((player, index) => (
+            <PlayerStation
+              key={player.id}
+              player={player}
+              slot={index + 1}
+              canManageBots={canManageBots}
+              isRemoving={pendingAction === `remove-bot:${player.id}`}
+              actionPending={actionPending}
+              onRemoveBot={onRemoveBot}
+            />
+          ))}
 
-          return (
-            <li
-              key={`empty-${index}`}
-              className={`${styles.station} ${styles.stationEmpty}`}
-              data-slot={slot}
-            >
-              <div className={styles.stationTopline}>
-                <span className={styles.stationNumber}>POSTO {String(slot).padStart(2, "0")}</span>
-                <span className="wb-player-state">LIVRE</span>
-              </div>
-              <div className={styles.stationBody}>
-                <span className={styles.insignia} aria-hidden="true" />
-                <div className={styles.stationIdentity}>
-                  <p className={styles.stationName}>Aguardando jogador</p>
-                  <p className={styles.stationMeta}>Vaga disponível</p>
+          {emptySlots.map((_, index) => {
+            const isNextBotSlot = canManageBots && index === 0;
+            const slot = players.length + index + 1;
+
+            return (
+              <li
+                key={`empty-${index}`}
+                className={`${styles.station} ${styles.stationEmpty}`}
+                data-slot={slot}
+              >
+                <div className={styles.stationTopline}>
+                  <span className={styles.stationNumber}>POSTO {String(slot).padStart(2, "0")}</span>
+                  <span className="wb-player-state">LIVRE</span>
                 </div>
-              </div>
-              <div className={styles.stationStatus}>
-                <span>Canal desocupado</span>
-                {isNextBotSlot ? (
-                  <button
-                    type="button"
-                    disabled={actionPending}
-                    onClick={onAddBot}
-                    className={`wb-button wb-button--ghost ${styles.botAction}`}
-                    aria-label="Adicionar bot na próxima vaga"
-                  >
-                    {pendingAction === "add-bot" ? "Adicionando…" : "+ Bot"}
-                  </button>
-                ) : (
-                  <span className={styles.stationStatusMark} aria-hidden="true" />
-                )}
-              </div>
-            </li>
-          );
-        })}
-      </ol>
+                <div className={styles.stationBody}>
+                  <span className={styles.insignia} aria-hidden="true" />
+                  <div className={styles.stationIdentity}>
+                    <p className={styles.stationName}>Canal disponível</p>
+                    <p className={styles.stationMeta}>Aguardando novo comando</p>
+                  </div>
+                </div>
+                <div className={styles.stationStatus}>
+                  <span>Sem assinatura</span>
+                  {isNextBotSlot ? (
+                    <button
+                      type="button"
+                      disabled={actionPending}
+                      onClick={onAddBot}
+                      className={`wb-button wb-button--ghost ${styles.botAction}`}
+                      aria-label="Adicionar bot na próxima vaga"
+                    >
+                      {pendingAction === "add-bot" ? "Adicionando…" : "+ Bot"}
+                    </button>
+                  ) : (
+                    <span className={styles.stationStatusMark} aria-hidden="true" />
+                  )}
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
     </section>
   );
 }
