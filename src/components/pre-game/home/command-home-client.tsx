@@ -173,9 +173,14 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
       return;
     }
 
-    const startedAt = performance.now();
-    setEntranceStartedAtMs(startedAt);
+    setEntranceStartedAtMs(performance.now());
     setCeremonyPhase("table");
+  }, [entranceStartedAtMs, ritualActive, sceneState, visitMode]);
+
+  useEffect(() => {
+    if (entranceStartedAtMs === null || visitMode !== "first" || !ritualActive) {
+      return;
+    }
 
     const stableTimer = window.setTimeout(() => {
       setCeremonyPhase("stable");
@@ -184,7 +189,7 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
     }, COMMAND_ENTRANCE_DURATION_MS);
 
     return () => window.clearTimeout(stableTimer);
-  }, [entranceStartedAtMs, ritualActive, sceneState, visitMode]);
+  }, [entranceStartedAtMs, ritualActive, visitMode]);
 
   const skipCeremony = () => {
     setCeremonyPhase("stable");
