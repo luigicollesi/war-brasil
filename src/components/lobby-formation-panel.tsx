@@ -112,7 +112,7 @@ export function LobbyFormationPanel({
                   <span className={styles.insignia} aria-hidden="true" />
                   <div className={styles.stationIdentity}>
                     <p className={styles.stationName}>Canal disponível</p>
-                    <p className={styles.stationMeta}>Aguardando novo comando</p>
+                    <p className={styles.stationMeta}>Aguardando jogador</p>
                   </div>
                 </div>
                 <div className={styles.stationStatus}>
