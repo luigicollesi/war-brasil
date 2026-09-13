@@ -96,6 +96,7 @@ jobs:
           fi
 
           node scripts/e2e/auth-credentials-verification-e2e.mjs
+          node scripts/e2e/auth-origin-redirect-e2e.mjs
           node scripts/e2e/auth-rate-limit-e2e.mjs
           node scripts/e2e/auth-seat-boundary-e2e.mjs
           npm run test:e2e:lobby
