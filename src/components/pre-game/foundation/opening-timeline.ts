@@ -31,12 +31,25 @@ export function smoothOpeningProgress(value: number) {
   return progress * progress * (3 - 2 * progress);
 }
 
+export function smootherOpeningProgress(value: number) {
+  const progress = clampOpeningProgress(value);
+  return progress * progress * progress * (progress * (progress * 6 - 15) + 10);
+}
+
 export function sampleOpeningCue(
   progress: number,
   cue: OpeningCueWindow,
 ) {
   const span = Math.max(cue.end - cue.start, Number.EPSILON);
   return smoothOpeningProgress((progress - cue.start) / span);
+}
+
+export function sampleContinuousOpeningCue(
+  progress: number,
+  cue: OpeningCueWindow,
+) {
+  const span = Math.max(cue.end - cue.start, Number.EPSILON);
+  return smootherOpeningProgress((progress - cue.start) / span);
 }
 
 export function resolveOpeningProgress(
