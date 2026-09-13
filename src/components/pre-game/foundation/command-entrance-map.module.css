@@ -1,0 +1,58 @@
+.mapStage {
+  position: absolute;
+  z-index: 3;
+  top: 50%;
+  left: 50%;
+  width: min(46vw, 590px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  transform-origin: 50% 50%;
+  pointer-events: none;
+  opacity: 1;
+  will-change: transform, opacity;
+}
+
+.mapStage :global(img) {
+  object-fit: contain;
+  filter: drop-shadow(0 28px 34px rgb(0 0 0 / 38%));
+}
+
+.mapStage::before,
+.mapStage::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  -webkit-mask: url("/war-brasil-42.production.svg") center / contain no-repeat;
+  mask: url("/war-brasil-42.production.svg") center / contain no-repeat;
+}
+
+.mapStage::before {
+  z-index: 2;
+  background:
+    radial-gradient(circle at 42% 32%, rgb(66 91 65 / 96%), transparent 46%),
+    linear-gradient(145deg, #314a34 0%, #213426 44%, #132219 100%);
+  opacity: .94;
+}
+
+.mapStage::after {
+  z-index: 3;
+  background:
+    linear-gradient(120deg, rgb(219 184 103 / 24%), transparent 26% 76%, rgb(3 8 5 / 42%)),
+    radial-gradient(circle at 50% 48%, transparent 48%, rgb(0 0 0 / 46%) 100%);
+  opacity: .62;
+  mix-blend-mode: screen;
+}
+
+@media (max-width: 900px) {
+  .mapStage {
+    top: 39%;
+    width: min(74vw, 520px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mapStage {
+    transform: translate(-50%, -50%);
+  }
+}
