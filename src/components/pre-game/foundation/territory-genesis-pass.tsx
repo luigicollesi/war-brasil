@@ -59,6 +59,11 @@ type StoredMaterialState<TMaterial extends MeshStandardMaterial | LineBasicMater
   transparent: boolean;
 };
 
+type StoredCommandRingState = StoredMaterialState<MeshStandardMaterial> & {
+  object: Mesh;
+  rotationZ: number;
+};
+
 function belongsToGenesisPass(object: Object3D) {
   let current: Object3D | null = object;
   while (current) {
@@ -71,7 +76,7 @@ function belongsToGenesisPass(object: Object3D) {
 function createSceneTargetsController() {
   let finalSurfaces: StoredMaterialState<MeshStandardMaterial>[] = [];
   let finalEdges: StoredMaterialState<LineBasicMaterial>[] = [];
-  let commandRing: StoredMaterialState<MeshStandardMaterial> | null = null;
+  let commandRing: StoredCommandRingState | null = null;
   let finalSurfaceVisible = true;
 
   const restore = () => {
@@ -85,6 +90,7 @@ function createSceneTargetsController() {
       state.material.transparent = state.transparent;
     }
     if (commandRing) {
+      commandRing.object.rotation.z = commandRing.rotationZ;
       commandRing.material.opacity = commandRing.opacity;
       commandRing.material.transparent = commandRing.transparent;
       commandRing.material.needsUpdate = true;
@@ -148,9 +154,11 @@ function createSceneTargetsController() {
         }
 
         commandRing = {
+          object,
           material: object.material,
           opacity: object.material.opacity,
           transparent: object.material.transparent,
+          rotationZ: object.rotation.z,
         };
       });
     },
@@ -166,6 +174,7 @@ function createSceneTargetsController() {
         state.material.opacity = 0;
       }
       if (commandRing) {
+        commandRing.object.rotation.z = commandRing.rotationZ;
         commandRing.material.transparent = true;
         commandRing.material.opacity = 0;
         commandRing.material.needsUpdate = true;
@@ -187,6 +196,7 @@ function createSceneTargetsController() {
         state.material.opacity = state.opacity * progress;
       }
       if (commandRing) {
+        commandRing.object.rotation.z = commandRing.rotationZ + Math.PI * 2 * progress;
         commandRing.material.opacity = commandRing.opacity * progress;
       }
     },
