@@ -4,35 +4,65 @@ import { readAuthServerEnvironment } from "./environment";
 
 const EXTERNAL_POST_CALLBACK_PREFIX = "/api/auth/callback/";
 
+type OriginEvidence =
+  | { present: false }
+  | { origin: string | null; present: true };
+
 function normalizeOrigin(value: string) {
   try {
-    return new URL(value).origin;
+    const origin = new URL(value).origin;
+    return origin === "null" ? null : origin;
   } catch {
     return null;
   }
 }
 
-function trustedApplicationOrigin(request: Request) {
+function isLocalHostname(hostname: string) {
+  return (
+    hostname === "localhost" ||
+    hostname === "127.0.0.1" ||
+    hostname === "::1" ||
+    hostname.endsWith(".localhost")
+  );
+}
+
+function isTrustedApplicationOrigin(origin: string, request: Request) {
   const environment = readAuthServerEnvironment();
-  const configured = environment.baseUrl
+  const candidate = new URL(origin);
+  const configuredOrigin = environment.baseUrl
     ? normalizeOrigin(environment.baseUrl)
     : null;
 
-  if (configured) {
-    return configured;
+  if (configuredOrigin === origin) {
+    return true;
   }
 
-  return new URL(request.url).origin;
+  if (environment.allowedHosts.includes(candidate.host)) {
+    return candidate.protocol === "https:" || isLocalHostname(candidate.hostname);
+  }
+
+  // Development without explicit auth URL/host allowlist may use the request's
+  // own origin. Production fail-fast requires BETTER_AUTH_URL, so this fallback
+  // cannot silently become the production authority.
+  return (
+    !configuredOrigin &&
+    environment.allowedHosts.length === 0 &&
+    origin === new URL(request.url).origin
+  );
 }
 
-function requestEvidenceOrigin(request: Request) {
+function requestEvidenceOrigin(request: Request): OriginEvidence {
   const origin = request.headers.get("origin");
-  if (origin) {
-    return normalizeOrigin(origin);
+  if (origin !== null) {
+    return { origin: normalizeOrigin(origin), present: true };
   }
 
   const referer = request.headers.get("referer");
-  return referer ? normalizeOrigin(referer) : null;
+  if (referer !== null) {
+    return { origin: normalizeOrigin(referer), present: true };
+  }
+
+  return { present: false };
 }
 
 export function isExternalAuthProviderCallback(request: Request) {
@@ -48,15 +78,19 @@ export function rejectUntrustedAuthMutationOrigin(request: Request) {
     return null;
   }
 
-  const evidenceOrigin = requestEvidenceOrigin(request);
+  const evidence = requestEvidenceOrigin(request);
 
-  // Requests without Origin/Referer remain available to trusted non-browser
-  // callers. Browser requests that do expose origin evidence must be first-party.
-  if (!evidenceOrigin) {
+  // Requests with no Origin/Referer remain available to trusted non-browser
+  // callers. Once a caller supplies browser-origin evidence it must parse and
+  // match an explicitly trusted application origin.
+  if (!evidence.present) {
     return null;
   }
 
-  if (evidenceOrigin === trustedApplicationOrigin(request)) {
+  if (
+    evidence.origin &&
+    isTrustedApplicationOrigin(evidence.origin, request)
+  ) {
     return null;
   }
 
