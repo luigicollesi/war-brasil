@@ -83,13 +83,15 @@ export async function createDiceFaceTexture({
   value,
   pipColor = DEFAULT_DICE_PIP_COLOR,
   resolution = DEFAULT_DICE_TEXTURE_RESOLUTION,
+  assetRef,
 }: {
   skin: DiceSkin;
   value: DiceValue;
   pipColor?: string;
   resolution?: number;
+  assetRef?: string | null;
 }): Promise<Texture> {
-  const source = DICE_SKIN_SOURCES[skin];
+  const source = assetRef ?? DICE_SKIN_SOURCES[skin];
   const image = await loadImage(source);
   const canvas = createCanvas(resolution);
   const context = canvas.getContext("2d", { alpha: true });
@@ -108,7 +110,7 @@ export async function createDiceFaceTexture({
   texture.minFilter = LinearMipmapLinearFilter;
   texture.generateMipmaps = true;
   texture.needsUpdate = true;
-  texture.name = `war-brasil-die-${skin}-${value}`;
+  texture.name = `war-brasil-die-${skin}-${value}:${assetRef ?? "native"}`;
 
   return texture;
 }
