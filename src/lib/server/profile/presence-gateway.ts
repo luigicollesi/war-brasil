@@ -10,6 +10,11 @@ type PresenceBatchResult = Readonly<{
   presences: ReadonlyMap<string, CommanderPresence>;
 }>;
 
+export type OwnPresenceHeartbeat = CommanderPresence &
+  Readonly<{
+    shouldPersistLastSeen: boolean;
+  }>;
+
 function internalConfig() {
   const rawUrl = process.env.GAME_REALTIME_INTERNAL_URL?.trim();
   const token = process.env.GAME_REALTIME_INTERNAL_TOKEN?.trim();
@@ -50,19 +55,24 @@ async function postInternal(path: string, body: unknown) {
   }
 }
 
-export async function renewOwnPresence(userId: string): Promise<CommanderPresence> {
+export async function renewOwnPresence(userId: string): Promise<OwnPresenceHeartbeat> {
   const payload = await postInternal("/internal/presence/heartbeat", { userId });
   if (
     payload?.availability !== "available" ||
     payload.state !== "online"
   ) {
-    return { state: "unavailable", lastSeenAt: null };
+    return {
+      state: "unavailable",
+      lastSeenAt: null,
+      shouldPersistLastSeen: false,
+    };
   }
 
   return {
     state: "online",
     lastSeenAt:
       typeof payload.observedAt === "string" ? payload.observedAt : null,
+    shouldPersistLastSeen: payload.persistLastSeen === true,
   };
 }
 
