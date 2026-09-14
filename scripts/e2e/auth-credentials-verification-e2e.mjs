@@ -174,6 +174,87 @@ async function assertSessionBoundPresence(page, session) {
   );
 }
 
+async function assertOwnedTitleBoundary(page, db, session, identity) {
+  const userId = session?.user?.id;
+  assert.equal(typeof userId, "string", "sessão autenticada sem user.id");
+
+  const handle = `title-${identity}`.slice(0, 32);
+  const ownedTitleId = `e2e-owned-${identity}`;
+  const foreignTitleId = `e2e-foreign-${identity}`;
+
+  await db.query(
+    `INSERT INTO profile.commanders(user_id,handle,display_name)
+     VALUES($1::uuid,$2,$3)
+     ON CONFLICT (user_id) DO UPDATE
+       SET handle=COALESCE(profile.commanders.handle,EXCLUDED.handle),
+           display_name=COALESCE(profile.commanders.display_name,EXCLUDED.display_name)`,
+    [userId, handle, "Title E2E Commander"],
+  );
+  await db.query(
+    `INSERT INTO catalog.commander_titles(id,name,rarity,is_active)
+     VALUES($1,'Owned E2E Title','rare',TRUE),($2,'Foreign E2E Title','epic',TRUE)`,
+    [ownedTitleId, foreignTitleId],
+  );
+  await db.query(
+    `INSERT INTO profile.commander_titles(user_id,title_id)
+     VALUES($1::uuid,$2)`,
+    [userId, ownedTitleId],
+  );
+
+  const available = await apiJson(page, "/api/profile/titles");
+  assert.equal(available.status, 200, JSON.stringify(available.body));
+  assert.equal(
+    available.body?.titles?.some((title) => title?.id === ownedTitleId),
+    true,
+    "título desbloqueado deve aparecer no inventário autenticado",
+  );
+  assert.equal(
+    available.body?.titles?.some((title) => title?.id === foreignTitleId),
+    false,
+    "título não possuído não pode aparecer no inventário autenticado",
+  );
+
+  const rejected = await apiJson(page, "/api/profile/titles", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ titleId: foreignTitleId }),
+  });
+  assert.equal(rejected.status, 409, JSON.stringify(rejected.body));
+  assert.equal(rejected.body?.error, "TITLE_NOT_OWNED_OR_INACTIVE");
+
+  const beforeEquip = await db.query(
+    `SELECT equipped_title_id FROM profile.commanders WHERE user_id=$1::uuid`,
+    [userId],
+  );
+  assert.equal(beforeEquip.rows[0]?.equipped_title_id ?? null, null);
+
+  const equipped = await apiJson(page, "/api/profile/titles", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ titleId: ownedTitleId }),
+  });
+  assert.equal(equipped.status, 200, JSON.stringify(equipped.body));
+
+  const afterEquip = await db.query(
+    `SELECT equipped_title_id FROM profile.commanders WHERE user_id=$1::uuid`,
+    [userId],
+  );
+  assert.equal(afterEquip.rows[0]?.equipped_title_id, ownedTitleId);
+
+  const cleared = await apiJson(page, "/api/profile/titles", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ titleId: null }),
+  });
+  assert.equal(cleared.status, 200, JSON.stringify(cleared.body));
+
+  const afterClear = await db.query(
+    `SELECT equipped_title_id FROM profile.commanders WHERE user_id=$1::uuid`,
+    [userId],
+  );
+  assert.equal(afterClear.rows[0]?.equipped_title_id ?? null, null);
+}
+
 const browser = await playwright.chromium.launch({ headless: true });
 const db = new Client({ connectionString: DATABASE_URL });
 await db.connect();
@@ -270,9 +351,10 @@ try {
     assert.ok(authenticatedSession?.user, "login pós-verification não criou sessão");
 
     await assertSessionBoundPresence(page, authenticatedSession);
+    await assertOwnedTitleBoundary(page, db, authenticatedSession, identity);
 
     console.log(
-      "[auth-verification-e2e] signup sem sessão, link real, replay, token inválido, login pós-verification e presença vinculada à sessão confirmados.",
+      "[auth-verification-e2e] signup sem sessão, link real, replay, token inválido, login pós-verification, presença vinculada à sessão e títulos cosméticos por ownership confirmados.",
     );
   } finally {
     await context.close();
