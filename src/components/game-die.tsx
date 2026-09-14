@@ -28,6 +28,7 @@ const pipClass = {
 export function GameDie({
   value,
   color = "forest",
+  assetRef,
   rolling = false,
   rollAnimation,
   size = "lg",
@@ -35,6 +36,7 @@ export function GameDie({
 }: {
   value: number;
   color?: PlayerColor;
+  assetRef?: string | null;
   rolling?: boolean;
   rollAnimation?: DieRollAnimation;
   size?: keyof typeof sizeClass;
@@ -62,9 +64,10 @@ export function GameDie({
       aria-label={`Dado mostrando ${safeValue}`}
     >
       <Image
-        src="/dado-brasil-hq.svg"
+        src={assetRef ?? "/dado-brasil-hq.svg"}
         alt=""
         fill
+        unoptimized={Boolean(assetRef)}
         sizes={size === "lg" ? "128px" : size === "md" ? "96px" : "64px"}
         className="object-cover"
       />
