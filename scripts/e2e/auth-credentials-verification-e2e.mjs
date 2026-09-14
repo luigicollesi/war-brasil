@@ -3,6 +3,7 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { Client } from "pg";
+import { assertProfileSocialFlow } from "./profile-social-flow.mjs";
 
 const playwrightRuntimeDir = path.resolve(
   process.env.PLAYWRIGHT_RUNTIME_DIR ?? ".e2e-runtime/node_modules/playwright",
@@ -253,6 +254,52 @@ async function assertOwnedTitleBoundary(page, db, session, identity) {
     [userId],
   );
   assert.equal(afterClear.rows[0]?.equipped_title_id ?? null, null);
+  return { handle };
+}
+
+async function createSocialPeer(browser, db, identity) {
+  const context = await browser.newContext({
+    extraHTTPHeaders: { "x-forwarded-for": "198.51.100.241" },
+  });
+  const page = await context.newPage();
+  const email = `social-peer-${identity}@e2e.war-brasil.test`;
+  const handle = `social-peer-${identity}`.slice(0, 32);
+
+  try {
+    await page.goto(`${BASE_URL}/robots.txt`, { waitUntil: "domcontentloaded" });
+    await register(page, email);
+
+    const verified = await db.query(
+      `UPDATE auth."user"
+          SET "emailVerified"=TRUE,
+              "updatedAt"=NOW()
+        WHERE email=$1
+        RETURNING id`,
+      [email],
+    );
+    assert.equal(verified.rowCount, 1, "peer social E2E não foi persistido");
+    const userId = verified.rows[0].id;
+
+    const signIn = await apiJson(page, "/api/auth/sign-in/email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, password: PASSWORD, rememberMe: true }),
+    });
+    assert.equal(signIn.status, 200, JSON.stringify(signIn.body));
+
+    const onboarding = await apiJson(page, "/api/auth/command-access", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ handle, displayName: "Social Peer E2E" }),
+    });
+    assert.equal(onboarding.status, 200, JSON.stringify(onboarding.body));
+    assert.equal(onboarding.body?.profileComplete, true);
+
+    return { context, page, userId, handle };
+  } catch (error) {
+    await context.close().catch(() => undefined);
+    throw error;
+  }
 }
 
 const browser = await playwright.chromium.launch({ headless: true });
@@ -351,10 +398,30 @@ try {
     assert.ok(authenticatedSession?.user, "login pós-verification não criou sessão");
 
     await assertSessionBoundPresence(page, authenticatedSession);
-    await assertOwnedTitleBoundary(page, db, authenticatedSession, identity);
+    const primaryProfile = await assertOwnedTitleBoundary(
+      page,
+      db,
+      authenticatedSession,
+      identity,
+    );
+
+    const peer = await createSocialPeer(browser, db, identity);
+    try {
+      await assertProfileSocialFlow({
+        db,
+        actorA: {
+          page,
+          userId: authenticatedSession.user.id,
+          handle: primaryProfile.handle,
+        },
+        actorB: peer,
+      });
+    } finally {
+      await peer.context.close();
+    }
 
     console.log(
-      "[auth-verification-e2e] signup sem sessão, link real, replay, token inválido, login pós-verification, presença vinculada à sessão e títulos cosméticos por ownership confirmados.",
+      "[auth-verification-e2e] signup sem sessão, verification, presença vinculada, títulos por ownership e grafo social com duas sessões reais confirmados.",
     );
   } finally {
     await context.close();
