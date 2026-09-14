@@ -9,6 +9,8 @@ test("browser heartbeat derives target exclusively from authenticated session", 
 
   assert.match(route, /requireProfileMutationActor\(request\)/);
   assert.match(route, /renewOwnPresence\(actor\.userId\)/);
+  assert.match(route, /persistCommanderLastSeen\(actor\.userId, presence\.lastSeenAt\)/);
+  assert.match(route, /presence\.shouldPersistLastSeen/);
   assert.doesNotMatch(route, /request\.json\(\)/);
   assert.doesNotMatch(route, /searchParams/);
   assert.doesNotMatch(route, /payload/);
@@ -23,8 +25,21 @@ test("Next presence gateway remains server-only and fails closed as unavailable"
   assert.match(gateway, /\/internal\/presence\/heartbeat/);
   assert.match(gateway, /\/internal\/presence\/batch/);
   assert.match(gateway, /Authorization:\s*`Bearer \$\{config\.token\}`/);
+  assert.match(gateway, /shouldPersistLastSeen: payload\.persistLastSeen === true/);
   assert.match(gateway, /return \{ availability: "unavailable", presences: new Map\(\) \}/);
   assert.doesNotMatch(gateway, /@redis\/client/);
+});
+
+test("durable last-seen writer is monotonic and separate from Redis heartbeat storage", () => {
+  const persistence = read("src/lib/server/profile/presence-persistence.ts");
+  const store = read("realtime/presence-store.mjs");
+
+  assert.match(persistence, /UPDATE profile\.commanders/);
+  assert.match(persistence, /last_seen_at=GREATEST/);
+  assert.match(persistence, /WHERE user_id=\$1::uuid/);
+  assert.match(store, /lastSeenThrottleKey/);
+  assert.match(store, /NX:\s*true/);
+  assert.doesNotMatch(store, /UPDATE profile\.commanders|\bpg\b|Pool/);
 });
 
 test("presence endpoints are isolated from game realtime readiness", () => {
