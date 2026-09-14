@@ -41,7 +41,7 @@ test("item possuído available pode ser reequipado sem qualquer caminho de aquis
 test("remessa anunciada possui preview interativo leve e sem aquisição", () => {
   assert.match(store, /previewSetId/);
   assert.match(store, /aria-expanded=\{previewOpen\}/);
-  assert.match(store, />INSPECIONAR</);
+  assert.match(store, /previewOpen \? "FECHAR" : "INSPECIONAR"/);
   assert.match(store, /data-preview-detail/);
   assert.match(store, /PRÉVIA DETALHADA/);
   assert.match(store, /HQ SOB DEMANDA · SEM AQUISIÇÃO/);
