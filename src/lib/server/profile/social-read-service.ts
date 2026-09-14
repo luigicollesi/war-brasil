@@ -9,7 +9,6 @@ import type {
   PlayerSocialSnapshot,
   RecentCommanderContact,
 } from "@/src/lib/profile/profile-command-contract";
-import { safeProfilePortraitSrc } from "@/src/lib/profile/profile-portrait-policy";
 import { getPresenceStates } from "./presence-gateway";
 import {
   countFriends,
@@ -66,16 +65,10 @@ function contextLabel(contact: CommanderContact) {
 }
 
 function friendFrom(row: SocialFriendRow, batch: PresenceBatch): CommanderContact {
-  const portraitSrc =
-    safeProfilePortraitSrc(row.portrait_ref) ?? safeProfilePortraitSrc(row.auth_image);
   const contact: CommanderContact = {
     handle: row.handle,
     displayName: row.display_name,
     title: row.title_name,
-    portrait: {
-      src: portraitSrc,
-      alt: `Retrato de ${row.display_name}`,
-    },
     presence: presenceFrom(row, batch),
     activity: activityFrom(row),
     contextLabel: "",
