@@ -11,6 +11,9 @@ import type {
   ProfileVisibility,
   PublicCommanderProfileDto,
 } from "./profile-domain";
+import { getCommanderActivity } from "./activity-service";
+import { getPlayerMatchHistory } from "./history-service";
+import { getPresenceStates } from "./presence-gateway";
 import {
   findCommanderByHandle,
   findCommanderByUserId,
@@ -18,8 +21,6 @@ import {
   type CommanderProfileRow,
   type CommanderSearchRow,
 } from "./profile-repository";
-import { getCommanderActivity } from "./activity-service";
-import { getPlayerMatchHistory } from "./history-service";
 import { getSocialRelationship } from "./social-repository";
 
 function safePortraitSrc(value: string | null) {
@@ -150,21 +151,37 @@ export async function getPublicCommanderProfile(
     relationship,
   );
 
-  const [activity, ownerHistory] = await Promise.all([
+  const [activity, ownerHistory, presenceBatch] = await Promise.all([
     activityVisible
       ? getCommanderActivity(row.user_id)
       : Promise.resolve(null),
     historyVisible
       ? getPlayerMatchHistory(row.user_id, { limit: 20 })
       : Promise.resolve(null),
+    presenceVisible
+      ? getPresenceStates([row.user_id])
+      : Promise.resolve(null),
   ]);
+
+  const livePresence =
+    presenceVisible && presenceBatch?.availability === "available"
+      ? presenceBatch.presences.get(row.user_id) ?? null
+      : null;
 
   return {
     identity: {
       ...identity,
-      presence: presenceVisible
-        ? identity.presence
-        : { state: "unavailable", lastSeenAt: null },
+      presence: !presenceVisible
+        ? { state: "unavailable", lastSeenAt: null }
+        : livePresence
+          ? {
+              state: livePresence.state,
+              lastSeenAt: livePresence.lastSeenAt ?? identity.presence.lastSeenAt,
+            }
+          : {
+              state: "unavailable",
+              lastSeenAt: identity.presence.lastSeenAt,
+            },
       activity:
         activityVisible && activity
           ? activity
