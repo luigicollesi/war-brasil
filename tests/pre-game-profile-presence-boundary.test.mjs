@@ -77,8 +77,9 @@ test("public profile queries Redis only after relationship privacy authorizes pr
   );
 });
 
-test("global heartbeat is session-aware, periodic and identity-free", () => {
+test("global heartbeat is session-aware, periodic, identity-free and independent from Foundation", () => {
   const heartbeat = read("src/components/profile/profile-presence-heartbeat.tsx");
+  const layout = read("src/app/layout.tsx");
   const runtime = read(
     "src/components/pre-game/foundation/pre-game-command-runtime.tsx",
   );
@@ -89,5 +90,7 @@ test("global heartbeat is session-aware, periodic and identity-free", () => {
   assert.match(heartbeat, /fetch\("\/api\/profile\/presence\/heartbeat"/);
   assert.doesNotMatch(heartbeat, /userId/);
   assert.doesNotMatch(heartbeat, /JSON\.stringify/);
-  assert.match(runtime, /<ProfilePresenceHeartbeat \/>/);
+  assert.match(layout, /<ProfilePresenceHeartbeat \/>/);
+  assert.doesNotMatch(runtime, /ProfilePresenceHeartbeat/);
+  assert.match(runtime, /if \(!intent\) return <>\{children\}<\/>;/);
 });
