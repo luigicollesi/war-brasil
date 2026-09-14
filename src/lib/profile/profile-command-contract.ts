@@ -157,6 +157,7 @@ export type CommanderSearchResult = Readonly<{
 }>;
 
 export type PublicCommanderRelationship =
+  | "self"
   | "none"
   | "outgoing-request"
   | "incoming-request"
