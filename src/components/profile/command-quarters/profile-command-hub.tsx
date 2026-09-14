@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { type ReactNode, useMemo, useState } from "react";
 import { useCommandSceneDirective } from "@/src/components/pre-game/foundation";
@@ -66,24 +65,11 @@ const SCENE_DIRECTIVES = {
   },
 } as const;
 
-function Portrait({
-  src,
-  alt,
-  name,
-  className,
-}: {
-  src: string | null;
-  alt: string;
-  name: string;
-  className?: string;
-}) {
+function IdentityMark({ name }: { name: string }) {
   return (
-    <div className={[styles.portrait, className].filter(Boolean).join(" ")}>
-      {src ? (
-        <Image src={src} alt={alt} fill sizes="(max-width: 640px) 96px, 150px" />
-      ) : (
-        <span aria-label={alt}>{initialsFrom(name)}</span>
-      )}
+    <div className={styles.identityMark} aria-label={`Monograma de ${name}`}>
+      <small>CALLSIGN</small>
+      <strong>{initialsFrom(name)}</strong>
       <i aria-hidden="true" />
     </div>
   );
@@ -204,11 +190,7 @@ function DossierStation({ snapshot }: { snapshot: ProfileCommandSnapshot }) {
 
   return (
     <div className={styles.dossierContent}>
-      <Portrait
-        src={identity.portrait.src}
-        alt={identity.portrait.alt}
-        name={identity.displayName}
-      />
+      <IdentityMark name={identity.displayName} />
       <div className={styles.identityCopy}>
         <span className={styles.presence} data-presence={identity.presence.state}>
           <i aria-hidden="true" />
