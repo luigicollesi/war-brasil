@@ -3,16 +3,19 @@ import "server-only";
 import type {
   CommanderContact,
   CommanderFriendRequest,
+  PlayerMatchHistory,
   PlayerSocialSnapshot,
   RecentCommanderContact,
 } from "@/src/lib/profile/profile-command-contract";
-import type { PlayerMatchHistory } from "@/src/lib/profile/profile-command-contract";
+import { getPresenceStates } from "./presence-gateway";
 import {
   countFriends,
   listFriendRows,
   listIncomingFriendRequestRows,
   type SocialFriendRow,
 } from "./social-read-repository";
+
+type PresenceBatch = Awaited<ReturnType<typeof getPresenceStates>>;
 
 function safePortraitSrc(value: string | null) {
   if (!value) return null;
@@ -38,6 +41,29 @@ function activityFrom(row: SocialFriendRow): CommanderContact["activity"] {
   return { state: "idle", matchMode: null };
 }
 
+function presenceFrom(
+  row: SocialFriendRow,
+  batch: PresenceBatch,
+): CommanderContact["presence"] {
+  if (row.presence_visibility === "private") {
+    return { state: "unavailable", lastSeenAt: null };
+  }
+
+  const durableLastSeenAt = row.last_seen_at?.toISOString() ?? null;
+  if (batch.availability !== "available") {
+    return { state: "unavailable", lastSeenAt: durableLastSeenAt };
+  }
+
+  const live = batch.presences.get(row.user_id);
+  if (!live) {
+    return { state: "unavailable", lastSeenAt: durableLastSeenAt };
+  }
+  return {
+    state: live.state,
+    lastSeenAt: live.lastSeenAt ?? durableLastSeenAt,
+  };
+}
+
 function contextLabel(contact: CommanderContact) {
   if (contact.activity.state === "match") return "Em partida · operação ativa";
   if (contact.activity.state === "lobby") return "Em sala de operações";
@@ -45,7 +71,7 @@ function contextLabel(contact: CommanderContact) {
   return "Atividade indisponível";
 }
 
-function friendFrom(row: SocialFriendRow): CommanderContact {
+function friendFrom(row: SocialFriendRow, batch: PresenceBatch): CommanderContact {
   const portraitSrc = safePortraitSrc(row.portrait_ref) ?? safePortraitSrc(row.auth_image);
   const contact: CommanderContact = {
     handle: row.handle,
@@ -55,13 +81,7 @@ function friendFrom(row: SocialFriendRow): CommanderContact {
       src: portraitSrc,
       alt: `Retrato de ${row.display_name}`,
     },
-    presence: {
-      state: "unavailable",
-      lastSeenAt:
-        row.presence_visibility === "private"
-          ? null
-          : row.last_seen_at?.toISOString() ?? null,
-    },
+    presence: presenceFrom(row, batch),
     activity: activityFrom(row),
     contextLabel: "",
   };
@@ -105,7 +125,12 @@ export async function getPlayerSocialSnapshot(
     countFriends(userId),
   ]);
 
-  const friends = friendRows.map(friendFrom);
+  const presence = await getPresenceStates(
+    friendRows
+      .filter((row) => row.presence_visibility !== "private")
+      .map((row) => row.user_id),
+  );
+  const friends = friendRows.map((row) => friendFrom(row, presence));
   const incomingRequests: CommanderFriendRequest[] = requestRows.map((row) => ({
     handle: row.handle,
     displayName: row.display_name,
