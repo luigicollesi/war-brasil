@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import type { CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties } from "react";
 import type { DieRollAnimation } from "@/src/lib/game-battle-display";
 import {
   DICE_PIP_LAYOUT_PERCENT,
@@ -12,6 +12,8 @@ import { playerColorHex } from "@/src/lib/client/player-color";
 import type { PlayerColor } from "@/src/lib/lobby";
 
 export type GameDieValue = DiceValue;
+
+const NATIVE_DIE_ASSET = "/dado-brasil-hq.svg";
 
 const sizeClass = {
   sm: "w-16 rounded-2xl",
@@ -42,6 +44,8 @@ export function GameDie({
   size?: keyof typeof sizeClass;
   className?: string;
 }) {
+  const requestedAsset = assetRef ?? NATIVE_DIE_ASSET;
+  const [imageSource, setImageSource] = useState(requestedAsset);
   const safeValue = normalizeDiceValue(value);
   const animationClass = rolling
     ? rollAnimation
@@ -56,6 +60,10 @@ export function GameDie({
       } as CSSProperties)
     : undefined;
 
+  useEffect(() => {
+    setImageSource(requestedAsset);
+  }, [requestedAsset]);
+
   return (
     <div
       className={`game-die relative aspect-square overflow-hidden ${sizeClass[size]} ${animationClass} ${className}`}
@@ -64,12 +72,17 @@ export function GameDie({
       aria-label={`Dado mostrando ${safeValue}`}
     >
       <Image
-        src={assetRef ?? "/dado-brasil-hq.svg"}
+        src={imageSource}
         alt=""
         fill
-        unoptimized={Boolean(assetRef)}
+        unoptimized={imageSource !== NATIVE_DIE_ASSET}
         sizes={size === "lg" ? "128px" : size === "md" ? "96px" : "64px"}
         className="object-cover"
+        onError={() => {
+          if (imageSource !== NATIVE_DIE_ASSET) {
+            setImageSource(NATIVE_DIE_ASSET);
+          }
+        }}
       />
       {DICE_PIP_LAYOUT_PERCENT[safeValue].map(([x, y], index) => (
         <span
