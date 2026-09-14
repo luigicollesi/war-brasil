@@ -23,6 +23,24 @@ test("boundary de email rejeita qualquer domínio .invalid antes do transportado
   );
 });
 
+test("produção envia email por transport HTTP com timeout e idempotência", () => {
+  assert.match(email, /https:\/\/api\.resend\.com\/emails/);
+  assert.match(email, /EMAIL_TRANSPORT_SECRET/);
+  assert.match(email, /AUTH_EMAIL_FROM/);
+  assert.match(email, /Idempotency-Key/);
+  assert.match(email, /AbortController/);
+  assert.match(email, /EMAIL_DELIVERY_TIMEOUT_MS = 8_000/);
+  assert.match(email, /await deliverWithResend\(message\)/);
+});
+
+test("dispatch usa Next after para sobreviver ao fim da resposta sem bloquear auth", () => {
+  assert.match(email, /import \{ after \} from "next\/server"/);
+  assert.match(
+    email,
+    /export function dispatchAuthEmail[\s\S]*after\(async \(\) => \{[\s\S]*await sendAuthEmail\(message\)/,
+  );
+});
+
 test("logs de email não incluem destinatário, token ou URL", () => {
   assert.doesNotMatch(email, /console\.(?:log|info|error)[^\n]*(?:message\.to|\burl\b|token)/i);
   assert.match(email, /delivery=sink subject=/);
