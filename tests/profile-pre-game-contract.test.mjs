@@ -43,7 +43,8 @@ test("contrato PROFILE separa identidade, economia, social, histórico e loja se
   assert.match(contract, /social: ProfileCommandSection/);
   assert.match(contract, /history: ProfileCommandSection/);
   assert.match(contract, /storefront: ProfileCommandSection/);
-  assert.match(contract, /"campaign-credit" \| "command-reserve"/);
+  assert.match(contract, /CommandCurrencyId = "campaign-credit"/);
+  assert.doesNotMatch(contract, /command-reserve/);
   assert.match(contract, /title: string \| null/);
   assert.match(contract, /presence: CommanderPresence/);
   assert.match(contract, /activity: CommanderActivity/);
@@ -53,21 +54,19 @@ test("contrato PROFILE separa identidade, economia, social, histórico e loja se
   assert.doesNotMatch(contract, /token|password|secret/i);
 });
 
-test("Tesouraria diferencia moedas por símbolo e rótulo e mantém markup válido no botão", () => {
+test("Tesouraria projeta uma única moeda real e não reintroduz moeda premium", () => {
   const fixture = source("src/lib/profile/profile-local-fixture.ts");
   const hub = source("src/components/profile/command-quarters/profile-command-hub.tsx");
-  const refinements = source("src/components/profile/command-quarters/profile-command-refinements.module.css");
 
   assert.match(fixture, /currency: "campaign-credit"/);
-  assert.match(fixture, /currency: "command-reserve"/);
   assert.match(fixture, /label: "Créditos de Campanha"/);
-  assert.match(fixture, /label: "Reserva de Comando"/);
   assert.match(fixture, /symbol: "◈"/);
-  assert.match(fixture, /symbol: "◆"/);
+  assert.match(fixture, /balance: 0/);
+  assert.doesNotMatch(fixture, /command-reserve|Reserva de Comando|symbol: "◆"/);
+  assert.match(hub, /wallet\.campaignCredit/);
   assert.match(hub, /currency\.shortLabel/);
   assert.match(hub, /currency\.symbol/);
-  assert.match(refinements, /walletCurrencyCompact/);
-  assert.match(refinements, /walletCurrencyPremium/);
+  assert.doesNotMatch(hub, /wallet\.premium|wallet\.common|command-reserve/);
 });
 
 test("Rede de Comando cobre amigos, sinais, recentes e busca autenticada sob demanda", () => {
@@ -110,15 +109,18 @@ test("Livro de Campanha pagina por cursor autenticado e preserva relação dos p
   assert.doesNotMatch(repository, /\bOFFSET\b/i);
 });
 
-test("Intendência é vitrine e não implementa compra falsa", () => {
+test("Intendência delega economia real e não implementa compra ou preço falsos", () => {
   const quartermaster = source("src/components/profile/command-quarters/profile-quartermaster-station.tsx");
   const contract = source("src/lib/profile/profile-command-contract.ts");
 
-  assert.match(quartermaster, /Vitrine local · nenhuma compra é persistida nesta etapa/);
+  assert.match(quartermaster, /Catálogo real · nenhuma compra habilitada nesta etapa/);
+  assert.match(quartermaster, /href="\/profile\/store"/);
+  assert.match(quartermaster, /EM BREVE/);
   assert.match(contract, /featuredItems/);
-  assert.match(contract, /price:/);
+  assert.match(contract, /status: "announced" \| "available"/);
+  assert.doesNotMatch(contract, /\bprice\s*:/);
   assert.doesNotMatch(contract, /StoreItemCategory = [^\n]*portrait/i);
-  assert.doesNotMatch(quartermaster, /Comprar agora|Compra concluída|purchaseItem|checkout/i);
+  assert.doesNotMatch(quartermaster, /Comprar agora|Compra concluída|purchaseItem|checkout|price\.amount/i);
 });
 
 test("controller mantém estações especializadas fora do arquivo central", () => {
@@ -138,6 +140,7 @@ test("PROFILE consome somente a API pública da Foundation", () => {
   assert.match(hub, /from "@\/src\/components\/pre-game\/foundation"/);
   assert.match(hub, /useCommandSceneDirective/);
   assert.match(routeIntent, /"\/profile": "profile"/);
+  assert.match(routeIntent, /startsWith\("\/profile\/"\)/);
   assert.match(layout, /<PreGameCommandRuntime>\{children\}<\/PreGameCommandRuntime>/);
   assert.doesNotMatch(hub, /@react-three\/fiber|command-scene-canvas|\bthree\b|Canvas|cameraPosition|\bfov\b/i);
   assert.match(hub, /data-scene-fallback="html"/);
