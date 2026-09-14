@@ -8,6 +8,7 @@ import type {
   ProfileCommandSnapshot,
   StoreShowcase,
 } from "@/src/lib/profile/profile-command-contract";
+import { getCurrentProfileCommandSnapshot as getEvaluationProfileCommandSnapshot } from "@/src/lib/profile/profile-command-data";
 import { auth } from "../auth/auth";
 import { getCommanderActivity } from "./activity-service";
 import { getPlayerMatchHistory } from "./history-service";
@@ -47,6 +48,10 @@ function guestSnapshot(reason: string): ProfileCommandSnapshot {
 }
 
 export async function getCurrentProfileCommandSnapshot(): Promise<ProfileCommandSnapshot> {
+  if (process.env.PROFILE_EVAL_MODE === "1") {
+    return getEvaluationProfileCommandSnapshot();
+  }
+
   const session = await auth.api.getSession({
     headers: await headers(),
     query: { disableCookieCache: true },
