@@ -22,6 +22,7 @@ import {
   initializeEconomyState,
   listOwnedCosmetics,
   listStorefrontSetItems,
+  lockCommanderEconomyState,
   type CosmeticRow,
   type EconomyQueryable,
 } from "./economy-repository";
@@ -131,19 +132,34 @@ function setsFromRows(
   return [...grouped.values()];
 }
 
+async function ensureLockedEconomyState(
+  userId: string,
+  db: EconomyQueryable,
+) {
+  const commanderExists = await lockCommanderEconomyState(userId, db);
+  if (!commanderExists) {
+    throw new EconomyServiceError(
+      "ECONOMY_COMMANDER_MISSING",
+      "A identidade de comandante precisa existir antes da economia.",
+      409,
+    );
+  }
+  await initializeEconomyState(userId, db);
+}
+
 export async function ensureEconomyState(
   userId: string,
   db?: EconomyQueryable,
 ) {
   if (db) {
-    await initializeEconomyState(userId, db);
+    await ensureLockedEconomyState(userId, db);
     return;
   }
 
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-    await initializeEconomyState(userId, client);
+    await ensureLockedEconomyState(userId, client);
     await client.query("COMMIT");
   } catch (error) {
     await client.query("ROLLBACK");
@@ -198,32 +214,42 @@ export async function equipCosmetic(
   slot: CosmeticSlot,
   cosmeticId: string,
 ) {
-  await ensureEconomyState(userId);
-  const item = await findOwnedCosmetic(userId, cosmeticId);
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await ensureLockedEconomyState(userId, client);
 
-  if (!item) {
-    throw new EconomyServiceError(
-      "ECONOMY_COSMETIC_NOT_OWNED",
-      "O comandante não possui esse cosmético.",
-      403,
-    );
+    const item = await findOwnedCosmetic(userId, cosmeticId, client);
+    if (!item) {
+      throw new EconomyServiceError(
+        "ECONOMY_COSMETIC_NOT_OWNED",
+        "O comandante não possui esse cosmético.",
+        403,
+      );
+    }
+
+    if (item.slot !== slot) {
+      throw new EconomyServiceError(
+        "ECONOMY_SLOT_MISMATCH",
+        "O cosmético não é compatível com esse slot.",
+        400,
+      );
+    }
+
+    if (item.status !== "available") {
+      throw new EconomyServiceError(
+        "ECONOMY_COSMETIC_NOT_EQUIPPABLE",
+        "Esse cosmético não está disponível para nova equipagem.",
+        409,
+      );
+    }
+
+    await equipOwnedCosmetic(userId, slot, cosmeticId, client);
+    await client.query("COMMIT");
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
   }
-
-  if (item.slot !== slot) {
-    throw new EconomyServiceError(
-      "ECONOMY_SLOT_MISMATCH",
-      "O cosmético não é compatível com esse slot.",
-      400,
-    );
-  }
-
-  if (item.status !== "available") {
-    throw new EconomyServiceError(
-      "ECONOMY_COSMETIC_NOT_EQUIPPABLE",
-      "Esse cosmético não está disponível para nova equipagem.",
-      409,
-    );
-  }
-
-  await equipOwnedCosmetic(userId, slot, cosmeticId);
 }
