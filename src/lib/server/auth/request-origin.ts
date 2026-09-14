@@ -2,8 +2,6 @@ import "server-only";
 
 import { readAuthServerEnvironment } from "./environment";
 
-const EXTERNAL_POST_CALLBACK_PREFIX = "/api/auth/callback/";
-
 type OriginEvidence =
   | { present: false }
   | { origin: string | null; present: true };
@@ -41,9 +39,6 @@ function isTrustedApplicationOrigin(origin: string, request: Request) {
     return candidate.protocol === "https:" || isLocalHostname(candidate.hostname);
   }
 
-  // Development without explicit auth URL/host allowlist may use the request's
-  // own origin. Production fail-fast requires BETTER_AUTH_URL, so this fallback
-  // cannot silently become the production authority.
   return (
     !configuredOrigin &&
     environment.allowedHosts.length === 0 &&
@@ -65,24 +60,15 @@ function requestEvidenceOrigin(request: Request): OriginEvidence {
   return { present: false };
 }
 
-export function isExternalAuthProviderCallback(request: Request) {
-  if (request.method !== "POST") {
-    return false;
-  }
-
-  return new URL(request.url).pathname.startsWith(EXTERNAL_POST_CALLBACK_PREFIX);
-}
-
 export function rejectUntrustedAuthMutationOrigin(request: Request) {
-  if (request.method !== "POST" || isExternalAuthProviderCallback(request)) {
+  if (request.method !== "POST") {
     return null;
   }
 
   const evidence = requestEvidenceOrigin(request);
 
-  // Requests with no Origin/Referer remain available to trusted non-browser
-  // callers. Once a caller supplies browser-origin evidence it must parse and
-  // match an explicitly trusted application origin.
+  // Trusted non-browser callers may omit Origin/Referer. Browser-origin evidence,
+  // when present, must resolve to the configured War-Brasil application origin.
   if (!evidence.present) {
     return null;
   }
