@@ -100,7 +100,10 @@ function cleanFriendRequestPolicy(value: unknown): FriendRequestPolicy {
 
 export function parseProfileSettingsUpdate(payload: unknown): ProfileSettingsUpdate {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
-    throw new ProfileSettingsError("INVALID_PROFILE_SETTINGS", "Payload de perfil inválido.");
+    throw new ProfileSettingsError(
+      "INVALID_PROFILE_SETTINGS",
+      "Payload de perfil inválido.",
+    );
   }
 
   const input = payload as Record<string, unknown>;
@@ -133,7 +136,11 @@ export function parseProfileSettingsUpdate(payload: unknown): ProfileSettingsUpd
   }
 
   if (Object.prototype.hasOwnProperty.call(input, "privacy")) {
-    if (!input.privacy || typeof input.privacy !== "object" || Array.isArray(input.privacy)) {
+    if (
+      !input.privacy ||
+      typeof input.privacy !== "object" ||
+      Array.isArray(input.privacy)
+    ) {
       throw new ProfileSettingsError(
         "INVALID_PRIVACY_SETTING",
         "Configuração de privacidade inválida.",
@@ -217,7 +224,7 @@ export async function updateOwnProfileSettings(
     if (update.displayName !== undefined || update.bio !== undefined) {
       await client.query(
         `UPDATE profile.commanders
-            SET display_name=COALESCE($2,display_name),
+            SET display_name=COALESCE($2::varchar(48),display_name),
                 bio=CASE WHEN $3::boolean THEN $4::varchar(240) ELSE bio END,
                 updated_at=NOW()
           WHERE user_id=$1::uuid`,
@@ -232,20 +239,20 @@ export async function updateOwnProfileSettings(
 
     if (update.privacy) {
       await client.query(
-        `INSERT INTO profile.privacy_settings(
-           user_id,presence_visibility,activity_visibility,
-           history_visibility,friend_request_policy,updated_at
-         )
-         VALUES(
-           $1::uuid,COALESCE($2,'friends'),COALESCE($3,'friends'),
-           COALESCE($4,'friends'),COALESCE($5,'everyone'),NOW()
-         )
-         ON CONFLICT (user_id) DO UPDATE SET
-           presence_visibility=COALESCE(EXCLUDED.presence_visibility,profile.privacy_settings.presence_visibility),
-           activity_visibility=COALESCE(EXCLUDED.activity_visibility,profile.privacy_settings.activity_visibility),
-           history_visibility=COALESCE(EXCLUDED.history_visibility,profile.privacy_settings.history_visibility),
-           friend_request_policy=COALESCE(EXCLUDED.friend_request_policy,profile.privacy_settings.friend_request_policy),
-           updated_at=NOW()`,
+        `INSERT INTO profile.privacy_settings(user_id)
+         VALUES($1::uuid)
+         ON CONFLICT (user_id) DO NOTHING`,
+        [userId],
+      );
+
+      await client.query(
+        `UPDATE profile.privacy_settings
+            SET presence_visibility=COALESCE($2::varchar(16),presence_visibility),
+                activity_visibility=COALESCE($3::varchar(16),activity_visibility),
+                history_visibility=COALESCE($4::varchar(16),history_visibility),
+                friend_request_policy=COALESCE($5::varchar(24),friend_request_policy),
+                updated_at=NOW()
+          WHERE user_id=$1::uuid`,
         [
           userId,
           update.privacy.presenceVisibility ?? null,
