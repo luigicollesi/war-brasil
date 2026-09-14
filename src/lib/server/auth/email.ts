@@ -1,8 +1,12 @@
 import "server-only";
 
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
+import { after } from "next/server";
+
+const RESEND_EMAIL_ENDPOINT = "https://api.resend.com/emails";
+const EMAIL_DELIVERY_TIMEOUT_MS = 8_000;
 
 export type AuthEmailMessage = {
   html: string;
@@ -138,6 +142,58 @@ async function captureAuthEmailForTest(message: AuthEmailMessage) {
   return true;
 }
 
+function productionTransportConfig() {
+  const from = process.env.AUTH_EMAIL_FROM?.trim();
+  const apiKey = process.env.EMAIL_TRANSPORT_SECRET?.trim();
+  if (!from || !apiKey) {
+    throw new Error("Transportador de email de autenticação não configurado.");
+  }
+  return { from, apiKey };
+}
+
+function deliveryIdempotencyKey(message: AuthEmailMessage) {
+  const digest = createHash("sha256")
+    .update(message.to)
+    .update("\0")
+    .update(message.subject)
+    .update("\0")
+    .update(message.text)
+    .digest("hex");
+  return `war-auth-${digest}`;
+}
+
+async function deliverWithResend(message: AuthEmailMessage) {
+  const { from, apiKey } = productionTransportConfig();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), EMAIL_DELIVERY_TIMEOUT_MS);
+  timeout.unref?.();
+
+  try {
+    const response = await fetch(RESEND_EMAIL_ENDPOINT, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+        "Idempotency-Key": deliveryIdempotencyKey(message),
+      },
+      body: JSON.stringify({
+        from,
+        to: [message.to],
+        subject: message.subject,
+        html: message.html,
+        text: message.text,
+      }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Transportador de email respondeu HTTP ${response.status}.`);
+    }
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export async function sendAuthEmail(message: AuthEmailMessage) {
   if (isNonDeliverableAuthAddress(message.to)) {
     return;
@@ -154,9 +210,7 @@ export async function sendAuthEmail(message: AuthEmailMessage) {
     return;
   }
 
-  throw new Error(
-    "Transportador de email de autenticação ainda não foi configurado para produção.",
-  );
+  await deliverWithResend(message);
 }
 
 export function dispatchAuthEmail(message: AuthEmailMessage) {
@@ -164,8 +218,12 @@ export function dispatchAuthEmail(message: AuthEmailMessage) {
     return;
   }
 
-  void sendAuthEmail(message).catch((error: unknown) => {
-    const reason = error instanceof Error ? error.message : "erro desconhecido";
-    console.error(`[auth-email] delivery=failed reason=${reason}`);
+  after(async () => {
+    try {
+      await sendAuthEmail(message);
+    } catch (error: unknown) {
+      const reason = error instanceof Error ? error.message : "erro desconhecido";
+      console.error(`[auth-email] delivery=failed reason=${reason}`);
+    }
   });
 }
