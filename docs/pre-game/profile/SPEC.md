@@ -12,6 +12,18 @@ A PROFILE é o **Quartel do Comandante**: identidade pública, rede social, pres
 
 A V3 preserva a composição visual da V2 e substitui progressivamente fixtures por fontes persistentes e auditáveis.
 
+## Estações preservadas do Quartel
+
+A V3 MUST preservar a linguagem e as cinco estações funcionais da composição existente:
+
+- **Dossiê do Comandante** — identidade, retrato, handle, nome público, bio, título, presença e atividade;
+- **Tesouraria** — economia do comandante, permanecendo `unavailable` enquanto não houver fonte real;
+- **Rede de Comando** — amizades, solicitações, busca, bloqueios e contatos recentes quando suportados;
+- **Livro de Campanha** — histórico real e paginado derivado de `game.*`;
+- **Intendência** — personalização/cosméticos, sem simular compra enquanto wallet/store não existirem.
+
+A **Mesa de Comando** continua sendo o eixo visual e semântico entre as estações e a Foundation. A V3 altera fontes de dados e ações persistentes; não substitui a identidade visual já aprovada da V2.
+
 ## Fontes autoritativas
 
 Cada dado MUST possuir uma única fonte de verdade:
