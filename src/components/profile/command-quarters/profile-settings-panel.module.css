@@ -71,7 +71,8 @@
 .header small,
 .sectionTitle,
 .field span,
-.feedback {
+.feedback,
+.hint {
   font-family: var(--font-geist-mono), monospace;
   font-size: 0.54rem;
   font-weight: 700;
@@ -163,8 +164,43 @@
   box-shadow: 0 0 0 1px rgb(208 170 87 / 12%);
 }
 
-.field input:disabled {
+.field input:disabled,
+.field select:disabled {
   color: rgb(238 232 218 / 45%);
+  cursor: not-allowed;
+}
+
+.hint {
+  margin: 0;
+  color: rgb(238 232 218 / 42%);
+  font-size: 0.48rem;
+  line-height: 1.55;
+  letter-spacing: 0.07em;
+}
+
+.secondaryAction {
+  min-height: 38px;
+  border: 1px solid rgb(208 170 87 / 28%);
+  padding: 0 12px;
+  color: var(--command-brass-bright, #d0aa57);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.54rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: rgb(208 170 87 / 6%);
+  cursor: pointer;
+}
+
+.secondaryAction:hover,
+.secondaryAction:focus-visible {
+  border-color: rgb(208 170 87 / 55%);
+  background: rgb(208 170 87 / 10%);
+  outline: none;
+}
+
+.secondaryAction:disabled {
+  opacity: 0.45;
   cursor: not-allowed;
 }
 
