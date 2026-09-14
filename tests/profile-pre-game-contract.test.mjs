@@ -22,13 +22,15 @@ test("PROFILE V3 preserva as cinco estações do Quartel", () => {
   assert.match(spec, /Mesa de Comando/);
 });
 
-test("rota PROFILE resolve snapshot em request-time", () => {
+test("rota PROFILE resolve snapshot autenticado em request-time", () => {
   const page = source("src/app/profile/page.tsx");
 
   assert.match(page, /import \{ connection \} from "next\/server"/);
+  assert.match(page, /server\/profile\/profile-command-snapshot-service/);
   assert.match(page, /getCurrentProfileCommandSnapshot/);
   assert.match(page, /await connection\(\);\s*\n\s*const snapshot = await getCurrentProfileCommandSnapshot\(\)/);
   assert.match(page, /<ProfileCommandHub snapshot=\{snapshot\} \/>/);
+  assert.doesNotMatch(page, /profile-command-data/);
   assert.doesNotMatch(page, /searchParams|useSearchParams/);
 });
 
@@ -44,6 +46,8 @@ test("contrato PROFILE separa identidade, economia, social, histórico e loja", 
   assert.match(contract, /"campaign-credit" \| "command-reserve"/);
   assert.match(contract, /title: string \| null/);
   assert.match(contract, /portrait: CommanderPortrait/);
+  assert.match(contract, /presence: CommanderPresence/);
+  assert.match(contract, /activity: CommanderActivity/);
   assert.match(fixture, /source: "local-static"/);
   assert.doesNotMatch(contract, /token|password|secret/i);
 });
@@ -83,19 +87,25 @@ test("Rede de Comando cobre amigos, sinais, recentes e busca autenticada sob dem
   assert.doesNotMatch(network, /LOCAL_COMMANDER_DIRECTORY/);
 });
 
-test("Livro de Campanha mantém janela limitada e relaciona participantes à rede", () => {
+test("Livro de Campanha pagina por cursor autenticado e preserva relação dos participantes", () => {
   const contract = source("src/lib/profile/profile-command-contract.ts");
-  const fixture = source("src/lib/profile/profile-local-fixture.ts");
   const campaign = source("src/components/profile/command-quarters/profile-campaign-station.tsx");
+  const endpoint = source("src/app/api/profile/history/route.ts");
+  const repository = source("src/lib/server/profile/history-repository.ts");
 
   assert.match(contract, /hasMore: boolean/);
   assert.match(contract, /nextCursor: string \| null/);
-  assert.match(fixture, /hasMore: true/);
-  assert.match(fixture, /nextCursor: "local-op-0415"/);
   assert.match(campaign, /Participantes da partida/);
   assert.match(campaign, /integrante da sua Rede de Comando/);
   assert.match(campaign, /fora da sua rede/);
-  assert.match(campaign, /carregamento continua progressivo/);
+  assert.match(campaign, /\/api\/profile\/history\?cursor=/);
+  assert.match(campaign, /Carregar mais registros/);
+  assert.match(endpoint, /getAuthenticatedSession\(request\)/);
+  assert.match(endpoint, /getPlayerMatchHistory\(session\.user\.id/);
+  assert.match(endpoint, /decodeMatchHistoryCursor/);
+  assert.match(endpoint, /private, no-store/);
+  assert.match(repository, /\(match\.finished_at, match\.id\) < \(\$2::timestamptz, \$3::bigint\)/);
+  assert.doesNotMatch(repository, /\bOFFSET\b/i);
 });
 
 test("Intendência é vitrine e não implementa compra falsa", () => {
@@ -153,7 +163,7 @@ test("reduced-motion e forced-colors permanecem explícitos", () => {
   assert.match(boundaryCss, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
-test("PROFILE mantém harness de avaliação somente no servidor", () => {
+test("PROFILE mantém harness de avaliação fora do fluxo normal", () => {
   const provider = source("src/lib/profile/profile-command-data.ts");
   const page = source("src/app/profile/page.tsx");
 
@@ -165,7 +175,7 @@ test("PROFILE mantém harness de avaliação somente no servidor", () => {
   assert.match(provider, /"empty-storefront"/);
   assert.match(provider, /"wallet-unavailable"/);
   assert.doesNotMatch(provider, /window\.|document\.|URLSearchParams/);
-  assert.doesNotMatch(page, /PROFILE_EVAL_STATE/);
+  assert.doesNotMatch(page, /profile-command-data|PROFILE_EVAL_STATE|LOCAL_PROFILE_COMMAND_SNAPSHOT/);
 });
 
 test("loading e error boundary continuam preservados durante o redesign", () => {
