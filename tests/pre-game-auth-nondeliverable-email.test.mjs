@@ -5,9 +5,9 @@ import test from "node:test";
 const auth = readFileSync("src/lib/server/auth/auth.ts", "utf8");
 const email = readFileSync("src/lib/server/auth/email.ts", "utf8");
 
-test("fallbacks sociais sem email usam somente domínio reservado .invalid", () => {
+test("fallback social sem email usa somente domínio reservado .invalid", () => {
   assert.match(auth, /@discord\.placeholder\.invalid/);
-  assert.match(auth, /@apple\.placeholder\.invalid/);
+  assert.doesNotMatch(auth, /@apple\.placeholder\.invalid/);
 });
 
 test("boundary de email rejeita qualquer domínio .invalid antes do transportador", () => {
