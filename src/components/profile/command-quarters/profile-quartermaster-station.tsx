@@ -1,10 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import type {
   ProfileCommandSnapshot,
   StoreItemPreview,
 } from "@/src/lib/profile/profile-command-contract";
-import { formatBalance } from "./profile-command-format";
 import styles from "./profile-command-hub.module.css";
 
 export function ProfileQuartermasterStation({
@@ -47,20 +47,17 @@ export function ProfileQuartermasterStation({
           aria-pressed={selectedSlug === item.slug}
           onClick={() => onSelect(item)}
         >
-          <span className={styles.storeArtwork} aria-hidden="true">
-            {item.category.slice(0, 2).toLocaleUpperCase("pt-BR")}
-          </span>
+          <span className={styles.storeArtwork} aria-hidden="true">D6</span>
           <span>
-            <small>{item.category}</small>
+            <small>conjunto de dados · {item.itemCount} itens</small>
             <strong>{item.name}</strong>
           </span>
-          <em>
-            {item.price.currency === "command-reserve" ? "◆" : "◈"} {formatBalance(item.price.amount)}
-          </em>
+          <em>{item.status === "announced" ? "EM BREVE" : "DISPONÍVEL"}</em>
         </button>
       ))}
       <p className={styles.storeDisclaimer}>
-        Vitrine local · nenhuma compra é persistida nesta etapa.
+        Catálogo real · nenhuma compra habilitada nesta etapa. {" "}
+        <Link href="/profile/store">Abrir arsenal</Link>
       </p>
     </div>
   );
