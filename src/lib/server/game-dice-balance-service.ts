@@ -33,6 +33,8 @@ type CurrentMatchRow = {
 type RoomMatchContext = {
   status: "waiting" | "order_roll" | "playing" | "finished";
   current_match_id: string | null;
+  match_mode: "classic" | "custom";
+  winner_player_id: string | null;
 };
 
 export type LoadedMatchDiceBalance = {
@@ -168,7 +170,7 @@ async function resolveProfileForNewMatch(
 async function lockRoomMatchContext(client: PoolClient, roomId: string) {
   const row = (
     await client.query<RoomMatchContext>(
-      `SELECT status,current_match_id
+      `SELECT status,current_match_id,match_mode,winner_player_id
        FROM game.rooms
        WHERE id = $1
        FOR UPDATE`,
@@ -209,9 +211,9 @@ export async function initializeDiceBalanceForGame(
     await client.query<{ id: string }>(
       `INSERT INTO game.matches (
          room_id,sequence,requested_profile_id,resolved_profile_id,
-         profile_source,dice_balance_profile_snapshot
+         profile_source,dice_balance_profile_snapshot,match_mode_snapshot
        )
-       VALUES ($1,$2,$3,$4,$5,$6::jsonb)
+       VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7)
        RETURNING id`,
       [
         roomId,
@@ -220,6 +222,7 @@ export async function initializeDiceBalanceForGame(
         selected.resolvedProfileId,
         selected.source,
         JSON.stringify(selected.profile),
+        room.match_mode,
       ],
     )
   ).rows[0];
@@ -244,12 +247,50 @@ export async function initializeDiceBalanceForGame(
   return { matchId: match.id, profile: selected.profile };
 }
 
+async function snapshotMatchParticipants(
+  client: PoolClient,
+  roomId: string,
+  matchId: string,
+  winnerPlayerId: string | null,
+) {
+  await client.query(
+    `INSERT INTO game.match_participants (
+       match_id,player_id_snapshot,user_id,display_name_snapshot,handle_snapshot,
+       faction_name_snapshot,color_snapshot,is_bot,is_winner
+     )
+     SELECT
+       $1,
+       player.id,
+       player.user_id,
+       COALESCE(NULLIF(btrim(player.display_name_snapshot), ''), player.faction_name),
+       NULLIF(btrim(player.handle_snapshot), ''),
+       player.faction_name,
+       player.color,
+       player.is_bot,
+       CASE
+         WHEN $3::bigint IS NULL THEN NULL
+         ELSE player.id=$3::bigint
+       END
+     FROM game.players player
+     WHERE player.room_id=$2
+     ON CONFLICT (match_id,player_id_snapshot) DO NOTHING`,
+    [matchId, roomId, winnerPlayerId],
+  );
+}
+
 export async function finishDiceBalanceMatchForRoom(
   client: PoolClient,
   roomId: string,
 ) {
   const room = await lockRoomMatchContext(client, roomId);
   if (room.current_match_id === null) return;
+
+  await snapshotMatchParticipants(
+    client,
+    roomId,
+    room.current_match_id,
+    room.winner_player_id,
+  );
 
   await client.query(
     `UPDATE game.matches

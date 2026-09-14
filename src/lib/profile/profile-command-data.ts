@@ -45,6 +45,17 @@ function evaluationSection<T>(section: ProfileCommandSection<T>): ProfileCommand
   };
 }
 
+function emptySocialData(): PlayerSocialSnapshot {
+  return {
+    friends: [],
+    incomingRequests: [],
+    outgoingRequests: [],
+    blockedCommanders: [],
+    recentContacts: [],
+    totalFriends: 0,
+  };
+}
+
 function createEvaluationSnapshot(state: Exclude<ProfileCommandEvaluationState, "error">): ProfileCommandSnapshot {
   const full: ProfileCommandSnapshot = {
     ...LOCAL_PROFILE_COMMAND_SNAPSHOT,
@@ -55,11 +66,13 @@ function createEvaluationSnapshot(state: Exclude<ProfileCommandEvaluationState, 
       data: {
         displayName: "Comandante de avaliação",
         handle: "eval-command",
+        bio: "Biografia sintética usada somente no harness de avaliação.",
         title: "Título sintético de avaliação",
-        portrait: { src: null, alt: "Retrato sintético de avaliação" },
-        presence: "online",
+        presence: { state: "online", lastSeenAt: null },
+        activity: { state: "idle", matchMode: null },
       },
     },
+    privacy: evaluationSection(LOCAL_PROFILE_COMMAND_SNAPSHOT.privacy),
     wallet: evaluationSection(LOCAL_PROFILE_COMMAND_SNAPSHOT.wallet),
     social: evaluationSection(LOCAL_PROFILE_COMMAND_SNAPSHOT.social),
     history: evaluationSection(LOCAL_PROFILE_COMMAND_SNAPSHOT.history),
@@ -74,9 +87,10 @@ function createEvaluationSnapshot(state: Exclude<ProfileCommandEvaluationState, 
       ...full,
       state: "guest",
       identity: unavailableSection(null, "Nenhuma identidade disponível neste cenário."),
+      privacy: unavailableSection(null, "Privacidade indisponível sem identidade."),
       wallet: unavailableSection<PlayerWallet | null>(null, "Tesouraria indisponível sem identidade."),
       social: unavailableSection<PlayerSocialSnapshot>(
-        { friends: [], incomingRequests: [], recentContacts: [], totalFriends: 0 },
+        emptySocialData(),
         "Rede de Comando indisponível sem identidade.",
       ),
       history: unavailableSection<PlayerMatchHistory>(
@@ -101,7 +115,7 @@ function createEvaluationSnapshot(state: Exclude<ProfileCommandEvaluationState, 
       social:
         state === "partial-data"
           ? unavailableSection<PlayerSocialSnapshot>(
-              { friends: [], incomingRequests: [], recentContacts: [], totalFriends: 0 },
+              emptySocialData(),
               "Rede de Comando ainda não possui fonte disponível neste cenário.",
             )
           : full.social,
@@ -152,7 +166,7 @@ function createEvaluationSnapshot(state: Exclude<ProfileCommandEvaluationState, 
     social: {
       availability: "empty",
       source: "evaluation-fixture",
-      data: { friends: [], incomingRequests: [], recentContacts: [], totalFriends: 0 },
+      data: emptySocialData(),
     },
   };
 }
@@ -171,10 +185,9 @@ function getEvaluationStateFromEnvironment(): ProfileCommandEvaluationState | nu
 /**
  * Stable boundary for the Quartel do Comandante redesign.
  *
- * Today it intentionally returns local-static data so the full interface can be
- * built before authentication, wallet, social, history and storefront services
- * exist. Future adapters should replace this implementation without exposing
- * provider-specific payloads to React components.
+ * Evaluation fixtures remain isolated behind PROFILE_EVAL_MODE. The normal
+ * runtime path uses authenticated server data without exposing provider-specific
+ * payloads to React components.
  */
 export async function getCurrentProfileCommandSnapshot(): Promise<ProfileCommandSnapshot> {
   const evaluationState = getEvaluationStateFromEnvironment();
@@ -191,8 +204,8 @@ export async function getCurrentProfileCommandSnapshot(): Promise<ProfileCommand
 }
 
 /**
- * Search is intentionally separate from the main snapshot so the profile never
- * needs to load a global player directory just to render the Rede de Comando.
+ * Legacy fixture search retained only for evaluation helpers. Production search
+ * is served by the authenticated /api/profile/commanders/search boundary.
  */
 export async function searchProfileCommanders(
   query: string,

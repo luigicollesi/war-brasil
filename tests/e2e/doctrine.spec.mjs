@@ -3,6 +3,13 @@ import { expect, test } from "@playwright/test";
 
 const BASE_URL = process.env.PLAYWRIGHT_TEST_BASE_URL ?? "http://127.0.0.1:3000";
 const EVIDENCE_DIR = process.env.DOCTRINE_EVIDENCE_DIR ?? "test-results/doctrine-evidence";
+const AUTH_STORAGE_STATE = process.env.DOCTRINE_AUTH_STORAGE_STATE;
+
+if (!AUTH_STORAGE_STATE) {
+  throw new Error("DOCTRINE_AUTH_STORAGE_STATE é obrigatório para o Doctrine E2E autenticado.");
+}
+
+test.use({ storageState: AUTH_STORAGE_STATE });
 
 const CHAPTERS = [
   "preparacao",
@@ -136,6 +143,7 @@ test("botão Voltar permanece disponível no índice e retorna ao comando", asyn
 
 test("mobile 390x844 mantém índice fixado no topo, aceita touch e não cria overflow horizontal", async ({ browser }) => {
   const context = await browser.newContext({
+    storageState: AUTH_STORAGE_STATE,
     viewport: { width: 390, height: 844 },
     hasTouch: true,
     isMobile: true,
@@ -240,7 +248,10 @@ test("conteúdo essencial permanece disponível quando WebGL falha", async ({ pa
 });
 
 test("deep-link continua ensinando com JavaScript desabilitado", async ({ browser }) => {
-  const context = await browser.newContext({ javaScriptEnabled: false });
+  const context = await browser.newContext({
+    storageState: AUTH_STORAGE_STATE,
+    javaScriptEnabled: false,
+  });
   const page = await context.newPage();
 
   await page.goto(chapterUrl("trocas"), { waitUntil: "domcontentloaded" });
@@ -262,6 +273,7 @@ test("captura evidência visual determinística desktop e mobile", async ({ brow
     { name: "mobile-390x844", width: 390, height: 844 },
   ]) {
     const context = await browser.newContext({
+      storageState: AUTH_STORAGE_STATE,
       viewport: { width: viewport.width, height: viewport.height },
       reducedMotion: "reduce",
       hasTouch: viewport.width <= 390,

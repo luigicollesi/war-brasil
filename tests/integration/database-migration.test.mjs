@@ -11,6 +11,7 @@ const physicalTables = new Map([
     "game",
     [
       "cards",
+      "match_participants",
       "matches",
       "order_rolls",
       "player_dice_states",
@@ -27,6 +28,7 @@ const physicalTables = new Map([
     "catalog",
     [
       "bot_names",
+      "commander_titles",
       "dice_balance_profiles",
       "dice_balance_settings",
       "event_connections",
@@ -37,6 +39,9 @@ const physicalTables = new Map([
       "territory_connections",
     ],
   ],
+  ["auth", ["account", "rateLimit", "session", "user", "verification"]],
+  ["profile", ["commander_titles", "commanders", "privacy_settings"]],
+  ["social", ["blocks", "friend_requests", "friendships"]],
   ["ops", ["command_receipts", "pgmigrations"]],
 ]);
 
@@ -66,6 +71,13 @@ const managedHistory = [
   "028-normalize-rooms-phase-constraint.sql",
   "029-adaptive-combat-dice.sql",
   "030-repair-adaptive-dice-state-schema.sql",
+  "031-auth-foundation.sql",
+  "032-profile-identity-game-binding.sql",
+  "033-auth-rate-limit.sql",
+  "034-profile-v3-foundation.sql",
+  "035-social-graph.sql",
+  "036-match-history-snapshots.sql",
+  "037-profile-remove-portraits.sql",
 ];
 
 function urlForDatabase(name) {
@@ -222,6 +234,16 @@ async function assertAdaptiveDiceSchema(client) {
     true,
   );
 
+  const matchColumns = await client.query(`
+    SELECT column_name
+    FROM information_schema.columns
+    WHERE table_schema='game' AND table_name='matches'
+  `);
+  assert.equal(
+    matchColumns.rows.some((row) => row.column_name === "match_mode_snapshot"),
+    true,
+  );
+
   const triggers = await client.query(`
     SELECT tgname
     FROM pg_trigger
@@ -235,6 +257,182 @@ async function assertAdaptiveDiceSchema(client) {
   assert.equal(triggerNames.has("matches_dice_profile_immutable"), true);
 }
 
+async function assertAuthProfileSchema(client) {
+  const playerColumns = await client.query(`
+    SELECT column_name
+    FROM information_schema.columns
+    WHERE table_schema='game' AND table_name='players'
+  `);
+  const playerColumnNames = new Set(
+    playerColumns.rows.map((row) => row.column_name),
+  );
+  for (const name of [
+    "user_id",
+    "display_name_snapshot",
+    "handle_snapshot",
+  ]) {
+    assert.equal(playerColumnNames.has(name), true, name);
+  }
+
+  const roomColumns = await client.query(`
+    SELECT column_name
+    FROM information_schema.columns
+    WHERE table_schema='game' AND table_name='rooms'
+  `);
+  const roomColumnNames = new Set(roomColumns.rows.map((row) => row.column_name));
+  assert.equal(roomColumnNames.has("match_mode"), true, "match_mode");
+  assert.equal(roomColumnNames.has("finished_at"), true, "finished_at");
+
+  const constraints = await client.query(`
+    SELECT c.conname
+    FROM pg_constraint c
+    WHERE c.conrelid IN ('game.players'::regclass, 'game.rooms'::regclass)
+  `);
+  const constraintNames = new Set(constraints.rows.map((row) => row.conname));
+  assert.equal(constraintNames.has("players_user_id_fkey"), true);
+  assert.equal(constraintNames.has("rooms_match_mode_check"), true);
+
+  const indexes = await client.query(`
+    SELECT indexname
+    FROM pg_indexes
+    WHERE schemaname IN ('game', 'profile')
+  `);
+  const indexNames = new Set(indexes.rows.map((row) => row.indexname));
+  for (const name of [
+    "players_room_user_uq",
+    "players_user_room_idx",
+    "commanders_handle_normalized_uq",
+    "commanders_display_name_normalized_idx",
+    "commander_titles_title_user_idx",
+    "match_participants_user_match_idx",
+    "match_participants_match_result_idx",
+  ]) {
+    assert.equal(indexNames.has(name), true, name);
+  }
+
+  const commanderColumns = await client.query(`
+    SELECT column_name
+    FROM information_schema.columns
+    WHERE table_schema='profile' AND table_name='commanders'
+  `);
+  const commanderColumnNames = new Set(
+    commanderColumns.rows.map((row) => row.column_name),
+  );
+  for (const name of ["bio", "last_seen_at", "equipped_title_id"]) {
+    assert.equal(commanderColumnNames.has(name), true, name);
+  }
+  assert.equal(commanderColumnNames.has("portrait_source"), false, "portrait_source removido");
+  assert.equal(commanderColumnNames.has("portrait_ref"), false, "portrait_ref removido");
+
+  const profileConstraints = await client.query(`
+    SELECT c.conname
+    FROM pg_constraint c
+    WHERE c.conrelid='profile.commanders'::regclass
+  `);
+  const profileConstraintNames = new Set(
+    profileConstraints.rows.map((row) => row.conname),
+  );
+  for (const name of [
+    "commanders_bio_not_blank_check",
+    "commanders_equipped_title_owned_fkey",
+  ]) {
+    assert.equal(profileConstraintNames.has(name), true, name);
+  }
+  assert.equal(profileConstraintNames.has("commanders_portrait_source_check"), false);
+  assert.equal(profileConstraintNames.has("commanders_portrait_pair_check"), false);
+
+  const authUser = await client.query(`
+    INSERT INTO auth."user"(name,email,"emailVerified")
+    VALUES('Profile Migration', 'profile-migration@example.invalid', TRUE)
+    RETURNING id
+  `);
+  const userId = authUser.rows[0].id;
+
+  await client.query(
+    `INSERT INTO profile.commanders(user_id,handle,display_name)
+     VALUES($1,'profile-migration','Profile Migration')`,
+    [userId],
+  );
+  await client.query(
+    `INSERT INTO profile.privacy_settings(user_id) VALUES($1)`,
+    [userId],
+  );
+
+  const privacy = await client.query(
+    `SELECT presence_visibility,activity_visibility,history_visibility,friend_request_policy
+       FROM profile.privacy_settings
+      WHERE user_id=$1`,
+    [userId],
+  );
+  assert.deepEqual(privacy.rows[0], {
+    presence_visibility: "friends",
+    activity_visibility: "friends",
+    history_visibility: "friends",
+    friend_request_policy: "everyone",
+  });
+
+  await client.query(`
+    INSERT INTO catalog.commander_titles(id,name,rarity)
+    VALUES('migration-title','Migration Title','rare')
+  `);
+
+  await assert.rejects(
+    client.query(
+      `UPDATE profile.commanders
+          SET equipped_title_id='migration-title'
+        WHERE user_id=$1`,
+      [userId],
+    ),
+    (error) => error?.code === "23503",
+  );
+
+  await client.query(
+    `INSERT INTO profile.commander_titles(user_id,title_id)
+     VALUES($1,'migration-title')`,
+    [userId],
+  );
+  await client.query(
+    `UPDATE profile.commanders
+        SET equipped_title_id='migration-title'
+      WHERE user_id=$1`,
+    [userId],
+  );
+
+  const equipped = await client.query(
+    `SELECT equipped_title_id FROM profile.commanders WHERE user_id=$1`,
+    [userId],
+  );
+  assert.equal(equipped.rows[0]?.equipped_title_id, "migration-title");
+
+  await client.query(`DELETE FROM auth."user" WHERE id=$1`, [userId]);
+  const cascaded = await client.query(
+    `SELECT
+       (SELECT COUNT(*)::int FROM profile.commanders WHERE user_id=$1) AS commanders,
+       (SELECT COUNT(*)::int FROM profile.commander_titles WHERE user_id=$1) AS titles,
+       (SELECT COUNT(*)::int FROM profile.privacy_settings WHERE user_id=$1) AS privacy`,
+    [userId],
+  );
+  assert.deepEqual(cascaded.rows[0], {
+    commanders: 0,
+    titles: 0,
+    privacy: 0,
+  });
+
+  const rateLimitColumns = await client.query(`
+    SELECT column_name, data_type
+    FROM information_schema.columns
+    WHERE table_schema='auth' AND table_name='rateLimit'
+    ORDER BY column_name
+  `);
+  const rateLimitColumnTypes = new Map(
+    rateLimitColumns.rows.map((row) => [row.column_name, row.data_type]),
+  );
+  assert.equal(rateLimitColumnTypes.get("id"), "uuid");
+  assert.equal(rateLimitColumnTypes.get("key"), "text");
+  assert.equal(rateLimitColumnTypes.get("count"), "integer");
+  assert.equal(rateLimitColumnTypes.get("lastRequest"), "bigint");
+}
+
 async function assertOrganizedDatabase(connectionString) {
   const client = new Client({ connectionString });
   await client.connect();
@@ -243,7 +441,7 @@ async function assertOrganizedDatabase(connectionString) {
       SELECT n.nspname AS schema_name, c.relname AS relation_name, c.relkind
       FROM pg_class c
       JOIN pg_namespace n ON n.oid = c.relnamespace
-      WHERE n.nspname IN ('game', 'catalog', 'ops', 'public')
+      WHERE n.nspname IN ('game', 'catalog', 'auth', 'profile', 'social', 'ops', 'public')
         AND c.relkind IN ('r', 'p', 'v')
       ORDER BY n.nspname, c.relname
     `);
@@ -279,6 +477,7 @@ async function assertOrganizedDatabase(connectionString) {
     assert.deepEqual(history.rows.map((row) => row.name), managedHistory);
 
     await assertAdaptiveDiceSchema(client);
+    await assertAuthProfileSchema(client);
 
     const room = await client.query(
       "INSERT INTO public.game_rooms(code) VALUES('MIGRATION') RETURNING id, revision",
@@ -355,6 +554,7 @@ async function assertOrganizedDatabase(connectionString) {
       "rooms_current_player_fkey",
       "rooms_winner_player_fkey",
       "rooms_current_match_fkey",
+      "rooms_match_mode_check",
     ]) {
       assert.equal(roomConstraintNames.has(name), true, name);
     }
@@ -384,7 +584,7 @@ async function assertOrganizedDatabase(connectionString) {
     const indexes = await client.query(`
       SELECT schemaname, indexname
       FROM pg_indexes
-      WHERE schemaname IN ('game', 'ops')
+      WHERE schemaname IN ('game', 'profile', 'social', 'ops')
     `);
     const indexNames = new Set(indexes.rows.map((row) => row.indexname));
     for (const name of [
@@ -393,6 +593,18 @@ async function assertOrganizedDatabase(connectionString) {
       "territories_room_owner_idx",
       "trade_offers_one_active_idx",
       "command_receipts_room_created_idx",
+      "players_room_user_uq",
+      "players_user_room_idx",
+      "commanders_handle_normalized_uq",
+      "commanders_display_name_normalized_idx",
+      "commander_titles_title_user_idx",
+      "friend_requests_pending_pair_uq",
+      "friend_requests_recipient_pending_idx",
+      "friend_requests_requester_pending_idx",
+      "friendships_user_b_idx",
+      "blocks_blocked_idx",
+      "match_participants_user_match_idx",
+      "match_participants_match_result_idx",
     ]) {
       assert.equal(indexNames.has(name), true, name);
     }
@@ -468,7 +680,7 @@ async function assertLegacyRoomRollout(connectionString) {
 if (!databaseUrl) {
   test("migrations de banco exigem DATABASE_URL", { skip: true }, () => {});
 } else {
-  test("026-030 migram banco v025, preservam catálogos e são idempotentes", async () => {
+  test("026-037 migram banco v025, preservam catálogos e são idempotentes", async () => {
     await withTemporaryDatabase("legacy", async (connectionString) => {
       await applySql(connectionString, "tests/fixtures/db/schema-v025.sql");
       await applySql(

@@ -7,6 +7,7 @@ import {
 } from "./auth.mjs";
 import { PostgresRealtimeListener } from "./listener.mjs";
 import { realtimeMetricsSnapshot, recordRealtimeMetric } from "./metrics.mjs";
+import { RedisPresenceStore } from "./presence-store.mjs";
 import {
   GAME_REALTIME_MAX_PAYLOAD_BYTES,
   GAME_REALTIME_PATH,
@@ -123,9 +124,25 @@ async function readJsonBody(request) {
   return JSON.parse(Buffer.concat(chunks).toString("utf8"));
 }
 
+function authorizeInternalRequest(request, response) {
+  if (!internalToken) {
+    writeJson(response, 503, { error: "Canal interno realtime não configurado." });
+    return false;
+  }
+  if (request.headers.authorization !== `Bearer ${internalToken}`) {
+    writeJson(response, 401, { error: "Credencial interna realtime inválida." });
+    return false;
+  }
+  return true;
+}
+
 const origins = allowedOrigins();
 const pool = new Pool({ connectionString, max: 5 });
 const registry = new GameRealtimeRegistry();
+const presenceStore = new RedisPresenceStore({
+  url: redisUrl,
+  ttlSeconds: process.env.PROFILE_PRESENCE_TTL_SECONDS,
+});
 let eventSourceHealthy = false;
 let redisShadowHealthy = eventSourceMode !== "dual";
 let acceptingUpgrades = false;
@@ -366,6 +383,7 @@ function statusBody() {
     eventSourceMode,
     eventSourceHealthy,
     redisShadowHealthy: eventSourceMode === "dual" ? redisShadowHealthy : null,
+    presenceAvailable: presenceStore.isAvailable(),
     authMode,
     connections: registry.size(),
     rooms: registry.roomCount(),
@@ -379,14 +397,7 @@ async function handleInternalEphemeral(request, response) {
     writeJson(response, 503, { error: "Realtime indisponível." });
     return;
   }
-  if (!internalToken) {
-    writeJson(response, 503, { error: "Canal interno realtime não configurado." });
-    return;
-  }
-  if (request.headers.authorization !== `Bearer ${internalToken}`) {
-    writeJson(response, 401, { error: "Credencial interna realtime inválida." });
-    return;
-  }
+  if (!authorizeInternalRequest(request, response)) return;
 
   try {
     const body = await readJsonBody(request);
@@ -403,9 +414,68 @@ async function handleInternalEphemeral(request, response) {
   }
 }
 
+async function handleInternalPresenceHeartbeat(request, response) {
+  if (!authorizeInternalRequest(request, response)) return;
+
+  try {
+    const body = await readJsonBody(request);
+    if (
+      !body ||
+      typeof body !== "object" ||
+      Array.isArray(body) ||
+      Object.keys(body).length !== 1 ||
+      typeof body.userId !== "string"
+    ) {
+      writeJson(response, 422, { error: "Heartbeat de presença inválido." });
+      return;
+    }
+
+    const result = await presenceStore.heartbeat(body.userId);
+    writeJson(response, result.availability === "available" ? 200 : 503, result);
+  } catch {
+    writeJson(response, 422, { error: "Heartbeat de presença inválido." });
+  }
+}
+
+async function handleInternalPresenceBatch(request, response) {
+  if (!authorizeInternalRequest(request, response)) return;
+
+  try {
+    const body = await readJsonBody(request);
+    if (
+      !body ||
+      typeof body !== "object" ||
+      Array.isArray(body) ||
+      Object.keys(body).length !== 1 ||
+      !Array.isArray(body.userIds)
+    ) {
+      writeJson(response, 422, { error: "Consulta de presença inválida." });
+      return;
+    }
+
+    const result = await presenceStore.readMany(body.userIds);
+    writeJson(response, result.availability === "available" ? 200 : 503, result);
+  } catch {
+    writeJson(response, 422, { error: "Consulta de presença inválida." });
+  }
+}
+
 const server = http.createServer((request, response) => {
   if (request.method === "POST" && request.url === "/internal/ephemeral") {
     void handleInternalEphemeral(request, response);
+    return;
+  }
+
+  if (
+    request.method === "POST" &&
+    request.url === "/internal/presence/heartbeat"
+  ) {
+    void handleInternalPresenceHeartbeat(request, response);
+    return;
+  }
+
+  if (request.method === "POST" && request.url === "/internal/presence/batch") {
+    void handleInternalPresenceBatch(request, response);
     return;
   }
 
@@ -503,6 +573,7 @@ if (eventSourceMode === "dual" && redisSource) {
     });
   });
 }
+presenceStore.start();
 server.listen(port, "0.0.0.0", () => {
   acceptingUpgrades = true;
   console.log(
@@ -521,6 +592,7 @@ async function shutdown() {
   });
   clearInterval(heartbeat);
   registry.closeAll(1012, "Servidor reiniciando");
+  presenceStore.stop();
   if (redisSource && redisSource !== primarySource) {
     await redisSource.stop();
   }

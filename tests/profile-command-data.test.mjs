@@ -28,7 +28,7 @@ async function withProfileEnvironment(state, run) {
   }
 }
 
-test("Quartel V2 expõe identidade, título e presença por contrato", async () => {
+test("Quartel V2 expõe identidade, título, presença e atividade por contrato", async () => {
   await withProfileEnvironment(null, async () => {
     const snapshot = await getCurrentProfileCommandSnapshot();
 
@@ -37,7 +37,8 @@ test("Quartel V2 expõe identidade, título e presença por contrato", async () 
     assert.equal(snapshot.identity.source, "local-static");
     assert.equal(snapshot.identity.data?.displayName, "Luigi");
     assert.equal(snapshot.identity.data?.title, "Estrategista do Sul");
-    assert.equal(snapshot.identity.data?.presence, "online");
+    assert.equal(snapshot.identity.data?.presence.state, "online");
+    assert.equal(snapshot.identity.data?.activity.state, "idle");
     assert.equal(snapshot.isEvaluationFixture, false);
   });
 });
@@ -68,6 +69,7 @@ test("Rede de Comando carrega resumo social e busca fica separada", async () => 
     assert.ok(snapshot.social.data.friends.length > 0);
     assert.ok(snapshot.social.data.incomingRequests.length > 0);
     assert.ok(snapshot.social.data.recentContacts.length > 0);
+    assert.ok(snapshot.social.data.friends.every((friend) => friend.presence && friend.activity));
   });
 
   assert.deepEqual(await searchProfileCommanders("m"), []);

@@ -17,6 +17,7 @@ const ARTIFACT_DIR = path.resolve(
   process.env.LOBBY_E2E_ARTIFACT_DIR ?? "test-results/lobby-eval",
 );
 const LOBBY_CONVERGENCE_TIMEOUT_MS = 15_000;
+const E2E_PASSWORD = "WarBrasil-E2E-2026!";
 
 if (!DATABASE_URL) {
   throw new Error("LOBBY_E2E_DATABASE_URL é obrigatória.");
@@ -26,6 +27,7 @@ mkdirSync(ARTIFACT_DIR, { recursive: true });
 
 const failures = [];
 const foundationDeprecations = [];
+let actorSequence = 0;
 
 async function step(name, callback) {
   process.stdout.write(`\n[lobby-e2e] ${name} ... `);
@@ -39,11 +41,92 @@ async function step(name, callback) {
   }
 }
 
+async function apiJson(page, url, init = {}) {
+  return page.evaluate(
+    async ({ url: requestUrl, init: requestInit }) => {
+      const response = await fetch(requestUrl, requestInit);
+      let body = null;
+      try {
+        body = await response.json();
+      } catch {
+        body = null;
+      }
+      return { status: response.status, body };
+    },
+    { url, init },
+  );
+}
+
+async function verifyE2eEmail(email) {
+  const db = new Client({ connectionString: DATABASE_URL });
+  await db.connect();
+  try {
+    const result = await db.query(
+      `UPDATE auth."user"
+          SET "emailVerified" = TRUE,
+              "updatedAt" = NOW()
+        WHERE email = $1
+        RETURNING id`,
+      [email],
+    );
+    assert.equal(result.rowCount, 1, `conta E2E não encontrada para ${email}`);
+  } finally {
+    await db.end();
+  }
+}
+
+async function authenticateActor(page) {
+  actorSequence += 1;
+  const identity = `${process.pid}-${actorSequence}`;
+  const email = `lobby-${identity}@e2e.war-brasil.test`;
+  const handle = `lobby_${identity}`;
+  const displayName = `Comandante E2E ${actorSequence}`;
+
+  // Mantém um origin localhost real sem carregar a Foundation/WebGL apenas para
+  // preparar uma identidade de teste. Os cenários navegam depois para a rota
+  // visual que realmente precisam exercitar.
+  await page.goto(`${BASE_URL}/robots.txt`, { waitUntil: "domcontentloaded" });
+
+  const registration = await apiJson(page, "/api/auth/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email,
+      password: E2E_PASSWORD,
+      termsAccepted: true,
+    }),
+  });
+  assert.equal(registration.status, 200, JSON.stringify(registration.body));
+
+  await verifyE2eEmail(email);
+
+  const signIn = await apiJson(page, "/api/auth/sign-in/email", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email,
+      password: E2E_PASSWORD,
+      rememberMe: true,
+    }),
+  });
+  assert.equal(signIn.status, 200, JSON.stringify(signIn.body));
+
+  const onboarding = await apiJson(page, "/api/auth/command-access", {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ handle, displayName }),
+  });
+  assert.equal(onboarding.status, 200, JSON.stringify(onboarding.body));
+  assert.equal(onboarding.body?.profileComplete, true);
+}
+
 async function createActor(browser, options = {}) {
+  const nextActorIp = `203.0.113.${actorSequence + 1}`;
   const context = await browser.newContext({
     viewport: options.viewport ?? { width: 1440, height: 900 },
     reducedMotion: options.reducedMotion ?? "no-preference",
     permissions: ["clipboard-read", "clipboard-write"],
+    extraHTTPHeaders: { "x-forwarded-for": nextActorIp },
   });
 
   if (options.disableWebgl) {
@@ -65,24 +148,15 @@ async function createActor(browser, options = {}) {
       foundationDeprecations.push(text);
     }
   });
-  await page.goto(`${BASE_URL}/matchmaking`, { waitUntil: "domcontentloaded" });
-  return { context, page };
-}
+  await authenticateActor(page);
 
-async function apiJson(page, url, init = {}) {
-  return page.evaluate(
-    async ({ url: requestUrl, init: requestInit }) => {
-      const response = await fetch(requestUrl, requestInit);
-      let body = null;
-      try {
-        body = await response.json();
-      } catch {
-        body = null;
-      }
-      return { status: response.status, body };
-    },
-    { url, init },
-  );
+  const initialPath =
+    options.initialPath === null ? null : options.initialPath ?? "/matchmaking";
+  if (initialPath) {
+    await page.goto(`${BASE_URL}${initialPath}`, { waitUntil: "domcontentloaded" });
+  }
+
+  return { context, page };
 }
 
 async function createRoom(actor) {
@@ -141,10 +215,21 @@ async function patchMe(actor, code, body) {
 
 async function openLobby(actor, code) {
   await actor.page.goto(`${BASE_URL}/lobby/${code}`, { waitUntil: "domcontentloaded" });
-  await actor.page.getByRole("heading", { name: "Conselho de operação" }).waitFor({
-    state: "visible",
-    timeout: 10_000,
-  });
+  try {
+    await actor.page.getByRole("heading", { name: "Conselho de operação" }).waitFor({
+      state: "visible",
+      timeout: 10_000,
+    });
+  } catch (error) {
+    const headings = await actor.page
+      .locator("h1, h2")
+      .allTextContents()
+      .catch(() => []);
+    throw new Error(
+      `Lobby ${code} não ficou pronta. url=${actor.page.url()} headings=${JSON.stringify(headings.slice(0, 6))}`,
+      { cause: error },
+    );
+  }
 }
 
 async function expectOccupied(page, count) {
@@ -338,7 +423,7 @@ async function main() {
         await actor.page.waitForURL(/\/matchmaking$/, { timeout: 10_000 });
         await assertPersistentScene(actor.page, "operations");
 
-        await actor.page.getByRole("link", { name: /Início/ }).first().click();
+        await actor.page.locator('a[href="/"]').first().click();
         await actor.page.waitForURL((url) => url.pathname === "/", { timeout: 10_000 });
         await assertPersistentScene(actor.page, "entrance");
 
@@ -356,7 +441,7 @@ async function main() {
         await actor.page.waitForURL(/\/profile$/, { timeout: 10_000 });
         await assertPersistentScene(actor.page, "profile");
 
-        await actor.page.getByRole("link", { name: /Início/ }).first().click();
+        await actor.page.locator('a[href="/"]').first().click();
         await actor.page.waitForURL((url) => url.pathname === "/", { timeout: 10_000 });
         await assertPersistentScene(actor.page, "entrance");
       } finally {
@@ -366,7 +451,10 @@ async function main() {
 
     await step("LOB-01/02/03/05/06/09 sincronização, regras, reconnect e copy", async () => {
       const host = await createActor(browser);
-      const guest = await createActor(browser);
+      const guest = await createActor(browser, {
+        disableWebgl: true,
+        initialPath: null,
+      });
       try {
         const room = await createRoom(host);
         await joinRoom(guest, room.code);
@@ -476,18 +564,24 @@ async function main() {
     });
 
     await step("LOB-07 seis jogadores permanecem representáveis e estáveis", async () => {
-      const actors = [];
+      const host = await createActor(browser);
       try {
-        const host = await createActor(browser);
-        actors.push(host);
         const room = await createRoom(host);
         await patchMe(host, room.code, { factionName: "Comando 01" });
 
         for (let index = 2; index <= 6; index += 1) {
-          const actor = await createActor(browser);
-          actors.push(actor);
-          await joinRoom(actor, room.code);
-          await patchMe(actor, room.code, { factionName: `Comando ${String(index).padStart(2, "0")}` });
+          const actor = await createActor(browser, {
+            disableWebgl: true,
+            initialPath: null,
+          });
+          try {
+            await joinRoom(actor, room.code);
+            await patchMe(actor, room.code, {
+              factionName: `Comando ${String(index).padStart(2, "0")}`,
+            });
+          } finally {
+            await actor.context.close();
+          }
         }
 
         const expectedSet = Array.from(
@@ -525,13 +619,16 @@ async function main() {
 
         await captureDesktopMobile(host.page, "6-players");
       } finally {
-        await Promise.all(actors.map((actor) => actor.context.close()));
+        await host.context.close();
       }
     });
 
     await step("LOB-04/11 todos prontos iniciam uma única partida sem espera cerimonial", async () => {
       const host = await createActor(browser);
-      const guest = await createActor(browser);
+      const guest = await createActor(browser, {
+        disableWebgl: true,
+        initialPath: null,
+      });
       try {
         const room = await createRoom(host);
         await joinRoom(guest, room.code);

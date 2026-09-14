@@ -21,6 +21,12 @@ const DEFAULT_COLORS: PlayerColor[] = [
   "orange",
 ];
 
+export type AuthenticatedPlayerIdentity = {
+  userId: string;
+  displayName: string;
+  handle: string;
+};
+
 type RoomRow = {
   id: string;
   code: string;
@@ -36,6 +42,11 @@ type PlayerRow = {
   is_ready: boolean;
   is_bot: boolean;
   is_me?: boolean;
+};
+
+type PlayerIdentityRow = {
+  id: string;
+  user_id: string | null;
 };
 
 type ReadinessRow = {
@@ -217,7 +228,75 @@ async function randomBotName(client: PoolClient, color: PlayerColor) {
   return names[randomInt(0, names.length)].name;
 }
 
-export async function createRoom(playerSession: string) {
+async function attachIdentityToExistingSeat(
+  client: PoolClient,
+  roomId: string,
+  playerSession: string,
+  identity: AuthenticatedPlayerIdentity,
+) {
+  const existingBySession = (
+    await client.query<PlayerIdentityRow>(
+      `SELECT id, user_id
+       FROM game.players
+       WHERE room_id = $1 AND player_session = $2
+       FOR UPDATE`,
+      [roomId, playerSession],
+    )
+  ).rows[0];
+
+  if (existingBySession) {
+    if (existingBySession.user_id && existingBySession.user_id !== identity.userId) {
+      throw new RoomError("Este assento pertence a outra conta.", 403);
+    }
+
+    await client.query(
+      `UPDATE game.players
+       SET user_id = $1,
+           display_name_snapshot = $2,
+           handle_snapshot = $3
+       WHERE id = $4`,
+      [
+        identity.userId,
+        identity.displayName,
+        identity.handle,
+        existingBySession.id,
+      ],
+    );
+    return true;
+  }
+
+  const existingByAccount = (
+    await client.query<PlayerIdentityRow>(
+      `SELECT id, user_id
+       FROM game.players
+       WHERE room_id = $1 AND user_id = $2 AND is_bot = FALSE
+       FOR UPDATE`,
+      [roomId, identity.userId],
+    )
+  ).rows[0];
+
+  if (!existingByAccount) return false;
+
+  await client.query(
+    `UPDATE game.players
+     SET player_session = $1,
+         display_name_snapshot = $2,
+         handle_snapshot = $3
+     WHERE id = $4`,
+    [
+      playerSession,
+      identity.displayName,
+      identity.handle,
+      existingByAccount.id,
+    ],
+  );
+  return true;
+}
+
+export async function createRoom(
+  playerSession: string,
+  identity: AuthenticatedPlayerIdentity | null = null,
+) {
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const code = createRoomCode();
 
@@ -232,9 +311,25 @@ export async function createRoom(playerSession: string) {
         const room = roomResult.rows[0];
 
         await client.query(
-          `INSERT INTO game.players (room_id, player_session, faction_name, color)
-           VALUES ($1, $2, $3, $4)`,
-          [room.id, playerSession, DEFAULT_FACTION_NAME, DEFAULT_COLORS[0]],
+          `INSERT INTO game.players (
+             room_id,
+             player_session,
+             faction_name,
+             color,
+             user_id,
+             display_name_snapshot,
+             handle_snapshot
+           )
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [
+            room.id,
+            playerSession,
+            DEFAULT_FACTION_NAME,
+            DEFAULT_COLORS[0],
+            identity?.userId ?? null,
+            identity?.displayName ?? null,
+            identity?.handle ?? null,
+          ],
         );
 
         return room;
@@ -248,7 +343,11 @@ export async function createRoom(playerSession: string) {
   throw new RoomError("Não foi possível gerar um código de sala. Tente novamente.", 503);
 }
 
-export async function joinRoom(codeValue: unknown, playerSession: string) {
+export async function joinRoom(
+  codeValue: unknown,
+  playerSession: string,
+  identity: AuthenticatedPlayerIdentity | null = null,
+) {
   const code = normalizeRoomCode(codeValue);
   if (!code) throw new RoomError("Código de sala inválido.", 422);
 
@@ -258,19 +357,44 @@ export async function joinRoom(codeValue: unknown, playerSession: string) {
       throw new RoomError("Esta partida já começou.", 409);
     }
 
-    const existingPlayer = await client.query<{ id: string }>(
-      `SELECT id FROM game.players
-       WHERE room_id = $1 AND player_session = $2`,
-      [room.id, playerSession],
-    );
-
-    if (existingPlayer.rows[0]) return room;
+    if (identity) {
+      const reusedSeat = await attachIdentityToExistingSeat(
+        client,
+        room.id,
+        playerSession,
+        identity,
+      );
+      if (reusedSeat) return room;
+    } else {
+      const existingPlayer = await client.query<{ id: string }>(
+        `SELECT id FROM game.players
+         WHERE room_id = $1 AND player_session = $2`,
+        [room.id, playerSession],
+      );
+      if (existingPlayer.rows[0]) return room;
+    }
 
     const color = await findAvailableColor(client, room.id);
     await client.query(
-      `INSERT INTO game.players (room_id, player_session, faction_name, color)
-       VALUES ($1, $2, $3, $4)`,
-      [room.id, playerSession, DEFAULT_FACTION_NAME, color],
+      `INSERT INTO game.players (
+         room_id,
+         player_session,
+         faction_name,
+         color,
+         user_id,
+         display_name_snapshot,
+         handle_snapshot
+       )
+       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        room.id,
+        playerSession,
+        DEFAULT_FACTION_NAME,
+        color,
+        identity?.userId ?? null,
+        identity?.displayName ?? null,
+        identity?.handle ?? null,
+      ],
     );
 
     return room;

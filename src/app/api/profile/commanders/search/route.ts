@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { searchProfileCommanders } from "@/src/lib/profile/profile-command-data";
+import {
+  authenticationRequiredResponse,
+  getAuthenticatedSession,
+} from "@/src/lib/server/auth/auth-guard";
+import { searchCommanderDirectory } from "@/src/lib/server/profile/profile-service";
 
 const MAX_QUERY_LENGTH = 64;
 
@@ -10,6 +14,9 @@ function noStoreJson(body: unknown, init?: ResponseInit) {
 }
 
 export async function GET(request: Request) {
+  const session = await getAuthenticatedSession(request);
+  if (!session) return authenticationRequiredResponse();
+
   const { searchParams } = new URL(request.url);
   const query = (searchParams.get("q") ?? "").trim();
 
@@ -24,6 +31,13 @@ export async function GET(request: Request) {
     );
   }
 
-  const results = await searchProfileCommanders(query);
+  const commanders = await searchCommanderDirectory(session.user.id, query);
+  const results = commanders.map((commander) => ({
+    handle: commander.handle,
+    displayName: commander.displayName,
+    title: commander.title?.name ?? null,
+    relationship: commander.relationship,
+    mutualContacts: commander.mutualContacts,
+  }));
   return noStoreJson({ results });
 }

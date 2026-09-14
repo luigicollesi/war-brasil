@@ -8,6 +8,7 @@ import {
   getLobbySnapshot,
   RoomError,
 } from "@/src/lib/rooms";
+import { assertAuthenticatedPlayerSeat } from "@/server/auth/player-seat-guard";
 
 type RouteContext = {
   params: Promise<{ code: string }>;
@@ -29,9 +30,14 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
   try {
     const session = requirePlayerSession(request);
     ({ code } = await params);
+    await assertAuthenticatedPlayerSeat(request, session, { roomCode: code });
     const snapshot = await getLobbySnapshot(code, session);
     return noStoreJson(snapshot);
   } catch (error) {
-    return roomErrorResponse(error, { operation: "get_lobby_snapshot", route: request.nextUrl.pathname, resource: { code } });
+    return roomErrorResponse(error, {
+      operation: "get_lobby_snapshot",
+      route: request.nextUrl.pathname,
+      resource: { code },
+    });
   }
 }

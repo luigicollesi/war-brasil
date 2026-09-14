@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { Client } from "pg";
 
@@ -5,7 +6,9 @@ const adminDatabaseUrl = process.env.DATABASE_URL;
 const lobbyDatabaseUrl = process.env.LOBBY_E2E_DATABASE_URL;
 
 if (!adminDatabaseUrl || !lobbyDatabaseUrl) {
-  throw new Error("DATABASE_URL e LOBBY_E2E_DATABASE_URL são obrigatórias para o E2E do Lobby.");
+  throw new Error(
+    "DATABASE_URL e LOBBY_E2E_DATABASE_URL são obrigatórias para o E2E do Lobby.",
+  );
 }
 
 const targetUrl = new URL(lobbyDatabaseUrl);
@@ -38,23 +41,23 @@ try {
   await admin.end();
 }
 
-const target = new Client({ connectionString: lobbyDatabaseUrl });
-await target.connect();
+const seedClient = new Client({ connectionString: lobbyDatabaseUrl });
+await seedClient.connect();
 
 try {
-  await target.query("BEGIN");
-  await target.query(schemaSql);
+  await seedClient.query("BEGIN");
+  await seedClient.query(schemaSql);
 
-  // O schema canônico contém as estruturas atuais, enquanto a migration 014 é
-  // a autoridade do catálogo de objetivos balanceados. O search_path faz a
-  // migration histórica gravar diretamente nas tabelas catalog.* atuais.
-  await target.query("SET LOCAL search_path TO catalog, public");
-  await target.query(balancedObjectivesSql);
+  // O schema canônico contém o baseline atual. O catálogo histórico continua
+  // vindo da migration 014 para que o E2E atravesse startGame com os mesmos
+  // objetivos balanceados usados pelo jogo.
+  await seedClient.query("SET LOCAL search_path TO catalog, public");
+  await seedClient.query(balancedObjectivesSql);
 
   // O E2E precisa de um baralho territorial completo para atravessar startGame.
   // A distribuição exata das artes não faz parte deste teste; mantemos 14 cartas
   // de cada símbolo para um fixture completo e determinístico.
-  await target.query(`
+  await seedClient.query(`
     INSERT INTO catalog.territory_card_symbols (territory_id, symbol)
     SELECT
       territory_id,
@@ -64,8 +67,38 @@ try {
       SET symbol = EXCLUDED.symbol
   `);
 
-  const catalogState = (
-    await target.query(`
+  await seedClient.query("COMMIT");
+} catch (error) {
+  await seedClient.query("ROLLBACK").catch(() => undefined);
+  throw error;
+} finally {
+  await seedClient.end();
+}
+
+// O fixture não pode manter um caminho de schema paralelo ao runtime. Depois do
+// baseline, convergimos pelo mesmo ledger 026+ usado em dev/produção, incluindo
+// Better Auth e o vínculo profile/account-seat das migrations 031/032.
+const prepareResult = spawnSync(process.execPath, ["scripts/prepare-dev-db.mjs"], {
+  cwd: process.cwd(),
+  encoding: "utf8",
+  env: {
+    ...process.env,
+    DATABASE_URL: lobbyDatabaseUrl,
+  },
+});
+
+if (prepareResult.status !== 0) {
+  throw new Error(
+    `Falha ao convergir banco E2E pelas migrations gerenciadas:\n${prepareResult.stdout}\n${prepareResult.stderr}`,
+  );
+}
+
+const validationClient = new Client({ connectionString: lobbyDatabaseUrl });
+await validationClient.connect();
+
+try {
+  const state = (
+    await validationClient.query(`
       SELECT
         (SELECT COUNT(*)::int
            FROM catalog.objective_rules
@@ -73,31 +106,59 @@ try {
         (SELECT COUNT(*)::int
            FROM catalog.territory_card_symbols) AS territory_symbols,
         (SELECT COUNT(*)::int
-           FROM catalog.dice_balance_settings) AS dice_settings
+           FROM catalog.dice_balance_settings) AS dice_settings,
+        (SELECT COUNT(*)::int
+           FROM pg_class c
+           JOIN pg_namespace n ON n.oid = c.relnamespace
+          WHERE n.nspname = 'auth'
+            AND c.relkind IN ('r', 'p')
+            AND c.relname = ANY(ARRAY['user','session','account','verification'])) AS auth_tables,
+        (to_regclass('profile.commanders') IS NOT NULL) AS commanders_ready,
+        EXISTS (
+          SELECT 1
+          FROM information_schema.columns
+          WHERE table_schema = 'game'
+            AND table_name = 'players'
+            AND column_name = 'user_id'
+        ) AS seat_binding_ready,
+        (SELECT COUNT(*)::int
+           FROM ops.pgmigrations
+          WHERE name IN (
+            '031-auth-foundation.sql',
+            '032-profile-identity-game-binding.sql'
+          )) AS auth_migrations
     `)
   ).rows[0];
 
-  if ((catalogState?.two_player_objectives ?? 0) < 2) {
-    throw new Error("Catálogo E2E não possui objetivos balanceados suficientes para 2 jogadores.");
-  }
-  if (catalogState?.territory_symbols !== 42) {
+  if ((state?.two_player_objectives ?? 0) < 2) {
     throw new Error(
-      `Catálogo E2E deveria possuir 42 símbolos territoriais; encontrou ${catalogState?.territory_symbols ?? 0}.`,
+      "Catálogo E2E não possui objetivos balanceados suficientes para 2 jogadores.",
     );
   }
-  if ((catalogState?.dice_settings ?? 0) !== 1) {
+  if (state?.territory_symbols !== 42) {
+    throw new Error(
+      `Catálogo E2E deveria possuir 42 símbolos territoriais; encontrou ${state?.territory_symbols ?? 0}.`,
+    );
+  }
+  if ((state?.dice_settings ?? 0) !== 1) {
     throw new Error("Configuração de dados adaptativos ausente no banco E2E.");
   }
+  if (state?.auth_tables !== 4 || !state?.commanders_ready) {
+    throw new Error(
+      "Schema Better Auth/profile não convergiu no banco E2E do Lobby.",
+    );
+  }
+  if (!state?.seat_binding_ready || state?.auth_migrations !== 2) {
+    throw new Error(
+      "Vínculo account+seat ou ledger 031/032 ausente no banco E2E do Lobby.",
+    );
+  }
 
-  await target.query("COMMIT");
   console.log(
     `[war-brasil] banco E2E do Lobby preparado: ${databaseName} ` +
-      `(${catalogState.two_player_objectives} objetivos para 2 jogadores, ` +
-      `${catalogState.territory_symbols} símbolos territoriais)`,
+      `(${state.two_player_objectives} objetivos para 2 jogadores, ` +
+      `${state.territory_symbols} símbolos territoriais, auth/profile prontos)`,
   );
-} catch (error) {
-  await target.query("ROLLBACK").catch(() => undefined);
-  throw error;
 } finally {
-  await target.end();
+  await validationClient.end();
 }

@@ -36,10 +36,13 @@
   "dependencies": {
     "@react-three/fiber": "9.7.0",
     "@react-three/rapier": "2.2.0",
+    "better-auth": "1.7.4",
+    "jose": "6.2.12",
     "next": "16.3.4",
     "pg": "^8.23.0",
     "react": "19.2.8",
     "react-dom": "19.2.8",
+    "server-only": "0.0.1",
     "three": "0.185.1"
   },
   "devDependencies": {

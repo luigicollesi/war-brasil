@@ -1,11 +1,29 @@
-import type { PlayerPresence } from "@/src/lib/profile/profile-command-contract";
+import type {
+  CommanderActivity,
+  CommanderPresence,
+  PlayerPresenceState,
+} from "@/src/lib/profile/profile-command-contract";
 
-export const PRESENCE_COPY: Readonly<Record<PlayerPresence, string>> = {
+export const PRESENCE_COPY: Readonly<Record<PlayerPresenceState, string>> = {
   online: "Disponível",
-  "in-lobby": "Em sala",
-  "in-match": "Em partida",
   offline: "Offline",
+  unavailable: "Presença indisponível",
 };
+
+const ACTIVITY_COPY = {
+  lobby: "Em sala",
+  match: "Em partida",
+} as const;
+
+export function commanderStatusLabel(
+  presence: CommanderPresence,
+  activity: CommanderActivity,
+) {
+  if (activity.state === "lobby" || activity.state === "match") {
+    return `${PRESENCE_COPY[presence.state]} · ${ACTIVITY_COPY[activity.state]}`;
+  }
+  return PRESENCE_COPY[presence.state];
+}
 
 export function initialsFrom(value: string) {
   return (

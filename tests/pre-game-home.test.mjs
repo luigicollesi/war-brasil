@@ -220,7 +220,8 @@ test("progresso Genesis vive em useFrame sem setState ou alocação aleatória",
 });
 
 test("priming compila shader e garante frames pintáveis antes de tocar", () => {
-  assert.match(scene, /gl\.compileAsync\(scene, camera\)/);
+  assert.match(scene, /gl\.compile\(scene, camera\)/);
+  assert.doesNotMatch(scene, /gl\.compileAsync\(scene, camera\)/);
   assert.match(scene, /requestAnimationFrame/);
   assert.match(scene, /onScenePhaseChange\("primed"\)/);
   assert.match(home, /ceremonyPhase !== "primed"/);

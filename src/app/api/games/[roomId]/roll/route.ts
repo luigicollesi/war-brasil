@@ -5,6 +5,7 @@ import { readGameCommandRequestMetadata } from "@/src/lib/server/game-command-re
 import { GAME_REVISION_HEADER } from "@/src/lib/game-sync-contract";
 import { getPlayerSession } from "@/src/lib/player-session";
 import { RoomError } from "@/src/lib/rooms";
+import { assertAuthenticatedPlayerSeat } from "@/server/auth/player-seat-guard";
 
 type RouteContext = {
   params: Promise<{ roomId: string }>;
@@ -19,8 +20,9 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
       throw new RoomError("Entre em uma sala antes de rolar o dado.", 401);
     }
 
-    const metadata = readGameCommandRequestMetadata(request);
     ({ roomId } = await params);
+    await assertAuthenticatedPlayerSeat(request, session, { roomId });
+    const metadata = readGameCommandRequestMetadata(request);
     const result = await rollOrderDieCommand(roomId, session, metadata);
 
     return noStoreJson(

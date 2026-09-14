@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Barlow_Condensed, Geist_Mono, Inter } from "next/font/google";
 import { PreGameCommandRuntime } from "@/src/components/pre-game/foundation";
+import { ProfilePresenceHeartbeat } from "@/src/components/profile/profile-presence-heartbeat";
 import { getSiteUrl } from "@/src/lib/site-url";
 import "./globals.css";
 import "./war-identity.css";
@@ -63,6 +64,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${interfaceFont.variable} ${displayFont.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full font-[var(--font-wb-ui)]">
+        <ProfilePresenceHeartbeat />
         <PreGameCommandRuntime>{children}</PreGameCommandRuntime>
       </body>
     </html>

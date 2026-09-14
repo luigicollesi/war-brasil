@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { noStoreJson, roomErrorResponse } from "@/src/lib/api-response";
 import { getPlayerSession } from "@/src/lib/player-session";
 import { removeBotFromRoom, RoomError } from "@/src/lib/rooms";
+import { assertAuthenticatedPlayerSeat } from "@/server/auth/player-seat-guard";
 
 type RouteContext = {
   params: Promise<{ code: string; botId: string }>;
@@ -18,6 +19,7 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
     }
 
     ({ code, botId } = await params);
+    await assertAuthenticatedPlayerSeat(request, session, { roomCode: code });
     await removeBotFromRoom(code, botId, session);
     return noStoreJson({ removed: true });
   } catch (error) {

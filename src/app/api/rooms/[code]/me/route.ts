@@ -6,6 +6,7 @@ import {
 } from "@/src/lib/api-response";
 import { getPlayerSession } from "@/src/lib/player-session";
 import { RoomError, updateLobbyPlayer } from "@/src/lib/rooms";
+import { assertAuthenticatedPlayerSeat } from "@/server/auth/player-seat-guard";
 
 type RouteContext = {
   params: Promise<{ code: string }>;
@@ -21,10 +22,16 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     }
 
     ({ code } = await params);
+    await assertAuthenticatedPlayerSeat(request, session, { roomCode: code });
     body = await readJsonObject(request);
     const room = await updateLobbyPlayer(code, session, body);
     return noStoreJson({ room });
   } catch (error) {
-    return roomErrorResponse(error, { operation: "update_lobby_player", route: request.nextUrl.pathname, resource: { code }, input: body });
+    return roomErrorResponse(error, {
+      operation: "update_lobby_player",
+      route: request.nextUrl.pathname,
+      resource: { code },
+      input: body,
+    });
   }
 }

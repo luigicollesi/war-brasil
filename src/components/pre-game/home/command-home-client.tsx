@@ -1,8 +1,19 @@
 "use client";
 
+import { useSession } from "@/client/auth-client";
+import {
+  CommandAuthModal,
+  type CommandAuthMode,
+} from "@/components/auth/command-auth-modal";
+import { CommandOnboardingModal } from "@/components/auth/command-onboarding-modal";
 import Link from "next/link";
 import type { ReactNode } from "react";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import {
   useCommandSceneDirective,
   useCommandSceneState,
@@ -20,6 +31,9 @@ type HomeTransitionState = "preparing" | "primed" | "running" | "complete";
 type HomeState =
   | "boot"
   | "awaiting-entry"
+  | "auth-check"
+  | "auth-modal"
+  | "onboarding"
   | "command-open"
   | "destination-focus"
   | "transitioning";
@@ -30,6 +44,16 @@ type Destination = {
   index: string;
   label: string;
   detail: string;
+};
+
+type CommandAccessResponse = {
+  authenticated?: boolean;
+  profileComplete?: boolean;
+  profile?: {
+    handle?: string | null;
+    displayName?: string | null;
+  };
+  suggestedDisplayName?: string | null;
 };
 
 type CommandHomeClientProps = {
@@ -86,6 +110,22 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
     useState<HomeDestinationId | null>(null);
   const [transitioningTo, setTransitioningTo] =
     useState<HomeDestinationId | null>(null);
+  const [authChecking, setAuthChecking] = useState(false);
+  const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] =
+    useState<CommandAuthMode>("login");
+  const [authModalNotice, setAuthModalNotice] = useState("");
+  const [authResetToken, setAuthResetToken] = useState<string | null>(null);
+  const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const [onboardingHandle, setOnboardingHandle] = useState<string | null>(null);
+  const [onboardingDisplayName, setOnboardingDisplayName] = useState<
+    string | null
+  >(null);
+  const {
+    data: authSession,
+    isPending: authSessionPending,
+    refetch: refetchAuthSession,
+  } = useSession();
 
   const reducedMotion = useSyncExternalStore(
     subscribeReducedMotion,
@@ -120,6 +160,77 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
   });
 
   useCommandSceneDirective(sceneIntent);
+
+  const openAuthModal = useCallback(
+    (mode: CommandAuthMode = "login", notice = "") => {
+      setOnboardingOpen(false);
+      setAuthModalMode(mode);
+      setAuthModalNotice(notice);
+      setAuthResetToken(null);
+      setAuthModalOpen(true);
+    },
+    [],
+  );
+
+  const applyCommandAccess = useCallback((payload: CommandAccessResponse) => {
+    if (payload.authenticated && payload.profileComplete) {
+      setOnboardingOpen(false);
+      setCommandOpen(true);
+      return "command-open" as const;
+    }
+
+    if (payload.authenticated) {
+      setCommandOpen(false);
+      setOnboardingHandle(payload.profile?.handle ?? null);
+      setOnboardingDisplayName(
+        payload.profile?.displayName ?? payload.suggestedDisplayName ?? null,
+      );
+      setOnboardingOpen(true);
+      return "onboarding" as const;
+    }
+
+    return "unauthenticated" as const;
+  }, []);
+
+  const checkCommandAccess = useCallback(
+    async (openLoginOnUnauthorized = true) => {
+      setAuthChecking(true);
+      try {
+        const response = await fetch("/api/auth/command-access", {
+          method: "GET",
+          cache: "no-store",
+          headers: { Accept: "application/json" },
+        });
+
+        if (response.status === 401) {
+          setCommandOpen(false);
+          setOnboardingOpen(false);
+          if (openLoginOnUnauthorized) {
+            openAuthModal("login");
+          }
+          return "unauthenticated" as const;
+        }
+
+        if (!response.ok) {
+          throw new Error("command_access_unavailable");
+        }
+
+        const payload = (await response.json()) as CommandAccessResponse;
+        return applyCommandAccess(payload);
+      } catch {
+        setCommandOpen(false);
+        setOnboardingOpen(false);
+        openAuthModal(
+          "login",
+          "Não foi possível validar uma sessão salva. Entre novamente para continuar.",
+        );
+        return "error" as const;
+      } finally {
+        setAuthChecking(false);
+      }
+    },
+    [applyCommandAccess, openAuthModal],
+  );
 
   useEffect(() => {
     if (
@@ -156,6 +267,64 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
     return () => window.cancelAnimationFrame(frame);
   }, [ceremonyPhase, ritualActive, sceneState, visitMode]);
 
+  useEffect(() => {
+    if (authSessionPending) {
+      return;
+    }
+
+    const frame = window.requestAnimationFrame(() => {
+      const params = new URLSearchParams(window.location.search);
+      const shouldContinueCommand = params.get("continue") === "command";
+      const emailVerified = params.get("emailVerified");
+      const resetPassword = params.get("auth") === "reset-password";
+      const resetToken = params.get("token");
+
+      if (resetPassword) {
+        setAuthResetToken(resetToken);
+        setAuthModalMode("reset");
+        setAuthModalNotice(
+          resetToken
+            ? "Defina uma nova senha para concluir a recuperação."
+            : "Este link de redefinição não contém um token válido.",
+        );
+        setAuthModalOpen(true);
+        return;
+      }
+
+      if (shouldContinueCommand && authSession) {
+        setCeremonyPhase("stable");
+        setRitualActive(false);
+        setAuthModalOpen(false);
+        void checkCommandAccess(false).then((result) => {
+          if (result === "unauthenticated") {
+            openAuthModal(
+              "login",
+              "A sessão retornada não pôde ser validada. Entre novamente.",
+            );
+          }
+          window.history.replaceState({}, "", "/");
+        });
+        return;
+      }
+
+      if (emailVerified === "success") {
+        setAuthModalMode("login");
+        setAuthModalNotice(
+          "Email confirmado. Entre com sua credencial para acessar o Comando.",
+        );
+        setAuthModalOpen(true);
+        window.history.replaceState({}, "", "/?continue=command");
+      }
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [
+    authSession,
+    authSessionPending,
+    checkCommandAccess,
+    openAuthModal,
+  ]);
+
   const settleCeremony = () => {
     setCeremonyPhase("stable");
     setRitualActive(false);
@@ -169,7 +338,39 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
     settleCeremony();
     setKeyboardDestinationFocus(null);
     setPointerDestinationFocus(null);
-    setCommandOpen(true);
+    void checkCommandAccess();
+  };
+
+  const handleAuthenticated = async () => {
+    await refetchAuthSession();
+    setAuthModalOpen(false);
+    setAuthModalNotice("");
+    setAuthResetToken(null);
+
+    const result = await checkCommandAccess(false);
+    if (result === "unauthenticated") {
+      openAuthModal(
+        "login",
+        "A autenticação não gerou uma sessão válida. Tente entrar novamente.",
+      );
+      return;
+    }
+
+    window.history.replaceState({}, "", "/");
+  };
+
+  const handleOnboardingCompleted = async () => {
+    setOnboardingOpen(false);
+    const result = await checkCommandAccess(false);
+
+    if (result !== "command-open") {
+      if (result === "unauthenticated") {
+        openAuthModal("login", "Sua sessão expirou. Entre novamente para continuar.");
+      }
+      return;
+    }
+
+    window.history.replaceState({}, "", "/");
   };
 
   const clearKeyboardFocus = (destination: HomeDestinationId) => {
@@ -186,13 +387,19 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
 
   const homeState: HomeState = transitioningTo
     ? "transitioning"
-    : commandOpen && destinationFocus
-      ? "destination-focus"
-      : commandOpen
-        ? "command-open"
-        : homeTransition === "preparing" || homeTransition === "primed"
-          ? "boot"
-          : "awaiting-entry";
+    : onboardingOpen
+      ? "onboarding"
+      : authModalOpen
+        ? "auth-modal"
+        : authChecking
+          ? "auth-check"
+          : commandOpen && destinationFocus
+            ? "destination-focus"
+            : commandOpen
+              ? "command-open"
+              : homeTransition === "preparing" || homeTransition === "primed"
+                ? "boot"
+                : "awaiting-entry";
 
   return (
     <main
@@ -205,6 +412,9 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
       data-ceremony={effectiveCeremonyPhase}
       data-visit={visitMode}
       data-command-open={commandOpen ? "true" : "false"}
+      data-authenticated={authSession ? "true" : "false"}
+      data-profile-onboarding={onboardingOpen ? "true" : "false"}
+      data-auth-checking={authChecking ? "true" : "false"}
       data-destination-focus={destinationFocus ?? "none"}
       data-transitioning-to={transitioningTo ?? "none"}
     >
@@ -223,18 +433,25 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
               type="button"
               className={styles.enterButton}
               onClick={enterCommand}
+              disabled={authChecking}
             >
               <span className={styles.enterButtonCode} aria-hidden="true">
                 A-01
               </span>
-              <span>ENTRAR NO COMANDO</span>
+              <span>
+                {authChecking ? "VALIDANDO CREDENCIAL..." : "ENTRAR NO COMANDO"}
+              </span>
               <span className={styles.enterButtonArrow} aria-hidden="true">
                 →
               </span>
             </button>
 
             <div className={styles.authorizationMeta}>
-              <span>ACESSO OPERACIONAL DISPONÍVEL</span>
+              <span>
+                {authChecking
+                  ? "CONSULTANDO SESSÃO SEGURA"
+                  : "ACESSO OPERACIONAL DISPONÍVEL"}
+              </span>
               {effectiveCeremonyPhase !== "stable" && visitMode === "first" ? (
                 <button
                   type="button"
@@ -295,6 +512,31 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
         <span>DOMÍNIO TERRITORIAL // BRASIL</span>
         <span>PROTOCOLO 42-T</span>
       </footer>
+
+      <CommandAuthModal
+        open={authModalOpen}
+        initialMode={authModalMode}
+        notice={authModalNotice}
+        resetToken={authResetToken}
+        onClose={() => {
+          setAuthModalOpen(false);
+          setAuthModalNotice("");
+          setAuthResetToken(null);
+          if (window.location.search) {
+            window.history.replaceState({}, "", "/");
+          }
+        }}
+        onAuthenticated={handleAuthenticated}
+      />
+
+      {onboardingOpen ? (
+        <CommandOnboardingModal
+          initialDisplayName={onboardingDisplayName}
+          initialHandle={onboardingHandle}
+          onClose={() => setOnboardingOpen(false)}
+          onCompleted={handleOnboardingCompleted}
+        />
+      ) : null}
     </main>
   );
 }

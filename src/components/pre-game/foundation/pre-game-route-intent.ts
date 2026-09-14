@@ -22,6 +22,7 @@ export function resolvePreGameSceneMode(pathname: string): CommandSceneMode | nu
 
   if (exactMode) return exactMode;
   if (normalizedPathname.startsWith("/lobby/")) return "lobby";
+  if (normalizedPathname.startsWith("/profile/")) return "profile";
 
   return null;
 }

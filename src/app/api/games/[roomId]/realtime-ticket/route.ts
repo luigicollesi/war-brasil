@@ -3,6 +3,7 @@ import { noStoreJson, roomErrorResponse } from "@/src/lib/api-response";
 import { getPlayerSession } from "@/src/lib/player-session";
 import { RoomError } from "@/src/lib/rooms";
 import { issueGameRealtimeTicket } from "@/src/lib/server/realtime/game-realtime-ticket";
+import { assertAuthenticatedPlayerSeat } from "@/server/auth/player-seat-guard";
 
 type RouteContext = {
   params: Promise<{ roomId: string }>;
@@ -21,6 +22,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     }
 
     ({ roomId } = await params);
+    await assertAuthenticatedPlayerSeat(request, session, { roomId });
     const result = await issueGameRealtimeTicket(roomId, session);
     return noStoreJson(result);
   } catch (error) {
