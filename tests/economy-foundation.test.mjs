@@ -6,14 +6,40 @@ function source(path) {
   return readFileSync(path, "utf8");
 }
 
-const migration = source("src/lib/db/migrations/managed/037-economy-cosmetics-foundation.sql");
+const migration = source("src/lib/db/migrations/managed/038-economy-cosmetics-foundation.sql");
+const gameMigration = source("src/lib/db/migrations/managed/039-game-cosmetic-loadout-snapshots.sql");
 const contract = source("src/lib/economy/economy-contract.ts");
+const gameContract = source("src/lib/shared/game-contract.ts");
 const repository = source("src/lib/server/economy/economy-repository.ts");
 const service = source("src/lib/server/economy/economy-service.ts");
+const gameCosmetics = source("src/lib/server/game-cosmetic-loadout-service.ts");
+const startGame = source("src/lib/server/start-game-service.ts");
+const gameSnapshot = source("src/lib/server/game-snapshot-service.ts");
+const gameFinish = source("src/lib/server/game-finish-command-service.ts");
+const snapshotSharing = source("src/lib/shared/game-snapshot-sharing.ts");
 const storefrontRoute = source("src/app/api/economy/storefront/route.ts");
 const loadoutRoute = source("src/app/api/economy/loadout/route.ts");
 const storePage = source("src/app/profile/store/page.tsx");
 const storeUi = source("src/components/profile/store/economy-storefront.tsx");
+
+test("histórico de migrations preserva 037 do Profile e move economia para 038", () => {
+  assert.equal(
+    existsSync("src/lib/db/migrations/managed/037-profile-remove-portraits.sql"),
+    true,
+  );
+  assert.equal(
+    existsSync("src/lib/db/migrations/managed/037-economy-cosmetics-foundation.sql"),
+    false,
+  );
+  assert.equal(
+    existsSync("src/lib/db/migrations/managed/038-economy-cosmetics-foundation.sql"),
+    true,
+  );
+  assert.equal(
+    existsSync("src/lib/db/migrations/managed/039-game-cosmetic-loadout-snapshots.sql"),
+    true,
+  );
+});
 
 test("economia v1 possui uma única moeda real com saldo inteiro não negativo", () => {
   assert.match(migration, /VALUES \('campaign-credit', 'Créditos de Campanha', '◈', TRUE\)/);
@@ -86,6 +112,34 @@ test("APIs derivam ator da sessão e expõem somente leitura + equipagem", () =>
   for (const forbidden of ["purchase", "reward", "transfer", "grant", "checkout"]) {
     assert.equal(existsSync(`src/app/api/economy/${forbidden}/route.ts`), false);
   }
+});
+
+test("partida congela loadout em game.* e snapshot não lê Profile em runtime", () => {
+  assert.match(gameMigration, /CREATE TABLE IF NOT EXISTS game\.player_cosmetic_loadouts/);
+  assert.match(gameMigration, /asset_ref TEXT/);
+  assert.match(gameMigration, /effect_key TEXT/);
+  assert.match(gameMigration, /catalog_cosmetics_default_slot_uidx/);
+  assert.match(startGame, /capturePlayerCosmeticLoadouts\(client, roomId\)/);
+  assert.match(gameCosmetics, /INSERT INTO game\.player_cosmetic_loadouts/);
+  assert.match(gameCosmetics, /loadRoomPlayerCosmetics/);
+
+  const runtimeReader = gameCosmetics.slice(
+    gameCosmetics.indexOf("export async function loadRoomPlayerCosmetics"),
+  );
+  assert.match(runtimeReader, /FROM game\.player_cosmetic_loadouts snapshot/);
+  assert.doesNotMatch(runtimeReader, /profile\.|inventory\.|catalog\./);
+
+  assert.match(gameSnapshot, /loadRoomPlayerCosmetics\(client, room\.id\)/);
+  assert.match(gameSnapshot, /cosmetics,/);
+  assert.match(gameContract, /export type GamePlayerCosmetics/);
+  assert.match(gameContract, /cosmetics: GamePlayerCosmetics/);
+});
+
+test("rematch descarta snapshot anterior e structural sharing observa cosméticos", () => {
+  assert.match(gameFinish, /DELETE FROM game\.player_cosmetic_loadouts/);
+  assert.match(snapshotSharing, /samePlayerCosmetics/);
+  assert.match(snapshotSharing, /sameCosmeticSelection/);
+  assert.match(snapshotSharing, /left\.cosmetics, right\.cosmetics/);
 });
 
 test("store autenticada usa cena Profile sem preço ou CTA de compra", () => {
