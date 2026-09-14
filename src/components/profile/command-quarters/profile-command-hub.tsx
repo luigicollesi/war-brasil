@@ -331,8 +331,8 @@ function CommandTable({
 
 export function ProfileCommandHub({ snapshot }: { snapshot: ProfileCommandSnapshot }) {
   const [activeStation, setActiveStation] = useState<ProfileCommandStation>("dossier");
-  const [selectedOperationCode, setSelectedOperationCode] = useState<string | null>(
-    snapshot.history.data.matches[0]?.operationCode ?? null,
+  const [selectedOperation, setSelectedOperation] = useState<MatchSummary | null>(
+    snapshot.history.data.matches[0] ?? null,
   );
   const [selectedItemSlug, setSelectedItemSlug] = useState<string | null>(
     snapshot.storefront.data.featuredItems[0]?.slug ?? null,
@@ -340,8 +340,6 @@ export function ProfileCommandHub({ snapshot }: { snapshot: ProfileCommandSnapsh
 
   useCommandSceneDirective(SCENE_DIRECTIVES[activeStation]);
 
-  const selectedOperation =
-    snapshot.history.data.matches.find((match) => match.operationCode === selectedOperationCode) ?? null;
   const selectedItem =
     snapshot.storefront.data.featuredItems.find((item) => item.slug === selectedItemSlug) ?? null;
 
@@ -436,9 +434,9 @@ export function ProfileCommandHub({ snapshot }: { snapshot: ProfileCommandSnapsh
         >
           <ProfileCampaignStation
             snapshot={snapshot}
-            selected={selectedOperationCode}
-            onSelect={(operationCode) => {
-              setSelectedOperationCode(operationCode);
+            selected={selectedOperation?.operationCode ?? null}
+            onSelect={(match) => {
+              setSelectedOperation(match);
               setActiveStation("campaigns");
             }}
           />
