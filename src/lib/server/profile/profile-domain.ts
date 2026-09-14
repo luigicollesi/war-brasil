@@ -1,6 +1,6 @@
 import "server-only";
 
-import type { PlayerMatchHistory } from "@/src/lib/profile/profile-command-contract";
+import type { PublicPlayerMatchHistory } from "@/src/lib/profile/profile-command-contract";
 
 export type ProfileVisibility = "public" | "friends" | "private";
 export type FriendRequestPolicy = "everyone" | "friends_of_friends" | "nobody";
@@ -63,7 +63,7 @@ export type PublicCommanderProfileDto = Readonly<{
   relationship: Exclude<CommanderRelationship, "blocked">;
   history: Readonly<{
     visible: boolean;
-    data: PlayerMatchHistory | null;
+    data: PublicPlayerMatchHistory | null;
   }>;
 }>;
 
