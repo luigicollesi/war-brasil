@@ -140,14 +140,14 @@ test("handler e client usam integrações oficiais Better Auth para Next e React
   assert.match(authClient, /signUp/);
 });
 
-test("mutações auth browser são first-party e só callbacks de provider aceitam POST externo", () => {
-  assert.match(requestOrigin, /EXTERNAL_POST_CALLBACK_PREFIX = "\/api\/auth\/callback\/"/);
+test("mutações auth browser por POST exigem origem first-party", () => {
   assert.match(requestOrigin, /request\.method !== "POST"/);
   assert.match(requestOrigin, /headers\.get\("origin"\)/);
   assert.match(requestOrigin, /headers\.get\("referer"\)/);
   assert.match(requestOrigin, /environment\.baseUrl/);
   assert.match(requestOrigin, /status: 403/);
   assert.match(registerRoute, /rejectUntrustedAuthMutationOrigin\(request\)/);
+  assert.doesNotMatch(requestOrigin, /EXTERNAL_POST_CALLBACK_PREFIX|isExternalAuthProviderCallback/);
   assert.doesNotMatch(requestOrigin, /trustedProxyHeaders|x-forwarded-host|x-forwarded-proto/i);
 });
 
