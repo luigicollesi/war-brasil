@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import type {
   CommanderIdentity,
   FriendRequestPolicy,
@@ -14,6 +14,13 @@ type Feedback = Readonly<{
   kind: "error" | "success";
   message: string;
 }> | null;
+
+type EditablePrivacyUpdate = {
+  presenceVisibility?: ProfileVisibility;
+  activityVisibility?: ProfileVisibility;
+  historyVisibility?: ProfileVisibility;
+  friendRequestPolicy?: FriendRequestPolicy;
+};
 
 const VISIBILITY_OPTIONS: ReadonlyArray<{
   value: ProfileVisibility;
@@ -79,14 +86,14 @@ export function ProfileSettingsPanel({
     setOpen(true);
   };
 
-  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (busy) return;
 
     const payload: {
       displayName?: string;
       bio?: string | null;
-      privacy?: Partial<ProfilePrivacySettings>;
+      privacy?: EditablePrivacyUpdate;
     } = {};
 
     const normalizedDisplayName = displayName.trim();
@@ -98,7 +105,7 @@ export function ProfileSettingsPanel({
       payload.bio = normalizedBio;
     }
 
-    const privacyUpdate: Partial<ProfilePrivacySettings> = {};
+    const privacyUpdate: EditablePrivacyUpdate = {};
     if (presenceVisibility !== privacy.presenceVisibility) {
       privacyUpdate.presenceVisibility = presenceVisibility;
     }
