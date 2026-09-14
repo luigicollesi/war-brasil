@@ -99,7 +99,7 @@ export function assertAuthRuntimeConfiguration(
     missing.push("AUTH_DATABASE_URL ou DATABASE_URL");
   }
   if (isObviouslyUnsafeAuthSecret(environment.secret)) {
-    missing.push(`BETTER_AUTH_SECRET(random, >=${AUTH_SECRET_MIN_LENGTH} chars)`);
+    missing.push(`BETTER_AUTH_SECRET(>=${AUTH_SECRET_MIN_LENGTH} chars)`);
   }
   if (!isValidProductionBaseUrl(environment.baseUrl)) {
     missing.push("BETTER_AUTH_URL(absolute HTTPS URL)");
