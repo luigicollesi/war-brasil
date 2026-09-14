@@ -35,11 +35,13 @@ export function BattleDiceCinematic({
   battle,
   side,
   color,
+  assetRef,
   onComplete,
 }: {
   battle: GameBattle;
   side: BattleDiceCinematicSide;
   color: PlayerColor;
+  assetRef?: string | null;
   onComplete: () => void;
 }) {
   const values = useMemo(
@@ -60,6 +62,7 @@ export function BattleDiceCinematic({
       seed={seed}
       skin={side}
       pipColor={playerColorHex(color)}
+      assetRef={assetRef}
       label={side === "attack" ? "ATAQUE" : "DEFESA"}
       replayDurationMs={BATTLE_DICE_CINEMATIC_REPLAY_MS}
       resultHoldMs={BATTLE_DICE_CINEMATIC_RESULT_HOLD_MS}
