@@ -34,6 +34,17 @@ export async function requireProfileMutationActor(request: Request) {
   return { userId: session.user.id } as const;
 }
 
+export function requireCommanderHandle(value: string) {
+  const handle = value.trim();
+  if (!HANDLE_PATTERN.test(handle)) {
+    throw new ProfileRequestError(
+      "INVALID_HANDLE",
+      "Handle de comandante inválido.",
+    );
+  }
+  return handle;
+}
+
 export async function readHandlePayload(request: Request) {
   let payload: unknown;
   try {
@@ -44,15 +55,9 @@ export async function readHandlePayload(request: Request) {
 
   const handle =
     payload && typeof payload === "object" && "handle" in payload
-      ? String(payload.handle ?? "").trim()
+      ? String(payload.handle ?? "")
       : "";
-  if (!HANDLE_PATTERN.test(handle)) {
-    throw new ProfileRequestError(
-      "INVALID_HANDLE",
-      "Handle de comandante inválido.",
-    );
-  }
-  return handle;
+  return requireCommanderHandle(handle);
 }
 
 export function requireRequestId(value: string) {
