@@ -11,6 +11,7 @@ export const LOCAL_PROFILE_COMMAND_SNAPSHOT: ProfileCommandSnapshot = {
     data: {
       displayName: "Luigi",
       handle: "luigi",
+      bio: "Comandante em preparação para a próxima campanha.",
       title: "Estrategista do Sul",
       portrait: {
         src: null,
@@ -18,6 +19,16 @@ export const LOCAL_PROFILE_COMMAND_SNAPSHOT: ProfileCommandSnapshot = {
       },
       presence: { state: "online", lastSeenAt: null },
       activity: { state: "idle", matchMode: null },
+    },
+  },
+  privacy: {
+    availability: "available",
+    source: "local-static",
+    data: {
+      presenceVisibility: "friends",
+      activityVisibility: "friends",
+      historyVisibility: "friends",
+      friendRequestPolicy: "everyone",
     },
   },
   wallet: {
