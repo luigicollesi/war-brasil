@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { EconomyStorefront } from "@/src/components/profile/store/economy-storefront";
+import type { EconomyStorefrontSnapshot } from "@/src/lib/economy/economy-contract";
 import { auth } from "@/src/lib/server/auth/auth";
 import {
   EconomyServiceError,
@@ -24,9 +25,9 @@ export default async function ProfileStorePage() {
 
   if (!session) redirect("/");
 
+  let storefront: EconomyStorefrontSnapshot;
   try {
-    const storefront = await getEconomyStorefront(session.user.id);
-    return <EconomyStorefront initialStorefront={storefront} />;
+    storefront = await getEconomyStorefront(session.user.id);
   } catch (error) {
     if (
       error instanceof EconomyServiceError &&
@@ -36,4 +37,6 @@ export default async function ProfileStorePage() {
     }
     throw error;
   }
+
+  return <EconomyStorefront initialStorefront={storefront} />;
 }
