@@ -7,16 +7,36 @@ const globalForAuthPostgres = globalThis as typeof globalThis & {
   warBrasilAuthPool?: Pool;
 };
 
-function createAuthPool() {
-  const { databaseUrl } = readAuthServerEnvironment();
+function isNeonPooledConnectionString(value: string) {
+  try {
+    const url = new URL(value);
+    return (
+      url.hostname.endsWith(".neon.tech") &&
+      url.hostname.split(".")[0]?.endsWith("-pooler")
+    );
+  } catch {
+    return false;
+  }
+}
 
-  if (!databaseUrl) {
-    throw new Error("DATABASE_URL não está configurada para autenticação.");
+function createAuthPool() {
+  const { authDatabaseUrl } = readAuthServerEnvironment();
+
+  if (!authDatabaseUrl) {
+    throw new Error(
+      "AUTH_DATABASE_URL ou DATABASE_URL não está configurada para autenticação.",
+    );
+  }
+
+  if (isNeonPooledConnectionString(authDatabaseUrl)) {
+    throw new Error(
+      "Better Auth usa search_path=auth, que não é aceito no startup packet do Neon PgBouncer. Configure AUTH_DATABASE_URL com a conexão Neon direta/unpooled (hostname sem -pooler) e mantenha DATABASE_URL pooled para o restante da aplicação.",
+    );
   }
 
   return new Pool({
-    connectionString: databaseUrl,
-    max: 6,
+    connectionString: authDatabaseUrl,
+    max: 4,
     options: "-c search_path=auth",
   });
 }
