@@ -135,6 +135,27 @@ test("partida congela loadout em game.* e snapshot não lê Profile em runtime",
   assert.match(gameContract, /cosmetics: GamePlayerCosmetics/);
 });
 
+test("waiting usa fallback visual efêmero, mas partida ativa exige snapshot persistido completo", () => {
+  assert.match(gameCosmetics, /player\.room_status === "waiting"/);
+  assert.match(gameCosmetics, /defaultPlayerCosmetics\(\)/);
+  assert.match(gameCosmetics, /requirePlayerCosmetics\(player\.id, playerRows\)/);
+  assert.match(gameCosmetics, /ECONOMY|profile\./i);
+
+  const runtimeReader = gameCosmetics.slice(
+    gameCosmetics.indexOf("export async function loadRoomPlayerCosmetics"),
+  );
+  assert.doesNotMatch(runtimeReader, /profile\.|inventory\.|catalog\./);
+  assert.match(runtimeReader, /room\.status AS room_status/);
+});
+
+test("GameSnapshot expõe somente cosméticos necessários, sem economia ou identidade auth", () => {
+  assert.match(gameContract, /cosmeticId: string/);
+  assert.match(gameContract, /assetRef: string \| null/);
+  assert.match(gameContract, /effectKey: string \| null/);
+  assert.doesNotMatch(gameContract, /campaign-credit|wallet|ledger|inventory|userId|authUser/i);
+  assert.doesNotMatch(gameSnapshot, /economy\.wallets|economy\.ledger_entries|inventory\.cosmetics/);
+});
+
 test("rematch descarta snapshot anterior e structural sharing observa cosméticos", () => {
   assert.match(gameFinish, /DELETE FROM game\.player_cosmetic_loadouts/);
   assert.match(snapshotSharing, /samePlayerCosmetics/);
