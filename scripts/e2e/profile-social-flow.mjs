@@ -111,6 +111,13 @@ function oneCreatedOneConflict(results, label) {
 }
 
 export async function assertProfileSocialFlow({ db, actorA, actorB }) {
+  await db.query(
+    `UPDATE auth."user"
+        SET image='https://lh3.googleusercontent.com/oauth-profile-image'
+      WHERE id=$1::uuid`,
+    [actorB.userId],
+  );
+
   const search = await apiJson(
     actorA.page,
     `/api/profile/commanders/search?q=${encodeURIComponent(actorB.handle)}`,
@@ -123,6 +130,8 @@ export async function assertProfileSocialFlow({ db, actorA, actorB }) {
     ["displayName", "handle", "mutualContacts", "relationship", "title"],
     "busca pública expôs campo além do DTO permitido",
   );
+  assert.equal("image" in found, false, "imagem OAuth vazou para o DTO de Profile");
+  assert.equal("portrait" in found, false, "retrato reapareceu no DTO de Profile");
 
   const selfRequest = await friendRequest(actorA.page, actorA.handle);
   assert.equal(selfRequest.status, 409, JSON.stringify(selfRequest.body));
