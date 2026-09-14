@@ -10,7 +10,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { ProfilePresenceHeartbeat } from "@/src/components/profile/profile-presence-heartbeat";
 import { CommandShell } from "./command-shell";
 import { resolvePreGameSceneIntent } from "./pre-game-route-intent";
 import type {
@@ -88,7 +87,9 @@ export function PreGameCommandRuntime({ children }: { children: ReactNode }) {
     [pathname, registration, routeIntent],
   );
 
-  const content = intent ? (
+  if (!intent) return <>{children}</>;
+
+  return (
     <SceneStateContext.Provider value={sceneState}>
       <SceneDirectiveContext.Provider value={publishDirective}>
         <CommandShell
@@ -100,15 +101,6 @@ export function PreGameCommandRuntime({ children }: { children: ReactNode }) {
         </CommandShell>
       </SceneDirectiveContext.Provider>
     </SceneStateContext.Provider>
-  ) : (
-    children
-  );
-
-  return (
-    <>
-      <ProfilePresenceHeartbeat />
-      {content}
-    </>
   );
 }
 
