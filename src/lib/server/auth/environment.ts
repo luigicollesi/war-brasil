@@ -1,6 +1,7 @@
 import "server-only";
 
 const AUTH_SECRET_MIN_LENGTH = 32;
+const AUTH_EXAMPLE_SECRET = "troque-por-um-segredo-com-pelo-menos-32-caracteres";
 
 function readOptional(name: string) {
   const value = process.env[name]?.trim();
@@ -14,6 +15,7 @@ export type AuthProviderAvailability = {
 
 export type AuthServerEnvironment = {
   allowedHosts: string[];
+  authDatabaseUrl?: string;
   baseUrl?: string;
   databaseUrl?: string;
   discord: {
@@ -46,7 +48,19 @@ function isValidProductionBaseUrl(value: string | undefined) {
   }
 }
 
+function isObviouslyUnsafeAuthSecret(value: string | undefined) {
+  if (!value || value.length < AUTH_SECRET_MIN_LENGTH) return true;
+
+  return (
+    value === AUTH_EXAMPLE_SECRET ||
+    /SENTINEL_DO_NOT_SHIP/i.test(value) ||
+    /^(?:password|secret|changeme|change-me|replace-me)/i.test(value)
+  );
+}
+
 export function readAuthServerEnvironment(): AuthServerEnvironment {
+  const databaseUrl = readOptional("DATABASE_URL");
+  const authDatabaseUrl = readOptional("AUTH_DATABASE_URL") ?? databaseUrl;
   const googleClientId = readOptional("GOOGLE_CLIENT_ID");
   const googleClientSecret = readOptional("GOOGLE_CLIENT_SECRET");
   const discordClientId = readOptional("DISCORD_CLIENT_ID");
@@ -54,8 +68,9 @@ export function readAuthServerEnvironment(): AuthServerEnvironment {
 
   return {
     allowedHosts: parseAllowedHosts(readOptional("AUTH_ALLOWED_HOSTS")),
+    authDatabaseUrl,
     baseUrl: readOptional("BETTER_AUTH_URL"),
-    databaseUrl: readOptional("DATABASE_URL"),
+    databaseUrl,
     discord: {
       clientId: discordClientId,
       clientSecret: discordClientSecret,
@@ -80,8 +95,11 @@ export function assertAuthRuntimeConfiguration(
   if (!environment.databaseUrl) {
     missing.push("DATABASE_URL");
   }
-  if (!environment.secret || environment.secret.length < AUTH_SECRET_MIN_LENGTH) {
-    missing.push(`BETTER_AUTH_SECRET(>=${AUTH_SECRET_MIN_LENGTH} chars)`);
+  if (!environment.authDatabaseUrl) {
+    missing.push("AUTH_DATABASE_URL ou DATABASE_URL");
+  }
+  if (isObviouslyUnsafeAuthSecret(environment.secret)) {
+    missing.push(`BETTER_AUTH_SECRET(random, >=${AUTH_SECRET_MIN_LENGTH} chars)`);
   }
   if (!isValidProductionBaseUrl(environment.baseUrl)) {
     missing.push("BETTER_AUTH_URL(absolute HTTPS URL)");
