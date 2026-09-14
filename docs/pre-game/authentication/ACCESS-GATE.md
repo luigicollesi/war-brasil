@@ -241,7 +241,6 @@ HOME
    ↓ ENTRAR NO COMANDO
 Better Auth
    ├── Google
-   ├── Apple
    ├── Discord
    └── Email + senha
           ↓
