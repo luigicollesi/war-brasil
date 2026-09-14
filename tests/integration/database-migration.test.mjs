@@ -77,6 +77,7 @@ const managedHistory = [
   "034-profile-v3-foundation.sql",
   "035-social-graph.sql",
   "036-match-history-snapshots.sql",
+  "037-profile-remove-portraits.sql",
 ];
 
 function urlForDatabase(name) {
@@ -317,15 +318,11 @@ async function assertAuthProfileSchema(client) {
   const commanderColumnNames = new Set(
     commanderColumns.rows.map((row) => row.column_name),
   );
-  for (const name of [
-    "bio",
-    "portrait_source",
-    "portrait_ref",
-    "last_seen_at",
-    "equipped_title_id",
-  ]) {
+  for (const name of ["bio", "last_seen_at", "equipped_title_id"]) {
     assert.equal(commanderColumnNames.has(name), true, name);
   }
+  assert.equal(commanderColumnNames.has("portrait_source"), false, "portrait_source removido");
+  assert.equal(commanderColumnNames.has("portrait_ref"), false, "portrait_ref removido");
 
   const profileConstraints = await client.query(`
     SELECT c.conname
@@ -337,12 +334,12 @@ async function assertAuthProfileSchema(client) {
   );
   for (const name of [
     "commanders_bio_not_blank_check",
-    "commanders_portrait_source_check",
-    "commanders_portrait_pair_check",
     "commanders_equipped_title_owned_fkey",
   ]) {
     assert.equal(profileConstraintNames.has(name), true, name);
   }
+  assert.equal(profileConstraintNames.has("commanders_portrait_source_check"), false);
+  assert.equal(profileConstraintNames.has("commanders_portrait_pair_check"), false);
 
   const authUser = await client.query(`
     INSERT INTO auth."user"(name,email,"emailVerified")
@@ -406,16 +403,6 @@ async function assertAuthProfileSchema(client) {
     [userId],
   );
   assert.equal(equipped.rows[0]?.equipped_title_id, "migration-title");
-
-  await assert.rejects(
-    client.query(
-      `UPDATE profile.commanders
-          SET portrait_source='upload', portrait_ref=NULL
-        WHERE user_id=$1`,
-      [userId],
-    ),
-    (error) => error?.code === "23514",
-  );
 
   await client.query(`DELETE FROM auth."user" WHERE id=$1`, [userId]);
   const cascaded = await client.query(
@@ -693,7 +680,7 @@ async function assertLegacyRoomRollout(connectionString) {
 if (!databaseUrl) {
   test("migrations de banco exigem DATABASE_URL", { skip: true }, () => {});
 } else {
-  test("026-036 migram banco v025, preservam catálogos e são idempotentes", async () => {
+  test("026-037 migram banco v025, preservam catálogos e são idempotentes", async () => {
     await withTemporaryDatabase("legacy", async (connectionString) => {
       await applySql(connectionString, "tests/fixtures/db/schema-v025.sql");
       await applySql(
