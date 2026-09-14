@@ -6,6 +6,8 @@
 
 Segue `../quality-standard.md`, `../visual-language.md` e `../traceability.md`.
 
+A integração de Tesouraria, Intendência, wallet, catálogo econômico, inventário e loadout jogável é regida por `../../economy/SPEC.md`. Este documento define apenas como essas capacidades se integram ao Quartel do Comandante; ele MUST NOT duplicar suas regras econômicas.
+
 ## Objetivo
 
 A PROFILE é o **Quartel do Comandante**: identidade pública textual, rede social, presença, atividade de jogo, histórico e personalização não baseada em imagem de perfil, integrados ao fluxo real de autenticação do WAR Brasil.
@@ -52,10 +54,10 @@ O Better Auth/OAuth MAY manter internamente `auth."user".image` ou campo equival
 A V3 MUST preservar a linguagem e as cinco estações funcionais da composição existente:
 
 - **Dossiê do Comandante** — handle, nome público, bio, título, presença e atividade;
-- **Tesouraria** — economia do comandante, permanecendo `unavailable` enquanto não houver fonte real;
+- **Tesouraria** — superfície de apresentação da carteira fornecida pelo domínio econômico;
 - **Rede de Comando** — amizades, solicitações, busca, bloqueios e contatos recentes quando suportados;
 - **Livro de Campanha** — histórico real e paginado derivado de `game.*`;
-- **Intendência** — personalização/cosméticos permitidos, sem simular compra enquanto wallet/store não existirem.
+- **Intendência** — ponto de entrada e apresentação da loja/cosméticos fornecidos pelo domínio econômico.
 
 A **Mesa de Comando** continua sendo o eixo visual e semântico entre as estações e a Foundation. A V3 altera fontes de dados e ações persistentes; não substitui a identidade visual já aprovada da V2.
 
@@ -64,18 +66,20 @@ A **Mesa de Comando** continua sendo o eixo visual e semântico entre as estaç�
 Cada dado MUST possuir uma única fonte de verdade:
 
 - `auth.*` / Better Auth — login, email, providers, sessão e credenciais;
-- `profile.*` — identidade pública textual, bio, título equipado, privacidade e `last_seen_at`;
+- `profile.*` — identidade pública textual, bio, título equipado, privacidade, `last_seen_at` e integração do loadout quando definida pelo domínio econômico;
 - `social.*` — solicitações, amizades e bloqueios;
 - Redis — presença efêmera online/offline;
 - `game.*` — lobby, partida atual e histórico;
-- `catalog.*` — títulos e demais cosméticos permitidos que não representem imagem de perfil.
+- `catalog.commander_titles` + `profile.commander_titles` — títulos cosméticos textuais do comandante;
+- `economy.*`, `inventory.*` e catálogo de cosméticos jogáveis — conforme `../../economy/SPEC.md`.
 
 MUST NOT duplicar estado autoritativo entre domínios. Em particular:
 
 - MUST NOT persistir `is_online` como verdade em PostgreSQL;
 - MUST NOT persistir `in_match` em `profile.commanders`;
 - MUST NOT criar histórico paralelo quando os snapshots persistidos em `game.*` já atenderem o contrato;
-- MUST NOT persistir avatar/retrato em `profile.*`.
+- MUST NOT persistir avatar/retrato em `profile.*`;
+- MUST NOT duplicar saldo, ownership ou regras de catálogo econômico dentro do domínio Profile.
 
 ## Autenticação e autorização
 
@@ -172,6 +176,8 @@ O modelo MUST distinguir:
 O banco SHOULD impedir equipar título não possuído por constraint/FK quando possível.
 
 Títulos MAY ser personalizados visualmente por tipografia/cor/raridade, mas MUST NOT introduzir uma imagem de perfil substituta.
+
+Títulos cosméticos textuais permanecem fora dos quatro slots jogáveis definidos por `../../economy/SPEC.md`.
 
 ## Privacidade
 
@@ -315,15 +321,30 @@ Fixtures normais MUST desaparecer do fluxo real. `evaluation-fixture` permanece 
 
 Fixtures de EVAL também MUST seguir o contrato sem imagem de perfil; não podem conservar propriedades de avatar apenas por conveniência visual.
 
-## Tesouraria e Intendência
+## Boundary com Tesouraria e Intendência
 
-A integração real de wallet/store continua independente desta entrega.
+Profile é responsável somente por:
 
-Enquanto não houver fonte real:
+- preservar Tesouraria e Intendência como estações do Quartel;
+- apresentar os DTOs econômicos recebidos de forma acessível e coerente com a Foundation;
+- fornecer navegação/entrada para a experiência de loja;
+- manter a regra estrutural de não oferecer avatar, retrato ou imagem de perfil como identidade do comandante.
 
-- seção MUST usar `unavailable` ou fixture de EVAL;
-- zero MUST NOT representar ausência de backend;
-- compra MUST NOT ser simulada como persistida.
+Profile MUST NOT redefinir:
+
+- moedas ou saldo inicial;
+- regras de ledger;
+- catálogo de dados/efeitos territoriais;
+- conjuntos;
+- ownership;
+- loadout jogável;
+- status de disponibilidade comercial;
+- preço;
+- aquisição;
+- compra;
+- snapshot cosmético de partida.
+
+Essas regras pertencem exclusivamente a `../../economy/SPEC.md` e são avaliadas por `../../economy/EVAL.md`.
 
 A Intendência MUST NOT oferecer retratos, avatares ou qualquer cosmético cujo papel seja substituir imagem de perfil.
 
@@ -353,6 +374,8 @@ Leitura de presença de roster SHOULD ser feita em lote.
 
 A remoção de imagem de perfil SHOULD reduzir payloads e dependências de renderização; nenhuma nova chamada de imagem remota deve ser necessária para renderizar identidade de comandante.
 
+Performance específica de storefront, previews, assets de dados, inventário e loadout é regida por `../../economy/SPEC.md`.
+
 ## Migrações
 
 Migrations MUST ser forward-only, ordenadas e idempotentes segundo o runner atual.
@@ -369,6 +392,8 @@ A migration de remoção MUST:
 Runtime MAY utilizar conexão pooled do Neon.
 
 Operações que dependam de estado de sessão PostgreSQL SHOULD preferir conexão direta; migrations MUST ser compatíveis com a estratégia adotada pelo runner.
+
+Migrações econômicas, inventário e snapshot cosmético não pertencem ao Definition of Done de Profile; são regidas por `../../economy/SPEC.md`.
 
 ## Referências técnicas
 
@@ -396,5 +421,6 @@ A PROFILE V3 está concluída quando:
 8. privacidade é aplicada no servidor;
 9. perfil público utiliza DTO próprio sem imagem de perfil;
 10. fixtures normais não aparecem em produção;
-11. todos os blockers do `EVAL.md` passam;
-12. requisitos visuais e de acessibilidade da V2 continuam verdes após a recomposição sem avatar.
+11. Tesouraria e Intendência respeitam a boundary de `../../economy/SPEC.md` sem duplicar sua autoridade;
+12. todos os blockers do `EVAL.md` passam;
+13. requisitos visuais e de acessibilidade da V2 continuam verdes após a recomposição sem avatar.
