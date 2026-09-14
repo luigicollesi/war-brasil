@@ -57,7 +57,8 @@ function createEvaluationSnapshot(state: Exclude<ProfileCommandEvaluationState, 
         handle: "eval-command",
         title: "Título sintético de avaliação",
         portrait: { src: null, alt: "Retrato sintético de avaliação" },
-        presence: "online",
+        presence: { state: "online", lastSeenAt: null },
+        activity: { state: "idle", matchMode: null },
       },
     },
     wallet: evaluationSection(LOCAL_PROFILE_COMMAND_SNAPSHOT.wallet),
@@ -171,9 +172,8 @@ function getEvaluationStateFromEnvironment(): ProfileCommandEvaluationState | nu
 /**
  * Stable boundary for the Quartel do Comandante redesign.
  *
- * Today it intentionally returns local-static data so the full interface can be
- * built before authentication, wallet, social, history and storefront services
- * exist. Future adapters should replace this implementation without exposing
+ * Evaluation fixtures remain isolated behind PROFILE_EVAL_MODE. The normal
+ * runtime path will be replaced by authenticated server data without exposing
  * provider-specific payloads to React components.
  */
 export async function getCurrentProfileCommandSnapshot(): Promise<ProfileCommandSnapshot> {
@@ -191,8 +191,8 @@ export async function getCurrentProfileCommandSnapshot(): Promise<ProfileCommand
 }
 
 /**
- * Search is intentionally separate from the main snapshot so the profile never
- * needs to load a global player directory just to render the Rede de Comando.
+ * Legacy fixture search retained only for evaluation helpers. Production search
+ * is served by the authenticated /api/profile/commanders/search boundary.
  */
 export async function searchProfileCommanders(
   query: string,
