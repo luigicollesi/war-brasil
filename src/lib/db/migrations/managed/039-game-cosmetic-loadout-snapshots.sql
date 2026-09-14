@@ -58,8 +58,14 @@ resolved AS (
   SELECT player.id AS player_id,
          defaults.slot,
          COALESCE(equipped.id, defaults.id) AS cosmetic_id,
-         COALESCE(equipped.asset_ref, defaults.asset_ref) AS asset_ref,
-         COALESCE(equipped.effect_key, defaults.effect_key) AS effect_key
+         CASE
+           WHEN equipped.id IS NOT NULL THEN equipped.asset_ref
+           ELSE defaults.asset_ref
+         END AS asset_ref,
+         CASE
+           WHEN equipped.id IS NOT NULL THEN equipped.effect_key
+           ELSE defaults.effect_key
+         END AS effect_key
     FROM game.players player
     CROSS JOIN defaults
     LEFT JOIN profile.cosmetic_loadout loadout
