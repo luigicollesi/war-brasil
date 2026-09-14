@@ -7,8 +7,6 @@ export type SocialFriendRow = {
   user_id: string;
   handle: string;
   display_name: string;
-  portrait_ref: string | null;
-  auth_image: string | null;
   last_seen_at: Date | null;
   title_name: string | null;
   presence_visibility: "public" | "friends" | "private";
@@ -75,8 +73,6 @@ export async function listFriendRows(
        commander.user_id,
        commander.handle,
        commander.display_name,
-       commander.portrait_ref,
-       auth_user.image AS auth_image,
        commander.last_seen_at,
        title.name AS title_name,
        COALESCE(privacy.presence_visibility,'friends') AS presence_visibility,
@@ -85,7 +81,6 @@ export async function listFriendRows(
        active.match_mode AS active_match_mode
        FROM friend_ids ids
        JOIN profile.commanders commander ON commander.user_id=ids.friend_id
-       JOIN auth."user" auth_user ON auth_user.id=commander.user_id
        LEFT JOIN profile.privacy_settings privacy ON privacy.user_id=commander.user_id
        LEFT JOIN catalog.commander_titles title ON title.id=commander.equipped_title_id
        LEFT JOIN LATERAL (
