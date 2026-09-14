@@ -8,6 +8,7 @@ import { useCommandSceneDirective } from "@/src/components/pre-game/foundation";
 import type {
   PublicCommanderProfileSnapshot,
   PublicMatchSummary,
+  PublicPlayerMatchHistory,
 } from "@/src/lib/profile/profile-command-contract";
 import {
   commanderStatusLabel,
@@ -47,6 +48,9 @@ export function PublicCommanderProfileView({
     kind: "error" | "success";
     message: string;
   } | null>(null);
+  const [history, setHistory] = useState<PublicPlayerMatchHistory>(snapshot.history.data);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState<string | null>(null);
 
   useCommandSceneDirective({
     focus: "insignia",
@@ -56,7 +60,6 @@ export function PublicCommanderProfileView({
   });
 
   const identity = snapshot.identity;
-  const history = snapshot.history.data;
 
   async function mutate(
     action: "request" | "remove" | "block",
@@ -129,6 +132,49 @@ export function PublicCommanderProfileView({
     );
   }
 
+  async function loadMoreHistory() {
+    if (
+      historyLoading ||
+      !history.hasMore ||
+      !history.nextCursor ||
+      snapshot.history.availability === "unavailable"
+    ) {
+      return;
+    }
+
+    setHistoryLoading(true);
+    setHistoryError(null);
+    try {
+      const response = await fetch(
+        `/api/profile/commanders/${encodeURIComponent(identity.handle)}/history?cursor=${encodeURIComponent(history.nextCursor)}`,
+        { cache: "no-store" },
+      );
+      const body = (await response.json().catch(() => null)) as
+        | (PublicPlayerMatchHistory & { message?: string })
+        | { message?: string }
+        | null;
+      if (!response.ok || !body || !("matches" in body) || !Array.isArray(body.matches)) {
+        throw new Error(body?.message ?? "Não foi possível carregar outros registros.");
+      }
+
+      setHistory((current) => ({
+        matches: [...current.matches, ...body.matches],
+        hasMore: body.hasMore,
+        nextCursor: body.nextCursor,
+      }));
+    } catch (error) {
+      setHistoryError(
+        error instanceof Error
+          ? error.message
+          : "Não foi possível carregar outros registros.",
+      );
+    } finally {
+      setHistoryLoading(false);
+    }
+  }
+
+  const canBlock = snapshot.relationship !== "self";
+
   return (
     <main className={styles.page} data-scene-fallback="html">
       <header className={styles.header}>
@@ -159,6 +205,8 @@ export function PublicCommanderProfileView({
             <p>{identity.title ?? "Sem título equipado"}</p>
           </div>
 
+          {identity.bio ? <p className={styles.bio}>{identity.bio}</p> : null}
+
           <span className={styles.relationship}>
             {RELATIONSHIP_COPY[snapshot.relationship]}
           </span>
@@ -175,24 +223,24 @@ export function PublicCommanderProfileView({
               </button>
             ) : null}
             {snapshot.relationship === "friend" ? (
-              <>
-                <button
-                  type="button"
-                  className={styles.secondaryAction}
-                  disabled={busy !== null}
-                  onClick={() => void removeFriend()}
-                >
-                  {busy === "remove" ? "Removendo" : "Remover da rede"}
-                </button>
-                <button
-                  type="button"
-                  className={styles.dangerAction}
-                  disabled={busy !== null}
-                  onClick={() => void blockCommander()}
-                >
-                  {busy === "block" ? "Bloqueando" : "Bloquear"}
-                </button>
-              </>
+              <button
+                type="button"
+                className={styles.secondaryAction}
+                disabled={busy !== null}
+                onClick={() => void removeFriend()}
+              >
+                {busy === "remove" ? "Removendo" : "Remover da rede"}
+              </button>
+            ) : null}
+            {canBlock ? (
+              <button
+                type="button"
+                className={styles.dangerAction}
+                disabled={busy !== null}
+                onClick={() => void blockCommander()}
+              >
+                {busy === "block" ? "Bloqueando" : "Bloquear"}
+              </button>
             ) : null}
           </div>
 
@@ -241,7 +289,7 @@ export function PublicCommanderProfileView({
           ) : (
             <ol className={styles.records} aria-label="Operações públicas recentes">
               {history.matches.map((match) => (
-                <li key={match.operationCode} className={styles.record}>
+                <li key={`${match.operationCode}-${match.playedAt}`} className={styles.record}>
                   <span>
                     <small>{formatOperationDate(match.playedAt)}</small>
                     <strong>{match.operationCode}</strong>
@@ -255,6 +303,22 @@ export function PublicCommanderProfileView({
               ))}
             </ol>
           )}
+
+          {snapshot.history.availability !== "unavailable" && history.hasMore ? (
+            <button
+              type="button"
+              className={styles.historyLoadMore}
+              disabled={historyLoading}
+              onClick={() => void loadMoreHistory()}
+            >
+              {historyLoading ? "Consultando arquivo..." : "Carregar mais registros"}
+            </button>
+          ) : null}
+          {historyError ? (
+            <p className={styles.historyError} role="alert">
+              {historyError}
+            </p>
+          ) : null}
         </section>
       </div>
     </main>
