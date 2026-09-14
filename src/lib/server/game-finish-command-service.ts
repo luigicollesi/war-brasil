@@ -77,6 +77,13 @@ async function clearGameArtifacts(client: PoolClient, roomId: string) {
   await client.query("DELETE FROM game.cards WHERE room_id=$1", [roomId]);
   await client.query("DELETE FROM game.player_objectives WHERE room_id=$1", [roomId]);
   await client.query("DELETE FROM game.territories WHERE room_id=$1", [roomId]);
+  await client.query(
+    `DELETE FROM game.player_cosmetic_loadouts snapshot
+      USING game.players player
+      WHERE snapshot.player_id=player.id
+        AND player.room_id=$1`,
+    [roomId],
+  );
 }
 
 async function resetRoomToWaiting(client: PoolClient, roomId: string) {
