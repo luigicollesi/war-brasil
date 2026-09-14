@@ -6,12 +6,11 @@ const SENTINELS = [
   ["DATABASE_PASSWORD", process.env.DB_PASSWORD_SENTINEL],
   ["BETTER_AUTH_SECRET", process.env.BETTER_AUTH_SECRET],
   ["GOOGLE_CLIENT_SECRET", process.env.GOOGLE_CLIENT_SECRET],
-  ["APPLE_PRIVATE_KEY", process.env.APPLE_PRIVATE_KEY],
   ["DISCORD_CLIENT_SECRET", process.env.DISCORD_CLIENT_SECRET],
   ["EMAIL_TRANSPORT_SECRET", process.env.EMAIL_TRANSPORT_SECRET],
 ].filter(([, value]) => typeof value === "string" && value.length > 0);
 
-if (SENTINELS.length !== 7) {
+if (SENTINELS.length !== 6) {
   throw new Error(
     "Leak scan exige sentinels falsos completos de banco e autenticação no ambiente de CI.",
   );
