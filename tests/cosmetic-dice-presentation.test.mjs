@@ -83,8 +83,10 @@ test("asset ausente ou inválido mantém o renderer nativo sem tocar no resultad
   assert.match(texture, /catch \{[\s\S]*loadImage\(nativeSource\)/);
   assert.match(texture, /presentation-only/);
   assert.match(die, /NATIVE_DIE_ASSET = "\/dado-brasil-hq\.svg"/);
+  assert.match(die, /failedAsset === requestedAsset \? NATIVE_DIE_ASSET : requestedAsset/);
   assert.match(die, /onError=\{\(\) => \{/);
-  assert.match(die, /setImageSource\(NATIVE_DIE_ASSET\)/);
+  assert.match(die, /setFailedAsset\(requestedAsset\)/);
+  assert.doesNotMatch(die, /useEffect/);
   assert.match(skins, /neutral: "\/dado-brasil-hq\.svg"/);
   assert.match(skins, /attack: "\/dado-ataque-vermelho-hq\.svg"/);
   assert.match(skins, /defense: "\/dado-defesa-azul-hq\.svg"/);
