@@ -55,6 +55,7 @@ export type CosmeticLoadout = Readonly<Record<CosmeticSlot, CosmeticCatalogItem>
 export type EconomyStorefrontSnapshot = Readonly<{
   wallet: CampaignCreditWallet;
   loadout: CosmeticLoadout;
+  ownedItems: ReadonlyArray<CosmeticCatalogItem>;
   sets: ReadonlyArray<CosmeticSet>;
 }>;
 
