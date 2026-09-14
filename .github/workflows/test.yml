@@ -84,13 +84,16 @@ jobs:
           mkdir -p .e2e-runtime
           npm install --prefix .e2e-runtime --no-save --no-package-lock playwright@1.63.0
           ./.e2e-runtime/node_modules/.bin/playwright install --with-deps chromium
-      - name: Run Auth boundary and Lobby multi-client E2E
+      - name: Run Auth, Profile presence and Lobby multi-client E2E
         run: |
           rm -rf "$AUTH_EMAIL_SINK_DIR"
           mkdir -p "$AUTH_EMAIL_SINK_DIR"
+
+          node realtime/server.mjs > /tmp/war-brasil-realtime-e2e.log 2>&1 &
+          REALTIME_PID=$!
           npm start > /tmp/war-brasil-e2e.log 2>&1 &
           SERVER_PID=$!
-          trap 'kill "$SERVER_PID" 2>/dev/null || true; rm -rf "$AUTH_EMAIL_SINK_DIR"' EXIT
+          trap 'kill "$SERVER_PID" 2>/dev/null || true; kill "$REALTIME_PID" 2>/dev/null || true; rm -rf "$AUTH_EMAIL_SINK_DIR"' EXIT
 
           READY=0
           for attempt in {1..60}; do
@@ -103,6 +106,22 @@ jobs:
 
           if [ "$READY" -ne 1 ]; then
             cat /tmp/war-brasil-e2e.log
+            cat /tmp/war-brasil-realtime-e2e.log
+            exit 1
+          fi
+
+          PRESENCE_READY=0
+          for attempt in {1..60}; do
+            STATUS="$(curl --silent http://127.0.0.1:3001/health || true)"
+            if [[ "$STATUS" == *'"ready":true'* && "$STATUS" == *'"presenceAvailable":true'* ]]; then
+              PRESENCE_READY=1
+              break
+            fi
+            sleep 1
+          done
+
+          if [ "$PRESENCE_READY" -ne 1 ]; then
+            cat /tmp/war-brasil-realtime-e2e.log
             exit 1
           fi
 
@@ -116,6 +135,14 @@ jobs:
           LOBBY_E2E_DATABASE_URL: postgresql://war:DB_SENTINEL_DO_NOT_SHIP_2026@127.0.0.1:5432/war_lobby_e2e
           LOBBY_E2E_BASE_URL: http://localhost:3000
           PLAYWRIGHT_RUNTIME_DIR: .e2e-runtime/node_modules/playwright
+          GAME_REALTIME_ENABLED: "true"
+          GAME_REALTIME_PORT: "3001"
+          GAME_REALTIME_EVENT_SOURCE: postgres
+          GAME_REALTIME_AUTH_MODE: cookie
+          GAME_REALTIME_REDIS_URL: redis://127.0.0.1:6379
+          GAME_REALTIME_INTERNAL_URL: http://127.0.0.1:3001
+          GAME_REALTIME_INTERNAL_TOKEN: PROFILE_PRESENCE_E2E_INTERNAL_SENTINEL_2026
+          PROFILE_PRESENCE_E2E_REQUIRED: "1"
       - name: Upload Lobby EVAL evidence
         if: always()
         uses: actions/upload-artifact@v4
@@ -124,5 +151,6 @@ jobs:
           path: |
             test-results/lobby-eval
             /tmp/war-brasil-e2e.log
+            /tmp/war-brasil-realtime-e2e.log
           if-no-files-found: warn
           retention-days: 14
