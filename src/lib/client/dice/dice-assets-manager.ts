@@ -22,6 +22,7 @@ function geometryKey(options: RoundedDieGeometryOptions) {
 function textureKey(options: DiceTextureOptions) {
   return [
     options.skin,
+    options.assetRef ?? "native",
     options.pipColor ?? DEFAULT_DICE_PIP_COLOR,
     options.resolution ?? DEFAULT_DICE_TEXTURE_RESOLUTION,
   ].join(":");
