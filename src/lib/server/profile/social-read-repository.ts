@@ -26,6 +26,21 @@ export type IncomingFriendRequestReadRow = {
   mutual_contacts: number;
 };
 
+export type OutgoingFriendRequestReadRow = {
+  id: string;
+  recipient_id: string;
+  handle: string;
+  display_name: string;
+  title_name: string | null;
+};
+
+export type BlockedCommanderReadRow = {
+  blocked_id: string;
+  handle: string;
+  display_name: string;
+  title_name: string | null;
+};
+
 export async function countFriends(
   userId: string,
   db: ProfileQueryable = pool,
@@ -96,10 +111,10 @@ export async function listFriendRows(
 
 export async function listIncomingFriendRequestRows(
   userId: string,
-  limit = 10,
+  limit = 20,
   db: ProfileQueryable = pool,
 ) {
-  const boundedLimit = Math.max(1, Math.min(20, Math.trunc(limit)));
+  const boundedLimit = Math.max(1, Math.min(50, Math.trunc(limit)));
   const result = await db.query<IncomingFriendRequestReadRow>(
     `WITH actor_friends AS (
        SELECT CASE
@@ -131,6 +146,58 @@ export async function listIncomingFriendRequestRows(
         AND commander.handle IS NOT NULL
         AND commander.display_name IS NOT NULL
       ORDER BY request.created_at DESC,request.id DESC
+      LIMIT $2`,
+    [userId, boundedLimit],
+  );
+  return result.rows;
+}
+
+export async function listOutgoingFriendRequestRows(
+  userId: string,
+  limit = 20,
+  db: ProfileQueryable = pool,
+) {
+  const boundedLimit = Math.max(1, Math.min(50, Math.trunc(limit)));
+  const result = await db.query<OutgoingFriendRequestReadRow>(
+    `SELECT
+       request.id,
+       request.recipient_id,
+       commander.handle,
+       commander.display_name,
+       title.name AS title_name
+       FROM social.friend_requests request
+       JOIN profile.commanders commander ON commander.user_id=request.recipient_id
+       LEFT JOIN catalog.commander_titles title ON title.id=commander.equipped_title_id
+      WHERE request.requester_id=$1::uuid
+        AND request.state='pending'
+        AND commander.handle IS NOT NULL
+        AND commander.display_name IS NOT NULL
+      ORDER BY request.created_at DESC,request.id DESC
+      LIMIT $2`,
+    [userId, boundedLimit],
+  );
+  return result.rows;
+}
+
+export async function listBlockedCommanderRows(
+  userId: string,
+  limit = 20,
+  db: ProfileQueryable = pool,
+) {
+  const boundedLimit = Math.max(1, Math.min(50, Math.trunc(limit)));
+  const result = await db.query<BlockedCommanderReadRow>(
+    `SELECT
+       block.blocked_id,
+       commander.handle,
+       commander.display_name,
+       title.name AS title_name
+       FROM social.blocks block
+       JOIN profile.commanders commander ON commander.user_id=block.blocked_id
+       LEFT JOIN catalog.commander_titles title ON title.id=commander.equipped_title_id
+      WHERE block.blocker_id=$1::uuid
+        AND commander.handle IS NOT NULL
+        AND commander.display_name IS NOT NULL
+      ORDER BY block.created_at DESC,block.blocked_id
       LIMIT $2`,
     [userId, boundedLimit],
   );
