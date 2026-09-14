@@ -2,6 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { useCommandSceneDirective } from "@/src/components/pre-game/foundation";
 import type {
   PublicCommanderProfileSnapshot,
@@ -39,6 +41,13 @@ export function PublicCommanderProfileView({
 }: {
   snapshot: PublicCommanderProfileSnapshot;
 }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState<"request" | "remove" | "block" | null>(null);
+  const [feedback, setFeedback] = useState<{
+    kind: "error" | "success";
+    message: string;
+  } | null>(null);
+
   useCommandSceneDirective({
     focus: "insignia",
     conflictLevel: 0,
@@ -48,6 +57,77 @@ export function PublicCommanderProfileView({
 
   const identity = snapshot.identity;
   const history = snapshot.history.data;
+
+  async function mutate(
+    action: "request" | "remove" | "block",
+    url: string,
+    init: RequestInit,
+    successMessage: string,
+  ) {
+    if (busy) return;
+    setBusy(action);
+    setFeedback(null);
+    try {
+      const response = await fetch(url, init);
+      const body = (await response.json().catch(() => null)) as
+        | { message?: string }
+        | null;
+      if (!response.ok) {
+        throw new Error(body?.message ?? "A operação social não pôde ser concluída.");
+      }
+      setFeedback({ kind: "success", message: successMessage });
+      if (action === "block") {
+        router.push("/profile");
+      } else {
+        router.refresh();
+      }
+    } catch (error) {
+      setFeedback({
+        kind: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "A operação social não pôde ser concluída.",
+      });
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  function sendFriendRequest() {
+    return mutate(
+      "request",
+      "/api/profile/friends/requests",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ handle: identity.handle }),
+      },
+      `Solicitação enviada para @${identity.handle}.`,
+    );
+  }
+
+  function removeFriend() {
+    return mutate(
+      "remove",
+      `/api/profile/friends/${encodeURIComponent(identity.handle)}`,
+      { method: "DELETE" },
+      `@${identity.handle} removido da Rede de Comando.`,
+    );
+  }
+
+  function blockCommander() {
+    return mutate(
+      "block",
+      "/api/profile/blocks",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ handle: identity.handle }),
+      },
+      `@${identity.handle} bloqueado.`,
+    );
+  }
 
   return (
     <main className={styles.page} data-scene-fallback="html">
@@ -82,6 +162,49 @@ export function PublicCommanderProfileView({
           <span className={styles.relationship}>
             {RELATIONSHIP_COPY[snapshot.relationship]}
           </span>
+
+          <div className={styles.socialActions} aria-label="Ações da Rede de Comando">
+            {snapshot.relationship === "none" ? (
+              <button
+                type="button"
+                className={styles.primaryAction}
+                disabled={busy !== null}
+                onClick={() => void sendFriendRequest()}
+              >
+                {busy === "request" ? "Enviando sinal" : "Conectar comandante"}
+              </button>
+            ) : null}
+            {snapshot.relationship === "friend" ? (
+              <>
+                <button
+                  type="button"
+                  className={styles.secondaryAction}
+                  disabled={busy !== null}
+                  onClick={() => void removeFriend()}
+                >
+                  {busy === "remove" ? "Removendo" : "Remover da rede"}
+                </button>
+                <button
+                  type="button"
+                  className={styles.dangerAction}
+                  disabled={busy !== null}
+                  onClick={() => void blockCommander()}
+                >
+                  {busy === "block" ? "Bloqueando" : "Bloquear"}
+                </button>
+              </>
+            ) : null}
+          </div>
+
+          {feedback ? (
+            <p
+              className={styles.socialFeedback}
+              data-kind={feedback.kind}
+              role={feedback.kind === "error" ? "alert" : "status"}
+            >
+              {feedback.message}
+            </p>
+          ) : null}
 
           <div className={styles.statusGrid}>
             <div>
