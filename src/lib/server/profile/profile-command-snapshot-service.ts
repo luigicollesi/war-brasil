@@ -30,7 +30,14 @@ function emptyHistory(): PlayerMatchHistory {
 }
 
 function emptySocial(): PlayerSocialSnapshot {
-  return { friends: [], incomingRequests: [], recentContacts: [], totalFriends: 0 };
+  return {
+    friends: [],
+    incomingRequests: [],
+    outgoingRequests: [],
+    blockedCommanders: [],
+    recentContacts: [],
+    totalFriends: 0,
+  };
 }
 
 function guestSnapshot(reason: string): ProfileCommandSnapshot {
@@ -87,6 +94,8 @@ export async function getCurrentProfileCommandSnapshot(): Promise<ProfileCommand
   const socialIsEmpty =
     social.totalFriends === 0 &&
     social.incomingRequests.length === 0 &&
+    social.outgoingRequests.length === 0 &&
+    social.blockedCommanders.length === 0 &&
     social.recentContacts.length === 0;
   const socialSection: ProfileCommandSnapshot["social"] = {
     availability: socialIsEmpty ? "empty" : "available",
