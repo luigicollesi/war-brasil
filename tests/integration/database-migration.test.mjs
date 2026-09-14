@@ -14,6 +14,7 @@ const physicalTables = new Map([
       "match_participants",
       "matches",
       "order_rolls",
+      "player_cosmetic_loadouts",
       "player_dice_states",
       "player_objectives",
       "players",
@@ -29,6 +30,9 @@ const physicalTables = new Map([
     [
       "bot_names",
       "commander_titles",
+      "cosmetic_set_items",
+      "cosmetic_sets",
+      "cosmetics",
       "dice_balance_profiles",
       "dice_balance_settings",
       "event_connections",
@@ -40,7 +44,12 @@ const physicalTables = new Map([
     ],
   ],
   ["auth", ["account", "rateLimit", "session", "user", "verification"]],
-  ["profile", ["commander_titles", "commanders", "privacy_settings"]],
+  [
+    "profile",
+    ["commander_titles", "commanders", "cosmetic_loadout", "privacy_settings"],
+  ],
+  ["economy", ["currencies", "ledger_entries", "wallets"]],
+  ["inventory", ["cosmetics"]],
   ["social", ["blocks", "friend_requests", "friendships"]],
   ["ops", ["command_receipts", "pgmigrations"]],
 ]);
@@ -78,6 +87,8 @@ const managedHistory = [
   "035-social-graph.sql",
   "036-match-history-snapshots.sql",
   "037-profile-remove-portraits.sql",
+  "038-economy-cosmetics-foundation.sql",
+  "039-game-cosmetic-loadout-snapshots.sql",
 ];
 
 function urlForDatabase(name) {
@@ -441,7 +452,10 @@ async function assertOrganizedDatabase(connectionString) {
       SELECT n.nspname AS schema_name, c.relname AS relation_name, c.relkind
       FROM pg_class c
       JOIN pg_namespace n ON n.oid = c.relnamespace
-      WHERE n.nspname IN ('game', 'catalog', 'auth', 'profile', 'social', 'ops', 'public')
+      WHERE n.nspname IN (
+        'game', 'catalog', 'auth', 'profile', 'economy', 'inventory',
+        'social', 'ops', 'public'
+      )
         AND c.relkind IN ('r', 'p', 'v')
       ORDER BY n.nspname, c.relname
     `);
@@ -680,7 +694,7 @@ async function assertLegacyRoomRollout(connectionString) {
 if (!databaseUrl) {
   test("migrations de banco exigem DATABASE_URL", { skip: true }, () => {});
 } else {
-  test("026-037 migram banco v025, preservam catálogos e são idempotentes", async () => {
+  test("026-039 migram banco v025, preservam catálogos e são idempotentes", async () => {
     await withTemporaryDatabase("legacy", async (connectionString) => {
       await applySql(connectionString, "tests/fixtures/db/schema-v025.sql");
       await applySql(
