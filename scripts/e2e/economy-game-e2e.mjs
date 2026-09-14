@@ -125,6 +125,15 @@ async function patchMe(actor, code, body) {
   return response.body;
 }
 
+async function addBot(actor, code) {
+  const response = await apiJson(actor.page, `/api/rooms/${code}/bots`, {
+    method: "POST",
+  });
+  assert.equal(response.status, 201, JSON.stringify(response.body));
+  assert.ok(response.body?.botId, "API de bot não retornou botId");
+  return response.body.botId;
+}
+
 async function grantOwnedCosmetic(db, userId, cosmeticId, slot) {
   await db.query(
     `UPDATE catalog.cosmetics
@@ -233,6 +242,154 @@ async function reconnectSnapshot(browser, actor, roomId, forwardedIp) {
     return response.body;
   } finally {
     await context.close();
+  }
+}
+
+async function prepareControlledBattle(db, roomId, attackerPlayerId, defenderPlayerId) {
+  await db.query(
+    `UPDATE game.players
+        SET turn_position=CASE
+          WHEN id=$2::bigint THEN 1
+          WHEN id=$3::bigint THEN 2
+          ELSE turn_position
+        END
+      WHERE room_id=$1::bigint
+        AND id=ANY($4::bigint[])`,
+    [roomId, attackerPlayerId, defenderPlayerId, [attackerPlayerId, defenderPlayerId]],
+  );
+
+  await db.query(
+    `UPDATE game.territories
+        SET owner_player_id=CASE
+              WHEN territory_id=1 THEN $2::bigint
+              ELSE $3::bigint
+            END,
+            troops=CASE
+              WHEN territory_id=1 THEN 6
+              ELSE 3
+            END
+      WHERE room_id=$1::bigint
+        AND territory_id IN (1,2)`,
+    [roomId, attackerPlayerId, defenderPlayerId],
+  );
+
+  await db.query(
+    `INSERT INTO game.round_events
+       (room_id,round_number,event_id,resolved_effects,applied_troop_changes)
+     VALUES($1::bigint,1,0,'[]'::jsonb,'[]'::jsonb)
+     ON CONFLICT (room_id,round_number) DO UPDATE
+       SET event_id=EXCLUDED.event_id,
+           resolved_effects=EXCLUDED.resolved_effects,
+           applied_troop_changes=EXCLUDED.applied_troop_changes`,
+    [roomId],
+  );
+
+  const battle = {
+    attackerTerritoryId: 1,
+    defenderTerritoryId: 2,
+    attackerPlayerId,
+    defenderPlayerId,
+    stage: "show_comparison",
+    stageStartedAt: new Date(Date.now() + 60_000).toISOString(),
+    attackMode: "normal",
+    barrierName: null,
+    attacker: [6, 4, 2],
+    defender: [5, 3, 1],
+    attackerLosses: 1,
+    defenderLosses: 2,
+    conquered: false,
+  };
+
+  await db.query(
+    `UPDATE game.rooms
+        SET status='playing',
+            phase='attack',
+            current_player_id=$2::bigint,
+            round_number=1,
+            jurassic_tunnel_territory_id=NULL,
+            initial_territory_presentation_started_at=NULL,
+            pending_from_territory_id=NULL,
+            pending_to_territory_id=NULL,
+            last_battle=$4::jsonb,
+            automation_due_at=NULL,
+            automation_kind=NULL,
+            automation_claimed_by=NULL,
+            automation_claimed_until=NULL
+      WHERE id=$1::bigint
+        AND current_match_id=$3::bigint`,
+    [roomId, attackerPlayerId, (await db.query(
+      `SELECT current_match_id FROM game.rooms WHERE id=$1::bigint`,
+      [roomId],
+    )).rows[0].current_match_id, JSON.stringify(battle)],
+  );
+}
+
+async function captureBattleEvidence(page, roomId) {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`${BASE_URL}/game/${roomId}`, { waitUntil: "domcontentloaded" });
+
+  const modal = page.locator(".battle-modal");
+  await modal.waitFor({ state: "visible", timeout: 20_000 });
+  const diceGrid = modal.locator(".battle-dice-grid");
+  await diceGrid.waitFor({ state: "visible", timeout: 10_000 });
+
+  const attackSrc = await modal.locator(".battle-side--attack img").first().getAttribute("src");
+  const defenseSrc = await modal.locator(".battle-side--defense img").first().getAttribute("src");
+  assert.ok(
+    attackSrc?.includes("/dados/exercito/ataque.svg"),
+    `dado visual de ataque incorreto: ${attackSrc}`,
+  );
+  assert.ok(
+    defenseSrc?.includes("/dados/lancas/defesa.svg"),
+    `dado visual de defesa incorreto: ${defenseSrc}`,
+  );
+
+  await modal.screenshot({
+    path: path.join(ARTIFACT_DIR, "battle-distinct-skins-1440x900.png"),
+    animations: "disabled",
+  });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await modal.waitFor({ state: "visible", timeout: 10_000 });
+  await modal.screenshot({
+    path: path.join(ARTIFACT_DIR, "battle-distinct-skins-390x844.png"),
+    animations: "disabled",
+  });
+}
+
+async function captureSixColorBoard(page, roomId) {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(`${BASE_URL}/game/${roomId}`, { waitUntil: "domcontentloaded" });
+
+  const board = page.locator('.game-map-surface[data-map-presentation-active="false"]');
+  await board.waitFor({ state: "visible", timeout: 20_000 });
+  await page.waitForFunction(
+    () => document.querySelectorAll(".game-troop-layer text").length >= 42,
+    undefined,
+    { timeout: 20_000 },
+  );
+
+  await page.locator(".game-map-canvas").screenshot({
+    path: path.join(ARTIFACT_DIR, "six-player-colors-default-effect-1440x900.png"),
+    animations: "disabled",
+  });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await board.waitFor({ state: "visible", timeout: 10_000 });
+  await page.locator(".game-map-canvas").screenshot({
+    path: path.join(ARTIFACT_DIR, "six-player-colors-default-effect-390x844.png"),
+    animations: "disabled",
+  });
+}
+
+function assertDefaultBotCosmetics(snapshot) {
+  const bots = snapshot.players.filter((player) => player.isBot);
+  assert.equal(bots.length, 4, "partida de evidência deveria conter quatro bots");
+  for (const bot of bots) {
+    assert.equal(bot.cosmetics.diceAttack.cosmeticId, "dice.attack.default");
+    assert.equal(bot.cosmetics.diceDefense.cosmeticId, "dice.defense.default");
+    assert.equal(bot.cosmetics.diceNeutral.cosmeticId, "dice.neutral.default");
+    assert.equal(bot.cosmetics.territoryEffect.cosmeticId, "territory.effect.default");
   }
 }
 
@@ -362,12 +519,93 @@ try {
       `${JSON.stringify(publicCosmetics(hostReconnect), null, 2)}\n`,
     );
 
+    await prepareControlledBattle(db, state.id, hostPlayerId, guestPlayerId);
+    const battleSnapshot = await fetchSnapshot(host, state.id);
+    assert.equal(battleSnapshot.room.battle?.stage, "show_comparison");
+    assert.equal(
+      battleSnapshot.players.find((player) => player.id === hostPlayerId)?.cosmetics?.diceAttack?.cosmeticId,
+      "dice.attack.exercito",
+    );
+    assert.equal(
+      battleSnapshot.players.find((player) => player.id === guestPlayerId)?.cosmetics?.diceDefense?.cosmeticId,
+      "dice.defense.lancas",
+    );
+    await captureBattleEvidence(host.page, state.id);
+
     console.log(
-      "[economy-game-e2e] ok — multi-client, profile drift e reconnect preservaram snapshot congelado",
+      "[economy-game-e2e] ok — multi-client, profile drift, reconnect e batalha visual preservaram snapshot congelado",
     );
   } finally {
     await host.context.close();
     await guest.context.close();
+  }
+
+  const sixHost = await createActor(browser, "Six Host");
+  const sixGuest = await createActor(browser, "Six Guest");
+  try {
+    const room = await createRoom(sixHost);
+    await joinRoom(sixGuest, room.code);
+    await patchMe(sixHost, room.code, { factionName: "Six Forest", color: "forest" });
+    await patchMe(sixGuest, room.code, { factionName: "Six Ruby", color: "ruby" });
+
+    for (let index = 0; index < 4; index += 1) {
+      await addBot(sixHost, room.code);
+    }
+
+    const waiting = await apiJson(sixHost.page, `/api/rooms/${room.code}`);
+    assert.equal(waiting.status, 200, JSON.stringify(waiting.body));
+    assert.equal(waiting.body?.players?.length, 6, "lobby deveria conter seis jogadores");
+    const waitingColors = new Set(waiting.body.players.map((player) => player.color));
+    assert.deepEqual(
+      [...waitingColors].sort(),
+      ["forest", "ocean", "orange", "ruby", "sun", "violet"],
+      "as seis PlayerColor não foram ocupadas",
+    );
+
+    await patchMe(sixHost, room.code, { isReady: true });
+    await patchMe(sixGuest, room.code, { isReady: true });
+
+    const state = await waitForStartedRoom(db, room.code);
+    assert.ok(state?.id, "sala de seis jogadores iniciada sem id");
+    assert.ok(state?.current_match_id, "sala de seis jogadores sem match");
+
+    const snapshot = await fetchSnapshot(sixHost, state.id);
+    assert.equal(snapshot.players.length, 6, "snapshot deveria conter seis jogadores");
+    assertDefaultBotCosmetics(snapshot);
+    assert.equal(
+      new Set(snapshot.players.map((player) => player.color)).size,
+      6,
+      "snapshot não preservou as seis cores distintas",
+    );
+
+    writeFileSync(
+      path.join(ARTIFACT_DIR, "six-player-public-cosmetics.json"),
+      `${JSON.stringify(
+        snapshot.players.map((player) => ({
+          id: player.id,
+          isBot: player.isBot,
+          color: player.color,
+          cosmetics: player.cosmetics,
+        })),
+        null,
+        2,
+      )}\n`,
+    );
+
+    await db.query(
+      `UPDATE game.rooms
+          SET initial_territory_presentation_started_at=NOW() - INTERVAL '60 seconds'
+        WHERE id=$1::bigint`,
+      [state.id],
+    );
+
+    await captureSixColorBoard(sixHost.page, state.id);
+    console.log(
+      "[economy-game-e2e] ok — 2 humanos + 4 bots preservaram seis PlayerColor e defaults visuais",
+    );
+  } finally {
+    await sixHost.context.close();
+    await sixGuest.context.close();
   }
 } finally {
   await browser.close();
