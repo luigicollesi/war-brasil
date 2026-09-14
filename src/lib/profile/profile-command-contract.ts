@@ -120,6 +120,27 @@ export type PlayerMatchHistory = Readonly<{
   nextCursor: string | null;
 }>;
 
+export type PublicMatchParticipantSummary = Readonly<{
+  handle: string | null;
+  displayName: string;
+  relation: "self" | "opponent";
+}>;
+
+export type PublicMatchSummary = Readonly<{
+  operationCode: string;
+  playedAt: string;
+  result: "victory" | "defeat" | "unknown";
+  mode: "classic" | "custom" | "unknown";
+  durationMinutes: number;
+  participants: ReadonlyArray<PublicMatchParticipantSummary>;
+}>;
+
+export type PublicPlayerMatchHistory = Readonly<{
+  matches: ReadonlyArray<PublicMatchSummary>;
+  hasMore: boolean;
+  nextCursor: string | null;
+}>;
+
 export type StoreItemCategory = "portrait" | "frame" | "title" | "insignia";
 
 export type StoreItemPreview = Readonly<{
@@ -166,7 +187,7 @@ export type PublicCommanderRelationship =
 export type PublicCommanderProfileSnapshot = Readonly<{
   identity: CommanderIdentity;
   relationship: PublicCommanderRelationship;
-  history: ProfileCommandSection<PlayerMatchHistory>;
+  history: ProfileCommandSection<PublicPlayerMatchHistory>;
 }>;
 
 export type ProfileCommandStation =
