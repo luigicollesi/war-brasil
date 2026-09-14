@@ -1,5 +1,7 @@
 import "server-only";
 
+import type { PlayerMatchHistory } from "@/src/lib/profile/profile-command-contract";
+
 export type ProfileVisibility = "public" | "friends" | "private";
 export type FriendRequestPolicy = "everyone" | "friends_of_friends" | "nobody";
 export type CommanderPortraitSource = "auth" | "upload" | "catalog";
@@ -58,7 +60,11 @@ export type OwnCommanderProfileDto = Readonly<{
 
 export type PublicCommanderProfileDto = Readonly<{
   identity: CommanderIdentityDto;
-  relationship: CommanderRelationship;
+  relationship: Exclude<CommanderRelationship, "self" | "blocked">;
+  history: Readonly<{
+    visible: boolean;
+    data: PlayerMatchHistory | null;
+  }>;
 }>;
 
 export type CommanderSearchDto = Readonly<{
