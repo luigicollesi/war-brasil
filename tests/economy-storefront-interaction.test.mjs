@@ -10,6 +10,7 @@ const contract = source("src/lib/economy/economy-contract.ts");
 const service = source("src/lib/server/economy/economy-service.ts");
 const migration = source("src/lib/db/migrations/managed/038-economy-cosmetics-foundation.sql");
 const store = source("src/components/profile/store/economy-storefront.tsx");
+const storePage = source("src/app/profile/store/page.tsx");
 
 test("storefront privado projeta inventário próprio necessário para reequipagem", () => {
   assert.match(contract, /ownedItems: ReadonlyArray<CosmeticCatalogItem>/);
@@ -48,4 +49,11 @@ test("remessa anunciada possui preview interativo leve e sem aquisição", () =>
   // A listagem e a prévia textual não carregam os SVGs multi-megabyte. O asset
   // autoritativo continua no DTO para runtime futuro, mas não é renderizado aqui.
   assert.doesNotMatch(store, /assetRef|previewRef|<img|<Image|\/dados\//);
+});
+
+test("acesso direto à loja não quebra sessão autenticada sem comandante", () => {
+  assert.match(storePage, /if \(!session\) redirect\("\/"\)/);
+  assert.match(storePage, /error instanceof EconomyServiceError/);
+  assert.match(storePage, /error\.code === "ECONOMY_COMMANDER_MISSING"/);
+  assert.match(storePage, /redirect\("\/profile"\)/);
 });
