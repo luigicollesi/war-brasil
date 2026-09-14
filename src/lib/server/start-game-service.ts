@@ -7,6 +7,7 @@ import {
   assignObjectives,
   ObjectiveConfigurationError,
 } from "@/src/lib/objectives/objective-assignment-service";
+import { capturePlayerCosmeticLoadouts } from "@/src/lib/server/game-cosmetic-loadout-service";
 import { initializeDiceBalanceForGame } from "@/src/lib/server/game-dice-balance-service";
 import { RoomError } from "@/src/lib/server/room-error";
 
@@ -139,7 +140,9 @@ export async function startGame(client: PoolClient, roomId: string) {
   const players = await loadPlayers(client, roomId);
 
   // Match creation and all runtime artifacts are part of the caller transaction.
-  // Any failure after this point rolls the complete start back.
+  // Any failure after this point rolls the complete start back. Cosmetics are
+  // frozen first so the running match never needs mutable profile/store state.
+  await capturePlayerCosmeticLoadouts(client, roomId);
   await initializeDiceBalanceForGame(client, roomId);
   await createInitialTerritories(client, roomId, players);
   await createObjectives(client, roomId, players);
