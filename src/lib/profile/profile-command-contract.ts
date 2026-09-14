@@ -55,7 +55,7 @@ export type ProfilePrivacySettings = Readonly<{
   friendRequestPolicy: FriendRequestPolicy;
 }>;
 
-export type CommandCurrencyId = "campaign-credit" | "command-reserve";
+export type CommandCurrencyId = "campaign-credit";
 
 export type CommandCurrencyBalance = Readonly<{
   currency: CommandCurrencyId;
@@ -66,8 +66,7 @@ export type CommandCurrencyBalance = Readonly<{
 }>;
 
 export type PlayerWallet = Readonly<{
-  common: CommandCurrencyBalance;
-  premium: CommandCurrencyBalance;
+  campaignCredit: CommandCurrencyBalance;
 }>;
 
 export type CommanderContact = Readonly<{
@@ -160,7 +159,7 @@ export type PublicPlayerMatchHistory = Readonly<{
   nextCursor: string | null;
 }>;
 
-export type StoreItemCategory = "frame" | "title" | "insignia";
+export type StoreItemCategory = "dice-set";
 
 export type StoreItemPreview = Readonly<{
   slug: string;
@@ -168,10 +167,8 @@ export type StoreItemPreview = Readonly<{
   category: StoreItemCategory;
   artworkSrc: string | null;
   artworkAlt: string;
-  price: Readonly<{
-    currency: CommandCurrencyId;
-    amount: number;
-  }>;
+  status: "announced" | "available";
+  itemCount: number;
 }>;
 
 export type StoreShowcase = Readonly<{
