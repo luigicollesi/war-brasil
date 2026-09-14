@@ -68,7 +68,6 @@ function createEvaluationSnapshot(state: Exclude<ProfileCommandEvaluationState, 
         handle: "eval-command",
         bio: "Biografia sintética usada somente no harness de avaliação.",
         title: "Título sintético de avaliação",
-        portrait: { src: null, alt: "Retrato sintético de avaliação" },
         presence: { state: "online", lastSeenAt: null },
         activity: { state: "idle", matchMode: null },
       },
@@ -187,8 +186,8 @@ function getEvaluationStateFromEnvironment(): ProfileCommandEvaluationState | nu
  * Stable boundary for the Quartel do Comandante redesign.
  *
  * Evaluation fixtures remain isolated behind PROFILE_EVAL_MODE. The normal
- * runtime path will be replaced by authenticated server data without exposing
- * provider-specific payloads to React components.
+ * runtime path uses authenticated server data without exposing provider-specific
+ * payloads to React components.
  */
 export async function getCurrentProfileCommandSnapshot(): Promise<ProfileCommandSnapshot> {
   const evaluationState = getEvaluationStateFromEnvironment();
