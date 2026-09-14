@@ -41,6 +41,31 @@ function event(eventId, resolvedEffects = [], overrides = {}) {
   };
 }
 
+function defaultCosmetics() {
+  return {
+    diceAttack: {
+      cosmeticId: "dice.attack.default",
+      assetRef: null,
+      effectKey: null,
+    },
+    diceDefense: {
+      cosmeticId: "dice.defense.default",
+      assetRef: null,
+      effectKey: null,
+    },
+    diceNeutral: {
+      cosmeticId: "dice.neutral.default",
+      assetRef: null,
+      effectKey: null,
+    },
+    territoryEffect: {
+      cosmeticId: "territory.effect.default",
+      assetRef: null,
+      effectKey: "default",
+    },
+  };
+}
+
 function payload({
   tunnelDestination = null,
   territories = [],
@@ -73,6 +98,8 @@ function payload({
         color: "forest",
         turnPosition: 1,
         isMe: true,
+        isBot: false,
+        cosmetics: defaultCosmetics(),
         rolls: [],
       },
     ],
@@ -153,6 +180,26 @@ test("shareGameSnapshot preserva referência quando topologia e evento não muda
   assert.equal(shared.connections, first.connections);
   assert.equal(shared.room, first.room);
   assert.equal(shared, first);
+});
+
+test("shareGameSnapshot troca jogadores quando snapshot cosmético muda", () => {
+  const baseConnections = [connection(20, 21)];
+  const first = hydrateGameSnapshot(payload(), baseConnections);
+  const changedPayload = payload();
+  changedPayload.players[0].cosmetics.diceAttack = {
+    cosmeticId: "dice.attack.exercito",
+    assetRef: "/dados/exercito/ataque.svg",
+    effectKey: null,
+  };
+  const changed = hydrateGameSnapshot(changedPayload, baseConnections);
+
+  const shared = shareGameSnapshot(first, changed);
+
+  assert.notEqual(shared.players, first.players);
+  assert.equal(
+    shared.players[0].cosmetics.diceAttack.assetRef,
+    "/dados/exercito/ataque.svg",
+  );
 });
 
 test("shareGameSnapshot troca referência quando evento ativo muda", () => {
