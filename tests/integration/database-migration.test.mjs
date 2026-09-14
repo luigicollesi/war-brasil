@@ -11,6 +11,7 @@ const physicalTables = new Map([
     "game",
     [
       "cards",
+      "match_participants",
       "matches",
       "order_rolls",
       "player_dice_states",
@@ -75,6 +76,7 @@ const managedHistory = [
   "033-auth-rate-limit.sql",
   "034-profile-v3-foundation.sql",
   "035-social-graph.sql",
+  "036-match-history-snapshots.sql",
 ];
 
 function urlForDatabase(name) {
@@ -231,6 +233,16 @@ async function assertAdaptiveDiceSchema(client) {
     true,
   );
 
+  const matchColumns = await client.query(`
+    SELECT column_name
+    FROM information_schema.columns
+    WHERE table_schema='game' AND table_name='matches'
+  `);
+  assert.equal(
+    matchColumns.rows.some((row) => row.column_name === "match_mode_snapshot"),
+    true,
+  );
+
   const triggers = await client.query(`
     SELECT tgname
     FROM pg_trigger
@@ -291,6 +303,8 @@ async function assertAuthProfileSchema(client) {
     "commanders_handle_normalized_uq",
     "commanders_display_name_normalized_idx",
     "commander_titles_title_user_idx",
+    "match_participants_user_match_idx",
+    "match_participants_match_result_idx",
   ]) {
     assert.equal(indexNames.has(name), true, name);
   }
@@ -602,6 +616,8 @@ async function assertOrganizedDatabase(connectionString) {
       "friend_requests_requester_pending_idx",
       "friendships_user_b_idx",
       "blocks_blocked_idx",
+      "match_participants_user_match_idx",
+      "match_participants_match_result_idx",
     ]) {
       assert.equal(indexNames.has(name), true, name);
     }
@@ -677,7 +693,7 @@ async function assertLegacyRoomRollout(connectionString) {
 if (!databaseUrl) {
   test("migrations de banco exigem DATABASE_URL", { skip: true }, () => {});
 } else {
-  test("026-035 migram banco v025, preservam catálogos e são idempotentes", async () => {
+  test("026-036 migram banco v025, preservam catálogos e são idempotentes", async () => {
     await withTemporaryDatabase("legacy", async (connectionString) => {
       await applySql(connectionString, "tests/fixtures/db/schema-v025.sql");
       await applySql(
