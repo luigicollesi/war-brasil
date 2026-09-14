@@ -224,7 +224,7 @@ Um conjunto:
 - não representa loadout por si só;
 - MAY agrupar menos ou mais que quatro slots.
 
-Nesta primeira entrega existem dois conjuntos anunciados.
+Nesta primeira entrega existem três conjuntos anunciados.
 
 ### Exército Clássico
 
@@ -249,6 +249,20 @@ Itens:
 - `dice.attack.lancas` → `/dados/lancas/ataque.svg`;
 - `dice.defense.lancas` → `/dados/lancas/defesa.svg`;
 - `dice.neutral.lancas` → `/dados/lancas/neutro.svg`.
+
+Status inicial: `announced`.
+
+Nenhum desses itens é concedido automaticamente aos usuários nesta entrega.
+
+### Viking
+
+ID de conjunto sugerido: `set.viking`
+
+Itens:
+
+- `dice.attack.viking` → `/dados/viking/ataque.svg`;
+- `dice.defense.viking` → `/dados/viking/defesa.svg`;
+- `dice.neutral.viking` → `/dados/viking/neutro.svg`.
 
 Status inicial: `announced`.
 
@@ -352,6 +366,7 @@ A primeira versão da loja MUST apresentar:
 - loadout atual dos quatro slots;
 - conjunto Exército Clássico como nova remessa;
 - conjunto Lanças Medievais como nova remessa;
+- conjunto Viking como nova remessa;
 - itens default como possuídos/equipáveis;
 - itens `announced` como `EM BREVE` ou equivalente inequívoco.
 
@@ -541,7 +556,7 @@ A fundação econômica desta etapa está concluída quando:
 3. nenhuma ação normal consegue ganhar ou gastar moeda;
 4. os quatro defaults são possuídos e equipados;
 5. ownership e loadout são persistentes e separados;
-6. Exército e Lanças existem como conjuntos anunciados, não adquiríveis;
+6. Exército, Lanças e Viking existem como conjuntos anunciados, não adquiríveis;
 7. Intendência/Profile consome fontes reais de wallet/store/inventory;
 8. `/profile/store` oferece a experiência de loja sem compra simulada;
 9. equipagem valida sessão, ownership e slot server-side;
