@@ -19,6 +19,7 @@ export function OrderDiceCinematic({
   value,
   rolledAt,
   color,
+  assetRef,
   onComplete,
 }: {
   roomId: string;
@@ -27,6 +28,7 @@ export function OrderDiceCinematic({
   value: number;
   rolledAt: string;
   color: PlayerColor;
+  assetRef?: string | null;
   onComplete: () => void;
 }) {
   const seed = [
@@ -44,6 +46,7 @@ export function OrderDiceCinematic({
       seed={seed}
       skin="neutral"
       pipColor={playerColorHex(color)}
+      assetRef={assetRef}
       label="ORDEM DE JOGO"
       replayDurationMs={ORDER_DICE_CINEMATIC_REPLAY_MS}
       resultHoldMs={ORDER_DICE_CINEMATIC_RESULT_HOLD_MS}
