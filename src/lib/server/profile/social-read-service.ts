@@ -1,8 +1,10 @@
 import "server-only";
 
 import type {
+  CommanderBlockedContact,
   CommanderContact,
   CommanderFriendRequest,
+  CommanderOutgoingFriendRequest,
   PlayerMatchHistory,
   PlayerSocialSnapshot,
   RecentCommanderContact,
@@ -11,8 +13,10 @@ import { safeProfilePortraitSrc } from "@/src/lib/profile/profile-portrait-polic
 import { getPresenceStates } from "./presence-gateway";
 import {
   countFriends,
+  listBlockedCommanderRows,
   listFriendRows,
   listIncomingFriendRequestRows,
+  listOutgoingFriendRequestRows,
   type SocialFriendRow,
 } from "./social-read-repository";
 
@@ -110,11 +114,14 @@ export async function getPlayerSocialSnapshot(
   userHandle: string,
   history: PlayerMatchHistory,
 ): Promise<PlayerSocialSnapshot> {
-  const [friendRows, requestRows, totalFriends] = await Promise.all([
-    listFriendRows(userId, 20),
-    listIncomingFriendRequestRows(userId, 10),
-    countFriends(userId),
-  ]);
+  const [friendRows, incomingRows, outgoingRows, blockedRows, totalFriends] =
+    await Promise.all([
+      listFriendRows(userId, 50),
+      listIncomingFriendRequestRows(userId, 50),
+      listOutgoingFriendRequestRows(userId, 50),
+      listBlockedCommanderRows(userId, 50),
+      countFriends(userId),
+    ]);
 
   const presence = await getPresenceStates(
     friendRows
@@ -122,17 +129,32 @@ export async function getPlayerSocialSnapshot(
       .map((row) => row.user_id),
   );
   const friends = friendRows.map((row) => friendFrom(row, presence));
-  const incomingRequests: CommanderFriendRequest[] = requestRows.map((row) => ({
+  const incomingRequests: CommanderFriendRequest[] = incomingRows.map((row) => ({
     requestId: row.id,
     handle: row.handle,
     displayName: row.display_name,
     title: row.title_name,
     mutualContacts: row.mutual_contacts,
   }));
+  const outgoingRequests: CommanderOutgoingFriendRequest[] = outgoingRows.map(
+    (row) => ({
+      requestId: row.id,
+      handle: row.handle,
+      displayName: row.display_name,
+      title: row.title_name,
+    }),
+  );
+  const blockedCommanders: CommanderBlockedContact[] = blockedRows.map((row) => ({
+    handle: row.handle,
+    displayName: row.display_name,
+    title: row.title_name,
+  }));
 
   return {
     friends,
     incomingRequests,
+    outgoingRequests,
+    blockedCommanders,
     recentContacts: recentContactsFromHistory(userHandle, history),
     totalFriends,
   };
