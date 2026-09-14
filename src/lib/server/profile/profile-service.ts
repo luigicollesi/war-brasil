@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { PublicPlayerMatchHistory } from "@/src/lib/profile/profile-command-contract";
+import { safeProfilePortraitSrc } from "@/src/lib/profile/profile-portrait-policy";
 import type {
   CommanderIdentityDto,
   CommanderPortraitDto,
@@ -23,21 +24,10 @@ import {
 } from "./profile-repository";
 import { getSocialRelationship } from "./social-repository";
 
-function safePortraitSrc(value: string | null) {
-  if (!value) return null;
-  if (value.startsWith("/") && !value.startsWith("//")) return value;
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" || url.protocol === "http:" ? value : null;
-  } catch {
-    return null;
-  }
-}
-
 function portraitFromRow(row: CommanderProfileRow | CommanderSearchRow): CommanderPortraitDto {
   const displayName = row.display_name?.trim() || row.handle?.trim() || "Comandante";
-  const selected = safePortraitSrc(row.portrait_ref);
-  const authFallback = safePortraitSrc(row.auth_image);
+  const selected = safeProfilePortraitSrc(row.portrait_ref);
+  const authFallback = safeProfilePortraitSrc(row.auth_image);
   return {
     src: selected ?? authFallback,
     alt: `Retrato de ${displayName}`,
