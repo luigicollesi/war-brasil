@@ -55,6 +55,37 @@ test("public history cannot expose the commander's friendship graph", () => {
   );
 });
 
+test("public commander social controls use relationship and public handle only", () => {
+  const publicView = read("src/components/profile/public-commander-profile.tsx");
+
+  assert.match(publicView, /snapshot\.relationship === "none"/);
+  assert.match(publicView, /snapshot\.relationship === "friend"/);
+  assert.match(publicView, /"\/api\/profile\/friends\/requests"/);
+  assert.match(
+    publicView,
+    /`\/api\/profile\/friends\/\$\{encodeURIComponent\(identity\.handle\)\}`/,
+  );
+  assert.match(publicView, /"\/api\/profile\/blocks"/);
+  assert.match(publicView, /JSON\.stringify\(\{ handle: identity\.handle \}\)/);
+  assert.match(publicView, /router\.refresh\(\)/);
+  assert.match(publicView, /router\.push\("\/profile"\)/);
+  assert.doesNotMatch(publicView, /userId/);
+  assert.doesNotMatch(publicView, /session\.user/);
+});
+
+test("pending public relationships remain informative without inventing request capabilities", () => {
+  const publicView = read("src/components/profile/public-commander-profile.tsx");
+  const contract = read("src/lib/profile/profile-command-contract.ts");
+
+  assert.match(publicView, /"outgoing-request": "Solicitação enviada"/);
+  assert.match(publicView, /"incoming-request": "Solicitação recebida"/);
+
+  const publicProfileStart = contract.indexOf("export type PublicCommanderProfileSnapshot");
+  const stationStart = contract.indexOf("export type ProfileCommandStation", publicProfileStart);
+  const publicProfileContract = contract.slice(publicProfileStart, stationStart);
+  assert.doesNotMatch(publicProfileContract, /requestId|userId|email|session|provider/i);
+});
+
 test("dynamic public profiles remain inside the shared profile Foundation scene", () => {
   const routeIntent = read("src/components/pre-game/foundation/pre-game-route-intent.ts");
   const publicView = read("src/components/profile/public-commander-profile.tsx");
