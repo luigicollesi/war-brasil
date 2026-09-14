@@ -237,7 +237,7 @@ export function ProfileNetworkStation({ snapshot }: { snapshot: ProfileCommandSn
                 <span className={styles.searchMonogram} aria-hidden="true">
                   {initialsFrom(request.displayName)}
                 </span>
-                <span>
+                <span className={refinementStyles.networkCopy}>
                   <strong>{request.displayName}</strong>
                   <small>
                     @{request.handle} · {request.mutualContacts} contatos em comum · solicitação pendente
@@ -326,7 +326,7 @@ export function ProfileNetworkStation({ snapshot }: { snapshot: ProfileCommandSn
                   <span className={styles.searchMonogram} aria-hidden="true">
                     {initialsFrom(result.displayName)}
                   </span>
-                  <span>
+                  <span className={refinementStyles.networkCopy}>
                     <strong>{result.displayName}</strong>
                     <small>@{result.handle} · {result.mutualContacts} contatos em comum</small>
                   </span>
