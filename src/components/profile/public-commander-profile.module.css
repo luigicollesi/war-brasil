@@ -109,6 +109,15 @@
   font-size: 0.78rem;
 }
 
+.bio {
+  max-width: 36ch;
+  margin: -4px auto 0;
+  color: rgb(238 232 218 / 58%);
+  font-size: 0.76rem;
+  line-height: 1.5;
+  text-align: center;
+}
+
 .socialActions {
   display: flex;
   justify-content: center;
@@ -209,7 +218,7 @@
 
 .history {
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
   padding: 20px;
   gap: 12px;
 }
@@ -288,6 +297,41 @@
   color: rgb(238 232 218 / 42%);
 }
 
+.historyLoadMore {
+  justify-self: end;
+  min-height: 36px;
+  border: 1px solid rgb(208 170 87 / 26%);
+  padding: 7px 12px;
+  color: var(--command-brass-bright, #d0aa57);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.5rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgb(208 170 87 / 6%);
+  cursor: pointer;
+}
+
+.historyLoadMore:hover,
+.historyLoadMore:focus-visible {
+  border-color: rgb(208 170 87 / 52%);
+  color: var(--command-ivory, #eee8da);
+  outline: none;
+}
+
+.historyLoadMore:disabled {
+  opacity: 0.42;
+  cursor: wait;
+}
+
+.historyError {
+  margin: 0;
+  color: #d68b8b;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.52rem;
+  text-align: right;
+}
+
 .empty {
   display: grid;
   min-height: 100%;
@@ -341,11 +385,18 @@
     font-size: clamp(1.5rem, 8vw, 2.4rem);
   }
 
+  .bio,
   .socialActions,
   .socialFeedback,
   .statusGrid,
   .relationship {
     grid-column: 1 / -1;
+  }
+
+  .bio {
+    max-width: none;
+    margin: 0;
+    text-align: left;
   }
 
   .socialActions {
@@ -369,6 +420,15 @@
 
   .record > :last-child {
     grid-column: 1 / -1;
+  }
+
+  .historyLoadMore {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .historyError {
+    text-align: left;
   }
 }
 
