@@ -1,6 +1,11 @@
 "use client";
 
-import type { ProfileCommandSnapshot } from "@/src/lib/profile/profile-command-contract";
+import { useState } from "react";
+import type {
+  MatchSummary,
+  PlayerMatchHistory,
+  ProfileCommandSnapshot,
+} from "@/src/lib/profile/profile-command-contract";
 import { formatOperationDate, initialsFrom } from "./profile-command-format";
 import styles from "./profile-command-hub.module.css";
 import refinementStyles from "./profile-command-refinements.module.css";
@@ -30,10 +35,41 @@ export function ProfileCampaignStation({
 }: {
   snapshot: ProfileCommandSnapshot;
   selected: string | null;
-  onSelect: (operationCode: string) => void;
+  onSelect: (match: MatchSummary) => void;
 }) {
-  const history = snapshot.history.data;
+  const [history, setHistory] = useState<PlayerMatchHistory>(snapshot.history.data);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreFailed, setLoadMoreFailed] = useState(false);
   const selectedMatch = history.matches.find((match) => match.operationCode === selected) ?? null;
+
+  async function loadMore() {
+    if (!history.hasMore || !history.nextCursor || loadingMore) return;
+    setLoadingMore(true);
+    setLoadMoreFailed(false);
+
+    try {
+      const response = await fetch(
+        `/api/profile/history?cursor=${encodeURIComponent(history.nextCursor)}&limit=20`,
+        { cache: "no-store" },
+      );
+      if (!response.ok) throw new Error("PROFILE_HISTORY_PAGE_FAILED");
+
+      const next = (await response.json()) as PlayerMatchHistory;
+      setHistory((current) => {
+        const known = new Set(current.matches.map((match) => match.operationCode));
+        const appended = next.matches.filter((match) => !known.has(match.operationCode));
+        return {
+          matches: [...current.matches, ...appended],
+          hasMore: next.hasMore,
+          nextCursor: next.nextCursor,
+        };
+      });
+    } catch {
+      setLoadMoreFailed(true);
+    } finally {
+      setLoadingMore(false);
+    }
+  }
 
   if (snapshot.history.availability === "unavailable") {
     return (
@@ -60,7 +96,7 @@ export function ProfileCampaignStation({
           <li key={match.operationCode}>
             <button
               type="button"
-              onClick={() => onSelect(match.operationCode)}
+              onClick={() => onSelect(match)}
               data-selected={selected === match.operationCode ? "true" : "false"}
               aria-pressed={selected === match.operationCode}
             >
@@ -108,7 +144,20 @@ export function ProfileCampaignStation({
       ) : null}
 
       {history.hasMore ? (
-        <p className={styles.moreRecords}>Existem registros adicionais; o carregamento continua progressivo.</p>
+        <button
+          type="button"
+          className={refinementStyles.historyLoadMore}
+          onClick={loadMore}
+          disabled={loadingMore}
+        >
+          {loadingMore ? "Carregando registros" : "Carregar mais registros"}
+        </button>
+      ) : null}
+
+      {loadMoreFailed ? (
+        <p className={refinementStyles.searchStatus} role="status">
+          Não foi possível carregar os registros adicionais. Tente novamente.
+        </p>
       ) : null}
     </div>
   );
