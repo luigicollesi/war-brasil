@@ -126,12 +126,12 @@ export async function listStorefrontSetItems(
   db: EconomyQueryable = pool,
 ): Promise<CosmeticSetItemRow[]> {
   const result = await db.query<CosmeticSetItemRow>(
-    `SELECT set.id AS set_id,
-            set.slug AS set_slug,
-            set.name AS set_name,
-            set.description AS set_description,
-            set.preview_ref AS set_preview_ref,
-            set.status AS set_status,
+    `SELECT cosmetic_set.id AS set_id,
+            cosmetic_set.slug AS set_slug,
+            cosmetic_set.name AS set_name,
+            cosmetic_set.description AS set_description,
+            cosmetic_set.preview_ref AS set_preview_ref,
+            cosmetic_set.status AS set_status,
             membership.position,
             item.id,
             item.slug,
@@ -146,8 +146,8 @@ export async function listStorefrontSetItems(
             item.is_default,
             (owned.cosmetic_id IS NOT NULL) AS owned,
             (loadout.cosmetic_id=item.id) AS equipped
-       FROM catalog.cosmetic_sets set
-       JOIN catalog.cosmetic_set_items membership ON membership.set_id=set.id
+       FROM catalog.cosmetic_sets cosmetic_set
+       JOIN catalog.cosmetic_set_items membership ON membership.set_id=cosmetic_set.id
        JOIN catalog.cosmetics item ON item.id=membership.cosmetic_id
        LEFT JOIN inventory.cosmetics owned
          ON owned.user_id=$1::uuid
@@ -155,9 +155,9 @@ export async function listStorefrontSetItems(
        LEFT JOIN profile.cosmetic_loadout loadout
          ON loadout.user_id=$1::uuid
         AND loadout.slot=item.slot
-      WHERE set.status IN ('announced', 'available')
+      WHERE cosmetic_set.status IN ('announced', 'available')
         AND item.status IN ('announced', 'available')
-      ORDER BY set.name, set.id, membership.position`,
+      ORDER BY cosmetic_set.name, cosmetic_set.id, membership.position`,
     [userId],
   );
   return result.rows;
