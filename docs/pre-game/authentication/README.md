@@ -2,9 +2,9 @@
 
 Documentos desta trilha:
 
-- `SPEC.md` — fluxo funcional, segurança, cookies, quatro métodos de autenticação e fronteira server/client;
+- `SPEC.md` — fluxo funcional, segurança, cookies, três métodos de autenticação e fronteira server/client;
 - `EVAL.md` — gates de autenticação, verificação de email, providers, secrets, modal, abuso e migrations;
-- `PROVIDER-STRATEGY.md` — contrato estrito de launch para Google, Apple, Discord e Email + senha;
+- `PROVIDER-STRATEGY.md` — contrato estrito de launch para Google, Discord e Email + senha;
 - `EMAIL-VERIFICATION-FLOW.md` — ciclo detalhado de cadastro credentials → email → confirmação → login, baseado na UX do Contrapista;
 - `ACCESS-GATE.md` — gate de navegação Next.js + autenticação obrigatória no backend;
 - `ACCESS-GATE-EVAL.md` — testes BLOCKER de redirect, 401/403, sessão inválida, ownership e realtime;
@@ -15,12 +15,11 @@ Documentos desta trilha:
 
 ```text
 Google
-Apple
 Discord
 Email + senha
 ```
 
-Esse conjunto é fechado para a primeira implementação. Nenhum quinto provider deve ser configurado ou mostrado sem atualização explícita dos contratos.
+Esse conjunto é fechado para a primeira implementação. Apple e qualquer outro provider não devem ser configurados ou mostrados sem atualização explícita dos contratos.
 
 A conta War-Brasil é a identidade principal; providers são credenciais vinculadas.
 
@@ -118,7 +117,6 @@ HOME
    ↓ ENTRAR NO COMANDO
 Better Auth
    ├── Google
-   ├── Apple
    ├── Discord
    └── Email + senha
           ↓
