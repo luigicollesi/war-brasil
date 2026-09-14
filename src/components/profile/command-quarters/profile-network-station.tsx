@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type FormEvent, useState } from "react";
 import type {
@@ -21,6 +22,23 @@ function searchActionLabel(result: CommanderSearchResult) {
   if (result.relationship === "incoming-request") return "Recebido";
   if (result.relationship === "blocked") return "Bloqueado";
   return "Conectar";
+}
+
+function CommanderLink({
+  handle,
+  children,
+}: {
+  handle: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Link
+      className={refinementStyles.networkProfileLink}
+      href={`/profile/${encodeURIComponent(handle)}`}
+    >
+      {children}
+    </Link>
+  );
 }
 
 export function ProfileNetworkStation({ snapshot }: { snapshot: ProfileCommandSnapshot }) {
@@ -131,6 +149,15 @@ export function ProfileNetworkStation({ snapshot }: { snapshot: ProfileCommandSn
     );
   }
 
+  async function cancelOutgoingRequest(requestId: string, handle: string) {
+    await mutate(
+      `cancel:${requestId}`,
+      `/api/profile/friends/requests/${requestId}`,
+      { method: "DELETE" },
+      `Sinal para @${handle} cancelado.`,
+    );
+  }
+
   async function removeFriend(handle: string) {
     await mutate(
       `remove:${handle}`,
@@ -140,7 +167,7 @@ export function ProfileNetworkStation({ snapshot }: { snapshot: ProfileCommandSn
     );
   }
 
-  async function blockFriend(handle: string) {
+  async function blockCommander(handle: string) {
     await mutate(
       `block:${handle}`,
       "/api/profile/blocks",
@@ -150,6 +177,15 @@ export function ProfileNetworkStation({ snapshot }: { snapshot: ProfileCommandSn
         body: JSON.stringify({ handle }),
       },
       `@${handle} bloqueado.`,
+    );
+  }
+
+  async function unblockCommander(handle: string) {
+    await mutate(
+      `unblock:${handle}`,
+      `/api/profile/blocks/${encodeURIComponent(handle)}`,
+      { method: "DELETE" },
+      `@${handle} desbloqueado.`,
     );
   }
 
@@ -169,6 +205,12 @@ export function ProfileNetworkStation({ snapshot }: { snapshot: ProfileCommandSn
       </div>
     );
   }
+
+  const managedCount =
+    social.friends.length +
+    social.incomingRequests.length +
+    social.outgoingRequests.length +
+    social.blockedCommanders.length;
 
   return (
     <div className={styles.networkContent}>
@@ -195,10 +237,12 @@ export function ProfileNetworkStation({ snapshot }: { snapshot: ProfileCommandSn
               <span
                 className={styles.presenceDot}
                 data-presence={friend.presence.state}
-                aria-hidden="true"
+                aria-label={`Presença: ${commanderStatusLabel(friend.presence, { state: "idle", matchMode: null })}`}
               />
               <span>
-                <strong>{friend.displayName}</strong>
+                <CommanderLink handle={friend.handle}>
+                  <strong>{friend.displayName}</strong>
+                </CommanderLink>
                 <small>{friend.contextLabel}</small>
               </span>
               <em>{commanderStatusLabel(friend.presence, friend.activity)}</em>
@@ -215,7 +259,7 @@ export function ProfileNetworkStation({ snapshot }: { snapshot: ProfileCommandSn
                   type="button"
                   className={`${refinementStyles.networkAction} ${refinementStyles.networkActionDanger}`}
                   disabled={!mutationsEnabled || mutationKey !== null}
-                  onClick={() => void blockFriend(friend.handle)}
+                  onClick={() => void blockCommander(friend.handle)}
                 >
                   {mutationKey === `block:${friend.handle}` ? "Bloqueando" : "Bloquear"}
                 </button>
@@ -238,7 +282,9 @@ export function ProfileNetworkStation({ snapshot }: { snapshot: ProfileCommandSn
                   {initialsFrom(request.displayName)}
                 </span>
                 <span className={refinementStyles.networkCopy}>
-                  <strong>{request.displayName}</strong>
+                  <CommanderLink handle={request.handle}>
+                    <strong>{request.displayName}</strong>
+                  </CommanderLink>
                   <small>
                     @{request.handle} · {request.mutualContacts} contatos em comum · solicitação pendente
                   </small>
@@ -267,6 +313,138 @@ export function ProfileNetworkStation({ snapshot }: { snapshot: ProfileCommandSn
         </>
       ) : null}
 
+      {managedCount > 0 ? (
+        <details className={refinementStyles.networkManager}>
+          <summary>
+            Gerenciar Rede de Comando
+            <span>{managedCount} registros</span>
+          </summary>
+          <div className={refinementStyles.networkManagerBody}>
+            {social.friends.length > 0 ? (
+              <section>
+                <strong>Aliados · {social.friends.length}</strong>
+                <ul className={refinementStyles.networkManagerList}>
+                  {social.friends.map((friend) => (
+                    <li key={`manager-friend-${friend.handle}`}>
+                      <CommanderLink handle={friend.handle}>
+                        <span>{friend.displayName}</span>
+                        <small>@{friend.handle}</small>
+                      </CommanderLink>
+                      <span className={refinementStyles.networkActions}>
+                        <button
+                          type="button"
+                          className={refinementStyles.networkAction}
+                          disabled={!mutationsEnabled || mutationKey !== null}
+                          onClick={() => void removeFriend(friend.handle)}
+                        >
+                          Remover
+                        </button>
+                        <button
+                          type="button"
+                          className={`${refinementStyles.networkAction} ${refinementStyles.networkActionDanger}`}
+                          disabled={!mutationsEnabled || mutationKey !== null}
+                          onClick={() => void blockCommander(friend.handle)}
+                        >
+                          Bloquear
+                        </button>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+
+            {social.incomingRequests.length > 0 ? (
+              <section>
+                <strong>Recebidos · {social.incomingRequests.length}</strong>
+                <ul className={refinementStyles.networkManagerList}>
+                  {social.incomingRequests.map((request) => (
+                    <li key={`manager-in-${request.requestId}`}>
+                      <CommanderLink handle={request.handle}>
+                        <span>{request.displayName}</span>
+                        <small>@{request.handle}</small>
+                      </CommanderLink>
+                      <span className={refinementStyles.networkActions}>
+                        <button
+                          type="button"
+                          className={refinementStyles.networkActionPrimary}
+                          disabled={!mutationsEnabled || mutationKey !== null}
+                          onClick={() => void resolveRequest(request.requestId, "accept")}
+                        >
+                          Aceitar
+                        </button>
+                        <button
+                          type="button"
+                          className={`${refinementStyles.networkAction} ${refinementStyles.networkActionDanger}`}
+                          disabled={!mutationsEnabled || mutationKey !== null}
+                          onClick={() => void blockCommander(request.handle)}
+                        >
+                          Bloquear
+                        </button>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+
+            {social.outgoingRequests.length > 0 ? (
+              <section>
+                <strong>Enviados · {social.outgoingRequests.length}</strong>
+                <ul className={refinementStyles.networkManagerList}>
+                  {social.outgoingRequests.map((request) => (
+                    <li key={`manager-out-${request.requestId}`}>
+                      <CommanderLink handle={request.handle}>
+                        <span>{request.displayName}</span>
+                        <small>@{request.handle}</small>
+                      </CommanderLink>
+                      <button
+                        type="button"
+                        className={refinementStyles.networkAction}
+                        disabled={!mutationsEnabled || mutationKey !== null}
+                        onClick={() =>
+                          void cancelOutgoingRequest(request.requestId, request.handle)
+                        }
+                      >
+                        {mutationKey === `cancel:${request.requestId}`
+                          ? "Cancelando"
+                          : "Cancelar sinal"}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+
+            {social.blockedCommanders.length > 0 ? (
+              <section>
+                <strong>Bloqueados · {social.blockedCommanders.length}</strong>
+                <ul className={refinementStyles.networkManagerList}>
+                  {social.blockedCommanders.map((blocked) => (
+                    <li key={`manager-block-${blocked.handle}`}>
+                      <span>
+                        <span>{blocked.displayName}</span>
+                        <small>@{blocked.handle}</small>
+                      </span>
+                      <button
+                        type="button"
+                        className={refinementStyles.networkAction}
+                        disabled={!mutationsEnabled || mutationKey !== null}
+                        onClick={() => void unblockCommander(blocked.handle)}
+                      >
+                        {mutationKey === `unblock:${blocked.handle}`
+                          ? "Desbloqueando"
+                          : "Desbloquear"}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ) : null}
+          </div>
+        </details>
+      ) : null}
+
       {social.recentContacts.length > 0 ? (
         <>
           <div className={refinementStyles.sectionLabel}>
@@ -280,7 +458,9 @@ export function ProfileNetworkStation({ snapshot }: { snapshot: ProfileCommandSn
                   {contact.relation === "ally" ? "AL" : "OP"}
                 </span>
                 <span>
-                  <strong>{contact.displayName}</strong>
+                  <CommanderLink handle={contact.handle}>
+                    <strong>{contact.displayName}</strong>
+                  </CommanderLink>
                   <small>{contact.operationCode} · {contact.contextLabel}</small>
                 </span>
               </li>
@@ -327,23 +507,37 @@ export function ProfileNetworkStation({ snapshot }: { snapshot: ProfileCommandSn
                     {initialsFrom(result.displayName)}
                   </span>
                   <span className={refinementStyles.networkCopy}>
-                    <strong>{result.displayName}</strong>
+                    <CommanderLink handle={result.handle}>
+                      <strong>{result.displayName}</strong>
+                    </CommanderLink>
                     <small>@{result.handle} · {result.mutualContacts} contatos em comum</small>
                   </span>
-                  <button
-                    type="button"
-                    className={refinementStyles.networkActionPrimary}
-                    disabled={
-                      !mutationsEnabled ||
-                      mutationKey !== null ||
-                      !actionable
-                    }
-                    onClick={() => void sendRequest(result)}
-                  >
-                    {mutationKey === `request:${result.handle}`
-                      ? "Enviando"
-                      : searchActionLabel(result)}
-                  </button>
+                  <span className={refinementStyles.networkActions}>
+                    <button
+                      type="button"
+                      className={refinementStyles.networkActionPrimary}
+                      disabled={
+                        !mutationsEnabled ||
+                        mutationKey !== null ||
+                        !actionable
+                      }
+                      onClick={() => void sendRequest(result)}
+                    >
+                      {mutationKey === `request:${result.handle}`
+                        ? "Enviando"
+                        : searchActionLabel(result)}
+                    </button>
+                    {result.relationship !== "blocked" ? (
+                      <button
+                        type="button"
+                        className={`${refinementStyles.networkAction} ${refinementStyles.networkActionDanger}`}
+                        disabled={!mutationsEnabled || mutationKey !== null}
+                        onClick={() => void blockCommander(result.handle)}
+                      >
+                        {mutationKey === `block:${result.handle}` ? "Bloqueando" : "Bloquear"}
+                      </button>
+                    ) : null}
+                  </span>
                 </li>
               );
             })}
