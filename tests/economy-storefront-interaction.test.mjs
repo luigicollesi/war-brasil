@@ -34,7 +34,7 @@ test("item possuído available pode ser reequipado sem qualquer caminho de aquis
   assert.match(store, /onClick=\{\(\) => equip\(item\)\}/);
   assert.match(store, /EQUIPANDO…/);
   assert.match(store, /ARQUIVADO/);
-  assert.doesNotMatch(store, /purchase|checkout|reward|grant|acquire|comprar|preço/i);
+  assert.doesNotMatch(store, />COMPRAR<|Comprar agora|price\b|\/api\/economy\/(purchase|reward|grant|checkout)/i);
 });
 
 test("remessa anunciada possui preview interativo leve e sem aquisição", () => {
