@@ -557,7 +557,9 @@ heartbeat.unref();
 async function start() {
   presenceStore.start();
   primarySource?.start();
-  redisSource && eventSourceMode === "dual" && redisSource.start();
+  if (redisSource && eventSourceMode === "dual") {
+    redisSource.start();
+  }
 
   await new Promise((resolve, reject) => {
     server.once("error", reject);
