@@ -14,6 +14,7 @@
     "src/lib/profile/profile-command-contract.ts",
     "src/lib/profile/profile-local-fixture.ts",
     "src/lib/profile/profile-command-data.ts",
+    "src/lib/server/profile/**/*.ts",
     "src/lib/game-rules.ts",
     "src/lib/game-trade-rules.ts",
     "src/lib/game-guide-presentation.ts",
