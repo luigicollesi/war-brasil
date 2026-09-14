@@ -159,6 +159,29 @@ function sameBattle(left: GameBattle | null, right: GameBattle | null) {
   );
 }
 
+function sameCosmeticSelection(
+  left: GamePlayer["cosmetics"]["diceAttack"],
+  right: GamePlayer["cosmetics"]["diceAttack"],
+) {
+  return (
+    left.cosmeticId === right.cosmeticId &&
+    left.assetRef === right.assetRef &&
+    left.effectKey === right.effectKey
+  );
+}
+
+function samePlayerCosmetics(
+  left: GamePlayer["cosmetics"],
+  right: GamePlayer["cosmetics"],
+) {
+  return (
+    sameCosmeticSelection(left.diceAttack, right.diceAttack) &&
+    sameCosmeticSelection(left.diceDefense, right.diceDefense) &&
+    sameCosmeticSelection(left.diceNeutral, right.diceNeutral) &&
+    sameCosmeticSelection(left.territoryEffect, right.territoryEffect)
+  );
+}
+
 function samePlayer(left: GamePlayer, right: GamePlayer) {
   return (
     left.id === right.id &&
@@ -167,6 +190,7 @@ function samePlayer(left: GamePlayer, right: GamePlayer) {
     left.turnPosition === right.turnPosition &&
     left.isMe === right.isMe &&
     left.isBot === right.isBot &&
+    samePlayerCosmetics(left.cosmetics, right.cosmetics) &&
     sameArray(
       left.rolls,
       right.rolls,
