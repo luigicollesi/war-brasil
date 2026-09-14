@@ -138,9 +138,17 @@ async function createHumanSeat(client, roomId, userId, factionName, color) {
     `INSERT INTO game.players(
        room_id,player_session,faction_name,color,user_id,display_name_snapshot,handle_snapshot
      )
-     VALUES($1,$2,$3,$4,$5,$3,lower($3))
+     VALUES($1,$2,$3,$4,$5,$6,$7)
      RETURNING id`,
-    [roomId, randomUUID(), factionName, color, userId],
+    [
+      roomId,
+      randomUUID(),
+      factionName,
+      color,
+      userId,
+      factionName,
+      factionName.toLowerCase(),
+    ],
   );
   return player.rows[0].id;
 }
