@@ -34,7 +34,7 @@ test("rota PROFILE resolve snapshot autenticado em request-time", () => {
   assert.doesNotMatch(page, /searchParams|useSearchParams/);
 });
 
-test("contrato PROFILE separa identidade, economia, social, histórico e loja", () => {
+test("contrato PROFILE separa identidade, economia, social, histórico e loja sem imagem de perfil", () => {
   const contract = source("src/lib/profile/profile-command-contract.ts");
   const fixture = source("src/lib/profile/profile-local-fixture.ts");
 
@@ -45,10 +45,11 @@ test("contrato PROFILE separa identidade, economia, social, histórico e loja", 
   assert.match(contract, /storefront: ProfileCommandSection/);
   assert.match(contract, /"campaign-credit" \| "command-reserve"/);
   assert.match(contract, /title: string \| null/);
-  assert.match(contract, /portrait: CommanderPortrait/);
   assert.match(contract, /presence: CommanderPresence/);
   assert.match(contract, /activity: CommanderActivity/);
   assert.match(fixture, /source: "local-static"/);
+  assert.doesNotMatch(contract, /CommanderPortrait|\bportrait\s*:/i);
+  assert.doesNotMatch(fixture, /\bportrait\s*:/i);
   assert.doesNotMatch(contract, /token|password|secret/i);
 });
 
@@ -84,6 +85,7 @@ test("Rede de Comando cobre amigos, sinais, recentes e busca autenticada sob dem
   assert.match(endpoint, /MAX_QUERY_LENGTH = 64/);
   assert.match(endpoint, /private, no-store/);
   assert.doesNotMatch(endpoint, /searchProfileCommanders|searchLocalCommanders|LOCAL_COMMANDER_DIRECTORY/);
+  assert.doesNotMatch(endpoint, /portrait|image/i);
   assert.doesNotMatch(network, /LOCAL_COMMANDER_DIRECTORY/);
 });
 
@@ -115,6 +117,7 @@ test("Intendência é vitrine e não implementa compra falsa", () => {
   assert.match(quartermaster, /Vitrine local · nenhuma compra é persistida nesta etapa/);
   assert.match(contract, /featuredItems/);
   assert.match(contract, /price:/);
+  assert.doesNotMatch(contract, /StoreItemCategory = [^\n]*portrait/i);
   assert.doesNotMatch(quartermaster, /Comprar agora|Compra concluída|purchaseItem|checkout/i);
 });
 
@@ -174,6 +177,7 @@ test("PROFILE mantém harness de avaliação fora do fluxo normal", () => {
   assert.match(provider, /"empty-social"/);
   assert.match(provider, /"empty-storefront"/);
   assert.match(provider, /"wallet-unavailable"/);
+  assert.doesNotMatch(provider, /portrait|auth_image|session\.user\.image/i);
   assert.doesNotMatch(provider, /window\.|document\.|URLSearchParams/);
   assert.doesNotMatch(page, /profile-command-data|PROFILE_EVAL_STATE|LOCAL_PROFILE_COMMAND_SNAPSHOT/);
 });
