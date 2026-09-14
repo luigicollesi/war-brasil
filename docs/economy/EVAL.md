@@ -26,12 +26,14 @@ Aprovação exige **todos os BLOCKERs verdes**. Nenhuma compra, recompensa ou gr
 | ECO-CAT-01 | catálogo possui os quatro itens default com IDs estáveis e slots corretos | migration/query test |
 | ECO-CAT-02 | catálogo possui Exército com ataque, defesa e neutro corretos | migration/asset contract |
 | ECO-CAT-03 | catálogo possui Lanças com ataque, defesa e neutro corretos | migration/asset contract |
-| ECO-CAT-04 | `set.exercito` agrupa exatamente os três itens esperados nesta entrega | DB test |
-| ECO-CAT-05 | `set.lancas` agrupa exatamente os três itens esperados nesta entrega | DB test |
-| ECO-CAT-06 | Exército e Lanças iniciam como `announced` | DB/storefront test |
-| ECO-CAT-07 | conjunto não cria ownership próprio nem implica ownership de todos os itens | schema/service review |
-| ECO-CAT-08 | ID de cosmético é independente do caminho físico do asset | schema/contract review |
-| ECO-CAT-09 | item `retired` continua resolvível para ownership/snapshot já existente | compatibility test |
+| ECO-CAT-04 | catálogo possui Viking com ataque, defesa e neutro corretos | migration/asset contract |
+| ECO-CAT-05 | `set.exercito` agrupa exatamente os três itens esperados nesta entrega | DB test |
+| ECO-CAT-06 | `set.lancas` agrupa exatamente os três itens esperados nesta entrega | DB test |
+| ECO-CAT-07 | `set.viking` agrupa exatamente os três itens esperados nesta entrega | DB test |
+| ECO-CAT-08 | Exército, Lanças e Viking iniciam como `announced` | DB/storefront test |
+| ECO-CAT-09 | conjunto não cria ownership próprio nem implica ownership de todos os itens | schema/service review |
+| ECO-CAT-10 | ID de cosmético é independente do caminho físico do asset | schema/contract review |
+| ECO-CAT-11 | item `retired` continua resolvível para ownership/snapshot já existente | compatibility test |
 
 ## Gates BLOCKER — inventário
 
@@ -42,8 +44,9 @@ Aprovação exige **todos os BLOCKERs verdes**. Nenhuma compra, recompensa ou gr
 | ECO-INV-03 | ownership é único por usuário/item | constraint/concurrency test |
 | ECO-INV-04 | Exército não é concedido automaticamente | integration |
 | ECO-INV-05 | Lanças não é concedido automaticamente | integration |
-| ECO-INV-06 | browser não consegue conceder item a si próprio | route/security test |
-| ECO-INV-07 | reexecutar inicialização não duplica grants nem altera saldo | idempotency integration |
+| ECO-INV-06 | Viking não é concedido automaticamente | integration |
+| ECO-INV-07 | browser não consegue conceder item a si próprio | route/security test |
+| ECO-INV-08 | reexecutar inicialização não duplica grants nem altera saldo | idempotency integration |
 
 ## Gates BLOCKER — loadout
 
@@ -68,12 +71,13 @@ Aprovação exige **todos os BLOCKERs verdes**. Nenhuma compra, recompensa ou gr
 | ECO-STORE-03 | `/profile/store` é autenticada e utiliza a cena `profile` existente | route/Foundation E2E |
 | ECO-STORE-04 | Exército aparece como nova remessa/anúncio | E2E/DOM |
 | ECO-STORE-05 | Lanças aparece como nova remessa/anúncio | E2E/DOM |
-| ECO-STORE-06 | itens `announced` possuem estado inequívoco `EM BREVE` ou equivalente | interaction review |
-| ECO-STORE-07 | nenhum item sem fluxo de aquisição oferece CTA `COMPRAR` | E2E/DOM negative assertion |
-| ECO-STORE-08 | nenhum clique em preview de item não possuído altera inventário/loadout | interaction/integration |
-| ECO-STORE-09 | nenhum preço é inventado para anúncio sem oferta ativa | DTO/DOM review |
-| ECO-STORE-10 | defaults aparecem como possuídos e podem ser equipados | E2E/integration |
-| ECO-STORE-11 | storefront real não depende da fixture sintética de Profile | source/integration |
+| ECO-STORE-06 | Viking aparece como nova remessa/anúncio | E2E/DOM |
+| ECO-STORE-07 | itens `announced` possuem estado inequívoco `EM BREVE` ou equivalente | interaction review |
+| ECO-STORE-08 | nenhum item sem fluxo de aquisição oferece CTA `COMPRAR` | E2E/DOM negative assertion |
+| ECO-STORE-09 | nenhum clique em preview de item não possuído altera inventário/loadout | interaction/integration |
+| ECO-STORE-10 | nenhum preço é inventado para anúncio sem oferta ativa | DTO/DOM review |
+| ECO-STORE-11 | defaults aparecem como possuídos e podem ser equipados | E2E/integration |
+| ECO-STORE-12 | storefront real não depende da fixture sintética de Profile | source/integration |
 
 ## Gates BLOCKER — dados
 
@@ -172,24 +176,25 @@ Aprovação exige **todos os BLOCKERs verdes**. Nenhuma compra, recompensa ou gr
 - `ECO-S14`: abrir `/profile/store`;
 - `ECO-S15`: visualizar Exército anunciado;
 - `ECO-S16`: visualizar Lanças anunciado;
-- `ECO-S17`: abrir preview detalhada sem adquirir item;
-- `ECO-S18`: confirmar ausência de CTA de compra e preço inventado.
+- `ECO-S17`: visualizar Viking anunciado;
+- `ECO-S18`: abrir preview detalhada sem adquirir item;
+- `ECO-S19`: confirmar ausência de CTA de compra e preço inventado.
 
 ### Partida
 
-- `ECO-S19`: dois jogadores iniciam partida com defaults;
-- `ECO-S20`: jogador com skin de teste autorizada usa ataque personalizado e defesa padrão;
-- `ECO-S21`: atacante e defensor usam skins diferentes simultaneamente;
-- `ECO-S22`: jogador muda loadout no Profile durante partida e partida ativa não muda;
-- `ECO-S23`: jogador reconecta e mantém visual congelado;
-- `ECO-S24`: bot participa usando defaults;
-- `ECO-S25`: fallback 2D mostra a mesma escolha que 3D.
+- `ECO-S20`: dois jogadores iniciam partida com defaults;
+- `ECO-S21`: jogador com skin de teste autorizada usa ataque personalizado e defesa padrão;
+- `ECO-S22`: atacante e defensor usam skins diferentes simultaneamente;
+- `ECO-S23`: jogador muda loadout no Profile durante partida e partida ativa não muda;
+- `ECO-S24`: jogador reconecta e mantém visual congelado;
+- `ECO-S25`: bot participa usando defaults;
+- `ECO-S26`: fallback 2D mostra a mesma escolha que 3D.
 
 ### Território
 
-- `ECO-S26`: cada uma das seis cores com efeito default permanece reconhecível;
-- `ECO-S27`: aplicar efeito de teste não altera seleção/hover;
-- `ECO-S28`: troca de cosmético entre partidas não altera dados autoritativos do território.
+- `ECO-S27`: cada uma das seis cores com efeito default permanece reconhecível;
+- `ECO-S28`: aplicar efeito de teste não altera seleção/hover;
+- `ECO-S29`: troca de cosmético entre partidas não altera dados autoritativos do território.
 
 ## Testes de concorrência obrigatórios
 
@@ -235,11 +240,12 @@ Para cada campo econômico ou cosmético visível registrar:
 Capturar pelo menos:
 
 - Profile/Tesouraria com `◈ 0`;
-- Profile/Intendência com os dois anúncios;
+- Profile/Intendência com os três anúncios;
 - `/profile/store` desktop 1440x900;
 - `/profile/store` mobile 390x844;
 - detalhe de Exército;
 - detalhe de Lanças;
+- detalhe de Viking;
 - loadout com os quatro defaults;
 - batalha com skins distintas de atacante/defensor em harness controlado;
 - território nas seis cores com efeito default.
@@ -250,7 +256,7 @@ Reduced-motion e fallback da Foundation continuam obrigatórios onde aplicáveis
 
 Validar por DevTools ou evidência automatizada:
 
-- nenhum carregamento em lote dos seis SVGs HQ apenas ao abrir a loja;
+- nenhum carregamento em lote dos nove SVGs HQ apenas ao abrir a loja;
 - ausência de N+1 para inventário/loadout;
 - ausência de consulta Profile por território;
 - ausência de consulta Profile por frame/rolagem;
@@ -286,7 +292,7 @@ A entrega econômica só pode ser considerada pronta quando:
 - storefront real substituir a fixture/estado `unavailable` da Intendência;
 - usuários novos e existentes tiverem saldo real `0`;
 - defaults estiverem possuídos/equipados;
-- Exército e Lanças estiverem anunciados e não adquiríveis;
+- Exército, Lanças e Viking estiverem anunciados e não adquiríveis;
 - partida utilizar snapshot cosmético congelado;
 - nenhuma regra competitiva tiver sido alterada;
 - nenhum endpoint de compra/recompensa/grant econômico tiver sido introduzido;
