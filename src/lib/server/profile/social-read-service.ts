@@ -132,6 +132,7 @@ export async function getPlayerSocialSnapshot(
   );
   const friends = friendRows.map((row) => friendFrom(row, presence));
   const incomingRequests: CommanderFriendRequest[] = requestRows.map((row) => ({
+    requestId: row.id,
     handle: row.handle,
     displayName: row.display_name,
     title: row.title_name,
