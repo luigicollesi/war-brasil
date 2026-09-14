@@ -29,7 +29,7 @@ test("exceção do harness exige CI explícito e sink de email controlado", () =
   );
 });
 
-test("validador fail-fast cobre URL HTTPS, banco, secret forte e providers aprovados", () => {
+test("validador fail-fast cobre URL HTTPS, banco, secret forte, email e providers aprovados", () => {
   for (const required of [
     "DATABASE_URL",
     "BETTER_AUTH_SECRET",
@@ -38,6 +38,8 @@ test("validador fail-fast cobre URL HTTPS, banco, secret forte e providers aprov
     "GOOGLE_CLIENT_SECRET",
     "DISCORD_CLIENT_ID",
     "DISCORD_CLIENT_SECRET",
+    "AUTH_EMAIL_FROM",
+    "EMAIL_TRANSPORT_SECRET",
   ]) {
     assert.ok(
       environmentSource.includes(required),
@@ -48,4 +50,6 @@ test("validador fail-fast cobre URL HTTPS, banco, secret forte e providers aprov
   assert.match(environmentSource, /AUTH_SECRET_MIN_LENGTH = 32/);
   assert.match(environmentSource, /url\.protocol === "https:"/);
   assert.match(environmentSource, /!url\.username && !url\.password/);
+  assert.match(environmentSource, /isValidEmailFrom/);
+  assert.match(environmentSource, /isObviouslyUnsafeTransportSecret/);
 });
