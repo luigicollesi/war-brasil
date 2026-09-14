@@ -162,9 +162,16 @@ test("partida congela loadout em game.* e snapshot não lê Profile em runtime",
   assert.match(gameContract, /cosmetics: GamePlayerCosmetics/);
 });
 
-test("waiting usa fallback visual efêmero, mas partida ativa exige snapshot persistido completo", () => {
-  assert.match(gameCosmetics, /player\.room_status === "waiting"/);
-  assert.match(gameCosmetics, /defaultPlayerCosmetics\(\)/);
+test("waiting completa snapshot parcial com defaults efêmeros, mas partida ativa exige persistência completa", () => {
+  assert.match(gameCosmetics, /function waitingPlayerCosmetics/);
+  assert.match(gameCosmetics, /bySlot\.dice_attack[\s\S]*defaults\.diceAttack/);
+  assert.match(gameCosmetics, /bySlot\.dice_defense[\s\S]*defaults\.diceDefense/);
+  assert.match(gameCosmetics, /bySlot\.dice_neutral[\s\S]*defaults\.diceNeutral/);
+  assert.match(gameCosmetics, /bySlot\.territory_effect[\s\S]*defaults\.territoryEffect/);
+  assert.match(
+    gameCosmetics,
+    /player\.room_status === "waiting"[\s\S]*waitingPlayerCosmetics\(playerRows\)/,
+  );
   assert.match(gameCosmetics, /requirePlayerCosmetics\(player\.id, playerRows\)/);
 
   const runtimeReader = gameCosmetics.slice(
@@ -202,8 +209,12 @@ test("store autenticada usa cena Profile sem preço ou CTA de compra", () => {
   assert.doesNotMatch(storeUi, /COMPRAR|Comprar agora|price|checkout\(/i);
 });
 
-test("listagem da loja não referencia nem renderiza os SVGs HQ diretamente", () => {
+test("listagem não hardcode SVGs HQ e detalhe monta somente o asset selecionado", () => {
   assert.doesNotMatch(storeUi, /\/dados\//);
-  assert.doesNotMatch(storeUi, /assetRef|<img|<Image/);
   assert.match(storeUi, />D6</);
+  assert.match(storeUi, /previewOpen/);
+  assert.match(storeUi, /selectedPreviewItem\?\.assetRef/);
+  assert.match(storeUi, /src=\{selectedPreviewItem\.assetRef\}/);
+  assert.match(storeUi, /loading="lazy"/);
+  assert.match(storeUi, /unoptimized/);
 });
