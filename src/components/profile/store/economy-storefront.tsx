@@ -27,6 +27,7 @@ export function EconomyStorefront({
 }) {
   const [storefront, setStorefront] = useState(initialStorefront);
   const [pending, setPending] = useState<string | null>(null);
+  const [previewSetId, setPreviewSetId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
 
   async function equip(item: CosmeticCatalogItem) {
@@ -97,6 +98,57 @@ export function EconomyStorefront({
         </div>
       </section>
 
+      <section className={styles.catalog} aria-labelledby="owned-title">
+        <div className={styles.sectionHeading}>
+          <span>SEU EQUIPAMENTO</span>
+          <h2 id="owned-title">Arsenal possuído</h2>
+        </div>
+        <div className={styles.setGrid}>
+          <article className={styles.setCard} data-status="available">
+            <div className={styles.setVisual} aria-hidden="true">
+              <span>✓</span>
+              <i>{storefront.ownedItems.length}</i>
+            </div>
+            <div className={styles.setCopy}>
+              <div>
+                <small>DISPONÍVEL</small>
+                <h3>Equipamento do comandante</h3>
+              </div>
+              <p>
+                Itens já pertencentes à sua conta. Os quatro padrões permanecem disponíveis para restaurar qualquer slot.
+              </p>
+              <ul>
+                {storefront.ownedItems.map((item) => {
+                  const equipped = storefront.loadout[item.slot].id === item.id;
+                  const canEquip = item.status === "available" && !equipped;
+                  return (
+                    <li key={item.id}>
+                      <span>
+                        <small>{SLOT_LABELS[item.slot]}</small>
+                        <strong>{item.name}</strong>
+                      </span>
+                      {equipped ? (
+                        <em>EQUIPADO</em>
+                      ) : canEquip ? (
+                        <button
+                          type="button"
+                          onClick={() => equip(item)}
+                          disabled={pending !== null}
+                        >
+                          {pending === item.id ? "EQUIPANDO…" : "EQUIPAR"}
+                        </button>
+                      ) : (
+                        <em>{item.status === "retired" ? "ARQUIVADO" : "POSSUÍDO"}</em>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          </article>
+        </div>
+      </section>
+
       <section className={styles.catalog} aria-labelledby="catalog-title">
         <div className={styles.sectionHeading}>
           <span>NOVAS REMESSAS</span>
@@ -104,48 +156,75 @@ export function EconomyStorefront({
         </div>
 
         <div className={styles.setGrid}>
-          {storefront.sets.map((set) => (
-            <article key={set.id} className={styles.setCard} data-status={set.status}>
-              <div className={styles.setVisual} aria-hidden="true">
-                <span>D6</span>
-                <i>{set.items.length}</i>
-              </div>
-              <div className={styles.setCopy}>
-                <div>
-                  <small>{set.status === "announced" ? "EM BREVE" : "DISPONÍVEL"}</small>
-                  <h3>{set.name}</h3>
+          {storefront.sets.map((set) => {
+            const previewOpen = previewSetId === set.id;
+            return (
+              <article key={set.id} className={styles.setCard} data-status={set.status}>
+                <div className={styles.setVisual} aria-hidden="true">
+                  <span>D6</span>
+                  <i>{set.items.length}</i>
                 </div>
-                <p>{set.description}</p>
-                <ul>
-                  {set.items.map((item) => {
-                    const equipped = storefront.loadout[item.slot].id === item.id;
-                    const canEquip = item.owned && item.status === "available" && !equipped;
-                    return (
-                      <li key={item.id}>
+                <div className={styles.setCopy}>
+                  <div>
+                    <small>{set.status === "announced" ? "EM BREVE" : "DISPONÍVEL"}</small>
+                    <h3>{set.name}</h3>
+                  </div>
+                  <p>{set.description}</p>
+                  <ul>
+                    {set.items.map((item) => {
+                      const equipped = storefront.loadout[item.slot].id === item.id;
+                      const canEquip = item.owned && item.status === "available" && !equipped;
+                      return (
+                        <li key={item.id}>
+                          <span>
+                            <small>{SLOT_LABELS[item.slot]}</small>
+                            <strong>{item.name}</strong>
+                          </span>
+                          {equipped ? (
+                            <em>EQUIPADO</em>
+                          ) : canEquip ? (
+                            <button
+                              type="button"
+                              onClick={() => equip(item)}
+                              disabled={pending !== null}
+                            >
+                              {pending === item.id ? "EQUIPANDO…" : "EQUIPAR"}
+                            </button>
+                          ) : (
+                            <em>{item.owned ? "POSSUÍDO" : "EM BREVE"}</em>
+                          )}
+                        </li>
+                      );
+                    })}
+                    <li>
+                      <span>
+                        <small>PRÉVIA</small>
+                        <strong>Inspecionar remessa</strong>
+                      </span>
+                      <button
+                        type="button"
+                        aria-expanded={previewOpen}
+                        onClick={() => setPreviewSetId(previewOpen ? null : set.id)}
+                      >
+                        {previewOpen ? "FECHAR" : "INSPECIONAR"}
+                      </button>
+                    </li>
+                    {previewOpen ? (
+                      <li data-preview-detail>
                         <span>
-                          <small>{SLOT_LABELS[item.slot]}</small>
-                          <strong>{item.name}</strong>
+                          <small>PRÉVIA DETALHADA</small>
+                          <strong>
+                            {set.items.map((item) => `${SLOT_LABELS[item.slot]} · ${item.name}`).join(" / ")}
+                          </strong>
                         </span>
-                        {equipped ? (
-                          <em>EQUIPADO</em>
-                        ) : canEquip ? (
-                          <button
-                            type="button"
-                            onClick={() => equip(item)}
-                            disabled={pending !== null}
-                          >
-                            {pending === item.id ? "EQUIPANDO…" : "EQUIPAR"}
-                          </button>
-                        ) : (
-                          <em>{item.owned ? "POSSUÍDO" : "EM BREVE"}</em>
-                        )}
+                        <em>HQ SOB DEMANDA · SEM AQUISIÇÃO</em>
                       </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            </article>
-          ))}
+                    ) : null}
+                  </ul>
+                </div>
+              </article>
+            );
+          })}
         </div>
       </section>
 
