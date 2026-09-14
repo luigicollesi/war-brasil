@@ -24,6 +24,7 @@ import { gameQuery } from "@/src/lib/game-query";
 import { getBaseTerritoryConnections } from "@/src/lib/game-topology-service";
 import { objectiveDescription } from "@/src/lib/objectives/objective-presentation";
 import { withObjectiveSchemaCompatibility } from "@/src/lib/objectives/objective-schema-compatibility";
+import { loadRoomPlayerCosmetics } from "@/src/lib/server/game-cosmetic-loadout-service";
 import { RoomError } from "@/src/lib/rooms";
 
 type SnapshotRoom = {
@@ -293,6 +294,8 @@ export async function getGameSnapshotQuery(
       throw new RoomError("Você não pertence a esta partida.", 403);
     }
 
+    const cosmeticsByPlayer = await loadRoomPlayerCosmetics(client, room.id);
+
     const territories = (
       await client.query<SnapshotTerritory>(
         `SELECT t.territory_id,t.owner_player_id,p.color,t.troops,t.moved_in_turn,
@@ -512,15 +515,26 @@ export async function getGameSnapshotQuery(
             : null,
         battle,
       },
-      players: players.map((player) => ({
-        id: player.id,
-        factionName: player.faction_name,
-        color: player.color,
-        turnPosition: player.turn_position,
-        isMe: Boolean(player.is_me),
-        isBot: player.is_bot,
-        rolls: byPlayer.get(player.id) ?? [],
-      })),
+      players: players.map((player) => {
+        const cosmetics = cosmeticsByPlayer.get(player.id);
+        if (!cosmetics) {
+          throw new RoomError(
+            `O snapshot cosmético da partida está ausente para o jogador ${player.id}.`,
+            503,
+          );
+        }
+
+        return {
+          id: player.id,
+          factionName: player.faction_name,
+          color: player.color,
+          turnPosition: player.turn_position,
+          isMe: Boolean(player.is_me),
+          isBot: player.is_bot,
+          cosmetics,
+          rolls: byPlayer.get(player.id) ?? [],
+        };
+      }),
       territories: territories.map((territory) => ({
         territoryId: territory.territory_id,
         ownerPlayerId: territory.owner_player_id,
