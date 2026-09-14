@@ -39,17 +39,11 @@ export type CommanderActivity = Readonly<{
   matchMode: "classic" | "custom" | null;
 }>;
 
-export type CommanderPortrait = Readonly<{
-  src: string | null;
-  alt: string;
-}>;
-
 export type CommanderIdentity = Readonly<{
   displayName: string;
   handle: string;
   bio: string | null;
   title: string | null;
-  portrait: CommanderPortrait;
   presence: CommanderPresence;
   activity: CommanderActivity;
 }>;
@@ -80,7 +74,6 @@ export type CommanderContact = Readonly<{
   handle: string;
   displayName: string;
   title: string | null;
-  portrait: CommanderPortrait;
   presence: CommanderPresence;
   activity: CommanderActivity;
   contextLabel: string;
@@ -167,7 +160,7 @@ export type PublicPlayerMatchHistory = Readonly<{
   nextCursor: string | null;
 }>;
 
-export type StoreItemCategory = "portrait" | "frame" | "title" | "insignia";
+export type StoreItemCategory = "frame" | "title" | "insignia";
 
 export type StoreItemPreview = Readonly<{
   slug: string;
@@ -207,7 +200,6 @@ export type CommanderSearchResult = Readonly<{
   handle: string;
   displayName: string;
   title: string | null;
-  portrait: CommanderPortrait;
   relationship: CommanderSearchRelationship;
   mutualContacts: number;
 }>;
