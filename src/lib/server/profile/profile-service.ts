@@ -94,6 +94,14 @@ function publicHistoryFromOwnerHistory(
   };
 }
 
+async function relationshipForRow(actorUserId: string, row: CommanderProfileRow) {
+  const relationship: CommanderRelationship =
+    row.user_id === actorUserId
+      ? "self"
+      : await getSocialRelationship(actorUserId, row.user_id);
+  return relationship;
+}
+
 export async function getOwnCommanderProfile(
   userId: string,
 ): Promise<OwnCommanderProfileDto | null> {
@@ -113,6 +121,27 @@ export async function getOwnCommanderProfile(
   };
 }
 
+export async function getPublicCommanderHistory(
+  actorUserId: string,
+  handle: string,
+  options: Readonly<{ cursor?: string | null; limit?: number }> = {},
+): Promise<Readonly<{ visible: boolean; data: PublicPlayerMatchHistory | null }> | null> {
+  const row = await findCommanderByHandle(handle);
+  if (!row?.handle || !row.display_name) return null;
+
+  const relationship = await relationshipForRow(actorUserId, row);
+  if (relationship === "blocked") return null;
+
+  const visible = visibilityAllows(row.history_visibility, relationship);
+  if (!visible) return { visible: false, data: null };
+
+  const history = await getPlayerMatchHistory(row.user_id, options);
+  return {
+    visible: true,
+    data: publicHistoryFromOwnerHistory(history),
+  };
+}
+
 export async function getPublicCommanderProfile(
   actorUserId: string,
   handle: string,
@@ -122,10 +151,7 @@ export async function getPublicCommanderProfile(
   const identity = identityFromRow(row);
   if (!identity) return null;
 
-  const relationship: CommanderRelationship =
-    row.user_id === actorUserId
-      ? "self"
-      : await getSocialRelationship(actorUserId, row.user_id);
+  const relationship = await relationshipForRow(actorUserId, row);
   if (relationship === "blocked") return null;
 
   const presenceVisible = visibilityAllows(
