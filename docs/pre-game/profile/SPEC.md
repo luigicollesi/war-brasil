@@ -1,190 +1,326 @@
-# SPEC — Perfil / Quartel do Comandante
+# SPEC — PROFILE V3 / Quartel do Comandante
 
-**Rota:** `/profile`  
+**Rota própria:** `/profile`  
+**Rota pública:** `/profile/[handle]`  
 **Cena:** `profile`
 
 Segue `../quality-standard.md`, `../visual-language.md` e `../traceability.md`.
 
-## Fantasia
+## Objetivo
 
-O perfil é o **Quartel do Comandante**: um espaço pessoal militar onde identidade, economia, rede social, memória de partidas e personalização coexistem ao redor de uma Mesa de Comando. A tela MUST parecer uma área viva do jogo, não uma dashboard web com tema militar.
+A PROFILE é o **Quartel do Comandante**: identidade pública, rede social, presença, atividade de jogo, histórico e personalização, integrados ao fluxo real de autenticação do WAR Brasil.
 
-As áreas do produto são tratadas como estações do Quartel:
+A V3 preserva a composição visual da V2 e substitui progressivamente fixtures por fontes persistentes e auditáveis.
 
-- **Dossiê do Comandante** — retrato/ícone, nome, título cosmético e presença;
-- **Tesouraria** — duas moedas de valor distinto;
-- **Rede de Comando** — amigos, solicitações, busca e contatos recentes;
-- **Livro de Campanha** — partidas recentes e acesso progressivo ao histórico;
-- **Intendência** — vitrine de itens cosméticos/personalização;
-- **Mesa de Comando** — eixo visual que reage à estação ativa e conecta a PROFILE à Foundation.
+## Fontes autoritativas
 
-## Princípio de integridade
+Cada dado MUST possuir uma única fonte de verdade:
 
-Todo dado exibido MUST ter origem identificável. Estruturas ainda sem backend MAY usar dados locais temporários somente quando estiverem explicitamente classificados como `local-static` ou `evaluation-fixture` no contrato.
+- `auth.*` / Better Auth — login, email, providers, sessão e credenciais;
+- `profile.*` — identidade pública, retrato selecionado, bio, título equipado, privacidade e `last_seen_at`;
+- `social.*` — solicitações, amizades e bloqueios;
+- Redis — presença efêmera online/offline;
+- `game.*` — lobby, partida atual e histórico;
+- `catalog.*` — títulos e demais cosméticos disponíveis.
 
-A UI MUST NOT transformar ausência de fonte em dado competitivo real. Não inventar como se fossem dados persistidos:
+MUST NOT duplicar estado autoritativo entre domínios. Em particular:
 
-- ranking, patente, nível ou taxa de vitória;
-- saldo remoto;
-- amizade persistida;
-- histórico real do usuário;
-- compra concluída;
-- inventário possuído;
-- disponibilidade comercial remota.
+- MUST NOT persistir `is_online` como verdade em PostgreSQL;
+- MUST NOT persistir `in_match` em `profile.commanders`;
+- MUST NOT criar histórico paralelo enquanto `game.rooms` + `game.players` forem suficientes.
 
-## Hierarquia principal
+## Autenticação e autorização
 
-1. identidade do jogador;
-2. Tesouraria;
-3. estação ativa;
-4. Rede de Comando;
-5. Livro de Campanha;
-6. Intendência;
-7. Mesa de Comando/Foundation como cenário e resposta visual.
+A identidade autenticada MUST ser derivada exclusivamente de `session.user.id`.
 
-A cena nunca pode competir com a legibilidade desses conteúdos.
+Mutações do próprio usuário MUST NOT aceitar `userId` fornecido pelo browser como identidade do ator.
 
-## Dossiê do Comandante
+O `Proxy` MAY realizar proteção otimista de navegação, mas MUST NOT ser a única barreira. Route Handlers, serviços e DAL MUST repetir autenticação/autorização server-side.
 
-MUST reservar espaço para:
+Autorização segue `deny by default`: ausência de regra explícita MUST resultar em negação.
 
-- imagem/retrato/ícone do jogador;
-- fallback textual/monograma quando não houver imagem;
-- nome público;
-- título cosmético opcional;
-- presença (`online`, `in-lobby`, `in-match`, `offline`) quando houver fonte.
+## Identidade do Comandante
 
-Título cosmético MUST permanecer semanticamente separado de patente/rank competitivo.
+`profile.commanders` continua vinculado 1:1 a `auth."user"(id)`.
 
-## Tesouraria
+O perfil MUST comportar:
 
-MUST comportar duas moedas distintas:
+- `handle` público único e case-insensitive;
+- `displayName`;
+- bio curta opcional;
+- retrato/avatar;
+- título cosmético equipado;
+- presença;
+- atividade;
+- `lastSeenAt` quando permitido;
+- timestamps de criação/atualização.
 
-- moeda comum;
-- moeda premium/mais valiosa.
+`auth.user.name` MAY ser usado apenas como sugestão inicial de nome público. Depois do onboarding, `profile.commanders.display_name` é a fonte pública.
 
-As duas moedas MUST ser distinguíveis por pelo menos três sinais: símbolo/forma, label textual e tratamento visual. Cor isolada não é suficiente.
+Nesta versão, o handle SHOULD permanecer imutável depois do onboarding. Mudança futura de handle exige regra própria de aliases/cooldown.
 
-Saldo indisponível MUST aparecer como indisponível; zero só pode ser exibido quando zero for o valor real da fonte.
+## Presença e atividade são conceitos separados
+
+A V3 MUST modelar presença e atividade separadamente.
+
+Presença:
+
+- `online`;
+- `offline`;
+- `unavailable`.
+
+Atividade:
+
+- `idle`;
+- `lobby`;
+- `match`;
+- `unavailable`.
+
+A aplicação MUST poder representar combinações como `online + match` e `offline + match`.
+
+Redis indisponível MUST resultar em `presence=unavailable`, nunca em falso `offline`.
+
+## Presença
+
+A presença atual MUST ser efêmera e baseada em TTL.
+
+O heartbeat MUST:
+
+- exigir sessão autenticada;
+- usar `session.user.id` como chave lógica;
+- renovar TTL por intervalo limitado;
+- não aceitar outro usuário como alvo;
+- não realizar escrita PostgreSQL a cada heartbeat.
+
+`profile.commanders.last_seen_at` MAY ser atualizado de forma throttled para persistir a última presença conhecida.
+
+## Atividade de jogo
+
+A atividade MUST ser derivada do estado real do jogo:
+
+- nenhuma sala ativa → `idle`;
+- sala `waiting`/`order_roll` → `lobby`;
+- sala `playing` → `match`.
+
+A fonte MUST ser `game.players.user_id` + `game.rooms`.
+
+O cliente MUST NOT declarar ou persistir `in-match`/`in-lobby` como verdade.
+
+## Retrato/avatar
+
+A identidade MUST suportar:
+
+- imagem herdada inicialmente de autenticação/OAuth;
+- upload futuro do usuário;
+- retratos de catálogo.
+
+PostgreSQL MUST armazenar somente referência/metadados, não bytes/base64 da imagem.
+
+Upload MUST validar tamanho, tipo real e formato permitido. Filename do cliente MUST NOT definir o caminho final no storage. SVG upload SHOULD permanecer desabilitado na primeira versão.
+
+## Títulos cosméticos
+
+Título é cosmético e MUST permanecer semanticamente separado de rank, patente, nível ou habilidade competitiva.
+
+O modelo MUST distinguir:
+
+- catálogo de títulos;
+- títulos desbloqueados pelo usuário;
+- título atualmente equipado.
+
+O banco SHOULD impedir equipar título não possuído por constraint/FK quando possível.
+
+## Privacidade
+
+A V3 MUST possuir política persistente para:
+
+- presença;
+- atividade;
+- histórico;
+- recebimento de solicitações de amizade.
+
+A projeção de privacidade MUST ocorrer server-side antes de formar DTOs.
+
+A UI MUST NOT receber dados privados para apenas escondê-los visualmente.
 
 ## Rede de Comando
 
-MUST prever:
+MUST suportar:
 
-- lista limitada de amigos;
-- estado de presença;
-- solicitações recebidas quando suportadas;
-- busca de novos jogadores;
-- contatos/jogadores recentes quando suportados;
+- amigos persistentes;
+- solicitações recebidas;
+- solicitações enviadas;
+- busca sob demanda;
+- contatos recentes derivados de partidas quando suportados;
+- remover amizade;
+- bloquear/desbloquear;
 - estados vazio, indisponível e erro.
 
-Busca de jogadores SHOULD ser sob demanda e MUST NOT exigir carregar o diretório inteiro na PROFILE.
+Busca MUST NOT carregar o diretório completo no browser.
 
-Ações futuras (`adicionar`, `aceitar`, `remover`, `bloquear`, `convidar`) MUST passar por uma boundary de serviço; componentes visuais não persistem relações diretamente.
+Amizade é simétrica. Solicitação é direcional.
 
-## Livro de Campanha
+O banco MUST impedir:
 
-A página inicial exibe somente uma janela de partidas recentes. O contrato MUST manter continuação explícita (`hasMore`, cursor ou equivalente) e MUST NOT carregar histórico ilimitado.
+- amizade consigo mesmo;
+- amizade duplicada/invertida;
+- mais de uma solicitação pendente para o mesmo par de usuários, independentemente da direção.
 
-Cada resumo de operação MAY conter, quando houver fonte:
+Aceitar amizade MUST ser transacional e idempotente.
+
+Bloquear MUST impedir novos pedidos entre o par e SHOULD remover amizade/pedidos pendentes na mesma transação.
+
+## Perfil próprio x perfil público
+
+`/profile` representa o próprio comandante autenticado e MAY expor controles de edição e informações privadas do proprietário.
+
+`/profile/[handle]` representa projeção pública de outro comandante e MUST utilizar DTO próprio.
+
+MUST NOT reutilizar DTO privado e apenas esconder campos no cliente.
+
+Perfil público MUST NOT expor:
+
+- email;
+- `auth.user.id`;
+- session token;
+- provider/account IDs;
+- IP/user-agent;
+- player_session;
+- payloads internos de autorização.
+
+## Busca de comandantes
+
+Busca MUST ser sob demanda, autenticada e limitada.
+
+Baseline:
+
+- mínimo de 2 caracteres;
+- máximo de 64 caracteres;
+- máximo de 8 resultados por chamada.
+
+Resultado público SHOULD conter somente:
+
+- handle;
+- display name;
+- retrato permitido;
+- título permitido;
+- relação social necessária à UI.
+
+## Histórico / Livro de Campanha
+
+A fonte inicial MUST ser `game.rooms` + `game.players`.
+
+A listagem MUST:
+
+- ser limitada;
+- usar cursor/keyset pagination;
+- possuir `hasMore` e `nextCursor`;
+- evitar histórico ilimitado e OFFSET profundo.
+
+Cada resumo MAY conter:
 
 - código/nome da operação;
 - data;
 - resultado;
 - modo;
 - duração;
-- participantes resumidos.
+- participantes resumidos;
+- relação social com participantes.
 
-Detalhes extensos pertencem ao Dossiê da Operação, não à lista principal.
+Snapshots históricos de nome/handle em `game.players` MUST ser preservados para que partidas antigas não mudem quando o usuário editar seu perfil.
 
-## Intendência
+## DAL e DTO
 
-A PROFILE contém uma **vitrine**, não a loja completa.
+A V3 MUST possuir boundary server-only entre UI/API e armazenamento.
 
-MUST prever itens de personalização como:
+Fluxo esperado:
 
-- retratos/ícones;
-- molduras;
-- títulos;
-- insígnias;
-- coleções futuras.
+`Page/Route Handler -> Service -> authorization/privacy -> Repository -> PostgreSQL/Redis -> DTO`.
 
-Cada item deve identificar preço e moeda quando houver fonte. Nesta etapa, nenhuma ação pode simular compra persistida. Se checkout/inventário não existirem, usar ação neutra como `Ver item`.
+React components MUST NOT consultar SQL diretamente.
 
-## Mesa de Comando e Foundation
+Route Handlers MUST NOT retornar `SELECT *` de tabelas internas.
 
-A PROFILE consome somente a API pública semântica da Foundation. MUST NOT importar `three`, `@react-three/fiber`, `Canvas`, câmera ou renderer.
+A página Server Component `/profile` SHOULD chamar o serviço diretamente; MUST NOT fazer fetch HTTP para a própria API apenas para montar o snapshot inicial.
 
-A estação ativa MAY alterar somente intenção semântica, como `focus`, `territoryExplode` e `orbitalAlignment`.
+## ProfileCommandSnapshot
 
-A Mesa de Comando em HTML/SVG MUST permanecer funcional e legível mesmo quando WebGL estiver indisponível.
+A UI continuará consumindo o contrato V2/V3, não payloads de provider.
 
-## Desktop
+Cada seção MUST manter `availability` e `source` auditáveis.
 
-Alvo principal: `1440x900`.
+Ausência de fonte MUST ser `unavailable`, nunca convertida para:
 
-A composição SHOULD caber em `100dvh` sem exigir scroll global para o uso principal. Conteúdo volumoso deve rolar dentro da estação ativa.
+- `offline`;
+- `0`;
+- lista vazia;
+- nenhum histórico;
+- nenhum amigo.
 
-O layout desktop SHOULD ser assimétrico e espacial; MUST NOT degenerar em grade uniforme de cards KPI.
+Fixtures normais MUST desaparecer do fluxo real. `evaluation-fixture` permanece permitido apenas em EVAL.
 
-## Mobile
+## Tesouraria e Intendência
 
-Alvo principal: `390x844` com touch.
+A integração real de wallet/store continua independente desta entrega.
 
-No mobile, o Quartel torna-se **Terminal de Campo**:
+Enquanto não houver fonte real:
 
-- identidade e carteira permanecem imediatamente legíveis;
-- somente uma estação principal fica expandida por vez;
-- navegação entre sistemas usa controles touch claros;
-- nenhuma função depende de hover ou perspectiva;
-- scroll interno/global deve ser previsível e sem overflow horizontal.
+- seção MUST usar `unavailable` ou fixture de EVAL;
+- zero MUST NOT representar ausência de backend;
+- compra MUST NOT ser simulada como persistida.
 
-## Estados mínimos
+## Foundation / visual
 
-- `guest`;
-- `loading`;
-- `loaded`;
-- `partial-data`;
-- `empty-history`;
-- `empty-social`;
-- `error`;
-- `reduced-motion`;
-- `scene-fallback`.
+Todos os requisitos visuais da PROFILE V2 permanecem:
 
-## Privacidade
+- Quartel militar espacial e assimétrico;
+- desktop 1440x900 sem scroll global obrigatório para uso principal;
+- mobile 390x844 como Terminal de Campo;
+- reduced-motion;
+- fallback WebGL;
+- Foundation acessada somente pela API pública semântica;
+- PROFILE MUST NOT importar Three/R3F/Canvas/câmera.
 
-MUST NOT expor:
+## Performance
 
-- IDs internos sem função pública;
-- tokens/códigos de autenticação;
-- payload bruto de backend;
-- dados privados de outros jogadores;
-- presença ou histórico não destinados ao perfil público.
+MUST evitar N+1 de presença/social.
 
-## Acessibilidade
+Leitura de presença de roster SHOULD ser feita em lote.
 
-- nome, título, moedas, presença e preços possuem equivalente textual;
-- moedas não dependem apenas de cor;
-- foco é visível;
-- controles touch têm área adequada;
-- reduced-motion preserva mudança de contexto sem motion ornamental;
-- objetos decorativos ficam fora da árvore acessível;
-- fallback 2D mantém todas as estações operáveis.
+Índices adicionais MUST ser justificados por padrões de consulta e, para histórico, preferencialmente por `EXPLAIN (ANALYZE, BUFFERS)` com dataset representativo.
 
-## Não fazer
+## Migrações
 
-MUST NOT:
+Migrations MUST ser forward-only, ordenadas e idempotentes segundo o runner atual.
 
-- usar tabs genéricas como linguagem visual principal no desktop;
-- transformar todas as estações em cards iguais;
-- duplicar renderer/câmera da Foundation;
-- carregar todos os usuários para busca social;
-- carregar histórico ilimitado;
-- simular compra concluída;
-- usar saldo fictício indistinguível de saldo real;
-- criar autenticação, banco social ou checkout como efeito colateral do redesign;
-- bloquear a PROFILE se WebGL falhar.
+Runtime MAY utilizar conexão pooled do Neon.
+
+Operações que dependam de estado de sessão PostgreSQL SHOULD preferir conexão direta; migrations MUST ser compatíveis com a estratégia adotada pelo runner.
+
+## Referências técnicas
+
+- Next.js Authentication: https://nextjs.org/docs/app/guides/authentication
+- Better Auth Database: https://better-auth.com/docs/concepts/database
+- Better Auth Session Management: https://better-auth.com/docs/concepts/session-management
+- PostgreSQL Constraints: https://www.postgresql.org/docs/current/ddl-constraints.html
+- PostgreSQL Expression Indexes: https://www.postgresql.org/docs/current/indexes-expressional.html
+- PostgreSQL Partial Indexes: https://www.postgresql.org/docs/current/indexes-partial.html
+- Redis EXPIRE: https://redis.io/docs/latest/commands/expire/
+- OWASP Authorization: https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html
+- OWASP IDOR: https://cheatsheetseries.owasp.org/cheatsheets/Insecure_Direct_Object_Reference_Prevention_Cheat_Sheet.html
+- OWASP File Upload: https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html
 
 ## Definition of Done
 
-A PROFILE representa um Quartel pessoal coerente em desktop e mobile, contém Dossiê, Tesouraria, Rede de Comando, Livro de Campanha e Intendência, usa somente contratos de dados auditáveis, permanece funcional sem WebGL e passa `EVAL.md` integralmente.
+A PROFILE V3 está concluída quando:
+
+1. autenticação real alimenta o perfil;
+2. identidade pública está persistida em `profile.*`;
+3. social real está persistido em `social.*`;
+4. presença efêmera é derivada de Redis e possui fallback `unavailable`;
+5. atividade e histórico vêm de `game.*`;
+6. privacidade é aplicada no servidor;
+7. perfil público utiliza DTO próprio;
+8. fixtures normais não aparecem em produção;
+9. todos os blockers do `EVAL.md` passam;
+10. requisitos visuais e de acessibilidade da V2 continuam verdes.
