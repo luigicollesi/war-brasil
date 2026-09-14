@@ -36,7 +36,6 @@ export async function GET(request: Request) {
     handle: commander.handle,
     displayName: commander.displayName,
     title: commander.title?.name ?? null,
-    portrait: commander.portrait,
     relationship: commander.relationship,
     mutualContacts: commander.mutualContacts,
   }));
