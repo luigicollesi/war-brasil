@@ -37,6 +37,21 @@ function loadImage(src: string) {
   return promise;
 }
 
+async function loadDiceSourceImage(skin: DiceSkin, assetRef?: string | null) {
+  const nativeSource = DICE_SKIN_SOURCES[skin];
+  if (!assetRef || assetRef === nativeSource) {
+    return { image: await loadImage(nativeSource), source: nativeSource };
+  }
+
+  try {
+    return { image: await loadImage(assetRef), source: assetRef };
+  } catch {
+    // A cosmetic asset is presentation-only. Falling back to the canonical skin
+    // must never cancel or change an already-authoritative dice result.
+    return { image: await loadImage(nativeSource), source: nativeSource };
+  }
+}
+
 function createCanvas(resolution: number) {
   if (typeof document === "undefined") {
     throw new Error("Canvas de dado só pode ser criado no navegador.");
@@ -91,8 +106,7 @@ export async function createDiceFaceTexture({
   resolution?: number;
   assetRef?: string | null;
 }): Promise<Texture> {
-  const source = assetRef ?? DICE_SKIN_SOURCES[skin];
-  const image = await loadImage(source);
+  const { image, source } = await loadDiceSourceImage(skin, assetRef);
   const canvas = createCanvas(resolution);
   const context = canvas.getContext("2d", { alpha: true });
 
@@ -110,7 +124,7 @@ export async function createDiceFaceTexture({
   texture.minFilter = LinearMipmapLinearFilter;
   texture.generateMipmaps = true;
   texture.needsUpdate = true;
-  texture.name = `war-brasil-die-${skin}-${value}:${assetRef ?? "native"}`;
+  texture.name = `war-brasil-die-${skin}-${value}:${source}`;
 
   return texture;
 }
