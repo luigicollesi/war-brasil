@@ -15,6 +15,8 @@ export type TerritorySurfacePalette = {
   edgeStrong: string;
 };
 
+export const DEFAULT_TERRITORY_EFFECT_KEY = "default";
+
 const TERRITORY_MATERIALS: Record<PlayerColor, TerritoryMaterial> = {
   forest: {
     playerColor: "forest",
@@ -109,8 +111,33 @@ const NEUTRAL_TERRITORY_MATERIAL: TerritoryMaterial = {
   rim: "#3f4744",
 };
 
-export function territoryMaterial(color: PlayerColor): TerritoryMaterial {
-  return TERRITORY_MATERIALS[color];
+type TerritoryEffectResolver = (
+  base: TerritoryMaterial,
+) => TerritoryMaterial;
+
+// Economy v1 intentionally exposes only the default territorial finish. Keeping
+// the resolver registry here means future effects stay a material concern and do
+// not require new territory state, fetches, hitboxes or React components.
+const TERRITORY_EFFECT_RESOLVERS: Readonly<Record<string, TerritoryEffectResolver>> = {
+  [DEFAULT_TERRITORY_EFFECT_KEY]: (base) => base,
+};
+
+export function normalizeTerritoryEffectKey(
+  effectKey: string | null | undefined,
+) {
+  const normalized = effectKey?.trim();
+  return normalized || DEFAULT_TERRITORY_EFFECT_KEY;
+}
+
+export function territoryMaterial(
+  color: PlayerColor,
+  effectKey?: string | null,
+): TerritoryMaterial {
+  const base = TERRITORY_MATERIALS[color];
+  const resolver =
+    TERRITORY_EFFECT_RESOLVERS[normalizeTerritoryEffectKey(effectKey)] ??
+    TERRITORY_EFFECT_RESOLVERS[DEFAULT_TERRITORY_EFFECT_KEY];
+  return resolver(base);
 }
 
 export function territorySurfacePalette(
