@@ -10,8 +10,15 @@ on:
       - "src/components/pre-game/foundation/**"
       - "src/lib/doctrine-presentation.ts"
       - "src/lib/server/auth/**"
+      - "src/app/api/economy/**"
+      - "src/app/profile/store/**"
+      - "src/components/profile/store/**"
+      - "src/components/profile/command-quarters/**"
+      - "src/lib/economy/**"
+      - "src/lib/server/economy/**"
       - "src/proxy.ts"
       - "scripts/e2e/prepare-doctrine-auth.mjs"
+      - "scripts/e2e/economy-e2e.mjs"
       - "tests/e2e/doctrine.spec.mjs"
       - ".github/workflows/doctrine-e2e.yml"
   workflow_dispatch:
@@ -43,6 +50,7 @@ jobs:
       DATABASE_URL: postgresql://war:war@127.0.0.1:5432/war_ci
       PLAYWRIGHT_TEST_BASE_URL: http://127.0.0.1:3000
       DOCTRINE_EVIDENCE_DIR: test-results/doctrine-evidence
+      ECONOMY_E2E_ARTIFACT_DIR: test-results/economy-eval
       DOCTRINE_AUTH_STORAGE_STATE: /tmp/war-brasil-doctrine-auth-state.json
       BETTER_AUTH_SECRET: AUTH_SENTINEL_DO_NOT_SHIP_0123456789ABCDEF
       BETTER_AUTH_URL: http://127.0.0.1:3000
@@ -107,6 +115,9 @@ jobs:
       - name: Run Doctrine browser gates
         run: npx playwright test tests/e2e/doctrine.spec.mjs --workers=1 --reporter=line
 
+      - name: Run Economy browser gates
+        run: node scripts/e2e/economy-e2e.mjs
+
       - name: Print application log on failure
         if: failure()
         run: cat /tmp/doctrine-next.log || true
@@ -116,6 +127,15 @@ jobs:
         uses: actions/upload-artifact@v5
         with:
           name: doctrine-eval-evidence
-          path: test-results/
+          path: test-results/doctrine-evidence
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload Economy evaluation evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: economy-eval-evidence
+          path: test-results/economy-eval
           if-no-files-found: warn
           retention-days: 30
