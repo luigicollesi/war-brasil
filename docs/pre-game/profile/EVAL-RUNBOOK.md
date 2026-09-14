@@ -1,7 +1,8 @@
-# PROFILE V2 — EVAL Runbook
+# PROFILE V3 — EVAL Runbook
 
-Branch: `feature/profile-command-quarters-v2`  
 Rota: `/profile`
+
+Este runbook cobre a experiência e as boundaries próprias de Profile. Economia, wallet, storefront, inventário, loadout jogável, dados cosméticos, efeitos territoriais e snapshot de partida são avaliados por `../../economy/EVAL.md`.
 
 ## Pré-condições
 
@@ -24,14 +25,14 @@ npm run dev
 PROFILE_EVAL_MODE=1 PROFILE_EVAL_STATE=guest npm run dev
 PROFILE_EVAL_MODE=1 PROFILE_EVAL_STATE=loaded npm run dev
 PROFILE_EVAL_MODE=1 PROFILE_EVAL_STATE=partial-data npm run dev
-PROFILE_EVAL_MODE=1 PROFILE_EVAL_STATE=wallet-unavailable npm run dev
 PROFILE_EVAL_MODE=1 PROFILE_EVAL_STATE=empty-history npm run dev
 PROFILE_EVAL_MODE=1 PROFILE_EVAL_STATE=empty-social npm run dev
-PROFILE_EVAL_MODE=1 PROFILE_EVAL_STATE=empty-storefront npm run dev
 PROFILE_EVAL_MODE=1 PROFILE_EVAL_STATE=error npm run dev
 ```
 
 Não selecionar fixture por query string, cookie ou controle público.
+
+Estados artificiais específicos de wallet/store não fazem parte deste runbook; cenários econômicos e de falha econômica são definidos por `../../economy/EVAL.md`. Profile deve apenas demonstrar que falha de uma fonte econômica não derruba as demais estações.
 
 ## Viewports canônicos
 
@@ -56,28 +57,29 @@ Desktop deve manter todas as estações reconhecíveis ao redor da Mesa. Mobile 
 
 ## Estados especiais
 
-Além das cinco estações, registrar desktop + mobile para:
+Registrar desktop + mobile para:
 
 - `guest`;
 - `partial-data`;
-- `wallet-unavailable`;
 - `empty-history`;
 - `empty-social`;
-- `empty-storefront`;
 - `error`;
 - `reduced-motion`;
 - `fallback`.
 
-## Tesouraria
+Estados e evidências internas de Tesouraria/Intendência pertencem ao EVAL econômico.
 
-Validar por DOM e visual:
+## Tesouraria — boundary de Profile
 
-- moeda comum = `campaign-credit`;
-- moeda premium = `command-reserve`;
-- símbolos distintos (`◈` e `◆` no fixture local);
-- labels textuais distintos;
-- saldo indisponível não vira `0`;
-- selecionar carteira ativa `treasury`.
+Validar somente:
+
+- selecionar a Tesouraria ativa `treasury`;
+- conteúdo econômico chega por DTO/service boundary;
+- Profile não consulta SQL econômico diretamente;
+- indisponibilidade da fonte econômica não derruba Dossiê, Rede ou Livro de Campanha;
+- conteúdo continua acessível em desktop, mobile e fallback.
+
+Moeda, saldo, ledger e demais contratos econômicos são validados exclusivamente por `../../economy/EVAL.md`.
 
 ## Rede de Comando
 
@@ -87,45 +89,43 @@ Validar:
 - social vazio ainda permite busca;
 - input aceita callsign/nome;
 - menos de 2 caracteres não dispara busca;
-- `mar` retorna resultados no provider local;
-- termo sem correspondência exibe feedback de nenhum sinal;
+- busca sem correspondência exibe feedback de nenhum sinal;
 - falha de endpoint exibe erro sem derrubar a PROFILE;
 - browser não recebe o diretório completo de comandantes.
-
-Não considerar botão de amizade obrigatório enquanto persistência social não existir.
 
 ## Livro de Campanha
 
 Validar:
 
-- exatamente três operações no fixture local inicial;
 - seleção de operação atualiza contexto da Mesa;
 - resultado, modo e duração possuem texto;
-- `hasMore: true`/cursor permanecem no contrato;
-- `empty-history` não parece erro.
+- `hasMore`/cursor permanecem no contrato quando aplicáveis;
+- `empty-history` não parece erro;
+- dados vêm da fonte real definida no SPEC de Profile, exceto em harness explícito de avaliação.
 
-## Intendência
+## Intendência — boundary de Profile
 
-Validar:
+Validar somente:
 
-- até três itens em destaque;
-- categoria, nome e preço visíveis;
-- preço identifica a moeda;
-- seleção altera contexto da Mesa;
-- `empty-storefront` permanece uma estação válida;
-- nenhuma ação/label afirma compra concluída;
-- não existe checkout na PROFILE.
+- selecionar Intendência ativa `quartermaster`;
+- Intendência recebe storefront por DTO/service boundary;
+- existe navegação/entrada coerente para a experiência econômica quando ela estiver disponível;
+- falha do domínio econômico não derruba as demais estações;
+- nenhuma superfície introduz retrato/avatar como identidade do comandante;
+- conteúdo continua operável em desktop, mobile e fallback.
+
+Itens, anúncios, preços, aquisição, preview, inventário e equipagem são avaliados exclusivamente por `../../economy/EVAL.md`.
 
 ## Dossiê
 
 Validar:
 
-- espaço de retrato/ícone;
-- fallback de monograma quando não há artwork;
+- identidade textual/monograma sem imagem de perfil;
 - nome;
 - handle;
 - título cosmético separado de rank;
-- presença textual.
+- presença textual;
+- nenhuma moldura ou slot vazio sugere foto ausente.
 
 ## Foundation / cena
 
@@ -169,7 +169,7 @@ Em 1440x900, sem mouse:
 3. navegar pelos headers das estações;
 4. pesquisar comandante;
 5. selecionar operação;
-6. selecionar item da Intendência;
+6. alcançar Intendência e sua navegação econômica quando disponível;
 7. no erro, alcançar `Tentar novamente`.
 
 Foco não pode ficar invisível ou preso.
@@ -179,32 +179,30 @@ Foco não pode ficar invisível ou preso.
 Em 390x844:
 
 1. alternar as cinco estações pelo seletor inferior;
-2. abrir Tesouraria pelo saldo superior;
+2. abrir Tesouraria;
 3. pesquisar comandante;
 4. selecionar operação;
-5. selecionar item da Intendência;
+5. abrir Intendência;
 6. confirmar ausência de overflow horizontal;
 7. confirmar que nenhuma informação depende de hover.
 
-## Integridade de fixture
+## Integridade de dados de avaliação
 
-Fluxo normal V2 usa dados `local-static`; EVAL usa `evaluation-fixture`.
+Fixtures são permitidas apenas em harness explícito de EVAL e MUST ser identificadas como `evaluation-fixture` ou equivalente.
 
-O objetivo é validar a experiência antes dos serviços reais, não fingir backend. O PR deve deixar explícito que:
+O fluxo real de Profile MUST usar fontes persistentes/serviços reais para identidade, social, presença e histórico conforme `SPEC.md`.
 
-- moeda não é persistida;
-- relações sociais não são persistidas;
-- histórico é fixture local;
-- itens da Intendência são showcase local.
+Fixtures econômicas, quando necessárias ao harness, MUST obedecer `../../economy/SPEC.md` e não redefinem contratos neste runbook.
 
 ## Encerramento
 
-A V2 só está concluída quando:
+Profile só está concluído quando:
 
 - lint/test/build verdes;
-- todos os PRO-01…PRO-24 verdes;
+- todos os blockers atuais de `EVAL.md` verdes, incluindo `PRO-ECO-*`;
 - score >= 85/100;
 - desktop 1440x900 validado;
 - mobile 390x844 validado;
 - teclado/touch/reduced-motion/fallback documentados;
+- nenhuma regra econômica duplicada neste runbook;
 - nenhuma regressão funcional fora da PROFILE.
