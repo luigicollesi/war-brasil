@@ -16,6 +16,23 @@ async function apiJson(page, url, init = {}) {
   );
 }
 
+async function concurrentApiJson(page, requests) {
+  return page.evaluate(async (items) => {
+    return Promise.all(
+      items.map(async ({ url, init }) => {
+        const response = await fetch(url, init);
+        let body = null;
+        try {
+          body = await response.json();
+        } catch {
+          body = null;
+        }
+        return { status: response.status, body };
+      }),
+    );
+  }, requests);
+}
+
 function friendRequest(page, handle) {
   return apiJson(page, "/api/profile/friends/requests", {
     method: "POST",
@@ -135,15 +152,34 @@ export async function assertProfileSocialFlow({ db, actorA, actorB }) {
   assert.equal(unauthorized.status, 404, JSON.stringify(unauthorized.body));
   assert.equal(unauthorized.body?.error, "REQUEST_NOT_FOUND");
 
-  const accepted = await acceptRequest(recipient.page, requestId);
-  assert.equal(accepted.status, 200, JSON.stringify(accepted.body));
-  assert.equal(accepted.body?.accepted, true);
-  assert.equal(accepted.body?.alreadyResolved, false);
+  const simultaneousAccepts = await concurrentApiJson(recipient.page, [
+    {
+      url: `/api/profile/friends/requests/${requestId}/accept`,
+      init: { method: "POST" },
+    },
+    {
+      url: `/api/profile/friends/requests/${requestId}/accept`,
+      init: { method: "POST" },
+    },
+  ]);
+  assert.deepEqual(
+    simultaneousAccepts.map((result) => result.status).sort((a, b) => a - b),
+    [200, 200],
+    JSON.stringify(simultaneousAccepts),
+  );
+  assert.equal(
+    simultaneousAccepts.filter((result) => result.body?.alreadyResolved === false).length,
+    1,
+  );
+  assert.equal(
+    simultaneousAccepts.filter((result) => result.body?.alreadyResolved === true).length,
+    1,
+  );
+  assert.equal(await friendshipCount(db, actorA.userId, actorB.userId), 1);
 
   const acceptedAgain = await acceptRequest(recipient.page, requestId);
   assert.equal(acceptedAgain.status, 200, JSON.stringify(acceptedAgain.body));
   assert.equal(acceptedAgain.body?.alreadyResolved, true);
-  assert.equal(await friendshipCount(db, actorA.userId, actorB.userId), 1);
 
   const removed = await removeFriend(requester.page, recipient.handle);
   assert.equal(removed.status, 200, JSON.stringify(removed.body));
@@ -152,6 +188,35 @@ export async function assertProfileSocialFlow({ db, actorA, actorB }) {
   assert.equal(removedAgain.status, 200, JSON.stringify(removedAgain.body));
   assert.equal(removedAgain.body?.removed, false);
   assert.equal(await friendshipCount(db, actorA.userId, actorB.userId), 0);
+
+  const raceRequest = await friendRequest(requester.page, recipient.handle);
+  assert.equal(raceRequest.status, 201, JSON.stringify(raceRequest.body));
+  const acceptBlockRace = await concurrentApiJson(recipient.page, [
+    {
+      url: `/api/profile/friends/requests/${raceRequest.body.requestId}/accept`,
+      init: { method: "POST" },
+    },
+    {
+      url: "/api/profile/blocks",
+      init: {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ handle: requester.handle }),
+      },
+    },
+  ]);
+  const raceBlock = acceptBlockRace[1];
+  assert.equal(raceBlock.status, 201, JSON.stringify(acceptBlockRace));
+  assert.ok(
+    [200, 403, 404].includes(acceptBlockRace[0].status),
+    `accept concorrente retornou estado inesperado: ${JSON.stringify(acceptBlockRace)}`,
+  );
+  assert.equal(await blockCount(db, recipient.userId, requester.userId), 1);
+  assert.equal(await friendshipCount(db, actorA.userId, actorB.userId), 0);
+  assert.notEqual(await requestState(db, raceRequest.body.requestId), "pending");
+
+  const raceCleanup = await unblockCommander(recipient.page, requester.handle);
+  assert.equal(raceCleanup.status, 200, JSON.stringify(raceCleanup.body));
 
   const recreate = await friendRequest(requester.page, recipient.handle);
   assert.equal(recreate.status, 201, JSON.stringify(recreate.body));
