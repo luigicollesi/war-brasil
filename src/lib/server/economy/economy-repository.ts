@@ -220,11 +220,14 @@ export async function equipOwnedCosmetic(
   db: EconomyQueryable = pool,
 ) {
   await db.query(
-    `INSERT INTO profile.cosmetic_loadout(user_id, slot, cosmetic_id, updated_at)
+    `INSERT INTO profile.cosmetic_loadout AS current_loadout(
+       user_id, slot, cosmetic_id, updated_at
+     )
      VALUES($1::uuid, $2, $3, NOW())
      ON CONFLICT (user_id, slot) DO UPDATE
      SET cosmetic_id=EXCLUDED.cosmetic_id,
-         updated_at=NOW()`,
+         updated_at=NOW()
+     WHERE current_loadout.cosmetic_id IS DISTINCT FROM EXCLUDED.cosmetic_id`,
     [userId, slot, cosmeticId],
   );
 }
