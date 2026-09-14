@@ -45,6 +45,19 @@ export type GameBattle = {
   defenderTroopsAfter?: number;
 };
 
+export type GameCosmeticSelection = {
+  cosmeticId: string;
+  assetRef: string | null;
+  effectKey: string | null;
+};
+
+export type GamePlayerCosmetics = {
+  diceAttack: GameCosmeticSelection;
+  diceDefense: GameCosmeticSelection;
+  diceNeutral: GameCosmeticSelection;
+  territoryEffect: GameCosmeticSelection;
+};
+
 export type GamePlayer = {
   id: string;
   factionName: string;
@@ -52,6 +65,7 @@ export type GamePlayer = {
   turnPosition: number | null;
   isMe: boolean;
   isBot: boolean;
+  cosmetics: GamePlayerCosmetics;
   rolls: Array<{ round: number; value: number; rolledAt: string }>;
 };
 
