@@ -336,9 +336,9 @@ function ScenePrimer({
     let firstFrame = 0;
     let secondFrame = 0;
 
-    const prime = async () => {
+    const prime = () => {
       try {
-        await gl.compileAsync(scene, camera);
+        gl.compile(scene, camera);
       } catch {
         // Compilation warm-up is an optimization; rendering remains the fallback.
       }
@@ -353,7 +353,7 @@ function ScenePrimer({
       });
     };
 
-    void prime();
+    prime();
 
     return () => {
       cancelled = true;
