@@ -7,14 +7,11 @@ import type {
 } from "@/src/lib/game-contract";
 import { RoomError } from "@/src/lib/server/room-error";
 
-const COSMETIC_SLOTS = [
-  "dice_attack",
-  "dice_defense",
-  "dice_neutral",
-  "territory_effect",
-] as const;
-
-export type GameCosmeticSlot = (typeof COSMETIC_SLOTS)[number];
+export type GameCosmeticSlot =
+  | "dice_attack"
+  | "dice_defense"
+  | "dice_neutral"
+  | "territory_effect";
 
 type MissingSnapshotRow = {
   player_id: string;
@@ -201,15 +198,22 @@ export async function capturePlayerCosmeticLoadouts(
  * Reads only the frozen game snapshot. This function deliberately does not join
  * profile.*, inventory.*, or catalog.* so a running match cannot drift when a
  * commander changes loadout or when storefront metadata changes.
- *
- * A waiting room is the only exception to snapshot completeness: after return
- * to lobby/rematch cleanup there is intentionally no active match snapshot, so
- * clients still redirecting from /game receive the four native defaults.
  */
 export async function loadRoomPlayerCosmetics(
   client: PoolClient,
   roomId: string,
 ): Promise<Map<string, GamePlayerCosmetics>> {
+  const playerStates = (
+    await client.query<GamePlayerSnapshotStateRow>(
+      `SELECT player.id, room.status AS room_status
+         FROM game.players player
+         JOIN game.rooms room ON room.id=player.room_id
+        WHERE player.room_id=$1
+        ORDER BY player.joined_at,player.id`,
+      [roomId],
+    )
+  ).rows;
+
   const rows = (
     await client.query<GameCosmeticSnapshotRow>(
       `SELECT snapshot.player_id,
@@ -236,26 +240,20 @@ export async function loadRoomPlayerCosmetics(
     grouped.set(row.player_id, current);
   }
 
-  const players = (
-    await client.query<GamePlayerSnapshotStateRow>(
-      `SELECT player.id,room.status AS room_status
-         FROM game.players player
-         JOIN game.rooms room ON room.id=player.room_id
-        WHERE player.room_id=$1
-        ORDER BY player.joined_at,player.id`,
-      [roomId],
-    )
-  ).rows;
-
   const result = new Map<string, GamePlayerCosmetics>();
-  for (const player of players) {
+  for (const player of playerStates) {
     const playerRows = grouped.get(player.id) ?? {};
-    result.set(
-      player.id,
-      player.room_status === "waiting"
-        ? defaultPlayerCosmetics()
-        : requirePlayerCosmetics(player.id, playerRows),
-    );
+    if (player.room_status === "waiting") {
+      result.set(
+        player.id,
+        Object.keys(playerRows).length
+          ? requirePlayerCosmetics(player.id, playerRows)
+          : defaultPlayerCosmetics(),
+      );
+      continue;
+    }
+
+    result.set(player.id, requirePlayerCosmetics(player.id, playerRows));
   }
 
   return result;
