@@ -10,6 +10,7 @@ import type {
 } from "@/src/lib/profile/profile-command-contract";
 import { getCurrentProfileCommandSnapshot as getEvaluationProfileCommandSnapshot } from "@/src/lib/profile/profile-command-data";
 import { auth } from "../auth/auth";
+import { getEconomyStorefront } from "../economy/economy-service";
 import { getCommanderActivity } from "./activity-service";
 import { getPlayerMatchHistory } from "./history-service";
 import { renewOwnPresence } from "./presence-gateway";
@@ -75,10 +76,16 @@ export async function getCurrentProfileCommandSnapshot(): Promise<ProfileCommand
     return guestSnapshot("Complete a identidade de comando antes de acessar o Quartel.");
   }
 
-  const [activity, history, livePresence] = await Promise.all([
+  const [activity, history, livePresence, economyResult] = await Promise.all([
     getCommanderActivity(session.user.id),
     getPlayerMatchHistory(session.user.id, { limit: 20 }),
     renewOwnPresence(session.user.id),
+    getEconomyStorefront(session.user.id)
+      .then((data) => ({ available: true as const, data }))
+      .catch((error: unknown) => {
+        console.error("Falha ao carregar economia no Profile.", error);
+        return { available: false as const, data: null };
+      }),
   ]);
   const social = await getPlayerSocialSnapshot(
     session.user.id,
@@ -103,8 +110,40 @@ export async function getCurrentProfileCommandSnapshot(): Promise<ProfileCommand
     data: social,
   };
 
+  const walletSection: ProfileCommandSnapshot["wallet"] = economyResult.available
+    ? {
+        availability: "available",
+        source: "wallet-service",
+        data: { campaignCredit: economyResult.data.wallet },
+      }
+    : unavailableSection(
+        null,
+        "Tesouraria temporariamente indisponível. Os demais sistemas do Quartel continuam operacionais.",
+      );
+
+  const storefrontSection: ProfileCommandSnapshot["storefront"] = economyResult.available
+    ? {
+        availability: economyResult.data.sets.length > 0 ? "available" : "empty",
+        source: "storefront-service",
+        data: {
+          featuredItems: economyResult.data.sets.map((set) => ({
+            slug: set.slug,
+            name: set.name,
+            category: "dice-set" as const,
+            artworkSrc: set.previewRef,
+            artworkAlt: `Prévia do conjunto ${set.name}`,
+            status: set.status === "available" ? "available" as const : "announced" as const,
+            itemCount: set.items.length,
+          })),
+        },
+      }
+    : unavailableSection<StoreShowcase>(
+        { featuredItems: [] },
+        "Intendência temporariamente indisponível. Tente novamente mais tarde.",
+      );
+
   return {
-    state: "partial-data",
+    state: economyResult.available ? "loaded" : "partial-data",
     identity: {
       availability: "available",
       source: "authenticated-user",
@@ -126,16 +165,10 @@ export async function getCurrentProfileCommandSnapshot(): Promise<ProfileCommand
       source: "authenticated-user",
       data: profile.privacy,
     },
-    wallet: unavailableSection(
-      null,
-      "Tesouraria ainda não possui uma fonte persistente disponível.",
-    ),
+    wallet: walletSection,
     social: socialSection,
     history: historySection,
-    storefront: unavailableSection<StoreShowcase>(
-      { featuredItems: [] },
-      "Intendência ainda não possui uma fonte persistente disponível.",
-    ),
+    storefront: storefrontSection,
     isEvaluationFixture: false,
   };
 }
