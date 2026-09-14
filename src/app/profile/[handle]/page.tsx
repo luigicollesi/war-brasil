@@ -18,7 +18,7 @@ export default async function PublicCommanderProfilePage({
   params: Promise<{ handle: string }>;
 }) {
   const { handle } = await params;
-  const normalizedHandle = decodeURIComponent(handle).trim();
+  const normalizedHandle = handle.trim();
   if (!normalizedHandle || normalizedHandle.length > 32) notFound();
 
   const snapshot = await getPublicCommanderProfileSnapshot(normalizedHandle);
