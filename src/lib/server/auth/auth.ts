@@ -1,7 +1,6 @@
 import "server-only";
 
 import { betterAuth } from "better-auth";
-import { generateAppleClientSecret } from "./apple-client-secret";
 import { authPool } from "./auth-pool";
 import {
   buildPasswordResetEmail,
@@ -69,36 +68,12 @@ const discordProvider = environment.providerAvailability.discord
     }
   : {};
 
-const appleProvider = environment.providerAvailability.apple
-  ? {
-      apple: async () => ({
-        clientId: environment.apple.clientId!,
-        clientSecret: await generateAppleClientSecret({
-          clientId: environment.apple.clientId!,
-          keyId: environment.apple.keyId!,
-          privateKey: environment.apple.privateKey!,
-          teamId: environment.apple.teamId!,
-        }),
-        ...(environment.apple.appBundleIdentifier
-          ? { appBundleIdentifier: environment.apple.appBundleIdentifier }
-          : {}),
-        mapProfileToUser: (profile: {
-          email?: string | null;
-          sub: string;
-        }) => ({
-          email: profile.email ?? `${profile.sub}@apple.placeholder.invalid`,
-        }),
-      }),
-    }
-  : {};
-
 export const auth = betterAuth({
   appName: "War-Brasil",
   database: authPool,
   basePath: "/api/auth",
   ...(resolveBaseUrl() ? { baseURL: resolveBaseUrl() } : {}),
   ...(environment.secret ? { secret: environment.secret } : {}),
-  trustedOrigins: ["https://appleid.apple.com"],
   rateLimit: {
     enabled: true,
     window: AUTH_RATE_LIMIT_WINDOW_SECONDS,
@@ -126,7 +101,6 @@ export const auth = betterAuth({
   },
   socialProviders: {
     ...googleProvider,
-    ...appleProvider,
     ...discordProvider,
   },
   emailAndPassword: {
