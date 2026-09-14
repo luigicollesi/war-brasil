@@ -90,6 +90,7 @@ function CinematicScene({
   seed,
   skin,
   pipColor,
+  assetRef,
   replayDurationMs,
   visualScale,
   onComplete,
@@ -99,6 +100,7 @@ function CinematicScene({
   seed: string;
   skin: DiceSkin;
   pipColor?: string;
+  assetRef?: string | null;
   replayDurationMs: number;
   visualScale: number;
   onComplete: () => void;
@@ -106,7 +108,7 @@ function CinematicScene({
 }) {
   const size = useThree((state) => state.size);
   const gl = useThree((state) => state.gl);
-  const textureState = useDiceFaceTextures({ skin, pipColor });
+  const textureState = useDiceFaceTextures({ skin, pipColor, assetRef });
   const portrait =
     size.height > 0 && size.width / size.height < PORTRAIT_ASPECT_THRESHOLD;
 
@@ -171,6 +173,7 @@ export function FullscreenDiceCinematic({
   seed,
   skin,
   pipColor,
+  assetRef,
   label,
   replayDurationMs,
   resultHoldMs,
@@ -181,6 +184,7 @@ export function FullscreenDiceCinematic({
   seed: string;
   skin: DiceSkin;
   pipColor?: string;
+  assetRef?: string | null;
   label: string;
   replayDurationMs: number;
   resultHoldMs: number;
@@ -278,6 +282,7 @@ export function FullscreenDiceCinematic({
               seed={seed}
               skin={skin}
               pipColor={pipColor}
+              assetRef={assetRef}
               replayDurationMs={replayDurationMs}
               visualScale={visualScale}
               onComplete={handleReplayComplete}
