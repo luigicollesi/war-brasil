@@ -101,6 +101,33 @@ test("inicialização econômica é idempotente e não cria movimentação", () 
   assert.doesNotMatch(service, /ledger_entries|UPDATE economy\.wallets|SET balance/i);
 });
 
+test("economia serializa inicialização, storefront, equipagem e captura da partida pelo comandante", () => {
+  assert.match(repository, /export async function lockCommanderEconomyState/);
+  assert.match(
+    repository,
+    /FROM profile\.commanders[\s\S]*WHERE user_id=\$1::uuid[\s\S]*FOR UPDATE/,
+  );
+
+  assert.match(
+    service,
+    /getEconomyStorefront[\s\S]*client\.query\("BEGIN"\)[\s\S]*ensureLockedEconomyState\(userId, client\)[\s\S]*findCampaignCreditWallet\(userId, client\)[\s\S]*client\.query\("COMMIT"\)/,
+  );
+  assert.match(
+    service,
+    /equipCosmetic[\s\S]*client\.query\("BEGIN"\)[\s\S]*ensureLockedEconomyState\(userId, client\)[\s\S]*findOwnedCosmetic\(userId, cosmeticId, client\)[\s\S]*equipOwnedCosmetic\(userId, slot, cosmeticId, client\)[\s\S]*client\.query\("COMMIT"\)/,
+  );
+
+  assert.match(gameCosmetics, /lockRoomCommanderCosmeticStates/);
+  assert.match(
+    gameCosmetics,
+    /ORDER BY commander\.user_id[\s\S]*FOR UPDATE OF commander/,
+  );
+  assert.match(
+    gameCosmetics,
+    /capturePlayerCosmeticLoadouts[\s\S]*await lockRoomCommanderCosmeticStates\(client, roomId\)[\s\S]*INSERT INTO game\.player_cosmetic_loadouts/,
+  );
+});
+
 test("APIs derivam ator da sessão e expõem somente leitura + equipagem", () => {
   assert.match(storefrontRoute, /getAuthenticatedSession\(request\)/);
   assert.match(storefrontRoute, /getEconomyStorefront\(session\.user\.id\)/);
@@ -139,7 +166,6 @@ test("waiting usa fallback visual efêmero, mas partida ativa exige snapshot per
   assert.match(gameCosmetics, /player\.room_status === "waiting"/);
   assert.match(gameCosmetics, /defaultPlayerCosmetics\(\)/);
   assert.match(gameCosmetics, /requirePlayerCosmetics\(player\.id, playerRows\)/);
-  assert.match(gameCosmetics, /ECONOMY|profile\./i);
 
   const runtimeReader = gameCosmetics.slice(
     gameCosmetics.indexOf("export async function loadRoomPlayerCosmetics"),
@@ -154,6 +180,10 @@ test("GameSnapshot expõe somente cosméticos necessários, sem economia ou iden
   assert.match(gameContract, /effectKey: string \| null/);
   assert.doesNotMatch(gameContract, /campaign-credit|wallet|ledger|inventory|userId|authUser/i);
   assert.doesNotMatch(gameSnapshot, /economy\.wallets|economy\.ledger_entries|inventory\.cosmetics/);
+  assert.doesNotMatch(
+    gameSnapshot,
+    /SELECT[^`]*\buser_id\b[^`]*FROM game\.players/,
+  );
 });
 
 test("rematch descarta snapshot anterior e structural sharing observa cosméticos", () => {
