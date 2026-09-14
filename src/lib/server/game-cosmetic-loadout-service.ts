@@ -1,6 +1,10 @@
 import "server-only";
 
 import type { PoolClient } from "pg";
+import type {
+  GameCosmeticSelection,
+  GamePlayerCosmetics,
+} from "@/src/lib/game-contract";
 import { RoomError } from "@/src/lib/server/room-error";
 
 const COSMETIC_SLOTS = [
@@ -16,6 +20,46 @@ type MissingSnapshotRow = {
   player_id: string;
   slot: GameCosmeticSlot;
 };
+
+type GameCosmeticSnapshotRow = {
+  player_id: string;
+  slot: GameCosmeticSlot;
+  cosmetic_id: string;
+  asset_ref: string | null;
+  effect_key: string | null;
+};
+
+function selection(row: GameCosmeticSnapshotRow): GameCosmeticSelection {
+  return {
+    cosmeticId: row.cosmetic_id,
+    assetRef: row.asset_ref,
+    effectKey: row.effect_key,
+  };
+}
+
+function requirePlayerCosmetics(
+  playerId: string,
+  bySlot: Partial<Record<GameCosmeticSlot, GameCosmeticSnapshotRow>>,
+): GamePlayerCosmetics {
+  const attack = bySlot.dice_attack;
+  const defense = bySlot.dice_defense;
+  const neutral = bySlot.dice_neutral;
+  const territory = bySlot.territory_effect;
+
+  if (!attack || !defense || !neutral || !territory) {
+    throw new RoomError(
+      `O snapshot cosmético da partida está incompleto para o jogador ${playerId}.`,
+      503,
+    );
+  }
+
+  return {
+    diceAttack: selection(attack),
+    diceDefense: selection(defense),
+    diceNeutral: selection(neutral),
+    territoryEffect: selection(territory),
+  };
+}
 
 /**
  * Copies each player's current profile loadout into game.* exactly when a match
@@ -90,4 +134,60 @@ export async function capturePlayerCosmeticLoadouts(
       503,
     );
   }
+}
+
+/**
+ * Reads only the frozen game snapshot. This function deliberately does not join
+ * profile.*, inventory.*, or catalog.* so a running match cannot drift when a
+ * commander changes loadout or when storefront metadata changes.
+ */
+export async function loadRoomPlayerCosmetics(
+  client: PoolClient,
+  roomId: string,
+): Promise<Map<string, GamePlayerCosmetics>> {
+  const rows = (
+    await client.query<GameCosmeticSnapshotRow>(
+      `SELECT snapshot.player_id,
+              snapshot.slot,
+              snapshot.cosmetic_id,
+              snapshot.asset_ref,
+              snapshot.effect_key
+         FROM game.player_cosmetic_loadouts snapshot
+         JOIN game.players player ON player.id=snapshot.player_id
+        WHERE player.room_id=$1
+        ORDER BY snapshot.player_id,snapshot.slot`,
+      [roomId],
+    )
+  ).rows;
+
+  const grouped = new Map<
+    string,
+    Partial<Record<GameCosmeticSlot, GameCosmeticSnapshotRow>>
+  >();
+
+  for (const row of rows) {
+    const current = grouped.get(row.player_id) ?? {};
+    current[row.slot] = row;
+    grouped.set(row.player_id, current);
+  }
+
+  const playerIds = (
+    await client.query<{ id: string }>(
+      `SELECT id
+         FROM game.players
+        WHERE room_id=$1
+        ORDER BY joined_at,id`,
+      [roomId],
+    )
+  ).rows.map((row) => row.id);
+
+  const result = new Map<string, GamePlayerCosmetics>();
+  for (const playerId of playerIds) {
+    result.set(
+      playerId,
+      requirePlayerCosmetics(playerId, grouped.get(playerId) ?? {}),
+    );
+  }
+
+  return result;
 }
