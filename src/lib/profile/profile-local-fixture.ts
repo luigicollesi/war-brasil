@@ -93,6 +93,21 @@ export const LOCAL_PROFILE_COMMAND_SNAPSHOT: ProfileCommandSnapshot = {
           mutualContacts: 2,
         },
       ],
+      outgoingRequests: [
+        {
+          requestId: "22222222-2222-4222-8222-222222222222",
+          handle: "serra_azul",
+          displayName: "Serra Azul",
+          title: null,
+        },
+      ],
+      blockedCommanders: [
+        {
+          handle: "fronteira_x",
+          displayName: "Fronteira X",
+          title: null,
+        },
+      ],
       recentContacts: [
         {
           handle: "cerrado_ax",
