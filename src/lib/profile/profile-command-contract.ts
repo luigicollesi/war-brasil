@@ -24,7 +24,18 @@ export type ProfileCommandSection<T> = Readonly<{
   data: T;
 }>;
 
-export type PlayerPresence = "online" | "in-lobby" | "in-match" | "offline";
+export type PlayerPresenceState = "online" | "offline" | "unavailable";
+export type PlayerActivityState = "idle" | "lobby" | "match" | "unavailable";
+
+export type CommanderPresence = Readonly<{
+  state: PlayerPresenceState;
+  lastSeenAt: string | null;
+}>;
+
+export type CommanderActivity = Readonly<{
+  state: PlayerActivityState;
+  matchMode: "classic" | "custom" | null;
+}>;
 
 export type CommanderPortrait = Readonly<{
   src: string | null;
@@ -36,7 +47,8 @@ export type CommanderIdentity = Readonly<{
   handle: string;
   title: string | null;
   portrait: CommanderPortrait;
-  presence: PlayerPresence;
+  presence: CommanderPresence;
+  activity: CommanderActivity;
 }>;
 
 export type CommandCurrencyId = "campaign-credit" | "command-reserve";
@@ -59,7 +71,8 @@ export type CommanderContact = Readonly<{
   displayName: string;
   title: string | null;
   portrait: CommanderPortrait;
-  presence: PlayerPresence;
+  presence: CommanderPresence;
+  activity: CommanderActivity;
   contextLabel: string;
 }>;
 
