@@ -6,7 +6,7 @@ function source(path) {
   return readFileSync(path, "utf8");
 }
 
-test("PROFILE V2 define as cinco estações do Quartel", () => {
+test("PROFILE V3 preserva as cinco estações do Quartel", () => {
   const hub = source("src/components/profile/command-quarters/profile-command-hub.tsx");
   const spec = source("docs/pre-game/profile/SPEC.md");
 
@@ -22,7 +22,7 @@ test("PROFILE V2 define as cinco estações do Quartel", () => {
   assert.match(spec, /Mesa de Comando/);
 });
 
-test("rota V2 resolve snapshot em request-time", () => {
+test("rota PROFILE resolve snapshot em request-time", () => {
   const page = source("src/app/profile/page.tsx");
 
   assert.match(page, /import \{ connection \} from "next\/server"/);
@@ -32,7 +32,7 @@ test("rota V2 resolve snapshot em request-time", () => {
   assert.doesNotMatch(page, /searchParams|useSearchParams/);
 });
 
-test("contrato V2 separa identidade, economia, social, histórico e loja", () => {
+test("contrato PROFILE separa identidade, economia, social, histórico e loja", () => {
   const contract = source("src/lib/profile/profile-command-contract.ts");
   const fixture = source("src/lib/profile/profile-local-fixture.ts");
 
@@ -65,10 +65,9 @@ test("Tesouraria diferencia moedas por símbolo e rótulo e mantém markup váli
   assert.match(refinements, /walletCurrencyPremium/);
 });
 
-test("Rede de Comando cobre amigos, sinais, recentes e busca sob demanda", () => {
+test("Rede de Comando cobre amigos, sinais, recentes e busca autenticada sob demanda", () => {
   const network = source("src/components/profile/command-quarters/profile-network-station.tsx");
   const endpoint = source("src/app/api/profile/commanders/search/route.ts");
-  const provider = source("src/lib/profile/profile-command-data.ts");
 
   assert.match(network, /Amigos na Rede de Comando/);
   assert.match(network, /Solicitações de conexão/);
@@ -76,11 +75,11 @@ test("Rede de Comando cobre amigos, sinais, recentes e busca sob demanda", () =>
   assert.match(network, /\/api\/profile\/commanders\/search\?q=/);
   assert.match(network, /aria-live="polite"/);
   assert.match(network, /maxLength=\{64\}/);
-  assert.match(endpoint, /searchProfileCommanders/);
+  assert.match(endpoint, /getAuthenticatedSession\(request\)/);
+  assert.match(endpoint, /searchCommanderDirectory\(session\.user\.id, query\)/);
   assert.match(endpoint, /MAX_QUERY_LENGTH = 64/);
   assert.match(endpoint, /private, no-store/);
-  assert.match(provider, /searchLocalCommanders\(query\)/);
-  assert.match(provider, /Search is intentionally separate from the main snapshot/);
+  assert.doesNotMatch(endpoint, /searchProfileCommanders|searchLocalCommanders|LOCAL_COMMANDER_DIRECTORY/);
   assert.doesNotMatch(network, /LOCAL_COMMANDER_DIRECTORY/);
 });
 
@@ -118,7 +117,7 @@ test("controller mantém estações especializadas fora do arquivo central", () 
   assert.doesNotMatch(hub, /async function handleSearch/);
 });
 
-test("PROFILE V2 consome somente a API pública da Foundation", () => {
+test("PROFILE consome somente a API pública da Foundation", () => {
   const hub = source("src/components/profile/command-quarters/profile-command-hub.tsx");
   const layout = source("src/app/layout.tsx");
   const routeIntent = source("src/components/pre-game/foundation/pre-game-route-intent.ts");
@@ -154,7 +153,7 @@ test("reduced-motion e forced-colors permanecem explícitos", () => {
   assert.match(boundaryCss, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
-test("V2 mantém harness de avaliação somente no servidor", () => {
+test("PROFILE mantém harness de avaliação somente no servidor", () => {
   const provider = source("src/lib/profile/profile-command-data.ts");
   const page = source("src/app/profile/page.tsx");
 
