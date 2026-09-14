@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import type {
@@ -20,6 +21,10 @@ function formatBalance(value: number) {
   return new Intl.NumberFormat("pt-BR").format(value);
 }
 
+function firstPreviewItem(items: ReadonlyArray<CosmeticCatalogItem>) {
+  return items.find((item) => item.assetRef !== null) ?? null;
+}
+
 export function EconomyStorefront({
   initialStorefront,
 }: {
@@ -28,6 +33,7 @@ export function EconomyStorefront({
   const [storefront, setStorefront] = useState(initialStorefront);
   const [pending, setPending] = useState<string | null>(null);
   const [previewSetId, setPreviewSetId] = useState<string | null>(null);
+  const [previewItemId, setPreviewItemId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState<string | null>(null);
 
   async function equip(item: CosmeticCatalogItem) {
@@ -158,6 +164,13 @@ export function EconomyStorefront({
         <div className={styles.setGrid}>
           {storefront.sets.map((set) => {
             const previewOpen = previewSetId === set.id;
+            const selectedPreviewItem = previewOpen
+              ? set.items.find(
+                  (item) => item.id === previewItemId && item.assetRef !== null,
+                ) ?? firstPreviewItem(set.items)
+              : null;
+            const previewPanelId = `preview-${set.slug}`;
+
             return (
               <article key={set.id} className={styles.setCard} data-status={set.status}>
                 <div className={styles.setVisual} aria-hidden="true">
@@ -204,23 +217,82 @@ export function EconomyStorefront({
                       <button
                         type="button"
                         aria-expanded={previewOpen}
-                        onClick={() => setPreviewSetId(previewOpen ? null : set.id)}
+                        aria-controls={previewPanelId}
+                        onClick={() => {
+                          if (previewOpen) {
+                            setPreviewSetId(null);
+                            setPreviewItemId(null);
+                            return;
+                          }
+
+                          setPreviewSetId(set.id);
+                          setPreviewItemId(firstPreviewItem(set.items)?.id ?? null);
+                        }}
                       >
                         {previewOpen ? "FECHAR" : "INSPECIONAR"}
                       </button>
                     </li>
-                    {previewOpen ? (
-                      <li data-preview-detail>
+                  </ul>
+
+                  {previewOpen ? (
+                    <div
+                      id={previewPanelId}
+                      className={styles.previewDetail}
+                      data-preview-detail
+                    >
+                      <div className={styles.previewHeading}>
                         <span>
                           <small>PRÉVIA DETALHADA</small>
-                          <strong>
-                            {set.items.map((item) => `${SLOT_LABELS[item.slot]} · ${item.name}`).join(" / ")}
-                          </strong>
+                          <strong>{set.name}</strong>
                         </span>
                         <em>HQ SOB DEMANDA · SEM AQUISIÇÃO</em>
-                      </li>
-                    ) : null}
-                  </ul>
+                      </div>
+
+                      <div
+                        className={styles.previewToolbar}
+                        role="group"
+                        aria-label={`Selecionar dado da remessa ${set.name}`}
+                      >
+                        {set.items
+                          .filter((item) => item.assetRef !== null)
+                          .map((item) => (
+                            <button
+                              key={item.id}
+                              type="button"
+                              data-active={selectedPreviewItem?.id === item.id ? "true" : "false"}
+                              aria-pressed={selectedPreviewItem?.id === item.id}
+                              onClick={() => setPreviewItemId(item.id)}
+                            >
+                              {SLOT_LABELS[item.slot]}
+                            </button>
+                          ))}
+                      </div>
+
+                      <div className={styles.previewStage} data-preview-stage>
+                        {selectedPreviewItem?.assetRef ? (
+                          <Image
+                            src={selectedPreviewItem.assetRef}
+                            alt={`${set.name} — dado de ${SLOT_LABELS[selectedPreviewItem.slot].toLowerCase()}`}
+                            width={320}
+                            height={320}
+                            loading="lazy"
+                            unoptimized
+                            className={styles.previewImage}
+                          />
+                        ) : (
+                          <span>PRÉVIA INDISPONÍVEL</span>
+                        )}
+                      </div>
+
+                      {selectedPreviewItem ? (
+                        <div className={styles.previewMeta}>
+                          <small>{SLOT_LABELS[selectedPreviewItem.slot]}</small>
+                          <strong>{selectedPreviewItem.name}</strong>
+                          <span>Somente visual · regras, RNG e física permanecem inalterados.</span>
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </div>
               </article>
             );
