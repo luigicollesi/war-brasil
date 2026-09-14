@@ -17,7 +17,7 @@ export type CommandAuthMode =
   | "forgot"
   | "reset";
 
-type AuthProvider = "google" | "apple" | "discord";
+type AuthProvider = "google" | "discord";
 
 type CommandAuthModalProps = {
   initialMode?: CommandAuthMode;
@@ -38,7 +38,6 @@ const RESEND_COOLDOWN_MS = 60_000;
 
 const PROVIDERS: Array<{ id: AuthProvider; label: string; mark: string }> = [
   { id: "google", label: "Continuar com Google", mark: "G" },
-  { id: "apple", label: "Continuar com Apple", mark: "●" },
   { id: "discord", label: "Continuar com Discord", mark: "D" },
 ];
 
@@ -287,8 +286,6 @@ export function CommandAuthModal({
         return;
       }
 
-      // Better Auth revoga as sessões autoritativas no reset. O sign-out também
-      // limpa o cookie-cache local para a UI voltar imediatamente ao estado guest.
       await authClient.signOut();
       setMode("login");
       setMessage("Senha redefinida. Entre novamente para acessar o Comando.");
