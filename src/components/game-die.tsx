@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState, type CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import type { DieRollAnimation } from "@/src/lib/game-battle-display";
 import {
   DICE_PIP_LAYOUT_PERCENT,
@@ -45,7 +45,9 @@ export function GameDie({
   className?: string;
 }) {
   const requestedAsset = assetRef ?? NATIVE_DIE_ASSET;
-  const [imageSource, setImageSource] = useState(requestedAsset);
+  const [failedAsset, setFailedAsset] = useState<string | null>(null);
+  const imageSource =
+    failedAsset === requestedAsset ? NATIVE_DIE_ASSET : requestedAsset;
   const safeValue = normalizeDiceValue(value);
   const animationClass = rolling
     ? rollAnimation
@@ -59,10 +61,6 @@ export function GameDie({
         "--die-roll-delay": `${rollAnimation.delayMs}ms`,
       } as CSSProperties)
     : undefined;
-
-  useEffect(() => {
-    setImageSource(requestedAsset);
-  }, [requestedAsset]);
 
   return (
     <div
@@ -79,8 +77,8 @@ export function GameDie({
         sizes={size === "lg" ? "128px" : size === "md" ? "96px" : "64px"}
         className="object-cover"
         onError={() => {
-          if (imageSource !== NATIVE_DIE_ASSET) {
-            setImageSource(NATIVE_DIE_ASSET);
+          if (requestedAsset !== NATIVE_DIE_ASSET) {
+            setFailedAsset(requestedAsset);
           }
         }}
       />
