@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
 import { ProfileCommandHub } from "@/src/components/profile/command-quarters/profile-command-hub";
-import { getCurrentProfileCommandSnapshot } from "@/src/lib/profile/profile-command-data";
+import { getCurrentProfileCommandSnapshot } from "@/src/lib/server/profile/profile-command-snapshot-service";
 
 export const metadata: Metadata = {
   title: "Quartel do Comandante",
