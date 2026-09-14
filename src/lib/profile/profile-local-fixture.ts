@@ -86,6 +86,7 @@ export const LOCAL_PROFILE_COMMAND_SNAPSHOT: ProfileCommandSnapshot = {
       ],
       incomingRequests: [
         {
+          requestId: "11111111-1111-4111-8111-111111111111",
           handle: "guarapuava21",
           displayName: "Guarapuava21",
           title: "Observador do Sul",
@@ -198,6 +199,7 @@ const LOCAL_COMMANDER_DIRECTORY: ReadonlyArray<CommanderSearchResult> = [
     displayName: "Marques",
     title: "Defensor do Planalto",
     portrait: { src: null, alt: "Retrato de Marques" },
+    relationship: "friend",
     mutualContacts: 4,
   },
   {
@@ -205,6 +207,7 @@ const LOCAL_COMMANDER_DIRECTORY: ReadonlyArray<CommanderSearchResult> = [
     displayName: "Marcelo SP",
     title: "Oficial de Reserva",
     portrait: { src: null, alt: "Retrato de Marcelo SP" },
+    relationship: "none",
     mutualContacts: 1,
   },
   {
@@ -212,6 +215,7 @@ const LOCAL_COMMANDER_DIRECTORY: ReadonlyArray<CommanderSearchResult> = [
     displayName: "Amazonas77",
     title: null,
     portrait: { src: null, alt: "Retrato de Amazonas77" },
+    relationship: "friend",
     mutualContacts: 2,
   },
   {
@@ -219,6 +223,7 @@ const LOCAL_COMMANDER_DIRECTORY: ReadonlyArray<CommanderSearchResult> = [
     displayName: "Cerrado AX",
     title: "Sentinela do Cerrado",
     portrait: { src: null, alt: "Retrato de Cerrado AX" },
+    relationship: "none",
     mutualContacts: 0,
   },
 ];
