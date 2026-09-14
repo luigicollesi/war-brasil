@@ -86,7 +86,7 @@ export type PlayerSocialSnapshot = Readonly<{
 }>;
 
 export type MatchParticipantSummary = Readonly<{
-  handle: string;
+  handle: string | null;
   displayName: string;
   relation: "self" | "ally" | "opponent";
   isFriend: boolean;
@@ -95,8 +95,8 @@ export type MatchParticipantSummary = Readonly<{
 export type MatchSummary = Readonly<{
   operationCode: string;
   playedAt: string;
-  result: "victory" | "defeat";
-  mode: "classic" | "custom";
+  result: "victory" | "defeat" | "unknown";
+  mode: "classic" | "custom" | "unknown";
   durationMinutes: number;
   participants: ReadonlyArray<MatchParticipantSummary>;
 }>;
