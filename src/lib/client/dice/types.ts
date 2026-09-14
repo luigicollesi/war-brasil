@@ -18,6 +18,8 @@ export type DiceTextureOptions = {
   skin: DiceSkin;
   pipColor?: string;
   resolution?: number;
+  /** Frozen game snapshot asset. Null/undefined preserves the native skin. */
+  assetRef?: string | null;
 };
 
 export type DiceLaunchState = {
