@@ -10,12 +10,18 @@ export const PRESENCE_COPY: Readonly<Record<PlayerPresenceState, string>> = {
   unavailable: "Presença indisponível",
 };
 
+const ACTIVITY_COPY = {
+  lobby: "Em sala",
+  match: "Em partida",
+} as const;
+
 export function commanderStatusLabel(
   presence: CommanderPresence,
   activity: CommanderActivity,
 ) {
-  if (activity.state === "match") return "Em partida";
-  if (activity.state === "lobby") return "Em sala";
+  if (activity.state === "lobby" || activity.state === "match") {
+    return `${PRESENCE_COPY[presence.state]} · ${ACTIVITY_COPY[activity.state]}`;
+  }
   return PRESENCE_COPY[presence.state];
 }
 
