@@ -1,6 +1,6 @@
 import "server-only";
 
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { after } from "next/server";
@@ -151,19 +151,20 @@ function productionTransportConfig() {
   return { from, apiKey };
 }
 
-function deliveryIdempotencyKey(message: AuthEmailMessage) {
-  const digest = createHash("sha256")
-    .update(message.to)
-    .update("\0")
-    .update(message.subject)
-    .update("\0")
-    .update(message.text)
-    .digest("hex");
-  return `war-auth-${digest}`;
+async function deliveryIdempotencyKey(message: AuthEmailMessage) {
+  const source = new TextEncoder().encode(
+    `${message.to}\0${message.subject}\0${message.text}`,
+  );
+  const digest = await globalThis.crypto.subtle.digest("SHA-256", source);
+  const hex = Array.from(new Uint8Array(digest), (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
+  return `war-auth-${hex}`;
 }
 
 async function deliverWithResend(message: AuthEmailMessage) {
   const { from, apiKey } = productionTransportConfig();
+  const idempotencyKey = await deliveryIdempotencyKey(message);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), EMAIL_DELIVERY_TIMEOUT_MS);
   timeout.unref?.();
@@ -175,7 +176,7 @@ async function deliverWithResend(message: AuthEmailMessage) {
       headers: {
         Authorization: `Bearer ${apiKey}`,
         "Content-Type": "application/json",
-        "Idempotency-Key": deliveryIdempotencyKey(message),
+        "Idempotency-Key": idempotencyKey,
       },
       body: JSON.stringify({
         from,
