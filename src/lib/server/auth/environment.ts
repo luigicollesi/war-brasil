@@ -22,6 +22,10 @@ export type AuthServerEnvironment = {
     clientId?: string;
     clientSecret?: string;
   };
+  email: {
+    from?: string;
+    transportSecret?: string;
+  };
   google: {
     clientId?: string;
     clientSecret?: string;
@@ -48,6 +52,16 @@ function isValidProductionBaseUrl(value: string | undefined) {
   }
 }
 
+function isValidEmailFrom(value: string | undefined) {
+  if (!value) return false;
+  const bracketed = value.match(/<([^<>]+)>\s*$/)?.[1];
+  const address = (bracketed ?? value).trim().toLowerCase();
+  const at = address.lastIndexOf("@");
+  if (at <= 0 || at === address.length - 1) return false;
+  const domain = address.slice(at + 1);
+  return domain.includes(".") && domain !== "invalid" && !domain.endsWith(".invalid");
+}
+
 function isObviouslyUnsafeAuthSecret(value: string | undefined) {
   if (!value || value.length < AUTH_SECRET_MIN_LENGTH) return true;
 
@@ -56,6 +70,11 @@ function isObviouslyUnsafeAuthSecret(value: string | undefined) {
     /SENTINEL_DO_NOT_SHIP/i.test(value) ||
     /^(?:password|secret|changeme|change-me|replace-me)/i.test(value)
   );
+}
+
+function isObviouslyUnsafeTransportSecret(value: string | undefined) {
+  if (!value || value.length < 16) return true;
+  return /SENTINEL_DO_NOT_SHIP|changeme|change-me|replace-me/i.test(value);
 }
 
 export function readAuthServerEnvironment(): AuthServerEnvironment {
@@ -74,6 +93,10 @@ export function readAuthServerEnvironment(): AuthServerEnvironment {
     discord: {
       clientId: discordClientId,
       clientSecret: discordClientSecret,
+    },
+    email: {
+      from: readOptional("AUTH_EMAIL_FROM"),
+      transportSecret: readOptional("EMAIL_TRANSPORT_SECRET"),
     },
     google: {
       clientId: googleClientId,
@@ -115,6 +138,12 @@ export function assertAuthRuntimeConfiguration(
   }
   if (!environment.discord.clientSecret) {
     missing.push("DISCORD_CLIENT_SECRET");
+  }
+  if (!isValidEmailFrom(environment.email.from)) {
+    missing.push("AUTH_EMAIL_FROM(valid deliverable sender)");
+  }
+  if (isObviouslyUnsafeTransportSecret(environment.email.transportSecret)) {
+    missing.push("EMAIL_TRANSPORT_SECRET(valid production credential)");
   }
 
   if (missing.length > 0) {
