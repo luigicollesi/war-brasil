@@ -18,7 +18,8 @@ test("skin cosmética altera somente a fonte visual das texturas 3D", () => {
   );
 
   assert.match(types, /assetRef\?: string \| null/);
-  assert.match(texture, /assetRef \?\? DICE_SKIN_SOURCES\[skin\]/);
+  assert.match(texture, /const nativeSource = DICE_SKIN_SOURCES\[skin\]/);
+  assert.match(texture, /loadImage\(assetRef\)/);
   assert.match(texture, /drawPips\(context, value, resolution, pipColor\)/);
   assert.match(assets, /options\.assetRef \?\? "native"/);
   assert.doesNotMatch(launch, /assetRef|cosmetic|catalog|profile/);
@@ -70,16 +71,20 @@ test("ordem de jogo usa o dado neutro congelado do jogador", () => {
     /assetRef=\{shownPlayer\?\.cosmetics\.diceNeutral\.assetRef\}/,
   );
   assert.match(cinematic, /assetRef=\{assetRef\}/);
-  assert.match(die, /src=\{assetRef \?\? "\/dado-brasil-hq\.svg"\}/);
+  assert.match(die, /assetRef \?\? NATIVE_DIE_ASSET/);
 });
 
-test("asset nulo mantém explicitamente o renderer nativo", () => {
+test("asset ausente ou inválido mantém o renderer nativo sem tocar no resultado", () => {
   const texture = source("src/lib/client/dice/textures/create-face-texture.ts");
   const die = source("src/components/game-die.tsx");
   const skins = source("src/lib/client/dice/textures/dice-skins.ts");
 
-  assert.match(texture, /assetRef \?\? DICE_SKIN_SOURCES\[skin\]/);
-  assert.match(die, /assetRef \?\? "\/dado-brasil-hq\.svg"/);
+  assert.match(texture, /if \(!assetRef \|\| assetRef === nativeSource\)/);
+  assert.match(texture, /catch \{[\s\S]*loadImage\(nativeSource\)/);
+  assert.match(texture, /presentation-only/);
+  assert.match(die, /NATIVE_DIE_ASSET = "\/dado-brasil-hq\.svg"/);
+  assert.match(die, /onError=\{\(\) => \{/);
+  assert.match(die, /setImageSource\(NATIVE_DIE_ASSET\)/);
   assert.match(skins, /neutral: "\/dado-brasil-hq\.svg"/);
   assert.match(skins, /attack: "\/dado-ataque-vermelho-hq\.svg"/);
   assert.match(skins, /defense: "\/dado-defesa-azul-hq\.svg"/);
