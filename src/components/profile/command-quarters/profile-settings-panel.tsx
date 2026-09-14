@@ -22,6 +22,15 @@ type EditablePrivacyUpdate = {
   friendRequestPolicy?: FriendRequestPolicy;
 };
 
+type OwnedTitle = Readonly<{
+  id: string;
+  name: string;
+  description: string | null;
+  rarity: "common" | "uncommon" | "rare" | "epic" | "legendary";
+  isActive: boolean;
+  equipped: boolean;
+}>;
+
 const VISIBILITY_OPTIONS: ReadonlyArray<{
   value: ProfileVisibility;
   label: string;
@@ -50,7 +59,12 @@ export function ProfileSettingsPanel({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [titleBusy, setTitleBusy] = useState(false);
+  const [titlesLoading, setTitlesLoading] = useState(false);
   const [feedback, setFeedback] = useState<Feedback>(null);
+  const [ownedTitles, setOwnedTitles] = useState<OwnedTitle[]>([]);
+  const [equippedTitleId, setEquippedTitleId] = useState("");
+  const [selectedTitleId, setSelectedTitleId] = useState("");
   const [displayName, setDisplayName] = useState(identity.displayName);
   const [bio, setBio] = useState(identity.bio ?? "");
   const [presenceVisibility, setPresenceVisibility] = useState<ProfileVisibility>(
@@ -65,15 +79,50 @@ export function ProfileSettingsPanel({
   const [friendRequestPolicy, setFriendRequestPolicy] = useState<FriendRequestPolicy>(
     privacy.friendRequestPolicy,
   );
+  const locked = busy || titleBusy;
 
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !busy) setOpen(false);
+      if (event.key === "Escape" && !locked) setOpen(false);
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [busy, open]);
+  }, [locked, open]);
+
+  const loadTitles = async () => {
+    setTitlesLoading(true);
+    try {
+      const response = await fetch("/api/profile/titles", {
+        method: "GET",
+        cache: "no-store",
+      });
+      const body = (await response.json().catch(() => null)) as
+        | { titles?: OwnedTitle[]; message?: string }
+        | null;
+      if (!response.ok || !Array.isArray(body?.titles)) {
+        throw new Error(body?.message ?? "Não foi possível carregar os títulos.");
+      }
+
+      const equipped = body.titles.find((title) => title.equipped)?.id ?? "";
+      setOwnedTitles(body.titles);
+      setEquippedTitleId(equipped);
+      setSelectedTitleId(equipped);
+    } catch (error) {
+      setOwnedTitles([]);
+      setEquippedTitleId("");
+      setSelectedTitleId("");
+      setFeedback({
+        kind: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Não foi possível carregar os títulos.",
+      });
+    } finally {
+      setTitlesLoading(false);
+    }
+  };
 
   const openPanel = () => {
     setDisplayName(identity.displayName);
@@ -84,6 +133,50 @@ export function ProfileSettingsPanel({
     setFriendRequestPolicy(privacy.friendRequestPolicy);
     setFeedback(null);
     setOpen(true);
+    void loadTitles();
+  };
+
+  const equipTitle = async () => {
+    if (titleBusy || titlesLoading || selectedTitleId === equippedTitleId) return;
+
+    setTitleBusy(true);
+    setFeedback(null);
+    try {
+      const response = await fetch("/api/profile/titles", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ titleId: selectedTitleId || null }),
+      });
+      const body = (await response.json().catch(() => null)) as
+        | { message?: string }
+        | null;
+      if (!response.ok) {
+        throw new Error(body?.message ?? "Não foi possível equipar o título.");
+      }
+
+      setEquippedTitleId(selectedTitleId);
+      setOwnedTitles((current) =>
+        current.map((title) => ({
+          ...title,
+          equipped: title.id === selectedTitleId,
+        })),
+      );
+      setFeedback({
+        kind: "success",
+        message: selectedTitleId ? "Título equipado." : "Título removido.",
+      });
+      router.refresh();
+    } catch (error) {
+      setFeedback({
+        kind: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Não foi possível equipar o título.",
+      });
+    } finally {
+      setTitleBusy(false);
+    }
   };
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
@@ -170,7 +263,7 @@ export function ProfileSettingsPanel({
             className={styles.backdrop}
             aria-label="Fechar configurações do Dossiê"
             onClick={() => {
-              if (!busy) setOpen(false);
+              if (!locked) setOpen(false);
             }}
           />
           <section
@@ -188,7 +281,7 @@ export function ProfileSettingsPanel({
                 type="button"
                 className={styles.close}
                 aria-label="Fechar configurações"
-                disabled={busy}
+                disabled={locked}
                 onClick={() => setOpen(false)}
               >
                 ×
@@ -223,6 +316,49 @@ export function ProfileSettingsPanel({
                     onChange={(event) => setBio(event.target.value)}
                   />
                 </label>
+              </section>
+
+              <section className={styles.section} aria-labelledby="profile-title-settings">
+                <strong className={styles.sectionTitle} id="profile-title-settings">
+                  Título cosmético
+                </strong>
+                <label className={styles.field}>
+                  <span>Título em exibição</span>
+                  <select
+                    value={selectedTitleId}
+                    disabled={titlesLoading || titleBusy}
+                    onChange={(event) => setSelectedTitleId(event.target.value)}
+                  >
+                    <option value="">Sem título</option>
+                    {ownedTitles.map((title) => (
+                      <option
+                        key={title.id}
+                        value={title.id}
+                        disabled={!title.isActive && !title.equipped}
+                      >
+                        {title.name} · {title.rarity}
+                        {!title.isActive ? " · indisponível" : ""}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <p className={styles.hint}>
+                  {titlesLoading
+                    ? "Sincronizando títulos desbloqueados..."
+                    : ownedTitles.length === 0
+                      ? "Nenhum título cosmético desbloqueado nesta conta."
+                      : "Somente títulos desbloqueados e ativos podem ser equipados."}
+                </p>
+                <button
+                  type="button"
+                  className={styles.secondaryAction}
+                  disabled={
+                    titlesLoading || titleBusy || selectedTitleId === equippedTitleId
+                  }
+                  onClick={() => void equipTitle()}
+                >
+                  {titleBusy ? "Equipando..." : "Aplicar título"}
+                </button>
               </section>
 
               <section className={styles.section} aria-labelledby="profile-privacy-settings">
