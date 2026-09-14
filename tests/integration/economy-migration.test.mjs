@@ -6,7 +6,7 @@ import { Client } from "pg";
 
 const databaseUrl = process.env.DATABASE_URL;
 const economyMigrationSource = readFileSync(
-  "src/lib/db/migrations/managed/037-economy-cosmetics-foundation.sql",
+  "src/lib/db/migrations/managed/038-economy-cosmetics-foundation.sql",
   "utf8",
 );
 const upMarker = "-- Up Migration";
@@ -80,15 +80,15 @@ async function createCommander(client, label) {
 if (!databaseUrl) {
   test("economy migration exige DATABASE_URL", { skip: true }, () => {});
 } else {
-  test("037 cria moeda única, catálogo determinístico e backfill idempotente", async () => {
+  test("038 cria moeda única, catálogo determinístico e backfill idempotente", async () => {
     await withTemporaryDatabase(async (connectionString) => {
       await prepareDatabase(connectionString);
       const client = new Client({ connectionString });
       await client.connect();
 
       try {
-        assert.ok(upStart >= 0, "migration 037 precisa manter marcador -- Up Migration");
-        assert.ok(economyMigrationSql.length > 0, "migration 037 precisa possuir SQL de up");
+        assert.ok(upStart >= 0, "migration 038 precisa manter marcador -- Up Migration");
+        assert.ok(economyMigrationSql.length > 0, "migration 038 precisa possuir SQL de up");
 
         const currencies = await client.query(
           `SELECT code,display_name,symbol,is_active
@@ -128,7 +128,7 @@ if (!databaseUrl) {
 
         const userId = await createCommander(client, "EconomyBackfill");
 
-        // 037 já foi aplicada pelo runner. Executá-la novamente prova que o SQL é
+        // 038 já foi aplicada pelo runner. Executá-la novamente prova que o SQL é
         // idempotente e que o backfill também cobre comandantes preexistentes.
         await client.query(economyMigrationSql);
         await client.query(economyMigrationSql);
@@ -181,7 +181,7 @@ if (!databaseUrl) {
     });
   });
 
-  test("037 bloqueia saldo negativo e loadout sem ownership/slot compatível", async () => {
+  test("038 bloqueia saldo negativo e loadout sem ownership/slot compatível", async () => {
     await withTemporaryDatabase(async (connectionString) => {
       await prepareDatabase(connectionString);
       const client = new Client({ connectionString });
