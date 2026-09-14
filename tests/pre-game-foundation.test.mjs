@@ -158,7 +158,8 @@ test("fallback 2D permanece visível até a cena estável e lifecycle intermedi�
   assert.match(scene, /const sceneUnavailable = sceneFailed \|\| !webglAvailable;/);
   assert.match(scene, /const webglState: CommandSceneState = sceneUnavailable \? "fallback" : scenePhase;/);
   assert.match(scene, /onScenePhaseChange=\{handleScenePhaseChange\}/);
-  assert.match(canvas, /gl\.compileAsync\(scene, camera\)/);
+  assert.match(canvas, /gl\.compile\(scene, camera\)/);
+  assert.doesNotMatch(canvas, /gl\.compileAsync\(scene, camera\)/);
   assert.match(canvas, /onScenePhaseChange\("primed"\)/);
   assert.match(canvas, /onScenePhaseChange\("ready"\)/);
   assert.doesNotMatch(canvas, /onCreated=\{\(\{ gl \}\) => \{[\s\S]*?onScenePhaseChange\("ready"\)/);
