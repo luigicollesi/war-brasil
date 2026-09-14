@@ -21,10 +21,13 @@ const authRoute = readFileSync("src/app/api/auth/[...all]/route.ts", "utf8");
 const registerRoute = readFileSync("src/app/api/auth/register/route.ts", "utf8");
 const proxy = readFileSync("src/proxy.ts", "utf8");
 const email = readFileSync("src/lib/server/auth/email.ts", "utf8");
-const appleSecret = readFileSync("src/lib/server/auth/apple-client-secret.ts", "utf8");
 const envExample = readFileSync(".env.example", "utf8");
 const home = readFileSync(
   "src/components/pre-game/home/command-home-client.tsx",
+  "utf8",
+);
+const authModal = readFileSync(
+  "src/components/auth/command-auth-modal.tsx",
   "utf8",
 );
 const onboarding = readFileSync(
@@ -49,12 +52,10 @@ const authSources = [
   registerRoute,
   proxy,
   email,
-  appleSecret,
 ].join("\n");
 
-test("auth fixa Better Auth e dependências criptográficas em versões exatas", () => {
+test("auth fixa Better Auth e dependências server-only em versões exatas", () => {
   assert.equal(pkg.dependencies["better-auth"], "1.7.4");
-  assert.equal(pkg.dependencies.jose, "6.2.12");
   assert.equal(pkg.dependencies["server-only"], "0.0.1");
 });
 
@@ -71,12 +72,12 @@ test("auth de servidor permanece server-only e usa schema PostgreSQL dedicado", 
   assert.match(auth, /joins: true/);
 });
 
-test("launch auth possui somente Google, Apple, Discord e credentials", () => {
+test("launch auth possui somente Google, Discord e credentials", () => {
   assert.match(auth, /google:/);
-  assert.match(auth, /apple:/);
   assert.match(auth, /discord:/);
   assert.match(auth, /emailAndPassword:/);
-  assert.doesNotMatch(auth, /github|microsoft|twitch|steam|epic|passkey/i);
+  assert.doesNotMatch(auth, /apple|github|microsoft|twitch|steam|epic|passkey/i);
+  assert.doesNotMatch(authModal, /apple|Continuar com Apple/i);
 });
 
 test("credentials exige email verificado e nunca auto-autentica cadastro/verificação", () => {
@@ -98,18 +99,9 @@ test("linking é explícito e não confia em coincidência de email", () => {
   assert.match(auth, /allowUnlinkingAll: false/);
 });
 
-test("Discord e Apple possuem fallback estável e não-entregável quando email falta", () => {
+test("Discord possui fallback estável e não-entregável quando email falta", () => {
   assert.match(auth, /\$\{profile\.id\}@discord\.placeholder\.invalid/);
-  assert.match(auth, /\$\{profile\.sub\}@apple\.placeholder\.invalid/);
   assert.match(auth, /scope: \["identify", "email"\]/);
-});
-
-test("Apple client secret é assinado no servidor e não armazenado como JWT estático", () => {
-  assert.match(appleSecret, /importPKCS8/);
-  assert.match(appleSecret, /SignJWT/);
-  assert.match(appleSecret, /"ES256"/);
-  assert.match(appleSecret, /https:\/\/appleid\.apple\.com/);
-  assert.match(appleSecret, /180 \* 24 \* 60 \* 60/);
 });
 
 test("cookies/sessão têm cache curto, mas backend sensível força validação no banco", () => {
@@ -162,16 +154,16 @@ test("mutações auth browser são first-party e só callbacks de provider aceit
 test("nenhuma variável auth server-only é publicada com NEXT_PUBLIC", () => {
   assert.doesNotMatch(
     authSources,
-    /NEXT_PUBLIC_(?:BETTER_AUTH|GOOGLE|APPLE|DISCORD|DATABASE)/,
+    /NEXT_PUBLIC_(?:BETTER_AUTH|GOOGLE|DISCORD|DATABASE)/,
   );
   assert.doesNotMatch(
     envExample,
-    /^NEXT_PUBLIC_(?:BETTER_AUTH|GOOGLE|APPLE|DISCORD|DATABASE)[A-Z0-9_]*=/m,
+    /^NEXT_PUBLIC_(?:BETTER_AUTH|GOOGLE|DISCORD|DATABASE)[A-Z0-9_]*=/m,
   );
   assert.match(envExample, /BETTER_AUTH_SECRET=/);
   assert.match(envExample, /GOOGLE_CLIENT_SECRET=/);
-  assert.match(envExample, /APPLE_PRIVATE_KEY=/);
   assert.match(envExample, /DISCORD_CLIENT_SECRET=/);
+  assert.doesNotMatch(envExample, /APPLE_/);
 });
 
 test("emails auth não geram token próprio nem registram URL/token", () => {
@@ -183,16 +175,13 @@ test("emails auth não geram token próprio nem registram URL/token", () => {
   assert.doesNotMatch(email, /console\.(?:log|info|error)\([^)]*url/i);
 });
 
-test("validador de produção exige segredo forte e configuração dos três OAuth providers", () => {
+test("validador de produção exige segredo forte e configuração dos dois OAuth providers", () => {
   assert.match(environment, /BETTER_AUTH_SECRET\(>=\$\{AUTH_SECRET_MIN_LENGTH\} chars\)/);
   assert.match(environment, /GOOGLE_CLIENT_ID/);
   assert.match(environment, /GOOGLE_CLIENT_SECRET/);
-  assert.match(environment, /APPLE_CLIENT_ID/);
-  assert.match(environment, /APPLE_TEAM_ID/);
-  assert.match(environment, /APPLE_KEY_ID/);
-  assert.match(environment, /APPLE_PRIVATE_KEY/);
   assert.match(environment, /DISCORD_CLIENT_ID/);
   assert.match(environment, /DISCORD_CLIENT_SECRET/);
+  assert.doesNotMatch(environment, /APPLE_/);
 });
 
 test("completude do Comando é lida de profile.commanders no servidor", () => {
