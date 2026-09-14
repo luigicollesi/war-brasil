@@ -412,6 +412,7 @@ function GameReadyClient({
           value={lastOrderRoll.value}
           rolledAt={lastOrderRoll.rolledAt}
           color={lastOrderRollPlayer.color}
+          assetRef={lastOrderRollPlayer.cosmetics.diceNeutral.assetRef}
           onComplete={() => setCompletedOrderPresentationId(orderPresentationId)}
         />
       ) : null}
@@ -447,13 +448,7 @@ function GameReadyClient({
 }
 
 type OrderRollPanelProps = {
-  players: Array<{
-    id: string;
-    factionName: string;
-    color: PlayerColor;
-    isMe: boolean;
-    rolls: Array<{ round: number; value: number; rolledAt: string }>;
-  }>;
+  players: GameSnapshot["players"];
   eligiblePlayerIds: string[];
   currentRound: number;
   meId: string | undefined;
@@ -492,6 +487,7 @@ function OrderRollPanel({
           key={`${currentRound}-${shownPlayer?.id ?? "pending"}-${shownValue}`}
           value={shownValue}
           color={shownPlayer?.color ?? currentColor ?? "forest"}
+          assetRef={shownPlayer?.cosmetics.diceNeutral.assetRef}
           size="lg"
         />
         <button
