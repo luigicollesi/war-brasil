@@ -23,12 +23,12 @@ test("CI injeta sentinels falsos para banco, auth, OAuth e email", () => {
     "DB_PASSWORD_SENTINEL",
     "BETTER_AUTH_SECRET",
     "GOOGLE_CLIENT_SECRET",
-    "APPLE_PRIVATE_KEY",
     "DISCORD_CLIENT_SECRET",
     "EMAIL_TRANSPORT_SECRET",
   ]) {
     assert.match(workflow, new RegExp(`${name}:`), name);
   }
+  assert.doesNotMatch(workflow, /APPLE_/);
   assert.match(workflow, /assert-no-auth-secret-leaks\.mjs/);
 });
 
