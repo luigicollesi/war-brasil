@@ -4,7 +4,6 @@ import type { PublicPlayerMatchHistory } from "@/src/lib/profile/profile-command
 
 export type ProfileVisibility = "public" | "friends" | "private";
 export type FriendRequestPolicy = "everyone" | "friends_of_friends" | "nobody";
-export type CommanderPortraitSource = "auth" | "upload" | "catalog";
 export type CommanderPresenceState = "online" | "offline" | "unavailable";
 export type CommanderActivityState = "idle" | "lobby" | "match" | "unavailable";
 export type CommanderRelationship =
@@ -21,11 +20,6 @@ export type CommanderTitleDto = Readonly<{
   rarity: "common" | "uncommon" | "rare" | "epic" | "legendary";
 }>;
 
-export type CommanderPortraitDto = Readonly<{
-  src: string | null;
-  alt: string;
-}>;
-
 export type CommanderPresenceDto = Readonly<{
   state: CommanderPresenceState;
   lastSeenAt: string | null;
@@ -40,7 +34,6 @@ export type CommanderIdentityDto = Readonly<{
   handle: string;
   displayName: string;
   bio: string | null;
-  portrait: CommanderPortraitDto;
   title: CommanderTitleDto | null;
   presence: CommanderPresenceDto;
   activity: CommanderActivityDto;
@@ -70,7 +63,6 @@ export type PublicCommanderProfileDto = Readonly<{
 export type CommanderSearchDto = Readonly<{
   handle: string;
   displayName: string;
-  portrait: CommanderPortraitDto;
   title: CommanderTitleDto | null;
   relationship: Exclude<CommanderRelationship, "self">;
   mutualContacts: number;
