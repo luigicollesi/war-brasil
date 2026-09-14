@@ -11,6 +11,18 @@ const RELATION_COPY = {
   opponent: "Outro lado",
 } as const;
 
+const RESULT_COPY = {
+  victory: "Vitória",
+  defeat: "Derrota",
+  unknown: "Resultado indisponível",
+} as const;
+
+const MODE_COPY = {
+  classic: "Clássico",
+  custom: "Personalizada",
+  unknown: "Modo não registrado",
+} as const;
+
 export function ProfileCampaignStation({
   snapshot,
   selected,
@@ -56,11 +68,9 @@ export function ProfileCampaignStation({
                 <small>{formatOperationDate(match.playedAt)}</small>
                 <strong>{match.operationCode}</strong>
               </span>
-              <em data-result={match.result}>
-                {match.result === "victory" ? "Vitória" : "Derrota"}
-              </em>
+              <em data-result={match.result}>{RESULT_COPY[match.result]}</em>
               <span>
-                <small>{match.mode === "classic" ? "Clássico" : "Personalizada"}</small>
+                <small>{MODE_COPY[match.mode]}</small>
                 <strong>{match.durationMinutes} min</strong>
               </span>
             </button>
@@ -75,8 +85,8 @@ export function ProfileCampaignStation({
             <strong>{selectedMatch.operationCode} · {selectedMatch.participants.length} jogadores</strong>
           </div>
           <ul className={styles.searchResults} aria-label="Participantes da partida">
-            {selectedMatch.participants.map((participant) => (
-              <li key={`${selectedMatch.operationCode}-${participant.handle}`}>
+            {selectedMatch.participants.map((participant, index) => (
+              <li key={`${selectedMatch.operationCode}-${participant.handle ?? participant.displayName}-${index}`}>
                 <span className={styles.searchMonogram} aria-hidden="true">
                   {initialsFrom(participant.displayName)}
                 </span>
