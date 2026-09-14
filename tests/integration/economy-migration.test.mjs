@@ -5,6 +5,17 @@ import test from "node:test";
 import { Client } from "pg";
 
 const databaseUrl = process.env.DATABASE_URL;
+const economyMigrationSource = readFileSync(
+  "src/lib/db/migrations/managed/037-economy-cosmetics-foundation.sql",
+  "utf8",
+);
+const upMarker = "-- Up Migration";
+const downMarker = "-- Down Migration";
+const upStart = economyMigrationSource.indexOf(upMarker);
+const downStart = economyMigrationSource.indexOf(downMarker, upStart + upMarker.length);
+const economyMigrationSql = economyMigrationSource
+  .slice(upStart + upMarker.length, downStart >= 0 ? downStart : economyMigrationSource.length)
+  .trim();
 
 function urlForDatabase(name) {
   const url = new URL(databaseUrl);
@@ -76,6 +87,9 @@ if (!databaseUrl) {
       await client.connect();
 
       try {
+        assert.ok(upStart >= 0, "migration 037 precisa manter marcador -- Up Migration");
+        assert.ok(economyMigrationSql.length > 0, "migration 037 precisa possuir SQL de up");
+
         const currencies = await client.query(
           `SELECT code,display_name,symbol,is_active
              FROM economy.currencies
@@ -100,11 +114,11 @@ if (!databaseUrl) {
         assert.deepEqual(catalog.rows[0], { total: 13, defaults: 4, announced: 9 });
 
         const sets = await client.query(
-          `SELECT set.id, set.status, COUNT(item.cosmetic_id)::int AS items
-             FROM catalog.cosmetic_sets set
-             LEFT JOIN catalog.cosmetic_set_items item ON item.set_id=set.id
-            GROUP BY set.id,set.status
-            ORDER BY set.id`,
+          `SELECT cosmetic_set.id, cosmetic_set.status, COUNT(item.cosmetic_id)::int AS items
+             FROM catalog.cosmetic_sets cosmetic_set
+             LEFT JOIN catalog.cosmetic_set_items item ON item.set_id=cosmetic_set.id
+            GROUP BY cosmetic_set.id,cosmetic_set.status
+            ORDER BY cosmetic_set.id`,
         );
         assert.deepEqual(sets.rows, [
           { id: "set.exercito", status: "announced", items: 3 },
@@ -113,8 +127,11 @@ if (!databaseUrl) {
         ]);
 
         const userId = await createCommander(client, "EconomyBackfill");
-        runPrepare(connectionString);
-        runPrepare(connectionString);
+
+        // 037 já foi aplicada pelo runner. Executá-la novamente prova que o SQL é
+        // idempotente e que o backfill também cobre comandantes preexistentes.
+        await client.query(economyMigrationSql);
+        await client.query(economyMigrationSql);
 
         const wallet = await client.query(
           `SELECT balance::text AS balance
@@ -172,7 +189,7 @@ if (!databaseUrl) {
 
       try {
         const userId = await createCommander(client, "EconomyConstraints");
-        runPrepare(connectionString);
+        await client.query(economyMigrationSql);
 
         await assert.rejects(
           client.query(
