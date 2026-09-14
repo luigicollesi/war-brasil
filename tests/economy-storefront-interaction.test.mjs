@@ -38,17 +38,26 @@ test("item possuído available pode ser reequipado sem qualquer caminho de aquis
   assert.doesNotMatch(store, />COMPRAR<|Comprar agora|price\b|\/api\/economy\/(purchase|reward|grant|checkout)/i);
 });
 
-test("remessa anunciada possui preview interativo leve e sem aquisição", () => {
+test("remessa anunciada possui preview visual HQ sob demanda e sem aquisição", () => {
   assert.match(store, /previewSetId/);
+  assert.match(store, /previewItemId/);
+  assert.match(store, /firstPreviewItem/);
   assert.match(store, /aria-expanded=\{previewOpen\}/);
   assert.match(store, /previewOpen \? "FECHAR" : "INSPECIONAR"/);
   assert.match(store, /data-preview-detail/);
+  assert.match(store, /data-preview-stage/);
   assert.match(store, /PRÉVIA DETALHADA/);
   assert.match(store, /HQ SOB DEMANDA · SEM AQUISIÇÃO/);
+  assert.match(store, /selectedPreviewItem\?\.assetRef/);
+  assert.match(store, /src=\{selectedPreviewItem\.assetRef\}/);
+  assert.match(store, /<Image/);
+  assert.match(store, /loading="lazy"/);
+  assert.match(store, /unoptimized/);
+  assert.match(store, /aria-pressed=\{selectedPreviewItem\?\.id === item\.id\}/);
 
-  // A listagem e a prévia textual não carregam os SVGs multi-megabyte. O asset
-  // autoritativo continua no DTO para runtime futuro, mas não é renderizado aqui.
-  assert.doesNotMatch(store, /assetRef|previewRef|<img|<Image|\/dados\//);
+  // O componente não hardcode os nove caminhos HQ. Eles chegam pelo DTO e só
+  // viram src quando o detalhe aberto seleciona exatamente um item.
+  assert.doesNotMatch(store, /\/dados\//);
 });
 
 test("acesso direto à loja não quebra sessão autenticada sem comandante", () => {
