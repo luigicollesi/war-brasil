@@ -156,6 +156,18 @@ export type CommanderSearchResult = Readonly<{
   mutualContacts: number;
 }>;
 
+export type PublicCommanderRelationship =
+  | "none"
+  | "outgoing-request"
+  | "incoming-request"
+  | "friend";
+
+export type PublicCommanderProfileSnapshot = Readonly<{
+  identity: CommanderIdentity;
+  relationship: PublicCommanderRelationship;
+  history: ProfileCommandSection<PlayerMatchHistory>;
+}>;
+
 export type ProfileCommandStation =
   | "dossier"
   | "treasury"
