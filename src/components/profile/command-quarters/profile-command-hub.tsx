@@ -12,9 +12,9 @@ import type {
 } from "@/src/lib/profile/profile-command-contract";
 import { ProfileCampaignStation } from "./profile-campaign-station";
 import {
+  commanderStatusLabel,
   formatBalance,
   initialsFrom,
-  PRESENCE_COPY,
 } from "./profile-command-format";
 import styles from "./profile-command-hub.module.css";
 import refinementStyles from "./profile-command-refinements.module.css";
@@ -210,9 +210,9 @@ function DossierStation({ snapshot }: { snapshot: ProfileCommandSnapshot }) {
         name={identity.displayName}
       />
       <div className={styles.identityCopy}>
-        <span className={styles.presence} data-presence={identity.presence}>
+        <span className={styles.presence} data-presence={identity.presence.state}>
           <i aria-hidden="true" />
-          {PRESENCE_COPY[identity.presence]}
+          {commanderStatusLabel(identity.presence, identity.activity)}
         </span>
         <h1>{identity.displayName}</h1>
         <p>{identity.title ?? "Sem título equipado"}</p>
@@ -224,6 +224,12 @@ function DossierStation({ snapshot }: { snapshot: ProfileCommandSnapshot }) {
       </div>
     </div>
   );
+}
+
+function campaignResultLabel(result: MatchSummary["result"]) {
+  if (result === "victory") return "Vitória";
+  if (result === "defeat") return "Derrota";
+  return "Resultado indisponível";
 }
 
 function CommandTable({
@@ -278,7 +284,7 @@ function CommandTable({
         kicker: "Memória operacional",
         title: selectedOperation?.operationCode ?? "Livro de Campanha",
         detail: selectedOperation
-          ? `${selectedOperation.result === "victory" ? "Vitória" : "Derrota"} · ${selectedOperation.durationMinutes} min`
+          ? `${campaignResultLabel(selectedOperation.result)} · ${selectedOperation.durationMinutes} min`
           : snapshot.history.availability === "unavailable"
             ? "Histórico sem fonte disponível"
             : `${snapshot.history.data.matches.length} registros recentes`,
