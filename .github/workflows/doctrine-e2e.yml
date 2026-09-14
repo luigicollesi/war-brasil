@@ -26,6 +26,10 @@ jobs:
       DATABASE_URL: postgresql://war:war@127.0.0.1:5432/war_ci
       PLAYWRIGHT_TEST_BASE_URL: http://127.0.0.1:3000
       DOCTRINE_EVIDENCE_DIR: test-results/doctrine-evidence
+      BETTER_AUTH_SECRET: AUTH_SENTINEL_DO_NOT_SHIP_0123456789ABCDEF
+      BETTER_AUTH_URL: http://127.0.0.1:3000
+      AUTH_ALLOWED_HOSTS: 127.0.0.1:3000,localhost:3000
+      AUTH_EMAIL_SINK_DIR: /tmp/war-brasil-doctrine-auth-email-sink
 
     steps:
       - uses: actions/checkout@v7
@@ -49,6 +53,7 @@ jobs:
 
       - name: Start production application
         run: |
+          mkdir -p "$AUTH_EMAIL_SINK_DIR"
           npm run start -- -p 3000 > /tmp/doctrine-next.log 2>&1 &
           echo $! > /tmp/doctrine-next.pid
 
