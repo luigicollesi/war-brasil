@@ -172,19 +172,31 @@ export async function ensureEconomyState(
 export async function getEconomyStorefront(
   userId: string,
 ): Promise<EconomyStorefrontSnapshot> {
-  await ensureEconomyState(userId);
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await ensureLockedEconomyState(userId, client);
 
-  const [walletRow, ownedRows, setRows] = await Promise.all([
-    findCampaignCreditWallet(userId),
-    listOwnedCosmetics(userId),
-    listStorefrontSetItems(userId),
-  ]);
+    const [walletRow, ownedRows, setRows] = await Promise.all([
+      findCampaignCreditWallet(userId, client),
+      listOwnedCosmetics(userId, client),
+      listStorefrontSetItems(userId, client),
+    ]);
 
-  return {
-    wallet: walletFromRow(walletRow),
-    loadout: loadoutFromOwned(ownedRows),
-    sets: setsFromRows(setRows),
-  };
+    const snapshot = {
+      wallet: walletFromRow(walletRow),
+      loadout: loadoutFromOwned(ownedRows),
+      sets: setsFromRows(setRows),
+    } satisfies EconomyStorefrontSnapshot;
+
+    await client.query("COMMIT");
+    return snapshot;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 export function parseEquipCosmeticInput(payload: unknown): EquipCosmeticInput {
