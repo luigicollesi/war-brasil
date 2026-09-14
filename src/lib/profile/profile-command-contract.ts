@@ -87,6 +87,7 @@ export type CommanderContact = Readonly<{
 }>;
 
 export type CommanderFriendRequest = Readonly<{
+  requestId: string;
   handle: string;
   displayName: string;
   title: string | null;
@@ -180,11 +181,19 @@ export type ProfileCommandSnapshot = Readonly<{
   isEvaluationFixture: boolean;
 }>;
 
+export type CommanderSearchRelationship =
+  | "none"
+  | "outgoing-request"
+  | "incoming-request"
+  | "friend"
+  | "blocked";
+
 export type CommanderSearchResult = Readonly<{
   handle: string;
   displayName: string;
   title: string | null;
   portrait: CommanderPortrait;
+  relationship: CommanderSearchRelationship;
   mutualContacts: number;
 }>;
 
