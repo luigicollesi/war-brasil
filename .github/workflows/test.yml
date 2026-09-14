@@ -35,6 +35,15 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      redis:
+        image: redis:8-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -53,7 +62,10 @@ jobs:
         run: npm run test:db
         env:
           DATABASE_URL: postgresql://war:DB_SENTINEL_DO_NOT_SHIP_2026@127.0.0.1:5432/war_ci
-      - run: npm run realtime:test
+      - name: Test realtime and Redis presence
+        run: npm run realtime:test
+        env:
+          PROFILE_PRESENCE_TEST_REDIS_URL: redis://127.0.0.1:6379
       - name: Prepare isolated Auth/Lobby E2E database
         run: node scripts/e2e/prepare-lobby-db.mjs
         env:
