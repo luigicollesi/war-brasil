@@ -36,6 +36,7 @@ function guestSnapshot(reason: string): ProfileCommandSnapshot {
   return {
     state: "guest",
     identity: unavailableSection(null, reason),
+    privacy: unavailableSection(null, "Privacidade indisponível sem identidade autenticada."),
     wallet: unavailableSection(null, "Tesouraria indisponível sem identidade autenticada."),
     social: unavailableSection(emptySocial(), "Rede de Comando indisponível sem identidade autenticada."),
     history: unavailableSection(emptyHistory(), "Livro de Campanha indisponível sem identidade autenticada."),
@@ -99,11 +100,17 @@ export async function getCurrentProfileCommandSnapshot(): Promise<ProfileCommand
       data: {
         displayName: profile.identity.displayName,
         handle: profile.identity.handle,
+        bio: profile.identity.bio,
         title: profile.identity.title?.name ?? null,
         portrait: profile.identity.portrait,
         presence: profile.identity.presence,
         activity,
       },
+    },
+    privacy: {
+      availability: "available",
+      source: "authenticated-user",
+      data: profile.privacy,
     },
     wallet: unavailableSection(
       null,
