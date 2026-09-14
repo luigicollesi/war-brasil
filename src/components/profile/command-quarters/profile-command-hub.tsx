@@ -67,11 +67,9 @@ const SCENE_DIRECTIVES = {
 
 function IdentityMark({ name }: { name: string }) {
   return (
-    <div className={styles.identityMark} aria-label={`Monograma de ${name}`}>
-      <small>CALLSIGN</small>
-      <strong>{initialsFrom(name)}</strong>
-      <i aria-hidden="true" />
-    </div>
+    <span className={styles.guestMark} aria-label={`Monograma de ${name}`}>
+      {initialsFrom(name)}
+    </span>
   );
 }
 
