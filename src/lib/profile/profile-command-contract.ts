@@ -94,6 +94,19 @@ export type CommanderFriendRequest = Readonly<{
   mutualContacts: number;
 }>;
 
+export type CommanderOutgoingFriendRequest = Readonly<{
+  requestId: string;
+  handle: string;
+  displayName: string;
+  title: string | null;
+}>;
+
+export type CommanderBlockedContact = Readonly<{
+  handle: string;
+  displayName: string;
+  title: string | null;
+}>;
+
 export type RecentCommanderContact = Readonly<{
   handle: string;
   displayName: string;
@@ -105,6 +118,8 @@ export type RecentCommanderContact = Readonly<{
 export type PlayerSocialSnapshot = Readonly<{
   friends: ReadonlyArray<CommanderContact>;
   incomingRequests: ReadonlyArray<CommanderFriendRequest>;
+  outgoingRequests: ReadonlyArray<CommanderOutgoingFriendRequest>;
+  blockedCommanders: ReadonlyArray<CommanderBlockedContact>;
   recentContacts: ReadonlyArray<RecentCommanderContact>;
   totalFriends: number;
 }>;
