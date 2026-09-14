@@ -1,11 +1,14 @@
 import "server-only";
 
+import type { PublicPlayerMatchHistory } from "@/src/lib/profile/profile-command-contract";
 import type {
   CommanderIdentityDto,
   CommanderPortraitDto,
+  CommanderRelationship,
   CommanderSearchDto,
   CommanderTitleDto,
   OwnCommanderProfileDto,
+  ProfileVisibility,
   PublicCommanderProfileDto,
 } from "./profile-domain";
 import {
@@ -15,6 +18,8 @@ import {
   type CommanderProfileRow,
   type CommanderSearchRow,
 } from "./profile-repository";
+import { getCommanderActivity } from "./activity-service";
+import { getPlayerMatchHistory } from "./history-service";
 import { getSocialRelationship } from "./social-repository";
 
 function safePortraitSrc(value: string | null) {
@@ -69,6 +74,35 @@ function identityFromRow(row: CommanderProfileRow): CommanderIdentityDto | null 
   };
 }
 
+function visibilityAllows(
+  visibility: ProfileVisibility,
+  relationship: Exclude<CommanderRelationship, "blocked">,
+) {
+  if (relationship === "self" || visibility === "public") return true;
+  return visibility === "friends" && relationship === "friend";
+}
+
+function publicHistoryFromOwnerHistory(
+  history: Awaited<ReturnType<typeof getPlayerMatchHistory>>,
+): PublicPlayerMatchHistory {
+  return {
+    matches: history.matches.map((match) => ({
+      operationCode: match.operationCode,
+      playedAt: match.playedAt,
+      result: match.result,
+      mode: match.mode,
+      durationMinutes: match.durationMinutes,
+      participants: match.participants.map((participant) => ({
+        handle: participant.handle,
+        displayName: participant.displayName,
+        relation: participant.relation === "self" ? "self" : "opponent",
+      })),
+    })),
+    hasMore: history.hasMore,
+    nextCursor: history.nextCursor,
+  };
+}
+
 export async function getOwnCommanderProfile(
   userId: string,
 ): Promise<OwnCommanderProfileDto | null> {
@@ -97,28 +131,50 @@ export async function getPublicCommanderProfile(
   const identity = identityFromRow(row);
   if (!identity) return null;
 
-  if (row.user_id === actorUserId) {
-    return { identity, relationship: "self" };
-  }
-
-  const relationship = await getSocialRelationship(actorUserId, row.user_id);
+  const relationship: CommanderRelationship =
+    row.user_id === actorUserId
+      ? "self"
+      : await getSocialRelationship(actorUserId, row.user_id);
   if (relationship === "blocked") return null;
+
+  const presenceVisible = visibilityAllows(
+    row.presence_visibility,
+    relationship,
+  );
+  const activityVisible = visibilityAllows(
+    row.activity_visibility,
+    relationship,
+  );
+  const historyVisible = visibilityAllows(
+    row.history_visibility,
+    relationship,
+  );
+
+  const [activity, ownerHistory] = await Promise.all([
+    activityVisible
+      ? getCommanderActivity(row.user_id)
+      : Promise.resolve(null),
+    historyVisible
+      ? getPlayerMatchHistory(row.user_id, { limit: 20 })
+      : Promise.resolve(null),
+  ]);
 
   return {
     identity: {
       ...identity,
-      presence:
-        row.presence_visibility === "private" ||
-        (row.presence_visibility === "friends" && relationship !== "friend")
-          ? { state: "unavailable", lastSeenAt: null }
-          : identity.presence,
+      presence: presenceVisible
+        ? identity.presence
+        : { state: "unavailable", lastSeenAt: null },
       activity:
-        row.activity_visibility === "private" ||
-        (row.activity_visibility === "friends" && relationship !== "friend")
-          ? { state: "unavailable", matchMode: null }
-          : identity.activity,
+        activityVisible && activity
+          ? activity
+          : { state: "unavailable", matchMode: null },
     },
     relationship,
+    history: {
+      visible: historyVisible,
+      data: ownerHistory ? publicHistoryFromOwnerHistory(ownerHistory) : null,
+    },
   };
 }
 
