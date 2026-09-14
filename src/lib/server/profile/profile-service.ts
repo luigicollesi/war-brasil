@@ -1,10 +1,8 @@
 import "server-only";
 
 import type { PublicPlayerMatchHistory } from "@/src/lib/profile/profile-command-contract";
-import { safeProfilePortraitSrc } from "@/src/lib/profile/profile-portrait-policy";
 import type {
   CommanderIdentityDto,
-  CommanderPortraitDto,
   CommanderRelationship,
   CommanderSearchDto,
   CommanderTitleDto,
@@ -24,16 +22,6 @@ import {
 } from "./profile-repository";
 import { getSocialRelationship } from "./social-repository";
 
-function portraitFromRow(row: CommanderProfileRow | CommanderSearchRow): CommanderPortraitDto {
-  const displayName = row.display_name?.trim() || row.handle?.trim() || "Comandante";
-  const selected = safeProfilePortraitSrc(row.portrait_ref);
-  const authFallback = safeProfilePortraitSrc(row.auth_image);
-  return {
-    src: selected ?? authFallback,
-    alt: `Retrato de ${displayName}`,
-  };
-}
-
 function titleFromRow(row: CommanderProfileRow | CommanderSearchRow): CommanderTitleDto | null {
   if (!row.title_id || !row.title_name || !row.title_rarity) return null;
   return {
@@ -52,7 +40,6 @@ function identityFromRow(row: CommanderProfileRow): CommanderIdentityDto | null 
     handle,
     displayName,
     bio: row.bio?.trim() || null,
-    portrait: portraitFromRow(row),
     title: titleFromRow(row),
     presence: {
       state: "unavailable",
@@ -227,7 +214,6 @@ export async function searchCommanderDirectory(
       {
         handle,
         displayName,
-        portrait: portraitFromRow(row),
         title: titleFromRow(row),
         relationship: row.relationship,
         mutualContacts: row.mutual_contacts,
