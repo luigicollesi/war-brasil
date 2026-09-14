@@ -29,6 +29,7 @@ export async function getPublicCommanderProfileSnapshot(
     identity: {
       displayName: profile.identity.displayName,
       handle: profile.identity.handle,
+      bio: profile.identity.bio,
       title: profile.identity.title?.name ?? null,
       portrait: profile.identity.portrait,
       presence: profile.identity.presence,
