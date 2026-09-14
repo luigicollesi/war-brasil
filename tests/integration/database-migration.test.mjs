@@ -40,6 +40,7 @@ const physicalTables = new Map([
   ],
   ["auth", ["account", "rateLimit", "session", "user", "verification"]],
   ["profile", ["commander_titles", "commanders", "privacy_settings"]],
+  ["social", ["blocks", "friend_requests", "friendships"]],
   ["ops", ["command_receipts", "pgmigrations"]],
 ]);
 
@@ -73,6 +74,7 @@ const managedHistory = [
   "032-profile-identity-game-binding.sql",
   "033-auth-rate-limit.sql",
   "034-profile-v3-foundation.sql",
+  "035-social-graph.sql",
 ];
 
 function urlForDatabase(name) {
@@ -438,7 +440,7 @@ async function assertOrganizedDatabase(connectionString) {
       SELECT n.nspname AS schema_name, c.relname AS relation_name, c.relkind
       FROM pg_class c
       JOIN pg_namespace n ON n.oid = c.relnamespace
-      WHERE n.nspname IN ('game', 'catalog', 'auth', 'profile', 'ops', 'public')
+      WHERE n.nspname IN ('game', 'catalog', 'auth', 'profile', 'social', 'ops', 'public')
         AND c.relkind IN ('r', 'p', 'v')
       ORDER BY n.nspname, c.relname
     `);
@@ -581,7 +583,7 @@ async function assertOrganizedDatabase(connectionString) {
     const indexes = await client.query(`
       SELECT schemaname, indexname
       FROM pg_indexes
-      WHERE schemaname IN ('game', 'profile', 'ops')
+      WHERE schemaname IN ('game', 'profile', 'social', 'ops')
     `);
     const indexNames = new Set(indexes.rows.map((row) => row.indexname));
     for (const name of [
@@ -595,6 +597,11 @@ async function assertOrganizedDatabase(connectionString) {
       "commanders_handle_normalized_uq",
       "commanders_display_name_normalized_idx",
       "commander_titles_title_user_idx",
+      "friend_requests_pending_pair_uq",
+      "friend_requests_recipient_pending_idx",
+      "friend_requests_requester_pending_idx",
+      "friendships_user_b_idx",
+      "blocks_blocked_idx",
     ]) {
       assert.equal(indexNames.has(name), true, name);
     }
@@ -670,7 +677,7 @@ async function assertLegacyRoomRollout(connectionString) {
 if (!databaseUrl) {
   test("migrations de banco exigem DATABASE_URL", { skip: true }, () => {});
 } else {
-  test("026-034 migram banco v025, preservam catálogos e são idempotentes", async () => {
+  test("026-035 migram banco v025, preservam catálogos e são idempotentes", async () => {
     await withTemporaryDatabase("legacy", async (connectionString) => {
       await applySql(connectionString, "tests/fixtures/db/schema-v025.sql");
       await applySql(
