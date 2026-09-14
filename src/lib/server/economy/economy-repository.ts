@@ -42,6 +42,25 @@ export type CosmeticSetItemRow = CosmeticRow & {
   position: number;
 };
 
+/**
+ * Serializes economy/loadout mutations for one commander. The same commander
+ * row is locked by match-start cosmetic capture so equip-vs-start has a clear
+ * transaction boundary instead of producing a partially observed loadout.
+ */
+export async function lockCommanderEconomyState(
+  userId: string,
+  db: EconomyQueryable,
+) {
+  const result = await db.query<{ user_id: string }>(
+    `SELECT user_id
+       FROM profile.commanders
+      WHERE user_id=$1::uuid
+      FOR UPDATE`,
+    [userId],
+  );
+  return (result.rowCount ?? 0) === 1;
+}
+
 export async function initializeEconomyState(
   userId: string,
   db: EconomyQueryable,
