@@ -27,6 +27,7 @@ const physicalTables = new Map([
     "catalog",
     [
       "bot_names",
+      "commander_titles",
       "dice_balance_profiles",
       "dice_balance_settings",
       "event_connections",
@@ -38,7 +39,7 @@ const physicalTables = new Map([
     ],
   ],
   ["auth", ["account", "rateLimit", "session", "user", "verification"]],
-  ["profile", ["commanders"]],
+  ["profile", ["commander_titles", "commanders", "privacy_settings"]],
   ["ops", ["command_receipts", "pgmigrations"]],
 ]);
 
@@ -71,6 +72,7 @@ const managedHistory = [
   "031-auth-foundation.sql",
   "032-profile-identity-game-binding.sql",
   "033-auth-rate-limit.sql",
+  "034-profile-v3-foundation.sql",
 ];
 
 function urlForDatabase(name) {
@@ -286,9 +288,132 @@ async function assertAuthProfileSchema(client) {
     "players_user_room_idx",
     "commanders_handle_normalized_uq",
     "commanders_display_name_normalized_idx",
+    "commander_titles_title_user_idx",
   ]) {
     assert.equal(indexNames.has(name), true, name);
   }
+
+  const commanderColumns = await client.query(`
+    SELECT column_name
+    FROM information_schema.columns
+    WHERE table_schema='profile' AND table_name='commanders'
+  `);
+  const commanderColumnNames = new Set(
+    commanderColumns.rows.map((row) => row.column_name),
+  );
+  for (const name of [
+    "bio",
+    "portrait_source",
+    "portrait_ref",
+    "last_seen_at",
+    "equipped_title_id",
+  ]) {
+    assert.equal(commanderColumnNames.has(name), true, name);
+  }
+
+  const profileConstraints = await client.query(`
+    SELECT c.conname
+    FROM pg_constraint c
+    WHERE c.conrelid='profile.commanders'::regclass
+  `);
+  const profileConstraintNames = new Set(
+    profileConstraints.rows.map((row) => row.conname),
+  );
+  for (const name of [
+    "commanders_bio_not_blank_check",
+    "commanders_portrait_source_check",
+    "commanders_portrait_pair_check",
+    "commanders_equipped_title_owned_fkey",
+  ]) {
+    assert.equal(profileConstraintNames.has(name), true, name);
+  }
+
+  const authUser = await client.query(`
+    INSERT INTO auth."user"(name,email,"emailVerified")
+    VALUES('Profile Migration', 'profile-migration@example.invalid', TRUE)
+    RETURNING id
+  `);
+  const userId = authUser.rows[0].id;
+
+  await client.query(
+    `INSERT INTO profile.commanders(user_id,handle,display_name)
+     VALUES($1,'profile-migration','Profile Migration')`,
+    [userId],
+  );
+  await client.query(
+    `INSERT INTO profile.privacy_settings(user_id) VALUES($1)`,
+    [userId],
+  );
+
+  const privacy = await client.query(
+    `SELECT presence_visibility,activity_visibility,history_visibility,friend_request_policy
+       FROM profile.privacy_settings
+      WHERE user_id=$1`,
+    [userId],
+  );
+  assert.deepEqual(privacy.rows[0], {
+    presence_visibility: "friends",
+    activity_visibility: "friends",
+    history_visibility: "friends",
+    friend_request_policy: "everyone",
+  });
+
+  await client.query(`
+    INSERT INTO catalog.commander_titles(id,name,rarity)
+    VALUES('migration-title','Migration Title','rare')
+  `);
+
+  await assert.rejects(
+    client.query(
+      `UPDATE profile.commanders
+          SET equipped_title_id='migration-title'
+        WHERE user_id=$1`,
+      [userId],
+    ),
+    (error) => error?.code === "23503",
+  );
+
+  await client.query(
+    `INSERT INTO profile.commander_titles(user_id,title_id)
+     VALUES($1,'migration-title')`,
+    [userId],
+  );
+  await client.query(
+    `UPDATE profile.commanders
+        SET equipped_title_id='migration-title'
+      WHERE user_id=$1`,
+    [userId],
+  );
+
+  const equipped = await client.query(
+    `SELECT equipped_title_id FROM profile.commanders WHERE user_id=$1`,
+    [userId],
+  );
+  assert.equal(equipped.rows[0]?.equipped_title_id, "migration-title");
+
+  await assert.rejects(
+    client.query(
+      `UPDATE profile.commanders
+          SET portrait_source='upload', portrait_ref=NULL
+        WHERE user_id=$1`,
+      [userId],
+    ),
+    (error) => error?.code === "23514",
+  );
+
+  await client.query(`DELETE FROM auth."user" WHERE id=$1`, [userId]);
+  const cascaded = await client.query(
+    `SELECT
+       (SELECT COUNT(*)::int FROM profile.commanders WHERE user_id=$1) AS commanders,
+       (SELECT COUNT(*)::int FROM profile.commander_titles WHERE user_id=$1) AS titles,
+       (SELECT COUNT(*)::int FROM profile.privacy_settings WHERE user_id=$1) AS privacy`,
+    [userId],
+  );
+  assert.deepEqual(cascaded.rows[0], {
+    commanders: 0,
+    titles: 0,
+    privacy: 0,
+  });
 
   const rateLimitColumns = await client.query(`
     SELECT column_name, data_type
@@ -469,6 +594,7 @@ async function assertOrganizedDatabase(connectionString) {
       "players_user_room_idx",
       "commanders_handle_normalized_uq",
       "commanders_display_name_normalized_idx",
+      "commander_titles_title_user_idx",
     ]) {
       assert.equal(indexNames.has(name), true, name);
     }
@@ -544,7 +670,7 @@ async function assertLegacyRoomRollout(connectionString) {
 if (!databaseUrl) {
   test("migrations de banco exigem DATABASE_URL", { skip: true }, () => {});
 } else {
-  test("026-033 migram banco v025, preservam catálogos e são idempotentes", async () => {
+  test("026-034 migram banco v025, preservam catálogos e são idempotentes", async () => {
     await withTemporaryDatabase("legacy", async (connectionString) => {
       await applySql(connectionString, "tests/fixtures/db/schema-v025.sql");
       await applySql(
