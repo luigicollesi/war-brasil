@@ -186,6 +186,7 @@ export async function getEconomyStorefront(
     const snapshot = {
       wallet: walletFromRow(walletRow),
       loadout: loadoutFromOwned(ownedRows),
+      ownedItems: ownedRows.map(cosmeticFromRow),
       sets: setsFromRows(setRows),
     } satisfies EconomyStorefrontSnapshot;
 
