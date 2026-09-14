@@ -67,3 +67,31 @@ test("Profile settings route rejects malformed JSON and mutation boundary owns o
   assert.match(boundary, /rejectUntrustedMutationOrigin\(request\)/);
   assert.match(boundary, /getAuthenticatedSession\(request\)/);
 });
+
+test("authenticated Profile snapshot projects persisted bio and privacy instead of local defaults", () => {
+  const snapshotService = read(
+    "src/lib/server/profile/profile-command-snapshot-service.ts",
+  );
+  const contract = read("src/lib/profile/profile-command-contract.ts");
+
+  assert.match(snapshotService, /bio:\s*profile\.identity\.bio/);
+  assert.match(snapshotService, /privacy:[\s\S]*source:\s*"authenticated-user"/);
+  assert.match(snapshotService, /data:\s*profile\.privacy/);
+  assert.match(contract, /privacy:\s*ProfileCommandSection<ProfilePrivacySettings \| null>/);
+});
+
+test("settings panel sends only changed fields and refreshes the server snapshot without navigation", () => {
+  const panel = read(
+    "src/components/profile/command-quarters/profile-settings-panel.tsx",
+  );
+  const page = read("src/app/profile/page.tsx");
+
+  assert.match(panel, /fetch\("\/api\/profile\/settings"/);
+  assert.match(panel, /method:\s*"PATCH"/);
+  assert.match(panel, /Object\.keys\(privacyUpdate\)\.length > 0/);
+  assert.match(panel, /router\.refresh\(\)/);
+  assert.doesNotMatch(panel, /router\.push\(/);
+  assert.doesNotMatch(panel, /userId/);
+  assert.match(page, /!snapshot\.isEvaluationFixture/);
+  assert.match(page, /snapshot\.privacy\.availability === "available"/);
+});
