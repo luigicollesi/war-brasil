@@ -57,6 +57,16 @@ async function createUser(client, label) {
   return result.rows[0].id;
 }
 
+function fulfilledCount(results) {
+  return results.filter((result) => result.status === "fulfilled").length;
+}
+
+function rejectedPgCodes(results) {
+  return results
+    .filter((result) => result.status === "rejected")
+    .map((result) => result.reason?.code);
+}
+
 if (!databaseUrl) {
   test("social graph migration exige DATABASE_URL", { skip: true }, () => {});
 } else {
@@ -176,6 +186,69 @@ if (!databaseUrl) {
         });
       } finally {
         await client.end();
+      }
+    });
+  });
+
+  test("035 converge requests concorrentes do mesmo par para um único pending", async () => {
+    await withTemporaryDatabase(async (connectionString) => {
+      await prepareDatabase(connectionString);
+      const setup = new Client({ connectionString });
+      const left = new Client({ connectionString });
+      const right = new Client({ connectionString });
+      await Promise.all([setup.connect(), left.connect(), right.connect()]);
+
+      try {
+        const userA = await createUser(setup, "ConcurrentA");
+        const userB = await createUser(setup, "ConcurrentB");
+        const insert = (client, requester, recipient) =>
+          client.query(
+            `INSERT INTO social.friend_requests(requester_id,recipient_id)
+             VALUES($1,$2)
+             RETURNING id`,
+            [requester, recipient],
+          );
+
+        const duplicate = await Promise.allSettled([
+          insert(left, userA, userB),
+          insert(right, userA, userB),
+        ]);
+        assert.equal(fulfilledCount(duplicate), 1);
+        assert.deepEqual(rejectedPgCodes(duplicate), ["23505"]);
+
+        const firstPending = await setup.query(
+          `SELECT id FROM social.friend_requests
+            WHERE LEAST(requester_id,recipient_id)=LEAST($1::uuid,$2::uuid)
+              AND GREATEST(requester_id,recipient_id)=GREATEST($1::uuid,$2::uuid)
+              AND state='pending'`,
+          [userA, userB],
+        );
+        assert.equal(firstPending.rowCount, 1);
+        await setup.query(
+          `UPDATE social.friend_requests
+              SET state='cancelled', resolved_at=NOW()
+            WHERE id=$1`,
+          [firstPending.rows[0].id],
+        );
+
+        const inverse = await Promise.allSettled([
+          insert(left, userA, userB),
+          insert(right, userB, userA),
+        ]);
+        assert.equal(fulfilledCount(inverse), 1);
+        assert.deepEqual(rejectedPgCodes(inverse), ["23505"]);
+
+        const finalPending = await setup.query(
+          `SELECT requester_id,recipient_id
+             FROM social.friend_requests
+            WHERE LEAST(requester_id,recipient_id)=LEAST($1::uuid,$2::uuid)
+              AND GREATEST(requester_id,recipient_id)=GREATEST($1::uuid,$2::uuid)
+              AND state='pending'`,
+          [userA, userB],
+        );
+        assert.equal(finalPending.rowCount, 1);
+      } finally {
+        await Promise.all([setup.end(), left.end(), right.end()]);
       }
     });
   });
