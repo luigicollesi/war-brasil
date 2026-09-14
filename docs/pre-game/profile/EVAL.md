@@ -6,11 +6,15 @@ Aprovação exige **todos os BLOCKERs verdes** e score >= 85/100.
 
 A regra de produto é estrutural: **nenhum comandante possui imagem de perfil, avatar ou retrato**. Qualquer reintrodução de imagem de usuário no schema `profile.*`, DTOs, APIs ou UI é regressão BLOCKER.
 
+Economia, wallet, storefront, inventário, loadout jogável, conjuntos, preços, aquisição e snapshot cosmético são avaliados exclusivamente por `../../economy/EVAL.md`. O EVAL de Profile valida somente a boundary e a integração visual dessas capacidades.
+
+Os antigos gates econômicos `PRO-13`, `PRO-14` e `PRO-19`, além da parte comercial de `PRO-18`, foram removidos deste EVAL e substituídos pelos gates `ECO-*` do domínio econômico.
+
 ## Gates BLOCKER — legado visual e de integridade
 
 | ID | Critério | Evidência mínima |
 | --- | --- | --- |
-| PRO-01 | nenhum rank/stat/saldo social/comercial é apresentado como real sem fonte | data-source review |
+| PRO-01 | nenhum rank/stat/dado social é apresentado como real sem fonte | data-source review |
 | PRO-02 | loading, parcial, vazio social, vazio histórico e erro possuem estados explícitos | state coverage |
 | PRO-03 | nenhum identificador sensível/interno é exibido | security review |
 | PRO-04 | conteúdo principal é utilizável sem WebGL | fallback/manual |
@@ -22,18 +26,25 @@ A regra de produto é estrutural: **nenhum comandante possui imagem de perfil, a
 | PRO-10 | identidade textual/monograma mantém leitura desktop/mobile/fallback sem imagem de perfil | visual/accessibility |
 | PRO-11 | nome e título são semanticamente distintos | DOM/accessibility |
 | PRO-12 | estados vazios continuam parte do Quartel | visual review |
-| PRO-13 | duas moedas têm símbolo, label e tratamento distintos | visual/DOM |
-| PRO-14 | saldo indisponível não vira zero | contract test |
 | PRO-15 | Rede cobre amigos, busca, recentes e vazio | state/interaction |
 | PRO-16 | busca social é sob demanda | architecture review |
 | PRO-17 | presença e atividade possuem equivalente textual sem colapsar estados distintos | accessibility |
-| PRO-18 | Intendência não simula compra inexistente nem oferece retrato/avatar | interaction review |
-| PRO-19 | preço identifica moeda por contrato | data/DOM |
+| PRO-18 | Intendência não oferece retrato/avatar como identidade do comandante | interaction review |
 | PRO-20 | estação ativa controla Foundation somente via API pública | source inspection |
 | PRO-21 | PROFILE não importa Three/R3F/Canvas/câmera | automated inspection |
 | PRO-22 | uso principal desktop cabe em 1440x900 sem scroll global obrigatório | visual/manual |
 | PRO-23 | mobile reorganiza para Terminal de Campo | 390x844 visual |
 | PRO-24 | fallback mantém sistemas operáveis | fallback/manual |
+
+## Gates BLOCKER — boundary econômica
+
+| ID | Critério | Evidência mínima |
+| --- | --- | --- |
+| PRO-ECO-01 | Profile não define moeda, saldo, preço, ownership, catálogo jogável, aquisição ou regras de loadout paralelas a `docs/economy` | architecture/source review |
+| PRO-ECO-02 | Tesouraria e Intendência recebem dados por DTO/service boundary e não consultam SQL diretamente | architecture/source review |
+| PRO-ECO-03 | integração econômica preserva `source`/availability do `ProfileCommandSnapshot` ou contrato sucessor | contract review |
+| PRO-ECO-04 | `/profile` continua operável quando uma fonte econômica falha, sem fabricar dados econômicos no cliente | failure-state E2E |
+| PRO-ECO-05 | a regra de ausência de avatar/retrato continua válida em qualquer superfície econômica renderizada dentro do Profile | DOM/source review |
 
 ## Gates BLOCKER — autenticação e autorização
 
@@ -122,6 +133,8 @@ Os IDs `PRO3-IMG-*` são preservados por rastreabilidade, mas agora validam **au
 | PRO3-DB-06 | novos índices possuem função observável/justificada | query review |
 | PRO3-DB-07 | nova migration forward-only remove `portrait_source`/`portrait_ref` de `profile.commanders` sem alterar schema core do Better Auth | clean + upgrade migration test |
 
+Migrações, constraints e backfills da economia/inventário não são avaliados por `PRO3-DB-*`; pertencem a `../../economy/EVAL.md`.
+
 ## Score / 100
 
 - 20 — autenticação, autorização e privacidade;
@@ -184,6 +197,15 @@ Os IDs `PRO3-IMG-*` são preservados por rastreabilidade, mas agora validam **au
 - `PRO3-S33`: título possuído/equipado;
 - `PRO3-S34`: tentativa de equipar título não possuído.
 
+### Integração econômica
+
+- `PRO3-S35`: Tesouraria recebe DTO econômico sem consultar armazenamento diretamente;
+- `PRO3-S36`: Intendência recebe storefront por boundary de serviço;
+- `PRO3-S37`: indisponibilidade do domínio econômico não derruba Dossiê, Rede ou Livro de Campanha;
+- `PRO3-S38`: superfícies econômicas dentro do Profile não introduzem avatar/retrato.
+
+Cenários de saldo, inventário, loja, dados, efeitos territoriais e snapshot cosmético pertencem exclusivamente a `../../economy/EVAL.md`.
+
 ### Visual legado
 
 Continuam obrigatórios:
@@ -213,18 +235,22 @@ Executar ao menos:
 
 O resultado final MUST ser determinístico e respeitar constraints.
 
+Concorrência de wallet, inventário, loadout e snapshot cosmético é avaliada por `../../economy/EVAL.md`, não por este documento.
+
 ## Auditoria de dados
 
-Para cada campo visível identificar:
+Para cada campo visível pertencente a Profile identificar:
 
 - fonte autoritativa;
 - política de privacidade;
 - disponibilidade;
 - DTO de saída.
 
-`offline`, lista vazia, zero e ausência de histórico são valores reais apenas quando a fonte consultada está disponível e retornou esse resultado.
+`offline`, lista vazia e ausência de histórico são valores reais apenas quando a fonte consultada está disponível e retornou esse resultado.
 
 A auditoria MUST verificar explicitamente que nenhuma propriedade de imagem do provider (`auth.user.image` ou equivalente) cruza a boundary de Profile.
+
+A auditoria econômica de saldo, catálogo, ownership e loadout pertence a `../../economy/EVAL.md`.
 
 ## Performance
 
@@ -236,9 +262,11 @@ Validar:
 - histórico por keyset cursor;
 - payload público mínimo;
 - ausência de requests de imagem remota para identidade de comandante;
-- índices novos revisados por padrão de consulta.
+- índices novos de Profile revisados por padrão de consulta.
 
 Antes de adicionar índice de histórico por otimização, registrar `EXPLAIN (ANALYZE, BUFFERS)` ou justificativa equivalente com dataset representativo.
+
+Performance de storefront, previews, assets HQ, inventário, loadout e integração cosmética com o mapa é avaliada por `../../economy/EVAL.md`.
 
 ## Interaction regression
 
@@ -250,7 +278,10 @@ Além da V2, validar:
 4. perfil de outro jogador respeitar relacionamento atual;
 5. bloqueio remover ações incompatíveis imediatamente após confirmação do servidor;
 6. paginação de histórico preservar registro selecionado quando aplicável;
-7. identidade permanece clara e acionável sem avatar em Dossiê, Rede, busca e perfil público.
+7. identidade permanece clara e acionável sem avatar em Dossiê, Rede, busca e perfil público;
+8. abrir Tesouraria/Intendência não reseta o estado local das demais estações.
+
+Interações internas de compra, inventário, equipagem e preview da loja pertencem ao EVAL econômico.
 
 ## Referências técnicas
 
@@ -268,10 +299,12 @@ A PROFILE V3 só pode ser considerada pronta quando:
 
 - todos os blockers acima estiverem verdes;
 - score >= 85;
-- migrations passarem em banco limpo e upgrade do baseline suportado;
+- migrations próprias de Profile passarem em banco limpo e upgrade do baseline suportado;
 - a migration de remoção de retrato estiver verde em clean/upgrade;
 - nenhum DTO/API/componente de Profile transportar ou renderizar imagem de perfil;
 - imagem OAuth, quando existir no provider, permanecer confinada ao domínio de auth;
+- Tesouraria e Intendência respeitarem a boundary definida em `../../economy/SPEC.md`;
+- gates econômicos não forem duplicados neste EVAL;
 - testes auth existentes continuarem verdes;
 - nenhum fluxo de jogo/realtime existente regredir;
 - evidência visual V2 continuar aprovada após recomposição sem avatar.
