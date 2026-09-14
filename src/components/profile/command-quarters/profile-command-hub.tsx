@@ -16,7 +16,6 @@ import {
   initialsFrom,
 } from "./profile-command-format";
 import styles from "./profile-command-hub.module.css";
-import refinementStyles from "./profile-command-refinements.module.css";
 import { ProfileNetworkStation } from "./profile-network-station";
 import { ProfileQuartermasterStation } from "./profile-quartermaster-station";
 
@@ -138,46 +137,31 @@ function TreasuryReadout({
     );
   }
 
-  const currencies = [wallet.common, wallet.premium];
+  const currency = wallet.campaignCredit;
 
   if (compact) {
     return (
       <span className={styles.walletCompact}>
-        {currencies.map((currency) => (
-          <span
-            key={currency.currency}
-            data-currency={currency.currency}
-            className={[
-              refinementStyles.walletCurrencyCompact,
-              currency.currency === "command-reserve"
-                ? refinementStyles.walletCurrencyPremium
-                : "",
-            ]
-              .filter(Boolean)
-              .join(" ")}
-          >
-            <span className={styles.currencySymbol} aria-hidden="true">{currency.symbol}</span>
-            <span className={refinementStyles.walletCurrencyCopy}>
-              <small>{currency.shortLabel}</small>
-              <strong>{formatBalance(currency.balance)}</strong>
-            </span>
+        <span key={currency.currency} data-currency={currency.currency}>
+          <span className={styles.currencySymbol} aria-hidden="true">{currency.symbol}</span>
+          <span>
+            <small>{currency.shortLabel}</small>
+            <strong>{formatBalance(currency.balance)}</strong>
           </span>
-        ))}
+        </span>
       </span>
     );
   }
 
   return (
     <div className={styles.walletExpanded}>
-      {currencies.map((currency) => (
-        <div key={currency.currency} data-currency={currency.currency}>
-          <span className={styles.currencySymbol} aria-hidden="true">{currency.symbol}</span>
-          <span>
-            <small>{currency.label}</small>
-            <strong>{formatBalance(currency.balance)}</strong>
-          </span>
-        </div>
-      ))}
+      <div data-currency={currency.currency}>
+        <span className={styles.currencySymbol} aria-hidden="true">{currency.symbol}</span>
+        <span>
+          <small>{currency.label}</small>
+          <strong>{formatBalance(currency.balance)}</strong>
+        </span>
+      </div>
     </div>
   );
 }
@@ -237,11 +221,12 @@ function CommandTable({
     }
 
     if (activeStation === "treasury") {
+      const currency = wallet?.campaignCredit;
       return {
         kicker: "Tesouraria aberta",
-        title: "Reservas de campanha",
-        detail: wallet
-          ? `${wallet.common.symbol} ${formatBalance(wallet.common.balance)} · ${wallet.premium.symbol} ${formatBalance(wallet.premium.balance)}`
+        title: "Créditos de Campanha",
+        detail: currency
+          ? `${currency.symbol} ${formatBalance(currency.balance)}`
           : "Sem saldo disponível",
         glyph: "¤",
       };
@@ -276,10 +261,12 @@ function CommandTable({
       kicker: "Intendência",
       title: selectedItem?.name ?? "Remessas em destaque",
       detail: selectedItem
-        ? `${selectedItem.price.currency === "command-reserve" ? "◆" : "◈"} ${formatBalance(selectedItem.price.amount)}`
+        ? selectedItem.status === "announced"
+          ? `EM BREVE · ${selectedItem.itemCount} itens`
+          : `${selectedItem.itemCount} itens disponíveis`
         : snapshot.storefront.availability === "unavailable"
           ? "Vitrine sem fonte disponível"
-          : `${snapshot.storefront.data.featuredItems.length} itens em vitrine`,
+          : `${snapshot.storefront.data.featuredItems.length} remessas em vitrine`,
       glyph: "▣",
     };
   }, [activeStation, identity, selectedItem, selectedOperation, snapshot, wallet]);
