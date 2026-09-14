@@ -7,6 +7,7 @@ import type {
   PlayerSocialSnapshot,
   RecentCommanderContact,
 } from "@/src/lib/profile/profile-command-contract";
+import { safeProfilePortraitSrc } from "@/src/lib/profile/profile-portrait-policy";
 import { getPresenceStates } from "./presence-gateway";
 import {
   countFriends,
@@ -16,17 +17,6 @@ import {
 } from "./social-read-repository";
 
 type PresenceBatch = Awaited<ReturnType<typeof getPresenceStates>>;
-
-function safePortraitSrc(value: string | null) {
-  if (!value) return null;
-  if (value.startsWith("/") && !value.startsWith("//")) return value;
-  try {
-    const url = new URL(value);
-    return url.protocol === "https:" || url.protocol === "http:" ? value : null;
-  } catch {
-    return null;
-  }
-}
 
 function activityFrom(row: SocialFriendRow): CommanderContact["activity"] {
   if (row.activity_visibility === "private") {
@@ -72,7 +62,8 @@ function contextLabel(contact: CommanderContact) {
 }
 
 function friendFrom(row: SocialFriendRow, batch: PresenceBatch): CommanderContact {
-  const portraitSrc = safePortraitSrc(row.portrait_ref) ?? safePortraitSrc(row.auth_image);
+  const portraitSrc =
+    safeProfilePortraitSrc(row.portrait_ref) ?? safeProfilePortraitSrc(row.auth_image);
   const contact: CommanderContact = {
     handle: row.handle,
     displayName: row.display_name,
