@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
-import { connection } from "next/server";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { EconomyStorefront } from "@/src/components/profile/store/economy-storefront";
 import { auth } from "@/src/lib/server/auth/auth";
-import { getEconomyStorefront } from "@/src/lib/server/economy/economy-service";
+import {
+  EconomyServiceError,
+  getEconomyStorefront,
+} from "@/src/lib/server/economy/economy-service";
 
 export const metadata: Metadata = {
   title: "Intendência",
@@ -21,6 +24,16 @@ export default async function ProfileStorePage() {
 
   if (!session) redirect("/");
 
-  const storefront = await getEconomyStorefront(session.user.id);
-  return <EconomyStorefront initialStorefront={storefront} />;
+  try {
+    const storefront = await getEconomyStorefront(session.user.id);
+    return <EconomyStorefront initialStorefront={storefront} />;
+  } catch (error) {
+    if (
+      error instanceof EconomyServiceError &&
+      error.code === "ECONOMY_COMMANDER_MISSING"
+    ) {
+      redirect("/profile");
+    }
+    throw error;
+  }
 }
