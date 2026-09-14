@@ -123,6 +123,23 @@ export async function lockPendingReceivedRequest(
   return result.rows[0] ?? null;
 }
 
+export async function lockPendingSentRequest(
+  client: PoolClient,
+  requestId: string,
+  requesterId: string,
+): Promise<PendingFriendRequestRow | null> {
+  const result = await client.query<PendingFriendRequestRow>(
+    `SELECT id,requester_id,recipient_id
+       FROM social.friend_requests
+      WHERE id=$1
+        AND requester_id=$2
+        AND state='pending'
+      FOR UPDATE`,
+    [requestId, requesterId],
+  );
+  return result.rows[0] ?? null;
+}
+
 export async function resolveFriendRequest(
   client: PoolClient,
   requestId: string,
@@ -160,7 +177,7 @@ export async function deleteCanonicalFriendship(
         AND user_b_id=GREATEST($1::uuid,$2::uuid)`,
     [userA, userB],
   );
-  return result.rowCount > 0;
+  return (result.rowCount ?? 0) > 0;
 }
 
 export async function insertBlock(
@@ -186,7 +203,7 @@ export async function deleteBlock(
       WHERE blocker_id=$1 AND blocked_id=$2`,
     [blockerId, blockedId],
   );
-  return result.rowCount > 0;
+  return (result.rowCount ?? 0) > 0;
 }
 
 export async function cancelPendingRequestsBetween(
