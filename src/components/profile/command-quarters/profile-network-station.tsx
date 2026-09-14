@@ -5,7 +5,7 @@ import type {
   CommanderSearchResult,
   ProfileCommandSnapshot,
 } from "@/src/lib/profile/profile-command-contract";
-import { initialsFrom, PRESENCE_COPY } from "./profile-command-format";
+import { commanderStatusLabel, initialsFrom } from "./profile-command-format";
 import styles from "./profile-command-hub.module.css";
 import refinementStyles from "./profile-command-refinements.module.css";
 
@@ -64,7 +64,7 @@ export function ProfileNetworkStation({ snapshot }: { snapshot: ProfileCommandSn
   return (
     <div className={styles.networkContent}>
       <div className={styles.rosterMeta}>
-        <span>{social.friends.filter((friend) => friend.presence !== "offline").length} online</span>
+        <span>{social.friends.filter((friend) => friend.presence.state === "online").length} online</span>
         <span>{social.totalFriends} contatos</span>
         <span>{social.incomingRequests.length} sinais</span>
       </div>
@@ -85,14 +85,14 @@ export function ProfileNetworkStation({ snapshot }: { snapshot: ProfileCommandSn
             <li key={friend.handle}>
               <span
                 className={styles.presenceDot}
-                data-presence={friend.presence}
+                data-presence={friend.presence.state}
                 aria-hidden="true"
               />
               <span>
                 <strong>{friend.displayName}</strong>
                 <small>{friend.contextLabel}</small>
               </span>
-              <em>{PRESENCE_COPY[friend.presence]}</em>
+              <em>{commanderStatusLabel(friend.presence, friend.activity)}</em>
             </li>
           ))}
         </ul>
