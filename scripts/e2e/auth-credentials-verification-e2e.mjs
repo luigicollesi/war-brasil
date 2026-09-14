@@ -15,12 +15,23 @@ const BASE_URL = process.env.LOBBY_E2E_BASE_URL ?? "http://localhost:3000";
 const DATABASE_URL = process.env.LOBBY_E2E_DATABASE_URL ?? process.env.DATABASE_URL;
 const EMAIL_SINK_DIR = process.env.AUTH_EMAIL_SINK_DIR;
 const PASSWORD = "WarBrasil-Verify-E2E-2026!";
+const PRESENCE_INTERNAL_URL =
+  process.env.GAME_REALTIME_INTERNAL_URL?.trim().replace(/\/$/, "") || null;
+const PRESENCE_INTERNAL_TOKEN =
+  process.env.GAME_REALTIME_INTERNAL_TOKEN?.trim() || null;
+const PRESENCE_E2E_REQUIRED = process.env.PROFILE_PRESENCE_E2E_REQUIRED === "1";
+const FORGED_PRESENCE_USER_ID = "44444444-4444-4444-8444-444444444444";
 
 if (!DATABASE_URL) {
   throw new Error("DATABASE_URL é obrigatória para o E2E de verification.");
 }
 if (!EMAIL_SINK_DIR) {
   throw new Error("AUTH_EMAIL_SINK_DIR é obrigatória para o E2E de verification.");
+}
+if (PRESENCE_E2E_REQUIRED && (!PRESENCE_INTERNAL_URL || !PRESENCE_INTERNAL_TOKEN)) {
+  throw new Error(
+    "GAME_REALTIME_INTERNAL_URL/TOKEN são obrigatórias quando PROFILE_PRESENCE_E2E_REQUIRED=1.",
+  );
 }
 
 async function apiJson(page, url, init = {}) {
@@ -102,6 +113,65 @@ async function userVerificationState(db, email) {
   );
   assert.equal(result.rowCount, 1, "usuário credentials não foi persistido");
   return result.rows[0].verified === true;
+}
+
+async function internalPresence(userIds) {
+  if (!PRESENCE_INTERNAL_URL || !PRESENCE_INTERNAL_TOKEN) return null;
+
+  const response = await fetch(`${PRESENCE_INTERNAL_URL}/internal/presence/batch`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${PRESENCE_INTERNAL_TOKEN}`,
+    },
+    body: JSON.stringify({ userIds }),
+  });
+  const body = await response.json().catch(() => null);
+  assert.equal(response.status, 200, JSON.stringify(body));
+  assert.equal(body?.availability, "available", JSON.stringify(body));
+  assert.ok(Array.isArray(body?.presences), JSON.stringify(body));
+  return body;
+}
+
+function presenceFor(batch, userId) {
+  return batch?.presences?.find((entry) => entry?.userId === userId) ?? null;
+}
+
+async function assertSessionBoundPresence(page, session) {
+  if (!PRESENCE_INTERNAL_URL || !PRESENCE_INTERNAL_TOKEN) return;
+
+  const sessionUserId = session?.user?.id;
+  assert.equal(typeof sessionUserId, "string", "sessão autenticada sem user.id");
+
+  const before = await internalPresence([FORGED_PRESENCE_USER_ID]);
+  assert.equal(
+    presenceFor(before, FORGED_PRESENCE_USER_ID)?.state,
+    "offline",
+    "identidade forjada deve começar offline",
+  );
+
+  const heartbeat = await apiJson(page, "/api/profile/presence/heartbeat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId: FORGED_PRESENCE_USER_ID }),
+  });
+  assert.equal(heartbeat.status, 200, JSON.stringify(heartbeat.body));
+  assert.equal(heartbeat.body?.state, "online", JSON.stringify(heartbeat.body));
+
+  const after = await internalPresence([
+    sessionUserId,
+    FORGED_PRESENCE_USER_ID,
+  ]);
+  assert.equal(
+    presenceFor(after, sessionUserId)?.state,
+    "online",
+    "heartbeat deve renovar somente a identidade autenticada",
+  );
+  assert.equal(
+    presenceFor(after, FORGED_PRESENCE_USER_ID)?.state,
+    "offline",
+    "userId forjado no payload não pode receber presença",
+  );
 }
 
 const browser = await playwright.chromium.launch({ headless: true });
@@ -196,10 +266,13 @@ try {
       }),
     });
     assert.equal(signIn.status, 200, JSON.stringify(signIn.body));
-    assert.ok((await getSession(page))?.user, "login pós-verification não criou sessão");
+    const authenticatedSession = await getSession(page);
+    assert.ok(authenticatedSession?.user, "login pós-verification não criou sessão");
+
+    await assertSessionBoundPresence(page, authenticatedSession);
 
     console.log(
-      "[auth-verification-e2e] signup sem sessão, link real, replay, token inválido e login pós-verification confirmados.",
+      "[auth-verification-e2e] signup sem sessão, link real, replay, token inválido, login pós-verification e presença vinculada à sessão confirmados.",
     );
   } finally {
     await context.close();
