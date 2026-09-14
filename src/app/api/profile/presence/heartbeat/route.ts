@@ -1,4 +1,5 @@
 import { renewOwnPresence } from "@/src/lib/server/profile/presence-gateway";
+import { persistCommanderLastSeen } from "@/src/lib/server/profile/presence-persistence";
 import { requireProfileMutationActor } from "@/src/lib/server/profile/social-http";
 
 export async function POST(request: Request) {
@@ -11,6 +12,10 @@ export async function POST(request: Request) {
       { availability: "unavailable", state: "unavailable" },
       { status: 503 },
     );
+  }
+
+  if (presence.shouldPersistLastSeen && presence.lastSeenAt) {
+    await persistCommanderLastSeen(actor.userId, presence.lastSeenAt);
   }
 
   return Response.json({
