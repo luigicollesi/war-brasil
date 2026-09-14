@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -184,23 +183,10 @@ export function PublicCommanderProfileView({
 
       <div className={styles.layout}>
         <section className={styles.dossier} aria-labelledby="public-commander-name">
-          <div className={styles.portrait}>
-            {identity.portrait.src ? (
-              <Image
-                src={identity.portrait.src}
-                alt={identity.portrait.alt}
-                fill
-                sizes="(max-width: 760px) 88px, 210px"
-              />
-            ) : (
-              <span aria-label={identity.portrait.alt}>
-                {initialsFrom(identity.displayName)}
-              </span>
-            )}
-          </div>
-
           <div className={styles.identity}>
-            <small>@{identity.handle}</small>
+            <small>
+              SIGILO {initialsFrom(identity.displayName)} · @{identity.handle}
+            </small>
             <h1 id="public-commander-name">{identity.displayName}</h1>
             <p>{identity.title ?? "Sem título equipado"}</p>
           </div>
