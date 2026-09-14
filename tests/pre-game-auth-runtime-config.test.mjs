@@ -38,16 +38,13 @@ test("validador fail-fast cobre URL HTTPS, banco, secret forte e providers aprov
     "GOOGLE_CLIENT_SECRET",
     "DISCORD_CLIENT_ID",
     "DISCORD_CLIENT_SECRET",
-    "APPLE_CLIENT_ID",
-    "APPLE_TEAM_ID",
-    "APPLE_KEY_ID",
-    "APPLE_PRIVATE_KEY",
   ]) {
     assert.ok(
       environmentSource.includes(required),
       `validador não cobre ${required}`,
     );
   }
+  assert.doesNotMatch(environmentSource, /APPLE_/);
   assert.match(environmentSource, /AUTH_SECRET_MIN_LENGTH = 32/);
   assert.match(environmentSource, /url\.protocol === "https:"/);
   assert.match(environmentSource, /!url\.username && !url\.password/);
