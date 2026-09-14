@@ -55,7 +55,9 @@ export class RedisPresenceStore {
   constructor({
     url,
     ttlSeconds = DEFAULT_TTL_SECONDS,
-    lastSeenThrottleSeconds = DEFAULT_LAST_SEEN_THROTTLE_SECONDS,
+    lastSeenThrottleSeconds =
+      process.env.PROFILE_LAST_SEEN_THROTTLE_SECONDS ??
+      DEFAULT_LAST_SEEN_THROTTLE_SECONDS,
     createRedisClient = createClient,
     now = () => new Date(),
   } = {}) {
