@@ -142,7 +142,6 @@ const registry = new GameRealtimeRegistry();
 const presenceStore = new RedisPresenceStore({
   url: redisUrl,
   ttlSeconds: process.env.PROFILE_PRESENCE_TTL_SECONDS,
-  lastSeenThrottleSeconds: process.env.PROFILE_LAST_SEEN_THROTTLE_SECONDS,
 });
 let eventSourceHealthy = false;
 let redisShadowHealthy = eventSourceMode !== "dual";
@@ -502,97 +501,108 @@ const server = http.createServer((request, response) => {
     return;
   }
 
-  response.writeHead(404);
-  response.end();
+  response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+  response.end("Not found\n");
 });
 
 server.on("upgrade", async (request, socket, head) => {
-  const origin = request.headers.origin;
-  if (!origin || !origins.has(origin)) {
-    rejectUpgrade(socket, 403, "Origin não permitida");
-    return;
-  }
+  try {
+    if (!gatewayReady()) {
+      rejectUpgrade(socket, 503, "Realtime indisponível");
+      return;
+    }
 
-  if (!gatewayReady()) {
-    rejectUpgrade(socket, 503, "Realtime indisponível");
-    return;
-  }
+    const origin = request.headers.origin;
+    if (!origin || !origins.has(origin)) {
+      recordRealtimeMetric("authRejected", { reason: "origin" });
+      rejectUpgrade(socket, 403, "Origin não permitida");
+      return;
+    }
 
-  if (!requestedSubprotocol(request)) {
-    rejectUpgrade(socket, 400, "Subprotocol realtime obrigatório");
-    return;
-  }
+    if (!requestedSubprotocol(request)) {
+      recordRealtimeMetric("authRejected", { reason: "protocol" });
+      rejectUpgrade(socket, 426, "Subprotocolo realtime obrigatório");
+      return;
+    }
 
-  const url = new URL(request.url ?? "/", `http://${request.headers.host ?? "localhost"}`);
-  if (url.pathname !== GAME_REALTIME_PATH) {
-    rejectUpgrade(socket, 404, "Path realtime inválido");
-    return;
-  }
+    const url = new URL(request.url ?? "/", "http://realtime.local");
+    if (url.pathname !== GAME_REALTIME_PATH) {
+      rejectUpgrade(socket, 404, "Endpoint realtime não encontrado");
+      return;
+    }
 
-  const roomId = url.searchParams.get("room");
-  if (!roomId || !/^\d+$/.test(roomId)) {
-    rejectUpgrade(socket, 400, "Sala realtime inválida");
-    return;
-  }
+    const roomId = url.searchParams.get("roomId");
+    if (!roomId || !/^\d+$/.test(roomId)) {
+      recordRealtimeMetric("authRejected", { reason: "room" });
+      rejectUpgrade(socket, 400, "roomId inválido");
+      return;
+    }
 
-  const identity = await authenticateUpgrade(
-    roomId,
-    url,
-    request.headers.cookie ?? "",
-  ).catch(() => null);
-  if (!identity) {
-    rejectUpgrade(socket, 401, "Sessão realtime inválida");
-    return;
-  }
+    const identity = await authenticateUpgrade(
+      roomId,
+      url,
+      request.headers.cookie,
+    );
+    if (!identity) {
+      recordRealtimeMetric("authRejected", { reason: "session_or_ticket", roomId });
+      rejectUpgrade(socket, 401, "Credencial realtime inválida");
+      return;
+    }
 
-  wss.handleUpgrade(request, socket, head, (client) => {
-    void setupConnection(client, identity);
-  });
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      void setupConnection(ws, identity);
+    });
+  } catch {
+    recordRealtimeMetric("authRejected", { reason: "internal" });
+    rejectUpgrade(socket, 500, "Falha ao iniciar conexão realtime");
+  }
 });
 
-const heartbeatIntervalMs = 15_000;
-const heartbeat = setInterval(() => registry.heartbeat(), heartbeatIntervalMs);
-heartbeat.unref();
+const heartbeat = setInterval(() => registry.heartbeat(), 30_000);
+heartbeat.unref?.();
 
-async function start() {
-  presenceStore.start();
-  primarySource?.start();
-  if (redisSource && eventSourceMode === "dual") {
-    redisSource.start();
-  }
-
-  await new Promise((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(port, () => {
-      server.off("error", reject);
-      resolve();
+if (!primarySource) {
+  throw new Error("Realtime primary event source não foi configurado.");
+}
+await primarySource.start();
+if (eventSourceMode === "dual" && redisSource) {
+  await redisSource.start().catch((error) => {
+    redisShadowHealthy = false;
+    recordRealtimeMetric("redisShadowStartFailure", {
+      error: error instanceof Error ? error.message : String(error),
     });
   });
-
-  acceptingUpgrades = true;
-  console.log(`War-Brasil realtime gateway listening on :${port}`);
 }
+presenceStore.start();
+server.listen(port, "0.0.0.0", () => {
+  acceptingUpgrades = true;
+  console.log(
+    `War-Brasil realtime gateway ouvindo na porta ${port} (${eventSourceMode}/${authMode}).`,
+  );
+});
 
 async function shutdown() {
   if (shuttingDown) return;
   shuttingDown = true;
   acceptingUpgrades = false;
+  recordRealtimeMetric("draining", {
+    connections: registry.size(),
+    rooms: registry.roomCount(),
+    eventSourceMode,
+  });
   clearInterval(heartbeat);
-  registry.closeAll(1012, "Realtime em manutenção");
-  await primarySource?.stop().catch(() => undefined);
-  if (redisSource && redisSource !== primarySource) {
-    await redisSource.stop().catch(() => undefined);
-  }
+  registry.closeAll(1012, "Servidor reiniciando");
   presenceStore.stop();
-  await pool.end().catch(() => undefined);
-  await new Promise((resolve) => server.close(() => resolve()));
+  if (redisSource && redisSource !== primarySource) {
+    await redisSource.stop();
+  }
+  await primarySource.stop();
+  await new Promise((resolve) => server.close(resolve));
+  await pool.end();
 }
 
-process.on("SIGTERM", () => {
-  void shutdown().finally(() => process.exit(0));
-});
-process.on("SIGINT", () => {
-  void shutdown().finally(() => process.exit(0));
-});
-
-await start();
+for (const signal of ["SIGTERM", "SIGINT"]) {
+  process.on(signal, () => {
+    void shutdown().finally(() => process.exit(0));
+  });
+}
