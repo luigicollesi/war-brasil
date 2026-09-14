@@ -5,6 +5,9 @@ const UUID_PATTERN =
 const DEFAULT_TTL_SECONDS = 90;
 const MIN_TTL_SECONDS = 30;
 const MAX_TTL_SECONDS = 300;
+const DEFAULT_LAST_SEEN_THROTTLE_SECONDS = 60;
+const MIN_LAST_SEEN_THROTTLE_SECONDS = 30;
+const MAX_LAST_SEEN_THROTTLE_SECONDS = 900;
 const MAX_BATCH_SIZE = 100;
 
 export function presenceKey(userId) {
@@ -14,10 +17,26 @@ export function presenceKey(userId) {
   return `war:profile:presence:v1:${userId.toLowerCase()}`;
 }
 
+export function lastSeenThrottleKey(userId) {
+  if (typeof userId !== "string" || !UUID_PATTERN.test(userId)) {
+    throw new Error("userId de presença inválido.");
+  }
+  return `war:profile:last-seen-write:v1:${userId.toLowerCase()}`;
+}
+
 function boundedTtlSeconds(value) {
   const parsed = Number(value ?? DEFAULT_TTL_SECONDS);
   if (!Number.isInteger(parsed)) return DEFAULT_TTL_SECONDS;
   return Math.max(MIN_TTL_SECONDS, Math.min(MAX_TTL_SECONDS, parsed));
+}
+
+function boundedLastSeenThrottleSeconds(value) {
+  const parsed = Number(value ?? DEFAULT_LAST_SEEN_THROTTLE_SECONDS);
+  if (!Number.isInteger(parsed)) return DEFAULT_LAST_SEEN_THROTTLE_SECONDS;
+  return Math.max(
+    MIN_LAST_SEEN_THROTTLE_SECONDS,
+    Math.min(MAX_LAST_SEEN_THROTTLE_SECONDS, parsed),
+  );
 }
 
 function uniqueUserIds(userIds) {
@@ -36,11 +55,15 @@ export class RedisPresenceStore {
   constructor({
     url,
     ttlSeconds = DEFAULT_TTL_SECONDS,
+    lastSeenThrottleSeconds = DEFAULT_LAST_SEEN_THROTTLE_SECONDS,
     createRedisClient = createClient,
     now = () => new Date(),
   } = {}) {
     this.url = typeof url === "string" && url.trim() ? url.trim() : null;
     this.ttlSeconds = boundedTtlSeconds(ttlSeconds);
+    this.lastSeenThrottleSeconds = boundedLastSeenThrottleSeconds(
+      lastSeenThrottleSeconds,
+    );
     this.createRedisClient = createRedisClient;
     this.now = now;
     this.client = null;
@@ -81,15 +104,30 @@ export class RedisPresenceStore {
       await client.set(presenceKey(userId), observedAt, {
         EX: this.ttlSeconds,
       });
-      return {
-        availability: "available",
-        state: "online",
-        observedAt,
-        ttlSeconds: this.ttlSeconds,
-      };
     } catch {
       return { availability: "unavailable", state: "unavailable" };
     }
+
+    let persistLastSeen = false;
+    try {
+      const lease = await client.set(lastSeenThrottleKey(userId), observedAt, {
+        EX: this.lastSeenThrottleSeconds,
+        NX: true,
+      });
+      persistLastSeen = lease === "OK";
+    } catch {
+      // A falha do throttle não transforma um heartbeat Redis válido em offline.
+      // Apenas deixa a persistência durável para uma tentativa futura.
+      persistLastSeen = false;
+    }
+
+    return {
+      availability: "available",
+      state: "online",
+      observedAt,
+      ttlSeconds: this.ttlSeconds,
+      persistLastSeen,
+    };
   }
 
   async readMany(userIds) {
