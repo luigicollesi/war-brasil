@@ -180,6 +180,7 @@ function GameReadyClient({
                 ownerPlayerId: territory.ownerPlayerId,
                 ownerName: owner.factionName,
                 ownerColor: territory.ownerColor,
+                territoryEffectKey: owner.cosmetics.territoryEffect.effectKey,
                 troops: territory.troops,
               },
             ]
