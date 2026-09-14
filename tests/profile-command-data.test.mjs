@@ -28,7 +28,7 @@ async function withProfileEnvironment(state, run) {
   }
 }
 
-test("Quartel V2 expõe identidade, título, presença e atividade por contrato", async () => {
+test("Quartel V3 expõe identidade, título, presença e atividade por contrato", async () => {
   await withProfileEnvironment(null, async () => {
     const snapshot = await getCurrentProfileCommandSnapshot();
 
@@ -43,7 +43,7 @@ test("Quartel V2 expõe identidade, título, presença e atividade por contrato"
   });
 });
 
-test("Tesouraria possui duas moedas semanticamente distintas", async () => {
+test("Tesouraria usa somente campaign-credit com saldo zero explícito", async () => {
   await withProfileEnvironment(null, async () => {
     const snapshot = await getCurrentProfileCommandSnapshot();
     const wallet = snapshot.wallet.data;
@@ -51,12 +51,12 @@ test("Tesouraria possui duas moedas semanticamente distintas", async () => {
     assert.equal(snapshot.wallet.availability, "available");
     assert.equal(snapshot.wallet.source, "local-static");
     assert.ok(wallet);
-    assert.equal(wallet.common.currency, "campaign-credit");
-    assert.equal(wallet.premium.currency, "command-reserve");
-    assert.notEqual(wallet.common.symbol, wallet.premium.symbol);
-    assert.notEqual(wallet.common.label, wallet.premium.label);
-    assert.ok(wallet.common.balance >= 0);
-    assert.ok(wallet.premium.balance >= 0);
+    assert.equal(wallet.campaignCredit.currency, "campaign-credit");
+    assert.equal(wallet.campaignCredit.symbol, "◈");
+    assert.equal(wallet.campaignCredit.label, "Créditos de Campanha");
+    assert.equal(wallet.campaignCredit.balance, 0);
+    assert.equal("premium" in wallet, false);
+    assert.equal("common" in wallet, false);
   });
 });
 
@@ -96,20 +96,21 @@ test("Livro de Campanha usa janela limitada com continuação explícita", async
   });
 });
 
-test("Intendência identifica preço e moeda sem estado de compra", async () => {
+test("Intendência anuncia conjuntos sem preço ou compra falsa", async () => {
   await withProfileEnvironment(null, async () => {
     const snapshot = await getCurrentProfileCommandSnapshot();
     const items = snapshot.storefront.data.featuredItems;
 
     assert.equal(snapshot.storefront.availability, "available");
     assert.equal(snapshot.storefront.source, "local-static");
-    assert.ok(items.length > 0);
-    assert.ok(
-      items.every((item) =>
-        ["campaign-credit", "command-reserve"].includes(item.price.currency),
-      ),
+    assert.equal(items.length, 3);
+    assert.deepEqual(
+      items.map((item) => item.slug).sort(),
+      ["exercito-classico", "lancas-medievais", "viking"].sort(),
     );
-    assert.ok(items.every((item) => item.price.amount > 0));
+    assert.ok(items.every((item) => item.status === "announced"));
+    assert.ok(items.every((item) => item.itemCount === 3));
+    assert.ok(items.every((item) => !("price" in item)));
     assert.ok(items.every((item) => !("owned" in item) && !("purchased" in item)));
   });
 });
@@ -173,7 +174,7 @@ test("empty-storefront mantém Intendência disponível e vazia", async () => {
   });
 });
 
-test("error V2 exercita error boundary por exceção controlada", async () => {
+test("error V3 exercita error boundary por exceção controlada", async () => {
   await withProfileEnvironment("error", async () => {
     await assert.rejects(getCurrentProfileCommandSnapshot(), /PROFILE_COMMAND_EVAL_ERROR/);
   });
