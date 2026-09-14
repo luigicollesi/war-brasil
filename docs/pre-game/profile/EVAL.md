@@ -4,6 +4,8 @@ Avaliar conforme `../quality-standard.md`, `../traceability.md` e `SPEC.md`.
 
 Aprovação exige **todos os BLOCKERs verdes** e score >= 85/100.
 
+A regra de produto é estrutural: **nenhum comandante possui imagem de perfil, avatar ou retrato**. Qualquer reintrodução de imagem de usuário no schema `profile.*`, DTOs, APIs ou UI é regressão BLOCKER.
+
 ## Gates BLOCKER — legado visual e de integridade
 
 | ID | Critério | Evidência mínima |
@@ -17,15 +19,15 @@ Aprovação exige **todos os BLOCKERs verdes** e score >= 85/100.
 | PRO-07 | cada seção possui `source`/availability ou equivalente auditável | contract review |
 | PRO-08 | guest/auth preserva comportamento vigente | regression |
 | PRO-09 | histórico é limitado e possui continuação explícita | contract/performance |
-| PRO-10 | retrato/insígnia mantém leitura desktop/mobile/fallback | visual |
+| PRO-10 | identidade textual/monograma mantém leitura desktop/mobile/fallback sem imagem de perfil | visual/accessibility |
 | PRO-11 | nome e título são semanticamente distintos | DOM/accessibility |
 | PRO-12 | estados vazios continuam parte do Quartel | visual review |
 | PRO-13 | duas moedas têm símbolo, label e tratamento distintos | visual/DOM |
 | PRO-14 | saldo indisponível não vira zero | contract test |
 | PRO-15 | Rede cobre amigos, busca, recentes e vazio | state/interaction |
 | PRO-16 | busca social é sob demanda | architecture review |
-| PRO-17 | presença possui equivalente textual | accessibility |
-| PRO-18 | Intendência não simula compra inexistente | interaction review |
+| PRO-17 | presença e atividade possuem equivalente textual sem colapsar estados distintos | accessibility |
+| PRO-18 | Intendência não simula compra inexistente nem oferece retrato/avatar | interaction review |
 | PRO-19 | preço identifica moeda por contrato | data/DOM |
 | PRO-20 | estação ativa controla Foundation somente via API pública | source inspection |
 | PRO-21 | PROFILE não importa Three/R3F/Canvas/câmera | automated inspection |
@@ -53,7 +55,7 @@ Aprovação exige **todos os BLOCKERs verdes** e score >= 85/100.
 | PRO3-ID-04 | título equipado precisa pertencer ao usuário | DB/service test |
 | PRO3-PRIV-01 | presença/atividade/histórico respeitam política persistida | integration |
 | PRO3-PRIV-02 | privacidade é aplicada antes do DTO chegar ao cliente | source/security review |
-| PRO3-PRIV-03 | DTO público não contém email, user ID interno, sessão, provider IDs, IP ou player_session | snapshot/security |
+| PRO3-PRIV-03 | DTO público não contém email, user ID interno, sessão, provider IDs, IP, player_session ou imagem de provider | snapshot/security |
 
 ## Gates BLOCKER — social
 
@@ -67,7 +69,7 @@ Aprovação exige **todos os BLOCKERs verdes** e score >= 85/100.
 | PRO3-SOC-06 | block impede novo pedido entre o par | integration |
 | PRO3-SOC-07 | block remove/cancela relação social pendente conforme contrato | transaction test |
 | PRO3-SOC-08 | busca permanece sob demanda e limitada | architecture/API |
-| PRO3-SOC-09 | busca não retorna dados privados | response snapshot |
+| PRO3-SOC-09 | busca não retorna dados privados nem campo de imagem de perfil | response snapshot |
 
 ## Gates BLOCKER — presença
 
@@ -79,6 +81,7 @@ Aprovação exige **todos os BLOCKERs verdes** e score >= 85/100.
 | PRO3-PRES-04 | Redis indisponível resulta em `unavailable`, não `offline` | failure injection |
 | PRO3-PRES-05 | PostgreSQL não recebe write em cada heartbeat | instrumentation/integration |
 | PRO3-PRES-06 | leitura de roster evita N chamadas HTTP por amigo | architecture/performance |
+| PRO3-PRES-07 | `last_seen_at` durável é atualizado com throttle e preservado após expiração do TTL | Redis + DB integration |
 
 ## Gates BLOCKER — atividade e histórico
 
@@ -92,15 +95,20 @@ Aprovação exige **todos os BLOCKERs verdes** e score >= 85/100.
 | PRO3-HIST-03 | histórico usa LIMIT + cursor/keyset | source/query test |
 | PRO3-HIST-04 | histórico profundo não usa OFFSET | source inspection |
 | PRO3-HIST-05 | snapshots históricos de nome/handle permanecem estáveis após edição de perfil | integration |
+| PRO3-HIST-06 | histórico não persiste nem projeta imagem de perfil de participante | schema/DTO review |
 
-## Gates BLOCKER — retrato/upload
+## Gates BLOCKER — ausência de imagem de perfil
+
+Os IDs `PRO3-IMG-*` são preservados por rastreabilidade, mas agora validam **ausência** de imagem em vez de upload.
 
 | ID | Critério | Evidência mínima |
 | --- | --- | --- |
-| PRO3-IMG-01 | banco armazena referência, não bytes/base64 | schema review |
-| PRO3-IMG-02 | upload inválido por MIME/tamanho é rejeitado | API test |
-| PRO3-IMG-03 | filename do usuário não define storage path | security test |
-| PRO3-IMG-04 | SVG upload permanece bloqueado enquanto não houver sanitização específica | test/config |
+| PRO3-IMG-01 | `profile.*` não possui coluna/tabela autoritativa de avatar, retrato ou imagem de perfil | schema/migration test |
+| PRO3-IMG-02 | DTO próprio, DTO público, busca e roster não contêm `portrait`, `avatar`, `image`, `imageUrl` ou URL equivalente de usuário | contract/snapshot test |
+| PRO3-IMG-03 | imagem fornecida por Google/Discord não altera o contrato nem é renderizada pela PROFILE | auth/profile integration |
+| PRO3-IMG-04 | não existe endpoint, storage adapter ou input de upload de imagem de perfil | architecture/source inspection |
+| PRO3-IMG-05 | componentes de identidade do comandante não renderizam `<Image>`/`<img>` para imagem de usuário | automated source/DOM inspection |
+| PRO3-IMG-06 | remoção do retrato resulta em composição visual intencional, sem moldura/slot vazio reservado para foto | visual 1440x900 + 390x844 |
 
 ## Gates BLOCKER — banco e migrations
 
@@ -112,6 +120,7 @@ Aprovação exige **todos os BLOCKERs verdes** e score >= 85/100.
 | PRO3-DB-04 | constraints sociais impedem estados inválidos sob concorrência | DB test |
 | PRO3-DB-05 | nenhum dado de auth é movido para social/profile sem necessidade | schema review |
 | PRO3-DB-06 | novos índices possuem função observável/justificada | query review |
+| PRO3-DB-07 | nova migration forward-only remove `portrait_source`/`portrait_ref` de `profile.commanders` sem alterar schema core do Better Auth | clean + upgrade migration test |
 
 ## Score / 100
 
@@ -121,7 +130,7 @@ Aprovação exige **todos os BLOCKERs verdes** e score >= 85/100.
 - 10 — presença e tolerância a falha;
 - 10 — atividade/histórico;
 - 10 — visual, mobile e Foundation;
-- 5 — avatar/personalização;
+- 5 — identidade sem imagem e minimização de contrato;
 - 10 — performance, migrations e testes.
 
 ## Cenários obrigatórios
@@ -156,7 +165,7 @@ Aprovação exige **todos os BLOCKERs verdes** e score >= 85/100.
 - `PRO3-S20`: usuário entra no lobby;
 - `PRO3-S21`: usuário entra em partida;
 - `PRO3-S22`: usuário fecha navegador durante partida;
-- `PRO3-S23`: presence offline + activity match permanece representável.
+- `PRO3-S23`: presence offline + activity match permanece representável textual e visualmente.
 
 ### Histórico
 
@@ -165,13 +174,13 @@ Aprovação exige **todos os BLOCKERs verdes** e score >= 85/100.
 - `PRO3-S26`: paginação por cursor;
 - `PRO3-S27`: edição posterior do nome não altera snapshot histórico.
 
-### Privacidade/retrato
+### Privacidade / identidade sem imagem
 
 - `PRO3-S28`: `presence_visibility=private`;
 - `PRO3-S29`: `history_visibility=friends` para não amigo;
-- `PRO3-S30`: avatar válido;
-- `PRO3-S31`: avatar MIME falso;
-- `PRO3-S32`: avatar acima do limite;
+- `PRO3-S30`: usuário OAuth cujo provider retorna imagem entra no PROFILE e nenhuma imagem/URL de perfil aparece no DTO ou DOM;
+- `PRO3-S31`: respostas do próprio perfil, perfil público, busca e Rede não contêm propriedade de avatar/retrato/imagem de usuário;
+- `PRO3-S32`: upgrade de banco que ainda possui `portrait_source`/`portrait_ref` remove as colunas sem perder handle, display name, bio, título, privacy ou `last_seen_at`;
 - `PRO3-S33`: título possuído/equipado;
 - `PRO3-S34`: tentativa de equipar título não possuído.
 
@@ -189,6 +198,8 @@ Continuam obrigatórios:
 - scene fallback;
 - 390x844;
 - 1440x900.
+
+Em `390x844` e `1440x900`, a composição MUST demonstrar que a retirada da imagem de perfil foi resolvida intencionalmente: nenhum círculo/moldura/slot vazio pode sugerir foto ausente.
 
 ## Testes de concorrência obrigatórios
 
@@ -213,6 +224,8 @@ Para cada campo visível identificar:
 
 `offline`, lista vazia, zero e ausência de histórico são valores reais apenas quando a fonte consultada está disponível e retornou esse resultado.
 
+A auditoria MUST verificar explicitamente que nenhuma propriedade de imagem do provider (`auth.user.image` ou equivalente) cruza a boundary de Profile.
+
 ## Performance
 
 Validar:
@@ -222,6 +235,7 @@ Validar:
 - presença em lote;
 - histórico por keyset cursor;
 - payload público mínimo;
+- ausência de requests de imagem remota para identidade de comandante;
 - índices novos revisados por padrão de consulta.
 
 Antes de adicionar índice de histórico por otimização, registrar `EXPLAIN (ANALYZE, BUFFERS)` ou justificativa equivalente com dataset representativo.
@@ -235,7 +249,8 @@ Além da V2, validar:
 3. presença atualizar sem resetar UI local;
 4. perfil de outro jogador respeitar relacionamento atual;
 5. bloqueio remover ações incompatíveis imediatamente após confirmação do servidor;
-6. paginação de histórico preservar registro selecionado quando aplicável.
+6. paginação de histórico preservar registro selecionado quando aplicável;
+7. identidade permanece clara e acionável sem avatar em Dossiê, Rede, busca e perfil público.
 
 ## Referências técnicas
 
@@ -246,7 +261,6 @@ Além da V2, validar:
 - Redis EXPIRE/TTL: https://redis.io/docs/latest/commands/expire/ e https://redis.io/docs/latest/commands/ttl/
 - OWASP Authorization: https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html
 - OWASP IDOR: https://cheatsheetseries.owasp.org/cheatsheets/Insecure_Direct_Object_Reference_Prevention_Cheat_Sheet.html
-- OWASP File Upload: https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html
 
 ## Gate de conclusão
 
@@ -255,6 +269,9 @@ A PROFILE V3 só pode ser considerada pronta quando:
 - todos os blockers acima estiverem verdes;
 - score >= 85;
 - migrations passarem em banco limpo e upgrade do baseline suportado;
+- a migration de remoção de retrato estiver verde em clean/upgrade;
+- nenhum DTO/API/componente de Profile transportar ou renderizar imagem de perfil;
+- imagem OAuth, quando existir no provider, permanecer confinada ao domínio de auth;
 - testes auth existentes continuarem verdes;
 - nenhum fluxo de jogo/realtime existente regredir;
-- evidência visual V2 continuar aprovada.
+- evidência visual V2 continuar aprovada após recomposição sem avatar.
