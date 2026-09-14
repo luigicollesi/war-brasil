@@ -60,11 +60,7 @@ function requestEvidenceOrigin(request: Request): OriginEvidence {
   return { present: false };
 }
 
-export function rejectUntrustedAuthMutationOrigin(request: Request) {
-  if (request.method !== "POST") {
-    return null;
-  }
-
+function rejectUntrustedOriginEvidence(request: Request) {
   const evidence = requestEvidenceOrigin(request);
 
   // Trusted non-browser callers may omit Origin/Referer. Browser-origin evidence,
@@ -87,4 +83,18 @@ export function rejectUntrustedAuthMutationOrigin(request: Request) {
     },
     { status: 403 },
   );
+}
+
+export function rejectUntrustedMutationOrigin(request: Request) {
+  if (["GET", "HEAD", "OPTIONS"].includes(request.method.toUpperCase())) {
+    return null;
+  }
+  return rejectUntrustedOriginEvidence(request);
+}
+
+export function rejectUntrustedAuthMutationOrigin(request: Request) {
+  if (request.method !== "POST") {
+    return null;
+  }
+  return rejectUntrustedOriginEvidence(request);
 }
