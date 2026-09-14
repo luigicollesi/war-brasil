@@ -10,9 +10,6 @@ export type CommanderProfileRow = {
   handle: string | null;
   display_name: string | null;
   bio: string | null;
-  portrait_source: "auth" | "upload" | "catalog" | null;
-  portrait_ref: string | null;
-  auth_image: string | null;
   last_seen_at: Date | null;
   title_id: string | null;
   title_name: string | null;
@@ -28,9 +25,6 @@ export type CommanderSearchRow = Pick<
   | "user_id"
   | "handle"
   | "display_name"
-  | "portrait_source"
-  | "portrait_ref"
-  | "auth_image"
   | "title_id"
   | "title_name"
   | "title_rarity"
@@ -44,9 +38,6 @@ const profileProjection = `
   commander.handle,
   commander.display_name,
   commander.bio,
-  commander.portrait_source,
-  commander.portrait_ref,
-  auth_user.image AS auth_image,
   commander.last_seen_at,
   title.id AS title_id,
   title.name AS title_name,
@@ -68,7 +59,6 @@ export async function findCommanderByUserId(
   const result = await db.query<CommanderProfileRow>(
     `SELECT ${profileProjection}
        FROM profile.commanders commander
-       JOIN auth."user" auth_user ON auth_user.id=commander.user_id
        LEFT JOIN profile.privacy_settings privacy ON privacy.user_id=commander.user_id
        LEFT JOIN catalog.commander_titles title
          ON title.id=commander.equipped_title_id
@@ -85,7 +75,6 @@ export async function findCommanderByHandle(
   const result = await db.query<CommanderProfileRow>(
     `SELECT ${profileProjection}
        FROM profile.commanders commander
-       JOIN auth."user" auth_user ON auth_user.id=commander.user_id
        LEFT JOIN profile.privacy_settings privacy ON privacy.user_id=commander.user_id
        LEFT JOIN catalog.commander_titles title
          ON title.id=commander.equipped_title_id
@@ -117,9 +106,6 @@ export async function searchCommanderDirectoryRows(
        commander.user_id,
        commander.handle,
        commander.display_name,
-       commander.portrait_source,
-       commander.portrait_ref,
-       auth_user.image AS auth_image,
        title.id AS title_id,
        title.name AS title_name,
        title.rarity AS title_rarity,
@@ -137,7 +123,6 @@ export async function searchCommanderDirectoryRows(
             AND mutual.user_b_id=GREATEST(actor_friend.friend_id, commander.user_id)
        ) AS mutual_contacts
        FROM profile.commanders commander
-       JOIN auth."user" auth_user ON auth_user.id=commander.user_id
        LEFT JOIN catalog.commander_titles title
          ON title.id=commander.equipped_title_id
        LEFT JOIN social.friendships friendship
