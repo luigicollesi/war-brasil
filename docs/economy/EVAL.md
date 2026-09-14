@@ -27,13 +27,40 @@ Aprovação exige **todos os BLOCKERs verdes**. Nenhuma compra, recompensa ou gr
 | ECO-CAT-02 | catálogo possui Exército com ataque, defesa e neutro corretos | migration/asset contract |
 | ECO-CAT-03 | catálogo possui Lanças com ataque, defesa e neutro corretos | migration/asset contract |
 | ECO-CAT-04 | catálogo possui Viking com ataque, defesa e neutro corretos | migration/asset contract |
-| ECO-CAT-05 | `set.exercito` agrupa exatamente os três itens esperados nesta entrega | DB test |
-| ECO-CAT-06 | `set.lancas` agrupa exatamente os três itens esperados nesta entrega | DB test |
-| ECO-CAT-07 | `set.viking` agrupa exatamente os três itens esperados nesta entrega | DB test |
-| ECO-CAT-08 | Exército, Lanças e Viking iniciam como `announced` | DB/storefront test |
-| ECO-CAT-09 | conjunto não cria ownership próprio nem implica ownership de todos os itens | schema/service review |
-| ECO-CAT-10 | ID de cosmético é independente do caminho físico do asset | schema/contract review |
-| ECO-CAT-11 | item `retired` continua resolvível para ownership/snapshot já existente | compatibility test |
+| ECO-CAT-05 | catálogo possui Gato com ataque, defesa e neutro corretos | migration/asset contract |
+| ECO-CAT-06 | catálogo possui Cachorro com ataque, defesa e neutro corretos | migration/asset contract |
+| ECO-CAT-07 | catálogo possui Futebol com ataque, defesa e neutro corretos | migration/asset contract |
+| ECO-CAT-08 | cada conjunto de dados agrupa exatamente os três papéis esperados | DB test |
+| ECO-CAT-09 | conjuntos anunciados iniciam como `announced` e não adquiríveis | DB/storefront test |
+| ECO-CAT-10 | conjunto não cria ownership próprio nem implica ownership de todos os itens | schema/service review |
+| ECO-CAT-11 | ID de cosmético é independente da object key física | schema/contract review |
+| ECO-CAT-12 | item `retired` continua resolvível para ownership/snapshot já existente | compatibility test |
+| ECO-CAT-13 | nome, descrição, ordem e status da remessa vêm do banco | repository/DTO test |
+| ECO-CAT-14 | frontend não possui allowlist hardcoded de slugs de conjuntos | source review |
+| ECO-CAT-15 | inserir novo conjunto `announced` válido no catálogo o torna visível sem alteração temática de React | integration/E2E |
+
+## Gates BLOCKER — object storage / R2
+
+| ID | Critério | Evidência mínima |
+| --- | --- | --- |
+| ECO-ASSET-01 | `ASSET_STORAGE_URL` é a única variável necessária para conexão da aplicação ao storage | env/config source review |
+| ECO-ASSET-02 | connection string possui credenciais, endpoint, bucket e região parseáveis | parser unit test |
+| ECO-ASSET-03 | `ASSET_STORAGE_URL` aceita o formato `s3://<key>:<secret>@<endpoint>/<bucket>?region=auto` | parser contract test |
+| ECO-ASSET-04 | credenciais percent-encoded são decodificadas corretamente pelo parser | parser edge-case test |
+| ECO-ASSET-05 | endpoint HTTP efetivo derivado é HTTPS e não contém credenciais | unit/security test |
+| ECO-ASSET-06 | bucket derivado é `war-brasil-assets-prod` no ambiente esperado | config test |
+| ECO-ASSET-07 | região R2 resolvida é `auto` | config test |
+| ECO-ASSET-08 | ausência ou formato inválido falha server-side sem expor segredo | negative test |
+| ECO-ASSET-09 | `ASSET_STORAGE_URL` não possui prefixo `NEXT_PUBLIC_` e não entra no bundle do browser | build/source inspection |
+| ECO-ASSET-10 | connection string, Secret Access Key e credenciais derivadas não aparecem em API, DTO, HTML, log ou evidência E2E | secret scan/E2E negative assertion |
+| ECO-ASSET-11 | catálogo/snapshot persistem object key ou referência estável, nunca URL com credenciais | DB/schema test |
+| ECO-ASSET-12 | URL presigned não é persistida como identidade do cosmético | DB/source test |
+| ECO-ASSET-13 | servidor consegue gerar GET presigned de objeto registrado sem expor Secret Access Key | integration test controlado |
+| ECO-ASSET-14 | URL presigned possui expiração finita e autoriza somente o objeto solicitado | signing contract test |
+| ECO-ASSET-15 | browser não consegue solicitar assinatura de object key arbitrária fora do catálogo autoritativo | negative route/service test |
+| ECO-ASSET-16 | storefront normal não executa `ListObjects` para descobrir produtos | source/integration inspection |
+| ECO-ASSET-17 | objeto ausente/falha R2 produz fallback visual seguro sem alterar gameplay | failure test |
+| ECO-ASSET-18 | acesso browser direto ao asset assinado funciona com CORS da aplicação | browser/network E2E |
 
 ## Gates BLOCKER — inventário
 
@@ -42,11 +69,9 @@ Aprovação exige **todos os BLOCKERs verdes**. Nenhuma compra, recompensa ou gr
 | ECO-INV-01 | novo comandante possui os quatro defaults | integration |
 | ECO-INV-02 | usuários existentes recebem somente os quatro defaults no backfill desta entrega | upgrade integration |
 | ECO-INV-03 | ownership é único por usuário/item | constraint/concurrency test |
-| ECO-INV-04 | Exército não é concedido automaticamente | integration |
-| ECO-INV-05 | Lanças não é concedido automaticamente | integration |
-| ECO-INV-06 | Viking não é concedido automaticamente | integration |
-| ECO-INV-07 | browser não consegue conceder item a si próprio | route/security test |
-| ECO-INV-08 | reexecutar inicialização não duplica grants nem altera saldo | idempotency integration |
+| ECO-INV-04 | nenhum conjunto `announced` é concedido automaticamente | integration |
+| ECO-INV-05 | browser não consegue conceder item a si próprio | route/security test |
+| ECO-INV-06 | reexecutar inicialização não duplica grants nem altera saldo | idempotency integration |
 
 ## Gates BLOCKER — loadout
 
@@ -69,15 +94,16 @@ Aprovação exige **todos os BLOCKERs verdes**. Nenhuma compra, recompensa ou gr
 | ECO-STORE-01 | Profile mostra saldo real `◈ 0` quando wallet está disponível | E2E/DOM |
 | ECO-STORE-02 | Intendência possui entrada clara para a loja | E2E/DOM |
 | ECO-STORE-03 | `/profile/store` é autenticada e utiliza a cena `profile` existente | route/Foundation E2E |
-| ECO-STORE-04 | Exército aparece como nova remessa/anúncio | E2E/DOM |
-| ECO-STORE-05 | Lanças aparece como nova remessa/anúncio | E2E/DOM |
-| ECO-STORE-06 | Viking aparece como nova remessa/anúncio | E2E/DOM |
-| ECO-STORE-07 | itens `announced` possuem estado inequívoco `EM BREVE` ou equivalente | interaction review |
-| ECO-STORE-08 | nenhum item sem fluxo de aquisição oferece CTA `COMPRAR` | E2E/DOM negative assertion |
-| ECO-STORE-09 | nenhum clique em preview de item não possuído altera inventário/loadout | interaction/integration |
-| ECO-STORE-10 | nenhum preço é inventado para anúncio sem oferta ativa | DTO/DOM review |
-| ECO-STORE-11 | defaults aparecem como possuídos e podem ser equipados | E2E/integration |
-| ECO-STORE-12 | storefront real não depende da fixture sintética de Profile | source/integration |
+| ECO-STORE-04 | todos os conjuntos `announced` retornados pelo catálogo são renderizados | E2E/DOM |
+| ECO-STORE-05 | baseline mostra Exército, Lanças, Viking, Gato, Cachorro e Futebol quando registrados | E2E/DOM |
+| ECO-STORE-06 | itens `announced` possuem estado inequívoco `EM BREVE` ou equivalente | interaction review |
+| ECO-STORE-07 | nenhum item sem fluxo de aquisição oferece CTA `COMPRAR` | E2E/DOM negative assertion |
+| ECO-STORE-08 | nenhum clique em preview de item não possuído altera inventário/loadout | interaction/integration |
+| ECO-STORE-09 | nenhum preço é inventado para anúncio sem oferta ativa | DTO/DOM review |
+| ECO-STORE-10 | defaults aparecem como possuídos e podem ser equipados | E2E/integration |
+| ECO-STORE-11 | storefront real não depende da fixture sintética de Profile | source/integration |
+| ECO-STORE-12 | nome e descrição exibidos são os valores persistidos no catálogo | DB→DTO→DOM E2E |
+| ECO-STORE-13 | adicionar/remover um conjunto da resposta de catálogo altera a UI sem branch temática no componente | component/integration |
 
 ## Gates BLOCKER — dados
 
@@ -90,7 +116,7 @@ Aprovação exige **todos os BLOCKERs verdes**. Nenhuma compra, recompensa ou gr
 | ECO-DICE-05 | fallback 2D e apresentação 3D resolvem o mesmo cosmético | contract/E2E |
 | ECO-DICE-06 | skin não altera RNG, valores ou balanceamento adaptativo | regression/property tests |
 | ECO-DICE-07 | skin não altera geometria, collider, trajetória ou detecção de face | dice physics regression |
-| ECO-DICE-08 | ausência/falha de asset não altera resultado autoritativo da rolagem | failure test |
+| ECO-DICE-08 | ausência/falha/expiração de asset não altera resultado autoritativo da rolagem | failure test |
 
 ## Gates BLOCKER — efeitos territoriais
 
@@ -113,30 +139,37 @@ Aprovação exige **todos os BLOCKERs verdes**. Nenhuma compra, recompensa ou gr
 | ECO-GAME-04 | todos os clientes veem a mesma configuração cosmética por jogador | multi-client E2E |
 | ECO-GAME-05 | bots usam os quatro defaults | integration |
 | ECO-GAME-06 | GameSnapshot expõe somente configuração visual necessária | DTO snapshot/security |
-| ECO-GAME-07 | GameSnapshot não expõe saldo, ledger, inventário completo ou `auth.user.id` | security snapshot |
+| ECO-GAME-07 | GameSnapshot não expõe saldo, ledger, inventário completo, `auth.user.id` ou `ASSET_STORAGE_URL` | security snapshot |
 | ECO-GAME-08 | runtime não consulta Profile/store a cada batalha/renderização | architecture/source inspection |
+| ECO-GAME-09 | snapshot congela object key/referência persistente e nunca URL presigned efêmera | DB/source integration |
+| ECO-GAME-10 | reconnect pode gerar nova URL de transporte para a mesma object key sem mudar o cosmético congelado | reconnect/storage E2E |
 
 ## Gates BLOCKER — segurança e boundary
 
 | ID | Critério | Evidência mínima |
 | --- | --- | --- |
 | ECO-SEC-01 | wallet, inventory e loadout próprios exigem sessão autenticada | route/service tests |
-| ECO-SEC-02 | browser não é autoridade para saldo, ownership, status, slot ou oferta | negative tests/source review |
-| ECO-SEC-03 | React components não executam SQL | architecture inspection |
+| ECO-SEC-02 | browser não é autoridade para saldo, ownership, status, slot, oferta ou object key arbitrária | negative tests/source review |
+| ECO-SEC-03 | React components não executam SQL nem instanciam cliente S3 com credenciais | architecture inspection |
 | ECO-SEC-04 | Route Handlers não retornam `SELECT *` de tabelas econômicas internas | source/DTO review |
 | ECO-SEC-05 | catálogo público não vaza ownership privado de outros usuários | API snapshot |
 | ECO-SEC-06 | outros jogadores recebem somente cosméticos congelados necessários à partida | DTO/security |
 | ECO-SEC-07 | não existe mutação financeira parcial ou não transacional escondida no runtime | source inspection |
+| ECO-SEC-08 | não existe `NEXT_PUBLIC_ASSET_STORAGE_URL` nem alias público equivalente | source/env scan |
+| ECO-SEC-09 | mensagens de erro sanitizam connection string e assinatura S3 | failure/log test |
 
 ## Gates BLOCKER — performance de assets
 
 | ID | Critério | Evidência mínima |
 | --- | --- | --- |
-| ECO-PERF-01 | listagem da loja não baixa automaticamente todos os SVGs HQ | browser network evidence |
-| ECO-PERF-02 | cards usam preview otimizado ou equivalente de baixo custo | asset/network review |
+| ECO-PERF-01 | listagem da loja não baixa automaticamente o catálogo inteiro de SVGs HQ | browser network evidence |
+| ECO-PERF-02 | cards usam representação leve sem exigir `preview.webp` nesta entrega | asset/network review |
 | ECO-PERF-03 | SVG HQ é carregado sob demanda ou quando necessário ao item equipado | network evidence |
-| ECO-PERF-04 | troca de estação/seleção da loja não força remontagem desnecessária da Foundation | React/browser evidence |
-| ECO-PERF-05 | mapa permanece sem fetch por território ou por frame | network/source inspection |
+| ECO-PERF-04 | abrir um detalhe solicita somente o asset selecionado, não os três papéis de todos os conjuntos | network evidence |
+| ECO-PERF-05 | troca de estação/seleção da loja não força remontagem desnecessária da Foundation | React/browser evidence |
+| ECO-PERF-06 | mapa permanece sem fetch por território ou por frame | network/source inspection |
+| ECO-PERF-07 | storefront não lista bucket/prefixos no R2 para montar catálogo | source/network evidence |
+| ECO-PERF-08 | presign é feito somente quando necessário e não em massa para itens fora da viewport/detalhe | source/network evidence |
 
 ## Gates BLOCKER — migrations
 
@@ -149,6 +182,8 @@ Aprovação exige **todos os BLOCKERs verdes**. Nenhuma compra, recompensa ou gr
 | ECO-DB-05 | novos usuários são inicializados de forma idempotente | onboarding integration |
 | ECO-DB-06 | constraints impedem saldo negativo, ownership duplicado e equipagem inválida conforme modelagem final | DB negative tests |
 | ECO-DB-07 | catálogo seed é determinístico | clean/repeat DB test |
+| ECO-DB-08 | referências locais `/dados/...` são migradas para object keys sem alterar IDs/ownership | upgrade integration |
+| ECO-DB-09 | metadata de conjunto inclui `storage_slug`/prefixo suficiente para resolver a pasta física | schema/query test |
 
 ## Cenários obrigatórios
 
@@ -165,7 +200,7 @@ Aprovação exige **todos os BLOCKERs verdes**. Nenhuma compra, recompensa ou gr
 
 - `ECO-S7`: novo usuário possui os quatro defaults;
 - `ECO-S8`: usuário equipa novamente um default;
-- `ECO-S9`: usuário tenta equipar Exército sem possuir;
+- `ECO-S9`: usuário tenta equipar item anunciado sem possuir;
 - `ECO-S10`: usuário tenta equipar dado de defesa no slot de ataque;
 - `ECO-S11`: atualização de ataque preserva defesa, neutro e território;
 - `ECO-S12`: inicialização executada duas vezes não duplica nada.
@@ -174,11 +209,21 @@ Aprovação exige **todos os BLOCKERs verdes**. Nenhuma compra, recompensa ou gr
 
 - `ECO-S13`: abrir Intendência pelo Profile;
 - `ECO-S14`: abrir `/profile/store`;
-- `ECO-S15`: visualizar Exército anunciado;
-- `ECO-S16`: visualizar Lanças anunciado;
-- `ECO-S17`: visualizar Viking anunciado;
-- `ECO-S18`: abrir preview detalhada sem adquirir item;
-- `ECO-S19`: confirmar ausência de CTA de compra e preço inventado.
+- `ECO-S15`: visualizar todos os conjuntos `announced` retornados pelo catálogo;
+- `ECO-S16`: verificar baseline Exército, Lanças, Viking, Gato, Cachorro e Futebol;
+- `ECO-S17`: abrir preview detalhada sem adquirir item;
+- `ECO-S18`: confirmar ausência de CTA de compra e preço inventado;
+- `ECO-S19`: inserir conjunto de teste `announced` no catálogo e confirmar aparecimento sem alterar React.
+
+### Object storage
+
+- `ECO-S30`: inicializar parser com uma única `ASSET_STORAGE_URL` válida;
+- `ECO-S31`: validar credenciais percent-encoded e derivação de endpoint/bucket/region;
+- `ECO-S32`: configuração inválida falha sem imprimir segredo;
+- `ECO-S33`: resolver item registrado para GET presigned e carregar no browser;
+- `ECO-S34`: confirmar que nenhuma credential/connection string aparece em HTML, JSON ou console/log capturado;
+- `ECO-S35`: alterar/expirar URL presigned e confirmar que a object key persistente continua sendo a identidade do item;
+- `ECO-S36`: object key não registrada não pode obter assinatura arbitrária por solicitação do browser.
 
 ### Partida
 
@@ -214,14 +259,18 @@ A auditoria MUST enumerar todos os endpoints/serviços capazes de alterar:
 
 - `economy.*`;
 - `inventory.*`;
+- catálogo cosmético;
 - loadout cosmético em `profile.*`;
-- snapshot cosmético em `game.*`.
+- snapshot cosmético em `game.*`;
+- object storage.
 
 Nesta entrega, o resultado esperado para dinheiro é: **nenhuma mutação exposta ao usuário**.
 
 Para inventário, o resultado esperado é: grants somente pela inicialização/migration controlada dos defaults.
 
 Para loadout, a única mutação normal esperada é equipar item já possuído.
+
+Para R2, o resultado esperado no runtime da loja é leitura/presign; upload, delete e alteração de bucket não são operações de usuário desta entrega.
 
 ## Auditoria de dados
 
@@ -233,6 +282,14 @@ Para cada campo econômico ou cosmético visível registrar:
 - DTO de saída;
 - se é persistente, derivado ou snapshot.
 
+Para assets registrar adicionalmente:
+
+- `cosmetic_id`;
+- `set_id`;
+- `storage_slug`;
+- object key persistida;
+- URL presigned apenas como valor efêmero quando aplicável.
+
 `0`, lista vazia e `não possuído` somente podem ser exibidos como fatos quando a respectiva fonte real foi consultada com sucesso.
 
 ## Evidência visual mínima
@@ -240,12 +297,10 @@ Para cada campo econômico ou cosmético visível registrar:
 Capturar pelo menos:
 
 - Profile/Tesouraria com `◈ 0`;
-- Profile/Intendência com os três anúncios;
+- Profile/Intendência com todas as remessas `announced` do baseline;
 - `/profile/store` desktop 1440x900;
 - `/profile/store` mobile 390x844;
-- detalhe de Exército;
-- detalhe de Lanças;
-- detalhe de Viking;
+- detalhe de pelo menos três coleções distintas carregando SVG do R2 sob demanda;
 - loadout com os quatro defaults;
 - batalha com skins distintas de atacante/defensor em harness controlado;
 - território nas seis cores com efeito default.
@@ -256,11 +311,14 @@ Reduced-motion e fallback da Foundation continuam obrigatórios onde aplicáveis
 
 Validar por DevTools ou evidência automatizada:
 
-- nenhum carregamento em lote dos nove SVGs HQ apenas ao abrir a loja;
+- nenhum carregamento em lote de todos os SVGs HQ apenas ao abrir a loja;
+- nenhuma descoberta do catálogo por `ListObjects` em request normal da storefront;
+- preview detalhado solicita somente os objetos efetivamente abertos;
 - ausência de N+1 para inventário/loadout;
 - ausência de consulta Profile por território;
 - ausência de consulta Profile por frame/rolagem;
 - resolução de catálogo e loadout em número limitado de queries;
+- presign não é gerado em massa para todo o catálogo;
 - mudança cosmética não causa regressão perceptível de interação do mapa.
 
 ## Fora do EVAL desta entrega
@@ -279,7 +337,10 @@ Não avaliar como funcionalidade implementada:
 - marketplace;
 - trading;
 - gifting;
-- refund.
+- refund;
+- upload de assets pelo browser;
+- edição administrativa do bucket pela storefront;
+- descoberta automática de produtos baseada somente em pastas do R2.
 
 Qualquer uma dessas funcionalidades aparecendo como ativa nesta entrega sem SPEC adicional é regressão.
 
@@ -292,8 +353,13 @@ A entrega econômica só pode ser considerada pronta quando:
 - storefront real substituir a fixture/estado `unavailable` da Intendência;
 - usuários novos e existentes tiverem saldo real `0`;
 - defaults estiverem possuídos/equipados;
-- Exército, Lanças e Viking estiverem anunciados e não adquiríveis;
-- partida utilizar snapshot cosmético congelado;
+- catálogo anunciado vier do PostgreSQL e não de lista hardcoded no frontend;
+- baseline registrado de Exército, Lanças, Viking, Gato, Cachorro e Futebol estiver anunciado e não adquirível;
+- `ASSET_STORAGE_URL` for a única configuração de conexão S3/R2;
+- nenhuma credencial de storage for exposta ao browser, DTO, logs ou snapshots persistentes;
+- referências físicas forem object keys estáveis e URLs presigned forem somente transporte efêmero;
+- browser carregar assets R2 sob demanda sem bulk-load do catálogo;
+- partida utilizar snapshot cosmético congelado por object key/referência persistente;
 - nenhuma regra competitiva tiver sido alterada;
 - nenhum endpoint de compra/recompensa/grant econômico tiver sido introduzido;
 - migrations passarem em banco limpo e upgrade.
