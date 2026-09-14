@@ -60,7 +60,7 @@ export type OwnCommanderProfileDto = Readonly<{
 
 export type PublicCommanderProfileDto = Readonly<{
   identity: CommanderIdentityDto;
-  relationship: Exclude<CommanderRelationship, "self" | "blocked">;
+  relationship: Exclude<CommanderRelationship, "blocked">;
   history: Readonly<{
     visible: boolean;
     data: PlayerMatchHistory | null;
