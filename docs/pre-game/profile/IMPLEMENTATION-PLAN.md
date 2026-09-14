@@ -6,7 +6,9 @@ Rota pública planejada: `/profile/[handle]`
 
 ## Objetivo
 
-Integrar a PROFILE ao fluxo real de autenticação sem quebrar o jogo, lobby, realtime ou Foundation. A V3 preserva a UI do Quartel construída na V2 e substitui fixtures por dados persistidos por domínio.
+Integrar a PROFILE ao fluxo real de autenticação sem quebrar o jogo, lobby, realtime ou Foundation. A V3 preserva a identidade visual do Quartel construída na V2 e substitui fixtures por dados persistidos por domínio.
+
+A PROFILE V3 **não possui imagens de perfil, avatares ou retratos de comandante**. A identidade visual de um comandante é representada por nome, handle, título, estado, atividade e elementos tipográficos/monogramas gerados pela própria interface.
 
 ## Princípio de implementação
 
@@ -19,7 +21,58 @@ Fontes de verdade:
 - `social.*` — grafo social;
 - Redis — presença efêmera;
 - `game.*` — atividade e histórico;
-- `catalog.*` — títulos/cosméticos.
+- `catalog.*` — títulos e outros cosméticos que não representem imagem de perfil.
+
+## Regra arquitetural — nenhum perfil possui imagem
+
+Esta regra é obrigatória em todas as camadas.
+
+### Produto/UI
+
+- não existe foto de perfil;
+- não existe avatar;
+- não existe retrato selecionável;
+- não existe upload de imagem pessoal;
+- não existe fallback para imagem OAuth;
+- não existe catálogo de retratos de comandante;
+- listas sociais, busca e perfil público usam identidade textual e, quando necessário, monograma/iniciais gerados pela UI;
+- assets decorativos do jogo continuam permitidos, desde que não funcionem como imagem identificadora do perfil do usuário.
+
+### Auth
+
+O Better Auth/OAuth pode manter internamente campos próprios como `auth."user".image` porque fazem parte do schema controlado pela biblioteca/provedor.
+
+War-Brasil deve:
+
+- não usar `session.user.image` como dado de Profile;
+- não copiar imagem OAuth para `profile.*`;
+- não retornar imagem OAuth em DTOs de Profile;
+- não renderizar imagem OAuth em `/profile`, `/profile/[handle]`, busca ou Rede de Comando;
+- não alterar manualmente o core schema do Better Auth apenas para remover uma coluna que a biblioteca espera administrar.
+
+### Profile database
+
+`profile.*` não deve possuir estado autoritativo relacionado a avatar/retrato.
+
+Consequentemente:
+
+- `profile.commanders.portrait_source` deve ser removido;
+- `profile.commanders.portrait_ref` deve ser removido;
+- nenhuma nova coluna equivalente deve ser criada;
+- nenhuma tabela de upload/storage de avatar deve existir;
+- títulos continuam válidos porque são identidade textual/cosmética e não imagem de perfil.
+
+### Contratos e DTOs
+
+Remover do domínio de Profile:
+
+- `CommanderPortrait`;
+- `CommanderPortraitDto`;
+- propriedades `portrait` de identidade, contatos, busca e perfil público;
+- qualquer função como `portraitFromRow`, `safeProfilePortraitSrc` ou equivalente;
+- qualquer allowlist de host criada exclusivamente para imagens de perfil.
+
+DTO público e privado não devem transportar URL de imagem de perfil.
 
 ## Estado atual aproveitado
 
@@ -36,6 +89,22 @@ A branch já possui:
 - realtime de jogo por sala;
 - Redis já disponível na infraestrutura realtime quando configurado.
 
+### Estado transitório a remover
+
+A implementação atual da branch chegou a introduzir suporte a retrato/avatar antes desta nova decisão de produto. Portanto podem existir temporariamente:
+
+- `portrait_source` / `portrait_ref` em `profile.commanders`;
+- leitura de `auth."user".image`;
+- tipos `CommanderPortrait*`;
+- políticas/allowlists de imagem;
+- propriedades `portrait` em DTOs;
+- `<Image>` ou `<img>` em componentes de Profile;
+- lógica de fallback OAuth.
+
+Esses elementos passam a ser dívida técnica explícita e devem ser eliminados nas fases abaixo.
+
+Não reescrever migrations que já possam ter sido aplicadas em ambientes compartilhados. A remoção física do schema deve ocorrer por **nova migration forward-only**.
+
 ## Decisões fechadas
 
 1. Não ampliar `auth.user` com dados de jogo/social quando esses dados pertencem a outro domínio.
@@ -48,6 +117,10 @@ A branch já possui:
 8. Constraints de banco protegem invariantes sociais críticas.
 9. Redis indisponível produz `presence=unavailable`.
 10. O realtime atual de sala não será reescrito para presença global nesta trilha.
+11. Nenhum usuário possui imagem de perfil no domínio War-Brasil.
+12. Imagens fornecidas por OAuth não fazem parte da identidade pública do comandante.
+13. Não haverá upload, storage, catálogo ou configuração de avatar/retrato.
+14. Monogramas/iniciais são apresentação derivada de texto, nunca estado persistido de imagem.
 
 ## Arquitetura alvo
 
@@ -63,13 +136,15 @@ Profile/Social services
        +--> Redis presence
        |
        v
-DTO privado/público
+DTO privado/público sem imagem de perfil
        |
        v
 ProfileCommandSnapshot / endpoints
        |
        v
 Quartel do Comandante
+       |
+       +--> identidade textual / monograma derivado
 ```
 
 ## Fase 0 — Contrato V3
@@ -80,29 +155,41 @@ Quartel do Comandante
 - atualizar `EVAL.md`;
 - atualizar este plano;
 - formalizar fontes autoritativas e DTOs;
-- registrar presença/activity como conceitos separados.
+- registrar presença/activity como conceitos separados;
+- registrar explicitamente que imagem de perfil é inexistente no produto.
 
 ### Gate
 
-Nenhuma migration ou endpoint deve contradizer `SPEC.md`/`EVAL.md`.
+Nenhuma migration, endpoint, DTO ou componente pode contradizer `SPEC.md`/`EVAL.md`.
 
-**Status:** em implementação nesta branch.
+Deve existir um gate específico garantindo ausência de imagem de perfil em contratos públicos e privados.
+
+**Status:** regra de ausência de imagem incorporada ao plano; SPEC/EVAL ainda devem ser sincronizados antes da implementação de remoção.
 
 ## Fase 1 — Profile database foundation
 
-### Migration 034
+### Modelo alvo
 
-Criar `034-profile-v3-foundation.sql`.
+`profile.commanders` deve conter apenas os campos necessários ao domínio de identidade textual e estado persistente:
 
-Alterar `profile.commanders` com campos mínimos:
-
+- `user_id`;
+- `handle`;
+- `display_name`;
 - `bio`;
+- `last_seen_at`;
+- `equipped_title_id`;
+- timestamps necessários.
+
+Não fazem parte do modelo alvo:
+
 - `portrait_source`;
 - `portrait_ref`;
-- `last_seen_at`;
-- `equipped_title_id` após criação das estruturas de título.
+- avatar URL;
+- storage key de imagem;
+- mime type de avatar;
+- qualquer campo equivalente de retrato.
 
-Criar `profile.privacy_settings`:
+Criar/manter `profile.privacy_settings`:
 
 - `user_id` PK/FK;
 - `presence_visibility`;
@@ -111,7 +198,7 @@ Criar `profile.privacy_settings`:
 - `friend_request_policy`;
 - `updated_at`.
 
-Criar `catalog.commander_titles`:
+Criar/manter `catalog.commander_titles`:
 
 - id;
 - nome;
@@ -120,12 +207,26 @@ Criar `catalog.commander_titles`:
 - ativo;
 - timestamps necessários.
 
-Criar `profile.commander_titles`:
+Criar/manter `profile.commander_titles`:
 
 - `user_id`;
 - `title_id`;
 - `unlocked_at`;
 - PK composta.
+
+### Migration de limpeza de imagem
+
+Como migrations anteriores da branch podem já ter criado `portrait_source` e `portrait_ref`, não alterar o histórico aplicado em-place.
+
+Criar a próxima migration disponível, por exemplo `036-profile-remove-portraits.sql` se essa numeração continuar livre no HEAD de implementação, para:
+
+1. remover constraints/indexes dependentes de portrait, se existirem;
+2. remover `profile.commanders.portrait_source`;
+3. remover `profile.commanders.portrait_ref`;
+4. remover estruturas de catálogo/storage criadas exclusivamente para avatar, caso existam;
+5. manter intacto `auth."user".image`, pois pertence ao Better Auth e apenas será ignorado pelo domínio Profile.
+
+A numeração final deve ser confirmada contra o HEAD antes da implementação.
 
 ### Integridade
 
@@ -133,24 +234,23 @@ Criar `profile.commander_titles`:
 - manter handle normalized unique;
 - impedir valores inválidos de privacy por CHECK;
 - impedir equipar título de outro usuário por FK composta quando possível;
-- não mover credenciais ou dados Better Auth para profile.
+- não mover credenciais ou dados Better Auth para profile;
+- não manter referência órfã de avatar/retrato no domínio Profile.
 
 ### Testes
 
-Atualizar `tests/integration/database-migration.test.mjs` para:
+Atualizar `tests/integration/database-migration.test.mjs` para provar:
 
-- migration history 034;
-- novas tabelas físicas;
-- novas colunas;
-- constraints/FKs;
-- upgrade de baseline;
-- execução idempotente pelo runner.
+- migration history completa;
+- modelo final sem colunas de portrait;
+- upgrade a partir do estado que ainda contém portrait;
+- constraints/FKs preservadas;
+- execução idempotente pelo runner;
+- `auth."user".image` não é usado como justificativa para recriar portrait no domínio Profile.
 
 ## Fase 2 — Social database foundation
 
-### Migration 035
-
-Criar schema `social`.
+Criar/manter schema `social`.
 
 Criar:
 
@@ -188,15 +288,17 @@ Usar unique partial expression index para existir no máximo um request pendente
 
 Testes concorrentes precisam provar que constraints, e não apenas TypeScript, impedem estados inválidos.
 
+Nenhuma tabela social deve duplicar URL ou referência de imagem de Profile.
+
 ## Fase 3 — DAL, repositories e DTOs
 
-Criar `src/lib/server/profile/`.
+Manter `src/lib/server/profile/` como fronteira server-only.
 
 Arquivos alvo:
 
 - `profile-repository.ts`;
 - `profile-service.ts`;
-- `profile-dto.ts`;
+- `profile-dto.ts` ou contratos equivalentes;
 - `profile-history.ts`;
 - `profile-search.ts`;
 - `social-repository.ts`;
@@ -209,6 +311,8 @@ Componentes React não executam SQL.
 
 Route Handlers não retornam rows internos diretamente.
 
+Repositories não devem selecionar `auth."user".image` para compor Profile.
+
 ### DTOs
 
 Separar explicitamente:
@@ -218,44 +322,65 @@ Separar explicitamente:
 - `CommanderSearchDTO`;
 - `FriendRosterDTO`.
 
+Nenhum desses DTOs possui `portrait`, `avatar`, `image`, `imageUrl` ou campo equivalente.
+
 ## Fase 4 — Snapshot autenticado real
 
-Alterar `getCurrentProfileCommandSnapshot()`.
+Alterar/manter `getCurrentProfileCommandSnapshot()`.
 
 Fluxo normal:
 
 1. obter sessão Better Auth server-side;
 2. obter commander real;
-3. compor identidade;
+3. compor identidade textual;
 4. compor social disponível;
 5. compor histórico disponível;
 6. manter wallet/store `unavailable` até fonte real existir;
 7. retornar contrato já consumido pela UI.
 
-`PROFILE_EVAL_MODE` continua sendo a única entrada para fixtures completas.
+A identidade contém, quando aplicável:
+
+- display name;
+- handle;
+- bio;
+- título;
+- presença;
+- atividade.
+
+Não contém imagem.
+
+`PROFILE_EVAL_MODE` continua sendo a única entrada para fixtures completas e suas fixtures também não podem conter retratos.
 
 ## Fase 5 — Search e Profile APIs
 
-Endpoints previstos:
+Endpoints previstos/manutenidos:
 
 - `PATCH /api/profile/me`;
 - `GET /api/profile/commanders/search?q=`;
 - endpoints sociais da fase seguinte;
 - heartbeat de presença em fase própria.
 
-A busca atual será migrada do provider local para SQL server-side mantendo:
+Não criar:
+
+- `/api/profile/avatar`;
+- `/api/profile/portrait`;
+- endpoint de upload/reset de foto;
+- endpoint de seleção de retrato.
+
+A busca SQL server-side mantém:
 
 - mínimo 2 chars;
 - máximo 64 chars;
 - máximo 8 resultados;
 - `private, no-store`;
-- nenhuma listagem global no browser.
+- nenhuma listagem global no browser;
+- resultado sem imagem de perfil.
 
 Cada endpoint protegido usa `withAuthenticatedApi` ou verificação equivalente dentro do próprio handler.
 
 ## Fase 6 — Social service + APIs
 
-Implementar operações:
+Implementar/manter operações:
 
 - send request;
 - cancel request;
@@ -287,6 +412,8 @@ Implementar operações:
 
 Operações repetidas devem ter comportamento idempotente ou erro de domínio estável conforme EVAL.
 
+UI social deve identificar comandantes por nome/handle/monograma textual, nunca por imagem.
+
 ## Fase 7 — Activity e histórico real
 
 ### Activity
@@ -311,13 +438,15 @@ Primeiro corte:
 - keyset pagination;
 - snapshots históricos de handle/display name.
 
+Histórico não persiste nem projeta imagem de participante.
+
 Não criar índice extra antes de medir a query. Se necessário, justificar com `EXPLAIN (ANALYZE, BUFFERS)`.
 
 ## Fase 8 — Presence V1
 
 O gateway realtime atual é por sala e autentica assentos de jogo. Não será acoplado à presença global nesta fase.
 
-Criar presence independente:
+Criar/manter presence independente:
 
 - endpoint autenticado de heartbeat;
 - chave Redis `presence:user:<userId>` ou namespace equivalente;
@@ -330,7 +459,7 @@ Falha Redis => `unavailable`.
 
 ## Fase 9 — Perfil público
 
-Criar `/profile/[handle]`.
+Criar/manter `/profile/[handle]`.
 
 Resolver commander por handle normalizado.
 
@@ -342,21 +471,57 @@ Aplicar:
 4. projection pública;
 5. DTO público mínimo.
 
+O cabeçalho público deve usar identidade tipográfica, título e monograma derivado quando necessário.
+
 Nunca enviar DTO próprio completo e esconder campos no cliente.
 
-## Fase 10 — Avatar/storage
+Nunca usar imagem OAuth como fallback visual.
 
-Criar interface de armazenamento independente de provider.
+## Fase 10 — Remoção completa do conceito de avatar
 
-`ProfilePortraitStorage` deve abstrair:
+Esta fase substitui integralmente o antigo plano de `Avatar/storage`.
 
-- upload;
-- delete/replace quando necessário;
-- resolução de URL pública/assinada.
+### Banco
 
-Upload inicial aceita somente formatos raster permitidos e possui limite explícito de bytes.
+- aplicar migration forward-only que remova os campos de portrait do domínio `profile`;
+- remover estruturas auxiliares de portrait que tenham sido criadas;
+- manter o core Better Auth intacto.
 
-OAuth image MAY ser usada como seed inicial sem virar fonte permanente obrigatória.
+### Backend
+
+Remover:
+
+- `ProfilePortraitStorage`;
+- políticas de URL de imagem de perfil;
+- leitura de `auth."user".image` para Profile;
+- transformações/fallbacks OAuth;
+- propriedades portrait/avatar dos DTOs;
+- qualquer código de upload, delete ou replace de imagem.
+
+### Frontend
+
+Remover:
+
+- `next/image` usado especificamente para avatar/retrato;
+- `<img>` de comandante;
+- preview de foto;
+- botão de upload/alteração/reset;
+- item de loja/cosmético do tipo retrato.
+
+Substituir a composição visual por:
+
+- nome;
+- handle;
+- título;
+- monograma/iniciais gerados em runtime;
+- molduras, insígnias e elementos gráficos não-fotográficos que não funcionem como imagem de perfil persistida.
+
+### Gate
+
+Uma busca de código deve provar ausência de conceitos de avatar/retrato nos contratos do domínio Profile, exceto:
+
+- documentação histórica explicitamente marcada como legado;
+- campos internos controlados pelo Better Auth que não são consumidos pela aplicação.
 
 ## Fase 11 — Hardening e performance
 
@@ -372,6 +537,17 @@ Rodar:
 - realtime regressions;
 - build.
 
+Adicionar testes específicos:
+
+- Profile próprio não retorna `portrait/avatar/image`;
+- busca não retorna `portrait/avatar/image`;
+- roster social não retorna `portrait/avatar/image`;
+- perfil público não retorna `portrait/avatar/image`;
+- OAuth com `user.image` preenchido continua sem imagem no Profile;
+- OAuth sem imagem produz exatamente o mesmo contrato visual;
+- nenhuma rota de upload de avatar existe;
+- migrations finais não mantêm `portrait_source`/`portrait_ref`.
+
 Medir:
 
 - profile snapshot;
@@ -385,7 +561,7 @@ Só então adicionar otimizações de índice adicionais.
 
 ## Fase 12 — Evidência visual
 
-Revalidar V2 em:
+Revalidar V2/V3 em:
 
 - 1440x900;
 - 390x844;
@@ -400,21 +576,26 @@ Revalidar V2 em:
 - usuário em partida;
 - presença unavailable.
 
+A evidência deve mostrar que a composição continua visualmente forte sem reservar espaço vazio para foto/retrato.
+
+Monogramas/iniciais devem ser legíveis, consistentes e não provocar layout shift.
+
 ## Estratégia de rollout
 
 A implementação deve permitir fases intermediárias seguras.
 
-Ordem recomendada de ativação:
+Ordem recomendada a partir da nova regra:
 
-1. migrations;
-2. DAL read-only;
-3. snapshot real de identidade;
-4. search real;
-5. social writes;
-6. histórico/activity;
-7. presence;
-8. perfil público;
-9. avatar upload.
+1. sincronizar SPEC/EVAL com a proibição de imagens de perfil;
+2. remover portrait/avatar dos contratos TypeScript e DTOs;
+3. remover leitura de `auth.user.image` e políticas de imagem;
+4. adaptar componentes para identidade textual/monograma;
+5. aplicar migration forward-only removendo portrait do `profile.*`;
+6. ajustar fixtures e testes;
+7. revalidar social/history/presence/profile público;
+8. concluir hardening e evidência visual.
+
+A remoção deve ser feita em cortes que mantenham compilação e testes verdes, evitando remover primeiro a coluna que runtime ainda consome.
 
 Nenhuma fase deve exigir reescrever o realtime de jogo existente.
 
@@ -428,7 +609,13 @@ Nenhuma fase deve exigir reescrever o realtime de jogo existente.
 - não criar histórico duplicado;
 - não introduzir WebSocket global antes de haver necessidade comprovada;
 - não adicionar índices preventivos sem padrão de consulta claro;
-- não misturar wallet/store real nesta trilha.
+- não misturar wallet/store real nesta trilha;
+- não criar imagem de perfil, avatar ou retrato;
+- não usar imagem OAuth como fallback;
+- não criar upload de imagem de usuário;
+- não persistir URL/storage key de foto de perfil;
+- não criar cosmético do tipo portrait/avatar;
+- não reintroduzir imagem de perfil por meio de um DTO genérico ou campo `image` ambíguo.
 
 ## Referências técnicas
 
@@ -441,8 +628,19 @@ Nenhuma fase deve exigir reescrever o realtime de jogo existente.
 - Redis EXPIRE: https://redis.io/docs/latest/commands/expire/
 - OWASP Authorization: https://cheatsheetseries.owasp.org/cheatsheets/Authorization_Cheat_Sheet.html
 - OWASP IDOR: https://cheatsheetseries.owasp.org/cheatsheets/Insecure_Direct_Object_Reference_Prevention_Cheat_Sheet.html
-- OWASP File Upload: https://cheatsheetseries.owasp.org/cheatsheets/File_Upload_Cheat_Sheet.html
+
+A referência OWASP File Upload deixa de fazer parte desta trilha porque Profile não terá upload de imagem.
 
 ## Próxima ação técnica
 
-Após a Fase 0, implementar exclusivamente a migration `034-profile-v3-foundation.sql` e seus testes de integração antes de alterar o runtime da PROFILE.
+Antes de remover código/runtime, sincronizar `SPEC.md` e `EVAL.md` com esta regra.
+
+Depois disso, executar a remoção em ordem segura:
+
+1. contratos/DTOs;
+2. services/repositories;
+3. UI/fixtures;
+4. migration forward-only;
+5. testes/E2E.
+
+A migration definitiva deve usar a próxima numeração livre do HEAD e não deve reescrever migrations que já possam ter sido executadas.
