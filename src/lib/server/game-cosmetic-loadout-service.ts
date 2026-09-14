@@ -64,6 +64,27 @@ function defaultPlayerCosmetics(): GamePlayerCosmetics {
   };
 }
 
+function waitingPlayerCosmetics(
+  bySlot: Partial<Record<GameCosmeticSlot, GameCosmeticSnapshotRow>>,
+): GamePlayerCosmetics {
+  const defaults = defaultPlayerCosmetics();
+
+  return {
+    diceAttack: bySlot.dice_attack
+      ? selection(bySlot.dice_attack)
+      : defaults.diceAttack,
+    diceDefense: bySlot.dice_defense
+      ? selection(bySlot.dice_defense)
+      : defaults.diceDefense,
+    diceNeutral: bySlot.dice_neutral
+      ? selection(bySlot.dice_neutral)
+      : defaults.diceNeutral,
+    territoryEffect: bySlot.territory_effect
+      ? selection(bySlot.territory_effect)
+      : defaults.territoryEffect,
+  };
+}
+
 function requirePlayerCosmetics(
   playerId: string,
   bySlot: Partial<Record<GameCosmeticSlot, GameCosmeticSnapshotRow>>,
@@ -198,6 +219,11 @@ export async function capturePlayerCosmeticLoadouts(
  * Reads only the frozen game snapshot. This function deliberately does not join
  * profile.*, inventory.*, or catalog.* so a running match cannot drift when a
  * commander changes loadout or when storefront metadata changes.
+ *
+ * Waiting rooms may contain legacy/transitional partial rows. They are not an
+ * authoritative match snapshot yet, so each absent slot resolves to the visual
+ * default in memory. Once the room leaves waiting, all four persisted rows are
+ * mandatory and an incomplete snapshot remains a hard failure.
  */
 export async function loadRoomPlayerCosmetics(
   client: PoolClient,
@@ -244,12 +270,7 @@ export async function loadRoomPlayerCosmetics(
   for (const player of playerStates) {
     const playerRows = grouped.get(player.id) ?? {};
     if (player.room_status === "waiting") {
-      result.set(
-        player.id,
-        Object.keys(playerRows).length
-          ? requirePlayerCosmetics(player.id, playerRows)
-          : defaultPlayerCosmetics(),
-      );
+      result.set(player.id, waitingPlayerCosmetics(playerRows));
       continue;
     }
 
