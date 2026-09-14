@@ -2,6 +2,7 @@ import "server-only";
 
 import type { AuthSession } from "./auth";
 import { authPool } from "./auth-pool";
+import { ensureEconomyState } from "../economy/economy-service";
 
 const HANDLE_MIN_LENGTH = 3;
 const HANDLE_MAX_LENGTH = 32;
@@ -108,9 +109,11 @@ export async function saveCommanderIdentity(
 ) {
   const handle = input.handle.trim();
   const displayName = input.displayName.trim();
+  const client = await authPool.connect();
 
   try {
-    const result = await authPool.query<{
+    await client.query("BEGIN");
+    const result = await client.query<{
       handle: string;
       display_name: string;
     }>(
@@ -124,11 +127,15 @@ export async function saveCommanderIdentity(
       [session.user.id, handle, displayName],
     );
 
+    await ensureEconomyState(session.user.id, client);
+    await client.query("COMMIT");
+
     return {
       handle: result.rows[0].handle,
       displayName: result.rows[0].display_name,
     };
   } catch (error) {
+    await client.query("ROLLBACK");
     if (
       error &&
       typeof error === "object" &&
@@ -138,5 +145,7 @@ export async function saveCommanderIdentity(
       throw new CommanderHandleConflictError();
     }
     throw error;
+  } finally {
+    client.release();
   }
 }
