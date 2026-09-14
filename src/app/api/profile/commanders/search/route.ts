@@ -37,6 +37,7 @@ export async function GET(request: Request) {
     displayName: commander.displayName,
     title: commander.title?.name ?? null,
     portrait: commander.portrait,
+    relationship: commander.relationship,
     mutualContacts: commander.mutualContacts,
   }));
   return noStoreJson({ results });
