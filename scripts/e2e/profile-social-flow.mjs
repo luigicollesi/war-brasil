@@ -120,7 +120,7 @@ export async function assertProfileSocialFlow({ db, actorA, actorB }) {
   assert.ok(found, "busca autenticada não encontrou o segundo comandante");
   assert.deepEqual(
     Object.keys(found).sort(),
-    ["displayName", "handle", "mutualContacts", "portrait", "relationship", "title"],
+    ["displayName", "handle", "mutualContacts", "relationship", "title"],
     "busca pública expôs campo além do DTO permitido",
   );
 
