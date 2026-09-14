@@ -7,26 +7,13 @@ function readOptional(name: string) {
   return value ? value : undefined;
 }
 
-function readPrivateKey(name: string) {
-  const value = readOptional(name);
-  return value?.replace(/\\n/g, "\n");
-}
-
 export type AuthProviderAvailability = {
-  apple: boolean;
   discord: boolean;
   google: boolean;
 };
 
 export type AuthServerEnvironment = {
   allowedHosts: string[];
-  apple: {
-    appBundleIdentifier?: string;
-    clientId?: string;
-    keyId?: string;
-    privateKey?: string;
-    teamId?: string;
-  };
   baseUrl?: string;
   databaseUrl?: string;
   discord: {
@@ -64,20 +51,9 @@ export function readAuthServerEnvironment(): AuthServerEnvironment {
   const googleClientSecret = readOptional("GOOGLE_CLIENT_SECRET");
   const discordClientId = readOptional("DISCORD_CLIENT_ID");
   const discordClientSecret = readOptional("DISCORD_CLIENT_SECRET");
-  const appleClientId = readOptional("APPLE_CLIENT_ID");
-  const appleTeamId = readOptional("APPLE_TEAM_ID");
-  const appleKeyId = readOptional("APPLE_KEY_ID");
-  const applePrivateKey = readPrivateKey("APPLE_PRIVATE_KEY");
 
   return {
     allowedHosts: parseAllowedHosts(readOptional("AUTH_ALLOWED_HOSTS")),
-    apple: {
-      appBundleIdentifier: readOptional("APPLE_APP_BUNDLE_IDENTIFIER"),
-      clientId: appleClientId,
-      keyId: appleKeyId,
-      privateKey: applePrivateKey,
-      teamId: appleTeamId,
-    },
     baseUrl: readOptional("BETTER_AUTH_URL"),
     databaseUrl: readOptional("DATABASE_URL"),
     discord: {
@@ -89,9 +65,6 @@ export function readAuthServerEnvironment(): AuthServerEnvironment {
       clientSecret: googleClientSecret,
     },
     providerAvailability: {
-      apple: Boolean(
-        appleClientId && appleTeamId && appleKeyId && applePrivateKey,
-      ),
       discord: Boolean(discordClientId && discordClientSecret),
       google: Boolean(googleClientId && googleClientSecret),
     },
@@ -124,18 +97,6 @@ export function assertAuthRuntimeConfiguration(
   }
   if (!environment.discord.clientSecret) {
     missing.push("DISCORD_CLIENT_SECRET");
-  }
-  if (!environment.apple.clientId) {
-    missing.push("APPLE_CLIENT_ID");
-  }
-  if (!environment.apple.teamId) {
-    missing.push("APPLE_TEAM_ID");
-  }
-  if (!environment.apple.keyId) {
-    missing.push("APPLE_KEY_ID");
-  }
-  if (!environment.apple.privateKey) {
-    missing.push("APPLE_PRIVATE_KEY");
   }
 
   if (missing.length > 0) {
