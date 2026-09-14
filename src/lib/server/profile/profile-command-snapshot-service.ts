@@ -113,7 +113,6 @@ export async function getCurrentProfileCommandSnapshot(): Promise<ProfileCommand
         handle: profile.identity.handle,
         bio: profile.identity.bio,
         title: profile.identity.title?.name ?? null,
-        portrait: profile.identity.portrait,
         presence: {
           state: livePresence.state,
           lastSeenAt:
