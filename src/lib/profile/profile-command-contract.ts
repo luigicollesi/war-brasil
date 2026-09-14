@@ -26,6 +26,8 @@ export type ProfileCommandSection<T> = Readonly<{
 
 export type PlayerPresenceState = "online" | "offline" | "unavailable";
 export type PlayerActivityState = "idle" | "lobby" | "match" | "unavailable";
+export type ProfileVisibility = "public" | "friends" | "private";
+export type FriendRequestPolicy = "everyone" | "friends_of_friends" | "nobody";
 
 export type CommanderPresence = Readonly<{
   state: PlayerPresenceState;
@@ -45,10 +47,18 @@ export type CommanderPortrait = Readonly<{
 export type CommanderIdentity = Readonly<{
   displayName: string;
   handle: string;
+  bio: string | null;
   title: string | null;
   portrait: CommanderPortrait;
   presence: CommanderPresence;
   activity: CommanderActivity;
+}>;
+
+export type ProfilePrivacySettings = Readonly<{
+  presenceVisibility: ProfileVisibility;
+  activityVisibility: ProfileVisibility;
+  historyVisibility: ProfileVisibility;
+  friendRequestPolicy: FriendRequestPolicy;
 }>;
 
 export type CommandCurrencyId = "campaign-credit" | "command-reserve";
@@ -162,6 +172,7 @@ export type StoreShowcase = Readonly<{
 export type ProfileCommandSnapshot = Readonly<{
   state: ProfileCommandState;
   identity: ProfileCommandSection<CommanderIdentity | null>;
+  privacy: ProfileCommandSection<ProfilePrivacySettings | null>;
   wallet: ProfileCommandSection<PlayerWallet | null>;
   social: ProfileCommandSection<PlayerSocialSnapshot>;
   history: ProfileCommandSection<PlayerMatchHistory>;
