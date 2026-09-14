@@ -45,6 +45,17 @@ function evaluationSection<T>(section: ProfileCommandSection<T>): ProfileCommand
   };
 }
 
+function emptySocialData(): PlayerSocialSnapshot {
+  return {
+    friends: [],
+    incomingRequests: [],
+    outgoingRequests: [],
+    blockedCommanders: [],
+    recentContacts: [],
+    totalFriends: 0,
+  };
+}
+
 function createEvaluationSnapshot(state: Exclude<ProfileCommandEvaluationState, "error">): ProfileCommandSnapshot {
   const full: ProfileCommandSnapshot = {
     ...LOCAL_PROFILE_COMMAND_SNAPSHOT,
@@ -80,7 +91,7 @@ function createEvaluationSnapshot(state: Exclude<ProfileCommandEvaluationState, 
       privacy: unavailableSection(null, "Privacidade indisponível sem identidade."),
       wallet: unavailableSection<PlayerWallet | null>(null, "Tesouraria indisponível sem identidade."),
       social: unavailableSection<PlayerSocialSnapshot>(
-        { friends: [], incomingRequests: [], recentContacts: [], totalFriends: 0 },
+        emptySocialData(),
         "Rede de Comando indisponível sem identidade.",
       ),
       history: unavailableSection<PlayerMatchHistory>(
@@ -105,7 +116,7 @@ function createEvaluationSnapshot(state: Exclude<ProfileCommandEvaluationState, 
       social:
         state === "partial-data"
           ? unavailableSection<PlayerSocialSnapshot>(
-              { friends: [], incomingRequests: [], recentContacts: [], totalFriends: 0 },
+              emptySocialData(),
               "Rede de Comando ainda não possui fonte disponível neste cenário.",
             )
           : full.social,
@@ -156,7 +167,7 @@ function createEvaluationSnapshot(state: Exclude<ProfileCommandEvaluationState, 
     social: {
       availability: "empty",
       source: "evaluation-fixture",
-      data: { friends: [], incomingRequests: [], recentContacts: [], totalFriends: 0 },
+      data: emptySocialData(),
     },
   };
 }
