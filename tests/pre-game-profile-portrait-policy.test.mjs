@@ -1,40 +1,58 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
-const policy = readFileSync("src/lib/profile/profile-portrait-policy.ts", "utf8");
-const nextConfig = readFileSync("next.config.ts", "utf8");
-const profileService = readFileSync(
-  "src/lib/server/profile/profile-service.ts",
+const contract = readFileSync("src/lib/profile/profile-command-contract.ts", "utf8");
+const domain = readFileSync("src/lib/server/profile/profile-domain.ts", "utf8");
+const repository = readFileSync("src/lib/server/profile/profile-repository.ts", "utf8");
+const profileService = readFileSync("src/lib/server/profile/profile-service.ts", "utf8");
+const socialRepository = readFileSync(
+  "src/lib/server/profile/social-read-repository.ts",
   "utf8",
 );
-const socialReadService = readFileSync(
+const socialService = readFileSync(
   "src/lib/server/profile/social-read-service.ts",
   "utf8",
 );
+const searchRoute = readFileSync(
+  "src/app/api/profile/commanders/search/route.ts",
+  "utf8",
+);
+const ownProfile = readFileSync(
+  "src/components/profile/command-quarters/profile-command-hub.tsx",
+  "utf8",
+);
+const publicProfile = readFileSync(
+  "src/components/profile/public-commander-profile.tsx",
+  "utf8",
+);
+const nextConfig = readFileSync("next.config.ts", "utf8");
 
-test("portrait policy permite somente HTTPS de hosts OAuth aprovados ou paths locais", () => {
-  assert.match(policy, /lh3\.googleusercontent\.com/);
-  assert.match(policy, /cdn\.discordapp\.com/);
-  assert.match(policy, /url\.protocol !== "https:"/);
-  assert.match(policy, /url\.username \|\|/);
-  assert.match(policy, /url\.password \|\|/);
-  assert.match(policy, /url\.port \|\|/);
-  assert.match(policy, /REMOTE_HOSTS\.has/);
-  assert.match(policy, /startsWith\("\/"\)/);
-  assert.doesNotMatch(policy, /http:"/);
+test("PROFILE não possui contrato ou DTO de imagem de perfil", () => {
+  for (const [label, source] of [
+    ["contract", contract],
+    ["domain", domain],
+    ["profile service", profileService],
+    ["social service", socialService],
+    ["search route", searchRoute],
+  ]) {
+    assert.doesNotMatch(source, /CommanderPortrait|portrait\s*:|portrait_ref|portrait_source|auth_image/i, label);
+  }
 });
 
-test("next/image reutiliza exatamente a allowlist do domínio", () => {
-  assert.match(nextConfig, /PROFILE_REMOTE_PORTRAIT_HOSTS/);
-  assert.match(nextConfig, /remotePatterns/);
-  assert.match(nextConfig, /protocol: "https"/);
-  assert.match(nextConfig, /pathname: "\/\*\*"/);
+test("repositories PROFILE não leem imagem OAuth nem colunas de retrato", () => {
+  assert.doesNotMatch(repository, /auth\."user"|auth_user\.image|portrait_ref|portrait_source/i);
+  assert.doesNotMatch(socialRepository, /auth\."user"|auth_user\.image|portrait_ref|portrait_source/i);
 });
 
-test("perfil próprio, público, busca e roster aplicam a mesma sanitização", () => {
-  assert.match(profileService, /safeProfilePortraitSrc/);
-  assert.match(socialReadService, /safeProfilePortraitSrc/);
-  assert.doesNotMatch(profileService, /url\.protocol === "http:"/);
-  assert.doesNotMatch(socialReadService, /url\.protocol === "http:"/);
+test("UI PROFILE usa identidade textual e nunca next image para comandante", () => {
+  assert.doesNotMatch(ownProfile, /next\/image|identity\.portrait|<Image\b|\bPortrait\b/);
+  assert.doesNotMatch(publicProfile, /next\/image|identity\.portrait|<Image\b|\bPortrait\b/);
+  assert.match(ownProfile, /IdentityMark/);
+  assert.match(publicProfile, /SIGILO/);
+});
+
+test("configuração exclusiva de retrato remoto foi removida", () => {
+  assert.doesNotMatch(nextConfig, /PROFILE_REMOTE_PORTRAIT_HOSTS|remotePatterns/);
+  assert.equal(existsSync("src/lib/profile/profile-portrait-policy.ts"), false);
 });
