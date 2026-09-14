@@ -29,11 +29,41 @@ type GameCosmeticSnapshotRow = {
   effect_key: string | null;
 };
 
+type GamePlayerSnapshotStateRow = {
+  id: string;
+  room_status: "waiting" | "order_roll" | "playing" | "finished";
+};
+
 function selection(row: GameCosmeticSnapshotRow): GameCosmeticSelection {
   return {
     cosmeticId: row.cosmetic_id,
     assetRef: row.asset_ref,
     effectKey: row.effect_key,
+  };
+}
+
+function defaultPlayerCosmetics(): GamePlayerCosmetics {
+  return {
+    diceAttack: {
+      cosmeticId: "dice.attack.default",
+      assetRef: null,
+      effectKey: null,
+    },
+    diceDefense: {
+      cosmeticId: "dice.defense.default",
+      assetRef: null,
+      effectKey: null,
+    },
+    diceNeutral: {
+      cosmeticId: "dice.neutral.default",
+      assetRef: null,
+      effectKey: null,
+    },
+    territoryEffect: {
+      cosmeticId: "territory.effect.default",
+      assetRef: null,
+      effectKey: "default",
+    },
   };
 }
 
@@ -171,6 +201,10 @@ export async function capturePlayerCosmeticLoadouts(
  * Reads only the frozen game snapshot. This function deliberately does not join
  * profile.*, inventory.*, or catalog.* so a running match cannot drift when a
  * commander changes loadout or when storefront metadata changes.
+ *
+ * A waiting room is the only exception to snapshot completeness: after return
+ * to lobby/rematch cleanup there is intentionally no active match snapshot, so
+ * clients still redirecting from /game receive the four native defaults.
  */
 export async function loadRoomPlayerCosmetics(
   client: PoolClient,
@@ -202,21 +236,25 @@ export async function loadRoomPlayerCosmetics(
     grouped.set(row.player_id, current);
   }
 
-  const playerIds = (
-    await client.query<{ id: string }>(
-      `SELECT id
-         FROM game.players
-        WHERE room_id=$1
-        ORDER BY joined_at,id`,
+  const players = (
+    await client.query<GamePlayerSnapshotStateRow>(
+      `SELECT player.id,room.status AS room_status
+         FROM game.players player
+         JOIN game.rooms room ON room.id=player.room_id
+        WHERE player.room_id=$1
+        ORDER BY player.joined_at,player.id`,
       [roomId],
     )
-  ).rows.map((row) => row.id);
+  ).rows;
 
   const result = new Map<string, GamePlayerCosmetics>();
-  for (const playerId of playerIds) {
+  for (const player of players) {
+    const playerRows = grouped.get(player.id) ?? {};
     result.set(
-      playerId,
-      requirePlayerCosmetics(playerId, grouped.get(playerId) ?? {}),
+      player.id,
+      player.room_status === "waiting"
+        ? defaultPlayerCosmetics()
+        : requirePlayerCosmetics(player.id, playerRows),
     );
   }
 
