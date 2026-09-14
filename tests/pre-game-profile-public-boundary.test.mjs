@@ -60,6 +60,7 @@ test("public commander social controls use relationship and public handle only",
 
   assert.match(publicView, /snapshot\.relationship === "none"/);
   assert.match(publicView, /snapshot\.relationship === "friend"/);
+  assert.match(publicView, /const canBlock = snapshot\.relationship !== "self"/);
   assert.match(publicView, /"\/api\/profile\/friends\/requests"/);
   assert.match(
     publicView,
@@ -84,6 +85,27 @@ test("pending public relationships remain informative without inventing request 
   const stationStart = contract.indexOf("export type ProfileCommandStation", publicProfileStart);
   const publicProfileContract = contract.slice(publicProfileStart, stationStart);
   assert.doesNotMatch(publicProfileContract, /requestId|userId|email|session|provider/i);
+});
+
+test("public profile displays public bio and paginates history through reauthorized boundary", () => {
+  const publicView = read("src/components/profile/public-commander-profile.tsx");
+  const route = read("src/app/api/profile/commanders/[handle]/history/route.ts");
+  const service = read("src/lib/server/profile/profile-service.ts");
+
+  assert.match(publicView, /identity\.bio/);
+  assert.match(publicView, /Carregar mais registros/);
+  assert.match(
+    publicView,
+    /\/api\/profile\/commanders\/\$\{encodeURIComponent\(identity\.handle\)\}\/history\?cursor=/,
+  );
+  assert.match(route, /getAuthenticatedSession\(request\)/);
+  assert.match(route, /decodeMatchHistoryCursor/);
+  assert.match(route, /getPublicCommanderHistory/);
+  assert.match(route, /private, no-store/);
+  assert.match(route, /HISTORY_RESTRICTED/);
+  assert.match(service, /export async function getPublicCommanderHistory/);
+  assert.match(service, /visibilityAllows\(row\.history_visibility, relationship\)/);
+  assert.match(service, /relationship === "blocked"\) return null/);
 });
 
 test("dynamic public profiles remain inside the shared profile Foundation scene", () => {
