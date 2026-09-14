@@ -42,6 +42,13 @@ export type ProfileSettingsUpdate = Readonly<{
   }>;
 }>;
 
+type MutableProfilePrivacyUpdate = {
+  presenceVisibility?: ProfileVisibility;
+  activityVisibility?: ProfileVisibility;
+  historyVisibility?: ProfileVisibility;
+  friendRequestPolicy?: FriendRequestPolicy;
+};
+
 function cleanDisplayName(value: unknown) {
   if (typeof value !== "string") {
     throw new ProfileSettingsError(
@@ -120,12 +127,7 @@ export function parseProfileSettingsUpdate(payload: unknown): ProfileSettingsUpd
   const update: {
     displayName?: string;
     bio?: string | null;
-    privacy?: {
-      presenceVisibility?: ProfileVisibility;
-      activityVisibility?: ProfileVisibility;
-      historyVisibility?: ProfileVisibility;
-      friendRequestPolicy?: FriendRequestPolicy;
-    };
+    privacy?: MutableProfilePrivacyUpdate;
   } = {};
 
   if (Object.prototype.hasOwnProperty.call(input, "displayName")) {
@@ -162,7 +164,7 @@ export function parseProfileSettingsUpdate(payload: unknown): ProfileSettingsUpd
       }
     }
 
-    const privacy: NonNullable<ProfileSettingsUpdate["privacy"]> = {};
+    const privacy: MutableProfilePrivacyUpdate = {};
     if (Object.prototype.hasOwnProperty.call(privacyInput, "presenceVisibility")) {
       privacy.presenceVisibility = cleanVisibility(
         privacyInput.presenceVisibility,
