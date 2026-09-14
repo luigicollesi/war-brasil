@@ -72,6 +72,33 @@
   font-size: 0.55rem;
 }
 
+.historyLoadMore {
+  justify-self: end;
+  min-height: 34px;
+  border: 1px solid rgb(208 170 87 / 24%);
+  padding: 7px 10px;
+  color: var(--command-brass-bright, #d0aa57);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgb(208 170 87 / 6%);
+  cursor: pointer;
+}
+
+.historyLoadMore:hover,
+.historyLoadMore:focus-visible {
+  border-color: rgb(208 170 87 / 48%);
+  background: rgb(208 170 87 / 10%);
+  outline: none;
+}
+
+.historyLoadMore:disabled {
+  opacity: 0.42;
+  cursor: wait;
+}
+
 .searchStatus {
   margin: 0;
   color: rgb(238 232 218 / 48%);
@@ -90,5 +117,10 @@
   .sectionLabel,
   .operationDossierHeader {
     font-size: 0.45rem;
+  }
+
+  .historyLoadMore {
+    width: 100%;
+    min-height: 44px;
   }
 }
