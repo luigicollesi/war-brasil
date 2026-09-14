@@ -1,7 +1,7 @@
 # SPEC — Authentication / Command Access
 
 **ID:** PRE-AUTH  
-**Escopo:** identidade de conta, restauração de sessão, login/cadastro, quatro métodos de autenticação, verificação de email, gate de acesso ao comando, proteção server-side e fronteira de segredos.  
+**Escopo:** identidade de conta, restauração de sessão, login/cadastro, três métodos de autenticação, verificação de email, gate de acesso ao comando, proteção server-side e fronteira de segredos.  
 **Integração inicial:** Home (`ENTRAR NO COMANDO`) → onboarding → matchmaking/lobby/profile/game.  
 **Target técnico inicial:** Better Auth 1.7.x fixado em versão validada pelo CI; PostgreSQL continua sendo a fonte persistente.  
 **Provider strategy:** `PROVIDER-STRATEGY.md`.  
@@ -37,16 +37,15 @@ A checagem da Home é UX. Segurança MUST ser aplicada novamente no servidor em 
 
 ## 2. Métodos de autenticação do launch
 
-A primeira versão possui **exatamente quatro** métodos:
+A primeira versão possui **exatamente três** métodos:
 
 1. Google;
-2. Apple;
-3. Discord;
-4. email + senha.
+2. Discord;
+3. email + senha.
 
-MUST NOT implementar, configurar ou exibir qualquer quinto método nesta trilha.
+MUST NOT implementar, configurar ou exibir qualquer quarto método nesta trilha.
 
-Em particular, GitHub, Microsoft, Steam, Twitch, Epic e passkeys estão fora deste escopo atual.
+Em particular, Apple, GitHub, Microsoft, Steam, Twitch, Epic e passkeys estão fora deste escopo atual.
 
 Adicionar novo método exige atualização explícita de `PROVIDER-STRATEGY.md`, `SPEC.md` e `EVAL.md` antes do código.
 
@@ -136,7 +135,6 @@ O modal reutiliza a estrutura de interação do Contrapista, redesenhada para a 
 A UI principal oferece somente:
 
 - `Continuar com Google`;
-- `Continuar com Apple`;
 - `Continuar com Discord`;
 - formulário Email + Senha;
 - alternância `Entrar` / `Criar conta`;
@@ -171,19 +169,20 @@ Google MUST:
 
 Nome/avatar Google MAY preencher sugestões/fallbacks de onboarding apenas.
 
-## 9. Apple
+## 9. Provider removido: Apple
 
-Apple MUST:
+Apple não faz parte do launch atual.
 
-- usar provider suportado pelo Better Auth;
-- usar Service ID adequado ao fluxo web;
-- manter private key e configuração do provider no servidor;
-- usar callback HTTPS real em staging/produção;
-- usar `sub`/provider account ID como identidade externa;
-- preservar email/relay recebido no primeiro consentimento;
-- continuar login por account ID quando Apple não reenviar email em autorizações posteriores;
-- tratar relay Apple como email real enquanto ativo;
-- não sobrescrever email real/relay persistido com fallback sintético.
+MUST NOT existir nesta implementação:
+
+- provider Apple configurado no Better Auth;
+- botão `Continuar com Apple`;
+- variáveis `APPLE_*` ativas;
+- geração de client secret/JWT Apple;
+- callback Apple como fluxo suportado;
+- teste positivo de login Apple.
+
+Adicionar Apple futuramente é mudança de escopo e exige atualização prévia de SPEC/EVAL/Provider Strategy.
 
 ## 10. Discord
 
@@ -424,7 +423,7 @@ MUST:
 
 A exigência de seção 12 é especificamente obrigatória para credentials.
 
-Para Google/Apple/Discord:
+Para Google/Discord:
 
 - usar provider account ID como prova de identidade externa;
 - considerar `email_verified` do provider somente quando confiável/documentado;
@@ -446,7 +445,7 @@ profile.commanders exists + handle/display_name completos?
   └─ sim -> command-open
 ```
 
-Google/Apple/Discord name/avatar MAY preencher sugestões. Credentials pode usar parte local do formulário apenas como sugestão visual, nunca gerar handle definitivo silenciosamente.
+Google/Discord name/avatar MAY preencher sugestões. Credentials pode usar parte local do formulário apenas como sugestão visual, nunca gerar handle definitivo silenciosamente.
 
 Handle é escolhido/confirmado pelo usuário e validado contra `profile.commanders`.
 
@@ -455,13 +454,13 @@ Handle é escolhido/confirmado pelo usuário e validado contra `profile.commande
 Inicialmente:
 
 - `/` — público;
-- `/rules` — público;
+- `/rules` — autenticado;
 - `/matchmaking` — autenticado + perfil completo;
 - `/profile` — autenticado; onboarding pode usar subrota/estado próprio;
 - lobby/game — autenticados + autorização de seat;
 - APIs mutáveis — validação server-side obrigatória.
 
-Proxy/middleware MAY melhorar UX, mas presença de cookie não substitui `auth.api.getSession()`/primitive equivalente em operação sensível.
+A Home é a única página pública de produto. Proxy MAY melhorar UX, mas presença de cookie não substitui `auth.api.getSession()`/primitive equivalente em operação sensível.
 
 ## 21. Fronteira de ambiente e segredos
 
@@ -482,12 +481,6 @@ BETTER_AUTH_URL
 GOOGLE_CLIENT_ID
 GOOGLE_CLIENT_SECRET
 
-APPLE_CLIENT_ID
-APPLE_TEAM_ID
-APPLE_KEY_ID
-APPLE_PRIVATE_KEY
-APPLE_APP_BUNDLE_IDENTIFIER    # somente se cliente Apple nativo exigir
-
 DISCORD_CLIENT_ID
 DISCORD_CLIENT_SECRET
 
@@ -501,9 +494,10 @@ IDs não são necessariamente segredos criptográficos, mas continuam server-onl
 
 ### 21.3 Não criar nesta fase
 
-MUST NOT introduzir env para providers fora dos quatro métodos:
+MUST NOT introduzir env para providers fora dos três métodos:
 
 ```text
+APPLE_*
 GITHUB_*
 MICROSOFT_*
 STEAM_*
@@ -517,7 +511,6 @@ PASSKEY_*
 - `DATABASE_URL`;
 - `BETTER_AUTH_SECRET(S)`;
 - OAuth client secrets;
-- `APPLE_PRIVATE_KEY`;
 - email transport credential;
 - senha/password hash;
 - session token bruto fora do cookie HttpOnly;
@@ -582,8 +575,7 @@ MUST:
 - `returnTo` externo arbitrário rejeitado;
 - `trustedProxyHeaders` desligado salvo contrato de infraestrutura;
 - cross-subdomain cookie desligado inicialmente;
-- localhost fora de trusted origins de produção;
-- Apple real testado em HTTPS.
+- localhost fora de trusted origins de produção.
 
 ## 25. Rate limiting
 
@@ -607,8 +599,8 @@ MUST redigir:
 - OAuth code/access/refresh/ID token;
 - verification/reset token e URLs que os contenham;
 - DB URL/password;
-- Apple private key;
-- provider/email transport secrets.
+- provider secrets;
+- email transport secrets.
 
 Eventos podem registrar IDs opacos, provider, tipo do evento, timestamp, resultado e debug ID.
 
@@ -626,11 +618,12 @@ MUST:
 
 MUST NOT:
 
-- adicionar provider além dos quatro aprovados;
+- adicionar provider além dos três aprovados;
+- adicionar Apple sem novo SPEC/EVAL;
 - manter GitHub por herança do Contrapista;
 - criar auth custom do zero;
 - copiar `email_verification_tokens` do Contrapista;
-- criar usuário autenticado credentials antes da confirmação;
+- criar sessão credentials antes da confirmação;
 - auto-login após clicar no link de verificação;
 - guardar password hash em tabela War-Brasil paralela;
 - usar email como handle/autoridade/linking implícito;
@@ -643,4 +636,4 @@ MUST NOT:
 
 ## 29. Definition of Done
 
-O usuário pode entrar com Google, Apple, Discord ou email+senha. Credentials segue o fluxo Contrapista de confirmação por email de 1 hora: signup envia mensagem, não cria sessão, link verifica email, retorna à Home e o usuário então faz login. OAuth e credentials convergem para a mesma conta War-Brasil e para o mesmo onboarding de perfil. Segredos permanecem server-only, nenhuma quinta opção aparece no produto e todos os gates de `EVAL.md` passam.
+O usuário pode entrar com Google, Discord ou email+senha. Credentials segue o fluxo Contrapista de confirmação por email de 1 hora: signup envia mensagem, não cria sessão, link verifica email, retorna à Home e o usuário então faz login. OAuth e credentials convergem para a mesma conta War-Brasil e para o mesmo onboarding de perfil. Segredos permanecem server-only, nenhuma quarta opção aparece no produto e todos os gates de `EVAL.md` passam.
