@@ -1,10 +1,31 @@
 import { betterAuth } from "better-auth";
 import { Pool } from "pg";
 
-const databaseUrl = process.env.DATABASE_URL?.trim();
+const databaseUrl =
+  process.env.AUTH_DATABASE_URL?.trim() ?? process.env.DATABASE_URL?.trim();
 
 if (!databaseUrl) {
-  throw new Error("DATABASE_URL é obrigatória para gerar o schema de autenticação.");
+  throw new Error(
+    "AUTH_DATABASE_URL ou DATABASE_URL é obrigatória para gerar o schema de autenticação.",
+  );
+}
+
+function isNeonPooledConnectionString(value: string) {
+  try {
+    const url = new URL(value);
+    return (
+      url.hostname.endsWith(".neon.tech") &&
+      url.hostname.split(".")[0]?.endsWith("-pooler")
+    );
+  } catch {
+    return false;
+  }
+}
+
+if (isNeonPooledConnectionString(databaseUrl)) {
+  throw new Error(
+    "A geração/migração do schema auth exige conexão Neon direta. Configure AUTH_DATABASE_URL com hostname sem -pooler.",
+  );
 }
 
 const schemaPool = new Pool({
