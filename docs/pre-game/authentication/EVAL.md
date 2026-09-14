@@ -9,12 +9,12 @@ Aprovação exige **todos os BLOCKERs aplicáveis**. Score visual/UX não compen
 | ID | Critério | Evidência mínima |
 | --- | --- | --- |
 | AUTH-001 | modal oferece Google | e2e/DOM |
-| AUTH-002 | modal oferece Apple | e2e/DOM |
-| AUTH-003 | modal oferece Discord | e2e/DOM |
-| AUTH-004 | modal oferece Email + senha | e2e/DOM |
-| AUTH-005 | não existe quinto provider de login no modal | static/e2e |
+| AUTH-002 | modal oferece Discord | e2e/DOM |
+| AUTH-003 | modal oferece Email + senha | e2e/DOM |
+| AUTH-004 | modal/config não oferecem Apple | static/e2e |
+| AUTH-005 | não existe quarto provider de login no modal | static/e2e |
 | AUTH-006 | GitHub não está configurado/importado como provider | static test |
-| AUTH-007 | Microsoft/Steam/Twitch/Epic/passkey não entram nesta implementação | static test |
+| AUTH-007 | Apple/Microsoft/Steam/Twitch/Epic/passkey não entram nesta implementação | static test |
 | AUTH-008 | providers não aprovados não possuem env obrigatória/config ativa | env/config test |
 
 ## 2. Gates BLOCKER — Home / Command Access
@@ -116,18 +116,20 @@ Aprovação exige **todos os BLOCKERs aplicáveis**. Score visual/UX não compen
 | AUTH-071 | nome/avatar Google só alimentam sugestão/fallback | integration/source |
 | AUTH-072 | Google não solicita Drive/Calendar/Contacts | provider consent inspection |
 
-## 9. Gates BLOCKER — Apple
+## 9. Gates BLOCKER — Apple removido do escopo
+
+Os IDs são preservados para estabilidade histórica dos relatórios EVAL. Eles agora funcionam como guards negativos contra reintrodução acidental.
 
 | ID | Critério | Evidência mínima |
 | --- | --- | --- |
-| AUTH-073 | Apple OAuth funciona em ambiente HTTPS real | staging/provider test |
-| AUTH-074 | primeiro consentimento com email persiste email/relay corretamente | provider integration |
-| AUTH-075 | segundo login Apple funciona mesmo sem novo email no payload | provider integration |
-| AUTH-076 | relay Apple não é classificado como placeholder | integration |
-| AUTH-077 | provider subject Apple é identidade externa estável | source/integration |
-| AUTH-078 | Apple private key nunca cruza server boundary | bundle/leak scan |
-| AUTH-079 | configuração Apple ausente/parcial falha cedo quando provider está habilitado | config test |
-| AUTH-080 | localhost HTTP não é usado como evidência do provider Apple real | staging runbook |
+| AUTH-073 | runtime Better Auth não importa/configura provider Apple | static test |
+| AUTH-074 | modal não oferece `Continuar com Apple` | e2e/DOM |
+| AUTH-075 | `.env.example` não possui `APPLE_*` | env/static |
+| AUTH-076 | não existe geração de client secret/JWT Apple | repo/static |
+| AUTH-077 | callback Apple não é fluxo suportado/documentado | route/config inspection |
+| AUTH-078 | CI não depende de private key ou secret Apple | workflow/static |
+| AUTH-079 | runtime não lê configuração Apple parcial | config test |
+| AUTH-080 | SPEC/Provider Strategy listam exatamente Google, Discord e credentials | docs/static |
 
 ## 10. Gates BLOCKER — Discord
 
@@ -148,8 +150,8 @@ Aprovação exige **todos os BLOCKERs aplicáveis**. Score visual/UX não compen
 | --- | --- | --- |
 | AUTH-089 | linking implícito por email está desabilitado | source/config |
 | AUTH-090 | `trustedProviders` não é preenchido silenciosamente | source/config |
-| AUTH-091 | Google + Apple relay não fazem merge automático | adversarial integration |
-| AUTH-092 | Google + Discord mesmo email não fazem merge automático | adversarial integration |
+| AUTH-091 | Google + Discord com emails diferentes não fazem merge automático | adversarial integration |
+| AUTH-092 | Google + Discord com mesmo email não fazem merge automático | adversarial integration |
 | AUTH-093 | linking explícito exige sessão autenticada | integration |
 | AUTH-094 | linking explícito pode aceitar emails diferentes conforme contrato | integration |
 | AUTH-095 | provider vinculado não sobrescreve handle/displayName/loadout | integration |
@@ -207,12 +209,6 @@ BETTER_AUTH_URL
 GOOGLE_CLIENT_ID
 GOOGLE_CLIENT_SECRET
 
-APPLE_CLIENT_ID
-APPLE_TEAM_ID
-APPLE_KEY_ID
-APPLE_PRIVATE_KEY
-APPLE_APP_BUNDLE_IDENTIFIER    # somente se fluxo Apple nativo for implementado
-
 DISCORD_CLIENT_ID
 DISCORD_CLIENT_SECRET
 
@@ -231,6 +227,7 @@ EMPTY
 ### Proibidas nesta fase
 
 ```text
+APPLE_*
 GITHUB_*
 MICROSOFT_*
 STEAM_*
@@ -247,7 +244,7 @@ PASSKEY_*
 | AUTH-122 | secret de auth possui entropia/comprimento mínimo aceito pela versão pinada | config test |
 | AUTH-123 | `BETTER_AUTH_URL` é explícita em produção | config test |
 | AUTH-124 | Google habilitado exige ID + secret completos | config test |
-| AUTH-125 | Apple habilitado exige configuração completa necessária | config test |
+| AUTH-125 | configuração `APPLE_*` não é lida nem habilita provider | config/static test |
 | AUTH-126 | Discord habilitado exige ID + secret completos | config test |
 | AUTH-127 | email transport habilitado exige remetente + credential | config test |
 | AUTH-128 | `.env.example` possui apenas placeholders | repo inspection |
@@ -261,7 +258,6 @@ Build CI MUST usar sentinels falsos, nunca secrets reais, por exemplo:
 ```text
 BETTER_AUTH_SECRET=AUTH_SENTINEL_DO_NOT_SHIP
 GOOGLE_CLIENT_SECRET=GOOGLE_SENTINEL_DO_NOT_SHIP
-APPLE_PRIVATE_KEY=APPLE_PRIVATE_KEY_SENTINEL_DO_NOT_SHIP
 DISCORD_CLIENT_SECRET=DISCORD_SENTINEL_DO_NOT_SHIP
 EMAIL_TRANSPORT_SECRET=EMAIL_SENTINEL_DO_NOT_SHIP
 DATABASE_URL=postgresql://sentinel:sentinel@invalid/db
@@ -274,7 +270,7 @@ Scan obrigatório em `.next/static/**`, chunks, HTML, RSC/Flight e sourcemaps p�
 | AUTH-131 | auth secret ausente dos artefatos client | CI scan |
 | AUTH-132 | DB credential ausente dos artefatos client | CI scan |
 | AUTH-133 | Google secret ausente | CI scan |
-| AUTH-134 | Apple private key ausente | CI scan |
+| AUTH-134 | nenhum secret/env Apple existe no escopo ativo | repo/CI scan |
 | AUTH-135 | Discord secret ausente | CI scan |
 | AUTH-136 | email transport secret ausente | CI scan |
 | AUTH-137 | leak scanner não imprime o próprio secret ao falhar | test-of-test |
@@ -309,7 +305,7 @@ Scan obrigatório em `.next/static/**`, chunks, HTML, RSC/Flight e sourcemaps p�
 | AUTH-151 | password/hash são redigidos | log test |
 | AUTH-152 | OAuth codes/tokens são redigidos | log test |
 | AUTH-153 | verification/reset tokens e URLs são redigidos | log test |
-| AUTH-154 | Apple private key/provider secrets são redigidos | log test |
+| AUTH-154 | provider secrets são redigidos | log test |
 | AUTH-155 | erro client não contém SQL/stack/connection string | integration |
 | AUTH-156 | email sender failure não retorna provider credential/detail | integration |
 
@@ -362,11 +358,11 @@ Solicitar reenvio para email existente, verificado, não existente e malformed-v
 
 ### AUTH-A6 — implicit provider merge
 
-Criar conta credentials/Google e tentar login Apple/Discord com email equivalente mas account diferente. Esperado: nenhuma fusão silenciosa.
+Criar conta credentials/Google e tentar login Discord com email equivalente mas account diferente. Esperado: nenhuma fusão silenciosa.
 
-### AUTH-A7 — Apple relay
+### AUTH-A7 — linking explícito com emails diferentes
 
-Linkar Apple com relay a conta que também possui Google com email real. Esperado: uma conta somente após linking explícito; relay preservado na identidade Apple.
+Linkar Google e Discord com emails diferentes a partir de sessão autenticada. Esperado: uma conta somente após linking explícito; provider vinculado não sobrescreve `profile.commanders`.
 
 ### AUTH-A8 — Discord sem email
 
@@ -396,9 +392,10 @@ Conta A tenta comando com seat B. Esperado: 403.
 ## 24. Inspeção estática obrigatória
 
 ```text
-[ ] providers de launch = google, apple, discord, credentials
+[ ] providers de launch = google, discord, credentials
+[ ] não existe provider Apple
 [ ] não existe provider GitHub
-[ ] não existe quinto provider
+[ ] não existe quarto provider
 [ ] não existe NEXT_PUBLIC_* de auth
 [ ] não existe tabela custom email_verification_tokens do War-Brasil
 [ ] não existe pending password hash paralelo
@@ -440,7 +437,7 @@ Somente depois de todos os blockers:
 - 25 — Home → login → onboarding/Comando sem atrito;
 - 20 — fluxo Email + senha → verificação claro;
 - 15 — qualidade visual do modal desktop/mobile;
-- 15 — Google/Apple/Discord consistentes;
+- 15 — Google/Discord consistentes;
 - 10 — acessibilidade/foco/teclado;
 - 10 — estados error/retry/resend;
 - 5 — observabilidade segura.
@@ -449,4 +446,4 @@ Aprovação UX: **>= 85**.
 
 ## 27. Definition of Done
 
-O launch expõe exclusivamente Google, Apple, Discord e Email + senha. Credentials não autentica até que o usuário confirme, por link de 1 hora, o email enviado no cadastro. O clique verifica mas não auto-loga, replicando a experiência do Contrapista com primitives nativas do Better Auth. Reenvio/reset são seguros e rate-limited, OAuth não faz merge implícito por email, secrets não cruzam a fronteira do servidor e todos os gates deste EVAL e do `DATABASE-EVAL.md` aplicável estão verdes.
+O launch expõe exclusivamente Google, Discord e Email + senha. Credentials não autentica até que o usuário confirme, por link de 1 hora, o email enviado no cadastro. O clique verifica mas não auto-loga, replicando a experiência do Contrapista com primitives nativas do Better Auth. Reenvio/reset são seguros e rate-limited, OAuth não faz merge implícito por email, secrets não cruzam a fronteira do servidor e todos os gates deste EVAL e do `DATABASE-EVAL.md` aplicável estão verdes.
