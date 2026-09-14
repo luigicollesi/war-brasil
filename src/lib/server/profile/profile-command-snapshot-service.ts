@@ -12,6 +12,7 @@ import { getCurrentProfileCommandSnapshot as getEvaluationProfileCommandSnapshot
 import { auth } from "../auth/auth";
 import { getCommanderActivity } from "./activity-service";
 import { getPlayerMatchHistory } from "./history-service";
+import { renewOwnPresence } from "./presence-gateway";
 import { getOwnCommanderProfile } from "./profile-service";
 import { getPlayerSocialSnapshot } from "./social-read-service";
 
@@ -67,9 +68,10 @@ export async function getCurrentProfileCommandSnapshot(): Promise<ProfileCommand
     return guestSnapshot("Complete a identidade de comando antes de acessar o Quartel.");
   }
 
-  const [activity, history] = await Promise.all([
+  const [activity, history, livePresence] = await Promise.all([
     getCommanderActivity(session.user.id),
     getPlayerMatchHistory(session.user.id, { limit: 20 }),
+    renewOwnPresence(session.user.id),
   ]);
   const social = await getPlayerSocialSnapshot(
     session.user.id,
@@ -103,7 +105,11 @@ export async function getCurrentProfileCommandSnapshot(): Promise<ProfileCommand
         bio: profile.identity.bio,
         title: profile.identity.title?.name ?? null,
         portrait: profile.identity.portrait,
-        presence: profile.identity.presence,
+        presence: {
+          state: livePresence.state,
+          lastSeenAt:
+            livePresence.lastSeenAt ?? profile.identity.presence.lastSeenAt,
+        },
         activity,
       },
     },
