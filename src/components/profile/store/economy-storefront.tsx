@@ -349,13 +349,17 @@ export function EconomyStorefront({
                       >
                         {offer.fullyOwned
                           ? "POSSUÍDO"
-                          : purchasePending
-                            ? "PROCESSANDO…"
-                            : "COMPRAR"}
+                          : !offer.purchasable
+                            ? "INDISPONÍVEL"
+                            : purchasePending
+                              ? "PROCESSANDO…"
+                              : "COMPRAR"}
                       </button>
                     </li>
                   </ul>
-                  {insufficientBalance && !offer.fullyOwned ? (
+                  {!offer.purchasable && !offer.fullyOwned ? (
+                    <small>Esta oferta está temporariamente indisponível.</small>
+                  ) : insufficientBalance && !offer.fullyOwned ? (
                     <small>Saldo insuficiente para esta oferta.</small>
                   ) : null}
                 </div>
