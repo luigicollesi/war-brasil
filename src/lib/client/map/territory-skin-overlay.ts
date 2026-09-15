@@ -2,15 +2,33 @@ import type { TerritoryVisualNodes } from "@/src/lib/client/map/territory-svg-no
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 const SKIN_PATTERN_SIZE = 192;
-const SKIN_OVERLAY_OPACITY = "0.52";
+const SKIN_OVERLAY_OPACITY_PROPERTY = "--territory-skin-opacity";
+
+const SKIN_OVERLAY_OPACITY_BY_SURFACE_STATE = {
+  normal: "0.52",
+  hover: "0.32",
+  highlighted: "0.18",
+  "highlighted-hover": "0.12",
+} as const;
+
+type TerritorySkinSurfaceState = keyof typeof SKIN_OVERLAY_OPACITY_BY_SURFACE_STATE;
 
 const patternIdsByDocument = new WeakMap<Document, Map<string, string>>();
+const failedAssetsByDocument = new WeakMap<Document, Set<string>>();
 
 function patternRegistry(document: Document): Map<string, string> {
   const existing = patternIdsByDocument.get(document);
   if (existing) return existing;
   const created = new Map<string, string>();
   patternIdsByDocument.set(document, created);
+  return created;
+}
+
+function failedAssetRegistry(document: Document): Set<string> {
+  const existing = failedAssetsByDocument.get(document);
+  if (existing) return existing;
+  const created = new Set<string>();
+  failedAssetsByDocument.set(document, created);
   return created;
 }
 
@@ -44,10 +62,24 @@ function removeTerritorySkinOverlaysForAsset(
   }
 }
 
+export function syncTerritorySkinSurfaceState(
+  nodes: TerritoryVisualNodes,
+  surfaceState: TerritorySkinSurfaceState,
+) {
+  const opacity = SKIN_OVERLAY_OPACITY_BY_SURFACE_STATE[surfaceState];
+  nodes.face.parentElement?.style.setProperty(
+    SKIN_OVERLAY_OPACITY_PROPERTY,
+    opacity,
+  );
+}
+
 export function ensureTerritorySkinPattern(
   document: Document,
   assetRef: string,
-) {
+): string | null {
+  const failedAssets = failedAssetRegistry(document);
+  if (failedAssets.has(assetRef)) return null;
+
   const registry = patternRegistry(document);
   const knownId = registry.get(assetRef);
   if (knownId && document.getElementById(knownId)) return knownId;
@@ -76,6 +108,7 @@ export function ensureTerritorySkinPattern(
   image.addEventListener(
     "error",
     () => {
+      failedAssets.add(assetRef);
       removeTerritorySkinOverlaysForAsset(document, assetRef);
       registry.delete(assetRef);
       pattern.remove();
@@ -109,6 +142,11 @@ export function applyTerritorySkinOverlay(
   }
 
   const patternId = ensureTerritorySkinPattern(document, assetRef);
+  if (!patternId) {
+    removeTerritorySkinOverlay(id, document);
+    return;
+  }
+
   let overlay = document.querySelector<SVGPathElement>(overlaySelector(id));
   if (!overlay) {
     overlay = document.createElementNS(SVG_NS, "path");
@@ -117,9 +155,9 @@ export function applyTerritorySkinOverlay(
     overlay.setAttribute("aria-hidden", "true");
     overlay.setAttribute("pointer-events", "none");
     overlay.style.pointerEvents = "none";
-    overlay.style.opacity = SKIN_OVERLAY_OPACITY;
-    // Luminosity takes texture detail from the skin while preserving the hue and
-    // saturation of the PlayerColor beneath it. This keeps ownership semantic.
+    overlay.style.opacity = `var(${SKIN_OVERLAY_OPACITY_PROPERTY}, ${SKIN_OVERLAY_OPACITY_BY_SURFACE_STATE.normal})`;
+    // The texture contributes luminosity only. PlayerColor and the semantic
+    // surface fill remain the authoritative hue/saturation channels beneath it.
     overlay.style.mixBlendMode = "luminosity";
     nodes.face.insertAdjacentElement("afterend", overlay);
   }
