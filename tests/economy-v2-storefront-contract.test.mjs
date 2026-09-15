@@ -61,6 +61,12 @@ test("Intendência V2 compra offer por id + idempotency key e reconcilia respost
   assert.doesNotMatch(storefront, /nenhuma compra ou recompensa está ativa/i);
 });
 
+test("offer não comprável é apresentada como indisponível e não como CTA de compra", () => {
+  assert.match(storefront, /!offer\.purchasable[\s\S]*"INDISPONÍVEL"/);
+  assert.match(storefront, /insufficientBalance/);
+  assert.match(storefront, /Saldo insuficiente para esta oferta/);
+});
+
 test("campanha usa coin.svg como identidade primária e packs BRL permanecem desabilitados", () => {
   assert.match(storefront, /src="\/coin\.svg"/);
   assert.doesNotMatch(storefront, /storefront\.wallet\.symbol/);
