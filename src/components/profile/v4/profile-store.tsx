@@ -104,6 +104,7 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
   const [selectedItemId, setSelectedItemId] = useState<string | null>(featured ? previewItem(featured)?.id ?? null : null);
   const [inspectionOpen, setInspectionOpen] = useState(false);
   const mobileCloseRef = useRef<HTMLButtonElement>(null);
+  const inspectionReturnFocusRef = useRef<HTMLElement | null>(null);
 
   const selectedSet = storefront.sets.find((set) => set.id === selectedSetId) ?? featured;
   const selectedItem = selectedSet
@@ -111,11 +112,21 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
     : null;
   const selectedArtwork = itemArtwork(selectedItem);
 
+  function closeInspection() {
+    setInspectionOpen(false);
+    const returnTarget = inspectionReturnFocusRef.current;
+    if (returnTarget) {
+      window.requestAnimationFrame(() => {
+        if (returnTarget.isConnected) returnTarget.focus();
+      });
+    }
+  }
+
   useEffect(() => {
     if (!inspectionOpen) return;
 
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setInspectionOpen(false);
+      if (event.key === "Escape") closeInspection();
     };
     const isMobile = window.matchMedia("(max-width: 820px)").matches;
     const previousOverflow = document.body.style.overflow;
@@ -133,6 +144,9 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
   }, [inspectionOpen]);
 
   function inspect(set: CosmeticSet) {
+    if (document.activeElement instanceof HTMLElement) {
+      inspectionReturnFocusRef.current = document.activeElement;
+    }
     setSelectedSetId(set.id);
     setSelectedItemId(previewItem(set)?.id ?? null);
     setInspectionOpen(true);
@@ -234,7 +248,7 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
             type="button"
             className={mobileStyles.mobileInspectionBackdrop}
             aria-label="Fechar inspeção"
-            onClick={() => setInspectionOpen(false)}
+            onClick={closeInspection}
           />
           <section
             className={mobileStyles.mobileInspection}
@@ -252,7 +266,7 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
                 type="button"
                 className={mobileStyles.mobileInspectionClose}
                 aria-label="Fechar inspeção"
-                onClick={() => setInspectionOpen(false)}
+                onClick={closeInspection}
               >
                 ×
               </button>
