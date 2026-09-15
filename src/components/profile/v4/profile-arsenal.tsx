@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useMemo, useState } from "react";
 import type {
   CosmeticCatalogItem,
@@ -8,6 +7,7 @@ import type {
   EconomyStorefrontSnapshot,
 } from "@/src/lib/economy/economy-contract";
 import { cosmeticPreviewSource } from "@/src/lib/economy/cosmetic-preview";
+import { ProfileCosmeticImage } from "./profile-cosmetic-image";
 import styles from "./profile-arsenal.module.css";
 
 const SLOT_META: Readonly<Record<CosmeticSlot, { label: string; code: string }>> = {
@@ -26,25 +26,16 @@ const FILTERS: ReadonlyArray<{ id: "all" | CosmeticSlot; label: string }> = [
 ];
 
 function CosmeticVisual({ item, priority = false }: { item: CosmeticCatalogItem; priority?: boolean }) {
-  const src = cosmeticPreviewSource(item);
-  if (!src) {
-    return (
-      <span className={styles.visualFallback} aria-label={`Prévia indisponível para ${item.name}`}>
-        {SLOT_META[item.slot].code}
-      </span>
-    );
-  }
-
   return (
-    <Image
-      src={src}
+    <ProfileCosmeticImage
+      src={cosmeticPreviewSource(item)}
       alt={`Prévia de ${item.name}`}
       width={320}
       height={320}
       priority={priority}
-      loading={priority ? "eager" : "lazy"}
-      unoptimized
       className={styles.itemImage}
+      fallbackClassName={styles.visualFallback}
+      fallbackLabel={SLOT_META[item.slot].code}
     />
   );
 }
