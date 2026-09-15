@@ -97,6 +97,7 @@ export type EquipCosmeticInput = Readonly<{
 export type PurchaseOfferInput = Readonly<{
   offerId: string;
   idempotencyKey: string;
+  expectedPrice: number;
 }>;
 
 export type PurchaseOfferResult = Readonly<{
