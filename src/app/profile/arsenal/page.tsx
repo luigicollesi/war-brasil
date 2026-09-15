@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
+import { ProfileArsenal } from "@/src/components/profile/v4/profile-arsenal";
 import { ProfileEconomyUnavailable } from "@/src/components/profile/v4/profile-economy-unavailable";
 import { ProfileShell } from "@/src/components/profile/v4/profile-shell";
-import { ProfileStore } from "@/src/components/profile/v4/profile-store";
 import type { EconomyStorefrontSnapshot } from "@/src/lib/economy/economy-contract";
 import { auth } from "@/src/lib/server/auth/auth";
 import {
@@ -14,15 +14,15 @@ import {
 import { getOwnCommanderProfile } from "@/src/lib/server/profile/profile-service";
 
 export const metadata: Metadata = {
-  title: "Intendência · Quartel do Comandante",
-  description: "Catálogo cosmético e futuras aquisições do comandante no WAR Brasil.",
+  title: "Arsenal · Quartel do Comandante",
+  description: "Inventário possuído e loadout cosmético do comandante no WAR Brasil.",
   robots: { index: false, follow: false },
 };
 
 const economyUnavailableReason =
   "Economia temporariamente indisponível. O Dossiê continua operacional.";
 
-export default async function ProfileStorePage() {
+export default async function ProfileArsenalPage() {
   await connection();
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -44,12 +44,12 @@ export default async function ProfileStorePage() {
     ) {
       redirect("/profile");
     }
-    console.error("Falha ao carregar Economy na Intendência V4.", error);
+    console.error("Falha ao carregar Economy no Arsenal V4.", error);
   }
 
   return (
     <ProfileShell
-      activeSurface="store"
+      activeSurface="arsenal"
       displayName={profile.identity.displayName}
       handle={profile.identity.handle}
       wallet={
@@ -66,9 +66,9 @@ export default async function ProfileStorePage() {
       }
     >
       {storefront ? (
-        <ProfileStore storefront={storefront} />
+        <ProfileArsenal initialStorefront={storefront} />
       ) : (
-        <ProfileEconomyUnavailable surface="store" />
+        <ProfileEconomyUnavailable surface="arsenal" />
       )}
     </ProfileShell>
   );

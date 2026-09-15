@@ -42,12 +42,10 @@ const doctrineCss = source(
 const profilePage = source("src/app/profile/page.tsx");
 const profileLoading = source("src/app/profile/loading.tsx");
 const profileError = source("src/app/profile/error.tsx");
-const profileBridge = source(
-  "src/components/profile/profile-command-shell.tsx",
-);
 const profileBridgeCss = source(
   "src/components/profile/profile-command-shell.module.css",
 );
+const profileV4Shell = source("src/components/profile/v4/profile-shell.tsx");
 
 const consumerSources = [
   homePage,
@@ -61,7 +59,7 @@ const consumerSources = [
   profilePage,
   profileLoading,
   profileError,
-  profileBridge,
+  profileV4Shell,
 ].join("\n");
 
 test("as cinco experiências compartilham um único runtime no RootLayout", () => {
@@ -88,7 +86,7 @@ test("mode pertence à rota e clientes publicam somente diretivas semânticas", 
     ["Operations", operationsClient],
     ["Lobby", lobbyClient],
     ["Doctrine", doctrineClient],
-    ["Profile", profileBridge],
+    ["Profile", profileV4Shell],
   ]) {
     assert.match(client, /useCommandSceneDirective/, `${name} não publica scene directive`);
     assert.doesNotMatch(client, /\bmode\s*:\s*"(?:entrance|operations|lobby|doctrine|profile)"/, `${name} declarou mode local`);
@@ -128,10 +126,15 @@ test("Lobby reserva o chrome dentro de 100dvh e mantém ready no fluxo sem cobri
   assert.doesNotMatch(`${lobbyWorkspaceCss}\n${lobbyReadyCss}`, /overflow-y:\s*(?:auto|scroll)/);
 });
 
-test("Profile V2 permanece no runtime Foundation sem reintroduzir WarShell", () => {
-  assert.match(profilePage, /ProfileCommandHub/);
-  assert.match(profileLoading, /ProfileSceneBridge/);
-  assert.match(profileError, /ProfileSceneBridge/);
-  assert.doesNotMatch(`${profilePage}\n${profileLoading}\n${profileError}`, /WarShell/);
-  assert.match(profileBridge, /aria-label="Navegação do perfil"/);
+test("Profile V4 permanece no runtime Foundation sem reintroduzir WarShell", () => {
+  assert.match(profilePage, /ProfileShell/);
+  assert.match(profilePage, /ProfileDossier/);
+  assert.match(profileLoading, /ProfileV4Boundary/);
+  assert.match(profileError, /ProfileV4Boundary/);
+  assert.match(profileV4Shell, /useCommandSceneDirective/);
+  assert.match(profileV4Shell, /aria-label="Áreas do Quartel do Comandante"/);
+  assert.doesNotMatch(
+    `${profilePage}\n${profileLoading}\n${profileError}\n${profileV4Shell}`,
+    /WarShell/,
+  );
 });

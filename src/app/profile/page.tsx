@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { connection } from "next/server";
-import { ProfileCommandHub } from "@/src/components/profile/command-quarters/profile-command-hub";
-import { ProfileSettingsPanel } from "@/src/components/profile/command-quarters/profile-settings-panel";
+import { ProfileDossier } from "@/src/components/profile/v4/profile-dossier";
+import { ProfileShell, type ProfileShellWallet } from "@/src/components/profile/v4/profile-shell";
 import { getCurrentProfileCommandSnapshot } from "@/src/lib/server/profile/profile-command-snapshot-service";
 
 export const metadata: Metadata = {
-  title: "Quartel do Comandante",
-  description: "Identidade, rede, campanhas e Intendência do comandante no WAR Brasil.",
+  title: "Dossiê · Quartel do Comandante",
+  description: "Identidade, rede e histórico operacional do comandante no WAR Brasil.",
   robots: {
     index: false,
     follow: false,
@@ -17,18 +17,28 @@ export default async function ProfilePage() {
   await connection();
   const snapshot = await getCurrentProfileCommandSnapshot();
   const identity = snapshot.identity.data;
-  const privacy = snapshot.privacy.data;
+  const walletData = snapshot.wallet.data?.campaignCredit ?? null;
+  const wallet: ProfileShellWallet =
+    snapshot.wallet.availability === "available" && walletData
+      ? {
+          available: true,
+          balance: walletData.balance,
+          label: walletData.label,
+        }
+      : {
+          available: false,
+          reason: snapshot.wallet.unavailableReason,
+        };
 
   return (
-    <>
-      <ProfileCommandHub snapshot={snapshot} />
-      {!snapshot.isEvaluationFixture &&
-      snapshot.identity.availability === "available" &&
-      snapshot.privacy.availability === "available" &&
-      identity &&
-      privacy ? (
-        <ProfileSettingsPanel identity={identity} privacy={privacy} />
-      ) : null}
-    </>
+    <ProfileShell
+      activeSurface="dossier"
+      displayName={identity?.displayName ?? "Comandante"}
+      handle={identity?.handle ?? null}
+      wallet={wallet}
+      evaluationFixture={snapshot.isEvaluationFixture}
+    >
+      <ProfileDossier snapshot={snapshot} />
+    </ProfileShell>
   );
 }
