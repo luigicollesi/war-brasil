@@ -14,10 +14,9 @@ test("PROFILE V4 purchase client sends only offer identity and idempotency", asy
   assert.match(store, /fetch\("\/api\/economy\/purchases"/);
   assert.match(store, /method:\s*"POST"/);
   assert.match(store, /crypto\.randomUUID\(\)/);
-  assert.match(store, /JSON\.stringify\(\{\s*offerId:\s*offer\.id,\s*idempotencyKey/);
+  assert.match(store, /body:\s*JSON\.stringify\(\{\s*offerId:\s*offer\.id,\s*idempotencyKey\s*\}\)/);
   assert.doesNotMatch(store, /userId\s*:/);
   assert.doesNotMatch(store, /price\s*:\s*offer\.price/);
-  assert.doesNotMatch(store, /currency\s*:/);
   assert.doesNotMatch(store, /cosmeticIds\s*:/);
 });
 
