@@ -12,17 +12,17 @@ test("PROFILE V4 cosmetic image falls back after delivery failure", async () => 
   const image = await source("src/components/profile/v4/profile-cosmetic-image.tsx");
 
   assert.match(image, /onError=/);
-  assert.match(image, /setFailed\(true\)/);
-  assert.match(image, /if \(!src \|\| failed\)/);
+  assert.match(image, /setFailedSrc\(src\)/);
+  assert.match(image, /failedSrc === src/);
   assert.match(image, /Prévia indisponível/);
 });
 
-test("PROFILE V4 resets failed preview when the selected asset changes", async () => {
+test("PROFILE V4 scopes a delivery failure to the source that actually failed", async () => {
   const image = await source("src/components/profile/v4/profile-cosmetic-image.tsx");
 
-  assert.match(image, /useEffect/);
-  assert.match(image, /setFailed\(false\)/);
-  assert.match(image, /\[src\]/);
+  assert.match(image, /failedSrc/);
+  assert.doesNotMatch(image, /useEffect/);
+  assert.doesNotMatch(image, /setFailed\(false\)/);
 });
 
 test("Arsenal and Store reuse the resilient cosmetic image boundary", async () => {
