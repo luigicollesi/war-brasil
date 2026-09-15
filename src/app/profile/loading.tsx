@@ -1,15 +1,12 @@
-import { ProfileBoundaryState } from "@/src/components/profile/profile-boundary-state";
-import { ProfileSceneBridge } from "@/src/components/profile/profile-command-shell";
+import { ProfileV4Boundary } from "@/src/components/profile/v4/profile-v4-boundary";
 
 export default function ProfileLoading() {
   return (
-    <ProfileSceneBridge>
-      <ProfileBoundaryState
-        variant="loading"
-        eyebrow="Consultando arquivo"
-        title="Recuperando registro de comando"
-        description="A identidade permanece sem valores simulados enquanto a fonte de dados é consultada."
-      />
-    </ProfileSceneBridge>
+    <ProfileV4Boundary
+      variant="loading"
+      eyebrow="SINCRONIZAÇÃO // PERFIL"
+      title="Recuperando registro de comando"
+      description="Identidade, Arsenal e Tesouraria permanecem sem valores simulados enquanto as fontes autoritativas são consultadas."
+    />
   );
 }
