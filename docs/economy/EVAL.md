@@ -52,10 +52,10 @@ Aprovação exige **todos os BLOCKERs verdes**. Nenhuma compra, recompensa ou gr
 | ECO-ASSET-07 | região R2 resolvida é `auto` | config test |
 | ECO-ASSET-08 | ausência ou formato inválido falha server-side sem expor segredo | negative test |
 | ECO-ASSET-09 | `ASSET_STORAGE_URL` não possui prefixo `NEXT_PUBLIC_` e não entra no bundle do browser | build/source inspection |
-| ECO-ASSET-10 | connection string, Secret Access Key e credenciais derivadas não aparecem em API, DTO, HTML, log ou evidência E2E | secret scan/E2E negative assertion |
+| ECO-ASSET-10 | `ASSET_STORAGE_URL` original/completa e Secret Access Key não aparecem em API, DTO, HTML, log ou evidência E2E; Access Key ID pode aparecer somente onde SigV4 o exige, como `X-Amz-Credential` de URL presigned | secret scan/E2E negative assertion |
 | ECO-ASSET-11 | catálogo/snapshot persistem object key ou referência estável, nunca URL com credenciais | DB/schema test |
 | ECO-ASSET-12 | URL presigned não é persistida como identidade do cosmético | DB/source test |
-| ECO-ASSET-13 | servidor consegue gerar GET presigned de objeto registrado sem expor Secret Access Key | integration test controlado |
+| ECO-ASSET-13 | servidor consegue gerar GET presigned de objeto registrado sem expor Secret Access Key nem a connection string original | integration test controlado |
 | ECO-ASSET-14 | URL presigned possui expiração finita e autoriza somente o objeto solicitado | signing contract test |
 | ECO-ASSET-15 | browser não consegue solicitar assinatura de object key arbitrária fora do catálogo autoritativo | negative route/service test |
 | ECO-ASSET-16 | storefront normal não executa `ListObjects` para descobrir produtos | source/integration inspection |
@@ -234,7 +234,7 @@ Aprovação exige **todos os BLOCKERs verdes**. Nenhuma compra, recompensa ou gr
 - `ECO-S31`: validar credenciais percent-encoded e derivação de endpoint/bucket/region;
 - `ECO-S32`: configuração inválida falha sem imprimir segredo;
 - `ECO-S33`: resolver item registrado para GET presigned e carregar WebP no browser;
-- `ECO-S34`: confirmar que nenhuma credential/connection string aparece em HTML, JSON ou console/log capturado;
+- `ECO-S34`: confirmar que `ASSET_STORAGE_URL` original/completa e Secret Access Key não aparecem em HTML, JSON ou console/log capturado; o Access Key ID é permitido apenas no `X-Amz-Credential` da URL SigV4 assinada;
 - `ECO-S35`: alterar/expirar URL presigned e confirmar que a object key persistente continua sendo a identidade do item;
 - `ECO-S36`: object key não registrada não pode obter assinatura arbitrária por solicitação do browser;
 - `ECO-S37`: validar `attack.webp`, `defense.webp` e `neutral.webp` em cada um dos sete diretórios do baseline;
@@ -392,7 +392,7 @@ A entrega econômica só pode ser considerada pronta quando:
 - catálogo anunciado vier do PostgreSQL e não de lista hardcoded no frontend;
 - baseline registrado de Exército, Lanças, Viking, Gato, Cachorro e Futebol estiver anunciado e não adquirível;
 - `ASSET_STORAGE_URL` for a única configuração de conexão S3/R2;
-- nenhuma credencial de storage for exposta ao browser, DTO, logs ou snapshots persistentes;
+- Secret Access Key e `ASSET_STORAGE_URL` original/completa não forem expostos ao browser, DTO, logs ou snapshots persistentes; Access Key ID em `X-Amz-Credential` de URL SigV4 presigned é permitido;
 - todos os dados do storage forem WebP com object key `.webp` e MIME `image/webp`;
 - nenhum dado de runtime vindo do storage usar SVG ou outro formato;
 - os 21 assets de dados do baseline forem validados antes do cutover;
