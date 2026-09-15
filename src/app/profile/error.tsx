@@ -3,7 +3,7 @@
 import { ProfileV4Boundary } from "@/src/components/profile/v4/profile-v4-boundary";
 
 type ProfileErrorProps = {
-  error: Error & { digest?: string };
+  error: Error;
   reset: () => void;
 };
 
