@@ -3,7 +3,9 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { ProfileArsenal } from "@/src/components/profile/v4/profile-arsenal";
+import { ProfileEconomyUnavailable } from "@/src/components/profile/v4/profile-economy-unavailable";
 import { ProfileShell } from "@/src/components/profile/v4/profile-shell";
+import type { EconomyStorefrontSnapshot } from "@/src/lib/economy/economy-contract";
 import { auth } from "@/src/lib/server/auth/auth";
 import {
   EconomyServiceError,
@@ -17,6 +19,9 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+const economyUnavailableReason =
+  "Economia temporariamente indisponível. O Dossiê continua operacional.";
+
 export default async function ProfileArsenalPage() {
   await connection();
   const session = await auth.api.getSession({
@@ -29,7 +34,7 @@ export default async function ProfileArsenalPage() {
   const profile = await getOwnCommanderProfile(session.user.id);
   if (!profile) redirect("/profile");
 
-  let storefront;
+  let storefront: EconomyStorefrontSnapshot | null = null;
   try {
     storefront = await getEconomyStorefront(session.user.id);
   } catch (error) {
@@ -39,7 +44,7 @@ export default async function ProfileArsenalPage() {
     ) {
       redirect("/profile");
     }
-    throw error;
+    console.error("Falha ao carregar Economy no Arsenal V4.", error);
   }
 
   return (
@@ -47,13 +52,24 @@ export default async function ProfileArsenalPage() {
       activeSurface="arsenal"
       displayName={profile.identity.displayName}
       handle={profile.identity.handle}
-      wallet={{
-        available: true,
-        balance: storefront.wallet.balance,
-        label: storefront.wallet.label,
-      }}
+      wallet={
+        storefront
+          ? {
+              available: true,
+              balance: storefront.wallet.balance,
+              label: storefront.wallet.label,
+            }
+          : {
+              available: false,
+              reason: economyUnavailableReason,
+            }
+      }
     >
-      <ProfileArsenal initialStorefront={storefront} />
+      {storefront ? (
+        <ProfileArsenal initialStorefront={storefront} />
+      ) : (
+        <ProfileEconomyUnavailable surface="arsenal" />
+      )}
     </ProfileShell>
   );
 }
