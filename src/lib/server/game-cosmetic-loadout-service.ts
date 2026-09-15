@@ -1,10 +1,7 @@
 import "server-only";
 
 import type { PoolClient } from "pg";
-import {
-  territorySkinRender,
-  territorySkinSnapshot,
-} from "@/src/lib/economy/territory-skin-contract";
+import { territorySkinSnapshot } from "@/src/lib/economy/territory-skin-contract";
 import type {
   GameCosmeticSelection,
   GamePlayerCosmetics,
@@ -58,13 +55,26 @@ function selection(row: GameCosmeticSnapshotRow): GameCosmeticSelection {
   };
 }
 
-function territorySelection(row: GameCosmeticSnapshotRow) {
+function territorySelection(row: GameCosmeticSnapshotRow): GameCosmeticSelection {
   const snapshot = territorySkinSnapshot({
     cosmeticId: row.cosmetic_id,
     assetRef: row.asset_ref,
     effectKey: row.effect_key,
   });
-  return territorySkinRender(snapshot, territorySkinAssetDeliveryPath);
+
+  if (snapshot.kind === "procedural") {
+    return {
+      cosmeticId: snapshot.cosmeticId,
+      assetRef: null,
+      effectKey: snapshot.effectKey,
+    };
+  }
+
+  return {
+    cosmeticId: snapshot.cosmeticId,
+    assetRef: territorySkinAssetDeliveryPath(snapshot.assetRef),
+    effectKey: null,
+  };
 }
 
 function defaultPlayerCosmetics(): GamePlayerCosmetics {
@@ -85,8 +95,8 @@ function defaultPlayerCosmetics(): GamePlayerCosmetics {
       effectKey: null,
     },
     territoryEffect: {
-      kind: "procedural",
       cosmeticId: "territory.effect.default",
+      assetRef: null,
       effectKey: "default",
     },
   };
