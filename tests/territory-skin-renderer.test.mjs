@@ -29,21 +29,45 @@ test("renderer de image skin usa overlay SVG compartilhado sem tocar hitbox", ()
   assert.doesNotMatch(hitGeometry, /territorySkin|skinAsset|cosmetic/i);
 });
 
-test("falha de WebP remove todos os overlays daquele asset e revela material base", () => {
+test("falha de WebP remove overlays, marca o asset como falho e não tenta recarregá-lo na mesma sessão", () => {
   const overlay = source("src/lib/client/map/territory-skin-overlay.ts");
 
   assert.match(overlay, /function removeTerritorySkinOverlaysForAsset/);
   assert.match(
     overlay,
-    /querySelectorAll<SVGPathElement>\("path\.territory-skin-overlay"\)/,
+    /querySelectorAll<SVGPathElement>\([\s\S]*?"path\.territory-skin-overlay"[\s\S]*?\)/,
   );
   assert.match(
     overlay,
     /overlay\.dataset\.territorySkinAsset === assetRef/,
   );
+  assert.match(overlay, /failedAssetsByDocument/);
+  assert.match(overlay, /WeakMap<Document, Set<string>>/);
+  assert.match(overlay, /failedAssets\.has\(assetRef\)/);
+  assert.match(overlay, /failedAssets\.add\(assetRef\)/);
   assert.match(overlay, /removeTerritorySkinOverlaysForAsset\(document, assetRef\)/);
   assert.match(overlay, /registry\.delete\(assetRef\)/);
   assert.match(overlay, /pattern\.remove\(\)/);
+});
+
+test("hover e estado semântico continuam dominantes sobre a textura sem recriar highlight overlay", () => {
+  const overlay = source("src/lib/client/map/territory-skin-overlay.ts");
+  const visualState = source("src/lib/client/map/territory-visual-state.ts");
+  const svgNodes = source("src/lib/client/map/territory-svg-nodes.ts");
+
+  assert.match(overlay, /SKIN_OVERLAY_OPACITY_BY_SURFACE_STATE/);
+  assert.match(overlay, /normal:\s*"0\.52"/);
+  assert.match(overlay, /hover:\s*"0\.32"/);
+  assert.match(overlay, /highlighted:\s*"0\.18"/);
+  assert.match(overlay, /"highlighted-hover":\s*"0\.12"/);
+  assert.match(overlay, /export function syncTerritorySkinSurfaceState/);
+  assert.match(visualState, /syncTerritorySkinSurfaceState/);
+  assert.match(visualState, /syncTerritorySkinSurfaceState\(nodes, surfaceState\)/);
+  assert.match(visualState, /face\.style\.setProperty\(SURFACE_FILL_PROPERTY, nextFill\)/);
+
+  assert.doesNotMatch(overlay, /territory-highlight/);
+  assert.doesNotMatch(svgNodes, /ensureTerritoryHighlightOverlay/);
+  assert.doesNotMatch(visualState, /filter:\s*(?!none)/);
 });
 
 test("runtime mantém DTO legado, mas projeta image skin por chave transitória não persistida", () => {
