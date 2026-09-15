@@ -31,6 +31,24 @@ test("efeito territorial default preserva as seis identidades PlayerColor", () =
   }
 });
 
+test("image skin preserva face, profundidade e rim de todos os seis PlayerColors", () => {
+  const assetKey = "cosmetics/territory-skins/azulejo_brasil.webp";
+  const runtimeKey = `territory-image:${encodeURIComponent(assetKey)}`;
+  const expectedDeliveryPath =
+    `/api/assets/territory-skins?key=${encodeURIComponent(assetKey)}`;
+
+  for (const color of COLORS) {
+    const nativeMaterial = territoryMaterial(color);
+    const skinnedMaterial = territoryMaterial(color, runtimeKey);
+
+    assert.equal(skinnedMaterial.playerColor, color);
+    assert.deepEqual(skinnedMaterial.face, nativeMaterial.face, color);
+    assert.deepEqual(skinnedMaterial.side, nativeMaterial.side, color);
+    assert.equal(skinnedMaterial.rim, nativeMaterial.rim, color);
+    assert.equal(skinnedMaterial.skinAssetRef, expectedDeliveryPath, color);
+  }
+});
+
 test("tabuleiro deriva efeito do dono sem criar fetch, estado ou hitbox cosmético", () => {
   const client = source("src/components/game-client-v2.tsx");
   const board = source("src/components/interactive-board.tsx");
