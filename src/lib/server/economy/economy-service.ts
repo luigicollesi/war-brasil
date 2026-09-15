@@ -19,6 +19,11 @@ import {
   ECONOMY_CURRENCY_ID,
   isCosmeticSlot,
 } from "@/src/lib/economy/economy-contract";
+import {
+  quoteStorefrontProduct,
+  resolveStorefrontUnitPrice,
+  type StorefrontQuoteItem,
+} from "@/src/lib/economy/storefront-pricing";
 import { territorySkinAssetDeliveryPath } from "../../economy/territory-skin-contract";
 import { diceAssetDeliveryPath } from "../assets/asset-storage-service";
 import { pool } from "../db/pool";
@@ -28,12 +33,10 @@ import {
   equipOwnedCosmetic,
   findCampaignCreditWallet,
   findOwnedCosmetic,
-  findPurchasableOffer,
   findPurchaseReceiptByIdempotencyKey,
   grantPurchasedCosmetics,
   initializeEconomyState,
   insertPurchaseLedgerEntry,
-  listOfferItemsForPurchase,
   listOwnedCosmetics,
   listPurchaseGrantedItems,
   listStorefrontSetItems,
@@ -51,12 +54,25 @@ import {
   type StorefrontOfferItemRow,
   type StorefrontOfferRow,
 } from "./economy-storefront-repository";
+import {
+  incrementCosmeticAcquisitionCounts,
+  listActiveStorefrontOfferProducts,
+  listActiveStorefrontQuoteItems,
+  listLockedProductQuoteItems,
+  lockOfferProductForPurchase,
+  lockProductCosmeticStats,
+  snapshotPurchaseCommercialContext,
+  snapshotPurchaseItemPrices,
+  type StorefrontOfferProductRow,
+  type StorefrontQuoteItemRow,
+} from "./storefront-quote-repository";
 
 export class EconomyServiceError extends Error {
   constructor(
     public readonly code: string,
     message: string,
     public readonly status: number,
+    public readonly details?: Readonly<Record<string, unknown>>,
   ) {
     super(message);
     this.name = "EconomyServiceError";
@@ -119,9 +135,13 @@ function walletFromRow(row: WalletRow | null): CampaignCreditWallet {
   };
 }
 
-function positiveAmount(value: string, errorCode: string) {
+function integerAmount(
+  value: string,
+  errorCode: string,
+  minimum: number,
+) {
   const amount = Number(value);
-  if (!Number.isSafeInteger(amount) || amount <= 0) {
+  if (!Number.isSafeInteger(amount) || amount < minimum) {
     throw new EconomyServiceError(
       errorCode,
       "O catálogo econômico contém um valor monetário inválido.",
@@ -129,6 +149,10 @@ function positiveAmount(value: string, errorCode: string) {
     );
   }
   return amount;
+}
+
+function positiveAmount(value: string, errorCode: string) {
+  return integerAmount(value, errorCode, 1);
 }
 
 function loadoutFromOwned(rows: CosmeticRow[]): CosmeticLoadout {
@@ -178,9 +202,101 @@ function setsFromRows(
   return [...grouped.values()];
 }
 
+function quoteItemFromRow(row: StorefrontQuoteItemRow): StorefrontQuoteItem {
+  const acquisitionCount = integerAmount(
+    row.acquisition_count,
+    "ECONOMY_CATALOG_INVALID",
+    0,
+  );
+
+  if (row.pricing_model === "fixed") {
+    if (row.fixed_price === null) {
+      throw new EconomyServiceError(
+        "ECONOMY_CATALOG_INVALID",
+        "Um cosmético de preço fixo está sem preço configurado.",
+        503,
+      );
+    }
+    return {
+      cosmeticId: row.cosmetic_id,
+      owned: row.owned,
+      pricing: {
+        type: "fixed",
+        price: positiveAmount(row.fixed_price, "ECONOMY_CATALOG_INVALID"),
+      },
+    };
+  }
+
+  if (row.tier_from === null || row.tier_price === null) {
+    throw new EconomyServiceError(
+      "ECONOMY_CATALOG_INVALID",
+      "Um cosmético progressivo não possui tier para o contador atual.",
+      503,
+    );
+  }
+
+  return {
+    cosmeticId: row.cosmetic_id,
+    owned: row.owned,
+    pricing: {
+      type: "progressive",
+      acquisitionCount,
+      tiers: [
+        {
+          acquisitionsFrom: integerAmount(
+            row.tier_from,
+            "ECONOMY_CATALOG_INVALID",
+            0,
+          ),
+          acquisitionsUntil:
+            row.tier_until === null
+              ? null
+              : integerAmount(
+                  row.tier_until,
+                  "ECONOMY_CATALOG_INVALID",
+                  0,
+                ),
+          price: positiveAmount(row.tier_price, "ECONOMY_CATALOG_INVALID"),
+        },
+      ],
+    },
+  };
+}
+
+function quoteFromRows(
+  rows: ReadonlyArray<StorefrontQuoteItemRow>,
+  discountBps: number,
+) {
+  try {
+    return quoteStorefrontProduct(rows.map(quoteItemFromRow), discountBps);
+  } catch (error) {
+    if (error instanceof EconomyServiceError) throw error;
+    throw new EconomyServiceError(
+      "ECONOMY_CATALOG_INVALID",
+      "A configuração de preço da loja é inválida.",
+      503,
+    );
+  }
+}
+
+function unitPriceFromRow(row: StorefrontQuoteItemRow) {
+  try {
+    return resolveStorefrontUnitPrice(quoteItemFromRow(row).pricing);
+  } catch (error) {
+    if (error instanceof EconomyServiceError) throw error;
+    throw new EconomyServiceError(
+      "ECONOMY_CATALOG_INVALID",
+      "A configuração de preço da loja é inválida.",
+      503,
+    );
+  }
+}
+
 function offersFromRows(
   offerRows: StorefrontOfferRow[],
   itemRows: StorefrontOfferItemRow[],
+  productRows: StorefrontOfferProductRow[],
+  quoteRows: StorefrontQuoteItemRow[],
 ): EconomyOffer[] {
   const itemsByOffer = new Map<string, CosmeticCatalogItem[]>();
   for (const row of itemRows) {
@@ -189,15 +305,34 @@ function offersFromRows(
     itemsByOffer.set(row.offer_id, current);
   }
 
+  const productByOffer = new Map(productRows.map((row) => [row.offer_id, row]));
+  const quoteRowsByOffer = new Map<string, StorefrontQuoteItemRow[]>();
+  for (const row of quoteRows) {
+    const current = quoteRowsByOffer.get(row.offer_id) ?? [];
+    current.push(row);
+    quoteRowsByOffer.set(row.offer_id, current);
+  }
+
   return offerRows.map((row) => {
     const items = itemsByOffer.get(row.id) ?? [];
+    const product = productByOffer.get(row.id);
+    const pricingItems = quoteRowsByOffer.get(row.id) ?? [];
+    if (!product || items.length === 0 || pricingItems.length !== items.length) {
+      throw new EconomyServiceError(
+        "ECONOMY_CATALOG_INVALID",
+        "A composição comercial da oferta está inconsistente.",
+        503,
+      );
+    }
+
+    const quote = quoteFromRows(pricingItems, product.bundle_discount_bps);
     const ownedCount = items.filter((item) => item.owned).length;
     const totalCount = items.length;
     const fullyOwned = totalCount > 0 && ownedCount === totalCount;
     const partiallyOwned = ownedCount > 0 && !fullyOwned;
-    const catalogEligible =
-      totalCount > 0 &&
-      items.every((item) => item.status === "available" && !item.isDefault);
+    const catalogEligible = items.every(
+      (item) => item.status === "available" && !item.isDefault,
+    );
 
     return {
       id: row.id,
@@ -205,7 +340,7 @@ function offersFromRows(
       name: row.name,
       description: row.description,
       currency: ECONOMY_CURRENCY_ID,
-      price: positiveAmount(row.price, "ECONOMY_CATALOG_INVALID"),
+      price: quote.finalPrice,
       status: row.status,
       featured: row.is_featured,
       items,
@@ -213,7 +348,11 @@ function offersFromRows(
       totalCount,
       fullyOwned,
       partiallyOwned,
-      purchasable: row.status === "available" && catalogEligible && !fullyOwned,
+      purchasable:
+        row.status === "available" &&
+        product.available_now &&
+        catalogEligible &&
+        !quote.fullyOwned,
     };
   });
 }
@@ -282,6 +421,8 @@ export async function getEconomyStorefront(
     const setRows = await listStorefrontSetItems(userId, client);
     const offerRows = await listStorefrontOffers(client);
     const offerItemRows = await listStorefrontOfferItems(userId, client);
+    const productRows = await listActiveStorefrontOfferProducts(client);
+    const quoteRows = await listActiveStorefrontQuoteItems(userId, client);
     const creditPackRows = await listStorefrontCreditPacks(client);
 
     const snapshot = {
@@ -289,7 +430,7 @@ export async function getEconomyStorefront(
       loadout: loadoutFromOwned(ownedRows),
       ownedItems: ownedRows.map(cosmeticFromRow),
       sets: setsFromRows(setRows),
-      offers: offersFromRows(offerRows, offerItemRows),
+      offers: offersFromRows(offerRows, offerItemRows, productRows, quoteRows),
       creditPacks: creditPacksFromRows(creditPackRows),
     } satisfies EconomyStorefrontSnapshot;
 
@@ -337,32 +478,39 @@ export function parsePurchaseOfferInput(payload: unknown): PurchaseOfferInput {
   const input = payload as Record<string, unknown>;
   const keys = Object.keys(input);
   const hasOnlyAllowedFields =
-    keys.length === 2 &&
-    keys.every((key) => key === "offerId" || key === "idempotencyKey");
+    keys.length === 3 &&
+    keys.every(
+      (key) =>
+        key === "offerId" || key === "idempotencyKey" || key === "expectedPrice",
+    );
   const offerId = typeof input.offerId === "string" ? input.offerId.trim() : "";
   const idempotencyKey =
     typeof input.idempotencyKey === "string" ? input.idempotencyKey.trim() : "";
+  const expectedPrice = input.expectedPrice;
 
   if (
     !hasOnlyAllowedFields ||
     !offerId ||
     offerId.length > 160 ||
-    !/^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/.test(idempotencyKey)
+    !/^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/.test(idempotencyKey) ||
+    !Number.isSafeInteger(expectedPrice) ||
+    (expectedPrice as number) < 0
   ) {
     throw new EconomyServiceError(
       "ECONOMY_INVALID_PURCHASE",
-      "Offer ou chave de idempotência inválida.",
+      "Offer, preço esperado ou chave de idempotência inválida.",
       400,
     );
   }
 
-  return { offerId, idempotencyKey };
+  return { offerId, idempotencyKey, expectedPrice: expectedPrice as number };
 }
 
 export async function purchaseOffer(
   userId: string,
   offerId: string,
   idempotencyKey: string,
+  expectedPrice: number,
 ): Promise<PurchaseOfferResult> {
   const client = await pool.connect();
   try {
@@ -402,7 +550,7 @@ export async function purchaseOffer(
       return result;
     }
 
-    const offer = await findPurchasableOffer(offerId, client);
+    const offer = await lockOfferProductForPurchase(offerId, client);
     if (!offer) {
       throw new EconomyServiceError(
         "ECONOMY_OFFER_NOT_FOUND",
@@ -410,7 +558,7 @@ export async function purchaseOffer(
         404,
       );
     }
-    if (offer.status !== "available") {
+    if (!offer.available_now) {
       throw new EconomyServiceError(
         "ECONOMY_OFFER_UNAVAILABLE",
         "A oferta não está disponível para compra.",
@@ -425,10 +573,17 @@ export async function purchaseOffer(
       );
     }
 
-    const offerItems = await listOfferItemsForPurchase(userId, offer.id, client);
+    const lockedStats = await lockProductCosmeticStats(offer.product_id, client);
+    const pricingRows = await listLockedProductQuoteItems(
+      userId,
+      offer.id,
+      offer.product_id,
+      client,
+    );
     if (
-      offerItems.length === 0 ||
-      offerItems.some((item) => item.status !== "available" || item.is_default)
+      pricingRows.length === 0 ||
+      lockedStats.length !== pricingRows.length ||
+      pricingRows.some((item) => item.status !== "available" || item.is_default)
     ) {
       throw new EconomyServiceError(
         "ECONOMY_CATALOG_INVALID",
@@ -437,8 +592,9 @@ export async function purchaseOffer(
       );
     }
 
-    const missingItems = offerItems.filter((item) => !item.owned);
-    if (missingItems.length === 0) {
+    const quote = quoteFromRows(pricingRows, offer.bundle_discount_bps);
+    const missingRows = pricingRows.filter((item) => !item.owned);
+    if (quote.fullyOwned || missingRows.length === 0) {
       throw new EconomyServiceError(
         "ECONOMY_OFFER_ALREADY_OWNED",
         "Todos os cosméticos desta oferta já pertencem ao comandante.",
@@ -446,7 +602,15 @@ export async function purchaseOffer(
       );
     }
 
-    const price = positiveAmount(offer.price, "ECONOMY_CATALOG_INVALID");
+    const price = quote.finalPrice;
+    if (price !== expectedPrice) {
+      throw new EconomyServiceError(
+        "ECONOMY_PRICE_CHANGED",
+        "O preço da oferta mudou. Confirme o novo valor antes de comprar.",
+        409,
+        { currentPrice: price },
+      );
+    }
     if (wallet.balance < price) {
       throw new EconomyServiceError(
         "ECONOMY_INSUFFICIENT_BALANCE",
@@ -461,34 +625,73 @@ export async function purchaseOffer(
       userId,
       offer.id,
       price,
-      offerItems.length,
+      pricingRows.length,
       idempotencyKey,
       client,
     );
+    await snapshotPurchaseCommercialContext(
+      purchaseId,
+      offer.product_id,
+      quote.subtotal,
+      offer.bundle_discount_bps,
+      client,
+    );
 
-    const updatedBalance = await debitCampaignCreditWallet(userId, price, client);
-    if (updatedBalance === null) {
-      throw new EconomyServiceError(
-        "ECONOMY_WALLET_CONFLICT",
-        "A carteira mudou durante a compra. Nenhuma alteração foi confirmada.",
-        409,
-      );
+    let updatedBalance = lockedWallet!.balance;
+    if (price > 0) {
+      const debitedBalance = await debitCampaignCreditWallet(userId, price, client);
+      if (debitedBalance === null) {
+        throw new EconomyServiceError(
+          "ECONOMY_WALLET_CONFLICT",
+          "A carteira mudou durante a compra. Nenhuma alteração foi confirmada.",
+          409,
+        );
+      }
+      updatedBalance = debitedBalance;
+      await insertPurchaseLedgerEntry(userId, purchaseId, price, client);
     }
 
-    await insertPurchaseLedgerEntry(userId, purchaseId, price, client);
+    const grantItems = missingRows.map((item) => ({
+      id: item.cosmetic_id,
+      slot: item.slot,
+    }));
     const grantedIds = await grantPurchasedCosmetics(
       userId,
       purchaseId,
-      missingItems,
+      grantItems,
       client,
     );
-    if (grantedIds.length !== missingItems.length) {
+    if (grantedIds.length !== missingRows.length) {
       throw new EconomyServiceError(
         "ECONOMY_INVENTORY_CONFLICT",
         "O inventário mudou durante a compra. Nenhuma alteração foi confirmada.",
         409,
       );
     }
+
+    const advancedCounters = await incrementCosmeticAcquisitionCounts(
+      grantedIds,
+      client,
+    );
+    if (advancedCounters.length !== grantedIds.length) {
+      throw new EconomyServiceError(
+        "ECONOMY_CATALOG_INVALID",
+        "Os contadores de aquisição da oferta estão inconsistentes.",
+        503,
+      );
+    }
+
+    const grantedIdSet = new Set(grantedIds);
+    await snapshotPurchaseItemPrices(
+      purchaseId,
+      missingRows
+        .filter((item) => grantedIdSet.has(item.cosmetic_id))
+        .map((item) => ({
+          cosmeticId: item.cosmetic_id,
+          unitPrice: unitPriceFromRow(item),
+        })),
+      client,
+    );
 
     const acquiredRows = await listPurchaseGrantedItems(userId, purchaseId, client);
     const result = {
@@ -497,8 +700,8 @@ export async function purchaseOffer(
       acquiredItems: acquiredRows.map(cosmeticFromRow),
       offer: {
         id: offer.id,
-        ownedCount: offerItems.length,
-        totalCount: offerItems.length,
+        ownedCount: pricingRows.length,
+        totalCount: pricingRows.length,
         fullyOwned: true,
       },
     } satisfies PurchaseOfferResult;
