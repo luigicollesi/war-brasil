@@ -146,7 +146,7 @@ export type WebPAssetObjectMetadata = Readonly<{
 export type DiceAssetObjectMetadata = WebPAssetObjectMetadata;
 export type TerritorySkinAssetObjectMetadata = WebPAssetObjectMetadata;
 
-async function validateWebPAssetObject(
+export async function validateWebPAssetObject(
   config: AssetStorageConfig,
   objectKey: string,
   options: Readonly<{
