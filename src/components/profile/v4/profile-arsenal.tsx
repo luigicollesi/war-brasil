@@ -7,6 +7,7 @@ import type {
   CosmeticSlot,
   EconomyStorefrontSnapshot,
 } from "@/src/lib/economy/economy-contract";
+import { cosmeticPreviewSource } from "@/src/lib/economy/cosmetic-preview";
 import styles from "./profile-arsenal.module.css";
 
 const SLOT_META: Readonly<Record<CosmeticSlot, { label: string; code: string }>> = {
@@ -24,12 +25,8 @@ const FILTERS: ReadonlyArray<{ id: "all" | CosmeticSlot; label: string }> = [
   { id: "territory_effect", label: "Território" },
 ];
 
-function itemPreview(item: CosmeticCatalogItem) {
-  return item.previewRef ?? item.assetRef;
-}
-
 function CosmeticVisual({ item, priority = false }: { item: CosmeticCatalogItem; priority?: boolean }) {
-  const src = itemPreview(item);
+  const src = cosmeticPreviewSource(item);
   if (!src) {
     return (
       <span className={styles.visualFallback} aria-label={`Prévia indisponível para ${item.name}`}>
@@ -65,7 +62,8 @@ export function ProfileArsenal({ initialStorefront }: { initialStorefront: Econo
     () => storefront.ownedItems.filter((item) => filter === "all" || item.slot === filter),
     [filter, storefront.ownedItems],
   );
-  const selected = storefront.ownedItems.find((item) => item.id === selectedId) ?? visibleItems[0] ?? null;
+  const selected =
+    visibleItems.find((item) => item.id === selectedId) ?? visibleItems[0] ?? null;
 
   async function equip(item: CosmeticCatalogItem) {
     if (pending || item.status !== "available" || storefront.loadout[item.slot].id === item.id) return;
@@ -152,7 +150,10 @@ export function ProfileArsenal({ initialStorefront }: { initialStorefront: Econo
                 type="button"
                 data-active={filter === option.id ? "true" : "false"}
                 aria-pressed={filter === option.id}
-                onClick={() => setFilter(option.id)}
+                onClick={() => {
+                  setFilter(option.id);
+                  setSelectedId(null);
+                }}
               >
                 {option.label}
               </button>
