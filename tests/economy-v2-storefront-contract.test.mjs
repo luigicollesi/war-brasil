@@ -16,7 +16,7 @@ const storefront = readFileSync(
   "utf8",
 );
 
-test("storefront V2 expõe collections, offers, ownership derivado e credit packs", () => {
+test("storefront V2 expõe collections, territory skins, offers, ownership derivado e credit packs", () => {
   assert.match(contract, /export const COLLECTION_ASSET_ROLES/);
   assert.match(contract, /"banner"/);
   assert.match(contract, /"background"/);
@@ -31,7 +31,7 @@ test("storefront V2 expõe collections, offers, ownership derivado e credit pack
   assert.match(contract, /export type EconomyCreditPack =/);
   assert.match(
     contract,
-    /EconomyStorefrontSnapshot[\s\S]*collections: ReadonlyArray<StorefrontCollection>[\s\S]*offers: ReadonlyArray<EconomyOffer>[\s\S]*creditPacks: ReadonlyArray<EconomyCreditPack>/,
+    /EconomyStorefrontSnapshot[\s\S]*collections: ReadonlyArray<StorefrontCollection>[\s\S]*territorySkins: ReadonlyArray<CosmeticCatalogItem>[\s\S]*offers: ReadonlyArray<EconomyOffer>[\s\S]*creditPacks: ReadonlyArray<EconomyCreditPack>/,
   );
 });
 
@@ -53,6 +53,15 @@ test("storefront V2 deriva collections completas no servidor sem inferir paths n
   assert.match(storefront, /selectedCollection\.assets\.background/);
   assert.match(storefront, /selectedCollection\.assets\.logo/);
   assert.doesNotMatch(storefront, /store\/collections\/football/);
+});
+
+test("storefront V2 expõe skins anunciadas/disponíveis sem convertê-las em ofertas fictícias", () => {
+  assert.match(repository, /export async function listStorefrontTerritorySkins/);
+  assert.match(repository, /item\.slot='territory_skin'/);
+  assert.match(repository, /item\.status IN \('announced','available'\)/);
+  assert.match(service, /listStorefrontTerritorySkins/);
+  assert.match(service, /territorySkins:/);
+  assert.match(storefront, /storefront\.territorySkins/);
 });
 
 test("storefront V2 deriva catálogo comercial no servidor sem regra React hardcoded", () => {
