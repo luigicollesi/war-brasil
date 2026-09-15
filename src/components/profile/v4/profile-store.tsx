@@ -9,6 +9,7 @@ import type {
   EconomyStorefrontSnapshot,
 } from "@/src/lib/economy/economy-contract";
 import { cosmeticPreviewSource } from "@/src/lib/economy/cosmetic-preview";
+import mobileStyles from "./profile-store-mobile-inspection.module.css";
 import styles from "./profile-store.module.css";
 
 const SLOT_LABELS: Readonly<Record<CosmeticSlot, string>> = {
@@ -210,7 +211,7 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
       </section>
 
       <section
-        className={`${styles.inspection} ${styles.desktopInspection}`}
+        className={`${styles.inspection} ${mobileStyles.desktopInspection}`}
         aria-labelledby="inspection-title-desktop"
       >
         <InspectionContent
@@ -226,17 +227,17 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
         <>
           <button
             type="button"
-            className={styles.mobileInspectionBackdrop}
+            className={mobileStyles.mobileInspectionBackdrop}
             aria-label="Fechar inspeção"
             onClick={() => setInspectionOpen(false)}
           />
           <section
-            className={styles.mobileInspection}
+            className={mobileStyles.mobileInspection}
             role="dialog"
             aria-modal="true"
             aria-labelledby="inspection-title-mobile"
           >
-            <header className={styles.mobileInspectionHeader}>
+            <header className={mobileStyles.mobileInspectionHeader}>
               <span>
                 <small>INSPEÇÃO TÁTICA</small>
                 <strong>{selectedSet?.name ?? "Coleção"}</strong>
@@ -244,14 +245,14 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
               <button
                 ref={mobileCloseRef}
                 type="button"
-                className={styles.mobileInspectionClose}
+                className={mobileStyles.mobileInspectionClose}
                 aria-label="Fechar inspeção"
                 onClick={() => setInspectionOpen(false)}
               >
                 ×
               </button>
             </header>
-            <div className={styles.mobileInspectionBody}>
+            <div className={`${styles.inspection} ${mobileStyles.mobileInspectionBody}`}>
               <InspectionContent
                 selectedSet={selectedSet}
                 selectedItem={selectedItem}
