@@ -2,6 +2,7 @@ import {
   territorySurfacePalette,
   type TerritoryMaterial,
 } from "@/src/lib/client/map/territory-material";
+import { applyTerritorySkinOverlay } from "@/src/lib/client/map/territory-skin-overlay";
 
 const EXPECTED_TERRITORY_COUNT = 42;
 const EXPECTED_FACE_STOPS = 5;
@@ -274,4 +275,6 @@ export function applyTerritoryMaterial(
   nodes.face.style.removeProperty("fill-opacity");
   nodes.face.setAttribute("fill", `url(#face-grad-${id})`);
   nodes.face.setAttribute("fill-opacity", "1");
+
+  applyTerritorySkinOverlay(id, nodes, material.skinAssetRef);
 }
