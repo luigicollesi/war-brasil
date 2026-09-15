@@ -1,0 +1,209 @@
+.page {
+  --ivory: #eee8da;
+  --brass: #d0aa57;
+  min-height: 100dvh;
+  color: var(--ivory);
+  background:
+    radial-gradient(circle at 16% 12%, rgb(30 82 60 / 22%), transparent 30rem),
+    radial-gradient(circle at 86% 18%, rgb(157 121 59 / 10%), transparent 24rem),
+    linear-gradient(145deg, #07130f 0%, #071a15 48%, #091611 100%);
+}
+
+.commandBar {
+  min-height: 74px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 18px;
+  border-bottom: 1px solid rgb(208 170 87 / 22%);
+  background: rgb(5 18 14 / 88%);
+  backdrop-filter: blur(16px);
+}
+
+.homeLink {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  color: var(--ivory);
+  border: 1px solid rgb(208 170 87 / 35%);
+  text-decoration: none;
+}
+
+.commandCopy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.commandCopy small,
+.code {
+  color: rgb(208 170 87 / 74%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+}
+
+.commandCopy strong {
+  color: rgb(238 232 218 / 82%);
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+}
+
+.walletPlaceholder {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: rgb(238 232 218 / 48%);
+}
+
+.walletPlaceholder img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  opacity: 0.72;
+}
+
+.walletPlaceholder strong {
+  min-width: 2ch;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.88rem;
+  text-align: right;
+}
+
+.state {
+  width: min(760px, calc(100% - 32px));
+  min-height: 430px;
+  margin: clamp(40px, 9vh, 110px) auto;
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 14px;
+  padding: clamp(30px, 6vw, 70px);
+  border: 1px solid rgb(208 170 87 / 20%);
+  background:
+    linear-gradient(145deg, rgb(12 31 24 / 94%), rgb(6 17 13 / 97%)),
+    repeating-linear-gradient(90deg, transparent 0 54px, rgb(255 255 255 / 1.4%) 55px);
+  box-shadow: 0 28px 70px rgb(0 0 0 / 20%);
+}
+
+.signal {
+  display: flex;
+  gap: 5px;
+  height: 12px;
+  align-items: end;
+}
+
+.signal i {
+  width: 3px;
+  height: 6px;
+  background: rgb(208 170 87 / 30%);
+}
+
+.signal i:nth-child(2) {
+  height: 10px;
+  background: rgb(208 170 87 / 52%);
+}
+
+.signal i:nth-child(3) {
+  height: 8px;
+  background: rgb(208 170 87 / 38%);
+}
+
+.page[data-profile-v4-boundary="loading"] .signal i {
+  animation: pulse 1.2s ease-in-out infinite alternate;
+}
+
+.page[data-profile-v4-boundary="loading"] .signal i:nth-child(2) {
+  animation-delay: 120ms;
+}
+
+.page[data-profile-v4-boundary="loading"] .signal i:nth-child(3) {
+  animation-delay: 240ms;
+}
+
+.state h1 {
+  max-width: 14ch;
+  margin: 0;
+  color: var(--ivory);
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: clamp(2rem, 5vw, 4.8rem);
+  line-height: 0.94;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+}
+
+.state p {
+  max-width: 62ch;
+  margin: 0;
+  color: rgb(238 232 218 / 62%);
+  font-size: 0.84rem;
+  line-height: 1.65;
+}
+
+.actions {
+  margin-top: 8px;
+}
+
+.actions button,
+.actions a {
+  min-height: 42px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 16px;
+  color: #111b14;
+  border: 1px solid var(--brass);
+  background: var(--brass);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: 0.09em;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.page :focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 3px;
+}
+
+@keyframes pulse {
+  from { opacity: 0.35; transform: scaleY(0.65); }
+  to { opacity: 1; transform: scaleY(1); }
+}
+
+@media (max-width: 520px) {
+  .commandBar {
+    min-height: 64px;
+    padding: 8px 10px;
+  }
+
+  .homeLink {
+    width: 36px;
+    height: 36px;
+  }
+
+  .commandCopy small {
+    display: none;
+  }
+
+  .walletPlaceholder img {
+    width: 26px;
+    height: 26px;
+  }
+
+  .state {
+    width: calc(100% - 24px);
+    min-height: 360px;
+    margin-block: 28px;
+    padding: 28px 22px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page[data-profile-v4-boundary="loading"] .signal i {
+    animation: none;
+  }
+}
