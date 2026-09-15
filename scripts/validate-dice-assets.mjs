@@ -34,7 +34,7 @@ async function loadCatalogAssets() {
   const result = await client.query(`
     SELECT id, slot, asset_ref
     FROM catalog.cosmetics
-    WHERE slot IN ('dice_attack', 'dice_defense', 'dice_neutral', 'territory_effect')
+    WHERE slot IN ('dice_attack', 'dice_defense', 'dice_neutral', 'territory_skin')
       AND status IN ('announced', 'available', 'retired')
       AND asset_ref IS NOT NULL
     ORDER BY id
@@ -50,7 +50,7 @@ async function loadCatalogAssets() {
       throw new Error(`O cosmético ${row.id} não possui asset_ref remoto.`);
     }
 
-    const territorySkin = row.slot === "territory_effect";
+    const territorySkin = row.slot === "territory_skin";
     const objectKey = territorySkin
       ? assertTerritorySkinAssetKey(row.asset_ref)
       : assertDiceAssetKey(row.asset_ref);

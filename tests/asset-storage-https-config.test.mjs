@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
-  ASSET_STORAGE_BUCKET,
+  ASSET_STORAGE_BUCKET_ENV,
+  ASSET_STORAGE_DEV_BUCKET,
   ASSET_STORAGE_REGION,
   AssetStorageConfigError,
   assetStorageConfigFromEnv,
@@ -11,6 +12,7 @@ const nativeR2Env = {
   ASSET_STORAGE_URL: "https://abc123.r2.cloudflarestorage.com",
   ASSET_STORAGE_ACCESS_KEY_ID: "ACCESS/KEY",
   ASSET_STORAGE_SECRET_ACCESS_KEY: "secret:with@reserved",
+  [ASSET_STORAGE_BUCKET_ENV]: ASSET_STORAGE_DEV_BUCKET,
 };
 
 test("asset storage accepts the native Cloudflare R2 HTTPS S3 endpoint", () => {
@@ -20,7 +22,7 @@ test("asset storage accepts the native Cloudflare R2 HTTPS S3 endpoint", () => {
   assert.equal(config.secretAccessKey, nativeR2Env.ASSET_STORAGE_SECRET_ACCESS_KEY);
   assert.equal(config.host, "abc123.r2.cloudflarestorage.com");
   assert.equal(config.endpoint, nativeR2Env.ASSET_STORAGE_URL);
-  assert.equal(config.bucket, ASSET_STORAGE_BUCKET);
+  assert.equal(config.bucket, ASSET_STORAGE_DEV_BUCKET);
   assert.equal(config.region, ASSET_STORAGE_REGION);
 });
 
@@ -39,10 +41,22 @@ test("native HTTPS configuration keeps credentials outside ASSET_STORAGE_URL", (
   }
 });
 
+test("native HTTPS configuration requires an explicit environment bucket", () => {
+  const env = { ...nativeR2Env };
+  delete env[ASSET_STORAGE_BUCKET_ENV];
+
+  assert.throws(
+    () => assetStorageConfigFromEnv(env),
+    (error) =>
+      error instanceof AssetStorageConfigError &&
+      error.code === "ASSET_STORAGE_BUCKET_MISSING",
+  );
+});
+
 test("native HTTPS endpoint rejects credentials, bucket paths and arbitrary query parameters", () => {
   for (const value of [
     "https://key:secret@abc123.r2.cloudflarestorage.com",
-    "https://abc123.r2.cloudflarestorage.com/war-brasil-assets-prod",
+    "https://abc123.r2.cloudflarestorage.com/war-brasil-assets-dev",
     "https://abc123.r2.cloudflarestorage.com?region=auto",
   ]) {
     assert.throws(

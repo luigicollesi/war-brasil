@@ -130,7 +130,7 @@ async function createPreEconomyCommander(connectionString, label) {
 if (!databaseUrl) {
   test("economy migration exige DATABASE_URL", { skip: true }, () => {});
 } else {
-  test("038→042 converge catálogo WebP, offers V2, territory skins e backfill idempotente", async () => {
+  test("038→044 converge catálogo, Storefront V2, territory commerce e backfill idempotente", async () => {
     await withTemporaryDatabase(async (connectionString) => {
       await prepareDatabaseThrough037(connectionString);
       const userId = await createPreEconomyCommander(
@@ -170,9 +170,9 @@ if (!databaseUrl) {
         assert.deepEqual(catalog.rows[0], {
           total: 26,
           defaults: 4,
-          available: 22,
-          announced: 4,
-          commercial: 18,
+          available: 26,
+          announced: 0,
+          commercial: 22,
         });
 
         const sets = await client.query(
@@ -186,69 +186,93 @@ if (!databaseUrl) {
             GROUP BY cosmetic_set.id,cosmetic_set.storage_slug,cosmetic_set.status,cosmetic_set.sort_order
             ORDER BY cosmetic_set.sort_order,cosmetic_set.id`,
         );
-        assert.deepEqual(sets.rows, [
+        assert.equal(sets.rowCount, 6);
+        assert.deepEqual(sets.rows.map((row) => row.items), [3, 3, 3, 3, 3, 3]);
+
+        const collections = await client.query(
+          `SELECT collection.id,collection.slug,COUNT(item.id)::int AS items
+             FROM catalog.collections collection
+             LEFT JOIN catalog.cosmetics item ON item.collection_id=collection.id
+            GROUP BY collection.id,collection.slug
+            ORDER BY collection.id`,
+        );
+        assert.equal(collections.rowCount, 6);
+        assert.deepEqual(collections.rows.map((row) => row.items), [3, 3, 3, 3, 3, 3]);
+
+        const products = await client.query(
+          `SELECT product.product_type,
+                  COUNT(DISTINCT product.id)::int AS products,
+                  MIN(product.bundle_discount_bps)::int AS min_discount,
+                  MAX(product.bundle_discount_bps)::int AS max_discount
+             FROM catalog.products product
+            GROUP BY product.product_type
+            ORDER BY product.product_type`,
+        );
+        assert.deepEqual(products.rows, [
           {
-            id: "set.exercito",
-            storage_slug: "military-classic",
-            status: "available",
-            sort_order: 10,
-            items: 3,
+            product_type: "bundle",
+            products: 6,
+            min_discount: 1111,
+            max_discount: 1111,
           },
           {
-            id: "set.lancas",
-            storage_slug: "medieval-spears",
-            status: "available",
-            sort_order: 20,
-            items: 3,
+            product_type: "single",
+            products: 22,
+            min_discount: 0,
+            max_discount: 0,
           },
+        ]);
+
+        const productComposition = await client.query(
+          `SELECT product.product_type,
+                  MIN(item_count)::int AS min_items,
+                  MAX(item_count)::int AS max_items
+             FROM catalog.products product
+             JOIN (
+               SELECT membership.product_id,COUNT(*)::int AS item_count
+                 FROM catalog.product_items membership
+                GROUP BY membership.product_id
+             ) composition ON composition.product_id=product.id
+            GROUP BY product.product_type
+            ORDER BY product.product_type`,
+        );
+        assert.deepEqual(productComposition.rows, [
+          { product_type: "bundle", min_items: 3, max_items: 3 },
+          { product_type: "single", min_items: 1, max_items: 1 },
+        ]);
+
+        const pricing = await client.query(
+          `SELECT pricing_model,
+                  COUNT(*)::int AS total,
+                  MIN(fixed_price)::text AS min_price,
+                  MAX(fixed_price)::text AS max_price
+             FROM catalog.cosmetic_pricing
+            GROUP BY pricing_model`,
+        );
+        assert.deepEqual(pricing.rows, [
           {
-            id: "set.viking",
-            storage_slug: "viking",
-            status: "available",
-            sort_order: 30,
-            items: 3,
-          },
-          {
-            id: "set.gato",
-            storage_slug: "cat",
-            status: "available",
-            sort_order: 40,
-            items: 3,
-          },
-          {
-            id: "set.cachorro",
-            storage_slug: "dog",
-            status: "available",
-            sort_order: 50,
-            items: 3,
-          },
-          {
-            id: "set.futebol",
-            storage_slug: "football",
-            status: "available",
-            sort_order: 60,
-            items: 3,
+            pricing_model: "fixed",
+            total: 22,
+            min_price: "150",
+            max_price: "300",
           },
         ]);
 
         const offers = await client.query(
-          `SELECT offer.id,
-                  offer.currency_code,
-                  offer.price::text AS price,
-                  offer.status,
-                  COUNT(item.cosmetic_id)::int AS items
+          `SELECT product.product_type,
+                  COUNT(*)::int AS offers,
+                  COUNT(*) FILTER (
+                    WHERE offer.status='available' AND offer.active=TRUE
+                  )::int AS active
              FROM catalog.offers offer
-             LEFT JOIN catalog.offer_items item ON item.offer_id=offer.id
-            GROUP BY offer.id,offer.currency_code,offer.price,offer.status
-            ORDER BY offer.id`,
+             JOIN catalog.products product ON product.id=offer.product_id
+            GROUP BY product.product_type
+            ORDER BY product.product_type`,
         );
-        assert.equal(offers.rowCount, 6);
-        for (const offer of offers.rows) {
-          assert.equal(offer.currency_code, "campaign-credit");
-          assert.equal(offer.status, "available");
-          assert.equal(Number(offer.price) > 0, true);
-          assert.equal(offer.items, 3);
-        }
+        assert.deepEqual(offers.rows, [
+          { product_type: "bundle", offers: 6, active: 6 },
+          { product_type: "single", offers: 22, active: 22 },
+        ]);
 
         const packs = await client.query(
           `SELECT COUNT(*)::int AS total,
@@ -280,7 +304,7 @@ if (!databaseUrl) {
         const territorySkins = await client.query(
           `SELECT id,asset_ref,effect_key,status,is_default
              FROM catalog.cosmetics
-            WHERE slot='territory_effect'
+            WHERE slot='territory_skin'
             ORDER BY id`,
         );
         assert.equal(territorySkins.rowCount, 5);
@@ -305,10 +329,37 @@ if (!databaseUrl) {
             id,
             asset_ref: assetRef,
             effect_key: null,
-            status: "announced",
+            status: "available",
             is_default: false,
           });
         }
+
+        const territoryCommerce = await client.query(
+          `SELECT item.id,
+                  pricing.fixed_price::text AS price,
+                  product.product_type,
+                  offer.status,
+                  offer.active
+             FROM catalog.cosmetics item
+             JOIN catalog.cosmetic_pricing pricing ON pricing.cosmetic_id=item.id
+             JOIN catalog.product_items membership ON membership.cosmetic_id=item.id
+             JOIN catalog.products product ON product.id=membership.product_id
+             JOIN catalog.offers offer ON offer.product_id=product.id
+            WHERE item.slot='territory_skin'
+              AND item.is_default=FALSE
+            ORDER BY item.id`,
+        );
+        assert.equal(territoryCommerce.rowCount, 4);
+        assert.equal(
+          territoryCommerce.rows.every(
+            (row) =>
+              row.price === "300" &&
+              row.product_type === "single" &&
+              row.status === "available" &&
+              row.active === true,
+          ),
+          true,
+        );
 
         const wallet = await client.query(
           `SELECT balance::text AS balance
@@ -341,9 +392,19 @@ if (!databaseUrl) {
             ["dice_attack", "dice.attack.default"],
             ["dice_defense", "dice.defense.default"],
             ["dice_neutral", "dice.neutral.default"],
-            ["territory_effect", "territory.effect.default"],
+            ["territory_skin", "territory.effect.default"],
           ]),
         );
+
+        const stats = await client.query(
+          `SELECT cosmetic_id,acquisition_count::text AS acquisition_count
+             FROM catalog.cosmetic_stats
+            WHERE cosmetic_id='territory.effect.default'`,
+        );
+        assert.deepEqual(stats.rows[0], {
+          cosmetic_id: "territory.effect.default",
+          acquisition_count: "1",
+        });
 
         const ledger = await client.query(
           `SELECT COUNT(*)::int AS total
@@ -358,7 +419,7 @@ if (!databaseUrl) {
     });
   });
 
-  test("constraints bloqueiam saldo, preços, loadout, dado e modos territory skin inválidos", async () => {
+  test("constraints bloqueiam saldo, pricing, loadout e territory skins inválidos", async () => {
     await withTemporaryDatabase(async (connectionString) => {
       await prepareDatabaseThrough037(connectionString);
       const userId = await createPreEconomyCommander(
@@ -382,6 +443,13 @@ if (!databaseUrl) {
 
         await assert.rejects(
           client.query(`UPDATE catalog.offers SET price=0 WHERE id='offer.viking'`),
+          (error) => error?.code === "23514",
+        );
+
+        await assert.rejects(
+          client.query(
+            `UPDATE catalog.products SET bundle_discount_bps=10001 WHERE id='product.viking'`,
+          ),
           (error) => error?.code === "23514",
         );
 
@@ -436,7 +504,7 @@ if (!databaseUrl) {
                id,slug,name,slot,asset_ref,effect_key,status,is_default
              ) VALUES(
                'territory.effect.invalid-both','territory-invalid-both','Inválido ambos',
-               'territory_effect','cosmetics/territory-skins/invalid.webp','default','draft',FALSE
+               'territory_skin','cosmetics/territory-skins/invalid.webp','default','draft',FALSE
              )`,
           ),
           (error) => error?.code === "23514",
@@ -448,7 +516,7 @@ if (!databaseUrl) {
                id,slug,name,slot,asset_ref,effect_key,status,is_default
              ) VALUES(
                'territory.effect.invalid-empty','territory-invalid-empty','Inválido vazio',
-               'territory_effect',NULL,NULL,'draft',FALSE
+               'territory_skin',NULL,NULL,'draft',FALSE
              )`,
           ),
           (error) => error?.code === "23514",
@@ -460,7 +528,7 @@ if (!databaseUrl) {
                id,slug,name,slot,asset_ref,effect_key,status,is_default
              ) VALUES(
                'territory.effect.invalid-path','territory-invalid-path','Inválido path',
-               'territory_effect','other/skin.webp',NULL,'draft',FALSE
+               'territory_skin','other/skin.webp',NULL,'draft',FALSE
              )`,
           ),
           (error) => error?.code === "23514",
@@ -471,9 +539,33 @@ if (!databaseUrl) {
              id,slug,name,slot,asset_ref,effect_key,status,is_default
            ) VALUES
              ('territory.effect.valid-procedural','territory-valid-procedural','Procedural válido',
-              'territory_effect',NULL,'test-procedural','draft',FALSE),
+              'territory_skin',NULL,'test-procedural','draft',FALSE),
              ('territory.effect.valid-image','territory-valid-image','Imagem válida',
-              'territory_effect','cosmetics/territory-skins/test_valid.webp',NULL,'draft',FALSE)`,
+              'territory_skin','cosmetics/territory-skins/test_valid.webp',NULL,'draft',FALSE)`,
+        );
+
+        const progressive = await client.query(
+          `SELECT cosmetic_id FROM catalog.cosmetic_pricing ORDER BY cosmetic_id LIMIT 1`,
+        );
+        const cosmeticId = progressive.rows[0].cosmetic_id;
+        await client.query(
+          `UPDATE catalog.cosmetic_pricing
+              SET pricing_model='progressive',fixed_price=NULL
+            WHERE cosmetic_id=$1`,
+          [cosmeticId],
+        );
+        await client.query(
+          `INSERT INTO catalog.price_tiers(cosmetic_id,acquisitions_from,acquisitions_until,price)
+           VALUES($1,0,99,500)`,
+          [cosmeticId],
+        );
+        await assert.rejects(
+          client.query(
+            `INSERT INTO catalog.price_tiers(cosmetic_id,acquisitions_from,acquisitions_until,price)
+             VALUES($1,99,199,575)`,
+            [cosmeticId],
+          ),
+          (error) => error?.code === "23P01",
         );
       } finally {
         await client.end();

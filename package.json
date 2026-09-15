@@ -6,7 +6,7 @@
     "dev": "node scripts/generate-region-outlines.mjs && node scripts/dev.mjs",
     "db:migrate": "node scripts/prepare-dev-db.mjs",
     "db:prepare:dev": "node scripts/prepare-dev-db.mjs",
-    "assets:validate": "npm run --silent test:compile && node scripts/validate-dice-assets.mjs",
+    "assets:validate": "npm run --silent test:compile && node scripts/validate-dice-assets.mjs && node scripts/validate-storefront-assets.mjs",
     "map:regions": "node scripts/generate-region-outlines.mjs",
     "build": "node scripts/generate-region-outlines.mjs && next build",
     "start": "next start",

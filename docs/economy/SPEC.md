@@ -1,731 +1,357 @@
 # SPEC — Economia V2, Loja e Cosméticos
 
-## Autoridade do documento
+Status: **contrato pai reconciliado com Storefront V2**
 
-Este documento é a fonte autoritativa do WAR Brasil para:
+## 1. Autoridade e documentos especializados
 
-- moeda e saldo persistente;
-- ledger econômico;
-- catálogo de cosméticos e conjuntos;
-- ofertas comerciais e preços em moeda do jogo;
-- compras com `campaign-credit`;
-- catálogo demonstrativo de pacotes de créditos em BRL;
-- ownership de cosméticos;
-- loadout cosmético;
-- Intendência enquanto storefront;
-- storage e entrega de assets cosméticos;
-- integração dos cosméticos com partidas, dados e territórios.
+Este documento é a autoridade pai para os invariantes econômicos do WAR Brasil:
 
-Outros SPECs MUST referenciar este documento em vez de redefinir moeda, saldo, preço, oferta, compra, ledger, catálogo, storage, inventário, loadout ou aquisição.
+- `campaign-credit`, wallet e saldo;
+- ledger e auditabilidade;
+- autenticação/autorização da economia;
+- ownership individual de cosméticos;
+- loadout persistente;
+- recibos e histórico de compra;
+- pacotes de créditos em BRL enquanto catálogo não adquirível;
+- regras gerais de segurança e object storage.
 
-O domínio de títulos cosméticos textuais do comandante continua pertencendo a `docs/pre-game/profile/SPEC.md` e não faz parte dos quatro slots jogáveis definidos aqui.
+Os detalhes de catálogo e comércio da Storefront V2 são definidos por:
 
-## Objetivo da Economy V2
+- `docs/economy/store/SPEC.md` — produtos, ofertas, coleções, bundles, completion pricing, pricing progressivo, campanhas, disponibilidade temporal, merchandising e integração R2 da loja;
+- `docs/economy/territory-skins/SPEC.md` — renderização, recoloração e legibilidade de territory skins durante gameplay.
 
-A Economy V2 evolui a fundação persistente existente para uma loja funcional com moeda do jogo, mantendo dinheiro real fora do runtime transacional desta entrega.
+Esses documentos especializados prevalecem em seus respectivos domínios. Não existe mais regra pai que proíba compra individual de dados, imponha preço integral após ownership parcial, proíba pricing progressivo ou use `territory_effect` como slot canônico.
 
-Ela MUST permitir:
+O domínio de títulos textuais do comandante continua pertencendo a `docs/pre-game/profile/SPEC.md` e não é um slot cosmético jogável.
 
-- cada comandante autenticado possuir uma carteira real de `campaign-credit`;
-- saldo inicial persistente exatamente `0`;
+## 2. Objetivo econômico
+
+A Economy V2 fornece uma economia persistente e server-authoritative para cosméticos, mantendo aquisição de créditos com dinheiro real fora desta entrega.
+
+Ela MUST garantir:
+
+- uma wallet persistente por comandante para `campaign-credit`;
+- saldo inicial exatamente `0`;
 - nenhuma fonte normal de ganho de créditos nesta entrega;
-- compras reais de cosméticos usando somente `campaign-credit`;
-- preços e ofertas definidos pelo banco, nunca pelo frontend;
-- ledger auditável para todo débito de compra;
-- recibo persistente de cada compra confirmada;
-- inventário persistente por item individual;
-- quatro slots cosméticos independentes e equipagem persistente;
-- conjuntos e ofertas dirigidos pelo PostgreSQL, sem allowlist temática no React;
-- assets de dados obtidos do object storage exclusivamente em WebP;
-- exposição de pacotes de créditos com valor em BRL apenas como catálogo visual não adquirível;
-- propagação segura do loadout para partidas futuras.
+- preços e disponibilidade determinados no servidor/banco;
+- débito auditável no ledger;
+- recibo persistente e snapshots suficientes para explicar o valor histórico pago;
+- ownership por cosmético individual, nunca por bundle;
+- loadout persistente por slot;
+- catálogo extensível sem allowlists de temas no frontend;
+- armazenamento de object keys, não URLs específicas de ambiente;
+- storefront que possa vender dados e territory skins individualmente ou em bundles conforme o SPEC especializado.
 
-Nesta entrega:
+## 3. Moeda e wallet
 
-- `campaign-credit -> cosmético` MUST funcionar;
-- `BRL -> campaign-credit` MUST NOT funcionar;
-- vitória, derrota, login, cadastro, tempo de jogo, evento ou navegação MUST NOT conceder créditos;
-- não existe endpoint público de grant, reward, transferência ou alteração arbitrária de saldo.
+### 3.1 Moeda
 
-## Princípios estruturais
-
-### Item é ownership; conjunto é apresentação; offer é comércio
-
-As três responsabilidades MUST permanecer separadas:
-
-- `catalog.cosmetics` define itens cosméticos individuais;
-- `catalog.cosmetic_sets` agrupa itens para apresentação e marketing;
-- `catalog.offers` define o que pode ser comprado e por qual preço.
-
-Ownership e equipagem MUST ocorrer por cosmético individual.
-
-Comprar uma offer que contenha vários cosméticos MUST conceder os itens individualmente em `inventory.cosmetics`.
-
-Um conjunto MUST NOT representar ownership e MUST NOT ser usado como substituto de offer.
-
-O sistema MUST continuar permitindo combinações independentes como:
-
-- ataque Viking;
-- defesa Gato;
-- neutro Futebol;
-- efeito territorial Azulejo.
-
-### Banco é autoridade; object storage é bytes
-
-PostgreSQL MUST ser a fonte de verdade para:
-
-- moedas;
-- saldo;
-- ledger;
-- cosméticos;
-- conjuntos;
-- offers;
-- preço;
-- composição das offers;
-- pacotes de créditos demonstrativos;
-- status comercial;
-- ordem de apresentação;
-- ownership;
-- loadout;
-- recibos de compra.
-
-Cloudflare R2 MUST ser tratado somente como fonte física dos assets.
-
-A storefront MUST NOT usar `ListObjects` ou equivalente para descobrir produtos durante request normal.
-
-A existência de arquivos no bucket MUST NOT tornar automaticamente um item, conjunto ou offer visível.
-
-### Cosmético nunca altera gameplay
-
-Cosméticos MUST NOT alterar RNG, resultado de dados, distribuição probabilística, balanceamento adaptativo, física, collider, regras de combate, hitbox, seleção de território, tropas, ordem de turno ou qualquer regra competitiva.
-
-A camada econômica é estritamente visual.
-
-## Domínios e fontes de verdade
-
-As responsabilidades MUST permanecer separadas:
-
-- `auth.*` — identidade autenticada e sessão;
-- `profile.*` — identidade pública e loadout equipado;
-- `economy.*` — moedas, wallets, ledger e compras confirmadas;
-- `catalog.*` — cosméticos, conjuntos, offers, pacotes demonstrativos e referências de assets;
-- `inventory.*` — ownership de cosméticos por usuário;
-- `game.*` — snapshot cosmético congelado para a partida;
-- Cloudflare R2 — bytes dos assets referenciados pelo catálogo.
-
-MUST NOT existir saldo autoritativo duplicado em `profile.*`, `game.*` ou estado do cliente.
-
-MUST NOT existir ownership autoritativo inferido do loadout.
-
-MUST NOT existir preço, desconto, composição de offer ou aquisição autoritativos definidos somente no frontend.
-
-## Moeda e wallet
-
-A Economy V2 possui uma única moeda ativa de gameplay/comércio:
-
-- ID: `campaign-credit`;
-- nome: `Créditos de Campanha`;
-- representação visual canônica: `/coin.svg`, proveniente de `public/coin.svg`;
-- saldo inicial: `0`.
-
-O glyph textual `◈` MAY permanecer em schema/contratos legados como fallback semântico ou de compatibilidade, mas MUST NOT ser tratado como a identidade visual principal da moeda nas superfícies V2/V4.
-
-Valores monetários MUST ser inteiros. `economy.wallets.balance` MUST continuar impedido de ficar negativo por constraint.
-
-Todo comandante autenticado MUST possuir uma wallet persistente para `campaign-credit`.
-
-Um saldo `0` representa valor real consultado da fonte persistente e MUST NOT ser usado como fallback para indisponibilidade.
-
-### Representação visual canônica da moeda
-
-`public/coin.svg` é o asset estrutural canônico para representar `campaign-credit` na UI.
-
-A aplicação MUST utilizar `/coin.svg` junto ao valor numérico em superfícies visuais de moeda, incluindo:
-
-- saldo da wallet;
-- preço de offer em `campaign-credit`;
-- quantidade de créditos em `credit_packs`;
-- feedback visual de débito/aquisição quando a moeda for mostrada.
-
-`coin.svg`:
-
-- MUST permanecer um asset local estável servido pela aplicação;
-- MUST NOT depender de Cloudflare R2, presigned URL ou catálogo cosmético;
-- MUST NOT ser persistido por usuário, inventário ou loadout;
-- MUST NOT ser tratado como cosmético;
-- MUST ser reutilizado como a mesma identidade visual em Profile, Arsenal, Intendência e futuras superfícies econômicas.
-
-O caminho `/coin.svg` é convenção estrutural de UI e não precisa ser enviado em cada DTO econômico. O backend continua enviando valores e identidade monetária autoritativos; a camada de apresentação associa `campaign-credit` ao asset local canônico.
-
-O valor monetário MUST permanecer legível textualmente. O ícone não pode ser a única forma de comunicar saldo ou preço. Quando o SVG for puramente decorativo ao lado de texto equivalente, SHOULD ser ocultado da árvore acessível; quando carregar nome de moeda, MUST possuir nome acessível equivalente a `Créditos de Campanha`.
-
-## Fontes de crédito
-
-Nesta entrega nenhuma ação normal concede créditos.
-
-MUST NOT conceder créditos por:
-
-- cadastro;
-- login;
-- vitória;
-- derrota;
-- participação;
-- tempo de jogo;
-- evento;
-- daily reward;
-- missão;
-- anúncio;
-- abertura da loja.
-
-Testes e ferramentas administrativas MAY preparar saldo diretamente em ambiente controlado, mas isso MUST NOT introduzir endpoint público de grant nem ser reutilizado pelo browser de produção.
-
-## Ledger
-
-`economy.ledger_entries` passa a ser parte ativa da Economy V2.
-
-Toda alteração de saldo realizada pela aplicação MUST possuir entrada correspondente no ledger e ocorrer na mesma transação PostgreSQL.
-
-Compra confirmada MUST criar exatamente um débito com:
-
-- usuário;
-- `campaign-credit`;
-- `delta < 0` igual ao preço efetivamente pago;
-- razão `purchase` ou equivalente estável;
-- referência para o recibo de compra;
-- chave de idempotência interna ou referência única suficiente para impedir duplicação;
-- timestamp.
-
-Equipagem, preview, abertura de página e consulta de catálogo MUST NOT criar ledger.
-
-Ledger é append-only do ponto de vista da aplicação normal. O browser MUST NOT possuir API para inserir, atualizar ou remover lançamentos.
-
-## Quatro slots cosméticos
-
-O loadout possui exatamente quatro slots:
-
-1. `dice_attack` — dado ofensivo;
-2. `dice_defense` — dado defensivo;
-3. `dice_neutral` — iniciativa e rolagens neutras;
-4. `territory_effect` — acabamento visual dos territórios controlados pelo jogador.
-
-Os slots são independentes.
-
-O backend MUST validar ownership e compatibilidade do slot em toda equipagem.
-
-## Cosméticos padrão
-
-Todo comandante MUST possuir e começar com os quatro defaults equipados:
-
-- `dice.attack.default`;
-- `dice.defense.default`;
-- `dice.neutral.default`;
-- `territory.effect.default`.
-
-Os defaults MUST permanecer gratuitos, sempre possuídos e nunca depender de offer comercial.
-
-Os dados padrão utilizam:
+A moeda funcional desta entrega é:
 
 ```text
-cosmetics/dice/default/attack.webp
-cosmetics/dice/default/defense.webp
-cosmetics/dice/default/neutral.webp
+campaign-credit
 ```
 
-Defaults MUST continuar servindo como fallback seguro para estado legado/incompleto.
+Nome de apresentação: `Créditos de Campanha`.
 
-## Catálogo de cosméticos
+Todos os valores autoritativos são inteiros. Floating point não pode ser usado para dinheiro ou descontos no caminho de compra.
 
-Cada cosmético SHOULD possuir ao menos:
+### 3.2 Saldo inicial
 
-- ID estável;
-- slug público;
-- nome;
-- descrição;
-- slot;
-- raridade opcional;
-- `asset_ref` persistente quando aplicável;
-- `preview_ref` opcional;
-- `effect_key` quando aplicável;
-- status;
-- indicador de default;
-- timestamps.
-
-IDs de catálogo MUST permanecer independentes das object keys físicas.
-
-Para dados, `asset_ref` MUST apontar para object key WebP válida e MUST NOT persistir URL presigned.
-
-### Status de cosmético
-
-O catálogo de cosméticos mantém:
-
-- `draft` — interno;
-- `announced` — pode aparecer como novidade, mas não é elegível para nova aquisição;
-- `available` — elegível para aquisição quando fizer parte de offer `available`;
-- `retired` — não elegível para novas aquisições, preservado para ownership e snapshots existentes.
-
-Item `available` sem offer ativa MUST NOT ser comprável por inferência.
-
-Item `retired` MUST continuar equipável para quem já o possui, salvo regra futura explícita em contrário.
-
-## Conjuntos
-
-`catalog.cosmetic_sets` continua sendo agrupamento de apresentação.
-
-Um conjunto SHOULD possuir:
-
-- ID estável;
-- slug público;
-- `storage_slug` quando aplicável;
-- nome;
-- descrição;
-- status;
-- ordem de apresentação;
-- preview opcional;
-- timestamps.
-
-Um conjunto:
-
-- referencia cosméticos em ordem de apresentação;
-- não possui saldo;
-- não possui ownership;
-- não define preço;
-- não concede itens por si só.
-
-A UI MUST renderizar conjuntos retornados pelo backend e MUST NOT possuir branch temática por slug conhecido.
-
-## Offers comerciais
-
-A Economy V2 introduz `catalog.offers` como unidade comercial autoritativa.
-
-Uma offer MUST possuir ao menos:
-
-- `id` estável;
-- `slug` público;
-- `name`;
-- descrição opcional;
-- `currency_code`;
-- `price` inteiro positivo;
-- `status`;
-- indicador de destaque opcional;
-- posição/ordem de apresentação;
-- timestamps.
-
-Status de offer:
-
-- `draft` — não exibida para compra;
-- `available` — exibida e comprável;
-- `retired` — indisponível para nova compra, preservando recibos históricos.
-
-A única moeda aceita pelas offers desta entrega é `campaign-credit`.
-
-O frontend MUST exibir o preço retornado pelo backend acompanhado da representação visual `/coin.svg` e MUST NOT calcular, inferir ou sobrescrever preço.
-
-O SPEC não fixa valores comerciais numéricos dos produtos. Preços de produção são dados de catálogo e podem ser alterados sem rebuild do frontend. Todo offer `available` MUST, porém, possuir preço inteiro positivo persistido.
-
-## Composição de offer
-
-`catalog.offer_items` relaciona offers a cosméticos individuais.
-
-Uma offer MUST conter ao menos um cosmético.
-
-A composição retornada pelo servidor é autoritativa. O browser MUST NOT enviar a lista de itens que deseja receber.
-
-O baseline comercial SHOULD vender cada coleção de dados como bundle dos três slots de dado correspondentes:
-
-- ataque;
-- defesa;
-- neutro.
-
-Depois da compra, ownership continua individual e a equipagem dos três itens continua independente.
-
-A arquitetura MUST permitir offers futuras de item único ou bundles diferentes sem alteração de schema de ownership.
-
-## Ownership parcial de uma offer
-
-Para uma offer de `N` itens:
-
-- `0/N` possuídos: compra normal disponível;
-- `N/N` possuídos: compra MUST ser bloqueada como já possuída;
-- `1..N-1/N` possuídos: compra MAY prosseguir pelo preço integral da offer e MUST conceder somente itens ainda ausentes.
-
-Nesta versão não existe desconto proporcional, crédito de volta ou preço dinâmico por ownership parcial.
-
-A UI MUST conseguir informar ownership parcial quando aplicável.
-
-## Compras confirmadas
-
-A Economy V2 introduz `economy.purchases` como recibo persistente de compra confirmada.
-
-Cada compra MUST registrar ao menos:
-
-- ID estável do receipt;
-- `user_id` derivado da sessão;
-- `offer_id`;
-- `currency_code` efetivamente usada;
-- `price_paid` inteiro;
-- `idempotency_key` fornecida para a operação;
-- timestamp.
-
-`price_paid` MUST registrar o preço no momento da compra. Alterar posteriormente `catalog.offers.price` MUST NOT modificar recibos históricos.
-
-A combinação necessária para tornar retries idempotentes MUST possuir constraint única no banco. No baseline, `(user_id, idempotency_key)` SHOULD ser única.
-
-Somente compras confirmadas criam rows em `economy.purchases`.
-
-## Fluxo transacional de compra
-
-O fluxo autoritativo MUST ocorrer server-side em uma única transação PostgreSQL:
+Todo comandante inicia com:
 
 ```text
-BEGIN
-  autenticar session.user.id
-  validar payload e idempotency key
-  resolver offer e composição pelo banco
-  validar offer available
-  validar cosméticos elegíveis
-  lock da wallet do usuário para campaign-credit
-  resolver ownership atual
-  rejeitar offer totalmente possuída
-  validar balance >= price
-  criar receipt de compra
-  debitar wallet exatamente por price
-  criar ledger de débito
-  inserir apenas ownerships ausentes
-COMMIT
+0 campaign-credit
 ```
 
-Qualquer falha MUST executar rollback de wallet, ledger, purchase e inventory.
+Vitória, derrota, cadastro, login, tempo de jogo, evento ou navegação não concedem créditos nesta entrega.
 
-A ordem interna MAY variar para acomodar constraints/idempotência, desde que os invariantes finais sejam preservados.
+### 3.3 Servidor como autoridade
 
-## Idempotência
+O browser nunca informa saldo final nem delta de wallet. O servidor deriva o débito a partir do preço autoritativo calculado dentro da transação.
 
-A API de compra MUST exigir `idempotencyKey` não vazia e com formato/tamanho validados.
+O banco impede saldo negativo.
 
-Repetir a mesma operação com o mesmo usuário e a mesma `idempotencyKey` MUST:
+## 4. Ledger
 
-- retornar semanticamente o mesmo resultado confirmado quando a compra anterior já foi concluída;
-- não criar segundo débito;
-- não criar segundo receipt;
-- não duplicar ownership;
-- não criar ledger duplicado.
+Toda compra confirmada com custo positivo deve produzir exatamente um débito de ledger relacionado ao recibo da compra.
 
-Uma mesma chave usada por usuários diferentes não pode transferir autoridade entre contas.
+Invariantes:
 
-## Concorrência
+- `delta = -price_paid`;
+- moeda do ledger = moeda da wallet;
+- nenhuma compra confirmada deixa wallet e ledger divergentes;
+- uma falha transacional não deixa débito órfão;
+- replay idempotente não cria segundo débito.
 
-Wallet MUST ser serializada com lock transacional ou mecanismo equivalente que impeça gasto concorrente acima do saldo.
+O ledger não substitui o recibo comercial: ambos têm responsabilidades distintas.
 
-Exemplo obrigatório:
+## 5. Cosméticos, ownership e slots
+
+### 5.1 Slots canônicos
+
+Os quatro slots iniciais são:
 
 ```text
-saldo inicial = 500
-offer A = 400
-offer B = 400
+dice_attack
+dice_defense
+dice_neutral
+territory_skin
 ```
 
-Duas compras concorrentes não podem resultar em saldo negativo nem em dois débitos confirmados. Uma operação pode concluir e a outra deve observar o saldo restante e falhar por saldo insuficiente.
+`territory_effect` é somente nomenclatura histórica de migrations anteriores e não deve ser introduzido em contratos/runtime novos.
 
-Concorrência também MUST preservar unicidade de receipts idempotentes e ownership.
+### 5.2 Ownership
 
-## API de compra
+Ownership é persistido por cosmético individual.
 
-A superfície HTTP planejada é:
+Um usuário não pode possuir o mesmo cosmético duas vezes. Essa garantia deve existir por constraint no banco, não apenas por lógica de aplicação.
 
-```http
-POST /api/economy/purchases
+Bundles, produtos, ofertas, coleções e campanhas não são ownership entities.
+
+### 5.3 Defaults
+
+Cada slot possui fallback/default seguro. Defaults fazem parte do inventário inicial quando necessário para garantir loadout válido, mas não são produtos comerciais.
+
+### 5.4 Equipagem
+
+Um cosmético só pode ser equipado quando:
+
+- pertence ao usuário;
+- corresponde ao slot solicitado;
+- está em estado equipável conforme o catálogo.
+
+A constraint relacional deve impedir loadout apontando para cosmético incompatível ou não possuído.
+
+## 6. Produto, oferta, coleção e campanha
+
+A Storefront V2 separa explicitamente:
+
+```text
+cosmetic item -> entidade possuída/equipada
+product       -> composição vendida (single ou bundle)
+offer         -> disponibilidade comercial e pricing
+collection    -> família temática persistente
+campaign      -> apresentação/editorial temporária
 ```
 
-Payload mínimo:
+A mesma cosmetic item pode participar de produto individual e bundle sem duplicar ownership.
+
+Coleções podem ser:
+
+- dice-only;
+- territory-only;
+- mistas.
+
+Campanhas expiram sem remover ou recriar a coleção e seus cosméticos.
+
+As regras completas são definidas em `docs/economy/store/SPEC.md`.
+
+## 7. Pricing e compra
+
+### 7.1 Pricing autoritativo
+
+O preço mostrado no storefront é preview. A compra sempre recalcula preço dentro da transação.
+
+O request inclui:
 
 ```json
 {
-  "offerId": "offer.viking",
-  "idempotencyKey": "<client-generated-id>"
+  "offerId": "...",
+  "idempotencyKey": "...",
+  "expectedPrice": 1200
 }
 ```
 
-O payload MUST NOT aceitar `userId`, `price`, `currency`, `balance`, `cosmeticIds` ou qualquer outro campo que torne o browser autoridade econômica.
+Se o preço recalculado diferir de `expectedPrice`, nenhuma mutação econômica é permitida e o servidor retorna conflito de preço, atualmente `409 ECONOMY_PRICE_CHANGED`.
 
-Resposta bem-sucedida SHOULD conter somente o necessário para atualizar a UI, por exemplo:
+### 7.2 Ownership parcial
 
-- `purchaseId`;
-- wallet autoritativa atualizada;
-- itens recém-adquiridos;
-- estado comercial necessário para a offer afetada.
+Ownership parcial reduz preço de bundles/completion products.
 
-A API MUST possuir erros distintos e seguros para, no mínimo:
+Somente itens faltantes entram no subtotal. O desconto do bundle é aplicado sobre esse subtotal faltante com aritmética inteira conforme `docs/economy/store/SPEC.md`.
 
-- payload inválido;
-- offer inexistente;
-- offer indisponível;
-- offer já integralmente possuída;
-- saldo insuficiente;
-- inconsistência interna de catálogo.
+Não existe mais regra de “preço integral mesmo já possuindo parte do conjunto”.
 
-Mensagens não podem expor SQL, connection strings, secrets ou detalhes internos sensíveis.
+### 7.3 Pricing progressivo
 
-## Storefront DTO V2
+Pricing progressivo é permitido quando configurado explicitamente em tiers não sobrepostos.
 
-O snapshot da loja MUST permitir renderizar a experiência sem regras comerciais hardcoded no cliente.
+O contador é por cosmetic item e avança somente para itens realmente concedidos. Compras concorrentes ao cruzar um tier devem ser serializadas de forma que preço obsoleto não seja silenciosamente consumido.
 
-Ele SHOULD projetar semanticamente:
+### 7.4 Disponibilidade temporal
 
-- wallet;
-- loadout;
-- ownership necessário ao usuário atual;
-- conjuntos;
-- offers e sua composição/apresentação;
-- estado derivado de ownership da offer;
-- pacotes demonstrativos de créditos.
+`starts_at`, `ends_at` e `active` são validados pelo servidor. Countdown ou estado do CTA no browser é informativo e nunca torna uma oferta comprável.
 
-O DTO MAY projetar URLs de entrega efêmeras para assets, mas MUST manter object key/segredo fora do contrato público quando não forem necessários.
+### 7.5 Transação
 
-O caminho `/coin.svg` MUST NOT precisar ser duplicado em cada payload monetário: ele é um asset estrutural estável associado no frontend ao `currency_code='campaign-credit'`.
+Uma compra segue, conceitualmente:
 
-O cliente MAY fazer optimistic presentation apenas quando reversível; saldo, ownership e compra confirmada MUST ser reconciliados pela resposta autoritativa do servidor.
+1. inicia transação;
+2. valida e trava estado relevante da oferta/produto;
+3. lê ownership atual;
+4. determina itens faltantes;
+5. trava counters necessários em ordem estável;
+6. calcula preços/tiers/subtotal/desconto;
+7. compara `expectedPrice`;
+8. valida wallet;
+9. grava recibo/contexto comercial;
+10. debita wallet e ledger;
+11. concede apenas cosméticos faltantes;
+12. avança counters somente para grants efetivos;
+13. grava snapshots de preço por item;
+14. commit.
 
-## Pacotes de créditos em BRL
+Qualquer falha causa rollback integral.
 
-A Economy V2 MAY manter `catalog.credit_packs` para apresentar futuramente compra de créditos com dinheiro real.
+## 8. Histórico e idempotência
 
-Cada pack SHOULD possuir:
+Toda compra possui uma chave de idempotência por usuário.
 
-- ID estável;
-- slug;
-- quantidade inteira positiva de `campaign-credit`;
-- `price_brl_cents` inteiro positivo;
-- status;
-- ordem de apresentação;
-- timestamps.
+Replay da mesma chave para a mesma compra retorna o resultado persistido sem novo débito, ownership ou counter.
 
-Status inicial da entrega MUST ser não adquirível, por exemplo `announced`.
+Reuso da chave para operação incompatível gera conflito.
 
-A UI MAY mostrar:
+O histórico preserva pelo menos:
 
-- quantidade de créditos acompanhada por `/coin.svg`;
-- preço formatado em BRL derivado de `price_brl_cents`;
-- estado `EM BREVE` ou equivalente.
+- oferta/produto adquirido;
+- valor total pago;
+- subtotal comercial aplicável;
+- desconto aplicado;
+- itens concedidos;
+- preço unitário histórico dos itens concedidos.
 
-Nesta entrega MUST NOT existir:
+Mudanças futuras no catálogo não reescrevem compras passadas.
 
-- checkout funcional;
-- integração Stripe, Mercado Pago ou outro PSP;
-- endpoint que converta BRL em créditos;
+## 9. Territory skins
+
+`territory_skin` é um cosmético de primeira classe e usa o mesmo pipeline econômico dos demais slots.
+
+Uma skin pode ser:
+
+- descoberta no catálogo sem oferta comercial ativa;
+- vendida por produto single;
+- incluída em bundle/coleção mista;
+- equipada independentemente dos dados.
+
+A renderização deve continuar obedecendo `docs/economy/territory-skins/SPEC.md`: ownership color e estados de gameplay são semanticamente mais fortes que a camada cosmética.
+
+## 10. Pacotes de créditos em BRL
+
+`credit_packs` continuam exclusivamente demonstrativos nesta entrega.
+
+A UI pode exibir:
+
+- quantidade de Créditos de Campanha;
+- preço em BRL;
+- estado `EM BREVE`/equivalente.
+
+Não pode existir nesta entrega:
+
+- checkout real;
 - webhook de pagamento;
-- geração de saldo após clicar em pack;
-- simulação falsa de compra aprovada.
+- criação de ordem de pagamento;
+- grant automático de créditos após pagamento;
+- endpoint público para compra real de créditos.
 
-Os valores de BRL são dados de catálogo, não constantes React. Este SPEC não fixa os preços comerciais numéricos dos packs.
+## 11. Object storage / Cloudflare R2
 
-## Inventário
+### 11.1 Configuração server-only
 
-`inventory.cosmetics` permanece a única autoridade de ownership jogável.
-
-Ownership MUST ser único por usuário/item.
-
-Compra MUST inserir somente itens ausentes e usar `acquisition_source='purchase'` ou equivalente estável.
-
-O browser MUST NOT possuir endpoint de grant arbitrário.
-
-Remover ou aposentar offer/set MUST NOT apagar ownership existente.
-
-## Loadout
-
-Toda equipagem MUST:
-
-- exigir sessão;
-- derivar ator de `session.user.id`;
-- validar ownership server-side;
-- validar slot;
-- preservar os outros três slots;
-- não alterar wallet;
-- não criar ledger;
-- ser idempotente ao reequipar o mesmo item.
-
-Item comprado deve poder ser equipado imediatamente após a compra quando seu status permitir.
-
-## Conexão com object storage
-
-A aplicação MUST utilizar uma única variável server-only para conectar ao bucket:
-
-`ASSET_STORAGE_URL`
-
-Formato canônico:
+Configuração planejada/implementada no servidor:
 
 ```text
-s3://<ACCESS_KEY_ID>:<SECRET_ACCESS_KEY>@<ACCOUNT_ID>.r2.cloudflarestorage.com/war-brasil-assets-prod?region=auto
+ASSET_STORAGE_URL
+ASSET_STORAGE_REGION=auto
+ASSET_STORAGE_BUCKET
+ASSET_STORAGE_ACCESS_KEY_ID
+ASSET_STORAGE_SECRET_ACCESS_KEY
 ```
 
-A aplicação MUST derivar internamente Access Key ID, Secret Access Key, endpoint HTTPS, bucket e região.
+Nenhuma credencial pode usar prefixo público/client-side.
 
-MUST NOT criar aliases públicos ou `NEXT_PUBLIC_*` equivalentes.
+### 11.2 Isolamento de ambiente
 
-A connection string e o Secret Access Key MUST NOT aparecer em browser bundle, HTML, DTOs, logs, erros, banco ou evidências E2E.
-
-`public/coin.svg` é explicitamente um asset estrutural local da aplicação e MUST NOT ser migrado para esse fluxo R2 apenas por representar moeda. A disponibilidade do ícone de moeda não pode depender de credenciais ou conectividade do object storage cosmético.
-
-## Entrega de assets ao browser
-
-Para objetos privados, o servidor SHOULD gerar GET presigned com expiração limitada ou outra URL de entrega controlada equivalente.
-
-URL efêmera:
-
-- MAY conter Access Key ID onde o protocolo SigV4 exigir;
-- MUST NOT conter Secret Access Key;
-- MUST NOT conter `ASSET_STORAGE_URL` original;
-- MUST autorizar somente leitura do objeto necessário;
-- MUST possuir expiração finita;
-- MUST NOT ser persistida como identidade do cosmético.
-
-Presigned URL é transporte. Object key é identidade persistente do asset.
-
-## Formato obrigatório dos dados
-
-Todo asset de dado servido do R2 MUST ser WebP.
-
-Dentro de `cosmetics/dice/`, runtime aceita somente:
+Os ambientes devem usar buckets mutáveis distintos, por exemplo:
 
 ```text
-cosmetics/dice/<storage_slug>/attack.webp
-cosmetics/dice/<storage_slug>/defense.webp
-cosmetics/dice/<storage_slug>/neutral.webp
+dev  -> war-brasil-assets-dev
+prod -> war-brasil-assets-prod
 ```
 
-`.svg`, `.png`, `.jpg`, `.jpeg` ou outra extensão MUST ser rejeitada para referências ativas desse namespace.
+O bucket não é hardcoded como produção no contrato HTTPS moderno.
 
-Objeto WebP MUST possuir `Content-Type: image/webp` e transparência quando exigida pelo design.
+### 11.3 Object keys
 
-`preview.webp`, quando usado, é asset de storefront separado dos três assets de runtime.
+PostgreSQL armazena object keys, por exemplo:
 
-## Catálogo dinâmico e previews
+```text
+cosmetics/dice/football/attack.webp
+cosmetics/territory-skins/azulejo_brasil.webp
+store/collections/football/banner.webp
+```
 
-Frontend MUST NOT possuir lista hardcoded de Exército, Lanças, Viking, Gato, Cachorro, Futebol ou qualquer coleção futura.
+Não armazena URL completa dependente de host/ambiente.
 
-Adicionar uma nova coleção/offer válida ao banco deve permitir sua apresentação sem alteração temática específica no componente React.
+Runtime resolve objetos por chave exata. Catálogo, collection detail e render de partida não podem depender de `ListObjects` ou de inferência por diretórios do bucket.
 
-`preview_ref` SHOULD ser usado para thumbnail/hero quando existir. A ausência de preview dedicado MAY usar fallback derivado de item válido, sem transformar object storage em fonte de descoberta.
+### 11.4 Falha de asset
 
-Falha de asset MUST produzir fallback visual seguro e MUST NOT alterar ownership, purchase, saldo ou gameplay.
+Asset remoto ausente ou inválido deve degradar para fallback visual seguro e logging acionável, sem quebrar wallet, ownership, compra ou demais itens da storefront.
 
-## Snapshot de partida
+## 12. Segurança
 
-Loadout efetivo MUST ser congelado no início da partida em `game.*`.
+Endpoints econômicos mutáveis exigem usuário autenticado e proteção de origem conforme a infraestrutura de auth atual.
 
-Alterar Profile/Arsenal durante uma partida MUST NOT alterar cosméticos da partida ativa.
-
-Reconnect MUST resolver o mesmo cosmético persistente, podendo gerar nova URL de transporte efêmera.
-
-Game snapshot MUST NOT expor wallet, ledger, histórico de compras ou inventário completo.
-
-## Integração com dados e território
-
-- iniciativa usa `dice_neutral` do jogador;
-- atacante usa `dice_attack` do próprio jogador;
-- defensor usa `dice_defense` do próprio jogador;
-- efeito territorial usa `territory_effect` do proprietário.
-
-Dois jogadores MAY usar cosméticos diferentes na mesma batalha.
-
-Skin/effect MUST NOT alterar resultado autoritativo, física, collider, pips, hitbox ou interação do mapa.
-
-## Segurança
-
-Toda mutação econômica MUST seguir deny-by-default e autenticação server-side.
-
-Browser nunca é autoridade para:
+O cliente não é autoridade para:
 
 - saldo;
-- preço;
-- moeda da offer;
-- status comercial;
-- composição da offer;
 - ownership;
-- cosméticos concedidos;
-- object key arbitrária;
-- identidade do ator.
+- preço final;
+- disponibilidade;
+- tier;
+- desconto;
+- counters;
+- grant;
+- loadout de item não possuído.
 
-React components MUST NOT executar SQL nem instanciar cliente S3 com credenciais.
+Segredos do banco/R2/autenticação não entram em DTO, browser bundle ou mensagens de erro.
 
-Route Handlers MUST trabalhar via service/repository boundary e DTO explícito.
+## 13. Migração e compatibilidade
 
-## Migrações
+A evolução de Economy V2 é forward-safe e aditiva sempre que possível.
 
-Migrations econômicas MUST ser:
+Regras:
 
-- forward-only;
-- ordenadas;
-- compatíveis com o runner atual;
-- seguras em upgrade e banco limpo;
-- sem reescrever migrations já aplicadas.
+- migrations nunca são renumeradas retroativamente;
+- nova migration usa número estritamente posterior ao maior existente;
+- backfills preservam ownership e defaults válidos;
+- destructive cleanup é postergado quando há dúvida de compatibilidade;
+- nomenclatura histórica pode existir dentro de migrations antigas, mas runtime novo usa os contratos canônicos atuais.
 
-A migration da V2 SHOULD criar, conforme necessário:
+A Storefront V2 introduz/evolui products, product items, collections, collection assets, pricing/counters, campaigns e territory-skin commerce conforme migrations específicas do repositório.
 
-- `catalog.offers`;
-- `catalog.offer_items`;
-- `economy.purchases`;
-- `catalog.credit_packs`;
-- constraints e índices correspondentes;
-- seeds de offers/packs necessários para a storefront.
+## 14. Não objetivos desta entrega
 
-Dados V1 existentes de wallet, inventory, loadout, catalog e snapshots MUST ser preservados.
+Fora de escopo:
 
-Nenhuma migration é necessária apenas para referenciar `/coin.svg`, salvo se implementação futura decidir remover um glyph textual legado do catálogo de moedas. A identidade visual canônica permanece responsabilidade da apresentação.
+- ganho normal de Créditos de Campanha;
+- compra de créditos com dinheiro real;
+- trading/gifting/resale;
+- marketplace entre jogadores;
+- NFT/tokenização;
+- loot box;
+- serialização de raridade por unidade;
+- CMS administrativo completo;
+- slots cosméticos além dos quatro definidos.
 
-## Observabilidade
+## 15. Critério de conclusão
 
-Falhas econômicas SHOULD possuir códigos estáveis para diagnóstico, sem secrets.
+A Economy V2 só pode ser considerada pronta para merge quando:
 
-A aplicação SHOULD permitir distinguir em logs server-side, sem dados sensíveis:
-
-- purchase confirmada;
-- saldo insuficiente;
-- offer indisponível;
-- retry idempotente;
-- rollback por erro interno.
-
-Logs MUST NOT incluir connection strings, credentials, presigned URLs completas ou payloads sensíveis.
-
-## Performance
-
-A storefront SHOULD obter catálogo, offers e ownership em consultas previsíveis e evitar N+1 por item.
-
-A compra MUST manter a seção crítica de lock da wallet curta.
-
-Grid/preview SHOULD lazy-load assets fora do viewport e evitar baixar todos os WebPs de runtime apenas para mostrar thumbnails.
-
-`coin.svg` SHOULD ser reaproveitado pelo cache normal de asset estático e não duplicado inline em cada card quando isso aumentar desnecessariamente o markup.
-
-## Fora de escopo
-
-Explicitamente fora de escopo nesta V2:
-
-- qualquer método normal de ganhar `campaign-credit`;
-- recompensas por partida;
-- missões e daily rewards;
-- gifting e transferência entre jogadores;
-- marketplace entre usuários;
-- descontos personalizados;
-- preço proporcional a ownership parcial;
-- refund automático;
-- assinatura;
-- checkout com dinheiro real;
-- integração com PSP;
-- webhook de pagamento;
-- moeda premium adicional;
-- vantagem competitiva comprável.
-
-## Critério de conclusão
-
-A Economy V2 só está pronta quando:
-
-- compra com créditos é atômica, idempotente e concorrente-segura;
-- preço exibido é o preço persistido da offer e usa `/coin.svg` como representação visual da moeda;
-- wallet, preços e packs representam `campaign-credit` de forma consistente com `public/coin.svg`;
-- saldo, ledger, receipt e inventory permanecem consistentes;
-- itens comprados aparecem no Arsenal e podem ser equipados;
-- catálogo continua dinâmico e orientado pelo banco;
-- pacotes BRL são somente informativos e não alteram saldo;
-- `coin.svg` permanece local e independente do R2 cosmético;
-- R2 continua seguro e cosmético não altera gameplay;
-- todos os BLOCKERs de `EVAL.md` estão verdes.
+1. `docs/economy/EVAL.md` estiver verde;
+2. todos os blockers de `docs/economy/store/EVAL.md` aplicáveis à Storefront V2 estiverem verdes;
+3. `docs/economy/territory-skins/EVAL.md` continuar verde;
+4. migrations forem verificadas contra a cadeia atual;
+5. nenhuma regra documental contraditória permanecer;
+6. qualquer verificação dependente de infraestrutura externa real (por exemplo R2 dev) possuir evidência autorizada antes do rollout.

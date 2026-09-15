@@ -8,16 +8,28 @@ async function source(path) {
   return readFile(new URL(path, ROOT), "utf8");
 }
 
-test("PROFILE V4 purchase client sends only offer identity and idempotency", async () => {
+test("PROFILE V4 purchase sends offer identity, idempotency and confirmed expectedPrice", async () => {
   const store = await source("src/components/profile/v4/profile-store.tsx");
 
   assert.match(store, /fetch\("\/api\/economy\/purchases"/);
   assert.match(store, /method:\s*"POST"/);
   assert.match(store, /crypto\.randomUUID\(\)/);
-  assert.match(store, /body:\s*JSON\.stringify\(\{\s*offerId:\s*offer\.id,\s*idempotencyKey\s*\}\)/);
+  assert.match(
+    store,
+    /body:\s*JSON\.stringify\(\{[\s\S]*offerId:\s*offer\.id,[\s\S]*idempotencyKey,[\s\S]*expectedPrice:\s*offer\.price[\s\S]*\}\)/,
+  );
   assert.doesNotMatch(store, /userId\s*:/);
-  assert.doesNotMatch(store, /price\s*:\s*offer\.price/);
   assert.doesNotMatch(store, /cosmeticIds\s*:/);
+});
+
+test("PROFILE V4 purchase rejects stale confirmation and requires a new user action", async () => {
+  const store = await source("src/components/profile/v4/profile-store.tsx");
+
+  assert.match(store, /ECONOMY_PRICE_CHANGED/);
+  assert.match(store, /currentPrice/);
+  assert.match(store, /router\.refresh\(\)/);
+  assert.match(store, /Confirme novamente|confirme novamente/i);
+  assert.doesNotMatch(store, /ECONOMY_PRICE_CHANGED[\s\S]*purchase\(offer\)/);
 });
 
 test("PROFILE V4 purchase interaction prevents duplicate clicks and refreshes authoritative state", async () => {

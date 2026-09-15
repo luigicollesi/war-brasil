@@ -142,7 +142,7 @@ async function createBotSeat(client, roomId) {
 if (!databaseUrl) {
   test("game cosmetic snapshot migration exige DATABASE_URL", { skip: true }, () => {});
 } else {
-  test("039 congela loadout humano e usa defaults para bot sem identidade", async () => {
+  test("039 congela loadout humano e permanece compatível após canonicalização territory_skin", async () => {
     await withTemporaryDatabase(async (connectionString) => {
       await prepareDatabase(connectionString);
       const client = new Client({ connectionString });
@@ -170,8 +170,8 @@ if (!databaseUrl) {
         );
 
         // 039 foi aplicada pelo runner antes dos assentos existirem. Reexecutar o
-        // SQL simula o backfill de deploy sobre uma sala já existente, agora
-        // copiando a object key WebP já migrada pelo catálogo 040.
+        // SQL simula o backfill de deploy sobre uma sala já existente; os slots
+        // são derivados do catálogo já migrado pela 043.
         await client.query(migrationSql);
 
         const humanRows = await client.query(
@@ -206,7 +206,7 @@ if (!databaseUrl) {
             ["dice_attack", "dice.attack.default"],
             ["dice_defense", "dice.defense.default"],
             ["dice_neutral", "dice.neutral.default"],
-            ["territory_effect", "territory.effect.default"],
+            ["territory_skin", "territory.effect.default"],
           ]),
         );
 

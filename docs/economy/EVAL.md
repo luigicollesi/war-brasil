@@ -1,339 +1,204 @@
 # EVAL — Economia V2, Loja e Cosméticos
 
-Avaliar conforme `SPEC.md` e os padrões de qualidade vigentes do projeto.
+Status: **contrato pai reconciliado com Storefront V2**
 
-Aprovação exige **todos os BLOCKERs verdes**. Compra com `campaign-credit` é parte funcional desta entrega. Compra de créditos com BRL permanece deliberadamente inativa e qualquer fluxo que conceda créditos após pagamento real é BLOCKER.
+Avaliar este documento em conjunto com:
 
-## Gates BLOCKER — moeda e wallet
+- `docs/economy/store/EVAL.md` para catálogo, produtos, ofertas, bundles, coleções, campanhas, pricing progressivo, disponibilidade temporal, merchandising e storage da storefront;
+- `docs/economy/territory-skins/EVAL.md` para renderização/legibilidade de territory skins.
 
-| ID | Critério | Evidência mínima |
-| --- | --- | --- |
-| ECO-WAL-01 | existe somente `campaign-credit` como moeda ativa de gameplay/comércio desta entrega | schema/contract |
-| ECO-WAL-02 | todo novo comandante inicia com saldo persistente exatamente `0` | onboarding integration |
-| ECO-WAL-03 | usuários existentes preservam saldo válido durante upgrade | upgrade integration |
-| ECO-WAL-04 | saldo não pode ficar negativo por constraint | DB negative test |
-| ECO-WAL-05 | saldo e valores econômicos são inteiros | schema/type review |
-| ECO-WAL-06 | vitória, derrota, login, cadastro, tempo de jogo, evento e navegação não concedem créditos | integration/source review |
-| ECO-WAL-07 | saldo exibido vem da wallet persistente, não de fallback sintético | DB→DTO→DOM |
-| ECO-WAL-08 | não existe endpoint público de grant/reward/transferência ou ajuste arbitrário de saldo | route/security review |
-| ECO-WAL-09 | browser não consegue enviar saldo final ou delta autoritativo | negative API test |
+Aprovação exige todos os BLOCKERs aplicáveis verdes. Compra com `campaign-credit` é funcional. Compra de créditos com BRL permanece deliberadamente inativa.
 
-## Gates BLOCKER — representação visual da moeda
+## 1. Wallet e moeda
 
 | ID | Critério | Evidência mínima |
 | --- | --- | --- |
-| ECO-COIN-01 | `public/coin.svg` existe e é um SVG válido servido como `/coin.svg` | repository/asset test |
-| ECO-COIN-02 | `/coin.svg` é a representação visual canônica de `campaign-credit` nas superfícies V2/V4 | DOM/visual/source review |
-| ECO-COIN-03 | wallet exibe `/coin.svg` junto ao saldo numérico quando a moeda está disponível | E2E/DOM |
-| ECO-COIN-04 | preço de offer em `campaign-credit` exibe `/coin.svg` junto ao valor | E2E/DOM |
-| ECO-COIN-05 | quantidade de créditos em `credit_packs` usa `/coin.svg`, enquanto BRL permanece textual/formatado separadamente | E2E/DOM |
-| ECO-COIN-06 | `coin.svg` não depende de R2, presigned URL, `ASSET_STORAGE_URL`, catálogo cosmético ou inventário | source/network negative test |
-| ECO-COIN-07 | o glyph `◈` não é usado como identidade visual primária quando `/coin.svg` pode ser renderizado | DOM/source negative assertion |
-| ECO-COIN-08 | saldo/preço possuem equivalente textual/acessível e não dependem apenas do ícone | accessibility test |
-| ECO-COIN-09 | o path `/coin.svg` não precisa ser repetido em DTO econômico por item/offer | contract/source review |
+| ECO-WAL-01 | `campaign-credit` é a moeda ativa desta entrega | schema/contract |
+| ECO-WAL-02 | novo comandante inicia com saldo persistente `0` | integration |
+| ECO-WAL-03 | upgrade preserva saldo válido existente | migration integration |
+| ECO-WAL-04 | DB impede saldo negativo | DB negative test |
+| ECO-WAL-05 | valores econômicos autoritativos são inteiros | schema/type review |
+| ECO-WAL-06 | gameplay/login/cadastro/eventos não concedem créditos nesta entrega | source/integration |
+| ECO-WAL-07 | saldo exibido vem da wallet persistente | DB→DTO→UI |
+| ECO-WAL-08 | não existe endpoint público arbitrário de grant/reward/transfer | route/security review |
+| ECO-WAL-09 | browser não informa saldo final/delta autoritativo | negative API/source |
 
-## Gates BLOCKER — ledger
-
-| ID | Critério | Evidência mínima |
-| --- | --- | --- |
-| ECO-LED-01 | toda compra confirmada cria exatamente um débito no ledger | integration |
-| ECO-LED-02 | delta do ledger é igual a `-price_paid` | DB integration |
-| ECO-LED-03 | ledger referencia de forma estável o receipt da compra | DB/contract |
-| ECO-LED-04 | equipagem, preview e navegação não criam lançamentos | integration |
-| ECO-LED-05 | browser não possui mutação direta de ledger | route/source inspection |
-| ECO-LED-06 | rollback de compra remove também qualquer ledger parcial | failure injection |
-| ECO-LED-07 | retry idempotente não cria segundo lançamento | concurrency/integration |
-
-## Gates BLOCKER — catálogo de cosméticos e conjuntos
+## 2. Representação da moeda
 
 | ID | Critério | Evidência mínima |
 | --- | --- | --- |
-| ECO-CAT-01 | catálogo possui os quatro defaults com IDs estáveis e slots corretos | migration/query |
-| ECO-CAT-02 | defaults são gratuitos e não dependem de offer | DB/service |
-| ECO-CAT-03 | Exército, Lanças, Viking, Gato, Cachorro e Futebol são resolvidos pelo catálogo quando registrados | DB/storefront |
-| ECO-CAT-04 | cada coleção de dados válida agrupa ataque, defesa e neutro | DB contract |
-| ECO-CAT-05 | conjunto não representa ownership nem preço | schema/service review |
-| ECO-CAT-06 | ID de cosmético é independente da object key | schema/contract |
-| ECO-CAT-07 | item `retired` continua resolvível para ownership/snapshot existente | compatibility |
-| ECO-CAT-08 | nome, descrição, status e ordem vêm do banco | DB→DTO |
-| ECO-CAT-09 | frontend não possui allowlist temática de slugs | source review |
-| ECO-CAT-10 | novo conjunto válido aparece sem branch React específica | integration/E2E |
-| ECO-CAT-11 | item `available` sem offer ativa não se torna comprável por inferência | service/DTO negative test |
+| ECO-COIN-01 | `public/coin.svg` existe e é servido como `/coin.svg` | asset/source test |
+| ECO-COIN-02 | `/coin.svg` é identidade visual canônica de `campaign-credit` nas superfícies atuais | DOM/source |
+| ECO-COIN-03 | wallet/preço/credit pack possuem valor textual acessível além do ícone | accessibility/DOM |
+| ECO-COIN-04 | BRL permanece formatado separadamente de Créditos de Campanha | DOM/source |
+| ECO-COIN-05 | moeda visual local não depende de R2 ou inventário | source/network negative |
 
-## Gates BLOCKER — offers e pricing
+## 3. Ledger e histórico
 
 | ID | Critério | Evidência mínima |
 | --- | --- | --- |
-| ECO-OFFER-01 | `catalog.offers` possui ID/slug estáveis, moeda, preço, status e ordem | schema/migration |
-| ECO-OFFER-02 | todo offer `available` possui preço inteiro positivo | constraint/DB test |
-| ECO-OFFER-03 | offers desta entrega usam `campaign-credit` | DB/contract |
-| ECO-OFFER-04 | `catalog.offer_items` contém ao menos um cosmético por offer comprável | DB validation |
-| ECO-OFFER-05 | composição da offer vem do banco e não do request do browser | API/service negative test |
-| ECO-OFFER-06 | `draft` e `retired` não são adquiríveis | service integration |
-| ECO-OFFER-07 | alterar preço no banco altera storefront sem rebuild/branch React | DB→DTO→DOM |
-| ECO-OFFER-08 | frontend não hardcoda preço de produto | source inspection |
-| ECO-OFFER-09 | receipt preserva `price_paid` histórico após mudança do preço atual da offer | integration |
-| ECO-OFFER-10 | offer não cria ownership próprio | schema/repository review |
-| ECO-OFFER-11 | baseline pode vender coleção de dados como bundle de três itens, mantendo ownership individual | integration |
-| ECO-OFFER-12 | ownership parcial mostra estado derivado correto e compra cobra preço integral | integration/E2E |
+| ECO-LED-01 | compra paga cria exatamente um débito | integration |
+| ECO-LED-02 | `delta = -price_paid` | DB integration |
+| ECO-LED-03 | rollback não deixa débito órfão | fault/integration |
+| ECO-LED-04 | replay idempotente não cria novo débito | integration |
+| ECO-HIST-01 | recibo preserva oferta/produto e total histórico | DB integration |
+| ECO-HIST-02 | compra preserva subtotal/desconto comercial aplicável | DB integration |
+| ECO-HIST-03 | itens concedidos preservam preço unitário histórico | DB integration |
+| ECO-HIST-04 | alteração posterior do catálogo não reinterpreta recibo antigo | integration |
 
-## Gates BLOCKER — purchase
+## 4. Ownership e loadout
 
 | ID | Critério | Evidência mínima |
 | --- | --- | --- |
-| ECO-BUY-01 | compra exige sessão autenticada e ator deriva de `session.user.id` | route/service test |
-| ECO-BUY-02 | payload não aceita `userId`, `price`, `currency`, `balance` ou `cosmeticIds` como autoridade | negative API test |
-| ECO-BUY-03 | offer inexistente não altera wallet, ledger, purchase ou inventory | integration |
-| ECO-BUY-04 | offer indisponível não altera estado econômico | integration |
-| ECO-BUY-05 | saldo insuficiente não altera wallet, ledger, purchase ou inventory | integration |
-| ECO-BUY-06 | compra válida debita exatamente o preço persistido | transaction integration |
-| ECO-BUY-07 | compra válida cria exatamente um receipt confirmado | DB integration |
-| ECO-BUY-08 | compra válida concede todos e somente os itens ausentes da offer | inventory integration |
-| ECO-BUY-09 | offer totalmente possuída não gera novo débito | integration |
-| ECO-BUY-10 | falha injetada após início da transação causa rollback completo | failure injection |
-| ECO-BUY-11 | resposta de sucesso retorna wallet autoritativa atualizada e aquisição necessária à UI | API contract |
-| ECO-BUY-12 | erros de compra não expõem SQL, connection string ou secrets | security test |
+| ECO-INV-01 | ownership é por cosmetic item, não por bundle/product/collection/campaign | schema/integration |
+| ECO-INV-02 | DB impede ownership duplicado `(user, cosmetic)` | constraint/concurrency |
+| ECO-INV-03 | defaults válidos mantêm loadout inicial completo | migration/integration |
+| ECO-INV-04 | slots canônicos são `dice_attack`, `dice_defense`, `dice_neutral`, `territory_skin` | schema/contract |
+| ECO-INV-05 | `territory_effect` não aparece como slot novo de runtime | source negative |
+| ECO-LOAD-01 | só cosmético possuído pode ser equipado | API/DB negative |
+| ECO-LOAD-02 | slot incompatível é rejeitado | API/DB negative |
+| ECO-LOAD-03 | loadout persiste e é recuperável | integration |
+| ECO-LOAD-04 | territory skin é independente dos três slots de dado | integration |
 
-## Gates BLOCKER — idempotência e concorrência
+## 5. Compra com campaign-credit
 
-| ID | Critério | Evidência mínima |
-| --- | --- | --- |
-| ECO-CON-01 | purchase exige `idempotencyKey` válida | route/service test |
-| ECO-CON-02 | duas requests simultâneas com mesma chave e usuário produzem no máximo um receipt | concurrency integration |
-| ECO-CON-03 | retry da mesma compra confirmada não debita novamente | idempotency integration |
-| ECO-CON-04 | retry não duplica ledger | DB integration |
-| ECO-CON-05 | retry não duplica ownership | DB integration |
-| ECO-CON-06 | duas compras diferentes concorrentes serializam a wallet corretamente | concurrency integration |
-| ECO-CON-07 | saldo nunca fica negativo sob corrida | concurrency + DB constraint |
-| ECO-CON-08 | cenário saldo 500 / duas offers 400 confirma no máximo uma compra | concurrency integration |
-| ECO-CON-09 | ownership continua único sob corrida | constraint/concurrency |
-| ECO-CON-10 | chave de um usuário não concede autoridade ou receipt a outro | authorization concurrency test |
-
-## Gates BLOCKER — inventário
+Os detalhes de produto/pricing ficam em `docs/economy/store/EVAL.md`; estes gates verificam os invariantes econômicos compartilhados.
 
 | ID | Critério | Evidência mínima |
 | --- | --- | --- |
-| ECO-INV-01 | novo comandante possui os quatro defaults | onboarding integration |
-| ECO-INV-02 | ownership é único por usuário/item | constraint |
-| ECO-INV-03 | compra grava `acquisition_source='purchase'` ou equivalente estável | DB integration |
-| ECO-INV-04 | compra de ownership parcial insere somente itens ausentes | integration |
-| ECO-INV-05 | browser não consegue conceder item arbitrário | route/security |
-| ECO-INV-06 | retirar/aposentar offer não remove ownership existente | compatibility |
-| ECO-INV-07 | reexecutar inicialização não duplica defaults nem altera saldo | idempotency integration |
+| ECO-BUY-01 | compra é autenticada e server-authoritative | route/service review |
+| ECO-BUY-02 | request usa `offerId`, idempotency key e `expectedPrice`; não envia grant/saldo final | contract/negative API |
+| ECO-BUY-03 | preço final é recalculado dentro da transação | integration/source |
+| ECO-BUY-04 | mismatch de `expectedPrice` não debita nem concede item | integration |
+| ECO-BUY-05 | saldo insuficiente não debita nem concede item | integration |
+| ECO-BUY-06 | wallet, ledger, grants, counters e histórico são atômicos | fault/integration |
+| ECO-BUY-07 | replay idempotente retorna compra persistida sem nova mutação | integration |
+| ECO-BUY-08 | mesma chave para operação incompatível gera conflito | integration |
+| ECO-BUY-09 | itens já possuídos são excluídos de completion pricing/grant | store EVAL + integration |
+| ECO-BUY-10 | bundle pode ser parcial; preço não permanece artificialmente integral | store EVAL |
+| ECO-BUY-11 | compra individual de attack/defense/neutral é válida | store EVAL |
+| ECO-BUY-12 | territory skin pode ser comprada pelo mesmo pipeline quando houver oferta ativa | integration |
 
-## Gates BLOCKER — loadout
+Regras antigas que proibiam dados individuais ou obrigavam preço integral com ownership parcial estão revogadas.
 
-| ID | Critério | Evidência mínima |
-| --- | --- | --- |
-| ECO-LOAD-01 | existem exatamente quatro slots: ataque, defesa, neutro e território | schema/contract |
-| ECO-LOAD-02 | quatro defaults começam equipados | onboarding/upgrade |
-| ECO-LOAD-03 | usuário só equipa item possuído | service negative test |
-| ECO-LOAD-04 | usuário não equipa item em slot incompatível | service/DB negative |
-| ECO-LOAD-05 | reequipar o mesmo item é idempotente | integration |
-| ECO-LOAD-06 | equipar um slot preserva os outros três | integration |
-| ECO-LOAD-07 | ator deriva de `session.user.id` | security/source |
-| ECO-LOAD-08 | equipagem nunca altera wallet ou ledger | integration |
-| ECO-LOAD-09 | item recém-comprado pode ser equipado quando `available` | purchase→equip integration |
-| ECO-LOAD-10 | estado legado incompleto resolve fallback default | compatibility |
+## 6. Pricing, tiers e disponibilidade
 
-## Gates BLOCKER — storefront
+Delegação principal: `docs/economy/store/EVAL.md`.
+
+O pai exige no mínimo:
 
 | ID | Critério | Evidência mínima |
 | --- | --- | --- |
-| ECO-STORE-01 | storefront mostra saldo real da wallet acompanhado de `/coin.svg` | E2E/DOM |
-| ECO-STORE-02 | catálogo e offers vêm de service/DTO real, não fixture | source/integration |
-| ECO-STORE-03 | toda offer `available` retornada é renderizada | E2E/DOM |
-| ECO-STORE-04 | preço mostrado corresponde ao valor persistido e usa `/coin.svg` para indicar `campaign-credit` | DB→DTO→DOM |
-| ECO-STORE-05 | estado `COMPRAR`, `POSSUÍDO`, `EQUIPADO` ou indisponível corresponde ao backend | E2E |
-| ECO-STORE-06 | offer parcialmente possuída informa progresso/estado sem inventar desconto | E2E |
-| ECO-STORE-07 | clicar preview não altera wallet/inventory/loadout | interaction/integration |
-| ECO-STORE-08 | novo offer válido aparece sem alteração temática de React | integration/E2E |
-| ECO-STORE-09 | novo preço persistido aparece sem rebuild | integration/E2E |
-| ECO-STORE-10 | storefront não depende de `ListObjects` | source/integration |
-| ECO-STORE-11 | preview ausente possui fallback visual seguro | E2E |
-| ECO-STORE-12 | compra confirmada atualiza saldo e estado de ownership a partir da resposta autoritativa | E2E |
+| ECO-PRICE-01 | dinheiro/desconto usam aritmética inteira determinística | unit/integration |
+| ECO-PRICE-02 | pricing fixo continua suportado | migration/unit |
+| ECO-PRICE-03 | pricing progressivo usa tiers explícitos e não sobrepostos | DB/unit |
+| ECO-PRICE-04 | counters avançam somente para grants efetivos | integration |
+| ECO-PRICE-05 | concorrência em boundary de tier não aceita silenciosamente preço obsoleto | concurrent DB integration |
+| ECO-OFFER-01 | `starts_at`, `ends_at` e `active` são validados no servidor | integration |
+| ECO-OFFER-02 | expiração exata impede compra | integration |
+| ECO-OFFER-03 | oferta expirada no detalhe causa refresh/reconfirmação, não compra obsoleta | UI/source + API integration |
+| ECO-OFFER-04 | uma nova offer pode recolocar o mesmo product em rotação sem recriar ownership | integration/model review |
 
-## Gates BLOCKER — pacotes de créditos em BRL
+Pricing dinâmico por tiers é permitido. A antiga proibição genérica de pricing dinâmico não se aplica à Storefront V2.
 
-| ID | Critério | Evidência mínima |
-| --- | --- | --- |
-| ECO-CASH-01 | pacotes demonstrativos vêm do banco | DB→DTO→DOM |
-| ECO-CASH-02 | `credit_amount` é inteiro positivo | constraint |
-| ECO-CASH-03 | `price_brl_cents` é inteiro positivo | constraint |
-| ECO-CASH-04 | preço BRL exibido é derivado do valor persistido, não hardcoded no React | source/DOM |
-| ECO-CASH-05 | pacotes desta entrega são inequívocos `EM BREVE`/disabled | E2E |
-| ECO-CASH-06 | clicar/ativar pack não altera wallet ou ledger | interaction/integration |
-| ECO-CASH-07 | não existe checkout funcional | route/source inspection |
-| ECO-CASH-08 | não existe webhook de pagamento | route/source inspection |
-| ECO-CASH-09 | não existe integração obrigatória com Stripe, Mercado Pago ou outro PSP | dependency/source review |
-| ECO-CASH-10 | browser não consegue converter BRL em créditos por endpoint escondido | security negative test |
-| ECO-CASH-11 | quantidade de `campaign-credit` do pack é apresentada com `/coin.svg`, sem confundir o ícone com o preço em BRL | E2E/visual |
+## 7. Coleções, produtos, ofertas e campanhas
 
-## Gates BLOCKER — object storage / R2
+Delegação principal: `docs/economy/store/EVAL.md`.
 
 | ID | Critério | Evidência mínima |
 | --- | --- | --- |
-| ECO-ASSET-01 | `ASSET_STORAGE_URL` é a única variável necessária para conexão da aplicação ao storage | env/config review |
-| ECO-ASSET-02 | parser aceita `s3://<key>:<secret>@<endpoint>/<bucket>?region=auto` | parser contract |
-| ECO-ASSET-03 | credenciais percent-encoded são decodificadas corretamente | parser edge case |
-| ECO-ASSET-04 | endpoint efetivo é HTTPS e sem credenciais | security unit |
-| ECO-ASSET-05 | bucket esperado é `war-brasil-assets-prod` | config test |
-| ECO-ASSET-06 | região R2 é `auto` | config test |
-| ECO-ASSET-07 | configuração inválida falha sem expor segredo | negative test |
-| ECO-ASSET-08 | connection string/Secret Access Key não entram em browser, DTO, HTML, log ou evidência E2E | secret scan |
-| ECO-ASSET-09 | catálogo/snapshot persistem referência estável, nunca presigned URL | DB/source |
-| ECO-ASSET-10 | URL de entrega possui expiração finita e acesso somente leitura ao objeto necessário | signing contract |
-| ECO-ASSET-11 | browser não consegue solicitar object key arbitrária fora do catálogo | security negative |
-| ECO-ASSET-12 | storefront normal não usa `ListObjects` | source inspection |
-| ECO-ASSET-13 | objeto ausente produz fallback sem alterar economia/gameplay | failure E2E |
-| ECO-ASSET-14 | dados ativos usam somente `attack.webp`, `defense.webp`, `neutral.webp` | DB/storage contract |
-| ECO-ASSET-15 | não há referência ativa `.svg/.png/.jpg/.jpeg` em `cosmetics/dice/` | negative DB/source |
-| ECO-ASSET-16 | WebP possui `Content-Type: image/webp` | storage integration |
-| ECO-ASSET-17 | coleção ativa não fica parcialmente local/SVG e parcialmente R2/WebP | migration/storage atomicity |
-| ECO-ASSET-18 | `/coin.svg` continua disponível como asset local mesmo quando R2/`ASSET_STORAGE_URL` está indisponível | failure/network E2E |
+| ECO-CAT-01 | product e cosmetic são entidades distintas | schema/test |
+| ECO-CAT-02 | single e bundle compartilham cosmetic items sem duplicar ownership | integration |
+| ECO-CAT-03 | coleção pode ser dice-only, territory-only ou mista | integration |
+| ECO-CAT-04 | Football é fixture dice-only de 3 dados | migration/integration |
+| ECO-CAT-05 | coleção V1 usa exatamente `banner/background/logo` ativos | constraint/integration |
+| ECO-CAT-06 | campanha é temporal/editorial e independente da coleção | integration |
+| ECO-CAT-07 | expirar campanha não remove coleção/cosméticos/products | integration |
 
-## Gates BLOCKER — dados e território
+## 8. Territory skins
+
+Além dos gates econômicos abaixo, todo blocker de `docs/economy/territory-skins/EVAL.md` permanece obrigatório.
 
 | ID | Critério | Evidência mínima |
 | --- | --- | --- |
-| ECO-DICE-01 | iniciativa usa `dice_neutral` do jogador | integration |
-| ECO-DICE-02 | atacante usa `dice_attack` do próprio jogador | battle integration |
-| ECO-DICE-03 | defensor usa `dice_defense` do próprio jogador | battle integration |
-| ECO-DICE-04 | jogadores podem usar skins diferentes na mesma batalha | multi-client E2E |
-| ECO-DICE-05 | skin não altera RNG, valores ou balanceamento | regression/property |
-| ECO-DICE-06 | skin não altera geometria, collider ou detecção de face | physics regression |
-| ECO-DICE-07 | falha de asset não altera resultado autoritativo | failure test |
-| ECO-MAP-01 | efeito territorial preserva identificação inequívoca do `PlayerColor` | visual seis cores |
-| ECO-MAP-02 | efeito não altera hitbox, seleção, hover ou foco | interaction regression |
-| ECO-MAP-03 | efeito não reduz legibilidade de tropas | visual desktop/mobile |
-| ECO-MAP-04 | mapa não consulta inventário por território | source/performance |
+| ECO-TS-01 | slot canônico é `territory_skin` | contract/schema |
+| ECO-TS-02 | skins não default podem possuir product/offer e pricing no catálogo | migration/integration |
+| ECO-TS-03 | compra concede ownership individual e registra histórico/ledger | integration |
+| ECO-TS-04 | equipagem de skin não altera slots de dado | integration |
+| ECO-TS-05 | skin ausente/quebrada não corrompe estado econômico | fallback/source |
 
-## Gates BLOCKER — snapshot de partida
+## 9. Pacotes de créditos em BRL
 
 | ID | Critério | Evidência mínima |
 | --- | --- | --- |
-| ECO-GAME-01 | loadout efetivo é congelado no início da partida | DB/start-game |
-| ECO-GAME-02 | alterar Arsenal durante partida não altera partida ativa | multi-client E2E |
-| ECO-GAME-03 | reconnect recupera exatamente o snapshot cosmético | reconnect E2E |
-| ECO-GAME-04 | todos os clientes veem a mesma configuração por jogador | multi-client E2E |
-| ECO-GAME-05 | bots usam defaults | integration |
-| ECO-GAME-06 | GameSnapshot não expõe saldo, ledger, purchases, inventory completo ou secrets | security snapshot |
-| ECO-GAME-07 | runtime não consulta storefront/profile a cada batalha/renderização | architecture inspection |
-| ECO-GAME-08 | snapshot persiste referência estável, não URL presigned | DB/source |
+| ECO-BRL-01 | `credit_packs` podem ser exibidos como catálogo demonstrativo | DB→UI |
+| ECO-BRL-02 | checkout/CTA real permanece desabilitado | DOM/source |
+| ECO-BRL-03 | não há webhook/payment order/grant de créditos por dinheiro real | route/source negative |
+| ECO-BRL-04 | usuário não consegue transformar `credit_packs` em saldo pela API | negative API |
 
-## Gates BLOCKER — segurança e boundary
+Qualquer implementação de checkout real nesta entrega é BLOCKER.
 
-| ID | Critério | Evidência mínima |
-| --- | --- | --- |
-| ECO-SEC-01 | wallet, purchase, inventory e loadout exigem sessão | route/service tests |
-| ECO-SEC-02 | browser não é autoridade para saldo, preço, moeda, offer, composição, ownership, status, slot ou object key | negative tests |
-| ECO-SEC-03 | React não executa SQL nem instancia S3 com credenciais | architecture inspection |
-| ECO-SEC-04 | Route Handlers não retornam `SELECT *` de tabelas econômicas | source/DTO review |
-| ECO-SEC-05 | catálogo público não vaza ownership privado de outros usuários | API snapshot |
-| ECO-SEC-06 | nenhuma mutação financeira ocorre fora de transação | source/integration |
-| ECO-SEC-07 | não existe `NEXT_PUBLIC_ASSET_STORAGE_URL` ou alias equivalente | env/source scan |
-| ECO-SEC-08 | mensagens de erro sanitizam secrets e URLs sensíveis | failure/security |
+## 10. Object storage e segurança de assets
 
-## Gates BLOCKER — migrations
+A storefront especializada adiciona gates específicos em `docs/economy/store/EVAL.md`.
 
 | ID | Critério | Evidência mínima |
 | --- | --- | --- |
-| ECO-DB-01 | migration V2 aplica sobre banco que já possui Economy V1 | upgrade integration |
-| ECO-DB-02 | migration V2 aplica em banco limpo via sequência normal | clean integration |
-| ECO-DB-03 | migration é forward-only e não reescreve 038/039/040 | repository review |
-| ECO-DB-04 | wallets, inventory, loadout e snapshots existentes são preservados | upgrade integration |
-| ECO-DB-05 | constraints de offers/purchases impedem preço inválido e receipts duplicados | DB negative tests |
-| ECO-DB-06 | índices novos possuem relação direta com consultas/locks previstos | query review |
-| ECO-DB-07 | adoção de `/coin.svg` não exige migration de saldo/ledger/inventory nem altera autoridade monetária | migration/schema review |
+| ECO-ASSET-01 | DB persiste object keys, não URLs específicas de ambiente | DB/source |
+| ECO-ASSET-02 | runtime resolve objeto por chave exata, sem `ListObjects` para construir catálogo | source/network |
+| ECO-ASSET-03 | credenciais R2 são server-only | env/build/source audit |
+| ECO-ASSET-04 | bucket é configurável por ambiente e dev/prod não compartilham namespace mutável | env/deploy evidence |
+| ECO-ASSET-05 | endpoint HTTPS moderno usa `ASSET_STORAGE_BUCKET` explícito | config test |
+| ECO-ASSET-06 | objeto ausente degrada com fallback/log seguro | unit/integration |
+| ECO-ASSET-07 | secret/access key não aparecem em DTO, browser bundle ou erro | build/source negative |
+| ECO-ASSET-08 | validação de catálogo usa `HEAD`/exact key e não exige list permission | validator test/source |
 
-## Cenários obrigatórios
+Não existe mais requisito pai de hardcode de `war-brasil-assets-prod` para todos os ambientes.
 
-### Wallet / purchase
+## 11. Auth e boundary
 
-- `ECO2-S1`: usuário com saldo `1000` compra offer de `400`; saldo final `600`, um receipt, um ledger e ownership esperado.
-- `ECO2-S2`: usuário com saldo `100` tenta offer de `400`; nada é alterado.
-- `ECO2-S3`: offer inexistente.
-- `ECO2-S4`: offer `draft`.
-- `ECO2-S5`: offer `retired`.
-- `ECO2-S6`: produto integralmente possuído.
-- `ECO2-S7`: bundle 1/3 possuído; preço integral é cobrado e somente 2 itens são inseridos.
-- `ECO2-S8`: preço da offer muda após compra; receipt histórico mantém `price_paid` original.
-- `ECO2-S9`: tentativa de forjar `price`, `currency`, `cosmeticIds` ou `userId` no request não altera autoridade server-side.
+| ID | Critério | Evidência mínima |
+| --- | --- | --- |
+| ECO-AUTH-01 | endpoints econômicos privados exigem sessão autenticada | route test |
+| ECO-AUTH-02 | mutações rejeitam origem não confiável conforme auth atual | route/security test |
+| ECO-AUTH-03 | usuário A não compra/equipa para usuário B via payload | negative API |
+| ECO-AUTH-04 | user id é derivado da sessão, não aceito como autoridade no body | source/negative API |
+| ECO-AUTH-05 | erros não expõem DB/R2/auth secrets | security review |
 
-### Idempotência / concorrência
+## 12. Migração e regressão
 
-- `ECO2-S10`: duplo clique com mesma idempotency key.
-- `ECO2-S11`: retry após resposta perdida.
-- `ECO2-S12`: duas abas usam a mesma chave simultaneamente.
-- `ECO2-S13`: saldo 500, offers A/B de 400 em paralelo; somente uma confirma.
-- `ECO2-S14`: duas compras concorrentes tentam inserir o mesmo ownership.
-- `ECO2-S15`: falha injetada depois da criação do receipt antes do commit; nenhuma mutação parcial persiste.
+| ID | Critério | Evidência mínima |
+| --- | --- | --- |
+| ECO-MIG-01 | migration nova usa número posterior ao maior existente | repository audit |
+| ECO-MIG-02 | upgrade preserva ownership/defaults/loadout válidos | migration integration |
+| ECO-MIG-03 | rerun/prepare segue convenção idempotente do projeto | migration integration |
+| ECO-MIG-04 | constraints novas não invalidam dados válidos existentes | migration integration |
+| ECO-MIG-05 | migrations históricas não são reescritas para esconder evolução | git/repository review |
+| ECO-REG-01 | testes de economy anteriores continuam verdes ou são reconciliados somente quando o contrato foi deliberadamente substituído | test suite |
+| ECO-REG-02 | gameplay continua consumindo loadout cosmético sem dar autoridade econômica ao cliente | regression |
 
-### Storefront / Arsenal
+## 13. Matriz obrigatória delegada
 
-- `ECO2-S16`: storefront recebe saldo, offers e ownership reais e representa `campaign-credit` com `/coin.svg`.
-- `ECO2-S17`: alterar preço no banco altera UI sem rebuild.
-- `ECO2-S18`: inserir offer válida altera UI sem branch temática React.
-- `ECO2-S19`: compra confirmada muda card para estado possuído e atualiza wallet.
-- `ECO2-S20`: item comprado é equipado e permanece após reload.
-- `ECO2-S21`: item não possuído não pode ser equipado.
-- `ECO2-S21A`: offer de `campaign-credit` mostra `/coin.svg` ao lado do preço e mantém o valor acessível textualmente.
+A conclusão deve também executar as matrizes descritas no store EVAL, incluindo:
 
-### BRL inativo
+- bundle 0/3, 1/3, 2/3, 3/3;
+- coleção dice-only e coleção mista;
+- ownership parcial misto;
+- tier boundary concorrente;
+- stale `expectedPrice`;
+- oferta scheduled/active/expired/disabled/retornada;
+- territory skin sob seis player colors e estados de gameplay;
+- viewports desktop/mobile da storefront.
 
-- `ECO2-S22`: pack mostra quantidade de créditos com `/coin.svg` e preço BRL persistido separadamente.
-- `ECO2-S23`: CTA do pack está disabled/EM BREVE.
-- `ECO2-S24`: ativação por mouse, teclado ou request manual não altera wallet.
-- `ECO2-S25`: inventário de rotas confirma ausência de checkout/webhook funcional.
+## 14. Definition of Done
 
-### Assets / runtime
+Economy V2 está pronta para merge somente quando:
 
-- `ECO2-S26`: preview WebP válido carrega do R2.
-- `ECO2-S27`: asset cosmético ausente usa fallback sem alterar compra/gameplay.
-- `ECO2-S28`: dois jogadores com skins diferentes batalham sem alterar RNG/física.
-- `ECO2-S29`: reconnect mantém cosmético congelado com nova URL efêmera quando necessário.
-- `ECO2-S30`: R2 indisponível não impede carregamento de `/coin.svg` nem transforma saldo real em indisponível.
-
-## Testes de concorrência obrigatórios
-
-Executar, no mínimo:
-
-1. duas compras simultâneas com a mesma idempotency key;
-2. duas compras diferentes disputando saldo insuficiente para ambas;
-3. retry da compra depois do commit;
-4. duas inserções concorrentes do mesmo ownership;
-5. compra concorrente com leitura/refresh da storefront.
-
-O estado final MUST ser determinístico e consistente entre `wallets`, `ledger_entries`, `purchases` e `inventory.cosmetics`.
-
-## Score / 100
-
-Todos os BLOCKERs são obrigatórios. O score mede qualidade adicional:
-
-- 20 — atomicidade, ledger e receipts;
-- 20 — idempotência e concorrência;
-- 15 — catálogo/offers/storefront dinâmicos;
-- 10 — inventário e loadout;
-- 10 — segurança e boundaries;
-- 10 — R2/assets e representação canônica da moeda;
-- 5 — integração de partida;
-- 5 — performance/observabilidade;
-- 5 — qualidade de migrations e evidências.
-
-Meta de qualidade: **>= 90/100**, além de todos os BLOCKERs verdes.
-
-## Evidência mínima de aprovação
-
-A revisão final MUST incluir:
-
-- testes unitários de parsing/contratos relevantes;
-- teste/inspeção de `public/coin.svg` e sua entrega em `/coin.svg`;
-- testes DOM/E2E do ícone em wallet, preço de offer e pack de créditos;
-- testes DB de constraints e transactions;
-- testes de integração de compra/equipagem;
-- testes de concorrência reais contra PostgreSQL;
-- E2E do storefront e Arsenal;
-- inspeção de rotas para confirmar ausência de checkout real;
-- evidência desktop/mobile dos estados comerciais principais;
-- secret scan para storage/economia;
-- regressão de dados/território/snapshot.
+1. estes blockers estiverem verdes;
+2. `docs/economy/store/EVAL.md` estiver verde para o escopo Storefront V2;
+3. `docs/economy/territory-skins/EVAL.md` permanecer verde;
+4. migrations estiverem verificadas contra a cadeia atual;
+5. `npm test`/testes DB/build/lint aplicáveis tiverem evidência fresca;
+6. verificação R2 dev exigida pelo store EVAL tiver sido executada em ambiente autorizado;
+7. revisão visual dos viewports requeridos estiver registrada;
+8. nenhum segredo tiver sido exposto.

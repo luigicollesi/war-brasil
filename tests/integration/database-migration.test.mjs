@@ -29,9 +29,17 @@ const physicalTables = new Map([
     "catalog",
     [
       "bot_names",
+      "campaign_assets",
+      "campaign_offers",
+      "campaigns",
+      "collection_assets",
+      "collections",
       "commander_titles",
+      "cosmetic_assets",
+      "cosmetic_pricing",
       "cosmetic_set_items",
       "cosmetic_sets",
+      "cosmetic_stats",
       "cosmetics",
       "credit_packs",
       "dice_balance_profiles",
@@ -42,6 +50,9 @@ const physicalTables = new Map([
       "objectives",
       "offer_items",
       "offers",
+      "price_tiers",
+      "product_items",
+      "products",
       "territory_card_symbols",
       "territory_connections",
     ],
@@ -98,6 +109,9 @@ const managedHistory = [
   "040-r2-webp-cosmetic-catalog.sql",
   "041-economy-v2-commerce.sql",
   "042-territory-skins-v1.sql",
+  "043-economy-storefront-v2.sql",
+  "044-economy-storefront-territory-commerce.sql",
+  "045-economy-storefront-launch-catalog.sql",
 ];
 
 function urlForDatabase(name) {
@@ -702,7 +716,7 @@ async function assertLegacyRoomRollout(connectionString) {
 if (!databaseUrl) {
   test("migrations de banco exigem DATABASE_URL", { skip: true }, () => {});
 } else {
-  test("026-042 migram banco v025, preservam catálogos e são idempotentes", async () => {
+  test("026-045 migram banco v025, preservam catálogos e são idempotentes", async () => {
     await withTemporaryDatabase("legacy", async (connectionString) => {
       await applySql(connectionString, "tests/fixtures/db/schema-v025.sql");
       await applySql(

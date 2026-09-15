@@ -19,7 +19,7 @@ export type GameCosmeticSlot =
   | "dice_attack"
   | "dice_defense"
   | "dice_neutral"
-  | "territory_effect";
+  | "territory_skin";
 
 type MissingSnapshotRow = {
   player_id: string;
@@ -42,7 +42,7 @@ type GamePlayerSnapshotStateRow = {
 function projectedSnapshotAssetRef(row: GameCosmeticSnapshotRow) {
   if (!row.asset_ref) return null;
   if (
-    row.slot !== "territory_effect" &&
+    row.slot !== "territory_skin" &&
     row.asset_ref.startsWith("cosmetics/dice/")
   ) {
     return diceAssetDeliveryPath(row.asset_ref);
@@ -115,8 +115,8 @@ function waitingPlayerCosmetics(
     diceNeutral: bySlot.dice_neutral
       ? selection(bySlot.dice_neutral)
       : defaults.diceNeutral,
-    territoryEffect: bySlot.territory_effect
-      ? territorySelection(bySlot.territory_effect)
+    territoryEffect: bySlot.territory_skin
+      ? territorySelection(bySlot.territory_skin)
       : defaults.territoryEffect,
   };
 }
@@ -128,7 +128,7 @@ function requirePlayerCosmetics(
   const attack = bySlot.dice_attack;
   const defense = bySlot.dice_defense;
   const neutral = bySlot.dice_neutral;
-  const territory = bySlot.territory_effect;
+  const territory = bySlot.territory_skin;
 
   if (!attack || !defense || !neutral || !territory) {
     throw new RoomError(
@@ -228,7 +228,7 @@ export async function capturePlayerCosmeticLoadouts(
            ('dice_attack'::varchar),
            ('dice_defense'::varchar),
            ('dice_neutral'::varchar),
-           ('territory_effect'::varchar)
+           ('territory_skin'::varchar)
        )
        SELECT player.id AS player_id, slots.slot
          FROM game.players player

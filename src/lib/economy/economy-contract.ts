@@ -4,10 +4,17 @@ export const COSMETIC_SLOTS = [
   "dice_attack",
   "dice_defense",
   "dice_neutral",
-  "territory_effect",
+  "territory_skin",
+] as const;
+
+export const COLLECTION_ASSET_ROLES = [
+  "banner",
+  "background",
+  "logo",
 ] as const;
 
 export type CosmeticSlot = (typeof COSMETIC_SLOTS)[number];
+export type CollectionAssetRole = (typeof COLLECTION_ASSET_ROLES)[number];
 export type CosmeticCatalogStatus = "draft" | "announced" | "available" | "retired";
 export type EconomyOfferStatus = "draft" | "available" | "retired";
 export type EconomyCreditPackStatus = "draft" | "announced" | "retired";
@@ -61,12 +68,44 @@ export type EconomyOffer = Readonly<{
   price: number;
   status: EconomyOfferStatus;
   featured: boolean;
+  startsAt: string | null;
+  endsAt: string | null;
   items: ReadonlyArray<CosmeticCatalogItem>;
   ownedCount: number;
   totalCount: number;
   fullyOwned: boolean;
   partiallyOwned: boolean;
   purchasable: boolean;
+}>;
+
+export type StorefrontCollectionAssets = Readonly<
+  Record<CollectionAssetRole, string>
+>;
+
+export type StorefrontCollection = Readonly<{
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  assets: StorefrontCollectionAssets;
+  items: ReadonlyArray<CosmeticCatalogItem>;
+  offerIds: ReadonlyArray<string>;
+  singleOfferIds: ReadonlyArray<string>;
+  bundleOfferIds: ReadonlyArray<string>;
+  ownedCount: number;
+  totalCount: number;
+  fullyOwned: boolean;
+  partiallyOwned: boolean;
+}>;
+
+export type StorefrontCampaign = Readonly<{
+  id: string;
+  slug: string;
+  title: string;
+  description: string | null;
+  startsAt: string | null;
+  endsAt: string | null;
+  offerIds: ReadonlyArray<string>;
 }>;
 
 export type EconomyCreditPack = Readonly<{
@@ -85,6 +124,9 @@ export type EconomyStorefrontSnapshot = Readonly<{
   loadout: CosmeticLoadout;
   ownedItems: ReadonlyArray<CosmeticCatalogItem>;
   sets: ReadonlyArray<CosmeticSet>;
+  collections: ReadonlyArray<StorefrontCollection>;
+  campaigns: ReadonlyArray<StorefrontCampaign>;
+  territorySkins: ReadonlyArray<CosmeticCatalogItem>;
   offers: ReadonlyArray<EconomyOffer>;
   creditPacks: ReadonlyArray<EconomyCreditPack>;
 }>;
@@ -97,6 +139,7 @@ export type EquipCosmeticInput = Readonly<{
 export type PurchaseOfferInput = Readonly<{
   offerId: string;
   idempotencyKey: string;
+  expectedPrice: number;
 }>;
 
 export type PurchaseOfferResult = Readonly<{
@@ -113,4 +156,11 @@ export type PurchaseOfferResult = Readonly<{
 
 export function isCosmeticSlot(value: unknown): value is CosmeticSlot {
   return typeof value === "string" && (COSMETIC_SLOTS as readonly string[]).includes(value);
+}
+
+export function isCollectionAssetRole(value: unknown): value is CollectionAssetRole {
+  return (
+    typeof value === "string" &&
+    (COLLECTION_ASSET_ROLES as readonly string[]).includes(value)
+  );
 }

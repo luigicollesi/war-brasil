@@ -9,6 +9,7 @@ function source(path) {
 const migration = source("src/lib/db/migrations/managed/038-economy-cosmetics-foundation.sql");
 const gameMigration = source("src/lib/db/migrations/managed/039-game-cosmetic-loadout-snapshots.sql");
 const storageMigration = source("src/lib/db/migrations/managed/040-r2-webp-cosmetic-catalog.sql");
+const storefrontMigration = source("src/lib/db/migrations/managed/043-economy-storefront-v2.sql");
 const contract = source("src/lib/economy/economy-contract.ts");
 const gameContract = source("src/lib/shared/game-contract.ts");
 const repository = source("src/lib/server/economy/economy-repository.ts");
@@ -27,7 +28,7 @@ const loadoutRoute = source("src/app/api/economy/loadout/route.ts");
 const storePage = source("src/app/profile/store/page.tsx");
 const storeUi = source("src/components/profile/store/economy-storefront.tsx");
 
-test("histórico de migrations preserva 037 e evolui economia por 038→039→040", () => {
+test("histórico de migrations preserva 037 e evolui economia até Storefront V2", () => {
   assert.equal(
     existsSync("src/lib/db/migrations/managed/037-profile-remove-portraits.sql"),
     true,
@@ -41,6 +42,8 @@ test("histórico de migrations preserva 037 e evolui economia por 038→039→04
     "src/lib/db/migrations/managed/039-game-cosmetic-loadout-snapshots.sql",
     "src/lib/db/migrations/managed/040-r2-webp-cosmetic-catalog.sql",
     "src/lib/db/migrations/managed/041-economy-v2-commerce.sql",
+    "src/lib/db/migrations/managed/042-territory-skins-v1.sql",
+    "src/lib/db/migrations/managed/043-economy-storefront-v2.sql",
   ]) {
     assert.equal(existsSync(path), true, path);
   }
@@ -96,12 +99,23 @@ test("catálogo remoto possui quatro defaults, seis conjuntos e somente WebP par
   assert.doesNotMatch(storageMigration, /asset_ref[^\n]*\.svg/);
 });
 
-test("loadout possui exatamente quatro slots e DB exige ownership compatível", () => {
-  for (const slot of ["dice_attack", "dice_defense", "dice_neutral", "territory_effect"]) {
+test("loadout canônico possui exatamente quatro slots e migra territory_effect para territory_skin", () => {
+  for (const slot of ["dice_attack", "dice_defense", "dice_neutral"]) {
     assert.match(contract, new RegExp(`"${slot}"`));
     assert.match(migration, new RegExp(`'${slot}'`));
   }
 
+  assert.match(migration, /'territory_effect'/);
+  assert.match(contract, /"territory_skin"/);
+  assert.doesNotMatch(contract, /"territory_effect"/);
+  assert.match(
+    storefrontMigration,
+    /UPDATE catalog\.cosmetics[\s\S]*territory_effect[\s\S]*territory_skin/,
+  );
+  assert.match(
+    storefrontMigration,
+    /CHECK \(slot IN \('dice_attack', 'dice_defense', 'dice_neutral', 'territory_skin'\)\)/,
+  );
   assert.match(migration, /FOREIGN KEY \(cosmetic_id, slot\)[\s\S]*REFERENCES catalog\.cosmetics\(id, slot\)/);
   assert.match(migration, /FOREIGN KEY \(user_id, slot, cosmetic_id\)[\s\S]*REFERENCES inventory\.cosmetics\(user_id, slot, cosmetic_id\)/);
   assert.match(service, /item\.slot !== slot/);
@@ -209,7 +223,7 @@ test("waiting completa snapshot parcial com defaults efêmeros, mas partida ativ
   assert.match(gameCosmetics, /bySlot\.dice_attack[\s\S]*defaults\.diceAttack/);
   assert.match(gameCosmetics, /bySlot\.dice_defense[\s\S]*defaults\.diceDefense/);
   assert.match(gameCosmetics, /bySlot\.dice_neutral[\s\S]*defaults\.diceNeutral/);
-  assert.match(gameCosmetics, /bySlot\.territory_effect[\s\S]*defaults\.territoryEffect/);
+  assert.match(gameCosmetics, /bySlot\.territory_skin[\s\S]*defaults\.territoryEffect/);
   assert.match(
     gameCosmetics,
     /player\.room_status === "waiting"[\s\S]*waitingPlayerCosmetics\(playerRows\)/,

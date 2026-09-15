@@ -16,7 +16,7 @@ const SLOT_LABELS: Record<CosmeticSlot, string> = {
   dice_attack: "Ataque",
   dice_defense: "Defesa",
   dice_neutral: "Neutro",
-  territory_effect: "Território",
+  territory_skin: "Território",
 };
 
 function formatBalance(value: number) {
@@ -135,11 +135,37 @@ export function EconomyStorefront({
       const response = await fetch("/api/economy/purchases", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ offerId: offer.id, idempotencyKey }),
+        body: JSON.stringify({
+          offerId: offer.id,
+          idempotencyKey,
+          expectedPrice: offer.price,
+        }),
       });
       const payload = (await response.json()) as Partial<PurchaseOfferResult> & {
+        error?: string;
         message?: string;
+        currentPrice?: number;
       };
+
+      if (
+        response.status === 409 &&
+        payload.error === "ECONOMY_PRICE_CHANGED" &&
+        typeof payload.currentPrice === "number" &&
+        Number.isSafeInteger(payload.currentPrice) &&
+        payload.currentPrice >= 0
+      ) {
+        setStorefront((current) => ({
+          ...current,
+          offers: current.offers.map((currentOffer) =>
+            currentOffer.id === offer.id
+              ? { ...currentOffer, price: payload.currentPrice! }
+              : currentOffer,
+          ),
+        }));
+        throw new Error(
+          `O preço foi atualizado para ${formatBalance(payload.currentPrice)} créditos. Confirme novamente para comprar.`,
+        );
+      }
 
       if (
         !response.ok ||
@@ -153,6 +179,15 @@ export function EconomyStorefront({
 
       const confirmed = payload as PurchaseOfferResult;
       setStorefront((current) => reconcilePurchase(current, confirmed));
+
+      const refreshedResponse = await fetch("/api/economy/storefront", {
+        cache: "no-store",
+      });
+      if (refreshedResponse.ok) {
+        const refreshed = (await refreshedResponse.json()) as EconomyStorefrontSnapshot;
+        setStorefront(refreshed);
+      }
+
       setFeedback(`${offer.name} adquirido. O inventário foi atualizado.`);
     } catch (error) {
       setFeedback(error instanceof Error ? error.message : "Falha ao concluir a compra.");
@@ -323,7 +358,7 @@ export function EconomyStorefront({
                         <small>PROGRESSO</small>
                         <strong>
                           {offer.ownedCount}/{offer.totalCount} possuído
-                          {offer.partiallyOwned ? " · preço integral" : ""}
+                          {offer.partiallyOwned ? " · preço de conclusão" : ""}
                         </strong>
                       </span>
                       <em>{offer.fullyOwned ? "POSSUÍDO" : ""}</em>
@@ -353,7 +388,9 @@ export function EconomyStorefront({
                             ? "INDISPONÍVEL"
                             : purchasePending
                               ? "PROCESSANDO…"
-                              : "COMPRAR"}
+                              : offer.partiallyOwned
+                                ? "COMPLETAR"
+                                : "COMPRAR"}
                       </button>
                     </li>
                   </ul>
