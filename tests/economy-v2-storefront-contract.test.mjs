@@ -4,7 +4,7 @@ import test from "node:test";
 
 const contract = readFileSync("src/lib/economy/economy-contract.ts", "utf8");
 const repository = readFileSync(
-  "src/lib/server/economy/economy-repository.ts",
+  "src/lib/server/economy/economy-storefront-repository.ts",
   "utf8",
 );
 const service = readFileSync(
