@@ -128,12 +128,13 @@ test("delivery usa endpoint autenticado e catálogo/snapshot como allowlist", ()
   assert.match(service, /createPresignedAssetUrl/);
 });
 
-test("economy storefront projeta object key territorial para rota entregável pelo cliente", () => {
+test("economy storefront projeta territory_effect pela rota interna de delivery", () => {
   const economyService = source("src/lib/server/economy/economy-service.ts");
 
   assert.match(economyService, /territorySkinAssetDeliveryPath/);
   assert.match(
     economyService,
-    /if \(\s*row\.slot === "territory_effect"\s*&&\s*row\.asset_ref\.startsWith\("cosmetics\/territory-skins\/"\)\s*\) \{\s*return territorySkinAssetDeliveryPath\(row\.asset_ref\);\s*\}/,
+    /if \(row\.slot === "territory_effect"\) \{\s*return territorySkinAssetDeliveryPath\(row\.asset_ref\);\s*\}/,
   );
+  assert.doesNotMatch(economyService, /https?:\/\/[^"']*territory-skins/);
 });

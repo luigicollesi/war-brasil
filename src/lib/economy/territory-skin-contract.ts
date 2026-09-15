@@ -98,7 +98,7 @@ export function territorySkinRender(
   };
 }
 
-function territorySkinAssetDeliveryPath(assetRef: string) {
+export function territorySkinAssetDeliveryPath(assetRef: string) {
   return `/api/assets/territory-skins?key=${encodeURIComponent(assetRef)}`;
 }
 
