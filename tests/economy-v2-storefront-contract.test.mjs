@@ -34,11 +34,13 @@ test("storefront V2 expõe offers, composição, ownership derivado e credit pac
 test("storefront V2 deriva catálogo comercial no servidor sem regra React hardcoded", () => {
   assert.match(repository, /export async function listStorefrontOffers/);
   assert.match(repository, /catalog\.offers/);
-  assert.match(repository, /catalog\.offer_items/);
+  assert.match(repository, /catalog\.product_items/);
   assert.match(repository, /export async function listStorefrontCreditPacks/);
   assert.match(repository, /catalog\.credit_packs/);
 
   assert.match(service, /listStorefrontOffers/);
+  assert.match(service, /listActiveStorefrontQuoteItems/);
+  assert.match(service, /quoteStorefrontProduct/);
   assert.match(service, /listStorefrontCreditPacks/);
   assert.match(service, /offers:/);
   assert.match(service, /creditPacks:/);
@@ -47,15 +49,19 @@ test("storefront V2 deriva catálogo comercial no servidor sem regra React hardc
   assert.doesNotMatch(storefront, /price\s*[:=]\s*400/);
 });
 
-test("Intendência V2 compra offer por id + idempotency key e reconcilia resposta autoritativa", () => {
+test("Intendência V2 confirma expectedPrice e reconcilia resposta autoritativa", () => {
   assert.match(storefront, /storefront\.offers\.map/);
   assert.match(storefront, /\/api\/economy\/purchases/);
   assert.match(storefront, /crypto\.randomUUID\(\)/);
   assert.match(storefront, /offerId/);
   assert.match(storefront, /idempotencyKey/);
+  assert.match(storefront, /expectedPrice:\s*offer\.price/);
+  assert.match(storefront, /ECONOMY_PRICE_CHANGED/);
+  assert.match(storefront, /currentPrice/);
   assert.match(storefront, /payload\.wallet/);
   assert.match(storefront, /payload\.offer/);
   assert.match(storefront, /COMPRAR/);
+  assert.match(storefront, /COMPLETAR/);
   assert.match(storefront, /POSSUÍDO/);
   assert.match(storefront, /EQUIPADO/);
   assert.doesNotMatch(storefront, /nenhuma compra ou recompensa está ativa/i);
