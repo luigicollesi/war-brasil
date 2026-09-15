@@ -235,10 +235,11 @@ src/lib/server/assets/asset-storage-s3.ts
 src/lib/server/assets/collection-asset-storage.ts
 src/app/api/assets/collections/route.ts
 scripts/validate-dice-assets.mjs
-scripts/validate-collection-assets.mjs
+scripts/validate-storefront-assets.mjs
 tests/asset-storage.test.mjs
 tests/asset-storage-https-config.test.mjs
-tests/collection-asset-storage.test.mjs
+tests/storefront-assets-validation.test.mjs
+tests/storefront-collection-assets.test.mjs
 ```
 
 Real R2 dev connectivity is environment evidence and cannot be manufactured by repository tests without authorized credentials.
@@ -261,6 +262,7 @@ It reconciles:
 Evidence:
 
 ```text
+tests/integration/database-migration.test.mjs
 tests/integration/economy-migration.test.mjs
 tests/integration/economy-storefront-collections.test.mjs
 ```
