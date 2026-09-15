@@ -5,11 +5,20 @@ import {
   AssetStorageConfigError,
   assertTerritorySkinAssetKey,
   isTerritorySkinAssetKey,
+  parseAssetStorageUrl,
 } from "../.test-build/server/assets/asset-storage-config.js";
+import {
+  AssetStorageRequestError,
+  validateTerritorySkinAssetObject,
+} from "../.test-build/server/assets/asset-storage-s3.js";
 
 function source(path) {
   return readFileSync(path, "utf8");
 }
+
+const config = parseAssetStorageUrl(
+  "s3://ACCESS:secret@abc123.r2.cloudflarestorage.com/war-brasil-assets-prod?region=auto",
+);
 
 test("storage aceita somente territory skin WebP no namespace canônico", () => {
   for (const key of [
@@ -36,6 +45,63 @@ test("storage aceita somente territory skin WebP no namespace canônico", () => 
         error.code === "TERRITORY_SKIN_ASSET_KEY_INVALID",
     );
   }
+});
+
+test("validação R2 de territory skin exige HEAD image/webp", async () => {
+  const key = "cosmetics/territory-skins/azulejo_brasil.webp";
+  const calls = [];
+  const metadata = await validateTerritorySkinAssetObject(
+    config,
+    key,
+    async (url, init) => {
+      calls.push({ url: String(url), method: init?.method });
+      return new Response(null, {
+        status: 200,
+        headers: {
+          "content-type": "image/webp; charset=binary",
+          "content-length": "4096",
+          etag: '"skin-etag"',
+        },
+      });
+    },
+  );
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].method, "HEAD");
+  assert.equal(
+    new URL(calls[0].url).pathname,
+    "/war-brasil-assets-prod/cosmetics/territory-skins/azulejo_brasil.webp",
+  );
+  assert.deepEqual(metadata, {
+    objectKey: key,
+    contentType: "image/webp",
+    contentLength: 4096,
+    etag: '"skin-etag"',
+  });
+
+  await assert.rejects(
+    validateTerritorySkinAssetObject(
+      config,
+      key,
+      async () =>
+        new Response(null, {
+          status: 200,
+          headers: { "content-type": "image/png" },
+        }),
+    ),
+    (error) =>
+      error instanceof AssetStorageRequestError &&
+      error.code === "TERRITORY_SKIN_ASSET_CONTENT_TYPE_INVALID",
+  );
+});
+
+test("assets:validate inclui territory skins do catálogo sem allowlist temática", () => {
+  const validator = source("scripts/validate-dice-assets.mjs");
+
+  assert.match(validator, /slot IN \('dice_attack', 'dice_defense', 'dice_neutral', 'territory_effect'\)/);
+  assert.match(validator, /validateTerritorySkinAssetObject/);
+  assert.match(validator, /assertTerritorySkinAssetKey/);
+  assert.doesNotMatch(validator, /azulejo_brasil|azulejo_ornamental|ceu_estrelado|solar_ornamental/);
 });
 
 test("delivery usa endpoint autenticado e catálogo/snapshot como allowlist", () => {
