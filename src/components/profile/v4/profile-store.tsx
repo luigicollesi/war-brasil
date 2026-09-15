@@ -8,6 +8,7 @@ import type {
   CosmeticSlot,
   EconomyStorefrontSnapshot,
 } from "@/src/lib/economy/economy-contract";
+import { cosmeticPreviewSource } from "@/src/lib/economy/cosmetic-preview";
 import styles from "./profile-store.module.css";
 
 const SLOT_LABELS: Readonly<Record<CosmeticSlot, string>> = {
@@ -18,11 +19,11 @@ const SLOT_LABELS: Readonly<Record<CosmeticSlot, string>> = {
 };
 
 function previewItem(set: CosmeticSet) {
-  return set.items.find((item) => item.previewRef ?? item.assetRef) ?? null;
+  return set.items.find((item) => cosmeticPreviewSource(item) !== null) ?? set.items[0] ?? null;
 }
 
 function itemArtwork(item: CosmeticCatalogItem | null) {
-  return item?.previewRef ?? item?.assetRef ?? null;
+  return item ? cosmeticPreviewSource(item) : null;
 }
 
 function ownershipLabel(set: CosmeticSet) {
