@@ -83,6 +83,40 @@ async function readEconomyState(userId) {
   }
 }
 
+async function readCommerceCatalog() {
+  const db = new Client({ connectionString: DATABASE_URL });
+  await db.connect();
+  try {
+    const offers = await db.query(
+      `SELECT id,name,price::text AS price
+         FROM catalog.offers
+        WHERE status='available'
+        ORDER BY sort_order,id`,
+    );
+    const creditPacks = await db.query(
+      `SELECT id,name,credit_amount::text AS credit_amount,price_brl_cents::text AS price_brl_cents
+         FROM catalog.credit_packs
+        WHERE status='announced'
+        ORDER BY sort_order,id`,
+    );
+    return {
+      offers: offers.rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        price: Number(row.price),
+      })),
+      creditPacks: creditPacks.rows.map((row) => ({
+        id: row.id,
+        name: row.name,
+        creditAmount: Number(row.credit_amount),
+        priceBrlCents: Number(row.price_brl_cents),
+      })),
+    };
+  } finally {
+    await db.end();
+  }
+}
+
 function assertFreshCommanderState(state) {
   assert.equal(state.balance, "0");
   assert.equal(state.ledgerCount, 0);
@@ -98,6 +132,17 @@ function assertFreshCommanderState(state) {
     { slot: "dice_neutral", cosmetic_id: "dice.neutral.default" },
     { slot: "territory_effect", cosmetic_id: "territory.effect.default" },
   ]);
+}
+
+function normalizeText(value) {
+  return String(value ?? "").replace(/\s+/g, " ").trim();
+}
+
+function formatBrl(cents) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(cents / 100);
 }
 
 function assetKeyFromDeliveryUrl(value) {
@@ -179,7 +224,8 @@ async function waitForPreviewImage(card) {
 }
 
 async function inspectSet(page, setName, expectedKey, screenshotName) {
-  const card = page.locator("article").filter({ hasText: setName });
+  const catalog = page.locator('section[aria-labelledby="catalog-title"]');
+  const card = catalog.locator("article").filter({ hasText: setName });
   await card.getByRole("button", { name: "INSPECIONAR", exact: true }).click();
   await card.locator("[data-preview-detail]").waitFor({ state: "visible" });
   await waitForPreviewImage(card);
@@ -279,6 +325,12 @@ try {
   const treasury = page.locator('[data-currency="campaign-credit"]').last();
   await treasury.waitFor({ state: "visible" });
   assert.match((await treasury.textContent()) ?? "", /0/);
+  const treasuryCoin = treasury.locator('[data-campaign-credit-mark="true"]');
+  assert.equal(await treasuryCoin.count(), 1);
+  assert.match(
+    await treasuryCoin.evaluate((node) => getComputedStyle(node).backgroundImage),
+    /coin\.svg/,
+  );
   await page.screenshot({
     path: path.join(ARTIFACT_DIR, "profile-treasury-1440x900.png"),
     fullPage: true,
@@ -299,22 +351,38 @@ try {
   assert.equal(deliveryKeys.length, 0, `asset carregado antes de inspeção: ${deliveryKeys}`);
   assert.equal(signedR2Keys.length, 0, `R2 assinado antes de inspeção: ${signedR2Keys}`);
 
+  const commerce = await readCommerceCatalog();
   const storeWallet = page.locator('[data-currency="campaign-credit"]').first();
-  assert.match((await storeWallet.textContent()) ?? "", /◈\s*0/);
+  assert.match(normalizeText(await storeWallet.textContent()), /Créditos de Campanha 0 saldo persistente/i);
+  assert.equal(await storeWallet.locator('img[src*="coin.svg"]').count(), 1);
   assert.equal(await page.locator('section[aria-labelledby="loadout-title"] article').count(), 4);
 
-  for (const name of [
-    "Exército Clássico",
-    "Lanças Medievais",
-    "Viking",
-    "Gato",
-    "Cachorro",
-    "Futebol",
-  ]) {
-    await page.getByRole("heading", { name, exact: true }).waitFor();
+  const offersSection = page.locator('section[aria-labelledby="offers-title"]');
+  assert.equal(await offersSection.locator("article").count(), commerce.offers.length);
+  for (const offer of commerce.offers) {
+    const card = offersSection.locator("article").filter({ hasText: offer.name });
+    await card.getByRole("heading", { name: offer.name, exact: true }).waitFor();
+    assert.match(normalizeText(await card.textContent()), new RegExp(`\\b${offer.price}\\b`));
+    assert.equal(await card.locator('img[src*="coin.svg"]').count(), 1);
+    const buyButton = card.getByRole("button", { name: "COMPRAR", exact: true });
+    assert.equal(await buyButton.count(), 1);
+    assert.equal(await buyButton.isDisabled(), true, `${offer.id} deveria respeitar saldo zero`);
   }
-  assert.equal(await page.getByRole("button", { name: /COMPRAR/i }).count(), 0);
-  assert.equal(await page.getByText(/R\$\s*\d/).count(), 0);
+
+  const creditsSection = page.locator('section[aria-labelledby="credits-title"]');
+  assert.equal(await creditsSection.locator("article").count(), commerce.creditPacks.length);
+  for (const pack of commerce.creditPacks) {
+    const card = creditsSection.locator("article").filter({ hasText: pack.name });
+    await card.getByRole("heading", { name: pack.name, exact: true }).waitFor();
+    const cardText = normalizeText(await card.textContent());
+    assert.ok(cardText.includes(String(pack.creditAmount)), `${pack.id} sem quantidade persistida`);
+    assert.ok(cardText.includes(normalizeText(formatBrl(pack.priceBrlCents))), `${pack.id} sem preço BRL persistido`);
+    assert.equal(await card.locator('img[src*="coin.svg"]').count(), 1);
+    const futureButton = card.getByRole("button", { name: "EM BREVE", exact: true });
+    assert.equal(await futureButton.count(), 1);
+    assert.equal(await futureButton.isDisabled(), true);
+  }
+  assertFreshCommanderState(await readEconomyState(userId));
 
   await page.screenshot({
     path: path.join(ARTIFACT_DIR, "store-1440x900.png"),
@@ -389,7 +457,7 @@ try {
   }
 
   console.log(
-    `[economy-e2e] ok — ${signedR2Keys.length} WebPs assinados e renderizados somente após interação`,
+    `[economy-e2e] ok — ${commerce.offers.length} offers, ${commerce.creditPacks.length} packs e ${signedR2Keys.length} WebPs validados`,
   );
 } finally {
   await context.close();
