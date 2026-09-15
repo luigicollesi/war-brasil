@@ -28,6 +28,10 @@ const BRL_FORMAT = new Intl.NumberFormat("pt-BR", {
   style: "currency",
   currency: "BRL",
 });
+const AVAILABILITY_DATE_FORMAT = new Intl.DateTimeFormat("pt-BR", {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
 
 type PurchaseFeedback = Readonly<{
   kind: "success" | "error";
@@ -63,6 +67,20 @@ function collectionProgressLabel(collection: StorefrontCollection) {
     return `${collection.ownedCount}/${collection.totalCount} POSSUÍDOS`;
   }
   return `${collection.totalCount} ITENS`;
+}
+
+function formattedAvailabilityDate(value: string) {
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) ? AVAILABILITY_DATE_FORMAT.format(date) : value;
+}
+
+function OfferRotationNotice({ offer }: { offer: EconomyOffer }) {
+  if (!offer.endsAt) return null;
+  return (
+    <p>
+      Disponível até {formattedAvailabilityDate(offer.endsAt)}. Pode retornar à rotação futuramente.
+    </p>
+  );
 }
 
 function CampaignCreditAmount({ amount }: { amount: number }) {
@@ -136,6 +154,7 @@ function InspectionContent({
                 Você já possui {selectedOffer.ownedCount} de {selectedOffer.totalCount} itens. O preço de conclusão considera apenas os itens ainda não adquiridos e aplica o desconto do conjunto sobre esse subtotal.
               </p>
             ) : null}
+            <OfferRotationNotice offer={selectedOffer} />
             <button
               type="button"
               className={commerceStyles.purchaseButton}
@@ -153,9 +172,19 @@ function InspectionContent({
 
 export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnapshot }) {
   const router = useRouter();
+  const activeCampaign = storefront.campaigns[0] ?? null;
+  const campaignFeaturedOffer = activeCampaign
+    ? activeCampaign.offerIds
+        .map((offerId) => storefront.offers.find((offer) => offer.id === offerId) ?? null)
+        .find((offer): offer is EconomyOffer => offer !== null) ?? null
+    : null;
   const featured = useMemo(
-    () => storefront.offers.find((offer) => offer.featured) ?? storefront.offers[0] ?? null,
-    [storefront.offers],
+    () =>
+      campaignFeaturedOffer ??
+      storefront.offers.find((offer) => offer.featured) ??
+      storefront.offers[0] ??
+      null,
+    [campaignFeaturedOffer, storefront.offers],
   );
   const diceOffers = useMemo(
     () =>
@@ -170,6 +199,15 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
       ),
     [storefront.offers],
   );
+  const territoryOfferByCosmeticId = useMemo(() => {
+    const offers = new Map<string, EconomyOffer>();
+    for (const offer of storefront.offers) {
+      if (offer.items.length !== 1) continue;
+      const [item] = offer.items;
+      if (item.slot === "territory_skin") offers.set(item.id, offer);
+    }
+    return offers;
+  }, [storefront.offers]);
   const [selectedOfferId, setSelectedOfferId] = useState<string | null>(featured?.id ?? null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(featured ? previewItem(featured)?.id ?? null : null);
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(
@@ -332,12 +370,19 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
 
       <section id="store-highlights" className={styles.hero} aria-labelledby="store-title">
         <div className={styles.heroCopy}>
-          <small>INTENDÊNCIA // ARSENAL COSMÉTICO</small>
-          <h1 id="store-title">Remessas do Comando</h1>
+          <small>
+            {activeCampaign ? "OPERAÇÃO ATIVA // INTENDÊNCIA" : "INTENDÊNCIA // ARSENAL COSMÉTICO"}
+          </small>
+          <h1 id="store-title">{activeCampaign?.title ?? "Remessas do Comando"}</h1>
           <p>
-            Explore coleções, inspecione equipamentos e adquira apenas os componentes que ainda faltam ao seu Arsenal.
+            {activeCampaign?.description ??
+              "Explore coleções, inspecione equipamentos e adquira apenas os componentes que ainda faltam ao seu Arsenal."}
           </p>
-          {selectedCollection ? (
+          {activeCampaign && campaignFeaturedOffer ? (
+            <button type="button" onClick={() => inspect(campaignFeaturedOffer)}>
+              INSPECIONAR OPERAÇÃO
+            </button>
+          ) : selectedCollection ? (
             <button type="button" onClick={() => openCollection(selectedCollection)}>
               ABRIR COLEÇÃO EM DESTAQUE
             </button>
@@ -348,7 +393,16 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
           ) : null}
         </div>
         <div className={styles.heroVisual}>
-          {selectedCollection ? (
+          {activeCampaign && campaignFeaturedOffer ? (
+            <ProfileCosmeticImage
+              src={itemArtwork(previewItem(campaignFeaturedOffer))}
+              alt={`Destaque da operação ${activeCampaign.title}`}
+              width={520}
+              height={520}
+              priority
+              fallbackLabel="OPERAÇÃO"
+            />
+          ) : selectedCollection ? (
             <ProfileCosmeticImage
               src={selectedCollection.assets.banner}
               alt={`Banner da coleção ${selectedCollection.name}`}
@@ -368,9 +422,19 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
             />
           )}
           <div>
-            <small>{selectedCollection ? "COLEÇÃO EM DESTAQUE" : "DESTAQUE ATUAL"}</small>
-            <strong>{selectedCollection?.name ?? featured?.name ?? "Nenhuma remessa disponível"}</strong>
-            {selectedCollection ? (
+            <small>
+              {activeCampaign
+                ? "OPERAÇÃO EM CURSO"
+                : selectedCollection
+                  ? "COLEÇÃO EM DESTAQUE"
+                  : "DESTAQUE ATUAL"}
+            </small>
+            <strong>
+              {activeCampaign?.title ?? selectedCollection?.name ?? featured?.name ?? "Nenhuma remessa disponível"}
+            </strong>
+            {activeCampaign?.endsAt ? (
+              <span>Até {formattedAvailabilityDate(activeCampaign.endsAt)}</span>
+            ) : selectedCollection ? (
               <span>{collectionProgressLabel(selectedCollection)}</span>
             ) : featured ? (
               <CampaignCreditAmount amount={featured.price} />
@@ -511,6 +575,7 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
                     ? "O valor atual considera somente os cosméticos faltantes e o desconto configurado para o conjunto."
                     : "Adquira os componentes faltantes da coleção em uma única operação atômica."}
                 </p>
+                <OfferRotationNotice offer={selectedCollectionBundle} />
                 <button
                   type="button"
                   className={commerceStyles.purchaseButton}
@@ -548,27 +613,51 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
 
         {storefront.territorySkins.length > 0 ? (
           <div className={styles.catalogGrid}>
-            {storefront.territorySkins.map((skin) => (
-              <article key={skin.id} className={styles.productCard}>
-                <div className={styles.productSelect}>
-                  <span className={styles.productVisual}>
-                    <ProfileCosmeticImage
-                      src={itemArtwork(skin)}
-                      alt={`Prévia de ${skin.name}`}
-                      width={420}
-                      height={300}
-                      fallbackClassName={styles.productFallback}
-                      fallbackLabel="SKIN"
-                    />
-                  </span>
-                  <span className={styles.productCopy}>
-                    <small>{skin.status === "available" ? "DISPONÍVEL" : "ANUNCIADO"}</small>
-                    <strong>{skin.name}</strong>
-                    <em>{skin.owned ? (skin.equipped ? "EQUIPADO" : "POSSUÍDO") : "EM BREVE"}</em>
-                  </span>
-                </div>
-              </article>
-            ))}
+            {storefront.territorySkins.map((skin) => {
+              const offer = territoryOfferByCosmeticId.get(skin.id) ?? null;
+              const pending = offer?.id === pendingOfferId;
+              return (
+                <article key={skin.id} className={styles.productCard}>
+                  <div className={styles.productSelect}>
+                    <span className={styles.productVisual}>
+                      <ProfileCosmeticImage
+                        src={itemArtwork(skin)}
+                        alt={`Prévia de ${skin.name}`}
+                        width={420}
+                        height={300}
+                        fallbackClassName={styles.productFallback}
+                        fallbackLabel="SKIN"
+                      />
+                    </span>
+                    <span className={styles.productCopy}>
+                      <small>{offer ? "DISPONÍVEL" : skin.status === "available" ? "CATÁLOGO" : "ANUNCIADO"}</small>
+                      <strong>{skin.name}</strong>
+                      <em>
+                        {skin.owned
+                          ? skin.equipped
+                            ? "EQUIPADO"
+                            : "POSSUÍDO"
+                          : offer
+                            ? ownershipLabel(offer)
+                            : "EM BREVE"}
+                      </em>
+                    </span>
+                  </div>
+                  {offer ? (
+                    <div className={commerceStyles.productCommerce}>
+                      <CampaignCreditAmount amount={offer.price} />
+                      <button
+                        type="button"
+                        disabled={!offer.purchasable || pending || pendingOfferId !== null}
+                        onClick={() => purchase(offer)}
+                      >
+                        {purchaseLabel(offer, pending)}
+                      </button>
+                    </div>
+                  ) : null}
+                </article>
+              );
+            })}
           </div>
         ) : (
           <div className={styles.emptyCatalog}>
