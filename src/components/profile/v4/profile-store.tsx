@@ -334,6 +334,15 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
         return;
       }
 
+      if (response.status === 409 && payload?.error === "ECONOMY_OFFER_UNAVAILABLE") {
+        setPurchaseFeedback({
+          kind: "error",
+          message: "A oferta não está mais disponível. A Intendência foi atualizada.",
+        });
+        router.refresh();
+        return;
+      }
+
       if (!response.ok) {
         const message =
           payload?.error === "ECONOMY_INSUFFICIENT_BALANCE"
