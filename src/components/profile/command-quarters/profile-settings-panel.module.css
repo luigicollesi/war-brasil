@@ -1,9 +1,7 @@
 .trigger {
-  position: fixed;
-  z-index: 34;
-  right: max(20px, env(safe-area-inset-right));
-  bottom: max(20px, env(safe-area-inset-bottom));
-  min-height: 42px;
+  position: static;
+  min-height: 40px;
+  width: 100%;
   border: 1px solid rgb(208 170 87 / 34%);
   padding: 0 14px;
   color: var(--command-brass-bright, #d0aa57);
@@ -13,7 +11,7 @@
   letter-spacing: 0.12em;
   text-transform: uppercase;
   background: linear-gradient(135deg, rgb(14 23 17 / 96%), rgb(6 11 8 / 96%));
-  box-shadow: 0 14px 34px rgb(0 0 0 / 32%);
+  box-shadow: none;
   cursor: pointer;
 }
 
@@ -239,8 +237,7 @@
 
 @media (max-width: 640px) {
   .trigger {
-    right: max(12px, env(safe-area-inset-right));
-    bottom: max(12px, env(safe-area-inset-bottom));
+    min-height: 38px;
   }
 
   .panel {
