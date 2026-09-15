@@ -11,6 +11,7 @@ import type {
 } from "@/src/lib/economy/economy-contract";
 import { cosmeticPreviewSource } from "@/src/lib/economy/cosmetic-preview";
 import { ProfileCosmeticImage } from "./profile-cosmetic-image";
+import commerceStyles from "./profile-store-commerce.module.css";
 import mobileStyles from "./profile-store-mobile-inspection.module.css";
 import styles from "./profile-store.module.css";
 
@@ -56,7 +57,7 @@ function purchaseLabel(offer: EconomyOffer, pending: boolean) {
 
 function CampaignCreditAmount({ amount }: { amount: number }) {
   return (
-    <span className={styles.creditAmount} aria-label={`${INTEGER_FORMAT.format(amount)} Créditos de Campanha`}>
+    <span className={commerceStyles.creditAmount} aria-label={`${INTEGER_FORMAT.format(amount)} Créditos de Campanha`}>
       <Image src="/coin.svg" alt="" width={22} height={22} aria-hidden="true" />
       <strong>{INTEGER_FORMAT.format(amount)}</strong>
     </span>
@@ -127,7 +128,7 @@ function InspectionContent({
             ) : null}
             <button
               type="button"
-              className={styles.purchaseButton}
+              className={commerceStyles.purchaseButton}
               disabled={!selectedOffer.purchasable || pending || pendingOfferId !== null}
               onClick={() => onPurchase(selectedOffer)}
             >
@@ -277,7 +278,7 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
 
       {purchaseFeedback ? (
         <div
-          className={styles.purchaseFeedback}
+          className={commerceStyles.purchaseFeedback}
           data-kind={purchaseFeedback.kind}
           role="status"
           aria-live="polite"
@@ -323,7 +324,7 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
                       <em>{ownershipLabel(offer)}</em>
                     </span>
                   </button>
-                  <div className={styles.productCommerce}>
+                  <div className={commerceStyles.productCommerce}>
                     <CampaignCreditAmount amount={offer.price} />
                     <button
                       type="button"
@@ -408,14 +409,14 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
         <span className={styles.treasuryCoin} aria-hidden="true">
           <Image src="/coin.svg" alt="" width={72} height={72} />
         </span>
-        <div className={styles.treasuryIntro}>
+        <div className={commerceStyles.treasuryIntro}>
           <small>TESOURARIA // CRÉDITOS DE CAMPANHA</small>
           <h2 id="treasury-title">Reforçar Tesouraria</h2>
           <p>Pacotes previstos para reforço de saldo. A aquisição em moeda real permanece indisponível nesta versão.</p>
         </div>
-        <div className={styles.creditPacks}>
+        <div className={commerceStyles.creditPacks}>
           {storefront.creditPacks.map((pack) => (
-            <article key={pack.id} className={styles.creditPack}>
+            <article key={pack.id} className={commerceStyles.creditPack}>
               <span>
                 <small>{pack.name}</small>
                 <CampaignCreditAmount amount={pack.creditAmount} />
@@ -427,7 +428,7 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
             </article>
           ))}
           {storefront.creditPacks.length === 0 ? (
-            <span className={styles.creditPacksEmpty}>Nenhum pacote anunciado.</span>
+            <span className={commerceStyles.creditPacksEmpty}>Nenhum pacote anunciado.</span>
           ) : null}
         </div>
       </section>
