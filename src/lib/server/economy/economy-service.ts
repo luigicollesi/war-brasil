@@ -13,6 +13,7 @@ import type {
   EquipCosmeticInput,
   PurchaseOfferInput,
   PurchaseOfferResult,
+  StorefrontCampaign,
   StorefrontCollection,
 } from "@/src/lib/economy/economy-contract";
 import {
@@ -49,12 +50,14 @@ import {
   type WalletRow,
 } from "./economy-repository";
 import {
+  listStorefrontCampaigns,
   listStorefrontCollections,
   listStorefrontCreditPacks,
   listStorefrontOfferItems,
   listStorefrontOffers,
   listStorefrontTerritorySkins,
   type CreditPackRow,
+  type StorefrontCampaignRow,
   type StorefrontCollectionRow,
   type StorefrontOfferItemRow,
   type StorefrontOfferRow,
@@ -284,6 +287,33 @@ function collectionsFromRows(
   });
 }
 
+function campaignsFromRows(rows: StorefrontCampaignRow[]): StorefrontCampaign[] {
+  const grouped = new Map<string, StorefrontCampaign>();
+
+  for (const row of rows) {
+    const current = grouped.get(row.campaign_id);
+    if (current) {
+      grouped.set(row.campaign_id, {
+        ...current,
+        offerIds: [...current.offerIds, row.offer_id],
+      });
+      continue;
+    }
+
+    grouped.set(row.campaign_id, {
+      id: row.campaign_id,
+      slug: row.campaign_slug,
+      title: row.campaign_title,
+      description: row.campaign_description,
+      startsAt: row.campaign_starts_at,
+      endsAt: row.campaign_ends_at,
+      offerIds: [row.offer_id],
+    });
+  }
+
+  return [...grouped.values()];
+}
+
 function quoteItemFromRow(row: StorefrontQuoteItemRow): StorefrontQuoteItem {
   const acquisitionCount = integerAmount(
     row.acquisition_count,
@@ -425,6 +455,8 @@ function offersFromRows(
       price: quote.finalPrice,
       status: row.status,
       featured: row.is_featured,
+      startsAt: row.starts_at,
+      endsAt: row.ends_at,
       items,
       ownedCount,
       totalCount,
@@ -507,6 +539,7 @@ export async function getEconomyStorefront(
     const offerItemRows = await listStorefrontOfferItems(userId, client);
     const productRows = await listActiveStorefrontOfferProducts(client);
     const quoteRows = await listActiveStorefrontQuoteItems(userId, client);
+    const campaignRows = await listStorefrontCampaigns(client);
     const creditPackRows = await listStorefrontCreditPacks(client);
     const offers = offersFromRows(offerRows, offerItemRows, productRows, quoteRows);
 
@@ -516,6 +549,7 @@ export async function getEconomyStorefront(
       ownedItems: ownedRows.map(cosmeticFromRow),
       sets: setsFromRows(setRows),
       collections: collectionsFromRows(collectionRows, productRows),
+      campaigns: campaignsFromRows(campaignRows),
       territorySkins: territorySkinRows.map(cosmeticFromRow),
       offers,
       creditPacks: creditPacksFromRows(creditPackRows),
