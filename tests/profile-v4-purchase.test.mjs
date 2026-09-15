@@ -1,0 +1,39 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
+
+const ROOT = new URL("../", import.meta.url);
+
+async function source(path) {
+  return readFile(new URL(path, ROOT), "utf8");
+}
+
+test("PROFILE V4 purchase client sends only offer identity and idempotency", async () => {
+  const store = await source("src/components/profile/v4/profile-store.tsx");
+
+  assert.match(store, /fetch\("\/api\/economy\/purchases"/);
+  assert.match(store, /method:\s*"POST"/);
+  assert.match(store, /crypto\.randomUUID\(\)/);
+  assert.match(store, /JSON\.stringify\(\{\s*offerId:\s*offer\.id,\s*idempotencyKey/);
+  assert.doesNotMatch(store, /userId\s*:/);
+  assert.doesNotMatch(store, /price\s*:\s*offer\.price/);
+  assert.doesNotMatch(store, /currency\s*:/);
+  assert.doesNotMatch(store, /cosmeticIds\s*:/);
+});
+
+test("PROFILE V4 purchase interaction prevents duplicate clicks and refreshes authoritative state", async () => {
+  const store = await source("src/components/profile/v4/profile-store.tsx");
+
+  assert.match(store, /pendingOfferId/);
+  assert.match(store, /if \(pendingOfferId\) return/);
+  assert.match(store, /router\.refresh\(\)/);
+  assert.match(store, /response\.ok/);
+  assert.match(store, /ECONOMY_INSUFFICIENT_BALANCE/);
+});
+
+test("PROFILE V4 purchase feedback keeps campaign credits visually canonical", async () => {
+  const store = await source("src/components/profile/v4/profile-store.tsx");
+
+  assert.match(store, /purchaseFeedback/);
+  assert.match(store, /\/coin\.svg/);
+});
