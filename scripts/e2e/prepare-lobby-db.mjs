@@ -54,6 +54,23 @@ try {
   await seedClient.query("SET LOCAL search_path TO catalog, public");
   await seedClient.query(balancedObjectivesSql);
 
+  // O evento 0 é o sentinel autoritativo de início do grafo de anomalias.
+  // O schema canônico define a estrutura do catálogo, mas não popula os 38
+  // eventos de produção; o E2E controlado só precisa do sentinel para registrar
+  // a rodada inicial sem inventar um evento de gameplay alternativo.
+  await seedClient.query(`
+    INSERT INTO catalog.events (id, name, text, image_url, effects, is_passive)
+    VALUES (
+      0,
+      'Estado inicial',
+      'Estado inicial do grafo de anomalias.',
+      '',
+      '[]'::jsonb,
+      FALSE
+    )
+    ON CONFLICT (id) DO NOTHING
+  `);
+
   // O E2E precisa de um baralho territorial completo para atravessar startGame.
   // A distribuição exata das artes não faz parte deste teste; mantemos 14 cartas
   // de cada símbolo para um fixture completo e determinístico.
@@ -105,6 +122,11 @@ try {
           WHERE player_count = 2 AND is_active = TRUE) AS two_player_objectives,
         (SELECT COUNT(*)::int
            FROM catalog.territory_card_symbols) AS territory_symbols,
+        EXISTS (
+          SELECT 1
+          FROM catalog.events
+          WHERE id = 0
+        ) AS initial_event_ready,
         (SELECT COUNT(*)::int
            FROM catalog.dice_balance_settings) AS dice_settings,
         (SELECT COUNT(*)::int
@@ -140,6 +162,9 @@ try {
       `Catálogo E2E deveria possuir 42 símbolos territoriais; encontrou ${state?.territory_symbols ?? 0}.`,
     );
   }
+  if (!state?.initial_event_ready) {
+    throw new Error("Evento inicial 0 ausente no catálogo E2E.");
+  }
   if ((state?.dice_settings ?? 0) !== 1) {
     throw new Error("Configuração de dados adaptativos ausente no banco E2E.");
   }
@@ -157,7 +182,7 @@ try {
   console.log(
     `[war-brasil] banco E2E do Lobby preparado: ${databaseName} ` +
       `(${state.two_player_objectives} objetivos para 2 jogadores, ` +
-      `${state.territory_symbols} símbolos territoriais, auth/profile prontos)`,
+      `${state.territory_symbols} símbolos territoriais, evento inicial e auth/profile prontos)`,
   );
 } finally {
   await validationClient.end();
