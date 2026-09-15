@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { TerritorySkinPreview } from "@/src/components/economy/territory-skin-preview";
 import type {
   CosmeticCatalogItem,
   CosmeticSlot,
@@ -26,6 +27,16 @@ const FILTERS: ReadonlyArray<{ id: "all" | CosmeticSlot; label: string }> = [
 ];
 
 function CosmeticVisual({ item, priority = false }: { item: CosmeticCatalogItem; priority?: boolean }) {
+  if (item.slot === "territory_effect") {
+    return (
+      <TerritorySkinPreview
+        assetRef={cosmeticPreviewSource(item)}
+        ariaLabel={`Prévia de ${item.name}`}
+        className={styles.itemImage}
+      />
+    );
+  }
+
   return (
     <ProfileCosmeticImage
       src={cosmeticPreviewSource(item)}
