@@ -11,9 +11,10 @@ async function source(path) {
 test("PROFILE V4 exposes three route-backed private surfaces", async () => {
   const shell = await source("src/components/profile/v4/profile-shell.tsx");
 
-  assert.match(shell, /href="\/profile"/);
-  assert.match(shell, /href="\/profile\/arsenal"/);
-  assert.match(shell, /href="\/profile\/store"/);
+  assert.match(shell, /id: "dossier", href: "\/profile"/);
+  assert.match(shell, /id: "arsenal", href: "\/profile\/arsenal"/);
+  assert.match(shell, /id: "store", href: "\/profile\/store"/);
+  assert.match(shell, /href=\{item\.href\}/);
   assert.match(shell, /aria-current=/);
 });
 
