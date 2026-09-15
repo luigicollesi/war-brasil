@@ -1,0 +1,482 @@
+.arsenal {
+  --ivory: #eee8da;
+  --brass: #d0aa57;
+  --red: #b53137;
+  display: grid;
+  gap: 18px;
+}
+
+.hero,
+.bays,
+.inventory {
+  border: 1px solid rgb(208 170 87 / 18%);
+  background: linear-gradient(145deg, rgb(12 31 24 / 92%), rgb(6 17 13 / 96%));
+  box-shadow: 0 24px 60px rgb(0 0 0 / 16%);
+}
+
+.hero {
+  min-height: 138px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: clamp(24px, 3vw, 38px);
+}
+
+.hero > span {
+  display: grid;
+  gap: 7px;
+}
+
+.hero small,
+.sectionHeading small,
+.bayCopy small,
+.cardCopy small,
+.inspectorCopy small {
+  color: rgb(208 170 87 / 70%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.hero h1,
+.sectionHeading h2,
+.inspectorCopy h3 {
+  margin: 0;
+  color: var(--ivory);
+  font-family: var(--font-wb-display), sans-serif;
+  text-transform: uppercase;
+}
+
+.hero h1 {
+  font-size: clamp(1.8rem, 4vw, 3.8rem);
+  line-height: 0.95;
+}
+
+.hero p {
+  max-width: 72ch;
+  margin: 0;
+  color: rgb(238 232 218 / 58%);
+  font-size: 0.82rem;
+}
+
+.hero > strong {
+  color: rgb(208 170 87 / 28%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: clamp(1.2rem, 2.2vw, 2.2rem);
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+
+.bays,
+.inventory {
+  padding: 18px;
+}
+
+.sectionHeading {
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.sectionHeading > span {
+  display: grid;
+  gap: 3px;
+}
+
+.sectionHeading h2 {
+  font-size: 1rem;
+  letter-spacing: 0.055em;
+}
+
+.sectionHeading em {
+  color: rgb(238 232 218 / 35%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.62rem;
+  font-style: normal;
+  letter-spacing: 0.1em;
+}
+
+.bayGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.bay {
+  position: relative;
+  min-height: 190px;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  overflow: hidden;
+  border: 1px solid rgb(238 232 218 / 9%);
+  background:
+    radial-gradient(circle at 50% 36%, rgb(208 170 87 / 9%), transparent 50%),
+    rgb(3 13 10 / 42%);
+}
+
+.bay::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  box-shadow: inset 0 0 40px rgb(0 0 0 / 22%);
+}
+
+.bayIndex {
+  position: absolute;
+  z-index: 2;
+  top: 10px;
+  right: 12px;
+  color: rgb(208 170 87 / 27%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 1.25rem;
+}
+
+.bayVisual,
+.cardVisual,
+.inspectorVisual {
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.bayVisual {
+  padding: 18px;
+}
+
+.itemImage {
+  width: 100%;
+  height: 100%;
+  max-height: 210px;
+  object-fit: contain;
+  filter: drop-shadow(0 18px 26px rgb(0 0 0 / 35%));
+}
+
+.visualFallback {
+  width: 86px;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  color: rgb(208 170 87 / 58%);
+  border: 1px solid rgb(208 170 87 / 25%);
+  background: repeating-linear-gradient(135deg, rgb(208 170 87 / 4%) 0 6px, transparent 6px 12px);
+  font-family: var(--font-geist-mono), monospace;
+  letter-spacing: 0.1em;
+}
+
+.bayCopy {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  gap: 4px;
+  padding: 13px 14px;
+  border-top: 1px solid rgb(238 232 218 / 8%);
+  background: rgb(4 14 11 / 70%);
+}
+
+.bayCopy strong,
+.cardCopy strong {
+  overflow: hidden;
+  color: var(--ivory);
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bayCopy span,
+.cardCopy em {
+  color: rgb(208 170 87 / 72%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.55rem;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+
+.inventoryHeader {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  padding-bottom: 14px;
+}
+
+.filters button,
+.inspectorCopy button {
+  border: 1px solid rgb(208 170 87 / 20%);
+  color: rgb(238 232 218 / 58%);
+  background: rgb(208 170 87 / 4%);
+  font: inherit;
+  cursor: pointer;
+}
+
+.filters button {
+  min-height: 34px;
+  padding: 0 11px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.58rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.filters button:hover,
+.filters button:focus-visible,
+.filters button[data-active="true"] {
+  color: var(--ivory);
+  border-color: rgb(208 170 87 / 52%);
+  background: rgb(208 170 87 / 10%);
+}
+
+.inventoryLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(280px, 0.55fr);
+  gap: 14px;
+}
+
+.inventoryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-content: start;
+  gap: 10px;
+}
+
+.inventoryCard {
+  min-width: 0;
+  min-height: 178px;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  padding: 0;
+  overflow: hidden;
+  color: inherit;
+  border: 1px solid rgb(238 232 218 / 8%);
+  background: rgb(3 13 10 / 42%);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 180ms ease, transform 180ms ease, background 180ms ease;
+}
+
+.inventoryCard:hover,
+.inventoryCard:focus-visible,
+.inventoryCard[data-selected="true"] {
+  border-color: rgb(208 170 87 / 48%);
+  background: rgb(208 170 87 / 6%);
+}
+
+.inventoryCard:hover {
+  transform: translateY(-2px);
+}
+
+.inventoryCard[data-equipped="true"] {
+  box-shadow: inset 0 2px var(--brass);
+}
+
+.cardVisual {
+  min-height: 112px;
+  padding: 12px;
+}
+
+.cardVisual .itemImage {
+  max-height: 105px;
+}
+
+.cardCopy {
+  display: grid;
+  gap: 3px;
+  padding: 10px 11px;
+  border-top: 1px solid rgb(238 232 218 / 7%);
+}
+
+.inspector {
+  min-height: 360px;
+  display: grid;
+  grid-template-rows: minmax(190px, 1fr) auto;
+  border: 1px solid rgb(208 170 87 / 17%);
+  background: rgb(2 11 8 / 48%);
+}
+
+.inspectorVisual {
+  min-height: 220px;
+  padding: 24px;
+  background: radial-gradient(circle at center, rgb(208 170 87 / 9%), transparent 60%);
+}
+
+.inspectorCopy {
+  display: grid;
+  gap: 10px;
+  padding: 18px;
+  border-top: 1px solid rgb(238 232 218 / 8%);
+}
+
+.inspectorCopy h3 {
+  font-size: 1.25rem;
+  letter-spacing: 0.03em;
+}
+
+.inspectorCopy p {
+  margin: 0;
+  color: rgb(238 232 218 / 58%);
+  font-size: 0.78rem;
+  line-height: 1.55;
+}
+
+.inspectorCopy button {
+  min-height: 42px;
+  margin-top: 4px;
+  color: #111b14;
+  border-color: var(--brass);
+  background: var(--brass);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.65rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+}
+
+.inspectorCopy button:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.equippedState,
+.archivedState {
+  padding: 11px;
+  color: var(--brass);
+  border: 1px solid rgb(208 170 87 / 22%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-align: center;
+}
+
+.archivedState {
+  color: rgb(238 232 218 / 45%);
+}
+
+.emptyInventory,
+.emptyInspector {
+  min-height: 180px;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 6px;
+  padding: 24px;
+  color: rgb(238 232 218 / 45%);
+  border: 1px dashed rgb(208 170 87 / 18%);
+  text-align: center;
+}
+
+.emptyInventory strong {
+  color: rgb(238 232 218 / 72%);
+}
+
+.feedback {
+  position: sticky;
+  z-index: 12;
+  bottom: 82px;
+  justify-self: center;
+  margin: 0;
+  padding: 10px 14px;
+  color: var(--ivory);
+  border: 1px solid rgb(208 170 87 / 30%);
+  background: rgb(5 18 14 / 94%);
+  box-shadow: 0 12px 30px rgb(0 0 0 / 30%);
+  font-size: 0.75rem;
+}
+
+.feedback[data-kind="error"] {
+  border-color: rgb(181 49 55 / 55%);
+}
+
+@media (max-width: 1100px) {
+  .bayGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .inventoryGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 820px) {
+  .hero {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .inventoryHeader {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .filters {
+    justify-content: flex-start;
+    padding-bottom: 8px;
+  }
+
+  .inventoryLayout {
+    grid-template-columns: 1fr;
+  }
+
+  .inspector {
+    min-height: 300px;
+  }
+}
+
+@media (max-width: 520px) {
+  .hero,
+  .bays,
+  .inventory {
+    padding: 14px;
+  }
+
+  .bayGrid,
+  .inventoryGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .bay {
+    min-height: 160px;
+  }
+
+  .bayVisual {
+    padding: 10px;
+  }
+
+  .cardVisual {
+    min-height: 92px;
+  }
+
+  .filters {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .filters button {
+    padding-inline: 5px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .inventoryCard {
+    transition: none;
+  }
+
+  .inventoryCard:hover {
+    transform: none;
+  }
+}
