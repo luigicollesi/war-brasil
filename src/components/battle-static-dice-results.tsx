@@ -37,6 +37,7 @@ function StaticDiceSide({
             <GameDie
               value={value}
               color={color}
+              skin={side}
               assetRef={assetRef}
               className="battle-die"
             />
