@@ -125,14 +125,39 @@ A Economy V2 possui uma única moeda ativa de gameplay/comércio:
 
 - ID: `campaign-credit`;
 - nome: `Créditos de Campanha`;
-- símbolo: `◈`;
+- representação visual canônica: `/coin.svg`, proveniente de `public/coin.svg`;
 - saldo inicial: `0`.
+
+O glyph textual `◈` MAY permanecer em schema/contratos legados como fallback semântico ou de compatibilidade, mas MUST NOT ser tratado como a identidade visual principal da moeda nas superfícies V2/V4.
 
 Valores monetários MUST ser inteiros. `economy.wallets.balance` MUST continuar impedido de ficar negativo por constraint.
 
 Todo comandante autenticado MUST possuir uma wallet persistente para `campaign-credit`.
 
 Um saldo `0` representa valor real consultado da fonte persistente e MUST NOT ser usado como fallback para indisponibilidade.
+
+### Representação visual canônica da moeda
+
+`public/coin.svg` é o asset estrutural canônico para representar `campaign-credit` na UI.
+
+A aplicação MUST utilizar `/coin.svg` junto ao valor numérico em superfícies visuais de moeda, incluindo:
+
+- saldo da wallet;
+- preço de offer em `campaign-credit`;
+- quantidade de créditos em `credit_packs`;
+- feedback visual de débito/aquisição quando a moeda for mostrada.
+
+`coin.svg`:
+
+- MUST permanecer um asset local estável servido pela aplicação;
+- MUST NOT depender de Cloudflare R2, presigned URL ou catálogo cosmético;
+- MUST NOT ser persistido por usuário, inventário ou loadout;
+- MUST NOT ser tratado como cosmético;
+- MUST ser reutilizado como a mesma identidade visual em Profile, Arsenal, Intendência e futuras superfícies econômicas.
+
+O caminho `/coin.svg` é convenção estrutural de UI e não precisa ser enviado em cada DTO econômico. O backend continua enviando valores e identidade monetária autoritativos; a camada de apresentação associa `campaign-credit` ao asset local canônico.
+
+O valor monetário MUST permanecer legível textualmente. O ícone não pode ser a única forma de comunicar saldo ou preço. Quando o SVG for puramente decorativo ao lado de texto equivalente, SHOULD ser ocultado da árvore acessível; quando carregar nome de moeda, MUST possuir nome acessível equivalente a `Créditos de Campanha`.
 
 ## Fontes de crédito
 
@@ -293,7 +318,7 @@ Status de offer:
 
 A única moeda aceita pelas offers desta entrega é `campaign-credit`.
 
-O frontend MUST exibir o preço retornado pelo backend e MUST NOT calcular, inferir ou sobrescrever preço.
+O frontend MUST exibir o preço retornado pelo backend acompanhado da representação visual `/coin.svg` e MUST NOT calcular, inferir ou sobrescrever preço.
 
 O SPEC não fixa valores comerciais numéricos dos produtos. Preços de produção são dados de catálogo e podem ser alterados sem rebuild do frontend. Todo offer `available` MUST, porém, possuir preço inteiro positivo persistido.
 
@@ -456,6 +481,8 @@ Ele SHOULD projetar semanticamente:
 
 O DTO MAY projetar URLs de entrega efêmeras para assets, mas MUST manter object key/segredo fora do contrato público quando não forem necessários.
 
+O caminho `/coin.svg` MUST NOT precisar ser duplicado em cada payload monetário: ele é um asset estrutural estável associado no frontend ao `currency_code='campaign-credit'`.
+
 O cliente MAY fazer optimistic presentation apenas quando reversível; saldo, ownership e compra confirmada MUST ser reconciliados pela resposta autoritativa do servidor.
 
 ## Pacotes de créditos em BRL
@@ -476,7 +503,7 @@ Status inicial da entrega MUST ser não adquirível, por exemplo `announced`.
 
 A UI MAY mostrar:
 
-- quantidade de créditos;
+- quantidade de créditos acompanhada por `/coin.svg`;
 - preço formatado em BRL derivado de `price_brl_cents`;
 - estado `EM BREVE` ou equivalente.
 
@@ -535,6 +562,8 @@ A aplicação MUST derivar internamente Access Key ID, Secret Access Key, endpoi
 MUST NOT criar aliases públicos ou `NEXT_PUBLIC_*` equivalentes.
 
 A connection string e o Secret Access Key MUST NOT aparecer em browser bundle, HTML, DTOs, logs, erros, banco ou evidências E2E.
+
+`public/coin.svg` é explicitamente um asset estrutural local da aplicação e MUST NOT ser migrado para esse fluxo R2 apenas por representar moeda. A disponibilidade do ícone de moeda não pode depender de credenciais ou conectividade do object storage cosmético.
 
 ## Entrega de assets ao browser
 
@@ -641,6 +670,8 @@ A migration da V2 SHOULD criar, conforme necessário:
 
 Dados V1 existentes de wallet, inventory, loadout, catalog e snapshots MUST ser preservados.
 
+Nenhuma migration é necessária apenas para referenciar `/coin.svg`, salvo se implementação futura decidir remover um glyph textual legado do catálogo de moedas. A identidade visual canônica permanece responsabilidade da apresentação.
+
 ## Observabilidade
 
 Falhas econômicas SHOULD possuir códigos estáveis para diagnóstico, sem secrets.
@@ -662,6 +693,8 @@ A storefront SHOULD obter catálogo, offers e ownership em consultas previsívei
 A compra MUST manter a seção crítica de lock da wallet curta.
 
 Grid/preview SHOULD lazy-load assets fora do viewport e evitar baixar todos os WebPs de runtime apenas para mostrar thumbnails.
+
+`coin.svg` SHOULD ser reaproveitado pelo cache normal de asset estático e não duplicado inline em cada card quando isso aumentar desnecessariamente o markup.
 
 ## Fora de escopo
 
@@ -687,10 +720,12 @@ Explicitamente fora de escopo nesta V2:
 A Economy V2 só está pronta quando:
 
 - compra com créditos é atômica, idempotente e concorrente-segura;
-- preço exibido é o preço persistido da offer;
+- preço exibido é o preço persistido da offer e usa `/coin.svg` como representação visual da moeda;
+- wallet, preços e packs representam `campaign-credit` de forma consistente com `public/coin.svg`;
 - saldo, ledger, receipt e inventory permanecem consistentes;
 - itens comprados aparecem no Arsenal e podem ser equipados;
 - catálogo continua dinâmico e orientado pelo banco;
 - pacotes BRL são somente informativos e não alteram saldo;
+- `coin.svg` permanece local e independente do R2 cosmético;
 - R2 continua seguro e cosmético não altera gameplay;
 - todos os BLOCKERs de `EVAL.md` estão verdes.
