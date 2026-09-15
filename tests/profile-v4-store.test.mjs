@@ -59,13 +59,13 @@ test("PROFILE V4 collection detail uses background, logo and canonical cosmetic 
   const store = await source("src/components/profile/v4/profile-store.tsx");
 
   assert.match(store, /collection\.assets\.banner/);
-  assert.match(store, /collection\.assets\.background/);
-  assert.match(store, /collection\.assets\.logo/);
-  assert.match(store, /collection\.items/);
-  assert.match(store, /collection\.ownedCount/);
-  assert.match(store, /collection\.totalCount/);
+  assert.match(store, /selectedCollection\.assets\.background/);
+  assert.match(store, /selectedCollection\.assets\.logo/);
+  assert.match(store, /selectedCollection\.items\.map/);
+  assert.match(store, /selectedCollection\.ownedCount/);
+  assert.match(store, /selectedCollection\.totalCount/);
   assert.match(store, /Completar coleção|COMPLETAR COLEÇÃO/i);
-  assert.doesNotMatch(store, /collection\.assets\.hero|collection\.assets\.card/);
+  assert.doesNotMatch(store, /(?:collection|selectedCollection)\.assets\.(?:hero|card)/);
 });
 
 test("PROFILE V4 collection banner is an accessible discovery control", async () => {
@@ -75,7 +75,7 @@ test("PROFILE V4 collection banner is an accessible discovery control", async ()
   assert.match(store, /setSelectedCollectionId/);
   assert.match(store, /collection\.assets\.banner/);
   assert.match(store, /type="button"/);
-  assert.match(store, /aria-label=.*coleção|aria-label=.*collection/i);
+  assert.match(store, /aria-label=\{`Abrir coleção \$\{collection\.name\}`\}/);
 });
 
 test("PROFILE V4 treasury renders DB credit packs but keeps BRL checkout disabled", async () => {
