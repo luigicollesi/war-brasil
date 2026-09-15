@@ -697,7 +697,7 @@ export async function purchaseOffer(
     const lockedStats = await lockProductCosmeticStats(offer.product_id, client);
     const pricingRows = await listLockedProductQuoteItems(
       userId,
-      offer.id,
+      offer.offer_id,
       offer.product_id,
       client,
     );
@@ -744,7 +744,7 @@ export async function purchaseOffer(
     await createPurchaseReceipt(
       purchaseId,
       userId,
-      offer.id,
+      offer.offer_id,
       price,
       pricingRows.length,
       idempotencyKey,
@@ -820,7 +820,7 @@ export async function purchaseOffer(
       wallet: walletFromRow({ ...lockedWallet!, balance: updatedBalance }),
       acquiredItems: acquiredRows.map(cosmeticFromRow),
       offer: {
-        id: offer.id,
+        id: offer.offer_id,
         ownedCount: pricingRows.length,
         totalCount: pricingRows.length,
         fullyOwned: true,
