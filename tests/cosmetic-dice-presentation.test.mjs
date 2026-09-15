@@ -18,10 +18,11 @@ test("skin cosmética altera somente a fonte visual das texturas 3D", () => {
   );
 
   assert.match(types, /assetRef\?: string \| null/);
-  assert.match(texture, /const nativeSource = DICE_SKIN_SOURCES\[skin\]/);
+  assert.match(texture, /if \(assetRef\)/);
   assert.match(texture, /loadImage\(assetRef\)/);
+  assert.match(texture, /drawProceduralBase\(context, skin, resolution\)/);
   assert.match(texture, /drawPips\(context, value, resolution, pipColor\)/);
-  assert.match(assets, /options\.assetRef \?\? "native"/);
+  assert.match(assets, /options\.assetRef \?\? "procedural"/);
   assert.doesNotMatch(launch, /assetRef|cosmetic|catalog|profile/);
   assert.doesNotMatch(predetermined, /assetRef|cosmetic|catalog|profile/);
 });
@@ -51,6 +52,7 @@ test("combate usa skin de ataque do atacante e defesa do defensor", () => {
   assert.match(overlay, /defenseAssetRef=\{defenseAssetRef\}/);
   assert.match(cinematic, /assetRef=\{assetRef\}/);
   assert.match(fullscreen, /useDiceFaceTextures\(\{ skin, pipColor, assetRef \}\)/);
+  assert.match(staticResults, /skin=\{side\}/);
   assert.match(staticResults, /assetRef=\{attackAssetRef\}/);
   assert.match(staticResults, /assetRef=\{defenseAssetRef\}/);
 });
@@ -71,23 +73,27 @@ test("ordem de jogo usa o dado neutro congelado do jogador", () => {
     /assetRef=\{shownPlayer\?\.cosmetics\.diceNeutral\.assetRef\}/,
   );
   assert.match(cinematic, /assetRef=\{assetRef\}/);
-  assert.match(die, /assetRef \?\? NATIVE_DIE_ASSET/);
+  assert.match(die, /requestedAsset = assetRef\?\.trim\(\) \|\| null/);
 });
 
-test("asset ausente ou inválido mantém o renderer nativo sem tocar no resultado", () => {
+test("asset ausente ou inválido usa fallback procedural sem tocar no resultado", () => {
   const texture = source("src/lib/client/dice/textures/create-face-texture.ts");
   const die = source("src/components/game-die.tsx");
   const skins = source("src/lib/client/dice/textures/dice-skins.ts");
 
-  assert.match(texture, /if \(!assetRef \|\| assetRef === nativeSource\)/);
-  assert.match(texture, /catch \{[\s\S]*loadImage\(nativeSource\)/);
+  assert.match(texture, /DICE_PROCEDURAL_PALETTES\[skin\]/);
+  assert.match(
+    texture,
+    /catch \{[\s\S]*drawProceduralBase\(context, skin, resolution\)/,
+  );
   assert.match(texture, /presentation-only/);
-  assert.match(die, /NATIVE_DIE_ASSET = "\/dado-brasil-hq\.svg"/);
-  assert.match(die, /failedAsset === requestedAsset \? NATIVE_DIE_ASSET : requestedAsset/);
-  assert.match(die, /onError=\{\(\) => \{/);
-  assert.match(die, /setFailedAsset\(requestedAsset\)/);
+  assert.match(die, /DICE_PROCEDURAL_PALETTES\[skin\]/);
+  assert.match(die, /failedAsset !== requestedAsset/);
+  assert.match(die, /onError=\{\(\) => setFailedAsset\(imageSource\)\}/);
+  assert.match(die, /data-dice-source=\{imageSource \? "cosmetic" : "procedural"\}/);
   assert.doesNotMatch(die, /useEffect/);
-  assert.match(skins, /neutral: "\/dado-brasil-hq\.svg"/);
-  assert.match(skins, /attack: "\/dado-ataque-vermelho-hq\.svg"/);
-  assert.match(skins, /defense: "\/dado-defesa-azul-hq\.svg"/);
+  assert.doesNotMatch(die, /dado-[^"']+\.svg/);
+  assert.doesNotMatch(texture, /dado-[^"']+\.svg/);
+  assert.doesNotMatch(skins, /\.svg/);
+  assert.match(skins, /neutral:[\s\S]*attack:[\s\S]*defense:/);
 });
