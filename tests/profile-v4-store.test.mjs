@@ -16,20 +16,50 @@ test("PROFILE V4 store is a dedicated Intendência surface inside the shared she
   assert.doesNotMatch(page, /<EconomyStorefront/);
 });
 
-test("PROFILE V4 store consumes catalog data instead of hardcoding commercial authority", async () => {
+test("PROFILE V4 store consumes Economy V2 offers and packs instead of inventing commerce", async () => {
   const store = await source("src/components/profile/v4/profile-store.tsx");
 
-  assert.match(store, /storefront\.sets/);
+  assert.match(store, /storefront\.offers/);
+  assert.match(store, /storefront\.creditPacks/);
+  assert.match(store, /offer\.price/);
+  assert.match(store, /pack\.creditAmount/);
+  assert.match(store, /pack\.priceBrlCents/);
   assert.doesNotMatch(store, /R\$\s*\d/);
   assert.doesNotMatch(store, /price:\s*\d/);
+  assert.doesNotMatch(store, /creditAmount:\s*\d/);
   assert.doesNotMatch(store, /userId/);
 });
 
-test("PROFILE V4 store exposes the future treasury reinforcement anchor without enabling checkout", async () => {
+test("PROFILE V4 store uses the canonical campaign-credit coin beside monetary values", async () => {
+  const store = await source("src/components/profile/v4/profile-store.tsx");
+
+  assert.match(store, /src="\/coin\.svg"/);
+  assert.match(store, /offer\.price/);
+  assert.match(store, /pack\.creditAmount/);
+  assert.doesNotMatch(store, />\s*◈\s*</);
+});
+
+test("PROFILE V4 store exposes partial ownership and server-derived offer states", async () => {
+  const store = await source("src/components/profile/v4/profile-store.tsx");
+
+  assert.match(store, /offer\.fullyOwned/);
+  assert.match(store, /offer\.partiallyOwned/);
+  assert.match(store, /offer\.ownedCount/);
+  assert.match(store, /offer\.totalCount/);
+  assert.match(store, /offer\.purchasable/);
+  assert.match(store, /POSSUÍDO/);
+  assert.match(store, /POSSUÍDOS/);
+  assert.match(store, /COMPRAR/);
+  assert.match(store, /INDISPONÍVEL/);
+});
+
+test("PROFILE V4 treasury renders DB credit packs but keeps BRL checkout disabled", async () => {
   const store = await source("src/components/profile/v4/profile-store.tsx");
 
   assert.match(store, /id="reforcar-tesouraria"/);
+  assert.match(store, /storefront\.creditPacks\.map/);
   assert.match(store, /EM BREVE/);
+  assert.match(store, /disabled/);
   assert.doesNotMatch(store, /Stripe|MercadoPago|checkout/i);
 });
 
