@@ -5,6 +5,8 @@ import {
   DEFAULT_TERRITORY_SKIN,
   assertTerritorySkinAssetKey,
   isTerritorySkinAssetKey,
+  territorySkinAssetRefFromRuntimeEffectKey,
+  territorySkinRuntimeEffectKey,
   territorySkinSnapshot,
 } from "../.test-build/economy/territory-skin-contract.js";
 
@@ -75,6 +77,30 @@ test("image territory skin aceita somente object key WebP canônica", () => {
     assert.equal(isTerritorySkinAssetKey(key), false);
     assert.throws(() => assertTerritorySkinAssetKey(key));
   }
+});
+
+test("bridge transitório round-tripa somente delivery path interno válido", () => {
+  const snapshot = territorySkinSnapshot({
+    cosmeticId: "territory.effect.azulejo-brasil",
+    assetRef: IMAGE_KEY,
+    effectKey: null,
+  });
+  const runtimeKey = territorySkinRuntimeEffectKey(
+    snapshot,
+    (assetRef) => `/api/assets/territory-skins?key=${encodeURIComponent(assetRef)}`,
+  );
+
+  assert.equal(
+    territorySkinAssetRefFromRuntimeEffectKey(runtimeKey),
+    `/api/assets/territory-skins?key=${encodeURIComponent(IMAGE_KEY)}`,
+  );
+  assert.equal(
+    territorySkinAssetRefFromRuntimeEffectKey(
+      `territory-image:${encodeURIComponent("https://evil.invalid/skin.webp")}`,
+    ),
+    null,
+  );
+  assert.equal(territorySkinAssetRefFromRuntimeEffectKey("future-procedural"), null);
 });
 
 test("contrato persistente mantém exclusividade procedural/image apenas em territory_effect", () => {
