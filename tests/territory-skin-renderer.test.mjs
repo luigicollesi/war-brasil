@@ -8,6 +8,8 @@ function source(path) {
 
 test("renderer de image skin usa overlay SVG compartilhado sem tocar hitbox", () => {
   const overlay = source("src/lib/client/map/territory-skin-overlay.ts");
+  const material = source("src/lib/client/map/territory-material.ts");
+  const svgNodes = source("src/lib/client/map/territory-svg-nodes.ts");
   const board = source("src/components/interactive-board.tsx");
   const hitGeometry = source("src/lib/client/map/territory-hit-geometry.ts");
 
@@ -18,36 +20,33 @@ test("renderer de image skin usa overlay SVG compartilhado sem tocar hitbox", ()
   assert.match(overlay, /ensureTerritorySkinPattern/);
   assert.match(overlay, /Map<string, string>/);
 
-  assert.match(board, /territoryCosmeticId: string/);
-  assert.match(board, /territorySkinAssetRef: string \| null/);
-  assert.match(board, /applyTerritorySkinOverlay/);
-  assert.match(board, /skinSignatureRef/);
+  assert.match(material, /territorySkinAssetRefFromRuntimeEffectKey/);
+  assert.match(material, /skinAssetRef: string \| null/);
+  assert.match(svgNodes, /applyTerritorySkinOverlay/);
+  assert.match(svgNodes, /material\.skinAssetRef/);
+
   assert.doesNotMatch(board, /fetch\(/);
   assert.doesNotMatch(hitGeometry, /territorySkin|skinAsset|cosmetic/i);
 });
 
-test("game client deriva skin do snapshot congelado do dono", () => {
+test("runtime mantém DTO legado, mas projeta image skin por chave transitória não persistida", () => {
+  const service = source("src/lib/server/game-cosmetic-loadout-service.ts");
+  const contract = source("src/lib/economy/territory-skin-contract.ts");
   const client = source("src/components/game-client-v2.tsx");
 
-  assert.match(
-    client,
-    /territoryCosmeticId: owner\.cosmetics\.territoryEffect\.cosmeticId/,
-  );
-  assert.match(
-    client,
-    /territorySkinAssetRef: owner\.cosmetics\.territoryEffect\.assetRef/,
-  );
+  assert.match(service, /territorySkinRuntimeEffectKey/);
+  assert.match(contract, /TERRITORY_SKIN_RUNTIME_IMAGE_PREFIX/);
+  assert.match(contract, /territorySkinAssetRefFromRuntimeEffectKey/);
   assert.match(
     client,
     /territoryEffectKey: owner\.cosmetics\.territoryEffect\.effectKey/,
   );
 });
 
-test("assinatura da skin usa identidade lógica e não cria estado React por território", () => {
+test("assinatura existente reaplica material/skin sem criar estado React por território", () => {
   const board = source("src/components/interactive-board.tsx");
 
-  assert.match(board, /skinSignatureRef = useRef\(new Map<number, string>\(\)\)/);
-  assert.match(board, /territory\.territoryCosmeticId/);
-  assert.match(board, /territory\.territorySkinAssetRef/);
+  assert.match(board, /materialSignatureRef = useRef\(new Map<number, string>\(\)\)/);
+  assert.match(board, /:effect:\$\{territoryEffectKey\}/);
   assert.doesNotMatch(board, /useState<.*territorySkin|setTerritorySkin/i);
 });
