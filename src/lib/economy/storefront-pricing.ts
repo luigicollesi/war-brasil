@@ -122,7 +122,7 @@ export function quoteStorefrontProduct(
   }
 
   const missingItems = items.filter((item) => !item.owned);
-  let subtotal = 0n;
+  let subtotal = BigInt(0);
 
   for (const item of missingItems) {
     if (!item.cosmeticId.trim()) {
