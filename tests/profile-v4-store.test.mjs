@@ -52,3 +52,12 @@ test("PROFILE V4 store provides an explicit mobile inspection sheet", async () =
   assert.match(styles, /position:\s*fixed/);
   assert.match(styles, /@media \(max-width: 820px\)/);
 });
+
+test("PROFILE V4 returns focus to the control that opened mobile inspection", async () => {
+  const store = await source("src/components/profile/v4/profile-store.tsx");
+
+  assert.match(store, /inspectionReturnFocusRef/);
+  assert.match(store, /document\.activeElement/);
+  assert.match(store, /function closeInspection/);
+  assert.match(store, /inspectionReturnFocusRef\.current\?\.focus\(\)/);
+});
