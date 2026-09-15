@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-labelledby="t">
+<title id="t">Crédito de Comando War Brasil</title>
+<defs>
+<linearGradient id="g" x1=".12" y1=".08" x2=".88" y2=".92">
+<stop stop-color="#DCCB91"/><stop offset=".3" stop-color="#B7954B"/><stop offset=".7" stop-color="#7B5B24"/><stop offset="1" stop-color="#493313"/>
+</linearGradient>
+<linearGradient id="n" x1=".18" y1=".1" x2=".82" y2=".9">
+<stop stop-color="#E2D19B"/><stop offset=".42" stop-color="#B28C3D"/><stop offset="1" stop-color="#664819"/>
+</linearGradient>
+</defs>
+<path d="M48.5 6.0 L79.5 6.0 L106.4 21.6 L122.0 48.5 L122.0 79.5 L106.4 106.4 L79.5 122.0 L48.5 122.0 L21.6 106.4 L6.0 79.5 L6.0 48.5 L21.6 21.6Z" fill="url(#g)"/>
+<path d="M49.7 10.5 L78.3 10.5 L103.2 24.8 L117.5 49.7 L117.5 78.3 L103.2 103.2 L78.3 117.5 L49.7 117.5 L24.8 103.2 L10.5 78.3 L10.5 49.7 L24.8 24.8Z" fill="#664819"/>
+<circle cx="64" cy="64" r="50.6" fill="#0B100D"/>
+<circle cx="64" cy="64" r="46.7" fill="none" stroke="#B99648" stroke-width="3.8" stroke-dasharray="31.8 17.1" transform="rotate(-3 64 64)"/>
+<circle cx="64" cy="64" r="41.2" fill="#213027"/>
+<circle cx="64" cy="64" r="35.8" fill="#0A0E0C"/>
+<path d="M64.0 32.0 L82.0 49.0 L75.0 65.0 L64.0 94.0 L53.0 65.0 L46.0 49.0Z" fill="url(#n)"/>
+<path d="M64.0 44.0 L73.0 53.0 L68.0 66.0 L64.0 82.0 L60.0 66.0 L55.0 53.0Z" fill="#1B2921"/>
+<path d="M62.5 53.0 L65.5 53.0 L65.0 74.0 L63.0 74.0Z" fill="#8F4035"/>
+<path d="M63.3 55H64.7L64.4 68H63.6Z" fill="#B85C4B"/>
+</svg>
