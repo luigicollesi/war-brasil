@@ -192,7 +192,7 @@ if (!databaseUrl) {
           setup,
           userA,
           "territory.effect.azulejo-brasil",
-          "territory_effect",
+          "territory_skin",
         );
         await grantAndEquip(
           setup,
@@ -229,7 +229,7 @@ if (!databaseUrl) {
           (row) => row.player_id === playerA && row.slot === "dice_attack",
         );
         const territoryA = firstA.find(
-          (row) => row.player_id === playerA && row.slot === "territory_effect",
+          (row) => row.player_id === playerA && row.slot === "territory_skin",
         );
         const defenseB = firstA.find(
           (row) => row.player_id === playerB && row.slot === "dice_defense",
@@ -243,7 +243,7 @@ if (!databaseUrl) {
         });
         assert.deepEqual(territoryA, {
           player_id: playerA,
-          slot: "territory_effect",
+          slot: "territory_skin",
           cosmetic_id: "territory.effect.azulejo-brasil",
           asset_ref: "cosmetics/territory-skins/azulejo_brasil.webp",
           effect_key: null,
@@ -261,7 +261,7 @@ if (!databaseUrl) {
           setup.query(
             `UPDATE game.player_cosmetic_loadouts
                 SET effect_key='default'
-              WHERE player_id=$1 AND slot='territory_effect'`,
+              WHERE player_id=$1 AND slot='territory_skin'`,
             [playerA],
           ),
           (error) => error?.code === "23514",
@@ -278,7 +278,7 @@ if (!databaseUrl) {
         await setup.query(
           `UPDATE profile.cosmetic_loadout
               SET cosmetic_id='territory.effect.default',updated_at=NOW()
-            WHERE user_id=$1 AND slot='territory_effect'`,
+            WHERE user_id=$1 AND slot='territory_skin'`,
           [userA],
         );
         await setup.query(
