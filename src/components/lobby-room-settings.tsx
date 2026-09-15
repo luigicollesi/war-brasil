@@ -20,6 +20,26 @@ function rulesetLabel(ruleset: GameRuleset) {
   return ruleset === "supremacy" ? "SUPREMACIA" : "OBJETIVO";
 }
 
+function SettingsGlyph() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width="18"
+      height="18"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path
+        d="M12 8.35a3.65 3.65 0 1 0 0 7.3 3.65 3.65 0 0 0 0-7.3Zm8.15 4.78v-2.26l-2.18-.76a6.63 6.63 0 0 0-.53-1.28l1-2.08-1.6-1.6-2.08 1a6.7 6.7 0 0 0-1.28-.53L12.72 3h-2.26l-.76 2.18c-.45.14-.88.32-1.28.53l-2.08-1-1.6 1.6 1 2.08c-.22.4-.4.83-.53 1.28L3 10.43v2.26l2.18.76c.14.45.32.88.53 1.28l-1 2.08 1.6 1.6 2.08-1c.4.22.83.4 1.28.53l.76 2.18h2.26l.76-2.18c.45-.14.88-.32 1.28-.53l2.08 1 1.6-1.6-1-2.08c.22-.4.4-.83.53-1.28l2.21-.62Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 export function LobbyRoomSettings({
   ruleset,
   balancedDiceEnabled,
@@ -56,7 +76,7 @@ export function LobbyRoomSettings({
       <div className={styles.summary} aria-label="Regras ativas da sala">
         <span>{rulesetLabel(ruleset)}</span>
         <span aria-hidden="true">·</span>
-        <span>{balancedDiceEnabled ? "SORTE BALANCEADA" : "ALEATÓRIO"}</span>
+        <span>{balancedDiceEnabled ? "BALANCEADO" : "ALEATÓRIO"}</span>
       </div>
 
       {canManageRoom ? (
@@ -66,10 +86,10 @@ export function LobbyRoomSettings({
           aria-label="Configurações da sala"
           aria-expanded={open}
           aria-controls={panelId}
+          title="Configurações da sala"
           onClick={() => setOpen((current) => !current)}
         >
-          <span className={styles.gear} aria-hidden="true">⌘</span>
-          <span className={styles.triggerText}>Configurar</span>
+          <SettingsGlyph />
         </button>
       ) : null}
 
@@ -81,15 +101,11 @@ export function LobbyRoomSettings({
           aria-label="Configurações da sala"
         >
           <div className={styles.panelHeading}>
-            <div>
-              <p className={styles.eyebrow}>PROTOCOLO DE OPERAÇÃO</p>
-              <h2>Configurações da sala</h2>
-            </div>
-            <span className={styles.authority}>HOST</span>
+            <h2>Configuração</h2>
           </div>
 
           <fieldset className={styles.fieldset} disabled={pending}>
-            <legend>Modo de vitória</legend>
+            <legend>Modo</legend>
             <div className={styles.segmented}>
               <button
                 type="button"
@@ -97,8 +113,7 @@ export function LobbyRoomSettings({
                 data-active={ruleset === "objective"}
                 onClick={() => onChange({ ruleset: "objective" })}
               >
-                <strong>Objetivo</strong>
-                <small>Missão estratégica individual</small>
+                Objetivo
               </button>
               <button
                 type="button"
@@ -106,25 +121,18 @@ export function LobbyRoomSettings({
                 data-active={ruleset === "supremacy"}
                 onClick={() => onChange({ ruleset: "supremacy" })}
               >
-                <strong>Supremacia</strong>
-                <small>Domínio total do território</small>
+                Supremacia
               </button>
             </div>
           </fieldset>
 
           <div className={styles.balanceRow}>
-            <div>
-              <span className={styles.balanceTitle}>Sorte balanceada</span>
-              <small>
-                {balancedDiceEnabled
-                  ? "Correção adaptativa ativa"
-                  : "Probabilidade uniforme por face"}
-              </small>
-            </div>
+            <span className={styles.balanceTitle}>Sorte balanceada</span>
             <button
               type="button"
               className={styles.switch}
               role="switch"
+              aria-label="Sorte balanceada"
               aria-checked={balancedDiceEnabled}
               disabled={pending}
               data-checked={balancedDiceEnabled}
@@ -139,9 +147,6 @@ export function LobbyRoomSettings({
             </button>
           </div>
 
-          <p className={styles.notice}>
-            Alterar uma regra revoga a prontidão dos jogadores humanos.
-          </p>
           {error ? (
             <p className={styles.error} role="alert">
               {error}
