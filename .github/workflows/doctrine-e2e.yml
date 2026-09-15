@@ -10,12 +10,15 @@ on:
       - "src/components/pre-game/foundation/**"
       - "src/lib/doctrine-presentation.ts"
       - "src/lib/server/auth/**"
+      - "src/app/api/assets/**"
       - "src/app/api/economy/**"
       - "src/app/profile/store/**"
       - "src/components/profile/store/**"
       - "src/components/profile/command-quarters/**"
       - "src/lib/economy/**"
+      - "src/lib/server/assets/**"
       - "src/lib/server/economy/**"
+      - "src/lib/db/migrations/managed/040-r2-webp-cosmetic-catalog.sql"
       - "src/proxy.ts"
       - "scripts/e2e/prepare-doctrine-auth.mjs"
       - "scripts/e2e/economy-e2e.mjs"
@@ -48,6 +51,7 @@ jobs:
       CI: "true"
       NEXT_TELEMETRY_DISABLED: "1"
       DATABASE_URL: postgresql://war:war@127.0.0.1:5432/war_ci
+      ASSET_STORAGE_URL: s3://E2EACCESSKEY:E2ESECRETKEY@e2eaccount.r2.cloudflarestorage.com/war-brasil-assets-prod?region=auto
       PLAYWRIGHT_TEST_BASE_URL: http://127.0.0.1:3000
       DOCTRINE_EVIDENCE_DIR: test-results/doctrine-evidence
       ECONOMY_E2E_ARTIFACT_DIR: test-results/economy-eval
