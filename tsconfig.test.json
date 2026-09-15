@@ -53,6 +53,7 @@
     "src/lib/shared/game-command-canonical.ts",
     "src/lib/shared/game-command-request.ts",
     "src/lib/shared/game-realtime-contract.ts",
+    "src/lib/shared/game-mode.ts",
     "src/lib/client/map/board-presentation.ts",
     "src/lib/client/map/map-runtime-events.ts",
     "src/lib/client/map/territory-hit-geometry.ts",
