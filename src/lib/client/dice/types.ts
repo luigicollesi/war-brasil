@@ -18,7 +18,7 @@ export type DiceTextureOptions = {
   skin: DiceSkin;
   pipColor?: string;
   resolution?: number;
-  /** Frozen game snapshot asset. Null/undefined preserves the native skin. */
+  /** Frozen game snapshot asset. Null/undefined uses the procedural fallback. */
   assetRef?: string | null;
 };
 
