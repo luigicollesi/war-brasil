@@ -21,6 +21,12 @@ test("STORE-15/17: offer contract exposes authoritative timed availability metad
   assert.match(store, /Pode retornar à rotação futuramente/);
 });
 
+test("STORE-15: offer expiring with detail open is refreshed after authoritative rejection", () => {
+  assert.match(store, /ECONOMY_OFFER_UNAVAILABLE/);
+  assert.match(store, /oferta (?:foi encerrada|não está mais disponível)/i);
+  assert.match(store, /router\.refresh\(\)/);
+});
+
 test("STORE-16/20: snapshot exposes active campaigns independently from collections", () => {
   assert.match(contract, /export type StorefrontCampaign/);
   assert.match(contract, /campaigns:\s*ReadonlyArray<StorefrontCampaign>/);
