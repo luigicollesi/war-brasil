@@ -1,4 +1,5 @@
 import type { CardSymbol, Region } from "../game-config";
+import type { GameRuleset } from "../game-mode";
 import type { TerritoryConnection } from "../territory-connections";
 import type { ResolvedEventEffect } from "../events/event-types";
 
@@ -31,6 +32,7 @@ export type BotObjectiveSnapshot = {
 export type BotStrategicState = {
   room: {
     id: string;
+    ruleset: GameRuleset;
     phase: string;
     roundNumber: number;
     reinforcementsRemaining: number;
@@ -40,7 +42,7 @@ export type BotStrategicState = {
     id: string;
     cardTradeCount: number;
   };
-  objective: BotObjectiveSnapshot;
+  objective: BotObjectiveSnapshot | null;
   cards: BotStrategicCard[];
   players: BotStrategicPlayer[];
   territories: BotStrategicTerritory[];
