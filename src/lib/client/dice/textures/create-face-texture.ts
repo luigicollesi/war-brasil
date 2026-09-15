@@ -10,7 +10,7 @@ import type { DiceSkin, DiceValue } from "../types";
 import {
   DEFAULT_DICE_PIP_COLOR,
   DEFAULT_DICE_TEXTURE_RESOLUTION,
-  DICE_SKIN_SOURCES,
+  DICE_PROCEDURAL_PALETTES,
 } from "./dice-skins";
 
 const imagePromises = new Map<string, Promise<HTMLImageElement>>();
@@ -41,21 +41,6 @@ function loadImage(src: string) {
   return promise;
 }
 
-async function loadDiceSourceImage(skin: DiceSkin, assetRef?: string | null) {
-  const nativeSource = DICE_SKIN_SOURCES[skin];
-  if (!assetRef || assetRef === nativeSource) {
-    return { image: await loadImage(nativeSource), source: nativeSource };
-  }
-
-  try {
-    return { image: await loadImage(assetRef), source: assetRef };
-  } catch {
-    // A cosmetic asset is presentation-only. Falling back to the canonical skin
-    // must never cancel or change an already-authoritative dice result.
-    return { image: await loadImage(nativeSource), source: nativeSource };
-  }
-}
-
 function createCanvas(resolution: number) {
   if (typeof document === "undefined") {
     throw new Error("Canvas de dado só pode ser criado no navegador.");
@@ -68,6 +53,49 @@ function createCanvas(resolution: number) {
   canvas.width = resolution;
   canvas.height = resolution;
   return canvas;
+}
+
+function drawProceduralBase(
+  context: CanvasRenderingContext2D,
+  skin: DiceSkin,
+  resolution: number,
+) {
+  const palette = DICE_PROCEDURAL_PALETTES[skin];
+  const gradient = context.createLinearGradient(0, 0, resolution, resolution);
+  gradient.addColorStop(0, palette.top);
+  gradient.addColorStop(1, palette.bottom);
+
+  context.save();
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, resolution, resolution);
+
+  const inset = resolution * 0.045;
+  const radius = resolution * 0.11;
+  context.strokeStyle = palette.edge;
+  context.lineWidth = Math.max(2, resolution * 0.018);
+  context.beginPath();
+  context.roundRect(
+    inset,
+    inset,
+    resolution - inset * 2,
+    resolution - inset * 2,
+    radius,
+  );
+  context.stroke();
+
+  const highlight = context.createRadialGradient(
+    resolution * 0.28,
+    resolution * 0.22,
+    0,
+    resolution * 0.28,
+    resolution * 0.22,
+    resolution * 0.72,
+  );
+  highlight.addColorStop(0, palette.highlight);
+  highlight.addColorStop(1, "rgba(255,255,255,0)");
+  context.fillStyle = highlight;
+  context.fillRect(0, 0, resolution, resolution);
+  context.restore();
 }
 
 function drawPips(
@@ -110,7 +138,6 @@ export async function createDiceFaceTexture({
   resolution?: number;
   assetRef?: string | null;
 }): Promise<Texture> {
-  const { image, source } = await loadDiceSourceImage(skin, assetRef);
   const canvas = createCanvas(resolution);
   const context = canvas.getContext("2d", { alpha: true });
 
@@ -119,7 +146,23 @@ export async function createDiceFaceTexture({
   }
 
   context.clearRect(0, 0, resolution, resolution);
-  context.drawImage(image, 0, 0, resolution, resolution);
+
+  let source = `procedural:${skin}`;
+  if (assetRef) {
+    try {
+      const image = await loadImage(assetRef);
+      context.drawImage(image, 0, 0, resolution, resolution);
+      source = assetRef;
+    } catch {
+      // Cosmetic delivery is presentation-only. A failed R2 request degrades
+      // to a network-independent procedural base without affecting the already
+      // authoritative dice value, physics or RNG.
+      drawProceduralBase(context, skin, resolution);
+    }
+  } else {
+    drawProceduralBase(context, skin, resolution);
+  }
+
   drawPips(context, value, resolution, pipColor);
 
   const texture = new CanvasTexture(canvas);
