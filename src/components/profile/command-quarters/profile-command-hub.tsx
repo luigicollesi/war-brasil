@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { type ReactNode, useMemo, useState } from "react";
 import { useCommandSceneDirective } from "@/src/components/pre-game/foundation";
@@ -119,13 +118,19 @@ function StationFrame({
 function CampaignCreditMark({ compact }: { compact: boolean }) {
   const size = compact ? 24 : 28;
   return (
-    <Image
-      src="/coin.svg"
-      alt=""
+    <span
       aria-hidden="true"
-      width={size}
-      height={size}
-      priority={compact}
+      data-campaign-credit-mark="true"
+      style={{
+        display: "inline-block",
+        width: size,
+        height: size,
+        flex: `0 0 ${size}px`,
+        backgroundImage: 'url("/coin.svg")',
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+        backgroundSize: "contain",
+      }}
     />
   );
 }
