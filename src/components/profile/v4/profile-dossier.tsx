@@ -95,6 +95,7 @@ export function ProfileDossier({ snapshot }: { snapshot: ProfileCommandSnapshot 
           </div>
           {privacy && !snapshot.isEvaluationFixture ? (
             <div className={styles.settingsSlot}>
+              <small>AJUSTAR DOSSIÊ</small>
               <ProfileSettingsPanel identity={identity} privacy={privacy} />
             </div>
           ) : null}
