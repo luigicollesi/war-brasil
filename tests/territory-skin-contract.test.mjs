@@ -114,9 +114,9 @@ test("contrato persistente mantém exclusividade procedural/image apenas em terr
     migration,
     /effect_key IS NOT NULL\s+AND asset_ref IS NULL[\s\S]*effect_key IS NULL\s+AND asset_ref IS NOT NULL/,
   );
-  assert.match(
-    migration,
-    /\^cosmetics\/territory-skins\/[a-z0-9]/,
+  assert.ok(
+    migration.includes("^cosmetics/territory-skins/[a-z0-9]+"),
+    "migration deve manter o namespace e alfabeto canônicos das object keys",
   );
 
   for (const key of [
