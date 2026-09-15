@@ -97,6 +97,7 @@ const managedHistory = [
   "039-game-cosmetic-loadout-snapshots.sql",
   "040-r2-webp-cosmetic-catalog.sql",
   "041-economy-v2-commerce.sql",
+  "042-territory-skins-v1.sql",
 ];
 
 function urlForDatabase(name) {
@@ -497,7 +498,6 @@ async function assertOrganizedDatabase(connectionString) {
       "SELECT name FROM ops.pgmigrations ORDER BY id",
     );
     assert.deepEqual(history.rows.map((row) => row.name), managedHistory);
-
     await assertAdaptiveDiceSchema(client);
     await assertAuthProfileSchema(client);
 
@@ -702,7 +702,7 @@ async function assertLegacyRoomRollout(connectionString) {
 if (!databaseUrl) {
   test("migrations de banco exigem DATABASE_URL", { skip: true }, () => {});
 } else {
-  test("026-041 migram banco v025, preservam catálogos e são idempotentes", async () => {
+  test("026-042 migram banco v025, preservam catálogos e são idempotentes", async () => {
     await withTemporaryDatabase("legacy", async (connectionString) => {
       await applySql(connectionString, "tests/fixtures/db/schema-v025.sql");
       await applySql(
