@@ -130,7 +130,7 @@ async function createPreEconomyCommander(connectionString, label) {
 if (!databaseUrl) {
   test("economy migration exige DATABASE_URL", { skip: true }, () => {});
 } else {
-  test("038→042 converge Economy V2, territory skins e backfill idempotente", async () => {
+  test("038→042 converge catálogo WebP, offers V2, territory skins e backfill idempotente", async () => {
     await withTemporaryDatabase(async (connectionString) => {
       await prepareDatabaseThrough037(connectionString);
       const userId = await createPreEconomyCommander(
@@ -163,6 +163,7 @@ if (!databaseUrl) {
              COUNT(*)::int AS total,
              COUNT(*) FILTER (WHERE is_default)::int AS defaults,
              COUNT(*) FILTER (WHERE status='available')::int AS available,
+             COUNT(*) FILTER (WHERE status='announced')::int AS announced,
              COUNT(*) FILTER (WHERE NOT is_default AND status='available')::int AS commercial
              FROM catalog.cosmetics`,
         );
@@ -170,6 +171,7 @@ if (!databaseUrl) {
           total: 26,
           defaults: 4,
           available: 22,
+          announced: 4,
           commercial: 18,
         });
 
@@ -185,12 +187,48 @@ if (!databaseUrl) {
             ORDER BY cosmetic_set.sort_order,cosmetic_set.id`,
         );
         assert.deepEqual(sets.rows, [
-          { id: "set.exercito", storage_slug: "military-classic", status: "available", sort_order: 10, items: 3 },
-          { id: "set.lancas", storage_slug: "medieval-spears", status: "available", sort_order: 20, items: 3 },
-          { id: "set.viking", storage_slug: "viking", status: "available", sort_order: 30, items: 3 },
-          { id: "set.gato", storage_slug: "cat", status: "available", sort_order: 40, items: 3 },
-          { id: "set.cachorro", storage_slug: "dog", status: "available", sort_order: 50, items: 3 },
-          { id: "set.futebol", storage_slug: "football", status: "available", sort_order: 60, items: 3 },
+          {
+            id: "set.exercito",
+            storage_slug: "military-classic",
+            status: "available",
+            sort_order: 10,
+            items: 3,
+          },
+          {
+            id: "set.lancas",
+            storage_slug: "medieval-spears",
+            status: "available",
+            sort_order: 20,
+            items: 3,
+          },
+          {
+            id: "set.viking",
+            storage_slug: "viking",
+            status: "available",
+            sort_order: 30,
+            items: 3,
+          },
+          {
+            id: "set.gato",
+            storage_slug: "cat",
+            status: "available",
+            sort_order: 40,
+            items: 3,
+          },
+          {
+            id: "set.cachorro",
+            storage_slug: "dog",
+            status: "available",
+            sort_order: 50,
+            items: 3,
+          },
+          {
+            id: "set.futebol",
+            storage_slug: "football",
+            status: "available",
+            sort_order: 60,
+            items: 3,
+          },
         ]);
 
         const offers = await client.query(
@@ -256,6 +294,7 @@ if (!databaseUrl) {
           status: "available",
           is_default: true,
         });
+
         for (const [id, assetRef] of [
           ["territory.effect.azulejo-brasil", "cosmetics/territory-skins/azulejo_brasil.webp"],
           ["territory.effect.azulejo-ornamental", "cosmetics/territory-skins/azulejo_ornamental.webp"],
@@ -281,7 +320,9 @@ if (!databaseUrl) {
         assert.equal(wallet.rows[0].balance, "0");
 
         const inventory = await client.query(
-          `SELECT COUNT(*)::int AS total FROM inventory.cosmetics WHERE user_id=$1`,
+          `SELECT COUNT(*)::int AS total
+             FROM inventory.cosmetics
+            WHERE user_id=$1`,
           [userId],
         );
         assert.equal(inventory.rows[0].total, 4);
@@ -305,7 +346,9 @@ if (!databaseUrl) {
         );
 
         const ledger = await client.query(
-          `SELECT COUNT(*)::int AS total FROM economy.ledger_entries WHERE user_id=$1`,
+          `SELECT COUNT(*)::int AS total
+             FROM economy.ledger_entries
+            WHERE user_id=$1`,
           [userId],
         );
         assert.equal(ledger.rows[0].total, 0);
@@ -315,7 +358,7 @@ if (!databaseUrl) {
     });
   });
 
-  test("constraints bloqueiam valores econômicos, loadout, dados e territory skins inválidos", async () => {
+  test("constraints bloqueiam saldo, preços, loadout, dado e modos territory skin inválidos", async () => {
     await withTemporaryDatabase(async (connectionString) => {
       await prepareDatabaseThrough037(connectionString);
       const userId = await createPreEconomyCommander(
@@ -329,33 +372,46 @@ if (!databaseUrl) {
       try {
         await assert.rejects(
           client.query(
-            `UPDATE economy.wallets SET balance=-1 WHERE user_id=$1 AND currency_code='campaign-credit'`,
+            `UPDATE economy.wallets
+                SET balance=-1
+              WHERE user_id=$1 AND currency_code='campaign-credit'`,
             [userId],
           ),
           (error) => error?.code === "23514",
         );
+
         await assert.rejects(
           client.query(`UPDATE catalog.offers SET price=0 WHERE id='offer.viking'`),
           (error) => error?.code === "23514",
         );
+
         await assert.rejects(
-          client.query(`UPDATE catalog.credit_packs SET price_brl_cents=0 WHERE id='credits.500'`),
+          client.query(
+            `UPDATE catalog.credit_packs SET price_brl_cents=0 WHERE id='credits.500'`,
+          ),
           (error) => error?.code === "23514",
         );
+
         await assert.rejects(
           client.query(
-            `UPDATE profile.cosmetic_loadout SET cosmetic_id='dice.attack.exercito' WHERE user_id=$1 AND slot='dice_attack'`,
+            `UPDATE profile.cosmetic_loadout
+                SET cosmetic_id='dice.attack.exercito'
+              WHERE user_id=$1 AND slot='dice_attack'`,
             [userId],
           ),
           (error) => error?.code === "23503",
         );
+
         await assert.rejects(
           client.query(
-            `UPDATE profile.cosmetic_loadout SET cosmetic_id='dice.attack.default' WHERE user_id=$1 AND slot='dice_defense'`,
+            `UPDATE profile.cosmetic_loadout
+                SET cosmetic_id='dice.attack.default'
+              WHERE user_id=$1 AND slot='dice_defense'`,
             [userId],
           ),
           (error) => error?.code === "23503",
         );
+
         await assert.rejects(
           client.query(
             `INSERT INTO inventory.cosmetics(user_id,cosmetic_id,slot,acquisition_source)
@@ -364,33 +420,60 @@ if (!databaseUrl) {
           ),
           (error) => error?.code === "23503",
         );
-        await assert.rejects(
-          client.query(`UPDATE catalog.cosmetics SET asset_ref='/dados/exercito/ataque.svg' WHERE id='dice.attack.exercito'`),
-          (error) => error?.code === "23514",
-        );
+
         await assert.rejects(
           client.query(
-            `INSERT INTO catalog.cosmetics(id,slug,name,slot,asset_ref,effect_key,status,is_default)
-             VALUES('territory.effect.invalid-both','territory-invalid-both','Inválido ambos',
-                    'territory_effect','cosmetics/territory-skins/invalid.webp','default','draft',FALSE)`,
+            `UPDATE catalog.cosmetics
+                SET asset_ref='/dados/exercito/ataque.svg'
+              WHERE id='dice.attack.exercito'`,
           ),
           (error) => error?.code === "23514",
         );
+
         await assert.rejects(
           client.query(
-            `INSERT INTO catalog.cosmetics(id,slug,name,slot,asset_ref,effect_key,status,is_default)
-             VALUES('territory.effect.invalid-empty','territory-invalid-empty','Inválido vazio',
-                    'territory_effect',NULL,NULL,'draft',FALSE)`,
+            `INSERT INTO catalog.cosmetics(
+               id,slug,name,slot,asset_ref,effect_key,status,is_default
+             ) VALUES(
+               'territory.effect.invalid-both','territory-invalid-both','Inválido ambos',
+               'territory_effect','cosmetics/territory-skins/invalid.webp','default','draft',FALSE
+             )`,
           ),
           (error) => error?.code === "23514",
         );
+
         await assert.rejects(
           client.query(
-            `INSERT INTO catalog.cosmetics(id,slug,name,slot,asset_ref,effect_key,status,is_default)
-             VALUES('territory.effect.invalid-path','territory-invalid-path','Inválido path',
-                    'territory_effect','other/skin.webp',NULL,'draft',FALSE)`,
+            `INSERT INTO catalog.cosmetics(
+               id,slug,name,slot,asset_ref,effect_key,status,is_default
+             ) VALUES(
+               'territory.effect.invalid-empty','territory-invalid-empty','Inválido vazio',
+               'territory_effect',NULL,NULL,'draft',FALSE
+             )`,
           ),
           (error) => error?.code === "23514",
+        );
+
+        await assert.rejects(
+          client.query(
+            `INSERT INTO catalog.cosmetics(
+               id,slug,name,slot,asset_ref,effect_key,status,is_default
+             ) VALUES(
+               'territory.effect.invalid-path','territory-invalid-path','Inválido path',
+               'territory_effect','other/skin.webp',NULL,'draft',FALSE
+             )`,
+          ),
+          (error) => error?.code === "23514",
+        );
+
+        await client.query(
+          `INSERT INTO catalog.cosmetics(
+             id,slug,name,slot,asset_ref,effect_key,status,is_default
+           ) VALUES
+             ('territory.effect.valid-procedural','territory-valid-procedural','Procedural válido',
+              'territory_effect',NULL,'test-procedural','draft',FALSE),
+             ('territory.effect.valid-image','territory-valid-image','Imagem válida',
+              'territory_effect','cosmetics/territory-skins/test_valid.webp',NULL,'draft',FALSE)`,
         );
       } finally {
         await client.end();
