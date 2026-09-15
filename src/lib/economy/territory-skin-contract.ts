@@ -1,4 +1,4 @@
-export const TERRITORY_SKIN_SLOT = "territory_effect" as const;
+export const TERRITORY_SKIN_SLOT = "territory_skin" as const;
 export const DEFAULT_TERRITORY_SKIN_EFFECT_KEY = "default" as const;
 export const DEFAULT_TERRITORY_SKIN_COSMETIC_ID = "territory.effect.default" as const;
 
