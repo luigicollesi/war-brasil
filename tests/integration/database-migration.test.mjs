@@ -98,6 +98,7 @@ const managedHistory = [
   "040-r2-webp-cosmetic-catalog.sql",
   "041-economy-v2-commerce.sql",
   "042-territory-skins-v1.sql",
+  "043-game-modes-objective-supremacy.sql",
 ];
 
 function urlForDatabase(name) {
@@ -249,20 +250,28 @@ async function assertAdaptiveDiceSchema(client) {
     FROM information_schema.columns
     WHERE table_schema='game' AND table_name='rooms'
   `);
-  assert.equal(
-    roomColumns.rows.some((row) => row.column_name === "current_match_id"),
-    true,
-  );
+  const roomColumnNames = new Set(roomColumns.rows.map((row) => row.column_name));
+  for (const name of [
+    "current_match_id",
+    "ruleset",
+    "balanced_dice_enabled",
+  ]) {
+    assert.equal(roomColumnNames.has(name), true, name);
+  }
 
   const matchColumns = await client.query(`
     SELECT column_name
     FROM information_schema.columns
     WHERE table_schema='game' AND table_name='matches'
   `);
-  assert.equal(
-    matchColumns.rows.some((row) => row.column_name === "match_mode_snapshot"),
-    true,
-  );
+  const matchColumnNames = new Set(matchColumns.rows.map((row) => row.column_name));
+  for (const name of [
+    "match_mode_snapshot",
+    "ruleset_snapshot",
+    "balanced_dice_enabled_snapshot",
+  ]) {
+    assert.equal(matchColumnNames.has(name), true, name);
+  }
 
   const triggers = await client.query(`
     SELECT tgname
@@ -275,6 +284,7 @@ async function assertAdaptiveDiceSchema(client) {
   const triggerNames = new Set(triggers.rows.map((row) => row.tgname));
   assert.equal(triggerNames.has("dice_balance_profiles_append_only"), true);
   assert.equal(triggerNames.has("matches_dice_profile_immutable"), true);
+  assert.equal(triggerNames.has("matches_rule_snapshot_immutable"), true);
 }
 
 async function assertAuthProfileSchema(client) {
@@ -577,6 +587,7 @@ async function assertOrganizedDatabase(connectionString) {
       "rooms_winner_player_fkey",
       "rooms_current_match_fkey",
       "rooms_match_mode_check",
+      "rooms_ruleset_check",
     ]) {
       assert.equal(roomConstraintNames.has(name), true, name);
     }
@@ -702,7 +713,7 @@ async function assertLegacyRoomRollout(connectionString) {
 if (!databaseUrl) {
   test("migrations de banco exigem DATABASE_URL", { skip: true }, () => {});
 } else {
-  test("026-042 migram banco v025, preservam catálogos e são idempotentes", async () => {
+  test("026-043 migram banco v025, preservam catálogos e são idempotentes", async () => {
     await withTemporaryDatabase("legacy", async (connectionString) => {
       await applySql(connectionString, "tests/fixtures/db/schema-v025.sql");
       await applySql(
