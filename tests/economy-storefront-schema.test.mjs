@@ -5,6 +5,14 @@ import test from "node:test";
 const migrationPath = "src/lib/db/migrations/managed/043-economy-storefront-v2.sql";
 const migration = existsSync(migrationPath) ? readFileSync(migrationPath, "utf8") : "";
 
+function sqlBlock(startPattern, endPattern) {
+  const start = migration.search(startPattern);
+  assert.notEqual(start, -1, `bloco inicial não encontrado: ${startPattern}`);
+  const tail = migration.slice(start);
+  const end = tail.search(endPattern);
+  return end < 0 ? tail : tail.slice(0, end);
+}
+
 test("STORE-01/06: migration separa collections, products e product_items de ownership", () => {
   assert.equal(existsSync(migrationPath), true);
   assert.match(migration, /CREATE TABLE IF NOT EXISTS catalog\.collections/);
@@ -34,12 +42,41 @@ test("STORE-03/04/05: produtos suportam singles, bundles e desconto em basis poi
   assert.match(migration, /INSERT INTO catalog\.product_items/i);
 });
 
-test("STORE-07: assets editoriais e assets canônicos usam papéis sem URL de ambiente", () => {
-  assert.match(migration, /CREATE TABLE IF NOT EXISTS catalog\.collection_assets/);
-  assert.match(migration, /CREATE TABLE IF NOT EXISTS catalog\.cosmetic_assets/);
-  assert.match(migration, /object_key TEXT NOT NULL/);
-  assert.match(migration, /hero[\s\S]*banner[\s\S]*card[\s\S]*logo[\s\S]*background/i);
-  assert.doesNotMatch(migration, /https?:\/\//i);
+test("STORE-07: collection assets V1 usam apenas banner, background e logo", () => {
+  const collectionAssets = sqlBlock(
+    /CREATE TABLE IF NOT EXISTS catalog\.collection_assets/,
+    /ALTER TABLE catalog\.cosmetics/,
+  );
+
+  assert.match(collectionAssets, /object_key TEXT NOT NULL/);
+  assert.match(
+    collectionAssets,
+    /CHECK \(role IN \('banner', 'background', 'logo'\)\)/,
+  );
+  assert.match(collectionAssets, /active BOOLEAN NOT NULL DEFAULT TRUE/);
+  assert.doesNotMatch(collectionAssets, /'hero'|'card'|'thumbnail'/);
+  assert.doesNotMatch(collectionAssets, /https?:\/\//i);
+
+  assert.match(
+    migration,
+    /CREATE UNIQUE INDEX IF NOT EXISTS catalog_collection_assets_one_active_role_uq[\s\S]*ON catalog\.collection_assets\(collection_id, role\)[\s\S]*WHERE active/i,
+  );
+});
+
+test("STORE-06/07: Football é fixture dice-only com os três assets editoriais exatos", () => {
+  assert.match(migration, /collection\.futebol|collection\.football/i);
+  assert.match(migration, /store\/collections\/football\/banner\.webp/);
+  assert.match(migration, /store\/collections\/football\/background\.webp/);
+  assert.match(migration, /store\/collections\/football\/logo\.webp/);
+
+  const footballAssets = [
+    "store/collections/football/banner.webp",
+    "store/collections/football/background.webp",
+    "store/collections/football/logo.webp",
+  ];
+  for (const key of footballAssets) {
+    assert.equal(migration.split(key).length - 1, 1, `${key} deve ter um único mapping seed`);
+  }
 });
 
 test("STORE-10/11: pricing progressivo possui contador e tiers não sobrepostos", () => {
