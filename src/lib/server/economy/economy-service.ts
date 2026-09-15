@@ -7,6 +7,8 @@ import type {
   CosmeticLoadout,
   CosmeticSet,
   CosmeticSlot,
+  EconomyCreditPack,
+  EconomyOffer,
   EconomyStorefrontSnapshot,
   EquipCosmeticInput,
   PurchaseOfferInput,
@@ -40,6 +42,14 @@ import {
   type EconomyQueryable,
   type WalletRow,
 } from "./economy-repository";
+import {
+  listStorefrontCreditPacks,
+  listStorefrontOfferItems,
+  listStorefrontOffers,
+  type CreditPackRow,
+  type StorefrontOfferItemRow,
+  type StorefrontOfferRow,
+} from "./economy-storefront-repository";
 
 export class EconomyServiceError extends Error {
   constructor(
@@ -167,6 +177,57 @@ function setsFromRows(
   return [...grouped.values()];
 }
 
+function offersFromRows(
+  offerRows: StorefrontOfferRow[],
+  itemRows: StorefrontOfferItemRow[],
+): EconomyOffer[] {
+  const itemsByOffer = new Map<string, CosmeticCatalogItem[]>();
+  for (const row of itemRows) {
+    const current = itemsByOffer.get(row.offer_id) ?? [];
+    current.push(cosmeticFromRow(row));
+    itemsByOffer.set(row.offer_id, current);
+  }
+
+  return offerRows.map((row) => {
+    const items = itemsByOffer.get(row.id) ?? [];
+    const ownedCount = items.filter((item) => item.owned).length;
+    const totalCount = items.length;
+    const fullyOwned = totalCount > 0 && ownedCount === totalCount;
+    const partiallyOwned = ownedCount > 0 && !fullyOwned;
+    const catalogEligible =
+      totalCount > 0 &&
+      items.every((item) => item.status === "available" && !item.isDefault);
+
+    return {
+      id: row.id,
+      slug: row.slug,
+      name: row.name,
+      description: row.description,
+      currency: ECONOMY_CURRENCY_ID,
+      price: positiveAmount(row.price, "ECONOMY_CATALOG_INVALID"),
+      status: row.status,
+      featured: row.is_featured,
+      items,
+      ownedCount,
+      totalCount,
+      fullyOwned,
+      partiallyOwned,
+      purchasable: row.status === "available" && catalogEligible && !fullyOwned,
+    };
+  });
+}
+
+function creditPacksFromRows(rows: CreditPackRow[]): EconomyCreditPack[] {
+  return rows.map((row) => ({
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
+    creditAmount: positiveAmount(row.credit_amount, "ECONOMY_CATALOG_INVALID"),
+    priceBrlCents: positiveAmount(row.price_brl_cents, "ECONOMY_CATALOG_INVALID"),
+    status: row.status,
+  }));
+}
+
 async function ensureLockedEconomyState(
   userId: string,
   db: EconomyQueryable,
@@ -218,12 +279,17 @@ export async function getEconomyStorefront(
     const walletRow = await findCampaignCreditWallet(userId, client);
     const ownedRows = await listOwnedCosmetics(userId, client);
     const setRows = await listStorefrontSetItems(userId, client);
+    const offerRows = await listStorefrontOffers(client);
+    const offerItemRows = await listStorefrontOfferItems(userId, client);
+    const creditPackRows = await listStorefrontCreditPacks(client);
 
     const snapshot = {
       wallet: walletFromRow(walletRow),
       loadout: loadoutFromOwned(ownedRows),
       ownedItems: ownedRows.map(cosmeticFromRow),
       sets: setsFromRows(setRows),
+      offers: offersFromRows(offerRows, offerItemRows),
+      creditPacks: creditPacksFromRows(creditPackRows),
     } satisfies EconomyStorefrontSnapshot;
 
     await client.query("COMMIT");
