@@ -51,8 +51,13 @@ export async function listStorefrontOffers(
             offer.is_featured,
             offer.sort_order
        FROM catalog.offers offer
+       JOIN catalog.products product ON product.id=offer.product_id
       WHERE offer.status='available'
-      ORDER BY offer.sort_order, offer.id`,
+        AND offer.active=TRUE
+        AND product.active=TRUE
+        AND (offer.starts_at IS NULL OR offer.starts_at <= CURRENT_TIMESTAMP)
+        AND (offer.ends_at IS NULL OR offer.ends_at > CURRENT_TIMESTAMP)
+      ORDER BY offer.priority, offer.sort_order, offer.id`,
   );
   return result.rows;
 }
@@ -62,7 +67,7 @@ export async function listStorefrontOfferItems(
   db: EconomyQueryable = pool,
 ): Promise<StorefrontOfferItemRow[]> {
   const result = await db.query<StorefrontOfferItemRow>(
-    `SELECT membership.offer_id,
+    `SELECT offer.id AS offer_id,
             membership.position,
             item.id,
             item.slug,
@@ -78,7 +83,8 @@ export async function listStorefrontOfferItems(
             (owned.cosmetic_id IS NOT NULL) AS owned,
             (loadout.cosmetic_id=item.id) AS equipped
        FROM catalog.offers offer
-       JOIN catalog.offer_items membership ON membership.offer_id=offer.id
+       JOIN catalog.products product ON product.id=offer.product_id
+       JOIN catalog.product_items membership ON membership.product_id=product.id
        JOIN catalog.cosmetics item ON item.id=membership.cosmetic_id
        LEFT JOIN inventory.cosmetics owned
          ON owned.user_id=$1::uuid
@@ -87,7 +93,11 @@ export async function listStorefrontOfferItems(
          ON loadout.user_id=$1::uuid
         AND loadout.slot=item.slot
       WHERE offer.status='available'
-      ORDER BY offer.sort_order, offer.id, membership.position`,
+        AND offer.active=TRUE
+        AND product.active=TRUE
+        AND (offer.starts_at IS NULL OR offer.starts_at <= CURRENT_TIMESTAMP)
+        AND (offer.ends_at IS NULL OR offer.ends_at > CURRENT_TIMESTAMP)
+      ORDER BY offer.priority, offer.sort_order, offer.id, membership.position`,
     [userId],
   );
   return result.rows;
