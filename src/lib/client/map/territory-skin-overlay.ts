@@ -32,6 +32,18 @@ function ensureDefs(document: Document) {
   return defs;
 }
 
+function removeTerritorySkinOverlaysForAsset(
+  document: Document,
+  assetRef: string,
+) {
+  const overlays = document.querySelectorAll<SVGPathElement>(
+    "path.territory-skin-overlay",
+  );
+  for (const overlay of overlays) {
+    if (overlay.dataset.territorySkinAsset === assetRef) overlay.remove();
+  }
+}
+
 export function ensureTerritorySkinPattern(
   document: Document,
   assetRef: string,
@@ -64,6 +76,7 @@ export function ensureTerritorySkinPattern(
   image.addEventListener(
     "error",
     () => {
+      removeTerritorySkinOverlaysForAsset(document, assetRef);
       registry.delete(assetRef);
       pattern.remove();
     },
