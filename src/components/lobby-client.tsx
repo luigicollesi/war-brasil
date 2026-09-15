@@ -7,6 +7,7 @@ import { LobbyCommandWorkspace } from "@/src/components/lobby-command-workspace"
 import { PreGameBackButton } from "@/src/components/pre-game-back-button";
 import { useCommandSceneDirective } from "@/src/components/pre-game/foundation";
 import { useLobbySync } from "@/src/hooks/use-lobby-sync";
+import type { GameRuleset } from "@/src/lib/game-mode";
 import styles from "./lobby-client-state.module.css";
 
 type LobbyClientProps = {
@@ -28,12 +29,13 @@ type BotActionResponse = {
 type LobbyPendingAction =
   | "profile"
   | "ready"
+  | "settings"
   | "add-bot"
   | `remove-bot:${string}`
   | null;
 
 type LobbyActionError = {
-  scope: "profile" | "ready" | "bot" | "copy";
+  scope: "profile" | "ready" | "settings" | "bot" | "copy";
   message: string;
 } | null;
 
@@ -99,6 +101,46 @@ export function LobbyClient({ code }: LobbyClientProps) {
           requestError instanceof Error
             ? requestError.message
             : "Não foi possível salvar suas escolhas.",
+      });
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function updateSettings(patch: {
+    ruleset?: GameRuleset;
+    balancedDiceEnabled?: boolean;
+  }) {
+    if (pendingAction !== null) return;
+    setActionError(null);
+    setPendingAction("settings");
+
+    try {
+      const response = await fetch(
+        `/api/rooms/${encodeURIComponent(code)}/settings`,
+        {
+          method: "PATCH",
+          cache: "no-store",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(patch),
+        },
+      );
+      const data = (await response.json()) as RoomUpdateResponse;
+
+      if (!response.ok) {
+        throw new Error(
+          data.error ?? "Não foi possível atualizar as configurações da sala.",
+        );
+      }
+
+      await refresh();
+    } catch (requestError) {
+      setActionError({
+        scope: "settings",
+        message:
+          requestError instanceof Error
+            ? requestError.message
+            : "Não foi possível atualizar as configurações da sala.",
       });
     } finally {
       setPendingAction(null);
@@ -241,15 +283,18 @@ export function LobbyClient({ code }: LobbyClientProps) {
     );
   }
 
-  const { me, players, room, canManageBots } = snapshot;
+  const { me, players, room, canManageBots, canManageRoom } = snapshot;
   const readyPlayers = sceneReadyPlayers;
   const allReady = sceneAllReady;
   const actionPending = pendingAction !== null;
   const readyPending = pendingAction === "ready";
+  const settingsPending = pendingAction === "settings";
   const roomCode = room.code.toUpperCase();
   const startAuthorized = sceneStartAuthorized;
   const copyError = actionError?.scope === "copy" ? actionError.message : null;
   const readyError = actionError?.scope === "ready" ? actionError.message : null;
+  const settingsError =
+    actionError?.scope === "settings" ? actionError.message : null;
   const consoleError =
     actionError?.scope === "profile" || actionError?.scope === "bot"
       ? actionError.message
@@ -263,25 +308,31 @@ export function LobbyClient({ code }: LobbyClientProps) {
   return (
     <LobbyCommandWorkspace
       roomCode={roomCode}
+      ruleset={room.ruleset}
+      balancedDiceEnabled={room.balancedDiceEnabled}
       players={players}
       me={me}
       canManageBots={canManageBots}
+      canManageRoom={canManageRoom}
       readyPlayers={readyPlayers}
       allReady={allReady}
       startAuthorized={startAuthorized}
       reconnecting={Boolean(syncError)}
       actionPending={actionPending}
       readyPending={readyPending}
+      settingsPending={settingsPending}
       pendingAction={pendingAction}
       copied={copied}
       copyError={copyError}
       consoleError={consoleError}
       readyError={readyError}
+      settingsError={settingsError}
       tableStatus={tableStatus}
       onCopyRoomCode={() => void copyRoomCode()}
       onRefresh={() => void refresh()}
       onSaveFaction={saveFaction}
       onColorChange={(color) => void updateMe({ color })}
+      onUpdateSettings={(patch) => void updateSettings(patch)}
       onAddBot={() => void addBot()}
       onRemoveBot={removeBot}
       onToggleReady={() => void updateMe({ isReady: !me.isReady }, "ready")}

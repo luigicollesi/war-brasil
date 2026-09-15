@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { PoolClient } from "pg";
+import type { GameRuleset } from "@/src/lib/game-mode";
 import {
   DiceBalanceConfigurationError,
   type DiceBalanceAlgorithm,
@@ -11,6 +12,8 @@ import {
   BUILTIN_SAFE_UNIFORM_PROFILE_ID,
   SAFE_UNIFORM_DICE_PROFILE,
 } from "@/src/lib/server/dice-balance-config";
+
+const UNIFORM_DICE_PROFILE_ID = "uniform-v1";
 
 type DiceBalanceProfileRow = {
   id: string;
@@ -34,12 +37,19 @@ type RoomMatchContext = {
   status: "waiting" | "order_roll" | "playing" | "finished";
   current_match_id: string | null;
   match_mode: "classic" | "custom";
+  ruleset: GameRuleset;
+  balanced_dice_enabled: boolean;
   winner_player_id: string | null;
 };
 
 export type LoadedMatchDiceBalance = {
   matchId: string;
   profile: DiceBalanceProfile;
+};
+
+export type InitializedMatchContext = LoadedMatchDiceBalance & {
+  ruleset: GameRuleset;
+  balancedDiceEnabled: boolean;
 };
 
 type ResolvedStartProfile = {
@@ -138,11 +148,14 @@ async function loadDefaultProfileId(client: PoolClient) {
 
 async function resolveProfileForNewMatch(
   client: PoolClient,
+  balancedDiceEnabled: boolean,
 ): Promise<ResolvedStartProfile> {
   let requestedProfileId: string | null = null;
 
   try {
-    requestedProfileId = await loadDefaultProfileId(client);
+    requestedProfileId = balancedDiceEnabled
+      ? await loadDefaultProfileId(client)
+      : UNIFORM_DICE_PROFILE_ID;
     const profile = await loadCatalogProfile(client, requestedProfileId);
     return {
       requestedProfileId,
@@ -170,7 +183,8 @@ async function resolveProfileForNewMatch(
 async function lockRoomMatchContext(client: PoolClient, roomId: string) {
   const row = (
     await client.query<RoomMatchContext>(
-      `SELECT status,current_match_id,match_mode,winner_player_id
+      `SELECT status,current_match_id,match_mode,ruleset,balanced_dice_enabled,
+              winner_player_id
        FROM game.rooms
        WHERE id = $1
        FOR UPDATE`,
@@ -185,7 +199,7 @@ async function lockRoomMatchContext(client: PoolClient, roomId: string) {
 export async function initializeDiceBalanceForGame(
   client: PoolClient,
   roomId: string,
-): Promise<LoadedMatchDiceBalance> {
+): Promise<InitializedMatchContext> {
   const room = await lockRoomMatchContext(client, roomId);
   if (room.status !== "waiting") {
     throw new Error(`A sala ${roomId} não está aguardando o início de uma partida.`);
@@ -196,7 +210,10 @@ export async function initializeDiceBalanceForGame(
     );
   }
 
-  const selected = await resolveProfileForNewMatch(client);
+  const selected = await resolveProfileForNewMatch(
+    client,
+    room.balanced_dice_enabled,
+  );
   const sequence =
     (
       await client.query<{ next_sequence: number }>(
@@ -211,9 +228,10 @@ export async function initializeDiceBalanceForGame(
     await client.query<{ id: string }>(
       `INSERT INTO game.matches (
          room_id,sequence,requested_profile_id,resolved_profile_id,
-         profile_source,dice_balance_profile_snapshot,match_mode_snapshot
+         profile_source,dice_balance_profile_snapshot,match_mode_snapshot,
+         ruleset_snapshot,balanced_dice_enabled_snapshot
        )
-       VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7)
+       VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9)
        RETURNING id`,
       [
         roomId,
@@ -223,6 +241,8 @@ export async function initializeDiceBalanceForGame(
         selected.source,
         JSON.stringify(selected.profile),
         room.match_mode,
+        room.ruleset,
+        room.balanced_dice_enabled,
       ],
     )
   ).rows[0];
@@ -244,7 +264,12 @@ export async function initializeDiceBalanceForGame(
     [roomId, match.id],
   );
 
-  return { matchId: match.id, profile: selected.profile };
+  return {
+    matchId: match.id,
+    profile: selected.profile,
+    ruleset: room.ruleset,
+    balancedDiceEnabled: room.balanced_dice_enabled,
+  };
 }
 
 async function snapshotMatchParticipants(

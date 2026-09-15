@@ -252,16 +252,16 @@ test("fortificação é reavaliada após manobra e bônus positivo de evento", (
 
   assert.match(
     maneuver,
-    /objectiveWon\(client, room\.id, player\.id, "troops_changed"\)/,
+    /evaluateGameVictory\([\s\S]*room\.id,[\s\S]*player\.id,[\s\S]*"troops_changed"/,
   );
   assert.match(maneuver, /winnerPlayerId: player\.id/);
-  assert.match(command, /function evaluateRoundTroopObjectiveWinners/);
+  assert.match(command, /function evaluateRoundTroopWinners/);
   assert.match(
     command,
     /roundActivation\.appliedTroopChanges\.some\(\(change\) => change\.delta > 0\)/,
   );
   assert.match(
     command,
-    /objectiveWon\(client, roomId, candidate\.id, "troops_changed"\)/,
+    /evaluateGameVictory\(client, roomId, candidate\.id, "troops_changed"\)/,
   );
 });

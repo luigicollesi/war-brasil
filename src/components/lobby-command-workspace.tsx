@@ -3,9 +3,11 @@
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { PreGameBackButton } from "@/src/components/pre-game-back-button";
+import type { GameRuleset } from "@/src/lib/game-mode";
 import type { LobbyPlayer } from "@/src/lib/lobby";
 import { LobbyFormationPanel } from "./lobby-formation-panel";
 import { LobbyReadyDock } from "./lobby-ready-dock";
+import { LobbyRoomSettings } from "./lobby-room-settings";
 import { LobbyStationPanel } from "./lobby-station-panel";
 import styles from "./lobby-command-workspace.module.css";
 
@@ -13,25 +15,34 @@ type MobileLobbyPanel = "formation" | "station";
 
 type LobbyCommandWorkspaceProps = {
   roomCode: string;
+  ruleset: GameRuleset;
+  balancedDiceEnabled: boolean;
   players: LobbyPlayer[];
   me: LobbyPlayer;
   canManageBots: boolean;
+  canManageRoom: boolean;
   readyPlayers: number;
   allReady: boolean;
   startAuthorized: boolean;
   reconnecting: boolean;
   actionPending: boolean;
   readyPending: boolean;
+  settingsPending: boolean;
   pendingAction: string | null;
   copied: boolean;
   copyError: string | null;
   consoleError: string | null;
   readyError: string | null;
+  settingsError: string | null;
   tableStatus: string;
   onCopyRoomCode: () => void;
   onRefresh: () => void;
   onSaveFaction: (event: FormEvent<HTMLFormElement>) => void;
   onColorChange: (color: string) => void;
+  onUpdateSettings: (patch: {
+    ruleset?: GameRuleset;
+    balancedDiceEnabled?: boolean;
+  }) => void;
   onAddBot: () => void;
   onRemoveBot: (botId: string) => Promise<void>;
   onToggleReady: () => void;
@@ -39,25 +50,31 @@ type LobbyCommandWorkspaceProps = {
 
 export function LobbyCommandWorkspace({
   roomCode,
+  ruleset,
+  balancedDiceEnabled,
   players,
   me,
   canManageBots,
+  canManageRoom,
   readyPlayers,
   allReady,
   startAuthorized,
   reconnecting,
   actionPending,
   readyPending,
+  settingsPending,
   pendingAction,
   copied,
   copyError,
   consoleError,
   readyError,
+  settingsError,
   tableStatus,
   onCopyRoomCode,
   onRefresh,
   onSaveFaction,
   onColorChange,
+  onUpdateSettings,
   onAddBot,
   onRemoveBot,
   onToggleReady,
@@ -107,6 +124,14 @@ export function LobbyCommandWorkspace({
 
         <div className={styles.commandStatus}>
           <span className={styles.phaseBadge}>MOBILIZAÇÃO // 00</span>
+          <LobbyRoomSettings
+            ruleset={ruleset}
+            balancedDiceEnabled={balancedDiceEnabled}
+            canManageRoom={canManageRoom}
+            pending={settingsPending}
+            error={settingsError}
+            onChange={onUpdateSettings}
+          />
           <div className={styles.connection} role="status" aria-live="polite" aria-atomic="true">
             <span className={styles.connectionLamp} aria-hidden="true" />
             {reconnecting ? "Reconectando ao comando" : "Sala sincronizada"}

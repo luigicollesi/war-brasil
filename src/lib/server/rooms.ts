@@ -3,6 +3,7 @@ import "server-only";
 import { randomInt, randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import { pool } from "@/src/lib/db/pool";
+import { isGameRuleset, type GameRuleset } from "@/src/lib/game-mode";
 import { isPlayerColor, type LobbySnapshot, type PlayerColor } from "@/src/lib/lobby";
 import { RoomError } from "@/src/lib/server/room-error";
 import { startGame } from "@/src/lib/server/start-game-service";
@@ -20,6 +21,7 @@ const DEFAULT_COLORS: PlayerColor[] = [
   "violet",
   "orange",
 ];
+const ROOM_SETTING_KEYS = new Set(["ruleset", "balancedDiceEnabled"]);
 
 export type AuthenticatedPlayerIdentity = {
   userId: string;
@@ -33,6 +35,8 @@ type RoomRow = {
   status: "waiting" | "order_roll" | "playing";
   created_at: Date;
   started_at: Date | null;
+  ruleset: GameRuleset;
+  balanced_dice_enabled: boolean;
 };
 
 type PlayerRow = {
@@ -103,7 +107,8 @@ function toSnapshot(room: RoomRow, players: PlayerRow[]): LobbySnapshot {
     throw new RoomError("Você não pertence a esta sala.", 403);
   }
 
-  const botManager = mappedPlayers.find((player) => !player.isBot);
+  const roomManager = mappedPlayers.find((player) => !player.isBot);
+  const canManageRoom = Boolean(roomManager?.isMe);
 
   return {
     room: {
@@ -112,10 +117,13 @@ function toSnapshot(room: RoomRow, players: PlayerRow[]): LobbySnapshot {
       status: room.status,
       createdAt: room.created_at.toISOString(),
       startedAt: room.started_at?.toISOString() ?? null,
+      ruleset: room.ruleset,
+      balancedDiceEnabled: room.balanced_dice_enabled,
     },
     players: mappedPlayers,
     me,
-    canManageBots: Boolean(botManager?.isMe),
+    canManageBots: canManageRoom,
+    canManageRoom,
   };
 }
 
@@ -148,7 +156,7 @@ async function withTransaction<T>(callback: (client: PoolClient) => Promise<T>) 
 
 async function findRoomForUpdate(client: PoolClient, code: string) {
   const result = await client.query<RoomRow>(
-    `SELECT id, code, status, created_at, started_at
+    `SELECT id,code,status,created_at,started_at,ruleset,balanced_dice_enabled
      FROM game.rooms
      WHERE code = $1
      FOR UPDATE`,
@@ -177,10 +185,11 @@ async function findAvailableColor(client: PoolClient, roomId: string) {
   return color;
 }
 
-async function assertRoomBotManager(
+async function assertRoomManager(
   client: PoolClient,
   roomId: string,
   playerSession: string,
+  errorMessage = "Apenas o criador da sala pode alterar as configurações.",
 ) {
   const manager = (
     await client.query<{ player_session: string }>(
@@ -194,7 +203,7 @@ async function assertRoomBotManager(
   ).rows[0];
 
   if (!manager || manager.player_session !== playerSession) {
-    throw new RoomError("Apenas o criador da sala pode gerenciar bots.", 403);
+    throw new RoomError(errorMessage, 403);
   }
 }
 
@@ -305,7 +314,7 @@ export async function createRoom(
         const roomResult = await client.query<RoomRow>(
           `INSERT INTO game.rooms (code)
            VALUES ($1)
-           RETURNING id, code, status, created_at, started_at`,
+           RETURNING id,code,status,created_at,started_at,ruleset,balanced_dice_enabled`,
           [code],
         );
         const room = roomResult.rows[0];
@@ -411,7 +420,12 @@ export async function addBotToRoom(codeValue: unknown, playerSession: string) {
       throw new RoomError("Esta partida já começou.", 409);
     }
 
-    await assertRoomBotManager(client, room.id, playerSession);
+    await assertRoomManager(
+      client,
+      room.id,
+      playerSession,
+      "Apenas o criador da sala pode gerenciar bots.",
+    );
 
     const colors = await availableColors(client, room.id);
     if (!colors.length) {
@@ -454,7 +468,12 @@ export async function removeBotFromRoom(
       throw new RoomError("Esta partida já começou.", 409);
     }
 
-    await assertRoomBotManager(client, room.id, playerSession);
+    await assertRoomManager(
+      client,
+      room.id,
+      playerSession,
+      "Apenas o criador da sala pode gerenciar bots.",
+    );
 
     const removed = await client.query<{ id: string }>(
       `DELETE FROM game.players
@@ -478,7 +497,7 @@ export async function getLobbySnapshot(codeValue: unknown, playerSession: string
   if (!code) throw new RoomError("Código de sala inválido.", 422);
 
   const roomResult = await pool.query<RoomRow>(
-    `SELECT id, code, status, created_at, started_at
+    `SELECT id,code,status,created_at,started_at,ruleset,balanced_dice_enabled
      FROM game.rooms
      WHERE code = $1`,
     [code],
@@ -496,6 +515,67 @@ export async function getLobbySnapshot(codeValue: unknown, playerSession: string
   );
 
   return toSnapshot(room, playerResult.rows);
+}
+
+export async function updateRoomSettings(
+  codeValue: unknown,
+  playerSession: string,
+  input: UpdateInput,
+) {
+  const code = normalizeRoomCode(codeValue);
+  if (!code) throw new RoomError("Código de sala inválido.", 422);
+
+  const keys = Object.keys(input);
+  if (keys.length === 0) {
+    throw new RoomError("Nenhuma configuração foi informada.", 400);
+  }
+  for (const key of keys) {
+    if (!ROOM_SETTING_KEYS.has(key)) {
+      throw new RoomError("Configuração da sala desconhecida.", 422);
+    }
+  }
+
+  const hasRuleset = Object.hasOwn(input, "ruleset");
+  const hasBalancedDiceEnabled = Object.hasOwn(input, "balancedDiceEnabled");
+
+  return withTransaction(async (client) => {
+    const room = await findRoomForUpdate(client, code);
+    if (room.status !== "waiting") {
+      throw new RoomError("As configurações só podem ser alteradas na sala de espera.", 409);
+    }
+
+    await assertRoomManager(client, room.id, playerSession);
+
+    const rulesetValue = hasRuleset ? input.ruleset : room.ruleset;
+    if (!isGameRuleset(rulesetValue)) {
+      throw new RoomError("Modo de jogo inválido.", 422);
+    }
+    const ruleset = rulesetValue;
+
+    const balancedDiceEnabled = hasBalancedDiceEnabled
+      ? input.balancedDiceEnabled
+      : room.balanced_dice_enabled;
+    if (typeof balancedDiceEnabled !== "boolean") {
+      throw new RoomError("Sorte balanceada deve ser ligada ou desligada.", 422);
+    }
+
+    const changed =
+      ruleset !== room.ruleset ||
+      balancedDiceEnabled !== room.balanced_dice_enabled;
+    if (!changed) return room;
+
+    await client.query(
+      `UPDATE game.rooms
+       SET ruleset=$2,balanced_dice_enabled=$3
+       WHERE id=$1`,
+      [room.id, ruleset, balancedDiceEnabled],
+    );
+    await resetHumanReadiness(client, room.id);
+
+    room.ruleset = ruleset;
+    room.balanced_dice_enabled = balancedDiceEnabled;
+    return room;
+  });
 }
 
 export async function updateLobbyPlayer(

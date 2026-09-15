@@ -119,16 +119,17 @@ test("evento inicial é narrativo e remoções preservam a última tropa", () =>
   assert.match(anomaly, /minimumTroopsAfterRemoval/);
 });
 
-test("objetivos encerram a partida imediatamente nas mudanças relevantes", () => {
-  const objective = source("src/lib/server/game-objective-service.ts");
+test("vitória é reavaliada imediatamente nas mudanças relevantes", () => {
+  const victory = source("src/lib/server/game-victory-service.ts");
   const troops = source("src/lib/server/game-troop-command-service.ts");
   const maneuver = source("src/lib/server/game-maneuver-command-service.ts");
   const battle = source("src/lib/server/game-battle-service.ts");
   const command = source("src/lib/server/game-command-service.ts");
 
-  assert.match(objective, /SET status='finished',phase='finished',winner_player_id=\$2/);
-  assert.match(troops, /objectiveWon\([\s\S]*"troops_changed"/);
-  assert.match(maneuver, /objectiveWon\(client, room\.id, player\.id, "troops_changed"\)/);
-  assert.match(battle, /"territory_control_changed"/);
-  assert.match(command, /evaluateRoundTroopObjectiveWinners/);
+  assert.match(victory, /SET status='finished',phase='finished',winner_player_id=\$2/);
+  assert.match(troops, /evaluateGameVictory\([\s\S]*"troops_changed"/);
+  assert.match(maneuver, /evaluateGameVictory\([\s\S]*"troops_changed"/);
+  assert.match(battle, /evaluateGameVictory\([\s\S]*"territory_control_changed"/);
+  assert.match(command, /function evaluateRoundTroopWinners/);
+  assert.match(command, /evaluateGameVictory\(client, roomId, candidate\.id, "troops_changed"\)/);
 });

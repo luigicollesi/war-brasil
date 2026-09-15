@@ -50,8 +50,8 @@ test("gerenciamento de bots permanece serializado pelo lock da sala", () => {
 
   assert.match(addBot, /findRoomForUpdate\(client, code\)/);
   assert.match(removeBot, /findRoomForUpdate\(client, code\)/);
-  assert.match(addBot, /assertRoomBotManager/);
-  assert.match(removeBot, /assertRoomBotManager/);
+  assert.match(addBot, /assertRoomManager/);
+  assert.match(removeBot, /assertRoomManager/);
 });
 
 test("bot recebe identidade interna, cor livre, nome catalogado e prontidão automática", () => {

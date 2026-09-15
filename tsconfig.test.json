@@ -22,6 +22,7 @@
     "src/lib/server/game-snapshot-service.ts",
     "src/lib/server/start-game-service.ts",
     "src/lib/server/game-finish-command-service.ts",
+    "src/lib/game-mode.ts",
     "src/lib/game-rules.ts",
     "src/lib/game-trade-rules.ts",
     "src/lib/game-guide-presentation.ts",

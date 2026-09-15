@@ -57,7 +57,7 @@ test("ready permanece confirmado pelo servidor e perceptível sem depender de co
 });
 
 test("ready pendente não antecipa estado e falha aparece junto da ação", () => {
-  assert.match(lobby, /scope: "profile" \| "ready" \| "bot" \| "copy"/);
+  assert.match(lobby, /scope: "profile" \| "ready" \| "settings" \| "bot" \| "copy"/);
   assert.match(lobby, /scope: action/);
   assert.match(lobby, /const readyPending = pendingAction === "ready"/);
   assert.match(lobby, /const readyError = actionError\?\.scope === "ready"/);
