@@ -102,6 +102,8 @@ ALTER TABLE game.player_cosmetic_loadouts
 
 -- ---------------------------------------------------------------------------
 -- Collections and semantic asset mappings.
+-- V1 collection merchandising intentionally has only banner/background/logo.
+-- Historical mappings may remain, but at most one active mapping exists per role.
 -- ---------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS catalog.collections (
@@ -120,19 +122,28 @@ CREATE TABLE IF NOT EXISTS catalog.collections (
 );
 
 CREATE TABLE IF NOT EXISTS catalog.collection_assets (
+  id BIGSERIAL PRIMARY KEY,
   collection_id TEXT NOT NULL REFERENCES catalog.collections(id) ON DELETE CASCADE,
   role VARCHAR(24) NOT NULL,
   object_key TEXT NOT NULL,
   mime_type VARCHAR(96) NOT NULL,
+  active BOOLEAN NOT NULL DEFAULT TRUE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  PRIMARY KEY (collection_id, role),
+  CONSTRAINT collection_assets_identity_uq UNIQUE (collection_id, role, object_key),
   CONSTRAINT collection_assets_role_check
-    CHECK (role IN ('hero', 'banner', 'card', 'logo', 'background')),
+    CHECK (role IN ('banner', 'background', 'logo')),
   CHECK (btrim(object_key) <> ''),
   CHECK (object_key !~ '^[a-z]+://'),
   CHECK (btrim(mime_type) <> '')
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS catalog_collection_assets_one_active_role_uq
+  ON catalog.collection_assets(collection_id, role)
+  WHERE active;
+
+CREATE INDEX IF NOT EXISTS catalog_collection_assets_active_idx
+  ON catalog.collection_assets(collection_id, active, role, id);
 
 ALTER TABLE catalog.cosmetics
   ADD COLUMN IF NOT EXISTS collection_id TEXT;
@@ -165,11 +176,12 @@ CREATE TABLE IF NOT EXISTS catalog.cosmetic_assets (
   CHECK (version > 0)
 );
 
--- Existing cosmetic sets become permanent collection identities. The legacy set
--- tables remain because the old storefront still reads them during rollout.
+-- Existing cosmetic sets become permanent collection identities. Prefer the stable
+-- storage slug so the public catalogue can use language-independent identifiers
+-- such as `football` while the legacy set IDs remain untouched during rollout.
 INSERT INTO catalog.collections(id, slug, name, description, active, sort_order)
-SELECT 'collection.' || substr(cosmetic_set.id, 5),
-       cosmetic_set.slug,
+SELECT 'collection.' || COALESCE(cosmetic_set.storage_slug, substr(cosmetic_set.id, 5)),
+       COALESCE(cosmetic_set.storage_slug, cosmetic_set.slug),
        cosmetic_set.name,
        cosmetic_set.description,
        cosmetic_set.status <> 'retired',
@@ -182,12 +194,33 @@ UPDATE catalog.cosmetics item
        updated_at = NOW()
   FROM (
     SELECT set_item.cosmetic_id,
-           MIN('collection.' || substr(set_item.set_id, 5)) AS collection_id
+           MIN(
+             'collection.' || COALESCE(cosmetic_set.storage_slug, substr(set_item.set_id, 5))
+           ) AS collection_id
       FROM catalog.cosmetic_set_items set_item
+      JOIN catalog.cosmetic_sets cosmetic_set ON cosmetic_set.id=set_item.set_id
      GROUP BY set_item.cosmetic_id
   ) membership
  WHERE membership.cosmetic_id=item.id
    AND item.collection_id IS NULL;
+
+-- Football is the V1 reference dice-only collection. These rows are merchandising
+-- metadata, not inventory and not canonical cosmetic previews.
+INSERT INTO catalog.collection_assets(
+  collection_id,
+  role,
+  object_key,
+  mime_type,
+  active
+)
+VALUES
+  ('collection.football', 'banner', 'store/collections/football/banner.webp', 'image/webp', TRUE),
+  ('collection.football', 'background', 'store/collections/football/background.webp', 'image/webp', TRUE),
+  ('collection.football', 'logo', 'store/collections/football/logo.webp', 'image/webp', TRUE)
+ON CONFLICT (collection_id, role, object_key) DO UPDATE
+SET mime_type=EXCLUDED.mime_type,
+    active=TRUE,
+    updated_at=NOW();
 
 INSERT INTO catalog.cosmetic_assets(cosmetic_id, role, object_key, mime_type, version)
 SELECT item.id,
@@ -462,6 +495,7 @@ CREATE INDEX IF NOT EXISTS catalog_offers_product_window_idx
 
 -- ---------------------------------------------------------------------------
 -- Temporary campaigns are editorial groupings over offers, never ownership.
+-- Campaign art remains independent from the closed V1 collection asset contract.
 -- ---------------------------------------------------------------------------
 
 CREATE TABLE IF NOT EXISTS catalog.campaigns (
@@ -553,6 +587,8 @@ ALTER TABLE economy.purchase_items
 
 COMMENT ON TABLE catalog.collections IS
   'Permanent thematic catalogue families. Collections are editorial identity, never owned inventory.';
+COMMENT ON TABLE catalog.collection_assets IS
+  'Versionable collection merchandising mappings. V1 roles are banner/background/logo and only one active mapping per role is allowed.';
 COMMENT ON TABLE catalog.products IS
   'Stable commercial compositions. Single and bundle products grant component cosmetics rather than product ownership.';
 COMMENT ON TABLE catalog.cosmetic_pricing IS
