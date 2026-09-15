@@ -13,6 +13,7 @@ import type {
   EquipCosmeticInput,
   PurchaseOfferInput,
   PurchaseOfferResult,
+  StorefrontCollection,
 } from "@/src/lib/economy/economy-contract";
 import {
   COSMETIC_SLOTS,
@@ -25,6 +26,7 @@ import {
   type StorefrontQuoteItem,
 } from "@/src/lib/economy/storefront-pricing";
 import { territorySkinAssetDeliveryPath } from "../../economy/territory-skin-contract";
+import { collectionAssetDeliveryPath } from "../assets/collection-asset-storage";
 import { diceAssetDeliveryPath } from "../assets/asset-storage-service";
 import { pool } from "../db/pool";
 import {
@@ -47,10 +49,12 @@ import {
   type WalletRow,
 } from "./economy-repository";
 import {
+  listStorefrontCollections,
   listStorefrontCreditPacks,
   listStorefrontOfferItems,
   listStorefrontOffers,
   type CreditPackRow,
+  type StorefrontCollectionRow,
   type StorefrontOfferItemRow,
   type StorefrontOfferRow,
 } from "./economy-storefront-repository";
@@ -200,6 +204,83 @@ function setsFromRows(
   }
 
   return [...grouped.values()];
+}
+
+function collectionsFromRows(
+  rows: StorefrontCollectionRow[],
+  productRows: StorefrontOfferProductRow[],
+): StorefrontCollection[] {
+  const grouped = new Map<
+    string,
+    Omit<StorefrontCollection, "offerIds" | "singleOfferIds" | "bundleOfferIds">
+  >();
+
+  for (const row of rows) {
+    const current = grouped.get(row.collection_id);
+    const item = cosmeticFromRow(row);
+    if (current) {
+      grouped.set(row.collection_id, {
+        ...current,
+        items: [...current.items, item],
+        ownedCount: current.ownedCount + (item.owned ? 1 : 0),
+        totalCount: current.totalCount + 1,
+        fullyOwned: current.fullyOwned && item.owned,
+        partiallyOwned: false,
+      });
+      continue;
+    }
+
+    grouped.set(row.collection_id, {
+      id: row.collection_id,
+      slug: row.collection_slug,
+      name: row.collection_name,
+      description: row.collection_description,
+      assets: {
+        banner: collectionAssetDeliveryPath(row.banner_object_key),
+        background: collectionAssetDeliveryPath(row.background_object_key),
+        logo: collectionAssetDeliveryPath(row.logo_object_key),
+      },
+      items: [item],
+      ownedCount: item.owned ? 1 : 0,
+      totalCount: 1,
+      fullyOwned: item.owned,
+      partiallyOwned: false,
+    });
+  }
+
+  const offersByCollection = new Map<
+    string,
+    { all: string[]; singles: string[]; bundles: string[] }
+  >();
+  for (const product of productRows) {
+    if (!product.collection_id) continue;
+    const current = offersByCollection.get(product.collection_id) ?? {
+      all: [],
+      singles: [],
+      bundles: [],
+    };
+    current.all.push(product.offer_id);
+    if (product.product_type === "single") current.singles.push(product.offer_id);
+    else current.bundles.push(product.offer_id);
+    offersByCollection.set(product.collection_id, current);
+  }
+
+  return [...grouped.values()].map((collection) => {
+    const offers = offersByCollection.get(collection.id) ?? {
+      all: [],
+      singles: [],
+      bundles: [],
+    };
+    const fullyOwned = collection.totalCount > 0 && collection.ownedCount === collection.totalCount;
+    return {
+      ...collection,
+      fullyOwned,
+      partiallyOwned: collection.ownedCount > 0 && !fullyOwned,
+      offerIds: offers.all,
+      singleOfferIds: offers.singles,
+      bundleOfferIds: offers.bundles,
+    };
+  });
 }
 
 function quoteItemFromRow(row: StorefrontQuoteItemRow): StorefrontQuoteItem {
@@ -419,18 +500,21 @@ export async function getEconomyStorefront(
     const walletRow = await findCampaignCreditWallet(userId, client);
     const ownedRows = await listOwnedCosmetics(userId, client);
     const setRows = await listStorefrontSetItems(userId, client);
+    const collectionRows = await listStorefrontCollections(userId, client);
     const offerRows = await listStorefrontOffers(client);
     const offerItemRows = await listStorefrontOfferItems(userId, client);
     const productRows = await listActiveStorefrontOfferProducts(client);
     const quoteRows = await listActiveStorefrontQuoteItems(userId, client);
     const creditPackRows = await listStorefrontCreditPacks(client);
+    const offers = offersFromRows(offerRows, offerItemRows, productRows, quoteRows);
 
     const snapshot = {
       wallet: walletFromRow(walletRow),
       loadout: loadoutFromOwned(ownedRows),
       ownedItems: ownedRows.map(cosmeticFromRow),
       sets: setsFromRows(setRows),
-      offers: offersFromRows(offerRows, offerItemRows, productRows, quoteRows),
+      collections: collectionsFromRows(collectionRows, productRows),
+      offers,
       creditPacks: creditPacksFromRows(creditPackRows),
     } satisfies EconomyStorefrontSnapshot;
 
