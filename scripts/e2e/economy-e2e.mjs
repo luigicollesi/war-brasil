@@ -10,7 +10,13 @@ const STORAGE_STATE_PATH = process.env.DOCTRINE_AUTH_STORAGE_STATE;
 const ARTIFACT_DIR = path.resolve(
   process.env.ECONOMY_E2E_ARTIFACT_DIR ?? "test-results/economy-eval",
 );
-const HQ_ASSET_PATTERN = /^\/dados\/(exercito|lancas|viking)\/(ataque|defesa|neutro)\.svg$/;
+const ASSET_ROUTE_PATH = "/api/assets/dice";
+const R2_ASSET_PATTERN =
+  /^https:\/\/[^/]+\.r2\.cloudflarestorage\.com\/war-brasil-assets-prod\/cosmetics\/dice\/[^?]+\.webp\?/;
+const FAKE_WEBP = Buffer.from(
+  "UklGRhoAAABXRUJQVlA4TA0AAAAvB8ABEAcQERGIiP4HAA==",
+  "base64",
+);
 
 if (!DATABASE_URL) throw new Error("DATABASE_URL é obrigatória para Economy E2E.");
 if (!STORAGE_STATE_PATH) {
@@ -116,7 +122,18 @@ async function waitForPreviewImage(card) {
   });
 }
 
-async function inspectSet(page, setName, expectedAttackPath, screenshotName) {
+function assetKeyFromDeliveryUrl(value) {
+  const url = new URL(value, BASE_URL);
+  assert.equal(url.pathname, ASSET_ROUTE_PATH);
+  const key = url.searchParams.get("key");
+  assert.match(
+    key ?? "",
+    /^cosmetics\/dice\/[a-z0-9]+(?:-[a-z0-9]+)*\/(attack|defense|neutral)\.webp$/,
+  );
+  return key;
+}
+
+async function inspectSet(page, setName, expectedKey, screenshotName) {
   const card = page.locator("article").filter({ hasText: setName });
   await card.getByRole("button", { name: "INSPECIONAR", exact: true }).click();
   await card.locator("[data-preview-detail]").waitFor({ state: "visible" });
@@ -124,7 +141,7 @@ async function inspectSet(page, setName, expectedAttackPath, screenshotName) {
 
   const src = await card.getByRole("img").getAttribute("src");
   assert.ok(src, `${setName} não expôs src de preview`);
-  assert.equal(new URL(src, BASE_URL).pathname, expectedAttackPath);
+  assert.equal(assetKeyFromDeliveryUrl(src), expectedKey);
 
   await page.screenshot({
     path: path.join(ARTIFACT_DIR, screenshotName),
@@ -141,11 +158,37 @@ const context = await browser.newContext({
   reducedMotion: "reduce",
 });
 const page = await context.newPage();
-const hqRequests = [];
+const deliveryKeys = [];
+const r2Keys = [];
+
+await page.route(R2_ASSET_PATTERN, async (route) => {
+  const url = new URL(route.request().url());
+  const marker = "/war-brasil-assets-prod/";
+  const markerIndex = url.pathname.indexOf(marker);
+  assert.ok(markerIndex >= 0, `path R2 inesperado: ${url.pathname}`);
+  const objectKey = decodeURIComponent(url.pathname.slice(markerIndex + marker.length));
+  assert.match(
+    objectKey,
+    /^cosmetics\/dice\/[a-z0-9]+(?:-[a-z0-9]+)*\/(attack|defense|neutral)\.webp$/,
+  );
+  assert.equal(url.searchParams.get("X-Amz-Algorithm"), "AWS4-HMAC-SHA256");
+  assert.match(url.searchParams.get("X-Amz-Signature") ?? "", /^[a-f0-9]{64}$/);
+  assert.ok(Number(url.searchParams.get("X-Amz-Expires")) > 0);
+  r2Keys.push(objectKey);
+  await route.fulfill({
+    status: 200,
+    contentType: "image/webp",
+    body: FAKE_WEBP,
+    headers: { "Cache-Control": "private, max-age=60" },
+  });
+});
 
 page.on("request", (request) => {
-  const pathname = new URL(request.url()).pathname;
-  if (HQ_ASSET_PATTERN.test(pathname)) hqRequests.push(pathname);
+  const url = new URL(request.url());
+  if (url.pathname === ASSET_ROUTE_PATH) {
+    const key = url.searchParams.get("key");
+    if (key) deliveryKeys.push(key);
+  }
 });
 
 try {
@@ -188,13 +231,21 @@ try {
   await page.waitForURL(`${BASE_URL}/profile/store`);
   await page.getByRole("heading", { name: "Remessas do Comando", exact: true }).waitFor();
   assert.equal(await page.locator('main[data-scene="profile"]').count(), 1);
-  assert.equal(hqRequests.length, 0, `SVG HQ carregado antes de inspeção: ${hqRequests}`);
+  assert.equal(deliveryKeys.length, 0, `asset carregado antes de inspeção: ${deliveryKeys}`);
+  assert.equal(r2Keys.length, 0, `R2 carregado antes de inspeção: ${r2Keys}`);
 
   const storeWallet = page.locator('[data-currency="campaign-credit"]').first();
   assert.match((await storeWallet.textContent()) ?? "", /◈\s*0/);
   assert.equal(await page.locator('section[aria-labelledby="loadout-title"] article').count(), 4);
 
-  for (const name of ["Exército Clássico", "Lanças Medievais", "Viking"]) {
+  for (const name of [
+    "Exército Clássico",
+    "Lanças Medievais",
+    "Viking",
+    "Gato",
+    "Cachorro",
+    "Futebol",
+  ]) {
     await page.getByRole("heading", { name, exact: true }).waitFor();
   }
   assert.equal(await page.getByRole("button", { name: /COMPRAR/i }).count(), 0);
@@ -208,39 +259,44 @@ try {
   const exercito = await inspectSet(
     page,
     "Exército Clássico",
-    "/dados/exercito/ataque.svg",
+    "cosmetics/dice/military-classic/attack.webp",
     "detail-exercito.png",
   );
-  assert.deepEqual(hqRequests, ["/dados/exercito/ataque.svg"]);
+  assert.deepEqual(deliveryKeys, ["cosmetics/dice/military-classic/attack.webp"]);
+  assert.deepEqual(r2Keys, deliveryKeys);
 
   await exercito.getByRole("button", { name: "Defesa", exact: true }).click();
   await waitForPreviewImage(exercito);
   await page.waitForFunction(() =>
-    [...document.images].some((image) => image.src.includes("/dados/exercito/defesa.svg")),
+    [...document.images].some((image) =>
+      image.src.includes(encodeURIComponent("cosmetics/dice/military-classic/defense.webp")),
+    ),
   );
-  assert.deepEqual(hqRequests, [
-    "/dados/exercito/ataque.svg",
-    "/dados/exercito/defesa.svg",
+  assert.deepEqual(deliveryKeys, [
+    "cosmetics/dice/military-classic/attack.webp",
+    "cosmetics/dice/military-classic/defense.webp",
   ]);
+  assert.deepEqual(r2Keys, deliveryKeys);
 
   await inspectSet(
     page,
     "Lanças Medievais",
-    "/dados/lancas/ataque.svg",
+    "cosmetics/dice/medieval-spears/attack.webp",
     "detail-lancas.png",
   );
   await inspectSet(
     page,
     "Viking",
-    "/dados/viking/ataque.svg",
+    "cosmetics/dice/viking/attack.webp",
     "detail-viking.png",
   );
-  assert.deepEqual(hqRequests, [
-    "/dados/exercito/ataque.svg",
-    "/dados/exercito/defesa.svg",
-    "/dados/lancas/ataque.svg",
-    "/dados/viking/ataque.svg",
+  assert.deepEqual(deliveryKeys, [
+    "cosmetics/dice/military-classic/attack.webp",
+    "cosmetics/dice/military-classic/defense.webp",
+    "cosmetics/dice/medieval-spears/attack.webp",
+    "cosmetics/dice/viking/attack.webp",
   ]);
+  assert.deepEqual(r2Keys, deliveryKeys);
 
   assertFreshCommanderState(await readEconomyState(userId));
 
@@ -275,7 +331,7 @@ try {
   }
 
   console.log(
-    `[economy-e2e] ok — ${hqRequests.length} SVGs HQ carregados somente após interação`,
+    `[economy-e2e] ok — ${r2Keys.length} WebPs R2 carregados somente após interação`,
   );
 } finally {
   await context.close();
