@@ -32,7 +32,7 @@ Ela MUST permitir:
 - quatro slots cosméticos independentes;
 - equipagem persistente dos cosméticos possuídos;
 - catálogo de conjuntos dirigido pelo banco, sem lista hardcoded no frontend;
-- assets de dados obtidos do object storage;
+- assets de dados obtidos do object storage exclusivamente em WebP;
 - acesso à loja pela experiência de Profile/Intendência;
 - propagação segura do loadout para partidas futuras.
 
@@ -175,7 +175,7 @@ Para objetos privados, o servidor SHOULD gerar URL S3 presigned de `GetObject` c
 
 A URL presigned:
 
-- MAY ser utilizada diretamente pelo browser para baixar o SVG do R2;
+- MAY ser utilizada diretamente pelo browser para baixar o WebP do R2;
 - MUST autorizar somente leitura do objeto solicitado;
 - MUST possuir expiração finita;
 - MUST NOT ser persistida como identidade do cosmético;
@@ -184,6 +184,30 @@ A URL presigned:
 Presigned URL é transporte efêmero. Object key é referência persistente.
 
 Quando o browser acessar diretamente URL presigned, a configuração CORS do bucket MUST permitir somente as origens necessárias da aplicação.
+
+## Formato obrigatório dos assets de dados
+
+Todo asset de dado servido a partir do object storage MUST ser WebP.
+
+Para o namespace `cosmetics/dice/`, somente os seguintes nomes de arquivo são válidos como assets de runtime:
+
+- `attack.webp`;
+- `defense.webp`;
+- `neutral.webp`.
+
+Dentro de `cosmetics/dice/`, referências de runtime terminadas em `.svg`, `.png`, `.jpg`, `.jpeg` ou qualquer extensão diferente de `.webp` MUST ser rejeitadas pela validação do catálogo/storage.
+
+Os objetos WebP MUST:
+
+- possuir `Content-Type: image/webp` no storage;
+- preservar transparência quando necessária ao design;
+- manter resolução suficiente para apresentação 2D e composição das texturas 3D;
+- produzir o mesmo papel puramente visual dos assets anteriores;
+- não alterar geometria, pips, RNG, física ou regras.
+
+A extensão `.webp` na object key e o MIME `image/webp` MUST concordar.
+
+`preview.webp`, quando existir futuramente, é um asset de storefront distinto e opcional; ele não substitui `attack.webp`, `defense.webp` ou `neutral.webp`.
 
 ## Moeda
 
@@ -275,9 +299,9 @@ Os três dados padrão utilizam a pasta física:
 
 com:
 
-- `attack.svg`;
-- `defense.svg`;
-- `neutral.svg`.
+- `attack.webp`;
+- `defense.webp`;
+- `neutral.webp`.
 
 Os defaults MUST funcionar como fallback seguro quando um estado legado/incompleto for lido.
 
@@ -308,9 +332,11 @@ Renomear ou mover um arquivo MUST NOT exigir alterar ownership histórico.
 
 `asset_ref`, ou seu sucessor semântico, MUST representar uma object key/prefixo controlado pela aplicação, nunca uma URL contendo credenciais e nunca uma URL presigned persistida.
 
+Para cosméticos de dados, a object key MUST terminar em `.webp`.
+
 Exemplo válido:
 
-`cosmetics/dice/viking/attack.svg`
+`cosmetics/dice/viking/attack.webp`
 
 ### Status de catálogo
 
@@ -352,7 +378,7 @@ A UI MUST renderizar os conjuntos retornados pelo catálogo. Ela MUST NOT possui
 
 Adicionar um novo conjunto de dados anunciado SHOULD exigir somente:
 
-1. enviar os três arquivos válidos ao R2;
+1. enviar `attack.webp`, `defense.webp` e `neutral.webp` válidos ao R2;
 2. registrar/atualizar os metadados no catálogo;
 3. registrar os três itens e seus relacionamentos;
 4. definir status `announced`.
@@ -369,13 +395,15 @@ Prefixo de dados:
 
 `cosmetics/dice/`
 
-Cada coleção segue a convenção:
+Cada coleção segue obrigatoriamente a convenção:
 
 ```text
-cosmetics/dice/<storage_slug>/attack.svg
-cosmetics/dice/<storage_slug>/defense.svg
-cosmetics/dice/<storage_slug>/neutral.svg
+cosmetics/dice/<storage_slug>/attack.webp
+cosmetics/dice/<storage_slug>/defense.webp
+cosmetics/dice/<storage_slug>/neutral.webp
 ```
+
+Nenhum `.svg` de dado é permitido como asset de runtime nesse prefixo.
 
 `preview.webp` é reservado para evolução futura e não é obrigatório nesta entrega.
 
@@ -393,7 +421,7 @@ O baseline físico informado para o bucket contém:
 
 ### Baseline inicial de conjuntos anunciados
 
-O baseline da loja SHOULD cadastrar como `announced`, quando os respectivos três objetos existirem e forem válidos:
+O baseline da loja SHOULD cadastrar como `announced`, quando os respectivos três objetos WebP existirem e forem válidos:
 
 - Exército Clássico → `military-classic`;
 - Lanças Medievais → `medieval-spears`;
@@ -419,13 +447,34 @@ A aplicação MAY utilizar a S3 API para `HeadObject`, `GetObject` e validação
 
 A storefront normal MUST NOT executar descoberta completa de bucket/prefixo para montar a lista de produtos.
 
-Um processo de validação, migration, script operacional ou ferramenta administrativa MAY verificar se um conjunto possui:
+Um processo de validação, migration, script operacional ou ferramenta administrativa MUST verificar, antes do cutover de uma coleção, se ela possui:
 
-- `attack.svg`;
-- `defense.svg`;
-- `neutral.svg`.
+- `attack.webp`;
+- `defense.webp`;
+- `neutral.webp`.
+
+Cada objeto MUST responder com MIME `image/webp`.
+
+Uma coleção MUST NOT ser ativada/apontada pelo catálogo remoto se qualquer um dos três objetos estiver ausente, usar extensão diferente de `.webp` ou retornar MIME incompatível.
 
 Um conjunto com metadata de catálogo mas asset ausente MUST falhar de forma visualmente segura e MUST NOT alterar regras de gameplay.
+
+## Plano de migração SVG → WebP
+
+A substituição dos dados locais/legados por R2 WebP MUST ocorrer em fases controladas:
+
+1. inventariar todos os dados atualmente referenciados por `default`, Exército, Lanças, Viking, Gato, Cachorro e Futebol;
+2. converter cada visual de ataque, defesa e neutro para WebP, preservando transparência, enquadramento e qualidade necessária para 2D/3D;
+3. enviar os WebPs para `cosmetics/dice/<storage_slug>/attack.webp`, `defense.webp` e `neutral.webp`;
+4. validar os 21 objetos esperados do baseline (`7` diretórios × `3` papéis) com `HeadObject`, extensão `.webp` e `Content-Type: image/webp`;
+5. somente após a validação completa, executar migration/backfill que troca referências locais `/dados/...` por object keys WebP do R2;
+6. manter IDs de catálogo, ownership e loadout inalterados durante a troca de formato/storage;
+7. validar storefront, preview, iniciativa, batalha 2D/3D, reconnect, bots e fallback usando as novas object keys;
+8. após gates verdes, remover referências de runtime aos SVGs de dados locais e remover os arquivos legados do bundle público em uma limpeza controlada.
+
+Durante a transição, SVG local MAY existir apenas como fonte/rollback operacional. Depois do cutover, nenhuma linha ativa de catálogo/snapshot novo e nenhum request normal de dados MUST depender dele.
+
+A migration MUST ser forward-only e não pode criar um estado em que parte de uma mesma coleção use SVG/local e outra parte use WebP/R2.
 
 ## Efeitos territoriais
 
@@ -541,16 +590,16 @@ A UI MUST NOT inventar preço para um item anunciado sem oferta comercial ativa.
 
 Nesta etapa não existe requisito de `preview.webp`.
 
-A listagem inicial SHOULD utilizar representação leve da coleção sem baixar os SVGs HQ.
+A listagem inicial SHOULD utilizar representação leve da coleção sem baixar os WebPs HQ.
 
-Os SVGs completos dos dados não devem ser carregados em lote apenas para renderizar cards da loja.
+Os WebPs completos dos dados não devem ser carregados em lote apenas para renderizar cards da loja.
 
 Assets HQ MAY ser carregados:
 
 - quando o usuário abre uma visualização detalhada;
 - quando o item equipado é necessário no runtime da partida.
 
-Ao abrir um detalhe, a UI SHOULD carregar somente o objeto necessário ao preview ativo. Trocar entre ataque, defesa e neutro MAY solicitar o respectivo objeto sob demanda.
+Ao abrir um detalhe, a UI SHOULD carregar somente o objeto necessário ao preview ativo. Trocar entre ataque, defesa e neutro MAY solicitar o respectivo WebP sob demanda.
 
 MUST evitar preloading de todo o catálogo HQ.
 
@@ -610,7 +659,7 @@ Regras:
 - ataque usa `dice_attack` do atacante;
 - defesa usa `dice_defense` do defensor.
 
-Fallback 2D e apresentação 3D MUST resolver o mesmo cosmético.
+Fallback 2D e apresentação 3D MUST resolver o mesmo cosmético WebP.
 
 Trocar skin MUST NOT alterar geometria, collider, lançamento, trajetória, valor predeterminado ou detecção da face superior.
 
@@ -624,7 +673,7 @@ O runtime de jogo MUST NOT consultar o Profile a cada batalha ou renderização.
 
 No início da partida, o backend SHOULD copiar os quatro slots efetivos para um snapshot em `game.*` associado ao jogador da sala.
 
-Para assets de dados, o snapshot MUST congelar a referência persistente/object key efetiva, não uma URL presigned efêmera.
+Para assets de dados, o snapshot MUST congelar a referência persistente/object key WebP efetiva, não uma URL presigned efêmera.
 
 Depois que a partida começou:
 
@@ -684,19 +733,20 @@ A implementação planejada deve comportar, conceitualmente:
 - fundação `economy.*` para moeda/saldo/ledger;
 - catálogo e conjuntos em `catalog.*`;
 - referência de `storage_slug`/prefixo por conjunto;
-- object key persistente para cosméticos de dados;
+- object key WebP persistente para cosméticos de dados;
 - ownership em `inventory.*`;
 - loadout em `profile.*`;
 - snapshot cosmético em `game.*`.
 
-A migration de storage MUST converter referências locais `/dados/...` para object keys R2 sem alterar IDs de catálogo ou ownership.
+A migration de storage MUST converter referências locais `/dados/...` para object keys R2 `.webp` sem alterar IDs de catálogo ou ownership.
 
 A migration MUST ser validada em:
 
 - banco limpo;
 - upgrade do baseline atual;
 - usuários existentes;
-- novos usuários.
+- novos usuários;
+- presença e MIME dos WebPs esperados no R2 antes do cutover.
 
 Backfill MUST ser determinístico e conceder somente os defaults previstos.
 
@@ -747,16 +797,18 @@ A fundação econômica desta etapa está concluída quando:
 5. ownership e loadout são persistentes e separados;
 6. catálogo e conjuntos são dirigidos pelo PostgreSQL, sem lista temática hardcoded no frontend;
 7. o baseline anunciado inclui os conjuntos registrados e válidos para `military-classic`, `medieval-spears`, `viking`, `cat`, `dog` e `football`;
-8. Intendência/Profile consome fontes reais de wallet/store/inventory;
-9. `/profile/store` oferece a experiência de loja sem compra simulada;
-10. `ASSET_STORAGE_URL` é a única connection string do object storage usada pela aplicação;
-11. nenhuma credencial do R2 chega ao browser, DTO, log ou snapshot persistente;
-12. assets são resolvidos a partir de object keys e entregues sob demanda, preferencialmente por URL presigned de leitura;
-13. equipagem valida sessão, ownership e slot server-side;
-14. partidas congelam object keys/loadout no início, não URLs presigned efêmeras;
-15. dados 2D/3D respeitam os três slots de dados sem alterar física ou resultado;
-16. território respeita `territory_effect` sem perder `PlayerColor` ou interação;
-17. bots utilizam defaults;
-18. storefront não baixa em lote os assets HQ;
-19. adicionar um conjunto `announced` válido ao catálogo não exige alteração temática específica no frontend;
-20. todos os BLOCKERs de `EVAL.md` estão verdes.
+8. os 21 assets de dados do baseline existem no R2 exclusivamente como `attack.webp`, `defense.webp` e `neutral.webp`, com MIME `image/webp`;
+9. Intendência/Profile consome fontes reais de wallet/store/inventory;
+10. `/profile/store` oferece a experiência de loja sem compra simulada;
+11. `ASSET_STORAGE_URL` é a única connection string do object storage usada pela aplicação;
+12. nenhuma credencial do R2 chega ao browser, DTO, log ou snapshot persistente;
+13. assets são resolvidos a partir de object keys WebP e entregues sob demanda, preferencialmente por URL presigned de leitura;
+14. equipagem valida sessão, ownership e slot server-side;
+15. partidas congelam object keys WebP/loadout no início, não URLs presigned efêmeras;
+16. dados 2D/3D respeitam os três slots de dados sem alterar física ou resultado;
+17. território respeita `territory_effect` sem perder `PlayerColor` ou interação;
+18. bots utilizam defaults;
+19. storefront não baixa em lote os assets HQ;
+20. adicionar um conjunto `announced` válido ao catálogo não exige alteração temática específica no frontend;
+21. nenhum request normal de dados vindo do storage usa `.svg` ou outro formato diferente de WebP;
+22. todos os BLOCKERs de `EVAL.md` estão verdes.
