@@ -249,7 +249,7 @@ test("store autenticada usa cena Profile e comércio autoritativo da Economy V2"
   assert.match(storeUi, /storefront\.offers\.map/);
   assert.match(storeUi, /offer\.price/);
   assert.match(storeUi, /src="\/coin\.svg"/);
-  assert.match(storeUi, />COMPRAR</);
+  assert.match(storeUi, /"COMPRAR"/);
   assert.match(storeUi, /storefront\.creditPacks\.map/);
   assert.match(storeUi, /EM BREVE/);
   assert.doesNotMatch(storeUi, /offer\.(exercito|lancas|viking|gato|cachorro|futebol)/);
