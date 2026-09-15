@@ -169,7 +169,9 @@ Ausência ou formato inválido de `ASSET_STORAGE_URL` em ambiente que exige asse
 
 ## Entrega dos assets ao browser
 
-O browser MUST NOT receber Access Key ID ou Secret Access Key.
+O browser MUST NOT receber o Secret Access Key nem a `ASSET_STORAGE_URL` original/completa.
+
+Em uma URL SigV4 presigned, o Access Key ID MAY aparecer legitimamente no parâmetro `X-Amz-Credential`, pois ele identifica a credencial usada na assinatura e não contém o Secret Access Key. A aplicação MUST NOT tratar a simples presença desse identificador em uma URL assinada como vazamento do segredo.
 
 Para objetos privados, o servidor SHOULD gerar URL S3 presigned de `GetObject` com expiração limitada e enviar somente essa URL derivada ao cliente quando o asset for necessário.
 
@@ -178,6 +180,8 @@ A URL presigned:
 - MAY ser utilizada diretamente pelo browser para baixar o WebP do R2;
 - MUST autorizar somente leitura do objeto solicitado;
 - MUST possuir expiração finita;
+- MUST NOT conter o Secret Access Key nem a `ASSET_STORAGE_URL` original;
+- MAY conter o Access Key ID como parte de `X-Amz-Credential`, conforme o protocolo SigV4;
 - MUST NOT ser persistida como identidade do cosmético;
 - MUST NOT substituir a object key no catálogo ou snapshot de partida.
 
@@ -615,7 +619,7 @@ Para resolução de assets, a boundary é estendida por um serviço server-only:
 
 React components MUST NOT consultar SQL diretamente.
 
-React components MUST NOT receber `ASSET_STORAGE_URL` nem credenciais derivadas.
+React components MUST NOT receber `ASSET_STORAGE_URL` nem o Secret Access Key. Uma URL presigned derivada MAY conter o Access Key ID em `X-Amz-Credential` conforme SigV4.
 
 A primeira entrega MAY expor leitura equivalente a:
 
@@ -801,7 +805,7 @@ A fundação econômica desta etapa está concluída quando:
 9. Intendência/Profile consome fontes reais de wallet/store/inventory;
 10. `/profile/store` oferece a experiência de loja sem compra simulada;
 11. `ASSET_STORAGE_URL` é a única connection string do object storage usada pela aplicação;
-12. nenhuma credencial do R2 chega ao browser, DTO, log ou snapshot persistente;
+12. o Secret Access Key e a `ASSET_STORAGE_URL` original/completa nunca chegam ao browser, DTO, log ou snapshot persistente; o Access Key ID MAY aparecer somente onde o protocolo SigV4 o exige, como `X-Amz-Credential` de URL presigned;
 13. assets são resolvidos a partir de object keys WebP e entregues sob demanda, preferencialmente por URL presigned de leitura;
 14. equipagem valida sessão, ownership e slot server-side;
 15. partidas congelam object keys WebP/loadout no início, não URLs presigned efêmeras;
