@@ -187,7 +187,7 @@ export function ProfileArsenal({ initialStorefront }: { initialStorefront: Econo
               <>
                 <div className={styles.inspectorVisual}><CosmeticVisual item={selected} priority /></div>
                 <div className={styles.inspectorCopy}>
-                  <small>{SLOT_META[selected.slot].label} // {selected.rarity ?? "PADRÃO"}</small>
+                  <small>{SLOT_META[selected.slot].label}{" // "}{selected.rarity ?? "PADRÃO"}</small>
                   <h3>{selected.name}</h3>
                   <p>{selected.description ?? "Cosmético visual sem impacto nas regras da partida."}</p>
                   {storefront.loadout[selected.slot].id === selected.id ? (
