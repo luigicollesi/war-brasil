@@ -416,7 +416,10 @@ try {
   const commerce = await readCommerceCatalog();
   assert.ok(commerce.offers.length > 0, "catálogo comercial sem offers disponíveis");
   const storeWallet = page.locator('[data-currency="campaign-credit"]').first();
-  assert.match(normalizeText(await storeWallet.textContent()), /Créditos de Campanha 0 saldo persistente/i);
+  const storeWalletText = normalizeText(await storeWallet.textContent());
+  assert.match(storeWalletText, /Créditos de Campanha/i);
+  assert.match(storeWalletText, /saldo persistente/i);
+  assert.equal(normalizeText(await storeWallet.locator("strong").textContent()), "0");
   assert.equal(await storeWallet.locator('img[src*="coin.svg"]').count(), 1);
   assert.equal(await page.locator('section[aria-labelledby="loadout-title"] article').count(), 4);
 
