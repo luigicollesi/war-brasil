@@ -409,3 +409,55 @@
     display: none;
   }
 }
+
+@media (forced-colors: active) {
+  .page,
+  .commandBar,
+  .mobileNav {
+    color: CanvasText;
+    background: Canvas;
+  }
+
+  .scanline,
+  .radial {
+    display: none;
+  }
+
+  .commandBar,
+  .commandIdentity,
+  .homeLink,
+  .navItem,
+  .addCredits,
+  .mobileNav,
+  .mobileNav a {
+    border-color: CanvasText;
+  }
+
+  .homeLink,
+  .navItem,
+  .addCredits,
+  .mobileNav a {
+    color: LinkText;
+  }
+
+  .navItem[data-active="true"],
+  .mobileNav a[data-active="true"] {
+    color: HighlightText;
+    background: Highlight;
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+
+  .commandCopy small,
+  .commandCopy strong,
+  .commandCopy em,
+  .walletReadout small,
+  .walletReadout strong,
+  .walletUnavailable {
+    color: CanvasText !important;
+  }
+
+  .coin {
+    filter: none;
+  }
+}
