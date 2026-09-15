@@ -5,7 +5,7 @@ import { createPresignedAssetUrl } from "./asset-storage-s3";
 import { getAssetStorageConfig } from "./asset-storage-service";
 
 const COLLECTION_ASSET_KEY_PATTERN =
-  /^store\/collections\/[a-z0-9]+(?:-[a-z0-9]+)*\/(?:banner|background|logo)\.webp$/;
+  /^store\/collections\/[a-z0-9]+(?:-[a-z0-9]+)*\/[a-z0-9]+(?:[-_][a-z0-9]+)*\.webp$/;
 
 export function isCollectionAssetKey(value: string): boolean {
   return COLLECTION_ASSET_KEY_PATTERN.test(value);
@@ -15,7 +15,7 @@ export function assertCollectionAssetKey(value: string): string {
   if (!isCollectionAssetKey(value)) {
     throw new AssetStorageConfigError(
       "COLLECTION_ASSET_KEY_INVALID",
-      "A referência editorial da coleção deve apontar para banner.webp, background.webp ou logo.webp no namespace store/collections/.",
+      "A referência editorial da coleção deve ser uma object key WebP no namespace store/collections/<slug>/.",
     );
   }
   return value;
