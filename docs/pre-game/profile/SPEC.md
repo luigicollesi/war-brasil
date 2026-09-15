@@ -85,12 +85,16 @@ O shell SHOULD permanecer visualmente estável durante navegação e MUST fornec
 - ação de retorno ao comando/Home;
 - identidade textual resumida do usuário;
 - navegação entre `Dossiê`, `Arsenal` e `Intendência`;
-- saldo de `campaign-credit` quando a fonte econômica estiver disponível;
+- saldo de `campaign-credit` quando a fonte econômica estiver disponível, acompanhado pelo asset canônico `/coin.svg`;
 - ação visual associada a adquirir créditos que navega para a seção de packs em `/profile/store`, sem executar pagamento real.
 
 A wallet deixa de ser conteúdo central de página e passa a ser informação contextual global.
 
 Saldo `0` MUST ser mostrado somente quando a economia retornou `0` real. Fonte indisponível MUST possuir estado próprio e MUST NOT virar `0` sintético.
+
+`/coin.svg` MUST ser tratado como asset estrutural local da interface. Profile MUST NOT solicitar esse ícone ao R2 nem depender de `ASSET_STORAGE_URL` para representar saldo/preço.
+
+O ícone da moeda SHOULD ser decorativo quando já existir texto/valor acessível equivalente. A acessibilidade MUST comunicar `Créditos de Campanha` e o valor, não apenas “imagem” ou “moeda”.
 
 ## Identidade visual
 
@@ -106,6 +110,8 @@ A V4 MUST herdar a linguagem visual da Home/Foundation:
 - redução de ornamentação quando ela não carrega significado.
 
 A UI MUST priorizar conteúdo jogável real — itens, slots, ofertas e identidade — em vez de grandes elementos puramente decorativos.
+
+A representação visual de `campaign-credit` MUST permanecer consistente entre shell, cards, hero e packs usando o mesmo `/coin.svg`.
 
 ## Foundation
 
@@ -279,7 +285,7 @@ Hero SHOULD expor:
 - nome;
 - descrição curta;
 - composição relevante;
-- preço em `campaign-credit`;
+- preço em `campaign-credit` acompanhado por `/coin.svg`;
 - CTA coerente com estado de compra.
 
 Ausência de offer featured MUST possuir fallback determinístico orientado pelo backend, sem slug especial no React.
@@ -291,7 +297,7 @@ Cada card de offer SHOULD expor:
 - preview;
 - nome;
 - categoria/conjunto quando relevante;
-- preço;
+- preço acompanhado por `/coin.svg` quando a moeda for `campaign-credit`;
 - estado de ownership;
 - CTA correspondente.
 
@@ -334,13 +340,15 @@ Durante compra:
 
 Compra confirmada SHOULD produzir feedback visual de aquisição, sem animações excessivas que prejudiquem performance.
 
+Quando o feedback exibir o novo saldo ou valor gasto, MUST reutilizar `/coin.svg` como representação visual de `campaign-credit`.
+
 ## Reforçar Tesouraria
 
 Ao final da loja MUST existir região para pacotes futuros de `campaign-credit` em BRL quando o catálogo os retornar.
 
 Cada pack pode mostrar:
 
-- quantidade de créditos;
+- quantidade de créditos acompanhada por `/coin.svg`;
 - preço em reais;
 - estado `EM BREVE`.
 
@@ -349,6 +357,8 @@ Nesta entrega o CTA MUST ser disabled ou semanticamente não acionável como com
 MUST NOT existir checkout, redirect para PSP, formulário de pagamento, webhook ou falsa confirmação de saldo.
 
 O botão global de adicionar créditos no shell MUST navegar/focar esta região e não executar pagamento.
+
+O ícone de `campaign-credit` MUST permanecer visualmente separado da representação de BRL para evitar sugerir que a moeda do jogo e Real são a mesma unidade.
 
 ## Responsividade
 
@@ -370,7 +380,7 @@ Shell SHOULD condensar para:
 
 - voltar;
 - nome/contexto mínimo;
-- saldo;
+- saldo com `/coin.svg`;
 - navegação de três itens.
 
 Store SHOULD usar:
@@ -479,6 +489,8 @@ React components MUST NOT executar SQL diretamente.
 
 Superfícies econômicas consomem contratos do domínio econômico em vez de duplicar tipos/regras comerciais no Profile.
 
+O frontend MAY conhecer estaticamente a associação visual `campaign-credit -> /coin.svg`; isso não transforma o cliente em autoridade de saldo, preço ou moeda. O path do ícone não precisa ser enviado repetidamente pelo backend.
+
 Falha de uma fonte secundária MUST possuir estado explícito. Ausência de fonte MUST NOT ser convertida em zero/lista vazia/offline sintético.
 
 ## Performance
@@ -493,6 +505,8 @@ Navegar entre Dossiê, Arsenal e Intendência SHOULD reutilizar o máximo possí
 
 Animações não devem causar flicker de cena nem remontagem pesada do background.
 
+`coin.svg` SHOULD aproveitar cache normal de asset estático e ser reutilizado entre wallet, cards e packs, sem depender de chamadas ao R2.
+
 ## Acessibilidade
 
 Todas as três superfícies MUST ser utilizáveis por teclado quando aplicável e por toque em mobile.
@@ -502,6 +516,8 @@ Focus visible MUST ser inequívoco.
 Estado não pode depender somente de cor.
 
 Saldo, preço, ownership, equipped e erros devem possuir representação textual.
+
+O uso de `/coin.svg` MUST preservar nome e valor de `Créditos de Campanha` em texto ou accessible name equivalente; o usuário não pode precisar interpretar exclusivamente a imagem para entender um preço ou saldo.
 
 Inspection/sheets devem manter foco gerenciável e fechamento acessível.
 
@@ -527,6 +543,8 @@ Devem existir estados explícitos para, no mínimo:
 
 Falha econômica MUST NOT derrubar Dossiê, social ou histórico quando suas próprias fontes estiverem disponíveis.
 
+Falha/indisponibilidade do R2 cosmético MUST NOT impedir o carregamento do `/coin.svg` local.
+
 ## Fora de escopo do Profile V4
 
 - avatar/foto de perfil;
@@ -548,6 +566,7 @@ PROFILE V4 só está pronto quando:
 - Dossiê usa melhor o espaço e integra edição, social e histórico;
 - Arsenal mostra ownership real e quatro itens equipados;
 - Intendência apresenta catálogo dinâmico, preços reais e compra com créditos;
+- wallet, preços de offer e quantidades de créditos usam `/coin.svg` de forma consistente;
 - pacotes BRL aparecem somente como futuros e não alteram saldo;
 - identidade continua sem avatar;
 - desktop/mobile/reduced-motion/fallback são operáveis;
