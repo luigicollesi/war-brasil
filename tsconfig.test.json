@@ -15,6 +15,7 @@
     "src/lib/profile/profile-command-contract.ts",
     "src/lib/profile/profile-local-fixture.ts",
     "src/lib/profile/profile-command-data.ts",
+    "src/lib/server/assets/**/*.ts",
     "src/lib/server/economy/**/*.ts",
     "src/lib/server/profile/**/*.ts",
     "src/lib/server/game-cosmetic-loadout-service.ts",
