@@ -17,7 +17,7 @@ test("storefront privado projeta inventário próprio necessário para reequipag
   assert.match(service, /ownedItems: ownedRows\.map\(cosmeticFromRow\)/);
   assert.match(store, /storefront\.ownedItems\.map/);
   assert.match(store, />Arsenal possuído</);
-  assert.match(store, /Os quatro padrões permanecem disponíveis/);
+  assert.match(store, /Cada slot pode ser configurado de forma independente/);
 
   for (const id of [
     "dice.attack.default",
@@ -30,15 +30,19 @@ test("storefront privado projeta inventário próprio necessário para reequipag
   assert.match(migration, /'available', TRUE/);
 });
 
-test("item possuído available pode ser reequipado sem qualquer caminho de aquisição", () => {
-  assert.match(store, /const canEquip = item\.status === "available" && !equipped/);
+test("item possuído available ou retired pode ser reequipado independentemente da aquisição", () => {
+  assert.match(
+    store,
+    /\(item\.status === "available" \|\| item\.status === "retired"\)[\s\S]*!equipped/,
+  );
   assert.match(store, /onClick=\{\(\) => equip\(item\)\}/);
   assert.match(store, /EQUIPANDO…/);
-  assert.match(store, /ARQUIVADO/);
-  assert.doesNotMatch(store, />COMPRAR<|Comprar agora|price\b|\/api\/economy\/(purchase|reward|grant|checkout)/i);
+  assert.match(store, /POSSUÍDO/);
+  assert.match(store, /\/api\/economy\/purchases/);
+  assert.doesNotMatch(store, /\/api\/economy\/(reward|grant)/i);
 });
 
-test("remessa anunciada possui preview visual HQ sob demanda e sem aquisição", () => {
+test("prévia de coleção permanece HQ sob demanda e não causa aquisição", () => {
   assert.match(store, /previewSetId/);
   assert.match(store, /previewItemId/);
   assert.match(store, /firstPreviewItem/);
@@ -55,8 +59,8 @@ test("remessa anunciada possui preview visual HQ sob demanda e sem aquisição",
   assert.match(store, /unoptimized/);
   assert.match(store, /aria-pressed=\{selectedPreviewItem\?\.id === item\.id\}/);
 
-  // O componente não hardcode os nove caminhos HQ. Eles chegam pelo DTO e só
-  // viram src quando o detalhe aberto seleciona exatamente um item.
+  // O componente não hardcode caminhos HQ. Eles chegam pelo DTO e só viram
+  // src quando o detalhe aberto seleciona exatamente um item.
   assert.doesNotMatch(store, /\/dados\//);
 });
 
