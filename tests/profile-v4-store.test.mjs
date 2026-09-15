@@ -35,7 +35,7 @@ test("PROFILE V4 exposes the future treasury reinforcement anchor without enabli
 
 test("PROFILE V4 store provides an explicit mobile inspection sheet", async () => {
   const store = await source("src/components/profile/v4/profile-store.tsx");
-  const styles = await source("src/components/profile/v4/profile-store.module.css");
+  const styles = await source("src/components/profile/v4/profile-store-mobile-inspection.module.css");
 
   assert.match(store, /inspectionOpen/);
   assert.match(store, /role="dialog"/);
