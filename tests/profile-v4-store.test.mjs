@@ -16,9 +16,10 @@ test("PROFILE V4 store is a dedicated Intendência surface inside the shared she
   assert.doesNotMatch(page, /<EconomyStorefront/);
 });
 
-test("PROFILE V4 store consumes Economy V2 offers and packs instead of inventing commerce", async () => {
+test("PROFILE V4 store consumes server-derived collections, offers and packs", async () => {
   const store = await source("src/components/profile/v4/profile-store.tsx");
 
+  assert.match(store, /storefront\.collections/);
   assert.match(store, /storefront\.offers/);
   assert.match(store, /storefront\.creditPacks/);
   assert.match(store, /offer\.price/);
@@ -39,7 +40,7 @@ test("PROFILE V4 store uses the canonical campaign-credit coin beside monetary v
   assert.doesNotMatch(store, />\s*◈\s*</);
 });
 
-test("PROFILE V4 store exposes partial ownership and server-derived offer states", async () => {
+test("PROFILE V4 store exposes ownership-aware completion instead of legacy full-price semantics", async () => {
   const store = await source("src/components/profile/v4/profile-store.tsx");
 
   assert.match(store, /offer\.fullyOwned/);
@@ -47,10 +48,34 @@ test("PROFILE V4 store exposes partial ownership and server-derived offer states
   assert.match(store, /offer\.ownedCount/);
   assert.match(store, /offer\.totalCount/);
   assert.match(store, /offer\.purchasable/);
+  assert.match(store, /COMPLETAR/);
   assert.match(store, /POSSUÍDO/);
-  assert.match(store, /POSSUÍDOS/);
   assert.match(store, /COMPRAR/);
   assert.match(store, /INDISPONÍVEL/);
+  assert.doesNotMatch(store, /mantém o valor integral/i);
+});
+
+test("PROFILE V4 collection detail uses background, logo and canonical cosmetic art without hero dependency", async () => {
+  const store = await source("src/components/profile/v4/profile-store.tsx");
+
+  assert.match(store, /collection\.assets\.banner/);
+  assert.match(store, /collection\.assets\.background/);
+  assert.match(store, /collection\.assets\.logo/);
+  assert.match(store, /collection\.items/);
+  assert.match(store, /collection\.ownedCount/);
+  assert.match(store, /collection\.totalCount/);
+  assert.match(store, /Completar coleção|COMPLETAR COLEÇÃO/i);
+  assert.doesNotMatch(store, /collection\.assets\.hero|collection\.assets\.card/);
+});
+
+test("PROFILE V4 collection banner is an accessible discovery control", async () => {
+  const store = await source("src/components/profile/v4/profile-store.tsx");
+
+  assert.match(store, /selectedCollectionId/);
+  assert.match(store, /setSelectedCollectionId/);
+  assert.match(store, /collection\.assets\.banner/);
+  assert.match(store, /type="button"/);
+  assert.match(store, /aria-label=.*coleção|aria-label=.*collection/i);
 });
 
 test("PROFILE V4 treasury renders DB credit packs but keeps BRL checkout disabled", async () => {
