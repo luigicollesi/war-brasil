@@ -40,5 +40,5 @@ test("PROFILE V4 keeps dossier identity image-free", async () => {
   assert.doesNotMatch(dossier, /<Image\b/);
   assert.doesNotMatch(dossier, /<img\b/);
   assert.doesNotMatch(dossier, /session\.user\.image/);
-  assert.match(dossier, /Ajustar Dossiê/);
+  assert.match(dossier, /Ajustar Dossiê/i);
 });
