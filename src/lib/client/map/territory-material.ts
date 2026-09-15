@@ -1,10 +1,12 @@
-import type { PlayerColor } from "@/src/lib/lobby";
+import { territorySkinAssetRefFromRuntimeEffectKey } from "../../economy/territory-skin-contract";
+import type { PlayerColor } from "../../lobby";
 
 export type TerritoryMaterial = {
   playerColor: PlayerColor | null;
   face: readonly [string, string, string, string, string];
   side: readonly [string, string, string];
   rim: string;
+  skinAssetRef: string | null;
 };
 
 export type TerritorySurfacePalette = {
@@ -23,36 +25,42 @@ const TERRITORY_MATERIALS: Record<PlayerColor, TerritoryMaterial> = {
     face: ["#58aa83", "#50a07a", "#499571", "#468b6a", "#438264"],
     side: ["#3b6b54", "#355f4b", "#305242"],
     rim: "#284135",
+    skinAssetRef: null,
   },
   ocean: {
     playerColor: "ocean",
     face: ["#5e9cd3", "#4f94d1", "#408bce", "#3785ca", "#347ec0"],
     side: ["#316ea5", "#2e6596", "#2c5c87"],
     rim: "#274e72",
+    skinAssetRef: null,
   },
   sun: {
     playerColor: "sun",
     face: ["#dcad28", "#d1a421", "#c3981d", "#b78f1c", "#ab861c"],
     side: ["#8e701a", "#7e6418", "#6e5716"],
     rim: "#584613",
+    skinAssetRef: null,
   },
   ruby: {
     playerColor: "ruby",
     face: ["#d07372", "#cc6464", "#c95655", "#c54e4d", "#c04544"],
     side: ["#a93e3d", "#9b3a39", "#8c3737"],
     rim: "#783231",
+    skinAssetRef: null,
   },
   violet: {
     playerColor: "violet",
     face: ["#a683c9", "#9d76c4", "#9468c0", "#8e60bb", "#8758b6"],
     side: ["#784da3", "#6f4896", "#664488"],
     rim: "#593e75",
+    skinAssetRef: null,
   },
   orange: {
     playerColor: "orange",
     face: ["#d7854c", "#d57b3c", "#d3712c", "#c76c2b", "#bc662a"],
     side: ["#a05927", "#905125", "#814923"],
     rim: "#6b3e1f",
+    skinAssetRef: null,
   },
 };
 
@@ -109,15 +117,16 @@ const NEUTRAL_TERRITORY_MATERIAL: TerritoryMaterial = {
   face: ["#939c98", "#8b9490", "#828b87", "#79827e", "#717a76"],
   side: ["#626b67", "#58605d", "#4d5552"],
   rim: "#3f4744",
+  skinAssetRef: null,
 };
 
 type TerritoryEffectResolver = (
   base: TerritoryMaterial,
 ) => TerritoryMaterial;
 
-// Economy v1 intentionally exposes only the default territorial finish. Keeping
-// the resolver registry here means future effects stay a material concern and do
-// not require new territory state, fetches, hitboxes or React components.
+// Procedural effects stay in this safe registry. Image skins are represented by
+// a namespaced runtime key projected from the immutable match snapshot and are
+// converted into a non-interactive SVG overlay by applyTerritoryMaterial.
 const TERRITORY_EFFECT_RESOLVERS: Readonly<Record<string, TerritoryEffectResolver>> = {
   [DEFAULT_TERRITORY_EFFECT_KEY]: (base) => base,
 };
@@ -134,8 +143,17 @@ export function territoryMaterial(
   effectKey?: string | null,
 ): TerritoryMaterial {
   const base = TERRITORY_MATERIALS[color];
+  const normalizedEffectKey = normalizeTerritoryEffectKey(effectKey);
+  const skinAssetRef = territorySkinAssetRefFromRuntimeEffectKey(normalizedEffectKey);
+  if (skinAssetRef) {
+    return {
+      ...base,
+      skinAssetRef,
+    };
+  }
+
   const resolver =
-    TERRITORY_EFFECT_RESOLVERS[normalizeTerritoryEffectKey(effectKey)] ??
+    TERRITORY_EFFECT_RESOLVERS[normalizedEffectKey] ??
     TERRITORY_EFFECT_RESOLVERS[DEFAULT_TERRITORY_EFFECT_KEY];
   return resolver(base);
 }

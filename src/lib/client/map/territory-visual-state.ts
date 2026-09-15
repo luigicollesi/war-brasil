@@ -1,3 +1,4 @@
+import { syncTerritorySkinSurfaceState } from "@/src/lib/client/map/territory-skin-overlay";
 import type { TerritoryVisualNodes } from "@/src/lib/client/map/territory-svg-nodes";
 
 const SVG_NS = "http://www.w3.org/2000/svg";
@@ -93,18 +94,21 @@ function fillForSurfaceState(surfaceState: TerritorySurfaceState) {
   return "var(--territory-base-fill)";
 }
 
-function syncTerritorySurfaceFill(face: SVGPathElement) {
+function syncTerritorySurfaceFill(nodes: TerritoryVisualNodes) {
+  const face = nodes.face;
   const state = runtimeState(face);
   const surfaceState = resolveTerritorySurfaceState(face, state.semanticState);
-  if (state.surfaceState === surfaceState && face.style.getPropertyValue(SURFACE_FILL_PROPERTY)) {
-    return;
-  }
-
-  state.surfaceState = surfaceState;
   const nextFill = fillForSurfaceState(surfaceState);
+
   if (face.style.getPropertyValue(SURFACE_FILL_PROPERTY) !== nextFill) {
     face.style.setProperty(SURFACE_FILL_PROPERTY, nextFill);
   }
+
+  // Territory skins remain texture-only. Whenever gameplay semantics or hover
+  // need priority, the skin weight is reduced without touching geometry,
+  // borders, hitboxes, filters or React state.
+  syncTerritorySkinSurfaceState(nodes, surfaceState);
+  state.surfaceState = surfaceState;
 }
 
 export function ensureTerritoryRuntimeStyles(document: Document) {
@@ -139,7 +143,7 @@ export function applyTerritoryVisualState(
 ) {
   const runtime = runtimeState(nodes.face);
   runtime.semanticState = semanticStateFromVisualState(state);
-  syncTerritorySurfaceFill(nodes.face);
+  syncTerritorySurfaceFill(nodes);
 }
 
 export function applyTerritoryHoverState(
@@ -149,7 +153,7 @@ export function applyTerritoryHoverState(
   const runtime = runtimeState(nodes.face);
   if (runtime.hovered === hovered) return;
   runtime.hovered = hovered;
-  syncTerritorySurfaceFill(nodes.face);
+  syncTerritorySurfaceFill(nodes);
 }
 
 export function applyTerritoryKeyboardFocusState(
@@ -159,5 +163,5 @@ export function applyTerritoryKeyboardFocusState(
   const runtime = runtimeState(nodes.face);
   if (runtime.keyboardFocused === focused) return;
   runtime.keyboardFocused = focused;
-  syncTerritorySurfaceFill(nodes.face);
+  syncTerritorySurfaceFill(nodes);
 }

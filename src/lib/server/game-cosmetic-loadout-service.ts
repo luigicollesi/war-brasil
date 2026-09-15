@@ -1,11 +1,18 @@
 import "server-only";
 
 import type { PoolClient } from "pg";
+import {
+  territorySkinRuntimeEffectKey,
+  territorySkinSnapshot,
+} from "@/src/lib/economy/territory-skin-contract";
 import type {
   GameCosmeticSelection,
   GamePlayerCosmetics,
 } from "@/src/lib/game-contract";
-import { diceAssetDeliveryPath } from "@/src/lib/server/assets/asset-storage-service";
+import {
+  diceAssetDeliveryPath,
+  territorySkinAssetDeliveryPath,
+} from "@/src/lib/server/assets/asset-storage-service";
 import { RoomError } from "@/src/lib/server/room-error";
 
 export type GameCosmeticSlot =
@@ -51,6 +58,23 @@ function selection(row: GameCosmeticSnapshotRow): GameCosmeticSelection {
   };
 }
 
+function territorySelection(row: GameCosmeticSnapshotRow): GameCosmeticSelection {
+  const snapshot = territorySkinSnapshot({
+    cosmeticId: row.cosmetic_id,
+    assetRef: row.asset_ref,
+    effectKey: row.effect_key,
+  });
+
+  return {
+    cosmeticId: snapshot.cosmeticId,
+    assetRef:
+      snapshot.kind === "image"
+        ? territorySkinAssetDeliveryPath(snapshot.assetRef)
+        : null,
+    effectKey: territorySkinRuntimeEffectKey(snapshot),
+  };
+}
+
 function defaultPlayerCosmetics(): GamePlayerCosmetics {
   return {
     diceAttack: {
@@ -92,7 +116,7 @@ function waitingPlayerCosmetics(
       ? selection(bySlot.dice_neutral)
       : defaults.diceNeutral,
     territoryEffect: bySlot.territory_effect
-      ? selection(bySlot.territory_effect)
+      ? territorySelection(bySlot.territory_effect)
       : defaults.territoryEffect,
   };
 }
@@ -117,7 +141,7 @@ function requirePlayerCosmetics(
     diceAttack: selection(attack),
     diceDefense: selection(defense),
     diceNeutral: selection(neutral),
-    territoryEffect: selection(territory),
+    territoryEffect: territorySelection(territory),
   };
 }
 

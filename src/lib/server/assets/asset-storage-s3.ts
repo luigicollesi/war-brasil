@@ -1,6 +1,10 @@
 import { createHash, createHmac } from "node:crypto";
 import type { AssetStorageConfig } from "./asset-storage-config";
-import { assertDiceAssetKey, diceCollectionAssetKeys } from "./asset-storage-config";
+import {
+  assertDiceAssetKey,
+  assertTerritorySkinAssetKey,
+  diceCollectionAssetKeys,
+} from "./asset-storage-config";
 
 const SIGNING_ALGORITHM = "AWS4-HMAC-SHA256";
 const SIGNING_SERVICE = "s3";
@@ -132,19 +136,28 @@ export function createPresignedDiceAssetUrl(
   return createPresignedAssetUrl(config, assertDiceAssetKey(objectKey), options);
 }
 
-export type DiceAssetObjectMetadata = Readonly<{
+export type WebPAssetObjectMetadata = Readonly<{
   objectKey: string;
   contentType: "image/webp";
   contentLength: number | null;
   etag: string | null;
 }>;
 
-export async function validateDiceAssetObject(
+export type DiceAssetObjectMetadata = WebPAssetObjectMetadata;
+export type TerritorySkinAssetObjectMetadata = WebPAssetObjectMetadata;
+
+async function validateWebPAssetObject(
   config: AssetStorageConfig,
   objectKey: string,
-  fetchImpl: typeof fetch = fetch,
-): Promise<DiceAssetObjectMetadata> {
-  const key = assertDiceAssetKey(objectKey);
+  options: Readonly<{
+    assertKey: (value: string) => string;
+    unavailableCode: string;
+    contentTypeCode: string;
+    label: string;
+  }>,
+  fetchImpl: typeof fetch,
+): Promise<WebPAssetObjectMetadata> {
+  const key = options.assertKey(objectKey);
   const signedUrl = createPresignedAssetUrl(config, key, {
     method: "HEAD",
     expiresInSeconds: 60,
@@ -153,16 +166,20 @@ export async function validateDiceAssetObject(
 
   if (!response.ok) {
     return requestError(
-      "DICE_ASSET_NOT_AVAILABLE",
-      `O asset ${key} não está disponível no object storage.`,
+      options.unavailableCode,
+      `${options.label} ${key} não está disponível no object storage.`,
     );
   }
 
-  const contentType = response.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase();
+  const contentType = response.headers
+    .get("content-type")
+    ?.split(";", 1)[0]
+    ?.trim()
+    .toLowerCase();
   if (contentType !== "image/webp") {
     return requestError(
-      "DICE_ASSET_CONTENT_TYPE_INVALID",
-      `O asset ${key} deve possuir Content-Type image/webp.`,
+      options.contentTypeCode,
+      `${options.label} ${key} deve possuir Content-Type image/webp.`,
     );
   }
 
@@ -179,6 +196,42 @@ export async function validateDiceAssetObject(
     contentLength,
     etag: response.headers.get("etag"),
   };
+}
+
+export async function validateDiceAssetObject(
+  config: AssetStorageConfig,
+  objectKey: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<DiceAssetObjectMetadata> {
+  return validateWebPAssetObject(
+    config,
+    objectKey,
+    {
+      assertKey: assertDiceAssetKey,
+      unavailableCode: "DICE_ASSET_NOT_AVAILABLE",
+      contentTypeCode: "DICE_ASSET_CONTENT_TYPE_INVALID",
+      label: "O asset",
+    },
+    fetchImpl,
+  );
+}
+
+export async function validateTerritorySkinAssetObject(
+  config: AssetStorageConfig,
+  objectKey: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<TerritorySkinAssetObjectMetadata> {
+  return validateWebPAssetObject(
+    config,
+    objectKey,
+    {
+      assertKey: assertTerritorySkinAssetKey,
+      unavailableCode: "TERRITORY_SKIN_ASSET_NOT_AVAILABLE",
+      contentTypeCode: "TERRITORY_SKIN_ASSET_CONTENT_TYPE_INVALID",
+      label: "A territory skin",
+    },
+    fetchImpl,
+  );
 }
 
 export async function validateDiceCollection(
