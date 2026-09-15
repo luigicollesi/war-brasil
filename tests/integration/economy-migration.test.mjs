@@ -6,6 +6,21 @@ import { Client } from "pg";
 
 const databaseUrl = process.env.DATABASE_URL;
 
+const preEconomyHistory = [
+  "026-organize-database-schemas.sql",
+  "027-normalize-schema-table-names.sql",
+  "028-normalize-rooms-phase-constraint.sql",
+  "029-adaptive-combat-dice.sql",
+  "030-repair-adaptive-dice-state-schema.sql",
+  "031-auth-foundation.sql",
+  "032-profile-identity-game-binding.sql",
+  "033-auth-rate-limit.sql",
+  "034-profile-v3-foundation.sql",
+  "035-social-graph.sql",
+  "036-match-history-snapshots.sql",
+  "037-profile-remove-portraits.sql",
+];
+
 function migrationUpSql(path) {
   const source = readFileSync(path, "utf8");
   const upMarker = "-- Up Migration";
@@ -17,13 +32,6 @@ function migrationUpSql(path) {
     .slice(upStart + upMarker.length, downStart >= 0 ? downStart : source.length)
     .trim();
 }
-
-const economyMigrationSql = migrationUpSql(
-  "src/lib/db/migrations/managed/038-economy-cosmetics-foundation.sql",
-);
-const storageMigrationSql = migrationUpSql(
-  "src/lib/db/migrations/managed/040-r2-webp-cosmetic-catalog.sql",
-);
 
 function urlForDatabase(name) {
   const url = new URL(databaseUrl);
@@ -58,15 +66,39 @@ function runPrepare(connectionString) {
   );
 }
 
-async function prepareDatabase(connectionString) {
+async function prepareDatabaseThrough037(connectionString) {
   const client = new Client({ connectionString });
   await client.connect();
   try {
-    await client.query(readFileSync("src/lib/db/schema.sql", "utf8"));
+    await client.query(readFileSync("tests/fixtures/db/schema-v025.sql", "utf8"));
+    await client.query(
+      readFileSync("tests/fixtures/db/schema-v025-supplement.sql", "utf8"),
+    );
+    await client.query("CREATE SCHEMA IF NOT EXISTS ops");
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS ops.pgmigrations (
+        id BIGSERIAL PRIMARY KEY,
+        name TEXT NOT NULL UNIQUE,
+        run_on TIMESTAMPTZ NOT NULL DEFAULT NOW()
+      )
+    `);
+
+    for (const name of preEconomyHistory) {
+      await client.query("BEGIN");
+      try {
+        await client.query(
+          migrationUpSql(`src/lib/db/migrations/managed/${name}`),
+        );
+        await client.query("INSERT INTO ops.pgmigrations(name) VALUES($1)", [name]);
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      }
+    }
   } finally {
     await client.end();
   }
-  runPrepare(connectionString);
 }
 
 async function createCommander(client, label) {
@@ -85,15 +117,32 @@ async function createCommander(client, label) {
   return userId;
 }
 
+async function createPreEconomyCommander(connectionString, label) {
+  const client = new Client({ connectionString });
+  await client.connect();
+  try {
+    return await createCommander(client, label);
+  } finally {
+    await client.end();
+  }
+}
+
 if (!databaseUrl) {
   test("economy migration exige DATABASE_URL", { skip: true }, () => {});
 } else {
   test("038→040 converge catálogo dinâmico WebP e backfill idempotente", async () => {
     await withTemporaryDatabase(async (connectionString) => {
-      await prepareDatabase(connectionString);
+      await prepareDatabaseThrough037(connectionString);
+      const userId = await createPreEconomyCommander(
+        connectionString,
+        "EconomyBackfill",
+      );
+
+      runPrepare(connectionString);
+      runPrepare(connectionString);
+
       const client = new Client({ connectionString });
       await client.connect();
-
       try {
         const currencies = await client.query(
           `SELECT code,display_name,symbol,is_active
@@ -116,7 +165,11 @@ if (!databaseUrl) {
              COUNT(*) FILTER (WHERE status='announced')::int AS announced
              FROM catalog.cosmetics`,
         );
-        assert.deepEqual(catalog.rows[0], { total: 22, defaults: 4, announced: 18 });
+        assert.deepEqual(catalog.rows[0], {
+          total: 22,
+          defaults: 4,
+          announced: 18,
+        });
 
         const sets = await client.query(
           `SELECT cosmetic_set.id,
@@ -130,12 +183,48 @@ if (!databaseUrl) {
             ORDER BY cosmetic_set.sort_order,cosmetic_set.id`,
         );
         assert.deepEqual(sets.rows, [
-          { id: "set.exercito", storage_slug: "military-classic", status: "announced", sort_order: 10, items: 3 },
-          { id: "set.lancas", storage_slug: "medieval-spears", status: "announced", sort_order: 20, items: 3 },
-          { id: "set.viking", storage_slug: "viking", status: "announced", sort_order: 30, items: 3 },
-          { id: "set.gato", storage_slug: "cat", status: "announced", sort_order: 40, items: 3 },
-          { id: "set.cachorro", storage_slug: "dog", status: "announced", sort_order: 50, items: 3 },
-          { id: "set.futebol", storage_slug: "football", status: "announced", sort_order: 60, items: 3 },
+          {
+            id: "set.exercito",
+            storage_slug: "military-classic",
+            status: "announced",
+            sort_order: 10,
+            items: 3,
+          },
+          {
+            id: "set.lancas",
+            storage_slug: "medieval-spears",
+            status: "announced",
+            sort_order: 20,
+            items: 3,
+          },
+          {
+            id: "set.viking",
+            storage_slug: "viking",
+            status: "announced",
+            sort_order: 30,
+            items: 3,
+          },
+          {
+            id: "set.gato",
+            storage_slug: "cat",
+            status: "announced",
+            sort_order: 40,
+            items: 3,
+          },
+          {
+            id: "set.cachorro",
+            storage_slug: "dog",
+            status: "announced",
+            sort_order: 50,
+            items: 3,
+          },
+          {
+            id: "set.futebol",
+            storage_slug: "football",
+            status: "announced",
+            sort_order: 60,
+            items: 3,
+          },
         ]);
 
         const diceAssets = await client.query(
@@ -151,15 +240,6 @@ if (!databaseUrl) {
             /^cosmetics\/dice\/[a-z0-9]+(?:-[a-z0-9]+)*\/(attack|defense|neutral)\.webp$/,
             row.id,
           );
-        }
-
-        const userId = await createCommander(client, "EconomyBackfill");
-
-        // Reaplicar a sequência convergente demonstra que os seeds continuam
-        // determinísticos sem deixar caminhos SVG ou grants duplicados.
-        for (let index = 0; index < 2; index += 1) {
-          await client.query(economyMigrationSql);
-          await client.query(storageMigrationSql);
         }
 
         const wallet = await client.query(
@@ -212,15 +292,16 @@ if (!databaseUrl) {
 
   test("constraints bloqueiam saldo negativo, loadout inválido e dado não-WebP", async () => {
     await withTemporaryDatabase(async (connectionString) => {
-      await prepareDatabase(connectionString);
+      await prepareDatabaseThrough037(connectionString);
+      const userId = await createPreEconomyCommander(
+        connectionString,
+        "EconomyConstraints",
+      );
+      runPrepare(connectionString);
+
       const client = new Client({ connectionString });
       await client.connect();
-
       try {
-        const userId = await createCommander(client, "EconomyConstraints");
-        await client.query(economyMigrationSql);
-        await client.query(storageMigrationSql);
-
         await assert.rejects(
           client.query(
             `UPDATE economy.wallets
