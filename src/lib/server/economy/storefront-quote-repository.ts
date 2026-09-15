@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { CosmeticSlot } from "@/src/lib/economy/economy-contract";
 import { pool } from "../db/pool";
 import type { EconomyQueryable } from "./economy-repository";
 
@@ -20,6 +21,9 @@ export type StorefrontQuoteItemRow = {
   offer_id: string;
   product_id: string;
   cosmetic_id: string;
+  slot: CosmeticSlot;
+  status: "draft" | "announced" | "available" | "retired";
+  is_default: boolean;
   owned: boolean;
   pricing_model: "fixed" | "progressive";
   fixed_price: string | null;
@@ -64,6 +68,9 @@ export async function listActiveStorefrontQuoteItems(
     `SELECT offer.id AS offer_id,
             product.id AS product_id,
             item.id AS cosmetic_id,
+            item.slot,
+            item.status,
+            item.is_default,
             (owned.cosmetic_id IS NOT NULL) AS owned,
             pricing.pricing_model,
             pricing.fixed_price::text AS fixed_price,
@@ -170,6 +177,9 @@ export async function listLockedProductQuoteItems(
     `SELECT $2::text AS offer_id,
             product.id AS product_id,
             item.id AS cosmetic_id,
+            item.slot,
+            item.status,
+            item.is_default,
             (owned.cosmetic_id IS NOT NULL) AS owned,
             pricing.pricing_model,
             pricing.fixed_price::text AS fixed_price,
@@ -225,6 +235,23 @@ export async function incrementCosmeticAcquisitionCounts(
     [cosmeticIds],
   );
   return result.rows.map((row) => row.cosmetic_id);
+}
+
+export async function snapshotPurchaseCommercialContext(
+  purchaseId: string,
+  productId: string,
+  subtotal: number,
+  discountBps: number,
+  db: EconomyQueryable,
+) {
+  await db.query(
+    `UPDATE economy.purchases
+        SET product_id=$2,
+            subtotal_price=$3::bigint,
+            discount_bps=$4::integer
+      WHERE id=$1::uuid`,
+    [purchaseId, productId, subtotal, discountBps],
+  );
 }
 
 export async function snapshotPurchaseItemPrices(
