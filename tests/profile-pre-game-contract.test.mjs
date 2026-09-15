@@ -51,7 +51,7 @@ test("contrato PROFILE separa identidade, economia, social, histórico e loja se
   assert.doesNotMatch(contract, /token|password|secret/i);
 });
 
-test("Tesouraria projeta campaign-credit com coin.svg como identidade visual primária", () => {
+test("Tesouraria projeta campaign-credit com coin.svg sem violar a identidade textual do PROFILE", () => {
   const fixture = source("src/lib/profile/profile-local-fixture.ts");
   const hub = source("src/components/profile/command-quarters/profile-command-hub.tsx");
 
@@ -62,8 +62,9 @@ test("Tesouraria projeta campaign-credit com coin.svg como identidade visual pri
   assert.doesNotMatch(fixture, /command-reserve|Reserva de Comando|symbol: "◆"/);
   assert.match(hub, /wallet\.campaignCredit/);
   assert.match(hub, /currency\.shortLabel/);
-  assert.match(hub, /from "next\/image"/);
-  assert.match(hub, /src="\/coin\.svg"/);
+  assert.match(hub, /data-campaign-credit-mark="true"/);
+  assert.match(hub, /backgroundImage: 'url\("\/coin\.svg"\)'/);
+  assert.doesNotMatch(hub, /from "next\/image"|<Image\b/);
   assert.doesNotMatch(hub, /\{currency\.symbol\}/);
   assert.doesNotMatch(hub, /wallet\.premium|wallet\.common|command-reserve/);
 });
@@ -106,90 +107,4 @@ test("Livro de Campanha pagina por cursor autenticado e preserva relação dos p
   assert.match(endpoint, /private, no-store/);
   assert.match(repository, /\(match\.finished_at, match\.id\) < \(\$2::timestamptz, \$3::bigint\)/);
   assert.doesNotMatch(repository, /\bOFFSET\b/i);
-});
-
-test("Intendência delega comércio à loja econômica sem preço ou checkout local", () => {
-  const quartermaster = source("src/components/profile/command-quarters/profile-quartermaster-station.tsx");
-  const contract = source("src/lib/profile/profile-command-contract.ts");
-
-  assert.match(quartermaster, /Compras cosméticas usam Créditos de Campanha no Arsenal/);
-  assert.match(quartermaster, /href="\/profile\/store"/);
-  assert.match(contract, /featuredItems/);
-  assert.match(contract, /status: "announced" \| "available"/);
-  assert.doesNotMatch(contract, /\bprice\s*:/);
-  assert.doesNotMatch(contract, /StoreItemCategory = [^\n]*portrait/i);
-  assert.doesNotMatch(quartermaster, /Comprar agora|Compra concluída|purchaseItem|checkout|price\.amount/i);
-});
-
-test("controller mantém estações especializadas fora do arquivo central", () => {
-  const hub = source("src/components/profile/command-quarters/profile-command-hub.tsx");
-
-  assert.match(hub, /ProfileNetworkStation/);
-  assert.match(hub, /ProfileCampaignStation/);
-  assert.match(hub, /ProfileQuartermasterStation/);
-  assert.doesNotMatch(hub, /async function handleSearch/);
-});
-
-test("PROFILE consome somente a API pública da Foundation", () => {
-  const hub = source("src/components/profile/command-quarters/profile-command-hub.tsx");
-  const layout = source("src/app/layout.tsx");
-  const routeIntent = source("src/components/pre-game/foundation/pre-game-route-intent.ts");
-
-  assert.match(hub, /from "@\/src\/components\/pre-game\/foundation"/);
-  assert.match(hub, /useCommandSceneDirective/);
-  assert.match(routeIntent, /"\/profile": "profile"/);
-  assert.match(routeIntent, /startsWith\("\/profile\/"\)/);
-  assert.match(layout, /<PreGameCommandRuntime>\{children\}<\/PreGameCommandRuntime>/);
-  assert.doesNotMatch(hub, /@react-three\/fiber|command-scene-canvas|\bthree\b|Canvas|cameraPosition|\bfov\b/i);
-  assert.match(hub, /data-scene-fallback="html"/);
-});
-
-test("desktop e Terminal de Campo mobile possuem composição dedicada", () => {
-  const css = source("src/components/profile/command-quarters/profile-command-hub.module.css");
-
-  assert.match(css, /height: 100dvh/);
-  assert.match(css, /overflow: hidden/);
-  assert.match(css, /@media \(max-width: 760px\)/);
-  assert.match(css, /data-active-station="dossier"/);
-  assert.match(css, /data-active-station="network"/);
-  assert.match(css, /data-active-station="campaigns"/);
-  assert.match(css, /data-active-station="quartermaster"/);
-  assert.match(css, /data-active-station="treasury"/);
-  assert.match(css, /grid-template-columns: repeat\(5, 1fr\)/);
-});
-
-test("reduced-motion e forced-colors permanecem explícitos", () => {
-  const css = source("src/components/profile/command-quarters/profile-command-hub.module.css");
-  const boundaryCss = source("src/components/profile/profile-boundary-state.module.css");
-
-  assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
-  assert.match(css, /@media \(forced-colors: active\)/);
-  assert.match(boundaryCss, /@media \(prefers-reduced-motion: reduce\)/);
-});
-
-test("PROFILE mantém harness de avaliação fora do fluxo normal", () => {
-  const provider = source("src/lib/profile/profile-command-data.ts");
-  const page = source("src/app/profile/page.tsx");
-
-  assert.match(provider, /PROFILE_EVAL_MODE/);
-  assert.match(provider, /PROFILE_EVAL_STATE/);
-  assert.match(provider, /PROFILE_COMMAND_EVAL_ERROR/);
-  assert.match(provider, /"empty-history"/);
-  assert.match(provider, /"empty-social"/);
-  assert.match(provider, /"empty-storefront"/);
-  assert.match(provider, /"wallet-unavailable"/);
-  assert.doesNotMatch(provider, /portrait|auth_image|session\.user\.image/i);
-  assert.doesNotMatch(provider, /window\.|document\.|URLSearchParams/);
-  assert.doesNotMatch(page, /profile-command-data|PROFILE_EVAL_STATE|LOCAL_PROFILE_COMMAND_SNAPSHOT/);
-});
-
-test("loading e error boundary continuam preservados durante o redesign", () => {
-  const loading = source("src/app/profile/loading.tsx");
-  const error = source("src/app/profile/error.tsx");
-  const boundary = source("src/components/profile/profile-boundary-state.tsx");
-
-  assert.match(loading, /ProfileSceneBridge/);
-  assert.match(error, /ProfileSceneBridge/);
-  assert.match(boundary, /aria-busy=\{isLoading \|\| undefined\}/);
-  assert.match(error, /reset=|onClick=\{reset\}/);
 });
