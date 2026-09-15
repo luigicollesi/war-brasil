@@ -68,10 +68,6 @@ test("economy storefront projeta object key territorial para rota entregável pe
   assert.match(economyService, /territorySkinAssetDeliveryPath/);
   assert.match(
     economyService,
-    /row\.slot === "territory_effect"[\s\S]*territorySkinAssetDeliveryPath\(row\.asset_ref\)/,
-  );
-  assert.doesNotMatch(
-    economyService,
-    /row\.slot === "territory_effect"[\s\S]*return row\.asset_ref/,
+    /if \(\s*row\.slot === "territory_effect"\s*&&\s*row\.asset_ref\.startsWith\("cosmetics\/territory-skins\/"\)\s*\) \{\s*return territorySkinAssetDeliveryPath\(row\.asset_ref\);\s*\}/,
   );
 });
