@@ -61,3 +61,17 @@ test("delivery usa endpoint autenticado e catálogo/snapshot como allowlist", ()
   );
   assert.match(service, /createPresignedAssetUrl/);
 });
+
+test("economy storefront projeta object key territorial para rota entregável pelo cliente", () => {
+  const economyService = source("src/lib/server/economy/economy-service.ts");
+
+  assert.match(economyService, /territorySkinAssetDeliveryPath/);
+  assert.match(
+    economyService,
+    /row\.slot === "territory_effect"[\s\S]*territorySkinAssetDeliveryPath\(row\.asset_ref\)/,
+  );
+  assert.doesNotMatch(
+    economyService,
+    /row\.slot === "territory_effect"[\s\S]*return row\.asset_ref/,
+  );
+});
