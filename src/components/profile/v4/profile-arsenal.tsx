@@ -1,13 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { TerritorySkinPreview } from "@/src/components/economy/territory-skin-preview";
 import type {
   CosmeticCatalogItem,
   CosmeticSlot,
   EconomyStorefrontSnapshot,
 } from "@/src/lib/economy/economy-contract";
 import { cosmeticPreviewSource } from "@/src/lib/economy/cosmetic-preview";
-import { TerritorySkinPreview } from "@/src/components/economy/territory-skin-preview";
 import { ProfileCosmeticImage } from "./profile-cosmetic-image";
 import styles from "./profile-arsenal.module.css";
 
@@ -198,7 +198,7 @@ export function ProfileArsenal({ initialStorefront }: { initialStorefront: Econo
               <>
                 <div className={styles.inspectorVisual}><CosmeticVisual item={selected} priority /></div>
                 <div className={styles.inspectorCopy}>
-                  <small>{SLOT_META[selected.slot].label} // {selected.rarity ?? "PADRÃO"}</small>
+                  <small>{SLOT_META[selected.slot].label}{" // "}{selected.rarity ?? "PADRÃO"}</small>
                   <h3>{selected.name}</h3>
                   <p>{selected.description ?? "Cosmético visual sem impacto nas regras da partida."}</p>
                   {storefront.loadout[selected.slot].id === selected.id ? (

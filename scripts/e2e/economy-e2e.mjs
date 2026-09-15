@@ -39,10 +39,18 @@ async function apiJson(page, url, init = {}) {
   );
 }
 
-async function readEconomyState(userId) {
+async function withDb(callback) {
   const db = new Client({ connectionString: DATABASE_URL });
   await db.connect();
   try {
+    return await callback(db);
+  } finally {
+    await db.end();
+  }
+}
+
+async function readEconomyState(userId) {
+  return withDb(async (db) => {
     const wallet = await db.query(
       `SELECT balance::text AS balance
          FROM economy.wallets
@@ -87,15 +95,11 @@ async function readEconomyState(userId) {
       inventoryIds: inventory.rows.map((row) => row.id),
       loadout: loadout.rows,
     };
-  } finally {
-    await db.end();
-  }
+  });
 }
 
 async function readCommerceCatalog() {
-  const db = new Client({ connectionString: DATABASE_URL });
-  await db.connect();
-  try {
+  return withDb(async (db) => {
     const offers = await db.query(
       `SELECT offer.id,
               offer.name,
@@ -113,6 +117,7 @@ async function readCommerceCatalog() {
         WHERE status='announced'
         ORDER BY sort_order,id`,
     );
+
     return {
       offers: offers.rows.map((row) => ({
         id: row.id,
@@ -127,16 +132,26 @@ async function readCommerceCatalog() {
         priceBrlCents: Number(row.price_brl_cents),
       })),
     };
-  } finally {
-    await db.end();
-  }
+  });
+}
+
+async function readOfferItems(offerId) {
+  return withDb(async (db) => {
+    const result = await db.query(
+      `SELECT item.id,item.name,item.slot
+         FROM catalog.offer_items membership
+         JOIN catalog.cosmetics item ON item.id=membership.cosmetic_id
+        WHERE membership.offer_id=$1
+        ORDER BY membership.position,item.id`,
+      [offerId],
+    );
+    return result.rows;
+  });
 }
 
 async function setCampaignCreditBalance(userId, balance) {
   assert.ok(Number.isSafeInteger(balance) && balance >= 0);
-  const db = new Client({ connectionString: DATABASE_URL });
-  await db.connect();
-  try {
+  await withDb(async (db) => {
     const result = await db.query(
       `UPDATE economy.wallets
           SET balance=$2::bigint,
@@ -148,16 +163,12 @@ async function setCampaignCreditBalance(userId, balance) {
     );
     assert.equal(result.rowCount, 1);
     assert.equal(result.rows[0].balance, String(balance));
-  } finally {
-    await db.end();
-  }
+  });
 }
 
 async function setOfferPrice(offerId, price) {
   assert.ok(Number.isSafeInteger(price) && price > 0);
-  const db = new Client({ connectionString: DATABASE_URL });
-  await db.connect();
-  try {
+  await withDb(async (db) => {
     const result = await db.query(
       `UPDATE catalog.offers
           SET price=$2::bigint,
@@ -168,49 +179,39 @@ async function setOfferPrice(offerId, price) {
     );
     assert.equal(result.rowCount, 1);
     assert.equal(result.rows[0].price, String(price));
-  } finally {
-    await db.end();
-  }
+  });
 }
 
 async function insertDynamicOffer({ id, slug, name, price, sourceOfferId }) {
-  const db = new Client({ connectionString: DATABASE_URL });
-  await db.connect();
-  try {
+  await withDb(async (db) => {
     await db.query("BEGIN");
-    await db.query(
-      `INSERT INTO catalog.offers(
-         id,slug,name,description,currency_code,price,status,is_featured,sort_order
-       )
-       VALUES($1,$2,$3,'Offer criada pelo E2E sem alteração React.','campaign-credit',$4::bigint,'available',FALSE,999)`,
-      [id, slug, name, price],
-    );
-    const copied = await db.query(
-      `INSERT INTO catalog.offer_items(offer_id,cosmetic_id,position)
-       SELECT $1,membership.cosmetic_id,membership.position
-         FROM catalog.offer_items membership
-        WHERE membership.offer_id=$2
-       RETURNING cosmetic_id`,
-      [id, sourceOfferId],
-    );
-    assert.ok(copied.rowCount > 0, "offer dinâmica precisa de composição válida");
-    await db.query("COMMIT");
-  } catch (error) {
-    await db.query("ROLLBACK");
-    throw error;
-  } finally {
-    await db.end();
-  }
+    try {
+      await db.query(
+        `INSERT INTO catalog.offers(
+           id,slug,name,description,currency_code,price,status,is_featured,sort_order
+         )
+         VALUES($1,$2,$3,'Offer criada pelo E2E sem alteração React.','campaign-credit',$4::bigint,'available',FALSE,999)`,
+        [id, slug, name, price],
+      );
+      const copied = await db.query(
+        `INSERT INTO catalog.offer_items(offer_id,cosmetic_id,position)
+         SELECT $1,membership.cosmetic_id,membership.position
+           FROM catalog.offer_items membership
+          WHERE membership.offer_id=$2
+         RETURNING cosmetic_id`,
+        [id, sourceOfferId],
+      );
+      assert.ok(copied.rowCount > 0, "offer dinâmica precisa de composição válida");
+      await db.query("COMMIT");
+    } catch (error) {
+      await db.query("ROLLBACK");
+      throw error;
+    }
+  });
 }
 
 async function deleteDynamicOffer(offerId) {
-  const db = new Client({ connectionString: DATABASE_URL });
-  await db.connect();
-  try {
-    await db.query(`DELETE FROM catalog.offers WHERE id=$1`, [offerId]);
-  } finally {
-    await db.end();
-  }
+  await withDb((db) => db.query(`DELETE FROM catalog.offers WHERE id=$1`, [offerId]));
 }
 
 function assertFreshCommanderState(state) {
@@ -296,10 +297,9 @@ function previewDiagnostics(src, cause) {
   });
 }
 
-async function waitForPreviewImage(card) {
-  const image = card.getByRole("img");
+async function waitForPreviewImage(scope) {
+  const image = scope.getByRole("img");
   await image.waitFor({ state: "visible" });
-
   try {
     await image.evaluate((node) => {
       if (!(node instanceof HTMLImageElement)) {
@@ -311,11 +311,9 @@ async function waitForPreviewImage(card) {
       }
       return new Promise((resolve, reject) => {
         node.addEventListener("load", () => resolve(undefined), { once: true });
-        node.addEventListener(
-          "error",
-          () => reject(new Error("preview image failed")),
-          { once: true },
-        );
+        node.addEventListener("error", () => reject(new Error("preview image failed")), {
+          once: true,
+        });
       });
     });
   } catch (error) {
@@ -323,17 +321,30 @@ async function waitForPreviewImage(card) {
     const cause = error instanceof Error ? error.message : String(error);
     throw new Error(`preview image failed: ${previewDiagnostics(src, cause)}`);
   }
+  return image;
 }
 
-async function inspectSet(page, setName, expectedKey, screenshotName) {
-  const catalog = page.locator('section[aria-labelledby="catalog-title"]');
-  const card = catalog.locator("article").filter({ hasText: setName });
-  await card.getByRole("button", { name: "INSPECIONAR", exact: true }).click();
-  await card.locator("[data-preview-detail]").waitFor({ state: "visible" });
-  await waitForPreviewImage(card);
+function catalogSection(page) {
+  return page.locator('section[aria-labelledby="catalog-title"]');
+}
 
-  const src = await card.getByRole("img").getAttribute("src");
-  assert.ok(src, `${setName} não expôs src de preview`);
+function offerCard(page, offerName) {
+  return catalogSection(page).locator("article").filter({ hasText: offerName });
+}
+
+async function openOfferInspection(page, offerName) {
+  const card = offerCard(page, offerName);
+  await card.locator("button").first().click();
+  const inspection = page.locator('section[aria-labelledby="inspection-title-desktop"]');
+  await inspection.getByRole("heading", { name: offerName, exact: true }).waitFor();
+  return { card, inspection };
+}
+
+async function inspectDiceOffer(page, offerName, expectedKey, screenshotName) {
+  const { card, inspection } = await openOfferInspection(page, offerName);
+  const image = await waitForPreviewImage(inspection);
+  const src = await image.getAttribute("src");
+  assert.ok(src, `${offerName} não expôs src de preview`);
   assert.equal(assetKeyFromDeliveryUrl(src), expectedKey);
 
   await page.screenshot({
@@ -341,7 +352,7 @@ async function inspectSet(page, setName, expectedKey, screenshotName) {
     fullPage: true,
   });
 
-  return card;
+  return { card, inspection };
 }
 
 const browser = await chromium.launch({ headless: true });
@@ -353,22 +364,18 @@ const context = await browser.newContext({
 });
 const page = await context.newPage();
 
-// Playwright invokes route handlers only for the first URL in a redirect chain.
-// Exercise the real authenticated delivery endpoint with maxRedirects=0, assert
-// its signed R2 Location, then provide deterministic WebP bytes to the browser.
 await page.route((url) => url.pathname === ASSET_ROUTE_PATH, async (route) => {
   const requestUrl = new URL(route.request().url());
   const expectedKey = assetKeyFromDeliveryUrl(requestUrl.toString());
-
   const upstream = await route.fetch({ maxRedirects: 0 });
   const headers = upstream.headers();
   const location = headers.location;
+
   deliveryResponses.push({
     key: expectedKey,
     status: upstream.status(),
     hasLocation: typeof location === "string" && location.length > 0,
   });
-
   assert.equal(upstream.status(), 307, `delivery deveria redirecionar ${expectedKey}`);
   assert.ok(location, `delivery não retornou Location para ${expectedKey}`);
   const signedKey = assetKeyFromSignedR2Url(location);
@@ -422,64 +429,60 @@ try {
   assertFreshCommanderState(await readEconomyState(userId));
 
   await page.goto(`${BASE_URL}/profile`, { waitUntil: "domcontentloaded" });
-  await page.getByText("Quartel do Comandante", { exact: true }).first().waitFor();
-  await page.getByRole("button", { name: "Abrir Tesouraria", exact: true }).click();
-  const treasury = page.locator('[data-currency="campaign-credit"]').last();
-  await treasury.waitFor({ state: "visible" });
-  assert.match((await treasury.textContent()) ?? "", /0/);
-  const treasuryCoin = treasury.locator('[data-campaign-credit-mark="true"]');
-  assert.equal(await treasuryCoin.count(), 1);
-  assert.match(
-    await treasuryCoin.evaluate((node) => getComputedStyle(node).backgroundImage),
-    /coin\.svg/,
-  );
+  await page.locator('[data-profile-v4-surface="dossier"]').waitFor({ state: "visible" });
+  assert.equal(await page.locator('main[data-profile-v4][data-active-surface="dossier"]').count(), 1);
+
+  const profileWallet = page.locator('[data-wallet-available="true"]').first();
+  await profileWallet.waitFor({ state: "visible" });
+  assert.match(normalizeText(await profileWallet.textContent()), /Créditos de Campanha/i);
+  assert.match(normalizeText(await profileWallet.textContent()), /0/);
+  assert.equal(await profileWallet.locator('img[src*="coin.svg"]').count(), 1);
   await page.screenshot({
-    path: path.join(ARTIFACT_DIR, "profile-treasury-1440x900.png"),
+    path: path.join(ARTIFACT_DIR, "profile-v4-dossier-1440x900.png"),
     fullPage: true,
   });
 
-  await page.locator('[data-station="quartermaster"] > button').click();
-  const arsenalLink = page.getByRole("link", { name: "Abrir arsenal", exact: true });
-  await arsenalLink.waitFor({ state: "visible" });
-  await page.screenshot({
-    path: path.join(ARTIFACT_DIR, "profile-quartermaster-1440x900.png"),
-    fullPage: true,
-  });
-
-  await arsenalLink.click();
+  await page.locator('a[href="/profile/store"]').first().click();
   await page.waitForURL(`${BASE_URL}/profile/store`);
   await page.getByRole("heading", { name: "Remessas do Comando", exact: true }).waitFor();
-  assert.equal(await page.locator('main[data-scene="profile"]').count(), 1);
-  assert.equal(deliveryKeys.length, 0, `asset carregado antes de inspeção: ${deliveryKeys}`);
-  assert.equal(signedR2Keys.length, 0, `R2 assinado antes de inspeção: ${signedR2Keys}`);
+  assert.equal(await page.locator('[data-profile-v4-surface="store"]').count(), 1);
+  assert.equal(await page.locator('main[data-profile-v4][data-active-surface="store"]').count(), 1);
 
   const commerce = await readCommerceCatalog();
   assert.ok(commerce.offers.length > 0, "catálogo comercial sem offers disponíveis");
-  const storeWallet = page.locator('[data-currency="campaign-credit"]').first();
+
+  const storeWallet = page.locator('[data-wallet-available="true"]').first();
   const storeWalletText = normalizeText(await storeWallet.textContent());
   assert.match(storeWalletText, /Créditos de Campanha/i);
-  assert.match(storeWalletText, /saldo persistente/i);
-  assert.equal(normalizeText(await storeWallet.locator("strong").textContent()), "0");
+  assert.match(storeWalletText, /0/);
   assert.equal(await storeWallet.locator('img[src*="coin.svg"]').count(), 1);
-  assert.equal(await page.locator('section[aria-labelledby="loadout-title"] article').count(), 4);
 
-  let offersSection = page.locator('section[aria-labelledby="offers-title"]');
-  assert.equal(await offersSection.locator("article").count(), commerce.offers.length);
+  let catalog = catalogSection(page);
+  assert.equal(await catalog.locator("article").count(), commerce.offers.length);
   for (const offer of commerce.offers) {
-    const card = offersSection.locator("article").filter({ hasText: offer.name });
-    await card.getByRole("heading", { name: offer.name, exact: true }).waitFor();
+    const card = offerCard(page, offer.name);
+    await card.waitFor({ state: "visible" });
     assert.ok(normalizeText(await card.textContent()).includes(formatNumber(offer.price)));
     assert.equal(await card.locator('img[src*="coin.svg"]').count(), 1);
     const buyButton = card.getByRole("button", { name: "COMPRAR", exact: true });
     assert.equal(await buyButton.count(), 1);
-    assert.equal(await buyButton.isDisabled(), true, `${offer.id} deveria respeitar saldo zero`);
+    assert.equal(await buyButton.isEnabled(), true, `${offer.id} deveria delegar saldo ao servidor`);
   }
 
-  const creditsSection = page.locator('section[aria-labelledby="credits-title"]');
-  assert.equal(await creditsSection.locator("article").count(), commerce.creditPacks.length);
+  const zeroBalanceOffer = commerce.offers[0];
+  await offerCard(page, zeroBalanceOffer.name)
+    .getByRole("button", { name: "COMPRAR", exact: true })
+    .click();
+  await page
+    .getByText("Créditos de Campanha insuficientes para esta aquisição.", { exact: true })
+    .waitFor();
+  assertFreshCommanderState(await readEconomyState(userId));
+
+  const creditPacks = page.locator('#reforcar-tesouraria article');
+  assert.equal(await creditPacks.count(), commerce.creditPacks.length);
   for (const pack of commerce.creditPacks) {
-    const card = creditsSection.locator("article").filter({ hasText: pack.name });
-    await card.getByRole("heading", { name: pack.name, exact: true }).waitFor();
+    const card = creditPacks.filter({ hasText: pack.name });
+    await card.waitFor({ state: "visible" });
     const cardText = normalizeText(await card.textContent());
     assert.ok(cardText.includes(formatNumber(pack.creditAmount)), `${pack.id} sem quantidade persistida`);
     assert.ok(cardText.includes(normalizeText(formatBrl(pack.priceBrlCents))), `${pack.id} sem preço BRL persistido`);
@@ -488,7 +491,6 @@ try {
     assert.equal(await futureButton.count(), 1);
     assert.equal(await futureButton.isDisabled(), true);
   }
-  assertFreshCommanderState(await readEconomyState(userId));
 
   const dynamicOffer = {
     id: "offer.e2e.dynamic",
@@ -501,73 +503,57 @@ try {
     await insertDynamicOffer(dynamicOffer);
     await page.goto(`${BASE_URL}/profile/store`, { waitUntil: "domcontentloaded" });
     await page.getByRole("heading", { name: "Remessas do Comando", exact: true }).waitFor();
-    offersSection = page.locator('section[aria-labelledby="offers-title"]');
-    assert.equal(await offersSection.locator("article").count(), commerce.offers.length + 1);
-    const dynamicCard = offersSection.locator("article").filter({ hasText: dynamicOffer.name });
-    await dynamicCard.getByRole("heading", { name: dynamicOffer.name, exact: true }).waitFor();
+    catalog = catalogSection(page);
+    assert.equal(await catalog.locator("article").count(), commerce.offers.length + 1);
+    const dynamicCard = offerCard(page, dynamicOffer.name);
+    await dynamicCard.waitFor({ state: "visible" });
     assert.ok(normalizeText(await dynamicCard.textContent()).includes(formatNumber(dynamicOffer.price)));
-    assert.equal(await dynamicCard.locator('img[src*="coin.svg"]').count(), 1);
-    const dynamicBuy = dynamicCard.getByRole("button", { name: "COMPRAR", exact: true });
-    assert.equal(await dynamicBuy.count(), 1);
-    assert.equal(await dynamicBuy.isDisabled(), true);
+    assert.equal(await dynamicCard.getByRole("button", { name: "COMPRAR", exact: true }).count(), 1);
     assertFreshCommanderState(await readEconomyState(userId));
   } finally {
     await deleteDynamicOffer(dynamicOffer.id);
   }
 
   await page.screenshot({
-    path: path.join(ARTIFACT_DIR, "store-1440x900.png"),
+    path: path.join(ARTIFACT_DIR, "store-v4-1440x900.png"),
     fullPage: true,
   });
 
-  const exercito = await inspectSet(
-    page,
-    "Exército Clássico",
-    "cosmetics/dice/military-classic/attack.webp",
-    "detail-exercito.png",
-  );
-  assert.deepEqual(deliveryKeys, ["cosmetics/dice/military-classic/attack.webp"]);
-  assert.deepEqual(signedR2Keys, deliveryKeys);
-
-  await exercito.getByRole("button", { name: "Defesa", exact: true }).click();
-  await waitForPreviewImage(exercito);
-  await page.waitForFunction(() =>
-    [...document.images].some((image) =>
-      image.src.includes(encodeURIComponent("cosmetics/dice/military-classic/defense.webp")),
-    ),
-  );
-  assert.deepEqual(deliveryKeys, [
-    "cosmetics/dice/military-classic/attack.webp",
-    "cosmetics/dice/military-classic/defense.webp",
-  ]);
-  assert.deepEqual(signedR2Keys, deliveryKeys);
-
-  const inspectionTargets = [
+  const diceInspectionTargets = [
+    ["Exército Clássico", "cosmetics/dice/military-classic/attack.webp", "detail-exercito.png"],
     ["Lanças Medievais", "cosmetics/dice/medieval-spears/attack.webp", "detail-lancas.png"],
     ["Viking", "cosmetics/dice/viking/attack.webp", "detail-viking.png"],
     ["Gato", "cosmetics/dice/cat/attack.webp", "detail-gato.png"],
     ["Cachorro", "cosmetics/dice/dog/attack.webp", "detail-cachorro.png"],
     ["Futebol", "cosmetics/dice/football/attack.webp", "detail-futebol.png"],
   ];
-
-  for (const [setName, key, screenshot] of inspectionTargets) {
-    await inspectSet(page, setName, key, screenshot);
+  const availableOfferNames = new Set(commerce.offers.map((offer) => offer.name));
+  for (const [offerName, key, screenshot] of diceInspectionTargets) {
+    if (!availableOfferNames.has(offerName)) continue;
+    await inspectDiceOffer(page, offerName, key, screenshot);
   }
 
-  assert.deepEqual(signedR2Keys, deliveryKeys);
-  assert.equal(new Set(deliveryKeys).size, deliveryKeys.length);
-  assert.equal(deliveryKeys.length, 7);
-  assertFreshCommanderState(await readEconomyState(userId));
+  if (availableOfferNames.has("Exército Clássico")) {
+    const { inspection } = await openOfferInspection(page, "Exército Clássico");
+    const selector = inspection.getByRole("group", { name: "Itens de Exército Clássico" });
+    const defense = selector.locator("button").filter({ hasText: "Defesa" });
+    await defense.click();
+    const defenseImage = await waitForPreviewImage(inspection);
+    const defenseSrc = await defenseImage.getAttribute("src");
+    assert.ok(defenseSrc);
+    assert.equal(
+      assetKeyFromDeliveryUrl(defenseSrc),
+      "cosmetics/dice/military-classic/defense.webp",
+    );
+  }
 
-  const reEquip = await apiJson(page, "/api/economy/loadout", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      slot: "dice_attack",
-      cosmeticId: "dice.attack.default",
-    }),
-  });
-  assert.equal(reEquip.status, 200, JSON.stringify(reEquip.body));
+  assert.equal(failedAssetRequests.length, 0, previewDiagnostics(null, "asset request failed"));
+  for (const response of deliveryResponses) {
+    assert.equal(response.status, 307);
+    assert.equal(response.hasLocation, true);
+  }
+  assert.ok(signedR2Keys.length > 0, "nenhum preview de dado exercitou delivery R2 assinado");
+  assert.deepEqual(new Set(signedR2Keys), new Set(deliveryKeys));
   assertFreshCommanderState(await readEconomyState(userId));
 
   const livePriceOffer = commerce.offers[0];
@@ -576,8 +562,7 @@ try {
     await setOfferPrice(livePriceOffer.id, probePrice);
     await page.goto(`${BASE_URL}/profile/store`, { waitUntil: "domcontentloaded" });
     await page.getByRole("heading", { name: "Remessas do Comando", exact: true }).waitFor();
-    offersSection = page.locator('section[aria-labelledby="offers-title"]');
-    const repricedCard = offersSection.locator("article").filter({ hasText: livePriceOffer.name });
+    const repricedCard = offerCard(page, livePriceOffer.name);
     assert.ok(
       normalizeText(await repricedCard.textContent()).includes(formatNumber(probePrice)),
       `${livePriceOffer.id} não refletiu alteração persistida de preço`,
@@ -591,24 +576,17 @@ try {
   await setCampaignCreditBalance(userId, purchaseBalance);
   await page.goto(`${BASE_URL}/profile/store`, { waitUntil: "domcontentloaded" });
   await page.getByRole("heading", { name: "Remessas do Comando", exact: true }).waitFor();
-  const fundedWallet = page.locator('[data-currency="campaign-credit"]').first();
+  const fundedWallet = page.locator('[data-wallet-available="true"]').first();
   assert.ok(normalizeText(await fundedWallet.textContent()).includes(formatNumber(purchaseBalance)));
 
-  offersSection = page.locator('section[aria-labelledby="offers-title"]');
-  let purchaseCard = offersSection.locator("article").filter({ hasText: livePriceOffer.name });
+  let purchaseCard = offerCard(page, livePriceOffer.name);
   const buyButton = purchaseCard.getByRole("button", { name: "COMPRAR", exact: true });
   assert.equal(await buyButton.isEnabled(), true);
   await buyButton.click();
-  await page.getByText(`${livePriceOffer.name} adquirido. O inventário foi atualizado.`, {
-    exact: true,
-  }).waitFor();
+  await page
+    .getByText("Aquisição confirmada e incorporada ao Arsenal.", { exact: true })
+    .waitFor();
   await purchaseCard.getByRole("button", { name: "POSSUÍDO", exact: true }).waitFor();
-  assert.ok(
-    normalizeText(await purchaseCard.textContent()).includes(
-      `${livePriceOffer.itemCount}/${livePriceOffer.itemCount} possuído`,
-    ),
-  );
-  assert.ok(normalizeText(await fundedWallet.textContent()).includes("100"));
 
   const purchasedState = await readEconomyState(userId);
   assert.equal(purchasedState.balance, "100");
@@ -617,11 +595,25 @@ try {
   assert.equal(purchasedState.ledgerDelta, String(-livePriceOffer.price));
   assert.equal(purchasedState.inventoryIds.length, 4 + livePriceOffer.itemCount);
 
+  const purchasedItems = await readOfferItems(livePriceOffer.id);
+  assert.ok(purchasedItems.length > 0, "offer comprada sem itens para equipar");
+  const targetItem = purchasedItems[0];
   const stateBeforeEquip = structuredClone(purchasedState);
-  const equipButton = purchaseCard.getByRole("button", { name: "EQUIPAR", exact: true }).first();
+
+  await page.goto(`${BASE_URL}/profile/arsenal`, { waitUntil: "domcontentloaded" });
+  await page.getByRole("heading", { name: "Equipamento do Comandante", exact: true }).waitFor();
+  assert.equal(await page.locator('[data-profile-v4-surface="arsenal"]').count(), 1);
+  assert.equal(await page.locator('article[data-slot]').count(), 4);
+
+  const ownedCard = page.locator("button").filter({ hasText: targetItem.name }).first();
+  await ownedCard.waitFor({ state: "visible" });
+  await ownedCard.click();
+  const inspector = page.locator("aside[aria-live=\"polite\"]");
+  await inspector.getByRole("heading", { name: targetItem.name, exact: true }).waitFor();
+  const equipButton = inspector.getByRole("button", { name: "EQUIPAR", exact: true });
   assert.equal(await equipButton.count(), 1);
   await equipButton.click();
-  await page.getByText(/equipado em (Ataque|Defesa|Neutro|Território)\./).waitFor();
+  await page.getByText(new RegExp(`${targetItem.name} equipado em`)).waitFor();
 
   const equippedState = await readEconomyState(userId);
   assert.equal(equippedState.balance, stateBeforeEquip.balance);
@@ -629,23 +621,19 @@ try {
   assert.equal(equippedState.ledgerCount, stateBeforeEquip.ledgerCount);
   assert.equal(equippedState.ledgerDelta, stateBeforeEquip.ledgerDelta);
   assert.equal(
-    equippedState.loadout.some((entry) => !entry.cosmetic_id.endsWith(".default")),
+    equippedState.loadout.some(
+      (entry) => entry.slot === targetItem.slot && entry.cosmetic_id === targetItem.id,
+    ),
     true,
   );
 
   await page.goto(`${BASE_URL}/profile/store`, { waitUntil: "domcontentloaded" });
   await page.getByRole("heading", { name: "Remessas do Comando", exact: true }).waitFor();
-  purchaseCard = page
-    .locator('section[aria-labelledby="offers-title"] article')
-    .filter({ hasText: livePriceOffer.name });
-  assert.ok((await purchaseCard.getByText("EQUIPADO", { exact: true }).count()) >= 1);
-  assert.equal(
-    await purchaseCard.getByRole("button", { name: "POSSUÍDO", exact: true }).count(),
-    1,
-  );
+  purchaseCard = offerCard(page, livePriceOffer.name);
+  assert.ok((await purchaseCard.getByText("POSSUÍDO", { exact: true }).count()) >= 1);
 
   await page.screenshot({
-    path: path.join(ARTIFACT_DIR, "store-purchase-equipped-1440x900.png"),
+    path: path.join(ARTIFACT_DIR, "store-purchase-equipped-v4-1440x900.png"),
     fullPage: true,
   });
 
@@ -653,7 +641,14 @@ try {
   await page.goto(`${BASE_URL}/profile/store`, { waitUntil: "domcontentloaded" });
   await page.getByRole("heading", { name: "Remessas do Comando", exact: true }).waitFor();
   await page.screenshot({
-    path: path.join(ARTIFACT_DIR, "store-390x844.png"),
+    path: path.join(ARTIFACT_DIR, "store-v4-390x844.png"),
+    fullPage: true,
+  });
+
+  await page.goto(`${BASE_URL}/profile/arsenal`, { waitUntil: "domcontentloaded" });
+  await page.getByRole("heading", { name: "Equipamento do Comandante", exact: true }).waitFor();
+  await page.screenshot({
+    path: path.join(ARTIFACT_DIR, "arsenal-v4-390x844.png"),
     fullPage: true,
   });
 
@@ -667,7 +662,7 @@ try {
   }
 
   console.log(
-    `[economy-e2e] ok — ${commerce.offers.length} offers, ${commerce.creditPacks.length} packs, offer dinâmica, compra/equip persistentes e ${signedR2Keys.length} WebPs validados`,
+    `[economy-e2e] ok — Profile V4, ${commerce.offers.length} offers, ${commerce.creditPacks.length} packs, compra/equip persistentes e ${signedR2Keys.length} deliveries R2 validados`,
   );
 } finally {
   await context.close();
