@@ -84,7 +84,7 @@ test("settings panel sends only changed fields and refreshes the server snapshot
   const panel = read(
     "src/components/profile/command-quarters/profile-settings-panel.tsx",
   );
-  const page = read("src/app/profile/page.tsx");
+  const dossier = read("src/components/profile/v4/profile-dossier.tsx");
 
   assert.match(panel, /fetch\("\/api\/profile\/settings"/);
   assert.match(panel, /method:\s*"PATCH"/);
@@ -92,6 +92,7 @@ test("settings panel sends only changed fields and refreshes the server snapshot
   assert.match(panel, /router\.refresh\(\)/);
   assert.doesNotMatch(panel, /router\.push\(/);
   assert.doesNotMatch(panel, /userId/);
-  assert.match(page, /!snapshot\.isEvaluationFixture/);
-  assert.match(page, /snapshot\.privacy\.availability === "available"/);
+  assert.match(dossier, /const privacy = snapshot\.privacy\.data/);
+  assert.match(dossier, /privacy && !snapshot\.isEvaluationFixture/);
+  assert.match(dossier, /<ProfileSettingsPanel identity=\{identity\} privacy=\{privacy\} \/>/);
 });
