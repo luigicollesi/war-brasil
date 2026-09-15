@@ -438,6 +438,18 @@ export function GameTurnPanel({
   if (snapshot.room.status === "order_roll") return null;
 
   const visibleMessage = message || interaction.message;
+  const supremacyTotalTerritories = snapshot.territories.length;
+  const supremacyOwnedTerritories = me
+    ? snapshot.territories.filter(
+        (territory) => territory.ownerPlayerId === me.id,
+      ).length
+    : 0;
+  const supremacyProgress =
+    supremacyTotalTerritories > 0
+      ? Math.round(
+          (supremacyOwnedTerritories / supremacyTotalTerritories) * 100,
+        )
+      : 0;
 
   return (
     <section className="rounded-3xl border border-[#17372d]/10 bg-[#faf8f2] p-5 shadow-[0_18px_50px_rgba(42,55,50,0.07)] sm:p-6">
@@ -456,6 +468,43 @@ export function GameTurnPanel({
           {isTurn ? "Seu turno" : "Aguardando outro jogador"}
         </span>
       </div>
+
+      {snapshot.room.ruleset === "supremacy" ? (
+        <section
+          className="mt-4 rounded-xl border border-[#9b7a27]/25 bg-[#12392f] p-4 text-white"
+          aria-label="Progresso de Supremacia"
+        >
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#d9bd70]">
+                Modo · Supremacia
+              </p>
+              <strong className="mt-1 block text-sm tracking-[0.08em]">
+                DOMÍNIO NACIONAL
+              </strong>
+            </div>
+            <p className="text-sm font-semibold text-[#f1d98f]">
+              {supremacyOwnedTerritories} / {supremacyTotalTerritories} territórios
+            </p>
+          </div>
+          <div
+            className="mt-3 h-1.5 overflow-hidden rounded-full bg-black/25"
+            role="progressbar"
+            aria-label="Territórios controlados"
+            aria-valuemin={0}
+            aria-valuemax={supremacyTotalTerritories}
+            aria-valuenow={supremacyOwnedTerritories}
+          >
+            <div
+              className="h-full rounded-full bg-[#d9b35b]"
+              style={{ width: `${supremacyProgress}%` }}
+            />
+          </div>
+          <p className="mt-2 text-xs text-[#d7e1dc]">
+            Controle todos os territórios da partida para conquistar a supremacia.
+          </p>
+        </section>
+      ) : null}
 
       {snapshot.myObjective ? (
         <p className="mt-4 rounded-xl bg-[#12392f] p-4 text-sm text-white">
