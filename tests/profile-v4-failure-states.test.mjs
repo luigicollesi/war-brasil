@@ -28,6 +28,8 @@ test("economy failure UI does not synthesize money or expose internal errors", a
   const unavailable = await source("src/components/profile/v4/profile-economy-unavailable.tsx");
 
   assert.match(unavailable, /temporariamente indisponível/i);
+  assert.match(unavailable, /SYNC \/\/ INDISPONÍVEL/);
+  assert.doesNotMatch(unavailable, /SYNC \/\/ OFFLINE/);
   assert.doesNotMatch(unavailable, /balance:\s*0/);
   assert.doesNotMatch(unavailable, /error\.message|stack|ECONOMY_/);
 });
