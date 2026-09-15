@@ -11,8 +11,6 @@ const ARTIFACT_DIR = path.resolve(
   process.env.ECONOMY_E2E_ARTIFACT_DIR ?? "test-results/economy-eval",
 );
 const ASSET_ROUTE_PATH = "/api/assets/dice";
-const R2_ASSET_PATTERN =
-  /^https:\/\/[^/]+\.r2\.cloudflarestorage\.com\/war-brasil-assets-prod\/cosmetics\/dice\/[^?]+\.webp\?/;
 const FAKE_WEBP = Buffer.from(
   "UklGRhoAAABXRUJQVlA4TA0AAAAvB8ABEAcQERGIiP4HAA==",
   "base64",
@@ -102,10 +100,42 @@ function assertFreshCommanderState(state) {
   ]);
 }
 
+function assetKeyFromDeliveryUrl(value) {
+  const url = new URL(value, BASE_URL);
+  assert.equal(url.pathname, ASSET_ROUTE_PATH);
+  const key = url.searchParams.get("key");
+  assert.match(
+    key ?? "",
+    /^cosmetics\/dice\/[a-z0-9]+(?:-[a-z0-9]+)*\/(attack|defense|neutral)\.webp$/,
+  );
+  return key;
+}
+
+function assetKeyFromSignedR2Url(value) {
+  const url = new URL(value);
+  assert.ok(
+    url.hostname.endsWith(".r2.cloudflarestorage.com"),
+    `host R2 inesperado: ${url.hostname}`,
+  );
+  const marker = "/war-brasil-assets-prod/";
+  const markerIndex = url.pathname.indexOf(marker);
+  assert.ok(markerIndex >= 0, `path R2 inesperado: ${url.pathname}`);
+  const objectKey = decodeURIComponent(url.pathname.slice(markerIndex + marker.length));
+  assert.match(
+    objectKey,
+    /^cosmetics\/dice\/[a-z0-9]+(?:-[a-z0-9]+)*\/(attack|defense|neutral)\.webp$/,
+  );
+  assert.equal(url.searchParams.get("X-Amz-Algorithm"), "AWS4-HMAC-SHA256");
+  assert.match(url.searchParams.get("X-Amz-Credential") ?? "", /\/.+\/s3\/aws4_request$/);
+  assert.match(url.searchParams.get("X-Amz-Signature") ?? "", /^[a-f0-9]{64}$/);
+  const expires = Number(url.searchParams.get("X-Amz-Expires"));
+  assert.ok(Number.isInteger(expires) && expires > 0 && expires <= 900);
+  return objectKey;
+}
+
 const deliveryKeys = [];
-const r2Keys = [];
+const signedR2Keys = [];
 const deliveryResponses = [];
-const r2Responses = [];
 const failedAssetRequests = [];
 
 function previewDiagnostics(src, cause) {
@@ -113,9 +143,8 @@ function previewDiagnostics(src, cause) {
     src,
     cause,
     deliveryKeys,
-    r2Keys,
+    signedR2Keys,
     deliveryResponses,
-    r2Responses,
     failedAssetRequests,
   });
 }
@@ -149,17 +178,6 @@ async function waitForPreviewImage(card) {
   }
 }
 
-function assetKeyFromDeliveryUrl(value) {
-  const url = new URL(value, BASE_URL);
-  assert.equal(url.pathname, ASSET_ROUTE_PATH);
-  const key = url.searchParams.get("key");
-  assert.match(
-    key ?? "",
-    /^cosmetics\/dice\/[a-z0-9]+(?:-[a-z0-9]+)*\/(attack|defense|neutral)\.webp$/,
-  );
-  return key;
-}
-
 async function inspectSet(page, setName, expectedKey, screenshotName) {
   const card = page.locator("article").filter({ hasText: setName });
   await card.getByRole("button", { name: "INSPECIONAR", exact: true }).click();
@@ -183,28 +201,40 @@ const context = await browser.newContext({
   storageState: STORAGE_STATE_PATH,
   viewport: { width: 1440, height: 900 },
   reducedMotion: "reduce",
+  serviceWorkers: "block",
 });
 const page = await context.newPage();
 
-await page.route(R2_ASSET_PATTERN, async (route) => {
-  const url = new URL(route.request().url());
-  const marker = "/war-brasil-assets-prod/";
-  const markerIndex = url.pathname.indexOf(marker);
-  assert.ok(markerIndex >= 0, `path R2 inesperado: ${url.pathname}`);
-  const objectKey = decodeURIComponent(url.pathname.slice(markerIndex + marker.length));
-  assert.match(
-    objectKey,
-    /^cosmetics\/dice\/[a-z0-9]+(?:-[a-z0-9]+)*\/(attack|defense|neutral)\.webp$/,
-  );
-  assert.equal(url.searchParams.get("X-Amz-Algorithm"), "AWS4-HMAC-SHA256");
-  assert.match(url.searchParams.get("X-Amz-Signature") ?? "", /^[a-f0-9]{64}$/);
-  assert.ok(Number(url.searchParams.get("X-Amz-Expires")) > 0);
-  r2Keys.push(objectKey);
+// Playwright invokes route handlers only for the first URL in a redirect chain.
+// Exercise the real authenticated delivery endpoint with maxRedirects=0, assert
+// its signed R2 Location, then provide deterministic WebP bytes to the browser.
+await page.route((url) => url.pathname === ASSET_ROUTE_PATH, async (route) => {
+  const requestUrl = new URL(route.request().url());
+  const expectedKey = assetKeyFromDeliveryUrl(requestUrl.toString());
+
+  const upstream = await route.fetch({ maxRedirects: 0 });
+  const headers = upstream.headers();
+  const location = headers.location;
+  deliveryResponses.push({
+    key: expectedKey,
+    status: upstream.status(),
+    hasLocation: typeof location === "string" && location.length > 0,
+  });
+
+  assert.equal(upstream.status(), 307, `delivery deveria redirecionar ${expectedKey}`);
+  assert.ok(location, `delivery não retornou Location para ${expectedKey}`);
+  const signedKey = assetKeyFromSignedR2Url(location);
+  assert.equal(signedKey, expectedKey);
+  signedR2Keys.push(signedKey);
+
   await route.fulfill({
     status: 200,
     contentType: "image/webp",
     body: FAKE_WEBP,
-    headers: { "Cache-Control": "private, max-age=60" },
+    headers: {
+      "Cache-Control": "private, max-age=60",
+      "Access-Control-Allow-Origin": "*",
+    },
   });
 });
 
@@ -216,43 +246,11 @@ page.on("request", (request) => {
   }
 });
 
-page.on("response", (response) => {
-  const url = new URL(response.url());
-  if (url.pathname === ASSET_ROUTE_PATH) {
-    const headers = response.headers();
-    deliveryResponses.push({
-      key: url.searchParams.get("key"),
-      status: response.status(),
-      hasLocation: typeof headers.location === "string" && headers.location.length > 0,
-    });
-    return;
-  }
-
-  if (url.hostname.endsWith(".r2.cloudflarestorage.com")) {
-    const marker = "/war-brasil-assets-prod/";
-    const markerIndex = url.pathname.indexOf(marker);
-    r2Responses.push({
-      key:
-        markerIndex >= 0
-          ? decodeURIComponent(url.pathname.slice(markerIndex + marker.length))
-          : url.pathname,
-      status: response.status(),
-      contentType: response.headers()["content-type"] ?? null,
-    });
-  }
-});
-
 page.on("requestfailed", (request) => {
   const url = new URL(request.url());
-  if (
-    url.pathname === ASSET_ROUTE_PATH ||
-    url.hostname.endsWith(".r2.cloudflarestorage.com")
-  ) {
+  if (url.pathname === ASSET_ROUTE_PATH) {
     failedAssetRequests.push({
-      target:
-        url.pathname === ASSET_ROUTE_PATH
-          ? `${url.pathname}?key=${url.searchParams.get("key") ?? ""}`
-          : url.pathname,
+      target: `${url.pathname}?key=${url.searchParams.get("key") ?? ""}`,
       error: request.failure()?.errorText ?? "unknown",
     });
   }
@@ -299,7 +297,7 @@ try {
   await page.getByRole("heading", { name: "Remessas do Comando", exact: true }).waitFor();
   assert.equal(await page.locator('main[data-scene="profile"]').count(), 1);
   assert.equal(deliveryKeys.length, 0, `asset carregado antes de inspeção: ${deliveryKeys}`);
-  assert.equal(r2Keys.length, 0, `R2 carregado antes de inspeção: ${r2Keys}`);
+  assert.equal(signedR2Keys.length, 0, `R2 assinado antes de inspeção: ${signedR2Keys}`);
 
   const storeWallet = page.locator('[data-currency="campaign-credit"]').first();
   assert.match((await storeWallet.textContent()) ?? "", /◈\s*0/);
@@ -330,7 +328,7 @@ try {
     "detail-exercito.png",
   );
   assert.deepEqual(deliveryKeys, ["cosmetics/dice/military-classic/attack.webp"]);
-  assert.deepEqual(r2Keys, deliveryKeys);
+  assert.deepEqual(signedR2Keys, deliveryKeys);
 
   await exercito.getByRole("button", { name: "Defesa", exact: true }).click();
   await waitForPreviewImage(exercito);
@@ -343,28 +341,23 @@ try {
     "cosmetics/dice/military-classic/attack.webp",
     "cosmetics/dice/military-classic/defense.webp",
   ]);
-  assert.deepEqual(r2Keys, deliveryKeys);
+  assert.deepEqual(signedR2Keys, deliveryKeys);
 
-  await inspectSet(
-    page,
-    "Lanças Medievais",
-    "cosmetics/dice/medieval-spears/attack.webp",
-    "detail-lancas.png",
-  );
-  await inspectSet(
-    page,
-    "Viking",
-    "cosmetics/dice/viking/attack.webp",
-    "detail-viking.png",
-  );
-  assert.deepEqual(deliveryKeys, [
-    "cosmetics/dice/military-classic/attack.webp",
-    "cosmetics/dice/military-classic/defense.webp",
-    "cosmetics/dice/medieval-spears/attack.webp",
-    "cosmetics/dice/viking/attack.webp",
-  ]);
-  assert.deepEqual(r2Keys, deliveryKeys);
+  const inspectionTargets = [
+    ["Lanças Medievais", "cosmetics/dice/medieval-spears/attack.webp", "detail-lancas.png"],
+    ["Viking", "cosmetics/dice/viking/attack.webp", "detail-viking.png"],
+    ["Gato", "cosmetics/dice/cat/attack.webp", "detail-gato.png"],
+    ["Cachorro", "cosmetics/dice/dog/attack.webp", "detail-cachorro.png"],
+    ["Futebol", "cosmetics/dice/football/attack.webp", "detail-futebol.png"],
+  ];
 
+  for (const [setName, key, screenshot] of inspectionTargets) {
+    await inspectSet(page, setName, key, screenshot);
+  }
+
+  assert.deepEqual(signedR2Keys, deliveryKeys);
+  assert.equal(new Set(deliveryKeys).size, deliveryKeys.length);
+  assert.equal(deliveryKeys.length, 7);
   assertFreshCommanderState(await readEconomyState(userId));
 
   const reEquip = await apiJson(page, "/api/economy/loadout", {
@@ -386,9 +379,7 @@ try {
     fullPage: true,
   });
 
-  const anonymousContext = await browser.newContext({
-    viewport: { width: 390, height: 844 },
-  });
+  const anonymousContext = await browser.newContext({ viewport: { width: 390, height: 844 } });
   try {
     const anonymousPage = await anonymousContext.newPage();
     await anonymousPage.goto(`${BASE_URL}/profile/store`, { waitUntil: "domcontentloaded" });
@@ -398,7 +389,7 @@ try {
   }
 
   console.log(
-    `[economy-e2e] ok — ${r2Keys.length} WebPs R2 carregados somente após interação`,
+    `[economy-e2e] ok — ${signedR2Keys.length} WebPs assinados e renderizados somente após interação`,
   );
 } finally {
   await context.close();
