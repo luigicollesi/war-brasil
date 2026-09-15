@@ -74,6 +74,11 @@ function expectedDeliveryPath(objectKey) {
   return `/api/assets/dice?key=${encodeURIComponent(objectKey)}`;
 }
 
+function normalizedDeliveryPath(value) {
+  const url = new URL(value, BASE_URL);
+  return `${url.pathname}${url.search}`;
+}
+
 async function apiJson(page, url, init = {}) {
   return page.evaluate(
     async ({ requestUrl, requestInit }) => {
@@ -394,12 +399,12 @@ async function captureBattleEvidence(page, roomId) {
   const attackSrc = await modal.locator(".battle-side--attack img").first().getAttribute("src");
   const defenseSrc = await modal.locator(".battle-side--defense img").first().getAttribute("src");
   assert.equal(
-    attackSrc,
+    normalizedDeliveryPath(attackSrc),
     expectedDeliveryPath("cosmetics/dice/military-classic/attack.webp"),
     `dado visual de ataque incorreto: ${attackSrc}`,
   );
   assert.equal(
-    defenseSrc,
+    normalizedDeliveryPath(defenseSrc),
     expectedDeliveryPath("cosmetics/dice/medieval-spears/defense.webp"),
     `dado visual de defesa incorreto: ${defenseSrc}`,
   );
