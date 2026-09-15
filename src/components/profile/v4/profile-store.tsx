@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   CosmeticCatalogItem,
   CosmeticSet,
@@ -33,6 +33,67 @@ function ownershipLabel(set: CosmeticSet) {
   return set.status === "available" ? "CATÁLOGO" : "EM BREVE";
 }
 
+function InspectionContent({
+  selectedSet,
+  selectedItem,
+  selectedArtwork,
+  titleId,
+  onSelectItem,
+}: {
+  selectedSet: CosmeticSet | null;
+  selectedItem: CosmeticCatalogItem | null;
+  selectedArtwork: string | null;
+  titleId: string;
+  onSelectItem: (itemId: string) => void;
+}) {
+  return (
+    <>
+      <div className={styles.inspectionVisual}>
+        {selectedArtwork ? (
+          <Image
+            src={selectedArtwork}
+            alt={selectedItem ? `Prévia de ${selectedItem.name}` : "Prévia cosmética"}
+            width={560}
+            height={560}
+            unoptimized
+          />
+        ) : (
+          <span>PRÉVIA INDISPONÍVEL</span>
+        )}
+      </div>
+      <div className={styles.inspectionCopy}>
+        <small>INSPEÇÃO // SEM MUTAÇÃO</small>
+        <h2 id={titleId}>{selectedSet?.name ?? "Selecione uma coleção"}</h2>
+        <p>{selectedSet?.description ?? "Nenhuma descrição de catálogo disponível."}</p>
+
+        {selectedSet ? (
+          <div className={styles.itemSelector} role="group" aria-label={`Itens de ${selectedSet.name}`}>
+            {selectedSet.items.map((item) => (
+              <button
+                key={item.id}
+                type="button"
+                data-active={selectedItem?.id === item.id ? "true" : "false"}
+                aria-pressed={selectedItem?.id === item.id}
+                onClick={() => onSelectItem(item.id)}
+              >
+                <small>{SLOT_LABELS[item.slot]}</small>
+                <strong>{item.name}</strong>
+                <span>{item.owned ? (item.equipped ? "EQUIPADO" : "POSSUÍDO") : "NÃO ADQUIRIDO"}</span>
+              </button>
+            ))}
+          </div>
+        ) : null}
+
+        <div className={styles.commerceBoundary}>
+          <span>OFERTAS ECONOMY V2</span>
+          <strong>AGUARDANDO AUTORIDADE COMERCIAL</strong>
+          <p>Preço e ação de compra não são inferidos pela interface.</p>
+        </div>
+      </div>
+    </>
+  );
+}
+
 export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnapshot }) {
   const featured = useMemo(
     () => storefront.sets.find((set) => set.status === "available") ?? storefront.sets[0] ?? null,
@@ -40,6 +101,8 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
   );
   const [selectedSetId, setSelectedSetId] = useState<string | null>(featured?.id ?? null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(featured ? previewItem(featured)?.id ?? null : null);
+  const [inspectionOpen, setInspectionOpen] = useState(false);
+  const mobileCloseRef = useRef<HTMLButtonElement>(null);
 
   const selectedSet = storefront.sets.find((set) => set.id === selectedSetId) ?? featured;
   const selectedItem = selectedSet
@@ -47,9 +110,25 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
     : null;
   const selectedArtwork = itemArtwork(selectedItem);
 
+  useEffect(() => {
+    if (!inspectionOpen) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setInspectionOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+
+    if (window.matchMedia("(max-width: 820px)").matches) {
+      window.requestAnimationFrame(() => mobileCloseRef.current?.focus());
+    }
+
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [inspectionOpen]);
+
   function inspect(set: CosmeticSet) {
     setSelectedSetId(set.id);
     setSelectedItemId(previewItem(set)?.id ?? null);
+    setInspectionOpen(true);
   }
 
   return (
@@ -130,50 +209,60 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
         )}
       </section>
 
-      <section className={styles.inspection} aria-labelledby="inspection-title">
-        <div className={styles.inspectionVisual}>
-          {selectedArtwork ? (
-            <Image
-              src={selectedArtwork}
-              alt={selectedItem ? `Prévia de ${selectedItem.name}` : "Prévia cosmética"}
-              width={560}
-              height={560}
-              unoptimized
-            />
-          ) : (
-            <span>PRÉVIA INDISPONÍVEL</span>
-          )}
-        </div>
-        <div className={styles.inspectionCopy}>
-          <small>INSPEÇÃO // SEM MUTAÇÃO</small>
-          <h2 id="inspection-title">{selectedSet?.name ?? "Selecione uma coleção"}</h2>
-          <p>{selectedSet?.description ?? "Nenhuma descrição de catálogo disponível."}</p>
-
-          {selectedSet ? (
-            <div className={styles.itemSelector} role="group" aria-label={`Itens de ${selectedSet.name}`}>
-              {selectedSet.items.map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  data-active={selectedItem?.id === item.id ? "true" : "false"}
-                  aria-pressed={selectedItem?.id === item.id}
-                  onClick={() => setSelectedItemId(item.id)}
-                >
-                  <small>{SLOT_LABELS[item.slot]}</small>
-                  <strong>{item.name}</strong>
-                  <span>{item.owned ? (item.equipped ? "EQUIPADO" : "POSSUÍDO") : "NÃO ADQUIRIDO"}</span>
-                </button>
-              ))}
-            </div>
-          ) : null}
-
-          <div className={styles.commerceBoundary}>
-            <span>OFERTAS ECONOMY V2</span>
-            <strong>AGUARDANDO AUTORIDADE COMERCIAL</strong>
-            <p>Preço e ação de compra não são inferidos pela interface.</p>
-          </div>
-        </div>
+      <section
+        className={`${styles.inspection} ${styles.desktopInspection}`}
+        aria-labelledby="inspection-title-desktop"
+      >
+        <InspectionContent
+          selectedSet={selectedSet}
+          selectedItem={selectedItem}
+          selectedArtwork={selectedArtwork}
+          titleId="inspection-title-desktop"
+          onSelectItem={setSelectedItemId}
+        />
       </section>
+
+      {inspectionOpen ? (
+        <>
+          <button
+            type="button"
+            className={styles.mobileInspectionBackdrop}
+            aria-label="Fechar inspeção"
+            onClick={() => setInspectionOpen(false)}
+          />
+          <section
+            className={styles.mobileInspection}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="inspection-title-mobile"
+          >
+            <header className={styles.mobileInspectionHeader}>
+              <span>
+                <small>INSPEÇÃO TÁTICA</small>
+                <strong>{selectedSet?.name ?? "Coleção"}</strong>
+              </span>
+              <button
+                ref={mobileCloseRef}
+                type="button"
+                className={styles.mobileInspectionClose}
+                aria-label="Fechar inspeção"
+                onClick={() => setInspectionOpen(false)}
+              >
+                ×
+              </button>
+            </header>
+            <div className={styles.mobileInspectionBody}>
+              <InspectionContent
+                selectedSet={selectedSet}
+                selectedItem={selectedItem}
+                selectedArtwork={selectedArtwork}
+                titleId="inspection-title-mobile"
+                onSelectItem={setSelectedItemId}
+              />
+            </div>
+          </section>
+        </>
+      ) : null}
 
       <section id="reforcar-tesouraria" className={styles.treasury} aria-labelledby="treasury-title">
         <span className={styles.treasuryCoin} aria-hidden="true">
