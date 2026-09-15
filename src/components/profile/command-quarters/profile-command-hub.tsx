@@ -157,13 +157,26 @@ function TreasuryReadout({
   if (compact) {
     return (
       <span className={styles.walletCompact}>
-        <div key={currency.currency} data-currency={currency.currency}>
+        <span
+          key={currency.currency}
+          data-currency={currency.currency}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 9,
+            minWidth: 112,
+            minHeight: 42,
+            padding: "5px 12px",
+            borderLeft: "1px solid rgb(238 232 218 / 8%)",
+            background: "rgb(5 10 7 / 48%)",
+          }}
+        >
           <CampaignCreditMark compact />
           <span>
             <small>{currency.shortLabel}</small>
             <strong>{formatBalance(currency.balance)}</strong>
           </span>
-        </div>
+        </span>
       </span>
     );
   }
