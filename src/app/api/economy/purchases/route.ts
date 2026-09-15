@@ -13,7 +13,11 @@ import {
 function economyErrorResponse(error: unknown) {
   if (error instanceof EconomyServiceError) {
     return NextResponse.json(
-      { error: error.code, message: error.message },
+      {
+        error: error.code,
+        message: error.message,
+        ...(error.details ?? {}),
+      },
       { status: error.status },
     );
   }
@@ -47,7 +51,12 @@ export async function POST(request: Request) {
 
   try {
     const input = parsePurchaseOfferInput(payload);
-    const purchase = await purchaseOffer(session.user.id, input.offerId, input.idempotencyKey);
+    const purchase = await purchaseOffer(
+      session.user.id,
+      input.offerId,
+      input.idempotencyKey,
+      input.expectedPrice,
+    );
 
     return NextResponse.json(
       { ok: true, ...purchase },
