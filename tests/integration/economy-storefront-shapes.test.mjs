@@ -98,7 +98,7 @@ async function quoteMixedBundle(client, userId) {
      SELECT total,
             owned_count,
             subtotal::text AS subtotal,
-            FLOOR(subtotal * (10000 - 1000) / 10000.0)::bigint::text AS final_price
+            ((subtotal * 9000) / 10000)::bigint::text AS final_price
        FROM totals`,
     [userId],
   );
@@ -135,8 +135,8 @@ if (!databaseUrl) {
         );
 
         const shape = await db.query(
-          `SELECT COUNT(*)::int AS total,
-                  COUNT(*) FILTER (WHERE slot='territory_skin')::int AS territory_items,
+          `SELECT COUNT(DISTINCT item.id)::int AS total,
+                  COUNT(DISTINCT item.id) FILTER (WHERE item.slot='territory_skin')::int AS territory_items,
                   COUNT(DISTINCT asset.role)::int AS roles
              FROM catalog.collections collection
              JOIN catalog.cosmetics item ON item.collection_id=collection.id
@@ -145,7 +145,7 @@ if (!databaseUrl) {
             WHERE collection.id='collection.test-territory'`,
         );
         assert.deepEqual(shape.rows, [
-          { total: 6, territory_items: 6, roles: 3 },
+          { total: 2, territory_items: 2, roles: 3 },
         ]);
       } finally {
         await db.end();
