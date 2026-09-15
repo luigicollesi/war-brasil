@@ -7,6 +7,7 @@ import type { EconomyQueryable } from "./economy-repository";
 export type StorefrontOfferProductRow = {
   offer_id: string;
   product_id: string;
+  collection_id: string | null;
   product_type: "single" | "bundle";
   bundle_discount_bps: number;
   currency_code: "campaign-credit";
@@ -40,6 +41,7 @@ export async function listActiveStorefrontOfferProducts(
   const result = await db.query<StorefrontOfferProductRow>(
     `SELECT offer.id AS offer_id,
             offer.product_id,
+            product.collection_id,
             product.product_type,
             product.bundle_discount_bps,
             offer.currency_code,
@@ -123,6 +125,7 @@ export async function lockOfferProductForPurchase(
   const result = await db.query<StorefrontOfferProductRow>(
     `SELECT offer.id AS offer_id,
             offer.product_id,
+            product.collection_id,
             product.product_type,
             product.bundle_discount_bps,
             offer.currency_code,
