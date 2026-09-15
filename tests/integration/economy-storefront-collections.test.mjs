@@ -209,4 +209,89 @@ if (!databaseUrl) {
       }
     });
   });
+
+  test("STORE-16: campanha expira sem remover coleção, cosméticos ou oferta estável", async () => {
+    await withTemporaryDatabase(async (connectionString) => {
+      await prepareDatabase(connectionString);
+      const db = new Client({ connectionString });
+      await db.connect();
+      try {
+        await db.query(
+          `INSERT INTO catalog.campaigns(
+             id,slug,title,description,starts_at,ends_at,priority,active
+           ) VALUES(
+             'campaign.test-football','test-football','Operação Futebol','Fixture editorial',
+             CURRENT_TIMESTAMP - INTERVAL '1 hour',
+             CURRENT_TIMESTAMP + INTERVAL '1 hour',
+             1,TRUE
+           )`,
+        );
+        await db.query(
+          `INSERT INTO catalog.campaign_offers(campaign_id,offer_id,position)
+           VALUES('campaign.test-football','offer.futebol',0)`,
+        );
+        await db.query(
+          `INSERT INTO catalog.campaign_assets(campaign_id,role,object_key,mime_type)
+           VALUES(
+             'campaign.test-football','hero','store/campaigns/test-football/hero.webp','image/webp'
+           )`,
+        );
+
+        const active = await db.query(
+          `SELECT campaign.id,membership.offer_id
+             FROM catalog.campaigns campaign
+             JOIN catalog.campaign_offers membership ON membership.campaign_id=campaign.id
+            WHERE campaign.id='campaign.test-football'
+              AND campaign.active=TRUE
+              AND campaign.starts_at <= CURRENT_TIMESTAMP
+              AND campaign.ends_at > CURRENT_TIMESTAMP`,
+        );
+        assert.deepEqual(active.rows, [
+          { id: "campaign.test-football", offer_id: "offer.futebol" },
+        ]);
+
+        await db.query(
+          `UPDATE catalog.campaigns
+              SET ends_at=CURRENT_TIMESTAMP - INTERVAL '1 second'
+            WHERE id='campaign.test-football'`,
+        );
+        const expired = await db.query(
+          `SELECT id
+             FROM catalog.campaigns
+            WHERE id='campaign.test-football'
+              AND active=TRUE
+              AND (ends_at IS NULL OR ends_at > CURRENT_TIMESTAMP)`,
+        );
+        assert.equal(expired.rowCount, 0);
+
+        const persistentCatalogue = await db.query(
+          `SELECT collection.id,
+                  COUNT(DISTINCT item.id)::int AS cosmetics,
+                  COUNT(DISTINCT product.id)::int AS products
+             FROM catalog.collections collection
+             JOIN catalog.cosmetics item ON item.collection_id=collection.id
+             JOIN catalog.products product ON product.collection_id=collection.id
+            WHERE collection.id='collection.football'
+            GROUP BY collection.id`,
+        );
+        assert.deepEqual(persistentCatalogue.rows, [
+          { id: "collection.football", cosmetics: 3, products: 4 },
+        ]);
+
+        const roles = await db.query(
+          `SELECT role
+             FROM catalog.collection_assets
+            WHERE collection_id='collection.football' AND active=TRUE
+            ORDER BY role`,
+        );
+        assert.deepEqual(roles.rows.map((row) => row.role), [
+          "background",
+          "banner",
+          "logo",
+        ]);
+      } finally {
+        await db.end();
+      }
+    });
+  });
 }
