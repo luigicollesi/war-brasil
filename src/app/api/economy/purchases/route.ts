@@ -47,11 +47,7 @@ export async function POST(request: Request) {
 
   try {
     const input = parsePurchaseOfferInput(payload);
-    const purchase = await purchaseOffer(
-      session.user.id,
-      input.offerId,
-      input.idempotencyKey,
-    );
+    const purchase = await purchaseOffer(session.user.id, input.offerId, input.idempotencyKey);
 
     return NextResponse.json(
       { ok: true, ...purchase },
