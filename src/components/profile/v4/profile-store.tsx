@@ -1,15 +1,17 @@
 "use client";
 
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   CosmeticCatalogItem,
-  CosmeticSet,
   CosmeticSlot,
+  EconomyOffer,
   EconomyStorefrontSnapshot,
 } from "@/src/lib/economy/economy-contract";
 import { cosmeticPreviewSource } from "@/src/lib/economy/cosmetic-preview";
 import { ProfileCosmeticImage } from "./profile-cosmetic-image";
+import commerceStyles from "./profile-store-commerce.module.css";
 import mobileStyles from "./profile-store-mobile-inspection.module.css";
 import styles from "./profile-store.module.css";
 
@@ -20,34 +22,67 @@ const SLOT_LABELS: Readonly<Record<CosmeticSlot, string>> = {
   territory_effect: "Território",
 };
 
-function previewItem(set: CosmeticSet) {
-  return set.items.find((item) => cosmeticPreviewSource(item) !== null) ?? set.items[0] ?? null;
+const INTEGER_FORMAT = new Intl.NumberFormat("pt-BR");
+const BRL_FORMAT = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+});
+
+type PurchaseFeedback = Readonly<{
+  kind: "success" | "error";
+  message: string;
+  balance?: number;
+}>;
+
+function previewItem(offer: EconomyOffer) {
+  return offer.items.find((item) => cosmeticPreviewSource(item) !== null) ?? offer.items[0] ?? null;
 }
 
 function itemArtwork(item: CosmeticCatalogItem | null) {
   return item ? cosmeticPreviewSource(item) : null;
 }
 
-function ownershipLabel(set: CosmeticSet) {
-  const owned = set.items.filter((item) => item.owned).length;
-  if (owned === set.items.length && set.items.length > 0) return "POSSUÍDO";
-  if (owned > 0) return `${owned}/${set.items.length} POSSUÍDOS`;
-  return set.status === "available" ? "CATÁLOGO" : "EM BREVE";
+function ownershipLabel(offer: EconomyOffer) {
+  if (offer.fullyOwned) return "POSSUÍDO";
+  if (offer.partiallyOwned) return `${offer.ownedCount}/${offer.totalCount} POSSUÍDOS`;
+  return offer.status === "available" ? "DISPONÍVEL" : "INDISPONÍVEL";
+}
+
+function purchaseLabel(offer: EconomyOffer, pending: boolean) {
+  if (pending) return "PROCESSANDO...";
+  if (offer.fullyOwned) return "POSSUÍDO";
+  if (!offer.purchasable) return "INDISPONÍVEL";
+  return "COMPRAR";
+}
+
+function CampaignCreditAmount({ amount }: { amount: number }) {
+  return (
+    <span className={commerceStyles.creditAmount} aria-label={`${INTEGER_FORMAT.format(amount)} Créditos de Campanha`}>
+      <Image src="/coin.svg" alt="" width={22} height={22} aria-hidden="true" />
+      <strong>{INTEGER_FORMAT.format(amount)}</strong>
+    </span>
+  );
 }
 
 function InspectionContent({
-  selectedSet,
+  selectedOffer,
   selectedItem,
   selectedArtwork,
   titleId,
+  pendingOfferId,
   onSelectItem,
+  onPurchase,
 }: {
-  selectedSet: CosmeticSet | null;
+  selectedOffer: EconomyOffer | null;
   selectedItem: CosmeticCatalogItem | null;
   selectedArtwork: string | null;
   titleId: string;
+  pendingOfferId: string | null;
   onSelectItem: (itemId: string) => void;
+  onPurchase: (offer: EconomyOffer) => void;
 }) {
+  const pending = selectedOffer?.id === pendingOfferId;
+
   return (
     <>
       <div className={styles.inspectionVisual}>
@@ -60,13 +95,13 @@ function InspectionContent({
         />
       </div>
       <div className={styles.inspectionCopy}>
-        <small>INSPEÇÃO // SEM MUTAÇÃO</small>
-        <h2 id={titleId}>{selectedSet?.name ?? "Selecione uma coleção"}</h2>
-        <p>{selectedSet?.description ?? "Nenhuma descrição de catálogo disponível."}</p>
+        <small>INSPEÇÃO // CATÁLOGO</small>
+        <h2 id={titleId}>{selectedOffer?.name ?? "Selecione uma oferta"}</h2>
+        <p>{selectedOffer?.description ?? "Nenhuma descrição de catálogo disponível."}</p>
 
-        {selectedSet ? (
-          <div className={styles.itemSelector} role="group" aria-label={`Itens de ${selectedSet.name}`}>
-            {selectedSet.items.map((item) => (
+        {selectedOffer ? (
+          <div className={styles.itemSelector} role="group" aria-label={`Itens de ${selectedOffer.name}`}>
+            {selectedOffer.items.map((item) => (
               <button
                 key={item.id}
                 type="button"
@@ -82,30 +117,47 @@ function InspectionContent({
           </div>
         ) : null}
 
-        <div className={styles.commerceBoundary}>
-          <span>AQUISIÇÕES</span>
-          <strong>EM PREPARAÇÃO</strong>
-          <p>Preços e ordens de compra aparecerão aqui quando o ciclo comercial estiver ativo.</p>
-        </div>
+        {selectedOffer ? (
+          <div className={styles.commerceBoundary}>
+            <span>AQUISIÇÃO // {ownershipLabel(selectedOffer)}</span>
+            <CampaignCreditAmount amount={selectedOffer.price} />
+            {selectedOffer.partiallyOwned ? (
+              <p>
+                Você já possui {selectedOffer.ownedCount} de {selectedOffer.totalCount} itens. O pacote mantém o valor integral e entrega apenas os itens ausentes.
+              </p>
+            ) : null}
+            <button
+              type="button"
+              className={commerceStyles.purchaseButton}
+              disabled={!selectedOffer.purchasable || pending || pendingOfferId !== null}
+              onClick={() => onPurchase(selectedOffer)}
+            >
+              {purchaseLabel(selectedOffer, pending)}
+            </button>
+          </div>
+        ) : null}
       </div>
     </>
   );
 }
 
 export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnapshot }) {
+  const router = useRouter();
   const featured = useMemo(
-    () => storefront.sets.find((set) => set.status === "available") ?? storefront.sets[0] ?? null,
-    [storefront.sets],
+    () => storefront.offers.find((offer) => offer.featured) ?? storefront.offers[0] ?? null,
+    [storefront.offers],
   );
-  const [selectedSetId, setSelectedSetId] = useState<string | null>(featured?.id ?? null);
+  const [selectedOfferId, setSelectedOfferId] = useState<string | null>(featured?.id ?? null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(featured ? previewItem(featured)?.id ?? null : null);
   const [inspectionOpen, setInspectionOpen] = useState(false);
+  const [pendingOfferId, setPendingOfferId] = useState<string | null>(null);
+  const [purchaseFeedback, setPurchaseFeedback] = useState<PurchaseFeedback | null>(null);
   const mobileCloseRef = useRef<HTMLButtonElement>(null);
   const inspectionReturnFocusRef = useRef<HTMLElement | null>(null);
 
-  const selectedSet = storefront.sets.find((set) => set.id === selectedSetId) ?? featured;
-  const selectedItem = selectedSet
-    ? selectedSet.items.find((item) => item.id === selectedItemId) ?? previewItem(selectedSet)
+  const selectedOffer = storefront.offers.find((offer) => offer.id === selectedOfferId) ?? featured;
+  const selectedItem = selectedOffer
+    ? selectedOffer.items.find((item) => item.id === selectedItemId) ?? previewItem(selectedOffer)
     : null;
   const selectedArtwork = itemArtwork(selectedItem);
 
@@ -140,13 +192,56 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
     };
   }, [closeInspection, inspectionOpen]);
 
-  function inspect(set: CosmeticSet) {
+  function inspect(offer: EconomyOffer) {
     if (document.activeElement instanceof HTMLElement) {
       inspectionReturnFocusRef.current = document.activeElement;
     }
-    setSelectedSetId(set.id);
-    setSelectedItemId(previewItem(set)?.id ?? null);
+    setSelectedOfferId(offer.id);
+    setSelectedItemId(previewItem(offer)?.id ?? null);
     setInspectionOpen(true);
+  }
+
+  async function purchase(offer: EconomyOffer) {
+    if (pendingOfferId) return;
+    if (!offer.purchasable || offer.fullyOwned) return;
+
+    setPendingOfferId(offer.id);
+    setPurchaseFeedback(null);
+    const idempotencyKey = crypto.randomUUID();
+
+    try {
+      const response = await fetch("/api/economy/purchases", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ offerId: offer.id, idempotencyKey }),
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: string; message?: string; wallet?: { balance?: number } }
+        | null;
+
+      if (!response.ok) {
+        const message =
+          payload?.error === "ECONOMY_INSUFFICIENT_BALANCE"
+            ? "Créditos de Campanha insuficientes para esta aquisição."
+            : payload?.message ?? "A aquisição não pôde ser concluída agora.";
+        setPurchaseFeedback({ kind: "error", message });
+        return;
+      }
+
+      setPurchaseFeedback({
+        kind: "success",
+        message: "Aquisição confirmada e incorporada ao Arsenal.",
+        balance: typeof payload?.wallet?.balance === "number" ? payload.wallet.balance : undefined,
+      });
+      router.refresh();
+    } catch {
+      setPurchaseFeedback({
+        kind: "error",
+        message: "A aquisição não pôde ser concluída agora.",
+      });
+    } finally {
+      setPendingOfferId(null);
+    }
   }
 
   return (
@@ -156,7 +251,7 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
           <small>INTENDÊNCIA // CATÁLOGO COSMÉTICO</small>
           <h1 id="store-title">Remessas do Comando</h1>
           <p>
-            Inspecione coleções, compare equipamentos e acompanhe as próximas remessas disponíveis para o comandante.
+            Inspecione equipamentos, confira sua posse e adquira remessas disponíveis com Créditos de Campanha.
           </p>
           {featured ? (
             <button type="button" onClick={() => inspect(featured)}>
@@ -176,31 +271,47 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
           <div>
             <small>DESTAQUE ATUAL</small>
             <strong>{featured?.name ?? "Nenhuma remessa disponível"}</strong>
+            {featured ? <CampaignCreditAmount amount={featured.price} /> : null}
           </div>
         </div>
       </section>
+
+      {purchaseFeedback ? (
+        <div
+          className={commerceStyles.purchaseFeedback}
+          data-kind={purchaseFeedback.kind}
+          role="status"
+          aria-live="polite"
+        >
+          <span>{purchaseFeedback.message}</span>
+          {typeof purchaseFeedback.balance === "number" ? (
+            <CampaignCreditAmount amount={purchaseFeedback.balance} />
+          ) : null}
+        </div>
+      ) : null}
 
       <section className={styles.catalog} aria-labelledby="catalog-title">
         <header className={styles.sectionHeading}>
           <span>
             <small>CATÁLOGO SINCRONIZADO</small>
-            <h2 id="catalog-title">Coleções</h2>
+            <h2 id="catalog-title">Ofertas</h2>
           </span>
-          <strong>{storefront.sets.length.toString().padStart(2, "0")}</strong>
+          <strong>{storefront.offers.length.toString().padStart(2, "0")}</strong>
         </header>
 
-        {storefront.sets.length > 0 ? (
+        {storefront.offers.length > 0 ? (
           <div className={styles.catalogGrid}>
-            {storefront.sets.map((set) => {
-              const art = itemArtwork(previewItem(set));
-              const active = selectedSet?.id === set.id;
+            {storefront.offers.map((offer) => {
+              const art = itemArtwork(previewItem(offer));
+              const active = selectedOffer?.id === offer.id;
+              const pending = pendingOfferId === offer.id;
               return (
-                <article key={set.id} className={styles.productCard} data-active={active ? "true" : "false"}>
-                  <button type="button" className={styles.productSelect} onClick={() => inspect(set)}>
+                <article key={offer.id} className={styles.productCard} data-active={active ? "true" : "false"}>
+                  <button type="button" className={styles.productSelect} onClick={() => inspect(offer)}>
                     <span className={styles.productVisual}>
                       <ProfileCosmeticImage
                         src={art}
-                        alt={`Prévia de ${set.name}`}
+                        alt={`Prévia de ${offer.name}`}
                         width={300}
                         height={300}
                         fallbackClassName={styles.productFallback}
@@ -208,11 +319,21 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
                       />
                     </span>
                     <span className={styles.productCopy}>
-                      <small>{set.status === "retired" ? "ARQUIVADO" : set.status === "announced" ? "EM BREVE" : "CATÁLOGO"}</small>
-                      <strong>{set.name}</strong>
-                      <em>{ownershipLabel(set)}</em>
+                      <small>{offer.status === "retired" ? "ARQUIVADO" : offer.status === "available" ? "DISPONÍVEL" : "INDISPONÍVEL"}</small>
+                      <strong>{offer.name}</strong>
+                      <em>{ownershipLabel(offer)}</em>
                     </span>
                   </button>
+                  <div className={commerceStyles.productCommerce}>
+                    <CampaignCreditAmount amount={offer.price} />
+                    <button
+                      type="button"
+                      disabled={!offer.purchasable || pending || pendingOfferId !== null}
+                      onClick={() => purchase(offer)}
+                    >
+                      {purchaseLabel(offer, pending)}
+                    </button>
+                  </div>
                 </article>
               );
             })}
@@ -230,11 +351,13 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
         aria-labelledby="inspection-title-desktop"
       >
         <InspectionContent
-          selectedSet={selectedSet}
+          selectedOffer={selectedOffer}
           selectedItem={selectedItem}
           selectedArtwork={selectedArtwork}
           titleId="inspection-title-desktop"
+          pendingOfferId={pendingOfferId}
           onSelectItem={setSelectedItemId}
+          onPurchase={purchase}
         />
       </section>
 
@@ -255,7 +378,7 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
             <header className={mobileStyles.mobileInspectionHeader}>
               <span>
                 <small>INSPEÇÃO TÁTICA</small>
-                <strong>{selectedSet?.name ?? "Coleção"}</strong>
+                <strong>{selectedOffer?.name ?? "Oferta"}</strong>
               </span>
               <button
                 ref={mobileCloseRef}
@@ -269,11 +392,13 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
             </header>
             <div className={`${styles.inspection} ${mobileStyles.mobileInspectionBody}`}>
               <InspectionContent
-                selectedSet={selectedSet}
+                selectedOffer={selectedOffer}
                 selectedItem={selectedItem}
                 selectedArtwork={selectedArtwork}
                 titleId="inspection-title-mobile"
+                pendingOfferId={pendingOfferId}
                 onSelectItem={setSelectedItemId}
+                onPurchase={purchase}
               />
             </div>
           </section>
@@ -284,12 +409,28 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
         <span className={styles.treasuryCoin} aria-hidden="true">
           <Image src="/coin.svg" alt="" width={72} height={72} />
         </span>
-        <div>
+        <div className={commerceStyles.treasuryIntro}>
           <small>TESOURARIA // CRÉDITOS DE CAMPANHA</small>
           <h2 id="treasury-title">Reforçar Tesouraria</h2>
-          <p>Novas formas de reforçar seus Créditos de Campanha serão liberadas em uma próxima atualização.</p>
+          <p>Pacotes previstos para reforço de saldo. A aquisição em moeda real permanece indisponível nesta versão.</p>
         </div>
-        <strong>EM BREVE</strong>
+        <div className={commerceStyles.creditPacks}>
+          {storefront.creditPacks.map((pack) => (
+            <article key={pack.id} className={commerceStyles.creditPack}>
+              <span>
+                <small>{pack.name}</small>
+                <CampaignCreditAmount amount={pack.creditAmount} />
+              </span>
+              <strong>{BRL_FORMAT.format(pack.priceBrlCents / 100)}</strong>
+              <button type="button" disabled>
+                EM BREVE
+              </button>
+            </article>
+          ))}
+          {storefront.creditPacks.length === 0 ? (
+            <span className={commerceStyles.creditPacksEmpty}>Nenhum pacote anunciado.</span>
+          ) : null}
+        </div>
       </section>
     </div>
   );
