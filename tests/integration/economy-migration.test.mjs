@@ -130,7 +130,7 @@ async function createPreEconomyCommander(connectionString, label) {
 if (!databaseUrl) {
   test("economy migration exige DATABASE_URL", { skip: true }, () => {});
 } else {
-  test("038→042 converge catálogo WebP, territory skins e backfill idempotente", async () => {
+  test("038→042 converge catálogo WebP, offers V2, territory skins e backfill idempotente", async () => {
     await withTemporaryDatabase(async (connectionString) => {
       await prepareDatabaseThrough037(connectionString);
       const userId = await createPreEconomyCommander(
@@ -162,13 +162,17 @@ if (!databaseUrl) {
           `SELECT
              COUNT(*)::int AS total,
              COUNT(*) FILTER (WHERE is_default)::int AS defaults,
-             COUNT(*) FILTER (WHERE status='announced')::int AS announced
+             COUNT(*) FILTER (WHERE status='available')::int AS available,
+             COUNT(*) FILTER (WHERE status='announced')::int AS announced,
+             COUNT(*) FILTER (WHERE NOT is_default AND status='available')::int AS commercial
              FROM catalog.cosmetics`,
         );
         assert.deepEqual(catalog.rows[0], {
           total: 26,
           defaults: 4,
-          announced: 22,
+          available: 22,
+          announced: 4,
+          commercial: 18,
         });
 
         const sets = await client.query(
@@ -186,46 +190,77 @@ if (!databaseUrl) {
           {
             id: "set.exercito",
             storage_slug: "military-classic",
-            status: "announced",
+            status: "available",
             sort_order: 10,
             items: 3,
           },
           {
             id: "set.lancas",
             storage_slug: "medieval-spears",
-            status: "announced",
+            status: "available",
             sort_order: 20,
             items: 3,
           },
           {
             id: "set.viking",
             storage_slug: "viking",
-            status: "announced",
+            status: "available",
             sort_order: 30,
             items: 3,
           },
           {
             id: "set.gato",
             storage_slug: "cat",
-            status: "announced",
+            status: "available",
             sort_order: 40,
             items: 3,
           },
           {
             id: "set.cachorro",
             storage_slug: "dog",
-            status: "announced",
+            status: "available",
             sort_order: 50,
             items: 3,
           },
           {
             id: "set.futebol",
             storage_slug: "football",
-            status: "announced",
+            status: "available",
             sort_order: 60,
             items: 3,
           },
         ]);
+
+        const offers = await client.query(
+          `SELECT offer.id,
+                  offer.currency_code,
+                  offer.price::text AS price,
+                  offer.status,
+                  COUNT(item.cosmetic_id)::int AS items
+             FROM catalog.offers offer
+             LEFT JOIN catalog.offer_items item ON item.offer_id=offer.id
+            GROUP BY offer.id,offer.currency_code,offer.price,offer.status
+            ORDER BY offer.id`,
+        );
+        assert.equal(offers.rowCount, 6);
+        for (const offer of offers.rows) {
+          assert.equal(offer.currency_code, "campaign-credit");
+          assert.equal(offer.status, "available");
+          assert.equal(Number(offer.price) > 0, true);
+          assert.equal(offer.items, 3);
+        }
+
+        const packs = await client.query(
+          `SELECT COUNT(*)::int AS total,
+                  COUNT(*) FILTER (WHERE status='announced')::int AS announced,
+                  MIN(credit_amount)::text AS min_credits,
+                  MIN(price_brl_cents)::text AS min_price
+             FROM catalog.credit_packs`,
+        );
+        assert.equal(packs.rows[0].total, 3);
+        assert.equal(packs.rows[0].announced, 3);
+        assert.equal(Number(packs.rows[0].min_credits) > 0, true);
+        assert.equal(Number(packs.rows[0].min_price) > 0, true);
 
         const diceAssets = await client.query(
           `SELECT id,asset_ref
@@ -323,7 +358,7 @@ if (!databaseUrl) {
     });
   });
 
-  test("constraints bloqueiam saldo, loadout, dado e modos territory skin inválidos", async () => {
+  test("constraints bloqueiam saldo, preços, loadout, dado e modos territory skin inválidos", async () => {
     await withTemporaryDatabase(async (connectionString) => {
       await prepareDatabaseThrough037(connectionString);
       const userId = await createPreEconomyCommander(
@@ -341,6 +376,18 @@ if (!databaseUrl) {
                 SET balance=-1
               WHERE user_id=$1 AND currency_code='campaign-credit'`,
             [userId],
+          ),
+          (error) => error?.code === "23514",
+        );
+
+        await assert.rejects(
+          client.query(`UPDATE catalog.offers SET price=0 WHERE id='offer.viking'`),
+          (error) => error?.code === "23514",
+        );
+
+        await assert.rejects(
+          client.query(
+            `UPDATE catalog.credit_packs SET price_brl_cents=0 WHERE id='credits.500'`,
           ),
           (error) => error?.code === "23514",
         );

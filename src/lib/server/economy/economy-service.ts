@@ -1,35 +1,56 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
 import type {
   CampaignCreditWallet,
   CosmeticCatalogItem,
   CosmeticLoadout,
   CosmeticSet,
   CosmeticSlot,
+  EconomyCreditPack,
+  EconomyOffer,
   EconomyStorefrontSnapshot,
   EquipCosmeticInput,
+  PurchaseOfferInput,
+  PurchaseOfferResult,
 } from "@/src/lib/economy/economy-contract";
 import {
   COSMETIC_SLOTS,
   ECONOMY_CURRENCY_ID,
   isCosmeticSlot,
 } from "@/src/lib/economy/economy-contract";
-import {
-  diceAssetDeliveryPath,
-  territorySkinAssetDeliveryPath,
-} from "../assets/asset-storage-service";
+import { territorySkinAssetDeliveryPath } from "../../economy/territory-skin-contract";
+import { diceAssetDeliveryPath } from "../assets/asset-storage-service";
 import { pool } from "../db/pool";
 import {
+  createPurchaseReceipt,
+  debitCampaignCreditWallet,
   equipOwnedCosmetic,
   findCampaignCreditWallet,
   findOwnedCosmetic,
+  findPurchasableOffer,
+  findPurchaseReceiptByIdempotencyKey,
+  grantPurchasedCosmetics,
   initializeEconomyState,
+  insertPurchaseLedgerEntry,
+  listOfferItemsForPurchase,
   listOwnedCosmetics,
+  listPurchaseGrantedItems,
   listStorefrontSetItems,
+  lockCampaignCreditWallet,
   lockCommanderEconomyState,
   type CosmeticRow,
   type EconomyQueryable,
+  type WalletRow,
 } from "./economy-repository";
+import {
+  listStorefrontCreditPacks,
+  listStorefrontOfferItems,
+  listStorefrontOffers,
+  type CreditPackRow,
+  type StorefrontOfferItemRow,
+  type StorefrontOfferRow,
+} from "./economy-storefront-repository";
 
 export class EconomyServiceError extends Error {
   constructor(
@@ -44,17 +65,11 @@ export class EconomyServiceError extends Error {
 
 function projectedAssetRef(row: CosmeticRow) {
   if (!row.asset_ref) return null;
-  if (
-    row.slot !== "territory_effect" &&
-    row.asset_ref.startsWith("cosmetics/dice/")
-  ) {
-    return diceAssetDeliveryPath(row.asset_ref);
-  }
-  if (
-    row.slot === "territory_effect" &&
-    row.asset_ref.startsWith("cosmetics/territory-skins/")
-  ) {
+  if (row.slot === "territory_effect") {
     return territorySkinAssetDeliveryPath(row.asset_ref);
+  }
+  if (row.asset_ref.startsWith("cosmetics/dice/")) {
+    return diceAssetDeliveryPath(row.asset_ref);
   }
   return row.asset_ref;
 }
@@ -77,9 +92,7 @@ function cosmeticFromRow(row: CosmeticRow): CosmeticCatalogItem {
   };
 }
 
-function walletFromRow(
-  row: Awaited<ReturnType<typeof findCampaignCreditWallet>>,
-): CampaignCreditWallet {
+function walletFromRow(row: WalletRow | null): CampaignCreditWallet {
   if (!row) {
     throw new EconomyServiceError(
       "ECONOMY_WALLET_MISSING",
@@ -104,6 +117,18 @@ function walletFromRow(
     symbol: "◈",
     balance,
   };
+}
+
+function positiveAmount(value: string, errorCode: string) {
+  const amount = Number(value);
+  if (!Number.isSafeInteger(amount) || amount <= 0) {
+    throw new EconomyServiceError(
+      errorCode,
+      "O catálogo econômico contém um valor monetário inválido.",
+      503,
+    );
+  }
+  return amount;
 }
 
 function loadoutFromOwned(rows: CosmeticRow[]): CosmeticLoadout {
@@ -151,6 +176,57 @@ function setsFromRows(
   }
 
   return [...grouped.values()];
+}
+
+function offersFromRows(
+  offerRows: StorefrontOfferRow[],
+  itemRows: StorefrontOfferItemRow[],
+): EconomyOffer[] {
+  const itemsByOffer = new Map<string, CosmeticCatalogItem[]>();
+  for (const row of itemRows) {
+    const current = itemsByOffer.get(row.offer_id) ?? [];
+    current.push(cosmeticFromRow(row));
+    itemsByOffer.set(row.offer_id, current);
+  }
+
+  return offerRows.map((row) => {
+    const items = itemsByOffer.get(row.id) ?? [];
+    const ownedCount = items.filter((item) => item.owned).length;
+    const totalCount = items.length;
+    const fullyOwned = totalCount > 0 && ownedCount === totalCount;
+    const partiallyOwned = ownedCount > 0 && !fullyOwned;
+    const catalogEligible =
+      totalCount > 0 &&
+      items.every((item) => item.status === "available" && !item.isDefault);
+
+    return {
+      id: row.id,
+      slug: row.slug,
+      name: row.name,
+      description: row.description,
+      currency: ECONOMY_CURRENCY_ID,
+      price: positiveAmount(row.price, "ECONOMY_CATALOG_INVALID"),
+      status: row.status,
+      featured: row.is_featured,
+      items,
+      ownedCount,
+      totalCount,
+      fullyOwned,
+      partiallyOwned,
+      purchasable: row.status === "available" && catalogEligible && !fullyOwned,
+    };
+  });
+}
+
+function creditPacksFromRows(rows: CreditPackRow[]): EconomyCreditPack[] {
+  return rows.map((row) => ({
+    id: row.id,
+    slug: row.slug,
+    name: row.name,
+    creditAmount: positiveAmount(row.credit_amount, "ECONOMY_CATALOG_INVALID"),
+    priceBrlCents: positiveAmount(row.price_brl_cents, "ECONOMY_CATALOG_INVALID"),
+    status: row.status,
+  }));
 }
 
 async function ensureLockedEconomyState(
@@ -204,12 +280,17 @@ export async function getEconomyStorefront(
     const walletRow = await findCampaignCreditWallet(userId, client);
     const ownedRows = await listOwnedCosmetics(userId, client);
     const setRows = await listStorefrontSetItems(userId, client);
+    const offerRows = await listStorefrontOffers(client);
+    const offerItemRows = await listStorefrontOfferItems(userId, client);
+    const creditPackRows = await listStorefrontCreditPacks(client);
 
     const snapshot = {
       wallet: walletFromRow(walletRow),
       loadout: loadoutFromOwned(ownedRows),
       ownedItems: ownedRows.map(cosmeticFromRow),
       sets: setsFromRows(setRows),
+      offers: offersFromRows(offerRows, offerItemRows),
+      creditPacks: creditPacksFromRows(creditPackRows),
     } satisfies EconomyStorefrontSnapshot;
 
     await client.query("COMMIT");
@@ -223,7 +304,7 @@ export async function getEconomyStorefront(
 }
 
 export function parseEquipCosmeticInput(payload: unknown): EquipCosmeticInput {
-  if (!payload || typeof payload !== "object") {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
     throw new EconomyServiceError(
       "ECONOMY_INVALID_SELECTION",
       "Seleção de cosmético inválida.",
@@ -242,6 +323,194 @@ export function parseEquipCosmeticInput(payload: unknown): EquipCosmeticInput {
   }
 
   return { slot: input.slot, cosmeticId };
+}
+
+export function parsePurchaseOfferInput(payload: unknown): PurchaseOfferInput {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    throw new EconomyServiceError(
+      "ECONOMY_INVALID_PURCHASE",
+      "Solicitação de compra inválida.",
+      400,
+    );
+  }
+
+  const input = payload as Record<string, unknown>;
+  const keys = Object.keys(input);
+  const hasOnlyAllowedFields =
+    keys.length === 2 &&
+    keys.every((key) => key === "offerId" || key === "idempotencyKey");
+  const offerId = typeof input.offerId === "string" ? input.offerId.trim() : "";
+  const idempotencyKey =
+    typeof input.idempotencyKey === "string" ? input.idempotencyKey.trim() : "";
+
+  if (
+    !hasOnlyAllowedFields ||
+    !offerId ||
+    offerId.length > 160 ||
+    !/^[A-Za-z0-9][A-Za-z0-9._:-]{7,127}$/.test(idempotencyKey)
+  ) {
+    throw new EconomyServiceError(
+      "ECONOMY_INVALID_PURCHASE",
+      "Offer ou chave de idempotência inválida.",
+      400,
+    );
+  }
+
+  return { offerId, idempotencyKey };
+}
+
+export async function purchaseOffer(
+  userId: string,
+  offerId: string,
+  idempotencyKey: string,
+): Promise<PurchaseOfferResult> {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+    await ensureLockedEconomyState(userId, client);
+
+    const lockedWallet = await lockCampaignCreditWallet(userId, client);
+    const wallet = walletFromRow(lockedWallet);
+
+    const existing = await findPurchaseReceiptByIdempotencyKey(
+      userId,
+      idempotencyKey,
+      client,
+    );
+    if (existing) {
+      if (existing.offer_id !== offerId) {
+        throw new EconomyServiceError(
+          "ECONOMY_IDEMPOTENCY_CONFLICT",
+          "A chave de idempotência já foi usada em outra compra.",
+          409,
+        );
+      }
+
+      const acquiredRows = await listPurchaseGrantedItems(userId, existing.id, client);
+      const result = {
+        purchaseId: existing.id,
+        wallet,
+        acquiredItems: acquiredRows.map(cosmeticFromRow),
+        offer: {
+          id: existing.offer_id,
+          ownedCount: existing.offer_item_count,
+          totalCount: existing.offer_item_count,
+          fullyOwned: true,
+        },
+      } satisfies PurchaseOfferResult;
+      await client.query("COMMIT");
+      return result;
+    }
+
+    const offer = await findPurchasableOffer(offerId, client);
+    if (!offer) {
+      throw new EconomyServiceError(
+        "ECONOMY_OFFER_NOT_FOUND",
+        "A oferta solicitada não existe.",
+        404,
+      );
+    }
+    if (offer.status !== "available") {
+      throw new EconomyServiceError(
+        "ECONOMY_OFFER_UNAVAILABLE",
+        "A oferta não está disponível para compra.",
+        409,
+      );
+    }
+    if (offer.currency_code !== ECONOMY_CURRENCY_ID) {
+      throw new EconomyServiceError(
+        "ECONOMY_CATALOG_INVALID",
+        "A oferta possui configuração econômica inválida.",
+        503,
+      );
+    }
+
+    const offerItems = await listOfferItemsForPurchase(userId, offer.id, client);
+    if (
+      offerItems.length === 0 ||
+      offerItems.some((item) => item.status !== "available" || item.is_default)
+    ) {
+      throw new EconomyServiceError(
+        "ECONOMY_CATALOG_INVALID",
+        "A composição da oferta está inconsistente.",
+        503,
+      );
+    }
+
+    const missingItems = offerItems.filter((item) => !item.owned);
+    if (missingItems.length === 0) {
+      throw new EconomyServiceError(
+        "ECONOMY_OFFER_ALREADY_OWNED",
+        "Todos os cosméticos desta oferta já pertencem ao comandante.",
+        409,
+      );
+    }
+
+    const price = positiveAmount(offer.price, "ECONOMY_CATALOG_INVALID");
+    if (wallet.balance < price) {
+      throw new EconomyServiceError(
+        "ECONOMY_INSUFFICIENT_BALANCE",
+        "Saldo insuficiente para concluir esta compra.",
+        409,
+      );
+    }
+
+    const purchaseId = randomUUID();
+    await createPurchaseReceipt(
+      purchaseId,
+      userId,
+      offer.id,
+      price,
+      offerItems.length,
+      idempotencyKey,
+      client,
+    );
+
+    const updatedBalance = await debitCampaignCreditWallet(userId, price, client);
+    if (updatedBalance === null) {
+      throw new EconomyServiceError(
+        "ECONOMY_WALLET_CONFLICT",
+        "A carteira mudou durante a compra. Nenhuma alteração foi confirmada.",
+        409,
+      );
+    }
+
+    await insertPurchaseLedgerEntry(userId, purchaseId, price, client);
+    const grantedIds = await grantPurchasedCosmetics(
+      userId,
+      purchaseId,
+      missingItems,
+      client,
+    );
+    if (grantedIds.length !== missingItems.length) {
+      throw new EconomyServiceError(
+        "ECONOMY_INVENTORY_CONFLICT",
+        "O inventário mudou durante a compra. Nenhuma alteração foi confirmada.",
+        409,
+      );
+    }
+
+    const acquiredRows = await listPurchaseGrantedItems(userId, purchaseId, client);
+    const result = {
+      purchaseId,
+      wallet: walletFromRow({ ...lockedWallet!, balance: updatedBalance }),
+      acquiredItems: acquiredRows.map(cosmeticFromRow),
+      offer: {
+        id: offer.id,
+        ownedCount: offerItems.length,
+        totalCount: offerItems.length,
+        fullyOwned: true,
+      },
+    } satisfies PurchaseOfferResult;
+
+    await client.query("COMMIT");
+    return result;
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 export async function equipCosmetic(
@@ -271,10 +540,10 @@ export async function equipCosmetic(
       );
     }
 
-    if (item.status !== "available") {
+    if (item.status !== "available" && item.status !== "retired") {
       throw new EconomyServiceError(
         "ECONOMY_COSMETIC_NOT_EQUIPPABLE",
-        "Esse cosmético não está disponível para nova equipagem.",
+        "Esse cosmético não está disponível para equipagem.",
         409,
       );
     }

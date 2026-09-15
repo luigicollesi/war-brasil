@@ -115,6 +115,26 @@ function StationFrame({
   );
 }
 
+function CampaignCreditMark({ compact }: { compact: boolean }) {
+  const size = compact ? 24 : 28;
+  return (
+    <span
+      aria-hidden="true"
+      data-campaign-credit-mark="true"
+      style={{
+        display: "inline-block",
+        width: size,
+        height: size,
+        flex: `0 0 ${size}px`,
+        backgroundImage: 'url("/coin.svg")',
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+        backgroundSize: "contain",
+      }}
+    />
+  );
+}
+
 function TreasuryReadout({
   snapshot,
   compact = false,
@@ -142,8 +162,21 @@ function TreasuryReadout({
   if (compact) {
     return (
       <span className={styles.walletCompact}>
-        <span key={currency.currency} data-currency={currency.currency}>
-          <span className={styles.currencySymbol} aria-hidden="true">{currency.symbol}</span>
+        <span
+          key={currency.currency}
+          data-currency={currency.currency}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 9,
+            minWidth: 112,
+            minHeight: 42,
+            padding: "5px 12px",
+            borderLeft: "1px solid rgb(238 232 218 / 8%)",
+            background: "rgb(5 10 7 / 48%)",
+          }}
+        >
+          <CampaignCreditMark compact />
           <span>
             <small>{currency.shortLabel}</small>
             <strong>{formatBalance(currency.balance)}</strong>
@@ -156,7 +189,7 @@ function TreasuryReadout({
   return (
     <div className={styles.walletExpanded}>
       <div data-currency={currency.currency}>
-        <span className={styles.currencySymbol} aria-hidden="true">{currency.symbol}</span>
+        <CampaignCreditMark compact={false} />
         <span>
           <small>{currency.label}</small>
           <strong>{formatBalance(currency.balance)}</strong>
@@ -226,7 +259,7 @@ function CommandTable({
         kicker: "Tesouraria aberta",
         title: "Créditos de Campanha",
         detail: currency
-          ? `${currency.symbol} ${formatBalance(currency.balance)}`
+          ? `${formatBalance(currency.balance)} créditos disponíveis`
           : "Sem saldo disponível",
         glyph: "¤",
       };
