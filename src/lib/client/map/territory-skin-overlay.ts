@@ -50,6 +50,10 @@ function ensureDefs(document: Document) {
   return defs;
 }
 
+function overlaySelector(id: number) {
+  return `path.territory-skin-overlay[data-territory-id="${id}"]`;
+}
+
 function removeTerritorySkinOverlaysForAsset(
   document: Document,
   assetRef: string,
@@ -67,10 +71,16 @@ export function syncTerritorySkinSurfaceState(
   surfaceState: TerritorySkinSurfaceState,
 ) {
   const opacity = SKIN_OVERLAY_OPACITY_BY_SURFACE_STATE[surfaceState];
-  nodes.face.parentElement?.style.setProperty(
-    SKIN_OVERLAY_OPACITY_PROPERTY,
-    opacity,
+  nodes.face.style.setProperty(SKIN_OVERLAY_OPACITY_PROPERTY, opacity);
+
+  const id = Number(nodes.face.dataset.id);
+  if (!Number.isInteger(id)) return;
+  const overlay = nodes.face.ownerDocument.querySelector<SVGPathElement>(
+    overlaySelector(id),
   );
+  if (overlay && overlay.style.opacity !== opacity) {
+    overlay.style.opacity = opacity;
+  }
 }
 
 export function ensureTerritorySkinPattern(
@@ -122,10 +132,6 @@ export function ensureTerritorySkinPattern(
   return id;
 }
 
-function overlaySelector(id: number) {
-  return `path.territory-skin-overlay[data-territory-id="${id}"]`;
-}
-
 function removeTerritorySkinOverlay(id: number, document: Document) {
   document.querySelector<SVGPathElement>(overlaySelector(id))?.remove();
 }
@@ -155,7 +161,9 @@ export function applyTerritorySkinOverlay(
     overlay.setAttribute("aria-hidden", "true");
     overlay.setAttribute("pointer-events", "none");
     overlay.style.pointerEvents = "none";
-    overlay.style.opacity = `var(${SKIN_OVERLAY_OPACITY_PROPERTY}, ${SKIN_OVERLAY_OPACITY_BY_SURFACE_STATE.normal})`;
+    overlay.style.opacity =
+      nodes.face.style.getPropertyValue(SKIN_OVERLAY_OPACITY_PROPERTY) ||
+      SKIN_OVERLAY_OPACITY_BY_SURFACE_STATE.normal;
     // The texture contributes luminosity only. PlayerColor and the semantic
     // surface fill remain the authoritative hue/saturation channels beneath it.
     overlay.style.mixBlendMode = "luminosity";
