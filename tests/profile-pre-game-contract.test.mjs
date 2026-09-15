@@ -120,7 +120,9 @@ test("Intendência V4 consome o domínio Economy e não cria autoridade comercia
 
   assert.match(page, /getEconomyStorefront\(session\.user\.id\)/);
   assert.match(store, /EconomyStorefrontSnapshot/);
-  assert.match(store, /storefront\.sets/);
+  assert.match(store, /EconomyOffer/);
+  assert.match(store, /storefront\.offers/);
+  assert.match(store, /storefront\.creditPacks/);
   assert.doesNotMatch(profileContract, /\bprice\s*:/);
   assert.doesNotMatch(profileContract, /StoreItemCategory = [^\n]*portrait/i);
   assert.doesNotMatch(store, /userId/);
@@ -164,7 +166,7 @@ test("desktop e mobile possuem composição V4 dedicada", () => {
   assert.match(shellCss, /grid-template-columns: repeat\(3, 1fr\)/);
   assert.match(dossierCss, /@media \(max-width: 520px\)/);
   assert.match(arsenalCss, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
-  assert.match(storeCss, /@media \(max-width: 620px\)/);
+  assert.match(storeCss, /@media \(max-width: 520px\)/);
 });
 
 test("reduced-motion e forced-colors permanecem explícitos na V4", () => {
