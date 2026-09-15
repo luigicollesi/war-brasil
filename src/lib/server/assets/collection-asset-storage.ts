@@ -1,7 +1,12 @@
 import "server-only";
 
+import type { AssetStorageConfig } from "./asset-storage-config";
 import { AssetStorageConfigError } from "./asset-storage-config";
-import { createPresignedAssetUrl } from "./asset-storage-s3";
+import {
+  createPresignedAssetUrl,
+  validateWebPAssetObject,
+  type WebPAssetObjectMetadata,
+} from "./asset-storage-s3";
 import { getAssetStorageConfig } from "./asset-storage-service";
 
 const COLLECTION_ASSET_KEY_PATTERN =
@@ -41,5 +46,23 @@ export function resolveCollectionAssetReadUrl(
       expiresInSeconds: options?.expiresInSeconds,
       now: options?.now,
     },
+  );
+}
+
+export async function validateCollectionAssetObject(
+  config: AssetStorageConfig,
+  objectKey: string,
+  fetchImpl: typeof fetch = fetch,
+): Promise<WebPAssetObjectMetadata> {
+  return validateWebPAssetObject(
+    config,
+    objectKey,
+    {
+      assertKey: assertCollectionAssetKey,
+      unavailableCode: "COLLECTION_ASSET_NOT_AVAILABLE",
+      contentTypeCode: "COLLECTION_ASSET_CONTENT_TYPE_INVALID",
+      label: "O asset editorial da coleção",
+    },
+    fetchImpl,
   );
 }
