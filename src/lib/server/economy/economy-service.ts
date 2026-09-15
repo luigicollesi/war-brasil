@@ -65,7 +65,7 @@ export class EconomyServiceError extends Error {
 
 function projectedAssetRef(row: CosmeticRow) {
   if (!row.asset_ref) return null;
-  if (row.slot === "territory_effect") {
+  if (row.slot === "territory_skin") {
     return territorySkinAssetDeliveryPath(row.asset_ref);
   }
   if (row.asset_ref.startsWith("cosmetics/dice/")) {
