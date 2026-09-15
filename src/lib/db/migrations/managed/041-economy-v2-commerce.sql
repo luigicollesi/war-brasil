@@ -37,9 +37,11 @@ CREATE TABLE IF NOT EXISTS economy.purchases (
   offer_id TEXT NOT NULL REFERENCES catalog.offers(id) ON DELETE RESTRICT,
   currency_code TEXT NOT NULL,
   price_paid BIGINT NOT NULL,
+  offer_item_count SMALLINT NOT NULL,
   idempotency_key TEXT NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CONSTRAINT economy_purchases_price_check CHECK (price_paid > 0),
+  CONSTRAINT economy_purchases_offer_item_count_check CHECK (offer_item_count > 0),
   CONSTRAINT economy_purchases_currency_check CHECK (currency_code = 'campaign-credit'),
   CONSTRAINT economy_purchases_idempotency_key_check
     CHECK (char_length(btrim(idempotency_key)) BETWEEN 8 AND 128),
@@ -160,7 +162,7 @@ COMMENT ON TABLE catalog.offers IS
 COMMENT ON TABLE catalog.offer_items IS
   'Individual cosmetics granted by one offer. Offers never create ownership of sets.';
 COMMENT ON TABLE economy.purchases IS
-  'Confirmed Economy V2 purchase receipts. price_paid preserves historical commercial value.';
+  'Confirmed Economy V2 purchase receipts. price_paid and offer_item_count preserve historical commercial value.';
 COMMENT ON TABLE economy.purchase_items IS
   'Items actually granted by a confirmed purchase, retained for exact idempotent replay.';
 COMMENT ON TABLE catalog.credit_packs IS
