@@ -8,7 +8,6 @@ import {
   type CommandPlayer,
 } from "@/src/lib/game-command-player";
 import type { GameCommandRequestMetadata } from "@/src/lib/game-command-request";
-import { objectiveWon } from "@/src/lib/game-objective-service";
 import {
   nextOrderRollPlayerId,
   type OrderPlayer,
@@ -16,6 +15,7 @@ import {
 } from "@/src/lib/game-order-rules";
 import { advanceGameRound } from "@/src/lib/game-round-service";
 import { isOrderRollActorAvailable } from "@/src/lib/game-transitions";
+import { evaluateGameVictory } from "@/src/lib/server/game-victory-service";
 import { RoomError } from "@/src/lib/rooms";
 import { executePlayerTradeAction } from "./game-player-trade-service";
 import { beginPlayerTurnPhase } from "./game-turn-service";
@@ -143,7 +143,7 @@ async function drawCard(
   }
 }
 
-async function evaluateRoundTroopObjectiveWinners(
+async function evaluateRoundTroopWinners(
   client: PoolClient,
   roomId: string,
 ) {
@@ -158,7 +158,9 @@ async function evaluateRoundTroopObjectiveWinners(
   ).rows;
 
   for (const candidate of players) {
-    if (await objectiveWon(client, roomId, candidate.id, "troops_changed")) {
+    if (
+      await evaluateGameVictory(client, roomId, candidate.id, "troops_changed")
+    ) {
       return true;
     }
   }
@@ -331,7 +333,7 @@ export async function executePhaseAction(
 
     if (
       roundActivation.appliedTroopChanges.some((change) => change.delta > 0) &&
-      (await evaluateRoundTroopObjectiveWinners(client, room.id))
+      (await evaluateRoundTroopWinners(client, room.id))
     ) {
       return null;
     }
