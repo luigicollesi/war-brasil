@@ -1,3 +1,4 @@
+import type { TerritorySkinRender } from "../economy/territory-skin-contract";
 import type { AttackMode } from "./game-barrier-rules";
 import type { CardSymbol } from "./game-config";
 import type { TradeCardDescriptor } from "./game-trade-rules";
@@ -55,7 +56,7 @@ export type GamePlayerCosmetics = {
   diceAttack: GameCosmeticSelection;
   diceDefense: GameCosmeticSelection;
   diceNeutral: GameCosmeticSelection;
-  territoryEffect: GameCosmeticSelection;
+  territoryEffect: TerritorySkinRender;
 };
 
 export type GamePlayer = {
