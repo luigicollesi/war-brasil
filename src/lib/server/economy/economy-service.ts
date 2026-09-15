@@ -19,6 +19,7 @@ import {
   ECONOMY_CURRENCY_ID,
   isCosmeticSlot,
 } from "@/src/lib/economy/economy-contract";
+import { territorySkinAssetDeliveryPath } from "../../economy/territory-skin-contract";
 import { diceAssetDeliveryPath } from "../assets/asset-storage-service";
 import { pool } from "../db/pool";
 import {
@@ -64,10 +65,10 @@ export class EconomyServiceError extends Error {
 
 function projectedAssetRef(row: CosmeticRow) {
   if (!row.asset_ref) return null;
-  if (
-    row.slot !== "territory_effect" &&
-    row.asset_ref.startsWith("cosmetics/dice/")
-  ) {
+  if (row.slot === "territory_effect") {
+    return territorySkinAssetDeliveryPath(row.asset_ref);
+  }
+  if (row.asset_ref.startsWith("cosmetics/dice/")) {
     return diceAssetDeliveryPath(row.asset_ref);
   }
   return row.asset_ref;

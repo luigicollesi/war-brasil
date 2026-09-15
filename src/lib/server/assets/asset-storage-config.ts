@@ -1,3 +1,5 @@
+import { isTerritorySkinAssetKey as isCanonicalTerritorySkinAssetKey } from "../../economy/territory-skin-contract";
+
 export const ASSET_STORAGE_ENV = "ASSET_STORAGE_URL" as const;
 export const ASSET_STORAGE_BUCKET = "war-brasil-assets-prod" as const;
 export const ASSET_STORAGE_REGION = "auto" as const;
@@ -156,6 +158,20 @@ export function assertDiceAssetKey(value: string): string {
     return configError(
       "DICE_ASSET_KEY_INVALID",
       "A referência de dado deve apontar para attack.webp, defense.webp ou neutral.webp no namespace cosmetics/dice/.",
+    );
+  }
+  return value;
+}
+
+export function isTerritorySkinAssetKey(value: string): boolean {
+  return isCanonicalTerritorySkinAssetKey(value);
+}
+
+export function assertTerritorySkinAssetKey(value: string): string {
+  if (!isTerritorySkinAssetKey(value)) {
+    return configError(
+      "TERRITORY_SKIN_ASSET_KEY_INVALID",
+      "A referência de territory skin deve apontar para um WebP no namespace cosmetics/territory-skins/.",
     );
   }
   return value;
