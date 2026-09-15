@@ -16,11 +16,42 @@ const DATABASE_URL = process.env.LOBBY_E2E_DATABASE_URL ?? process.env.DATABASE_
 const ARTIFACT_DIR = path.resolve(
   process.env.ECONOMY_GAME_E2E_ARTIFACT_DIR ?? "test-results/economy-game-eval",
 );
+const FAKE_WEBP = Buffer.from(
+  "UklGRhoAAABXRUJQVlA4TA0AAAAvB8ABEAcQERGIiP4HAA==",
+  "base64",
+);
+const R2_ASSET_PATTERN =
+  /^https:\/\/[^/]+\.r2\.cloudflarestorage\.com\/war-brasil-assets-prod\/cosmetics\/dice\/[^?]+\.webp\?/;
 
 if (!DATABASE_URL) throw new Error("DATABASE_URL E2E é obrigatória.");
 mkdirSync(ARTIFACT_DIR, { recursive: true });
 
 let actorSequence = 0;
+
+async function installR2Mock(context) {
+  await context.route(R2_ASSET_PATTERN, async (route) => {
+    const url = new URL(route.request().url());
+    const marker = "/war-brasil-assets-prod/";
+    const markerIndex = url.pathname.indexOf(marker);
+    assert.ok(markerIndex >= 0, `path R2 inesperado: ${url.pathname}`);
+    const objectKey = decodeURIComponent(url.pathname.slice(markerIndex + marker.length));
+    assert.match(
+      objectKey,
+      /^cosmetics\/dice\/[a-z0-9]+(?:-[a-z0-9]+)*\/(attack|defense|neutral)\.webp$/,
+    );
+    assert.equal(url.searchParams.get("X-Amz-Algorithm"), "AWS4-HMAC-SHA256");
+    assert.match(url.searchParams.get("X-Amz-Signature") ?? "", /^[a-f0-9]{64}$/);
+    await route.fulfill({
+      status: 200,
+      contentType: "image/webp",
+      body: FAKE_WEBP,
+    });
+  });
+}
+
+function expectedDeliveryPath(objectKey) {
+  return `/api/assets/dice?key=${encodeURIComponent(objectKey)}`;
+}
 
 async function apiJson(page, url, init = {}) {
   return page.evaluate(
@@ -69,6 +100,7 @@ async function createActor(browser, label) {
     reducedMotion: "reduce",
     extraHTTPHeaders: { "x-forwarded-for": `198.51.100.${70 + actorSequence}` },
   });
+  await installR2Mock(context);
   const page = await context.newPage();
 
   await page.goto(`${BASE_URL}/robots.txt`, { waitUntil: "domcontentloaded" });
@@ -194,6 +226,8 @@ function assertNoPrivateEconomyLeak(snapshot) {
     "acquisition_source",
     "user_id",
     "userId",
+    "ASSET_STORAGE_URL",
+    "E2ESECRETKEY",
   ]) {
     assert.equal(
       serialized.includes(forbidden),
@@ -234,6 +268,7 @@ async function reconnectSnapshot(browser, actor, roomId, forwardedIp) {
     reducedMotion: "reduce",
     extraHTTPHeaders: { "x-forwarded-for": forwardedIp },
   });
+  await installR2Mock(context);
   try {
     const page = await context.newPage();
     await page.goto(`${BASE_URL}/robots.txt`, { waitUntil: "domcontentloaded" });
@@ -335,14 +370,27 @@ async function captureBattleEvidence(page, roomId) {
 
   const attackSrc = await modal.locator(".battle-side--attack img").first().getAttribute("src");
   const defenseSrc = await modal.locator(".battle-side--defense img").first().getAttribute("src");
-  assert.ok(
-    attackSrc?.includes("/dados/exercito/ataque.svg"),
+  assert.equal(
+    attackSrc,
+    expectedDeliveryPath("cosmetics/dice/military-classic/attack.webp"),
     `dado visual de ataque incorreto: ${attackSrc}`,
   );
-  assert.ok(
-    defenseSrc?.includes("/dados/lancas/defesa.svg"),
+  assert.equal(
+    defenseSrc,
+    expectedDeliveryPath("cosmetics/dice/medieval-spears/defense.webp"),
     `dado visual de defesa incorreto: ${defenseSrc}`,
   );
+
+  await modal.locator(".battle-side--attack img").first().evaluate((image) => {
+    if (!(image instanceof HTMLImageElement) || !image.complete || image.naturalWidth <= 0) {
+      throw new Error("dado WebP de ataque não carregou");
+    }
+  });
+  await modal.locator(".battle-side--defense img").first().evaluate((image) => {
+    if (!(image instanceof HTMLImageElement) || !image.complete || image.naturalWidth <= 0) {
+      throw new Error("dado WebP de defesa não carregou");
+    }
+  });
 
   await modal.screenshot({
     path: path.join(ARTIFACT_DIR, "battle-distinct-skins-1440x900.png"),
@@ -390,6 +438,18 @@ function assertDefaultBotCosmetics(snapshot) {
     assert.equal(bot.cosmetics.diceDefense.cosmeticId, "dice.defense.default");
     assert.equal(bot.cosmetics.diceNeutral.cosmeticId, "dice.neutral.default");
     assert.equal(bot.cosmetics.territoryEffect.cosmeticId, "territory.effect.default");
+    assert.equal(
+      bot.cosmetics.diceAttack.assetRef,
+      expectedDeliveryPath("cosmetics/dice/default/attack.webp"),
+    );
+    assert.equal(
+      bot.cosmetics.diceDefense.assetRef,
+      expectedDeliveryPath("cosmetics/dice/default/defense.webp"),
+    );
+    assert.equal(
+      bot.cosmetics.diceNeutral.assetRef,
+      expectedDeliveryPath("cosmetics/dice/default/neutral.webp"),
+    );
   }
 }
 
@@ -445,11 +505,20 @@ try {
     const hostPublic = hostInitial.players.find((player) => player.id === hostPlayerId);
     const guestPublic = hostInitial.players.find((player) => player.id === guestPlayerId);
     assert.equal(hostPublic?.cosmetics?.diceAttack?.cosmeticId, "dice.attack.exercito");
-    assert.equal(hostPublic?.cosmetics?.diceAttack?.assetRef, "/dados/exercito/ataque.svg");
+    assert.equal(
+      hostPublic?.cosmetics?.diceAttack?.assetRef,
+      expectedDeliveryPath("cosmetics/dice/military-classic/attack.webp"),
+    );
     assert.equal(hostPublic?.cosmetics?.diceNeutral?.cosmeticId, "dice.neutral.viking");
-    assert.equal(hostPublic?.cosmetics?.diceNeutral?.assetRef, "/dados/viking/neutro.svg");
+    assert.equal(
+      hostPublic?.cosmetics?.diceNeutral?.assetRef,
+      expectedDeliveryPath("cosmetics/dice/viking/neutral.webp"),
+    );
     assert.equal(guestPublic?.cosmetics?.diceDefense?.cosmeticId, "dice.defense.lancas");
-    assert.equal(guestPublic?.cosmetics?.diceDefense?.assetRef, "/dados/lancas/defesa.svg");
+    assert.equal(
+      guestPublic?.cosmetics?.diceDefense?.assetRef,
+      expectedDeliveryPath("cosmetics/dice/medieval-spears/defense.webp"),
+    );
 
     const frozen = publicCosmetics(hostInitial);
     writeFileSync(
@@ -491,6 +560,20 @@ try {
       [[hostPlayerId, guestPlayerId]],
     );
     assert.equal(persisted.rows.length, 8, "snapshot persistido deveria ter quatro slots por jogador");
+    const persistedAttack = persisted.rows.find(
+      (row) => row.player_id === hostPlayerId && row.slot === "dice_attack",
+    );
+    const persistedDefense = persisted.rows.find(
+      (row) => row.player_id === guestPlayerId && row.slot === "dice_defense",
+    );
+    assert.equal(persistedAttack?.asset_ref, "cosmetics/dice/military-classic/attack.webp");
+    assert.equal(persistedDefense?.asset_ref, "cosmetics/dice/medieval-spears/defense.webp");
+    for (const row of persisted.rows.filter((row) => row.slot.startsWith("dice_"))) {
+      assert.match(
+        row.asset_ref ?? "",
+        /^cosmetics\/dice\/[a-z0-9]+(?:-[a-z0-9]+)*\/(attack|defense|neutral)\.webp$/,
+      );
+    }
     writeFileSync(
       path.join(ARTIFACT_DIR, "persisted-cosmetics.json"),
       `${JSON.stringify(persisted.rows, null, 2)}\n`,
@@ -533,7 +616,7 @@ try {
     await captureBattleEvidence(host.page, state.id);
 
     console.log(
-      "[economy-game-e2e] ok — multi-client, profile drift, reconnect e batalha visual preservaram snapshot congelado",
+      "[economy-game-e2e] ok — multi-client, profile drift, reconnect e batalha WebP preservaram snapshot congelado",
     );
   } finally {
     await host.context.close();
@@ -601,7 +684,7 @@ try {
 
     await captureSixColorBoard(sixHost.page, state.id);
     console.log(
-      "[economy-game-e2e] ok — 2 humanos + 4 bots preservaram seis PlayerColor e defaults visuais",
+      "[economy-game-e2e] ok — 2 humanos + 4 bots preservaram seis PlayerColor e defaults WebP",
     );
   } finally {
     await sixHost.context.close();
