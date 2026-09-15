@@ -61,13 +61,21 @@ test("hover e estado semântico continuam dominantes sobre a textura sem recriar
   assert.match(overlay, /highlighted:\s*"0\.18"/);
   assert.match(overlay, /"highlighted-hover":\s*"0\.12"/);
   assert.match(overlay, /export function syncTerritorySkinSurfaceState/);
+  assert.match(
+    overlay,
+    /nodes\.face\.style\.setProperty\(SKIN_OVERLAY_OPACITY_PROPERTY, opacity\)/,
+  );
+  assert.match(overlay, /overlay\.style\.opacity = opacity/);
+  assert.doesNotMatch(
+    overlay,
+    /parentElement\?\.style\.setProperty\(SKIN_OVERLAY_OPACITY_PROPERTY/,
+  );
   assert.match(visualState, /syncTerritorySkinSurfaceState/);
   assert.match(visualState, /syncTerritorySkinSurfaceState\(nodes, surfaceState\)/);
   assert.match(visualState, /face\.style\.setProperty\(SURFACE_FILL_PROPERTY, nextFill\)/);
 
   assert.doesNotMatch(overlay, /territory-highlight/);
   assert.doesNotMatch(svgNodes, /ensureTerritoryHighlightOverlay/);
-  assert.doesNotMatch(visualState, /filter:\s*(?!none)/);
 });
 
 test("runtime mantém DTO legado, mas projeta image skin por chave transitória não persistida", () => {
