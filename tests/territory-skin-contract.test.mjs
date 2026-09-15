@@ -79,17 +79,19 @@ test("image territory skin aceita somente object key WebP canônica", () => {
   }
 });
 
-test("bridge transitório round-tripa somente delivery path interno válido", () => {
+test("bridge transitório usa object key estável e resolve somente delivery path interno válido", () => {
   const snapshot = territorySkinSnapshot({
     cosmeticId: "territory.effect.azulejo-brasil",
     assetRef: IMAGE_KEY,
     effectKey: null,
   });
-  const runtimeKey = territorySkinRuntimeEffectKey(
-    snapshot,
-    (assetRef) => `/api/assets/territory-skins?key=${encodeURIComponent(assetRef)}`,
-  );
+  const runtimeKey = territorySkinRuntimeEffectKey(snapshot);
 
+  assert.equal(
+    runtimeKey,
+    `territory-image:${encodeURIComponent(IMAGE_KEY)}`,
+    "assinatura lógica não pode incorporar URL assinada ou URL de delivery renovável",
+  );
   assert.equal(
     territorySkinAssetRefFromRuntimeEffectKey(runtimeKey),
     `/api/assets/territory-skins?key=${encodeURIComponent(IMAGE_KEY)}`,
