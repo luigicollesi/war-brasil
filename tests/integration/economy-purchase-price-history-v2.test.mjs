@@ -51,7 +51,7 @@ async function prepareDatabase(connectionString) {
 if (!databaseUrl) {
   test("economy purchase price history exige DATABASE_URL", { skip: true }, () => {});
 } else {
-  test("receipt mantém price_paid após alteração do preço atual da offer", async () => {
+  test("receipt mantém snapshots comerciais após alteração do catálogo atual", async () => {
     await withTemporaryDatabase(async (connectionString) => {
       await prepareDatabase(connectionString);
       const db = new Client({ connectionString });
@@ -71,44 +71,96 @@ if (!databaseUrl) {
           [userId],
         );
 
-        const offer = await db.query(
-          `SELECT price::text AS price,
-                  (SELECT COUNT(*)::int FROM catalog.offer_items membership WHERE membership.offer_id=offer.id) AS item_count
+        const product = await db.query(
+          `SELECT offer.product_id,
+                  product.bundle_discount_bps,
+                  COUNT(membership.cosmetic_id)::int AS item_count,
+                  SUM(pricing.fixed_price)::bigint::text AS subtotal
              FROM catalog.offers offer
-            WHERE id='offer.viking'`,
+             JOIN catalog.products product ON product.id=offer.product_id
+             JOIN catalog.product_items membership ON membership.product_id=product.id
+             JOIN catalog.cosmetic_pricing pricing ON pricing.cosmetic_id=membership.cosmetic_id
+            WHERE offer.id='offer.viking'
+            GROUP BY offer.product_id,product.bundle_discount_bps`,
         );
-        assert.equal(offer.rowCount, 1);
-        const originalPrice = Number(offer.rows[0].price);
-        assert.ok(originalPrice > 0);
-        assert.ok(offer.rows[0].item_count > 0);
+        assert.equal(product.rowCount, 1);
+        const subtotal = Number(product.rows[0].subtotal);
+        const discountBps = product.rows[0].bundle_discount_bps;
+        const pricePaid = Math.floor((subtotal * (10_000 - discountBps)) / 10_000);
 
         const purchaseId = randomUUID();
         await db.query(
           `INSERT INTO economy.purchases(
-             id,user_id,offer_id,currency_code,price_paid,offer_item_count,idempotency_key
+             id,user_id,offer_id,currency_code,price_paid,offer_item_count,idempotency_key,
+             product_id,subtotal_price,discount_bps
            )
-           VALUES($1::uuid,$2::uuid,'offer.viking','campaign-credit',$3::bigint,$4::smallint,$5)`,
-          [purchaseId, userId, originalPrice, offer.rows[0].item_count, `price-${randomUUID()}`],
+           VALUES(
+             $1::uuid,$2::uuid,'offer.viking','campaign-credit',$3::bigint,$4::smallint,$5,
+             $6,$7::bigint,$8::integer
+           )`,
+          [
+            purchaseId,
+            userId,
+            pricePaid,
+            product.rows[0].item_count,
+            `price-${randomUUID()}`,
+            product.rows[0].product_id,
+            subtotal,
+            discountBps,
+          ],
         );
 
-        const newPrice = originalPrice + 300;
         await db.query(
-          `UPDATE catalog.offers SET price=$2::bigint WHERE id=$1`,
-          ["offer.viking", newPrice],
+          `INSERT INTO economy.purchase_items(purchase_id,cosmetic_id,unit_price)
+           SELECT $1::uuid,membership.cosmetic_id,pricing.fixed_price
+             FROM catalog.product_items membership
+             JOIN catalog.cosmetic_pricing pricing ON pricing.cosmetic_id=membership.cosmetic_id
+            WHERE membership.product_id=$2`,
+          [purchaseId, product.rows[0].product_id],
+        );
+
+        await db.query(
+          `UPDATE catalog.cosmetic_pricing pricing
+              SET fixed_price=fixed_price+300,
+                  updated_at=NOW()
+            WHERE pricing.cosmetic_id IN (
+              SELECT membership.cosmetic_id
+                FROM catalog.product_items membership
+               WHERE membership.product_id=$1
+            )`,
+          [product.rows[0].product_id],
+        );
+        await db.query(
+          `UPDATE catalog.products
+              SET bundle_discount_bps=500,
+                  updated_at=NOW()
+            WHERE id=$1`,
+          [product.rows[0].product_id],
         );
 
         const history = await db.query(
           `SELECT purchase.price_paid::text AS price_paid,
-                  offer.price::text AS current_price
+                  purchase.subtotal_price::text AS subtotal_price,
+                  purchase.discount_bps,
+                  MIN(item.unit_price)::text AS min_unit_price,
+                  MIN(pricing.fixed_price)::text AS current_min_unit_price,
+                  product.bundle_discount_bps AS current_discount_bps
              FROM economy.purchases purchase
-             JOIN catalog.offers offer ON offer.id=purchase.offer_id
-            WHERE purchase.id=$1::uuid`,
+             JOIN economy.purchase_items item ON item.purchase_id=purchase.id
+             JOIN catalog.cosmetic_pricing pricing ON pricing.cosmetic_id=item.cosmetic_id
+             JOIN catalog.products product ON product.id=purchase.product_id
+            WHERE purchase.id=$1::uuid
+            GROUP BY purchase.id,product.bundle_discount_bps`,
           [purchaseId],
         );
 
         assert.deepEqual(history.rows[0], {
-          price_paid: String(originalPrice),
-          current_price: String(newPrice),
+          price_paid: String(pricePaid),
+          subtotal_price: String(subtotal),
+          discount_bps: discountBps,
+          min_unit_price: "150",
+          current_min_unit_price: "450",
+          current_discount_bps: 500,
         });
       } finally {
         await db.end();
