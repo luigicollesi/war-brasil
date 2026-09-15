@@ -1,5 +1,6 @@
 import type { AttackMode } from "./game-barrier-rules";
 import type { CardSymbol } from "./game-config";
+import type { GameRuleset } from "./game-mode";
 import type { TradeCardDescriptor } from "./game-trade-rules";
 import type {
   AppliedEventTroopChange,
@@ -142,6 +143,7 @@ export type GameSnapshot = {
     id: string;
     code: string;
     status: GameStatus;
+    ruleset: GameRuleset;
     orderRollRound: number;
     orderRollPlayerId: string | null;
     lastOrderRollPlayerId: string | null;
