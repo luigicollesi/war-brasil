@@ -229,14 +229,14 @@ if (!databaseUrl) {
           player_id: playerA,
           slot: "dice_attack",
           cosmetic_id: "dice.attack.exercito",
-          asset_ref: "/dados/exercito/ataque.svg",
+          asset_ref: "cosmetics/dice/military-classic/attack.webp",
           effect_key: null,
         });
         assert.deepEqual(defenseB, {
           player_id: playerB,
           slot: "dice_defense",
           cosmetic_id: "dice.defense.lancas",
-          asset_ref: "/dados/lancas/defesa.svg",
+          asset_ref: "cosmetics/dice/medieval-spears/defense.webp",
           effect_key: null,
         });
 
@@ -256,7 +256,11 @@ if (!databaseUrl) {
         );
         await setup.query(
           `UPDATE catalog.cosmetics
-              SET asset_ref='/dados/mutado-depois-do-start.svg'
+              SET asset_ref=CASE id
+                    WHEN 'dice.attack.exercito' THEN 'cosmetics/dice/military-classic-v2/attack.webp'
+                    WHEN 'dice.defense.lancas' THEN 'cosmetics/dice/medieval-spears-v2/defense.webp'
+                    ELSE asset_ref
+                  END
             WHERE id IN ('dice.attack.exercito','dice.defense.lancas')`,
         );
 
@@ -325,7 +329,7 @@ if (!databaseUrl) {
         );
         assert.deepEqual(snapshot.rows[0], {
           cosmetic_id: "dice.neutral.viking",
-          asset_ref: "/dados/viking/neutro.svg",
+          asset_ref: "cosmetics/dice/viking/neutral.webp",
         });
       } finally {
         await client.end();
