@@ -1,7 +1,10 @@
 import "server-only";
 
 import type { PoolClient } from "pg";
-import { territorySkinSnapshot } from "@/src/lib/economy/territory-skin-contract";
+import {
+  territorySkinRuntimeEffectKey,
+  territorySkinSnapshot,
+} from "@/src/lib/economy/territory-skin-contract";
 import type {
   GameCosmeticSelection,
   GamePlayerCosmetics,
@@ -62,18 +65,16 @@ function territorySelection(row: GameCosmeticSnapshotRow): GameCosmeticSelection
     effectKey: row.effect_key,
   });
 
-  if (snapshot.kind === "procedural") {
-    return {
-      cosmeticId: snapshot.cosmeticId,
-      assetRef: null,
-      effectKey: snapshot.effectKey,
-    };
-  }
-
   return {
     cosmeticId: snapshot.cosmeticId,
-    assetRef: territorySkinAssetDeliveryPath(snapshot.assetRef),
-    effectKey: null,
+    assetRef:
+      snapshot.kind === "image"
+        ? territorySkinAssetDeliveryPath(snapshot.assetRef)
+        : null,
+    effectKey: territorySkinRuntimeEffectKey(
+      snapshot,
+      territorySkinAssetDeliveryPath,
+    ),
   };
 }
 
