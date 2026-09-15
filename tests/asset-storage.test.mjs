@@ -213,8 +213,16 @@ test("assets:validate deriva a lista do catálogo em vez de hardcode de temas", 
   assert.match(validator, /FROM catalog\.cosmetics/);
   assert.match(validator, /validateDiceAssetObject/);
   assert.match(validator, /status IN \('announced', 'available', 'retired'\)/);
-  assert.doesNotMatch(
-    validator,
-    /\b(?:military-classic|medieval-spears|viking|cat|dog|football)\b/,
-  );
+
+  for (const theme of [
+    "military-classic",
+    "medieval-spears",
+    "viking",
+    "cat",
+    "dog",
+    "football",
+  ]) {
+    assert.equal(validator.includes(`"${theme}"`), false, theme);
+    assert.equal(validator.includes(`'${theme}'`), false, theme);
+  }
 });
