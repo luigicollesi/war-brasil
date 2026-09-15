@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { connection } from "next/server";
+import { ProfileEconomyUnavailable } from "@/src/components/profile/v4/profile-economy-unavailable";
 import { ProfileShell } from "@/src/components/profile/v4/profile-shell";
 import { ProfileStore } from "@/src/components/profile/v4/profile-store";
 import type { EconomyStorefrontSnapshot } from "@/src/lib/economy/economy-contract";
@@ -18,6 +19,9 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
+const economyUnavailableReason =
+  "Economia temporariamente indisponível. O Dossiê continua operacional.";
+
 export default async function ProfileStorePage() {
   await connection();
   const session = await auth.api.getSession({
@@ -30,7 +34,7 @@ export default async function ProfileStorePage() {
   const profile = await getOwnCommanderProfile(session.user.id);
   if (!profile) redirect("/profile");
 
-  let storefront: EconomyStorefrontSnapshot;
+  let storefront: EconomyStorefrontSnapshot | null = null;
   try {
     storefront = await getEconomyStorefront(session.user.id);
   } catch (error) {
@@ -40,7 +44,7 @@ export default async function ProfileStorePage() {
     ) {
       redirect("/profile");
     }
-    throw error;
+    console.error("Falha ao carregar Economy na Intendência V4.", error);
   }
 
   return (
@@ -48,13 +52,24 @@ export default async function ProfileStorePage() {
       activeSurface="store"
       displayName={profile.identity.displayName}
       handle={profile.identity.handle}
-      wallet={{
-        available: true,
-        balance: storefront.wallet.balance,
-        label: storefront.wallet.label,
-      }}
+      wallet={
+        storefront
+          ? {
+              available: true,
+              balance: storefront.wallet.balance,
+              label: storefront.wallet.label,
+            }
+          : {
+              available: false,
+              reason: economyUnavailableReason,
+            }
+      }
     >
-      <ProfileStore storefront={storefront} />
+      {storefront ? (
+        <ProfileStore storefront={storefront} />
+      ) : (
+        <ProfileEconomyUnavailable surface="store" />
+      )}
     </ProfileShell>
   );
 }
