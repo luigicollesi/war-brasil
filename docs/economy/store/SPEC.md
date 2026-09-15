@@ -19,7 +19,7 @@ It refines `docs/economy/SPEC.md` for:
 
 `docs/economy/SPEC.md` remains authoritative for wallet, ledger, authentication, auditability, credits and general Economy V2 security rules.
 
-When this SPEC conflicts with older storefront rules in the parent Economy V2 document — especially partial ownership pricing, dynamic/progressive pricing, collection semantics or the supported cosmetic slots — this document is the more specific authority for the store-restructure implementation. The parent SPEC/EVAL must be reconciled during implementation so contradictory rules do not remain after the migration.
+When this SPEC conflicts with older storefront rules in the parent Economy V2 document — especially partial ownership pricing, dynamic/progressive pricing, collection semantics or supported cosmetic slots — this document is the more specific authority for the store-restructure implementation. The parent SPEC/EVAL must be reconciled during implementation so contradictory rules do not remain after migration.
 
 `docs/economy/territory-skins/SPEC.md` remains authoritative for territory rendering and gameplay-legibility constraints. This document defines how territory skins are catalogued, sold and presented in the store.
 
@@ -33,16 +33,16 @@ Turn the current store from a flat cosmetic catalogue into an editorial **Arsena
 4. complete dice sets with a bundle discount;
 5. territory skins;
 6. territory-skin packs;
-7. mixed collections containing dice and territory skins;
+7. thematic collections containing dice, territory skins, or both;
 8. complete or partial collection bundles;
 9. permanent, timed and progressively priced offers;
-10. themed campaigns with their own merchandising art.
+10. themed campaigns and collection merchandising.
 
 The design must preserve server-authoritative economy rules and must not couple ownership to R2 filenames or folder structure.
 
-## 3. Core domain rule
+## 3. Core domain model
 
-The store must distinguish four concepts:
+The store distinguishes four concepts.
 
 ### 3.1 Cosmetic item
 
@@ -59,11 +59,11 @@ A bundle is **not** an owned cosmetic. Buying a bundle grants ownership of its c
 
 ### 3.2 Cosmetic collection
 
-A `cosmetic_collection` is a permanent thematic family and visual identity.
+A `cosmetic_collection` is a persistent thematic family and visual identity.
 
-A collection may contain any compatible combination of cosmetics. It is explicitly valid for one collection to contain both dice and territory skins.
+A collection may contain any compatible combination of cosmetics. Mixed dice + territory collections are valid, but territory content is not mandatory.
 
-Examples:
+Mixed example:
 
 ```text
 Celestial
@@ -74,12 +74,13 @@ Celestial
 └── Solar Ornamental Territory Skin
 ```
 
+Dice-only example:
+
 ```text
-Viking
-├── Viking Attack Die
-├── Viking Defense Die
-├── Viking Neutral Die
-└── Viking Territory Skin
+Football
+├── Football Attack Die
+├── Football Defense Die
+└── Football Neutral Die
 ```
 
 A cosmetic may also exist without a collection.
@@ -90,47 +91,127 @@ A `store_product` is what the store sells.
 
 A product can be:
 
-- `single`: contains one cosmetic item;
-- `bundle`: contains two or more cosmetic items.
+- `single`: one cosmetic item;
+- `bundle`: two or more cosmetic items.
 
-This allows the same three Viking dice to be offered as three individual products and as one discounted dice-set product without duplicating ownership records.
+The same three Football dice may therefore be offered as three individual products and as one discounted dice-set product without duplicating ownership records.
 
 ### 3.4 Store offer
 
 A `store_offer` controls how and when a product is commercially available.
 
-The product and its cosmetics remain stable while offers may start, expire and return later.
+The product and its cosmetics remain stable while offers may start, expire and return later. The same product can participate in multiple rotations without recreating the owned cosmetic entities.
 
-This enables the same collection or product to participate in multiple future rotations without recreating the owned cosmetics.
+## 4. Collection merchandising contract
 
-## 4. Collection identity and merchandising
+### 4.1 Minimal asset kit
 
-Every collection may have its own editorial visual identity in the store.
+A store-visible collection has exactly three required editorial asset roles in V1:
 
-Supported collection asset roles should include at least:
-
-- `hero`
 - `banner`
-- `card`
-- `logo`
 - `background`
+- `logo`
 
-Not every role is mandatory. The UI must degrade gracefully when optional artwork is absent.
+Do **not** require collection-specific `hero`, `card`, `thumbnail` or other redundant artwork in V1.
 
-Collection art is merchandising content; it is not the canonical in-game cosmetic asset.
+The intent is to keep authoring, storage and visual consistency manageable while allowing each collection to feel unique.
 
-Collection detail must be able to show:
+### 4.2 Asset responsibilities
+
+#### `banner`
+
+The banner is the collection's storefront advertisement and primary entry point.
+
+It may be used in:
+
+- Destaques;
+- Coleções;
+- campaign/editorial rails that feature a collection.
+
+The banner should communicate the collection fantasy and may visually feature the real cosmetic designs. Clicking/tapping the banner opens the collection detail surface.
+
+#### `background`
+
+The background is the environmental stage for the opened collection detail surface.
+
+It should:
+
+- establish the collection atmosphere;
+- leave sufficient negative/low-detail space for interface overlays;
+- sit behind the actual product/cosmetic presentation;
+- not be the canonical item preview itself.
+
+#### `logo`
+
+The logo is the collection's visual signature and appears prominently at the top of the opened collection detail surface.
+
+It may also be reused where compact collection identity is useful, but it is not an owned/equippable cosmetic.
+
+### 4.3 Collection detail composition
+
+Opening a collection must conceptually produce:
+
+```text
+collection background
+        +
+collection logo at top
+        +
+actual cosmetic assets as foreground content
+        +
+product/price/ownership actions
+```
+
+The collection detail must not require a separate collection `hero` image to display the cosmetics. The actual attack/defense/neutral dice assets and territory-skin previews are the product content.
+
+Collection detail must support:
 
 - collection name and short marketing copy;
-- hero artwork;
+- the collection logo;
+- the collection background;
 - number of cosmetics;
 - user completion progress (`owned / total`);
 - owned/unowned state per cosmetic;
 - relevant bundles;
 - individual products;
-- a `Completar coleção` CTA when only part of the collection is owned.
+- `Completar conjunto` / `Completar coleção` when only part is owned.
 
-## 5. Product composition
+### 4.4 Active collection validation
+
+A collection exposed as a full visual storefront collection should resolve exactly one active mapping for each required V1 role:
+
+```text
+banner
+background
+logo
+```
+
+A broken/missing remote object must still degrade safely at runtime, but incomplete editorial configuration should be detected by validation/tests rather than normalized as an intentional V1 state.
+
+## 5. Football collection reference fixture
+
+The first concrete dice-only collection reference is `football`.
+
+Current cosmetic assets conceptually map to:
+
+```text
+cosmetics/dice/football/attack.webp
+cosmetics/dice/football/defense.webp
+cosmetics/dice/football/neutral.webp
+```
+
+Collection merchandising maps to:
+
+```text
+store/collections/football/banner.webp
+store/collections/football/background.webp
+store/collections/football/logo.webp
+```
+
+`football` intentionally has no territory skin in its initial collection contents. This proves that mixed collections are supported but not required.
+
+The banner advertises the three football dice. Opening it uses the Football background, places the Football logo at the top and renders the actual three dice assets as the main collection content.
+
+## 6. Product composition
 
 The conceptual target is:
 
@@ -142,18 +223,18 @@ catalog.product_items
 catalog.offers
 ```
 
-Exact SQL names may be adapted to the current Economy V2 schema during implementation, but the domain separation above is mandatory.
+Exact SQL names may adapt to the current Economy V2 schema during implementation, but the domain separation is mandatory.
 
-A product-item relation must support:
+A product-item relation must support dice bundles:
 
 ```text
-Product: viking-dice-set
-├── viking-attack-die
-├── viking-defense-die
-└── viking-neutral-die
+Product: football-dice-set
+├── football-attack-die
+├── football-defense-die
+└── football-neutral-die
 ```
 
-and mixed products such as:
+and mixed bundles:
 
 ```text
 Product: celestial-complete-bundle
@@ -164,16 +245,16 @@ Product: celestial-complete-bundle
 └── solar-ornamental-territory-skin
 ```
 
-## 6. Individual dice and bundle pricing
+## 7. Individual dice and bundle pricing
 
-Every dice cosmetic can have an individual product and price.
+Every dice cosmetic may have an individual product and price.
 
 Example:
 
 ```text
-Viking Attack   500 credits
-Viking Defense  500 credits
-Viking Neutral  500 credits
+Football Attack   500 credits
+Football Defense  500 credits
+Football Neutral  500 credits
 ```
 
 A dice-set bundle may grant all three at a lower effective price:
@@ -184,26 +265,26 @@ Bundle price          1200
 Savings                300
 ```
 
-### 6.1 Partial ownership
+### 7.1 Partial ownership
 
 Bundles must never charge again for component cosmetics the user already owns.
 
-If the user already owns Viking Attack:
+If the user already owns Football Attack:
 
 ```text
 Owned
-✓ Viking Attack
+✓ Football Attack
 
 Missing
-- Viking Defense  500
-- Viking Neutral  500
+- Football Defense  500
+- Football Neutral  500
 ```
 
 The bundle/completion price is calculated only over missing cosmetics.
 
 The CTA changes from `Adquirir conjunto` to `Completar conjunto` / `Completar coleção` when appropriate.
 
-### 6.2 Bundle discount
+### 7.2 Bundle discount
 
 Bundle discount should be represented as basis points (`discount_bps`) or an equivalent exact integer representation.
 
@@ -218,11 +299,11 @@ All prices are integer credit units. No floating-point money math is allowed in 
 
 If no items remain missing, the product is considered acquired/completed and cannot be purchased again.
 
-## 7. Progressive scarcity pricing
+## 8. Progressive scarcity pricing
 
 Selected cosmetics may use progressive pricing to create transparent scarcity/value appreciation.
 
-Progressive pricing must use explicit tiers, not an unbounded formula that increments after every purchase.
+Progressive pricing uses explicit tiers, not an unbounded formula that increments after every purchase.
 
 Example:
 
@@ -236,7 +317,7 @@ Example:
 
 The authoritative counter is acquisition count per cosmetic item, regardless of whether the item was acquired individually or through a bundle.
 
-Therefore, buying a mixed bundle increments the acquisition count only for newly granted cosmetic items.
+Buying a mixed bundle increments the acquisition count only for newly granted cosmetic items.
 
 Suggested conceptual structures:
 
@@ -256,7 +337,7 @@ Tier ranges must be deterministic and non-overlapping.
 
 A product may also use fixed pricing. Progressive pricing is opt-in, not mandatory for all store content.
 
-## 8. Price race protection
+## 9. Price race protection
 
 Storefront prices are previews. The server is authoritative.
 
@@ -269,7 +350,7 @@ Purchase requests must include the price the user confirmed, for example:
 }
 ```
 
-The server must recalculate the current price inside the purchase transaction.
+The server recalculates the current price inside the purchase transaction.
 
 If the authoritative price differs from `expectedPrice`, the purchase must not silently charge the new value. It returns a price-change response such as:
 
@@ -281,7 +362,7 @@ The client then presents the new price and requires a new confirmation.
 
 This is required for progressive tiers and dynamic completion bundles.
 
-## 9. Timed availability and rotation
+## 10. Timed availability and rotation
 
 Availability and pricing are separate concerns.
 
@@ -300,16 +381,18 @@ active
 
 The server determines whether an offer can be purchased. Client countdowns are informational only.
 
-A timed offer must communicate its end clearly. If the product may return later, the storefront must not imply permanent exclusivity. Recommended copy:
+A timed offer must communicate its end clearly. If the product may return later, the storefront must not imply permanent exclusivity.
+
+Recommended copy:
 
 ```text
 Disponível até <date>.
 Pode retornar à rotação futuramente.
 ```
 
-Truly never-returning editions require an explicit product/campaign decision and must be rare; they are not the default behavior.
+Truly never-returning editions require an explicit product/campaign decision and are not the default behavior.
 
-## 10. Campaigns are not collections
+## 11. Campaigns are not collections
 
 A collection is a persistent thematic catalogue concept.
 
@@ -332,11 +415,11 @@ catalog.campaigns
 catalog.campaign_offers
 ```
 
-A campaign can feature products from one or more collections and may have independent hero/banner artwork and marketing copy.
+Campaign-specific editorial assets, if later required, are independent from the three-role collection asset contract. Campaigns must not force collections to grow beyond `banner`, `background` and `logo`.
 
-## 11. Store information architecture
+## 12. Store information architecture
 
-The store should be intentionally scrollable. Unlike Lobby/Matchmaking, it is an exploration surface and must not be compressed into a no-scroll viewport.
+The store is intentionally scrollable. Unlike Lobby/Matchmaking, it is an exploration surface and must not be compressed into a no-scroll viewport.
 
 Primary navigation:
 
@@ -344,21 +427,24 @@ Primary navigation:
 Destaques | Dados | Territórios | Coleções
 ```
 
-The upper store chrome should keep current currency and inventory access readily visible; a sticky header is allowed/recommended when it does not obscure content.
+The upper store chrome should keep current currency and inventory access readily visible. A sticky header is allowed/recommended when it does not obscure content.
 
-### 11.1 Destaques
+### 12.1 Destaques
 
 Priority order:
 
-1. active campaign hero;
-2. editorial featured products;
-3. new products;
-4. featured bundles;
-5. selected territory skins/collections.
+1. active campaign/editorial promotion;
+2. featured collection banners;
+3. featured products;
+4. new products;
+5. featured bundles;
+6. selected territory skins.
+
+A collection banner is a first-class promotional CTA. Activating it opens collection detail.
 
 Do not render the entire catalogue as one undifferentiated card grid.
 
-### 11.2 Dados
+### 12.2 Dados
 
 A dice theme/set is presented as one coherent family while still exposing individual purchase choices.
 
@@ -372,19 +458,27 @@ Product detail must be able to display:
 - savings;
 - ownership status per die.
 
-### 11.3 Territórios
+### 12.3 Territórios
 
 Territory skins receive a dedicated merchandising surface.
 
 Each territory-skin preview must demonstrate its recolorable nature across the six supported player colors without requiring six separate canonical texture files.
 
-### 11.4 Coleções
+### 12.4 Coleções
 
-Collection cards prioritize their unique artwork and identity.
+Collection discovery prioritizes the `banner` artwork.
 
-A collection detail view must support mixed content and completion progress.
+The opened collection surface uses:
 
-## 12. Card and detail hierarchy
+```text
+background → visual stage
+logo       → identity/header
+cosmetic assets → actual foreground products
+```
+
+A collection may be dice-only, territory-only or mixed. Completion progress spans every cosmetic that belongs to that collection.
+
+## 13. Card and detail hierarchy
 
 Store cards should prioritize:
 
@@ -405,7 +499,7 @@ Owned products must not retain an active purchase CTA. They should transition to
 - `Equipado`;
 - `Completar conjunto/coleção` when the product is a partially owned bundle.
 
-## 13. Territory skin store contract
+## 14. Territory skin store contract
 
 Territory skins are first-class cosmetic items with slot `territory_skin`.
 
@@ -427,7 +521,7 @@ charcoal/black   → darker owner-color shades
 
 Simple single-asset skins may use one WebP directly. Complex skins may use multiple roles such as `surface`, `pattern`, `overlay` or future material maps.
 
-## 14. Cloudflare R2 / object-storage contract
+## 15. Cloudflare R2 / object-storage contract
 
 Cloudflare R2 is the planned S3-compatible object store for canonical cosmetic and merchandising assets.
 
@@ -435,7 +529,7 @@ No real bucket credential, token, account secret or access key may be committed 
 
 Bucket creation, access-policy configuration and real environment values are explicitly deferred to implementation.
 
-### 14.1 Environment isolation
+### 15.1 Environment isolation
 
 Planned buckets:
 
@@ -446,7 +540,7 @@ war-brasil-assets-prod
 
 Development and production must not share a mutable bucket namespace.
 
-### 14.2 Planned server-only access variables
+### 15.2 Planned server-only access variables
 
 The implementation should reuse the parent Economy V2 storage contract and extend it only as needed:
 
@@ -466,32 +560,37 @@ ASSET_PUBLIC_BASE_URL
 
 All credential-bearing variables are server-only and must never use a public/client environment prefix.
 
-The exact values and R2 policies are configured when the buckets are provisioned during implementation.
+The exact values and R2 policies are configured when buckets are provisioned during implementation.
 
-### 14.3 Key strategy
+### 15.3 Key strategy
 
 Postgres stores object keys, not complete URLs.
 
 Examples:
 
 ```text
-cosmetics/dice/viking/attack.webp
-cosmetics/dice/viking/defense.webp
-cosmetics/dice/viking/neutral.webp
+cosmetics/dice/football/attack.webp
+cosmetics/dice/football/defense.webp
+cosmetics/dice/football/neutral.webp
 cosmetics/territory-skins/solar-ornamental.webp
-store/collections/celestial/hero.webp
-store/collections/celestial/card.webp
+store/collections/football/banner.webp
+store/collections/football/background.webp
+store/collections/football/logo.webp
 ```
 
 The application resolves the correct environment/base URL at runtime/server boundary.
 
 Runtime catalogue rendering must never depend on `ListObjects`/bucket directory discovery. The database maps each semantic asset role to an exact object key.
 
-### 14.4 Suggested R2 layout
+### 15.4 Suggested R2 layout
 
 ```text
 cosmetics/
 ├── dice/
+│   ├── football/
+│   │   ├── attack.webp
+│   │   ├── defense.webp
+│   │   └── neutral.webp
 │   ├── celestial/
 │   ├── viking/
 │   └── military/
@@ -507,22 +606,30 @@ cosmetics/
 
 store/
 ├── collections/
-│   ├── celestial/
-│   │   ├── hero.webp
+│   ├── football/
 │   │   ├── banner.webp
-│   │   ├── card.webp
-│   │   ├── logo.webp
-│   │   └── background.webp
+│   │   ├── background.webp
+│   │   └── logo.webp
+│   ├── celestial/
+│   │   ├── banner.webp
+│   │   ├── background.webp
+│   │   └── logo.webp
 │   └── ...
 └── campaigns/
     └── ...
 ```
 
-## 15. Target database model
+### 15.5 Collection object policy
+
+Collection runtime rendering should request only the exact three configured editorial keys plus the exact cosmetic keys needed for visible items.
+
+The collection system must not derive behavior from directory names alone. `football` is a stable collection slug, while DB IDs remain the canonical relational identifiers.
+
+## 16. Target database model
 
 The implementation migration must evolve the existing Economy V2 schema toward the following capabilities. Exact physical table names may preserve/rename existing structures after repository/database audit, but the logical responsibilities are mandatory.
 
-### Catalogue
+### 16.1 Catalogue
 
 ```text
 collections
@@ -535,7 +642,7 @@ collections
 collection_assets
 - id
 - collection_id
-- role
+- role (banner | background | logo)
 - object_key
 - mime_type
 
@@ -605,7 +712,13 @@ campaign_offers
 - position
 ```
 
-### Economy / ownership
+For V1 collection assets, the DB should enforce or validate:
+
+- role belongs to `banner | background | logo`;
+- at most one active mapping exists per `(collection_id, role)`;
+- a store-visible collection has all three roles configured.
+
+### 16.2 Economy / ownership
 
 The implementation must preserve or evolve the existing Economy V2 equivalents for:
 
@@ -621,7 +734,7 @@ wallet / ledger
 
 Purchase history must preserve the commercial product/offer and enough price snapshots to reproduce what the user paid at purchase time.
 
-## 16. Purchase transaction
+## 17. Purchase transaction
 
 A purchase must be atomic and server-authoritative.
 
@@ -639,7 +752,7 @@ Recommended sequence:
 10. compare with `expectedPrice`;
 11. if different, abort with `PRICE_CHANGED` and no mutation;
 12. validate wallet balance;
-13. debit wallet through the existing ledger rules;
+13. debit wallet through existing ledger rules;
 14. grant only missing cosmetics;
 15. increment acquisition counters for newly granted cosmetics;
 16. record purchase and item-level price snapshots;
@@ -647,7 +760,7 @@ Recommended sequence:
 
 The transaction must be concurrency-safe around tier boundaries.
 
-## 17. Database migration strategy
+## 18. Database migration strategy
 
 No migration is executed by this documentation change.
 
@@ -663,14 +776,16 @@ Before creating SQL, implementation must:
 6. introduce products/product-items and collection semantics;
 7. add `territory_skin` as a supported cosmetic slot/type;
 8. add progressive-pricing structures and counters;
-9. add campaign/collection merchandising asset mappings;
+9. add collection merchandising asset mappings with `banner/background/logo` roles;
 10. add constraints/indexes after required backfill where necessary;
 11. switch application reads/writes only after the migrated shape is valid;
 12. defer destructive cleanup of obsolete columns/tables to a later migration unless proven safe.
 
 Migration and seed operations must be idempotent or safely guarded according to existing repository conventions.
 
-## 18. Rollout order
+The Football collection should be usable as an implementation/seed fixture for validating the new three-asset collection contract and individual/bundled dice products.
+
+## 19. Rollout order
 
 Recommended implementation order:
 
@@ -679,21 +794,24 @@ Recommended implementation order:
 3. write and run the additive DB migration against the implementation environment;
 4. migrate/backfill current dice catalogue into item/product/collection semantics;
 5. implement object-key asset resolver;
-6. add territory-skin catalogue support and six-color previews;
-7. implement individual dice products;
-8. implement dynamic bundle/completion pricing;
-9. implement progressive tiers and concurrency-safe purchase path;
-10. implement collections and their unique store art;
-11. implement campaigns/timed offers;
-12. restructure storefront UI into Destaques / Dados / Territórios / Coleções;
-13. reconcile parent `docs/economy/SPEC.md` and `EVAL.md` with this final implementation;
-14. complete EVAL evidence and regression tests.
+6. implement the three-role collection asset contract (`banner/background/logo`);
+7. seed/integrate Football as the first dice-only collection fixture;
+8. add territory-skin catalogue support and six-color previews;
+9. implement individual dice products;
+10. implement dynamic bundle/completion pricing;
+11. implement progressive tiers and concurrency-safe purchase path;
+12. implement mixed collections and completion flows;
+13. implement campaigns/timed offers;
+14. restructure storefront UI into Destaques / Dados / Territórios / Coleções;
+15. reconcile parent `docs/economy/SPEC.md` and `EVAL.md` with the final implementation;
+16. complete EVAL evidence and regression tests.
 
-## 19. Explicit non-goals of this design pass
+## 20. Explicit non-goals of this design pass
 
 This documentation change does **not**:
 
 - provision or mutate an R2 bucket;
+- upload the Football assets to R2;
 - create Cloudflare API tokens;
 - commit credentials;
 - execute a database migration;
@@ -701,6 +819,7 @@ This documentation change does **not**:
 - add a currency-earning method;
 - introduce real-money purchases;
 - add cosmetic trading or gifting;
-- implement the storefront code itself.
+- implement the storefront code itself;
+- require extra collection artwork beyond `banner`, `background` and `logo`.
 
 Those actions require the subsequent implementation phase and its EVAL gates.

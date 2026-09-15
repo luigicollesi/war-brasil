@@ -9,7 +9,7 @@ This EVAL defines the acceptance gates for the storefront/catalog restructuring 
 
 It supplements `docs/economy/EVAL.md` and `docs/economy/territory-skins/EVAL.md`.
 
-Wallet/ledger/auth/audit gates from the parent Economy V2 EVAL remain mandatory. When an older storefront assertion conflicts with the new specific store SPEC — notably partial-ownership pricing, progressive pricing, mixed collections or the `territory_skin` slot — the implementation must update/reconcile the parent EVAL rather than weakening this EVAL.
+Wallet/ledger/auth/audit gates from the parent Economy V2 EVAL remain mandatory. When an older storefront assertion conflicts with the new specific store SPEC — notably partial-ownership pricing, progressive pricing, mixed collections, collection asset roles or the `territory_skin` slot — the implementation must update/reconcile the parent EVAL rather than weaken this EVAL.
 
 ## 2. Evaluation policy
 
@@ -109,40 +109,91 @@ This gate intentionally supersedes the previous Economy V2 assumption that parti
 
 ---
 
-### STORE-06 — Mixed collections are supported
+### STORE-06 — Collections may be dice-only, territory-only or mixed
 
 **Requirement**
 
-One collection can contain both dice and territory skins.
+A collection is a thematic grouping, not a fixed bundle shape.
 
 **Pass**
 
-At least one fixture/test collection contains:
+Fixtures/tests prove at least:
 
-- attack die;
-- defense die;
-- neutral die;
-- one or more territory skins.
+- one dice-only collection with attack/defense/neutral dice;
+- one mixed collection with dice and one or more territory skins.
 
-The collection is browsable and its progress is calculated across all component cosmetic types.
+The `football` reference fixture is valid with only:
+
+- Football Attack Die;
+- Football Defense Die;
+- Football Neutral Die.
+
+No territory skin is required for Football.
 
 ---
 
-### STORE-07 — Collection has independent visual identity
+### STORE-07 — Collection merchandising uses exactly three V1 asset roles
 
 **Requirement**
 
-A collection can resolve dedicated merchandising assets such as hero/banner/card/logo/background without treating those assets as owned cosmetics.
+A store-visible collection resolves exactly one configured asset for each V1 editorial role:
+
+```text
+banner
+background
+logo
+```
+
+Collection-specific `hero`, `card`, `thumbnail` or equivalent redundant roles are not required by V1 and must not become runtime dependencies.
 
 **Pass**
 
-- semantic asset roles map to explicit object keys;
-- missing optional roles degrade gracefully;
-- collection art and in-game cosmetic assets remain distinct concepts.
+- semantic roles map to explicit object keys;
+- DB/schema validation restricts V1 collection roles to `banner | background | logo` or an equivalent explicit closed set;
+- at most one active mapping exists per `(collection, role)`;
+- full store-visible collections have all three roles configured;
+- collection editorial assets are not owned/equippable cosmetics.
 
 ---
 
-### STORE-08 — Collection completion is ownership-aware
+### STORE-08 — Collection banner opens collection detail
+
+**Requirement**
+
+The collection `banner` is the primary promotional/entry asset in storefront discovery surfaces.
+
+**Pass**
+
+Activating a Football collection banner opens the Football collection detail surface rather than a disconnected generic product card.
+
+The interaction is keyboard/touch accessible and does not depend on interpreting filenames or R2 folder listings.
+
+---
+
+### STORE-09 — Collection detail composes background, logo and real cosmetic assets
+
+**Requirement**
+
+Opened collection detail uses:
+
+```text
+background → visual stage
+logo       → top identity
+cosmetic assets → actual product content
+```
+
+**Pass**
+
+For Football:
+
+- Football background renders as the collection backdrop;
+- Football logo is visible near the top/header identity region;
+- attack, defense and neutral dice use their canonical cosmetic assets as the foreground product presentation;
+- no separate collection hero/card asset is required to show the dice.
+
+---
+
+### STORE-10 — Collection completion is ownership-aware
 
 **Requirement**
 
@@ -150,11 +201,11 @@ Collection detail shows `owned / total` progress and can offer a completion bund
 
 **Pass**
 
-Tests cover a mixed collection where the user owns only some dice and/or a territory skin.
+Tests cover both a dice-only collection and a mixed collection where the user owns only some component cosmetics.
 
 ---
 
-### STORE-09 — Bundle math uses exact integer arithmetic
+### STORE-11 — Bundle math uses exact integer arithmetic
 
 **Requirement**
 
@@ -173,7 +224,7 @@ Boundary tests verify deterministic rounding and zero/maximum allowed discount b
 
 ---
 
-### STORE-10 — Progressive pricing uses explicit tiers
+### STORE-12 — Progressive pricing uses explicit tiers
 
 **Requirement**
 
@@ -189,7 +240,7 @@ Selected cosmetics can use price tiers based on global cosmetic acquisition coun
 
 ---
 
-### STORE-11 — Tier-boundary concurrency is safe
+### STORE-13 — Tier-boundary concurrency is safe
 
 **Requirement**
 
@@ -201,7 +252,7 @@ A DB/integration test exercises a boundary such as acquisition `99 -> 100` with 
 
 ---
 
-### STORE-12 — Expected-price confirmation prevents silent overcharge
+### STORE-14 — Expected-price confirmation prevents silent overcharge
 
 **Requirement**
 
@@ -219,7 +270,7 @@ When current price differs:
 
 ---
 
-### STORE-13 — Timed availability is server-authoritative
+### STORE-15 — Timed availability is server-authoritative
 
 **Requirement**
 
@@ -239,7 +290,7 @@ Manipulating client time or CTA state cannot make an expired offer purchasable.
 
 ---
 
-### STORE-14 — Collections and campaigns are independent
+### STORE-16 — Collections and campaigns are independent
 
 **Requirement**
 
@@ -249,9 +300,11 @@ A collection can remain discoverable when a campaign ends, and campaigns can fea
 
 A campaign fixture expires while the related collection and cosmetics remain valid catalogue entities.
 
+Campaign-specific art does not alter the three-role collection asset contract.
+
 ---
 
-### STORE-15 — No false permanent-exclusivity messaging
+### STORE-17 — No false permanent-exclusivity messaging
 
 **Requirement**
 
@@ -263,7 +316,7 @@ UI copy distinguishes rotation/timed availability from explicitly configured nev
 
 ---
 
-### STORE-16 — Territory skins use one canonical recolorable source where applicable
+### STORE-18 — Territory skins use one canonical recolorable source where applicable
 
 **Requirement**
 
@@ -275,7 +328,7 @@ Visual/unit coverage exercises all six palettes and preserves recognizable owner
 
 ---
 
-### STORE-17 — Territory gameplay states remain stronger than cosmetics
+### STORE-19 — Territory gameplay states remain stronger than cosmetics
 
 **Requirement**
 
@@ -289,7 +342,7 @@ This gate must also satisfy `docs/economy/territory-skins/EVAL.md`.
 
 ---
 
-### STORE-18 — Store IA is implemented as Destaques / Dados / Territórios / Coleções
+### STORE-20 — Store IA is Destaques / Dados / Territórios / Coleções
 
 **Requirement**
 
@@ -297,14 +350,14 @@ The store exposes the four primary discovery surfaces.
 
 **Pass**
 
-- Destaques contains campaign/editorial content instead of a flat full catalogue dump;
+- Destaques contains campaign/editorial content and featured collection banners instead of a flat full catalogue dump;
 - Dados exposes individual and set purchasing;
 - Territórios exposes territory-skin previews;
-- Coleções exposes themed mixed collections and progress.
+- Coleções exposes themed collections and progress.
 
 ---
 
-### STORE-19 — Store is intentionally scrollable
+### STORE-21 — Store is intentionally scrollable
 
 **Requirement**
 
@@ -316,7 +369,7 @@ Desktop and mobile can reach all catalogue content without clipping. Sticky stor
 
 ---
 
-### STORE-20 — Card hierarchy avoids information overload
+### STORE-22 — Card hierarchy avoids information overload
 
 **Requirement**
 
@@ -328,7 +381,7 @@ Detailed acquisition count, next tier, countdown, savings breakdown and similar 
 
 ---
 
-### STORE-21 — Owned states replace invalid purchase CTA
+### STORE-23 — Owned states replace invalid purchase CTA
 
 **Requirement**
 
@@ -340,7 +393,7 @@ UI uses appropriate states such as `Adquirido`, `Equipar`, `Equipado` or complet
 
 ---
 
-### STORE-22 — Purchase transaction is atomic
+### STORE-24 — Purchase transaction is atomic
 
 **Requirement**
 
@@ -352,7 +405,7 @@ Fault-injection/integration coverage verifies rollback on failure after each cri
 
 ---
 
-### STORE-23 — Duplicate ownership is prevented by DB constraint
+### STORE-25 — Duplicate ownership is prevented by DB constraint
 
 **Requirement**
 
@@ -364,7 +417,7 @@ Concurrent/repeated acquisition attempts cannot create duplicate inventory rows.
 
 ---
 
-### STORE-24 — Purchase history preserves price snapshots
+### STORE-26 — Purchase history preserves price snapshots
 
 **Requirement**
 
@@ -376,14 +429,15 @@ Changing current price tiers after a purchase does not alter/reinterpret the rec
 
 ---
 
-### STORE-25 — Database contains object keys, not environment-specific R2 URLs
+### STORE-27 — Database contains object keys, not environment-specific R2 URLs
 
 **Requirement**
 
 Canonical asset references are object keys such as:
 
 ```text
-cosmetics/territory-skins/solar-ornamental.webp
+cosmetics/dice/football/attack.webp
+store/collections/football/banner.webp
 ```
 
 not complete `https://...` URLs.
@@ -394,7 +448,7 @@ Dev/prod base delivery can change without rewriting catalogue rows.
 
 ---
 
-### STORE-26 — Runtime does not discover assets with bucket listing
+### STORE-28 — Runtime does not discover assets with bucket listing
 
 **Requirement**
 
@@ -406,7 +460,7 @@ Static/code audit finds no runtime list operation used to construct catalogue or
 
 ---
 
-### STORE-27 — R2 credentials are server-only
+### STORE-29 — R2 credentials are server-only
 
 **Requirement**
 
@@ -428,7 +482,7 @@ Optional `ASSET_PUBLIC_BASE_URL` contains no secret.
 
 ---
 
-### STORE-28 — Dev/prod object storage is isolated
+### STORE-30 — Dev/prod object storage is isolated
 
 **Requirement**
 
@@ -445,7 +499,7 @@ Exact credentials/policies are configured during implementation, not in reposito
 
 ---
 
-### STORE-29 — Missing object asset degrades gracefully
+### STORE-31 — Missing object asset degrades gracefully
 
 **Requirement**
 
@@ -455,9 +509,11 @@ One missing/broken R2 object cannot crash the full storefront or match renderer.
 
 Tests verify placeholder/fallback behavior and actionable server logging without exposing secrets.
 
+A missing required collection object may mark that collection presentation degraded/unavailable, but must not crash unrelated store content.
+
 ---
 
-### STORE-30 — Migration number is allocated from current repository state
+### STORE-32 — Migration number is allocated from current repository state
 
 **Requirement**
 
@@ -469,11 +525,11 @@ No hard-coded migration number from this planning document is reused blindly.
 
 ---
 
-### STORE-31 — Migration is forward-safe and backfills existing catalogue
+### STORE-33 — Migration is forward-safe and backfills existing catalogue
 
 **Requirement**
 
-Existing Economy V2 dice catalogue/ownership data is preserved while introducing products, mixed collections and territory skins.
+Existing Economy V2 dice catalogue/ownership data is preserved while introducing products, collections and territory skins.
 
 **Pass**
 
@@ -482,24 +538,45 @@ Migration tests/verification demonstrate:
 - existing dice cosmetics remain addressable;
 - existing ownership remains valid;
 - product mappings are backfilled;
+- collection mappings can represent dice-only and mixed collections;
 - new constraints do not invalidate existing valid rows;
 - destructive cleanup is deferred unless proven safe.
 
 ---
 
-### STORE-32 — Territory-skin migration is part of implementation
+### STORE-34 — Territory-skin migration is part of implementation
 
 **Requirement**
 
-The implementation migration adds the necessary catalogue/loadout support for `territory_skin`; this documentation commit alone does not mutate the DB.
+The implementation migration adds the necessary catalogue/loadout support for `territory_skin`; this documentation change alone does not mutate the DB.
 
 **Pass**
 
-Repository history clearly separates this planning SPEC/EVAL from the later SQL/application implementation.
+Repository history clearly separates this planning SPEC/EVAL from later SQL/application implementation.
 
 ---
 
-### STORE-33 — Bucket provisioning/access is part of implementation
+### STORE-35 — Collection asset migration/seed supports the three-role contract
+
+**Requirement**
+
+The implementation migration/seed shape supports `banner`, `background` and `logo` mappings without requiring collection-specific hero/card rows.
+
+**Pass**
+
+A Football fixture can map exactly:
+
+```text
+store/collections/football/banner.webp
+store/collections/football/background.webp
+store/collections/football/logo.webp
+```
+
+and satisfy collection validation.
+
+---
+
+### STORE-36 — Bucket provisioning/access is part of implementation
 
 **Requirement**
 
@@ -511,7 +588,7 @@ The implementation phase later proves dev-bucket connectivity with a harmless se
 
 ---
 
-### STORE-34 — Parent Economy V2 docs are reconciled before implementation is declared complete
+### STORE-37 — Parent Economy V2 docs are reconciled before implementation is declared complete
 
 **Requirement**
 
@@ -523,6 +600,7 @@ At minimum review/reconcile parent statements about:
 - partial-ownership bundle pricing;
 - dynamic/progressive pricing;
 - collection semantics;
+- collection merchandising roles;
 - storefront offer/product model.
 
 **Pass**
@@ -542,7 +620,28 @@ Implementation must cover at least the following scenarios.
 | attack + defense | price/grant neutral only |
 | all 3 | no purchase CTA / reject repeated purchase |
 
-### 4.2 Mixed collection completion
+### 4.2 Collection shapes
+
+At least:
+
+- Football-style dice-only collection with 3 dice and no territory skin;
+- territory-only collection or equivalent supported fixture;
+- mixed collection with dice + territory skin;
+- full ownership state for each tested shape.
+
+### 4.3 Collection merchandising flow
+
+For the Football reference fixture verify:
+
+1. storefront renders `banner.webp` as the promotional entry;
+2. clicking/tapping the banner opens Football collection detail;
+3. detail resolves `background.webp` as the backdrop;
+4. detail resolves `logo.webp` as the top collection identity;
+5. detail renders canonical attack/defense/neutral cosmetic assets in the foreground;
+6. no `hero.webp` or `card.webp` collection dependency is required;
+7. individual and bundle purchase paths remain available from the detail surface.
+
+### 4.4 Mixed collection completion
 
 At least one scenario each for:
 
@@ -551,7 +650,7 @@ At least one scenario each for:
 - owns a mix of both;
 - owns full collection.
 
-### 4.3 Progressive price boundary
+### 4.5 Progressive price boundary
 
 At least:
 
@@ -561,7 +660,7 @@ At least:
 - two concurrent purchases crossing a boundary;
 - stale `expectedPrice` rejection.
 
-### 4.4 Timed offer
+### 4.6 Timed offer
 
 At least:
 
@@ -571,7 +670,7 @@ At least:
 - expired;
 - returned through a later new offer.
 
-### 4.5 Territory skin visual matrix
+### 4.7 Territory skin visual matrix
 
 At least:
 
@@ -585,7 +684,7 @@ representative complex/high-detail skin
 
 Check ownership readability and gameplay highlights.
 
-### 4.6 Store viewport matrix
+### 4.8 Store viewport matrix
 
 At least:
 
@@ -594,7 +693,7 @@ At least:
 - mobile 390×844;
 - compact mobile 390×667 or lower practical target supported by the app.
 
-Verify scrolling, sticky chrome, modals/drawers and CTA reachability.
+Verify scrolling, sticky chrome, collection banners, collection detail surfaces and CTA reachability.
 
 ## 5. Migration verification checklist
 
@@ -607,8 +706,10 @@ When implementation begins, evidence should include:
 5. backfilled current dice catalogue count reconciles with pre-migration data;
 6. ownership count reconciles with pre-migration data;
 7. loadout remains valid;
-8. rollback strategy or forward-fix strategy documented for production rollout;
-9. application tests run against migrated schema.
+8. collection role constraint/mapping supports only the approved V1 roles;
+9. Football fixture resolves 3 dice + 3 collection merchandising assets correctly;
+10. rollback strategy or forward-fix strategy documented for production rollout;
+11. application tests run against migrated schema.
 
 No production migration is authorized merely by this EVAL.
 
@@ -620,31 +721,36 @@ When bucket access is configured during implementation, evidence should include:
 2. production points to a distinct production bucket;
 3. secrets are server-only;
 4. exact-key read succeeds for a known fixture object;
-5. authorized upload path succeeds only where required by tooling/admin flow;
-6. runtime catalogue does not require list permission;
-7. missing object produces fallback behavior;
-8. no credential value appears in client JS/build output/logged API response;
-9. DB stores object key rather than complete environment-specific URL.
+5. Football exact-key reads cover `attack.webp`, `defense.webp`, `neutral.webp`, `banner.webp`, `background.webp` and `logo.webp`;
+6. authorized upload path succeeds only where required by tooling/admin flow;
+7. runtime catalogue does not require list permission;
+8. missing object produces fallback behavior;
+9. no credential value appears in client JS/build output/logged API response;
+10. DB stores object keys rather than complete environment-specific URLs.
 
 ## 7. UX / visual quality checks
 
 These are required manual/visual review items in addition to automated blockers:
 
 - store feels like War Brasil's military/prestige arsenal rather than generic SaaS ecommerce;
-- campaign hero is visually dominant but does not bury navigation;
-- collection artwork gives each collection a recognizable identity;
-- dice-set presentation reads as one family while preserving individual buying;
+- collection banners are visually strong promotional entry points without burying navigation;
+- opening a collection produces a coherent scene using its background, top logo and real cosmetic assets;
+- the three-asset collection model feels intentional rather than visually sparse;
+- collection presentation does not depend on redundant hero/card artwork;
+- Football reads as one coherent dice family while preserving individual buying;
+- dice-set presentation reads as one family while preserving individual buying generally;
 - territory skins visibly demonstrate six-color adaptability;
-- collection completion is understandable without inspecting price math manually;
+- mixed collection completion is understandable without inspecting price math manually;
 - gold is used for prestige/value/focus, green for command structure, red primarily for real urgency/error/unavailable state;
 - animations respect `prefers-reduced-motion`;
-- mobile cards/detail surfaces remain legible and actionable;
+- mobile collection banners/detail surfaces remain legible and actionable;
 - the store can grow to many products without turning the landing view into an undifferentiated grid.
 
 ## 8. Non-blocking future candidates
 
 These are intentionally outside the first implementation unless separately specified:
 
+- additional collection editorial roles beyond `banner`, `background`, `logo`;
 - personalized discount market;
 - real-money purchases;
 - gifting/trading;
@@ -664,8 +770,10 @@ The store restructure is complete only when:
 3. territory-skin EVAL remains green;
 4. the DB migration has been verified against the current migration chain;
 5. R2 dev access is configured and verified without exposing credentials;
-6. individual dice, dice bundles, territory skins and mixed collection completion all work end-to-end;
-7. progressive pricing and timed offers are server-authoritative and race-safe;
-8. storefront visual review passes desktop/mobile matrices;
-9. parent Economy V2 SPEC/EVAL is reconciled with the implemented model;
-10. implementation evidence is committed/referenced according to the repository's normal workflow.
+6. individual dice, dice bundles, territory skins and mixed collection completion work end-to-end;
+7. dice-only collections such as Football work without a territory-skin requirement;
+8. collection merchandising uses the approved `banner/background/logo` contract end-to-end;
+9. progressive pricing and timed offers are server-authoritative and race-safe;
+10. storefront visual review passes desktop/mobile matrices;
+11. parent Economy V2 SPEC/EVAL is reconciled with the implemented model;
+12. implementation evidence is committed/referenced according to the repository's normal workflow.
