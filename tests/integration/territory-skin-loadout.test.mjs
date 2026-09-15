@@ -111,7 +111,7 @@ if (!databaseUrl) {
         );
         await client.query(
           `INSERT INTO inventory.cosmetics(user_id,cosmetic_id,slot,acquisition_source)
-           VALUES($1,$2,'territory_effect','test-grant')`,
+           VALUES($1,$2,'territory_effect','admin')`,
           [userId, imageSkinId],
         );
         await client.query(
