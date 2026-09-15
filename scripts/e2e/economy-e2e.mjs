@@ -173,6 +173,46 @@ async function setOfferPrice(offerId, price) {
   }
 }
 
+async function insertDynamicOffer({ id, slug, name, price, sourceOfferId }) {
+  const db = new Client({ connectionString: DATABASE_URL });
+  await db.connect();
+  try {
+    await db.query("BEGIN");
+    await db.query(
+      `INSERT INTO catalog.offers(
+         id,slug,name,description,currency_code,price,status,is_featured,sort_order
+       )
+       VALUES($1,$2,$3,'Offer criada pelo E2E sem alteração React.','campaign-credit',$4::bigint,'available',FALSE,999)`,
+      [id, slug, name, price],
+    );
+    const copied = await db.query(
+      `INSERT INTO catalog.offer_items(offer_id,cosmetic_id,position)
+       SELECT $1,membership.cosmetic_id,membership.position
+         FROM catalog.offer_items membership
+        WHERE membership.offer_id=$2
+       RETURNING cosmetic_id`,
+      [id, sourceOfferId],
+    );
+    assert.ok(copied.rowCount > 0, "offer dinâmica precisa de composição válida");
+    await db.query("COMMIT");
+  } catch (error) {
+    await db.query("ROLLBACK");
+    throw error;
+  } finally {
+    await db.end();
+  }
+}
+
+async function deleteDynamicOffer(offerId) {
+  const db = new Client({ connectionString: DATABASE_URL });
+  await db.connect();
+  try {
+    await db.query(`DELETE FROM catalog.offers WHERE id=$1`, [offerId]);
+  } finally {
+    await db.end();
+  }
+}
+
 function assertFreshCommanderState(state) {
   assert.equal(state.balance, "0");
   assert.equal(state.ledgerCount, 0);
@@ -450,6 +490,31 @@ try {
   }
   assertFreshCommanderState(await readEconomyState(userId));
 
+  const dynamicOffer = {
+    id: "offer.e2e.dynamic",
+    slug: "e2e-dynamic",
+    name: "Oferta Dinâmica E2E",
+    price: 777,
+    sourceOfferId: commerce.offers[0].id,
+  };
+  try {
+    await insertDynamicOffer(dynamicOffer);
+    await page.goto(`${BASE_URL}/profile/store`, { waitUntil: "domcontentloaded" });
+    await page.getByRole("heading", { name: "Remessas do Comando", exact: true }).waitFor();
+    offersSection = page.locator('section[aria-labelledby="offers-title"]');
+    assert.equal(await offersSection.locator("article").count(), commerce.offers.length + 1);
+    const dynamicCard = offersSection.locator("article").filter({ hasText: dynamicOffer.name });
+    await dynamicCard.getByRole("heading", { name: dynamicOffer.name, exact: true }).waitFor();
+    assert.ok(normalizeText(await dynamicCard.textContent()).includes(formatNumber(dynamicOffer.price)));
+    assert.equal(await dynamicCard.locator('img[src*="coin.svg"]').count(), 1);
+    const dynamicBuy = dynamicCard.getByRole("button", { name: "COMPRAR", exact: true });
+    assert.equal(await dynamicBuy.count(), 1);
+    assert.equal(await dynamicBuy.isDisabled(), true);
+    assertFreshCommanderState(await readEconomyState(userId));
+  } finally {
+    await deleteDynamicOffer(dynamicOffer.id);
+  }
+
   await page.screenshot({
     path: path.join(ARTIFACT_DIR, "store-1440x900.png"),
     fullPage: true,
@@ -602,9 +667,14 @@ try {
   }
 
   console.log(
-    `[economy-e2e] ok — ${commerce.offers.length} offers, ${commerce.creditPacks.length} packs, compra/equip persistentes e ${signedR2Keys.length} WebPs validados`,
+    `[economy-e2e] ok — ${commerce.offers.length} offers, ${commerce.creditPacks.length} packs, offer dinâmica, compra/equip persistentes e ${signedR2Keys.length} WebPs validados`,
   );
 } finally {
   await context.close();
   await browser.close();
 }
+
+process.env.PLAYWRIGHT_RUNTIME_DIR ??= path.resolve("node_modules/playwright");
+process.env.LOBBY_E2E_BASE_URL ??= BASE_URL;
+process.env.LOBBY_E2E_DATABASE_URL ??= DATABASE_URL;
+await import("./economy-purchase-e2e.mjs");
