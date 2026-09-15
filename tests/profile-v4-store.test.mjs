@@ -58,6 +58,7 @@ test("PROFILE V4 returns focus to the control that opened mobile inspection", as
 
   assert.match(store, /inspectionReturnFocusRef/);
   assert.match(store, /document\.activeElement/);
-  assert.match(store, /function closeInspection/);
-  assert.match(store, /inspectionReturnFocusRef\.current\?\.focus\(\)/);
+  assert.match(store, /closeInspection\s*=\s*useCallback/);
+  assert.match(store, /returnTarget\.isConnected/);
+  assert.match(store, /returnTarget\.focus\(\)/);
 });
