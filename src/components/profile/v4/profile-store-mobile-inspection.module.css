@@ -1,9 +1,17 @@
+.desktopInspection {
+  display: grid;
+}
+
 .mobileInspectionBackdrop,
 .mobileInspection {
   display: none;
 }
 
 @media (max-width: 820px) {
+  .desktopInspection {
+    display: none;
+  }
+
   .mobileInspectionBackdrop {
     position: fixed;
     z-index: 70;
