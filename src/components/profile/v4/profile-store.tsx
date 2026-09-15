@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type {
   CosmeticCatalogItem,
   CosmeticSet,
@@ -109,7 +109,7 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
     : null;
   const selectedArtwork = itemArtwork(selectedItem);
 
-  function closeInspection() {
+  const closeInspection = useCallback(() => {
     setInspectionOpen(false);
     const returnTarget = inspectionReturnFocusRef.current;
     if (returnTarget) {
@@ -117,7 +117,7 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
         if (returnTarget.isConnected) returnTarget.focus();
       });
     }
-  }
+  }, []);
 
   useEffect(() => {
     if (!inspectionOpen) return;
@@ -138,7 +138,7 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
       window.removeEventListener("keydown", onKeyDown);
       if (isMobile) document.body.style.overflow = previousOverflow;
     };
-  }, [inspectionOpen]);
+  }, [closeInspection, inspectionOpen]);
 
   function inspect(set: CosmeticSet) {
     if (document.activeElement instanceof HTMLElement) {
