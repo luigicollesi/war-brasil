@@ -51,3 +51,26 @@ test("PROFILE V4 dossier monogram is an interface insignia, not a portrait slot"
   assert.doesNotMatch(styles, /\.identitySignal::after[\s\S]*transform:\s*rotate\(45deg\)/);
   assert.match(styles, /@media \(max-width: 520px\)[\s\S]*\.identitySignal\s*{[\s\S]*display:\s*none/);
 });
+
+test("PROFILE V4 owns page chrome and moves its command bar to the viewport bottom on compact screens", async () => {
+  const runtime = await source(
+    "src/components/pre-game/foundation/pre-game-command-runtime.tsx",
+  );
+  const shell = await source("src/components/profile/v4/profile-shell.tsx");
+  const styles = await source("src/components/profile/v4/profile-shell.module.css");
+
+  assert.match(
+    runtime,
+    /const profileOwnsChrome = pathname === "\/profile" \|\| pathname\.startsWith\("\/profile\/"\)/,
+  );
+  assert.match(runtime, /chrome=\{!profileOwnsChrome\}/);
+  assert.doesNotMatch(shell, /className=\{styles\.mobileNav\}/);
+  assert.match(
+    styles,
+    /@media \(max-width: 980px\)[\s\S]*?\.commandBar\s*\{[\s\S]*?position:\s*fixed;[\s\S]*?top:\s*auto;[\s\S]*?bottom:\s*max\(/,
+  );
+  assert.match(
+    styles,
+    /@media \(max-width: 980px\)[\s\S]*?\.primaryNav\s*\{[\s\S]*?display:\s*grid;/,
+  );
+});
