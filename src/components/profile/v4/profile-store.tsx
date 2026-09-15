@@ -157,6 +157,19 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
     () => storefront.offers.find((offer) => offer.featured) ?? storefront.offers[0] ?? null,
     [storefront.offers],
   );
+  const diceOffers = useMemo(
+    () =>
+      storefront.offers.filter(
+        (offer) =>
+          offer.items.length > 0 &&
+          offer.items.every((item) =>
+            item.slot === "dice_attack" ||
+            item.slot === "dice_defense" ||
+            item.slot === "dice_neutral",
+          ),
+      ),
+    [storefront.offers],
+  );
   const [selectedOfferId, setSelectedOfferId] = useState<string | null>(featured?.id ?? null);
   const [selectedItemId, setSelectedItemId] = useState<string | null>(featured ? previewItem(featured)?.id ?? null : null);
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(
@@ -310,7 +323,14 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
 
   return (
     <div className={styles.store} data-profile-v4-surface="store">
-      <section className={styles.hero} aria-labelledby="store-title">
+      <nav className={styles.storeNav} aria-label="Navegação da Intendência">
+        <a href="#store-highlights">DESTAQUES</a>
+        <a href="#store-dice">DADOS</a>
+        <a href="#store-territories">TERRITÓRIOS</a>
+        <a href="#store-collections">COLEÇÕES</a>
+      </nav>
+
+      <section id="store-highlights" className={styles.hero} aria-labelledby="store-title">
         <div className={styles.heroCopy}>
           <small>INTENDÊNCIA // ARSENAL COSMÉTICO</small>
           <h1 id="store-title">Remessas do Comando</h1>
@@ -373,7 +393,7 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
         </div>
       ) : null}
 
-      <section className={styles.catalog} aria-labelledby="collections-title">
+      <section id="store-collections" className={styles.catalog} aria-labelledby="collections-title">
         <header className={styles.sectionHeading}>
           <span>
             <small>COLEÇÕES // IDENTIDADE DE ARSENAL</small>
@@ -517,18 +537,59 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
         </section>
       ) : null}
 
-      <section className={styles.catalog} aria-labelledby="catalog-title">
+      <section id="store-territories" className={styles.catalog} aria-labelledby="territories-title">
         <header className={styles.sectionHeading}>
           <span>
-            <small>DADOS // TERRITÓRIOS // OFERTAS ATIVAS</small>
-            <h2 id="catalog-title">Ofertas</h2>
+            <small>TERRITÓRIOS // ACABAMENTOS VISUAIS</small>
+            <h2 id="territories-title">Territórios</h2>
           </span>
-          <strong>{storefront.offers.length.toString().padStart(2, "0")}</strong>
+          <strong>{storefront.territorySkins.length.toString().padStart(2, "0")}</strong>
         </header>
 
-        {storefront.offers.length > 0 ? (
+        {storefront.territorySkins.length > 0 ? (
           <div className={styles.catalogGrid}>
-            {storefront.offers.map((offer) => {
+            {storefront.territorySkins.map((skin) => (
+              <article key={skin.id} className={styles.productCard}>
+                <div className={styles.productSelect}>
+                  <span className={styles.productVisual}>
+                    <ProfileCosmeticImage
+                      src={itemArtwork(skin)}
+                      alt={`Prévia de ${skin.name}`}
+                      width={420}
+                      height={300}
+                      fallbackClassName={styles.productFallback}
+                      fallbackLabel="SKIN"
+                    />
+                  </span>
+                  <span className={styles.productCopy}>
+                    <small>{skin.status === "available" ? "DISPONÍVEL" : "ANUNCIADO"}</small>
+                    <strong>{skin.name}</strong>
+                    <em>{skin.owned ? (skin.equipped ? "EQUIPADO" : "POSSUÍDO") : "EM BREVE"}</em>
+                  </span>
+                </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className={styles.emptyCatalog}>
+            <strong>Nenhum acabamento territorial anunciado</strong>
+            <span>Novas camadas visuais aparecerão aqui quando entrarem no catálogo.</span>
+          </div>
+        )}
+      </section>
+
+      <section id="store-dice" className={styles.catalog} aria-labelledby="catalog-title">
+        <header className={styles.sectionHeading}>
+          <span>
+            <small>DADOS // OFERTAS ATIVAS</small>
+            <h2 id="catalog-title">Dados</h2>
+          </span>
+          <strong>{diceOffers.length.toString().padStart(2, "0")}</strong>
+        </header>
+
+        {diceOffers.length > 0 ? (
+          <div className={styles.catalogGrid}>
+            {diceOffers.map((offer) => {
               const art = itemArtwork(previewItem(offer));
               const active = selectedOffer?.id === offer.id;
               const pending = pendingOfferId === offer.id;
@@ -567,7 +628,7 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
           </div>
         ) : (
           <div className={styles.emptyCatalog}>
-            <strong>Nenhuma remessa disponível</strong>
+            <strong>Nenhuma remessa de dados disponível</strong>
             <span>A Intendência continua acessível enquanto o catálogo é restabelecido.</span>
           </div>
         )}
