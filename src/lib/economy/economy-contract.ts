@@ -9,6 +9,8 @@ export const COSMETIC_SLOTS = [
 
 export type CosmeticSlot = (typeof COSMETIC_SLOTS)[number];
 export type CosmeticCatalogStatus = "draft" | "announced" | "available" | "retired";
+export type EconomyOfferStatus = "draft" | "available" | "retired";
+export type EconomyCreditPackStatus = "draft" | "announced" | "retired";
 export type CosmeticAcquisitionSource =
   | "default"
   | "purchase"
@@ -50,6 +52,32 @@ export type CosmeticSet = Readonly<{
   items: ReadonlyArray<CosmeticCatalogItem>;
 }>;
 
+export type EconomyOffer = Readonly<{
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  currency: typeof ECONOMY_CURRENCY_ID;
+  price: number;
+  status: EconomyOfferStatus;
+  featured: boolean;
+  items: ReadonlyArray<CosmeticCatalogItem>;
+  ownedCount: number;
+  totalCount: number;
+  fullyOwned: boolean;
+  partiallyOwned: boolean;
+  purchasable: boolean;
+}>;
+
+export type EconomyCreditPack = Readonly<{
+  id: string;
+  slug: string;
+  name: string;
+  creditAmount: number;
+  priceBrlCents: number;
+  status: EconomyCreditPackStatus;
+}>;
+
 export type CosmeticLoadout = Readonly<Record<CosmeticSlot, CosmeticCatalogItem>>;
 
 export type EconomyStorefrontSnapshot = Readonly<{
@@ -57,6 +85,8 @@ export type EconomyStorefrontSnapshot = Readonly<{
   loadout: CosmeticLoadout;
   ownedItems: ReadonlyArray<CosmeticCatalogItem>;
   sets: ReadonlyArray<CosmeticSet>;
+  offers: ReadonlyArray<EconomyOffer>;
+  creditPacks: ReadonlyArray<EconomyCreditPack>;
 }>;
 
 export type EquipCosmeticInput = Readonly<{
