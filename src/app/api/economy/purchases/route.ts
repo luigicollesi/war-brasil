@@ -3,7 +3,7 @@ import {
   authenticationRequiredResponse,
   getAuthenticatedSession,
 } from "@/src/lib/server/auth/auth-guard";
-import { rejectUntrustedMutationOrigin } from "@/src/lib/server/http/request-origin";
+import { rejectUntrustedMutationOrigin } from "@/src/lib/server/auth/request-origin";
 import {
   EconomyServiceError,
   parsePurchaseOfferInput,
