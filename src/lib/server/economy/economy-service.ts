@@ -14,6 +14,7 @@ import {
   ECONOMY_CURRENCY_ID,
   isCosmeticSlot,
 } from "@/src/lib/economy/economy-contract";
+import { diceAssetDeliveryPath } from "../assets/asset-storage-service";
 import { pool } from "../db/pool";
 import {
   equipOwnedCosmetic,
@@ -38,6 +39,17 @@ export class EconomyServiceError extends Error {
   }
 }
 
+function projectedAssetRef(row: CosmeticRow) {
+  if (!row.asset_ref) return null;
+  if (
+    row.slot !== "territory_effect" &&
+    row.asset_ref.startsWith("cosmetics/dice/")
+  ) {
+    return diceAssetDeliveryPath(row.asset_ref);
+  }
+  return row.asset_ref;
+}
+
 function cosmeticFromRow(row: CosmeticRow): CosmeticCatalogItem {
   return {
     id: row.id,
@@ -51,7 +63,7 @@ function cosmeticFromRow(row: CosmeticRow): CosmeticCatalogItem {
     owned: row.owned,
     equipped: row.equipped,
     previewRef: row.preview_ref,
-    assetRef: row.asset_ref,
+    assetRef: projectedAssetRef(row),
     effectKey: row.effect_key,
   };
 }
