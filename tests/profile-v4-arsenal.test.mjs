@@ -36,3 +36,11 @@ test("PROFILE V4 arsenal derives inventory from ownedItems and equips through th
   assert.doesNotMatch(arsenal, /userId/);
   assert.doesNotMatch(arsenal, /price/);
 });
+
+test("PROFILE V4 territory bay preserves PlayerColor through the shared territory skin preview", async () => {
+  const arsenal = await source("src/components/profile/v4/profile-arsenal.tsx");
+
+  assert.match(arsenal, /TerritorySkinPreview/);
+  assert.match(arsenal, /item\.slot === "territory_effect"/);
+  assert.match(arsenal, /assetRef=\{cosmeticPreviewSource\(item\)\}/);
+});
