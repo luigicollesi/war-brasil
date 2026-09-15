@@ -1,5 +1,5 @@
-import { territorySkinAssetRefFromRuntimeEffectKey } from "@/src/lib/economy/territory-skin-contract";
-import type { PlayerColor } from "@/src/lib/lobby";
+import { territorySkinAssetRefFromRuntimeEffectKey } from "../../economy/territory-skin-contract";
+import type { PlayerColor } from "../../lobby";
 
 export type TerritoryMaterial = {
   playerColor: PlayerColor | null;
