@@ -11,6 +11,7 @@ import {
   createPresignedDiceAssetUrl,
   validateDiceAssetObject,
   validateDiceCollection,
+  validateTerritorySkinAssetObject,
 } from "./asset-storage-s3";
 
 let cachedConfig: AssetStorageConfig | null = null;
@@ -75,6 +76,17 @@ export async function validateConfiguredDiceAsset(
   fetchImpl: typeof fetch = fetch,
 ) {
   return validateDiceAssetObject(getAssetStorageConfig(), objectKey, fetchImpl);
+}
+
+export async function validateConfiguredTerritorySkinAsset(
+  objectKey: string,
+  fetchImpl: typeof fetch = fetch,
+) {
+  return validateTerritorySkinAssetObject(
+    getAssetStorageConfig(),
+    objectKey,
+    fetchImpl,
+  );
 }
 
 export async function validateConfiguredDiceCollection(
