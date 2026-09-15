@@ -14,6 +14,7 @@ export async function isKnownDiceAssetKey(
        FROM catalog.cosmetics item
       WHERE item.asset_ref=$1
         AND item.slot IN ('dice_attack','dice_defense','dice_neutral')
+        AND item.status IN ('announced','available')
       UNION ALL
      SELECT 1
        FROM game.player_cosmetic_loadouts snapshot
