@@ -59,16 +59,17 @@ try {
   // eventos de produção; o E2E controlado só precisa do sentinel para registrar
   // a rodada inicial sem inventar um evento de gameplay alternativo.
   await seedClient.query(`
-    INSERT INTO catalog.events (id, name, text, image_url, effects, is_passive)
+    INSERT INTO catalog.events (id, name, description, effects)
     VALUES (
       0,
       'Estado inicial',
       'Estado inicial do grafo de anomalias.',
-      '',
-      '[]'::jsonb,
-      FALSE
+      '[]'::jsonb
     )
-    ON CONFLICT (id) DO NOTHING
+    ON CONFLICT (id) DO UPDATE
+      SET name = EXCLUDED.name,
+          description = EXCLUDED.description,
+          effects = EXCLUDED.effects
   `);
 
   // O E2E precisa de um baralho territorial completo para atravessar startGame.
