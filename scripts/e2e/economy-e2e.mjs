@@ -51,8 +51,15 @@ async function readEconomyState(userId) {
       [userId],
     );
     const ledger = await db.query(
-      `SELECT COUNT(*)::int AS total
+      `SELECT COUNT(*)::int AS total,
+              COALESCE(SUM(delta),0)::text AS delta
          FROM economy.ledger_entries
+        WHERE user_id=$1::uuid`,
+      [userId],
+    );
+    const purchases = await db.query(
+      `SELECT COUNT(*)::int AS total
+         FROM economy.purchases
         WHERE user_id=$1::uuid`,
       [userId],
     );
@@ -75,6 +82,8 @@ async function readEconomyState(userId) {
     return {
       balance: wallet.rows[0]?.balance ?? null,
       ledgerCount: ledger.rows[0]?.total ?? -1,
+      ledgerDelta: ledger.rows[0]?.delta ?? null,
+      purchaseCount: purchases.rows[0]?.total ?? -1,
       inventoryIds: inventory.rows.map((row) => row.id),
       loadout: loadout.rows,
     };
@@ -88,10 +97,15 @@ async function readCommerceCatalog() {
   await db.connect();
   try {
     const offers = await db.query(
-      `SELECT id,name,price::text AS price
-         FROM catalog.offers
-        WHERE status='available'
-        ORDER BY sort_order,id`,
+      `SELECT offer.id,
+              offer.name,
+              offer.price::text AS price,
+              (SELECT COUNT(*)::int
+                 FROM catalog.offer_items membership
+                WHERE membership.offer_id=offer.id) AS item_count
+         FROM catalog.offers offer
+        WHERE offer.status='available'
+        ORDER BY offer.sort_order,offer.id`,
     );
     const creditPacks = await db.query(
       `SELECT id,name,credit_amount::text AS credit_amount,price_brl_cents::text AS price_brl_cents
@@ -104,6 +118,7 @@ async function readCommerceCatalog() {
         id: row.id,
         name: row.name,
         price: Number(row.price),
+        itemCount: row.item_count,
       })),
       creditPacks: creditPacks.rows.map((row) => ({
         id: row.id,
@@ -117,9 +132,52 @@ async function readCommerceCatalog() {
   }
 }
 
+async function setCampaignCreditBalance(userId, balance) {
+  assert.ok(Number.isSafeInteger(balance) && balance >= 0);
+  const db = new Client({ connectionString: DATABASE_URL });
+  await db.connect();
+  try {
+    const result = await db.query(
+      `UPDATE economy.wallets
+          SET balance=$2::bigint,
+              updated_at=NOW()
+        WHERE user_id=$1::uuid
+          AND currency_code='campaign-credit'
+        RETURNING balance::text AS balance`,
+      [userId, balance],
+    );
+    assert.equal(result.rowCount, 1);
+    assert.equal(result.rows[0].balance, String(balance));
+  } finally {
+    await db.end();
+  }
+}
+
+async function setOfferPrice(offerId, price) {
+  assert.ok(Number.isSafeInteger(price) && price > 0);
+  const db = new Client({ connectionString: DATABASE_URL });
+  await db.connect();
+  try {
+    const result = await db.query(
+      `UPDATE catalog.offers
+          SET price=$2::bigint,
+              updated_at=NOW()
+        WHERE id=$1
+        RETURNING price::text AS price`,
+      [offerId, price],
+    );
+    assert.equal(result.rowCount, 1);
+    assert.equal(result.rows[0].price, String(price));
+  } finally {
+    await db.end();
+  }
+}
+
 function assertFreshCommanderState(state) {
   assert.equal(state.balance, "0");
   assert.equal(state.ledgerCount, 0);
+  assert.equal(state.ledgerDelta, "0");
+  assert.equal(state.purchaseCount, 0);
   assert.deepEqual(state.inventoryIds, [
     "dice.attack.default",
     "dice.defense.default",
@@ -356,12 +414,13 @@ try {
   assert.equal(signedR2Keys.length, 0, `R2 assinado antes de inspeção: ${signedR2Keys}`);
 
   const commerce = await readCommerceCatalog();
+  assert.ok(commerce.offers.length > 0, "catálogo comercial sem offers disponíveis");
   const storeWallet = page.locator('[data-currency="campaign-credit"]').first();
   assert.match(normalizeText(await storeWallet.textContent()), /Créditos de Campanha 0 saldo persistente/i);
   assert.equal(await storeWallet.locator('img[src*="coin.svg"]').count(), 1);
   assert.equal(await page.locator('section[aria-labelledby="loadout-title"] article').count(), 4);
 
-  const offersSection = page.locator('section[aria-labelledby="offers-title"]');
+  let offersSection = page.locator('section[aria-labelledby="offers-title"]');
   assert.equal(await offersSection.locator("article").count(), commerce.offers.length);
   for (const offer of commerce.offers) {
     const card = offersSection.locator("article").filter({ hasText: offer.name });
@@ -443,6 +502,85 @@ try {
   assert.equal(reEquip.status, 200, JSON.stringify(reEquip.body));
   assertFreshCommanderState(await readEconomyState(userId));
 
+  const livePriceOffer = commerce.offers[0];
+  const probePrice = livePriceOffer.price + 37;
+  try {
+    await setOfferPrice(livePriceOffer.id, probePrice);
+    await page.goto(`${BASE_URL}/profile/store`, { waitUntil: "domcontentloaded" });
+    await page.getByRole("heading", { name: "Remessas do Comando", exact: true }).waitFor();
+    offersSection = page.locator('section[aria-labelledby="offers-title"]');
+    const repricedCard = offersSection.locator("article").filter({ hasText: livePriceOffer.name });
+    assert.ok(
+      normalizeText(await repricedCard.textContent()).includes(formatNumber(probePrice)),
+      `${livePriceOffer.id} não refletiu alteração persistida de preço`,
+    );
+    assertFreshCommanderState(await readEconomyState(userId));
+  } finally {
+    await setOfferPrice(livePriceOffer.id, livePriceOffer.price);
+  }
+
+  const purchaseBalance = livePriceOffer.price + 100;
+  await setCampaignCreditBalance(userId, purchaseBalance);
+  await page.goto(`${BASE_URL}/profile/store`, { waitUntil: "domcontentloaded" });
+  await page.getByRole("heading", { name: "Remessas do Comando", exact: true }).waitFor();
+  const fundedWallet = page.locator('[data-currency="campaign-credit"]').first();
+  assert.ok(normalizeText(await fundedWallet.textContent()).includes(formatNumber(purchaseBalance)));
+
+  offersSection = page.locator('section[aria-labelledby="offers-title"]');
+  let purchaseCard = offersSection.locator("article").filter({ hasText: livePriceOffer.name });
+  const buyButton = purchaseCard.getByRole("button", { name: "COMPRAR", exact: true });
+  assert.equal(await buyButton.isEnabled(), true);
+  await buyButton.click();
+  await page.getByText(`${livePriceOffer.name} adquirido. O inventário foi atualizado.`, {
+    exact: true,
+  }).waitFor();
+  await purchaseCard.getByRole("button", { name: "POSSUÍDO", exact: true }).waitFor();
+  assert.ok(
+    normalizeText(await purchaseCard.textContent()).includes(
+      `${livePriceOffer.itemCount}/${livePriceOffer.itemCount} possuído`,
+    ),
+  );
+  assert.ok(normalizeText(await fundedWallet.textContent()).includes("100"));
+
+  const purchasedState = await readEconomyState(userId);
+  assert.equal(purchasedState.balance, "100");
+  assert.equal(purchasedState.purchaseCount, 1);
+  assert.equal(purchasedState.ledgerCount, 1);
+  assert.equal(purchasedState.ledgerDelta, String(-livePriceOffer.price));
+  assert.equal(purchasedState.inventoryIds.length, 4 + livePriceOffer.itemCount);
+
+  const stateBeforeEquip = structuredClone(purchasedState);
+  const equipButton = purchaseCard.getByRole("button", { name: "EQUIPAR", exact: true }).first();
+  assert.equal(await equipButton.count(), 1);
+  await equipButton.click();
+  await page.getByText(/equipado em (Ataque|Defesa|Neutro|Território)\./).waitFor();
+
+  const equippedState = await readEconomyState(userId);
+  assert.equal(equippedState.balance, stateBeforeEquip.balance);
+  assert.equal(equippedState.purchaseCount, stateBeforeEquip.purchaseCount);
+  assert.equal(equippedState.ledgerCount, stateBeforeEquip.ledgerCount);
+  assert.equal(equippedState.ledgerDelta, stateBeforeEquip.ledgerDelta);
+  assert.equal(
+    equippedState.loadout.some((entry) => !entry.cosmetic_id.endsWith(".default")),
+    true,
+  );
+
+  await page.goto(`${BASE_URL}/profile/store`, { waitUntil: "domcontentloaded" });
+  await page.getByRole("heading", { name: "Remessas do Comando", exact: true }).waitFor();
+  purchaseCard = page
+    .locator('section[aria-labelledby="offers-title"] article')
+    .filter({ hasText: livePriceOffer.name });
+  assert.ok((await purchaseCard.getByText("EQUIPADO", { exact: true }).count()) >= 1);
+  assert.equal(
+    await purchaseCard.getByRole("button", { name: "POSSUÍDO", exact: true }).count(),
+    1,
+  );
+
+  await page.screenshot({
+    path: path.join(ARTIFACT_DIR, "store-purchase-equipped-1440x900.png"),
+    fullPage: true,
+  });
+
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${BASE_URL}/profile/store`, { waitUntil: "domcontentloaded" });
   await page.getByRole("heading", { name: "Remessas do Comando", exact: true }).waitFor();
@@ -461,7 +599,7 @@ try {
   }
 
   console.log(
-    `[economy-e2e] ok — ${commerce.offers.length} offers, ${commerce.creditPacks.length} packs e ${signedR2Keys.length} WebPs validados`,
+    `[economy-e2e] ok — ${commerce.offers.length} offers, ${commerce.creditPacks.length} packs, compra/equip persistentes e ${signedR2Keys.length} WebPs validados`,
   );
 } finally {
   await context.close();
