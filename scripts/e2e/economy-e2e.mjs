@@ -138,6 +138,10 @@ function normalizeText(value) {
   return String(value ?? "").replace(/\s+/g, " ").trim();
 }
 
+function formatNumber(value) {
+  return new Intl.NumberFormat("pt-BR").format(value);
+}
+
 function formatBrl(cents) {
   return new Intl.NumberFormat("pt-BR", {
     style: "currency",
@@ -362,7 +366,7 @@ try {
   for (const offer of commerce.offers) {
     const card = offersSection.locator("article").filter({ hasText: offer.name });
     await card.getByRole("heading", { name: offer.name, exact: true }).waitFor();
-    assert.match(normalizeText(await card.textContent()), new RegExp(`\\b${offer.price}\\b`));
+    assert.ok(normalizeText(await card.textContent()).includes(formatNumber(offer.price)));
     assert.equal(await card.locator('img[src*="coin.svg"]').count(), 1);
     const buyButton = card.getByRole("button", { name: "COMPRAR", exact: true });
     assert.equal(await buyButton.count(), 1);
@@ -375,7 +379,7 @@ try {
     const card = creditsSection.locator("article").filter({ hasText: pack.name });
     await card.getByRole("heading", { name: pack.name, exact: true }).waitFor();
     const cardText = normalizeText(await card.textContent());
-    assert.ok(cardText.includes(String(pack.creditAmount)), `${pack.id} sem quantidade persistida`);
+    assert.ok(cardText.includes(formatNumber(pack.creditAmount)), `${pack.id} sem quantidade persistida`);
     assert.ok(cardText.includes(normalizeText(formatBrl(pack.priceBrlCents))), `${pack.id} sem preço BRL persistido`);
     assert.equal(await card.locator('img[src*="coin.svg"]').count(), 1);
     const futureButton = card.getByRole("button", { name: "EM BREVE", exact: true });
