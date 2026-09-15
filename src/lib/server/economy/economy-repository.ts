@@ -39,7 +39,16 @@ export type CosmeticSetItemRow = CosmeticRow & {
   set_description: string | null;
   set_preview_ref: string | null;
   set_status: CosmeticCatalogStatus;
+  set_storage_slug: string | null;
+  set_sort_order: number;
   position: number;
+};
+
+export type CatalogCosmeticAssetRow = {
+  id: string;
+  slot: CosmeticSlot;
+  status: CosmeticCatalogStatus;
+  asset_ref: string | null;
 };
 
 /**
@@ -151,6 +160,8 @@ export async function listStorefrontSetItems(
             cosmetic_set.description AS set_description,
             cosmetic_set.preview_ref AS set_preview_ref,
             cosmetic_set.status AS set_status,
+            cosmetic_set.storage_slug AS set_storage_slug,
+            cosmetic_set.sort_order AS set_sort_order,
             membership.position,
             item.id,
             item.slug,
@@ -176,10 +187,23 @@ export async function listStorefrontSetItems(
         AND loadout.slot=item.slot
       WHERE cosmetic_set.status IN ('announced', 'available')
         AND item.status IN ('announced', 'available')
-      ORDER BY cosmetic_set.name, cosmetic_set.id, membership.position`,
+      ORDER BY cosmetic_set.sort_order, cosmetic_set.id, membership.position`,
     [userId],
   );
   return result.rows;
+}
+
+export async function findCatalogCosmeticAsset(
+  cosmeticId: string,
+  db: EconomyQueryable = pool,
+): Promise<CatalogCosmeticAssetRow | null> {
+  const result = await db.query<CatalogCosmeticAssetRow>(
+    `SELECT id,slot,status,asset_ref
+       FROM catalog.cosmetics
+      WHERE id=$1`,
+    [cosmeticId],
+  );
+  return result.rows[0] ?? null;
 }
 
 export async function findOwnedCosmetic(
