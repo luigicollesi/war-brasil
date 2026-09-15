@@ -18,9 +18,9 @@ test("territory_effect usa a mesma boundary owned-only dos demais cosméticos", 
   assert.match(service, /if \(item\.status !== "available"\)/);
   assert.match(service, /await equipOwnedCosmetic\(userId, slot, cosmeticId, client\)/);
 
-  assert.match(repository, /FROM inventory\.cosmetics inventory/);
-  assert.match(repository, /inventory\.user_id=\$1/);
-  assert.match(repository, /inventory\.cosmetic_id=\$2/);
+  assert.match(repository, /FROM inventory\.cosmetics owned/);
+  assert.match(repository, /owned\.user_id=\$1::uuid/);
+  assert.match(repository, /owned\.cosmetic_id=\$2/);
   assert.match(repository, /profile\.cosmetic_loadout/);
 });
 
