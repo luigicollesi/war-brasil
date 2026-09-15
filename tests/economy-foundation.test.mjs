@@ -8,11 +8,16 @@ function source(path) {
 
 const migration = source("src/lib/db/migrations/managed/038-economy-cosmetics-foundation.sql");
 const gameMigration = source("src/lib/db/migrations/managed/039-game-cosmetic-loadout-snapshots.sql");
+const storageMigration = source("src/lib/db/migrations/managed/040-r2-webp-cosmetic-catalog.sql");
 const contract = source("src/lib/economy/economy-contract.ts");
 const gameContract = source("src/lib/shared/game-contract.ts");
 const repository = source("src/lib/server/economy/economy-repository.ts");
 const service = source("src/lib/server/economy/economy-service.ts");
 const gameCosmetics = source("src/lib/server/game-cosmetic-loadout-service.ts");
+const assetConfig = source("src/lib/server/assets/asset-storage-config.ts");
+const assetSigning = source("src/lib/server/assets/asset-storage-s3.ts");
+const assetService = source("src/lib/server/assets/asset-storage-service.ts");
+const assetRoute = source("src/app/api/assets/dice/route.ts");
 const startGame = source("src/lib/server/start-game-service.ts");
 const gameSnapshot = source("src/lib/server/game-snapshot-service.ts");
 const gameFinish = source("src/lib/server/game-finish-command-service.ts");
@@ -22,7 +27,7 @@ const loadoutRoute = source("src/app/api/economy/loadout/route.ts");
 const storePage = source("src/app/profile/store/page.tsx");
 const storeUi = source("src/components/profile/store/economy-storefront.tsx");
 
-test("histórico de migrations preserva 037 do Profile e move economia para 038", () => {
+test("histórico de migrations preserva 037 e evolui economia por 038→039→040", () => {
   assert.equal(
     existsSync("src/lib/db/migrations/managed/037-profile-remove-portraits.sql"),
     true,
@@ -31,14 +36,13 @@ test("histórico de migrations preserva 037 do Profile e move economia para 038"
     existsSync("src/lib/db/migrations/managed/037-economy-cosmetics-foundation.sql"),
     false,
   );
-  assert.equal(
-    existsSync("src/lib/db/migrations/managed/038-economy-cosmetics-foundation.sql"),
-    true,
-  );
-  assert.equal(
-    existsSync("src/lib/db/migrations/managed/039-game-cosmetic-loadout-snapshots.sql"),
-    true,
-  );
+  for (const path of [
+    "src/lib/db/migrations/managed/038-economy-cosmetics-foundation.sql",
+    "src/lib/db/migrations/managed/039-game-cosmetic-loadout-snapshots.sql",
+    "src/lib/db/migrations/managed/040-r2-webp-cosmetic-catalog.sql",
+  ]) {
+    assert.equal(existsSync(path), true, path);
+  }
 });
 
 test("economia v1 possui uma única moeda real com saldo inteiro não negativo", () => {
@@ -50,35 +54,45 @@ test("economia v1 possui uma única moeda real com saldo inteiro não negativo",
   assert.doesNotMatch(contract, /command-reserve/);
 });
 
-test("catálogo inicial contém quatro defaults e três conjuntos anunciados", () => {
+test("catálogo remoto possui quatro defaults, seis conjuntos e somente WebP para dados", () => {
   for (const id of [
     "dice.attack.default",
     "dice.defense.default",
     "dice.neutral.default",
     "territory.effect.default",
   ]) {
-    assert.match(migration, new RegExp(id.replaceAll(".", "\\.")));
+    assert.match(migration + storageMigration, new RegExp(id.replaceAll(".", "\\.")));
   }
 
-  for (const set of ["set.exercito", "set.lancas", "set.viking"]) {
-    assert.match(migration, new RegExp(set.replaceAll(".", "\\.")));
+  for (const set of [
+    "set.exercito",
+    "set.lancas",
+    "set.viking",
+    "set.gato",
+    "set.cachorro",
+    "set.futebol",
+  ]) {
+    assert.match(storageMigration, new RegExp(set.replaceAll(".", "\\.")));
   }
 
   for (const path of [
-    "/dados/exercito/ataque.svg",
-    "/dados/exercito/defesa.svg",
-    "/dados/exercito/neutro.svg",
-    "/dados/lancas/ataque.svg",
-    "/dados/lancas/defesa.svg",
-    "/dados/lancas/neutro.svg",
-    "/dados/viking/ataque.svg",
-    "/dados/viking/defesa.svg",
-    "/dados/viking/neutro.svg",
+    "cosmetics/dice/default/attack.webp",
+    "cosmetics/dice/default/defense.webp",
+    "cosmetics/dice/default/neutral.webp",
+    "cosmetics/dice/military-classic/attack.webp",
+    "cosmetics/dice/medieval-spears/defense.webp",
+    "cosmetics/dice/viking/neutral.webp",
+    "cosmetics/dice/cat/attack.webp",
+    "cosmetics/dice/dog/defense.webp",
+    "cosmetics/dice/football/neutral.webp",
   ]) {
-    assert.match(migration, new RegExp(path.replaceAll("/", "\\/")));
+    assert.match(storageMigration, new RegExp(path.replaceAll("/", "\\/")));
   }
 
-  assert.match(migration, /'announced', FALSE/);
+  assert.match(storageMigration, /storage_slug/);
+  assert.match(storageMigration, /sort_order/);
+  assert.match(storageMigration, /cosmetics_dice_asset_ref_webp_check/);
+  assert.doesNotMatch(storageMigration, /asset_ref[^\n]*\.svg/);
 });
 
 test("loadout possui exatamente quatro slots e DB exige ownership compatível", () => {
@@ -99,6 +113,14 @@ test("inicialização econômica é idempotente e não cria movimentação", () 
   assert.match(repository, /INSERT INTO profile\.cosmetic_loadout[\s\S]*ON CONFLICT \(user_id, slot\) DO NOTHING/);
   assert.doesNotMatch(repository, /INSERT INTO economy\.ledger_entries/);
   assert.doesNotMatch(service, /ledger_entries|UPDATE economy\.wallets|SET balance/i);
+});
+
+test("storefront é dirigido pelo catálogo e não por allowlist temática de React", () => {
+  assert.match(repository, /cosmetic_set\.storage_slug AS set_storage_slug/);
+  assert.match(repository, /cosmetic_set\.sort_order AS set_sort_order/);
+  assert.match(repository, /ORDER BY cosmetic_set\.sort_order, cosmetic_set\.id, membership\.position/);
+  assert.match(storeUi, /storefront\.sets\.map/);
+  assert.doesNotMatch(storeUi, /set\.exercito|set\.lancas|set\.viking|set\.gato|set\.cachorro|set\.futebol/);
 });
 
 test("economia serializa inicialização, storefront, equipagem e captura da partida pelo comandante", () => {
@@ -141,6 +163,20 @@ test("APIs derivam ator da sessão e expõem somente leitura + equipagem", () =>
   }
 });
 
+test("ASSET_STORAGE_URL permanece server-only e dados usam entrega autenticada", () => {
+  assert.match(assetConfig, /ASSET_STORAGE_ENV = "ASSET_STORAGE_URL"/);
+  assert.match(assetConfig, /war-brasil-assets-prod/);
+  assert.match(assetConfig, /r2\\\.cloudflarestorage\\\.com/);
+  assert.match(assetSigning, /AWS4-HMAC-SHA256/);
+  assert.match(assetSigning, /image\/webp/);
+  assert.match(assetService, /\/api\/assets\/dice\?key=/);
+  assert.match(assetRoute, /getAuthenticatedSession\(request\)/);
+  assert.match(assetRoute, /isKnownDiceAssetKey\(objectKey\)/);
+  assert.match(assetRoute, /resolveDiceAssetReadUrl\(objectKey/);
+  assert.doesNotMatch(assetRoute, /process\.env\.ASSET_STORAGE_URL|secretAccessKey|accessKeyId/);
+  assert.equal(existsSync("src/app/api/assets/dice/route.ts"), true);
+});
+
 test("partida congela loadout em game.* e snapshot não lê Profile em runtime", () => {
   assert.match(gameMigration, /CREATE TABLE IF NOT EXISTS game\.player_cosmetic_loadouts/);
   assert.match(gameMigration, /asset_ref TEXT/);
@@ -149,6 +185,7 @@ test("partida congela loadout em game.* e snapshot não lê Profile em runtime",
   assert.match(startGame, /capturePlayerCosmeticLoadouts\(client, roomId\)/);
   assert.match(gameCosmetics, /INSERT INTO game\.player_cosmetic_loadouts/);
   assert.match(gameCosmetics, /loadRoomPlayerCosmetics/);
+  assert.match(gameCosmetics, /diceAssetDeliveryPath\(row\.asset_ref\)/);
 
   const runtimeReader = gameCosmetics.slice(
     gameCosmetics.indexOf("export async function loadRoomPlayerCosmetics"),
@@ -209,7 +246,7 @@ test("store autenticada usa cena Profile sem preço ou CTA de compra", () => {
   assert.doesNotMatch(storeUi, /COMPRAR|Comprar agora|price|checkout\(/i);
 });
 
-test("listagem não hardcode SVGs HQ e detalhe monta somente o asset selecionado", () => {
+test("listagem não baixa catálogo HQ e detalhe monta somente o asset selecionado", () => {
   assert.doesNotMatch(storeUi, /\/dados\//);
   assert.match(storeUi, />D6</);
   assert.match(storeUi, /previewOpen/);
