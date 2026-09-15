@@ -11,8 +11,9 @@ test("configurações ficam compactas e editáveis somente para o host", () => {
   assert.match(settings, /canManageRoom/);
   assert.match(settings, /aria-expanded/);
   assert.match(settings, /role="dialog"/);
-  assert.match(settings, /Objetivo/);
+  assert.match(settings, /Clássico/);
   assert.match(settings, /Supremacia/);
+  assert.match(settings, /ruleset === "objective"/);
 });
 
 test("sorte balanceada usa semântica de switch e texto ON OFF", () => {
