@@ -69,6 +69,7 @@ export type PurchaseReceiptRow = {
   offer_id: string;
   currency_code: "campaign-credit";
   price_paid: string;
+  offer_item_count: number;
   idempotency_key: string;
   created_at: Date;
 };
@@ -366,6 +367,7 @@ export async function findPurchaseReceiptByIdempotencyKey(
             offer_id,
             currency_code,
             price_paid::text AS price_paid,
+            offer_item_count,
             idempotency_key,
             created_at
        FROM economy.purchases
@@ -414,15 +416,22 @@ export async function createPurchaseReceipt(
   userId: string,
   offerId: string,
   pricePaid: number,
+  offerItemCount: number,
   idempotencyKey: string,
   db: EconomyQueryable,
 ) {
   await db.query(
     `INSERT INTO economy.purchases(
-       id, user_id, offer_id, currency_code, price_paid, idempotency_key
+       id,
+       user_id,
+       offer_id,
+       currency_code,
+       price_paid,
+       offer_item_count,
+       idempotency_key
      )
-     VALUES($1::uuid, $2::uuid, $3, 'campaign-credit', $4::bigint, $5)`,
-    [purchaseId, userId, offerId, pricePaid, idempotencyKey],
+     VALUES($1::uuid, $2::uuid, $3, 'campaign-credit', $4::bigint, $5::smallint, $6)`,
+    [purchaseId, userId, offerId, pricePaid, offerItemCount, idempotencyKey],
   );
 }
 
