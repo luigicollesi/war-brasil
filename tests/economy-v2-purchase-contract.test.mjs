@@ -40,14 +40,15 @@ test("receipt é idempotente por usuário e preserva preço histórico", () => {
   );
 });
 
-test("contrato público de purchase não recebe autoridade econômica do browser", () => {
+test("STORE-12: contrato público recebe expectedPrice sem aceitar autoridade econômica do browser", () => {
   assert.match(contract, /export type PurchaseOfferInput/);
   assert.match(contract, /offerId: string/);
   assert.match(contract, /idempotencyKey: string/);
+  assert.match(contract, /expectedPrice: number/);
   const purchaseInput = contract.slice(contract.indexOf("export type PurchaseOfferInput"));
   assert.doesNotMatch(
     purchaseInput.slice(0, purchaseInput.indexOf("}>;") + 3),
-    /userId|price|currency|balance|cosmeticIds/,
+    /userId|currency|balance|cosmeticIds/,
   );
 });
 
@@ -67,13 +68,24 @@ test("purchase é transacional, trava wallet e grava receipt + ledger + ownershi
   assert.match(service, /lockCampaignCreditWallet/);
 });
 
-test("POST purchases deriva ator da sessão e aceita somente offerId + idempotencyKey", () => {
+test("STORE-12: servidor recalcula preço e rejeita confirmação stale antes de debitar", () => {
+  assert.match(service, /expectedPrice/);
+  assert.match(service, /ECONOMY_PRICE_CHANGED/);
+  assert.match(service, /409/);
+  const priceCheck = service.indexOf("ECONOMY_PRICE_CHANGED");
+  const debit = service.indexOf("debitCampaignCreditWallet");
+  assert.ok(priceCheck >= 0, "price-change gate must exist");
+  assert.ok(debit > priceCheck, "price confirmation must happen before wallet debit");
+});
+
+test("POST purchases deriva ator da sessão e aceita offerId + idempotencyKey + expectedPrice", () => {
   assert.equal(existsSync(purchaseRoutePath), true);
   assert.match(purchaseRoute, /getAuthenticatedSession\(request\)/);
   assert.match(purchaseRoute, /rejectUntrustedMutationOrigin\(request\)/);
   assert.match(purchaseRoute, /purchaseOffer\(session\.user\.id/);
+  assert.match(purchaseRoute, /input\.expectedPrice/);
   assert.doesNotMatch(purchaseRoute, /payload\.userId|body\.userId|input\.userId/);
-  assert.doesNotMatch(purchaseRoute, /payload\.price|payload\.balance|payload\.currency|payload\.cosmeticIds/);
+  assert.doesNotMatch(purchaseRoute, /payload\.balance|payload\.currency|payload\.cosmeticIds/);
 });
 
 test("packs BRL permanecem catálogo demonstrativo sem checkout", () => {
