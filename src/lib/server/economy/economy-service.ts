@@ -189,11 +189,12 @@ export async function getEconomyStorefront(
     await client.query("BEGIN");
     await ensureLockedEconomyState(userId, client);
 
-    const [walletRow, ownedRows, setRows] = await Promise.all([
-      findCampaignCreditWallet(userId, client),
-      listOwnedCosmetics(userId, client),
-      listStorefrontSetItems(userId, client),
-    ]);
+    // A single pg Client owns one PostgreSQL connection. Keep these reads
+    // sequential so transaction ordering remains explicit and compatible with
+    // node-postgres v9, which no longer accepts concurrent queries per client.
+    const walletRow = await findCampaignCreditWallet(userId, client);
+    const ownedRows = await listOwnedCosmetics(userId, client);
+    const setRows = await listStorefrontSetItems(userId, client);
 
     const snapshot = {
       wallet: walletFromRow(walletRow),
