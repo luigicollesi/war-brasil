@@ -6,30 +6,32 @@ function source(path) {
   return readFileSync(path, "utf8");
 }
 
-test("PROFILE V3 preserva as cinco estações do Quartel", () => {
-  const hub = source("src/components/profile/command-quarters/profile-command-hub.tsx");
+test("PROFILE V4 substitui as cinco estações por Dossiê, Arsenal e Intendência", () => {
   const spec = source("docs/pre-game/profile/SPEC.md");
+  const shell = source("src/components/profile/v4/profile-shell.tsx");
 
-  for (const station of ["dossier", "treasury", "network", "campaigns", "quartermaster"]) {
-    assert.match(hub, new RegExp(`\\b${station}\\b`));
-  }
-
-  assert.match(spec, /Dossiê do Comandante/);
-  assert.match(spec, /Tesouraria/);
-  assert.match(spec, /Rede de Comando/);
-  assert.match(spec, /Livro de Campanha/);
-  assert.match(spec, /Intendência/);
-  assert.match(spec, /Mesa de Comando/);
+  assert.match(spec, /PROFILE V4/);
+  assert.match(spec, /A V4 substitui deliberadamente a composição de cinco estações da V3/);
+  assert.match(spec, /1\. \*\*Dossiê\*\*/);
+  assert.match(spec, /2\. \*\*Arsenal\*\*/);
+  assert.match(spec, /3\. \*\*Intendência\*\*/);
+  assert.match(shell, /href: "\/profile"/);
+  assert.match(shell, /href: "\/profile\/arsenal"/);
+  assert.match(shell, /href: "\/profile\/store"/);
+  assert.doesNotMatch(shell, /"treasury"|"network"|"campaigns"|"quartermaster"/);
 });
 
-test("rota PROFILE resolve snapshot autenticado em request-time", () => {
+test("rota PROFILE resolve snapshot autenticado em request-time e renderiza Dossiê V4", () => {
   const page = source("src/app/profile/page.tsx");
 
   assert.match(page, /import \{ connection \} from "next\/server"/);
   assert.match(page, /server\/profile\/profile-command-snapshot-service/);
   assert.match(page, /getCurrentProfileCommandSnapshot/);
   assert.match(page, /await connection\(\);\s*\n\s*const snapshot = await getCurrentProfileCommandSnapshot\(\)/);
-  assert.match(page, /<ProfileCommandHub snapshot=\{snapshot\} \/>/);
+  assert.match(page, /<ProfileShell/);
+  assert.match(page, /activeSurface="dossier"/);
+  assert.match(page, /<ProfileDossier snapshot=\{snapshot\} \/>/);
+  assert.doesNotMatch(page, /ProfileCommandHub/);
   assert.doesNotMatch(page, /profile-command-data/);
   assert.doesNotMatch(page, /searchParams|useSearchParams/);
 });
@@ -54,25 +56,25 @@ test("contrato PROFILE separa identidade, economia, social, histórico e loja se
   assert.doesNotMatch(contract, /token|password|secret/i);
 });
 
-test("Tesouraria projeta uma única moeda real e não reintroduz moeda premium", () => {
+test("Tesouraria usa campaign-credit real e coin.svg como identidade visual V4", () => {
   const fixture = source("src/lib/profile/profile-local-fixture.ts");
-  const hub = source("src/components/profile/command-quarters/profile-command-hub.tsx");
+  const shell = source("src/components/profile/v4/profile-shell.tsx");
 
   assert.match(fixture, /currency: "campaign-credit"/);
   assert.match(fixture, /label: "Créditos de Campanha"/);
-  assert.match(fixture, /symbol: "◈"/);
-  assert.match(fixture, /balance: 0/);
-  assert.doesNotMatch(fixture, /command-reserve|Reserva de Comando|symbol: "◆"/);
-  assert.match(hub, /wallet\.campaignCredit/);
-  assert.match(hub, /currency\.shortLabel/);
-  assert.match(hub, /currency\.symbol/);
-  assert.doesNotMatch(hub, /wallet\.premium|wallet\.common|command-reserve/);
+  assert.match(shell, /src="\/coin\.svg"/);
+  assert.match(shell, /wallet\.balance/);
+  assert.match(shell, /INDISPONÍVEL/);
+  assert.doesNotMatch(shell, /currency\.symbol|>◈</);
+  assert.doesNotMatch(shell, /wallet\.premium|wallet\.common|command-reserve/);
 });
 
 test("Rede de Comando cobre amigos, sinais, recentes e busca autenticada sob demanda", () => {
   const network = source("src/components/profile/command-quarters/profile-network-station.tsx");
+  const dossier = source("src/components/profile/v4/profile-dossier.tsx");
   const endpoint = source("src/app/api/profile/commanders/search/route.ts");
 
+  assert.match(dossier, /ProfileNetworkStation/);
   assert.match(network, /Amigos na Rede de Comando/);
   assert.match(network, /Solicitações de conexão/);
   assert.match(network, /Contatos recentes/);
@@ -88,12 +90,14 @@ test("Rede de Comando cobre amigos, sinais, recentes e busca autenticada sob dem
   assert.doesNotMatch(network, /LOCAL_COMMANDER_DIRECTORY/);
 });
 
-test("Livro de Campanha pagina por cursor autenticado e preserva relação dos participantes", () => {
+test("Livro de Campanha pagina por cursor autenticado e permanece módulo secundário do Dossiê", () => {
   const contract = source("src/lib/profile/profile-command-contract.ts");
+  const dossier = source("src/components/profile/v4/profile-dossier.tsx");
   const campaign = source("src/components/profile/command-quarters/profile-campaign-station.tsx");
   const endpoint = source("src/app/api/profile/history/route.ts");
   const repository = source("src/lib/server/profile/history-repository.ts");
 
+  assert.match(dossier, /ProfileCampaignStation/);
   assert.match(contract, /hasMore: boolean/);
   assert.match(contract, /nextCursor: string \| null/);
   assert.match(campaign, /Participantes da partida/);
@@ -109,63 +113,66 @@ test("Livro de Campanha pagina por cursor autenticado e preserva relação dos p
   assert.doesNotMatch(repository, /\bOFFSET\b/i);
 });
 
-test("Intendência delega economia real e não implementa compra ou preço falsos", () => {
-  const quartermaster = source("src/components/profile/command-quarters/profile-quartermaster-station.tsx");
-  const contract = source("src/lib/profile/profile-command-contract.ts");
+test("Intendência V4 consome o domínio Economy e não cria autoridade comercial local", () => {
+  const page = source("src/app/profile/store/page.tsx");
+  const store = source("src/components/profile/v4/profile-store.tsx");
+  const profileContract = source("src/lib/profile/profile-command-contract.ts");
 
-  assert.match(quartermaster, /Catálogo real · nenhuma compra habilitada nesta etapa/);
-  assert.match(quartermaster, /href="\/profile\/store"/);
-  assert.match(quartermaster, /EM BREVE/);
-  assert.match(contract, /featuredItems/);
-  assert.match(contract, /status: "announced" \| "available"/);
-  assert.doesNotMatch(contract, /\bprice\s*:/);
-  assert.doesNotMatch(contract, /StoreItemCategory = [^\n]*portrait/i);
-  assert.doesNotMatch(quartermaster, /Comprar agora|Compra concluída|purchaseItem|checkout|price\.amount/i);
+  assert.match(page, /getEconomyStorefront\(session\.user\.id\)/);
+  assert.match(store, /EconomyStorefrontSnapshot/);
+  assert.match(store, /storefront\.sets/);
+  assert.doesNotMatch(profileContract, /\bprice\s*:/);
+  assert.doesNotMatch(profileContract, /StoreItemCategory = [^\n]*portrait/i);
+  assert.doesNotMatch(store, /userId/);
+  assert.doesNotMatch(store, /R\$\s*\d|price:\s*\d/);
 });
 
-test("controller mantém estações especializadas fora do arquivo central", () => {
-  const hub = source("src/components/profile/command-quarters/profile-command-hub.tsx");
+test("ProfileShell centraliza navegação enquanto Dossiê mantém módulos especializados", () => {
+  const shell = source("src/components/profile/v4/profile-shell.tsx");
+  const dossier = source("src/components/profile/v4/profile-dossier.tsx");
 
-  assert.match(hub, /ProfileNetworkStation/);
-  assert.match(hub, /ProfileCampaignStation/);
-  assert.match(hub, /ProfileQuartermasterStation/);
-  assert.doesNotMatch(hub, /async function handleSearch/);
+  assert.match(shell, /NAV_ITEMS/);
+  assert.match(shell, /Dossiê/);
+  assert.match(shell, /Arsenal/);
+  assert.match(shell, /Intendência/);
+  assert.match(dossier, /ProfileNetworkStation/);
+  assert.match(dossier, /ProfileCampaignStation/);
+  assert.doesNotMatch(shell, /async function handleSearch/);
 });
 
-test("PROFILE consome somente a API pública da Foundation", () => {
-  const hub = source("src/components/profile/command-quarters/profile-command-hub.tsx");
+test("PROFILE V4 consome somente a API pública da Foundation", () => {
+  const shell = source("src/components/profile/v4/profile-shell.tsx");
   const layout = source("src/app/layout.tsx");
   const routeIntent = source("src/components/pre-game/foundation/pre-game-route-intent.ts");
 
-  assert.match(hub, /from "@\/src\/components\/pre-game\/foundation"/);
-  assert.match(hub, /useCommandSceneDirective/);
+  assert.match(shell, /from "@\/src\/components\/pre-game\/foundation"/);
+  assert.match(shell, /useCommandSceneDirective/);
   assert.match(routeIntent, /"\/profile": "profile"/);
   assert.match(routeIntent, /startsWith\("\/profile\/"\)/);
   assert.match(layout, /<PreGameCommandRuntime>\{children\}<\/PreGameCommandRuntime>/);
-  assert.doesNotMatch(hub, /@react-three\/fiber|command-scene-canvas|\bthree\b|Canvas|cameraPosition|\bfov\b/i);
-  assert.match(hub, /data-scene-fallback="html"/);
+  assert.doesNotMatch(shell, /@react-three\/fiber|command-scene-canvas|\bthree\b|Canvas|cameraPosition|\bfov\b/i);
 });
 
-test("desktop e Terminal de Campo mobile possuem composição dedicada", () => {
-  const css = source("src/components/profile/command-quarters/profile-command-hub.module.css");
+test("desktop e mobile possuem composição V4 dedicada", () => {
+  const shellCss = source("src/components/profile/v4/profile-shell.module.css");
+  const dossierCss = source("src/components/profile/v4/profile-dossier.module.css");
+  const arsenalCss = source("src/components/profile/v4/profile-arsenal.module.css");
+  const storeCss = source("src/components/profile/v4/profile-store.module.css");
 
-  assert.match(css, /height: 100dvh/);
-  assert.match(css, /overflow: hidden/);
-  assert.match(css, /@media \(max-width: 760px\)/);
-  assert.match(css, /data-active-station="dossier"/);
-  assert.match(css, /data-active-station="network"/);
-  assert.match(css, /data-active-station="campaigns"/);
-  assert.match(css, /data-active-station="quartermaster"/);
-  assert.match(css, /data-active-station="treasury"/);
-  assert.match(css, /grid-template-columns: repeat\(5, 1fr\)/);
+  assert.match(shellCss, /min-height: 100dvh/);
+  assert.match(shellCss, /@media \(max-width: 980px\)/);
+  assert.match(shellCss, /grid-template-columns: repeat\(3, 1fr\)/);
+  assert.match(dossierCss, /@media \(max-width: 520px\)/);
+  assert.match(arsenalCss, /grid-template-columns: repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(storeCss, /@media \(max-width: 620px\)/);
 });
 
-test("reduced-motion e forced-colors permanecem explícitos", () => {
-  const css = source("src/components/profile/command-quarters/profile-command-hub.module.css");
-  const boundaryCss = source("src/components/profile/profile-boundary-state.module.css");
+test("reduced-motion e forced-colors permanecem explícitos na V4", () => {
+  const shellCss = source("src/components/profile/v4/profile-shell.module.css");
+  const boundaryCss = source("src/components/profile/v4/profile-v4-boundary.module.css");
 
-  assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
-  assert.match(css, /@media \(forced-colors: active\)/);
+  assert.match(shellCss, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(shellCss, /@media \(forced-colors: active\)/);
   assert.match(boundaryCss, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
@@ -185,13 +192,15 @@ test("PROFILE mantém harness de avaliação fora do fluxo normal", () => {
   assert.doesNotMatch(page, /profile-command-data|PROFILE_EVAL_STATE|LOCAL_PROFILE_COMMAND_SNAPSHOT/);
 });
 
-test("loading e error boundary continuam preservados durante o redesign", () => {
+test("loading e error boundary usam a linguagem V4 sem dados simulados", () => {
   const loading = source("src/app/profile/loading.tsx");
   const error = source("src/app/profile/error.tsx");
-  const boundary = source("src/components/profile/profile-boundary-state.tsx");
+  const boundary = source("src/components/profile/v4/profile-v4-boundary.tsx");
 
-  assert.match(loading, /ProfileSceneBridge/);
-  assert.match(error, /ProfileSceneBridge/);
-  assert.match(boundary, /aria-busy=\{isLoading \|\| undefined\}/);
-  assert.match(error, /reset=|onClick=\{reset\}/);
+  assert.match(loading, /ProfileV4Boundary/);
+  assert.match(error, /ProfileV4Boundary/);
+  assert.match(boundary, /src="\/coin\.svg"/);
+  assert.match(error, /onClick=\{reset\}/);
+  assert.doesNotMatch(loading, /ProfileSceneBridge|ProfileBoundaryState/);
+  assert.doesNotMatch(error, /ProfileSceneBridge|ProfileBoundaryState/);
 });
