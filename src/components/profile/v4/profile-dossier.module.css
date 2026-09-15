@@ -33,7 +33,7 @@
 .identityPanel {
   min-height: 280px;
   display: grid;
-  grid-template-columns: minmax(150px, 0.34fr) minmax(340px, 1.3fr) minmax(230px, 0.58fr);
+  grid-template-columns: 88px minmax(340px, 1.3fr) minmax(230px, 0.58fr);
   align-items: stretch;
 }
 
@@ -42,44 +42,52 @@
   display: grid;
   place-items: center;
   border-right: 1px solid rgb(238 232 218 / 8%);
-  background:
-    radial-gradient(circle at center, rgb(208 170 87 / 12%), transparent 56%),
-    linear-gradient(145deg, rgb(208 170 87 / 4%), transparent);
+  background: linear-gradient(180deg, rgb(208 170 87 / 6%), transparent 72%);
 }
 
-.identitySignal::before,
+.identitySignal::before {
+  content: "";
+  position: absolute;
+  top: 20%;
+  bottom: 20%;
+  left: 50%;
+  width: 1px;
+  background: linear-gradient(to bottom, transparent, rgb(208 170 87 / 28%), transparent);
+}
+
 .identitySignal::after {
   content: "";
   position: absolute;
-  width: min(72%, 190px);
-  aspect-ratio: 1;
-  border: 1px solid rgb(208 170 87 / 17%);
-  transform: rotate(45deg);
-}
-
-.identitySignal::after {
-  width: min(55%, 145px);
-  border-color: rgb(208 170 87 / 9%);
+  top: 22px;
+  width: 24px;
+  height: 2px;
+  background: var(--brass);
+  box-shadow: 0 6px rgb(208 170 87 / 18%);
 }
 
 .monogram {
   position: relative;
   z-index: 2;
+  min-width: 42px;
+  padding: 8px 5px;
   color: var(--ivory);
+  border-block: 1px solid rgb(208 170 87 / 28%);
   font-family: var(--font-wb-display), sans-serif;
-  font-size: clamp(2.7rem, 5vw, 5rem);
+  font-size: 1.55rem;
   font-weight: 800;
-  letter-spacing: -0.08em;
-  text-shadow: 0 0 26px rgb(208 170 87 / 16%);
+  letter-spacing: 0.02em;
+  line-height: 1;
+  text-align: center;
+  text-shadow: 0 0 18px rgb(208 170 87 / 16%);
 }
 
 .identitySignal i {
   position: absolute;
-  bottom: 24px;
-  width: 22px;
+  bottom: 22px;
+  width: 16px;
   height: 2px;
   background: var(--brass);
-  box-shadow: 30px 0 rgb(208 170 87 / 30%), -30px 0 rgb(208 170 87 / 30%);
+  box-shadow: 22px 0 rgb(208 170 87 / 22%), -22px 0 rgb(208 170 87 / 22%);
 }
 
 .identityMain {
@@ -265,7 +273,7 @@
 }
 
 .guestState .monogram {
-  font-size: 3rem;
+  font-size: 2rem;
 }
 
 .guestState p,
@@ -297,7 +305,7 @@
 
 @media (max-width: 1080px) {
   .identityPanel {
-    grid-template-columns: 150px minmax(0, 1fr);
+    grid-template-columns: 76px minmax(0, 1fr);
   }
 
   .identityStatus {
@@ -319,22 +327,16 @@
   }
 
   .identityPanel {
-    grid-template-columns: 1fr;
+    grid-template-columns: 64px minmax(0, 1fr);
   }
 
   .identitySignal {
-    min-height: 160px;
-    border-right: 0;
-    border-bottom: 1px solid rgb(238 232 218 / 8%);
-  }
-
-  .identitySignal::before,
-  .identitySignal::after {
-    width: 110px;
+    border-bottom: 0;
   }
 
   .identitySignal::after {
-    width: 80px;
+    top: 18px;
+    width: 18px;
   }
 
   .identityMain {
@@ -355,8 +357,12 @@
 }
 
 @media (max-width: 520px) {
+  .identityPanel {
+    grid-template-columns: 1fr;
+  }
+
   .identitySignal {
-    min-height: 118px;
+    display: none;
   }
 
   .identityMain h1 {
@@ -387,6 +393,6 @@
 @media (prefers-reduced-motion: reduce) {
   .identitySignal::before,
   .identitySignal::after {
-    transform: rotate(45deg);
+    transition: none;
   }
 }
