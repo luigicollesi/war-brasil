@@ -9,6 +9,14 @@ CREATE TABLE IF NOT EXISTS game.rooms (
     CHECK (status IN ('waiting', 'order_roll', 'playing', 'finished')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   started_at TIMESTAMPTZ,
+  finished_at TIMESTAMPTZ,
+  match_mode TEXT NOT NULL DEFAULT 'custom'
+    CONSTRAINT rooms_match_mode_check
+      CHECK (match_mode IN ('classic', 'custom')),
+  ruleset TEXT NOT NULL DEFAULT 'objective'
+    CONSTRAINT rooms_ruleset_check
+      CHECK (ruleset IN ('objective', 'supremacy')),
+  balanced_dice_enabled BOOLEAN NOT NULL DEFAULT TRUE,
   revision INTEGER NOT NULL DEFAULT 1 CHECK (revision >= 1),
   order_roll_round INTEGER NOT NULL DEFAULT 1
     CHECK (order_roll_round >= 1),
@@ -549,6 +557,13 @@ CREATE TABLE IF NOT EXISTS game.matches (
   dice_balance_profile_snapshot JSONB NOT NULL
     CONSTRAINT matches_profile_snapshot_object_check
       CHECK (jsonb_typeof(dice_balance_profile_snapshot) = 'object'),
+  match_mode_snapshot TEXT
+    CONSTRAINT matches_match_mode_snapshot_check
+      CHECK (match_mode_snapshot IS NULL OR match_mode_snapshot IN ('classic', 'custom')),
+  ruleset_snapshot TEXT
+    CONSTRAINT matches_ruleset_snapshot_check
+      CHECK (ruleset_snapshot IS NULL OR ruleset_snapshot IN ('objective', 'supremacy')),
+  balanced_dice_enabled_snapshot BOOLEAN,
   started_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   finished_at TIMESTAMPTZ,
   CONSTRAINT matches_room_sequence_key UNIQUE (room_id, sequence),
@@ -584,6 +599,22 @@ BEFORE UPDATE OF requested_profile_id,resolved_profile_id,profile_source,dice_ba
 ON game.matches
 FOR EACH ROW
 EXECUTE FUNCTION game.reject_match_dice_profile_mutation();
+
+CREATE OR REPLACE FUNCTION game.reject_match_rule_snapshot_mutation()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  RAISE EXCEPTION 'match rule snapshot fields are immutable after match creation';
+END;
+$$;
+
+DROP TRIGGER IF EXISTS matches_rule_snapshot_immutable ON game.matches;
+CREATE TRIGGER matches_rule_snapshot_immutable
+BEFORE UPDATE OF match_mode_snapshot,ruleset_snapshot,balanced_dice_enabled_snapshot
+ON game.matches
+FOR EACH ROW
+EXECUTE FUNCTION game.reject_match_rule_snapshot_mutation();
 
 ALTER TABLE game.rooms
   ADD COLUMN IF NOT EXISTS current_match_id BIGINT;
