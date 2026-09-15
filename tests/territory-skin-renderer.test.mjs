@@ -29,6 +29,23 @@ test("renderer de image skin usa overlay SVG compartilhado sem tocar hitbox", ()
   assert.doesNotMatch(hitGeometry, /territorySkin|skinAsset|cosmetic/i);
 });
 
+test("falha de WebP remove todos os overlays daquele asset e revela material base", () => {
+  const overlay = source("src/lib/client/map/territory-skin-overlay.ts");
+
+  assert.match(overlay, /function removeTerritorySkinOverlaysForAsset/);
+  assert.match(
+    overlay,
+    /querySelectorAll<SVGPathElement>\("path\.territory-skin-overlay"\)/,
+  );
+  assert.match(
+    overlay,
+    /overlay\.dataset\.territorySkinAsset === assetRef/,
+  );
+  assert.match(overlay, /removeTerritorySkinOverlaysForAsset\(document, assetRef\)/);
+  assert.match(overlay, /registry\.delete\(assetRef\)/);
+  assert.match(overlay, /pattern\.remove\(\)/);
+});
+
 test("runtime mantém DTO legado, mas projeta image skin por chave transitória não persistida", () => {
   const service = source("src/lib/server/game-cosmetic-loadout-service.ts");
   const contract = source("src/lib/economy/territory-skin-contract.ts");
@@ -37,6 +54,19 @@ test("runtime mantém DTO legado, mas projeta image skin por chave transitória 
   assert.match(service, /territorySkinRuntimeEffectKey/);
   assert.match(contract, /TERRITORY_SKIN_RUNTIME_IMAGE_PREFIX/);
   assert.match(contract, /territorySkinAssetRefFromRuntimeEffectKey/);
+  assert.match(
+    client,
+    /territoryEffectKey: owner\.cosmetics\.territoryEffect\.effectKey/,
+  );
+});
+
+test("conquista troca skin pela do novo dono congelado no snapshot", () => {
+  const client = source("src/components/game-client-v2.tsx");
+
+  assert.match(
+    client,
+    /const owner = game\.playersById\.get\(territory\.ownerPlayerId\)/,
+  );
   assert.match(
     client,
     /territoryEffectKey: owner\.cosmetics\.territoryEffect\.effectKey/,
