@@ -16,10 +16,11 @@ test("PROFILE V4 store is a dedicated Intendência surface inside the shared she
   assert.doesNotMatch(page, /<EconomyStorefront/);
 });
 
-test("PROFILE V4 store consumes server-derived collections, offers and packs", async () => {
+test("PROFILE V4 store consumes server-derived collections, territory skins, offers and packs", async () => {
   const store = await source("src/components/profile/v4/profile-store.tsx");
 
   assert.match(store, /storefront\.collections/);
+  assert.match(store, /storefront\.territorySkins/);
   assert.match(store, /storefront\.offers/);
   assert.match(store, /storefront\.creditPacks/);
   assert.match(store, /offer\.price/);
@@ -29,6 +30,17 @@ test("PROFILE V4 store consumes server-derived collections, offers and packs", a
   assert.doesNotMatch(store, /price:\s*\d/);
   assert.doesNotMatch(store, /creditAmount:\s*\d/);
   assert.doesNotMatch(store, /userId/);
+});
+
+test("PROFILE V4 store exposes Destaques, Dados, Territórios e Coleções as primary discovery surfaces", async () => {
+  const store = await source("src/components/profile/v4/profile-store.tsx");
+
+  for (const label of ["DESTAQUES", "DADOS", "TERRITÓRIOS", "COLEÇÕES"]) {
+    assert.match(store, new RegExp(label));
+  }
+  for (const anchor of ["store-highlights", "store-dice", "store-territories", "store-collections"]) {
+    assert.match(store, new RegExp(`id=\\"${anchor}\\"|href=\\"#${anchor}\\"`));
+  }
 });
 
 test("PROFILE V4 store uses the canonical campaign-credit coin beside monetary values", async () => {
@@ -76,6 +88,15 @@ test("PROFILE V4 collection banner is an accessible discovery control", async ()
   assert.match(store, /collection\.assets\.banner/);
   assert.match(store, /type="button"/);
   assert.match(store, /aria-label=\{`Abrir coleção \$\{collection\.name\}`\}/);
+});
+
+test("PROFILE V4 territory surface renders announced skins without inventing a purchase price", async () => {
+  const store = await source("src/components/profile/v4/profile-store.tsx");
+
+  assert.match(store, /storefront\.territorySkins\.map/);
+  assert.match(store, /skin\.status/);
+  assert.match(store, /EM BREVE|ANUNCIADO/);
+  assert.doesNotMatch(store, /skin\.price/);
 });
 
 test("PROFILE V4 treasury renders DB credit packs but keeps BRL checkout disabled", async () => {
