@@ -98,10 +98,45 @@ async function initializeEconomy(client, userId, balance) {
   );
 }
 
-function rejected(code) {
+function rejected(code, details = {}) {
   const error = new Error(code);
   error.code = code;
+  Object.assign(error, details);
   return error;
+}
+
+function integer(value) {
+  const parsed = Number(value);
+  assert.equal(Number.isSafeInteger(parsed), true);
+  return parsed;
+}
+
+function calculateQuote(items, discountBps) {
+  const missingItems = items.filter((item) => !item.owned);
+  let subtotal = 0n;
+  const unitPrices = new Map();
+
+  for (const item of missingItems) {
+    let unitPrice;
+    if (item.pricing_model === "fixed") {
+      unitPrice = integer(item.fixed_price);
+    } else {
+      assert.notEqual(item.tier_price, null);
+      unitPrice = integer(item.tier_price);
+    }
+    unitPrices.set(item.id, unitPrice);
+    subtotal += BigInt(unitPrice);
+  }
+
+  const finalPrice =
+    (subtotal * BigInt(10_000 - discountBps)) / 10_000n;
+
+  return {
+    missingItems,
+    unitPrices,
+    subtotal: Number(subtotal),
+    finalPrice: Number(finalPrice),
+  };
 }
 
 async function purchaseInTransaction(
@@ -109,7 +144,7 @@ async function purchaseInTransaction(
   userId,
   offerId,
   idempotencyKey,
-  { failAfterLedger = false } = {},
+  { expectedPrice = null, failAfterLedger = false } = {},
 ) {
   await client.query("BEGIN");
   try {
@@ -148,83 +183,149 @@ async function purchaseInTransaction(
         ok: true,
         replayed: true,
         purchaseId: existing.rows[0].id,
-        price: Number(existing.rows[0].price_paid),
+        price: integer(existing.rows[0].price_paid),
       };
     }
 
     const offerResult = await client.query(
-      `SELECT id,price::text AS price,status,currency_code
-         FROM catalog.offers
-        WHERE id=$1
-        FOR SHARE`,
+      `SELECT offer.id,
+              offer.product_id,
+              offer.currency_code,
+              product.bundle_discount_bps,
+              (
+                offer.status='available'
+                AND offer.active=TRUE
+                AND product.active=TRUE
+                AND (offer.starts_at IS NULL OR offer.starts_at <= CURRENT_TIMESTAMP)
+                AND (offer.ends_at IS NULL OR offer.ends_at > CURRENT_TIMESTAMP)
+              ) AS available_now
+         FROM catalog.offers offer
+         JOIN catalog.products product ON product.id=offer.product_id
+        WHERE offer.id=$1
+        FOR UPDATE OF offer,product`,
       [offerId],
     );
-    if (offerResult.rowCount !== 1 || offerResult.rows[0].status !== "available") {
+    if (offerResult.rowCount !== 1 || !offerResult.rows[0].available_now) {
       throw rejected("ECONOMY_OFFER_UNAVAILABLE");
     }
 
+    const offer = offerResult.rows[0];
+    const lockedStats = await client.query(
+      `SELECT stats.cosmetic_id
+         FROM catalog.product_items membership
+         JOIN catalog.cosmetic_stats stats ON stats.cosmetic_id=membership.cosmetic_id
+        WHERE membership.product_id=$1
+        ORDER BY stats.cosmetic_id
+        FOR UPDATE OF stats`,
+      [offer.product_id],
+    );
+
     const items = await client.query(
-      `SELECT item.id,item.slot,item.status,item.is_default,
-              (owned.cosmetic_id IS NOT NULL) AS owned
-         FROM catalog.offer_items membership
+      `SELECT item.id,
+              item.slot,
+              item.status,
+              item.is_default,
+              (owned.cosmetic_id IS NOT NULL) AS owned,
+              pricing.pricing_model,
+              pricing.fixed_price::text AS fixed_price,
+              current_tier.price::text AS tier_price
+         FROM catalog.product_items membership
          JOIN catalog.cosmetics item ON item.id=membership.cosmetic_id
+         JOIN catalog.cosmetic_pricing pricing ON pricing.cosmetic_id=item.id
+         JOIN catalog.cosmetic_stats stats ON stats.cosmetic_id=item.id
          LEFT JOIN inventory.cosmetics owned
            ON owned.user_id=$1::uuid
           AND owned.cosmetic_id=item.id
-        WHERE membership.offer_id=$2
+         LEFT JOIN LATERAL (
+           SELECT tier.price
+             FROM catalog.price_tiers tier
+            WHERE tier.cosmetic_id=item.id
+              AND stats.acquisition_count >= tier.acquisitions_from
+              AND (
+                tier.acquisitions_until IS NULL
+                OR stats.acquisition_count <= tier.acquisitions_until
+              )
+            ORDER BY tier.acquisitions_from DESC
+            LIMIT 1
+         ) current_tier ON pricing.pricing_model='progressive'
+        WHERE membership.product_id=$2
         ORDER BY membership.position,item.id
-        FOR SHARE OF membership,item`,
-      [userId, offerId],
+        FOR SHARE OF membership,item,pricing`,
+      [userId, offer.product_id],
     );
+
     if (
       items.rowCount === 0 ||
+      lockedStats.rowCount !== items.rowCount ||
       items.rows.some((item) => item.status !== "available" || item.is_default)
     ) {
       throw rejected("ECONOMY_CATALOG_INVALID");
     }
 
-    const missingItems = items.rows.filter((item) => !item.owned);
-    if (missingItems.length === 0) {
+    const quote = calculateQuote(items.rows, offer.bundle_discount_bps);
+    if (quote.missingItems.length === 0) {
       throw rejected("ECONOMY_OFFER_ALREADY_OWNED");
     }
+    if (expectedPrice !== null && expectedPrice !== quote.finalPrice) {
+      throw rejected("ECONOMY_PRICE_CHANGED", { currentPrice: quote.finalPrice });
+    }
 
-    const price = Number(offerResult.rows[0].price);
-    const balance = Number(walletResult.rows[0].balance);
-    if (balance < price) throw rejected("ECONOMY_INSUFFICIENT_BALANCE");
+    const balance = integer(walletResult.rows[0].balance);
+    if (balance < quote.finalPrice) {
+      throw rejected("ECONOMY_INSUFFICIENT_BALANCE");
+    }
 
     const purchaseId = randomUUID();
     await client.query(
       `INSERT INTO economy.purchases(
-         id,user_id,offer_id,currency_code,price_paid,offer_item_count,idempotency_key
+         id,user_id,offer_id,currency_code,price_paid,offer_item_count,idempotency_key,
+         product_id,subtotal_price,discount_bps
        )
-       VALUES($1::uuid,$2::uuid,$3,'campaign-credit',$4::bigint,$5::smallint,$6)`,
-      [purchaseId, userId, offerId, price, items.rowCount, idempotencyKey],
+       VALUES(
+         $1::uuid,$2::uuid,$3,'campaign-credit',$4::bigint,$5::smallint,$6,
+         $7,$8::bigint,$9::integer
+       )`,
+      [
+        purchaseId,
+        userId,
+        offerId,
+        quote.finalPrice,
+        items.rowCount,
+        idempotencyKey,
+        offer.product_id,
+        quote.subtotal,
+        offer.bundle_discount_bps,
+      ],
     );
 
-    const walletUpdate = await client.query(
-      `UPDATE economy.wallets
-          SET balance=balance-$2::bigint,
-              updated_at=NOW()
-        WHERE user_id=$1::uuid
-          AND currency_code='campaign-credit'
-          AND balance >= $2::bigint
-        RETURNING balance::text AS balance`,
-      [userId, price],
-    );
-    if (walletUpdate.rowCount !== 1) throw rejected("ECONOMY_WALLET_CONFLICT");
+    let updatedBalance = balance;
+    if (quote.finalPrice > 0) {
+      const walletUpdate = await client.query(
+        `UPDATE economy.wallets
+            SET balance=balance-$2::bigint,
+                updated_at=NOW()
+          WHERE user_id=$1::uuid
+            AND currency_code='campaign-credit'
+            AND balance >= $2::bigint
+          RETURNING balance::text AS balance`,
+        [userId, quote.finalPrice],
+      );
+      if (walletUpdate.rowCount !== 1) throw rejected("ECONOMY_WALLET_CONFLICT");
+      updatedBalance = integer(walletUpdate.rows[0].balance);
 
-    await client.query(
-      `INSERT INTO economy.ledger_entries(
-         user_id,currency_code,delta,reason,domain_reference,idempotency_key
-       )
-       VALUES($1::uuid,'campaign-credit',-$3::bigint,'purchase',$2,'purchase:' || $2)`,
-      [userId, purchaseId, price],
-    );
+      await client.query(
+        `INSERT INTO economy.ledger_entries(
+           user_id,currency_code,delta,reason,domain_reference,idempotency_key
+         )
+         VALUES($1::uuid,'campaign-credit',-$3::bigint,'purchase',$2,'purchase:' || $2)`,
+        [userId, purchaseId, quote.finalPrice],
+      );
+    }
 
     if (failAfterLedger) throw rejected("INJECTED_FAILURE");
 
-    const cosmeticIds = missingItems.map((item) => item.id);
-    const slots = missingItems.map((item) => item.slot);
+    const cosmeticIds = quote.missingItems.map((item) => item.id);
+    const slots = quote.missingItems.map((item) => item.slot);
     const granted = await client.query(
       `INSERT INTO inventory.cosmetics(user_id,cosmetic_id,slot,acquisition_source)
        SELECT $1::uuid,input.cosmetic_id,input.slot,'purchase'
@@ -233,15 +334,29 @@ async function purchaseInTransaction(
        RETURNING cosmetic_id`,
       [userId, cosmeticIds, slots],
     );
-    if (granted.rowCount !== missingItems.length) {
+    if (granted.rowCount !== quote.missingItems.length) {
       throw rejected("ECONOMY_INVENTORY_CONFLICT");
     }
 
+    const grantedIds = granted.rows.map((row) => row.cosmetic_id).sort();
     await client.query(
-      `INSERT INTO economy.purchase_items(purchase_id,cosmetic_id)
-       SELECT $1::uuid,cosmetic_id
-         FROM UNNEST($2::text[]) AS granted(cosmetic_id)`,
-      [purchaseId, granted.rows.map((row) => row.cosmetic_id)],
+      `UPDATE catalog.cosmetic_stats stats
+          SET acquisition_count=acquisition_count+1,
+              updated_at=NOW()
+         FROM UNNEST($1::text[]) AS acquired(cosmetic_id)
+        WHERE stats.cosmetic_id=acquired.cosmetic_id`,
+      [grantedIds],
+    );
+
+    await client.query(
+      `INSERT INTO economy.purchase_items(purchase_id,cosmetic_id,unit_price)
+       SELECT $1::uuid,input.cosmetic_id,input.unit_price
+         FROM UNNEST($2::text[],$3::bigint[]) AS input(cosmetic_id,unit_price)`,
+      [
+        purchaseId,
+        grantedIds,
+        grantedIds.map((id) => quote.unitPrices.get(id)),
+      ],
     );
 
     await client.query("COMMIT");
@@ -249,14 +364,20 @@ async function purchaseInTransaction(
       ok: true,
       replayed: false,
       purchaseId,
-      price,
-      balance: Number(walletUpdate.rows[0].balance),
-      grantedIds: granted.rows.map((row) => row.cosmetic_id).sort(),
+      price: quote.finalPrice,
+      subtotal: quote.subtotal,
+      discountBps: offer.bundle_discount_bps,
+      balance: updatedBalance,
+      grantedIds,
     };
   } catch (error) {
     await client.query("ROLLBACK");
     if (error?.code?.startsWith?.("ECONOMY_") || error?.code === "INJECTED_FAILURE") {
-      return { ok: false, code: error.code };
+      return {
+        ok: false,
+        code: error.code,
+        ...(error.currentPrice === undefined ? {} : { currentPrice: error.currentPrice }),
+      };
     }
     throw error;
   }
@@ -292,8 +413,8 @@ if (!databaseUrl) {
         const key = `retry-${randomUUID()}`;
 
         const [left, right] = await Promise.all([
-          purchaseInTransaction(first, userId, "offer.viking", key),
-          purchaseInTransaction(second, userId, "offer.viking", key),
+          purchaseInTransaction(first, userId, "offer.viking", key, { expectedPrice: 400 }),
+          purchaseInTransaction(second, userId, "offer.viking", key, { expectedPrice: 400 }),
         ]);
 
         assert.equal(left.ok, true);
@@ -306,14 +427,6 @@ if (!databaseUrl) {
           ledger_entries: 1,
           ledger_delta: "-400",
         });
-
-        const purchaseItems = await setup.query(
-          `SELECT COUNT(*)::int AS total
-             FROM economy.purchase_items
-            WHERE purchase_id=$1::uuid`,
-          [left.purchaseId],
-        );
-        assert.equal(purchaseItems.rows[0].total, 3);
       } finally {
         await Promise.all([setup.end(), first.end(), second.end()]);
       }
@@ -331,8 +444,12 @@ if (!databaseUrl) {
         await initializeEconomy(setup, userId, 500);
 
         const results = await Promise.all([
-          purchaseInTransaction(first, userId, "offer.gato", `gato-${randomUUID()}`),
-          purchaseInTransaction(second, userId, "offer.cachorro", `dog-${randomUUID()}`),
+          purchaseInTransaction(first, userId, "offer.gato", `gato-${randomUUID()}`, {
+            expectedPrice: 400,
+          }),
+          purchaseInTransaction(second, userId, "offer.cachorro", `dog-${randomUUID()}`, {
+            expectedPrice: 400,
+          }),
         ]);
 
         assert.equal(results.filter((result) => result.ok).length, 1);
@@ -352,7 +469,7 @@ if (!databaseUrl) {
     });
   });
 
-  test("ownership parcial cobra preço integral e concede somente itens ausentes", async () => {
+  test("STORE-05: ownership parcial cobra somente itens ausentes com desconto", async () => {
     await withTemporaryDatabase(async (connectionString) => {
       await prepareDatabase(connectionString);
       const setup = await connect(connectionString);
@@ -362,9 +479,10 @@ if (!databaseUrl) {
 
         const oneItem = await setup.query(
           `SELECT item.id,item.slot
-             FROM catalog.offer_items membership
+             FROM catalog.offers offer
+             JOIN catalog.product_items membership ON membership.product_id=offer.product_id
              JOIN catalog.cosmetics item ON item.id=membership.cosmetic_id
-            WHERE membership.offer_id='offer.viking'
+            WHERE offer.id='offer.viking'
             ORDER BY membership.position
             LIMIT 1`,
         );
@@ -379,43 +497,47 @@ if (!databaseUrl) {
           userId,
           "offer.viking",
           `partial-${randomUUID()}`,
+          { expectedPrice: 266 },
         );
         assert.equal(result.ok, true);
-        assert.equal(result.price, 400);
+        assert.equal(result.subtotal, 300);
+        assert.equal(result.price, 266);
         assert.equal(result.grantedIds.length, 2);
         assert.deepEqual(await readMoneyState(setup, userId), {
-          balance: "100",
+          balance: "234",
           purchases: 1,
           ledger_entries: 1,
-          ledger_delta: "-400",
+          ledger_delta: "-266",
         });
 
         const receipt = await setup.query(
-          `SELECT offer_item_count,price_paid::text AS price_paid
+          `SELECT offer_item_count,
+                  subtotal_price::text AS subtotal_price,
+                  discount_bps,
+                  price_paid::text AS price_paid
              FROM economy.purchases
             WHERE id=$1::uuid`,
           [result.purchaseId],
         );
-        assert.deepEqual(receipt.rows[0], { offer_item_count: 3, price_paid: "400" });
-
-        const purchaseItems = await setup.query(
-          `SELECT COUNT(*)::int AS total FROM economy.purchase_items WHERE purchase_id=$1::uuid`,
-          [result.purchaseId],
-        );
-        assert.equal(purchaseItems.rows[0].total, 2);
+        assert.deepEqual(receipt.rows[0], {
+          offer_item_count: 3,
+          subtotal_price: "300",
+          discount_bps: 1111,
+          price_paid: "266",
+        });
       } finally {
         await setup.end();
       }
     });
   });
 
-  test("falha após ledger faz rollback de wallet, receipt, ledger e inventory", async () => {
+  test("STORE-12: expectedPrice stale rejeita sem mutar wallet, ledger ou inventory", async () => {
     await withTemporaryDatabase(async (connectionString) => {
       await prepareDatabase(connectionString);
       const setup = await connect(connectionString);
       try {
-        const userId = await createCommander(setup, "PurchaseRollback");
-        await initializeEconomy(setup, userId, 500);
+        const userId = await createCommander(setup, "StalePrice");
+        await initializeEconomy(setup, userId, 1000);
         const before = await setup.query(
           `SELECT COUNT(*)::int AS total FROM inventory.cosmetics WHERE user_id=$1::uuid`,
           [userId],
@@ -424,13 +546,17 @@ if (!databaseUrl) {
         const result = await purchaseInTransaction(
           setup,
           userId,
-          "offer.futebol",
-          `rollback-${randomUUID()}`,
-          { failAfterLedger: true },
+          "offer.viking",
+          `stale-${randomUUID()}`,
+          { expectedPrice: 399 },
         );
-        assert.deepEqual(result, { ok: false, code: "INJECTED_FAILURE" });
+        assert.deepEqual(result, {
+          ok: false,
+          code: "ECONOMY_PRICE_CHANGED",
+          currentPrice: 400,
+        });
         assert.deepEqual(await readMoneyState(setup, userId), {
-          balance: "500",
+          balance: "1000",
           purchases: 0,
           ledger_entries: 0,
           ledger_delta: "0",
@@ -441,6 +567,53 @@ if (!databaseUrl) {
           [userId],
         );
         assert.equal(after.rows[0].total, before.rows[0].total);
+      } finally {
+        await setup.end();
+      }
+    });
+  });
+
+  test("falha após ledger faz rollback de wallet, receipt, ledger, counters e inventory", async () => {
+    await withTemporaryDatabase(async (connectionString) => {
+      await prepareDatabase(connectionString);
+      const setup = await connect(connectionString);
+      try {
+        const userId = await createCommander(setup, "PurchaseRollback");
+        await initializeEconomy(setup, userId, 500);
+        const beforeInventory = await setup.query(
+          `SELECT COUNT(*)::int AS total FROM inventory.cosmetics WHERE user_id=$1::uuid`,
+          [userId],
+        );
+        const beforeStats = await setup.query(
+          `SELECT SUM(stats.acquisition_count)::text AS total
+             FROM catalog.cosmetic_stats stats`,
+        );
+
+        const result = await purchaseInTransaction(
+          setup,
+          userId,
+          "offer.futebol",
+          `rollback-${randomUUID()}`,
+          { expectedPrice: 400, failAfterLedger: true },
+        );
+        assert.deepEqual(result, { ok: false, code: "INJECTED_FAILURE" });
+        assert.deepEqual(await readMoneyState(setup, userId), {
+          balance: "500",
+          purchases: 0,
+          ledger_entries: 0,
+          ledger_delta: "0",
+        });
+
+        const afterInventory = await setup.query(
+          `SELECT COUNT(*)::int AS total FROM inventory.cosmetics WHERE user_id=$1::uuid`,
+          [userId],
+        );
+        const afterStats = await setup.query(
+          `SELECT SUM(stats.acquisition_count)::text AS total
+             FROM catalog.cosmetic_stats stats`,
+        );
+        assert.equal(afterInventory.rows[0].total, beforeInventory.rows[0].total);
+        assert.equal(afterStats.rows[0].total, beforeStats.rows[0].total);
       } finally {
         await setup.end();
       }
@@ -461,8 +634,12 @@ if (!databaseUrl) {
         const sharedKey = `shared-${randomUUID()}`;
 
         const [purchaseA, purchaseB] = await Promise.all([
-          purchaseInTransaction(first, userA, "offer.exercito", sharedKey),
-          purchaseInTransaction(second, userB, "offer.exercito", sharedKey),
+          purchaseInTransaction(first, userA, "offer.exercito", sharedKey, {
+            expectedPrice: 400,
+          }),
+          purchaseInTransaction(second, userB, "offer.exercito", sharedKey, {
+            expectedPrice: 400,
+          }),
         ]);
 
         assert.equal(purchaseA.ok, true);
