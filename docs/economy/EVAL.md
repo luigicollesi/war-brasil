@@ -61,6 +61,14 @@ Aprovação exige **todos os BLOCKERs verdes**. Nenhuma compra, recompensa ou gr
 | ECO-ASSET-16 | storefront normal não executa `ListObjects` para descobrir produtos | source/integration inspection |
 | ECO-ASSET-17 | objeto ausente/falha R2 produz fallback visual seguro sem alterar gameplay | failure test |
 | ECO-ASSET-18 | acesso browser direto ao asset assinado funciona com CORS da aplicação | browser/network E2E |
+| ECO-ASSET-19 | todo asset de dado do R2 possui object key terminada em `attack.webp`, `defense.webp` ou `neutral.webp` | DB/storage contract test |
+| ECO-ASSET-20 | nenhuma object key ativa em `cosmetics/dice/` usa `.svg`, `.png`, `.jpg`, `.jpeg` ou outra extensão | DB/source negative test |
+| ECO-ASSET-21 | `HeadObject` dos assets de dados retorna `Content-Type: image/webp` | storage integration |
+| ECO-ASSET-22 | extensão `.webp` e MIME `image/webp` são validados em conjunto | storage negative test |
+| ECO-ASSET-23 | baseline contém 21 objetos válidos: 7 diretórios × ataque/defesa/neutro | storage inventory test |
+| ECO-ASSET-24 | runtime/browser não solicita `.svg` dentro de `cosmetics/dice/` após o cutover | browser network negative assertion |
+| ECO-ASSET-25 | uma coleção não entra no cutover se qualquer um dos três WebPs estiver ausente ou inválido | migration/storage failure test |
+| ECO-ASSET-26 | nenhuma coleção ativa fica parcialmente em local/SVG e parcialmente em R2/WebP | migration atomicity test |
 
 ## Gates BLOCKER — inventário
 
@@ -113,10 +121,12 @@ Aprovação exige **todos os BLOCKERs verdes**. Nenhuma compra, recompensa ou gr
 | ECO-DICE-02 | atacante usa `dice_attack` do próprio jogador | battle integration |
 | ECO-DICE-03 | defensor usa `dice_defense` do próprio jogador | battle integration |
 | ECO-DICE-04 | dois jogadores podem usar skins diferentes na mesma batalha | multi-player E2E |
-| ECO-DICE-05 | fallback 2D e apresentação 3D resolvem o mesmo cosmético | contract/E2E |
+| ECO-DICE-05 | fallback 2D e apresentação 3D resolvem o mesmo cosmético WebP | contract/E2E |
 | ECO-DICE-06 | skin não altera RNG, valores ou balanceamento adaptativo | regression/property tests |
 | ECO-DICE-07 | skin não altera geometria, collider, trajetória ou detecção de face | dice physics regression |
 | ECO-DICE-08 | ausência/falha/expiração de asset não altera resultado autoritativo da rolagem | failure test |
+| ECO-DICE-09 | renderer 2D aceita WebP remoto/presigned sem depender de SVG local | browser/component E2E |
+| ECO-DICE-10 | renderer 3D consegue usar WebP remoto como base de textura mantendo pips/resultado | visual/physics E2E |
 
 ## Gates BLOCKER — efeitos territoriais
 
@@ -141,7 +151,7 @@ Aprovação exige **todos os BLOCKERs verdes**. Nenhuma compra, recompensa ou gr
 | ECO-GAME-06 | GameSnapshot expõe somente configuração visual necessária | DTO snapshot/security |
 | ECO-GAME-07 | GameSnapshot não expõe saldo, ledger, inventário completo, `auth.user.id` ou `ASSET_STORAGE_URL` | security snapshot |
 | ECO-GAME-08 | runtime não consulta Profile/store a cada batalha/renderização | architecture/source inspection |
-| ECO-GAME-09 | snapshot congela object key/referência persistente e nunca URL presigned efêmera | DB/source integration |
+| ECO-GAME-09 | snapshot congela object key WebP/referência persistente e nunca URL presigned efêmera | DB/source integration |
 | ECO-GAME-10 | reconnect pode gerar nova URL de transporte para a mesma object key sem mudar o cosmético congelado | reconnect/storage E2E |
 
 ## Gates BLOCKER — segurança e boundary
@@ -162,14 +172,15 @@ Aprovação exige **todos os BLOCKERs verdes**. Nenhuma compra, recompensa ou gr
 
 | ID | Critério | Evidência mínima |
 | --- | --- | --- |
-| ECO-PERF-01 | listagem da loja não baixa automaticamente o catálogo inteiro de SVGs HQ | browser network evidence |
+| ECO-PERF-01 | listagem da loja não baixa automaticamente o catálogo inteiro de WebPs HQ | browser network evidence |
 | ECO-PERF-02 | cards usam representação leve sem exigir `preview.webp` nesta entrega | asset/network review |
-| ECO-PERF-03 | SVG HQ é carregado sob demanda ou quando necessário ao item equipado | network evidence |
+| ECO-PERF-03 | WebP HQ é carregado sob demanda ou quando necessário ao item equipado | network evidence |
 | ECO-PERF-04 | abrir um detalhe solicita somente o asset selecionado, não os três papéis de todos os conjuntos | network evidence |
 | ECO-PERF-05 | troca de estação/seleção da loja não força remontagem desnecessária da Foundation | React/browser evidence |
 | ECO-PERF-06 | mapa permanece sem fetch por território ou por frame | network/source inspection |
 | ECO-PERF-07 | storefront não lista bucket/prefixos no R2 para montar catálogo | source/network evidence |
 | ECO-PERF-08 | presign é feito somente quando necessário e não em massa para itens fora da viewport/detalhe | source/network evidence |
+| ECO-PERF-09 | nenhum request normal do runtime para `cosmetics/dice/` solicita SVG após migração | browser network assertion |
 
 ## Gates BLOCKER — migrations
 
@@ -182,8 +193,10 @@ Aprovação exige **todos os BLOCKERs verdes**. Nenhuma compra, recompensa ou gr
 | ECO-DB-05 | novos usuários são inicializados de forma idempotente | onboarding integration |
 | ECO-DB-06 | constraints impedem saldo negativo, ownership duplicado e equipagem inválida conforme modelagem final | DB negative tests |
 | ECO-DB-07 | catálogo seed é determinístico | clean/repeat DB test |
-| ECO-DB-08 | referências locais `/dados/...` são migradas para object keys sem alterar IDs/ownership | upgrade integration |
+| ECO-DB-08 | referências locais `/dados/...` são migradas para object keys `.webp` sem alterar IDs/ownership | upgrade integration |
 | ECO-DB-09 | metadata de conjunto inclui `storage_slug`/prefixo suficiente para resolver a pasta física | schema/query test |
+| ECO-DB-10 | cutover só ocorre depois de validar os três WebPs da coleção no R2 | migration/storage integration |
+| ECO-DB-11 | nenhuma coleção fica com referências mistas SVG/local e WebP/R2 | atomicity/upgrade test |
 
 ## Cenários obrigatórios
 
@@ -220,10 +233,14 @@ Aprovação exige **todos os BLOCKERs verdes**. Nenhuma compra, recompensa ou gr
 - `ECO-S30`: inicializar parser com uma única `ASSET_STORAGE_URL` válida;
 - `ECO-S31`: validar credenciais percent-encoded e derivação de endpoint/bucket/region;
 - `ECO-S32`: configuração inválida falha sem imprimir segredo;
-- `ECO-S33`: resolver item registrado para GET presigned e carregar no browser;
+- `ECO-S33`: resolver item registrado para GET presigned e carregar WebP no browser;
 - `ECO-S34`: confirmar que nenhuma credential/connection string aparece em HTML, JSON ou console/log capturado;
 - `ECO-S35`: alterar/expirar URL presigned e confirmar que a object key persistente continua sendo a identidade do item;
-- `ECO-S36`: object key não registrada não pode obter assinatura arbitrária por solicitação do browser.
+- `ECO-S36`: object key não registrada não pode obter assinatura arbitrária por solicitação do browser;
+- `ECO-S37`: validar `attack.webp`, `defense.webp` e `neutral.webp` em cada um dos sete diretórios do baseline;
+- `ECO-S38`: rejeitar asset de dado `.svg` ou com MIME diferente de `image/webp`;
+- `ECO-S39`: confirmar por network trace que preview e partida solicitam WebP e não SVG do namespace de dados;
+- `ECO-S40`: simular coleção com somente dois WebPs válidos e impedir cutover para R2.
 
 ### Partida
 
@@ -233,7 +250,7 @@ Aprovação exige **todos os BLOCKERs verdes**. Nenhuma compra, recompensa ou gr
 - `ECO-S23`: jogador muda loadout no Profile durante partida e partida ativa não muda;
 - `ECO-S24`: jogador reconecta e mantém visual congelado;
 - `ECO-S25`: bot participa usando defaults;
-- `ECO-S26`: fallback 2D mostra a mesma escolha que 3D.
+- `ECO-S26`: fallback 2D mostra a mesma escolha WebP que 3D.
 
 ### Território
 
@@ -287,7 +304,8 @@ Para assets registrar adicionalmente:
 - `cosmetic_id`;
 - `set_id`;
 - `storage_slug`;
-- object key persistida;
+- object key `.webp` persistida;
+- `Content-Type: image/webp` esperado;
 - URL presigned apenas como valor efêmero quando aplicável.
 
 `0`, lista vazia e `não possuído` somente podem ser exibidos como fatos quando a respectiva fonte real foi consultada com sucesso.
@@ -300,9 +318,9 @@ Capturar pelo menos:
 - Profile/Intendência com todas as remessas `announced` do baseline;
 - `/profile/store` desktop 1440x900;
 - `/profile/store` mobile 390x844;
-- detalhe de pelo menos três coleções distintas carregando SVG do R2 sob demanda;
+- detalhe de pelo menos três coleções distintas carregando WebP do R2 sob demanda;
 - loadout com os quatro defaults;
-- batalha com skins distintas de atacante/defensor em harness controlado;
+- batalha com skins WebP distintas de atacante/defensor em harness controlado;
 - território nas seis cores com efeito default.
 
 Reduced-motion e fallback da Foundation continuam obrigatórios onde aplicáveis.
@@ -311,15 +329,33 @@ Reduced-motion e fallback da Foundation continuam obrigatórios onde aplicáveis
 
 Validar por DevTools ou evidência automatizada:
 
-- nenhum carregamento em lote de todos os SVGs HQ apenas ao abrir a loja;
+- nenhum carregamento em lote de todos os WebPs HQ apenas ao abrir a loja;
 - nenhuma descoberta do catálogo por `ListObjects` em request normal da storefront;
 - preview detalhado solicita somente os objetos efetivamente abertos;
+- nenhuma request normal para `cosmetics/dice/**/*.svg` após o cutover;
 - ausência de N+1 para inventário/loadout;
 - ausência de consulta Profile por território;
 - ausência de consulta Profile por frame/rolagem;
 - resolução de catálogo e loadout em número limitado de queries;
 - presign não é gerado em massa para todo o catálogo;
 - mudança cosmética não causa regressão perceptível de interação do mapa.
+
+## Plano técnico de cutover SVG → WebP
+
+A implementação só pode ser finalizada depois de executar e validar esta sequência:
+
+1. converter os assets atuais de dados para WebP mantendo transparência e qualidade visual;
+2. subir `attack.webp`, `defense.webp` e `neutral.webp` para `default`, `military-classic`, `medieval-spears`, `viking`, `cat`, `dog` e `football`;
+3. validar os 21 objetos via S3 API, incluindo extensão e `Content-Type: image/webp`;
+4. implementar parser/cliente de `ASSET_STORAGE_URL` e resolução/presign server-only;
+5. criar migration que troca as referências locais/legadas por object keys `.webp` somente após validação do conjunto completo;
+6. garantir que snapshot de partida congele object key WebP e não URL assinada;
+7. ajustar renderers 2D/3D e previews para WebP remoto/presigned;
+8. executar E2E de storefront, network, iniciativa, batalha, multi-client, reconnect e bots;
+9. provar zero request SVG para dados remotos;
+10. remover referências runtime e, após gates verdes, arquivos SVG de dados locais que ficaram obsoletos.
+
+O cutover MUST ser atômico por coleção e MUST evitar estado híbrido de uma mesma coleção.
 
 ## Fora do EVAL desta entrega
 
@@ -357,9 +393,12 @@ A entrega econômica só pode ser considerada pronta quando:
 - baseline registrado de Exército, Lanças, Viking, Gato, Cachorro e Futebol estiver anunciado e não adquirível;
 - `ASSET_STORAGE_URL` for a única configuração de conexão S3/R2;
 - nenhuma credencial de storage for exposta ao browser, DTO, logs ou snapshots persistentes;
+- todos os dados do storage forem WebP com object key `.webp` e MIME `image/webp`;
+- nenhum dado de runtime vindo do storage usar SVG ou outro formato;
+- os 21 assets de dados do baseline forem validados antes do cutover;
 - referências físicas forem object keys estáveis e URLs presigned forem somente transporte efêmero;
 - browser carregar assets R2 sob demanda sem bulk-load do catálogo;
-- partida utilizar snapshot cosmético congelado por object key/referência persistente;
+- partida utilizar snapshot cosmético congelado por object key WebP/referência persistente;
 - nenhuma regra competitiva tiver sido alterada;
 - nenhum endpoint de compra/recompensa/grant econômico tiver sido introduzido;
 - migrations passarem em banco limpo e upgrade.
