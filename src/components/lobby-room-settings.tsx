@@ -17,7 +17,7 @@ type LobbyRoomSettingsProps = {
 };
 
 function rulesetLabel(ruleset: GameRuleset) {
-  return ruleset === "supremacy" ? "SUPREMACIA" : "OBJETIVO";
+  return ruleset === "supremacy" ? "SUPREMACIA" : "CLÁSSICO";
 }
 
 function SettingsGlyph() {
@@ -113,7 +113,7 @@ export function LobbyRoomSettings({
                 data-active={ruleset === "objective"}
                 onClick={() => onChange({ ruleset: "objective" })}
               >
-                Objetivo
+                Clássico
               </button>
               <button
                 type="button"
