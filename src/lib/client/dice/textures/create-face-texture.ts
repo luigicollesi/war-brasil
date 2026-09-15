@@ -27,6 +27,10 @@ function loadImage(src: string) {
 
     const image = new Image();
     image.decoding = "async";
+    // The stable same-origin delivery route redirects to Cloudflare R2. The
+    // final response is cross-origin and must remain origin-clean because this
+    // image is drawn into a canvas before becoming a Three.js texture.
+    image.crossOrigin = "anonymous";
     image.onload = () => resolve(image);
     image.onerror = () => reject(new Error(`Não foi possível carregar ${src}.`));
     image.src = src;
