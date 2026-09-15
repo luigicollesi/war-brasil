@@ -31,6 +31,8 @@ Economia, wallet, offers, preço, purchase, inventário, loadout jogável, catá
 | PRO4-SHELL-05 | ação de adicionar créditos navega/foca `Reforçar Tesouraria` e não executa pagamento | E2E |
 | PRO4-SHELL-06 | navegação via back/forward mantém rotas e superfície coerentes | browser E2E |
 | PRO4-SHELL-07 | shell permanece utilizável quando catálogo/store está indisponível | failure E2E |
+| PRO4-SHELL-08 | saldo de `campaign-credit` usa `/coin.svg` como representação visual canônica junto ao valor | E2E/DOM/visual |
+| PRO4-SHELL-09 | shell não depende de R2/`ASSET_STORAGE_URL` para renderizar o ícone da moeda | network/failure E2E |
 
 ## Gates BLOCKER — Dossiê
 
@@ -70,7 +72,7 @@ Economia, wallet, offers, preço, purchase, inventário, loadout jogável, catá
 | PRO4-STORE-02 | loja ocupa a superfície principal e prioriza produtos/preview em vez de widgets administrativos | visual review |
 | PRO4-STORE-03 | hero/destaque deriva de dados retornados, sem slug temático especial | source/integration |
 | PRO4-STORE-04 | todas as offers renderizadas vêm do snapshot econômico | DTO/DOM |
-| PRO4-STORE-05 | preço exibido é o preço retornado pelo backend | DB→DTO→DOM |
+| PRO4-STORE-05 | preço exibido é o preço retornado pelo backend e usa `/coin.svg` para representar `campaign-credit` | DB→DTO→DOM |
 | PRO4-STORE-06 | card diferencia comprável, possuído, parcialmente possuído e indisponível | E2E/visual |
 | PRO4-STORE-07 | ownership parcial é mostrado sem desconto inventado no client | DOM/source |
 | PRO4-STORE-08 | novo offer válido aparece sem alteração temática no React | integration |
@@ -78,6 +80,8 @@ Economia, wallet, offers, preço, purchase, inventário, loadout jogável, catá
 | PRO4-STORE-10 | preview/inspection não altera wallet, ownership ou loadout | interaction/integration |
 | PRO4-STORE-11 | inspection é operável por teclado e toque | accessibility/manual |
 | PRO4-STORE-12 | ausência/falha de asset possui fallback sem quebrar CTA/estado comercial | failure E2E |
+| PRO4-STORE-13 | hero, cards e feedback de saldo usam a mesma identidade visual `/coin.svg` para `campaign-credit` | visual/source review |
+| PRO4-STORE-14 | glyph textual legado como `◈` não substitui `/coin.svg` como identidade visual primária | DOM/source negative assertion |
 
 ## Gates BLOCKER — integração de compra
 
@@ -92,6 +96,7 @@ As invariantes financeiras são avaliadas em `../../economy/EVAL.md`. Aqui valid
 | PRO4-BUY-05 | saldo insuficiente produz feedback claro e preserva tela operável | E2E |
 | PRO4-BUY-06 | erro de compra não transforma offer em possuída localmente | failure E2E |
 | PRO4-BUY-07 | reload após compra confirma persistência real | browser E2E |
+| PRO4-BUY-08 | quando saldo/valor gasto é mostrado após compra, `/coin.svg` continua sendo usado junto ao valor | E2E/visual |
 
 ## Gates BLOCKER — Reforçar Tesouraria
 
@@ -102,6 +107,7 @@ As invariantes financeiras são avaliadas em `../../economy/EVAL.md`. Aqui valid
 | PRO4-CASH-03 | CTA é `EM BREVE`, disabled ou semanticamente não adquirível | DOM/accessibility |
 | PRO4-CASH-04 | mouse, teclado ou toque não iniciam checkout nem alteram saldo | E2E |
 | PRO4-CASH-05 | UI não contém formulário de cartão/pagamento ou falsa confirmação | source/DOM negative |
+| PRO4-CASH-06 | quantidade de `campaign-credit` usa `/coin.svg` e permanece visualmente distinta do preço em BRL | visual/E2E |
 
 ## Gates BLOCKER — Foundation e visual
 
@@ -115,6 +121,7 @@ As invariantes financeiras são avaliadas em `../../economy/EVAL.md`. Aqui valid
 | PRO4-VIS-02 | produtos/assets têm prioridade visual maior que ornamentação sem função | visual review |
 | PRO4-VIS-03 | UI não assume aparência de dashboard corporativo genérico | review comparativo com visual-language |
 | PRO4-VIS-04 | estado de foco, ownership, preço e erro é legível em contraste normal | accessibility/visual |
+| PRO4-VIS-05 | `public/coin.svg` mantém escala, nitidez e enquadramento coerentes em shell, cards e packs | visual desktop/mobile |
 
 ## Gates BLOCKER — motion
 
@@ -137,6 +144,16 @@ As invariantes financeiras são avaliadas em `../../economy/EVAL.md`. Aqui valid
 | PRO4-RESP-05 | Arsenal mobile reorganiza bays sem overflow horizontal acidental | 390x844 visual |
 | PRO4-RESP-06 | Store mobile mantém preview, preço e CTA legíveis | 390x844 visual |
 | PRO4-RESP-07 | inspection mobile usa sheet/painel que não aprisiona foco indevidamente | accessibility/manual |
+| PRO4-RESP-08 | `/coin.svg` permanece legível sem dominar saldo/preço em 390x844 | mobile visual |
+
+## Gates BLOCKER — acessibilidade monetária
+
+| ID | Critério | Evidência mínima |
+| --- | --- | --- |
+| PRO4-A11Y-COIN-01 | saldo e preço continuam compreensíveis sem depender exclusivamente do desenho da moeda | screen reader/DOM |
+| PRO4-A11Y-COIN-02 | quando `coin.svg` é decorativo, ele não gera anúncio redundante no leitor de tela | accessibility inspection |
+| PRO4-A11Y-COIN-03 | quando o ícone participa do nome acessível, o nome equivalente é `Créditos de Campanha` | accessibility test |
+| PRO4-A11Y-COIN-04 | falha visual do SVG não remove o valor numérico/textual do saldo ou preço | failure DOM test |
 
 ## Gates BLOCKER — autenticação e autorização preservadas
 
@@ -214,13 +231,14 @@ As invariantes financeiras são avaliadas em `../../economy/EVAL.md`. Aqui valid
 | PRO4-DATA-03 | ausência de fonte não vira lista vazia/zero/offline sintético | failure tests |
 | PRO4-DATA-04 | Arsenal/Store usam contratos econômicos em vez de duplicar regras comerciais | contract/source |
 | PRO4-DATA-05 | `/profile/[handle]` usa DTO público separado | security/source |
+| PRO4-DATA-06 | associação visual `campaign-credit -> /coin.svg` pode permanecer estrutural no frontend sem transformar o cliente em autoridade econômica | contract/source review |
 
 ## Cenários obrigatórios
 
 ### Navegação e Dossiê
 
 - `PRO4-S1`: visitante tenta `/profile`.
-- `PRO4-S2`: usuário autenticado abre Dossiê.
+- `PRO4-S2`: usuário autenticado abre Dossiê e o shell mostra saldo real com `/coin.svg`.
 - `PRO4-S3`: navegar Dossiê→Arsenal→Intendência→back/forward.
 - `PRO4-S4`: editar display name/bio e recarregar.
 - `PRO4-S5`: abrir e fechar edição sem perder dados.
@@ -238,21 +256,21 @@ As invariantes financeiras são avaliadas em `../../economy/EVAL.md`. Aqui valid
 
 ### Store
 
-- `PRO4-S14`: hero usa offer retornada pelo backend.
+- `PRO4-S14`: hero usa offer retornada pelo backend e preço usa `/coin.svg`.
 - `PRO4-S15`: catalog renderiza todas as offers retornadas sem conhecimento de slug.
-- `PRO4-S16`: preço no banco muda e DOM acompanha.
+- `PRO4-S16`: preço no banco muda e DOM acompanha sem alterar o ícone canônico da moeda.
 - `PRO4-S17`: offer 0/N mostra comprar.
 - `PRO4-S18`: offer parcial mostra `x/N POSSUÍDOS` sem desconto inventado.
 - `PRO4-S19`: offer N/N mostra possuído.
 - `PRO4-S20`: abrir inspection e trocar previews não altera estado econômico.
-- `PRO4-S21`: compra bem-sucedida atualiza saldo/ownership.
+- `PRO4-S21`: compra bem-sucedida atualiza saldo/ownership e novo saldo continua acompanhado de `/coin.svg`.
 - `PRO4-S22`: saldo insuficiente mostra erro e não altera estado local indevidamente.
 - `PRO4-S23`: reload após compra confirma estado persistido.
 
 ### Packs BRL
 
-- `PRO4-S24`: packs retornados aparecem no fim da loja.
-- `PRO4-S25`: BRL é formatado a partir de centavos persistidos.
+- `PRO4-S24`: packs retornados aparecem no fim da loja e quantidade de créditos usa `/coin.svg`.
+- `PRO4-S25`: BRL é formatado a partir de centavos persistidos e visualmente distinto da moeda do jogo.
 - `PRO4-S26`: CTA não é acionável como checkout.
 - `PRO4-S27`: botão global `+` leva à seção e não altera saldo.
 
@@ -266,14 +284,15 @@ As invariantes financeiras são avaliadas em `../../economy/EVAL.md`. Aqui valid
 
 ### Visual/responsivo
 
-- `PRO4-S33`: 1440x900 Dossiê.
+- `PRO4-S33`: 1440x900 Dossiê com wallet e `coin.svg` legíveis.
 - `PRO4-S34`: 1440x900 Arsenal com inventário suficiente para scroll.
-- `PRO4-S35`: 1440x900 Intendência com hero, catálogo e inspection.
-- `PRO4-S36`: 390x844 Dossiê.
+- `PRO4-S35`: 1440x900 Intendência com hero, catálogo, inspection e preços com `coin.svg`.
+- `PRO4-S36`: 390x844 Dossiê com saldo e ícone sem overflow.
 - `PRO4-S37`: 390x844 Arsenal.
-- `PRO4-S38`: 390x844 Intendência e bottom sheet.
+- `PRO4-S38`: 390x844 Intendência e bottom sheet com preço/ícone legíveis.
 - `PRO4-S39`: reduced-motion nas três superfícies.
 - `PRO4-S40`: Foundation/WebGL fallback nas três superfícies.
+- `PRO4-S41`: R2 indisponível, mas `/coin.svg` continua disponível e valores econômicos permanecem representáveis.
 
 ## Testes de concorrência preservados
 
@@ -298,12 +317,12 @@ Capturar e revisar, no mínimo:
 
 Store adicionalmente deve possuir evidência dos estados:
 
-- comprável;
+- comprável com `/coin.svg` + preço;
 - possuído;
 - ownership parcial;
 - saldo insuficiente;
 - preview indisponível;
-- pack BRL inativo.
+- pack BRL inativo com `/coin.svg` para quantidade de créditos.
 
 Arsenal deve possuir evidência de:
 
@@ -322,7 +341,7 @@ Todos os BLOCKERs são obrigatórios. O score mede qualidade adicional:
 - 15 — Arsenal e personalização;
 - 15 — Intendência e integração econômica;
 - 10 — identidade/privacidade/social/histórico preservados;
-- 10 — responsividade e acessibilidade;
+- 10 — responsividade e acessibilidade, incluindo representação da moeda;
 - 5 — Foundation e fallback;
 - 5 — motion/performance;
 - 5 — estados de erro e qualidade de evidência.
@@ -337,6 +356,8 @@ A PROFILE V4 é aprovada somente quando:
 - todos os BLOCKERs econômicos aplicáveis estiverem verdes em `../../economy/EVAL.md`;
 - a antiga Mesa de Comando estiver ausente da composição principal;
 - as três superfícies tiverem evidência desktop/mobile/reduced-motion/fallback;
+- wallet, preço de offers e packs usarem `/coin.svg` como representação visual canônica de `campaign-credit`;
+- a representação textual/acessível de saldo e preço permanecer correta;
 - compra com créditos estiver integrada pela boundary correta;
 - packs em BRL permanecerem demonstrativos e não transacionais;
 - nenhuma imagem de perfil tiver sido reintroduzida.
