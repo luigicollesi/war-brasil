@@ -14,7 +14,7 @@ export function ProfileEconomyUnavailable({
 
   return (
     <section className={styles.state} data-profile-economy-state="unavailable" aria-labelledby="profile-economy-unavailable-title">
-      <span className={styles.code} aria-hidden="true">SYNC // OFFLINE</span>
+      <span className={styles.code} aria-hidden="true">SYNC // INDISPONÍVEL</span>
       <div className={styles.signal} aria-hidden="true"><i /><i /><i /></div>
       <h1 id="profile-economy-unavailable-title">{title}</h1>
       <p>{detail}</p>
