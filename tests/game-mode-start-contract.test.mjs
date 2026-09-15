@@ -20,6 +20,13 @@ test("match congela ruleset e flag de sorte junto do perfil efetivo", () => {
 
 test("sorte desligada resolve perfil uniforme sem aceitar profile id do browser", () => {
   assert.match(dice, /UNIFORM_DICE_PROFILE_ID/);
-  assert.match(dice, /resolveProfileForNewMatch\(client, room\.balanced_dice_enabled\)/);
-  assert.match(dice, /loadCatalogProfile\(client, UNIFORM_DICE_PROFILE_ID\)/);
+  assert.match(
+    dice,
+    /resolveProfileForNewMatch\(\s*client,\s*room\.balanced_dice_enabled,?\s*\)/,
+  );
+  assert.match(dice, /loadCatalogProfile\(client, requestedProfileId\)/);
+  assert.match(
+    dice,
+    /requestedProfileId = balancedDiceEnabled[\s\S]*UNIFORM_DICE_PROFILE_ID/,
+  );
 });
