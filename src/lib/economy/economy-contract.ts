@@ -113,6 +113,7 @@ export type EconomyStorefrontSnapshot = Readonly<{
   ownedItems: ReadonlyArray<CosmeticCatalogItem>;
   sets: ReadonlyArray<CosmeticSet>;
   collections: ReadonlyArray<StorefrontCollection>;
+  territorySkins: ReadonlyArray<CosmeticCatalogItem>;
   offers: ReadonlyArray<EconomyOffer>;
   creditPacks: ReadonlyArray<EconomyCreditPack>;
 }>;
