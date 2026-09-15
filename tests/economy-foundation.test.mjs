@@ -40,6 +40,7 @@ test("histórico de migrations preserva 037 e evolui economia por 038→039→04
     "src/lib/db/migrations/managed/038-economy-cosmetics-foundation.sql",
     "src/lib/db/migrations/managed/039-game-cosmetic-loadout-snapshots.sql",
     "src/lib/db/migrations/managed/040-r2-webp-cosmetic-catalog.sql",
+    "src/lib/db/migrations/managed/041-economy-v2-commerce.sql",
   ]) {
     assert.equal(existsSync(path), true, path);
   }
@@ -108,11 +109,15 @@ test("loadout possui exatamente quatro slots e DB exige ownership compatível", 
 });
 
 test("inicialização econômica é idempotente e não cria movimentação", () => {
-  assert.match(repository, /INSERT INTO economy\.wallets[\s\S]*ON CONFLICT \(user_id, currency_code\) DO NOTHING/);
-  assert.match(repository, /INSERT INTO inventory\.cosmetics[\s\S]*ON CONFLICT \(user_id, cosmetic_id\) DO NOTHING/);
-  assert.match(repository, /INSERT INTO profile\.cosmetic_loadout[\s\S]*ON CONFLICT \(user_id, slot\) DO NOTHING/);
-  assert.doesNotMatch(repository, /INSERT INTO economy\.ledger_entries/);
-  assert.doesNotMatch(service, /ledger_entries|UPDATE economy\.wallets|SET balance/i);
+  const initializeStart = repository.indexOf("export async function initializeEconomyState");
+  const initializeEnd = repository.indexOf("export async function findCampaignCreditWallet");
+  const initialization = repository.slice(initializeStart, initializeEnd);
+
+  assert.match(initialization, /INSERT INTO economy\.wallets[\s\S]*ON CONFLICT \(user_id, currency_code\) DO NOTHING/);
+  assert.match(initialization, /INSERT INTO inventory\.cosmetics[\s\S]*ON CONFLICT \(user_id, cosmetic_id\) DO NOTHING/);
+  assert.match(initialization, /INSERT INTO profile\.cosmetic_loadout[\s\S]*ON CONFLICT \(user_id, slot\) DO NOTHING/);
+  assert.doesNotMatch(initialization, /INSERT INTO economy\.ledger_entries/);
+  assert.doesNotMatch(initialization, /UPDATE economy\.wallets|SET balance/i);
 });
 
 test("storefront é dirigido pelo catálogo e não por allowlist temática de React", () => {
@@ -150,7 +155,7 @@ test("economia serializa inicialização, storefront, equipagem e captura da par
   );
 });
 
-test("APIs derivam ator da sessão e expõem somente leitura + equipagem", () => {
+test("APIs derivam ator da sessão e preservam leitura + equipagem autenticada", () => {
   assert.match(storefrontRoute, /getAuthenticatedSession\(request\)/);
   assert.match(storefrontRoute, /getEconomyStorefront\(session\.user\.id\)/);
   assert.match(loadoutRoute, /getAuthenticatedSession\(request\)/);
@@ -158,7 +163,7 @@ test("APIs derivam ator da sessão e expõem somente leitura + equipagem", () =>
   assert.match(loadoutRoute, /equipCosmetic\(session\.user\.id/);
   assert.doesNotMatch(storefrontRoute + loadoutRoute, /payload\.userId|body\.userId|input\.userId/);
 
-  for (const forbidden of ["purchase", "reward", "transfer", "grant", "checkout"]) {
+  for (const forbidden of ["reward", "transfer", "grant", "checkout"]) {
     assert.equal(existsSync(`src/app/api/economy/${forbidden}/route.ts`), false);
   }
 });
