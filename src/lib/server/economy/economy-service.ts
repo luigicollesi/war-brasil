@@ -473,10 +473,10 @@ export async function equipCosmetic(
       );
     }
 
-    if (item.status !== "available") {
+    if (item.status !== "available" && item.status !== "retired") {
       throw new EconomyServiceError(
         "ECONOMY_COSMETIC_NOT_EQUIPPABLE",
-        "Esse cosmético não está disponível para nova equipagem.",
+        "Esse cosmético não está disponível para equipagem.",
         409,
       );
     }
