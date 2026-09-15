@@ -16,35 +16,56 @@ const DATABASE_URL = process.env.LOBBY_E2E_DATABASE_URL ?? process.env.DATABASE_
 const ARTIFACT_DIR = path.resolve(
   process.env.ECONOMY_GAME_E2E_ARTIFACT_DIR ?? "test-results/economy-game-eval",
 );
+const ASSET_ROUTE_PATH = "/api/assets/dice";
 const FAKE_WEBP = Buffer.from(
   "UklGRhoAAABXRUJQVlA4TA0AAAAvB8ABEAcQERGIiP4HAA==",
   "base64",
 );
-const R2_ASSET_PATTERN =
-  /^https:\/\/[^/]+\.r2\.cloudflarestorage\.com\/war-brasil-assets-prod\/cosmetics\/dice\/[^?]+\.webp\?/;
 
 if (!DATABASE_URL) throw new Error("DATABASE_URL E2E é obrigatória.");
 mkdirSync(ARTIFACT_DIR, { recursive: true });
 
 let actorSequence = 0;
 
+function assetKeyFromDeliveryUrl(value) {
+  const url = new URL(value, BASE_URL);
+  assert.equal(url.pathname, ASSET_ROUTE_PATH);
+  const key = url.searchParams.get("key");
+  assert.match(
+    key ?? "",
+    /^cosmetics\/dice\/[a-z0-9]+(?:-[a-z0-9]+)*\/(attack|defense|neutral)\.webp$/,
+  );
+  return key;
+}
+
+function assertSignedR2Location(value, expectedKey) {
+  const url = new URL(value);
+  assert.ok(url.hostname.endsWith(".r2.cloudflarestorage.com"));
+  const marker = "/war-brasil-assets-prod/";
+  const markerIndex = url.pathname.indexOf(marker);
+  assert.ok(markerIndex >= 0, `path R2 inesperado: ${url.pathname}`);
+  const objectKey = decodeURIComponent(url.pathname.slice(markerIndex + marker.length));
+  assert.equal(objectKey, expectedKey);
+  assert.equal(url.searchParams.get("X-Amz-Algorithm"), "AWS4-HMAC-SHA256");
+  assert.match(url.searchParams.get("X-Amz-Credential") ?? "", /\/.+\/s3\/aws4_request$/);
+  assert.match(url.searchParams.get("X-Amz-Signature") ?? "", /^[a-f0-9]{64}$/);
+  const expires = Number(url.searchParams.get("X-Amz-Expires"));
+  assert.ok(Number.isInteger(expires) && expires > 0 && expires <= 900);
+}
+
 async function installR2Mock(context) {
-  await context.route(R2_ASSET_PATTERN, async (route) => {
-    const url = new URL(route.request().url());
-    const marker = "/war-brasil-assets-prod/";
-    const markerIndex = url.pathname.indexOf(marker);
-    assert.ok(markerIndex >= 0, `path R2 inesperado: ${url.pathname}`);
-    const objectKey = decodeURIComponent(url.pathname.slice(markerIndex + marker.length));
-    assert.match(
-      objectKey,
-      /^cosmetics\/dice\/[a-z0-9]+(?:-[a-z0-9]+)*\/(attack|defense|neutral)\.webp$/,
-    );
-    assert.equal(url.searchParams.get("X-Amz-Algorithm"), "AWS4-HMAC-SHA256");
-    assert.match(url.searchParams.get("X-Amz-Signature") ?? "", /^[a-f0-9]{64}$/);
+  await context.route((url) => url.pathname === ASSET_ROUTE_PATH, async (route) => {
+    const expectedKey = assetKeyFromDeliveryUrl(route.request().url());
+    const upstream = await route.fetch({ maxRedirects: 0 });
+    assert.equal(upstream.status(), 307, `delivery deveria redirecionar ${expectedKey}`);
+    const location = upstream.headers().location;
+    assert.ok(location, `delivery não retornou Location para ${expectedKey}`);
+    assertSignedR2Location(location, expectedKey);
     await route.fulfill({
       status: 200,
       contentType: "image/webp",
       body: FAKE_WEBP,
+      headers: { "Access-Control-Allow-Origin": "*" },
     });
   });
 }
@@ -98,6 +119,7 @@ async function createActor(browser, label) {
   const context = await browser.newContext({
     viewport: { width: 1440, height: 900 },
     reducedMotion: "reduce",
+    serviceWorkers: "block",
     extraHTTPHeaders: { "x-forwarded-for": `198.51.100.${70 + actorSequence}` },
   });
   await installR2Mock(context);
@@ -266,6 +288,7 @@ async function reconnectSnapshot(browser, actor, roomId, forwardedIp) {
     storageState,
     viewport: { width: 1440, height: 900 },
     reducedMotion: "reduce",
+    serviceWorkers: "block",
     extraHTTPHeaders: { "x-forwarded-for": forwardedIp },
   });
   await installR2Mock(context);
