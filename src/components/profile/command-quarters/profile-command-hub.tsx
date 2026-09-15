@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { type ReactNode, useMemo, useState } from "react";
 import { useCommandSceneDirective } from "@/src/components/pre-game/foundation";
@@ -115,6 +116,20 @@ function StationFrame({
   );
 }
 
+function CampaignCreditMark({ compact }: { compact: boolean }) {
+  const size = compact ? 24 : 28;
+  return (
+    <Image
+      src="/coin.svg"
+      alt=""
+      aria-hidden="true"
+      width={size}
+      height={size}
+      priority={compact}
+    />
+  );
+}
+
 function TreasuryReadout({
   snapshot,
   compact = false,
@@ -143,7 +158,7 @@ function TreasuryReadout({
     return (
       <span className={styles.walletCompact}>
         <span key={currency.currency} data-currency={currency.currency}>
-          <span className={styles.currencySymbol} aria-hidden="true">{currency.symbol}</span>
+          <CampaignCreditMark compact />
           <span>
             <small>{currency.shortLabel}</small>
             <strong>{formatBalance(currency.balance)}</strong>
@@ -156,7 +171,7 @@ function TreasuryReadout({
   return (
     <div className={styles.walletExpanded}>
       <div data-currency={currency.currency}>
-        <span className={styles.currencySymbol} aria-hidden="true">{currency.symbol}</span>
+        <CampaignCreditMark compact={false} />
         <span>
           <small>{currency.label}</small>
           <strong>{formatBalance(currency.balance)}</strong>
@@ -226,7 +241,7 @@ function CommandTable({
         kicker: "Tesouraria aberta",
         title: "Créditos de Campanha",
         detail: currency
-          ? `${currency.symbol} ${formatBalance(currency.balance)}`
+          ? `${formatBalance(currency.balance)} créditos disponíveis`
           : "Sem saldo disponível",
         glyph: "¤",
       };
