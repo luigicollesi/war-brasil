@@ -5,6 +5,7 @@ import type {
   GameCosmeticSelection,
   GamePlayerCosmetics,
 } from "@/src/lib/game-contract";
+import { diceAssetDeliveryPath } from "@/src/lib/server/assets/asset-storage-service";
 import { RoomError } from "@/src/lib/server/room-error";
 
 export type GameCosmeticSlot =
@@ -31,10 +32,21 @@ type GamePlayerSnapshotStateRow = {
   room_status: "waiting" | "order_roll" | "playing" | "finished";
 };
 
+function projectedSnapshotAssetRef(row: GameCosmeticSnapshotRow) {
+  if (!row.asset_ref) return null;
+  if (
+    row.slot !== "territory_effect" &&
+    row.asset_ref.startsWith("cosmetics/dice/")
+  ) {
+    return diceAssetDeliveryPath(row.asset_ref);
+  }
+  return row.asset_ref;
+}
+
 function selection(row: GameCosmeticSnapshotRow): GameCosmeticSelection {
   return {
     cosmeticId: row.cosmetic_id,
-    assetRef: row.asset_ref,
+    assetRef: projectedSnapshotAssetRef(row),
     effectKey: row.effect_key,
   };
 }
@@ -135,7 +147,8 @@ async function lockRoomCommanderCosmeticStates(
 /**
  * Copies each player's current profile loadout into game.* exactly when a match
  * starts. After this function succeeds, runtime reads no longer need profile,
- * inventory, or mutable catalog rows for cosmetic presentation.
+ * inventory, or mutable catalog rows for cosmetic presentation. asset_ref is a
+ * stable object key; delivery URLs are projected only while building the DTO.
  */
 export async function capturePlayerCosmeticLoadouts(
   client: PoolClient,
