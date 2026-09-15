@@ -86,9 +86,9 @@ function InspectionContent({
         ) : null}
 
         <div className={styles.commerceBoundary}>
-          <span>OFERTAS ECONOMY V2</span>
-          <strong>AGUARDANDO AUTORIDADE COMERCIAL</strong>
-          <p>Preço e ação de compra não são inferidos pela interface.</p>
+          <span>AQUISIÇÕES</span>
+          <strong>EM PREPARAÇÃO</strong>
+          <p>Preços e ordens de compra aparecerão aqui quando o ciclo comercial estiver ativo.</p>
         </div>
       </div>
     </>
@@ -117,13 +117,19 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") setInspectionOpen(false);
     };
-    window.addEventListener("keydown", onKeyDown);
+    const isMobile = window.matchMedia("(max-width: 820px)").matches;
+    const previousOverflow = document.body.style.overflow;
 
-    if (window.matchMedia("(max-width: 820px)").matches) {
+    window.addEventListener("keydown", onKeyDown);
+    if (isMobile) {
+      document.body.style.overflow = "hidden";
       window.requestAnimationFrame(() => mobileCloseRef.current?.focus());
     }
 
-    return () => window.removeEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      if (isMobile) document.body.style.overflow = previousOverflow;
+    };
   }, [inspectionOpen]);
 
   function inspect(set: CosmeticSet) {
@@ -139,8 +145,7 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
           <small>INTENDÊNCIA // CATÁLOGO COSMÉTICO</small>
           <h1 id="store-title">Remessas do Comando</h1>
           <p>
-            Inspecione o catálogo real do comandante. Aquisição só será habilitada quando offers e preços
-            autoritativos forem entregues pelo domínio Economy.
+            Inspecione coleções, compare equipamentos e acompanhe as próximas remessas disponíveis para o comandante.
           </p>
           {featured ? (
             <button type="button" onClick={() => inspect(featured)}>
@@ -272,7 +277,7 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
         <div>
           <small>TESOURARIA // CRÉDITOS DE CAMPANHA</small>
           <h2 id="treasury-title">Reforçar Tesouraria</h2>
-          <p>Pacotes em BRL serão exibidos somente quando `credit_packs` forem fornecidos pelo backend.</p>
+          <p>Novas formas de reforçar seus Créditos de Campanha serão liberadas em uma próxima atualização.</p>
         </div>
         <strong>EM BREVE</strong>
       </section>
