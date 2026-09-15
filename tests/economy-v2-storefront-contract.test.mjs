@@ -42,7 +42,7 @@ test("storefront V2 deriva collections completas no servidor sem inferir paths n
   assert.match(repository, /role='banner'/);
   assert.match(repository, /role='background'/);
   assert.match(repository, /role='logo'/);
-  assert.match(repository, /asset_count=3|asset_count\s*=\s*3/);
+  assert.match(repository, /COUNT\(\*\)=3/);
 
   assert.match(service, /listStorefrontCollections/);
   assert.match(service, /collectionsFromRows/);
@@ -50,8 +50,8 @@ test("storefront V2 deriva collections completas no servidor sem inferir paths n
 
   assert.match(storefront, /storefront\.collections/);
   assert.match(storefront, /collection\.assets\.banner/);
-  assert.match(storefront, /collection\.assets\.background/);
-  assert.match(storefront, /collection\.assets\.logo/);
+  assert.match(storefront, /selectedCollection\.assets\.background/);
+  assert.match(storefront, /selectedCollection\.assets\.logo/);
   assert.doesNotMatch(storefront, /store\/collections\/football/);
 });
 
