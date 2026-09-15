@@ -18,6 +18,20 @@ Aprovação exige **todos os BLOCKERs verdes**. Compra com `campaign-credit` é 
 | ECO-WAL-08 | não existe endpoint público de grant/reward/transferência ou ajuste arbitrário de saldo | route/security review |
 | ECO-WAL-09 | browser não consegue enviar saldo final ou delta autoritativo | negative API test |
 
+## Gates BLOCKER — representação visual da moeda
+
+| ID | Critério | Evidência mínima |
+| --- | --- | --- |
+| ECO-COIN-01 | `public/coin.svg` existe e é um SVG válido servido como `/coin.svg` | repository/asset test |
+| ECO-COIN-02 | `/coin.svg` é a representação visual canônica de `campaign-credit` nas superfícies V2/V4 | DOM/visual/source review |
+| ECO-COIN-03 | wallet exibe `/coin.svg` junto ao saldo numérico quando a moeda está disponível | E2E/DOM |
+| ECO-COIN-04 | preço de offer em `campaign-credit` exibe `/coin.svg` junto ao valor | E2E/DOM |
+| ECO-COIN-05 | quantidade de créditos em `credit_packs` usa `/coin.svg`, enquanto BRL permanece textual/formatado separadamente | E2E/DOM |
+| ECO-COIN-06 | `coin.svg` não depende de R2, presigned URL, `ASSET_STORAGE_URL`, catálogo cosmético ou inventário | source/network negative test |
+| ECO-COIN-07 | o glyph `◈` não é usado como identidade visual primária quando `/coin.svg` pode ser renderizado | DOM/source negative assertion |
+| ECO-COIN-08 | saldo/preço possuem equivalente textual/acessível e não dependem apenas do ícone | accessibility test |
+| ECO-COIN-09 | o path `/coin.svg` não precisa ser repetido em DTO econômico por item/offer | contract/source review |
+
 ## Gates BLOCKER — ledger
 
 | ID | Critério | Evidência mínima |
@@ -126,10 +140,10 @@ Aprovação exige **todos os BLOCKERs verdes**. Compra com `campaign-credit` é 
 
 | ID | Critério | Evidência mínima |
 | --- | --- | --- |
-| ECO-STORE-01 | storefront mostra saldo real da wallet | E2E/DOM |
+| ECO-STORE-01 | storefront mostra saldo real da wallet acompanhado de `/coin.svg` | E2E/DOM |
 | ECO-STORE-02 | catálogo e offers vêm de service/DTO real, não fixture | source/integration |
 | ECO-STORE-03 | toda offer `available` retornada é renderizada | E2E/DOM |
-| ECO-STORE-04 | preço mostrado corresponde ao valor persistido | DB→DTO→DOM |
+| ECO-STORE-04 | preço mostrado corresponde ao valor persistido e usa `/coin.svg` para indicar `campaign-credit` | DB→DTO→DOM |
 | ECO-STORE-05 | estado `COMPRAR`, `POSSUÍDO`, `EQUIPADO` ou indisponível corresponde ao backend | E2E |
 | ECO-STORE-06 | offer parcialmente possuída informa progresso/estado sem inventar desconto | E2E |
 | ECO-STORE-07 | clicar preview não altera wallet/inventory/loadout | interaction/integration |
@@ -153,6 +167,7 @@ Aprovação exige **todos os BLOCKERs verdes**. Compra com `campaign-credit` é 
 | ECO-CASH-08 | não existe webhook de pagamento | route/source inspection |
 | ECO-CASH-09 | não existe integração obrigatória com Stripe, Mercado Pago ou outro PSP | dependency/source review |
 | ECO-CASH-10 | browser não consegue converter BRL em créditos por endpoint escondido | security negative test |
+| ECO-CASH-11 | quantidade de `campaign-credit` do pack é apresentada com `/coin.svg`, sem confundir o ícone com o preço em BRL | E2E/visual |
 
 ## Gates BLOCKER — object storage / R2
 
@@ -175,6 +190,7 @@ Aprovação exige **todos os BLOCKERs verdes**. Compra com `campaign-credit` é 
 | ECO-ASSET-15 | não há referência ativa `.svg/.png/.jpg/.jpeg` em `cosmetics/dice/` | negative DB/source |
 | ECO-ASSET-16 | WebP possui `Content-Type: image/webp` | storage integration |
 | ECO-ASSET-17 | coleção ativa não fica parcialmente local/SVG e parcialmente R2/WebP | migration/storage atomicity |
+| ECO-ASSET-18 | `/coin.svg` continua disponível como asset local mesmo quando R2/`ASSET_STORAGE_URL` está indisponível | failure/network E2E |
 
 ## Gates BLOCKER — dados e território
 
@@ -228,6 +244,7 @@ Aprovação exige **todos os BLOCKERs verdes**. Compra com `campaign-credit` é 
 | ECO-DB-04 | wallets, inventory, loadout e snapshots existentes são preservados | upgrade integration |
 | ECO-DB-05 | constraints de offers/purchases impedem preço inválido e receipts duplicados | DB negative tests |
 | ECO-DB-06 | índices novos possuem relação direta com consultas/locks previstos | query review |
+| ECO-DB-07 | adoção de `/coin.svg` não exige migration de saldo/ledger/inventory nem altera autoridade monetária | migration/schema review |
 
 ## Cenários obrigatórios
 
@@ -254,16 +271,17 @@ Aprovação exige **todos os BLOCKERs verdes**. Compra com `campaign-credit` é 
 
 ### Storefront / Arsenal
 
-- `ECO2-S16`: storefront recebe saldo, offers e ownership reais.
+- `ECO2-S16`: storefront recebe saldo, offers e ownership reais e representa `campaign-credit` com `/coin.svg`.
 - `ECO2-S17`: alterar preço no banco altera UI sem rebuild.
 - `ECO2-S18`: inserir offer válida altera UI sem branch temática React.
 - `ECO2-S19`: compra confirmada muda card para estado possuído e atualiza wallet.
 - `ECO2-S20`: item comprado é equipado e permanece após reload.
 - `ECO2-S21`: item não possuído não pode ser equipado.
+- `ECO2-S21A`: offer de `campaign-credit` mostra `/coin.svg` ao lado do preço e mantém o valor acessível textualmente.
 
 ### BRL inativo
 
-- `ECO2-S22`: pack mostra quantidade de créditos e preço BRL persistidos.
+- `ECO2-S22`: pack mostra quantidade de créditos com `/coin.svg` e preço BRL persistido separadamente.
 - `ECO2-S23`: CTA do pack está disabled/EM BREVE.
 - `ECO2-S24`: ativação por mouse, teclado ou request manual não altera wallet.
 - `ECO2-S25`: inventário de rotas confirma ausência de checkout/webhook funcional.
@@ -271,9 +289,10 @@ Aprovação exige **todos os BLOCKERs verdes**. Compra com `campaign-credit` é 
 ### Assets / runtime
 
 - `ECO2-S26`: preview WebP válido carrega do R2.
-- `ECO2-S27`: asset ausente usa fallback sem alterar compra/gameplay.
+- `ECO2-S27`: asset cosmético ausente usa fallback sem alterar compra/gameplay.
 - `ECO2-S28`: dois jogadores com skins diferentes batalham sem alterar RNG/física.
 - `ECO2-S29`: reconnect mantém cosmético congelado com nova URL efêmera quando necessário.
+- `ECO2-S30`: R2 indisponível não impede carregamento de `/coin.svg` nem transforma saldo real em indisponível.
 
 ## Testes de concorrência obrigatórios
 
@@ -296,7 +315,7 @@ Todos os BLOCKERs são obrigatórios. O score mede qualidade adicional:
 - 15 — catálogo/offers/storefront dinâmicos;
 - 10 — inventário e loadout;
 - 10 — segurança e boundaries;
-- 10 — R2/assets;
+- 10 — R2/assets e representação canônica da moeda;
 - 5 — integração de partida;
 - 5 — performance/observabilidade;
 - 5 — qualidade de migrations e evidências.
@@ -308,6 +327,8 @@ Meta de qualidade: **>= 90/100**, além de todos os BLOCKERs verdes.
 A revisão final MUST incluir:
 
 - testes unitários de parsing/contratos relevantes;
+- teste/inspeção de `public/coin.svg` e sua entrega em `/coin.svg`;
+- testes DOM/E2E do ícone em wallet, preço de offer e pack de créditos;
 - testes DB de constraints e transactions;
 - testes de integração de compra/equipagem;
 - testes de concorrência reais contra PostgreSQL;
