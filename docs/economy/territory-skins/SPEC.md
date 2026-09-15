@@ -1,63 +1,55 @@
 # Territory Skins — SPEC v1
 
-## 1. Status e autoridade
+Status: **reconciliado com Economy/Storefront V2**
 
-Este documento é a especificação normativa do subtipo de cosmético `territory_effect` responsável pela superfície visual dos territórios.
+## 1. Autoridade
 
-Ele complementa `docs/economy/SPEC.md` e `docs/pre-game/profile/SPEC.md`.
+Este documento é a autoridade especializada para representação, equipagem, snapshot, delivery e renderização do cosmético de superfície territorial.
 
-Em caso de conflito:
+O slot canônico é:
 
-- `docs/economy/SPEC.md` governa carteira, ofertas, compra, inventário e atomicidade econômica;
-- este documento governa representação, storage, equipagem, snapshot e renderização de territory skins;
-- `docs/pre-game/profile/SPEC.md` governa composição e UX do Dossiê, Arsenal e Intendência.
+```text
+territory_skin
+```
 
-Esta versão NÃO implementa código, migration ou conteúdo comercial. Ela congela o contrato necessário para implementação.
+Referências históricas a `territory_effect` em migrations antigas não definem o contrato atual.
+
+Em caso de sobreposição:
+
+- `docs/economy/SPEC.md` governa wallet, ledger, ownership e invariantes econômicos;
+- `docs/economy/store/SPEC.md` governa catálogo comercial, produtos, ofertas, coleções e merchandising;
+- este documento governa semântica visual e integração de territory skins no jogo.
 
 ## 2. Objetivo
 
-Permitir que um usuário possua, compre e equipe um acabamento visual para os territórios que controla, sem alterar regra de jogo, geometria, hitbox, ownership territorial ou protocolo de interação.
+Permitir que um jogador possua, compre, equipe e use um acabamento visual nos territórios que controla sem alterar:
 
-O sistema MUST suportar duas famílias de implementação:
+- regra de jogo;
+- geometria territorial;
+- hitbox;
+- ownership territorial;
+- fronteiras;
+- tropas;
+- protocolo de interação.
 
-1. `procedural`: acabamento definido por renderer seguro em código;
-2. `image`: textura WebP armazenada no catálogo e entregue pelo storage de assets.
-
-A extensão futura de qualquer uma das famílias MUST reutilizar o mesmo slot econômico `territory_effect` e o mesmo fluxo de ownership/loadout.
-
-## 3. Não objetivos
-
-Esta entrega MUST NOT:
-
-- criar um inventário separado de skins territoriais;
-- criar uma tabela exclusiva de ownership para texturas;
-- permitir CSS arbitrário vindo do banco;
-- permitir JavaScript/shader arbitrário vindo do banco;
-- alterar regras, tropas, fronteiras, conquista ou cálculo de batalha;
-- persistir URL temporária/presigned URL em snapshot de partida;
-- consultar o banco a cada render, hover, seleção ou conquista;
-- listar objetos do R2 em runtime para descobrir cosméticos;
-- definir preços comerciais dos quatro assets iniciais sem decisão explícita de produto.
-
-## 4. Modelo de domínio
-
-### 4.1 Slot econômico
-
-Todos os acabamentos territoriais MUST continuar sendo registros de `catalog.cosmetics` com:
+O sistema suporta duas famílias:
 
 ```text
-slot = territory_effect
+procedural -> effect_key em registry seguro
+image      -> asset_ref WebP canônica
 ```
 
-Ownership MUST continuar sendo representado por `inventory.cosmetics`.
+## 3. Modelo persistente
 
-Equipagem MUST continuar sendo representada pelo slot `territory_effect` do `profile.cosmetic_loadout`.
+Todo acabamento territorial é um `catalog.cosmetics` com:
 
-Partidas MUST consumir o snapshot congelado correspondente em `game.player_cosmetic_loadouts` ou no contrato sucessor equivalente.
+```text
+slot = territory_skin
+```
 
-### 4.2 Modos de renderização
+Ownership continua em `inventory.cosmetics` e equipagem em `profile.cosmetic_loadout`.
 
-Para `slot = territory_effect`, cada cosmético MUST estar em exatamente um dos estados válidos abaixo:
+Para `territory_skin`, exatamente uma representação visual é válida:
 
 ```text
 PROCEDURAL
@@ -69,21 +61,18 @@ IMAGE
   asset_ref IS NOT NULL
 ```
 
-O banco SHOULD impor a exclusividade acima com constraint limitada ao slot `territory_effect`.
-
-A constraint MUST NOT ser aplicada de modo que quebre outros slots, em especial os dados (`dice_attack`, `dice_defense`, `dice_neutral`).
-
-Estados ambíguos são inválidos:
+São inválidos:
 
 ```text
-effect_key != NULL + asset_ref != NULL  -> inválido
-
-effect_key = NULL + asset_ref = NULL    -> inválido para territory_effect
+effect_key != NULL + asset_ref != NULL
+effect_key = NULL + asset_ref = NULL
 ```
 
-### 4.3 Contrato de runtime
+A constraint correspondente não pode invalidar os slots de dados.
 
-O cliente SHOULD projetar o cosmético equipado em um discriminated union equivalente a:
+## 4. Runtime
+
+O runtime deve projetar semanticamente algo equivalente a:
 
 ```ts
 type TerritorySkinRender =
@@ -99,189 +88,112 @@ type TerritorySkinRender =
     };
 ```
 
-Nomes concretos MAY variar. As responsabilidades são normativas:
+`cosmeticId` é a identidade estável. URL temporária não é identidade de skin.
 
-- `kind` diferencia implementação procedural e imagem;
-- `cosmeticId` fornece identidade estável para cache/signature;
-- uma skin procedural resolve por chave segura;
-- uma skin de imagem recebe URL de entrega válida somente no cliente.
+## 5. Default
 
-## 5. Acabamento padrão
-
-O acabamento já existente do mapa é o cosmético padrão e gratuito.
-
-Contrato conceitual:
+O acabamento metálico atual é o default universal:
 
 ```text
-id/slug: territory.effect.default
-slot: territory_effect
+id: territory.effect.default
+slot: territory_skin
 effect_key: default
 asset_ref: NULL
 is_default: true
 status: available
 ```
 
-O nome público MAY ser ajustado, mas sua identidade funcional MUST permanecer estável.
+Todo usuário deve possuir e poder reequipar o default sem compra.
 
-Todo usuário MUST:
+Falha de storage nunca remove acesso ao default.
 
-- possuir o acabamento padrão sem compra;
-- iniciar com ele equipado quando não houver escolha explícita válida;
-- conseguir reequipá-lo a qualquer momento;
-- nunca perder acesso a ele por compra, falha de storage ou retirada de outro cosmético.
+## 6. Skins de imagem V1
 
-O acabamento `default` representa o tratamento metálico procedural atualmente usado pelo mapa.
+As quatro skins iniciais são:
 
-## 6. Catálogo inicial de imagens
+| Cosmético | `asset_ref` |
+| --- | --- |
+| `territory.effect.azulejo-brasil` | `cosmetics/territory-skins/azulejo_brasil.webp` |
+| `territory.effect.azulejo-ornamental` | `cosmetics/territory-skins/azulejo_ornamental.webp` |
+| `territory.effect.ceu-estrelado` | `cosmetics/territory-skins/ceu_estrelado.webp` |
+| `territory.effect.solar-ornamental` | `cosmetics/territory-skins/solar_ornamental.webp` |
 
-A primeira entrega de image territory skins contém exatamente estes assets R2:
-
-| Cosmético | Identidade sugerida | `asset_ref` |
-| --- | --- | --- |
-| Azulejo Brasil | `territory.effect.azulejo-brasil` | `cosmetics/territory-skins/azulejo_brasil.webp` |
-| Azulejo Ornamental | `territory.effect.azulejo-ornamental` | `cosmetics/territory-skins/azulejo_ornamental.webp` |
-| Céu Estrelado | `territory.effect.ceu-estrelado` | `cosmetics/territory-skins/ceu_estrelado.webp` |
-| Solar Ornamental | `territory.effect.solar-ornamental` | `cosmetics/territory-skins/solar_ornamental.webp` |
-
-Os quatro MUST usar:
+Todas usam:
 
 ```text
-slot = territory_effect
+slot = territory_skin
 effect_key = NULL
-asset_ref = object key acima
 is_default = false
 ```
 
-A migration/catalog seed MAY escolher IDs internos UUID diferentes. Slug e identidade pública MUST continuar estáveis após publicação.
+Preço e disponibilidade pertencem à camada comercial, não a este renderer SPEC. A Storefront V2 pode promovê-las a products/offers sem alterar identidade ou asset key.
 
-Nenhum preço é definido por esta SPEC.
+## 7. Storage e delivery
 
-## 7. Storage R2
-
-### 7.1 Namespace
-
-Image territory skins MUST usar o namespace:
+Image skins usam somente:
 
 ```text
-cosmetics/territory-skins/
+cosmetics/territory-skins/*.webp
 ```
 
-A forma válida de object key SHOULD obedecer a:
+O banco persiste object key, não URL temporária nem URL dependente de ambiente.
 
-```regex
-^cosmetics/territory-skins/[a-z0-9]+(?:[-_][a-z0-9]+)*\.webp$
-```
+A aplicação resolve a chave por delivery server-side. Runtime não usa `ListObjects` para descobrir catálogo.
 
-### 7.2 Formato
+Uma nova skin de imagem deve exigir, no máximo:
 
-Assets de imagem desta versão MUST:
+1. objeto WebP válido;
+2. registro de catálogo;
+3. product/offer quando comercial.
 
-- terminar em `.webp`;
-- ser entregues como `image/webp`;
-- manter `asset_ref` como object key canônica, não URL absoluta;
-- ser resolvidos pelo mesmo serviço de entrega/autorização de assets cosméticos usado pela aplicação.
+Não deve exigir branch React por slug.
 
-### 7.3 Descoberta
+## 8. Ownership, compra e equipagem
 
-O catálogo é a fonte de verdade.
+Cada skin é um cosmetic item individual.
 
-A aplicação MUST NOT executar `ListObjects`/listagem de bucket para decidir quais skins existem, quais estão disponíveis ou quais pertencem ao jogador.
+Quando existir oferta ativa, compra usa exatamente o pipeline econômico compartilhado:
 
-Adicionar uma nova image skin SHOULD exigir somente:
+- `expectedPrice` server-authoritative;
+- wallet/ledger/receipt atômicos;
+- ownership individual;
+- counter/histórico quando aplicável;
+- rollback integral em erro.
 
-1. upload do asset válido;
-2. registro em catálogo;
-3. criação/ativação da oferta quando aplicável.
+Compra não equipa automaticamente.
 
-A UI não SHOULD precisar de branch temática ou slug hardcoded por novo asset de imagem.
+O Arsenal possui bay `TERRITÓRIO` e oferece somente default + skins possuídas. Equipar item não possuído é rejeitado pelo servidor.
 
-## 8. Ownership, oferta e compra
+## 9. Storefront
 
-### 8.1 Unidade de ownership
+A Storefront apresenta territory skins a partir do catálogo e das ofertas, sem allowlist temática local.
 
-Cada territory skin é um cosmético individual e MUST gerar ownership individual.
+Um item pode aparecer como descoberta editorial mesmo sem oferta ativa. CTA e preço só aparecem como compra real quando um product/offer autoritativo existir.
 
-### 8.2 Ofertas
+Estados mínimos:
 
-As quatro image skins iniciais SHOULD ser expostas como ofertas individuais pela camada comercial definida em `docs/economy/SPEC.md`.
+- disponível/comprável;
+- possuído;
+- equipado;
+- anunciado/sem oferta ativa;
+- indisponível.
 
-Uma oferta MUST referenciar o cosmético por relacionamento de catálogo, nunca por caminho R2 hardcoded no componente React.
+## 10. Composição visual do mapa
 
-Preço, moeda, disponibilidade e janela comercial pertencem à oferta e não ao renderer.
-
-### 8.3 Compra
-
-Compra bem-sucedida MUST:
-
-- obedecer à transação econômica do Economy V2;
-- registrar ledger/carteira conforme contrato pai;
-- criar ownership de `inventory.cosmetics` com acquisition source compatível com `purchase`;
-- NÃO equipar automaticamente a skin, salvo se um requisito futuro explicitamente mudar essa regra.
-
-Falha por saldo, oferta, idempotência ou ownership MUST preservar atomicidade definida na Economy SPEC.
-
-## 9. Arsenal e equipagem
-
-O Arsenal MUST possuir um bay de equipamento `TERRITÓRIO` correspondente a `territory_effect`.
-
-Ele MUST:
-
-- mostrar a skin atualmente equipada;
-- mostrar somente alternativas pertencentes ao usuário;
-- permitir equipar qualquer skin possuída e disponível;
-- permitir voltar ao acabamento metálico padrão;
-- usar preview coerente com o renderer real sempre que possível;
-- bloquear equipagem de item não possuído.
-
-Itens não possuídos pertencem à experiência de Store/Intendência, não ao seletor de ownership do Arsenal.
-
-## 10. Store / Intendência
-
-A Store MUST poder agrupar dinamicamente `territory_effect` como categoria de apresentação, por exemplo `Texturas de Território`.
-
-A categoria MUST ser dirigida por dados do catálogo/ofertas.
-
-Cards MUST poder apresentar:
-
-- nome;
-- preview real ou preview derivado;
-- preço em moeda de jogo quando a oferta estiver ativa;
-- estados `owned`, `equipped`, `available` e estados de indisponibilidade previstos pela Economy SPEC.
-
-A Store MUST NOT manter um array React hardcoded com os quatro slugs iniciais como fonte de verdade.
-
-## 11. Renderer do mapa
-
-### 11.1 Princípio de composição
-
-O renderer MUST preservar esta hierarquia conceitual:
+Hierarquia conceitual:
 
 ```text
-1. base/material do PlayerColor
-2. acabamento/textura cosmética
-3. estado de interação
-4. conteúdo funcional: tropas, markers e demais HUDs
+1. base/material derivado do PlayerColor
+2. acabamento/textura territory_skin
+3. estado funcional de interação
+4. tropas, markers e HUD funcional
 ```
 
-A skin modifica a superfície. Ela MUST NOT substituir a semântica de ownership dada pela cor do jogador.
+A skin modifica a superfície; não substitui a semântica de ownership.
 
-### 11.2 Image skins em SVG
+## 11. PlayerColor dominante
 
-Como a face territorial é um `<path>` SVG, image skins SHOULD ser implementadas por recurso SVG reutilizável, preferencialmente um `<pattern>` contendo `<image>` ou mecanismo funcionalmente equivalente que preserve a geometria existente.
-
-A implementação MUST:
-
-- reutilizar a geometria da face territorial;
-- manter a camada cosmética sem captura de pointer (`pointer-events: none` ou equivalente);
-- NÃO duplicar hitbox interativa;
-- NÃO criar um React component completo por território apenas para trocar textura;
-- manter atualizações incrementais baseadas em assinatura/material quando nada visual mudou.
-
-Valores concretos de opacity, blend mode, scale e transform da textura são decisões de implementação e tuning visual, não invariantes desta SPEC.
-
-### 11.3 PlayerColor dominante
-
-Para uma mesma skin, os seis PlayerColors jogáveis MUST continuar distinguíveis sem depender do tooltip:
+A mesma skin deve continuar distinguível nos seis PlayerColors:
 
 ```text
 forest
@@ -292,218 +204,161 @@ violet
 orange
 ```
 
-O acabamento MAY modular tonalidade/luz, mas MUST preservar leitura inequívoca do proprietário.
+Para fonte grayscale/neutral, o renderer pode derivar highlights/base/shadows da cor do dono. Uma fonte canônica recolorável deve servir às seis cores quando aplicável.
 
-### 11.4 Interação tem precedência
+Não são necessárias seis cópias do mesmo asset.
 
-Estados funcionais de mapa têm precedência visual sobre o cosmético.
+## 12. SVG, hitbox e interação
 
-A implementação MUST preservar clareza de, no mínimo:
+Como territórios são paths SVG, image skins devem reutilizar a geometria existente via pattern/image/material equivalente.
+
+A camada cosmética:
+
+- não captura pointer;
+- não duplica hitbox;
+- não cria um componente React completo por território apenas para textura;
+- reaplica material somente quando assinatura visual relevante muda.
+
+Estados funcionais têm precedência sobre a skin, incluindo:
 
 ```text
 normal
 hover
 highlighted
 highlighted-hover
+selected
+target selectable
+target blocked
 ```
 
-Seleção, alvo válido, alvo bloqueado e outros estados semânticos do jogo MUST continuar reconhecíveis com qualquer skin.
+A skin pode perder intensidade para preservar esses estados.
 
-A textura MAY ter sua intensidade reduzida durante estados funcionais para cumprir esta regra.
+## 13. Legibilidade
 
-### 11.5 Legibilidade
+Nenhuma skin pode ocultar:
 
-Skin alguma pode tornar ilegíveis:
-
+- ownership color;
 - marcador de tropas;
-- borda/hit feedback;
 - seleção;
-- targetability;
-- markers especiais que já pertencem ao jogo.
+- borda/feedback de hit;
+- alvo válido/bloqueado;
+- markers especiais do jogo.
 
-## 12. Skins procedurais
+## 14. Procedurais
 
-### 12.1 Registry seguro
-
-Skins procedurais MUST ser resolvidas por registry/controlador de código, conceitualmente:
-
-```text
-TERRITORY_EFFECT_RESOLVERS
-  default
-  future-effect-a
-  future-effect-b
-```
+Skins procedurais são resolvidas por registry seguro de código.
 
 O banco armazena somente `effect_key`.
 
-O renderer interpreta chaves conhecidas.
+Chave desconhecida degrada visualmente para `default` sem mutar:
 
-### 12.2 Chave desconhecida
+- ownership;
+- loadout;
+- snapshot;
+- ledger.
 
-Uma `effect_key` desconhecida MUST degradar visualmente para o acabamento `default` sem alterar ownership ou loadout persistido.
+CSS, HTML, JavaScript ou shader arbitrário vindo do banco é proibido.
 
-### 12.3 Extensão futura
+## 15. Snapshot de partida
 
-Adicionar nova skin procedural exige:
+A escolha equipada é congelada quando a partida inicia.
 
-1. resolver seguro em código;
-2. testes do renderer;
-3. registro do cosmético no catálogo;
-4. oferta, se comercial.
-
-CSS arbitrário, HTML ou expressão executável do banco é proibido.
-
-## 13. Snapshot de partida
-
-### 13.1 Congelamento
-
-Ao entrar/iniciar uma partida, a escolha equipada de cada jogador MUST ser congelada no snapshot cosmético da partida.
-
-O comportamento visual de uma partida em andamento MUST NOT depender de mudanças posteriores em `profile.cosmetic_loadout`.
-
-### 13.2 Shape conceitual
-
-O snapshot MUST ser capaz de representar conteúdo equivalente a:
+Shape conceitual:
 
 ```ts
 type TerritorySkinSnapshot =
-  | {
-      kind: "procedural";
-      cosmeticId: string;
-      effectKey: string;
-    }
-  | {
-      kind: "image";
-      cosmeticId: string;
-      assetRef: string;
-    };
+  | { kind: "procedural"; cosmeticId: string; effectKey: string }
+  | { kind: "image"; cosmeticId: string; assetRef: string };
 ```
 
-O shape físico MAY continuar normalizado em colunas/tabelas existentes. A semântica acima é obrigatória.
+Alterar o perfil depois não altera partida em andamento.
 
-### 13.3 URLs temporárias
-
-Presigned URL ou URL temporária MUST NOT ser persistida como identidade da skin no snapshot.
-
-Em reconnect/reload:
+Presigned URL nunca é persistida como identidade. Em reconnect:
 
 ```text
-assetRef persistente
-  -> resolver de delivery
-  -> URL válida atual
+assetRef persistente -> delivery resolver -> URL válida atual
 ```
 
-### 13.4 Skin pertence ao jogador
+A skin pertence ao jogador. Após conquista, o território passa a usar a skin congelada do novo proprietário sem consulta econômica ao banco.
 
-A skin pertence ao jogador, não ao território.
+## 16. Cache e performance
 
-Quando um território muda de proprietário durante conquista:
+Assets devem ser reutilizados por `asset_ref`, não baixados uma vez por território.
+
+O renderer não deve produzir o padrão:
 
 ```text
-território
-  -> novo ownerPlayerId
-  -> snapshot cosmético do novo jogador
-  -> skin do novo proprietário
+42 territórios = 42 downloads do mesmo WebP
 ```
 
-A troca MUST ocorrer sem consulta nova ao banco e sem mutar ownership/loadout.
+A Store pode lazy-load previews; o jogo carrega apenas skins necessárias aos jogadores da partida e o fallback default.
 
-## 14. Cache e performance
+## 17. Falhas
 
-O renderer MUST operar por skins únicas equipadas, não por downloads independentes por território.
+Falha de image skin causa fallback visual para o default metálico.
 
-Se vários territórios ou jogadores usam o mesmo `asset_ref`, o asset SHOULD ser carregado/cacheado uma única vez por contexto/navegador sempre que a plataforma permitir.
+Fallback não pode:
 
-A implementação MUST evitar o padrão `42 territórios = 42 downloads independentes do mesmo WebP`.
-
-A Store SHOULD:
-
-- lazy-load previews fora da viewport;
-- usar `preview_ref` otimizado quando disponível;
-- carregar asset completo somente quando necessário para inspeção/render real;
-- reservar dimensões para evitar layout shift.
-
-O jogo MUST carregar somente skins efetivamente necessárias aos jogadores da partida, além do fallback procedural padrão.
-
-## 15. Falhas e fallback
-
-### 15.1 Falha de asset
-
-Se uma image skin equipada não puder ser carregada, o mapa MUST usar visualmente o acabamento metálico `default` como fallback.
-
-### 15.2 Fallback não é mutação
-
-Fallback de render MUST NOT:
-
-- reequipar `default` no perfil;
+- reequipar default persistente;
 - remover ownership;
 - alterar snapshot;
 - alterar ledger;
 - gerar compra/reembolso;
 - alterar gameplay.
 
-Quando o asset voltar a ficar disponível, a skin autoritativa MAY voltar a ser renderizada normalmente.
+Erro de um objeto deve permanecer isolado ao asset afetado.
 
-### 15.3 Falha de delivery
+## 18. Assinatura visual
 
-Erro de URL/asset SHOULD ser isolado ao acabamento afetado. O mapa e a partida MUST continuar utilizáveis.
-
-## 16. Assinatura e invalidação visual
-
-O renderer SHOULD usar identidade estável para decidir reaplicação do material.
-
-Uma assinatura adequada é equivalente a:
+A identidade usada para invalidação deve ser estável, por exemplo:
 
 ```text
 owner:<playerColor>:skin:<cosmeticId>:mode:<kind>
 ```
 
-ou outra forma estável com a mesma semântica.
+Presigned URL não pode ser a única identidade porque renovação de URL não representa troca de skin.
 
-Presigned URL MUST NOT ser usada como única identidade da assinatura, porque renovação de URL não significa mudança de cosmético.
+## 19. Segurança
 
-## 17. Segurança e confiança de dados
+Servidor valida:
 
-O servidor MUST validar:
+- slot `territory_skin`;
+- ownership antes de equipar;
+- lifecycle do catálogo;
+- object key permitida;
+- transação econômica quando houver compra.
 
-- que o cosmético pertence ao slot `territory_effect`;
-- que o usuário possui o cosmético antes de equipar;
-- que o catálogo/lifecycle permite a operação;
-- que image skins usam object key permitida;
-- que procedural skins referenciam uma chave conhecida ou degradável de forma segura.
+Cliente nunca é autoridade econômica.
 
-O cliente MUST tratar catálogo e ownership como dados, não como autorização suficiente para mutação econômica.
+## 20. Compatibilidade
 
-## 18. Compatibilidade
+A implementação preserva:
 
-A implementação MUST preservar:
+- 42 territórios;
+- geometria/hit layer;
+- hover/seleção;
+- pointer/keyboard;
+- regras multiplayer;
+- default de usuários/partidas antigas.
 
-- os 42 territórios canônicos;
-- geometria existente;
-- hit layer existente;
-- machine de hover/seleção existente;
-- interação por pointer/keyboard existente;
-- regras e sincronização multiplayer existentes;
-- acabamento padrão de usuários/partidas sem skins novas.
+Descriptor inválido ou ausente degrada para `default`.
 
-Partidas e usuários antigos sem descriptor de skin válido MUST degradar para `default`.
+## 21. Critérios de aceite
 
-## 19. Critérios de aceite
+A feature está aderente quando:
 
-A implementação só pode ser considerada aderente quando:
-
-1. o acabamento metálico `default` continua universal e gratuito;
-2. os quatro WebPs iniciais estão catalogados como `territory_effect` image skins;
-3. uma image skin pode ser comprada pela camada econômica, adquirida e equipada;
-4. uma skin possuída persiste após reload;
-5. uma skin equipada é congelada no snapshot da partida;
-6. a textura é renderizada sem alterar hitbox ou regra de jogo;
-7. os seis PlayerColors continuam distinguíveis usando a mesma skin;
-8. hover/seleção/alvos/tropas continuam legíveis;
-9. conquista troca imediatamente para a skin congelada do novo proprietário;
-10. uma falha R2 resulta em fallback metálico sem mutação persistente;
-11. assets iguais são reutilizados/cacheados em vez de baixados por território;
-12. novo WebP não exige branch temática no React;
-13. nova skin procedural entra apenas por resolver seguro + catálogo;
-14. nenhum CSS/JS arbitrário é executado a partir do banco;
-15. todos os gates de `docs/economy/territory-skins/EVAL.md` passam.
+1. `territory_skin` é o slot canônico;
+2. default continua universal/gratuito;
+3. quatro WebPs V1 permanecem catalogados por object key;
+4. skins com oferta ativa podem ser compradas atomicamente;
+5. compra não equipa implicitamente;
+6. equipagem owned-only persiste;
+7. snapshot congela a skin;
+8. seis PlayerColors continuam legíveis com a mesma skin;
+9. estados funcionais prevalecem;
+10. hitbox não muda;
+11. conquista troca para a skin do novo dono;
+12. falha R2 degrada sem mutação persistente;
+13. cache evita downloads redundantes;
+14. novo WebP não exige branch temática;
+15. todos os blockers de `docs/economy/territory-skins/EVAL.md` passam.
