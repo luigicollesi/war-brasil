@@ -2,6 +2,7 @@ import "server-only";
 
 import type { PoolClient } from "pg";
 import { getEffectiveGameTopology } from "@/src/lib/game-effective-topology-service";
+import type { GameRuleset } from "@/src/lib/game-mode";
 import { withObjectiveSchemaCompatibility } from "@/src/lib/objectives/objective-schema-compatibility";
 import type {
   BotObjectiveSnapshot,
@@ -13,6 +14,7 @@ import type {
 
 type StateRoom = {
   id: string;
+  ruleset: GameRuleset;
   phase: string;
   round_number: number;
   reinforcements_remaining: number;
@@ -38,10 +40,13 @@ export async function loadBotStrategicState(
 ): Promise<BotStrategicState> {
   const room = (
     await client.query<StateRoom>(
-      `SELECT id,phase,round_number,reinforcements_remaining,
-              conquered_this_turn,jurassic_tunnel_territory_id
-       FROM game.rooms
-       WHERE id=$1`,
+      `SELECT room.id,
+              COALESCE(match.ruleset_snapshot,room.ruleset,'objective') ruleset,
+              room.phase,room.round_number,room.reinforcements_remaining,
+              room.conquered_this_turn,room.jurassic_tunnel_territory_id
+       FROM game.rooms room
+       LEFT JOIN game.matches match ON match.id=room.current_match_id
+       WHERE room.id=$1`,
       [roomId],
     )
   ).rows[0];
@@ -57,36 +62,42 @@ export async function loadBotStrategicState(
   ).rows[0];
   if (!bot) throw new Error("Bot não encontrado na partida.");
 
-  const objective = await withObjectiveSchemaCompatibility(
-    client,
-    async () =>
-      (
-        await client.query<ObjectiveRow>(
-          `SELECT o.type,
-                  COALESCE(
-                    CASE WHEN r.objective_id=a.objective_id THEN a.resolved_params END,
-                    o.params
-                  ) params,
-                  a.target_player_id
-           FROM game.player_objectives a
-           JOIN catalog.objectives o ON o.id=a.objective_id
-           LEFT JOIN catalog.objective_rules r ON r.id=a.objective_rule_id
-           WHERE a.room_id=$1 AND a.player_id=$2`,
-          [roomId, botId],
+  const objective =
+    room.ruleset === "objective"
+      ? await withObjectiveSchemaCompatibility(
+          client,
+          async () =>
+            (
+              await client.query<ObjectiveRow>(
+                `SELECT o.type,
+                        COALESCE(
+                          CASE WHEN r.objective_id=a.objective_id THEN a.resolved_params END,
+                          o.params
+                        ) params,
+                        a.target_player_id
+                 FROM game.player_objectives a
+                 JOIN catalog.objectives o ON o.id=a.objective_id
+                 LEFT JOIN catalog.objective_rules r ON r.id=a.objective_rule_id
+                 WHERE a.room_id=$1 AND a.player_id=$2`,
+                [roomId, botId],
+              )
+            ).rows[0] ?? null,
+          async () =>
+            (
+              await client.query<ObjectiveRow>(
+                `SELECT o.type,o.params,a.target_player_id
+                 FROM game.player_objectives a
+                 JOIN catalog.objectives o ON o.id=a.objective_id
+                 WHERE a.room_id=$1 AND a.player_id=$2`,
+                [roomId, botId],
+              )
+            ).rows[0] ?? null,
         )
-      ).rows[0] ?? null,
-    async () =>
-      (
-        await client.query<ObjectiveRow>(
-          `SELECT o.type,o.params,a.target_player_id
-           FROM game.player_objectives a
-           JOIN catalog.objectives o ON o.id=a.objective_id
-           WHERE a.room_id=$1 AND a.player_id=$2`,
-          [roomId, botId],
-        )
-      ).rows[0] ?? null,
-  );
-  if (!objective) throw new Error("Objetivo do bot não encontrado.");
+      : null;
+
+  if (room.ruleset === "objective" && !objective) {
+    throw new Error("Objetivo do bot não encontrado.");
+  }
 
   const players = (
     await client.query<{
@@ -152,15 +163,18 @@ export async function loadBotStrategicState(
     jurassicTunnelDestinationId: room.jurassic_tunnel_territory_id,
   });
 
-  const objectiveSnapshot: BotObjectiveSnapshot = {
-    type: objective.type,
-    params: objective.params,
-    targetPlayerId: objective.target_player_id,
-  };
+  const objectiveSnapshot: BotObjectiveSnapshot | null = objective
+    ? {
+        type: objective.type,
+        params: objective.params,
+        targetPlayerId: objective.target_player_id,
+      }
+    : null;
 
   return {
     room: {
       id: room.id,
+      ruleset: room.ruleset,
       phase: room.phase,
       roundNumber: room.round_number,
       reinforcementsRemaining: room.reinforcements_remaining,
