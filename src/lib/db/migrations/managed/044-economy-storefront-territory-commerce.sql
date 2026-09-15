@@ -97,13 +97,13 @@ SELECT 'offer.single.' || item.id,
        pricing.fixed_price,
        'available',
        FALSE,
-       2000 + ROW_NUMBER() OVER (ORDER BY item.id)::int,
+       2000 + (ROW_NUMBER() OVER (ORDER BY item.id))::int,
        'product.single.' || item.id,
        'itemized',
        NULL,
        NULL,
        TRUE,
-       2000 + ROW_NUMBER() OVER (ORDER BY item.id)::int
+       2000 + (ROW_NUMBER() OVER (ORDER BY item.id))::int
   FROM catalog.cosmetics item
   JOIN catalog.cosmetic_pricing pricing ON pricing.cosmetic_id=item.id
  WHERE item.id IN (
