@@ -170,7 +170,8 @@ if (!databaseUrl) {
         );
 
         // 039 foi aplicada pelo runner antes dos assentos existirem. Reexecutar o
-        // SQL simula o backfill de deploy sobre uma sala já existente.
+        // SQL simula o backfill de deploy sobre uma sala já existente, agora
+        // copiando a object key WebP já migrada pelo catálogo 040.
         await client.query(migrationSql);
 
         const humanRows = await client.query(
@@ -186,7 +187,7 @@ if (!databaseUrl) {
           {
             slot: "dice_attack",
             cosmetic_id: "dice.attack.exercito",
-            asset_ref: "/dados/exercito/ataque.svg",
+            asset_ref: "cosmetics/dice/military-classic/attack.webp",
             effect_key: null,
           },
         );
@@ -219,7 +220,7 @@ if (!databaseUrl) {
         );
         await client.query(
           `UPDATE catalog.cosmetics
-              SET asset_ref='/dados/exercito/alterado.svg'
+              SET asset_ref='cosmetics/dice/military-classic-v2/attack.webp'
             WHERE id='dice.attack.exercito'`,
         );
         await client.query(migrationSql);
@@ -232,7 +233,7 @@ if (!databaseUrl) {
         );
         assert.deepEqual(frozen.rows[0], {
           cosmetic_id: "dice.attack.exercito",
-          asset_ref: "/dados/exercito/ataque.svg",
+          asset_ref: "cosmetics/dice/military-classic/attack.webp",
           effect_key: null,
         });
       } finally {
