@@ -4,7 +4,7 @@ export const COSMETIC_SLOTS = [
   "dice_attack",
   "dice_defense",
   "dice_neutral",
-  "territory_effect",
+  "territory_skin",
 ] as const;
 
 export type CosmeticSlot = (typeof COSMETIC_SLOTS)[number];
