@@ -27,6 +27,17 @@ export type StorefrontOfferItemRow = CosmeticRow & {
   position: number;
 };
 
+export type StorefrontCollectionRow = CosmeticRow & {
+  collection_id: string;
+  collection_slug: string;
+  collection_name: string;
+  collection_description: string | null;
+  collection_sort_order: number;
+  banner_object_key: string;
+  background_object_key: string;
+  logo_object_key: string;
+};
+
 export type CreditPackRow = {
   id: string;
   slug: string;
@@ -36,6 +47,73 @@ export type CreditPackRow = {
   status: EconomyCreditPackStatus;
   sort_order: number;
 };
+
+export async function listStorefrontCollections(
+  userId: string,
+  db: EconomyQueryable = pool,
+): Promise<StorefrontCollectionRow[]> {
+  const result = await db.query<StorefrontCollectionRow>(
+    `WITH active_assets AS (
+       SELECT asset.collection_id,
+              MAX(asset.object_key) FILTER (WHERE asset.role='banner') AS banner_object_key,
+              MAX(asset.object_key) FILTER (WHERE asset.role='background') AS background_object_key,
+              MAX(asset.object_key) FILTER (WHERE asset.role='logo') AS logo_object_key,
+              COUNT(*)::int AS asset_count
+         FROM catalog.collection_assets asset
+        WHERE asset.active=TRUE
+        GROUP BY asset.collection_id
+       HAVING COUNT(*) FILTER (WHERE asset.role='banner')=1
+          AND COUNT(*) FILTER (WHERE asset.role='background')=1
+          AND COUNT(*) FILTER (WHERE asset.role='logo')=1
+          AND COUNT(*)=3
+     )
+     SELECT collection.id AS collection_id,
+            collection.slug AS collection_slug,
+            collection.name AS collection_name,
+            collection.description AS collection_description,
+            collection.sort_order AS collection_sort_order,
+            assets.banner_object_key,
+            assets.background_object_key,
+            assets.logo_object_key,
+            item.id,
+            item.slug,
+            item.name,
+            item.description,
+            item.slot,
+            item.rarity,
+            item.asset_ref,
+            item.preview_ref,
+            item.effect_key,
+            item.status,
+            item.is_default,
+            (owned.cosmetic_id IS NOT NULL) AS owned,
+            (loadout.cosmetic_id=item.id) AS equipped
+       FROM catalog.collections collection
+       JOIN active_assets assets ON assets.collection_id=collection.id
+       JOIN catalog.cosmetics item ON item.collection_id=collection.id
+       LEFT JOIN inventory.cosmetics owned
+         ON owned.user_id=$1::uuid
+        AND owned.cosmetic_id=item.id
+       LEFT JOIN profile.cosmetic_loadout loadout
+         ON loadout.user_id=$1::uuid
+        AND loadout.slot=item.slot
+      WHERE collection.active=TRUE
+        AND item.is_default=FALSE
+        AND item.status IN ('announced','available')
+      ORDER BY collection.sort_order,
+               collection.id,
+               CASE item.slot
+                 WHEN 'dice_attack' THEN 10
+                 WHEN 'dice_defense' THEN 20
+                 WHEN 'dice_neutral' THEN 30
+                 WHEN 'territory_skin' THEN 40
+                 ELSE 99
+               END,
+               item.id`,
+    [userId],
+  );
+  return result.rows;
+}
 
 export async function listStorefrontOffers(
   db: EconomyQueryable = pool,
