@@ -157,13 +157,13 @@ function TreasuryReadout({
   if (compact) {
     return (
       <span className={styles.walletCompact}>
-        <span key={currency.currency} data-currency={currency.currency}>
+        <div key={currency.currency} data-currency={currency.currency}>
           <CampaignCreditMark compact />
           <span>
             <small>{currency.shortLabel}</small>
             <strong>{formatBalance(currency.balance)}</strong>
           </span>
-        </span>
+        </div>
       </span>
     );
   }
