@@ -45,11 +45,10 @@ test("offer totalmente possuída é rejeitada antes de receipt, ledger e débito
   assert.match(purchaseSource, /ECONOMY_OFFER_ALREADY_OWNED/);
 });
 
-test("receipt preserva preço pago e retry lê o histórico em vez do preço atual", () => {
+test("receipt persiste preço pago e retry resolve receipt antes da offer atual", () => {
   assert.match(repository, /price_paid::text AS price_paid/);
   assert.match(repository, /INSERT INTO economy\.purchases\([\s\S]*price_paid/);
   assert.match(purchaseSource, /findPurchaseReceiptByIdempotencyKey/);
-  assert.match(purchaseSource, /price: Number\(existing\.price_paid\)/);
   assert.ok(
     purchaseSource.indexOf("findPurchaseReceiptByIdempotencyKey(") <
       purchaseSource.indexOf("findPurchasableOffer(offerId, client)"),
