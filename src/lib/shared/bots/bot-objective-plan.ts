@@ -2,6 +2,7 @@ import { TERRITORY_METADATA, type Region } from "../game-config";
 import type { BotStrategicState } from "./bot-state";
 
 export type BotObjectivePlan =
+  | { kind: "supremacy"; territoryCount: number }
   | { kind: "territories"; territoryCount: number }
   | {
       kind: "fortification";
@@ -55,7 +56,14 @@ function regionsParam(value: unknown): Region[] | null {
 }
 
 export function buildObjectivePlan(state: BotStrategicState): BotObjectivePlan {
-  const { type, params, targetPlayerId } = state.objective;
+  if (state.room.ruleset === "supremacy") {
+    return { kind: "supremacy", territoryCount: state.territories.length };
+  }
+
+  const objective = state.objective;
+  if (!objective) return { kind: "generic_expansion" };
+
+  const { type, params, targetPlayerId } = objective;
 
   if (type === "territories") {
     const territoryCount = positiveInteger(params.territories);
@@ -138,11 +146,11 @@ export function evaluateObjectiveProgress(
   const ownedIds = new Set(owned.map((territory) => territory.territoryId));
   const genericTargets = frontierEnemyTerritories(state, ownedIds);
 
-  if (plan.kind === "territories") {
+  if (plan.kind === "supremacy" || plan.kind === "territories") {
     const missing = Math.max(0, plan.territoryCount - owned.length);
     return {
       ratio: ratio(owned.length, plan.territoryCount),
-      immediateWinPossible: missing === 1,
+      immediateWinPossible: plan.territoryCount > 0 && missing === 1,
       primaryTargets: genericTargets,
       routeTargets: [],
       protectedTerritories: [],
