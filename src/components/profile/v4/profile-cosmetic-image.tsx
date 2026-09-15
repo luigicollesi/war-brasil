@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 export function ProfileCosmeticImage({
   src,
@@ -22,11 +22,8 @@ export function ProfileCosmeticImage({
   fallbackClassName?: string;
   fallbackLabel: string;
 }) {
-  const [failed, setFailed] = useState(false);
-
-  useEffect(() => {
-    setFailed(false);
-  }, [src]);
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
+  const failed = src !== null && failedSrc === src;
 
   if (!src || failed) {
     return (
@@ -50,7 +47,7 @@ export function ProfileCosmeticImage({
       loading={priority ? undefined : "lazy"}
       unoptimized
       className={className}
-      onError={() => setFailed(true)}
+      onError={() => setFailedSrc(src)}
     />
   );
 }
