@@ -6,20 +6,17 @@ function source(path) {
   return readFileSync(path, "utf8");
 }
 
-test("PROFILE V3 preserva as cinco estações do Quartel", () => {
-  const hub = source("src/components/profile/command-quarters/profile-command-hub.tsx");
+test("PROFILE V4 substitui as cinco estações por Dossiê, Arsenal e Intendência", () => {
   const spec = source("docs/pre-game/profile/SPEC.md");
 
-  for (const station of ["dossier", "treasury", "network", "campaigns", "quartermaster"]) {
-    assert.match(hub, new RegExp(`\\b${station}\\b`));
-  }
-
-  assert.match(spec, /Dossiê do Comandante/);
-  assert.match(spec, /Tesouraria/);
-  assert.match(spec, /Rede de Comando/);
-  assert.match(spec, /Livro de Campanha/);
-  assert.match(spec, /Intendência/);
-  assert.match(spec, /Mesa de Comando/);
+  assert.match(spec, /PROFILE V4/);
+  assert.match(spec, /A V4 substitui deliberadamente a composição de cinco estações da V3/);
+  assert.match(spec, /1\. \*\*Dossiê\*\*/);
+  assert.match(spec, /2\. \*\*Arsenal\*\*/);
+  assert.match(spec, /3\. \*\*Intendência\*\*/);
+  assert.match(spec, /`\/profile\/arsenal`/);
+  assert.match(spec, /`\/profile\/store`/);
+  assert.match(spec, /Tesouraria passa a ser informação global de wallet no shell/);
 });
 
 test("rota PROFILE resolve snapshot autenticado em request-time", () => {
