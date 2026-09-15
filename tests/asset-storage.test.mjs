@@ -215,6 +215,6 @@ test("assets:validate deriva a lista do catálogo em vez de hardcode de temas", 
   assert.match(validator, /status IN \('announced', 'available', 'retired'\)/);
   assert.doesNotMatch(
     validator,
-    /military-classic|medieval-spears|viking|cat|dog|football/,
+    /\b(?:military-classic|medieval-spears|viking|cat|dog|football)\b/,
   );
 });
