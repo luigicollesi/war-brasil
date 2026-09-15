@@ -242,13 +242,17 @@ test("rematch descarta snapshot anterior e structural sharing observa cosmético
   assert.match(snapshotSharing, /left\.cosmetics, right\.cosmetics/);
 });
 
-test("store autenticada usa cena Profile sem preço ou CTA de compra", () => {
+test("store autenticada usa cena Profile e comércio autoritativo da Economy V2", () => {
   assert.match(storePage, /auth\.api\.getSession/);
   assert.match(storePage, /getEconomyStorefront\(session\.user\.id\)/);
   assert.match(storeUi, /data-scene="profile"/);
+  assert.match(storeUi, /storefront\.offers\.map/);
+  assert.match(storeUi, /offer\.price/);
+  assert.match(storeUi, /src="\/coin\.svg"/);
+  assert.match(storeUi, />COMPRAR</);
+  assert.match(storeUi, /storefront\.creditPacks\.map/);
   assert.match(storeUi, /EM BREVE/);
-  assert.match(storeUi, /Sem checkout/);
-  assert.doesNotMatch(storeUi, /COMPRAR|Comprar agora|price|checkout\(/i);
+  assert.doesNotMatch(storeUi, /offer\.(exercito|lancas|viking|gato|cachorro|futebol)/);
 });
 
 test("listagem não baixa catálogo HQ e detalhe monta somente o asset selecionado", () => {
