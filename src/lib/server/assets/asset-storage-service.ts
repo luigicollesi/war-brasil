@@ -22,6 +22,11 @@ export function resetAssetStorageConfigForTests() {
   cachedConfig = null;
 }
 
+export function diceAssetDeliveryPath(objectKey: string) {
+  const key = assertDiceAssetKey(objectKey);
+  return `/api/assets/dice?key=${encodeURIComponent(key)}`;
+}
+
 export function resolveDiceAssetReadUrl(
   objectKey: string,
   options?: Readonly<{
