@@ -435,12 +435,25 @@ async function captureBattleEvidence(page, roomId) {
 
 async function captureSixColorBoard(page, roomId) {
   await page.setViewportSize({ width: 1440, height: 900 });
+  await page.addInitScript(() => {
+    document.addEventListener(
+      "war:map-visuals-ready",
+      () => {
+        document.documentElement.dataset.warMapVisualsReady = "true";
+      },
+      { capture: true },
+    );
+  });
   await page.goto(`${BASE_URL}/game/${roomId}`, { waitUntil: "domcontentloaded" });
 
   const board = page.locator('.game-map-surface[data-map-presentation-active="false"]');
   await board.waitFor({ state: "visible", timeout: 20_000 });
   await page.waitForFunction(
-    () => document.querySelectorAll(".game-troop-layer text").length >= 42,
+    () => {
+      if (document.documentElement.dataset.warMapVisualsReady !== "true") return false;
+      const boardObject = document.querySelector(".game-map-object");
+      return boardObject?.contentDocument?.querySelectorAll("path.territory").length === 42;
+    },
     undefined,
     { timeout: 20_000 },
   );
