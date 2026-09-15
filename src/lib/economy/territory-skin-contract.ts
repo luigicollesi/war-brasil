@@ -2,6 +2,8 @@ export const TERRITORY_SKIN_SLOT = "territory_effect" as const;
 export const DEFAULT_TERRITORY_SKIN_EFFECT_KEY = "default" as const;
 export const DEFAULT_TERRITORY_SKIN_COSMETIC_ID = "territory.effect.default" as const;
 
+const TERRITORY_SKIN_RUNTIME_IMAGE_PREFIX = "territory-image:";
+
 export type TerritorySkinDescriptor = Readonly<{
   cosmeticId: string;
   assetRef: string | null;
@@ -94,4 +96,41 @@ export function territorySkinRender(
     ...snapshot,
     imageUrl: imageUrlForAsset(snapshot.assetRef),
   };
+}
+
+/**
+ * The current game DTO predates image territory skins and exposes one effectKey
+ * to the board. During the V1 rollout we preserve that wire shape and encode an
+ * image delivery path into a namespaced, non-persistent runtime key. The raw
+ * database snapshot remains the canonical asset_ref/effect_key XOR contract.
+ */
+export function territorySkinRuntimeEffectKey(
+  snapshot: TerritorySkinSnapshot,
+  imageUrlForAsset: (assetRef: string) => string,
+) {
+  if (snapshot.kind === "procedural") return snapshot.effectKey;
+  return `${TERRITORY_SKIN_RUNTIME_IMAGE_PREFIX}${encodeURIComponent(
+    imageUrlForAsset(snapshot.assetRef),
+  )}`;
+}
+
+export function territorySkinAssetRefFromRuntimeEffectKey(
+  effectKey: string | null | undefined,
+): string | null {
+  const normalized = normalizedText(effectKey);
+  if (!normalized?.startsWith(TERRITORY_SKIN_RUNTIME_IMAGE_PREFIX)) return null;
+
+  try {
+    const encoded = normalized.slice(TERRITORY_SKIN_RUNTIME_IMAGE_PREFIX.length);
+    const deliveryPath = decodeURIComponent(encoded);
+    const url = new URL(deliveryPath, "https://war-brasil.invalid");
+    if (url.origin !== "https://war-brasil.invalid") return null;
+    if (url.pathname !== "/api/assets/territory-skins") return null;
+
+    const assetRef = url.searchParams.get("key");
+    if (!assetRef || !isTerritorySkinAssetKey(assetRef)) return null;
+    return `/api/assets/territory-skins?key=${encodeURIComponent(assetRef)}`;
+  } catch {
+    return null;
+  }
 }
