@@ -140,12 +140,15 @@ export async function startGame(client: PoolClient, roomId: string) {
   const players = await loadPlayers(client, roomId);
 
   // Match creation and all runtime artifacts are part of the caller transaction.
-  // Any failure after this point rolls the complete start back. Cosmetics are
-  // frozen first so the running match never needs mutable profile/store state.
+  // Any failure after this point rolls the complete start back. Cosmetics and
+  // rules are frozen first so the running match never depends on mutable room,
+  // profile or store state.
   await capturePlayerCosmeticLoadouts(client, roomId);
-  await initializeDiceBalanceForGame(client, roomId);
+  const matchContext = await initializeDiceBalanceForGame(client, roomId);
   await createInitialTerritories(client, roomId, players);
-  await createObjectives(client, roomId, players);
+  if (matchContext.ruleset === "objective") {
+    await createObjectives(client, roomId, players);
+  }
   await createDeck(client, roomId);
   await transitionRoomToOrderRoll(client, roomId);
 }
