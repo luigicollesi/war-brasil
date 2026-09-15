@@ -6,7 +6,9 @@ import { useState } from "react";
 import type {
   CosmeticCatalogItem,
   CosmeticSlot,
+  EconomyOffer,
   EconomyStorefrontSnapshot,
+  PurchaseOfferResult,
 } from "@/src/lib/economy/economy-contract";
 import styles from "./economy-storefront.module.css";
 
@@ -21,8 +23,67 @@ function formatBalance(value: number) {
   return new Intl.NumberFormat("pt-BR").format(value);
 }
 
+function formatBrl(cents: number) {
+  return new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  }).format(cents / 100);
+}
+
 function firstPreviewItem(items: ReadonlyArray<CosmeticCatalogItem>) {
   return items.find((item) => item.assetRef !== null) ?? null;
+}
+
+function withPurchasedOwnership(
+  item: CosmeticCatalogItem,
+  acquiredIds: ReadonlySet<string>,
+): CosmeticCatalogItem {
+  return acquiredIds.has(item.id) ? { ...item, owned: true } : item;
+}
+
+function reconcilePurchase(
+  current: EconomyStorefrontSnapshot,
+  payload: PurchaseOfferResult,
+): EconomyStorefrontSnapshot {
+  const acquiredIds = new Set(payload.acquiredItems.map((item) => item.id));
+  const ownedById = new Map(current.ownedItems.map((item) => [item.id, item]));
+  for (const item of payload.acquiredItems) ownedById.set(item.id, item);
+
+  const sets = current.sets.map((set) => ({
+    ...set,
+    items: set.items.map((item) => withPurchasedOwnership(item, acquiredIds)),
+  }));
+
+  const offers = current.offers.map((offer) => {
+    const items = offer.items.map((item) => withPurchasedOwnership(item, acquiredIds));
+    const derivedOwnedCount = items.filter((item) => item.owned).length;
+    const ownedCount =
+      offer.id === payload.offer.id ? payload.offer.ownedCount : derivedOwnedCount;
+    const totalCount =
+      offer.id === payload.offer.id ? payload.offer.totalCount : items.length;
+    const fullyOwned =
+      offer.id === payload.offer.id
+        ? payload.offer.fullyOwned
+        : totalCount > 0 && ownedCount === totalCount;
+
+    return {
+      ...offer,
+      items,
+      ownedCount,
+      totalCount,
+      fullyOwned,
+      partiallyOwned: ownedCount > 0 && !fullyOwned,
+      purchasable: offer.purchasable && !fullyOwned,
+    };
+  });
+
+  return {
+    ...current,
+    wallet: payload.wallet,
+    ownedItems: [...ownedById.values()],
+    sets,
+    offers,
+  };
 }
 
 export function EconomyStorefront({
@@ -64,6 +125,42 @@ export function EconomyStorefront({
     }
   }
 
+  async function purchase(offer: EconomyOffer) {
+    const idempotencyKey = crypto.randomUUID();
+    const pendingKey = `purchase:${offer.id}`;
+    setPending(pendingKey);
+    setFeedback(null);
+
+    try {
+      const response = await fetch("/api/economy/purchases", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ offerId: offer.id, idempotencyKey }),
+      });
+      const payload = (await response.json()) as Partial<PurchaseOfferResult> & {
+        message?: string;
+      };
+
+      if (
+        !response.ok ||
+        !payload.purchaseId ||
+        !payload.wallet ||
+        !payload.offer ||
+        !Array.isArray(payload.acquiredItems)
+      ) {
+        throw new Error(payload.message ?? "Não foi possível concluir a compra.");
+      }
+
+      const confirmed = payload as PurchaseOfferResult;
+      setStorefront((current) => reconcilePurchase(current, confirmed));
+      setFeedback(`${offer.name} adquirido. O inventário foi atualizado.`);
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : "Falha ao concluir a compra.");
+    } finally {
+      setPending(null);
+    }
+  }
+
   return (
     <main className={styles.page} data-scene="profile">
       <header className={styles.header}>
@@ -72,13 +169,19 @@ export function EconomyStorefront({
           <p>INTENDÊNCIA · ARSENAL COSMÉTICO</p>
           <h1>Remessas do Comando</h1>
           <span>
-            Catálogo visual sem vantagem competitiva. Nesta fase, nenhuma compra ou recompensa está ativa.
+            Cosméticos são adquiridos com Créditos de Campanha e nunca alteram regras, RNG ou desempenho em batalha.
           </span>
         </div>
         <div className={styles.wallet} data-currency={storefront.wallet.currency}>
           <small>{storefront.wallet.label}</small>
           <strong>
-            <i aria-hidden="true">{storefront.wallet.symbol}</i>{" "}
+            <Image
+              src="/coin.svg"
+              alt=""
+              aria-hidden="true"
+              width={24}
+              height={24}
+            />{" "}
             {formatBalance(storefront.wallet.balance)}
           </strong>
           <span>saldo persistente</span>
@@ -121,12 +224,14 @@ export function EconomyStorefront({
                 <h3>Equipamento do comandante</h3>
               </div>
               <p>
-                Itens já pertencentes à sua conta. Os quatro padrões permanecem disponíveis para restaurar qualquer slot.
+                Itens pertencentes à sua conta. Cada slot pode ser configurado de forma independente.
               </p>
               <ul>
                 {storefront.ownedItems.map((item) => {
                   const equipped = storefront.loadout[item.slot].id === item.id;
-                  const canEquip = item.status === "available" && !equipped;
+                  const canEquip =
+                    (item.status === "available" || item.status === "retired") &&
+                    !equipped;
                   return (
                     <li key={item.id}>
                       <span>
@@ -144,7 +249,7 @@ export function EconomyStorefront({
                           {pending === item.id ? "EQUIPANDO…" : "EQUIPAR"}
                         </button>
                       ) : (
-                        <em>{item.status === "retired" ? "ARQUIVADO" : "POSSUÍDO"}</em>
+                        <em>POSSUÍDO</em>
                       )}
                     </li>
                   );
@@ -155,10 +260,119 @@ export function EconomyStorefront({
         </div>
       </section>
 
+      <section className={styles.catalog} aria-labelledby="offers-title">
+        <div className={styles.sectionHeading}>
+          <span>OFERTAS ATIVAS</span>
+          <h2 id="offers-title">Aquisições disponíveis</h2>
+        </div>
+        <div className={styles.setGrid}>
+          {storefront.offers.map((offer) => {
+            const purchasePending = pending === `purchase:${offer.id}`;
+            const insufficientBalance = storefront.wallet.balance < offer.price;
+            const purchaseDisabled =
+              pending !== null ||
+              !offer.purchasable ||
+              offer.fullyOwned ||
+              insufficientBalance;
+
+            return (
+              <article key={offer.id} className={styles.setCard} data-status={offer.status}>
+                <div className={styles.setVisual} aria-hidden="true">
+                  <span>{offer.featured ? "★" : "OFERTA"}</span>
+                  <i>{offer.totalCount}</i>
+                </div>
+                <div className={styles.setCopy}>
+                  <div>
+                    <small>{offer.featured ? "DESTAQUE" : "DISPONÍVEL"}</small>
+                    <h3>{offer.name}</h3>
+                  </div>
+                  <p>{offer.description}</p>
+                  <ul>
+                    {offer.items.map((item) => {
+                      const equipped = storefront.loadout[item.slot].id === item.id;
+                      const canEquip =
+                        item.owned &&
+                        (item.status === "available" || item.status === "retired") &&
+                        !equipped;
+                      return (
+                        <li key={item.id}>
+                          <span>
+                            <small>{SLOT_LABELS[item.slot]}</small>
+                            <strong>{item.name}</strong>
+                          </span>
+                          {equipped ? (
+                            <em>EQUIPADO</em>
+                          ) : canEquip ? (
+                            <button
+                              type="button"
+                              onClick={() => equip(item)}
+                              disabled={pending !== null}
+                            >
+                              {pending === item.id ? "EQUIPANDO…" : "EQUIPAR"}
+                            </button>
+                          ) : item.owned ? (
+                            <em>POSSUÍDO</em>
+                          ) : (
+                            <em>INCLUSO</em>
+                          )}
+                        </li>
+                      );
+                    })}
+                    <li>
+                      <span>
+                        <small>PROGRESSO</small>
+                        <strong>
+                          {offer.ownedCount}/{offer.totalCount} possuído
+                          {offer.partiallyOwned ? " · preço integral" : ""}
+                        </strong>
+                      </span>
+                      <em>{offer.fullyOwned ? "POSSUÍDO" : ""}</em>
+                    </li>
+                    <li>
+                      <span>
+                        <small>VALOR</small>
+                        <strong>
+                          <Image
+                            src="/coin.svg"
+                            alt=""
+                            aria-hidden="true"
+                            width={20}
+                            height={20}
+                          />{" "}
+                          {formatBalance(offer.price)}
+                        </strong>
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => purchase(offer)}
+                        disabled={purchaseDisabled}
+                      >
+                        {offer.fullyOwned
+                          ? "POSSUÍDO"
+                          : !offer.purchasable
+                            ? "INDISPONÍVEL"
+                            : purchasePending
+                              ? "PROCESSANDO…"
+                              : "COMPRAR"}
+                      </button>
+                    </li>
+                  </ul>
+                  {!offer.purchasable && !offer.fullyOwned ? (
+                    <small>Esta oferta está temporariamente indisponível.</small>
+                  ) : insufficientBalance && !offer.fullyOwned ? (
+                    <small>Saldo insuficiente para esta oferta.</small>
+                  ) : null}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+
       <section className={styles.catalog} aria-labelledby="catalog-title">
         <div className={styles.sectionHeading}>
-          <span>NOVAS REMESSAS</span>
-          <h2 id="catalog-title">Coleções anunciadas</h2>
+          <span>CATÁLOGO VISUAL</span>
+          <h2 id="catalog-title">Coleções e prévias</h2>
         </div>
 
         <div className={styles.setGrid}>
@@ -179,14 +393,17 @@ export function EconomyStorefront({
                 </div>
                 <div className={styles.setCopy}>
                   <div>
-                    <small>{set.status === "announced" ? "EM BREVE" : "DISPONÍVEL"}</small>
+                    <small>{set.status === "announced" ? "EM BREVE" : "CATÁLOGO"}</small>
                     <h3>{set.name}</h3>
                   </div>
                   <p>{set.description}</p>
                   <ul>
                     {set.items.map((item) => {
                       const equipped = storefront.loadout[item.slot].id === item.id;
-                      const canEquip = item.owned && item.status === "available" && !equipped;
+                      const canEquip =
+                        item.owned &&
+                        (item.status === "available" || item.status === "retired") &&
+                        !equipped;
                       return (
                         <li key={item.id}>
                           <span>
@@ -204,7 +421,7 @@ export function EconomyStorefront({
                               {pending === item.id ? "EQUIPANDO…" : "EQUIPAR"}
                             </button>
                           ) : (
-                            <em>{item.owned ? "POSSUÍDO" : "EM BREVE"}</em>
+                            <em>{item.owned ? "POSSUÍDO" : "CATÁLOGO"}</em>
                           )}
                         </li>
                       );
@@ -300,11 +517,60 @@ export function EconomyStorefront({
         </div>
       </section>
 
+      <section className={styles.catalog} aria-labelledby="credits-title">
+        <div className={styles.sectionHeading}>
+          <span>CRÉDITOS DE CAMPANHA</span>
+          <h2 id="credits-title">Reforços de saldo</h2>
+        </div>
+        <div className={styles.setGrid}>
+          {storefront.creditPacks.map((pack) => (
+            <article key={pack.id} className={styles.setCard} data-status={pack.status}>
+              <div className={styles.setVisual} aria-hidden="true">
+                <span>CR</span>
+                <i>{formatBalance(pack.creditAmount)}</i>
+              </div>
+              <div className={styles.setCopy}>
+                <div>
+                  <small>EM BREVE</small>
+                  <h3>{pack.name}</h3>
+                </div>
+                <p>Pacote demonstrativo. Aquisição por moeda real não está habilitada.</p>
+                <ul>
+                  <li>
+                    <span>
+                      <small>CRÉDITOS</small>
+                      <strong>
+                        <Image
+                          src="/coin.svg"
+                          alt=""
+                          aria-hidden="true"
+                          width={20}
+                          height={20}
+                        />{" "}
+                        {formatBalance(pack.creditAmount)}
+                      </strong>
+                    </span>
+                    <em>{formatBrl(pack.priceBrlCents)}</em>
+                  </li>
+                  <li>
+                    <span>
+                      <small>STATUS</small>
+                      <strong>Disponibilidade futura</strong>
+                    </span>
+                    <button type="button" disabled>EM BREVE</button>
+                  </li>
+                </ul>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
       {feedback ? <p className={styles.feedback} role="status">{feedback}</p> : null}
 
       <footer className={styles.footer}>
-        <span>ECONOMIA V1</span>
-        <p>Sem checkout · sem preço fictício · sem moeda premium · sem alteração de gameplay.</p>
+        <span>ECONOMIA V2</span>
+        <p>Créditos de Campanha · cosméticos individuais · sem vantagem competitiva.</p>
       </footer>
     </main>
   );

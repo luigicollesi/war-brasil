@@ -7,6 +7,7 @@ import type {
   EconomyStorefrontSnapshot,
 } from "@/src/lib/economy/economy-contract";
 import { cosmeticPreviewSource } from "@/src/lib/economy/cosmetic-preview";
+import { TerritorySkinPreview } from "@/src/components/economy/territory-skin-preview";
 import { ProfileCosmeticImage } from "./profile-cosmetic-image";
 import styles from "./profile-arsenal.module.css";
 
@@ -26,6 +27,16 @@ const FILTERS: ReadonlyArray<{ id: "all" | CosmeticSlot; label: string }> = [
 ];
 
 function CosmeticVisual({ item, priority = false }: { item: CosmeticCatalogItem; priority?: boolean }) {
+  if (item.slot === "territory_effect") {
+    return (
+      <TerritorySkinPreview
+        assetRef={cosmeticPreviewSource(item)}
+        ariaLabel={`Prévia de ${item.name}`}
+        className={styles.itemImage}
+      />
+    );
+  }
+
   return (
     <ProfileCosmeticImage
       src={cosmeticPreviewSource(item)}

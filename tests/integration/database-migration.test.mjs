@@ -33,12 +33,15 @@ const physicalTables = new Map([
       "cosmetic_set_items",
       "cosmetic_sets",
       "cosmetics",
+      "credit_packs",
       "dice_balance_profiles",
       "dice_balance_settings",
       "event_connections",
       "events",
       "objective_rules",
       "objectives",
+      "offer_items",
+      "offers",
       "territory_card_symbols",
       "territory_connections",
     ],
@@ -48,7 +51,10 @@ const physicalTables = new Map([
     "profile",
     ["commander_titles", "commanders", "cosmetic_loadout", "privacy_settings"],
   ],
-  ["economy", ["currencies", "ledger_entries", "wallets"]],
+  [
+    "economy",
+    ["currencies", "ledger_entries", "purchase_items", "purchases", "wallets"],
+  ],
   ["inventory", ["cosmetics"]],
   ["social", ["blocks", "friend_requests", "friendships"]],
   ["ops", ["command_receipts", "pgmigrations"]],
@@ -90,6 +96,7 @@ const managedHistory = [
   "038-economy-cosmetics-foundation.sql",
   "039-game-cosmetic-loadout-snapshots.sql",
   "040-r2-webp-cosmetic-catalog.sql",
+  "041-economy-v2-commerce.sql",
 ];
 
 function urlForDatabase(name) {
@@ -695,7 +702,7 @@ async function assertLegacyRoomRollout(connectionString) {
 if (!databaseUrl) {
   test("migrations de banco exigem DATABASE_URL", { skip: true }, () => {});
 } else {
-  test("026-040 migram banco v025, preservam catálogos e são idempotentes", async () => {
+  test("026-041 migram banco v025, preservam catálogos e são idempotentes", async () => {
     await withTemporaryDatabase("legacy", async (connectionString) => {
       await applySql(connectionString, "tests/fixtures/db/schema-v025.sql");
       await applySql(

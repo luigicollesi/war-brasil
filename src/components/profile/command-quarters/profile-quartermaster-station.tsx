@@ -56,7 +56,7 @@ export function ProfileQuartermasterStation({
         </button>
       ))}
       <p className={styles.storeDisclaimer}>
-        Catálogo real · nenhuma compra habilitada nesta etapa. {" "}
+        Compras cosméticas usam Créditos de Campanha no Arsenal. {" "}
         <Link href="/profile/store">Abrir arsenal</Link>
       </p>
     </div>
