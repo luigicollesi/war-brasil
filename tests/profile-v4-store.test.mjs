@@ -25,12 +25,18 @@ test("PROFILE V4 store consumes catalog data instead of hardcoding commercial au
   assert.doesNotMatch(store, /userId/);
 });
 
-test("PROFILE V4 exposes the future treasury reinforcement anchor without enabling checkout", async () => {
+test("PROFILE V4 store exposes the future treasury reinforcement anchor without enabling checkout", async () => {
   const store = await source("src/components/profile/v4/profile-store.tsx");
 
   assert.match(store, /id="reforcar-tesouraria"/);
   assert.match(store, /EM BREVE/);
   assert.doesNotMatch(store, /Stripe|MercadoPago|checkout/i);
+});
+
+test("PROFILE V4 store keeps implementation jargon out of player-facing copy", async () => {
+  const store = await source("src/components/profile/v4/profile-store.tsx");
+
+  assert.doesNotMatch(store, />[^<]*(?:Economy V2|backend|autoridade comercial)[^<]*</i);
 });
 
 test("PROFILE V4 store provides an explicit mobile inspection sheet", async () => {
