@@ -102,8 +102,7 @@
 
 .commandCopy small,
 .navItem small,
-.walletReadout small,
-.mobileNav small {
+.walletReadout small {
   color: rgb(208 170 87 / 76%);
   font-size: 0.63rem;
   font-weight: 700;
@@ -261,10 +260,6 @@
   padding: clamp(22px, 3vw, 44px);
 }
 
-.mobileNav {
-  display: none;
-}
-
 .page :focus-visible {
   outline: 2px solid var(--profile-brass-bright);
   outline-offset: 3px;
@@ -272,77 +267,100 @@
 
 @media (max-width: 980px) {
   .commandBar {
-    grid-template-columns: 1fr auto;
-    min-height: 70px;
-  }
-
-  .commandIdentity {
-    border-right: 0;
-  }
-
-  .primaryNav {
-    display: none;
-  }
-
-  .walletCluster {
-    padding-inline: 12px;
-  }
-
-  .surface {
-    min-height: calc(100dvh - 138px);
-    padding: 20px 16px 88px;
-  }
-
-  .mobileNav {
     position: fixed;
-    z-index: 40;
+    top: auto;
+    bottom: max(12px, env(safe-area-inset-bottom));
     left: 12px;
     right: 12px;
-    bottom: 12px;
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    z-index: 40;
+    min-height: 72px;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     border: 1px solid rgb(208 170 87 / 25%);
     background: rgb(5 18 14 / 94%);
     box-shadow: 0 18px 50px rgb(0 0 0 / 45%);
-    backdrop-filter: blur(18px);
   }
 
-  .mobileNav a {
-    min-height: 58px;
+  .commandIdentity {
+    gap: 10px;
+    padding: 10px 12px;
+    border-right: 1px solid rgb(208 170 87 / 12%);
+  }
+
+  .commandCopy strong {
+    max-width: 16vw;
+  }
+
+  .primaryNav {
     display: grid;
-    align-content: center;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .navItem {
+    min-width: 0;
     justify-items: center;
     gap: 2px;
-    color: rgb(238 232 218 / 56%);
-    border-right: 1px solid rgb(208 170 87 / 10%);
-    text-decoration: none;
+    padding: 10px 8px;
+    text-align: center;
   }
 
-  .mobileNav a:last-child {
-    border-right: 0;
+  .navItem::after {
+    left: 10px;
+    right: 10px;
   }
 
-  .mobileNav strong {
+  .navItem small {
+    font-size: 0.52rem;
+    letter-spacing: 0.12em;
+  }
+
+  .navItem strong {
     font-size: 0.78rem;
     letter-spacing: 0.04em;
-    text-transform: uppercase;
   }
 
-  .mobileNav a[data-active="true"] {
-    color: var(--profile-ivory);
-    background: rgb(208 170 87 / 10%);
-    box-shadow: inset 0 2px var(--profile-brass-bright);
+  .walletCluster {
+    grid-template-columns: minmax(0, 1fr) 38px;
+    gap: 7px;
+    padding: 8px 10px;
+    border-left: 1px solid rgb(208 170 87 / 12%);
+  }
+
+  .walletReadout {
+    gap: 6px;
+  }
+
+  .coin {
+    width: 28px;
+    height: 28px;
+  }
+
+  .addCredits {
+    width: 36px;
+    height: 36px;
+  }
+
+  .evalBadge {
+    top: 12px;
+  }
+
+  .surface {
+    min-height: 100dvh;
+    padding: 20px 16px calc(112px + env(safe-area-inset-bottom));
   }
 }
 
 @media (max-width: 620px) {
   .commandBar {
+    left: 8px;
+    right: 8px;
+    bottom: max(8px, env(safe-area-inset-bottom));
     min-height: 64px;
+    grid-template-columns: 44px minmax(0, 1fr) auto;
   }
 
   .commandIdentity {
-    gap: 9px;
-    padding: 9px 10px;
+    gap: 0;
+    padding: 8px;
   }
 
   .homeLink {
@@ -350,25 +368,35 @@
     height: 36px;
   }
 
-  .commandCopy small,
-  .commandCopy em {
+  .commandCopy {
     display: none;
   }
 
-  .commandCopy strong {
-    max-width: 34vw;
-    font-size: 0.82rem;
+  .navItem {
+    padding: 8px 4px;
+  }
+
+  .navItem small {
+    display: none;
+  }
+
+  .navItem strong {
+    overflow: hidden;
+    max-width: 100%;
+    font-size: 0.7rem;
+    letter-spacing: 0.025em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .walletCluster {
-    grid-template-columns: minmax(0, 1fr) 36px;
-    gap: 6px;
-    padding: 8px 9px;
+    grid-template-columns: auto 34px;
+    gap: 5px;
+    padding: 7px 8px;
   }
 
   .coin {
-    width: 27px;
-    height: 27px;
+    display: none;
   }
 
   .walletReadout small {
@@ -376,7 +404,12 @@
   }
 
   .walletReadout strong {
-    font-size: 0.82rem;
+    font-size: 0.76rem;
+  }
+
+  .walletUnavailable {
+    font-size: 0.52rem !important;
+    letter-spacing: 0.04em !important;
   }
 
   .addCredits {
@@ -385,8 +418,8 @@
   }
 
   .surface {
-    min-height: calc(100dvh - 126px);
-    padding: 16px 12px 84px;
+    min-height: 100dvh;
+    padding: 16px 12px calc(96px + env(safe-area-inset-bottom));
   }
 }
 
@@ -412,8 +445,7 @@
 
 @media (forced-colors: active) {
   .page,
-  .commandBar,
-  .mobileNav {
+  .commandBar {
     color: CanvasText;
     background: Canvas;
   }
@@ -427,21 +459,18 @@
   .commandIdentity,
   .homeLink,
   .navItem,
-  .addCredits,
-  .mobileNav,
-  .mobileNav a {
+  .walletCluster,
+  .addCredits {
     border-color: CanvasText;
   }
 
   .homeLink,
   .navItem,
-  .addCredits,
-  .mobileNav a {
+  .addCredits {
     color: LinkText;
   }
 
-  .navItem[data-active="true"],
-  .mobileNav a[data-active="true"] {
+  .navItem[data-active="true"] {
     color: HighlightText;
     background: Highlight;
     outline: 2px solid Highlight;

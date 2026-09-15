@@ -41,6 +41,11 @@ type PublishSceneDirective = (
 
 const SceneDirectiveContext = createContext<PublishSceneDirective | null>(null);
 const SceneStateContext = createContext<CommandSceneState | null>(null);
+const PROFILE_SHELL_ROUTES = new Set([
+  "/profile",
+  "/profile/arsenal",
+  "/profile/store",
+]);
 
 function mergeSceneIntent(
   routeIntent: CommandSceneIntent,
@@ -58,6 +63,7 @@ function mergeSceneIntent(
 
 export function PreGameCommandRuntime({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const profileOwnsChrome = PROFILE_SHELL_ROUTES.has(pathname);
   const routeIntent = useMemo(
     () => resolvePreGameSceneIntent(pathname),
     [pathname],
@@ -94,6 +100,7 @@ export function PreGameCommandRuntime({ children }: { children: ReactNode }) {
       <SceneDirectiveContext.Provider value={publishDirective}>
         <CommandShell
           intent={intent}
+          chrome={!profileOwnsChrome}
           showModeRail={pathname !== "/"}
           onSceneStateChange={setSceneState}
         >

@@ -149,23 +149,6 @@ export function ProfileShell({
       {evaluationFixture ? <span className={styles.evalBadge}>FIXTURE DE AVALIAÇÃO</span> : null}
 
       <div className={styles.surface}>{children}</div>
-
-      <nav className={styles.mobileNav} aria-label="Áreas do Quartel do Comandante">
-        {NAV_ITEMS.map((item) => {
-          const active = item.id === activeSurface;
-          return (
-            <Link
-              key={`mobile-${item.id}`}
-              href={item.href}
-              data-active={active ? "true" : "false"}
-              aria-current={active ? "page" : undefined}
-            >
-              <small>{item.eyebrow}</small>
-              <strong>{item.label}</strong>
-            </Link>
-          );
-        })}
-      </nav>
     </main>
   );
 }
