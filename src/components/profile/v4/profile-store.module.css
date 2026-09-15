@@ -1,0 +1,542 @@
+.store {
+  --ivory: #eee8da;
+  --brass: #d0aa57;
+  --red: #b53137;
+  display: grid;
+  gap: 18px;
+}
+
+.hero,
+.catalog,
+.inspection,
+.treasury {
+  border: 1px solid rgb(208 170 87 / 18%);
+  background: linear-gradient(145deg, rgb(12 31 24 / 94%), rgb(6 17 13 / 97%));
+  box-shadow: 0 24px 60px rgb(0 0 0 / 16%);
+}
+
+.hero {
+  min-height: 370px;
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(360px, 1.1fr);
+  overflow: hidden;
+}
+
+.heroCopy {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 14px;
+  padding: clamp(30px, 5vw, 68px);
+}
+
+.heroCopy small,
+.sectionHeading small,
+.inspectionCopy > small,
+.treasury small,
+.productCopy small,
+.itemSelector small {
+  color: rgb(208 170 87 / 72%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.heroCopy h1,
+.sectionHeading h2,
+.inspectionCopy h2,
+.treasury h2 {
+  margin: 0;
+  color: var(--ivory);
+  font-family: var(--font-wb-display), sans-serif;
+  text-transform: uppercase;
+}
+
+.heroCopy h1 {
+  max-width: 10ch;
+  font-size: clamp(2.5rem, 5vw, 5.7rem);
+  line-height: 0.88;
+  letter-spacing: -0.04em;
+}
+
+.heroCopy p,
+.inspectionCopy p,
+.treasury p {
+  margin: 0;
+  color: rgb(238 232 218 / 60%);
+  font-size: 0.82rem;
+  line-height: 1.6;
+}
+
+.heroCopy p {
+  max-width: 60ch;
+}
+
+.heroCopy > button {
+  min-height: 44px;
+  margin-top: 4px;
+  padding: 0 18px;
+  color: #101913;
+  border: 1px solid var(--brass);
+  background: var(--brass);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.09em;
+  cursor: pointer;
+}
+
+.heroVisual {
+  position: relative;
+  min-height: 360px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 48% 45%, rgb(208 170 87 / 15%), transparent 36%),
+    linear-gradient(135deg, rgb(208 170 87 / 2%), rgb(3 12 9 / 48%));
+}
+
+.heroVisual::before,
+.heroVisual::after {
+  content: "";
+  position: absolute;
+  width: 330px;
+  aspect-ratio: 1;
+  border: 1px solid rgb(208 170 87 / 13%);
+  transform: rotate(45deg);
+}
+
+.heroVisual::after {
+  width: 250px;
+  border-color: rgb(208 170 87 / 7%);
+}
+
+.heroVisual > img {
+  position: relative;
+  z-index: 2;
+  width: min(72%, 430px);
+  height: min(72%, 430px);
+  object-fit: contain;
+  filter: drop-shadow(0 30px 45px rgb(0 0 0 / 45%));
+}
+
+.heroVisual > span {
+  position: relative;
+  z-index: 2;
+  color: rgb(208 170 87 / 32%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: clamp(1.3rem, 3vw, 2.8rem);
+  letter-spacing: 0.08em;
+  text-align: center;
+}
+
+.heroVisual > div {
+  position: absolute;
+  z-index: 3;
+  left: 22px;
+  right: 22px;
+  bottom: 20px;
+  display: grid;
+  gap: 3px;
+  padding: 12px 14px;
+  border-left: 2px solid var(--brass);
+  background: rgb(3 13 10 / 72%);
+  backdrop-filter: blur(9px);
+}
+
+.heroVisual > div small {
+  color: rgb(208 170 87 / 70%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.57rem;
+  letter-spacing: 0.12em;
+}
+
+.heroVisual > div strong {
+  color: var(--ivory);
+  font-size: 0.86rem;
+  letter-spacing: 0.04em;
+}
+
+.catalog,
+.inspection,
+.treasury {
+  padding: 18px;
+}
+
+.sectionHeading {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.sectionHeading > span {
+  display: grid;
+  gap: 3px;
+}
+
+.sectionHeading h2 {
+  font-size: 1.05rem;
+  letter-spacing: 0.055em;
+}
+
+.sectionHeading > strong {
+  color: rgb(208 170 87 / 28%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 1.55rem;
+}
+
+.catalogGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.productCard {
+  min-width: 0;
+  border: 1px solid rgb(238 232 218 / 8%);
+  background: rgb(3 13 10 / 45%);
+  transition: border-color 180ms ease, transform 180ms ease, background 180ms ease;
+}
+
+.productCard:hover,
+.productCard[data-active="true"] {
+  border-color: rgb(208 170 87 / 45%);
+  background: rgb(208 170 87 / 5%);
+}
+
+.productCard:hover {
+  transform: translateY(-2px);
+}
+
+.productSelect {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  grid-template-rows: minmax(180px, 1fr) auto;
+  padding: 0;
+  color: inherit;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.productVisual {
+  min-height: 180px;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  overflow: hidden;
+  background: radial-gradient(circle at center, rgb(208 170 87 / 8%), transparent 60%);
+}
+
+.productVisual img {
+  width: 100%;
+  height: 100%;
+  max-height: 210px;
+  object-fit: contain;
+  filter: drop-shadow(0 18px 28px rgb(0 0 0 / 40%));
+}
+
+.productFallback {
+  width: 84px;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  color: rgb(208 170 87 / 48%);
+  border: 1px solid rgb(208 170 87 / 22%);
+  font-family: var(--font-geist-mono), monospace;
+  letter-spacing: 0.08em;
+}
+
+.productCopy {
+  display: grid;
+  gap: 4px;
+  padding: 14px;
+  border-top: 1px solid rgb(238 232 218 / 7%);
+}
+
+.productCopy strong {
+  overflow: hidden;
+  color: var(--ivory);
+  font-size: 0.84rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.productCopy em {
+  color: rgb(238 232 218 / 46%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.56rem;
+  font-style: normal;
+  letter-spacing: 0.08em;
+}
+
+.emptyCatalog {
+  min-height: 190px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 6px;
+  color: rgb(238 232 218 / 46%);
+  border: 1px dashed rgb(208 170 87 / 18%);
+  text-align: center;
+}
+
+.emptyCatalog strong {
+  color: rgb(238 232 218 / 72%);
+}
+
+.inspection {
+  min-height: 430px;
+  display: grid;
+  grid-template-columns: minmax(320px, 0.9fr) minmax(0, 1.1fr);
+  gap: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.inspectionVisual {
+  min-height: 430px;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  border-right: 1px solid rgb(238 232 218 / 8%);
+  background: radial-gradient(circle at center, rgb(208 170 87 / 10%), transparent 55%);
+}
+
+.inspectionVisual img {
+  width: min(88%, 480px);
+  height: min(88%, 480px);
+  object-fit: contain;
+  filter: drop-shadow(0 26px 40px rgb(0 0 0 / 42%));
+}
+
+.inspectionVisual > span {
+  color: rgb(208 170 87 / 32%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.13em;
+}
+
+.inspectionCopy {
+  display: grid;
+  align-content: center;
+  gap: 14px;
+  padding: clamp(28px, 4vw, 54px);
+}
+
+.inspectionCopy h2,
+.treasury h2 {
+  font-size: clamp(1.55rem, 3vw, 2.8rem);
+  line-height: 1;
+}
+
+.itemSelector {
+  display: grid;
+  gap: 7px;
+  margin-top: 5px;
+}
+
+.itemSelector button {
+  min-height: 58px;
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 12px;
+  color: rgb(238 232 218 / 58%);
+  border: 1px solid rgb(238 232 218 / 8%);
+  background: rgb(2 11 8 / 32%);
+  text-align: left;
+  cursor: pointer;
+}
+
+.itemSelector button:hover,
+.itemSelector button:focus-visible,
+.itemSelector button[data-active="true"] {
+  color: var(--ivory);
+  border-color: rgb(208 170 87 / 38%);
+  background: rgb(208 170 87 / 6%);
+}
+
+.itemSelector strong {
+  overflow: hidden;
+  font-size: 0.76rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.itemSelector span {
+  color: rgb(208 170 87 / 58%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.53rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+.commerceBoundary {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+  padding: 14px;
+  border-left: 2px solid rgb(208 170 87 / 44%);
+  background: rgb(208 170 87 / 5%);
+}
+
+.commerceBoundary span {
+  color: rgb(208 170 87 / 65%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.54rem;
+  letter-spacing: 0.11em;
+}
+
+.commerceBoundary strong {
+  color: var(--ivory);
+  font-size: 0.7rem;
+  letter-spacing: 0.055em;
+}
+
+.commerceBoundary p {
+  font-size: 0.7rem;
+}
+
+.treasury {
+  min-height: 150px;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 20px;
+  scroll-margin-top: 100px;
+}
+
+.treasuryCoin {
+  width: 82px;
+  height: 82px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgb(208 170 87 / 18%);
+  background: radial-gradient(circle, rgb(208 170 87 / 12%), transparent 65%);
+}
+
+.treasuryCoin img {
+  width: 68px;
+  height: 68px;
+  object-fit: contain;
+}
+
+.treasury > div {
+  display: grid;
+  gap: 5px;
+}
+
+.treasury > strong {
+  padding: 10px 13px;
+  color: rgb(238 232 218 / 45%);
+  border: 1px solid rgb(238 232 218 / 11%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+}
+
+@media (max-width: 1080px) {
+  .hero {
+    grid-template-columns: minmax(0, 1fr) minmax(300px, 0.8fr);
+  }
+
+  .catalogGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 820px) {
+  .hero,
+  .inspection {
+    grid-template-columns: 1fr;
+  }
+
+  .heroVisual {
+    min-height: 300px;
+  }
+
+  .inspectionVisual {
+    min-height: 300px;
+    border-right: 0;
+    border-bottom: 1px solid rgb(238 232 218 / 8%);
+  }
+
+  .treasury {
+    grid-template-columns: auto 1fr;
+  }
+
+  .treasury > strong {
+    grid-column: 1 / -1;
+    justify-self: stretch;
+    text-align: center;
+  }
+}
+
+@media (max-width: 520px) {
+  .heroCopy {
+    padding: 28px 20px;
+  }
+
+  .heroCopy h1 {
+    font-size: clamp(2.4rem, 14vw, 4rem);
+  }
+
+  .catalog,
+  .treasury {
+    padding: 14px;
+  }
+
+  .catalogGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .productSelect {
+    grid-template-rows: minmax(130px, 1fr) auto;
+  }
+
+  .productVisual {
+    min-height: 130px;
+    padding: 10px;
+  }
+
+  .itemSelector button {
+    grid-template-columns: 62px minmax(0, 1fr);
+  }
+
+  .itemSelector span {
+    grid-column: 2;
+  }
+
+  .treasuryCoin {
+    width: 64px;
+    height: 64px;
+  }
+
+  .treasuryCoin img {
+    width: 52px;
+    height: 52px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .productCard {
+    transition: none;
+  }
+
+  .productCard:hover {
+    transform: none;
+  }
+}
