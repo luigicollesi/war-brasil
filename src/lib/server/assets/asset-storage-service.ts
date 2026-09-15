@@ -3,9 +3,11 @@ import "server-only";
 import {
   assetStorageConfigFromEnv,
   assertDiceAssetKey,
+  assertTerritorySkinAssetKey,
   type AssetStorageConfig,
 } from "./asset-storage-config";
 import {
+  createPresignedAssetUrl,
   createPresignedDiceAssetUrl,
   validateDiceAssetObject,
   validateDiceCollection,
@@ -27,6 +29,11 @@ export function diceAssetDeliveryPath(objectKey: string) {
   return `/api/assets/dice?key=${encodeURIComponent(key)}`;
 }
 
+export function territorySkinAssetDeliveryPath(objectKey: string) {
+  const key = assertTerritorySkinAssetKey(objectKey);
+  return `/api/assets/territory-skins?key=${encodeURIComponent(key)}`;
+}
+
 export function resolveDiceAssetReadUrl(
   objectKey: string,
   options?: Readonly<{
@@ -37,6 +44,24 @@ export function resolveDiceAssetReadUrl(
   return createPresignedDiceAssetUrl(
     getAssetStorageConfig(),
     assertDiceAssetKey(objectKey),
+    {
+      method: "GET",
+      expiresInSeconds: options?.expiresInSeconds,
+      now: options?.now,
+    },
+  );
+}
+
+export function resolveTerritorySkinAssetReadUrl(
+  objectKey: string,
+  options?: Readonly<{
+    expiresInSeconds?: number;
+    now?: Date;
+  }>,
+) {
+  return createPresignedAssetUrl(
+    getAssetStorageConfig(),
+    assertTerritorySkinAssetKey(objectKey),
     {
       method: "GET",
       expiresInSeconds: options?.expiresInSeconds,
