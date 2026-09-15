@@ -64,6 +64,23 @@ export type EquipCosmeticInput = Readonly<{
   cosmeticId: string;
 }>;
 
+export type PurchaseOfferInput = Readonly<{
+  offerId: string;
+  idempotencyKey: string;
+}>;
+
+export type PurchaseOfferResult = Readonly<{
+  purchaseId: string;
+  wallet: CampaignCreditWallet;
+  acquiredItems: ReadonlyArray<CosmeticCatalogItem>;
+  offer: Readonly<{
+    id: string;
+    ownedCount: number;
+    totalCount: number;
+    fullyOwned: boolean;
+  }>;
+}>;
+
 export function isCosmeticSlot(value: unknown): value is CosmeticSlot {
   return typeof value === "string" && (COSMETIC_SLOTS as readonly string[]).includes(value);
 }
