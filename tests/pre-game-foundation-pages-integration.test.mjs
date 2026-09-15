@@ -42,9 +42,6 @@ const doctrineCss = source(
 const profilePage = source("src/app/profile/page.tsx");
 const profileLoading = source("src/app/profile/loading.tsx");
 const profileError = source("src/app/profile/error.tsx");
-const profileBridge = source(
-  "src/components/profile/profile-command-shell.tsx",
-);
 const profileBridgeCss = source(
   "src/components/profile/profile-command-shell.module.css",
 );
