@@ -125,7 +125,7 @@ export function parseAssetStorageUrl(value: string | undefined): AssetStorageCon
 }
 
 export function assetStorageConfigFromEnv(
-  env: Pick<NodeJS.ProcessEnv, "ASSET_STORAGE_URL"> = process.env,
+  env: { ASSET_STORAGE_URL?: string } = process.env,
 ): AssetStorageConfig {
   const config = parseAssetStorageUrl(env.ASSET_STORAGE_URL);
   if (config.bucket !== ASSET_STORAGE_BUCKET) {
