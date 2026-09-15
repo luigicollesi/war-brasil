@@ -9,13 +9,13 @@ import {
 import type { GameCommandPatch } from "@/src/lib/game-command-patch";
 import type { GameCommandRequestMetadata } from "@/src/lib/game-command-request";
 import type { CardSymbol } from "@/src/lib/game-config";
-import { objectiveWon } from "@/src/lib/game-objective-service";
 import {
   isValidTrade,
   MANDATORY_TRADE_HAND_SIZE,
   OWNED_TERRITORY_CARD_BONUS,
   tradeValue,
 } from "@/src/lib/game-rules";
+import { evaluateGameVictory } from "@/src/lib/server/game-victory-service";
 import { RoomError } from "@/src/lib/rooms";
 
 type TroopRoom = {
@@ -152,7 +152,7 @@ export async function executeReinforcement(
     [room.id, remaining],
   );
 
-  const won = await objectiveWon(
+  const won = await evaluateGameVictory(
     client,
     room.id,
     player.id,
@@ -272,7 +272,7 @@ export async function executeTradeCards(
   );
 
   if (changedTroops) {
-    await objectiveWon(client, room.id, player.id, "troops_changed");
+    await evaluateGameVictory(client, room.id, player.id, "troops_changed");
   }
   return null;
 }
