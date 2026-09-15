@@ -342,6 +342,7 @@ function sameRoom(left: GameSnapshot["room"], right: GameSnapshot["room"]) {
     left.id === right.id &&
     left.code === right.code &&
     left.status === right.status &&
+    left.ruleset === right.ruleset &&
     left.orderRollRound === right.orderRollRound &&
     left.orderRollPlayerId === right.orderRollPlayerId &&
     left.lastOrderRollPlayerId === right.lastOrderRollPlayerId &&
