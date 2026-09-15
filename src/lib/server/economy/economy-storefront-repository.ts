@@ -115,6 +115,42 @@ export async function listStorefrontCollections(
   return result.rows;
 }
 
+export async function listStorefrontTerritorySkins(
+  userId: string,
+  db: EconomyQueryable = pool,
+): Promise<CosmeticRow[]> {
+  const result = await db.query<CosmeticRow>(
+    `SELECT item.id,
+            item.slug,
+            item.name,
+            item.description,
+            item.slot,
+            item.rarity,
+            item.asset_ref,
+            item.preview_ref,
+            item.effect_key,
+            item.status,
+            item.is_default,
+            (owned.cosmetic_id IS NOT NULL) AS owned,
+            (loadout.cosmetic_id=item.id) AS equipped
+       FROM catalog.cosmetics item
+       LEFT JOIN inventory.cosmetics owned
+         ON owned.user_id=$1::uuid
+        AND owned.cosmetic_id=item.id
+       LEFT JOIN profile.cosmetic_loadout loadout
+         ON loadout.user_id=$1::uuid
+        AND loadout.slot=item.slot
+      WHERE item.slot='territory_skin'
+        AND item.is_default=FALSE
+        AND item.status IN ('announced','available')
+      ORDER BY CASE item.status WHEN 'available' THEN 0 ELSE 1 END,
+               item.name,
+               item.id`,
+    [userId],
+  );
+  return result.rows;
+}
+
 export async function listStorefrontOffers(
   db: EconomyQueryable = pool,
 ): Promise<StorefrontOfferRow[]> {
