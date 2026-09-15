@@ -132,6 +132,7 @@ jobs:
           node scripts/e2e/auth-seat-boundary-e2e.mjs
           npm run test:e2e:lobby
           node scripts/e2e/game-modes-e2e.mjs
+          node scripts/e2e/game-modes-victory-e2e.mjs
           node scripts/e2e/economy-game-e2e.mjs
         env:
           DATABASE_URL: postgresql://war:DB_SENTINEL_DO_NOT_SHIP_2026@127.0.0.1:5432/war_lobby_e2e
