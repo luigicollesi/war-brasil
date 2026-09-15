@@ -68,6 +68,8 @@ export type EconomyOffer = Readonly<{
   price: number;
   status: EconomyOfferStatus;
   featured: boolean;
+  startsAt: string | null;
+  endsAt: string | null;
   items: ReadonlyArray<CosmeticCatalogItem>;
   ownedCount: number;
   totalCount: number;
@@ -96,6 +98,16 @@ export type StorefrontCollection = Readonly<{
   partiallyOwned: boolean;
 }>;
 
+export type StorefrontCampaign = Readonly<{
+  id: string;
+  slug: string;
+  title: string;
+  description: string | null;
+  startsAt: string | null;
+  endsAt: string | null;
+  offerIds: ReadonlyArray<string>;
+}>;
+
 export type EconomyCreditPack = Readonly<{
   id: string;
   slug: string;
@@ -113,6 +125,7 @@ export type EconomyStorefrontSnapshot = Readonly<{
   ownedItems: ReadonlyArray<CosmeticCatalogItem>;
   sets: ReadonlyArray<CosmeticSet>;
   collections: ReadonlyArray<StorefrontCollection>;
+  campaigns: ReadonlyArray<StorefrontCampaign>;
   territorySkins: ReadonlyArray<CosmeticCatalogItem>;
   offers: ReadonlyArray<EconomyOffer>;
   creditPacks: ReadonlyArray<EconomyCreditPack>;
