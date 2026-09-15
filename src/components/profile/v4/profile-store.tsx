@@ -9,6 +9,7 @@ import type {
   EconomyStorefrontSnapshot,
 } from "@/src/lib/economy/economy-contract";
 import { cosmeticPreviewSource } from "@/src/lib/economy/cosmetic-preview";
+import { ProfileCosmeticImage } from "./profile-cosmetic-image";
 import mobileStyles from "./profile-store-mobile-inspection.module.css";
 import styles from "./profile-store.module.css";
 
@@ -50,17 +51,13 @@ function InspectionContent({
   return (
     <>
       <div className={styles.inspectionVisual}>
-        {selectedArtwork ? (
-          <Image
-            src={selectedArtwork}
-            alt={selectedItem ? `Prévia de ${selectedItem.name}` : "Prévia cosmética"}
-            width={560}
-            height={560}
-            unoptimized
-          />
-        ) : (
-          <span>PRÉVIA INDISPONÍVEL</span>
-        )}
+        <ProfileCosmeticImage
+          src={selectedArtwork}
+          alt={selectedItem ? `Prévia de ${selectedItem.name}` : "Prévia cosmética"}
+          width={560}
+          height={560}
+          fallbackLabel="PRÉVIA INDISPONÍVEL"
+        />
       </div>
       <div className={styles.inspectionCopy}>
         <small>INSPEÇÃO // SEM MUTAÇÃO</small>
@@ -168,18 +165,14 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
           ) : null}
         </div>
         <div className={styles.heroVisual}>
-          {featured && itemArtwork(previewItem(featured)) ? (
-            <Image
-              src={itemArtwork(previewItem(featured))!}
-              alt={`Destaque ${featured.name}`}
-              width={520}
-              height={520}
-              priority
-              unoptimized
-            />
-          ) : (
-            <span>CATÁLOGO<br />SEM PRÉVIA</span>
-          )}
+          <ProfileCosmeticImage
+            src={featured ? itemArtwork(previewItem(featured)) : null}
+            alt={featured ? `Destaque ${featured.name}` : "Destaque do catálogo"}
+            width={520}
+            height={520}
+            priority
+            fallbackLabel="SEM PRÉVIA"
+          />
           <div>
             <small>DESTAQUE ATUAL</small>
             <strong>{featured?.name ?? "Nenhuma remessa disponível"}</strong>
@@ -205,11 +198,14 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
                 <article key={set.id} className={styles.productCard} data-active={active ? "true" : "false"}>
                   <button type="button" className={styles.productSelect} onClick={() => inspect(set)}>
                     <span className={styles.productVisual}>
-                      {art ? (
-                        <Image src={art} alt={`Prévia de ${set.name}`} width={300} height={300} loading="lazy" unoptimized />
-                      ) : (
-                        <span className={styles.productFallback}>WB</span>
-                      )}
+                      <ProfileCosmeticImage
+                        src={art}
+                        alt={`Prévia de ${set.name}`}
+                        width={300}
+                        height={300}
+                        fallbackClassName={styles.productFallback}
+                        fallbackLabel="WB"
+                      />
                     </span>
                     <span className={styles.productCopy}>
                       <small>{set.status === "retired" ? "ARQUIVADO" : set.status === "announced" ? "EM BREVE" : "CATÁLOGO"}</small>
