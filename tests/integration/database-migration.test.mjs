@@ -110,6 +110,7 @@ const managedHistory = [
   "041-economy-v2-commerce.sql",
   "042-territory-skins-v1.sql",
   "043-economy-storefront-v2.sql",
+  "044-economy-storefront-territory-commerce.sql",
 ];
 
 function urlForDatabase(name) {
@@ -714,7 +715,7 @@ async function assertLegacyRoomRollout(connectionString) {
 if (!databaseUrl) {
   test("migrations de banco exigem DATABASE_URL", { skip: true }, () => {});
 } else {
-  test("026-043 migram banco v025, preservam catálogos e são idempotentes", async () => {
+  test("026-044 migram banco v025, preservam catálogos e são idempotentes", async () => {
     await withTemporaryDatabase("legacy", async (connectionString) => {
       await applySql(connectionString, "tests/fixtures/db/schema-v025.sql");
       await applySql(
