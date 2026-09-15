@@ -98,19 +98,20 @@ export function territorySkinRender(
   };
 }
 
+function territorySkinAssetDeliveryPath(assetRef: string) {
+  return `/api/assets/territory-skins?key=${encodeURIComponent(assetRef)}`;
+}
+
 /**
  * The current game DTO predates image territory skins and exposes one effectKey
- * to the board. During the V1 rollout we preserve that wire shape and encode an
- * image delivery path into a namespaced, non-persistent runtime key. The raw
- * database snapshot remains the canonical asset_ref/effect_key XOR contract.
+ * to the board. During the V1 rollout we preserve that wire shape, but the
+ * transient key carries only the canonical object key. Delivery URLs can then
+ * rotate independently without changing the skin's logical render identity.
  */
-export function territorySkinRuntimeEffectKey(
-  snapshot: TerritorySkinSnapshot,
-  imageUrlForAsset: (assetRef: string) => string,
-) {
+export function territorySkinRuntimeEffectKey(snapshot: TerritorySkinSnapshot) {
   if (snapshot.kind === "procedural") return snapshot.effectKey;
   return `${TERRITORY_SKIN_RUNTIME_IMAGE_PREFIX}${encodeURIComponent(
-    imageUrlForAsset(snapshot.assetRef),
+    snapshot.assetRef,
   )}`;
 }
 
@@ -122,14 +123,9 @@ export function territorySkinAssetRefFromRuntimeEffectKey(
 
   try {
     const encoded = normalized.slice(TERRITORY_SKIN_RUNTIME_IMAGE_PREFIX.length);
-    const deliveryPath = decodeURIComponent(encoded);
-    const url = new URL(deliveryPath, "https://war-brasil.invalid");
-    if (url.origin !== "https://war-brasil.invalid") return null;
-    if (url.pathname !== "/api/assets/territory-skins") return null;
-
-    const assetRef = url.searchParams.get("key");
-    if (!assetRef || !isTerritorySkinAssetKey(assetRef)) return null;
-    return `/api/assets/territory-skins?key=${encodeURIComponent(assetRef)}`;
+    const assetRef = decodeURIComponent(encoded);
+    if (!isTerritorySkinAssetKey(assetRef)) return null;
+    return territorySkinAssetDeliveryPath(assetRef);
   } catch {
     return null;
   }
