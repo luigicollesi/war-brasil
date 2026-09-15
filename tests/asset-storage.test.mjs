@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import {
   ASSET_STORAGE_BUCKET,
@@ -201,4 +202,19 @@ test("validação de coleção verifica exatamente ataque, defesa e neutro", asy
     "/war-brasil-assets-prod/cosmetics/dice/football/defense.webp",
     "/war-brasil-assets-prod/cosmetics/dice/football/neutral.webp",
   ]);
+});
+
+test("assets:validate deriva a lista do catálogo em vez de hardcode de temas", () => {
+  const packageJson = JSON.parse(readFileSync("package.json", "utf8"));
+  const validator = readFileSync("scripts/validate-dice-assets.mjs", "utf8");
+
+  assert.match(packageJson.scripts["assets:validate"], /test:compile/);
+  assert.match(packageJson.scripts["assets:validate"], /validate-dice-assets\.mjs/);
+  assert.match(validator, /FROM catalog\.cosmetics/);
+  assert.match(validator, /validateDiceAssetObject/);
+  assert.match(validator, /status IN \('announced', 'available', 'retired'\)/);
+  assert.doesNotMatch(
+    validator,
+    /military-classic|medieval-spears|viking|cat|dog|football/,
+  );
 });
