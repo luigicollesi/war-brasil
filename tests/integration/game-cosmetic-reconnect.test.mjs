@@ -190,6 +190,12 @@ if (!databaseUrl) {
         );
         await grantAndEquip(
           setup,
+          userA,
+          "territory.effect.azulejo-brasil",
+          "territory_effect",
+        );
+        await grantAndEquip(
+          setup,
           userB,
           "dice.defense.lancas",
           "dice_defense",
@@ -222,6 +228,9 @@ if (!databaseUrl) {
         const attackA = firstA.find(
           (row) => row.player_id === playerA && row.slot === "dice_attack",
         );
+        const territoryA = firstA.find(
+          (row) => row.player_id === playerA && row.slot === "territory_effect",
+        );
         const defenseB = firstA.find(
           (row) => row.player_id === playerB && row.slot === "dice_defense",
         );
@@ -232,6 +241,13 @@ if (!databaseUrl) {
           asset_ref: "cosmetics/dice/military-classic/attack.webp",
           effect_key: null,
         });
+        assert.deepEqual(territoryA, {
+          player_id: playerA,
+          slot: "territory_effect",
+          cosmetic_id: "territory.effect.azulejo-brasil",
+          asset_ref: "cosmetics/territory-skins/azulejo_brasil.webp",
+          effect_key: null,
+        });
         assert.deepEqual(defenseB, {
           player_id: playerB,
           slot: "dice_defense",
@@ -240,12 +256,29 @@ if (!databaseUrl) {
           effect_key: null,
         });
 
+        // O snapshot de imagem também preserva XOR procedural/image.
+        await assert.rejects(
+          setup.query(
+            `UPDATE game.player_cosmetic_loadouts
+                SET effect_key='default'
+              WHERE player_id=$1 AND slot='territory_effect'`,
+            [playerA],
+          ),
+          (error) => error?.code === "23514",
+        );
+
         // Profile e catálogo mudam depois do começo da partida. Uma reconexão
         // ainda deve recuperar somente game.player_cosmetic_loadouts.
         await setup.query(
           `UPDATE profile.cosmetic_loadout
               SET cosmetic_id='dice.attack.default',updated_at=NOW()
             WHERE user_id=$1 AND slot='dice_attack'`,
+          [userA],
+        );
+        await setup.query(
+          `UPDATE profile.cosmetic_loadout
+              SET cosmetic_id='territory.effect.default',updated_at=NOW()
+            WHERE user_id=$1 AND slot='territory_effect'`,
           [userA],
         );
         await setup.query(
@@ -259,9 +292,14 @@ if (!databaseUrl) {
               SET asset_ref=CASE id
                     WHEN 'dice.attack.exercito' THEN 'cosmetics/dice/military-classic-v2/attack.webp'
                     WHEN 'dice.defense.lancas' THEN 'cosmetics/dice/medieval-spears-v2/defense.webp'
+                    WHEN 'territory.effect.azulejo-brasil' THEN 'cosmetics/territory-skins/azulejo_brasil_v2.webp'
                     ELSE asset_ref
                   END
-            WHERE id IN ('dice.attack.exercito','dice.defense.lancas')`,
+            WHERE id IN (
+              'dice.attack.exercito',
+              'dice.defense.lancas',
+              'territory.effect.azulejo-brasil'
+            )`,
         );
 
         const reconnectA = await readRoomCosmetics(clientA, roomId);
