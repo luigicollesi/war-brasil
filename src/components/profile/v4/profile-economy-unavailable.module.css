@@ -1,0 +1,102 @@
+.state {
+  width: min(780px, 100%);
+  min-height: min(560px, calc(100dvh - 170px));
+  margin: 0 auto;
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 14px;
+  padding: clamp(30px, 6vw, 72px);
+  border: 1px solid rgb(208 170 87 / 20%);
+  color: #eee8da;
+  background:
+    radial-gradient(circle at 75% 30%, rgb(181 49 55 / 8%), transparent 32%),
+    linear-gradient(145deg, rgb(12 31 24 / 94%), rgb(6 17 13 / 97%));
+  box-shadow: 0 24px 60px rgb(0 0 0 / 18%);
+}
+
+.code {
+  color: rgb(181 49 55 / 85%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.15em;
+}
+
+.signal {
+  display: flex;
+  align-items: end;
+  gap: 5px;
+  height: 38px;
+}
+
+.signal i {
+  width: 6px;
+  background: rgb(208 170 87 / 55%);
+}
+
+.signal i:nth-child(1) { height: 12px; }
+.signal i:nth-child(2) { height: 23px; }
+.signal i:nth-child(3) { height: 34px; background: rgb(181 49 55 / 58%); }
+
+.state h1 {
+  max-width: 14ch;
+  margin: 0;
+  color: #eee8da;
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: clamp(2rem, 5vw, 4.6rem);
+  line-height: 0.96;
+  text-transform: uppercase;
+}
+
+.state p {
+  max-width: 62ch;
+  margin: 0;
+  color: rgb(238 232 218 / 62%);
+  font-size: 0.86rem;
+  line-height: 1.65;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.actions a {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 14px;
+  color: #d0aa57;
+  border: 1px solid rgb(208 170 87 / 30%);
+  background: rgb(208 170 87 / 5%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.actions a:hover,
+.actions a:focus-visible {
+  border-color: rgb(208 170 87 / 62%);
+  background: rgb(208 170 87 / 10%);
+}
+
+@media (max-width: 520px) {
+  .state {
+    min-height: calc(100dvh - 155px);
+  }
+
+  .actions {
+    width: 100%;
+    display: grid;
+  }
+
+  .actions a {
+    justify-content: center;
+  }
+}
