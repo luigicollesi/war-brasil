@@ -53,6 +53,7 @@ import {
   listStorefrontCreditPacks,
   listStorefrontOfferItems,
   listStorefrontOffers,
+  listStorefrontTerritorySkins,
   type CreditPackRow,
   type StorefrontCollectionRow,
   type StorefrontOfferItemRow,
@@ -501,6 +502,7 @@ export async function getEconomyStorefront(
     const ownedRows = await listOwnedCosmetics(userId, client);
     const setRows = await listStorefrontSetItems(userId, client);
     const collectionRows = await listStorefrontCollections(userId, client);
+    const territorySkinRows = await listStorefrontTerritorySkins(userId, client);
     const offerRows = await listStorefrontOffers(client);
     const offerItemRows = await listStorefrontOfferItems(userId, client);
     const productRows = await listActiveStorefrontOfferProducts(client);
@@ -514,6 +516,7 @@ export async function getEconomyStorefront(
       ownedItems: ownedRows.map(cosmeticFromRow),
       sets: setsFromRows(setRows),
       collections: collectionsFromRows(collectionRows, productRows),
+      territorySkins: territorySkinRows.map(cosmeticFromRow),
       offers,
       creditPacks: creditPacksFromRows(creditPackRows),
     } satisfies EconomyStorefrontSnapshot;
