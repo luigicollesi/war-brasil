@@ -71,10 +71,7 @@ function territorySelection(row: GameCosmeticSnapshotRow): GameCosmeticSelection
       snapshot.kind === "image"
         ? territorySkinAssetDeliveryPath(snapshot.assetRef)
         : null,
-    effectKey: territorySkinRuntimeEffectKey(
-      snapshot,
-      territorySkinAssetDeliveryPath,
-    ),
+    effectKey: territorySkinRuntimeEffectKey(snapshot),
   };
 }
 
