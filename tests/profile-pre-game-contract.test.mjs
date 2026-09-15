@@ -51,7 +51,7 @@ test("contrato PROFILE separa identidade, economia, social, histórico e loja se
   assert.doesNotMatch(contract, /token|password|secret/i);
 });
 
-test("Tesouraria projeta uma única moeda real e não reintroduz moeda premium", () => {
+test("Tesouraria projeta campaign-credit com coin.svg como identidade visual primária", () => {
   const fixture = source("src/lib/profile/profile-local-fixture.ts");
   const hub = source("src/components/profile/command-quarters/profile-command-hub.tsx");
 
@@ -62,7 +62,9 @@ test("Tesouraria projeta uma única moeda real e não reintroduz moeda premium",
   assert.doesNotMatch(fixture, /command-reserve|Reserva de Comando|symbol: "◆"/);
   assert.match(hub, /wallet\.campaignCredit/);
   assert.match(hub, /currency\.shortLabel/);
-  assert.match(hub, /currency\.symbol/);
+  assert.match(hub, /from "next\/image"/);
+  assert.match(hub, /src="\/coin\.svg"/);
+  assert.doesNotMatch(hub, /\{currency\.symbol\}/);
   assert.doesNotMatch(hub, /wallet\.premium|wallet\.common|command-reserve/);
 });
 
@@ -106,13 +108,12 @@ test("Livro de Campanha pagina por cursor autenticado e preserva relação dos p
   assert.doesNotMatch(repository, /\bOFFSET\b/i);
 });
 
-test("Intendência delega economia real e não implementa compra ou preço falsos", () => {
+test("Intendência delega comércio à loja econômica sem preço ou checkout local", () => {
   const quartermaster = source("src/components/profile/command-quarters/profile-quartermaster-station.tsx");
   const contract = source("src/lib/profile/profile-command-contract.ts");
 
-  assert.match(quartermaster, /Catálogo real · nenhuma compra habilitada nesta etapa/);
+  assert.match(quartermaster, /Compras cosméticas usam Créditos de Campanha no Arsenal/);
   assert.match(quartermaster, /href="\/profile\/store"/);
-  assert.match(quartermaster, /EM BREVE/);
   assert.match(contract, /featuredItems/);
   assert.match(contract, /status: "announced" \| "available"/);
   assert.doesNotMatch(contract, /\bprice\s*:/);
