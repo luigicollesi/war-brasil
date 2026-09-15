@@ -102,24 +102,51 @@ function assertFreshCommanderState(state) {
   ]);
 }
 
+const deliveryKeys = [];
+const r2Keys = [];
+const deliveryResponses = [];
+const r2Responses = [];
+const failedAssetRequests = [];
+
+function previewDiagnostics(src, cause) {
+  return JSON.stringify({
+    src,
+    cause,
+    deliveryKeys,
+    r2Keys,
+    deliveryResponses,
+    r2Responses,
+    failedAssetRequests,
+  });
+}
+
 async function waitForPreviewImage(card) {
   const image = card.getByRole("img");
   await image.waitFor({ state: "visible" });
-  await image.evaluate((node) => {
-    if (!(node instanceof HTMLImageElement)) {
-      throw new Error("preview não foi renderizado como imagem");
-    }
-    if (node.complete) {
-      if (node.naturalWidth > 0) return;
-      throw new Error("preview terminou sem conteúdo visual");
-    }
-    return new Promise((resolve, reject) => {
-      node.addEventListener("load", () => resolve(undefined), { once: true });
-      node.addEventListener("error", () => reject(new Error("preview image failed")), {
-        once: true,
+
+  try {
+    await image.evaluate((node) => {
+      if (!(node instanceof HTMLImageElement)) {
+        throw new Error("preview não foi renderizado como imagem");
+      }
+      if (node.complete) {
+        if (node.naturalWidth > 0) return;
+        throw new Error("preview terminou sem conteúdo visual");
+      }
+      return new Promise((resolve, reject) => {
+        node.addEventListener("load", () => resolve(undefined), { once: true });
+        node.addEventListener(
+          "error",
+          () => reject(new Error("preview image failed")),
+          { once: true },
+        );
       });
     });
-  });
+  } catch (error) {
+    const src = await image.getAttribute("src").catch(() => null);
+    const cause = error instanceof Error ? error.message : String(error);
+    throw new Error(`preview image failed: ${previewDiagnostics(src, cause)}`);
+  }
 }
 
 function assetKeyFromDeliveryUrl(value) {
@@ -158,8 +185,6 @@ const context = await browser.newContext({
   reducedMotion: "reduce",
 });
 const page = await context.newPage();
-const deliveryKeys = [];
-const r2Keys = [];
 
 await page.route(R2_ASSET_PATTERN, async (route) => {
   const url = new URL(route.request().url());
@@ -188,6 +213,48 @@ page.on("request", (request) => {
   if (url.pathname === ASSET_ROUTE_PATH) {
     const key = url.searchParams.get("key");
     if (key) deliveryKeys.push(key);
+  }
+});
+
+page.on("response", (response) => {
+  const url = new URL(response.url());
+  if (url.pathname === ASSET_ROUTE_PATH) {
+    const headers = response.headers();
+    deliveryResponses.push({
+      key: url.searchParams.get("key"),
+      status: response.status(),
+      hasLocation: typeof headers.location === "string" && headers.location.length > 0,
+    });
+    return;
+  }
+
+  if (url.hostname.endsWith(".r2.cloudflarestorage.com")) {
+    const marker = "/war-brasil-assets-prod/";
+    const markerIndex = url.pathname.indexOf(marker);
+    r2Responses.push({
+      key:
+        markerIndex >= 0
+          ? decodeURIComponent(url.pathname.slice(markerIndex + marker.length))
+          : url.pathname,
+      status: response.status(),
+      contentType: response.headers()["content-type"] ?? null,
+    });
+  }
+});
+
+page.on("requestfailed", (request) => {
+  const url = new URL(request.url());
+  if (
+    url.pathname === ASSET_ROUTE_PATH ||
+    url.hostname.endsWith(".r2.cloudflarestorage.com")
+  ) {
+    failedAssetRequests.push({
+      target:
+        url.pathname === ASSET_ROUTE_PATH
+          ? `${url.pathname}?key=${url.searchParams.get("key") ?? ""}`
+          : url.pathname,
+      error: request.failure()?.errorText ?? "unknown",
+    });
   }
 });
 
