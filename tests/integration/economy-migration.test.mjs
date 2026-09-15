@@ -130,7 +130,7 @@ async function createPreEconomyCommander(connectionString, label) {
 if (!databaseUrl) {
   test("economy migration exige DATABASE_URL", { skip: true }, () => {});
 } else {
-  test("038→043 converge catálogo, Storefront V2, territory skins e backfill idempotente", async () => {
+  test("038→044 converge catálogo, Storefront V2, territory commerce e backfill idempotente", async () => {
     await withTemporaryDatabase(async (connectionString) => {
       await prepareDatabaseThrough037(connectionString);
       const userId = await createPreEconomyCommander(
@@ -170,9 +170,9 @@ if (!databaseUrl) {
         assert.deepEqual(catalog.rows[0], {
           total: 26,
           defaults: 4,
-          available: 22,
-          announced: 4,
-          commercial: 18,
+          available: 26,
+          announced: 0,
+          commercial: 22,
         });
 
         const sets = await client.query(
@@ -217,7 +217,7 @@ if (!databaseUrl) {
           },
           {
             product_type: "single",
-            products: 18,
+            products: 22,
             min_discount: 0,
             max_discount: 0,
           },
@@ -252,9 +252,9 @@ if (!databaseUrl) {
         assert.deepEqual(pricing.rows, [
           {
             pricing_model: "fixed",
-            total: 18,
+            total: 22,
             min_price: "150",
-            max_price: "150",
+            max_price: "300",
           },
         ]);
 
@@ -271,7 +271,7 @@ if (!databaseUrl) {
         );
         assert.deepEqual(offers.rows, [
           { product_type: "bundle", offers: 6, active: 6 },
-          { product_type: "single", offers: 18, active: 18 },
+          { product_type: "single", offers: 22, active: 22 },
         ]);
 
         const packs = await client.query(
@@ -329,10 +329,37 @@ if (!databaseUrl) {
             id,
             asset_ref: assetRef,
             effect_key: null,
-            status: "announced",
+            status: "available",
             is_default: false,
           });
         }
+
+        const territoryCommerce = await client.query(
+          `SELECT item.id,
+                  pricing.fixed_price::text AS price,
+                  product.product_type,
+                  offer.status,
+                  offer.active
+             FROM catalog.cosmetics item
+             JOIN catalog.cosmetic_pricing pricing ON pricing.cosmetic_id=item.id
+             JOIN catalog.product_items membership ON membership.cosmetic_id=item.id
+             JOIN catalog.products product ON product.id=membership.product_id
+             JOIN catalog.offers offer ON offer.product_id=product.id
+            WHERE item.slot='territory_skin'
+              AND item.is_default=FALSE
+            ORDER BY item.id`,
+        );
+        assert.equal(territoryCommerce.rowCount, 4);
+        assert.equal(
+          territoryCommerce.rows.every(
+            (row) =>
+              row.price === "300" &&
+              row.product_type === "single" &&
+              row.status === "available" &&
+              row.active === true,
+          ),
+          true,
+        );
 
         const wallet = await client.query(
           `SELECT balance::text AS balance
