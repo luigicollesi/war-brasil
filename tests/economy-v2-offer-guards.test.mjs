@@ -18,36 +18,41 @@ const storefront = readFileSync(
   "src/components/profile/store/economy-storefront.tsx",
   "utf8",
 );
+const purchaseStart = service.indexOf("export async function purchaseOffer");
+const purchaseEnd = service.indexOf("export async function equipCosmetic");
+const purchaseSource = service.slice(purchaseStart, purchaseEnd);
 
 test("offer indisponível é rejeitada antes de qualquer débito", () => {
-  const statusGuard = service.indexOf('offer.status !== "available"');
-  const debit = service.indexOf("debitCampaignCreditWallet(userId, price, client)");
+  const statusGuard = purchaseSource.indexOf('offer.status !== "available"');
+  const debit = purchaseSource.indexOf("debitCampaignCreditWallet(userId, price, client)");
   assert.ok(statusGuard >= 0);
   assert.ok(debit > statusGuard);
-  assert.match(service, /ECONOMY_OFFER_UNAVAILABLE/);
+  assert.match(purchaseSource, /ECONOMY_OFFER_UNAVAILABLE/);
 });
 
 test("offer totalmente possuída é rejeitada antes de receipt, ledger e débito", () => {
-  const fullyOwnedGuard = service.indexOf("missingItems.length === 0");
-  const receipt = service.indexOf("createPurchaseReceipt(");
-  const debit = service.indexOf("debitCampaignCreditWallet(userId, price, client)");
-  const ledger = service.indexOf("insertPurchaseLedgerEntry(userId, purchaseId, price, client)");
+  const fullyOwnedGuard = purchaseSource.indexOf("missingItems.length === 0");
+  const receipt = purchaseSource.indexOf("createPurchaseReceipt(");
+  const debit = purchaseSource.indexOf("debitCampaignCreditWallet(userId, price, client)");
+  const ledger = purchaseSource.indexOf(
+    "insertPurchaseLedgerEntry(userId, purchaseId, price, client)",
+  );
 
   assert.ok(fullyOwnedGuard >= 0);
   assert.ok(receipt > fullyOwnedGuard);
   assert.ok(debit > fullyOwnedGuard);
   assert.ok(ledger > fullyOwnedGuard);
-  assert.match(service, /ECONOMY_OFFER_ALREADY_OWNED/);
+  assert.match(purchaseSource, /ECONOMY_OFFER_ALREADY_OWNED/);
 });
 
 test("receipt preserva preço pago e retry lê o histórico em vez do preço atual", () => {
   assert.match(repository, /price_paid::text AS price_paid/);
   assert.match(repository, /INSERT INTO economy\.purchases\([\s\S]*price_paid/);
-  assert.match(service, /findPurchaseReceiptByIdempotencyKey/);
-  assert.match(service, /price: Number\(existing\.price_paid\)/);
+  assert.match(purchaseSource, /findPurchaseReceiptByIdempotencyKey/);
+  assert.match(purchaseSource, /price: Number\(existing\.price_paid\)/);
   assert.ok(
-    service.indexOf("findPurchaseReceiptByIdempotencyKey") <
-      service.indexOf("findPurchasableOffer(offerId, client)"),
+    purchaseSource.indexOf("findPurchaseReceiptByIdempotencyKey(") <
+      purchaseSource.indexOf("findPurchasableOffer(offerId, client)"),
   );
 });
 
