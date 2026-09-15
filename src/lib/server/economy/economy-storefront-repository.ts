@@ -20,6 +20,8 @@ export type StorefrontOfferRow = {
   status: EconomyOfferStatus;
   is_featured: boolean;
   sort_order: number;
+  starts_at: string | null;
+  ends_at: string | null;
 };
 
 export type StorefrontOfferItemRow = CosmeticRow & {
@@ -36,6 +38,18 @@ export type StorefrontCollectionRow = CosmeticRow & {
   banner_object_key: string;
   background_object_key: string;
   logo_object_key: string;
+};
+
+export type StorefrontCampaignRow = {
+  campaign_id: string;
+  campaign_slug: string;
+  campaign_title: string;
+  campaign_description: string | null;
+  campaign_starts_at: string | null;
+  campaign_ends_at: string | null;
+  campaign_priority: number;
+  offer_id: string;
+  offer_position: number;
 };
 
 export type CreditPackRow = {
@@ -163,7 +177,9 @@ export async function listStorefrontOffers(
             offer.price::text AS price,
             offer.status,
             offer.is_featured,
-            offer.sort_order
+            offer.sort_order,
+            offer.starts_at::text AS starts_at,
+            offer.ends_at::text AS ends_at
        FROM catalog.offers offer
        JOIN catalog.products product ON product.id=offer.product_id
       WHERE offer.status='available'
@@ -213,6 +229,39 @@ export async function listStorefrontOfferItems(
         AND (offer.ends_at IS NULL OR offer.ends_at > CURRENT_TIMESTAMP)
       ORDER BY offer.priority, offer.sort_order, offer.id, membership.position`,
     [userId],
+  );
+  return result.rows;
+}
+
+export async function listStorefrontCampaigns(
+  db: EconomyQueryable = pool,
+): Promise<StorefrontCampaignRow[]> {
+  const result = await db.query<StorefrontCampaignRow>(
+    `SELECT campaign.id AS campaign_id,
+            campaign.slug AS campaign_slug,
+            campaign.title AS campaign_title,
+            campaign.description AS campaign_description,
+            campaign.starts_at::text AS campaign_starts_at,
+            campaign.ends_at::text AS campaign_ends_at,
+            campaign.priority AS campaign_priority,
+            membership.offer_id,
+            membership.position AS offer_position
+       FROM catalog.campaigns campaign
+       JOIN catalog.campaign_offers membership ON membership.campaign_id=campaign.id
+       JOIN catalog.offers offer ON offer.id=membership.offer_id
+       JOIN catalog.products product ON product.id=offer.product_id
+      WHERE campaign.active=TRUE
+        AND (campaign.starts_at IS NULL OR campaign.starts_at <= CURRENT_TIMESTAMP)
+        AND (campaign.ends_at IS NULL OR campaign.ends_at > CURRENT_TIMESTAMP)
+        AND offer.status='available'
+        AND offer.active=TRUE
+        AND product.active=TRUE
+        AND (offer.starts_at IS NULL OR offer.starts_at <= CURRENT_TIMESTAMP)
+        AND (offer.ends_at IS NULL OR offer.ends_at > CURRENT_TIMESTAMP)
+      ORDER BY campaign.priority,
+               campaign.id,
+               membership.position,
+               membership.offer_id`,
   );
   return result.rows;
 }
