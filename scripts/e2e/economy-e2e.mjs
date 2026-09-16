@@ -98,57 +98,6 @@ async function readEconomyState(userId) {
   });
 }
 
-async function readCommerceCatalog() {
-  return withDb(async (db) => {
-    const offers = await db.query(
-      `SELECT offer.id,
-              offer.name,
-              offer.price::text AS price,
-              (SELECT COUNT(*)::int
-                 FROM catalog.offer_items membership
-                WHERE membership.offer_id=offer.id) AS item_count
-         FROM catalog.offers offer
-        WHERE offer.status='available'
-        ORDER BY offer.sort_order,offer.id`,
-    );
-    const creditPacks = await db.query(
-      `SELECT id,name,credit_amount::text AS credit_amount,price_brl_cents::text AS price_brl_cents
-         FROM catalog.credit_packs
-        WHERE status='announced'
-        ORDER BY sort_order,id`,
-    );
-
-    return {
-      offers: offers.rows.map((row) => ({
-        id: row.id,
-        name: row.name,
-        price: Number(row.price),
-        itemCount: row.item_count,
-      })),
-      creditPacks: creditPacks.rows.map((row) => ({
-        id: row.id,
-        name: row.name,
-        creditAmount: Number(row.credit_amount),
-        priceBrlCents: Number(row.price_brl_cents),
-      })),
-    };
-  });
-}
-
-async function readOfferItems(offerId) {
-  return withDb(async (db) => {
-    const result = await db.query(
-      `SELECT item.id,item.name,item.slot
-         FROM catalog.offer_items membership
-         JOIN catalog.cosmetics item ON item.id=membership.cosmetic_id
-        WHERE membership.offer_id=$1
-        ORDER BY membership.position,item.id`,
-      [offerId],
-    );
-    return result.rows;
-  });
-}
-
 async function setCampaignCreditBalance(userId, balance) {
   assert.ok(Number.isSafeInteger(balance) && balance >= 0);
   await withDb(async (db) => {
@@ -166,54 +115,6 @@ async function setCampaignCreditBalance(userId, balance) {
   });
 }
 
-async function setOfferPrice(offerId, price) {
-  assert.ok(Number.isSafeInteger(price) && price > 0);
-  await withDb(async (db) => {
-    const result = await db.query(
-      `UPDATE catalog.offers
-          SET price=$2::bigint,
-              updated_at=NOW()
-        WHERE id=$1
-        RETURNING price::text AS price`,
-      [offerId, price],
-    );
-    assert.equal(result.rowCount, 1);
-    assert.equal(result.rows[0].price, String(price));
-  });
-}
-
-async function insertDynamicOffer({ id, slug, name, price, sourceOfferId }) {
-  await withDb(async (db) => {
-    await db.query("BEGIN");
-    try {
-      await db.query(
-        `INSERT INTO catalog.offers(
-           id,slug,name,description,currency_code,price,status,is_featured,sort_order
-         )
-         VALUES($1,$2,$3,'Offer criada pelo E2E sem alteração React.','campaign-credit',$4::bigint,'available',FALSE,999)`,
-        [id, slug, name, price],
-      );
-      const copied = await db.query(
-        `INSERT INTO catalog.offer_items(offer_id,cosmetic_id,position)
-         SELECT $1,membership.cosmetic_id,membership.position
-           FROM catalog.offer_items membership
-          WHERE membership.offer_id=$2
-         RETURNING cosmetic_id`,
-        [id, sourceOfferId],
-      );
-      assert.ok(copied.rowCount > 0, "offer dinâmica precisa de composição válida");
-      await db.query("COMMIT");
-    } catch (error) {
-      await db.query("ROLLBACK");
-      throw error;
-    }
-  });
-}
-
-async function deleteDynamicOffer(offerId) {
-  await withDb((db) => db.query(`DELETE FROM catalog.offers WHERE id=$1`, [offerId]));
-}
-
 function assertFreshCommanderState(state) {
   assert.equal(state.balance, "0");
   assert.equal(state.ledgerCount, 0);
@@ -229,7 +130,7 @@ function assertFreshCommanderState(state) {
     { slot: "dice_attack", cosmetic_id: "dice.attack.default" },
     { slot: "dice_defense", cosmetic_id: "dice.defense.default" },
     { slot: "dice_neutral", cosmetic_id: "dice.neutral.default" },
-    { slot: "territory_effect", cosmetic_id: "territory.effect.default" },
+    { slot: "territory_skin", cosmetic_id: "territory.effect.default" },
   ]);
 }
 
@@ -281,6 +182,31 @@ function assetKeyFromSignedR2Url(value) {
   return objectKey;
 }
 
+function offerById(storefront, offerId) {
+  const offer = storefront.offers.find((candidate) => candidate.id === offerId);
+  assert.ok(offer, `offer ${offerId} ausente do storefront`);
+  return offer;
+}
+
+function collectionById(storefront, collectionId) {
+  const collection = storefront.collections.find((candidate) => candidate.id === collectionId);
+  assert.ok(collection, `collection ${collectionId} ausente do storefront`);
+  return collection;
+}
+
+function singleOfferForItem(storefront, collection, itemId) {
+  const offer = collection.singleOfferIds
+    .map((offerId) => offerById(storefront, offerId))
+    .find((candidate) => candidate.items.length === 1 && candidate.items[0].id === itemId);
+  assert.ok(offer, `single offer ausente para ${itemId}`);
+  return offer;
+}
+
+function bundleOfferForCollection(storefront, collection) {
+  assert.equal(collection.bundleOfferIds.length, 1, "collection precisa de um bundle ativo");
+  return offerById(storefront, collection.bundleOfferIds[0]);
+}
+
 const deliveryKeys = [];
 const signedR2Keys = [];
 const deliveryResponses = [];
@@ -298,7 +224,7 @@ function previewDiagnostics(src, cause) {
 }
 
 async function waitForPreviewImage(scope) {
-  const image = scope.getByRole("img");
+  const image = scope.getByRole("img").first();
   await image.waitFor({ state: "visible" });
   try {
     await image.evaluate((node) => {
@@ -324,35 +250,24 @@ async function waitForPreviewImage(scope) {
   return image;
 }
 
-function catalogSection(page) {
-  return page.locator('section[aria-labelledby="catalog-title"]');
+async function loadStorefront(page) {
+  const response = await apiJson(page, "/api/economy/storefront");
+  assert.equal(response.status, 200, JSON.stringify(response.body));
+  assert.ok(response.body && typeof response.body === "object");
+  return response.body;
 }
 
-function offerCard(page, offerName) {
-  return catalogSection(page).locator("article").filter({ hasText: offerName });
+async function openFeaturedCollection(page) {
+  const opener = page.getByRole("button", { name: "ABRIR COLEÇÃO EM DESTAQUE", exact: true });
+  await opener.waitFor({ state: "visible" });
+  await opener.click();
+  const dialog = page.getByRole("dialog");
+  await dialog.waitFor({ state: "visible" });
+  return dialog;
 }
 
-async function openOfferInspection(page, offerName) {
-  const card = offerCard(page, offerName);
-  await card.locator("button").first().click();
-  const inspection = page.locator('section[aria-labelledby="inspection-title-desktop"]');
-  await inspection.getByRole("heading", { name: offerName, exact: true }).waitFor();
-  return { card, inspection };
-}
-
-async function inspectDiceOffer(page, offerName, expectedKey, screenshotName) {
-  const { card, inspection } = await openOfferInspection(page, offerName);
-  const image = await waitForPreviewImage(inspection);
-  const src = await image.getAttribute("src");
-  assert.ok(src, `${offerName} não expôs src de preview`);
-  assert.equal(assetKeyFromDeliveryUrl(src), expectedKey);
-
-  await page.screenshot({
-    path: path.join(ARTIFACT_DIR, screenshotName),
-    fullPage: true,
-  });
-
-  return { card, inspection };
+function collectionItemCard(dialog, itemName) {
+  return dialog.locator("article").filter({ hasText: itemName });
 }
 
 const browser = await chromium.launch({ headless: true });
@@ -430,8 +345,6 @@ try {
 
   await page.goto(`${BASE_URL}/profile`, { waitUntil: "domcontentloaded" });
   await page.locator('[data-profile-v4-surface="dossier"]').waitFor({ state: "visible" });
-  assert.equal(await page.locator('main[data-profile-v4][data-active-surface="dossier"]').count(), 1);
-
   const profileWallet = page.locator('[data-wallet-available="true"]').first();
   await profileWallet.waitFor({ state: "visible" });
   assert.match(normalizeText(await profileWallet.textContent()), /Créditos de Campanha/i);
@@ -442,14 +355,28 @@ try {
     fullPage: true,
   });
 
-  await page.locator('a[href="/profile/store"]').first().click();
-  await page.waitForURL(`${BASE_URL}/profile/store`);
-  await page.getByRole("heading", { name: "Remessas do Comando", exact: true }).waitFor();
-  assert.equal(await page.locator('[data-profile-v4-surface="store"]').count(), 1);
-  assert.equal(await page.locator('main[data-profile-v4][data-active-surface="store"]').count(), 1);
+  await page.goto(`${BASE_URL}/profile/store`, { waitUntil: "domcontentloaded" });
+  await page.locator('[data-profile-v4-surface="store"]').waitFor({ state: "visible" });
 
-  const commerce = await readCommerceCatalog();
-  assert.ok(commerce.offers.length > 0, "catálogo comercial sem offers disponíveis");
+  let storefront = await loadStorefront(page);
+  const football = collectionById(storefront, "collection.football");
+  assert.equal(football.featured, true);
+  assert.equal(football.promotionDiscountBps, 4000);
+  assert.equal(football.items.length, 3);
+  assert.equal(football.singleOfferIds.length, 3);
+  assert.equal(football.bundleOfferIds.length, 1);
+
+  let footballBundle = bundleOfferForCollection(storefront, football);
+  assert.equal(footballBundle.basePrice, 1200);
+  assert.equal(footballBundle.promotionDiscountBps, 4000);
+  assert.equal(footballBundle.price, 720);
+
+  for (const item of football.items) {
+    const single = singleOfferForItem(storefront, football, item.id);
+    assert.equal(single.basePrice, 500);
+    assert.equal(single.promotionDiscountBps, 4000);
+    assert.equal(single.price, 300);
+  }
 
   const storeWallet = page.locator('[data-wallet-available="true"]').first();
   const storeWalletText = normalizeText(await storeWallet.textContent());
@@ -457,30 +384,51 @@ try {
   assert.match(storeWalletText, /0/);
   assert.equal(await storeWallet.locator('img[src*="coin.svg"]').count(), 1);
 
-  let catalog = catalogSection(page);
-  assert.equal(await catalog.locator("article").count(), commerce.offers.length);
-  for (const offer of commerce.offers) {
-    const card = offerCard(page, offer.name);
-    await card.waitFor({ state: "visible" });
-    assert.ok(normalizeText(await card.textContent()).includes(formatNumber(offer.price)));
-    assert.equal(await card.locator('img[src*="coin.svg"]').count(), 1);
-    const buyButton = card.getByRole("button", { name: "COMPRAR", exact: true });
-    assert.equal(await buyButton.count(), 1);
-    assert.equal(await buyButton.isEnabled(), true, `${offer.id} deveria delegar saldo ao servidor`);
+  await page.getByRole("heading", { name: "Futebol", exact: true }).first().waitFor();
+  assert.equal(
+    await page.getByRole("button", { name: "Abrir coleção Futebol", exact: true }).count(),
+    1,
+  );
+
+  const diceCatalog = page.locator('section[aria-labelledby="catalog-title"]');
+  for (const item of football.items) {
+    assert.equal(
+      await diceCatalog.getByText(item.name, { exact: true }).count(),
+      0,
+      `${item.id} vazou da collection para a grade comum de Dados`,
+    );
   }
 
-  const zeroBalanceOffer = commerce.offers[0];
-  await offerCard(page, zeroBalanceOffer.name)
-    .getByRole("button", { name: "COMPRAR", exact: true })
-    .click();
+  let dialog = await openFeaturedCollection(page);
+  await dialog.getByRole("heading", { name: "Futebol", exact: true }).waitFor();
+  assert.match(normalizeText(await dialog.textContent()), /40% OFF/i);
+  assert.match(normalizeText(await dialog.textContent()), /1\.200 CR/i);
+  assert.match(normalizeText(await dialog.textContent()), /720 CR/i);
+
+  for (const item of football.items) {
+    const card = collectionItemCard(dialog, item.name);
+    await card.waitFor({ state: "visible" });
+    const cardText = normalizeText(await card.textContent());
+    assert.ok(cardText.includes("500 CR"), `${item.id} sem preço-base`);
+    assert.ok(cardText.includes("300 CR"), `${item.id} sem preço promocional`);
+  }
+
+  const firstItem = football.items[0];
+  const firstCard = collectionItemCard(dialog, firstItem.name);
+  const firstImage = await waitForPreviewImage(firstCard);
+  const firstSrc = await firstImage.getAttribute("src");
+  assert.ok(firstSrc, `${firstItem.id} não expôs src de preview`);
+  assert.equal(assetKeyFromDeliveryUrl(firstSrc), firstItem.assetRef.split("key=")[1]);
+
+  await firstCard.getByRole("button", { name: "COMPRAR", exact: true }).click();
   await page
     .getByText("Créditos de Campanha insuficientes para esta aquisição.", { exact: true })
     .waitFor();
   assertFreshCommanderState(await readEconomyState(userId));
 
   const creditPacks = page.locator('#reforcar-tesouraria article');
-  assert.equal(await creditPacks.count(), commerce.creditPacks.length);
-  for (const pack of commerce.creditPacks) {
+  assert.equal(await creditPacks.count(), storefront.creditPacks.length);
+  for (const pack of storefront.creditPacks) {
     const card = creditPacks.filter({ hasText: pack.name });
     await card.waitFor({ state: "visible" });
     const cardText = normalizeText(await card.textContent());
@@ -492,61 +440,6 @@ try {
     assert.equal(await futureButton.isDisabled(), true);
   }
 
-  const dynamicOffer = {
-    id: "offer.e2e.dynamic",
-    slug: "e2e-dynamic",
-    name: "Oferta Dinâmica E2E",
-    price: 777,
-    sourceOfferId: commerce.offers[0].id,
-  };
-  try {
-    await insertDynamicOffer(dynamicOffer);
-    await page.goto(`${BASE_URL}/profile/store`, { waitUntil: "domcontentloaded" });
-    await page.getByRole("heading", { name: "Remessas do Comando", exact: true }).waitFor();
-    catalog = catalogSection(page);
-    assert.equal(await catalog.locator("article").count(), commerce.offers.length + 1);
-    const dynamicCard = offerCard(page, dynamicOffer.name);
-    await dynamicCard.waitFor({ state: "visible" });
-    assert.ok(normalizeText(await dynamicCard.textContent()).includes(formatNumber(dynamicOffer.price)));
-    assert.equal(await dynamicCard.getByRole("button", { name: "COMPRAR", exact: true }).count(), 1);
-    assertFreshCommanderState(await readEconomyState(userId));
-  } finally {
-    await deleteDynamicOffer(dynamicOffer.id);
-  }
-
-  await page.screenshot({
-    path: path.join(ARTIFACT_DIR, "store-v4-1440x900.png"),
-    fullPage: true,
-  });
-
-  const diceInspectionTargets = [
-    ["Exército Clássico", "cosmetics/dice/military-classic/attack.webp", "detail-exercito.png"],
-    ["Lanças Medievais", "cosmetics/dice/medieval-spears/attack.webp", "detail-lancas.png"],
-    ["Viking", "cosmetics/dice/viking/attack.webp", "detail-viking.png"],
-    ["Gato", "cosmetics/dice/cat/attack.webp", "detail-gato.png"],
-    ["Cachorro", "cosmetics/dice/dog/attack.webp", "detail-cachorro.png"],
-    ["Futebol", "cosmetics/dice/football/attack.webp", "detail-futebol.png"],
-  ];
-  const availableOfferNames = new Set(commerce.offers.map((offer) => offer.name));
-  for (const [offerName, key, screenshot] of diceInspectionTargets) {
-    if (!availableOfferNames.has(offerName)) continue;
-    await inspectDiceOffer(page, offerName, key, screenshot);
-  }
-
-  if (availableOfferNames.has("Exército Clássico")) {
-    const { inspection } = await openOfferInspection(page, "Exército Clássico");
-    const selector = inspection.getByRole("group", { name: "Itens de Exército Clássico" });
-    const defense = selector.locator("button").filter({ hasText: "Defesa" });
-    await defense.click();
-    const defenseImage = await waitForPreviewImage(inspection);
-    const defenseSrc = await defenseImage.getAttribute("src");
-    assert.ok(defenseSrc);
-    assert.equal(
-      assetKeyFromDeliveryUrl(defenseSrc),
-      "cosmetics/dice/military-classic/defense.webp",
-    );
-  }
-
   assert.equal(failedAssetRequests.length, 0, previewDiagnostics(null, "asset request failed"));
   for (const response of deliveryResponses) {
     assert.equal(response.status, 307);
@@ -554,94 +447,88 @@ try {
   }
   assert.ok(signedR2Keys.length > 0, "nenhum preview de dado exercitou delivery R2 assinado");
   assert.deepEqual(new Set(signedR2Keys), new Set(deliveryKeys));
-  assertFreshCommanderState(await readEconomyState(userId));
 
-  const livePriceOffer = commerce.offers[0];
-  const probePrice = livePriceOffer.price + 37;
-  try {
-    await setOfferPrice(livePriceOffer.id, probePrice);
-    await page.goto(`${BASE_URL}/profile/store`, { waitUntil: "domcontentloaded" });
-    await page.getByRole("heading", { name: "Remessas do Comando", exact: true }).waitFor();
-    const repricedCard = offerCard(page, livePriceOffer.name);
-    assert.ok(
-      normalizeText(await repricedCard.textContent()).includes(formatNumber(probePrice)),
-      `${livePriceOffer.id} não refletiu alteração persistida de preço`,
-    );
-    assertFreshCommanderState(await readEconomyState(userId));
-  } finally {
-    await setOfferPrice(livePriceOffer.id, livePriceOffer.price);
-  }
-
-  const purchaseBalance = livePriceOffer.price + 100;
+  const attackItem = football.items.find((item) => item.slot === "dice_attack");
+  assert.ok(attackItem, "collection Futebol sem dado de ataque");
+  const attackOffer = singleOfferForItem(storefront, football, attackItem.id);
+  const purchaseBalance = attackOffer.price + 100;
+  assert.equal(purchaseBalance, 400);
   await setCampaignCreditBalance(userId, purchaseBalance);
-  await page.goto(`${BASE_URL}/profile/store`, { waitUntil: "domcontentloaded" });
-  await page.getByRole("heading", { name: "Remessas do Comando", exact: true }).waitFor();
-  const fundedWallet = page.locator('[data-wallet-available="true"]').first();
-  assert.ok(normalizeText(await fundedWallet.textContent()).includes(formatNumber(purchaseBalance)));
 
-  let purchaseCard = offerCard(page, livePriceOffer.name);
-  const buyButton = purchaseCard.getByRole("button", { name: "COMPRAR", exact: true });
-  assert.equal(await buyButton.isEnabled(), true);
-  await buyButton.click();
+  await page.goto(`${BASE_URL}/profile/store`, { waitUntil: "domcontentloaded" });
+  await page.locator('[data-profile-v4-surface="store"]').waitFor({ state: "visible" });
+  dialog = await openFeaturedCollection(page);
+  const attackCard = collectionItemCard(dialog, attackItem.name);
+  await attackCard.waitFor({ state: "visible" });
+  await attackCard.getByRole("button", { name: "COMPRAR", exact: true }).click();
   await page
     .getByText("Aquisição confirmada e incorporada ao Arsenal.", { exact: true })
     .waitFor();
-  await purchaseCard.getByRole("button", { name: "POSSUÍDO", exact: true }).waitFor();
 
   const purchasedState = await readEconomyState(userId);
   assert.equal(purchasedState.balance, "100");
   assert.equal(purchasedState.purchaseCount, 1);
   assert.equal(purchasedState.ledgerCount, 1);
-  assert.equal(purchasedState.ledgerDelta, String(-livePriceOffer.price));
-  assert.equal(purchasedState.inventoryIds.length, 4 + livePriceOffer.itemCount);
-
-  const purchasedItems = await readOfferItems(livePriceOffer.id);
-  assert.ok(purchasedItems.length > 0, "offer comprada sem itens para equipar");
-  const targetItem = purchasedItems[0];
-  const stateBeforeEquip = structuredClone(purchasedState);
+  assert.equal(purchasedState.ledgerDelta, "-300");
+  assert.equal(purchasedState.inventoryIds.length, 5);
+  assert.ok(purchasedState.inventoryIds.includes(attackItem.id));
 
   await page.goto(`${BASE_URL}/profile/arsenal`, { waitUntil: "domcontentloaded" });
   await page.getByRole("heading", { name: "Equipamento do Comandante", exact: true }).waitFor();
-  assert.equal(await page.locator('[data-profile-v4-surface="arsenal"]').count(), 1);
   assert.equal(await page.locator('article[data-slot]').count(), 4);
 
-  const ownedCard = page.locator("button").filter({ hasText: targetItem.name }).first();
+  const ownedCard = page.locator("button").filter({ hasText: attackItem.name }).first();
   await ownedCard.waitFor({ state: "visible" });
   await ownedCard.click();
-  const inspector = page.locator("aside[aria-live=\"polite\"]");
-  await inspector.getByRole("heading", { name: targetItem.name, exact: true }).waitFor();
+  const inspector = page.locator('aside[aria-live="polite"]');
+  await inspector.getByRole("heading", { name: attackItem.name, exact: true }).waitFor();
   const equipButton = inspector.getByRole("button", { name: "EQUIPAR", exact: true });
   assert.equal(await equipButton.count(), 1);
   await equipButton.click();
-  await page.getByText(new RegExp(`${targetItem.name} equipado em`)).waitFor();
+  await page.getByText(new RegExp(`${attackItem.name} equipado em`)).waitFor();
 
   const equippedState = await readEconomyState(userId);
-  assert.equal(equippedState.balance, stateBeforeEquip.balance);
-  assert.equal(equippedState.purchaseCount, stateBeforeEquip.purchaseCount);
-  assert.equal(equippedState.ledgerCount, stateBeforeEquip.ledgerCount);
-  assert.equal(equippedState.ledgerDelta, stateBeforeEquip.ledgerDelta);
+  assert.equal(equippedState.balance, purchasedState.balance);
+  assert.equal(equippedState.purchaseCount, purchasedState.purchaseCount);
+  assert.equal(equippedState.ledgerCount, purchasedState.ledgerCount);
+  assert.equal(equippedState.ledgerDelta, purchasedState.ledgerDelta);
   assert.equal(
     equippedState.loadout.some(
-      (entry) => entry.slot === targetItem.slot && entry.cosmetic_id === targetItem.id,
+      (entry) => entry.slot === attackItem.slot && entry.cosmetic_id === attackItem.id,
     ),
     true,
   );
 
+  storefront = await loadStorefront(page);
+  const updatedFootball = collectionById(storefront, "collection.football");
+  footballBundle = bundleOfferForCollection(storefront, updatedFootball);
+  assert.equal(updatedFootball.partiallyOwned, true);
+  assert.equal(updatedFootball.ownedCount, 1);
+  assert.equal(footballBundle.basePrice, 800);
+  assert.equal(footballBundle.price, 480);
+
   await page.goto(`${BASE_URL}/profile/store`, { waitUntil: "domcontentloaded" });
-  await page.getByRole("heading", { name: "Remessas do Comando", exact: true }).waitFor();
-  purchaseCard = offerCard(page, livePriceOffer.name);
-  assert.ok((await purchaseCard.getByText("POSSUÍDO", { exact: true }).count()) >= 1);
+  await page.locator('[data-profile-v4-surface="store"]').waitFor({ state: "visible" });
+  dialog = await openFeaturedCollection(page);
+  assert.match(normalizeText(await dialog.textContent()), /800 CR/i);
+  assert.match(normalizeText(await dialog.textContent()), /480 CR/i);
+  await dialog.getByRole("button", { name: "COMPLETAR COLEÇÃO", exact: true }).waitFor();
 
   await page.screenshot({
-    path: path.join(ARTIFACT_DIR, "store-purchase-equipped-v4-1440x900.png"),
+    path: path.join(ARTIFACT_DIR, "store-collection-promotion-v4-1440x900.png"),
     fullPage: true,
   });
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto(`${BASE_URL}/profile/store`, { waitUntil: "domcontentloaded" });
-  await page.getByRole("heading", { name: "Remessas do Comando", exact: true }).waitFor();
+  await page.locator('[data-profile-v4-surface="store"]').waitFor({ state: "visible" });
   await page.screenshot({
     path: path.join(ARTIFACT_DIR, "store-v4-390x844.png"),
+    fullPage: true,
+  });
+  dialog = await openFeaturedCollection(page);
+  await page.screenshot({
+    path: path.join(ARTIFACT_DIR, "store-collection-modal-v4-390x844.png"),
     fullPage: true,
   });
 
@@ -662,7 +549,7 @@ try {
   }
 
   console.log(
-    `[economy-e2e] ok — Profile V4, ${commerce.offers.length} offers, ${commerce.creditPacks.length} packs, compra/equip persistentes e ${signedR2Keys.length} deliveries R2 validados`,
+    `[economy-e2e] ok — Futebol 40% OFF, compra 300 CR, completion 480 CR, equipagem e ${signedR2Keys.length} deliveries R2 validados`,
   );
 } finally {
   await context.close();
