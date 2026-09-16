@@ -23,7 +23,8 @@ test("PROFILE V4 arsenal exposes exactly the four cosmetic bays", async () => {
   assert.match(arsenal, /dice_attack/);
   assert.match(arsenal, /dice_defense/);
   assert.match(arsenal, /dice_neutral/);
-  assert.match(arsenal, /territory_effect/);
+  assert.match(arsenal, /territory_skin/);
+  assert.doesNotMatch(arsenal, /territory_effect/);
   assert.match(arsenal, /Todos/);
   assert.match(arsenal, /Território/);
 });
@@ -41,6 +42,6 @@ test("PROFILE V4 territory bay preserves PlayerColor through the shared territor
   const arsenal = await source("src/components/profile/v4/profile-arsenal.tsx");
 
   assert.match(arsenal, /TerritorySkinPreview/);
-  assert.match(arsenal, /item\.slot === "territory_effect"/);
+  assert.match(arsenal, /item\.slot === "territory_skin"/);
   assert.match(arsenal, /assetRef=\{cosmeticPreviewSource\(item\)\}/);
 });
