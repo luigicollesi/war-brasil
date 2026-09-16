@@ -97,26 +97,26 @@ test("purchase fails closed if a collection deactivates between availability and
   assert.match(repository, /if \(result\.rowCount !== 1\)[\s\S]*throw new Error/i);
 });
 
-test("collection banners open an accessible modal with item purchases and bundle purchase", async () => {
+test("collection banners route into the dedicated showcase with authoritative promotion detail", async () => {
   const store = await source("src/components/profile/v4/profile-store.tsx");
-  const styles = await source(
-    "src/components/profile/v4/profile-store-collection-modal.module.css",
+  const projection = await source("src/lib/economy/store-showcase.ts");
+  const showcase = await source(
+    "src/components/profile/v4/store-showcase/store-showcase.tsx",
   );
 
-  assert.match(store, /collectionModalOpen/);
-  assert.match(store, /role="dialog"/);
-  assert.match(store, /aria-modal="true"/);
-  assert.match(store, /collection-modal-title/);
-  assert.match(store, /selectedCollection\.items\.map/);
-  assert.match(store, /selectedCollectionSingles\.map/);
-  assert.match(store, /selectedCollectionBundle/);
-  assert.match(store, /promotionDiscountBps/);
-  assert.match(styles, /position:\s*fixed/);
-  assert.match(styles, /\.collectionItems/);
-  assert.match(styles, /\.bundlePurchase/);
+  assert.match(store, /showcaseHref\("collection",\s*collection\.id\)/);
+  assert.doesNotMatch(store, /collectionModalOpen/);
+  assert.doesNotMatch(store, /aria-modal="true"/);
+  assert.match(projection, /backgroundRef:\s*collection\.assets\.background/);
+  assert.match(projection, /logoRef:\s*collection\.assets\.logo/);
+  assert.match(projection, /promotionDiscountBps:\s*collection\.promotionDiscountBps/);
+  assert.match(projection, /singleOfferByItemId/);
+  assert.match(projection, /bundleOffer/);
+  assert.match(showcase, /showcase\.items\.map/);
+  assert.match(showcase, /showcase\.bundleOffer/);
 });
 
-test("product cards use intrinsic rows so commerce controls cannot overlap the card body", async () => {
+test("product cards use intrinsic rows so discovery controls cannot overlap the card body", async () => {
   const styles = await source("src/components/profile/v4/profile-store.module.css");
 
   assert.match(styles, /\.productCard\s*\{[\s\S]*display:\s*grid/i);
