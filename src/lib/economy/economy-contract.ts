@@ -65,6 +65,8 @@ export type EconomyOffer = Readonly<{
   name: string;
   description: string | null;
   currency: typeof ECONOMY_CURRENCY_ID;
+  basePrice: number;
+  promotionDiscountBps: number;
   price: number;
   status: EconomyOfferStatus;
   featured: boolean;
@@ -87,6 +89,8 @@ export type StorefrontCollection = Readonly<{
   slug: string;
   name: string;
   description: string | null;
+  featured: boolean;
+  promotionDiscountBps: number;
   assets: StorefrontCollectionAssets;
   items: ReadonlyArray<CosmeticCatalogItem>;
   offerIds: ReadonlyArray<string>;
