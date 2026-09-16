@@ -5,7 +5,6 @@ import { useEffect, useRef, type ReactNode } from "react";
 import type { Group } from "three";
 import {
   SHOWCASE_INTERACTION_RESUME_MS,
-  SHOWCASE_ITEM_TRANSITION_PHASE_MS,
   idleAngularVelocity,
   resolveShowcaseDragRotation,
   showcaseTransitionProgress,
