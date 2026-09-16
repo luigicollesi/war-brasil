@@ -74,8 +74,11 @@ test("PROFILE V4 collection detail uses background, logo and canonical cosmetic 
   assert.match(store, /selectedCollection\.assets\.background/);
   assert.match(store, /selectedCollection\.assets\.logo/);
   assert.match(store, /selectedCollection\.items\.map/);
-  assert.match(store, /selectedCollection\.ownedCount/);
-  assert.match(store, /selectedCollection\.totalCount/);
+  assert.match(
+    store,
+    /function collectionProgressLabel[\s\S]*collection\.ownedCount[\s\S]*collection\.totalCount/,
+  );
+  assert.match(store, /collectionProgressLabel\(selectedCollection\)/);
   assert.match(store, /Completar coleção|COMPLETAR COLEÇÃO/i);
   assert.doesNotMatch(store, /(?:collection|selectedCollection)\.assets\.(?:hero|card)/);
 });
