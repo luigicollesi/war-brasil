@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
-import type { StoreShowcaseView } from "@/src/lib/economy/store-showcase";
+import { StoreShowcase } from "@/src/components/profile/v4/store-showcase/store-showcase";
 import {
   resolveStoreShowcaseView,
   type StoreShowcaseKind,
@@ -28,19 +27,6 @@ export const metadata: Metadata = {
 
 function isShowcaseKind(value: string): value is StoreShowcaseKind {
   return value === "offer" || value === "collection";
-}
-
-function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
-  const selected = showcase.items.find((item) => item.id === showcase.selectedItemId);
-
-  return (
-    <main aria-label="Expositor da Intendência">
-      <Link href="/profile/store">Voltar à Intendência</Link>
-      <p>{showcase.kind === "collection" ? "COLEÇÃO // EXPOSIÇÃO" : "INSPEÇÃO // ARSENAL"}</p>
-      <h1>{showcase.title}</h1>
-      <p>{selected?.name ?? showcase.title}</p>
-    </main>
-  );
 }
 
 export default async function StoreShowcasePage({
