@@ -29,18 +29,35 @@ export type CommandSceneDirective = Readonly<{
   entranceState?: CommandEntranceState;
 }>;
 
+export type ShowcaseSceneMode = "standard" | "collection";
+
+export type ShowcaseScenePayload = Readonly<{
+  key: string;
+  mode: ShowcaseSceneMode;
+  render: (context: { reducedMotion: boolean }) => ReactNode;
+}>;
+
 type DirectiveRegistration = Readonly<{
   token: symbol;
   pathname: string;
   directive: CommandSceneDirective;
 }>;
 
+type ShowcaseSceneRegistration = Readonly<{
+  token: symbol;
+  pathname: string;
+  scene: ShowcaseScenePayload;
+}>;
+
 type PublishSceneDirective = (
   directive: CommandSceneDirective,
 ) => () => void;
 
+type PublishShowcaseScene = (scene: ShowcaseScenePayload) => () => void;
+
 const SceneDirectiveContext = createContext<PublishSceneDirective | null>(null);
 const SceneStateContext = createContext<CommandSceneState | null>(null);
+const ShowcaseSceneContext = createContext<PublishShowcaseScene | null>(null);
 const PROFILE_SHELL_ROUTES = new Set([
   "/profile",
   "/profile/arsenal",
@@ -69,6 +86,8 @@ export function PreGameCommandRuntime({ children }: { children: ReactNode }) {
     [pathname],
   );
   const [registration, setRegistration] = useState<DirectiveRegistration | null>(null);
+  const [showcaseRegistration, setShowcaseRegistration] =
+    useState<ShowcaseSceneRegistration | null>(null);
   const [sceneState, setSceneState] = useState<CommandSceneState>("loading");
 
   const publishDirective = useCallback<PublishSceneDirective>(
@@ -85,6 +104,20 @@ export function PreGameCommandRuntime({ children }: { children: ReactNode }) {
     [pathname],
   );
 
+  const publishShowcaseScene = useCallback<PublishShowcaseScene>(
+    (scene) => {
+      const token = Symbol("showcase-scene");
+      setShowcaseRegistration({ token, pathname, scene });
+
+      return () => {
+        setShowcaseRegistration((current) =>
+          current?.token === token ? null : current,
+        );
+      };
+    },
+    [pathname],
+  );
+
   const intent = useMemo(
     () =>
       routeIntent
@@ -93,19 +126,27 @@ export function PreGameCommandRuntime({ children }: { children: ReactNode }) {
     [pathname, registration, routeIntent],
   );
 
+  const showcaseScene =
+    showcaseRegistration?.pathname === pathname
+      ? showcaseRegistration.scene
+      : null;
+
   if (!intent) return <>{children}</>;
 
   return (
     <SceneStateContext.Provider value={sceneState}>
       <SceneDirectiveContext.Provider value={publishDirective}>
-        <CommandShell
-          intent={intent}
-          chrome={!profileOwnsChrome}
-          showModeRail={pathname !== "/"}
-          onSceneStateChange={setSceneState}
-        >
-          {children}
-        </CommandShell>
+        <ShowcaseSceneContext.Provider value={publishShowcaseScene}>
+          <CommandShell
+            intent={intent}
+            chrome={!profileOwnsChrome}
+            showModeRail={pathname !== "/"}
+            onSceneStateChange={setSceneState}
+            showcaseScene={showcaseScene}
+          >
+            {children}
+          </CommandShell>
+        </ShowcaseSceneContext.Provider>
       </SceneDirectiveContext.Provider>
     </SceneStateContext.Provider>
   );
@@ -143,6 +184,24 @@ export function useCommandSceneDirective(
 
     return publishDirective(stableDirective);
   }, [enabled, publishDirective, stableDirective]);
+}
+
+export function useShowcaseScene(
+  scene: ShowcaseScenePayload,
+  enabled = true,
+) {
+  const publishShowcaseScene = useContext(ShowcaseSceneContext);
+
+  useEffect(() => {
+    if (!enabled) return undefined;
+    if (!publishShowcaseScene) {
+      throw new Error(
+        "useShowcaseScene deve ser usado dentro de PreGameCommandRuntime.",
+      );
+    }
+
+    return publishShowcaseScene(scene);
+  }, [enabled, publishShowcaseScene, scene]);
 }
 
 export function useCommandSceneState() {
