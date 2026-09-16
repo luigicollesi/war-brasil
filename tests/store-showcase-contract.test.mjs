@@ -30,12 +30,14 @@ test("store showcase contract resolves offer and collection targets without clie
   assert.match(route, /StoreShowcase/);
 });
 
-test("store showcase contract keeps authoritative offer prices and safe selected-item fallback", () => {
+test("store showcase contract keeps authoritative offer prices, availability and safe selected-item fallback", () => {
   const projection = read(projectionPath);
 
   assert.match(projection, /price:\s*offer\.price/);
   assert.match(projection, /basePrice:\s*offer\.basePrice/);
   assert.match(projection, /promotionDiscountBps:\s*offer\.promotionDiscountBps/);
+  assert.match(projection, /startsAt:\s*offer\.startsAt/);
+  assert.match(projection, /endsAt:\s*offer\.endsAt/);
   assert.match(projection, /items\.find\(.*selectedItemId/s);
   assert.match(projection, /\?\?\s*items\[0\]/);
 });
