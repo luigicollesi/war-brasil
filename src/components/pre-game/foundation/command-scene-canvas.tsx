@@ -150,17 +150,17 @@ function CameraDirector({
 }
 
 function ShowcaseCameraDirector({ compact }: { compact: boolean }) {
-  const { camera, invalidate } = useThree();
+  const set = useThree((state) => state.set);
+  const invalidate = useThree((state) => state.invalidate);
 
   useEffect(() => {
+    const camera = new PerspectiveCamera(compact ? 39 : 36, 1, 0.1, 40);
     camera.position.set(compact ? 0 : -0.65, compact ? 0.35 : 0.15, compact ? 6.2 : 5.5);
     camera.lookAt(compact ? 0 : -0.65, 0, 0);
-    if (camera instanceof PerspectiveCamera) {
-      camera.fov = compact ? 39 : 36;
-      camera.updateProjectionMatrix();
-    }
+    camera.updateProjectionMatrix();
+    set({ camera });
     invalidate();
-  }, [camera, compact, invalidate]);
+  }, [compact, invalidate, set]);
 
   return null;
 }
