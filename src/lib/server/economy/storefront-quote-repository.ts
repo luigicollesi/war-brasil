@@ -87,6 +87,7 @@ export async function listActiveStorefrontQuoteItems(
             membership.position
        FROM catalog.offers offer
        JOIN catalog.products product ON product.id=offer.product_id
+       LEFT JOIN catalog.collections collection ON collection.id=product.collection_id
        JOIN catalog.product_items membership ON membership.product_id=product.id
        JOIN catalog.cosmetics item ON item.id=membership.cosmetic_id
        JOIN catalog.cosmetic_pricing pricing ON pricing.cosmetic_id=item.id
@@ -112,6 +113,7 @@ export async function listActiveStorefrontQuoteItems(
       WHERE offer.status='available'
         AND offer.active=TRUE
         AND product.active=TRUE
+        AND (product.collection_id IS NULL OR collection.active=TRUE)
         AND item.status='available'
         AND item.is_default=FALSE
         AND (offer.starts_at IS NULL OR offer.starts_at <= CURRENT_TIMESTAMP)
