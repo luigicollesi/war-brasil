@@ -2,21 +2,17 @@
 
 import { useMemo, useState } from "react";
 import { TerritorySkinPreview } from "@/src/components/economy/territory-skin-preview";
-import type {
-  CosmeticCatalogItem,
-  CosmeticSlot,
-  EconomyStorefrontSnapshot,
+import {
+  COSMETIC_SLOTS,
+  type CosmeticCatalogItem,
+  type CosmeticSlot,
+  type EconomyStorefrontSnapshot,
 } from "@/src/lib/economy/economy-contract";
 import { cosmeticPreviewSource } from "@/src/lib/economy/cosmetic-preview";
 import { ProfileCosmeticImage } from "./profile-cosmetic-image";
 import styles from "./profile-arsenal.module.css";
 
-const LOADOUT_SLOTS = [
-  "dice_attack",
-  "dice_defense",
-  "dice_neutral",
-  "territory_skin",
-] as const satisfies readonly CosmeticSlot[];
+const LOADOUT_SLOTS = COSMETIC_SLOTS satisfies readonly CosmeticSlot[];
 
 const SLOT_META: Readonly<Record<CosmeticSlot, { label: string; code: string }>> = {
   dice_attack: { label: "Ataque", code: "ATK" },
