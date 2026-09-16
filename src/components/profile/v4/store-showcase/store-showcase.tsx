@@ -2,10 +2,16 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { useShowcaseScene } from "@/src/components/pre-game/foundation";
+import {
+  ShowcasePurchaseError,
+  purchaseShowcaseOffer,
+} from "@/src/lib/client/store-showcase/purchase-showcase-offer";
 import type {
   StoreShowcaseItem,
+  StoreShowcaseOffer,
   StoreShowcaseView,
 } from "@/src/lib/economy/store-showcase";
 import { ProfileCosmeticImage } from "../profile-cosmetic-image";
@@ -15,6 +21,11 @@ import { TerritoryShowcaseModel } from "./territory-showcase-model";
 import styles from "./store-showcase.module.css";
 
 const INTEGER_FORMAT = new Intl.NumberFormat("pt-BR");
+
+type PurchaseMessage = Readonly<{
+  kind: "success" | "error";
+  text: string;
+}>;
 
 function itemRoleLabel(item: StoreShowcaseItem) {
   switch (item.slot) {
@@ -43,13 +54,46 @@ function promotionLabel(discountBps: number) {
   return `${INTEGER_FORMAT.format(discountBps / 100)}% OFF`;
 }
 
-export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
-  const initialIndex = Math.max(
-    0,
-    showcase.items.findIndex((item) => item.id === showcase.selectedItemId),
+function purchaseErrorMessage(error: ShowcasePurchaseError) {
+  if (error.code === "ECONOMY_PRICE_CHANGED") {
+    return error.currentPrice === null
+      ? "O preço mudou. Confira o valor atualizado antes de tentar novamente."
+      : `O preço mudou para ${priceLabel(error.currentPrice)}. Confirme o novo valor.`;
+  }
+  if (error.code === "ECONOMY_INSUFFICIENT_BALANCE") {
+    return "Créditos insuficientes para concluir esta compra.";
+  }
+  if (error.code === "ECONOMY_OFFER_ALREADY_OWNED") {
+    return "Este conteúdo já pertence ao seu Arsenal.";
+  }
+  return error.retryable
+    ? "Não foi possível confirmar a compra. Tente novamente para consultar a mesma operação com segurança."
+    : error.message;
+}
+
+function shouldRefreshAfterError(error: ShowcasePurchaseError) {
+  return (
+    error.code === "ECONOMY_PRICE_CHANGED" ||
+    error.code === "ECONOMY_OFFER_ALREADY_OWNED" ||
+    error.code === "ECONOMY_OFFER_UNAVAILABLE"
   );
-  const [selectedIndex, setSelectedIndex] = useState(initialIndex);
+}
+
+export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
+  const router = useRouter();
+  const [selectedItemId, setSelectedItemId] = useState(showcase.selectedItemId);
   const [failedBackgroundRef, setFailedBackgroundRef] = useState<string | null>(null);
+  const [pendingOfferId, setPendingOfferId] = useState<string | null>(null);
+  const [purchaseMessage, setPurchaseMessage] = useState<PurchaseMessage | null>(null);
+
+  const selectedIndexFromState = showcase.items.findIndex((item) => item.id === selectedItemId);
+  const selectedIndexFromProjection = showcase.items.findIndex(
+    (item) => item.id === showcase.selectedItemId,
+  );
+  const selectedIndex =
+    selectedIndexFromState >= 0
+      ? selectedIndexFromState
+      : Math.max(0, selectedIndexFromProjection);
   const selectedItem = showcase.items[selectedIndex] ?? showcase.items[0];
   const selectedOffer = selectedItem?.singleOffer ?? null;
   const itemCount = showcase.items.length;
@@ -90,10 +134,50 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
 
   function moveSelection(direction: -1 | 1) {
     if (itemCount <= 1) return;
-    setSelectedIndex((current) => (current + direction + itemCount) % itemCount);
+    const nextIndex = (selectedIndex + direction + itemCount) % itemCount;
+    const nextItem = showcase.items[nextIndex];
+    if (nextItem) setSelectedItemId(nextItem.id);
+    setPurchaseMessage(null);
+  }
+
+  async function handlePurchase(offer: StoreShowcaseOffer | null) {
+    if (!offer?.purchasable || pendingOfferId !== null) return;
+
+    setPendingOfferId(offer.id);
+    setPurchaseMessage(null);
+    try {
+      await purchaseShowcaseOffer({
+        offerId: offer.id,
+        expectedPrice: offer.price,
+      });
+      setPurchaseMessage({
+        kind: "success",
+        text: "Compra confirmada. Arsenal e créditos atualizados pelo Comando.",
+      });
+      router.refresh();
+    } catch (error) {
+      if (error instanceof ShowcasePurchaseError) {
+        setPurchaseMessage({ kind: "error", text: purchaseErrorMessage(error) });
+        if (shouldRefreshAfterError(error)) router.refresh();
+      } else {
+        setPurchaseMessage({
+          kind: "error",
+          text: "A compra não pôde ser confirmada agora.",
+        });
+      }
+    } finally {
+      setPendingOfferId(null);
+    }
   }
 
   if (!selectedItem) return null;
+
+  const itemPurchasePending = pendingOfferId === selectedOffer?.id;
+  const bundlePurchasePending = pendingOfferId === showcase.bundleOffer?.id;
+  const itemPurchaseDisabled =
+    selectedItem.owned || !selectedOffer?.purchasable || pendingOfferId !== null;
+  const bundlePurchaseDisabled =
+    showcase.fullyOwned || !showcase.bundleOffer?.purchasable || pendingOfferId !== null;
 
   return (
     <main
@@ -210,12 +294,34 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
           <div className={styles.itemCommerce}>
             <span>ITEM ATUAL</span>
             <strong>{selectedOffer ? priceLabel(selectedOffer.price) : "SEM OFERTA"}</strong>
-            <button type="button" disabled>
-              {selectedItem.owned ? "POSSUÍDO" : "COMPRAR ITEM"}
+            <button
+              type="button"
+              disabled={itemPurchaseDisabled}
+              onClick={() => void handlePurchase(selectedOffer)}
+            >
+              {selectedItem.owned
+                ? "POSSUÍDO"
+                : itemPurchasePending
+                  ? "PROCESSANDO..."
+                  : selectedOffer?.purchasable
+                    ? "COMPRAR ITEM"
+                    : "INDISPONÍVEL"}
             </button>
           </div>
         </aside>
       </section>
+
+      {purchaseMessage ? (
+        <div
+          className={styles.purchaseMessage}
+          data-kind={purchaseMessage.kind}
+          role="status"
+          aria-live="polite"
+          style={{ pointerEvents: "auto" }}
+        >
+          {purchaseMessage.text}
+        </div>
+      ) : null}
 
       <footer
         className={styles.dock}
@@ -229,7 +335,10 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
               type="button"
               aria-pressed={index === selectedIndex}
               data-active={index === selectedIndex ? "true" : "false"}
-              onClick={() => setSelectedIndex(index)}
+              onClick={() => {
+                setSelectedItemId(item.id);
+                setPurchaseMessage(null);
+              }}
             >
               <small>{itemRoleLabel(item)}</small>
               <strong>{item.name}</strong>
@@ -251,12 +360,20 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
                   : "SEM OFERTA"}
             </strong>
           </span>
-          <button type="button" disabled={!showcase.bundleOffer?.purchasable}>
+          <button
+            type="button"
+            disabled={bundlePurchaseDisabled}
+            onClick={() => void handlePurchase(showcase.bundleOffer)}
+          >
             {showcase.fullyOwned
               ? "COMPLETO"
-              : showcase.partiallyOwned
-                ? "COMPLETAR"
-                : "COMPRAR TUDO"}
+              : bundlePurchasePending
+                ? "PROCESSANDO..."
+                : showcase.partiallyOwned
+                  ? "COMPLETAR"
+                  : showcase.bundleOffer?.purchasable
+                    ? "COMPRAR TUDO"
+                    : "INDISPONÍVEL"}
           </button>
         </div>
       </footer>
