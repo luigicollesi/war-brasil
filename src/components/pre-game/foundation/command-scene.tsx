@@ -185,6 +185,7 @@ export function CommandScene({
   return (
     <div
       className={[styles.sceneHost, className].filter(Boolean).join(" ")}
+      style={showcaseScene ? { pointerEvents: "auto" } : undefined}
       data-command-scene
       data-scene-mode={normalizedIntent.mode}
       data-webgl={webglState}
