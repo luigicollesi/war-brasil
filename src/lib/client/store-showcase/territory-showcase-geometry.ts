@@ -26,6 +26,32 @@ function collectiveBounds(geometries: ReadonlyArray<ExtrudeGeometry>) {
   return bounds;
 }
 
+function applyCenteredSquareUvs(
+  geometries: ReadonlyArray<ExtrudeGeometry>,
+  bounds: Box3,
+) {
+  const size = bounds.getSize(new Vector3());
+  const center = bounds.getCenter(new Vector3());
+  const dominantExtent = Math.max(size.x, size.y);
+  const originX = center.x - dominantExtent / 2;
+  const originY = center.y - dominantExtent / 2;
+
+  for (const geometry of geometries) {
+    const position = geometry.getAttribute("position");
+    const uv = geometry.getAttribute("uv");
+    if (!position || !uv) continue;
+
+    for (let index = 0; index < position.count; index += 1) {
+      uv.setXY(
+        index,
+        (position.getX(index) - originX) / dominantExtent,
+        (position.getY(index) - originY) / dominantExtent,
+      );
+    }
+    uv.needsUpdate = true;
+  }
+}
+
 export function createTerritoryShowcaseGeometry(
   shapes: ReadonlyArray<Shape>,
 ): TerritoryShowcaseGeometry {
@@ -67,6 +93,7 @@ export function createTerritoryShowcaseGeometry(
 
   const normalizedBounds = collectiveBounds(geometries);
   const normalizedSize = normalizedBounds.getSize(new Vector3());
+  applyCenteredSquareUvs(geometries, normalizedBounds);
 
   return {
     geometries,
