@@ -85,12 +85,12 @@ if (!databaseUrl) {
         );
         await client.query(
           `INSERT INTO inventory.cosmetics(user_id,cosmetic_id,slot,acquisition_source)
-           VALUES($1,$2,'territory_effect','default')`,
+           VALUES($1,$2,'territory_skin','default')`,
           [userId, defaultSkinId],
         );
         await client.query(
           `INSERT INTO profile.cosmetic_loadout(user_id,slot,cosmetic_id)
-           VALUES($1,'territory_effect',$2)`,
+           VALUES($1,'territory_skin',$2)`,
           [userId, defaultSkinId],
         );
 
@@ -98,7 +98,7 @@ if (!databaseUrl) {
           client.query(
             `UPDATE profile.cosmetic_loadout
                 SET cosmetic_id=$2, updated_at=NOW()
-              WHERE user_id=$1 AND slot='territory_effect'`,
+              WHERE user_id=$1 AND slot='territory_skin'`,
             [userId, imageSkinId],
           ),
           (error) => error?.code === "23503",
@@ -111,20 +111,20 @@ if (!databaseUrl) {
         );
         await client.query(
           `INSERT INTO inventory.cosmetics(user_id,cosmetic_id,slot,acquisition_source)
-           VALUES($1,$2,'territory_effect','admin')`,
+           VALUES($1,$2,'territory_skin','admin')`,
           [userId, imageSkinId],
         );
         await client.query(
           `UPDATE profile.cosmetic_loadout
               SET cosmetic_id=$2, updated_at=NOW()
-            WHERE user_id=$1 AND slot='territory_effect'`,
+            WHERE user_id=$1 AND slot='territory_skin'`,
           [userId, imageSkinId],
         );
 
         const equippedImage = await client.query(
           `SELECT cosmetic_id
              FROM profile.cosmetic_loadout
-            WHERE user_id=$1 AND slot='territory_effect'`,
+            WHERE user_id=$1 AND slot='territory_skin'`,
           [userId],
         );
         assert.equal(equippedImage.rows[0].cosmetic_id, imageSkinId);
@@ -132,14 +132,14 @@ if (!databaseUrl) {
         await client.query(
           `UPDATE profile.cosmetic_loadout
               SET cosmetic_id=$2, updated_at=NOW()
-            WHERE user_id=$1 AND slot='territory_effect'`,
+            WHERE user_id=$1 AND slot='territory_skin'`,
           [userId, defaultSkinId],
         );
 
         const finalLoadout = await client.query(
           `SELECT cosmetic_id
              FROM profile.cosmetic_loadout
-            WHERE user_id=$1 AND slot='territory_effect'`,
+            WHERE user_id=$1 AND slot='territory_skin'`,
           [userId],
         );
         assert.equal(finalLoadout.rows[0].cosmetic_id, defaultSkinId);
