@@ -161,7 +161,7 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
         <div className={styles.bundleAction}>
           <span>
             <small>
-              {showcase.mode === "collection" ? "COLEÇÃO" : "CONJUNTO"} // {collectionProgress}
+              {showcase.mode === "collection" ? "COLEÇÃO" : "CONJUNTO"} {"//"} {collectionProgress}
             </small>
             <strong>
               {showcase.bundleOffer
