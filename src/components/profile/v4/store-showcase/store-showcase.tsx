@@ -3,12 +3,16 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useShowcaseScene } from "@/src/components/pre-game/foundation";
 import {
   ShowcasePurchaseError,
   purchaseShowcaseOffer,
 } from "@/src/lib/client/store-showcase/purchase-showcase-offer";
+import {
+  SHOWCASE_ITEM_TRANSITION_PHASE_MS,
+  type ShowcaseTransitionPhase,
+} from "@/src/lib/client/store-showcase/showcase-motion";
 import type {
   StoreShowcaseItem,
   StoreShowcaseOffer,
@@ -85,6 +89,31 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
   const [failedBackgroundRef, setFailedBackgroundRef] = useState<string | null>(null);
   const [pendingOfferId, setPendingOfferId] = useState<string | null>(null);
   const [purchaseMessage, setPurchaseMessage] = useState<PurchaseMessage | null>(null);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [transitionPhase, setTransitionPhase] = useState<ShowcaseTransitionPhase>("idle");
+  const [transitionDirection, setTransitionDirection] = useState<-1 | 1>(1);
+  const transitionTimers = useRef<number[]>([]);
+
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const syncPreference = () => setPrefersReducedMotion(media.matches);
+    syncPreference();
+    media.addEventListener?.("change", syncPreference);
+    return () => media.removeEventListener?.("change", syncPreference);
+  }, []);
+
+  useEffect(
+    () => () => {
+      for (const timer of transitionTimers.current) window.clearTimeout(timer);
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (showcase.items.some((item) => item.id === selectedItemId)) return;
+    setSelectedItemId(showcase.selectedItemId);
+    setTransitionPhase("idle");
+  }, [selectedItemId, showcase.items, showcase.selectedItemId]);
 
   const selectedIndexFromState = showcase.items.findIndex((item) => item.id === selectedItemId);
   const selectedIndexFromProjection = showcase.items.findIndex(
@@ -112,7 +141,11 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
       key: selectedItem?.id ?? showcase.id,
       mode: showcase.mode,
       render: ({ reducedMotion }: { reducedMotion: boolean }) => (
-        <ShowcaseObjectController reducedMotion={reducedMotion}>
+        <ShowcaseObjectController
+          reducedMotion={reducedMotion}
+          transitionPhase={transitionPhase}
+          transitionDirection={transitionDirection}
+        >
           {selectedItem?.type === "dice" ? (
             <DiceShowcaseModel
               assetRef={selectedItem.assetRef}
@@ -128,16 +161,47 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
         </ShowcaseObjectController>
       ),
     }),
-    [selectedItem, showcase.id, showcase.mode],
+    [selectedItem, showcase.id, showcase.mode, transitionDirection, transitionPhase],
   );
   useShowcaseScene(showcaseScene, Boolean(selectedItem));
 
+  function clearTransitionTimers() {
+    for (const timer of transitionTimers.current) window.clearTimeout(timer);
+    transitionTimers.current = [];
+  }
+
+  function requestSelection(targetItemId: string, direction: -1 | 1) {
+    if (targetItemId === selectedItemId || transitionPhase !== "idle") return;
+    setPurchaseMessage(null);
+
+    if (prefersReducedMotion) {
+      setSelectedItemId(targetItemId);
+      return;
+    }
+
+    clearTransitionTimers();
+    setTransitionDirection(direction);
+    setTransitionPhase("exit");
+
+    const swapTimer = window.setTimeout(() => {
+      setSelectedItemId(targetItemId);
+      setTransitionPhase("enter");
+
+      const settleTimer = window.setTimeout(() => {
+        setTransitionPhase("idle");
+        transitionTimers.current = [];
+      }, SHOWCASE_ITEM_TRANSITION_PHASE_MS);
+      transitionTimers.current = [settleTimer];
+    }, SHOWCASE_ITEM_TRANSITION_PHASE_MS);
+
+    transitionTimers.current = [swapTimer];
+  }
+
   function moveSelection(direction: -1 | 1) {
-    if (itemCount <= 1) return;
+    if (itemCount <= 1 || transitionPhase !== "idle") return;
     const nextIndex = (selectedIndex + direction + itemCount) % itemCount;
     const nextItem = showcase.items[nextIndex];
-    if (nextItem) setSelectedItemId(nextItem.id);
-    setPurchaseMessage(null);
+    if (nextItem) requestSelection(nextItem.id, direction);
   }
 
   async function handlePurchase(offer: StoreShowcaseOffer | null) {
@@ -184,6 +248,7 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
       className={styles.root}
       style={{ background: "transparent", pointerEvents: "none" }}
       data-showcase-mode={showcase.mode}
+      data-transition-phase={transitionPhase}
       data-collection-background={collectionBackgroundVisible ? "ready" : "fallback"}
       aria-label="Expositor da Intendência"
     >
@@ -254,7 +319,7 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
           className={`${styles.stageArrow} ${styles.stageArrowPrevious}`}
           style={{ pointerEvents: "auto" }}
           aria-label="Exibir item anterior"
-          disabled={itemCount <= 1}
+          disabled={itemCount <= 1 || transitionPhase !== "idle"}
           onClick={() => moveSelection(-1)}
         >
           ‹
@@ -273,7 +338,7 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
           className={`${styles.stageArrow} ${styles.stageArrowNext}`}
           style={{ pointerEvents: "auto" }}
           aria-label="Exibir próximo item"
-          disabled={itemCount <= 1}
+          disabled={itemCount <= 1 || transitionPhase !== "idle"}
           onClick={() => moveSelection(1)}
         >
           ›
@@ -335,9 +400,10 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
               type="button"
               aria-pressed={index === selectedIndex}
               data-active={index === selectedIndex ? "true" : "false"}
+              disabled={transitionPhase !== "idle"}
               onClick={() => {
-                setSelectedItemId(item.id);
-                setPurchaseMessage(null);
+                const direction: -1 | 1 = index >= selectedIndex ? 1 : -1;
+                requestSelection(item.id, direction);
               }}
             >
               <small>{itemRoleLabel(item)}</small>
