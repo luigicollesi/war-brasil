@@ -9,10 +9,13 @@ import type {
   StoreShowcaseView,
 } from "@/src/lib/economy/store-showcase";
 import { ProfileCosmeticImage } from "../profile-cosmetic-image";
+import { DiceShowcaseModel } from "./dice-showcase-model";
 import { ShowcaseObjectController } from "./showcase-object-controller";
 import styles from "./store-showcase.module.css";
 
 const INTEGER_FORMAT = new Intl.NumberFormat("pt-BR");
+
+type DiceShowcaseSlot = "dice_attack" | "dice_defense" | "dice_neutral";
 
 function itemRoleLabel(item: StoreShowcaseItem) {
   switch (item.slot) {
@@ -62,11 +65,25 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
       mode: showcase.mode,
       render: ({ reducedMotion }: { reducedMotion: boolean }) => (
         <ShowcaseObjectController reducedMotion={reducedMotion}>
-          <group name="StoreShowcaseModelSlot" />
+          {selectedItem?.type === "dice" ? (
+            <DiceShowcaseModel
+              assetRef={selectedItem.assetRef}
+              slot={selectedItem.slot as DiceShowcaseSlot}
+            />
+          ) : (
+            <group name="StoreShowcaseModelSlot" />
+          )}
         </ShowcaseObjectController>
       ),
     }),
-    [selectedItem?.id, showcase.id, showcase.mode],
+    [
+      selectedItem?.assetRef,
+      selectedItem?.id,
+      selectedItem?.slot,
+      selectedItem?.type,
+      showcase.id,
+      showcase.mode,
+    ],
   );
   useShowcaseScene(showcaseScene, Boolean(selectedItem));
 
@@ -123,16 +140,22 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
         </button>
 
         <div className={styles.stageObject} data-showcase-object-type={selectedItem.type}>
-          <div className={styles.previewFallback}>
-            <ProfileCosmeticImage
-              src={previewSource(selectedItem)}
-              alt={`Prévia de ${selectedItem.name}`}
-              width={680}
-              height={680}
-              fallbackLabel={selectedItem.type === "dice" ? "DADO" : "TERRITÓRIO"}
-            />
-          </div>
-          <span className={styles.stageMarker}>EXPOSITOR 3D // CENA FOUNDATION ATIVA</span>
+          {selectedItem.type === "territory" ? (
+            <div className={styles.previewFallback}>
+              <ProfileCosmeticImage
+                src={previewSource(selectedItem)}
+                alt={`Prévia de ${selectedItem.name}`}
+                width={680}
+                height={680}
+                fallbackLabel="TERRITÓRIO"
+              />
+            </div>
+          ) : null}
+          <span className={styles.stageMarker}>
+            {selectedItem.type === "dice"
+              ? "EXPOSITOR 3D // GEOMETRIA CANÔNICA"
+              : "EXPOSITOR 3D // TERRITÓRIO EM PREPARAÇÃO"}
+          </span>
         </div>
 
         <button
