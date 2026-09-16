@@ -29,12 +29,12 @@ export function WarShell({
                 {backLabel}
               </Link>
             ) : (
-              <Link href="/" className="wb-brand" aria-label="WAR Brasil — início">
+              <Link href="/" className="wb-brand" aria-label="Bellum Civile — início">
                 <span className="wb-brand-mark" aria-hidden="true">
-                  <span>W</span>
+                  <span>B</span>
                 </span>
                 <span className="wb-brand-copy">
-                  WAR <strong>BRASIL</strong>
+                  BELLUM <strong>CIVILE</strong>
                 </span>
               </Link>
             )}

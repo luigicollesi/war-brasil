@@ -34,7 +34,7 @@ export default async function GamePage({ params }: GamePageProps) {
   const { roomId } = await params;
 
   return (
-    <main className="game-screen" aria-label="Partida War Brasil">
+    <main className="game-screen" aria-label="Partida Bellum Civile">
       <div className="game-runtime">
         <RoadVisibilityProvider>
           <GameClient roomId={roomId} />
