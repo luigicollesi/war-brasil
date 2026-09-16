@@ -2,20 +2,23 @@
 
 import { useMemo, useState } from "react";
 import { TerritorySkinPreview } from "@/src/components/economy/territory-skin-preview";
-import type {
-  CosmeticCatalogItem,
-  CosmeticSlot,
-  EconomyStorefrontSnapshot,
+import {
+  COSMETIC_SLOTS,
+  type CosmeticCatalogItem,
+  type CosmeticSlot,
+  type EconomyStorefrontSnapshot,
 } from "@/src/lib/economy/economy-contract";
 import { cosmeticPreviewSource } from "@/src/lib/economy/cosmetic-preview";
 import { ProfileCosmeticImage } from "./profile-cosmetic-image";
 import styles from "./profile-arsenal.module.css";
 
+const LOADOUT_SLOTS = COSMETIC_SLOTS satisfies readonly CosmeticSlot[];
+
 const SLOT_META: Readonly<Record<CosmeticSlot, { label: string; code: string }>> = {
   dice_attack: { label: "Ataque", code: "ATK" },
   dice_defense: { label: "Defesa", code: "DEF" },
   dice_neutral: { label: "Neutro", code: "NTR" },
-  territory_effect: { label: "Território", code: "TRT" },
+  territory_skin: { label: "Território", code: "TRT" },
 };
 
 const FILTERS: ReadonlyArray<{ id: "all" | CosmeticSlot; label: string }> = [
@@ -23,11 +26,11 @@ const FILTERS: ReadonlyArray<{ id: "all" | CosmeticSlot; label: string }> = [
   { id: "dice_attack", label: "Ataque" },
   { id: "dice_defense", label: "Defesa" },
   { id: "dice_neutral", label: "Neutro" },
-  { id: "territory_effect", label: "Território" },
+  { id: "territory_skin", label: "Território" },
 ];
 
 function CosmeticVisual({ item, priority = false }: { item: CosmeticCatalogItem; priority?: boolean }) {
-  if (item.slot === "territory_effect") {
+  if (item.slot === "territory_skin") {
     return (
       <TerritorySkinPreview
         assetRef={cosmeticPreviewSource(item)}
@@ -118,7 +121,7 @@ export function ProfileArsenal({ initialStorefront }: { initialStorefront: Econo
           <em>4 / 4 POSIÇÕES</em>
         </div>
         <div className={styles.bayGrid}>
-          {(Object.keys(SLOT_META) as CosmeticSlot[]).map((slot, index) => {
+          {LOADOUT_SLOTS.map((slot, index) => {
             const item = storefront.loadout[slot];
             return (
               <article key={slot} className={styles.bay} data-slot={slot}>
