@@ -418,7 +418,7 @@ try {
   const firstImage = await waitForPreviewImage(firstCard);
   const firstSrc = await firstImage.getAttribute("src");
   assert.ok(firstSrc, `${firstItem.id} não expôs src de preview`);
-  assert.equal(assetKeyFromDeliveryUrl(firstSrc), firstItem.assetRef.split("key=")[1]);
+  assert.equal(assetKeyFromDeliveryUrl(firstSrc), assetKeyFromDeliveryUrl(firstItem.assetRef));
 
   await firstCard.getByRole("button", { name: "COMPRAR", exact: true }).click();
   await page
