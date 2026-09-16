@@ -188,9 +188,11 @@ export async function listStorefrontOffers(
             offer.ends_at::text AS ends_at
        FROM catalog.offers offer
        JOIN catalog.products product ON product.id=offer.product_id
+       LEFT JOIN catalog.collections collection ON collection.id=product.collection_id
       WHERE offer.status='available'
         AND offer.active=TRUE
         AND product.active=TRUE
+        AND (product.collection_id IS NULL OR collection.active=TRUE)
         AND (offer.starts_at IS NULL OR offer.starts_at <= CURRENT_TIMESTAMP)
         AND (offer.ends_at IS NULL OR offer.ends_at > CURRENT_TIMESTAMP)
       ORDER BY offer.priority, offer.sort_order, offer.id`,
@@ -220,6 +222,7 @@ export async function listStorefrontOfferItems(
             (loadout.cosmetic_id=item.id) AS equipped
        FROM catalog.offers offer
        JOIN catalog.products product ON product.id=offer.product_id
+       LEFT JOIN catalog.collections collection ON collection.id=product.collection_id
        JOIN catalog.product_items membership ON membership.product_id=product.id
        JOIN catalog.cosmetics item ON item.id=membership.cosmetic_id
        LEFT JOIN inventory.cosmetics owned
@@ -231,6 +234,7 @@ export async function listStorefrontOfferItems(
       WHERE offer.status='available'
         AND offer.active=TRUE
         AND product.active=TRUE
+        AND (product.collection_id IS NULL OR collection.active=TRUE)
         AND (offer.starts_at IS NULL OR offer.starts_at <= CURRENT_TIMESTAMP)
         AND (offer.ends_at IS NULL OR offer.ends_at > CURRENT_TIMESTAMP)
       ORDER BY offer.priority, offer.sort_order, offer.id, membership.position`,
@@ -256,12 +260,14 @@ export async function listStorefrontCampaigns(
        JOIN catalog.campaign_offers membership ON membership.campaign_id=campaign.id
        JOIN catalog.offers offer ON offer.id=membership.offer_id
        JOIN catalog.products product ON product.id=offer.product_id
+       LEFT JOIN catalog.collections collection ON collection.id=product.collection_id
       WHERE campaign.active=TRUE
         AND (campaign.starts_at IS NULL OR campaign.starts_at <= CURRENT_TIMESTAMP)
         AND (campaign.ends_at IS NULL OR campaign.ends_at > CURRENT_TIMESTAMP)
         AND offer.status='available'
         AND offer.active=TRUE
         AND product.active=TRUE
+        AND (product.collection_id IS NULL OR collection.active=TRUE)
         AND (offer.starts_at IS NULL OR offer.starts_at <= CURRENT_TIMESTAMP)
         AND (offer.ends_at IS NULL OR offer.ends_at > CURRENT_TIMESTAMP)
       ORDER BY campaign.priority,
