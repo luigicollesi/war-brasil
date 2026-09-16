@@ -109,12 +109,6 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
     [],
   );
 
-  useEffect(() => {
-    if (showcase.items.some((item) => item.id === selectedItemId)) return;
-    setSelectedItemId(showcase.selectedItemId);
-    setTransitionPhase("idle");
-  }, [selectedItemId, showcase.items, showcase.selectedItemId]);
-
   const selectedIndexFromState = showcase.items.findIndex((item) => item.id === selectedItemId);
   const selectedIndexFromProjection = showcase.items.findIndex(
     (item) => item.id === showcase.selectedItemId,
