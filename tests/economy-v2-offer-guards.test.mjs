@@ -18,6 +18,10 @@ const storefront = readFileSync(
   "src/components/profile/v4/profile-store.tsx",
   "utf8",
 );
+const purchaseRoute = readFileSync(
+  "src/app/api/economy/purchases/route.ts",
+  "utf8",
+);
 const purchaseStart = service.indexOf("export async function purchaseOffer");
 const purchaseEnd = service.indexOf("export async function equipCosmetic");
 const purchaseSource = service.slice(purchaseStart, purchaseEnd);
@@ -65,12 +69,14 @@ test("item available sem offer ativa não cria caminho de compra por inferência
   assert.doesNotMatch(storefront, /storefront\.sets\.map[\s\S]{0,400}purchase\(/);
 });
 
-test("frontend envia apenas identidade, idempotência e expectedPrice para purchase", () => {
-  assert.match(
-    storefront,
-    /body:\s*JSON\.stringify\(\{\s*offerId:\s*offer\.id,\s*idempotencyKey,\s*expectedPrice:\s*offer\.price,\s*\}\)/,
-  );
-  assert.doesNotMatch(storefront, /JSON\.stringify\(\{[^}]*cosmeticIds/);
-  assert.doesNotMatch(storefront, /JSON\.stringify\(\{[^}]*balance/);
-  assert.doesNotMatch(storefront, /JSON\.stringify\(\{[^}]*currency/);
+test("purchase API accepts only offer identity, idempotency and expectedPrice from the browser", () => {
+  assert.match(purchaseRoute, /parsePurchaseOfferInput\(payload\)/);
+  assert.match(purchaseRoute, /input\.offerId/);
+  assert.match(purchaseRoute, /input\.idempotencyKey/);
+  assert.match(purchaseRoute, /input\.expectedPrice/);
+  assert.match(purchaseRoute, /session\.user\.id/);
+  assert.doesNotMatch(purchaseRoute, /payload\.cosmeticIds/);
+  assert.doesNotMatch(purchaseRoute, /payload\.balance/);
+  assert.doesNotMatch(purchaseRoute, /payload\.currency/);
+  assert.doesNotMatch(purchaseRoute, /payload\.userId/);
 });
