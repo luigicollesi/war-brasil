@@ -71,6 +71,22 @@ test("collection membership stays out of normal dice and territory discovery", a
   assert.match(repository, /item\.collection_id\s+IS\s+NULL/i);
 });
 
+test("inactive collections are filtered consistently from offer, item, campaign and quote reads", async () => {
+  const storefrontRepository = await source(
+    "src/lib/server/economy/economy-storefront-repository.ts",
+  );
+  const quoteRepository = await source(
+    "src/lib/server/economy/storefront-quote-repository.ts",
+  );
+
+  assert.ok(
+    storefrontRepository.match(/product\.collection_id IS NULL OR collection\.active=TRUE/g)?.length >= 3,
+  );
+  assert.ok(
+    quoteRepository.match(/product\.collection_id IS NULL OR collection\.active=TRUE/g)?.length >= 3,
+  );
+});
+
 test("purchase fails closed if a collection deactivates between availability and promotion locks", async () => {
   const repository = await source(
     "src/lib/server/economy/storefront-quote-repository.ts",
