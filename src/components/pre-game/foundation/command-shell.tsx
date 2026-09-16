@@ -3,6 +3,7 @@ import type { CSSProperties, ReactNode } from "react";
 import styles from "./command-foundation.module.css";
 import { CommandScene } from "./command-scene";
 import { COMMAND_FOUNDATION_TOKENS } from "./foundation-tokens";
+import type { ShowcaseScenePayload } from "./pre-game-command-runtime";
 import {
   COMMAND_SCENE_MODE_LABELS,
   normalizeCommandSceneIntent,
@@ -18,6 +19,7 @@ type CommandShellProps = {
   showModeRail?: boolean;
   sectionLabel?: string;
   style?: CSSProperties;
+  showcaseScene?: ShowcaseScenePayload | null;
   onSceneStateChange?: (state: CommandSceneState) => void;
 };
 
@@ -55,6 +57,7 @@ export function CommandShell({
   showModeRail = true,
   sectionLabel,
   style,
+  showcaseScene = null,
   onSceneStateChange,
 }: CommandShellProps) {
   const normalizedIntent = normalizeCommandSceneIntent(intent);
@@ -66,7 +69,11 @@ export function CommandShell({
       style={foundationStyle(style)}
       data-command-scene-mode={normalizedIntent.mode}
     >
-      <CommandScene intent={normalizedIntent} onStateChange={onSceneStateChange} />
+      <CommandScene
+        intent={normalizedIntent}
+        showcaseScene={showcaseScene}
+        onStateChange={onSceneStateChange}
+      />
       <div className={styles.atmosphere} data-command-atmosphere aria-hidden="true" />
       {chrome ? (
         <div className={styles.shellChrome} data-command-chrome aria-hidden="true">
