@@ -216,10 +216,14 @@ async function patchMe(actor, code, body) {
 async function openLobby(actor, code) {
   await actor.page.goto(`${BASE_URL}/lobby/${code}`, { waitUntil: "domcontentloaded" });
   try {
-    await actor.page.getByRole("heading", { name: "Conselho de operação" }).waitFor({
-      state: "visible",
-      timeout: 10_000,
-    });
+    await actor.page
+      .locator("h1:visible")
+      .filter({ hasText: /^Conselho de operação$/ })
+      .first()
+      .waitFor({
+        state: "visible",
+        timeout: LOBBY_CONVERGENCE_TIMEOUT_MS,
+      });
   } catch (error) {
     const headings = await actor.page
       .locator("h1, h2")
