@@ -15,8 +15,6 @@ import styles from "./store-showcase.module.css";
 
 const INTEGER_FORMAT = new Intl.NumberFormat("pt-BR");
 
-type DiceShowcaseSlot = "dice_attack" | "dice_defense" | "dice_neutral";
-
 function itemRoleLabel(item: StoreShowcaseItem) {
   switch (item.slot) {
     case "dice_attack":
@@ -68,7 +66,7 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
           {selectedItem?.type === "dice" ? (
             <DiceShowcaseModel
               assetRef={selectedItem.assetRef}
-              slot={selectedItem.slot as DiceShowcaseSlot}
+              slot={selectedItem.slot}
             />
           ) : (
             <group name="StoreShowcaseModelSlot" />
