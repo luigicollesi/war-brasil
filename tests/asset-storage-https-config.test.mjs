@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   ASSET_STORAGE_BUCKET_ENV,
   ASSET_STORAGE_DEV_BUCKET,
+  ASSET_STORAGE_PROD_BUCKET,
   ASSET_STORAGE_REGION,
   AssetStorageConfigError,
   assetStorageConfigFromEnv,
@@ -41,16 +42,12 @@ test("native HTTPS configuration keeps credentials outside ASSET_STORAGE_URL", (
   }
 });
 
-test("native HTTPS configuration requires an explicit environment bucket", () => {
+test("native HTTPS configuration falls back to the legacy production bucket when bucket is omitted", () => {
   const env = { ...nativeR2Env };
   delete env[ASSET_STORAGE_BUCKET_ENV];
 
-  assert.throws(
-    () => assetStorageConfigFromEnv(env),
-    (error) =>
-      error instanceof AssetStorageConfigError &&
-      error.code === "ASSET_STORAGE_BUCKET_MISSING",
-  );
+  const config = assetStorageConfigFromEnv(env);
+  assert.equal(config.bucket, ASSET_STORAGE_PROD_BUCKET);
 });
 
 test("native HTTPS endpoint rejects credentials, bucket paths and arbitrary query parameters", () => {
