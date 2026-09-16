@@ -32,7 +32,8 @@ test("territory mannequin keeps canonical geometry while changing front side and
   assert.match(model, /LineBasicMaterial/);
   assert.match(model, /skinAssetRef/);
   assert.match(model, /TextureLoader/);
-  assert.match(model, /onError|setSkinTexture\(null\)/);
+  assert.match(model, /loader\.load/);
+  assert.match(model, /texture:\s*null/);
   assert.doesNotMatch(model, /useLoader\(TextureLoader/);
 });
 
