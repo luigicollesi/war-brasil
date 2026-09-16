@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
@@ -34,7 +35,7 @@ function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
 
   return (
     <main aria-label="Expositor da Intendência">
-      <a href="/profile/store">Voltar à Intendência</a>
+      <Link href="/profile/store">Voltar à Intendência</Link>
       <p>{showcase.kind === "collection" ? "COLEÇÃO // EXPOSIÇÃO" : "INSPEÇÃO // ARSENAL"}</p>
       <h1>{showcase.title}</h1>
       <p>{selected?.name ?? showcase.title}</p>
