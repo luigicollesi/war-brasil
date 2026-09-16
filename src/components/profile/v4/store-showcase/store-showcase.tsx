@@ -74,14 +74,7 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
         </ShowcaseObjectController>
       ),
     }),
-    [
-      selectedItem?.assetRef,
-      selectedItem?.id,
-      selectedItem?.slot,
-      selectedItem?.type,
-      showcase.id,
-      showcase.mode,
-    ],
+    [selectedItem, showcase.id, showcase.mode],
   );
   useShowcaseScene(showcaseScene, Boolean(selectedItem));
 
