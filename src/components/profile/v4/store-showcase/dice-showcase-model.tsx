@@ -7,12 +7,7 @@ import { getSharedRoundedDieGeometry } from "@/src/lib/client/dice/dice-assets-m
 import type { DiceSkin } from "@/src/lib/client/dice/types";
 import type { CosmeticCatalogItem } from "@/src/lib/economy/economy-contract";
 
-type DiceShowcaseSlot = Extract<
-  CosmeticCatalogItem["slot"],
-  "dice_attack" | "dice_defense" | "dice_neutral"
->;
-
-function skinForSlot(slot: DiceShowcaseSlot): DiceSkin {
+function skinForSlot(slot: CosmeticCatalogItem["slot"]): DiceSkin {
   switch (slot) {
     case "dice_attack":
       return "attack";
@@ -20,6 +15,8 @@ function skinForSlot(slot: DiceShowcaseSlot): DiceSkin {
       return "defense";
     case "dice_neutral":
       return "neutral";
+    case "territory_skin":
+      throw new Error("Territory skin cannot be rendered as a showcase die.");
   }
 }
 
@@ -27,7 +24,7 @@ export function DiceShowcaseModel({
   slot,
   assetRef,
 }: {
-  slot: DiceShowcaseSlot;
+  slot: CosmeticCatalogItem["slot"];
   assetRef: string | null;
 }) {
   const skin = skinForSlot(slot);
