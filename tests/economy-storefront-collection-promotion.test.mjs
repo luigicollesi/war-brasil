@@ -56,7 +56,8 @@ test("storefront schema supports exactly one featured collection and snapshots p
   assert.match(migration, /featured\s+BOOLEAN\s+NOT NULL\s+DEFAULT FALSE/i);
   assert.match(migration, /promotion_discount_bps\s+INTEGER\s+NOT NULL\s+DEFAULT 0/i);
   assert.match(migration, /CREATE UNIQUE INDEX[\s\S]*WHERE featured/i);
-  assert.match(migration, /collection\.football[\s\S]*4000/i);
+  assert.match(migration, /promotion_discount_bps=4000/i);
+  assert.match(migration, /WHERE id='collection\.football'/i);
   assert.match(migration, /economy\.purchases[\s\S]*promotion_discount_bps/i);
 });
 
