@@ -14,6 +14,7 @@ import {
 import { installDice3DDependencyWarningFilter } from "@/src/lib/client/dice/install-3d-dependency-warning-filter";
 import styles from "./command-foundation.module.css";
 import { COMMAND_FOUNDATION_TOKENS } from "./foundation-tokens";
+import type { ShowcaseScenePayload } from "./pre-game-command-runtime";
 import {
   normalizeCommandSceneIntent,
   type CommandSceneIntent,
@@ -30,6 +31,7 @@ const CommandSceneCanvas = dynamic(
 type CommandSceneProps = {
   intent: CommandSceneIntent;
   className?: string;
+  showcaseScene?: ShowcaseScenePayload | null;
   onStateChange?: (state: CommandSceneState) => void;
 };
 
@@ -142,7 +144,12 @@ function CommandSceneFallback({
   );
 }
 
-export function CommandScene({ intent, className, onStateChange }: CommandSceneProps) {
+export function CommandScene({
+  intent,
+  className,
+  showcaseScene = null,
+  onStateChange,
+}: CommandSceneProps) {
   const normalizedIntent = useMemo(
     () => normalizeCommandSceneIntent(intent),
     [intent],
@@ -183,6 +190,7 @@ export function CommandScene({ intent, className, onStateChange }: CommandSceneP
       data-webgl={webglState}
       data-reduced-motion={reducedMotion ? "true" : "false"}
       data-compact-scene={compactScene ? "true" : "false"}
+      data-showcase-interactive={showcaseScene ? "true" : "false"}
       aria-hidden="true"
     >
       <CommandSceneFallback intent={normalizedIntent} />
@@ -194,6 +202,7 @@ export function CommandScene({ intent, className, onStateChange }: CommandSceneP
               reducedMotion={reducedMotion}
               compact={compactScene}
               maxDpr={maxDpr}
+              showcaseScene={showcaseScene}
               onScenePhaseChange={handleScenePhaseChange}
               onUnavailable={handleUnavailable}
             />
