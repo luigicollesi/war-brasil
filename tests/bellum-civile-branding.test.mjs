@@ -6,15 +6,23 @@ const readSource = (path) =>
   readFile(new URL(`../${path}`, import.meta.url), "utf8");
 
 test("public branding exposes Bellum Civile instead of WAR Brasil", async () => {
-  const [layout, home, homeIdentity, siteHeader, warShell, gamePage] =
-    await Promise.all([
-      readSource("src/app/layout.tsx"),
-      readSource("src/app/page.tsx"),
-      readSource("src/components/pre-game/home/command-home-content.tsx"),
-      readSource("src/components/site-header.tsx"),
-      readSource("src/components/war-shell.tsx"),
-      readSource("src/app/game/[roomId]/page.tsx"),
-    ]);
+  const [
+    layout,
+    home,
+    homeIdentity,
+    siteHeader,
+    warShell,
+    commandShell,
+    gamePage,
+  ] = await Promise.all([
+    readSource("src/app/layout.tsx"),
+    readSource("src/app/page.tsx"),
+    readSource("src/components/pre-game/home/command-home-content.tsx"),
+    readSource("src/components/site-header.tsx"),
+    readSource("src/components/war-shell.tsx"),
+    readSource("src/components/pre-game/foundation/command-shell.tsx"),
+    readSource("src/app/game/[roomId]/page.tsx"),
+  ]);
 
   const publicBranding = [
     layout,
@@ -22,6 +30,7 @@ test("public branding exposes Bellum Civile instead of WAR Brasil", async () => 
     homeIdentity,
     siteHeader,
     warShell,
+    commandShell,
     gamePage,
   ].join("\n");
 
@@ -31,6 +40,9 @@ test("public branding exposes Bellum Civile instead of WAR Brasil", async () => 
   assert.match(homeIdentity, />CIVILE</);
   assert.match(siteHeader, /Bellum Civile/);
   assert.match(warShell, /Bellum Civile/);
+  assert.match(commandShell, /<strong>BELLUM CIVILE<\/strong>/);
+  assert.match(commandShell, /src="\/icone\.png"/);
+  assert.doesNotMatch(commandShell, />WB</);
   assert.match(gamePage, /Bellum Civile/);
   assert.doesNotMatch(publicBranding, /WAR Brasil|War Brasil|WAR <|>WAR</);
 });
