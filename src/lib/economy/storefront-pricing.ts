@@ -26,6 +26,8 @@ export type StorefrontQuoteItem = Readonly<{
 export type StorefrontProductQuote = Readonly<{
   subtotal: number;
   discountBps: number;
+  basePrice: number;
+  promotionDiscountBps: number;
   finalPrice: number;
   missingCosmeticIds: ReadonlyArray<string>;
   fullyOwned: boolean;
@@ -35,6 +37,14 @@ function requireSafeInteger(value: number, label: string, minimum = 0) {
   if (!Number.isSafeInteger(value) || value < minimum) {
     throw new Error(`${label} must be a safe integer >= ${minimum}.`);
   }
+}
+
+function requireBasisPoints(value: number, label: string) {
+  requireSafeInteger(value, label);
+  if (value > BASIS_POINTS) {
+    throw new Error(`${label} must be between 0 and ${BASIS_POINTS}.`);
+  }
+  return value;
 }
 
 function requirePositivePrice(price: number) {
@@ -47,6 +57,10 @@ function toSafeInteger(value: bigint, label: string) {
     throw new Error(`${label} exceeds the supported safe integer range.`);
   }
   return Number(value);
+}
+
+function applyDiscount(value: bigint, discountBps: number) {
+  return (value * BigInt(BASIS_POINTS - discountBps)) / BigInt(BASIS_POINTS);
 }
 
 function validatedTiers(tiers: ReadonlyArray<StorefrontPriceTier>) {
@@ -115,11 +129,10 @@ export function resolveStorefrontUnitPrice(pricing: StorefrontItemPricing) {
 export function quoteStorefrontProduct(
   items: ReadonlyArray<StorefrontQuoteItem>,
   discountBps: number,
+  promotionDiscountBps = 0,
 ): StorefrontProductQuote {
-  requireSafeInteger(discountBps, "discount_bps");
-  if (discountBps > BASIS_POINTS) {
-    throw new Error(`discount_bps must be between 0 and ${BASIS_POINTS}.`);
-  }
+  requireBasisPoints(discountBps, "discount_bps");
+  requireBasisPoints(promotionDiscountBps, "promotion_discount_bps");
 
   const missingItems = items.filter((item) => !item.owned);
   let subtotal = BigInt(0);
@@ -131,12 +144,14 @@ export function quoteStorefrontProduct(
     subtotal += BigInt(resolveStorefrontUnitPrice(item.pricing));
   }
 
-  const finalPrice =
-    (subtotal * BigInt(BASIS_POINTS - discountBps)) / BigInt(BASIS_POINTS);
+  const basePrice = applyDiscount(subtotal, discountBps);
+  const finalPrice = applyDiscount(basePrice, promotionDiscountBps);
 
   return {
     subtotal: toSafeInteger(subtotal, "subtotal"),
     discountBps,
+    basePrice: toSafeInteger(basePrice, "basePrice"),
+    promotionDiscountBps,
     finalPrice: toSafeInteger(finalPrice, "finalPrice"),
     missingCosmeticIds: missingItems.map((item) => item.cosmeticId),
     fullyOwned: missingItems.length === 0,
