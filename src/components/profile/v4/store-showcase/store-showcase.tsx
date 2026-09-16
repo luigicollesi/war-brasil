@@ -11,6 +11,7 @@ import type {
 import { ProfileCosmeticImage } from "../profile-cosmetic-image";
 import { DiceShowcaseModel } from "./dice-showcase-model";
 import { ShowcaseObjectController } from "./showcase-object-controller";
+import { TerritoryShowcaseModel } from "./territory-showcase-model";
 import styles from "./store-showcase.module.css";
 
 const INTEGER_FORMAT = new Intl.NumberFormat("pt-BR");
@@ -40,10 +41,6 @@ function priceLabel(price: number) {
 
 function promotionLabel(discountBps: number) {
   return `${INTEGER_FORMAT.format(discountBps / 100)}% OFF`;
-}
-
-function previewSource(item: StoreShowcaseItem) {
-  return item.previewRef ?? item.assetRef;
 }
 
 export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
@@ -77,9 +74,9 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
               assetRef={selectedItem.assetRef}
               slot={selectedItem.slot}
             />
-          ) : (
-            <group name="StoreShowcaseModelSlot" />
-          )}
+          ) : selectedItem?.type === "territory" ? (
+            <TerritoryShowcaseModel />
+          ) : null}
         </ShowcaseObjectController>
       ),
     }),
@@ -176,21 +173,10 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
         </button>
 
         <div className={styles.stageObject} data-showcase-object-type={selectedItem.type}>
-          {selectedItem.type === "territory" ? (
-            <div className={styles.previewFallback}>
-              <ProfileCosmeticImage
-                src={previewSource(selectedItem)}
-                alt={`Prévia de ${selectedItem.name}`}
-                width={680}
-                height={680}
-                fallbackLabel="TERRITÓRIO"
-              />
-            </div>
-          ) : null}
           <span className={styles.stageMarker}>
             {selectedItem.type === "dice"
               ? "EXPOSITOR 3D // GEOMETRIA CANÔNICA"
-              : "EXPOSITOR 3D // TERRITÓRIO EM PREPARAÇÃO"}
+              : "EXPOSITOR 3D // TERRITÓRIO CANÔNICO"}
           </span>
         </div>
 
