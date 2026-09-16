@@ -8,61 +8,36 @@ async function source(path) {
   return readFile(new URL(path, ROOT), "utf8");
 }
 
-function purchaseSource(store) {
-  const start = store.indexOf("async function purchase(");
-  const end = store.indexOf("\n  return (", start);
-  assert.ok(start >= 0, "purchase handler must exist");
-  assert.ok(end > start, "purchase handler must end before component render");
-  return store.slice(start, end);
-}
-
-test("PROFILE V4 purchase sends offer identity, idempotency and confirmed expectedPrice", async () => {
+test("PROFILE V4 discovery delegates purchase interaction to the dedicated showcase", async () => {
   const store = await source("src/components/profile/v4/profile-store.tsx");
 
-  assert.match(store, /fetch\("\/api\/economy\/purchases"/);
-  assert.match(store, /method:\s*"POST"/);
-  assert.match(store, /crypto\.randomUUID\(\)/);
-  assert.match(
-    store,
-    /body:\s*JSON\.stringify\(\{[\s\S]*offerId:\s*offer\.id,[\s\S]*idempotencyKey,[\s\S]*expectedPrice:\s*offer\.price[\s\S]*\}\)/,
-  );
-  assert.doesNotMatch(store, /userId\s*:/);
-  assert.doesNotMatch(store, /cosmeticIds\s*:/);
+  assert.match(store, /function showcaseHref/);
+  assert.match(store, /INSPECIONAR/);
+  assert.doesNotMatch(store, /fetch\("\/api\/economy\/purchases"/);
+  assert.doesNotMatch(store, /async function purchase\(/);
+  assert.doesNotMatch(store, /pendingOfferId/);
+  assert.doesNotMatch(store, /purchaseFeedback/);
+  assert.doesNotMatch(store, /expectedPrice/);
 });
 
-test("PROFILE V4 purchase rejects stale confirmation and requires a new user action", async () => {
-  const store = await source("src/components/profile/v4/profile-store.tsx");
-  const purchase = purchaseSource(store);
-  const priceChangedStart = purchase.indexOf('payload?.error === "ECONOMY_PRICE_CHANGED"');
-  const unavailableStart = purchase.indexOf(
-    'payload?.error === "ECONOMY_OFFER_UNAVAILABLE"',
-    priceChangedStart,
-  );
+test("purchase API remains session-derived and accepts only the authoritative purchase contract", async () => {
+  const route = await source("src/app/api/economy/purchases/route.ts");
 
-  assert.ok(priceChangedStart >= 0, "price-change branch must exist");
-  assert.ok(unavailableStart > priceChangedStart, "price-change branch must be bounded");
-  const priceChangedBranch = purchase.slice(priceChangedStart, unavailableStart);
-
-  assert.match(priceChangedBranch, /currentPrice/);
-  assert.match(priceChangedBranch, /router\.refresh\(\)/);
-  assert.match(priceChangedBranch, /Confirme novamente|confirme novamente/i);
-  assert.match(priceChangedBranch, /return;/);
-  assert.doesNotMatch(priceChangedBranch, /purchase\(offer\)/);
+  assert.match(route, /getAuthenticatedSession\(request\)/);
+  assert.match(route, /parsePurchaseOfferInput\(payload\)/);
+  assert.match(route, /session\.user\.id/);
+  assert.match(route, /input\.offerId/);
+  assert.match(route, /input\.idempotencyKey/);
+  assert.match(route, /input\.expectedPrice/);
+  assert.doesNotMatch(route, /payload\.userId/);
+  assert.doesNotMatch(route, /payload\.cosmeticIds/);
 });
 
-test("PROFILE V4 purchase interaction prevents duplicate clicks and refreshes authoritative state", async () => {
-  const store = await source("src/components/profile/v4/profile-store.tsx");
+test("showcase projection carries server-derived prices instead of creating client pricing math", async () => {
+  const projection = await source("src/lib/economy/store-showcase.ts");
 
-  assert.match(store, /pendingOfferId/);
-  assert.match(store, /if \(pendingOfferId\) return/);
-  assert.match(store, /router\.refresh\(\)/);
-  assert.match(store, /response\.ok/);
-  assert.match(store, /ECONOMY_INSUFFICIENT_BALANCE/);
-});
-
-test("PROFILE V4 purchase feedback keeps campaign credits visually canonical", async () => {
-  const store = await source("src/components/profile/v4/profile-store.tsx");
-
-  assert.match(store, /purchaseFeedback/);
-  assert.match(store, /\/coin\.svg/);
+  assert.match(projection, /price:\s*offer\.price/);
+  assert.match(projection, /basePrice:\s*offer\.basePrice/);
+  assert.match(projection, /promotionDiscountBps:\s*offer\.promotionDiscountBps/);
+  assert.doesNotMatch(projection, /Math\.(?:floor|round)\([^\n]*price/);
 });
