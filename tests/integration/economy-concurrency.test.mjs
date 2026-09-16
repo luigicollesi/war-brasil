@@ -301,8 +301,6 @@ if (!databaseUrl) {
         await initializeTransaction(setup, userId);
         await grantTestCosmetics(setup, userId);
 
-        // Mesmo slot: a segunda transação só atravessa o mutex depois do commit
-        // da primeira. O estado final representa uma ordem serial completa.
         await first.query("BEGIN");
         await lockCommander(first, userId);
         const secondSameSlot = (async () => {
@@ -347,8 +345,6 @@ if (!databaseUrl) {
           "dice.defense.default",
         );
 
-        // Slots diferentes também são serializados pelo mesmo comandante, mas
-        // cada UPSERT toca apenas sua chave (user_id,slot), então ambos persistem.
         await first.query("BEGIN");
         await lockCommander(first, userId);
         const secondDifferentSlot = (async () => {
@@ -388,7 +384,7 @@ if (!databaseUrl) {
         assert.equal(bySlot.get("dice_attack"), "dice.attack.exercito");
         assert.equal(bySlot.get("dice_defense"), "dice.defense.exercito");
         assert.equal(bySlot.get("dice_neutral"), "dice.neutral.default");
-        assert.equal(bySlot.get("territory_effect"), "territory.effect.default");
+        assert.equal(bySlot.get("territory_skin"), "territory.effect.default");
 
         const money = await setup.query(
           `SELECT wallet.balance::text AS balance,
@@ -418,8 +414,6 @@ if (!databaseUrl) {
         const playerId = await createHumanSeat(setup, roomId, userId);
         await createBotSeat(setup, roomId);
 
-        // Match-start vence a corrida: congela default; a equipagem só entra no
-        // Profile depois e portanto vale apenas para a próxima partida.
         await match.query("BEGIN");
         await lockRoomCommanders(match, roomId);
         const equipAfterMatch = (async () => {
@@ -459,8 +453,6 @@ if (!databaseUrl) {
         );
         assert.equal(profile.rows[0].cosmetic_id, "dice.attack.exercito");
 
-        // Equipagem vence a corrida: o próximo snapshot observa o estado novo
-        // por inteiro. Nenhum estado intermediário de slot é visível.
         await setup.query(
           `DELETE FROM game.player_cosmetic_loadouts
             WHERE player_id IN (SELECT id FROM game.players WHERE room_id=$1)`,
