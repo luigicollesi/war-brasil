@@ -71,6 +71,15 @@ test("collection membership stays out of normal dice and territory discovery", a
   assert.match(repository, /item\.collection_id\s+IS\s+NULL/i);
 });
 
+test("purchase fails closed if a collection deactivates between availability and promotion locks", async () => {
+  const repository = await source(
+    "src/lib/server/economy/storefront-quote-repository.ts",
+  );
+
+  assert.match(repository, /collection\.active=TRUE[\s\S]*FOR SHARE/i);
+  assert.match(repository, /if \(result\.rowCount !== 1\)[\s\S]*throw new Error/i);
+});
+
 test("collection banners open an accessible modal with item purchases and bundle purchase", async () => {
   const store = await source("src/components/profile/v4/profile-store.tsx");
   const styles = await source(
