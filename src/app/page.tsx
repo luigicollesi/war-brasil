@@ -3,9 +3,9 @@ import { CommandHomeClient } from "@/src/components/pre-game/home/command-home-c
 import { CommandHomeContent } from "@/src/components/pre-game/home/command-home-content";
 import { getSiteUrl } from "@/src/lib/site-url";
 
-const HOME_TITLE = "WAR Brasil — Jogo de estratégia no mapa do Brasil";
+const HOME_TITLE = "Bellum Civile — Jogo de estratégia no mapa do Brasil";
 const HOME_DESCRIPTION =
-  "Jogue WAR Brasil online: dispute 42 territórios, atravesse barreiras e conduza sua facção em partidas estratégicas para 2 a 6 jogadores.";
+  "Jogue Bellum Civile online: dispute 42 territórios, atravesse barreiras e conduza sua facção em partidas estratégicas para 2 a 6 jogadores.";
 
 export const metadata: Metadata = {
   title: {
@@ -13,7 +13,8 @@ export const metadata: Metadata = {
   },
   description: HOME_DESCRIPTION,
   keywords: [
-    "WAR Brasil",
+    "Bellum Civile",
+    "guerra civil",
     "jogo de estratégia",
     "jogo online Brasil",
     "jogo de território",
@@ -41,13 +42,13 @@ export const metadata: Metadata = {
     type: "website",
     locale: "pt_BR",
     url: "/",
-    siteName: "WAR Brasil",
+    siteName: "Bellum Civile",
     title: HOME_TITLE,
     description: HOME_DESCRIPTION,
     images: [
       {
         url: "/icone.png",
-        alt: "WAR Brasil",
+        alt: "Bellum Civile",
       },
     ],
   },
@@ -69,7 +70,7 @@ export default function Home() {
         "@type": "WebSite",
         "@id": `${homeUrl}#website`,
         url: homeUrl,
-        name: "WAR Brasil",
+        name: "Bellum Civile",
         description: HOME_DESCRIPTION,
         inLanguage: "pt-BR",
       },
@@ -77,7 +78,7 @@ export default function Home() {
         "@type": "WebApplication",
         "@id": `${homeUrl}#game`,
         url: homeUrl,
-        name: "WAR Brasil",
+        name: "Bellum Civile",
         description: HOME_DESCRIPTION,
         applicationCategory: "GameApplication",
         operatingSystem: "Web",

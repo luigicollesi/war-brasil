@@ -58,7 +58,8 @@ test("HOME consome somente contrato público e não controla progresso por frame
 });
 
 test("HOME mantém identidade, CTA e três destinos do comando", () => {
-  assert.match(content, /WAR/);
+  assert.match(content, /BELLUM/);
+  assert.match(content, /CIVILE/);
   assert.match(content, /BRASIL/);
   assert.match(home, /ENTRAR NO COMANDO/);
   assert.match(home, /href: "\/matchmaking"/);

@@ -34,10 +34,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: getSiteUrl(),
-  applicationName: "WAR Brasil",
+  applicationName: "Bellum Civile",
   title: {
-    default: "WAR Brasil",
-    template: "%s | WAR Brasil",
+    default: "Bellum Civile",
+    template: "%s | Bellum Civile",
   },
   description:
     "Jogo de estratégia online no mapa do Brasil, com 42 territórios, barreiras e disputas entre facções.",

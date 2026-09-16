@@ -9,8 +9,8 @@ export function CommandHomeContent() {
     >
       <p className={styles.kicker}>AUTORIDADE TERRITORIAL / BRASIL</p>
       <h1 id="home-title" className={styles.title}>
-        <span>WAR</span>
-        <strong>BRASIL</strong>
+        <span>BELLUM</span>
+        <strong>CIVILE</strong>
       </h1>
       <p className={styles.subtitle}>
         Quarenta e dois territórios. Uma mesa de domínio. Uma ordem de comando.
