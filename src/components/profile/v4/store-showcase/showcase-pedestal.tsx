@@ -9,7 +9,7 @@ export function StoreShowcasePedestal({
 
   return (
     <group name="StoreShowcasePedestal" position={[0, -1.45, 0]}>
-      <mesh receiveShadow>
+      <mesh>
         <cylinderGeometry args={[1.72, 1.94, 0.22, 72]} />
         <meshStandardMaterial
           color={collection ? "#211c12" : "#151b18"}
