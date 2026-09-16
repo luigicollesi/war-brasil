@@ -130,7 +130,7 @@ async function createPreEconomyCommander(connectionString, label) {
 if (!databaseUrl) {
   test("economy migration exige DATABASE_URL", { skip: true }, () => {});
 } else {
-  test("038→044 converge catálogo, Storefront V2, territory commerce e backfill idempotente", async () => {
+  test("038→047 converge catálogo, Storefront V2, territory commerce e backfill idempotente", async () => {
     await withTemporaryDatabase(async (connectionString) => {
       await prepareDatabaseThrough037(connectionString);
       const userId = await createPreEconomyCommander(
@@ -168,10 +168,10 @@ if (!databaseUrl) {
              FROM catalog.cosmetics`,
         );
         assert.deepEqual(catalog.rows[0], {
-          total: 26,
+          total: 29,
           defaults: 4,
           available: 26,
-          announced: 0,
+          announced: 3,
           commercial: 22,
         });
 
@@ -186,8 +186,8 @@ if (!databaseUrl) {
             GROUP BY cosmetic_set.id,cosmetic_set.storage_slug,cosmetic_set.status,cosmetic_set.sort_order
             ORDER BY cosmetic_set.sort_order,cosmetic_set.id`,
         );
-        assert.equal(sets.rowCount, 6);
-        assert.deepEqual(sets.rows.map((row) => row.items), [3, 3, 3, 3, 3, 3]);
+        assert.equal(sets.rowCount, 7);
+        assert.deepEqual(sets.rows.map((row) => row.items), [3, 3, 3, 3, 3, 3, 3]);
 
         const collections = await client.query(
           `SELECT collection.id,collection.slug,COUNT(item.id)::int AS items
@@ -197,7 +197,7 @@ if (!databaseUrl) {
             ORDER BY collection.id`,
         );
         assert.equal(collections.rowCount, 6);
-        assert.deepEqual(collections.rows.map((row) => row.items), [3, 3, 3, 3, 3, 3]);
+        assert.deepEqual(collections.rows.map((row) => row.items), [3, 3, 3, 0, 0, 3]);
 
         const products = await client.query(
           `SELECT product.product_type,
@@ -211,13 +211,13 @@ if (!databaseUrl) {
         assert.deepEqual(products.rows, [
           {
             product_type: "bundle",
-            products: 6,
+            products: 7,
             min_discount: 1111,
-            max_discount: 1111,
+            max_discount: 2000,
           },
           {
             product_type: "single",
-            products: 22,
+            products: 25,
             min_discount: 0,
             max_discount: 0,
           },
@@ -252,9 +252,9 @@ if (!databaseUrl) {
         assert.deepEqual(pricing.rows, [
           {
             pricing_model: "fixed",
-            total: 22,
+            total: 25,
             min_price: "150",
-            max_price: "300",
+            max_price: "500",
           },
         ]);
 
@@ -270,8 +270,8 @@ if (!databaseUrl) {
             ORDER BY product.product_type`,
         );
         assert.deepEqual(offers.rows, [
-          { product_type: "bundle", offers: 6, active: 6 },
-          { product_type: "single", offers: 22, active: 22 },
+          { product_type: "bundle", offers: 7, active: 6 },
+          { product_type: "single", offers: 25, active: 22 },
         ]);
 
         const packs = await client.query(
@@ -292,7 +292,7 @@ if (!databaseUrl) {
             WHERE slot IN ('dice_attack','dice_defense','dice_neutral')
             ORDER BY id`,
         );
-        assert.equal(diceAssets.rowCount, 21);
+        assert.equal(diceAssets.rowCount, 24);
         for (const row of diceAssets.rows) {
           assert.match(
             row.asset_ref,
