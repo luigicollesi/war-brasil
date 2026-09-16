@@ -1,3 +1,4 @@
+import Image from "next/image";
 import type { CSSProperties, ReactNode } from "react";
 import styles from "./command-foundation.module.css";
 import { CommandScene } from "./command-scene";
@@ -70,10 +71,19 @@ export function CommandShell({
       {chrome ? (
         <div className={styles.shellChrome} data-command-chrome aria-hidden="true">
           <div className={styles.brandLockup}>
-            <span className={styles.brandSeal}>WB</span>
+            <span className={styles.brandSeal}>
+              <Image
+                src="/icone.png"
+                alt=""
+                width={34}
+                height={34}
+                priority
+                style={{ width: 34, height: 34, objectFit: "contain" }}
+              />
+            </span>
             <span>
               <small>COMANDO TERRITORIAL</small>
-              <strong>WAR BRASIL</strong>
+              <strong>BELLUM CIVILE</strong>
             </span>
           </div>
           {showModeRail ? (
