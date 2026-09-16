@@ -1,22 +1,30 @@
 "use client";
 
 import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
-import { useRef, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import type { Group } from "three";
 import {
   SHOWCASE_INTERACTION_RESUME_MS,
+  SHOWCASE_ITEM_TRANSITION_PHASE_MS,
   idleAngularVelocity,
   resolveShowcaseDragRotation,
+  showcaseTransitionProgress,
+  type ShowcaseTransitionPhase,
 } from "@/src/lib/client/store-showcase/showcase-motion";
 
 export function ShowcaseObjectController({
   children,
   reducedMotion,
+  transitionPhase,
+  transitionDirection,
 }: {
   children: ReactNode;
   reducedMotion: boolean;
+  transitionPhase: ShowcaseTransitionPhase;
+  transitionDirection: -1 | 1;
 }) {
   const groupRef = useRef<Group>(null);
+  const transitionStartedAt = useRef(0);
   const dragRef = useRef({
     active: false,
     pointerId: -1,
@@ -26,9 +34,47 @@ export function ShowcaseObjectController({
   });
   const invalidate = useThree((state) => state.invalidate);
 
+  useEffect(() => {
+    transitionStartedAt.current = performance.now();
+    const group = groupRef.current;
+    if (!group) return;
+
+    if (transitionPhase === "idle" || reducedMotion) {
+      group.position.x = 0;
+      group.scale.setScalar(1);
+    } else if (transitionPhase === "enter") {
+      group.position.x = -transitionDirection * 0.32;
+      group.scale.setScalar(0.92);
+    } else {
+      group.position.x = 0;
+      group.scale.setScalar(1);
+    }
+    invalidate();
+  }, [invalidate, reducedMotion, transitionDirection, transitionPhase]);
+
   useFrame((_, delta) => {
     const group = groupRef.current;
-    if (!group || reducedMotion || dragRef.current.active) return;
+    if (!group) return;
+
+    if (transitionPhase !== "idle" && !reducedMotion) {
+      const progress = showcaseTransitionProgress({
+        elapsedMs: performance.now() - transitionStartedAt.current,
+        prefersReducedMotion: reducedMotion,
+      });
+
+      if (transitionPhase === "exit") {
+        group.position.x = transitionDirection * 0.32 * progress;
+        group.scale.setScalar(1 - 0.08 * progress);
+      } else {
+        group.position.x = -transitionDirection * 0.32 * (1 - progress);
+        group.scale.setScalar(0.92 + 0.08 * progress);
+      }
+
+      if (progress < 1) invalidate();
+      return;
+    }
+
+    if (reducedMotion || dragRef.current.active) return;
     if (performance.now() < dragRef.current.resumeAt) return;
     group.rotation.y += idleAngularVelocity({ prefersReducedMotion: false }) * delta;
   });
@@ -36,7 +82,7 @@ export function ShowcaseObjectController({
   function onPointerDown(event: ThreeEvent<PointerEvent>) {
     event.stopPropagation();
     const group = groupRef.current;
-    if (!group) return;
+    if (!group || transitionPhase !== "idle") return;
 
     dragRef.current.active = true;
     dragRef.current.pointerId = event.pointerId;
