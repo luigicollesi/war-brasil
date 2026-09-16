@@ -10,8 +10,13 @@ export {
   PreGameCommandRuntime,
   useCommandSceneDirective,
   useCommandSceneState,
+  useShowcaseScene,
 } from "./pre-game-command-runtime";
-export type { CommandSceneDirective } from "./pre-game-command-runtime";
+export type {
+  CommandSceneDirective,
+  ShowcaseSceneMode,
+  ShowcaseScenePayload,
+} from "./pre-game-command-runtime";
 export {
   resolvePreGameSceneIntent,
   resolvePreGameSceneMode,
