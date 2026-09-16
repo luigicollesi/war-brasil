@@ -16,6 +16,8 @@ export type StoreShowcaseOffer = Readonly<{
   basePrice: number;
   promotionDiscountBps: number;
   price: number;
+  startsAt: string | null;
+  endsAt: string | null;
   ownedCount: number;
   totalCount: number;
   fullyOwned: boolean;
@@ -65,6 +67,8 @@ function projectOffer(offer: EconomyOffer): StoreShowcaseOffer {
     basePrice: offer.basePrice,
     promotionDiscountBps: offer.promotionDiscountBps,
     price: offer.price,
+    startsAt: offer.startsAt,
+    endsAt: offer.endsAt,
     ownedCount: offer.ownedCount,
     totalCount: offer.totalCount,
     fullyOwned: offer.fullyOwned,
