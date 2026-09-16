@@ -69,6 +69,7 @@ import {
   listLockedProductQuoteItems,
   lockOfferProductForPurchase,
   lockProductCosmeticStats,
+  lockStorefrontCollectionPromotion,
   snapshotPurchaseCommercialContext,
   snapshotPurchaseItemPrices,
   type StorefrontOfferProductRow,
@@ -143,11 +144,7 @@ function walletFromRow(row: WalletRow | null): CampaignCreditWallet {
   };
 }
 
-function integerAmount(
-  value: string,
-  errorCode: string,
-  minimum: number,
-) {
+function integerAmount(value: string, errorCode: string, minimum: number) {
   const amount = Number(value);
   if (!Number.isSafeInteger(amount) || amount < minimum) {
     throw new EconomyServiceError(
@@ -239,6 +236,8 @@ function collectionsFromRows(
       slug: row.collection_slug,
       name: row.collection_name,
       description: row.collection_description,
+      featured: row.collection_featured,
+      promotionDiscountBps: row.collection_promotion_discount_bps,
       assets: {
         banner: collectionAssetDeliveryPath(row.banner_object_key),
         background: collectionAssetDeliveryPath(row.background_object_key),
@@ -275,7 +274,8 @@ function collectionsFromRows(
       singles: [],
       bundles: [],
     };
-    const fullyOwned = collection.totalCount > 0 && collection.ownedCount === collection.totalCount;
+    const fullyOwned =
+      collection.totalCount > 0 && collection.ownedCount === collection.totalCount;
     return {
       ...collection,
       fullyOwned,
@@ -378,9 +378,14 @@ function quoteItemFromRow(row: StorefrontQuoteItemRow): StorefrontQuoteItem {
 function quoteFromRows(
   rows: ReadonlyArray<StorefrontQuoteItemRow>,
   discountBps: number,
+  promotionDiscountBps = 0,
 ) {
   try {
-    return quoteStorefrontProduct(rows.map(quoteItemFromRow), discountBps);
+    return quoteStorefrontProduct(
+      rows.map(quoteItemFromRow),
+      discountBps,
+      promotionDiscountBps,
+    );
   } catch (error) {
     if (error instanceof EconomyServiceError) throw error;
     throw new EconomyServiceError(
@@ -437,7 +442,11 @@ function offersFromRows(
       );
     }
 
-    const quote = quoteFromRows(pricingItems, product.bundle_discount_bps);
+    const quote = quoteFromRows(
+      pricingItems,
+      product.bundle_discount_bps,
+      product.promotion_discount_bps,
+    );
     const ownedCount = items.filter((item) => item.owned).length;
     const totalCount = items.length;
     const fullyOwned = totalCount > 0 && ownedCount === totalCount;
@@ -452,6 +461,8 @@ function offersFromRows(
       name: row.name,
       description: row.description,
       currency: ECONOMY_CURRENCY_ID,
+      basePrice: quote.basePrice,
+      promotionDiscountBps: quote.promotionDiscountBps,
       price: quote.finalPrice,
       status: row.status,
       featured: row.is_featured,
@@ -482,10 +493,7 @@ function creditPacksFromRows(rows: CreditPackRow[]): EconomyCreditPack[] {
   }));
 }
 
-async function ensureLockedEconomyState(
-  userId: string,
-  db: EconomyQueryable,
-) {
+async function ensureLockedEconomyState(userId: string, db: EconomyQueryable) {
   const commanderExists = await lockCommanderEconomyState(userId, db);
   if (!commanderExists) {
     throw new EconomyServiceError(
@@ -497,10 +505,7 @@ async function ensureLockedEconomyState(
   await initializeEconomyState(userId, db);
 }
 
-export async function ensureEconomyState(
-  userId: string,
-  db?: EconomyQueryable,
-) {
+export async function ensureEconomyState(userId: string, db?: EconomyQueryable) {
   if (db) {
     await ensureLockedEconomyState(userId, db);
     return;
@@ -527,9 +532,6 @@ export async function getEconomyStorefront(
     await client.query("BEGIN");
     await ensureLockedEconomyState(userId, client);
 
-    // A single pg Client owns one PostgreSQL connection. Keep these reads
-    // sequential so transaction ordering remains explicit and compatible with
-    // node-postgres v9, which no longer accepts concurrent queries per client.
     const walletRow = await findCampaignCreditWallet(userId, client);
     const ownedRows = await listOwnedCosmetics(userId, client);
     const setRows = await listStorefrontSetItems(userId, client);
@@ -694,6 +696,10 @@ export async function purchaseOffer(
       );
     }
 
+    const promotionDiscountBps = await lockStorefrontCollectionPromotion(
+      offer.collection_id,
+      client,
+    );
     const lockedStats = await lockProductCosmeticStats(offer.product_id, client);
     const pricingRows = await listLockedProductQuoteItems(
       userId,
@@ -713,7 +719,11 @@ export async function purchaseOffer(
       );
     }
 
-    const quote = quoteFromRows(pricingRows, offer.bundle_discount_bps);
+    const quote = quoteFromRows(
+      pricingRows,
+      offer.bundle_discount_bps,
+      promotionDiscountBps,
+    );
     const missingRows = pricingRows.filter((item) => !item.owned);
     if (quote.fullyOwned || missingRows.length === 0) {
       throw new EconomyServiceError(
@@ -755,6 +765,7 @@ export async function purchaseOffer(
       offer.product_id,
       quote.subtotal,
       offer.bundle_discount_bps,
+      promotionDiscountBps,
       client,
     );
 
