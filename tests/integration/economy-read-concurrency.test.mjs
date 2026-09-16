@@ -179,7 +179,7 @@ if (!databaseUrl) {
         assert.equal(bySlot.get("dice_attack"), "dice.attack.exercito");
         assert.equal(bySlot.get("dice_defense"), "dice.defense.default");
         assert.equal(bySlot.get("dice_neutral"), "dice.neutral.default");
-        assert.equal(bySlot.get("territory_effect"), "territory.effect.default");
+        assert.equal(bySlot.get("territory_skin"), "territory.effect.default");
         assert.equal(snapshot.balance, "0");
 
         const ledger = await setup.query(
