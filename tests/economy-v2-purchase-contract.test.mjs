@@ -10,9 +10,15 @@ const migrationPath = "src/lib/db/migrations/managed/041-economy-v2-commerce.sql
 const migration = source(migrationPath);
 const contract = source("src/lib/economy/economy-contract.ts");
 const repository = source("src/lib/server/economy/economy-repository.ts");
+const quoteRepository = source(
+  "src/lib/server/economy/storefront-quote-repository.ts",
+);
 const service = source("src/lib/server/economy/economy-service.ts");
 const purchaseRoutePath = "src/app/api/economy/purchases/route.ts";
 const purchaseRoute = source(purchaseRoutePath);
+const purchaseStart = service.indexOf("export async function purchaseOffer");
+const purchaseEnd = service.indexOf("export async function equipCosmetic");
+const purchaseSource = service.slice(purchaseStart, purchaseEnd);
 
 test("economy v2 cria migration comercial incremental", () => {
   assert.equal(existsSync(migrationPath), true);
@@ -55,7 +61,7 @@ test("STORE-12: contrato público recebe expectedPrice sem aceitar autoridade ec
 test("purchase é transacional, trava wallet e grava receipt + ledger + ownership", () => {
   assert.match(repository, /export async function lockCampaignCreditWallet/);
   assert.match(repository, /FOR UPDATE/);
-  assert.match(repository, /export async function findPurchasableOffer/);
+  assert.match(quoteRepository, /export async function lockOfferProductForPurchase/);
   assert.match(repository, /export async function createPurchaseReceipt/);
   assert.match(repository, /export async function debitCampaignCreditWallet/);
   assert.match(repository, /INSERT INTO economy\.ledger_entries/);
@@ -66,15 +72,18 @@ test("purchase é transacional, trava wallet e grava receipt + ledger + ownershi
   assert.match(service, /client\.query\("COMMIT"\)/);
   assert.match(service, /client\.query\("ROLLBACK"\)/);
   assert.match(service, /lockCampaignCreditWallet/);
+  assert.match(service, /lockOfferProductForPurchase/);
 });
 
 test("STORE-12: servidor recalcula preço e rejeita confirmação stale antes de debitar", () => {
-  assert.match(service, /expectedPrice/);
-  assert.match(service, /ECONOMY_PRICE_CHANGED/);
-  assert.match(service, /409/);
-  const priceCheck = service.indexOf("ECONOMY_PRICE_CHANGED");
-  const debit = service.indexOf("debitCampaignCreditWallet");
+  const priceCheck = purchaseSource.indexOf("if (price !== expectedPrice)");
+  const debit = purchaseSource.indexOf(
+    "debitCampaignCreditWallet(userId, price, client)",
+  );
+
   assert.ok(priceCheck >= 0, "price-change gate must exist");
+  assert.match(purchaseSource, /ECONOMY_PRICE_CHANGED/);
+  assert.match(purchaseSource, /409/);
   assert.ok(debit > priceCheck, "price confirmation must happen before wallet debit");
 });
 
@@ -82,7 +91,7 @@ test("POST purchases deriva ator da sessão e aceita offerId + idempotencyKey + 
   assert.equal(existsSync(purchaseRoutePath), true);
   assert.match(purchaseRoute, /getAuthenticatedSession\(request\)/);
   assert.match(purchaseRoute, /rejectUntrustedMutationOrigin\(request\)/);
-  assert.match(purchaseRoute, /purchaseOffer\(session\.user\.id/);
+  assert.match(purchaseRoute, /purchaseOffer\(\s*session\.user\.id,/);
   assert.match(purchaseRoute, /input\.expectedPrice/);
   assert.doesNotMatch(purchaseRoute, /payload\.userId|body\.userId|input\.userId/);
   assert.doesNotMatch(purchaseRoute, /payload\.balance|payload\.currency|payload\.cosmeticIds/);

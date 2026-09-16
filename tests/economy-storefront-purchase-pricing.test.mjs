@@ -50,5 +50,5 @@ test("STORE-12: preview e compra usam o mesmo motor quoteStorefrontProduct", () 
 test("STORE-10: counters avançam somente para cosmetics efetivamente concedidos", () => {
   assert.match(quoteRepository, /incrementCosmeticAcquisitionCounts/);
   assert.match(service, /grantedIds/);
-  assert.match(service, /incrementCosmeticAcquisitionCounts\(grantedIds/);
+  assert.match(service, /incrementCosmeticAcquisitionCounts\(\s*grantedIds/);
 });

@@ -6,12 +6,12 @@ function source(path) {
   return readFileSync(path, "utf8");
 }
 
-test("territory_effect usa a mesma boundary owned-only dos demais cosméticos", () => {
+test("territory_skin usa a mesma boundary owned-only dos demais cosméticos", () => {
   const contract = source("src/lib/economy/economy-contract.ts");
   const service = source("src/lib/server/economy/economy-service.ts");
   const repository = source("src/lib/server/economy/economy-repository.ts");
 
-  assert.match(contract, /"territory_effect"/);
+  assert.match(contract, /"territory_skin"/);
   assert.match(service, /const item = await findOwnedCosmetic\(userId, cosmeticId, client\)/);
   assert.match(service, /"ECONOMY_COSMETIC_NOT_OWNED"/);
   assert.match(service, /if \(item\.slot !== slot\)/);

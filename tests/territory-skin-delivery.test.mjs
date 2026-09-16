@@ -98,7 +98,7 @@ test("validação R2 de territory skin exige HEAD image/webp", async () => {
 test("assets:validate inclui territory skins do catálogo sem allowlist temática", () => {
   const validator = source("scripts/validate-dice-assets.mjs");
 
-  assert.match(validator, /slot IN \('dice_attack', 'dice_defense', 'dice_neutral', 'territory_effect'\)/);
+  assert.match(validator, /slot IN \('dice_attack', 'dice_defense', 'dice_neutral', 'territory_skin'\)/);
   assert.match(validator, /validateTerritorySkinAssetObject/);
   assert.match(validator, /assertTerritorySkinAssetKey/);
   assert.doesNotMatch(validator, /azulejo_brasil|azulejo_ornamental|ceu_estrelado|solar_ornamental/);
@@ -116,8 +116,8 @@ test("delivery usa endpoint autenticado e catálogo/snapshot como allowlist", ()
   assert.match(route, /status: 307/);
   assert.match(route, /private, no-store/);
 
-  assert.match(repository, /item\.slot='territory_effect'/);
-  assert.match(repository, /snapshot\.slot='territory_effect'/);
+  assert.match(repository, /item\.slot='territory_skin'/);
+  assert.match(repository, /snapshot\.slot='territory_skin'/);
   assert.match(repository, /snapshot\.asset_ref=\$1/);
   assert.doesNotMatch(repository, /ListObjects|listObjects/i);
 
@@ -128,13 +128,13 @@ test("delivery usa endpoint autenticado e catálogo/snapshot como allowlist", ()
   assert.match(service, /createPresignedAssetUrl/);
 });
 
-test("economy storefront projeta territory_effect pela rota interna de delivery", () => {
+test("economy storefront projeta territory_skin pela rota interna de delivery", () => {
   const economyService = source("src/lib/server/economy/economy-service.ts");
 
   assert.match(economyService, /territorySkinAssetDeliveryPath/);
   assert.match(
     economyService,
-    /if \(row\.slot === "territory_effect"\) \{\s*return territorySkinAssetDeliveryPath\(row\.asset_ref\);\s*\}/,
+    /if \(row\.slot === "territory_skin"\) \{\s*return territorySkinAssetDeliveryPath\(row\.asset_ref\);\s*\}/,
   );
   assert.doesNotMatch(economyService, /https?:\/\/[^"']*territory-skins/);
 });

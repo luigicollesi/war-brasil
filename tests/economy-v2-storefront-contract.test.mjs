@@ -75,7 +75,7 @@ test("storefront V2 deriva catálogo comercial no servidor sem regra React hardc
   assert.match(service, /listActiveStorefrontQuoteItems/);
   assert.match(service, /quoteStorefrontProduct/);
   assert.match(service, /listStorefrontCreditPacks/);
-  assert.match(service, /offers:/);
+  assert.match(service, /\boffers,\s*creditPacks:/);
   assert.match(service, /creditPacks:/);
 
   assert.doesNotMatch(storefront, /offer\.(exercito|lancas|viking|gato|cachorro|futebol)/);
