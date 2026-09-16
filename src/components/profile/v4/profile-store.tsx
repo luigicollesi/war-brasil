@@ -280,12 +280,8 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
         .map((offerId) => storefront.offers.find((offer) => offer.id === offerId) ?? null)
         .find((offer): offer is EconomyOffer => offer !== null) ?? null
     : null;
-  const selectedCollectionSingleByItem = useMemo(
-    () =>
-      new Map(
-        selectedCollectionSingles.map((offer) => [offer.items[0]?.id ?? offer.id, offer] as const),
-      ),
-    [selectedCollectionSingles],
+  const selectedCollectionSingleByItem = new Map(
+    selectedCollectionSingles.map((offer) => [offer.items[0]?.id ?? offer.id, offer] as const),
   );
 
   const closeInspection = useCallback(() => {
