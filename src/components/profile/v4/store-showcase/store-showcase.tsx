@@ -75,7 +75,11 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
               slot={selectedItem.slot}
             />
           ) : selectedItem?.type === "territory" ? (
-            <TerritoryShowcaseModel />
+            <TerritoryShowcaseModel
+              cosmeticId={selectedItem.id}
+              assetRef={selectedItem.assetRef}
+              effectKey={selectedItem.effectKey}
+            />
           ) : null}
         </ShowcaseObjectController>
       ),
