@@ -771,7 +771,7 @@ function ShowcaseSceneWorld({
     <>
       <ShowcaseCameraDirector compact={compact} />
       <ambientLight color={collection ? "#8d7a55" : "#87958c"} intensity={0.78} />
-      <directionalLight color={keyLight} intensity={3.4} position={[-4, 5.5, 6.5]} castShadow />
+      <directionalLight color={keyLight} intensity={3.4} position={[-4, 5.5, 6.5]} />
       <pointLight color={keyLight} intensity={collection ? 20 : 13} distance={12} position={[4.2, 2.8, 4]} />
       <pointLight color="#7b1f25" intensity={collection ? 2.6 : 1.2} distance={8} position={[-4, -2.2, 3]} />
       <StoreShowcasePedestal mode={showcaseScene.mode} />
