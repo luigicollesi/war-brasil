@@ -170,7 +170,14 @@ export async function lockStorefrontCollectionPromotion(
       FOR SHARE`,
     [collectionId],
   );
-  return result.rows[0]?.promotion_discount_bps ?? 0;
+
+  // The collection may have been deactivated after the offer/product lock but
+  // before this row lock. Fail closed rather than purchasing an offer whose
+  // authoritative collection is no longer active.
+  if (result.rowCount !== 1) {
+    throw new Error("Storefront collection became unavailable during purchase.");
+  }
+  return result.rows[0].promotion_discount_bps;
 }
 
 /**
