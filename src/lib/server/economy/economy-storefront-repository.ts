@@ -35,6 +35,8 @@ export type StorefrontCollectionRow = CosmeticRow & {
   collection_name: string;
   collection_description: string | null;
   collection_sort_order: number;
+  collection_featured: boolean;
+  collection_promotion_discount_bps: number;
   banner_object_key: string;
   background_object_key: string;
   logo_object_key: string;
@@ -86,6 +88,8 @@ export async function listStorefrontCollections(
             collection.name AS collection_name,
             collection.description AS collection_description,
             collection.sort_order AS collection_sort_order,
+            collection.featured AS collection_featured,
+            collection.promotion_discount_bps AS collection_promotion_discount_bps,
             assets.banner_object_key,
             assets.background_object_key,
             assets.logo_object_key,
@@ -114,7 +118,8 @@ export async function listStorefrontCollections(
       WHERE collection.active=TRUE
         AND item.is_default=FALSE
         AND item.status IN ('announced','available')
-      ORDER BY collection.sort_order,
+      ORDER BY collection.featured DESC,
+               collection.sort_order,
                collection.id,
                CASE item.slot
                  WHEN 'dice_attack' THEN 10
@@ -155,6 +160,7 @@ export async function listStorefrontTerritorySkins(
          ON loadout.user_id=$1::uuid
         AND loadout.slot=item.slot
       WHERE item.slot='territory_skin'
+        AND item.collection_id IS NULL
         AND item.is_default=FALSE
         AND item.status IN ('announced','available')
       ORDER BY CASE item.status WHEN 'available' THEN 0 ELSE 1 END,
