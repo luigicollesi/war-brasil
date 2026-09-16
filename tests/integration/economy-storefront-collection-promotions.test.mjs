@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 import { Client } from "pg";
 
@@ -25,7 +26,15 @@ async function withTemporaryDatabase(label, callback) {
   }
 }
 
-function prepareDatabase(connectionString) {
+async function prepareDatabase(connectionString) {
+  const client = new Client({ connectionString });
+  await client.connect();
+  try {
+    await client.query(readFileSync("src/lib/db/schema.sql", "utf8"));
+  } finally {
+    await client.end();
+  }
+
   const result = spawnSync(process.execPath, ["scripts/prepare-dev-db.mjs"], {
     cwd: process.cwd(),
     encoding: "utf8",
@@ -43,7 +52,7 @@ test(
   { skip: !databaseUrl },
   async () => {
     await withTemporaryDatabase("collection_promo", async (connectionString) => {
-      prepareDatabase(connectionString);
+      await prepareDatabase(connectionString);
       const client = new Client({ connectionString });
       await client.connect();
       try {
