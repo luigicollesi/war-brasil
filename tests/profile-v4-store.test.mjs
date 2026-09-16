@@ -52,7 +52,7 @@ test("PROFILE V4 store uses the canonical campaign-credit coin beside monetary v
   assert.doesNotMatch(store, />\s*◈\s*</);
 });
 
-test("PROFILE V4 store exposes ownership-aware completion instead of legacy full-price semantics", async () => {
+test("PROFILE V4 store exposes ownership-aware discovery without becoming purchase authority", async () => {
   const store = await source("src/components/profile/v4/profile-store.tsx");
 
   assert.match(store, /offer\.fullyOwned/);
@@ -60,44 +60,42 @@ test("PROFILE V4 store exposes ownership-aware completion instead of legacy full
   assert.match(store, /offer\.ownedCount/);
   assert.match(store, /offer\.totalCount/);
   assert.match(store, /offer\.purchasable/);
-  assert.match(store, /COMPLETAR/);
   assert.match(store, /POSSUÍDO/);
-  assert.match(store, /COMPRAR/);
   assert.match(store, /INDISPONÍVEL/);
-  assert.doesNotMatch(store, /mantém o valor integral/i);
+  assert.match(store, /INSPECIONAR/);
+  assert.doesNotMatch(store, /\/api\/economy\/purchases/);
 });
 
-test("PROFILE V4 collection detail uses background, logo and canonical cosmetic art without hero dependency", async () => {
+test("PROFILE V4 collection discovery uses only its banner and routes detail into the showcase", async () => {
   const store = await source("src/components/profile/v4/profile-store.tsx");
 
   assert.match(store, /collection\.assets\.banner/);
-  assert.match(store, /selectedCollection\.assets\.background/);
-  assert.match(store, /selectedCollection\.assets\.logo/);
-  assert.match(store, /selectedCollection\.items\.map/);
+  assert.match(store, /showcaseHref\("collection",\s*collection\.id/);
+  assert.match(store, /showcaseHref\("collection",\s*featuredCollection\.id/);
   assert.match(
     store,
     /function collectionProgressLabel[\s\S]*collection\.ownedCount[\s\S]*collection\.totalCount/,
   );
-  assert.match(store, /collectionProgressLabel\(selectedCollection\)/);
-  assert.match(store, /Completar coleção|COMPLETAR COLEÇÃO/i);
-  assert.doesNotMatch(store, /(?:collection|selectedCollection)\.assets\.(?:hero|card)/);
+  assert.doesNotMatch(store, /selectedCollection\.assets\.(?:background|logo)/);
+  assert.doesNotMatch(store, /aria-modal="true"/);
 });
 
-test("PROFILE V4 collection banner is an accessible discovery control", async () => {
+test("PROFILE V4 collection banner is an accessible showcase link", async () => {
   const store = await source("src/components/profile/v4/profile-store.tsx");
 
-  assert.match(store, /selectedCollectionId/);
-  assert.match(store, /setSelectedCollectionId/);
   assert.match(store, /collection\.assets\.banner/);
-  assert.match(store, /type="button"/);
-  assert.match(store, /aria-label=\{`Abrir coleção \$\{collection\.name\}`\}/);
+  assert.match(store, /href=\{showcaseHref\("collection", collection\.id\)\}/);
+  assert.match(store, /aria-label=\{`Inspecionar coleção \$\{collection\.name\}`\}/);
+  assert.doesNotMatch(store, /selectedCollectionId/);
+  assert.doesNotMatch(store, /collectionModalOpen/);
 });
 
-test("PROFILE V4 territory surface renders announced skins without inventing a purchase price", async () => {
+test("PROFILE V4 territory surface routes purchasable skins and never invents a price", async () => {
   const store = await source("src/components/profile/v4/profile-store.tsx");
 
   assert.match(store, /storefront\.territorySkins\.map/);
   assert.match(store, /skin\.status/);
+  assert.match(store, /showcaseHref\("offer",\s*offer\.id,\s*skin\.id\)/);
   assert.match(store, /EM BREVE|ANUNCIADO/);
   assert.doesNotMatch(store, /skin\.price/);
 });
@@ -118,26 +116,12 @@ test("PROFILE V4 store keeps implementation jargon out of player-facing copy", a
   assert.doesNotMatch(store, />[^<]*(?:Economy V2|backend|autoridade comercial)[^<]*</i);
 });
 
-test("PROFILE V4 store provides an explicit mobile inspection sheet", async () => {
-  const store = await source("src/components/profile/v4/profile-store.tsx");
-  const styles = await source("src/components/profile/v4/profile-store-mobile-inspection.module.css");
-
-  assert.match(store, /inspectionOpen/);
-  assert.match(store, /role="dialog"/);
-  assert.match(store, /aria-modal="true"/);
-  assert.match(store, /event\.key === "Escape"/);
-  assert.match(store, /Fechar inspeção/);
-  assert.match(styles, /\.mobileInspection/);
-  assert.match(styles, /position:\s*fixed/);
-  assert.match(styles, /@media \(max-width: 820px\)/);
-});
-
-test("PROFILE V4 returns focus to the control that opened mobile inspection", async () => {
+test("PROFILE V4 store delegates inspection state to the dedicated showcase route", async () => {
   const store = await source("src/components/profile/v4/profile-store.tsx");
 
-  assert.match(store, /inspectionReturnFocusRef/);
-  assert.match(store, /document\.activeElement/);
-  assert.match(store, /closeInspection\s*=\s*useCallback/);
-  assert.match(store, /returnTarget\.isConnected/);
-  assert.match(store, /returnTarget\.focus\(\)/);
+  assert.match(store, /function showcaseHref/);
+  assert.match(store, /\/profile\/store\/showcase\//);
+  assert.doesNotMatch(store, /InspectionContent/);
+  assert.doesNotMatch(store, /inspectionOpen/);
+  assert.doesNotMatch(store, /profile-store-mobile-inspection\.module\.css/);
 });
