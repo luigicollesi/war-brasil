@@ -158,8 +158,8 @@ if (!databaseUrl) {
           price_paid: String(pricePaid),
           subtotal_price: String(subtotal),
           discount_bps: discountBps,
-          min_unit_price: "150",
-          current_min_unit_price: "450",
+          min_unit_price: "500",
+          current_min_unit_price: "800",
           current_discount_bps: 500,
         });
       } finally {
