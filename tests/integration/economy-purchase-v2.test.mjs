@@ -409,12 +409,12 @@ if (!databaseUrl) {
       const second = await connect(connectionString);
       try {
         const userId = await createCommander(setup, "PurchaseRetry");
-        await initializeEconomy(setup, userId, 1000);
+        await initializeEconomy(setup, userId, 1500);
         const key = `retry-${randomUUID()}`;
 
         const [left, right] = await Promise.all([
-          purchaseInTransaction(first, userId, "offer.viking", key, { expectedPrice: 400 }),
-          purchaseInTransaction(second, userId, "offer.viking", key, { expectedPrice: 400 }),
+          purchaseInTransaction(first, userId, "offer.viking", key, { expectedPrice: 1200 }),
+          purchaseInTransaction(second, userId, "offer.viking", key, { expectedPrice: 1200 }),
         ]);
 
         assert.equal(left.ok, true);
@@ -422,10 +422,10 @@ if (!databaseUrl) {
         assert.equal(left.purchaseId, right.purchaseId);
         assert.equal([left.replayed, right.replayed].filter(Boolean).length, 1);
         assert.deepEqual(await readMoneyState(setup, userId), {
-          balance: "600",
+          balance: "300",
           purchases: 1,
           ledger_entries: 1,
-          ledger_delta: "-400",
+          ledger_delta: "-1200",
         });
       } finally {
         await Promise.all([setup.end(), first.end(), second.end()]);
@@ -444,10 +444,10 @@ if (!databaseUrl) {
         await initializeEconomy(setup, userId, 500);
 
         const results = await Promise.all([
-          purchaseInTransaction(first, userId, "offer.gato", `gato-${randomUUID()}`, {
+          purchaseInTransaction(first, userId, "offer.exercito", `exercito-${randomUUID()}`, {
             expectedPrice: 400,
           }),
-          purchaseInTransaction(second, userId, "offer.cachorro", `dog-${randomUUID()}`, {
+          purchaseInTransaction(second, userId, "offer.lancas", `lancas-${randomUUID()}`, {
             expectedPrice: 400,
           }),
         ]);
@@ -475,7 +475,7 @@ if (!databaseUrl) {
       const setup = await connect(connectionString);
       try {
         const userId = await createCommander(setup, "PartialOwnership");
-        await initializeEconomy(setup, userId, 500);
+        await initializeEconomy(setup, userId, 1000);
 
         const oneItem = await setup.query(
           `SELECT item.id,item.slot
@@ -497,17 +497,17 @@ if (!databaseUrl) {
           userId,
           "offer.viking",
           `partial-${randomUUID()}`,
-          { expectedPrice: 266 },
+          { expectedPrice: 800 },
         );
         assert.equal(result.ok, true);
-        assert.equal(result.subtotal, 300);
-        assert.equal(result.price, 266);
+        assert.equal(result.subtotal, 1000);
+        assert.equal(result.price, 800);
         assert.equal(result.grantedIds.length, 2);
         assert.deepEqual(await readMoneyState(setup, userId), {
-          balance: "234",
+          balance: "200",
           purchases: 1,
           ledger_entries: 1,
-          ledger_delta: "-266",
+          ledger_delta: "-800",
         });
 
         const receipt = await setup.query(
@@ -521,9 +521,9 @@ if (!databaseUrl) {
         );
         assert.deepEqual(receipt.rows[0], {
           offer_item_count: 3,
-          subtotal_price: "300",
-          discount_bps: 1111,
-          price_paid: "266",
+          subtotal_price: "1000",
+          discount_bps: 2000,
+          price_paid: "800",
         });
       } finally {
         await setup.end();
@@ -548,12 +548,12 @@ if (!databaseUrl) {
           userId,
           "offer.viking",
           `stale-${randomUUID()}`,
-          { expectedPrice: 399 },
+          { expectedPrice: 1199 },
         );
         assert.deepEqual(result, {
           ok: false,
           code: "ECONOMY_PRICE_CHANGED",
-          currentPrice: 400,
+          currentPrice: 1200,
         });
         assert.deepEqual(await readMoneyState(setup, userId), {
           balance: "1000",
@@ -592,7 +592,7 @@ if (!databaseUrl) {
         const result = await purchaseInTransaction(
           setup,
           userId,
-          "offer.futebol",
+          "offer.exercito",
           `rollback-${randomUUID()}`,
           { expectedPrice: 400, failAfterLedger: true },
         );
