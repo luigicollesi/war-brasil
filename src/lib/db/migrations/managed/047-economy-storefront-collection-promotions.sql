@@ -43,12 +43,5 @@ UPDATE catalog.collections
        updated_at=NOW()
  WHERE id='collection.football';
 
-COMMENT ON COLUMN catalog.collections.featured IS
-  'At most one active merchandising collection is selected for the storefront hero.';
-COMMENT ON COLUMN catalog.collections.promotion_discount_bps IS
-  'Temporary collection discount applied after the product/completion discount; 4000 means 40 percent. Non-zero values require featured=true.';
-COMMENT ON COLUMN economy.purchases.promotion_discount_bps IS
-  'Snapshot of the collection promotion discount applied to this receipt.';
-
 -- Down Migration
 -- Promotion state may be referenced by durable receipts. Prefer a forward fix.
