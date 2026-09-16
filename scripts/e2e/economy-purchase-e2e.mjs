@@ -15,6 +15,13 @@ const DATABASE_URL = process.env.LOBBY_E2E_DATABASE_URL ?? process.env.DATABASE_
 
 if (!DATABASE_URL) throw new Error("DATABASE_URL E2E é obrigatória.");
 
+const OFFERS = Object.freeze({
+  exercito: { id: "offer.exercito", price: 400 },
+  lancas: { id: "offer.lancas", price: 400 },
+  viking: { id: "offer.viking", price: 1200, partialPrice: 800 },
+  futebol: { id: "offer.futebol", price: 720 },
+});
+
 let actorSequence = 0;
 
 async function apiJson(page, url, init = {}) {
@@ -50,13 +57,13 @@ async function apiJsonConcurrent(page, requests) {
   }, requests);
 }
 
-function purchaseRequest(offerId, idempotencyKey, extra = {}) {
+function purchaseRequest(offerId, idempotencyKey, expectedPrice, extra = {}) {
   return {
     url: "/api/economy/purchases",
     init: {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ offerId, idempotencyKey, ...extra }),
+      body: JSON.stringify({ offerId, idempotencyKey, expectedPrice, ...extra }),
     },
   };
 }
@@ -150,11 +157,7 @@ async function resetEconomyState(userId, balance) {
             AND reason='purchase'`,
         [userId],
       );
-      await db.query(
-        `DELETE FROM economy.purchases
-          WHERE user_id=$1::uuid`,
-        [userId],
-      );
+      await db.query(`DELETE FROM economy.purchases WHERE user_id=$1::uuid`, [userId]);
       await db.query(
         `DELETE FROM inventory.cosmetics owned
           WHERE owned.user_id=$1::uuid
@@ -209,52 +212,50 @@ async function setOfferStatus(offerId, status) {
 
 async function readEconomyState(userId) {
   return withDb(async (db) => {
-    const [wallet, purchases, ledger, purchaseItems, inventory] = await Promise.all([
-      db.query(
-        `SELECT balance::text AS balance
-           FROM economy.wallets
-          WHERE user_id=$1::uuid
-            AND currency_code='campaign-credit'`,
-        [userId],
-      ),
-      db.query(
-        `SELECT id::text AS id,
-                offer_id,
-                price_paid::text AS price_paid,
-                offer_item_count,
-                idempotency_key
-           FROM economy.purchases
-          WHERE user_id=$1::uuid
-          ORDER BY created_at,id`,
-        [userId],
-      ),
-      db.query(
-        `SELECT delta::text AS delta,
-                reason,
-                domain_reference,
-                idempotency_key
-           FROM economy.ledger_entries
-          WHERE user_id=$1::uuid
-          ORDER BY created_at,id`,
-        [userId],
-      ),
-      db.query(
-        `SELECT purchased.purchase_id::text AS purchase_id,
-                purchased.cosmetic_id
-           FROM economy.purchase_items purchased
-           JOIN economy.purchases purchase ON purchase.id=purchased.purchase_id
-          WHERE purchase.user_id=$1::uuid
-          ORDER BY purchased.purchase_id,purchased.cosmetic_id`,
-        [userId],
-      ),
-      db.query(
-        `SELECT owned.cosmetic_id,owned.acquisition_source
-           FROM inventory.cosmetics owned
-          WHERE owned.user_id=$1::uuid
-          ORDER BY owned.cosmetic_id`,
-        [userId],
-      ),
-    ]);
+    const wallet = await db.query(
+      `SELECT balance::text AS balance
+         FROM economy.wallets
+        WHERE user_id=$1::uuid
+          AND currency_code='campaign-credit'`,
+      [userId],
+    );
+    const purchases = await db.query(
+      `SELECT id::text AS id,
+              offer_id,
+              price_paid::text AS price_paid,
+              offer_item_count,
+              idempotency_key
+         FROM economy.purchases
+        WHERE user_id=$1::uuid
+        ORDER BY created_at,id`,
+      [userId],
+    );
+    const ledger = await db.query(
+      `SELECT delta::text AS delta,
+              reason,
+              domain_reference,
+              idempotency_key
+         FROM economy.ledger_entries
+        WHERE user_id=$1::uuid
+        ORDER BY created_at,id`,
+      [userId],
+    );
+    const purchaseItems = await db.query(
+      `SELECT purchased.purchase_id::text AS purchase_id,
+              purchased.cosmetic_id
+         FROM economy.purchase_items purchased
+         JOIN economy.purchases purchase ON purchase.id=purchased.purchase_id
+        WHERE purchase.user_id=$1::uuid
+        ORDER BY purchased.purchase_id,purchased.cosmetic_id`,
+      [userId],
+    );
+    const inventory = await db.query(
+      `SELECT owned.cosmetic_id,owned.acquisition_source
+         FROM inventory.cosmetics owned
+        WHERE owned.user_id=$1::uuid
+        ORDER BY owned.cosmetic_id`,
+      [userId],
+    );
 
     return {
       balance: wallet.rows[0]?.balance ?? null,
@@ -266,20 +267,22 @@ async function readEconomyState(userId) {
   });
 }
 
-function assertSinglePurchaseState(state, expectedOfferId, expectedGrantedCount = 3) {
+function assertSinglePurchaseState(
+  state,
+  expectedOfferId,
+  expectedPrice = 400,
+  expectedGrantedCount = 3,
+) {
   assert.equal(state.balance, "100");
   assert.equal(state.purchases.length, 1);
   assert.equal(state.purchases[0].offer_id, expectedOfferId);
-  assert.equal(state.purchases[0].price_paid, "400");
+  assert.equal(state.purchases[0].price_paid, String(expectedPrice));
   assert.equal(state.purchases[0].offer_item_count, 3);
   assert.equal(state.ledger.length, 1);
-  assert.equal(state.ledger[0].delta, "-400");
+  assert.equal(state.ledger[0].delta, String(-expectedPrice));
   assert.equal(state.ledger[0].reason, "purchase");
   assert.equal(state.ledger[0].domain_reference, state.purchases[0].id);
-  assert.equal(
-    state.ledger[0].idempotency_key,
-    `purchase:${state.purchases[0].id}`,
-  );
+  assert.equal(state.ledger[0].idempotency_key, `purchase:${state.purchases[0].id}`);
   assert.equal(state.purchaseItems.length, expectedGrantedCount);
   assert.equal(state.inventory.length, 7);
 }
@@ -303,8 +306,8 @@ try {
   await resetEconomyState(primary.userId, 500);
   const sameKey = `purchase-same-${process.pid}-${Date.now()}`;
   const duplicateResponses = await apiJsonConcurrent(primary.page, [
-    purchaseRequest("offer.exercito", sameKey),
-    purchaseRequest("offer.exercito", sameKey),
+    purchaseRequest(OFFERS.exercito.id, sameKey, OFFERS.exercito.price),
+    purchaseRequest(OFFERS.exercito.id, sameKey, OFFERS.exercito.price),
   ]);
   assert.deepEqual(
     duplicateResponses.map((response) => response.status),
@@ -319,22 +322,21 @@ try {
   assert.equal(duplicateResponses[1].body?.acquiredItems?.length, 3);
 
   let state = await readEconomyState(primary.userId);
-  assertSinglePurchaseState(state, "offer.exercito");
+  assertSinglePurchaseState(state, OFFERS.exercito.id);
 
   const retry = await apiJson(
     primary.page,
     "/api/economy/purchases",
-    purchaseRequest("offer.exercito", sameKey).init,
+    purchaseRequest(OFFERS.exercito.id, sameKey, OFFERS.exercito.price).init,
   );
   assert.equal(retry.status, 200, JSON.stringify(retry.body));
   assert.equal(retry.body?.purchaseId, duplicateResponses[0].body?.purchaseId);
-  state = await readEconomyState(primary.userId);
-  assertSinglePurchaseState(state, "offer.exercito");
+  assertSinglePurchaseState(await readEconomyState(primary.userId), OFFERS.exercito.id);
 
   const keyConflict = await apiJson(
     primary.page,
     "/api/economy/purchases",
-    purchaseRequest("offer.viking", sameKey).init,
+    purchaseRequest(OFFERS.viking.id, sameKey, OFFERS.viking.price).init,
   );
   assert.equal(keyConflict.status, 409, JSON.stringify(keyConflict.body));
   assert.equal(keyConflict.body?.error, "ECONOMY_IDEMPOTENCY_CONFLICT");
@@ -343,19 +345,28 @@ try {
     primary.page,
     "/api/economy/purchases",
     purchaseRequest(
-      "offer.exercito",
+      OFFERS.exercito.id,
       `purchase-owned-${process.pid}-${Date.now()}`,
+      OFFERS.exercito.price,
     ).init,
   );
   assert.equal(alreadyOwned.status, 409, JSON.stringify(alreadyOwned.body));
   assert.equal(alreadyOwned.body?.error, "ECONOMY_OFFER_ALREADY_OWNED");
-  assertSinglePurchaseState(await readEconomyState(primary.userId), "offer.exercito");
+  assertSinglePurchaseState(await readEconomyState(primary.userId), OFFERS.exercito.id);
 
-  // Different keys + different offers contend on one 500-credit wallet: at most one wins.
+  // Two 400-credit bundles contend on one 500-credit wallet: at most one wins.
   await resetEconomyState(primary.userId, 500);
   const raceResponses = await apiJsonConcurrent(primary.page, [
-    purchaseRequest("offer.viking", `purchase-race-a-${process.pid}-${Date.now()}`),
-    purchaseRequest("offer.gato", `purchase-race-b-${process.pid}-${Date.now()}`),
+    purchaseRequest(
+      OFFERS.exercito.id,
+      `purchase-race-a-${process.pid}-${Date.now()}`,
+      OFFERS.exercito.price,
+    ),
+    purchaseRequest(
+      OFFERS.lancas.id,
+      `purchase-race-b-${process.pid}-${Date.now()}`,
+      OFFERS.lancas.price,
+    ),
   ]);
   assert.deepEqual(
     raceResponses.map((response) => response.status).sort((a, b) => a - b),
@@ -371,20 +382,26 @@ try {
     raceSuccess.body.offer.id,
   );
 
-  // Partial ownership still charges the persisted full price and grants only missing items.
-  await resetEconomyState(primary.userId, 500);
+  // Partial ownership charges only missing Viking items, then applies the 20% bundle discount.
+  await resetEconomyState(primary.userId, 900);
   await grantOneOwnedCosmetic(primary.userId, "dice.attack.viking");
   const partial = await apiJson(
     primary.page,
     "/api/economy/purchases",
     purchaseRequest(
-      "offer.viking",
+      OFFERS.viking.id,
       `purchase-partial-${process.pid}-${Date.now()}`,
+      OFFERS.viking.partialPrice,
     ).init,
   );
   assert.equal(partial.status, 200, JSON.stringify(partial.body));
   assert.equal(partial.body?.acquiredItems?.length, 2);
-  assertSinglePurchaseState(await readEconomyState(primary.userId), "offer.viking", 2);
+  assertSinglePurchaseState(
+    await readEconomyState(primary.userId),
+    OFFERS.viking.id,
+    OFFERS.viking.partialPrice,
+    2,
+  );
 
   // Invalid authority fields, insufficient funds, unknown and unavailable offers are inert.
   await resetEconomyState(primary.userId, 0);
@@ -392,8 +409,9 @@ try {
     primary.page,
     "/api/economy/purchases",
     purchaseRequest(
-      "offer.futebol",
+      OFFERS.futebol.id,
       `purchase-invalid-${process.pid}-${Date.now()}`,
+      OFFERS.futebol.price,
       { price: 1 },
     ).init,
   );
@@ -405,8 +423,9 @@ try {
     primary.page,
     "/api/economy/purchases",
     purchaseRequest(
-      "offer.futebol",
+      OFFERS.futebol.id,
       `purchase-empty-${process.pid}-${Date.now()}`,
+      OFFERS.futebol.price,
     ).init,
   );
   assert.equal(insufficient.status, 409, JSON.stringify(insufficient.body));
@@ -419,28 +438,30 @@ try {
     purchaseRequest(
       "offer.does-not-exist",
       `purchase-missing-${process.pid}-${Date.now()}`,
+      1,
     ).init,
   );
   assert.equal(missing.status, 404, JSON.stringify(missing.body));
   assert.equal(missing.body?.error, "ECONOMY_OFFER_NOT_FOUND");
   assertNoPurchaseState(await readEconomyState(primary.userId), 0);
 
-  await resetEconomyState(primary.userId, 500);
-  await setOfferStatus("offer.futebol", "retired");
+  await resetEconomyState(primary.userId, 800);
+  await setOfferStatus(OFFERS.futebol.id, "retired");
   try {
     const unavailable = await apiJson(
       primary.page,
       "/api/economy/purchases",
       purchaseRequest(
-        "offer.futebol",
+        OFFERS.futebol.id,
         `purchase-retired-${process.pid}-${Date.now()}`,
+        OFFERS.futebol.price,
       ).init,
     );
     assert.equal(unavailable.status, 409, JSON.stringify(unavailable.body));
     assert.equal(unavailable.body?.error, "ECONOMY_OFFER_UNAVAILABLE");
-    assertNoPurchaseState(await readEconomyState(primary.userId), 500);
+    assertNoPurchaseState(await readEconomyState(primary.userId), 800);
   } finally {
-    await setOfferStatus("offer.futebol", "available");
+    await setOfferStatus(OFFERS.futebol.id, "available");
   }
 
   // Idempotency keys are scoped per user; one account cannot inherit another receipt.
@@ -453,22 +474,22 @@ try {
     apiJson(
       primary.page,
       "/api/economy/purchases",
-      purchaseRequest("offer.lancas", sharedKey).init,
+      purchaseRequest(OFFERS.lancas.id, sharedKey, OFFERS.lancas.price).init,
     ),
     apiJson(
       secondary.page,
       "/api/economy/purchases",
-      purchaseRequest("offer.lancas", sharedKey).init,
+      purchaseRequest(OFFERS.lancas.id, sharedKey, OFFERS.lancas.price).init,
     ),
   ]);
   assert.equal(primaryCrossUser.status, 200, JSON.stringify(primaryCrossUser.body));
   assert.equal(secondaryCrossUser.status, 200, JSON.stringify(secondaryCrossUser.body));
   assert.notEqual(primaryCrossUser.body?.purchaseId, secondaryCrossUser.body?.purchaseId);
-  assertSinglePurchaseState(await readEconomyState(primary.userId), "offer.lancas");
-  assertSinglePurchaseState(await readEconomyState(secondary.userId), "offer.lancas");
+  assertSinglePurchaseState(await readEconomyState(primary.userId), OFFERS.lancas.id);
+  assertSinglePurchaseState(await readEconomyState(secondary.userId), OFFERS.lancas.id);
 
   console.log(
-    "[economy-purchase-e2e] ok — compra, idempotência, concorrência, ownership parcial e isolamento por usuário validados",
+    "[economy-purchase-e2e] ok — expectedPrice, idempotência, concorrência, completion pricing e isolamento por usuário validados",
   );
 } finally {
   for (const actor of actors.reverse()) {
