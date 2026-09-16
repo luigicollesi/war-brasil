@@ -6,7 +6,7 @@ export const ASSET_STORAGE_SECRET_ACCESS_KEY_ENV = "ASSET_STORAGE_SECRET_ACCESS_
 export const ASSET_STORAGE_BUCKET_ENV = "ASSET_STORAGE_BUCKET" as const;
 export const ASSET_STORAGE_DEV_BUCKET = "war-brasil-assets-dev" as const;
 export const ASSET_STORAGE_PROD_BUCKET = "war-brasil-assets-prod" as const;
-/** @deprecated Legacy s3:// parser compatibility only. New HTTPS config uses ASSET_STORAGE_BUCKET. */
+/** Default bucket kept for backwards compatibility when ASSET_STORAGE_BUCKET is omitted. */
 export const ASSET_STORAGE_BUCKET = ASSET_STORAGE_PROD_BUCKET;
 export const ASSET_STORAGE_REGION = "auto" as const;
 
@@ -107,14 +107,10 @@ function requiredCredential(value: string | undefined, label: string) {
   return normalized;
 }
 
-function requiredBucket(value: string | undefined) {
+function bucketOrDefault(value: string | undefined) {
   const normalized = value?.trim();
-  if (!normalized) {
-    return configError(
-      "ASSET_STORAGE_BUCKET_MISSING",
-      `${ASSET_STORAGE_BUCKET_ENV} não está configurado para o object storage.`,
-    );
-  }
+  if (!normalized) return ASSET_STORAGE_BUCKET;
+
   if (!/^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/.test(normalized)) {
     return configError(
       "ASSET_STORAGE_BUCKET_INVALID",
@@ -127,7 +123,8 @@ function requiredBucket(value: string | undefined) {
 /**
  * Legacy connection-string parser kept for backwards compatibility.
  * New deployments should configure the native R2 HTTPS endpoint through
- * ASSET_STORAGE_URL plus separate access-key and bucket environment variables.
+ * ASSET_STORAGE_URL plus separate access-key environment variables.
+ * ASSET_STORAGE_BUCKET is an optional bucket override.
  */
 export function parseAssetStorageUrl(value: string | undefined): AssetStorageConfig {
   if (!value?.trim()) {
@@ -238,14 +235,13 @@ export function assetStorageConfigFromEnv(
         ASSET_STORAGE_SECRET_ACCESS_KEY_ENV,
       ),
       ...endpoint,
-      bucket: requiredBucket(env.ASSET_STORAGE_BUCKET),
+      bucket: bucketOrDefault(env.ASSET_STORAGE_BUCKET),
       region: ASSET_STORAGE_REGION,
     };
   }
 
   const config = parseAssetStorageUrl(value);
-  const configuredBucket = env.ASSET_STORAGE_BUCKET?.trim();
-  const expectedBucket = configuredBucket || ASSET_STORAGE_BUCKET;
+  const expectedBucket = bucketOrDefault(env.ASSET_STORAGE_BUCKET);
   if (config.bucket !== expectedBucket) {
     return configError(
       "ASSET_STORAGE_URL_UNEXPECTED_BUCKET",
