@@ -12,6 +12,7 @@ import type {
 } from "@/src/lib/economy/economy-contract";
 import { cosmeticPreviewSource } from "@/src/lib/economy/cosmetic-preview";
 import { ProfileCosmeticImage } from "./profile-cosmetic-image";
+import collectionModalStyles from "./profile-store-collection-modal.module.css";
 import commerceStyles from "./profile-store-commerce.module.css";
 import mobileStyles from "./profile-store-mobile-inspection.module.css";
 import styles from "./profile-store.module.css";
@@ -74,6 +75,10 @@ function formattedAvailabilityDate(value: string) {
   return Number.isFinite(date.getTime()) ? AVAILABILITY_DATE_FORMAT.format(date) : value;
 }
 
+function promotionLabel(discountBps: number) {
+  return `${Math.round(discountBps / 100)}% OFF`;
+}
+
 function OfferRotationNotice({ offer }: { offer: EconomyOffer }) {
   if (!offer.endsAt) return null;
   return (
@@ -85,9 +90,22 @@ function OfferRotationNotice({ offer }: { offer: EconomyOffer }) {
 
 function CampaignCreditAmount({ amount }: { amount: number }) {
   return (
-    <span className={commerceStyles.creditAmount} aria-label={`${INTEGER_FORMAT.format(amount)} Créditos de Campanha`}>
+    <span
+      className={commerceStyles.creditAmount}
+      aria-label={`${INTEGER_FORMAT.format(amount)} Créditos de Campanha`}
+    >
       <Image src="/coin.svg" alt="" width={22} height={22} aria-hidden="true" />
       <strong>{INTEGER_FORMAT.format(amount)}</strong>
+    </span>
+  );
+}
+
+function PromotionalPrice({ offer }: { offer: EconomyOffer }) {
+  const discounted = offer.promotionDiscountBps > 0 && offer.basePrice > offer.price;
+  return (
+    <span className={collectionModalStyles.priceStack}>
+      {discounted ? <s>{INTEGER_FORMAT.format(offer.basePrice)} CR</s> : null}
+      <strong>{INTEGER_FORMAT.format(offer.price)} CR</strong>
     </span>
   );
 }
@@ -172,52 +190,72 @@ function InspectionContent({
 
 export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnapshot }) {
   const router = useRouter();
+  const featuredCollection = useMemo(
+    () => storefront.collections.find((collection) => collection.featured) ?? storefront.collections[0] ?? null,
+    [storefront.collections],
+  );
+  const collectionOfferIds = useMemo(
+    () => new Set(storefront.collections.flatMap((collection) => collection.offerIds)),
+    [storefront.collections],
+  );
+  const normalOffers = useMemo(
+    () => storefront.offers.filter((offer) => !collectionOfferIds.has(offer.id)),
+    [collectionOfferIds, storefront.offers],
+  );
   const activeCampaign = storefront.campaigns[0] ?? null;
   const campaignFeaturedOffer = activeCampaign
     ? activeCampaign.offerIds
-        .map((offerId) => storefront.offers.find((offer) => offer.id === offerId) ?? null)
+        .map((offerId) => normalOffers.find((offer) => offer.id === offerId) ?? null)
         .find((offer): offer is EconomyOffer => offer !== null) ?? null
     : null;
   const featured = useMemo(
     () =>
       campaignFeaturedOffer ??
-      storefront.offers.find((offer) => offer.featured) ??
-      storefront.offers[0] ??
+      normalOffers.find((offer) => offer.featured) ??
+      normalOffers[0] ??
       null,
-    [campaignFeaturedOffer, storefront.offers],
+    [campaignFeaturedOffer, normalOffers],
   );
   const diceOffers = useMemo(
     () =>
       storefront.offers.filter(
         (offer) =>
+          !collectionOfferIds.has(offer.id) &&
           offer.items.length > 0 &&
-          offer.items.every((item) =>
-            item.slot === "dice_attack" ||
-            item.slot === "dice_defense" ||
-            item.slot === "dice_neutral",
+          offer.items.every(
+            (item) =>
+              item.slot === "dice_attack" ||
+              item.slot === "dice_defense" ||
+              item.slot === "dice_neutral",
           ),
       ),
-    [storefront.offers],
+    [collectionOfferIds, storefront.offers],
   );
   const territoryOfferByCosmeticId = useMemo(() => {
     const offers = new Map<string, EconomyOffer>();
     for (const offer of storefront.offers) {
-      if (offer.items.length !== 1) continue;
+      if (collectionOfferIds.has(offer.id) || offer.items.length !== 1) continue;
       const [item] = offer.items;
       if (item.slot === "territory_skin") offers.set(item.id, offer);
     }
     return offers;
-  }, [storefront.offers]);
+  }, [collectionOfferIds, storefront.offers]);
+
   const [selectedOfferId, setSelectedOfferId] = useState<string | null>(featured?.id ?? null);
-  const [selectedItemId, setSelectedItemId] = useState<string | null>(featured ? previewItem(featured)?.id ?? null : null);
+  const [selectedItemId, setSelectedItemId] = useState<string | null>(
+    featured ? previewItem(featured)?.id ?? null : null,
+  );
   const [selectedCollectionId, setSelectedCollectionId] = useState<string | null>(
-    storefront.collections[0]?.id ?? null,
+    featuredCollection?.id ?? null,
   );
   const [inspectionOpen, setInspectionOpen] = useState(false);
+  const [collectionModalOpen, setCollectionModalOpen] = useState(false);
   const [pendingOfferId, setPendingOfferId] = useState<string | null>(null);
   const [purchaseFeedback, setPurchaseFeedback] = useState<PurchaseFeedback | null>(null);
   const mobileCloseRef = useRef<HTMLButtonElement>(null);
+  const collectionCloseRef = useRef<HTMLButtonElement>(null);
   const inspectionReturnFocusRef = useRef<HTMLElement | null>(null);
+  const collectionReturnFocusRef = useRef<HTMLElement | null>(null);
 
   const selectedOffer = storefront.offers.find((offer) => offer.id === selectedOfferId) ?? featured;
   const selectedItem = selectedOffer
@@ -226,8 +264,7 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
   const selectedArtwork = itemArtwork(selectedItem);
   const selectedCollection =
     storefront.collections.find((collection) => collection.id === selectedCollectionId) ??
-    storefront.collections[0] ??
-    null;
+    featuredCollection;
   const selectedCollectionOffers = selectedCollection
     ? selectedCollection.offerIds
         .map((offerId) => storefront.offers.find((offer) => offer.id === offerId) ?? null)
@@ -243,10 +280,27 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
         .map((offerId) => storefront.offers.find((offer) => offer.id === offerId) ?? null)
         .find((offer): offer is EconomyOffer => offer !== null) ?? null
     : null;
+  const selectedCollectionSingleByItem = useMemo(
+    () =>
+      new Map(
+        selectedCollectionSingles.map((offer) => [offer.items[0]?.id ?? offer.id, offer] as const),
+      ),
+    [selectedCollectionSingles],
+  );
 
   const closeInspection = useCallback(() => {
     setInspectionOpen(false);
     const returnTarget = inspectionReturnFocusRef.current;
+    if (returnTarget) {
+      window.requestAnimationFrame(() => {
+        if (returnTarget.isConnected) returnTarget.focus();
+      });
+    }
+  }, []);
+
+  const closeCollection = useCallback(() => {
+    setCollectionModalOpen(false);
+    const returnTarget = collectionReturnFocusRef.current;
     if (returnTarget) {
       window.requestAnimationFrame(() => {
         if (returnTarget.isConnected) returnTarget.focus();
@@ -275,6 +329,24 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
     };
   }, [closeInspection, inspectionOpen]);
 
+  useEffect(() => {
+    if (!collectionModalOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") closeCollection();
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKeyDown);
+    window.requestAnimationFrame(() => collectionCloseRef.current?.focus());
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [closeCollection, collectionModalOpen]);
+
   function inspect(offer: EconomyOffer) {
     if (document.activeElement instanceof HTMLElement) {
       inspectionReturnFocusRef.current = document.activeElement;
@@ -285,13 +357,11 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
   }
 
   function openCollection(collection: StorefrontCollection) {
+    if (document.activeElement instanceof HTMLElement) {
+      collectionReturnFocusRef.current = document.activeElement;
+    }
     setSelectedCollectionId(collection.id);
-    window.requestAnimationFrame(() => {
-      document.getElementById("collection-detail")?.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
-    });
+    setCollectionModalOpen(true);
   }
 
   async function purchase(offer: EconomyOffer) {
@@ -380,20 +450,30 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
       <section id="store-highlights" className={styles.hero} aria-labelledby="store-title">
         <div className={styles.heroCopy}>
           <small>
-            {activeCampaign ? "OPERAÇÃO ATIVA // INTENDÊNCIA" : "INTENDÊNCIA // ARSENAL COSMÉTICO"}
+            {featuredCollection?.featured
+              ? "DESTAQUE ESPECIAL // COLEÇÃO"
+              : activeCampaign
+                ? "OPERAÇÃO ATIVA // INTENDÊNCIA"
+                : "INTENDÊNCIA // ARSENAL COSMÉTICO"}
           </small>
-          <h1 id="store-title">{activeCampaign?.title ?? "Remessas do Comando"}</h1>
+          <h1 id="store-title">
+            {featuredCollection?.featured
+              ? featuredCollection.name
+              : activeCampaign?.title ?? "Remessas do Comando"}
+          </h1>
           <p>
-            {activeCampaign?.description ??
-              "Explore coleções, inspecione equipamentos e adquira apenas os componentes que ainda faltam ao seu Arsenal."}
+            {featuredCollection?.featured
+              ? featuredCollection.description ?? "Coleção especial em destaque na Intendência."
+              : activeCampaign?.description ??
+                "Explore coleções, inspecione equipamentos e adquira apenas os componentes que ainda faltam ao seu Arsenal."}
           </p>
-          {activeCampaign && campaignFeaturedOffer ? (
+          {featuredCollection?.featured ? (
+            <button type="button" onClick={() => openCollection(featuredCollection)}>
+              ABRIR COLEÇÃO EM DESTAQUE
+            </button>
+          ) : activeCampaign && campaignFeaturedOffer ? (
             <button type="button" onClick={() => inspect(campaignFeaturedOffer)}>
               INSPECIONAR OPERAÇÃO
-            </button>
-          ) : selectedCollection ? (
-            <button type="button" onClick={() => openCollection(selectedCollection)}>
-              ABRIR COLEÇÃO EM DESTAQUE
             </button>
           ) : featured ? (
             <button type="button" onClick={() => inspect(featured)}>
@@ -402,7 +482,16 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
           ) : null}
         </div>
         <div className={styles.heroVisual}>
-          {activeCampaign && campaignFeaturedOffer ? (
+          {featuredCollection?.featured ? (
+            <ProfileCosmeticImage
+              src={featuredCollection.assets.banner}
+              alt={`Banner da coleção ${featuredCollection.name}`}
+              width={900}
+              height={500}
+              priority
+              fallbackLabel="COLEÇÃO"
+            />
+          ) : activeCampaign && campaignFeaturedOffer ? (
             <ProfileCosmeticImage
               src={itemArtwork(previewItem(campaignFeaturedOffer))}
               alt={`Destaque da operação ${activeCampaign.title}`}
@@ -410,15 +499,6 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
               height={520}
               priority
               fallbackLabel="OPERAÇÃO"
-            />
-          ) : selectedCollection ? (
-            <ProfileCosmeticImage
-              src={selectedCollection.assets.banner}
-              alt={`Banner da coleção ${selectedCollection.name}`}
-              width={900}
-              height={500}
-              priority
-              fallbackLabel="COLEÇÃO"
             />
           ) : (
             <ProfileCosmeticImage
@@ -432,19 +512,21 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
           )}
           <div>
             <small>
-              {activeCampaign
-                ? "OPERAÇÃO EM CURSO"
-                : selectedCollection
-                  ? "COLEÇÃO EM DESTAQUE"
+              {featuredCollection?.featured
+                ? `ESPECIAL // ${promotionLabel(featuredCollection.promotionDiscountBps)}`
+                : activeCampaign
+                  ? "OPERAÇÃO EM CURSO"
                   : "DESTAQUE ATUAL"}
             </small>
             <strong>
-              {activeCampaign?.title ?? selectedCollection?.name ?? featured?.name ?? "Nenhuma remessa disponível"}
+              {featuredCollection?.featured
+                ? featuredCollection.name
+                : activeCampaign?.title ?? featured?.name ?? "Nenhuma remessa disponível"}
             </strong>
-            {activeCampaign?.endsAt ? (
+            {featuredCollection?.featured ? (
+              <span>{collectionProgressLabel(featuredCollection)}</span>
+            ) : activeCampaign?.endsAt ? (
               <span>Até {formattedAvailabilityDate(activeCampaign.endsAt)}</span>
-            ) : selectedCollection ? (
-              <span>{collectionProgressLabel(selectedCollection)}</span>
             ) : featured ? (
               <CampaignCreditAmount amount={featured.price} />
             ) : null}
@@ -466,155 +548,66 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
         </div>
       ) : null}
 
-      <section id="store-collections" className={styles.catalog} aria-labelledby="collections-title">
+      <section id="store-dice" className={styles.catalog} aria-labelledby="catalog-title">
         <header className={styles.sectionHeading}>
           <span>
-            <small>COLEÇÕES // IDENTIDADE DE ARSENAL</small>
-            <h2 id="collections-title">Coleções</h2>
+            <small>DADOS // CATÁLOGO PERMANENTE</small>
+            <h2 id="catalog-title">Dados</h2>
           </span>
-          <strong>{storefront.collections.length.toString().padStart(2, "0")}</strong>
+          <strong>{diceOffers.length.toString().padStart(2, "0")}</strong>
         </header>
 
-        {storefront.collections.length > 0 ? (
+        {diceOffers.length > 0 ? (
           <div className={styles.catalogGrid}>
-            {storefront.collections.map((collection) => (
-              <article
-                key={collection.id}
-                className={styles.productCard}
-                data-active={selectedCollection?.id === collection.id ? "true" : "false"}
-              >
-                <button
-                  type="button"
-                  className={styles.productSelect}
-                  aria-label={`Abrir coleção ${collection.name}`}
-                  onClick={() => openCollection(collection)}
-                >
-                  <span className={styles.productVisual}>
-                    <ProfileCosmeticImage
-                      src={collection.assets.banner}
-                      alt={`Banner da coleção ${collection.name}`}
-                      width={720}
-                      height={400}
-                      fallbackClassName={styles.productFallback}
-                      fallbackLabel="COLEÇÃO"
-                    />
-                  </span>
-                  <span className={styles.productCopy}>
-                    <small>COLEÇÃO</small>
-                    <strong>{collection.name}</strong>
-                    <em>{collectionProgressLabel(collection)}</em>
-                  </span>
-                </button>
-              </article>
-            ))}
+            {diceOffers.map((offer) => {
+              const art = itemArtwork(previewItem(offer));
+              const active = selectedOffer?.id === offer.id;
+              const pending = pendingOfferId === offer.id;
+              return (
+                <article key={offer.id} className={styles.productCard} data-active={active ? "true" : "false"}>
+                  <button type="button" className={styles.productSelect} onClick={() => inspect(offer)}>
+                    <span className={styles.productVisual}>
+                      <ProfileCosmeticImage
+                        src={art}
+                        alt={`Prévia de ${offer.name}`}
+                        width={300}
+                        height={300}
+                        fallbackClassName={styles.productFallback}
+                        fallbackLabel="WB"
+                      />
+                    </span>
+                    <span className={styles.productCopy}>
+                      <small>{offer.status === "retired" ? "ARQUIVADO" : offer.status === "available" ? "DISPONÍVEL" : "INDISPONÍVEL"}</small>
+                      <strong>{offer.name}</strong>
+                      <em>{ownershipLabel(offer)}</em>
+                    </span>
+                  </button>
+                  <div className={commerceStyles.productCommerce}>
+                    <CampaignCreditAmount amount={offer.price} />
+                    <button
+                      type="button"
+                      disabled={!offer.purchasable || pending || pendingOfferId !== null}
+                      onClick={() => purchase(offer)}
+                    >
+                      {purchaseLabel(offer, pending)}
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         ) : (
           <div className={styles.emptyCatalog}>
-            <strong>Nenhuma coleção editorial disponível</strong>
-            <span>As ofertas individuais continuam acessíveis abaixo.</span>
+            <strong>Nenhuma remessa de dados disponível</strong>
+            <span>A Intendência continua acessível enquanto o catálogo é restabelecido.</span>
           </div>
         )}
       </section>
 
-      {selectedCollection ? (
-        <section
-          id="collection-detail"
-          className={styles.inspection}
-          aria-labelledby="collection-detail-title"
-          style={{
-            backgroundImage: `linear-gradient(90deg, rgba(3,13,10,.9), rgba(3,13,10,.68)), url("${selectedCollection.assets.background}")`,
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-          }}
-        >
-          <div className={styles.inspectionVisual}>
-            <ProfileCosmeticImage
-              src={selectedCollection.assets.logo}
-              alt={`Logo da coleção ${selectedCollection.name}`}
-              width={560}
-              height={300}
-              fallbackLabel={selectedCollection.name}
-            />
-          </div>
-          <div className={styles.inspectionCopy}>
-            <small>COLEÇÃO // {collectionProgressLabel(selectedCollection)}</small>
-            <h2 id="collection-detail-title">{selectedCollection.name}</h2>
-            <p>{selectedCollection.description ?? "Coleção temática do Arsenal do Comando."}</p>
-            <p>
-              Progresso: {selectedCollection.ownedCount}/{selectedCollection.totalCount} cosméticos adquiridos.
-            </p>
-
-            <div className={styles.itemSelector} role="list" aria-label={`Cosméticos da coleção ${selectedCollection.name}`}>
-              {selectedCollection.items.map((item) => (
-                <div key={item.id} role="listitem">
-                  <small>{SLOT_LABELS[item.slot]}</small>
-                  <strong>{item.name}</strong>
-                  <span>{item.owned ? (item.equipped ? "EQUIPADO" : "POSSUÍDO") : "NÃO ADQUIRIDO"}</span>
-                </div>
-              ))}
-            </div>
-
-            {selectedCollectionSingles.length > 0 ? (
-              <div className={styles.itemSelector} role="group" aria-label="Aquisições individuais da coleção">
-                {selectedCollectionSingles.map((offer) => (
-                  <button
-                    key={offer.id}
-                    type="button"
-                    disabled={!offer.purchasable || pendingOfferId !== null}
-                    onClick={() => purchase(offer)}
-                  >
-                    <small>INDIVIDUAL</small>
-                    <strong>{offer.name}</strong>
-                    <span>
-                      {offer.fullyOwned ? "POSSUÍDO" : `${INTEGER_FORMAT.format(offer.price)} CR`}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            ) : null}
-
-            {selectedCollectionBundle ? (
-              <div className={styles.commerceBoundary}>
-                <span>
-                  CONJUNTO // {selectedCollection.partiallyOwned ? "CONCLUSÃO" : "PACOTE COMPLETO"}
-                </span>
-                <CampaignCreditAmount amount={selectedCollectionBundle.price} />
-                <p>
-                  {selectedCollection.partiallyOwned
-                    ? "O valor atual considera somente os cosméticos faltantes e o desconto configurado para o conjunto."
-                    : "Adquira os componentes faltantes da coleção em uma única operação atômica."}
-                </p>
-                <OfferRotationNotice offer={selectedCollectionBundle} />
-                <button
-                  type="button"
-                  className={commerceStyles.purchaseButton}
-                  disabled={
-                    selectedCollectionBundle.fullyOwned ||
-                    !selectedCollectionBundle.purchasable ||
-                    pendingOfferId !== null
-                  }
-                  onClick={() => purchase(selectedCollectionBundle)}
-                >
-                  {selectedCollection.fullyOwned
-                    ? "COLEÇÃO ADQUIRIDA"
-                    : selectedCollection.partiallyOwned
-                      ? "COMPLETAR COLEÇÃO"
-                      : "ADQUIRIR CONJUNTO"}
-                </button>
-              </div>
-            ) : null}
-
-            {selectedCollectionOffers.length === 0 ? (
-              <small>Nenhuma oferta ativa vinculada a esta coleção.</small>
-            ) : null}
-          </div>
-        </section>
-      ) : null}
-
       <section id="store-territories" className={styles.catalog} aria-labelledby="territories-title">
         <header className={styles.sectionHeading}>
           <span>
-            <small>TERRITÓRIOS // ACABAMENTOS VISUAIS</small>
+            <small>TERRITÓRIOS // CATÁLOGO PERMANENTE</small>
             <h2 id="territories-title">Territórios</h2>
           </span>
           <strong>{storefront.territorySkins.length.toString().padStart(2, "0")}</strong>
@@ -676,58 +669,56 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
         )}
       </section>
 
-      <section id="store-dice" className={styles.catalog} aria-labelledby="catalog-title">
+      <section id="store-collections" className={styles.catalog} aria-labelledby="collections-title">
         <header className={styles.sectionHeading}>
           <span>
-            <small>DADOS // OFERTAS ATIVAS</small>
-            <h2 id="catalog-title">Dados</h2>
+            <small>COLEÇÕES // EDIÇÕES ESPECIAIS</small>
+            <h2 id="collections-title">Coleções</h2>
           </span>
-          <strong>{diceOffers.length.toString().padStart(2, "0")}</strong>
+          <strong>{storefront.collections.length.toString().padStart(2, "0")}</strong>
         </header>
 
-        {diceOffers.length > 0 ? (
-          <div className={styles.catalogGrid}>
-            {diceOffers.map((offer) => {
-              const art = itemArtwork(previewItem(offer));
-              const active = selectedOffer?.id === offer.id;
-              const pending = pendingOfferId === offer.id;
-              return (
-                <article key={offer.id} className={styles.productCard} data-active={active ? "true" : "false"}>
-                  <button type="button" className={styles.productSelect} onClick={() => inspect(offer)}>
-                    <span className={styles.productVisual}>
-                      <ProfileCosmeticImage
-                        src={art}
-                        alt={`Prévia de ${offer.name}`}
-                        width={300}
-                        height={300}
-                        fallbackClassName={styles.productFallback}
-                        fallbackLabel="WB"
-                      />
+        {storefront.collections.length > 0 ? (
+          <div className={styles.collectionGrid}>
+            {storefront.collections.map((collection) => (
+              <article
+                key={collection.id}
+                className={styles.collectionBannerCard}
+                data-featured={collection.featured ? "true" : "false"}
+              >
+                <button
+                  type="button"
+                  className={styles.collectionBannerButton}
+                  aria-label={`Abrir coleção ${collection.name}`}
+                  onClick={() => openCollection(collection)}
+                >
+                  <ProfileCosmeticImage
+                    src={collection.assets.banner}
+                    alt={`Banner da coleção ${collection.name}`}
+                    width={900}
+                    height={500}
+                    fallbackClassName={styles.productFallback}
+                    fallbackLabel="COLEÇÃO"
+                  />
+                  <span className={styles.collectionBannerMeta}>
+                    <span>
+                      <small>{collection.featured ? "DESTAQUE ESPECIAL" : "COLEÇÃO"}</small>
+                      <strong>{collection.name}</strong>
                     </span>
-                    <span className={styles.productCopy}>
-                      <small>{offer.status === "retired" ? "ARQUIVADO" : offer.status === "available" ? "DISPONÍVEL" : "INDISPONÍVEL"}</small>
-                      <strong>{offer.name}</strong>
-                      <em>{ownershipLabel(offer)}</em>
-                    </span>
-                  </button>
-                  <div className={commerceStyles.productCommerce}>
-                    <CampaignCreditAmount amount={offer.price} />
-                    <button
-                      type="button"
-                      disabled={!offer.purchasable || pending || pendingOfferId !== null}
-                      onClick={() => purchase(offer)}
-                    >
-                      {purchaseLabel(offer, pending)}
-                    </button>
-                  </div>
-                </article>
-              );
-            })}
+                    <em>
+                      {collection.promotionDiscountBps > 0
+                        ? promotionLabel(collection.promotionDiscountBps)
+                        : collectionProgressLabel(collection)}
+                    </em>
+                  </span>
+                </button>
+              </article>
+            ))}
           </div>
         ) : (
           <div className={styles.emptyCatalog}>
-            <strong>Nenhuma remessa de dados disponível</strong>
-            <span>A Intendência continua acessível enquanto o catálogo é restabelecido.</span>
+            <strong>Nenhuma coleção editorial disponível</strong>
+            <span>As ofertas individuais continuam acessíveis acima.</span>
           </div>
         )}
       </section>
@@ -789,6 +780,141 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
             </div>
           </section>
         </>
+      ) : null}
+
+      {collectionModalOpen && selectedCollection ? (
+        <div
+          className={collectionModalStyles.overlay}
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) closeCollection();
+          }}
+        >
+          <section
+            className={collectionModalStyles.dialog}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="collection-modal-title"
+            style={{
+              backgroundImage: `linear-gradient(90deg, rgba(3,13,10,.94), rgba(3,13,10,.7)), url("${selectedCollection.assets.background}")`,
+            }}
+          >
+            <button
+              ref={collectionCloseRef}
+              type="button"
+              className={collectionModalStyles.close}
+              aria-label="Fechar coleção"
+              onClick={closeCollection}
+            >
+              ×
+            </button>
+
+            <header className={collectionModalStyles.header}>
+              <div className={collectionModalStyles.logo}>
+                <ProfileCosmeticImage
+                  src={selectedCollection.assets.logo}
+                  alt={`Logo da coleção ${selectedCollection.name}`}
+                  width={420}
+                  height={220}
+                  fallbackLabel={selectedCollection.name}
+                />
+              </div>
+              <div className={collectionModalStyles.headerCopy}>
+                <small>COLEÇÃO // {collectionProgressLabel(selectedCollection)}</small>
+                <h2 id="collection-modal-title">{selectedCollection.name}</h2>
+                <p>{selectedCollection.description ?? "Coleção temática do Arsenal do Comando."}</p>
+                {selectedCollection.promotionDiscountBps > 0 ? (
+                  <span className={collectionModalStyles.promotionBadge}>
+                    DESTAQUE ESPECIAL // {promotionLabel(selectedCollection.promotionDiscountBps)}
+                  </span>
+                ) : null}
+              </div>
+            </header>
+
+            <div className={collectionModalStyles.body}>
+              <div
+                className={collectionModalStyles.collectionItems}
+                role="list"
+                aria-label={`Cosméticos da coleção ${selectedCollection.name}`}
+              >
+                {selectedCollection.items.map((item) => {
+                  const offer = selectedCollectionSingleByItem.get(item.id) ?? null;
+                  const pending = offer?.id === pendingOfferId;
+                  return (
+                    <article key={item.id} className={collectionModalStyles.itemCard} role="listitem">
+                      <div className={collectionModalStyles.itemArt}>
+                        <ProfileCosmeticImage
+                          src={itemArtwork(item)}
+                          alt={`Prévia de ${item.name}`}
+                          width={320}
+                          height={320}
+                          fallbackLabel={SLOT_LABELS[item.slot]}
+                        />
+                      </div>
+                      <div className={collectionModalStyles.itemCopy}>
+                        <small>{SLOT_LABELS[item.slot]}</small>
+                        <strong>{item.name}</strong>
+                        <span>{item.owned ? (item.equipped ? "EQUIPADO" : "POSSUÍDO") : "NÃO ADQUIRIDO"}</span>
+                      </div>
+                      <div className={collectionModalStyles.itemAction}>
+                        {offer ? <PromotionalPrice offer={offer} /> : <span>SEM OFERTA</span>}
+                        <button
+                          type="button"
+                          disabled={!offer?.purchasable || pending || pendingOfferId !== null}
+                          onClick={() => offer && purchase(offer)}
+                        >
+                          {offer ? purchaseLabel(offer, pending) : "INDISPONÍVEL"}
+                        </button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+
+              {selectedCollectionBundle ? (
+                <div className={collectionModalStyles.bundlePurchase}>
+                  <span className={collectionModalStyles.bundleIcon} aria-hidden="true">
+                    <ProfileCosmeticImage
+                      src={selectedCollection.assets.logo}
+                      alt=""
+                      width={92}
+                      height={92}
+                      fallbackLabel="SET"
+                    />
+                  </span>
+                  <div className={collectionModalStyles.bundleCopy}>
+                    <small>
+                      CONJUNTO // {selectedCollection.partiallyOwned ? "CONCLUSÃO" : "80% DO VALOR INDIVIDUAL"}
+                    </small>
+                    <strong>Adquirir coleção {selectedCollection.name}</strong>
+                    <PromotionalPrice offer={selectedCollectionBundle} />
+                    <p>
+                      {selectedCollection.partiallyOwned
+                        ? "O valor considera apenas os itens ainda não adquiridos, aplica o desconto normal da coleção e depois a promoção ativa."
+                        : "O conjunto custa 80% da soma dos itens individuais. Uma promoção de destaque, quando ativa, é aplicada depois desse desconto."}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={
+                      selectedCollectionBundle.fullyOwned ||
+                      !selectedCollectionBundle.purchasable ||
+                      pendingOfferId !== null
+                    }
+                    onClick={() => purchase(selectedCollectionBundle)}
+                  >
+                    {selectedCollection.fullyOwned
+                      ? "COLEÇÃO ADQUIRIDA"
+                      : selectedCollection.partiallyOwned
+                        ? "COMPLETAR COLEÇÃO"
+                        : "COMPRAR COLEÇÃO"}
+                  </button>
+                </div>
+              ) : selectedCollectionOffers.length === 0 ? (
+                <small>Nenhuma oferta ativa vinculada a esta coleção.</small>
+              ) : null}
+            </div>
+          </section>
+        </div>
       ) : null}
 
       <section id="reforcar-tesouraria" className={styles.treasury} aria-labelledby="treasury-title">
