@@ -38,6 +38,10 @@ function priceLabel(price: number) {
   return `${INTEGER_FORMAT.format(price)} CR`;
 }
 
+function promotionLabel(discountBps: number) {
+  return `${INTEGER_FORMAT.format(discountBps / 100)}% OFF`;
+}
+
 function previewSource(item: StoreShowcaseItem) {
   return item.previewRef ?? item.assetRef;
 }
@@ -48,9 +52,14 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
     showcase.items.findIndex((item) => item.id === showcase.selectedItemId),
   );
   const [selectedIndex, setSelectedIndex] = useState(initialIndex);
+  const [failedBackgroundRef, setFailedBackgroundRef] = useState<string | null>(null);
   const selectedItem = showcase.items[selectedIndex] ?? showcase.items[0];
   const selectedOffer = selectedItem?.singleOffer ?? null;
   const itemCount = showcase.items.length;
+  const backgroundFailed =
+    showcase.backgroundRef !== null && failedBackgroundRef === showcase.backgroundRef;
+  const collectionBackgroundVisible =
+    showcase.mode === "collection" && Boolean(showcase.backgroundRef) && !backgroundFailed;
 
   const collectionProgress = useMemo(
     () => `${showcase.ownedCount}/${showcase.totalCount}`,
@@ -90,8 +99,24 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
       className={styles.root}
       style={{ background: "transparent", pointerEvents: "none" }}
       data-showcase-mode={showcase.mode}
+      data-collection-background={collectionBackgroundVisible ? "ready" : "fallback"}
       aria-label="Expositor da Intendência"
     >
+      {collectionBackgroundVisible ? (
+        <div className={styles.collectionBackdrop} aria-hidden="true">
+          <Image
+            src={showcase.backgroundRef as string}
+            alt=""
+            fill
+            priority
+            unoptimized
+            sizes="100vw"
+            onError={() => setFailedBackgroundRef(showcase.backgroundRef)}
+          />
+          <span className={styles.collectionBackdropScrim} />
+        </div>
+      ) : null}
+
       <header
         className={styles.header}
         style={{ pointerEvents: "auto" }}
@@ -103,12 +128,32 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
         </Link>
 
         <div className={styles.headerIdentity}>
+          {showcase.mode === "collection" && showcase.logoRef ? (
+            <ProfileCosmeticImage
+              src={showcase.logoRef}
+              alt={`Logo da coleção ${showcase.title}`}
+              width={180}
+              height={52}
+              priority
+              className={styles.collectionLogo}
+              fallbackClassName={styles.collectionLogoFallback}
+              fallbackLabel="COLEÇÃO"
+            />
+          ) : null}
           <small>
             {showcase.mode === "collection"
               ? "COLEÇÃO // EXPOSIÇÃO ESPECIAL"
               : "INSPEÇÃO // ARSENAL"}
           </small>
           <strong>{showcase.title}</strong>
+          {showcase.mode === "collection" && showcase.promotionDiscountBps > 0 ? (
+            <span
+              className={styles.promotionBadge}
+              aria-label={`${showcase.promotionDiscountBps / 100}% de desconto na coleção`}
+            >
+              {promotionLabel(showcase.promotionDiscountBps)}
+            </span>
+          ) : null}
         </div>
 
         <div className={styles.wallet} aria-label={`${showcase.wallet.balance} Créditos de Campanha`}>
