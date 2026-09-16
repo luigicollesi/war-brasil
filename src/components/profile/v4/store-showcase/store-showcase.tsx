@@ -3,11 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { useShowcaseScene } from "@/src/components/pre-game/foundation";
 import type {
   StoreShowcaseItem,
   StoreShowcaseView,
 } from "@/src/lib/economy/store-showcase";
 import { ProfileCosmeticImage } from "../profile-cosmetic-image";
+import { ShowcaseObjectController } from "./showcase-object-controller";
 import styles from "./store-showcase.module.css";
 
 const INTEGER_FORMAT = new Intl.NumberFormat("pt-BR");
@@ -54,6 +56,20 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
     [showcase.ownedCount, showcase.totalCount],
   );
 
+  const showcaseScene = useMemo(
+    () => ({
+      key: selectedItem?.id ?? showcase.id,
+      mode: showcase.mode,
+      render: ({ reducedMotion }: { reducedMotion: boolean }) => (
+        <ShowcaseObjectController reducedMotion={reducedMotion}>
+          <group name="StoreShowcaseModelSlot" />
+        </ShowcaseObjectController>
+      ),
+    }),
+    [selectedItem?.id, showcase.id, showcase.mode],
+  );
+  useShowcaseScene(showcaseScene, Boolean(selectedItem));
+
   function moveSelection(direction: -1 | 1) {
     if (itemCount <= 1) return;
     setSelectedIndex((current) => (current + direction + itemCount) % itemCount);
@@ -64,10 +80,15 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
   return (
     <main
       className={styles.root}
+      style={{ background: "transparent", pointerEvents: "none" }}
       data-showcase-mode={showcase.mode}
       aria-label="Expositor da Intendência"
     >
-      <header className={styles.header} data-showcase-zone="header">
+      <header
+        className={styles.header}
+        style={{ pointerEvents: "auto" }}
+        data-showcase-zone="header"
+      >
         <Link className={styles.backLink} href="/profile/store">
           <span aria-hidden="true">←</span>
           <span>INTENDÊNCIA</span>
@@ -93,6 +114,7 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
         <button
           type="button"
           className={`${styles.stageArrow} ${styles.stageArrowPrevious}`}
+          style={{ pointerEvents: "auto" }}
           aria-label="Exibir item anterior"
           disabled={itemCount <= 1}
           onClick={() => moveSelection(-1)}
@@ -110,12 +132,13 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
               fallbackLabel={selectedItem.type === "dice" ? "DADO" : "TERRITÓRIO"}
             />
           </div>
-          <span className={styles.stageMarker}>EXPOSITOR 3D // PREPARADO PARA CENA</span>
+          <span className={styles.stageMarker}>EXPOSITOR 3D // CENA FOUNDATION ATIVA</span>
         </div>
 
         <button
           type="button"
           className={`${styles.stageArrow} ${styles.stageArrowNext}`}
+          style={{ pointerEvents: "auto" }}
           aria-label="Exibir próximo item"
           disabled={itemCount <= 1}
           onClick={() => moveSelection(1)}
@@ -123,7 +146,11 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
           ›
         </button>
 
-        <aside className={styles.itemHud} aria-label="Item em exposição">
+        <aside
+          className={styles.itemHud}
+          style={{ pointerEvents: "auto" }}
+          aria-label="Item em exposição"
+        >
           <small>{itemRoleLabel(selectedItem)}</small>
           <h1>{selectedItem.name}</h1>
           <span className={styles.ownership}>{ownershipLabel(selectedItem)}</span>
@@ -141,7 +168,11 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
         </aside>
       </section>
 
-      <footer className={styles.dock} data-showcase-zone="dock">
+      <footer
+        className={styles.dock}
+        style={{ pointerEvents: "auto" }}
+        data-showcase-zone="dock"
+      >
         <div className={styles.itemStrip} aria-label="Itens da exposição">
           {showcase.items.map((item, index) => (
             <button
