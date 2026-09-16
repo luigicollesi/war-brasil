@@ -5,7 +5,6 @@ import {
   ASSET_STORAGE_BUCKET_ENV,
   ASSET_STORAGE_DEV_BUCKET,
   ASSET_STORAGE_PROD_BUCKET,
-  AssetStorageConfigError,
   assetStorageConfigFromEnv,
 } from "../.test-build/server/assets/asset-storage-config.js";
 
@@ -51,20 +50,14 @@ test("collection assets aceitam object keys WebP explícitas sem inferir papel p
   );
 });
 
-test("configuração HTTPS exige bucket server-only explícito e aceita namespaces dev/prod distintos", () => {
+test("configuração HTTPS usa bucket de produção por compatibilidade e aceita override dev/prod", () => {
   const base = {
     ASSET_STORAGE_URL: "https://abc123.r2.cloudflarestorage.com",
     ASSET_STORAGE_ACCESS_KEY_ID: "key",
     ASSET_STORAGE_SECRET_ACCESS_KEY: "secret",
   };
 
-  assert.throws(
-    () => assetStorageConfigFromEnv(base),
-    (error) =>
-      error instanceof AssetStorageConfigError &&
-      error.code === "ASSET_STORAGE_BUCKET_MISSING",
-  );
-
+  const fallback = assetStorageConfigFromEnv(base);
   const dev = assetStorageConfigFromEnv({
     ...base,
     [ASSET_STORAGE_BUCKET_ENV]: ASSET_STORAGE_DEV_BUCKET,
@@ -74,6 +67,7 @@ test("configuração HTTPS exige bucket server-only explícito e aceita namespac
     [ASSET_STORAGE_BUCKET_ENV]: ASSET_STORAGE_PROD_BUCKET,
   });
 
+  assert.equal(fallback.bucket, "war-brasil-assets-prod");
   assert.equal(dev.bucket, "war-brasil-assets-dev");
   assert.equal(prod.bucket, "war-brasil-assets-prod");
   assert.notEqual(dev.bucket, prod.bucket);
