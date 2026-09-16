@@ -15,6 +15,10 @@ const storefront = readFileSync(
   "src/components/profile/v4/profile-store.tsx",
   "utf8",
 );
+const showcaseProjection = readFileSync(
+  "src/lib/economy/store-showcase.ts",
+  "utf8",
+);
 
 test("storefront V2 expõe collections, territory skins, offers, ownership derivado e credit packs", () => {
   assert.match(contract, /export const COLLECTION_ASSET_ROLES/);
@@ -35,7 +39,7 @@ test("storefront V2 expõe collections, territory skins, offers, ownership deriv
   );
 });
 
-test("storefront V2 deriva collections completas no servidor sem inferir paths no React", () => {
+test("storefront V2 deriva collections completas no servidor e o showcase projeta seus assets", () => {
   assert.match(repository, /export async function listStorefrontCollections/);
   assert.match(repository, /catalog\.collections/);
   assert.match(repository, /catalog\.collection_assets/);
@@ -50,8 +54,8 @@ test("storefront V2 deriva collections completas no servidor sem inferir paths n
 
   assert.match(storefront, /storefront\.collections/);
   assert.match(storefront, /collection\.assets\.banner/);
-  assert.match(storefront, /selectedCollection\.assets\.background/);
-  assert.match(storefront, /selectedCollection\.assets\.logo/);
+  assert.match(showcaseProjection, /backgroundRef:\s*collection\.assets\.background/);
+  assert.match(showcaseProjection, /logoRef:\s*collection\.assets\.logo/);
   assert.doesNotMatch(storefront, /store\/collections\/football/);
 });
 
@@ -62,6 +66,8 @@ test("storefront V2 expõe skins anunciadas/disponíveis sem convertê-las em of
   assert.match(service, /listStorefrontTerritorySkins/);
   assert.match(service, /territorySkins:/);
   assert.match(storefront, /storefront\.territorySkins/);
+  assert.match(storefront, /offer \? \(/);
+  assert.match(storefront, /EM BREVE/);
 });
 
 test("storefront V2 deriva catálogo comercial no servidor sem regra React hardcoded", () => {
@@ -82,22 +88,19 @@ test("storefront V2 deriva catálogo comercial no servidor sem regra React hardc
   assert.doesNotMatch(storefront, /price\s*[:=]\s*400/);
 });
 
-test("Intendência V4 confirma expectedPrice e reconcilia preço alterado sem compra automática", () => {
-  assert.match(storefront, /\/api\/economy\/purchases/);
-  assert.match(storefront, /crypto\.randomUUID\(\)/);
-  assert.match(storefront, /offerId/);
-  assert.match(storefront, /idempotencyKey/);
-  assert.match(storefront, /expectedPrice:\s*offer\.price/);
-  assert.match(storefront, /ECONOMY_PRICE_CHANGED/);
-  assert.match(storefront, /currentPrice/);
-  assert.match(storefront, /router\.refresh\(\)/);
-  assert.match(storefront, /COMPRAR/);
-  assert.match(storefront, /COMPLETAR/);
-  assert.match(storefront, /POSSUÍDO/);
+test("Intendência V4 delegates acquisition to showcase while preserving authoritative prices", () => {
+  assert.match(storefront, /showcaseHref\("offer"/);
+  assert.match(storefront, /INSPECIONAR/);
+  assert.doesNotMatch(storefront, /\/api\/economy\/purchases/);
+  assert.doesNotMatch(storefront, /expectedPrice/);
+
+  assert.match(showcaseProjection, /price:\s*offer\.price/);
+  assert.match(showcaseProjection, /basePrice:\s*offer\.basePrice/);
+  assert.match(showcaseProjection, /purchasable:\s*offer\.purchasable/);
 });
 
-test("offer não comprável é apresentada como indisponível e não como CTA de compra", () => {
-  assert.match(storefront, /!offer\.purchasable|!selectedOffer\.purchasable/);
+test("offer não comprável é apresentada como indisponível na descoberta", () => {
+  assert.match(storefront, /offer\.purchasable/);
   assert.match(storefront, /INDISPONÍVEL/);
 });
 
