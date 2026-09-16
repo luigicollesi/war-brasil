@@ -10,6 +10,7 @@ export type StorefrontOfferProductRow = {
   collection_id: string | null;
   product_type: "single" | "bundle";
   bundle_discount_bps: number;
+  promotion_discount_bps: number;
   currency_code: "campaign-credit";
   status: "draft" | "available" | "retired";
   active: boolean;
@@ -44,6 +45,7 @@ export async function listActiveStorefrontOfferProducts(
             product.collection_id,
             product.product_type,
             product.bundle_discount_bps,
+            COALESCE(collection.promotion_discount_bps, 0) AS promotion_discount_bps,
             offer.currency_code,
             offer.status,
             offer.active,
@@ -52,9 +54,11 @@ export async function listActiveStorefrontOfferProducts(
             offer.ends_at
        FROM catalog.offers offer
        JOIN catalog.products product ON product.id=offer.product_id
+       LEFT JOIN catalog.collections collection ON collection.id=product.collection_id
       WHERE offer.status='available'
         AND offer.active=TRUE
         AND product.active=TRUE
+        AND (product.collection_id IS NULL OR collection.active=TRUE)
         AND (offer.starts_at IS NULL OR offer.starts_at <= CURRENT_TIMESTAMP)
         AND (offer.ends_at IS NULL OR offer.ends_at > CURRENT_TIMESTAMP)
       ORDER BY offer.priority, offer.sort_order, offer.id`,
@@ -128,6 +132,7 @@ export async function lockOfferProductForPurchase(
             product.collection_id,
             product.product_type,
             product.bundle_discount_bps,
+            COALESCE(collection.promotion_discount_bps, 0) AS promotion_discount_bps,
             offer.currency_code,
             offer.status,
             offer.active,
@@ -135,6 +140,7 @@ export async function lockOfferProductForPurchase(
               offer.status='available'
               AND offer.active=TRUE
               AND product.active=TRUE
+              AND (product.collection_id IS NULL OR collection.active=TRUE)
               AND (offer.starts_at IS NULL OR offer.starts_at <= CURRENT_TIMESTAMP)
               AND (offer.ends_at IS NULL OR offer.ends_at > CURRENT_TIMESTAMP)
             ) AS available_now,
@@ -142,11 +148,29 @@ export async function lockOfferProductForPurchase(
             offer.ends_at
        FROM catalog.offers offer
        JOIN catalog.products product ON product.id=offer.product_id
+       LEFT JOIN catalog.collections collection ON collection.id=product.collection_id
       WHERE offer.id=$1
       FOR UPDATE OF offer, product`,
     [offerId],
   );
   return result.rows[0] ?? null;
+}
+
+export async function lockStorefrontCollectionPromotion(
+  collectionId: string | null,
+  db: EconomyQueryable,
+): Promise<number> {
+  if (!collectionId) return 0;
+
+  const result = await db.query<{ promotion_discount_bps: number }>(
+    `SELECT collection.promotion_discount_bps
+       FROM catalog.collections collection
+      WHERE collection.id=$1
+        AND collection.active=TRUE
+      FOR SHARE`,
+    [collectionId],
+  );
+  return result.rows[0]?.promotion_discount_bps ?? 0;
 }
 
 /**
@@ -245,15 +269,17 @@ export async function snapshotPurchaseCommercialContext(
   productId: string,
   subtotal: number,
   discountBps: number,
+  promotionDiscountBps: number,
   db: EconomyQueryable,
 ) {
   await db.query(
     `UPDATE economy.purchases
         SET product_id=$2,
             subtotal_price=$3::bigint,
-            discount_bps=$4::integer
+            discount_bps=$4::integer,
+            promotion_discount_bps=$5::integer
       WHERE id=$1::uuid`,
-    [purchaseId, productId, subtotal, discountBps],
+    [purchaseId, productId, subtotal, discountBps, promotionDiscountBps],
   );
 }
 
