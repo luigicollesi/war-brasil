@@ -14,8 +14,10 @@ import {
   Vector3,
 } from "three";
 import { SVGLoader } from "three/addons/loaders/SVGLoader.js";
+import { StoreShowcasePedestal } from "@/src/components/profile/v4/store-showcase/showcase-pedestal";
 import { COMMAND_FOUNDATION_TOKENS } from "./foundation-tokens";
 import { ProfileOrbAssembly } from "./profile-orb-assembly";
+import type { ShowcaseScenePayload } from "./pre-game-command-runtime";
 import type {
   CommandSceneState,
   NormalizedCommandSceneIntent,
@@ -31,6 +33,8 @@ const MAP_SCALE = COMMAND_FOUNDATION_TOKENS.scene.mapScale;
 const MAP_HALF_EXTENT = (MAP_VIEWBOX_SIZE * MAP_SCALE) / 2;
 const CANONICAL_TERRITORY_COUNT = 42;
 const PLATE_TONES = ["#26352a", "#2d3d30", "#223027", "#344437"] as const;
+const SHOWCASE_STANDARD_LIGHT = "#edf3ee";
+const SHOWCASE_COLLECTION_LIGHT = "#d8ae56";
 
 type Position3 = [number, number, number];
 
@@ -66,6 +70,7 @@ type CommandSceneCanvasProps = {
   reducedMotion: boolean;
   compact: boolean;
   maxDpr: number;
+  showcaseScene?: ShowcaseScenePayload | null;
   onScenePhaseChange: (state: CommandSceneState) => void;
   onUnavailable: () => void;
 };
@@ -140,6 +145,22 @@ function CameraDirector({
       activeCamera.updateProjectionMatrix();
     }
   });
+
+  return null;
+}
+
+function ShowcaseCameraDirector({ compact }: { compact: boolean }) {
+  const { camera, invalidate } = useThree();
+
+  useEffect(() => {
+    camera.position.set(compact ? 0 : -0.65, compact ? 0.35 : 0.15, compact ? 6.2 : 5.5);
+    camera.lookAt(compact ? 0 : -0.65, 0, 0);
+    if (camera instanceof PerspectiveCamera) {
+      camera.fov = compact ? 39 : 36;
+      camera.updateProjectionMatrix();
+    }
+    invalidate();
+  }, [camera, compact, invalidate]);
 
   return null;
 }
@@ -734,15 +755,49 @@ function CommandSceneWorld({
   );
 }
 
+function ShowcaseSceneWorld({
+  showcaseScene,
+  reducedMotion,
+  compact,
+}: {
+  showcaseScene: ShowcaseScenePayload;
+  reducedMotion: boolean;
+  compact: boolean;
+}) {
+  const collection = showcaseScene.mode === "collection";
+  const keyLight = collection ? SHOWCASE_COLLECTION_LIGHT : SHOWCASE_STANDARD_LIGHT;
+
+  return (
+    <>
+      <ShowcaseCameraDirector compact={compact} />
+      <ambientLight color={collection ? "#8d7a55" : "#87958c"} intensity={0.78} />
+      <directionalLight color={keyLight} intensity={3.4} position={[-4, 5.5, 6.5]} castShadow />
+      <pointLight color={keyLight} intensity={collection ? 20 : 13} distance={12} position={[4.2, 2.8, 4]} />
+      <pointLight color="#7b1f25" intensity={collection ? 2.6 : 1.2} distance={8} position={[-4, -2.2, 3]} />
+      <StoreShowcasePedestal mode={showcaseScene.mode} />
+      <group name="StoreShowcaseSceneContent" position={[compact ? 0 : -0.65, 0.12, 0]}>
+        {showcaseScene.render({ reducedMotion })}
+      </group>
+    </>
+  );
+}
+
 export function CommandSceneCanvas({
   intent,
   reducedMotion,
   compact,
   maxDpr,
+  showcaseScene = null,
   onScenePhaseChange,
   onUnavailable,
 }: CommandSceneCanvasProps) {
   const initialPose = resolveCommandCameraPose(intent, compact);
+
+  useEffect(() => {
+    if (!showcaseScene) return;
+    const frame = window.requestAnimationFrame(() => onScenePhaseChange("ready"));
+    return () => window.cancelAnimationFrame(frame);
+  }, [onScenePhaseChange, showcaseScene]);
 
   return (
     <Canvas
@@ -766,12 +821,20 @@ export function CommandSceneCanvas({
     >
       <fog attach="fog" args={[COMMAND_FOUNDATION_TOKENS.color.void, 11.5, 19]} />
       <WebGLContextGuard onUnavailable={onUnavailable} />
-      <CommandSceneWorld
-        intent={intent}
-        reducedMotion={reducedMotion}
-        compact={compact}
-        onScenePhaseChange={onScenePhaseChange}
-      />
+      {showcaseScene ? (
+        <ShowcaseSceneWorld
+          showcaseScene={showcaseScene}
+          reducedMotion={reducedMotion}
+          compact={compact}
+        />
+      ) : (
+        <CommandSceneWorld
+          intent={intent}
+          reducedMotion={reducedMotion}
+          compact={compact}
+          onScenePhaseChange={onScenePhaseChange}
+        />
+      )}
     </Canvas>
   );
 }
