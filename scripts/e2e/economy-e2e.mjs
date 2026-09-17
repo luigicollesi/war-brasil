@@ -212,6 +212,13 @@ function bundleOfferForCollection(storefront, collection) {
   return offerById(storefront, collection.bundleOfferIds[0]);
 }
 
+async function loadStorefront(page) {
+  const response = await apiJson(page, "/api/economy/storefront");
+  assert.equal(response.status, 200, JSON.stringify(response.body));
+  assert.ok(response.body && typeof response.body === "object");
+  return response.body;
+}
+
 async function waitForShowcase(page, expectedTitle) {
   const root = page.locator('main[aria-label="Expositor da Intendência"]');
   await root.waitFor({ state: "visible" });
