@@ -47,6 +47,8 @@ export type CosmeticCatalogItem = Readonly<{
   previewRef: string | null;
   assetRef: string | null;
   effectKey: string | null;
+  bodyColor: string | null;
+  bodyHighlightColor: string | null;
 }>;
 
 export type CosmeticSet = Readonly<{
