@@ -33,6 +33,15 @@ test("store showcase browser eval covers the exact viewport matrix and degradati
   assert.match(e2e, /collection\.nao-existe/);
 });
 
+test("no-WebGL browser eval proves that navigation still changes the selected item", () => {
+  const e2e = read(E2E_PATH);
+
+  assert.match(e2e, /fallbackSelectedBeforeNavigation/);
+  assert.match(e2e, /fallbackNextArrow/);
+  assert.match(e2e, /fallbackSelectedAfterNavigation/);
+  assert.match(e2e, /assert\.notEqual\(fallbackSelectedAfterNavigation, fallbackSelectedBeforeNavigation\)/);
+});
+
 test("main CI executes showcase browser eval and retains its evidence", () => {
   const workflow = read(WORKFLOW_PATH);
 
