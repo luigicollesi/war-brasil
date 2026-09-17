@@ -64,10 +64,15 @@
 
 @media (max-width: 640px) {
   .button {
+    width: 42px;
     min-width: 42px;
     min-height: 42px;
-    gap: 7px;
-    padding-inline: 10px;
+    gap: 0;
+    padding-inline: 0;
+  }
+
+  .button > span:not(.icon) {
+    display: none;
   }
 }
 
