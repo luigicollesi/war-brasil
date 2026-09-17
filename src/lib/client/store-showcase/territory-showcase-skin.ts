@@ -23,9 +23,30 @@ export type TerritoryShowcaseSkin = Readonly<{
   skinOpacity: number;
 }>;
 
+function deliveredTerritorySkinAsset(assetRef: string | null) {
+  const normalized = assetRef?.trim();
+  return normalized?.startsWith("/api/assets/territory-skins?key=")
+    ? normalized
+    : null;
+}
+
 export function resolveTerritoryShowcaseSkin(
   input: TerritoryShowcaseSkinInput,
 ): TerritoryShowcaseSkin {
+  const deliveredAssetRef = deliveredTerritorySkinAsset(input.assetRef);
+
+  if (deliveredAssetRef && !input.effectKey?.trim()) {
+    const material = territoryMaterial(SHOWCASE_TERRITORY_PREVIEW_COLOR);
+    return {
+      kind: "image",
+      frontColor: material.face[2],
+      sideColor: material.side[1],
+      rimColor: material.rim,
+      skinAssetRef: deliveredAssetRef,
+      skinOpacity: SHOWCASE_TERRITORY_SKIN_OPACITY,
+    };
+  }
+
   const snapshot = territorySkinSnapshot(input);
   const runtimeEffectKey = territorySkinRuntimeEffectKey(snapshot);
   const material = territoryMaterial(
