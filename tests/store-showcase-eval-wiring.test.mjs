@@ -42,6 +42,18 @@ test("no-WebGL browser eval proves that navigation still changes the selected it
   assert.match(e2e, /assert\.notEqual\(fallbackSelectedAfterNavigation, fallbackSelectedBeforeNavigation\)/);
 });
 
+test("SHOWCASE-28 browser eval proves stale price fails closed and requires explicit reconfirmation", () => {
+  const e2e = read(E2E_PATH);
+
+  assert.match(e2e, /setCollectionPromotionDiscount/);
+  assert.match(e2e, /stalePriceStateBeforeAttempt/);
+  assert.match(e2e, /stalePriceStateAfterAttempt/);
+  assert.match(e2e, /O preço mudou para 400 CR\. Confirme o novo valor\./);
+  assert.match(e2e, /stalePriceCta/);
+  assert.match(e2e, /stalePriceStateAfterPurchase/);
+  assert.match(e2e, /promotion_discount_bps=4000/);
+});
+
 test("main CI executes showcase browser eval and retains its evidence", () => {
   const workflow = read(WORKFLOW_PATH);
 
