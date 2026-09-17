@@ -5,7 +5,7 @@ import type { CosmeticSlot } from "@/src/lib/economy/economy-contract";
 
 type BodyColorLoadState = Readonly<{
   key: string;
-  bodyColor: string | null | undefined;
+  bodyColor: string | null;
 }>;
 
 const bodyColorCache = new Map<string, string | null>();
@@ -30,24 +30,13 @@ export function useDiceBodyColor(
   const requestKey = objectKey ? `${slot}:${objectKey}` : "";
   const [state, setState] = useState<BodyColorLoadState>({
     key: "",
-    bodyColor: undefined,
+    bodyColor: null,
   });
 
   useEffect(() => {
-    if (!objectKey) {
-      setState({ key: requestKey, bodyColor: null });
-      return;
-    }
-
-    const cached = bodyColorCache.get(requestKey);
-    if (cached !== undefined) {
-      setState({ key: requestKey, bodyColor: cached });
-      return;
-    }
+    if (!objectKey || bodyColorCache.has(requestKey)) return;
 
     let active = true;
-    setState({ key: requestKey, bodyColor: undefined });
-
     const query = new URLSearchParams({ key: objectKey, slot });
     void fetch(`/api/assets/dice/metadata?${query.toString()}`, {
       credentials: "same-origin",
@@ -69,6 +58,10 @@ export function useDiceBodyColor(
     };
   }, [objectKey, requestKey, slot]);
 
+  if (!objectKey) return null;
+  if (bodyColorCache.has(requestKey)) {
+    return bodyColorCache.get(requestKey) ?? null;
+  }
   if (state.key !== requestKey) return undefined;
   return state.bodyColor;
 }
