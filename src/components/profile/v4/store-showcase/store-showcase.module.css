@@ -232,26 +232,6 @@
   object-fit: contain;
 }
 
-.stageObject::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: 8%;
-  width: min(42vw, 540px);
-  height: 18px;
-  transform: translateX(-50%);
-  border: 1px solid rgb(255 255 255 / 16%);
-  border-radius: 50%;
-  background: radial-gradient(ellipse at center, rgb(255 255 255 / 32%), rgb(255 255 255 / 8%) 45%, transparent 72%);
-  box-shadow: 0 0 42px rgb(255 255 255 / 13%);
-}
-
-.root[data-showcase-mode="collection"] .stageObject::before {
-  border-color: rgb(227 188 96 / 25%);
-  background: radial-gradient(ellipse at center, rgb(225 188 102 / 36%), rgb(195 149 61 / 10%) 48%, transparent 72%);
-  box-shadow: 0 0 52px rgb(208 170 87 / 18%);
-}
-
 .stageMarker {
   position: absolute;
   left: 50%;
