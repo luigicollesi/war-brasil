@@ -23,6 +23,7 @@ import type {
 } from "@/src/lib/economy/store-showcase";
 import { ProfileCosmeticImage } from "../profile-cosmetic-image";
 import { DiceShowcaseModel } from "./dice-showcase-model";
+import { ShowcaseModelErrorBoundary } from "./showcase-model-error-boundary";
 import { ShowcaseObjectController } from "./showcase-object-controller";
 import { TerritoryShowcaseFallback } from "./territory-showcase-fallback";
 import { TerritoryShowcaseModel } from "./territory-showcase-model";
@@ -107,6 +108,7 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
   const sceneState = useCommandSceneState();
   const [selectedItemId, setSelectedItemId] = useState(showcase.selectedItemId);
   const [failedBackgroundRef, setFailedBackgroundRef] = useState<string | null>(null);
+  const [failedTerritoryItemId, setFailedTerritoryItemId] = useState<string | null>(null);
   const [pendingOfferId, setPendingOfferId] = useState<string | null>(null);
   const [purchaseMessage, setPurchaseMessage] = useState<PurchaseMessage | null>(null);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
@@ -142,6 +144,8 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
   const selectedOffer = selectedItem?.singleOffer ?? null;
   const itemCount = showcase.items.length;
   const sceneFallback = sceneState === "fallback";
+  const territoryGeometryFallback =
+    selectedItem?.type === "territory" && selectedItem.id === failedTerritoryItemId;
   const backgroundFailed =
     showcase.backgroundRef !== null && failedBackgroundRef === showcase.backgroundRef;
   const collectionBackgroundVisible =
@@ -175,17 +179,30 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
               assetRef={selectedItem.assetRef}
               slot={selectedItem.slot}
             />
-          ) : selectedItem?.type === "territory" ? (
-            <TerritoryShowcaseModel
-              cosmeticId={selectedItem.id}
-              assetRef={selectedItem.assetRef}
-              effectKey={selectedItem.effectKey}
-            />
+          ) : selectedItem?.type === "territory" &&
+            selectedItem.id !== failedTerritoryItemId ? (
+            <ShowcaseModelErrorBoundary
+              key={selectedItem.id}
+              onError={() => setFailedTerritoryItemId(selectedItem.id)}
+            >
+              <TerritoryShowcaseModel
+                cosmeticId={selectedItem.id}
+                assetRef={selectedItem.assetRef}
+                effectKey={selectedItem.effectKey}
+              />
+            </ShowcaseModelErrorBoundary>
           ) : null}
         </ShowcaseObjectController>
       ),
     }),
-    [selectedItem, showcase.id, showcase.mode, transitionDirection, transitionPhase],
+    [
+      failedTerritoryItemId,
+      selectedItem,
+      showcase.id,
+      showcase.mode,
+      transitionDirection,
+      transitionPhase,
+    ],
   );
   useShowcaseScene(showcaseScene, Boolean(selectedItem));
 
@@ -371,8 +388,12 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
         </button>
 
         <div className={styles.stageObject} data-showcase-object-type={selectedItem.type}>
-          {sceneFallback ? (
-            <div className={styles.previewFallback} data-showcase-fallback>
+          {sceneFallback || territoryGeometryFallback ? (
+            <div
+              className={styles.previewFallback}
+              data-showcase-fallback
+              data-showcase-geometry-fallback={territoryGeometryFallback ? "" : undefined}
+            >
               {selectedItem.type === "dice" ? (
                 <ProfileCosmeticImage
                   src={previewSource(selectedItem)}
@@ -392,7 +413,7 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
             </div>
           ) : null}
           <span className={styles.stageMarker}>
-            {sceneFallback
+            {sceneFallback || territoryGeometryFallback
               ? "EXPOSITOR 2D // FALLBACK CANÔNICO"
               : selectedItem.type === "dice"
                 ? "EXPOSITOR 3D // GEOMETRIA CANÔNICA"
