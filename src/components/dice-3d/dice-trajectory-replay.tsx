@@ -73,6 +73,8 @@ export function DiceTrajectoryReplay({
   roll,
   geometry,
   textures,
+  bodyColor,
+  bodyHighlightColor,
   playbackDurationMs,
   initialElapsedMs = 0,
   visualScale = 1,
@@ -85,6 +87,8 @@ export function DiceTrajectoryReplay({
   roll: PredeterminedDiceRoll;
   geometry: BufferGeometry;
   textures: DiceFaceTextureSet;
+  bodyColor?: string | null;
+  bodyHighlightColor?: string | null;
   playbackDurationMs?: number;
   initialElapsedMs?: number;
   visualScale?: number;
@@ -291,6 +295,8 @@ export function DiceTrajectoryReplay({
                 textures={textures}
                 size={DICE_PHYSICS.dieSize}
                 radius={DICE_PHYSICS.dieRadius}
+                bodyColor={bodyColor}
+                bodyHighlightColor={bodyHighlightColor}
               />
             </group>
           </group>
