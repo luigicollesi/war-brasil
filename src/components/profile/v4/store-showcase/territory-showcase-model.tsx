@@ -3,11 +3,11 @@
 import { useLoader, useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useState } from "react";
 import {
-  ClampToEdgeWrapping,
   DoubleSide,
   EdgesGeometry,
   LineBasicMaterial,
   MeshStandardMaterial,
+  RepeatWrapping,
   SRGBColorSpace,
   TextureLoader,
   type Texture,
@@ -46,8 +46,8 @@ function useSafeTerritorySkinTexture(skinAssetRef: string | null) {
       skinAssetRef,
       (texture) => {
         texture.colorSpace = SRGBColorSpace;
-        texture.wrapS = ClampToEdgeWrapping;
-        texture.wrapT = ClampToEdgeWrapping;
+        texture.wrapS = RepeatWrapping;
+        texture.wrapT = RepeatWrapping;
         texture.needsUpdate = true;
 
         if (!active) {
