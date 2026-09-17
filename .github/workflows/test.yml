@@ -85,7 +85,7 @@ jobs:
           mkdir -p .e2e-runtime
           npm install --prefix .e2e-runtime --no-save --no-package-lock playwright@1.63.0
           ./.e2e-runtime/node_modules/.bin/playwright install --with-deps chromium
-      - name: Run Auth, Profile presence, Lobby, Game modes and Economy game multi-client E2E
+      - name: Run Auth, Profile presence, Lobby, Game modes, Economy game and Store Showcase E2E
         run: |
           rm -rf "$AUTH_EMAIL_SINK_DIR"
           mkdir -p "$AUTH_EMAIL_SINK_DIR"
@@ -134,6 +134,7 @@ jobs:
           node scripts/e2e/game-modes-e2e.mjs
           node scripts/e2e/game-modes-victory-e2e.mjs
           node scripts/e2e/economy-game-e2e.mjs
+          node scripts/e2e/store-showcase-e2e.mjs
         env:
           DATABASE_URL: postgresql://war:DB_SENTINEL_DO_NOT_SHIP_2026@127.0.0.1:5432/war_lobby_e2e
           LOBBY_E2E_DATABASE_URL: postgresql://war:DB_SENTINEL_DO_NOT_SHIP_2026@127.0.0.1:5432/war_lobby_e2e
@@ -141,6 +142,7 @@ jobs:
           PLAYWRIGHT_RUNTIME_DIR: .e2e-runtime/node_modules/playwright
           GAME_MODES_E2E_ARTIFACT_DIR: test-results/game-modes-eval
           ECONOMY_GAME_E2E_ARTIFACT_DIR: test-results/economy-game-eval
+          STORE_SHOWCASE_E2E_ARTIFACT_DIR: test-results/store-showcase-eval
           GAME_REALTIME_ENABLED: "true"
           GAME_REALTIME_PORT: "3001"
           GAME_REALTIME_EVENT_SOURCE: postgres
@@ -149,7 +151,7 @@ jobs:
           GAME_REALTIME_INTERNAL_URL: http://127.0.0.1:3001
           GAME_REALTIME_INTERNAL_TOKEN: PROFILE_PRESENCE_E2E_INTERNAL_SENTINEL_2026
           PROFILE_PRESENCE_E2E_REQUIRED: "1"
-      - name: Upload Lobby, Game modes and Economy game EVAL evidence
+      - name: Upload Lobby, Game modes, Economy game and Store Showcase EVAL evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
@@ -158,6 +160,7 @@ jobs:
             test-results/lobby-eval
             test-results/game-modes-eval
             test-results/economy-game-eval
+            test-results/store-showcase-eval
             /tmp/war-brasil-e2e.log
             /tmp/war-brasil-realtime-e2e.log
           if-no-files-found: warn
