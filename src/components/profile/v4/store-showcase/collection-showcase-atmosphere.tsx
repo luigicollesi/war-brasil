@@ -4,38 +4,64 @@ import { useThree } from "@react-three/fiber";
 import { useEffect, useMemo, useState } from "react";
 import {
   AdditiveBlending,
+  CanvasTexture,
+  ClampToEdgeWrapping,
+  LinearFilter,
   SRGBColorSpace,
   TextureLoader,
-  Vector3,
   type Texture,
 } from "three";
 
-const BACKGROUND_Z = -5.4;
+function createGlowTexture() {
+  const canvas = document.createElement("canvas");
+  canvas.width = 256;
+  canvas.height = 256;
+
+  const context = canvas.getContext("2d");
+  if (!context) return null;
+
+  const gradient = context.createRadialGradient(128, 128, 0, 128, 128, 128);
+  gradient.addColorStop(0, "rgba(255, 236, 184, 0.92)");
+  gradient.addColorStop(0.18, "rgba(229, 185, 94, 0.58)");
+  gradient.addColorStop(0.42, "rgba(198, 155, 75, 0.26)");
+  gradient.addColorStop(0.68, "rgba(124, 160, 111, 0.1)");
+  gradient.addColorStop(1, "rgba(124, 160, 111, 0)");
+
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, 256, 256);
+
+  const texture = new CanvasTexture(canvas);
+  texture.colorSpace = SRGBColorSpace;
+  texture.minFilter = LinearFilter;
+  texture.magFilter = LinearFilter;
+  texture.needsUpdate = true;
+  return texture;
+}
 
 export function CollectionShowcaseAtmosphere({
   backgroundRef,
 }: {
   backgroundRef: string | null;
 }) {
-  const camera = useThree((state) => state.camera);
+  const scene = useThree((state) => state.scene);
   const invalidate = useThree((state) => state.invalidate);
   const size = useThree((state) => state.size);
-  const viewport = useThree((state) => state.viewport);
   const [backgroundTexture, setBackgroundTexture] = useState<Texture | null>(null);
-
-  const backgroundTarget = useMemo(
-    () => new Vector3(camera.position.x, 0, BACKGROUND_Z),
-    [camera.position.x],
-  );
-  const backgroundViewport = viewport.getCurrentViewport(
-    camera,
-    backgroundTarget,
-    size,
-  );
+  const glowTexture = useMemo(() => createGlowTexture(), []);
 
   useEffect(() => {
+    return () => glowTexture?.dispose();
+  }, [glowTexture]);
+
+  useEffect(() => {
+    const previousBackground = scene.background;
     setBackgroundTexture(null);
-    if (!backgroundRef) return undefined;
+
+    if (!backgroundRef) {
+      scene.background = previousBackground;
+      invalidate();
+      return undefined;
+    }
 
     let active = true;
     let loadedTexture: Texture | null = null;
@@ -46,85 +72,100 @@ export function CollectionShowcaseAtmosphere({
       (texture) => {
         loadedTexture = texture;
         texture.colorSpace = SRGBColorSpace;
+        texture.wrapS = ClampToEdgeWrapping;
+        texture.wrapT = ClampToEdgeWrapping;
+        texture.minFilter = LinearFilter;
+        texture.magFilter = LinearFilter;
         texture.needsUpdate = true;
+
         if (!active) {
           texture.dispose();
           return;
         }
+
         setBackgroundTexture(texture);
+        scene.background = texture;
         invalidate();
       },
       undefined,
       () => {
-        if (active) setBackgroundTexture(null);
+        if (!active) return;
+        setBackgroundTexture(null);
+        scene.background = previousBackground;
+        invalidate();
       },
     );
 
     return () => {
       active = false;
+      if (scene.background === loadedTexture) {
+        scene.background = previousBackground;
+      }
       loadedTexture?.dispose();
+      invalidate();
     };
-  }, [backgroundRef, invalidate]);
+  }, [backgroundRef, invalidate, scene]);
+
+  useEffect(() => {
+    if (!backgroundTexture) return;
+
+    const image = backgroundTexture.image as {
+      width?: number;
+      height?: number;
+    };
+    const imageWidth = image.width ?? 0;
+    const imageHeight = image.height ?? 0;
+    if (!imageWidth || !imageHeight || !size.width || !size.height) return;
+
+    const imageAspect = imageWidth / imageHeight;
+    const viewAspect = size.width / size.height;
+
+    backgroundTexture.repeat.set(1, 1);
+    backgroundTexture.offset.set(0, 0);
+
+    if (imageAspect > viewAspect) {
+      const visibleWidth = viewAspect / imageAspect;
+      backgroundTexture.repeat.x = visibleWidth;
+      backgroundTexture.offset.x = (1 - visibleWidth) / 2;
+    } else {
+      const visibleHeight = imageAspect / viewAspect;
+      backgroundTexture.repeat.y = visibleHeight;
+      backgroundTexture.offset.y = (1 - visibleHeight) / 2;
+    }
+
+    backgroundTexture.needsUpdate = true;
+    invalidate();
+  }, [backgroundTexture, invalidate, size.height, size.width]);
 
   return (
-    <>
-      {backgroundTexture ? (
-        <mesh
-          name="CollectionShowcaseBackground"
-          position={[0, 0, BACKGROUND_Z]}
-          renderOrder={-30}
-          frustumCulled={false}
-          raycast={() => undefined}
-        >
-          <planeGeometry
-            args={[
-              backgroundViewport.width * 1.08,
-              backgroundViewport.height * 1.08,
-            ]}
-          />
-          <meshBasicMaterial
-            map={backgroundTexture}
-            transparent
-            opacity={0.76}
-            depthWrite={false}
-            toneMapped={false}
-          />
-        </mesh>
-      ) : null}
+    <group name="CollectionShowcaseRearLighting" position={[0, 0.16, -1.62]}>
+      <pointLight
+        color="#dfb45a"
+        intensity={13}
+        distance={5.4}
+        decay={2}
+        position={[0, 0.05, 0.12]}
+      />
 
-      <group name="CollectionShowcaseRearGlow" position={[0, 0.12, -1.72]}>
-        <pointLight color="#e1b65b" intensity={28} distance={7.2} decay={2} />
-        <mesh
-          scale={[1.75, 1.75, 0.34]}
-          renderOrder={-12}
+      {glowTexture ? (
+        <sprite
+          name="CollectionShowcaseRearGlow"
+          scale={[4.5, 4.5, 1]}
+          renderOrder={-10}
           raycast={() => undefined}
         >
-          <sphereGeometry args={[1, 48, 32]} />
-          <meshBasicMaterial
-            color="#e5b95d"
+          <spriteMaterial
+            map={glowTexture}
+            color="#fff4d1"
             transparent
-            opacity={0.12}
+            opacity={0.68}
+            depthTest
             depthWrite={false}
             toneMapped={false}
             blending={AdditiveBlending}
           />
-        </mesh>
-        <mesh
-          scale={[2.65, 2.65, 0.24]}
-          renderOrder={-13}
-          raycast={() => undefined}
-        >
-          <sphereGeometry args={[1, 48, 32]} />
-          <meshBasicMaterial
-            color="#8dad79"
-            transparent
-            opacity={0.055}
-            depthWrite={false}
-            toneMapped={false}
-            blending={AdditiveBlending}
-          />
-        </mesh>
-      </group>
-    </>
+        </sprite>
+      ) : null}
+    </group>
   );
 }
