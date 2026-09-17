@@ -12,7 +12,7 @@ import {
 } from "@/src/lib/client/store-showcase/showcase-motion";
 
 const DESKTOP_SHOWCASE_SCALE = 0.92;
-const DESKTOP_SHOWCASE_X = -0.18;
+const DESKTOP_SHOWCASE_X = -0.43;
 
 export function ShowcaseObjectController({
   children,
