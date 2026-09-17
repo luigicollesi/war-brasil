@@ -9,6 +9,8 @@ import {
   SHOWCASE_TERRITORY_TARGET_SIZE,
 } from "./territory-showcase-config";
 
+const TERRITORY_SKIN_PATTERN_SIZE = 192;
+
 export type TerritoryShowcaseGeometry = Readonly<{
   geometries: ReadonlyArray<ExtrudeGeometry>;
   sourceAspectRatio: number;
@@ -26,16 +28,7 @@ function collectiveBounds(geometries: ReadonlyArray<ExtrudeGeometry>) {
   return bounds;
 }
 
-function applyCenteredSquareUvs(
-  geometries: ReadonlyArray<ExtrudeGeometry>,
-  bounds: Box3,
-) {
-  const size = bounds.getSize(new Vector3());
-  const center = bounds.getCenter(new Vector3());
-  const dominantExtent = Math.max(size.x, size.y);
-  const originX = center.x - dominantExtent / 2;
-  const originY = center.y - dominantExtent / 2;
-
+function applyCanonicalPatternUvs(geometries: ReadonlyArray<ExtrudeGeometry>) {
   for (const geometry of geometries) {
     const position = geometry.getAttribute("position");
     const uv = geometry.getAttribute("uv");
@@ -44,8 +37,8 @@ function applyCenteredSquareUvs(
     for (let index = 0; index < position.count; index += 1) {
       uv.setXY(
         index,
-        (position.getX(index) - originX) / dominantExtent,
-        (position.getY(index) - originY) / dominantExtent,
+        position.getX(index) / TERRITORY_SKIN_PATTERN_SIZE,
+        position.getY(index) / TERRITORY_SKIN_PATTERN_SIZE,
       );
     }
     uv.needsUpdate = true;
@@ -81,6 +74,11 @@ export function createTerritoryShowcaseGeometry(
     throw new Error("Canonical showcase territory has invalid SVG bounds.");
   }
 
+  // Match the board's SVG patternUnits="userSpaceOnUse" mapping before the
+  // showcase geometry is centered/scaled. UV values intentionally exceed 1 so
+  // the 192x192 skin repeats in the same canonical map coordinate space.
+  applyCanonicalPatternUvs(geometries);
+
   const scale = SHOWCASE_TERRITORY_TARGET_SIZE / dominantExtent;
 
   for (const geometry of geometries) {
@@ -93,7 +91,6 @@ export function createTerritoryShowcaseGeometry(
 
   const normalizedBounds = collectiveBounds(geometries);
   const normalizedSize = normalizedBounds.getSize(new Vector3());
-  applyCenteredSquareUvs(geometries, normalizedBounds);
 
   return {
     geometries,
