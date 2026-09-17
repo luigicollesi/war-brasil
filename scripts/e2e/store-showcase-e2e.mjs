@@ -464,6 +464,63 @@ try {
     await noWebGlContext.close();
   }
 
+  const geometryFailureContext = await browser.newContext({
+    storageState,
+    viewport: { width: 1440, height: 900 },
+    reducedMotion: "reduce",
+    serviceWorkers: "block",
+    extraHTTPHeaders: { "x-forwarded-for": "198.51.100.151" },
+  });
+  await installDiceAssetMock(geometryFailureContext);
+  await geometryFailureContext.addInitScript(() => {
+    const originalParseFromString = DOMParser.prototype.parseFromString;
+    DOMParser.prototype.parseFromString = function forcedTerritoryGeometryFailure(source, mimeType) {
+      const document = originalParseFromString.call(this, source, mimeType);
+      if (String(mimeType).includes("svg")) {
+        document.getElementById("territory-18")?.remove();
+      }
+      return document;
+    };
+  });
+
+  try {
+    const geometryFailurePage = await geometryFailureContext.newPage();
+    await geometryFailurePage.goto(`${BASE_URL}/profile/store`, { waitUntil: "domcontentloaded" });
+    const geometryStorefront = await loadStorefront(geometryFailurePage);
+    const geometryTerritoryOffer = geometryStorefront.offers.find(
+      (offer) => offer.items.length === 1 && offer.items[0]?.slot === "territory_skin",
+    );
+    assert.ok(geometryTerritoryOffer, "catálogo E2E sem offer territorial para SHOWCASE-36");
+    const geometryTerritoryItem = geometryTerritoryOffer.items[0];
+    const geometryTerritoryUrl = `${BASE_URL}/profile/store/showcase/offer/${encodeURIComponent(geometryTerritoryOffer.id)}?item=${encodeURIComponent(geometryTerritoryItem.id)}`;
+    await geometryFailurePage.goto(geometryTerritoryUrl, { waitUntil: "domcontentloaded" });
+    await waitForShowcase(geometryFailurePage);
+
+    const geometryFallback = geometryFailurePage.locator("[data-showcase-geometry-fallback]");
+    await geometryFallback.waitFor({ state: "visible" });
+    await geometryFailurePage
+      .locator('svg[aria-label="Prévia 2D do território canônico"]')
+      .waitFor({ state: "visible" });
+    assert.equal(
+      await geometryFailurePage.locator("canvas.command-foundation-canvas").count(),
+      1,
+      "falha de geometria não deve derrubar o Canvas compartilhado",
+    );
+
+    const geometryFallbackCommerce = geometryFailurePage.getByRole("button", {
+      name: "COMPRAR ITEM",
+      exact: true,
+    });
+    await geometryFallbackCommerce.waitFor({ state: "visible" });
+    assert.equal(await geometryFallbackCommerce.isEnabled(), true);
+    const geometryFallbackBack = geometryFailurePage.getByRole("link", { name: /INTENDÊNCIA/ });
+    await geometryFallbackBack.focus();
+    await geometryFailurePage.keyboard.press("Enter");
+    await geometryFailurePage.waitForURL((url) => url.pathname === "/profile/store");
+  } finally {
+    await geometryFailureContext.close();
+  }
+
   storefront = await loadStorefront(page);
   const afterSingle = collectionById(storefront, football.id);
   const completionOffer = bundleOfferForCollection(storefront, afterSingle);
@@ -531,7 +588,7 @@ try {
   assert.equal(invalidResponse?.status(), 404);
 
   console.log(
-    `[store-showcase-e2e] ok — ${VIEWPORTS.length} viewports, stale price fail-closed, WebGL/2D fallback, compra individual, completion e background fallback validados`,
+    `[store-showcase-e2e] ok — ${VIEWPORTS.length} viewports, stale price fail-closed, WebGL/2D fallback, geometry fallback, compra individual, completion e background fallback validados`,
   );
 } finally {
   await actor.context.close();
