@@ -29,6 +29,17 @@ import { TerritoryShowcaseModel } from "./territory-showcase-model";
 import styles from "./store-showcase.module.css";
 
 const INTEGER_FORMAT = new Intl.NumberFormat("pt-BR");
+const SEMANTIC_MIRROR_STYLE = {
+  position: "absolute",
+  width: 1,
+  height: 1,
+  padding: 0,
+  margin: -1,
+  overflow: "hidden",
+  clipPath: "inset(50%)",
+  whiteSpace: "nowrap",
+  border: 0,
+} as const;
 
 type PurchaseMessage = Readonly<{
   kind: "success" | "error";
@@ -280,7 +291,7 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
         </div>
       ) : null}
 
-      <section className={styles.semanticMirror} aria-live="polite">
+      <section style={SEMANTIC_MIRROR_STYLE} aria-live="polite">
         <h2>{selectedItem.name}</h2>
         <p>
           Item {selectedIndex + 1} de {itemCount}. {itemRoleLabel(selectedItem)}.
@@ -369,7 +380,6 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
                   width={680}
                   height={680}
                   priority
-                  fallbackClassName={styles.fallbackLabel}
                   fallbackLabel="DADO"
                 />
               ) : (
@@ -377,7 +387,6 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
                   cosmeticId={selectedItem.id}
                   assetRef={selectedItem.assetRef}
                   effectKey={selectedItem.effectKey}
-                  className={styles.territoryFallback}
                 />
               )}
             </div>
