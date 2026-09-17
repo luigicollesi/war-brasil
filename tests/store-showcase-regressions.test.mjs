@@ -13,6 +13,7 @@ const controller = read(
 const model = read(
   "src/components/profile/v4/store-showcase/dice-showcase-model.tsx",
 );
+const dieVisual = read("src/components/dice-3d/die-visual.tsx");
 const bodyColorHook = read(
   "src/components/profile/v4/store-showcase/use-dice-body-color.ts",
 );
@@ -27,14 +28,16 @@ const metadataRepository = read(
 const diceRoute = read("src/app/api/assets/dice/route.ts");
 const territoryRoute = read("src/app/api/assets/territory-skins/route.ts");
 
-test("showcase owns its chrome and keeps the object slightly farther on desktop", () => {
+test("showcase owns its chrome and keeps the object farther and left-aligned on desktop", () => {
   assert.match(runtime, /pathname\.startsWith\("\/profile\/store\/showcase\/"\)/);
   assert.match(controller, /const DESKTOP_SHOWCASE_SCALE = 0\.92/);
+  assert.match(controller, /const DESKTOP_SHOWCASE_X = -0\.18/);
   assert.match(controller, /state\.size\.width > 900/);
+  assert.match(controller, /group\.position\.x = viewX/);
   assert.match(controller, /group\.scale\.setScalar\(viewScale\)/);
 });
 
-test("showcase dice reads catalog body_color and includes it in texture identity", () => {
+test("showcase dice reads catalog body_color and applies it to texture and physical body", () => {
   assert.match(metadataRepository, /SELECT body_color/);
   assert.match(metadataRepository, /FROM catalog\.cosmetics/);
   assert.match(metadataRepository, /asset_ref=\$1/);
@@ -42,7 +45,11 @@ test("showcase dice reads catalog body_color and includes it in texture identity
 
   assert.match(bodyColorHook, /\/api\/assets\/dice\/metadata/);
   assert.match(model, /useDiceBodyColor\(assetRef, slot\)/);
-  assert.match(model, /bodyColor,/);
+  assert.match(model, /bodyColor,?/);
+  assert.match(model, /bodyColor=\{bodyColor\}/);
+  assert.match(dieVisual, /bodyColor\?: string \| null/);
+  assert.match(dieVisual, /const resolvedBodyColor = bodyColor \?\? DICE_BODY_GOLD/);
+  assert.match(dieVisual, /color=\{resolvedBodyColor\}/);
   assert.match(textureHook, /bodyColor/);
   assert.match(textureManager, /options\.bodyColor \?\? "default-body"/);
 });

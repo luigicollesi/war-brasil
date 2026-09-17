@@ -12,6 +12,7 @@ import {
 } from "@/src/lib/client/store-showcase/showcase-motion";
 
 const DESKTOP_SHOWCASE_SCALE = 0.92;
+const DESKTOP_SHOWCASE_X = -0.18;
 
 export function ShowcaseObjectController({
   children,
@@ -37,6 +38,9 @@ export function ShowcaseObjectController({
   const viewScale = useThree((state) =>
     state.size.width > 900 ? DESKTOP_SHOWCASE_SCALE : 1,
   );
+  const viewX = useThree((state) =>
+    state.size.width > 900 ? DESKTOP_SHOWCASE_X : 0,
+  );
 
   useEffect(() => {
     transitionStartedAt.current = performance.now();
@@ -44,13 +48,13 @@ export function ShowcaseObjectController({
     if (!group) return;
 
     if (transitionPhase === "idle" || reducedMotion) {
-      group.position.x = 0;
+      group.position.x = viewX;
       group.scale.setScalar(viewScale);
     } else if (transitionPhase === "enter") {
-      group.position.x = -transitionDirection * 0.32;
+      group.position.x = viewX - transitionDirection * 0.32;
       group.scale.setScalar(viewScale * 0.92);
     } else {
-      group.position.x = 0;
+      group.position.x = viewX;
       group.scale.setScalar(viewScale);
     }
     invalidate();
@@ -60,6 +64,7 @@ export function ShowcaseObjectController({
     transitionDirection,
     transitionPhase,
     viewScale,
+    viewX,
   ]);
 
   useFrame((_, delta) => {
@@ -73,10 +78,11 @@ export function ShowcaseObjectController({
       });
 
       if (transitionPhase === "exit") {
-        group.position.x = transitionDirection * 0.32 * progress;
+        group.position.x = viewX + transitionDirection * 0.32 * progress;
         group.scale.setScalar(viewScale * (1 - 0.08 * progress));
       } else {
-        group.position.x = -transitionDirection * 0.32 * (1 - progress);
+        group.position.x =
+          viewX - transitionDirection * 0.32 * (1 - progress);
         group.scale.setScalar(viewScale * (0.92 + 0.08 * progress));
       }
 

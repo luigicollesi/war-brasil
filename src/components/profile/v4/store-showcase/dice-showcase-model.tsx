@@ -46,7 +46,13 @@ export function DiceShowcaseModel({
 
   return (
     <group name="StoreShowcaseDie" position={[0, 0.08, 0]} scale={1.08}>
-      <DieVisual geometry={geometry} textures={textures} size={1.9} radius={0.19} />
+      <DieVisual
+        geometry={geometry}
+        textures={textures}
+        size={1.9}
+        radius={0.19}
+        bodyColor={bodyColor}
+      />
     </group>
   );
 }

@@ -12,20 +12,23 @@ export function DieVisual({
   textures,
   size = 1,
   radius = 0.1,
+  bodyColor,
 }: {
   geometry: BufferGeometry;
   textures: DiceFaceTextureSet;
   size?: number;
   radius?: number;
+  bodyColor?: string | null;
 }) {
   const faceSize = Math.max(size * 0.55, size - radius * 1.65);
   const faceOffset = size / 2 + size * 0.0025;
+  const resolvedBodyColor = bodyColor ?? DICE_BODY_GOLD;
 
   return (
     <>
       <mesh geometry={geometry} castShadow receiveShadow>
         <meshPhysicalMaterial
-          color={DICE_BODY_GOLD}
+          color={resolvedBodyColor}
           metalness={0.08}
           roughness={0.34}
           clearcoat={0.38}
