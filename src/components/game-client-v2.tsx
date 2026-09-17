@@ -414,6 +414,10 @@ function GameReadyClient({
           rolledAt={lastOrderRoll.rolledAt}
           color={lastOrderRollPlayer.color}
           assetRef={lastOrderRollPlayer.cosmetics.diceNeutral.assetRef}
+          bodyColor={lastOrderRollPlayer.cosmetics.diceNeutral.bodyColor}
+          bodyHighlightColor={
+            lastOrderRollPlayer.cosmetics.diceNeutral.bodyHighlightColor
+          }
           onComplete={() => setCompletedOrderPresentationId(orderPresentationId)}
         />
       ) : null}
@@ -441,7 +445,7 @@ function GameReadyClient({
           className="rounded-xl bg-[#fff0eb] px-4 py-3 text-sm text-[#a33c33]"
           role="alert"
         >
-          {error}
+          {error || "Não foi possível atualizar a partida."}
         </p>
       ) : null}
     </div>
