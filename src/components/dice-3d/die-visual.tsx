@@ -1,10 +1,10 @@
 "use client";
 
-import type { BufferGeometry } from "three";
+import { Color, type BufferGeometry } from "three";
+import { resolveDiceBodyColors } from "@/src/lib/client/dice/body-color";
 import { DICE_FACE_DEFINITIONS } from "@/src/lib/client/dice/geometry/dice-faces";
 import type { DiceFaceTextureSet } from "@/src/lib/client/dice/types";
 
-const DICE_BODY_GOLD = "#d0ad5a";
 const DICE_EDGE_COLOR = "#111111";
 
 // BoxGeometry cria os grupos de material em +X, -X, +Y, -Y, +Z e -Z.
@@ -18,6 +18,7 @@ export function DieVisual({
   size = 1,
   radius = 0.1,
   bodyColor,
+  bodyHighlightColor,
   surfaceWrappedFaces = false,
 }: {
   geometry: BufferGeometry;
@@ -25,11 +26,13 @@ export function DieVisual({
   size?: number;
   radius?: number;
   bodyColor?: string | null;
+  bodyHighlightColor?: string | null;
   surfaceWrappedFaces?: boolean;
 }) {
   const faceSize = Math.max(size * 0.55, size - radius * 1.65);
   const faceOffset = size / 2 + size * 0.0025;
-  const resolvedBodyColor = bodyColor ?? DICE_BODY_GOLD;
+  const resolvedBody = resolveDiceBodyColors(bodyColor, bodyHighlightColor);
+  const materialKey = `${resolvedBody.bodyColor}:${resolvedBody.bodyHighlightColor}:${size}`;
 
   return (
     <>
@@ -50,11 +53,36 @@ export function DieVisual({
       ) : (
         <mesh geometry={geometry} castShadow receiveShadow>
           <meshPhysicalMaterial
-            color={resolvedBodyColor}
+            key={materialKey}
+            color={resolvedBody.bodyColor}
             metalness={0.08}
             roughness={0.34}
             clearcoat={0.38}
             clearcoatRoughness={0.3}
+            onBeforeCompile={(shader) => {
+              shader.uniforms.diceBodyHighlightColor = {
+                value: new Color(resolvedBody.bodyHighlightColor),
+              };
+              shader.uniforms.diceBodyHalfSize = { value: size / 2 };
+              shader.vertexShader = shader.vertexShader
+                .replace(
+                  "#include <common>",
+                  `#include <common>\nvarying vec3 vDiceLocalPosition;`,
+                )
+                .replace(
+                  "#include <begin_vertex>",
+                  `#include <begin_vertex>\nvDiceLocalPosition = position;`,
+                );
+              shader.fragmentShader = shader.fragmentShader
+                .replace(
+                  "#include <common>",
+                  `#include <common>\nvarying vec3 vDiceLocalPosition;\nuniform vec3 diceBodyHighlightColor;\nuniform float diceBodyHalfSize;`,
+                )
+                .replace(
+                  "#include <color_fragment>",
+                  `#include <color_fragment>\nvec3 diceP = abs(vDiceLocalPosition) / max(diceBodyHalfSize, 0.0001);\nfloat diceMinAxis = min(diceP.x, min(diceP.y, diceP.z));\nfloat diceMaxAxis = max(diceP.x, max(diceP.y, diceP.z));\nfloat diceSecondAxis = diceP.x + diceP.y + diceP.z - diceMinAxis - diceMaxAxis;\nfloat diceEdgeFactor = smoothstep(0.70, 0.97, diceSecondAxis);\nfloat diceCornerFactor = smoothstep(0.64, 0.94, diceMinAxis);\nfloat diceHighlightFactor = clamp(diceEdgeFactor * 0.82 + diceCornerFactor * 0.18, 0.0, 1.0);\ndiffuseColor.rgb = mix(diffuseColor.rgb, diceBodyHighlightColor, diceHighlightFactor);`,
+                );
+            }}
           />
         </mesh>
       )}
