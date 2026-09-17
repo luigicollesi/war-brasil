@@ -91,6 +91,8 @@ function CinematicScene({
   skin,
   pipColor,
   assetRef,
+  bodyColor,
+  bodyHighlightColor,
   replayDurationMs,
   visualScale,
   onComplete,
@@ -101,6 +103,8 @@ function CinematicScene({
   skin: DiceSkin;
   pipColor?: string;
   assetRef?: string | null;
+  bodyColor?: string | null;
+  bodyHighlightColor?: string | null;
   replayDurationMs: number;
   visualScale: number;
   onComplete: () => void;
@@ -155,6 +159,8 @@ function CinematicScene({
           values={values}
           seed={seed}
           textures={textureState.textures}
+          bodyColor={bodyColor}
+          bodyHighlightColor={bodyHighlightColor}
           preparingFallback={null}
           failureFallback={null}
           playbackDurationMs={replayDurationMs}
@@ -174,6 +180,8 @@ export function FullscreenDiceCinematic({
   skin,
   pipColor,
   assetRef,
+  bodyColor,
+  bodyHighlightColor,
   label,
   replayDurationMs,
   resultHoldMs,
@@ -185,6 +193,8 @@ export function FullscreenDiceCinematic({
   skin: DiceSkin;
   pipColor?: string;
   assetRef?: string | null;
+  bodyColor?: string | null;
+  bodyHighlightColor?: string | null;
   label: string;
   replayDurationMs: number;
   resultHoldMs: number;
@@ -283,6 +293,8 @@ export function FullscreenDiceCinematic({
               skin={skin}
               pipColor={pipColor}
               assetRef={assetRef}
+              bodyColor={bodyColor}
+              bodyHighlightColor={bodyHighlightColor}
               replayDurationMs={replayDurationMs}
               visualScale={visualScale}
               onComplete={handleReplayComplete}
