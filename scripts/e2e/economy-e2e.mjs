@@ -149,6 +149,11 @@ function formatBrl(cents) {
   }).format(cents / 100);
 }
 
+function collectionShowcaseUrl(collectionId, itemId = null) {
+  const base = `${BASE_URL}/profile/store/showcase/collection/${encodeURIComponent(collectionId)}`;
+  return itemId ? `${base}?item=${encodeURIComponent(itemId)}` : base;
+}
+
 function assetKeyFromDeliveryUrl(value) {
   const url = new URL(value, BASE_URL);
   assert.equal(url.pathname, ASSET_ROUTE_PATH);
@@ -207,67 +212,26 @@ function bundleOfferForCollection(storefront, collection) {
   return offerById(storefront, collection.bundleOfferIds[0]);
 }
 
+async function waitForShowcase(page, expectedTitle) {
+  const root = page.locator('main[aria-label="Expositor da Intendência"]');
+  await root.waitFor({ state: "visible" });
+  await root.getByText(expectedTitle, { exact: true }).first().waitFor({ state: "visible" });
+  return root;
+}
+
 const deliveryKeys = [];
 const signedR2Keys = [];
 const deliveryResponses = [];
 const failedAssetRequests = [];
 
-function previewDiagnostics(src, cause) {
+function deliveryDiagnostics(cause) {
   return JSON.stringify({
-    src,
     cause,
     deliveryKeys,
     signedR2Keys,
     deliveryResponses,
     failedAssetRequests,
   });
-}
-
-async function waitForPreviewImage(scope) {
-  const image = scope.getByRole("img").first();
-  await image.waitFor({ state: "visible" });
-  try {
-    await image.evaluate((node) => {
-      if (!(node instanceof HTMLImageElement)) {
-        throw new Error("preview não foi renderizado como imagem");
-      }
-      if (node.complete) {
-        if (node.naturalWidth > 0) return;
-        throw new Error("preview terminou sem conteúdo visual");
-      }
-      return new Promise((resolve, reject) => {
-        node.addEventListener("load", () => resolve(undefined), { once: true });
-        node.addEventListener("error", () => reject(new Error("preview image failed")), {
-          once: true,
-        });
-      });
-    });
-  } catch (error) {
-    const src = await image.getAttribute("src").catch(() => null);
-    const cause = error instanceof Error ? error.message : String(error);
-    throw new Error(`preview image failed: ${previewDiagnostics(src, cause)}`);
-  }
-  return image;
-}
-
-async function loadStorefront(page) {
-  const response = await apiJson(page, "/api/economy/storefront");
-  assert.equal(response.status, 200, JSON.stringify(response.body));
-  assert.ok(response.body && typeof response.body === "object");
-  return response.body;
-}
-
-async function openFeaturedCollection(page) {
-  const opener = page.getByRole("button", { name: "ABRIR COLEÇÃO EM DESTAQUE", exact: true });
-  await opener.waitFor({ state: "visible" });
-  await opener.click();
-  const dialog = page.getByRole("dialog");
-  await dialog.waitFor({ state: "visible" });
-  return dialog;
-}
-
-function collectionItemCard(dialog, itemName) {
-  return dialog.locator("article").filter({ hasText: itemName });
 }
 
 const browser = await chromium.launch({ headless: true });
@@ -385,10 +349,17 @@ try {
   assert.equal(await storeWallet.locator('img[src*="coin.svg"]').count(), 1);
 
   await page.getByRole("heading", { name: "Futebol", exact: true }).first().waitFor();
+  const collectionLink = page.getByRole("link", {
+    name: "Inspecionar coleção Futebol",
+    exact: true,
+  });
+  assert.equal(await collectionLink.count(), 1);
   assert.equal(
-    await page.getByRole("button", { name: "Abrir coleção Futebol", exact: true }).count(),
-    1,
+    await page.getByRole("button", { name: /ABRIR COLEÇÃO EM DESTAQUE/i }).count(),
+    0,
+    "o modal editorial antigo não pode voltar ao discovery",
   );
+  assert.equal(await page.getByRole("dialog").count(), 0, "SHOWCASE-40 proíbe modal permanente");
 
   const diceCatalog = page.locator('section[aria-labelledby="catalog-title"]');
   for (const item of football.items) {
@@ -398,33 +369,6 @@ try {
       `${item.id} vazou da collection para a grade comum de Dados`,
     );
   }
-
-  let dialog = await openFeaturedCollection(page);
-  await dialog.getByRole("heading", { name: "Futebol", exact: true }).waitFor();
-  assert.match(normalizeText(await dialog.textContent()), /40% OFF/i);
-  assert.match(normalizeText(await dialog.textContent()), /1\.200 CR/i);
-  assert.match(normalizeText(await dialog.textContent()), /720 CR/i);
-
-  for (const item of football.items) {
-    const card = collectionItemCard(dialog, item.name);
-    await card.waitFor({ state: "visible" });
-    const cardText = normalizeText(await card.textContent());
-    assert.ok(cardText.includes("500 CR"), `${item.id} sem preço-base`);
-    assert.ok(cardText.includes("300 CR"), `${item.id} sem preço promocional`);
-  }
-
-  const firstItem = football.items[0];
-  const firstCard = collectionItemCard(dialog, firstItem.name);
-  const firstImage = await waitForPreviewImage(firstCard);
-  const firstSrc = await firstImage.getAttribute("src");
-  assert.ok(firstSrc, `${firstItem.id} não expôs src de preview`);
-  assert.equal(assetKeyFromDeliveryUrl(firstSrc), assetKeyFromDeliveryUrl(firstItem.assetRef));
-
-  await firstCard.getByRole("button", { name: "COMPRAR", exact: true }).click();
-  await page
-    .getByText("Créditos de Campanha insuficientes para esta aquisição.", { exact: true })
-    .waitFor();
-  assertFreshCommanderState(await readEconomyState(userId));
 
   const creditPacks = page.locator('#reforcar-tesouraria article');
   assert.equal(await creditPacks.count(), storefront.creditPacks.length);
@@ -440,13 +384,38 @@ try {
     assert.equal(await futureButton.isDisabled(), true);
   }
 
-  assert.equal(failedAssetRequests.length, 0, previewDiagnostics(null, "asset request failed"));
+  const firstItem = football.items[0];
+  await page.goto(collectionShowcaseUrl(football.id, firstItem.id), {
+    waitUntil: "domcontentloaded",
+  });
+  let showcase = await waitForShowcase(page, "Futebol");
+  assert.equal(new URL(page.url()).pathname, `/profile/store/showcase/collection/${football.id}`);
+  assert.equal(await showcase.getByText("40% OFF", { exact: true }).count() > 0, true);
+  assert.equal(await showcase.getByText("720 CR", { exact: true }).count() > 0, true);
+  const itemHud = showcase.getByLabel("Item em exposição");
+  await itemHud.getByRole("heading", { name: firstItem.name, exact: true }).waitFor();
+  assert.match(normalizeText(await showcase.textContent()), /300 CR/);
+
+  const delivered = await page.evaluate(async (assetRef) => {
+    const response = await fetch(assetRef);
+    return { status: response.status, contentType: response.headers.get("content-type") };
+  }, firstItem.assetRef);
+  assert.equal(delivered.status, 200);
+  assert.match(delivered.contentType ?? "", /^image\/webp(?:;|$)/i);
+
+  await itemHud.getByRole("button", { name: "COMPRAR ITEM", exact: true }).click();
+  await page
+    .getByText("Créditos insuficientes para concluir esta compra.", { exact: true })
+    .waitFor();
+  assertFreshCommanderState(await readEconomyState(userId));
+
+  assert.equal(failedAssetRequests.length, 0, deliveryDiagnostics("asset request failed"));
+  assert.ok(signedR2Keys.length > 0, "nenhum dado exercitou delivery R2 assinado");
+  assert.deepEqual(new Set(signedR2Keys), new Set(deliveryKeys));
   for (const response of deliveryResponses) {
     assert.equal(response.status, 307);
     assert.equal(response.hasLocation, true);
   }
-  assert.ok(signedR2Keys.length > 0, "nenhum preview de dado exercitou delivery R2 assinado");
-  assert.deepEqual(new Set(signedR2Keys), new Set(deliveryKeys));
 
   const attackItem = football.items.find((item) => item.slot === "dice_attack");
   assert.ok(attackItem, "collection Futebol sem dado de ataque");
@@ -455,15 +424,17 @@ try {
   assert.equal(purchaseBalance, 400);
   await setCampaignCreditBalance(userId, purchaseBalance);
 
-  await page.goto(`${BASE_URL}/profile/store`, { waitUntil: "domcontentloaded" });
-  await page.locator('[data-profile-v4-surface="store"]').waitFor({ state: "visible" });
-  dialog = await openFeaturedCollection(page);
-  const attackCard = collectionItemCard(dialog, attackItem.name);
-  await attackCard.waitFor({ state: "visible" });
-  await attackCard.getByRole("button", { name: "COMPRAR", exact: true }).click();
+  await page.goto(collectionShowcaseUrl(football.id, attackItem.id), {
+    waitUntil: "domcontentloaded",
+  });
+  showcase = await waitForShowcase(page, "Futebol");
+  const attackHud = showcase.getByLabel("Item em exposição");
+  await attackHud.getByRole("heading", { name: attackItem.name, exact: true }).waitFor();
+  await attackHud.getByRole("button", { name: "COMPRAR ITEM", exact: true }).click();
   await page
-    .getByText("Aquisição confirmada e incorporada ao Arsenal.", { exact: true })
+    .getByText("Compra confirmada. Arsenal e créditos atualizados pelo Comando.", { exact: true })
     .waitFor();
+  await attackHud.getByRole("button", { name: "POSSUÍDO", exact: true }).waitFor();
 
   const purchasedState = await readEconomyState(userId);
   assert.equal(purchasedState.balance, "100");
@@ -472,6 +443,13 @@ try {
   assert.equal(purchasedState.ledgerDelta, "-300");
   assert.equal(purchasedState.inventoryIds.length, 5);
   assert.ok(purchasedState.inventoryIds.includes(attackItem.id));
+  assert.equal(
+    purchasedState.loadout.some(
+      (entry) => entry.slot === attackItem.slot && entry.cosmetic_id === attackItem.id,
+    ),
+    false,
+    "comprar no Expositor não pode auto-equipar",
+  );
 
   await page.goto(`${BASE_URL}/profile/arsenal`, { waitUntil: "domcontentloaded" });
   await page.getByRole("heading", { name: "Equipamento do Comandante", exact: true }).waitFor();
@@ -507,15 +485,14 @@ try {
   assert.equal(footballBundle.basePrice, 800);
   assert.equal(footballBundle.price, 480);
 
-  await page.goto(`${BASE_URL}/profile/store`, { waitUntil: "domcontentloaded" });
-  await page.locator('[data-profile-v4-surface="store"]').waitFor({ state: "visible" });
-  dialog = await openFeaturedCollection(page);
-  assert.match(normalizeText(await dialog.textContent()), /800 CR/i);
-  assert.match(normalizeText(await dialog.textContent()), /480 CR/i);
-  await dialog.getByRole("button", { name: "COMPLETAR COLEÇÃO", exact: true }).waitFor();
-
+  await page.goto(collectionShowcaseUrl(updatedFootball.id, attackItem.id), {
+    waitUntil: "domcontentloaded",
+  });
+  showcase = await waitForShowcase(page, "Futebol");
+  assert.equal(await showcase.getByText("480 CR", { exact: true }).count() > 0, true);
+  await showcase.getByRole("button", { name: "COMPLETAR", exact: true }).waitFor();
   await page.screenshot({
-    path: path.join(ARTIFACT_DIR, "store-collection-promotion-v4-1440x900.png"),
+    path: path.join(ARTIFACT_DIR, "store-showcase-promotion-v1-1440x900.png"),
     fullPage: true,
   });
 
@@ -526,9 +503,13 @@ try {
     path: path.join(ARTIFACT_DIR, "store-v4-390x844.png"),
     fullPage: true,
   });
-  dialog = await openFeaturedCollection(page);
+
+  await page.goto(collectionShowcaseUrl(updatedFootball.id, attackItem.id), {
+    waitUntil: "domcontentloaded",
+  });
+  await waitForShowcase(page, "Futebol");
   await page.screenshot({
-    path: path.join(ARTIFACT_DIR, "store-collection-modal-v4-390x844.png"),
+    path: path.join(ARTIFACT_DIR, "store-showcase-v1-390x844.png"),
     fullPage: true,
   });
 
@@ -549,7 +530,7 @@ try {
   }
 
   console.log(
-    `[economy-e2e] ok — Futebol 40% OFF, compra 300 CR, completion 480 CR, equipagem e ${signedR2Keys.length} deliveries R2 validados`,
+    `[economy-e2e] ok — Futebol 40% OFF, Expositor dedicado, compra 300 CR, completion 480 CR, equipagem e ${signedR2Keys.length} deliveries R2 validados`,
   );
 } finally {
   await context.close();
