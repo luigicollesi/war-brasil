@@ -53,6 +53,7 @@ Do not start a local server or open a browser just to verify changes.
 - Prefer targeted checks over full suites.
 - Do not claim a check passed unless it was actually run.
 - If verification requires starting the app or an unavailable service, leave it for manual verification.
+- When an E2E or other targeted test is being used to diagnose a possible hang, observe it for at most 20 seconds. If it has not completed by then, stop waiting for additional output, preserve the logs collected during that window, and diagnose/fix from those logs instead of waiting for the test's longer timeout. Do not repeat longer waits unless the existing evidence specifically justifies them.
 
 ## Safety
 
