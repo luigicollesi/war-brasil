@@ -11,7 +11,8 @@ const read = (path) => readFileSync(path, "utf8");
 test("semantic HTML mirrors selected item position slot ownership price and promotion", () => {
   const showcase = read(SHOWCASE_PATH);
 
-  assert.match(showcase, /semanticMirror/);
+  assert.match(showcase, /SEMANTIC_MIRROR_STYLE/);
+  assert.match(showcase, /clipPath:\s*"inset\(50%\)"/);
   assert.match(showcase, /selectedIndex\s*\+\s*1/);
   assert.match(showcase, /itemCount/);
   assert.match(showcase, /itemRoleLabel\(selectedItem\)/);
@@ -58,12 +59,14 @@ test("territory 2d fallback references the configured canonical map path instead
   assert.doesNotMatch(fallback, /new\s+Shape/);
 });
 
-test("showcase layout remains viewport fitted and semantic mirror is visually hidden only", () => {
+test("showcase layout remains viewport fitted while semantic mirror stays non-visual", () => {
   const styles = read(STYLES_PATH);
+  const showcase = read(SHOWCASE_PATH);
 
   assert.match(styles, /height:\s*100dvh/);
   assert.match(styles, /overflow:\s*hidden/);
   assert.match(styles, /\.itemStrip[^}]*overflow-x:\s*auto/s);
-  assert.match(styles, /\.semanticMirror/);
-  assert.match(styles, /clip-path:\s*inset\(50%\)/);
+  assert.match(showcase, /width:\s*1/);
+  assert.match(showcase, /height:\s*1/);
+  assert.match(showcase, /overflow:\s*"hidden"/);
 });
