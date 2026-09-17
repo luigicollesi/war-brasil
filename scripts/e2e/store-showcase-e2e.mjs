@@ -92,6 +92,23 @@ async function setCampaignCreditBalance(userId, balance) {
   });
 }
 
+async function setCollectionPromotionDiscount(collectionId, discountBps) {
+  assert.ok(Number.isSafeInteger(discountBps) && discountBps >= 0 && discountBps <= 10_000);
+  await withDb(async (db) => {
+    const result = await db.query(
+      `UPDATE catalog.collections
+          SET promotion_discount_bps=$2,
+              updated_at=NOW()
+        WHERE id=$1
+          AND featured=TRUE
+        RETURNING promotion_discount_bps`,
+      [collectionId, discountBps],
+    );
+    assert.equal(result.rowCount, 1, `coleção featured ${collectionId} ausente`);
+    assert.equal(result.rows[0].promotion_discount_bps, discountBps);
+  });
+}
+
 async function readEconomyState(userId) {
   return withDb(async (db) => {
     const wallet = await db.query(
@@ -123,15 +140,15 @@ async function readEconomyState(userId) {
   });
 }
 
-async function createActor(browser) {
-  const identity = `${process.pid}-${Date.now()}`;
+async function createActor(browser, forwardedFor = "198.51.100.147") {
+  const identity = `${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
   const email = `store-showcase-${identity}@e2e.war-brasil.test`;
   const password = `E2e-${identity}-Aa1!`;
   const context = await browser.newContext({
     viewport: { width: 1440, height: 900 },
     reducedMotion: "reduce",
     serviceWorkers: "block",
-    extraHTTPHeaders: { "x-forwarded-for": "198.51.100.147" },
+    extraHTTPHeaders: { "x-forwarded-for": forwardedFor },
   });
   const page = await context.newPage();
   await page.goto(`${BASE_URL}/robots.txt`, { waitUntil: "domcontentloaded" });
@@ -155,7 +172,7 @@ async function createActor(browser) {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
-      handle: `showcase_${process.pid}_${String(Date.now()).slice(-6)}`,
+      handle: `showcase_${process.pid}_${String(Date.now()).slice(-6)}_${Math.random().toString(36).slice(2, 5)}`,
       displayName: "Store Showcase E2E",
     }),
   });
@@ -191,6 +208,14 @@ function collectionById(storefront, collectionId) {
 function bundleOfferForCollection(storefront, collection) {
   assert.ok(collection.bundleOfferIds.length > 0, "collection sem bundle ativo");
   return offerById(storefront, collection.bundleOfferIds[0]);
+}
+
+function singleOfferForItem(storefront, itemId) {
+  const offer = storefront.offers.find(
+    (candidate) => candidate.items.length === 1 && candidate.items[0]?.id === itemId,
+  );
+  assert.ok(offer, `offer individual para ${itemId} ausente`);
+  return offer;
 }
 
 function currentItemButton(page) {
@@ -266,6 +291,64 @@ try {
   const initialBalance = 2_000;
   await setCampaignCreditBalance(userId, initialBalance);
 
+  const staleActor = await createActor(browser, "198.51.100.150");
+  await installDiceAssetMock(staleActor.context);
+  await staleActor.context.route(backgroundPredicate, async (route) => {
+    await route.fulfill({ status: 200, contentType: "image/webp", body: FAKE_WEBP });
+  });
+  try {
+    const stalePage = staleActor.page;
+    await stalePage.goto(`${BASE_URL}/profile/store`, { waitUntil: "domcontentloaded" });
+    const staleStorefront = await loadStorefront(stalePage);
+    const staleFootball = collectionById(staleStorefront, football.id);
+    const staleItem = staleFootball.items[0];
+    assert.ok(staleItem, "Football precisa de item individual para SHOWCASE-28");
+    const staleInitialOffer = singleOfferForItem(staleStorefront, staleItem.id);
+    assert.equal(staleInitialOffer.price, 300);
+    await setCampaignCreditBalance(staleActor.userId, 1_000);
+
+    const staleShowcaseUrl = `${BASE_URL}/profile/store/showcase/collection/${encodeURIComponent(staleFootball.id)}?item=${encodeURIComponent(staleItem.id)}`;
+    await stalePage.goto(staleShowcaseUrl, { waitUntil: "domcontentloaded" });
+    await waitForShowcase(stalePage);
+    const staleItemHud = stalePage.locator('[aria-label="Item em exposição"]');
+    await staleItemHud.getByText("300 CR", { exact: true }).waitFor({ state: "visible" });
+    const staleSelectedBeforeAttempt = await currentItemButton(stalePage).textContent();
+    const stalePriceStateBeforeAttempt = await readEconomyState(staleActor.userId);
+
+    await setCollectionPromotionDiscount(football.id, 2000);
+    const staleInitialCta = stalePage.getByRole("button", { name: "COMPRAR ITEM", exact: true });
+    await staleInitialCta.focus();
+    await stalePage.keyboard.press("Enter");
+    await stalePage
+      .getByRole("status")
+      .filter({ hasText: "O preço mudou para 400 CR. Confirme o novo valor." })
+      .waitFor({ state: "visible" });
+
+    const stalePriceStateAfterAttempt = await readEconomyState(staleActor.userId);
+    assert.equal(stalePriceStateAfterAttempt.balance, stalePriceStateBeforeAttempt.balance);
+    assert.deepEqual(stalePriceStateAfterAttempt.inventoryIds, stalePriceStateBeforeAttempt.inventoryIds);
+    assert.equal(await currentItemButton(stalePage).textContent(), staleSelectedBeforeAttempt);
+    await staleItemHud.getByText("400 CR", { exact: true }).waitFor({ state: "visible" });
+
+    const stalePriceCta = stalePage.getByRole("button", { name: "COMPRAR ITEM", exact: true });
+    await stalePriceCta.focus();
+    await stalePage.keyboard.press("Enter");
+    await stalePage
+      .getByRole("status")
+      .filter({ hasText: "Compra confirmada" })
+      .waitFor({ state: "visible" });
+    await stalePage.waitForFunction(() =>
+      document.querySelector('[aria-label="Itens da exposição"] button[aria-current="true"]')?.textContent?.includes("POSSUÍDO"),
+    );
+
+    const stalePriceStateAfterPurchase = await readEconomyState(staleActor.userId);
+    assert.equal(stalePriceStateAfterPurchase.balance, String(Number(stalePriceStateBeforeAttempt.balance) - 400));
+    assert.ok(stalePriceStateAfterPurchase.inventoryIds.includes(staleItem.id));
+  } finally {
+    await setCollectionPromotionDiscount(football.id, 4000);
+    await staleActor.context.close();
+  }
+
   const heroLink = page.getByRole("link", { name: "INSPECIONAR COLEÇÃO", exact: true }).first();
   await heroLink.waitFor({ state: "visible" });
   await heroLink.focus();
@@ -288,7 +371,6 @@ try {
   await page.goto(showcaseUrl, { waitUntil: "domcontentloaded" });
   const root = await waitForShowcase(page);
   assert.equal(await page.locator("canvas.command-foundation-canvas").count(), 1);
-  assert.equal(await page.locator("canvas.command-foundation-canvas").evaluateAll((nodes) => nodes.length), 1);
   assert.equal(await root.getAttribute("data-collection-background"), "ready");
   assert.ok(backgroundRequests > 0, "background canônico não foi requisitado");
 
@@ -449,7 +531,7 @@ try {
   assert.equal(invalidResponse?.status(), 404);
 
   console.log(
-    `[store-showcase-e2e] ok — ${VIEWPORTS.length} viewports, WebGL/2D fallback, compra individual, completion e background fallback validados`,
+    `[store-showcase-e2e] ok — ${VIEWPORTS.length} viewports, stale price fail-closed, WebGL/2D fallback, compra individual, completion e background fallback validados`,
   );
 } finally {
   await actor.context.close();
