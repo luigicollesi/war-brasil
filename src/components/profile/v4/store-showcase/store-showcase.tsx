@@ -22,6 +22,7 @@ import type {
   StoreShowcaseView,
 } from "@/src/lib/economy/store-showcase";
 import { ProfileCosmeticImage } from "../profile-cosmetic-image";
+import { CollectionShowcaseAtmosphere } from "./collection-showcase-atmosphere";
 import { DiceShowcaseModel } from "./dice-showcase-model";
 import { ShowcaseModelErrorBoundary } from "./showcase-model-error-boundary";
 import { ShowcaseObjectController } from "./showcase-object-controller";
@@ -164,35 +165,41 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
       key: selectedItem?.id ?? showcase.id,
       mode: showcase.mode,
       render: ({ reducedMotion }: { reducedMotion: boolean }) => (
-        <ShowcaseObjectController
-          reducedMotion={reducedMotion}
-          transitionPhase={transitionPhase}
-          transitionDirection={transitionDirection}
-        >
-          {selectedItem?.type === "dice" ? (
-            <DiceShowcaseModel
-              assetRef={selectedItem.assetRef}
-              slot={selectedItem.slot}
-            />
-          ) : selectedItem?.type === "territory" &&
-            selectedItem.id !== failedTerritoryItemId ? (
-            <ShowcaseModelErrorBoundary
-              key={selectedItem.id}
-              onError={() => setFailedTerritoryItemId(selectedItem.id)}
-            >
-              <TerritoryShowcaseModel
-                cosmeticId={selectedItem.id}
-                assetRef={selectedItem.assetRef}
-                effectKey={selectedItem.effectKey}
-              />
-            </ShowcaseModelErrorBoundary>
+        <>
+          {showcase.mode === "collection" ? (
+            <CollectionShowcaseAtmosphere backgroundRef={showcase.backgroundRef} />
           ) : null}
-        </ShowcaseObjectController>
+          <ShowcaseObjectController
+            reducedMotion={reducedMotion}
+            transitionPhase={transitionPhase}
+            transitionDirection={transitionDirection}
+          >
+            {selectedItem?.type === "dice" ? (
+              <DiceShowcaseModel
+                assetRef={selectedItem.assetRef}
+                slot={selectedItem.slot}
+              />
+            ) : selectedItem?.type === "territory" &&
+              selectedItem.id !== failedTerritoryItemId ? (
+              <ShowcaseModelErrorBoundary
+                key={selectedItem.id}
+                onError={() => setFailedTerritoryItemId(selectedItem.id)}
+              >
+                <TerritoryShowcaseModel
+                  cosmeticId={selectedItem.id}
+                  assetRef={selectedItem.assetRef}
+                  effectKey={selectedItem.effectKey}
+                />
+              </ShowcaseModelErrorBoundary>
+            ) : null}
+          </ShowcaseObjectController>
+        </>
       ),
     }),
     [
       failedTerritoryItemId,
       selectedItem,
+      showcase.backgroundRef,
       showcase.id,
       showcase.mode,
       transitionDirection,
@@ -278,15 +285,11 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
     selectedItem.owned || !selectedOffer?.purchasable || pendingOfferId !== null;
   const bundlePurchaseDisabled =
     showcase.fullyOwned || !showcase.bundleOffer?.purchasable || pendingOfferId !== null;
-  const showcaseBackground =
-    showcase.mode === "collection"
-      ? "radial-gradient(ellipse 24% 31% at 38% 47%, rgb(255 229 157 / 18%) 0%, transparent 72%), radial-gradient(ellipse 39% 48% at 38% 47%, rgb(210 174 87 / 25%) 0%, rgb(100 151 119 / 14%) 38%, rgb(31 67 48 / 7%) 58%, transparent 80%)"
-      : "transparent";
 
   return (
     <main
       className={styles.root}
-      style={{ background: showcaseBackground, pointerEvents: "none" }}
+      style={{ background: "transparent", pointerEvents: "none" }}
       data-showcase-mode={showcase.mode}
       data-transition-phase={transitionPhase}
       aria-label="Expositor da Intendência"
