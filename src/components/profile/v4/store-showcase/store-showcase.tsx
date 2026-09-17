@@ -4,7 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useShowcaseScene } from "@/src/components/pre-game/foundation";
+import {
+  useCommandSceneState,
+  useShowcaseScene,
+} from "@/src/components/pre-game/foundation";
 import {
   ShowcasePurchaseError,
   purchaseShowcaseOffer,
@@ -21,6 +24,7 @@ import type {
 import { ProfileCosmeticImage } from "../profile-cosmetic-image";
 import { DiceShowcaseModel } from "./dice-showcase-model";
 import { ShowcaseObjectController } from "./showcase-object-controller";
+import { TerritoryShowcaseFallback } from "./territory-showcase-fallback";
 import { TerritoryShowcaseModel } from "./territory-showcase-model";
 import styles from "./store-showcase.module.css";
 
@@ -58,6 +62,10 @@ function promotionLabel(discountBps: number) {
   return `${INTEGER_FORMAT.format(discountBps / 100)}% OFF`;
 }
 
+function previewSource(item: StoreShowcaseItem) {
+  return item.previewRef ?? item.assetRef;
+}
+
 function purchaseErrorMessage(error: ShowcasePurchaseError) {
   if (error.code === "ECONOMY_PRICE_CHANGED") {
     return error.currentPrice === null
@@ -85,6 +93,7 @@ function shouldRefreshAfterError(error: ShowcasePurchaseError) {
 
 export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
   const router = useRouter();
+  const sceneState = useCommandSceneState();
   const [selectedItemId, setSelectedItemId] = useState(showcase.selectedItemId);
   const [failedBackgroundRef, setFailedBackgroundRef] = useState<string | null>(null);
   const [pendingOfferId, setPendingOfferId] = useState<string | null>(null);
@@ -93,6 +102,7 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
   const [transitionPhase, setTransitionPhase] = useState<ShowcaseTransitionPhase>("idle");
   const [transitionDirection, setTransitionDirection] = useState<-1 | 1>(1);
   const transitionTimers = useRef<number[]>([]);
+  const selectedStripItemRef = useRef<HTMLButtonElement | null>(null);
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -120,10 +130,19 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
   const selectedItem = showcase.items[selectedIndex] ?? showcase.items[0];
   const selectedOffer = selectedItem?.singleOffer ?? null;
   const itemCount = showcase.items.length;
+  const sceneFallback = sceneState === "fallback";
   const backgroundFailed =
     showcase.backgroundRef !== null && failedBackgroundRef === showcase.backgroundRef;
   const collectionBackgroundVisible =
     showcase.mode === "collection" && Boolean(showcase.backgroundRef) && !backgroundFailed;
+
+  useEffect(() => {
+    selectedStripItemRef.current?.scrollIntoView({
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+      block: "nearest",
+      inline: "center",
+    });
+  }, [prefersReducedMotion, selectedIndex]);
 
   const collectionProgress = useMemo(
     () => `${showcase.ownedCount}/${showcase.totalCount}`,
@@ -165,7 +184,7 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
   }
 
   function requestSelection(targetItemId: string, direction: -1 | 1) {
-    if (targetItemId === selectedItemId || transitionPhase !== "idle") return;
+    if (targetItemId === selectedItem?.id || transitionPhase !== "idle") return;
     setPurchaseMessage(null);
 
     if (prefersReducedMotion) {
@@ -261,6 +280,27 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
         </div>
       ) : null}
 
+      <section className={styles.semanticMirror} aria-live="polite">
+        <h2>{selectedItem.name}</h2>
+        <p>
+          Item {selectedIndex + 1} de {itemCount}. {itemRoleLabel(selectedItem)}.
+        </p>
+        <p>{ownershipLabel(selectedItem)}.</p>
+        {selectedOffer ? (
+          <>
+            {selectedOffer.basePrice !== selectedOffer.price ? (
+              <p>Preço original: {priceLabel(selectedOffer.basePrice)}.</p>
+            ) : null}
+            <p>Preço atual: {priceLabel(selectedOffer.price)}.</p>
+          </>
+        ) : (
+          <p>Sem oferta individual ativa.</p>
+        )}
+        {showcase.promotionDiscountBps > 0 ? (
+          <p>Promoção da coleção: {promotionLabel(showcase.promotionDiscountBps)}.</p>
+        ) : null}
+      </section>
+
       <header
         className={styles.header}
         style={{ pointerEvents: "auto" }}
@@ -320,10 +360,34 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
         </button>
 
         <div className={styles.stageObject} data-showcase-object-type={selectedItem.type}>
+          {sceneFallback ? (
+            <div className={styles.previewFallback} data-showcase-fallback>
+              {selectedItem.type === "dice" ? (
+                <ProfileCosmeticImage
+                  src={previewSource(selectedItem)}
+                  alt={`Prévia 2D de ${selectedItem.name}`}
+                  width={680}
+                  height={680}
+                  priority
+                  fallbackClassName={styles.fallbackLabel}
+                  fallbackLabel="DADO"
+                />
+              ) : (
+                <TerritoryShowcaseFallback
+                  cosmeticId={selectedItem.id}
+                  assetRef={selectedItem.assetRef}
+                  effectKey={selectedItem.effectKey}
+                  className={styles.territoryFallback}
+                />
+              )}
+            </div>
+          ) : null}
           <span className={styles.stageMarker}>
-            {selectedItem.type === "dice"
-              ? "EXPOSITOR 3D // GEOMETRIA CANÔNICA"
-              : "EXPOSITOR 3D // TERRITÓRIO CANÔNICO"}
+            {sceneFallback
+              ? "EXPOSITOR 2D // FALLBACK CANÔNICO"
+              : selectedItem.type === "dice"
+                ? "EXPOSITOR 3D // GEOMETRIA CANÔNICA"
+                : "EXPOSITOR 3D // TERRITÓRIO CANÔNICO"}
           </span>
         </div>
 
@@ -391,7 +455,9 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
           {showcase.items.map((item, index) => (
             <button
               key={item.id}
+              ref={index === selectedIndex ? selectedStripItemRef : undefined}
               type="button"
+              aria-current={index === selectedIndex ? "true" : undefined}
               aria-pressed={index === selectedIndex}
               data-active={index === selectedIndex ? "true" : "false"}
               disabled={transitionPhase !== "idle"}
