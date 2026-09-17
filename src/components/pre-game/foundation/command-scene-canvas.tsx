@@ -34,7 +34,6 @@ const MAP_HALF_EXTENT = (MAP_VIEWBOX_SIZE * MAP_SCALE) / 2;
 const CANONICAL_TERRITORY_COUNT = 42;
 const PLATE_TONES = ["#26352a", "#2d3d30", "#223027", "#344437"] as const;
 const SHOWCASE_STANDARD_LIGHT = "#edf3ee";
-const SHOWCASE_COLLECTION_LIGHT = "#d8ae56";
 
 type Position3 = [number, number, number];
 
@@ -90,6 +89,20 @@ function WebGLContextGuard({ onUnavailable }: { onUnavailable: () => void }) {
     canvas.addEventListener("webglcontextlost", handleContextLost, false);
     return () => canvas.removeEventListener("webglcontextlost", handleContextLost, false);
   }, [gl, onUnavailable]);
+
+  return null;
+}
+
+function SceneClearDirector({ transparent }: { transparent: boolean }) {
+  const gl = useThree((state) => state.gl);
+  const scene = useThree((state) => state.scene);
+  const invalidate = useThree((state) => state.invalidate);
+
+  useEffect(() => {
+    scene.background = null;
+    gl.setClearColor(COMMAND_FOUNDATION_TOKENS.color.void, transparent ? 0 : 1);
+    invalidate();
+  }, [gl, invalidate, scene, transparent]);
 
   return null;
 }
@@ -764,16 +777,13 @@ function ShowcaseSceneWorld({
   reducedMotion: boolean;
   compact: boolean;
 }) {
-  const collection = showcaseScene.mode === "collection";
-  const keyLight = collection ? SHOWCASE_COLLECTION_LIGHT : SHOWCASE_STANDARD_LIGHT;
-
   return (
     <>
       <ShowcaseCameraDirector compact={compact} />
-      <ambientLight color={collection ? "#8d7a55" : "#87958c"} intensity={0.78} />
-      <directionalLight color={keyLight} intensity={3.4} position={[-4, 5.5, 6.5]} />
-      <pointLight color={keyLight} intensity={collection ? 20 : 13} distance={12} position={[4.2, 2.8, 4]} />
-      <pointLight color="#7b1f25" intensity={collection ? 2.6 : 1.2} distance={8} position={[-4, -2.2, 3]} />
+      <ambientLight color="#87958c" intensity={0.78} />
+      <directionalLight color={SHOWCASE_STANDARD_LIGHT} intensity={3.4} position={[-4, 5.5, 6.5]} />
+      <pointLight color={SHOWCASE_STANDARD_LIGHT} intensity={13} distance={12} position={[4.2, 2.8, 4]} />
+      <pointLight color="#7b1f25" intensity={1.2} distance={8} position={[-4, -2.2, 3]} />
       <StoreShowcasePedestal mode={showcaseScene.mode} />
       <group name="StoreShowcaseSceneContent" position={[compact ? 0 : -0.65, 0.12, 0]}>
         {showcaseScene.render({ reducedMotion })}
@@ -792,6 +802,7 @@ export function CommandSceneCanvas({
   onUnavailable,
 }: CommandSceneCanvasProps) {
   const initialPose = resolveCommandCameraPose(intent, compact);
+  const transparentCollection = showcaseScene?.mode === "collection";
 
   useEffect(() => {
     if (!showcaseScene) return;
@@ -812,14 +823,15 @@ export function CommandSceneCanvas({
       frameloop={reducedMotion ? "demand" : "always"}
       gl={{
         antialias: maxDpr > 1.05,
-        alpha: false,
+        alpha: true,
         powerPreference: "high-performance",
       }}
       onCreated={({ gl }) => {
-        gl.setClearColor(COMMAND_FOUNDATION_TOKENS.color.void, 1);
+        gl.setClearColor(COMMAND_FOUNDATION_TOKENS.color.void, transparentCollection ? 0 : 1);
       }}
     >
       <fog attach="fog" args={[COMMAND_FOUNDATION_TOKENS.color.void, 11.5, 19]} />
+      <SceneClearDirector transparent={transparentCollection} />
       <WebGLContextGuard onUnavailable={onUnavailable} />
       {showcaseScene ? (
         <ShowcaseSceneWorld
