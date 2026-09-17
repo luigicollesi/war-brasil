@@ -14,6 +14,7 @@ import {
 } from "./dice-skins";
 
 const imagePromises = new Map<string, Promise<HTMLImageElement>>();
+const BODY_COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
 
 function loadImage(src: string) {
   const cached = imagePromises.get(src);
@@ -27,10 +28,8 @@ function loadImage(src: string) {
 
     const image = new Image();
     image.decoding = "async";
-    // The stable same-origin delivery route redirects to Cloudflare R2. The
-    // final response is cross-origin and must remain origin-clean because this
-    // image is drawn into a canvas before becoming a Three.js texture.
-    image.crossOrigin = "anonymous";
+    // Dice assets are delivered through an authenticated same-origin proxy so
+    // the image remains origin-clean when composed into the canvas texture.
     image.onload = () => resolve(image);
     image.onerror = () => reject(new Error(`Não foi possível carregar ${src}.`));
     image.src = src;
@@ -53,6 +52,21 @@ function createCanvas(resolution: number) {
   canvas.width = resolution;
   canvas.height = resolution;
   return canvas;
+}
+
+function validBodyColor(bodyColor: string | null | undefined) {
+  return bodyColor && BODY_COLOR_PATTERN.test(bodyColor) ? bodyColor : null;
+}
+
+function drawBodyColor(
+  context: CanvasRenderingContext2D,
+  resolution: number,
+  bodyColor: string,
+) {
+  context.save();
+  context.fillStyle = bodyColor;
+  context.fillRect(0, 0, resolution, resolution);
+  context.restore();
 }
 
 function drawProceduralBase(
@@ -131,12 +145,14 @@ export async function createDiceFaceTexture({
   pipColor = DEFAULT_DICE_PIP_COLOR,
   resolution = DEFAULT_DICE_TEXTURE_RESOLUTION,
   assetRef,
+  bodyColor,
 }: {
   skin: DiceSkin;
   value: DiceValue;
   pipColor?: string;
   resolution?: number;
   assetRef?: string | null;
+  bodyColor?: string | null;
 }): Promise<Texture> {
   const canvas = createCanvas(resolution);
   const context = canvas.getContext("2d", { alpha: true });
@@ -147,6 +163,11 @@ export async function createDiceFaceTexture({
 
   context.clearRect(0, 0, resolution, resolution);
 
+  const resolvedBodyColor = validBodyColor(bodyColor);
+  if (resolvedBodyColor) {
+    drawBodyColor(context, resolution, resolvedBodyColor);
+  }
+
   let source = `procedural:${skin}`;
   if (assetRef) {
     try {
@@ -154,12 +175,11 @@ export async function createDiceFaceTexture({
       context.drawImage(image, 0, 0, resolution, resolution);
       source = assetRef;
     } catch {
-      // Cosmetic delivery is presentation-only. A failed R2 request degrades
-      // to a network-independent procedural base without affecting the already
-      // authoritative dice value, physics or RNG.
-      drawProceduralBase(context, skin, resolution);
+      // Cosmetic delivery is presentation-only. A failed request degrades to
+      // a network-independent base without affecting authoritative dice state.
+      if (!resolvedBodyColor) drawProceduralBase(context, skin, resolution);
     }
-  } else {
+  } else if (!resolvedBodyColor) {
     drawProceduralBase(context, skin, resolution);
   }
 

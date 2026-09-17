@@ -80,7 +80,9 @@ function mergeSceneIntent(
 
 export function PreGameCommandRuntime({ children }: { children: ReactNode }) {
   const pathname = usePathname();
-  const profileOwnsChrome = PROFILE_SHELL_ROUTES.has(pathname);
+  const profileOwnsChrome =
+    PROFILE_SHELL_ROUTES.has(pathname) ||
+    pathname.startsWith("/profile/store/showcase/");
   const routeIntent = useMemo(
     () => resolvePreGameSceneIntent(pathname),
     [pathname],
