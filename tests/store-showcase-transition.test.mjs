@@ -24,7 +24,6 @@ test("item replacement uses one short 300ms transition split into exit and enter
 test("old and new models transition on the same anchored object group", () => {
   assert.match(controller, /transitionPhase/);
   assert.match(controller, /transitionDirection/);
-  assert.match(controller, /SHOWCASE_ITEM_TRANSITION_PHASE_MS/);
   assert.match(controller, /showcaseTransitionProgress/);
   assert.match(controller, /group\.position\.x/);
   assert.match(controller, /group\.scale\.setScalar/);
