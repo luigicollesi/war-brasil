@@ -104,7 +104,7 @@ test("assets:validate inclui territory skins do catálogo sem allowlist temátic
   assert.doesNotMatch(validator, /azulejo_brasil|azulejo_ornamental|ceu_estrelado|solar_ornamental/);
 });
 
-test("delivery usa endpoint autenticado e catálogo/snapshot como allowlist", () => {
+test("delivery usa endpoint autenticado, catálogo/snapshot como allowlist e proxy same-origin", () => {
   const route = source("src/app/api/assets/territory-skins/route.ts");
   const repository = source("src/lib/server/assets/asset-storage-repository.ts");
   const service = source("src/lib/server/assets/asset-storage-service.ts");
@@ -113,7 +113,10 @@ test("delivery usa endpoint autenticado e catálogo/snapshot como allowlist", ()
   assert.match(route, /assertTerritorySkinAssetKey/);
   assert.match(route, /isKnownTerritorySkinAssetKey/);
   assert.match(route, /resolveTerritorySkinAssetReadUrl/);
-  assert.match(route, /status: 307/);
+  assert.match(route, /const upstream = await fetch\(location/);
+  assert.match(route, /return proxiedAssetResponse\(upstream\)/);
+  assert.doesNotMatch(route, /status: 307/);
+  assert.doesNotMatch(route, /Location:\s*location/);
   assert.match(route, /private, no-store/);
 
   assert.match(repository, /item\.slot='territory_skin'/);

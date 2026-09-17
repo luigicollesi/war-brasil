@@ -52,7 +52,7 @@ test("PROFILE V4 dossier monogram is an interface insignia, not a portrait slot"
   assert.match(styles, /@media \(max-width: 520px\)[\s\S]*\.identitySignal\s*{[\s\S]*display:\s*none/);
 });
 
-test("PROFILE V4 owns page chrome only on its three private surfaces and moves its command bar to the viewport bottom on compact screens", async () => {
+test("PROFILE V4 and store showcase own their page chrome while compact profile navigation stays viewport-bottom", async () => {
   const runtime = await source(
     "src/components/pre-game/foundation/pre-game-command-runtime.tsx",
   );
@@ -63,7 +63,10 @@ test("PROFILE V4 owns page chrome only on its three private surfaces and moves i
   assert.match(runtime, /"\/profile"/);
   assert.match(runtime, /"\/profile\/arsenal"/);
   assert.match(runtime, /"\/profile\/store"/);
-  assert.match(runtime, /const profileOwnsChrome = PROFILE_SHELL_ROUTES\.has\(pathname\)/);
+  assert.match(
+    runtime,
+    /const profileOwnsChrome =\s*PROFILE_SHELL_ROUTES\.has\(pathname\) \|\|\s*pathname\.startsWith\("\/profile\/store\/showcase\/"\)/,
+  );
   assert.match(runtime, /chrome=\{!profileOwnsChrome\}/);
   assert.doesNotMatch(runtime, /startsWith\("\/profile\/"\)/);
   assert.doesNotMatch(shell, /className=\{styles\.mobileNav\}/);
