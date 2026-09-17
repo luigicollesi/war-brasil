@@ -332,8 +332,25 @@ try {
     assert.equal(await fallback.getByRole("img").count(), 1, "dado sem fallback 2D canônico");
     assert.equal(await fallbackPage.locator("canvas.command-foundation-canvas").count(), 0);
 
-    const selectedBeforePurchase = await currentItemButton(fallbackPage).textContent();
-    assert.ok(selectedBeforePurchase);
+    const fallbackSelectedBeforeNavigation = await currentItemButton(fallbackPage).textContent();
+    assert.ok(fallbackSelectedBeforeNavigation);
+    const fallbackNextArrow = fallbackPage.getByRole("button", {
+      name: "Exibir próximo item",
+      exact: true,
+    });
+    await fallbackNextArrow.focus();
+    await fallbackPage.keyboard.press("Enter");
+    await fallbackPage.waitForFunction(
+      (previous) =>
+        document.querySelector('[aria-label="Itens da exposição"] button[aria-current="true"]')?.textContent !== previous,
+      fallbackSelectedBeforeNavigation,
+    );
+    const fallbackSelectedAfterNavigation = await currentItemButton(fallbackPage).textContent();
+    assert.ok(fallbackSelectedAfterNavigation);
+    assert.notEqual(fallbackSelectedAfterNavigation, fallbackSelectedBeforeNavigation);
+    await fallback.waitFor({ state: "visible" });
+    assert.equal(await fallback.getByRole("img").count(), 1, "navegação degradada perdeu o fallback 2D");
+
     const buyItem = fallbackPage.getByRole("button", { name: "COMPRAR ITEM", exact: true });
     await buyItem.focus();
     await fallbackPage.keyboard.press("Enter");
