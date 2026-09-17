@@ -118,6 +118,12 @@ export function BattleOverlay({
   const defender = players.find((player) => player.id === battle.defenderPlayerId);
   const attackAssetRef = attacker?.cosmetics.diceAttack.assetRef ?? null;
   const defenseAssetRef = defender?.cosmetics.diceDefense.assetRef ?? null;
+  const attackBodyColor = attacker?.cosmetics.diceAttack.bodyColor ?? null;
+  const attackBodyHighlightColor =
+    attacker?.cosmetics.diceAttack.bodyHighlightColor ?? null;
+  const defenseBodyColor = defender?.cosmetics.diceDefense.bodyColor ?? null;
+  const defenseBodyHighlightColor =
+    defender?.cosmetics.diceDefense.bodyHighlightColor ?? null;
   const attackerTerritory = territories.find(
     (territory) => territory.territoryId === battle.attackerTerritoryId,
   );
@@ -262,6 +268,12 @@ export function BattleOverlay({
         : (defender?.color ?? "ruby");
     const cinematicAssetRef =
       cinematicSide === "attack" ? attackAssetRef : defenseAssetRef;
+    const cinematicBodyColor =
+      cinematicSide === "attack" ? attackBodyColor : defenseBodyColor;
+    const cinematicBodyHighlightColor =
+      cinematicSide === "attack"
+        ? attackBodyHighlightColor
+        : defenseBodyHighlightColor;
 
     return (
       <BattleDiceCinematic
@@ -270,6 +282,8 @@ export function BattleOverlay({
         side={cinematicSide}
         color={cinematicColor}
         assetRef={cinematicAssetRef}
+        bodyColor={cinematicBodyColor}
+        bodyHighlightColor={cinematicBodyHighlightColor}
         onComplete={() => finishCinematic(cinematicPresentationId)}
       />
     );
