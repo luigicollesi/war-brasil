@@ -32,6 +32,8 @@ type GameCosmeticSnapshotRow = {
   cosmetic_id: string;
   asset_ref: string | null;
   effect_key: string | null;
+  body_color: string | null;
+  body_highlight_color: string | null;
 };
 
 type GamePlayerSnapshotStateRow = {
@@ -55,6 +57,8 @@ function selection(row: GameCosmeticSnapshotRow): GameCosmeticSelection {
     cosmeticId: row.cosmetic_id,
     assetRef: projectedSnapshotAssetRef(row),
     effectKey: row.effect_key,
+    bodyColor: row.body_color,
+    bodyHighlightColor: row.body_highlight_color,
   };
 }
 
@@ -72,6 +76,8 @@ function territorySelection(row: GameCosmeticSnapshotRow): GameCosmeticSelection
         ? territorySkinAssetDeliveryPath(snapshot.assetRef)
         : null,
     effectKey: territorySkinRuntimeEffectKey(snapshot),
+    bodyColor: null,
+    bodyHighlightColor: null,
   };
 }
 
@@ -81,21 +87,29 @@ function defaultPlayerCosmetics(): GamePlayerCosmetics {
       cosmeticId: "dice.attack.default",
       assetRef: null,
       effectKey: null,
+      bodyColor: null,
+      bodyHighlightColor: null,
     },
     diceDefense: {
       cosmeticId: "dice.defense.default",
       assetRef: null,
       effectKey: null,
+      bodyColor: null,
+      bodyHighlightColor: null,
     },
     diceNeutral: {
       cosmeticId: "dice.neutral.default",
       assetRef: null,
       effectKey: null,
+      bodyColor: null,
+      bodyHighlightColor: null,
     },
     territoryEffect: {
       cosmeticId: "territory.effect.default",
       assetRef: null,
       effectKey: "default",
+      bodyColor: null,
+      bodyHighlightColor: null,
     },
   };
 }
@@ -171,8 +185,8 @@ async function lockRoomCommanderCosmeticStates(
 /**
  * Copies each player's current profile loadout into game.* exactly when a match
  * starts. After this function succeeds, runtime reads no longer need profile,
- * inventory, or mutable catalog rows for cosmetic presentation. asset_ref is a
- * stable object key; delivery URLs are projected only while building the DTO.
+ * inventory, or mutable catalog rows for cosmetic presentation. Asset and body
+ * colors are frozen here; delivery URLs are projected only while building DTOs.
  */
 export async function capturePlayerCosmeticLoadouts(
   client: PoolClient,
@@ -182,7 +196,7 @@ export async function capturePlayerCosmeticLoadouts(
 
   await client.query(
     `WITH defaults AS (
-       SELECT id, slot, asset_ref, effect_key
+       SELECT id, slot, asset_ref, effect_key, body_color, body_highlight_color
          FROM catalog.cosmetics
         WHERE is_default=TRUE
      ),
@@ -197,7 +211,15 @@ export async function capturePlayerCosmeticLoadouts(
               CASE
                 WHEN equipped.id IS NOT NULL THEN equipped.effect_key
                 ELSE defaults.effect_key
-              END AS effect_key
+              END AS effect_key,
+              CASE
+                WHEN equipped.id IS NOT NULL THEN equipped.body_color
+                ELSE defaults.body_color
+              END AS body_color,
+              CASE
+                WHEN equipped.id IS NOT NULL THEN equipped.body_highlight_color
+                ELSE defaults.body_highlight_color
+              END AS body_highlight_color
          FROM game.players player
          CROSS JOIN defaults
          LEFT JOIN profile.cosmetic_loadout loadout
@@ -209,14 +231,18 @@ export async function capturePlayerCosmeticLoadouts(
         WHERE player.room_id=$1
      )
      INSERT INTO game.player_cosmetic_loadouts(
-       player_id,slot,cosmetic_id,asset_ref,effect_key,captured_at
+       player_id,slot,cosmetic_id,asset_ref,effect_key,
+       body_color,body_highlight_color,captured_at
      )
-     SELECT player_id,slot,cosmetic_id,asset_ref,effect_key,NOW()
+     SELECT player_id,slot,cosmetic_id,asset_ref,effect_key,
+            body_color,body_highlight_color,NOW()
        FROM resolved
      ON CONFLICT (player_id,slot) DO UPDATE
      SET cosmetic_id=EXCLUDED.cosmetic_id,
          asset_ref=EXCLUDED.asset_ref,
          effect_key=EXCLUDED.effect_key,
+         body_color=EXCLUDED.body_color,
+         body_highlight_color=EXCLUDED.body_highlight_color,
          captured_at=EXCLUDED.captured_at`,
     [roomId],
   );
@@ -283,7 +309,9 @@ export async function loadRoomPlayerCosmetics(
               snapshot.slot,
               snapshot.cosmetic_id,
               snapshot.asset_ref,
-              snapshot.effect_key
+              snapshot.effect_key,
+              snapshot.body_color,
+              snapshot.body_highlight_color
          FROM game.player_cosmetic_loadouts snapshot
          JOIN game.players player ON player.id=snapshot.player_id
         WHERE player.room_id=$1
