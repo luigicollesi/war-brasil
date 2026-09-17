@@ -349,6 +349,34 @@ try {
     await staleActor.context.close();
   }
 
+  const normalOffer = offerById(storefront, "offer.simple-silver");
+  assert.equal(normalOffer.price, 400);
+  assert.equal(normalOffer.items.length, 3);
+  const normalShowcaseUrl = `${BASE_URL}/profile/store/showcase/offer/${encodeURIComponent(normalOffer.id)}`;
+  await page.goto(`${BASE_URL}/profile/store`, { waitUntil: "domcontentloaded" });
+  const normalHistoryReturnUrl = page.url();
+  await page.goto(normalShowcaseUrl, { waitUntil: "domcontentloaded" });
+  const normalRoot = await waitForShowcase(page);
+  assert.equal(await normalRoot.getAttribute("data-showcase-mode"), "standard");
+  assert.equal(await normalRoot.getAttribute("data-collection-background"), "fallback");
+  assert.equal(await page.locator("canvas.command-foundation-canvas").count(), 1);
+  await page.getByRole("button", { name: "COMPRAR TUDO", exact: true }).waitFor({ state: "visible" });
+
+  const normalSelectedBeforeNavigation = await currentItemButton(page).textContent();
+  const normalNextArrow = page.getByRole("button", { name: "Exibir próximo item", exact: true });
+  await normalNextArrow.focus();
+  await page.keyboard.press("Enter");
+  await page.waitForFunction(
+    (previous) =>
+      document.querySelector('[aria-label="Itens da exposição"] button[aria-current="true"]')?.textContent !== previous,
+    normalSelectedBeforeNavigation,
+  );
+  const normalSelectedAfterNavigation = await currentItemButton(page).textContent();
+  assert.notEqual(normalSelectedAfterNavigation, normalSelectedBeforeNavigation);
+  await page.goBack();
+  await page.waitForURL(normalHistoryReturnUrl);
+  assert.equal(page.url(), normalHistoryReturnUrl);
+
   const heroLink = page.getByRole("link", { name: "INSPECIONAR COLEÇÃO", exact: true }).first();
   await heroLink.waitFor({ state: "visible" });
   await heroLink.focus();
@@ -588,7 +616,7 @@ try {
   assert.equal(invalidResponse?.status(), 404);
 
   console.log(
-    `[store-showcase-e2e] ok — ${VIEWPORTS.length} viewports, stale price fail-closed, WebGL/2D fallback, geometry fallback, compra individual, completion e background fallback validados`,
+    `[store-showcase-e2e] ok — ${VIEWPORTS.length} viewports, normal showcase/history, stale price fail-closed, WebGL/2D fallback, geometry fallback, compra individual, completion e background fallback validados`,
   );
 } finally {
   await actor.context.close();
