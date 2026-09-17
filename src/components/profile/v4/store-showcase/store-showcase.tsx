@@ -107,7 +107,6 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
   const router = useRouter();
   const sceneState = useCommandSceneState();
   const [selectedItemId, setSelectedItemId] = useState(showcase.selectedItemId);
-  const [failedBackgroundRef, setFailedBackgroundRef] = useState<string | null>(null);
   const [failedTerritoryItemId, setFailedTerritoryItemId] = useState<string | null>(null);
   const [pendingOfferId, setPendingOfferId] = useState<string | null>(null);
   const [purchaseMessage, setPurchaseMessage] = useState<PurchaseMessage | null>(null);
@@ -146,10 +145,6 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
   const sceneFallback = sceneState === "fallback";
   const territoryGeometryFallback =
     selectedItem?.type === "territory" && selectedItem.id === failedTerritoryItemId;
-  const backgroundFailed =
-    showcase.backgroundRef !== null && failedBackgroundRef === showcase.backgroundRef;
-  const collectionBackgroundVisible =
-    showcase.mode === "collection" && Boolean(showcase.backgroundRef) && !backgroundFailed;
 
   useEffect(() => {
     selectedStripItemRef.current?.scrollIntoView({
@@ -283,31 +278,19 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
     selectedItem.owned || !selectedOffer?.purchasable || pendingOfferId !== null;
   const bundlePurchaseDisabled =
     showcase.fullyOwned || !showcase.bundleOffer?.purchasable || pendingOfferId !== null;
+  const showcaseBackground =
+    showcase.mode === "collection"
+      ? "radial-gradient(ellipse 24% 31% at 38% 47%, rgb(255 229 157 / 18%) 0%, transparent 72%), radial-gradient(ellipse 39% 48% at 38% 47%, rgb(210 174 87 / 25%) 0%, rgb(100 151 119 / 14%) 38%, rgb(31 67 48 / 7%) 58%, transparent 80%)"
+      : "transparent";
 
   return (
     <main
       className={styles.root}
-      style={{ background: "transparent", pointerEvents: "none" }}
+      style={{ background: showcaseBackground, pointerEvents: "none" }}
       data-showcase-mode={showcase.mode}
       data-transition-phase={transitionPhase}
-      data-collection-background={collectionBackgroundVisible ? "ready" : "fallback"}
       aria-label="Expositor da Intendência"
     >
-      {collectionBackgroundVisible ? (
-        <div className={styles.collectionBackdrop} aria-hidden="true">
-          <Image
-            src={showcase.backgroundRef as string}
-            alt=""
-            fill
-            priority
-            unoptimized
-            sizes="100vw"
-            onError={() => setFailedBackgroundRef(showcase.backgroundRef)}
-          />
-          <span className={styles.collectionBackdropScrim} />
-        </div>
-      ) : null}
-
       <section style={SEMANTIC_MIRROR_STYLE} aria-live="polite">
         <h2>{selectedItem.name}</h2>
         <p>
