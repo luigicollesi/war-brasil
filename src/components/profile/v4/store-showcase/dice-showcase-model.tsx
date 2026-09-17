@@ -31,7 +31,7 @@ export function DiceShowcaseModel({
   const skin = skinForSlot(slot);
   const bodyColor = useDiceBodyColor(assetRef, slot);
   const geometry = useMemo(
-    () => getSharedRoundedDieGeometry({ size: 1.9, radius: 0.19, segments: 10 }),
+    () => getSharedRoundedDieGeometry({ size: 1.9, radius: 0.285, segments: 12 }),
     [],
   );
   const { textures } = useDiceFaceTextures({
@@ -50,8 +50,9 @@ export function DiceShowcaseModel({
         geometry={geometry}
         textures={textures}
         size={1.9}
-        radius={0.19}
+        radius={0.285}
         bodyColor={bodyColor}
+        surfaceWrappedFaces
       />
     </group>
   );
