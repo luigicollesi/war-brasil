@@ -6,6 +6,7 @@ import { createLobbySyncCoordinator } from "@/src/lib/client/lobby-sync-coordina
 
 const POLLING_INTERVAL_MS = 1_000;
 const REQUEST_TIMEOUT_MS = 4_000;
+const TERMINAL_SYNC_STATUSES = new Set([401, 403, 404]);
 
 export function useLobbySync(code: string) {
   const [snapshot, setSnapshot] = useState<LobbySnapshot | null>(null);
@@ -17,6 +18,7 @@ export function useLobbySync(code: string) {
     let isActive = true;
     let requestController: AbortController | null = null;
     let pollTimeoutId = 0;
+    let pollingStopped = false;
 
     const coordinator = createLobbySyncCoordinator(async () => {
       const controller = new AbortController();
@@ -35,6 +37,10 @@ export function useLobbySync(code: string) {
         const data: unknown = await response.json();
 
         if (!response.ok) {
+          if (TERMINAL_SYNC_STATUSES.has(response.status)) {
+            pollingStopped = true;
+          }
+
           const message =
             typeof data === "object" &&
             data !== null &&
@@ -45,6 +51,7 @@ export function useLobbySync(code: string) {
           throw new Error(message);
         }
 
+        pollingStopped = false;
         if (isActive) {
           setSnapshot(data as LobbySnapshot);
           setError("");
@@ -71,7 +78,7 @@ export function useLobbySync(code: string) {
 
     async function poll() {
       await coordinator.sync();
-      if (isActive) {
+      if (isActive && !pollingStopped) {
         pollTimeoutId = window.setTimeout(() => void poll(), POLLING_INTERVAL_MS);
       }
     }
