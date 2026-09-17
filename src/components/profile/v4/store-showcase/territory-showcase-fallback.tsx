@@ -11,7 +11,6 @@ type TerritoryShowcaseFallbackProps = Readonly<{
   cosmeticId: string;
   assetRef: string | null;
   effectKey: string | null;
-  className?: string;
 }>;
 
 type SvgBounds = Readonly<{
@@ -27,7 +26,6 @@ export function TerritoryShowcaseFallback({
   cosmeticId,
   assetRef,
   effectKey,
-  className,
 }: TerritoryShowcaseFallbackProps) {
   const shapeRef = useRef<SVGUseElement>(null);
   const [bounds, setBounds] = useState<SvgBounds | null>(null);
@@ -77,11 +75,11 @@ export function TerritoryShowcaseFallback({
 
   return (
     <svg
-      className={className}
       viewBox={paddedViewBox}
       role="img"
       aria-label="Prévia 2D do território canônico"
       preserveAspectRatio="xMidYMid meet"
+      style={{ width: "100%", height: "100%", overflow: "visible" }}
     >
       <defs>
         <mask id={maskId} maskUnits="userSpaceOnUse">
