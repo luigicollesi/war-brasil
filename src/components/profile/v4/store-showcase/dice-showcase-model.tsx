@@ -5,8 +5,12 @@ import { DiceModel3D } from "@/src/components/dice-3d/dice-model-3d";
 import { useDiceFaceTextures } from "@/src/components/dice-3d/use-dice-face-textures";
 import { getSharedRoundedDieGeometry } from "@/src/lib/client/dice/dice-assets-manager";
 import type { DiceSkin } from "@/src/lib/client/dice/types";
+import { diceVisualGeometry } from "@/src/lib/client/dice/visual-config";
 import type { CosmeticCatalogItem } from "@/src/lib/economy/economy-contract";
 import { useDiceBodyColor } from "./use-dice-body-color";
+
+const SHOWCASE_DIE_SIZE = 1.9;
+const SHOWCASE_DIE_GEOMETRY = diceVisualGeometry(SHOWCASE_DIE_SIZE);
 
 function skinForSlot(slot: CosmeticCatalogItem["slot"]): DiceSkin {
   switch (slot) {
@@ -31,7 +35,7 @@ export function DiceShowcaseModel({
   const skin = skinForSlot(slot);
   const bodyColor = useDiceBodyColor(assetRef, slot);
   const geometry = useMemo(
-    () => getSharedRoundedDieGeometry({ size: 1.9, radius: 0.285, segments: 12 }),
+    () => getSharedRoundedDieGeometry(SHOWCASE_DIE_GEOMETRY),
     [],
   );
   const { textures } = useDiceFaceTextures({
@@ -49,8 +53,8 @@ export function DiceShowcaseModel({
       <DiceModel3D
         geometry={geometry}
         textures={textures}
-        size={1.9}
-        radius={0.285}
+        size={SHOWCASE_DIE_GEOMETRY.size}
+        radius={SHOWCASE_DIE_GEOMETRY.radius}
         bodyColor={bodyColor}
       />
     </group>
