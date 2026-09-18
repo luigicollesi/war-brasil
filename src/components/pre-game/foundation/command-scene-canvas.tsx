@@ -1,7 +1,7 @@
 "use client";
 
 import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
-import { Suspense, useEffect, useMemo, useRef } from "react";
+import { Suspense, useEffect, useMemo, useRef, type ReactNode } from "react";
 import {
   Color,
   EdgesGeometry,
@@ -34,6 +34,7 @@ const MAP_HALF_EXTENT = (MAP_VIEWBOX_SIZE * MAP_SCALE) / 2;
 const CANONICAL_TERRITORY_COUNT = 42;
 const PLATE_TONES = ["#26352a", "#2d3d30", "#223027", "#344437"] as const;
 const SHOWCASE_STANDARD_LIGHT = "#edf3ee";
+const SHOWCASE_DESKTOP_CAMERA_X = -0.65;
 
 type Position3 = [number, number, number];
 
@@ -166,8 +167,12 @@ function ShowcaseCameraDirector({ compact }: { compact: boolean }) {
 
   useEffect(() => {
     const camera = new PerspectiveCamera(compact ? 39 : 36, 1, 0.1, 40);
-    camera.position.set(compact ? 0 : -0.65, compact ? 0.35 : 0.15, compact ? 6.2 : 5.5);
-    camera.lookAt(compact ? 0 : -0.65, 0, 0);
+    camera.position.set(
+      compact ? 0 : SHOWCASE_DESKTOP_CAMERA_X,
+      compact ? 0.35 : 0.15,
+      compact ? 6.2 : 5.5,
+    );
+    camera.lookAt(compact ? 0 : SHOWCASE_DESKTOP_CAMERA_X, 0, 0);
     camera.updateProjectionMatrix();
     set({ camera });
     invalidate();
@@ -766,6 +771,24 @@ function CommandSceneWorld({
   );
 }
 
+function ShowcaseStageAnchor({
+  stageCenterRatio,
+  children,
+}: {
+  stageCenterRatio: number;
+  children: ReactNode;
+}) {
+  const viewportWidth = useThree((state) => state.viewport.width);
+  const normalizedCenterRatio = Math.max(0, Math.min(1, stageCenterRatio));
+  const offsetX = (normalizedCenterRatio - 0.5) * viewportWidth;
+
+  return (
+    <group name="StoreShowcaseStageAnchor" position={[offsetX, 0, 0]}>
+      {children}
+    </group>
+  );
+}
+
 function ShowcaseSceneWorld({
   showcaseScene,
   reducedMotion,
@@ -775,6 +798,8 @@ function ShowcaseSceneWorld({
   reducedMotion: boolean;
   compact: boolean;
 }) {
+  const sceneAnchorX = compact ? 0 : SHOWCASE_DESKTOP_CAMERA_X;
+
   return (
     <>
       <ShowcaseCameraDirector compact={compact} />
@@ -782,9 +807,13 @@ function ShowcaseSceneWorld({
       <directionalLight color={SHOWCASE_STANDARD_LIGHT} intensity={3.4} position={[-4, 5.5, 6.5]} />
       <pointLight color={SHOWCASE_STANDARD_LIGHT} intensity={13} distance={12} position={[4.2, 2.8, 4]} />
       <pointLight color="#7b1f25" intensity={1.2} distance={8} position={[-4, -2.2, 3]} />
-      <StoreShowcasePedestal mode={showcaseScene.mode} />
-      <group name="StoreShowcaseSceneContent" position={[compact ? 0 : -0.65, 0.12, 0]}>
-        {showcaseScene.render({ reducedMotion })}
+      <group name="StoreShowcaseSceneAnchor" position={[sceneAnchorX, 0, 0]}>
+        <ShowcaseStageAnchor stageCenterRatio={showcaseScene.stageCenterRatio}>
+          <StoreShowcasePedestal mode={showcaseScene.mode} />
+          <group name="StoreShowcaseSceneContent" position={[0, 0.12, 0]}>
+            {showcaseScene.render({ reducedMotion })}
+          </group>
+        </ShowcaseStageAnchor>
       </group>
     </>
   );
