@@ -1,0 +1,38 @@
+name: Dice Model Check
+
+on:
+  push:
+    branches:
+      - dev
+    paths:
+      - "src/components/dice-3d/**"
+      - "src/components/profile/v4/store-showcase/dice-showcase-model.tsx"
+      - "tests/unified-dice-3d-model.test.mjs"
+      - "tests/cosmetic-dice-presentation.test.mjs"
+      - ".github/workflows/dice-model-check.yml"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: TypeScript
+        run: npx tsc --noEmit
+      - name: Dice tests
+        run: node --test tests/unified-dice-3d-model.test.mjs tests/dice-body-color.test.mjs tests/cosmetic-dice-presentation.test.mjs
+      - name: Lint changed dice files
+        run: >
+          npx eslint --max-warnings=0
+          src/components/dice-3d/dice-model-3d.tsx
+          src/components/dice-3d/die-visual.tsx
+          src/components/dice-3d/die-3d.tsx
+          src/components/dice-3d/physics-die.tsx
+          src/components/dice-3d/dice-trajectory-replay.tsx
+          src/components/dice-3d/fullscreen-dice-cinematic.tsx
+          src/components/profile/v4/store-showcase/dice-showcase-model.tsx
