@@ -8,7 +8,7 @@ const model = read("src/components/profile/v4/store-showcase/dice-showcase-model
 const showcase = read("src/components/profile/v4/store-showcase/store-showcase.tsx");
 
 test("showcase die reuses canonical geometry and face texture pipeline", () => {
-  assert.match(model, /DieVisual/);
+  assert.match(model, /DiceModel3D/);
   assert.match(model, /getSharedRoundedDieGeometry/);
   assert.match(model, /useDiceFaceTextures/);
   assert.match(model, /assetRef/);
