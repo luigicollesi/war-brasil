@@ -78,3 +78,27 @@ test("jogo compõe a textura 3D com a mesma bodyColor usada pela loja", () => {
     /useDiceFaceTextures\(\{\s*skin,\s*pipColor,\s*assetRef,\s*bodyColor\s*\}\)/,
   );
 });
+
+test("loja e jogo derivam a mesma geometria visual canônica", () => {
+  const visualConfig = source("src/lib/client/dice/visual-config.ts");
+  const physicsConfig = source(
+    "src/lib/client/dice/physics/dice-physics-config.ts",
+  );
+  const showcase = source(
+    "src/components/profile/v4/store-showcase/dice-showcase-model.tsx",
+  );
+
+  assert.match(visualConfig, /DICE_VISUAL_RADIUS_RATIO = 0\.15/);
+  assert.match(visualConfig, /DICE_VISUAL_SEGMENTS = 12/);
+  assert.match(visualConfig, /export function diceVisualGeometry/);
+
+  assert.match(physicsConfig, /diceVisualGeometry\(1\)/);
+  assert.match(physicsConfig, /dieRadius: DICE_GAME_VISUAL_GEOMETRY\.radius/);
+  assert.match(physicsConfig, /dieSegments: DICE_GAME_VISUAL_GEOMETRY\.segments/);
+
+  assert.match(showcase, /diceVisualGeometry\(SHOWCASE_DIE_SIZE\)/);
+  assert.doesNotMatch(
+    showcase,
+    /getSharedRoundedDieGeometry\(\{ size: 1\.9, radius: 0\.285, segments: 12 \}\)/,
+  );
+});
