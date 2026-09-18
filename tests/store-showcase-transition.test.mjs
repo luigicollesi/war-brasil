@@ -45,3 +45,14 @@ test("reduced motion performs immediate item replacement", () => {
   assert.match(showcase, /setSelectedItemId\(targetItemId\)/);
   assert.match(showcase, /if \(prefersReducedMotion\)/);
 });
+
+
+test("horizontal mouse or touch swipes reuse the same previous and next selection flow as the arrows", () => {
+  assert.match(motion, /SHOWCASE_SWIPE_THRESHOLD_PX/);
+  assert.match(motion, /resolveShowcaseSwipeDirection/);
+  assert.match(showcase, /beginStageSwipe/);
+  assert.match(showcase, /updateStageSwipe/);
+  assert.match(showcase, /moveSelection\(direction\)/);
+  assert.match(showcase, /onPointerDown=\{beginStageSwipe\}/);
+  assert.match(showcase, /onPointerMove=\{updateStageSwipe\}/);
+});
