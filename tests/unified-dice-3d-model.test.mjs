@@ -112,6 +112,11 @@ test("loja e cinematic 3D usam a mesma composição visual de textura", () => {
 
   assert.match(visualConfig, /DICE_VISUAL_PIP_COLOR = "#0b0b0b"/);
   assert.match(visualConfig, /DICE_VISUAL_TEXTURE_RESOLUTION = 512/);
+  assert.match(visualConfig, /DICE_VISUAL_TEXTURE_UV_SCALE = 0\.94/);
+  assert.match(visualConfig, /DICE_VISUAL_BEVEL_HIGHLIGHT_START = 0\.8/);
+  assert.match(visualConfig, /DICE_VISUAL_BEVEL_HIGHLIGHT_END = 0\.95/);
+  assert.match(visualConfig, /DICE_VISUAL_CORNER_HIGHLIGHT_START = 0\.76/);
+  assert.match(visualConfig, /DICE_VISUAL_CORNER_HIGHLIGHT_END = 0\.94/);
 
   for (const consumer of [showcase, fullscreen]) {
     assert.match(consumer, /DICE_VISUAL_PIP_COLOR/);
@@ -119,4 +124,25 @@ test("loja e cinematic 3D usam a mesma composição visual de textura", () => {
   }
 
   assert.doesNotMatch(fullscreen, /pipColor\?: string/);
+});
+
+
+test("modelo canônico centraliza zoom da arte e faixa de highlight", () => {
+  const visualConfig = source("src/lib/client/dice/visual-config.ts");
+  const assets = source("src/lib/client/dice/dice-assets-manager.ts");
+  const model = source("src/components/dice-3d/dice-model-3d.tsx");
+
+  assert.match(assets, /DICE_VISUAL_TEXTURE_UV_SCALE/);
+  assert.match(assets, /texture\.center\.set\(0\.5, 0\.5\)/);
+  assert.match(assets, /texture\.repeat\.set/);
+
+  for (const name of [
+    "DICE_VISUAL_BEVEL_HIGHLIGHT_START",
+    "DICE_VISUAL_BEVEL_HIGHLIGHT_END",
+    "DICE_VISUAL_CORNER_HIGHLIGHT_START",
+    "DICE_VISUAL_CORNER_HIGHLIGHT_END",
+  ]) {
+    assert.match(visualConfig, new RegExp(name));
+    assert.match(model, new RegExp(name));
+  }
 });
