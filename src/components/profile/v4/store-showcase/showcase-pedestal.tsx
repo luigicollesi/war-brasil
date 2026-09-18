@@ -1,22 +1,14 @@
 "use client";
 
-import { useThree } from "@react-three/fiber";
-
-const DESKTOP_PEDESTAL_X = -0.25;
-
 export function StoreShowcasePedestal({
   mode,
 }: {
   mode: "standard" | "collection";
 }) {
-  const pedestalX = useThree((state) =>
-    state.size.width > 900 ? DESKTOP_PEDESTAL_X : 0,
-  );
-
   if (mode === "collection") return null;
 
   return (
-    <group name="StoreShowcasePedestal" position={[pedestalX, -1.45, 0]}>
+    <group name="StoreShowcasePedestal" position={[0, -1.45, 0]}>
       <mesh>
         <cylinderGeometry args={[1.72, 1.94, 0.22, 72]} />
         <meshStandardMaterial
