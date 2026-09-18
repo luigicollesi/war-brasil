@@ -197,6 +197,16 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
 
   return (
     <div className={styles.store} data-profile-v4-surface="store">
+      <div className={styles.storeAtmosphere} aria-hidden="true">
+        <span className={styles.atmosphereBase} />
+        <span className={styles.atmosphereOptical} />
+        <span className={styles.atmospherePlatePrimary} />
+        <span className={styles.atmospherePlateSecondary} />
+        <span className={styles.atmosphereGhostType}>14</span>
+        <span className={styles.atmosphereLight} />
+        <span className={styles.atmosphereVignette} />
+      </div>
+
       <nav className={styles.storeNav} aria-label="Navegação da Intendência">
         <a href="#store-highlights">DESTAQUES</a>
         <a href="#store-dice">DADOS</a>
@@ -215,7 +225,13 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
         </div>
       ) : null}
 
-      <section id="store-highlights" className={styles.hero} aria-labelledby="store-title">
+      <section
+        id="store-highlights"
+        className={styles.hero}
+        data-store-zone="hero"
+        data-store-layer="00"
+        aria-labelledby="store-title"
+      >
         <div className={styles.heroCopy}>
           <small>
             {featuredCollection?.featured
@@ -301,7 +317,13 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
         </div>
       </section>
 
-      <section id="store-dice" className={styles.catalog} aria-labelledby="catalog-title">
+      <section
+        id="store-dice"
+        className={styles.catalog}
+        data-store-zone="dice"
+        data-store-layer="01"
+        aria-labelledby="catalog-title"
+      >
         <header className={styles.sectionHeading}>
           <span>
             <small>DADOS // CATÁLOGO PERMANENTE</small>
@@ -367,7 +389,13 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
         )}
       </section>
 
-      <section id="store-territories" className={styles.catalog} aria-labelledby="territories-title">
+      <section
+        id="store-territories"
+        className={styles.catalog}
+        data-store-zone="territories"
+        data-store-layer="02"
+        aria-labelledby="territories-title"
+      >
         <header className={styles.sectionHeading}>
           <span>
             <small>TERRITÓRIOS // CATÁLOGO PERMANENTE</small>
@@ -455,7 +483,13 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
         )}
       </section>
 
-      <section id="store-collections" className={styles.catalog} aria-labelledby="collections-title">
+      <section
+        id="store-collections"
+        className={styles.catalog}
+        data-store-zone="collections"
+        data-store-layer="03"
+        aria-labelledby="collections-title"
+      >
         <header className={styles.sectionHeading}>
           <span>
             <small>COLEÇÕES // EDIÇÕES ESPECIAIS</small>
@@ -508,7 +542,13 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
         )}
       </section>
 
-      <section id="reforcar-tesouraria" className={styles.treasury} aria-labelledby="treasury-title">
+      <section
+        id="reforcar-tesouraria"
+        className={styles.treasury}
+        data-store-zone="treasury"
+        data-store-layer="04"
+        aria-labelledby="treasury-title"
+      >
         <span className={styles.treasuryCoin} aria-hidden="true">
           <Image src="/coin.svg" alt="" width={72} height={72} />
         </span>
