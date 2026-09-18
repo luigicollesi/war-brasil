@@ -114,6 +114,8 @@ function cosmeticFromRow(row: CosmeticRow): CosmeticCatalogItem {
     previewRef: row.preview_ref,
     assetRef: projectedAssetRef(row),
     effectKey: row.effect_key,
+    bodyColor: row.body_color,
+    bodyHighlightColor: row.body_highlight_color,
   };
 }
 
