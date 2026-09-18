@@ -69,6 +69,8 @@
     "src/lib/client/sync/revision-coordinator.ts",
     "src/lib/client/sync/game-poll-scheduler.ts",
     "src/lib/client/dice/types.ts",
+    "src/lib/client/dice/body-color.ts",
+    "src/lib/client/dice/visual-config.ts",
     "src/lib/client/dice/pip-layout.ts",
     "src/lib/client/dice/dice-values.ts",
     "src/lib/client/dice/battle-dice-layout.ts",
