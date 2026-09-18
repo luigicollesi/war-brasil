@@ -6,21 +6,21 @@ const read = (path) => readFileSync(path, "utf8");
 
 const showcase = read("src/components/profile/v4/store-showcase/store-showcase.tsx");
 const styles = read("src/components/profile/v4/store-showcase/store-showcase.module.css");
+const atmosphere = read(
+  "src/components/profile/v4/store-showcase/collection-showcase-atmosphere.tsx",
+);
 const canvas = read("src/components/pre-game/foundation/command-scene-canvas.tsx");
 
-test("collection showcase renders canonical full-screen background with safe tactical fallback", () => {
-  assert.match(showcase, /showcase\.backgroundRef/);
-  assert.match(showcase, /collectionBackdrop/);
-  assert.match(showcase, /onError=/);
-  assert.match(showcase, /backgroundFailed/);
+test("collection showcase publishes its canonical background through the shared canvas host", () => {
+  assert.match(showcase, /CollectionShowcaseAtmosphere/);
+  assert.match(showcase, /backgroundRef=\{showcase\.backgroundRef\}/);
+  assert.match(atmosphere, /host\.style\.backgroundImage/);
+  assert.match(atmosphere, /host\.style\.backgroundSize = "cover"/);
+  assert.match(atmosphere, /host\.dataset\.collectionBackdrop = "true"/);
+  assert.match(atmosphere, /delete host\.dataset\.collectionBackdrop/);
 
-  assert.match(styles, /\.collectionBackdrop\s*\{/);
-  assert.match(styles, /position:\s*absolute/);
-  assert.match(styles, /inset:\s*0/);
-  assert.match(styles, /object-fit:\s*cover/);
-  assert.match(styles, /\.collectionBackdropScrim/);
-  assert.match(styles, /radial-gradient/);
-  assert.doesNotMatch(styles, /\.collectionBackdropScrim[^}]*background:\s*rgb\(0\s+0\s+0\s*\/\s*100%\)/s);
+  assert.match(styles, /\.root\s*\{/);
+  assert.doesNotMatch(styles, /\.collectionBackdrop\s*\{/);
 });
 
 test("collection identity exposes logo and authoritative promotion semantics", () => {
@@ -33,9 +33,12 @@ test("collection identity exposes logo and authoritative promotion semantics", (
   assert.match(styles, /\.promotionBadge/);
 });
 
-test("collection lighting remains scene state in the shared Foundation canvas", () => {
-  assert.match(canvas, /showcaseScene\.mode === "collection"/);
-  assert.match(canvas, /SHOWCASE_COLLECTION_LIGHT/);
+test("collection atmosphere uses the transparent Foundation canvas and its own rear light", () => {
+  assert.match(canvas, /alpha: true/);
+  assert.match(canvas, /SceneClearDirector/);
   assert.match(canvas, /SHOWCASE_STANDARD_LIGHT/);
+  assert.doesNotMatch(canvas, /SHOWCASE_COLLECTION_LIGHT/);
+  assert.match(atmosphere, /CollectionShowcaseRearLighting/);
+  assert.match(atmosphere, /color="#dfb45a"/);
   assert.equal((canvas.match(/<Canvas\b/g) ?? []).length, 1);
 });
