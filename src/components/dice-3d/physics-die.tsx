@@ -14,7 +14,7 @@ import type {
   DiceFaceTextureSet,
   DiceLaunchState,
 } from "@/src/lib/client/dice/types";
-import { DieVisual } from "./die-visual";
+import { DiceModel3D } from "./dice-model-3d";
 
 export function PhysicsDie({
   launch,
@@ -59,7 +59,7 @@ export function PhysicsDie({
         restitution={DICE_PHYSICS.restitution}
         contactSkin={DICE_PHYSICS.contactSkin}
       />
-      <DieVisual
+      <DiceModel3D
         geometry={geometry}
         textures={textures}
         size={DICE_PHYSICS.dieSize}
