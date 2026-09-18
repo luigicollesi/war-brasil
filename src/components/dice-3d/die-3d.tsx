@@ -8,7 +8,7 @@ import type {
   DiceValue,
   DiceVector3,
 } from "@/src/lib/client/dice/types";
-import { DieVisual } from "./die-visual";
+import { DiceModel3D } from "./dice-model-3d";
 
 const WORLD_UP = new Vector3(0, 1, 0);
 
@@ -48,7 +48,7 @@ export function Die3D({
 
   return (
     <group position={position} quaternion={quaternion}>
-      <DieVisual
+      <DiceModel3D
         geometry={geometry}
         textures={textures}
         size={size}
