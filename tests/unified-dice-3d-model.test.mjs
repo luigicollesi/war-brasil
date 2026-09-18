@@ -102,3 +102,23 @@ test("loja e jogo derivam a mesma geometria visual canônica", () => {
     /getSharedRoundedDieGeometry\(\{ size: 1\.9, radius: 0\.285, segments: 12 \}\)/,
   );
 });
+
+test("loja e cinematic 3D usam a mesma composição visual de textura", () => {
+  const visualConfig = source("src/lib/client/dice/visual-config.ts");
+  const showcase = source(
+    "src/components/profile/v4/store-showcase/dice-showcase-model.tsx",
+  );
+  const fullscreen = source(
+    "src/components/dice-3d/fullscreen-dice-cinematic.tsx",
+  );
+
+  assert.match(visualConfig, /DICE_VISUAL_PIP_COLOR = "#0b0b0b"/);
+  assert.match(visualConfig, /DICE_VISUAL_TEXTURE_RESOLUTION = 512/);
+
+  for (const consumer of [showcase, fullscreen]) {
+    assert.match(consumer, /DICE_VISUAL_PIP_COLOR/);
+    assert.match(consumer, /DICE_VISUAL_TEXTURE_RESOLUTION/);
+  }
+
+  assert.doesNotMatch(fullscreen, /pipColor\?: string/);
+});
