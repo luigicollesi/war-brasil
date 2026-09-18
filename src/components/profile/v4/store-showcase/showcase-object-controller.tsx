@@ -1,18 +1,15 @@
 "use client";
 
-import { useFrame, useThree, type ThreeEvent } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useRef, type ReactNode } from "react";
 import type { Group } from "three";
 import {
-  SHOWCASE_INTERACTION_RESUME_MS,
   idleAngularVelocity,
-  resolveShowcaseDragRotation,
   showcaseTransitionProgress,
   type ShowcaseTransitionPhase,
 } from "@/src/lib/client/store-showcase/showcase-motion";
 
 const DESKTOP_SHOWCASE_SCALE = 0.92;
-const DESKTOP_SHOWCASE_X = -0.43;
 
 export function ShowcaseObjectController({
   children,
@@ -27,19 +24,9 @@ export function ShowcaseObjectController({
 }) {
   const groupRef = useRef<Group>(null);
   const transitionStartedAt = useRef(0);
-  const dragRef = useRef({
-    active: false,
-    pointerId: -1,
-    clientX: 0,
-    clientY: 0,
-    resumeAt: 0,
-  });
   const invalidate = useThree((state) => state.invalidate);
   const viewScale = useThree((state) =>
     state.size.width > 900 ? DESKTOP_SHOWCASE_SCALE : 1,
-  );
-  const viewX = useThree((state) =>
-    state.size.width > 900 ? DESKTOP_SHOWCASE_X : 0,
   );
 
   useEffect(() => {
@@ -48,13 +35,13 @@ export function ShowcaseObjectController({
     if (!group) return;
 
     if (transitionPhase === "idle" || reducedMotion) {
-      group.position.x = viewX;
+      group.position.x = 0;
       group.scale.setScalar(viewScale);
     } else if (transitionPhase === "enter") {
-      group.position.x = viewX - transitionDirection * 0.32;
+      group.position.x = -transitionDirection * 0.32;
       group.scale.setScalar(viewScale * 0.92);
     } else {
-      group.position.x = viewX;
+      group.position.x = 0;
       group.scale.setScalar(viewScale);
     }
     invalidate();
@@ -64,7 +51,6 @@ export function ShowcaseObjectController({
     transitionDirection,
     transitionPhase,
     viewScale,
-    viewX,
   ]);
 
   useFrame((_, delta) => {
@@ -78,11 +64,11 @@ export function ShowcaseObjectController({
       });
 
       if (transitionPhase === "exit") {
-        group.position.x = viewX + transitionDirection * 0.32 * progress;
+        group.position.x = transitionDirection * 0.32 * progress;
         group.scale.setScalar(viewScale * (1 - 0.08 * progress));
       } else {
         group.position.x =
-          viewX - transitionDirection * 0.32 * (1 - progress);
+          -transitionDirection * 0.32 * (1 - progress);
         group.scale.setScalar(viewScale * (0.92 + 0.08 * progress));
       }
 
@@ -90,70 +76,15 @@ export function ShowcaseObjectController({
       return;
     }
 
-    if (reducedMotion || dragRef.current.active) return;
-    if (performance.now() < dragRef.current.resumeAt) return;
+    if (reducedMotion) return;
     group.rotation.y += idleAngularVelocity({ prefersReducedMotion: false }) * delta;
   });
-
-  function onPointerDown(event: ThreeEvent<PointerEvent>) {
-    event.stopPropagation();
-    const group = groupRef.current;
-    if (!group || transitionPhase !== "idle") return;
-
-    dragRef.current.active = true;
-    dragRef.current.pointerId = event.pointerId;
-    dragRef.current.clientX = event.clientX;
-    dragRef.current.clientY = event.clientY;
-    dragRef.current.resumeAt = Number.POSITIVE_INFINITY;
-    (event.target as Element).setPointerCapture?.(event.pointerId);
-    invalidate();
-  }
-
-  function onPointerMove(event: ThreeEvent<PointerEvent>) {
-    const group = groupRef.current;
-    if (!group || !dragRef.current.active || dragRef.current.pointerId !== event.pointerId) {
-      return;
-    }
-
-    event.stopPropagation();
-    const deltaX = event.clientX - dragRef.current.clientX;
-    const deltaY = event.clientY - dragRef.current.clientY;
-    const rotation = resolveShowcaseDragRotation({
-      yaw: group.rotation.y,
-      pitch: group.rotation.x,
-      deltaX,
-      deltaY,
-    });
-
-    group.rotation.y = rotation.yaw;
-    group.rotation.x = rotation.pitch;
-    dragRef.current.clientX = event.clientX;
-    dragRef.current.clientY = event.clientY;
-    invalidate();
-  }
-
-  function finishInteraction(event: ThreeEvent<PointerEvent>) {
-    if (!dragRef.current.active || dragRef.current.pointerId !== event.pointerId) return;
-    event.stopPropagation();
-    dragRef.current.active = false;
-    dragRef.current.pointerId = -1;
-    dragRef.current.resumeAt = performance.now() + SHOWCASE_INTERACTION_RESUME_MS;
-    (event.target as Element).releasePointerCapture?.(event.pointerId);
-    invalidate();
-  }
 
   return (
     <group
       ref={groupRef}
       name="StoreShowcaseObject"
       rotation={[-0.12, -0.52, 0]}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={finishInteraction}
-      onPointerCancel={finishInteraction}
-      onPointerLeave={(event) => {
-        if (dragRef.current.active) finishInteraction(event);
-      }}
     >
       {children}
     </group>
