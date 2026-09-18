@@ -8,7 +8,7 @@ export const DICE_VISUAL_TEXTURE_RESOLUTION = 512;
  * Lower values zoom the artwork in, making it cover more of the rounded face.
  * 1 = original framing.
  */
-export const DICE_VISUAL_TEXTURE_UV_SCALE = 0.94;
+export const DICE_VISUAL_TEXTURE_UV_SCALE = 1;
 
 /**
  * Edge dissolve thresholds, normalized against half the die size.
