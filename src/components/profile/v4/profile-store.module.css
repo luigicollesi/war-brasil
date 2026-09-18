@@ -3,7 +3,7 @@
   --brass: #d0aa57;
   --red: #b53137;
   display: grid;
-  gap: 18px;
+  gap: clamp(42px, 5vw, 72px);
 }
 
 .storeNav {
@@ -15,9 +15,9 @@
   gap: 1px;
   padding: 4px;
   overflow: hidden;
-  border: 1px solid rgb(208 170 87 / 20%);
-  background: rgb(3 13 10 / 88%);
-  box-shadow: 0 16px 40px rgb(0 0 0 / 24%);
+  border: 0;
+  background: rgb(3 13 10 / 72%);
+  box-shadow: 0 14px 32px rgb(0 0 0 / 16%);
   backdrop-filter: blur(14px);
 }
 
@@ -27,21 +27,21 @@
   place-items: center;
   padding: 0 14px;
   color: rgb(238 232 218 / 58%);
-  border: 1px solid transparent;
-  background: rgb(238 232 218 / 2%);
+  border: 0;
+  background: transparent;
   font-family: var(--font-geist-mono), monospace;
   font-size: 0.59rem;
   font-weight: 900;
   letter-spacing: 0.12em;
   text-decoration: none;
-  transition: color 160ms ease, border-color 160ms ease, background 160ms ease;
+  transition: color 160ms ease, background 160ms ease, box-shadow 160ms ease;
 }
 
 .storeNav a:hover,
 .storeNav a:focus-visible {
   color: var(--ivory);
-  border-color: rgb(208 170 87 / 32%);
-  background: rgb(208 170 87 / 7%);
+  background: transparent;
+  box-shadow: inset 0 -2px 0 rgb(208 170 87 / 72%);
   outline: none;
 }
 
@@ -50,9 +50,9 @@
 .inspection,
 .treasury {
   scroll-margin-top: 84px;
-  border: 1px solid rgb(208 170 87 / 18%);
-  background: linear-gradient(145deg, rgb(12 31 24 / 94%), rgb(6 17 13 / 97%));
-  box-shadow: 0 24px 60px rgb(0 0 0 / 16%);
+  border: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .hero {
@@ -137,8 +137,8 @@
   place-items: center;
   overflow: hidden;
   background:
-    radial-gradient(circle at 48% 45%, rgb(208 170 87 / 15%), transparent 36%),
-    linear-gradient(135deg, rgb(208 170 87 / 2%), rgb(3 12 9 / 48%));
+    radial-gradient(circle at 48% 45%, rgb(208 170 87 / 16%), transparent 38%),
+    radial-gradient(circle at 76% 64%, rgb(34 87 60 / 13%), transparent 58%);
 }
 
 .heroVisual::before,
@@ -183,10 +183,10 @@
   bottom: 20px;
   display: grid;
   gap: 3px;
-  padding: 12px 14px;
-  border-left: 2px solid var(--brass);
-  background: rgb(3 13 10 / 72%);
-  backdrop-filter: blur(9px);
+  padding: 12px 0;
+  border-left: 0;
+  background: transparent;
+  backdrop-filter: none;
 }
 
 .heroVisual > div small {
@@ -205,7 +205,7 @@
 .catalog,
 .inspection,
 .treasury {
-  padding: 18px;
+  padding: 0;
 }
 
 .sectionHeading {
@@ -214,7 +214,19 @@
   align-items: center;
   justify-content: space-between;
   gap: 16px;
-  margin-bottom: 14px;
+  position: relative;
+  margin-bottom: 22px;
+  padding-bottom: 12px;
+}
+
+.sectionHeading::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: linear-gradient(90deg, rgb(208 170 87 / 22%), transparent 72%);
 }
 
 .sectionHeading > span {
@@ -236,7 +248,7 @@
 .catalogGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(230px, 100%), 1fr));
-  gap: 12px;
+  gap: clamp(18px, 2.2vw, 30px);
 }
 
 .productCard {
@@ -244,20 +256,24 @@
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto;
   align-content: start;
-  overflow: hidden;
-  border: 1px solid rgb(238 232 218 / 8%);
-  background: rgb(3 13 10 / 45%);
-  transition: border-color 180ms ease, transform 180ms ease, background 180ms ease;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  transition: transform 180ms ease, filter 180ms ease;
 }
 
 .productCard:hover,
 .productCard[data-active="true"] {
-  border-color: rgb(208 170 87 / 45%);
-  background: rgb(208 170 87 / 5%);
+  background: transparent;
 }
 
 .productCard:hover {
-  transform: translateY(-2px);
+  transform: translateY(-3px);
+}
+
+.productCard:hover .productVisual img {
+  transform: translateY(-3px) scale(1.015);
+  filter: drop-shadow(0 24px 34px rgb(0 0 0 / 48%));
 }
 
 .productSelect {
@@ -294,6 +310,7 @@
   max-height: 210px;
   object-fit: contain;
   filter: drop-shadow(0 18px 28px rgb(0 0 0 / 40%));
+  transition: transform 180ms ease, filter 180ms ease;
 }
 
 .productFallback {
@@ -311,8 +328,8 @@
   min-width: 0;
   display: grid;
   gap: 4px;
-  padding: 14px;
-  border-top: 1px solid rgb(238 232 218 / 7%);
+  padding: 14px 4px 8px;
+  border-top: 0;
 }
 
 .productCopy strong {
@@ -334,25 +351,24 @@
 .collectionGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(520px, 100%), 1fr));
-  gap: 14px;
+  gap: clamp(22px, 2.5vw, 36px);
 }
 
 .collectionBannerCard {
   min-width: 0;
-  overflow: hidden;
-  border: 1px solid rgb(238 232 218 / 9%);
-  background: rgb(3 13 10 / 52%);
-  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+  overflow: visible;
+  border: 0;
+  background: transparent;
+  transition: transform 180ms ease, filter 180ms ease;
 }
 
 .collectionBannerCard[data-featured="true"] {
-  border-color: rgb(208 170 87 / 58%);
-  box-shadow: inset 0 0 0 1px rgb(208 170 87 / 11%), 0 18px 40px rgb(0 0 0 / 22%);
+  filter: drop-shadow(0 18px 34px rgb(0 0 0 / 22%));
 }
 
 .collectionBannerCard:hover {
-  transform: translateY(-2px);
-  border-color: rgb(208 170 87 / 46%);
+  transform: translateY(-3px);
+  filter: drop-shadow(0 22px 38px rgb(0 0 0 / 28%));
 }
 
 .collectionBannerButton {
@@ -374,6 +390,12 @@
   width: 100%;
   height: auto;
   object-fit: contain;
+  transition: transform 180ms ease, filter 180ms ease;
+}
+
+.collectionBannerCard:hover .collectionBannerButton > img {
+  transform: translateY(-2px) scale(1.006);
+  filter: drop-shadow(0 18px 30px rgb(0 0 0 / 30%));
 }
 
 .collectionBannerMeta {
@@ -382,8 +404,8 @@
   align-items: center;
   justify-content: space-between;
   gap: 14px;
-  padding: 14px 16px;
-  border-top: 1px solid rgb(238 232 218 / 8%);
+  padding: 14px 2px 0;
+  border-top: 0;
 }
 
 .collectionBannerMeta > span {
@@ -427,7 +449,8 @@
   align-content: center;
   gap: 6px;
   color: rgb(238 232 218 / 46%);
-  border: 1px dashed rgb(208 170 87 / 18%);
+  border: 0;
+  background: radial-gradient(circle at center, rgb(208 170 87 / 5%), transparent 64%);
   text-align: center;
 }
 
@@ -566,7 +589,7 @@
   height: 82px;
   display: grid;
   place-items: center;
-  border: 1px solid rgb(208 170 87 / 18%);
+  border: 0;
   background: radial-gradient(circle, rgb(208 170 87 / 12%), transparent 65%);
 }
 
@@ -637,7 +660,7 @@
 
 @media (max-width: 520px) {
   .store {
-    gap: 12px;
+    gap: clamp(28px, 8vw, 44px);
   }
 
   .storeNav {
@@ -660,7 +683,7 @@
 
   .catalog,
   .treasury {
-    padding: 14px;
+    padding: 0;
   }
 
   .catalogGrid,
@@ -679,7 +702,7 @@
   }
 
   .collectionBannerButton {
-    grid-template-rows: minmax(160px, 210px) auto;
+    grid-template-rows: auto auto;
   }
 
   .itemSelector button,
