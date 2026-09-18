@@ -101,7 +101,7 @@ test("apresentação usa cor oficial da facção e acabamento físico com contor
   assert.match(visual, /meshPhysicalMaterial/);
   assert.match(visual, /clearcoat=\{0\.3\}/);
   assert.match(visual, /clearcoatRoughness=\{0\.32\}/);
-  assert.match(visual, /diceBevelFactor/);
+  assert.match(visual, /diceEdgeMask/);
   assert.match(visual, /diceCornerFactor/);
   assert.match(visual, /<lineSegments/);
   assert.match(visual, /<edgesGeometry args=\{\[geometry, 28\]\}/);
