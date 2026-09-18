@@ -5,7 +5,11 @@ import { DiceModel3D } from "@/src/components/dice-3d/dice-model-3d";
 import { useDiceFaceTextures } from "@/src/components/dice-3d/use-dice-face-textures";
 import { getSharedRoundedDieGeometry } from "@/src/lib/client/dice/dice-assets-manager";
 import type { DiceSkin } from "@/src/lib/client/dice/types";
-import { diceVisualGeometry } from "@/src/lib/client/dice/visual-config";
+import {
+  DICE_VISUAL_PIP_COLOR,
+  DICE_VISUAL_TEXTURE_RESOLUTION,
+  diceVisualGeometry,
+} from "@/src/lib/client/dice/visual-config";
 import type { CosmeticCatalogItem } from "@/src/lib/economy/economy-contract";
 import { useDiceBodyColor } from "./use-dice-body-color";
 
@@ -42,8 +46,8 @@ export function DiceShowcaseModel({
     skin,
     assetRef,
     bodyColor,
-    pipColor: "#0b0b0b",
-    resolution: 512,
+    pipColor: DICE_VISUAL_PIP_COLOR,
+    resolution: DICE_VISUAL_TEXTURE_RESOLUTION,
   });
 
   if (!textures || (assetRef && bodyColor === undefined)) return null;
