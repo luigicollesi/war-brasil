@@ -186,7 +186,6 @@ export function FullscreenDiceCinematic({
   values,
   seed,
   skin,
-  pipColor,
   assetRef,
   bodyColor,
   bodyHighlightColor,
@@ -199,7 +198,6 @@ export function FullscreenDiceCinematic({
   values: readonly number[];
   seed: string;
   skin: DiceSkin;
-  pipColor?: string;
   assetRef?: string | null;
   bodyColor?: string | null;
   bodyHighlightColor?: string | null;
