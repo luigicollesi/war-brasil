@@ -34,6 +34,7 @@ export type ShowcaseSceneMode = "standard" | "collection";
 export type ShowcaseScenePayload = Readonly<{
   key: string;
   mode: ShowcaseSceneMode;
+  stageCenterRatio: number;
   render: (context: { reducedMotion: boolean }) => ReactNode;
 }>;
 
