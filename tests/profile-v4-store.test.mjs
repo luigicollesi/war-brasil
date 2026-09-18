@@ -125,3 +125,15 @@ test("PROFILE V4 store delegates inspection state to the dedicated showcase rout
   assert.doesNotMatch(store, /inspectionOpen/);
   assert.doesNotMatch(store, /profile-store-mobile-inspection\.module\.css/);
 });
+
+
+test("PROFILE V4 product cards open the showcase while purchasable offers can be bought directly", async () => {
+  const store = await source("src/components/profile/v4/profile-store.tsx");
+
+  assert.match(store, /purchaseShowcaseOffer/);
+  assert.match(store, /handlePurchase\(offer\)/);
+  assert.match(store, /showcaseHref\("offer", offer\.id/);
+  assert.match(store, /pendingOfferId/);
+  assert.match(store, /PROCESSANDO\.\.\./);
+  assert.match(store, /COMPRAR/);
+});
