@@ -137,3 +137,21 @@ test("PROFILE V4 product cards open the showcase while purchasable offers can be
   assert.match(store, /PROCESSANDO\.\.\./);
   assert.match(store, /COMPRAR/);
 });
+
+
+test("PROFILE V4 collection banners keep the full artwork and use wider cards", async () => {
+  const styles = await source("src/components/profile/v4/profile-store.module.css");
+
+  assert.match(
+    styles,
+    /\.collectionGrid\s*\{[\s\S]*grid-template-columns:\s*repeat\(auto-fit,\s*minmax\(min\(520px,\s*100%\),\s*1fr\)\)/,
+  );
+  assert.match(
+    styles,
+    /\.collectionBannerButton\s*\{[\s\S]*grid-template-rows:\s*auto\s+auto/,
+  );
+  assert.match(
+    styles,
+    /\.collectionBannerButton\s*>\s*img\s*\{[\s\S]*height:\s*auto;[\s\S]*object-fit:\s*contain;/,
+  );
+});
