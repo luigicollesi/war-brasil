@@ -43,11 +43,11 @@ test("modelo canônico preserva faces embrulhadas e aplica degradê nas quinas",
   assert.match(model, /diceCornerFactor/);
   assert.match(
     model,
-    /mix\(diceBodyColor, diceBodyHighlightColor, diceCornerFactor\)/,
+    /mix\(diceBodyColor, diceBodyHighlightColor, diceCornerFactor \* diceEdgeMask\)/,
   );
   assert.match(
     model,
-    /mix\(diceTextureColor, diceEdgeColor, diceEdgeMask\)/,
+    /mix\(diceBodySurfaceColor, diceArtworkColor, diceArtworkAlpha\)/,
   );
 
   assert.doesNotMatch(model, /surfaceWrappedFaces/);
@@ -112,7 +112,7 @@ test("loja e cinematic 3D usam a mesma composição visual de textura", () => {
 
   assert.match(visualConfig, /DICE_VISUAL_PIP_COLOR = "#0b0b0b"/);
   assert.match(visualConfig, /DICE_VISUAL_TEXTURE_RESOLUTION = 512/);
-  assert.match(visualConfig, /DICE_VISUAL_TEXTURE_UV_SCALE = 0\.94/);
+  assert.match(visualConfig, /DICE_VISUAL_TEXTURE_UV_SCALE = 1/);
   assert.match(visualConfig, /DICE_VISUAL_EDGE_DISSOLVE_START = 0\.84/);
   assert.match(visualConfig, /DICE_VISUAL_EDGE_DISSOLVE_END = 0\.96/);
   assert.match(visualConfig, /DICE_VISUAL_CORNER_HIGHLIGHT_START = 0\.76/);
@@ -148,19 +148,19 @@ test("modelo canônico centraliza zoom da arte e faixa de highlight", () => {
 });
 
 
-test("borda dissolve sobre a WebP sem alterar a arte fora da transição", () => {
+test("borda dissolve no corpo sob a WebP sem alterar a arte", () => {
   const visualConfig = source("src/lib/client/dice/visual-config.ts");
   const model = source("src/components/dice-3d/dice-model-3d.tsx");
 
   assert.match(visualConfig, /DICE_VISUAL_EDGE_DISSOLVE_START = 0\.84/);
   assert.match(visualConfig, /DICE_VISUAL_EDGE_DISSOLVE_END = 0\.96/);
 
-  assert.match(model, /vec3 diceTextureColor = diffuseColor\.rgb/);
+  assert.match(model, /float diceArtworkAlpha = diffuseColor\.a/);
+  assert.match(model, /vec3 diceArtworkColor = diffuseColor\.rgb/);
   assert.match(model, /float diceEdgeMask = smoothstep/);
-  assert.match(model, /vec3 diceEdgeColor = mix\(diceBodyColor, diceBodyHighlightColor, diceCornerFactor\)/);
   assert.match(
     model,
-    /diffuseColor\.rgb = mix\(diceTextureColor, diceEdgeColor, diceEdgeMask\)/,
+    /diffuseColor\.rgb = mix\(diceBodySurfaceColor, diceArtworkColor, diceArtworkAlpha\)/,
   );
 });
 
