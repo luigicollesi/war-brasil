@@ -25,21 +25,21 @@ test("showcase reuses the Foundation WebGL runtime instead of mounting another C
   assert.equal((canvas.match(/<Canvas\b/g) ?? []).length, 1);
 });
 
-test("showcase scene has fixed-camera exhibition controls without Rapier", () => {
+test("showcase keeps fixed-camera auto-rotation while horizontal gestures navigate the exhibition", () => {
   assert.doesNotMatch(controller, /rapier/i);
   assert.doesNotMatch(pedestal, /rapier/i);
   assert.doesNotMatch(motion, /rapier/i);
 
   assert.match(controller, /useFrame/);
-  assert.match(controller, /onPointerDown/);
-  assert.match(controller, /onPointerMove/);
-  assert.match(controller, /onPointerUp/);
   assert.match(controller, /rotation\.y/);
-  assert.match(controller, /rotation\.x/);
+  assert.doesNotMatch(controller, /onPointerDown/);
+  assert.doesNotMatch(controller, /onPointerMove/);
 
+  assert.match(showcase, /data-showcase-swipe-surface/);
+  assert.match(showcase, /onPointerDown=\{beginStageSwipe\}/);
+  assert.match(showcase, /onPointerMove=\{updateStageSwipe\}/);
   assert.match(motion, /SHOWCASE_IDLE_REVOLUTION_SECONDS/);
-  assert.match(motion, /prefersReducedMotion/);
-  assert.match(motion, /idleAngularVelocity/);
+  assert.match(motion, /resolveShowcaseSwipeDirection/);
 });
 
 test("pedestal identity is stable and collection atmosphere stays outside the shared light rig", () => {
