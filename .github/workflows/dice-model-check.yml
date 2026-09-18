@@ -16,6 +16,7 @@ on:
       - "src/lib/server/economy/economy-service.ts"
       - "tests/unified-dice-3d-model.test.mjs"
       - "tests/dice-body-color-catalog.test.mjs"
+      - "tests/dice-body-color.test.mjs"
       - "tests/cosmetic-dice-presentation.test.mjs"
       - "tests/game-display.test.mjs"
       - "tests/dice-3d-foundation.test.mjs"
@@ -40,6 +41,7 @@ jobs:
           node --test
           tests/unified-dice-3d-model.test.mjs
           tests/dice-body-color-catalog.test.mjs
+          tests/dice-body-color.test.mjs
           tests/cosmetic-dice-presentation.test.mjs
           tests/game-display.test.mjs
           tests/dice-3d-foundation.test.mjs
