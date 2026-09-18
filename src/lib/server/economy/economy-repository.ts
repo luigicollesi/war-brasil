@@ -24,6 +24,8 @@ export type CosmeticRow = {
   slot: CosmeticSlot;
   rarity: string | null;
   asset_ref: string | null;
+  body_color: string | null;
+  body_highlight_color: string | null;
   preview_ref: string | null;
   effect_key: string | null;
   status: CosmeticCatalogStatus;
@@ -174,6 +176,8 @@ export async function listOwnedCosmetics(
             item.slot,
             item.rarity,
             item.asset_ref,
+            item.body_color,
+            item.body_highlight_color,
             item.preview_ref,
             item.effect_key,
             item.status,
@@ -213,6 +217,8 @@ export async function listStorefrontSetItems(
             item.slot,
             item.rarity,
             item.asset_ref,
+            item.body_color,
+            item.body_highlight_color,
             item.preview_ref,
             item.effect_key,
             item.status,
@@ -262,6 +268,8 @@ export async function findOwnedCosmetic(
             item.slot,
             item.rarity,
             item.asset_ref,
+            item.body_color,
+            item.body_highlight_color,
             item.preview_ref,
             item.effect_key,
             item.status,
@@ -334,6 +342,8 @@ export async function listOfferItemsForPurchase(
             item.slot,
             item.rarity,
             item.asset_ref,
+            item.body_color,
+            item.body_highlight_color,
             item.preview_ref,
             item.effect_key,
             item.status,
@@ -391,6 +401,8 @@ export async function listPurchaseGrantedItems(
             item.slot,
             item.rarity,
             item.asset_ref,
+            item.body_color,
+            item.body_highlight_color,
             item.preview_ref,
             item.effect_key,
             item.status,
