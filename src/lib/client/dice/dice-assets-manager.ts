@@ -11,6 +11,7 @@ import {
   DEFAULT_DICE_PIP_COLOR,
   DEFAULT_DICE_TEXTURE_RESOLUTION,
 } from "./textures/dice-skins";
+import { DICE_VISUAL_TEXTURE_UV_SCALE } from "./visual-config";
 
 const geometryCache = new Map<string, BufferGeometry>();
 const textureCache = new Map<string, Promise<DiceFaceTextureSet>>();
@@ -52,9 +53,20 @@ export function getDiceFaceTextures(options: DiceTextureOptions) {
       value,
       await createDiceFaceTexture({ ...options, value }),
     ] as const),
-  ).then(
-    (entries) => Object.fromEntries(entries) as unknown as DiceFaceTextureSet,
-  );
+  ).then((entries) => {
+    const textures = Object.fromEntries(entries) as unknown as DiceFaceTextureSet;
+
+    for (const texture of Object.values(textures)) {
+      texture.center.set(0.5, 0.5);
+      texture.repeat.set(
+        DICE_VISUAL_TEXTURE_UV_SCALE,
+        DICE_VISUAL_TEXTURE_UV_SCALE,
+      );
+      texture.needsUpdate = true;
+    }
+
+    return textures;
+  });
 
   textureCache.set(key, promise);
   promise.catch(() => textureCache.delete(key));
