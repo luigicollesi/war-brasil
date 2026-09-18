@@ -112,7 +112,7 @@ function CinematicScene({
 }) {
   const size = useThree((state) => state.size);
   const gl = useThree((state) => state.gl);
-  const textureState = useDiceFaceTextures({ skin, pipColor, assetRef });
+  const textureState = useDiceFaceTextures({ skin, pipColor, assetRef, bodyColor });
   const portrait =
     size.height > 0 && size.width / size.height < PORTRAIT_ASPECT_THRESHOLD;
 
