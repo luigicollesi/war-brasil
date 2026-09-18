@@ -51,10 +51,10 @@ test("combate usa skin de ataque do atacante e defesa do defensor", () => {
   assert.match(overlay, /attackAssetRef=\{attackAssetRef\}/);
   assert.match(overlay, /defenseAssetRef=\{defenseAssetRef\}/);
   assert.match(cinematic, /assetRef=\{assetRef\}/);
-  assert.match(
-    fullscreen,
-    /useDiceFaceTextures\(\{\s*skin,\s*pipColor,\s*assetRef,\s*bodyColor\s*\}\)/,
-  );
+  assert.match(fullscreen, /useDiceFaceTextures/);
+  assert.match(fullscreen, /DICE_VISUAL_PIP_COLOR/);
+  assert.match(fullscreen, /DICE_VISUAL_TEXTURE_RESOLUTION/);
+  assert.match(fullscreen, /bodyColor/);
   assert.match(staticResults, /skin=\{side\}/);
   assert.match(staticResults, /assetRef=\{attackAssetRef\}/);
   assert.match(staticResults, /assetRef=\{defenseAssetRef\}/);
