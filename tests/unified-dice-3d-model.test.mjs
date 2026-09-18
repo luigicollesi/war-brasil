@@ -172,7 +172,7 @@ test("WebP preserva alpha e revela corpo com highlight sem tingir a arte opaca",
   const model = source("src/components/dice-3d/dice-model-3d.tsx");
 
   assert.doesNotMatch(texture, /function drawBodyColor/);
-  assert.doesNotMatch(texture, /fillRect\(0, 0, resolution, resolution\).*bodyColor/s);
+  assert.doesNotMatch(texture, /fillStyle\s*=\s*bodyColor/);
 
   assert.match(model, /float diceArtworkAlpha = diffuseColor\.a/);
   assert.match(model, /vec3 diceArtworkColor = diffuseColor\.rgb/);
