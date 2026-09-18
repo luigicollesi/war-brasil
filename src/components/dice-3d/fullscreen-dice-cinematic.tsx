@@ -15,6 +15,10 @@ import { validateDiceValues } from "@/src/lib/client/dice/dice-values";
 import { installDice3DDependencyWarningFilter } from "@/src/lib/client/dice/install-3d-dependency-warning-filter";
 import { DICE_PHYSICS } from "@/src/lib/client/dice/physics/dice-physics-config";
 import type { DiceSkin, DiceValue } from "@/src/lib/client/dice/types";
+import {
+  DICE_VISUAL_PIP_COLOR,
+  DICE_VISUAL_TEXTURE_RESOLUTION,
+} from "@/src/lib/client/dice/visual-config";
 import styles from "./battle-dice-cinematic.module.css";
 import { PredeterminedDiceRoll } from "./predetermined-dice-roll";
 import {
@@ -89,7 +93,6 @@ function CinematicScene({
   values,
   seed,
   skin,
-  pipColor,
   assetRef,
   bodyColor,
   bodyHighlightColor,
@@ -101,7 +104,6 @@ function CinematicScene({
   values: readonly DiceValue[];
   seed: string;
   skin: DiceSkin;
-  pipColor?: string;
   assetRef?: string | null;
   bodyColor?: string | null;
   bodyHighlightColor?: string | null;
@@ -112,7 +114,13 @@ function CinematicScene({
 }) {
   const size = useThree((state) => state.size);
   const gl = useThree((state) => state.gl);
-  const textureState = useDiceFaceTextures({ skin, pipColor, assetRef, bodyColor });
+  const textureState = useDiceFaceTextures({
+    skin,
+    assetRef,
+    bodyColor,
+    pipColor: DICE_VISUAL_PIP_COLOR,
+    resolution: DICE_VISUAL_TEXTURE_RESOLUTION,
+  });
   const portrait =
     size.height > 0 && size.width / size.height < PORTRAIT_ASPECT_THRESHOLD;
 
@@ -291,7 +299,6 @@ export function FullscreenDiceCinematic({
               values={safeValues}
               seed={seed}
               skin={skin}
-              pipColor={pipColor}
               assetRef={assetRef}
               bodyColor={bodyColor}
               bodyHighlightColor={bodyHighlightColor}
