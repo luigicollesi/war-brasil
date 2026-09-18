@@ -198,7 +198,7 @@ test("fundação 3D é client-side, procedural e mantém fallback 2D sem SVG", (
   const gameDie = source("src/components/game-die.tsx");
   const scene = source("src/components/dice-3d/dice-scene.tsx");
   const die = source("src/components/dice-3d/die-3d.tsx");
-  const visual = source("src/components/dice-3d/die-visual.tsx");
+  const visual = source("src/components/dice-3d/dice-model-3d.tsx");
   const skins = source("src/lib/client/dice/textures/dice-skins.ts");
   const texture = source("src/lib/client/dice/textures/create-face-texture.ts");
 
@@ -213,10 +213,11 @@ test("fundação 3D é client-side, procedural e mantém fallback 2D sem SVG", (
   assert.doesNotMatch(scene, /runGameCommand/);
   assert.doesNotMatch(scene, /Math\.random/);
 
-  assert.match(die, /DieVisual/);
+  assert.match(die, /DiceModel3D/);
   assert.doesNotMatch(die, /useGLTF|\.glb/);
-  assert.match(visual, /planeGeometry/);
-  assert.match(visual, /DICE_FACE_DEFINITIONS/);
+  assert.match(visual, /DICE_BOX_MATERIAL_FACE_VALUES/);
+  assert.match(visual, /map=\{textures\[value\]\}/);
+  assert.match(visual, /meshPhysicalMaterial/);
 
   assert.match(skins, /DICE_PROCEDURAL_PALETTES/);
   assert.doesNotMatch(skins, /\.svg/);
