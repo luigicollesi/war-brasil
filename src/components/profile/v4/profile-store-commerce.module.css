@@ -87,9 +87,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 11px 14px 14px;
-  border-top: 1px solid rgb(238 232 218 / 7%);
-  background: rgb(3 13 10 / 96%);
+  padding: 8px 4px 0;
+  border-top: 0;
+  background: transparent;
 }
 
 .productCommerce button {
@@ -108,10 +108,10 @@
   grid-column: 1 / -1;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 9px;
+  gap: clamp(16px, 2vw, 28px);
   width: 100%;
-  padding-top: 14px;
-  border-top: 1px solid rgb(238 232 218 / 8%);
+  padding-top: 18px;
+  border-top: 0;
 }
 
 .creditPack {
@@ -120,9 +120,9 @@
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px 12px;
-  padding: 13px;
-  border: 1px solid rgb(208 170 87 / 14%);
-  background: rgb(3 13 10 / 44%);
+  padding: 13px 4px;
+  border: 0;
+  background: transparent;
 }
 
 .creditPack > span {
@@ -153,7 +153,8 @@
   grid-column: 1 / -1;
   padding: 16px;
   color: rgb(238 232 218 / 42%);
-  border: 1px dashed rgb(208 170 87 / 16%);
+  border: 0;
+  background: radial-gradient(circle at center, rgb(208 170 87 / 4%), transparent 68%);
   font-family: var(--font-geist-mono), monospace;
   font-size: 0.64rem;
   text-align: center;
