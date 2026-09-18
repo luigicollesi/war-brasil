@@ -203,3 +203,55 @@ test("PROFILE V4 store V1 uses spacing and image lift instead of card outlines f
     /\.collectionBannerCard\[data-featured="true"\]\s*\{[\s\S]*?border-color:/,
   );
 });
+
+
+test("PROFILE V4 store V2 builds a static tactical optical atmosphere from layered HTML and CSS", async () => {
+  const store = await source("src/components/profile/v4/profile-store.tsx");
+  const styles = await source("src/components/profile/v4/profile-store.module.css");
+
+  for (const layer of [
+    "storeAtmosphere",
+    "atmosphereBase",
+    "atmosphereOptical",
+    "atmospherePlatePrimary",
+    "atmospherePlateSecondary",
+    "atmosphereGhostType",
+    "atmosphereLight",
+    "atmosphereVignette",
+  ]) {
+    assert.match(store, new RegExp(`styles\\.${layer}`));
+  }
+
+  assert.match(store, /className=\{styles\.storeAtmosphere\}[\s\S]*aria-hidden="true"/);
+  assert.match(styles, /\.store\s*\{[\s\S]*position:\s*relative;[\s\S]*isolation:\s*isolate;/);
+  assert.match(styles, /\.storeAtmosphere\s*\{[\s\S]*position:\s*absolute;[\s\S]*pointer-events:\s*none;/);
+  assert.match(styles, /\.atmosphereOptical\s*\{[\s\S]*repeating-(?:linear|radial)-gradient/);
+  assert.match(styles, /\.atmospherePlatePrimary\s*\{[\s\S]*clip-path:\s*polygon\(/);
+  assert.match(styles, /\.atmospherePlateSecondary\s*\{[\s\S]*clip-path:\s*polygon\(/);
+  assert.match(styles, /\.atmosphereLight\s*\{[\s\S]*radial-gradient/);
+  assert.match(styles, /\.atmosphereVignette\s*\{[\s\S]*radial-gradient/);
+  assert.doesNotMatch(
+    styles,
+    /\.atmosphere(?:Base|Optical|PlatePrimary|PlateSecondary|GhostType|Light|Vignette)\s*\{[^}]*animation:/s,
+  );
+  assert.doesNotMatch(store, /@react-three|three\/|<Canvas\b/);
+});
+
+test("PROFILE V4 store V2 gives hero and catalog sections static 2.5D depth cues without restoring cards", async () => {
+  const store = await source("src/components/profile/v4/profile-store.tsx");
+  const styles = await source("src/components/profile/v4/profile-store.module.css");
+
+  assert.match(store, /data-store-zone="dice"/);
+  assert.match(store, /data-store-zone="territories"/);
+  assert.match(store, /data-store-zone="collections"/);
+  assert.match(store, /data-store-layer="01"/);
+  assert.match(store, /data-store-layer="02"/);
+  assert.match(store, /data-store-layer="03"/);
+  assert.match(styles, /\.catalog::before\s*\{[\s\S]*content:\s*attr\(data-store-layer\)/);
+  assert.match(styles, /\[data-store-zone="dice"\]::after\s*\{[\s\S]*radial-gradient/);
+  assert.match(styles, /\[data-store-zone="territories"\]::after\s*\{[\s\S]*radial-gradient/);
+  assert.match(styles, /\[data-store-zone="collections"\]::after\s*\{[\s\S]*(?:linear|radial)-gradient/);
+  assert.match(styles, /\.heroVisual::before[\s\S]*clip-path:\s*polygon\(/);
+  assert.doesNotMatch(styles, /\.heroVisual::before,[\s\S]*?border:\s*1px solid/);
+  assert.match(styles, /@media\s*\(max-width:\s*520px\)[\s\S]*\.atmospherePlateSecondary\s*\{[\s\S]*display:\s*none/);
+});
