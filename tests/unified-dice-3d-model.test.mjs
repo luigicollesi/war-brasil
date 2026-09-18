@@ -163,3 +163,26 @@ test("borda dissolve sobre a WebP sem alterar a arte fora da transição", () =>
     /diffuseColor\.rgb = mix\(diceTextureColor, diceEdgeColor, diceEdgeMask\)/,
   );
 });
+
+
+test("WebP preserva alpha e revela corpo com highlight sem tingir a arte opaca", () => {
+  const texture = source(
+    "src/lib/client/dice/textures/create-face-texture.ts",
+  );
+  const model = source("src/components/dice-3d/dice-model-3d.tsx");
+
+  assert.doesNotMatch(texture, /function drawBodyColor/);
+  assert.doesNotMatch(texture, /fillRect\(0, 0, resolution, resolution\).*bodyColor/s);
+
+  assert.match(model, /float diceArtworkAlpha = diffuseColor\.a/);
+  assert.match(model, /vec3 diceArtworkColor = diffuseColor\.rgb/);
+  assert.match(
+    model,
+    /vec3 diceBodySurfaceColor = mix\(diceBodyColor, diceBodyHighlightColor, diceCornerFactor \* diceEdgeMask\)/,
+  );
+  assert.match(
+    model,
+    /diffuseColor\.rgb = mix\(diceBodySurfaceColor, diceArtworkColor, diceArtworkAlpha\)/,
+  );
+  assert.match(model, /diffuseColor\.a = 1\.0/);
+});
