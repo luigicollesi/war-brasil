@@ -71,10 +71,10 @@ test("jogo compõe a textura 3D com a mesma bodyColor usada pela loja", () => {
 
   assert.match(
     showcase,
-    /useDiceFaceTextures\(\{[\s\S]*skin,[\s\S]*assetRef,[\s\S]*bodyColor,/,
+    /useDiceFaceTextures\(\{\s*skin,\s*assetRef,\s*bodyColor,/,
   );
   assert.match(
     fullscreen,
-    /useDiceFaceTextures\(\{[\s\S]*skin,[\s\S]*pipColor,[\s\S]*assetRef,[\s\S]*bodyColor,[\s\S]*\}\)/,
+    /useDiceFaceTextures\(\{\s*skin,\s*pipColor,\s*assetRef,\s*bodyColor\s*\}\)/,
   );
 });
