@@ -13,7 +13,7 @@ const controller = read(
 const model = read(
   "src/components/profile/v4/store-showcase/dice-showcase-model.tsx",
 );
-const dieVisual = read("src/components/dice-3d/die-visual.tsx");
+const diceModel = read("src/components/dice-3d/dice-model-3d.tsx");
 const bodyColorHook = read(
   "src/components/profile/v4/store-showcase/use-dice-body-color.ts",
 );
@@ -31,7 +31,7 @@ const territoryRoute = read("src/app/api/assets/territory-skins/route.ts");
 test("showcase owns its chrome and keeps the object farther and left-aligned on desktop", () => {
   assert.match(runtime, /pathname\.startsWith\("\/profile\/store\/showcase\/"\)/);
   assert.match(controller, /const DESKTOP_SHOWCASE_SCALE = 0\.92/);
-  assert.match(controller, /const DESKTOP_SHOWCASE_X = -0\.18/);
+  assert.match(controller, /const DESKTOP_SHOWCASE_X = -0\.43/);
   assert.match(controller, /state\.size\.width > 900/);
   assert.match(controller, /group\.position\.x = viewX/);
   assert.match(controller, /group\.scale\.setScalar\(viewScale\)/);
@@ -47,9 +47,10 @@ test("showcase dice reads catalog body_color and applies it to texture and physi
   assert.match(model, /useDiceBodyColor\(assetRef, slot\)/);
   assert.match(model, /bodyColor,?/);
   assert.match(model, /bodyColor=\{bodyColor\}/);
-  assert.match(dieVisual, /bodyColor\?: string \| null/);
-  assert.match(dieVisual, /const resolvedBodyColor = bodyColor \?\? DICE_BODY_GOLD/);
-  assert.match(dieVisual, /color=\{resolvedBodyColor\}/);
+  assert.match(diceModel, /bodyColor\?: string \| null/);
+  assert.match(diceModel, /resolveDiceBodyColors\(bodyColor, bodyHighlightColor\)/);
+  assert.match(diceModel, /diceBodyColor/);
+  assert.match(diceModel, /diceBodyHighlightColor/);
   assert.match(textureHook, /bodyColor/);
   assert.match(textureManager, /options\.bodyColor \?\? "default-body"/);
 });
