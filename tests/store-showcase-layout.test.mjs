@@ -44,20 +44,28 @@ test("store showcase keeps secondary copy collapsible before the stage", () => {
   assert.match(styles, /\.stageObject\s*\{[^}]*clamp\(/s);
 });
 
-test("desktop showcase moves the displayed item another quarter unit to the left", () => {
+test("showcase centers 3D content on the measured exhibition field instead of the full desktop", () => {
+  const component = read(componentPath);
   const controller = read(controllerPath);
+  const canvas = read("src/components/pre-game/foundation/command-scene-canvas.tsx");
 
-  assert.match(controller, /const DESKTOP_SHOWCASE_X = -0\.43;/);
-  assert.match(controller, /state\.size\.width > 900 \? DESKTOP_SHOWCASE_X : 0/);
+  assert.match(component, /stageCenterRatio/);
+  assert.match(component, /getBoundingClientRect\(\)/);
+  assert.match(component, /ResizeObserver/);
+  assert.match(canvas, /function ShowcaseStageAnchor/);
+  assert.match(canvas, /stageCenterRatio/);
+  assert.match(canvas, /viewportWidth/);
+  assert.doesNotMatch(controller, /DESKTOP_SHOWCASE_X/);
 });
 
-test("standard pedestal follows the desktop item shift and collections do not render it", () => {
+test("standard pedestal shares the measured stage anchor and collections do not render it", () => {
   const pedestal = read(pedestalPath);
+  const canvas = read("src/components/pre-game/foundation/command-scene-canvas.tsx");
 
-  assert.match(pedestal, /const DESKTOP_PEDESTAL_X = -0\.25;/);
-  assert.match(pedestal, /state\.size\.width > 900 \? DESKTOP_PEDESTAL_X : 0/);
   assert.match(pedestal, /if \(mode === "collection"\) return null;/);
-  assert.match(pedestal, /position=\{\[pedestalX, -1\.45, 0\]\}/);
+  assert.match(pedestal, /position=\{\[0, -1\.45, 0\]\}/);
+  assert.match(canvas, /<ShowcaseStageAnchor/);
+  assert.match(canvas, /<StoreShowcasePedestal mode=\{showcaseScene\.mode\}/);
 });
 
 test("showcase removes the always-on css platform below every item", () => {
