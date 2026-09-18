@@ -215,6 +215,16 @@
   display: grid;
   place-items: center;
   overflow: hidden;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.stageObject[data-swipe-enabled="true"] {
+  cursor: grab;
+}
+
+.stageObject[data-swipe-enabled="true"]:active {
+  cursor: grabbing;
 }
 
 .previewFallback {
