@@ -17,7 +17,6 @@ export function OrderDiceCinematic({
   playerId,
   value,
   rolledAt,
-  color,
   assetRef,
   bodyColor,
   bodyHighlightColor,
