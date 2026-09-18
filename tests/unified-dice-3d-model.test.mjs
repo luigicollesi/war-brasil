@@ -39,7 +39,7 @@ test("modelo canônico preserva faces embrulhadas e aplica degradê nas quinas",
 
   assert.match(model, /diceBodyColor/);
   assert.match(model, /diceBodyHighlightColor/);
-  assert.match(model, /diceBevelFactor/);
+  assert.match(model, /diceEdgeMask/);
   assert.match(model, /diceCornerFactor/);
   assert.match(
     model,
@@ -47,7 +47,7 @@ test("modelo canônico preserva faces embrulhadas e aplica degradê nas quinas",
   );
   assert.match(
     model,
-    /mix\(diffuseColor\.rgb, diceBevelColor, diceBevelFactor\)/,
+    /mix\(diceTextureColor, diceEdgeColor, diceEdgeMask\)/,
   );
 
   assert.doesNotMatch(model, /surfaceWrappedFaces/);
@@ -113,8 +113,8 @@ test("loja e cinematic 3D usam a mesma composição visual de textura", () => {
   assert.match(visualConfig, /DICE_VISUAL_PIP_COLOR = "#0b0b0b"/);
   assert.match(visualConfig, /DICE_VISUAL_TEXTURE_RESOLUTION = 512/);
   assert.match(visualConfig, /DICE_VISUAL_TEXTURE_UV_SCALE = 0\.94/);
-  assert.match(visualConfig, /DICE_VISUAL_BEVEL_HIGHLIGHT_START = 0\.8/);
-  assert.match(visualConfig, /DICE_VISUAL_BEVEL_HIGHLIGHT_END = 0\.95/);
+  assert.match(visualConfig, /DICE_VISUAL_EDGE_DISSOLVE_START = 0\.84/);
+  assert.match(visualConfig, /DICE_VISUAL_EDGE_DISSOLVE_END = 0\.96/);
   assert.match(visualConfig, /DICE_VISUAL_CORNER_HIGHLIGHT_START = 0\.76/);
   assert.match(visualConfig, /DICE_VISUAL_CORNER_HIGHLIGHT_END = 0\.94/);
 
@@ -137,8 +137,8 @@ test("modelo canônico centraliza zoom da arte e faixa de highlight", () => {
   assert.match(assets, /texture\.repeat\.set/);
 
   for (const name of [
-    "DICE_VISUAL_BEVEL_HIGHLIGHT_START",
-    "DICE_VISUAL_BEVEL_HIGHLIGHT_END",
+    "DICE_VISUAL_EDGE_DISSOLVE_START",
+    "DICE_VISUAL_EDGE_DISSOLVE_END",
     "DICE_VISUAL_CORNER_HIGHLIGHT_START",
     "DICE_VISUAL_CORNER_HIGHLIGHT_END",
   ]) {
