@@ -58,17 +58,6 @@ function validBodyColor(bodyColor: string | null | undefined) {
   return bodyColor && BODY_COLOR_PATTERN.test(bodyColor) ? bodyColor : null;
 }
 
-function drawBodyColor(
-  context: CanvasRenderingContext2D,
-  resolution: number,
-  bodyColor: string,
-) {
-  context.save();
-  context.fillStyle = bodyColor;
-  context.fillRect(0, 0, resolution, resolution);
-  context.restore();
-}
-
 function drawProceduralBase(
   context: CanvasRenderingContext2D,
   skin: DiceSkin,
@@ -163,10 +152,7 @@ export async function createDiceFaceTexture({
 
   context.clearRect(0, 0, resolution, resolution);
 
-  const resolvedBodyColor = validBodyColor(bodyColor);
-  if (resolvedBodyColor) {
-    drawBodyColor(context, resolution, resolvedBodyColor);
-  }
+  const hasBodyColor = validBodyColor(bodyColor) !== null;
 
   let source = `procedural:${skin}`;
   if (assetRef) {
@@ -177,9 +163,9 @@ export async function createDiceFaceTexture({
     } catch {
       // Cosmetic delivery is presentation-only. A failed request degrades to
       // a network-independent base without affecting authoritative dice state.
-      if (!resolvedBodyColor) drawProceduralBase(context, skin, resolution);
+      if (!hasBodyColor) drawProceduralBase(context, skin, resolution);
     }
-  } else if (!resolvedBodyColor) {
+  } else if (!hasBodyColor) {
     drawProceduralBase(context, skin, resolution);
   }
 
