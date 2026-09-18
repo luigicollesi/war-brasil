@@ -1,0 +1,80 @@
+name: Dice Model Check
+
+on:
+  push:
+    branches:
+      - dev
+    paths:
+      - "src/components/dice-3d/**"
+      - "src/components/profile/v4/store-showcase/dice-showcase-model.tsx"
+      - "src/lib/client/dice/visual-config.ts"
+      - "src/lib/client/dice/physics/dice-physics-config.ts"
+      - "src/lib/server/economy/economy-repository.ts"
+      - "src/lib/server/economy/economy-storefront-repository.ts"
+      - "src/lib/server/economy/economy-service.ts"
+      - "tests/unified-dice-3d-model.test.mjs"
+      - "tests/dice-body-color-catalog.test.mjs"
+      - "tests/cosmetic-dice-presentation.test.mjs"
+      - ".github/workflows/dice-model-check.yml"
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Dice tests
+        run: node --test tests/unified-dice-3d-model.test.mjs tests/dice-body-color-catalog.test.mjs tests/cosmetic-dice-presentation.test.mjs
+      - name: Economy and library TypeScript
+        run: npm run test:compile
+      - name: Focused 3D TypeScript
+        run: |
+          cat > dice-model-css.d.ts <<'EOF'
+          declare module "*.module.css" {
+            const classes: Record<string, string>;
+            export default classes;
+          }
+          EOF
+          cat > tsconfig.dice-check.json <<'EOF'
+          {
+            "extends": "./tsconfig.json",
+            "compilerOptions": {
+              "noEmit": true,
+              "incremental": false
+            },
+            "include": [
+              "dice-model-css.d.ts",
+              "src/components/dice-3d/dice-model-3d.tsx",
+              "src/components/dice-3d/die-visual.tsx",
+              "src/components/dice-3d/die-3d.tsx",
+              "src/components/dice-3d/physics-die.tsx",
+              "src/components/dice-3d/dice-trajectory-replay.tsx",
+              "src/components/dice-3d/fullscreen-dice-cinematic.tsx",
+              "src/components/profile/v4/store-showcase/dice-showcase-model.tsx",
+              "src/lib/client/dice/visual-config.ts",
+              "src/lib/client/dice/physics/dice-physics-config.ts"
+            ],
+            "exclude": ["node_modules", ".test-build"]
+          }
+          EOF
+          npx tsc -p tsconfig.dice-check.json
+      - name: Lint changed dice files
+        run: >
+          npx eslint --max-warnings=0
+          src/components/dice-3d/dice-model-3d.tsx
+          src/components/dice-3d/die-visual.tsx
+          src/components/dice-3d/die-3d.tsx
+          src/components/dice-3d/physics-die.tsx
+          src/components/dice-3d/dice-trajectory-replay.tsx
+          src/components/dice-3d/fullscreen-dice-cinematic.tsx
+          src/components/profile/v4/store-showcase/dice-showcase-model.tsx
+          src/lib/client/dice/visual-config.ts
+          src/lib/client/dice/physics/dice-physics-config.ts
+          src/lib/server/economy/economy-repository.ts
+          src/lib/server/economy/economy-storefront-repository.ts
+          src/lib/server/economy/economy-service.ts
