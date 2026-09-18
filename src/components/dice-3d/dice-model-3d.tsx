@@ -4,10 +4,10 @@ import { Color, type BufferGeometry } from "three";
 import { resolveDiceBodyColors } from "@/src/lib/client/dice/body-color";
 import type { DiceFaceTextureSet } from "@/src/lib/client/dice/types";
 import {
-  DICE_VISUAL_BEVEL_HIGHLIGHT_END,
-  DICE_VISUAL_BEVEL_HIGHLIGHT_START,
   DICE_VISUAL_CORNER_HIGHLIGHT_END,
   DICE_VISUAL_CORNER_HIGHLIGHT_START,
+  DICE_VISUAL_EDGE_DISSOLVE_END,
+  DICE_VISUAL_EDGE_DISSOLVE_START,
 } from "@/src/lib/client/dice/visual-config";
 
 const DICE_EDGE_COLOR = "#111111";
@@ -78,7 +78,7 @@ export function DiceModel3D({
                 )
                 .replace(
                   "#include <map_fragment>",
-                  `#include <map_fragment>\nvec3 diceP = abs(vDiceLocalPosition) / max(diceBodyHalfSize, 0.0001);\nfloat diceMinAxis = min(diceP.x, min(diceP.y, diceP.z));\nfloat diceMaxAxis = max(diceP.x, max(diceP.y, diceP.z));\nfloat diceSecondAxis = diceP.x + diceP.y + diceP.z - diceMinAxis - diceMaxAxis;\nfloat diceBevelFactor = smoothstep(${DICE_VISUAL_BEVEL_HIGHLIGHT_START}, ${DICE_VISUAL_BEVEL_HIGHLIGHT_END}, diceSecondAxis);\nfloat diceCornerFactor = smoothstep(${DICE_VISUAL_CORNER_HIGHLIGHT_START}, ${DICE_VISUAL_CORNER_HIGHLIGHT_END}, diceMinAxis);\nvec3 diceBevelColor = mix(diceBodyColor, diceBodyHighlightColor, diceCornerFactor);\ndiffuseColor.rgb = mix(diffuseColor.rgb, diceBevelColor, diceBevelFactor);`,
+                  `#include <map_fragment>\nvec3 diceP = abs(vDiceLocalPosition) / max(diceBodyHalfSize, 0.0001);\nfloat diceMinAxis = min(diceP.x, min(diceP.y, diceP.z));\nfloat diceMaxAxis = max(diceP.x, max(diceP.y, diceP.z));\nfloat diceSecondAxis = diceP.x + diceP.y + diceP.z - diceMinAxis - diceMaxAxis;\nvec3 diceTextureColor = diffuseColor.rgb;\nfloat diceEdgeMask = smoothstep(${DICE_VISUAL_EDGE_DISSOLVE_START}, ${DICE_VISUAL_EDGE_DISSOLVE_END}, diceSecondAxis);\nfloat diceCornerFactor = smoothstep(${DICE_VISUAL_CORNER_HIGHLIGHT_START}, ${DICE_VISUAL_CORNER_HIGHLIGHT_END}, diceMinAxis);\nvec3 diceEdgeColor = mix(diceBodyColor, diceBodyHighlightColor, diceCornerFactor);\ndiffuseColor.rgb = mix(diceTextureColor, diceEdgeColor, diceEdgeMask);`,
                 );
             }}
           />
