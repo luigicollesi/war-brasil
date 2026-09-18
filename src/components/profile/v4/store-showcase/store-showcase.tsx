@@ -3,7 +3,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
 import {
   useCommandSceneState,
   useShowcaseScene,
@@ -14,6 +21,7 @@ import {
 } from "@/src/lib/client/store-showcase/purchase-showcase-offer";
 import {
   SHOWCASE_ITEM_TRANSITION_PHASE_MS,
+  resolveShowcaseSwipeDirection,
   type ShowcaseTransitionPhase,
 } from "@/src/lib/client/store-showcase/showcase-motion";
 import type {
@@ -116,6 +124,14 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
   const [transitionDirection, setTransitionDirection] = useState<-1 | 1>(1);
   const transitionTimers = useRef<number[]>([]);
   const selectedStripItemRef = useRef<HTMLButtonElement | null>(null);
+  const stageObjectRef = useRef<HTMLDivElement | null>(null);
+  const stageSwipeRef = useRef<{
+    pointerId: number;
+    startX: number;
+    startY: number;
+    committed: boolean;
+  } | null>(null);
+  const [stageCenterRatio, setStageCenterRatio] = useState(0.5);
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -131,6 +147,35 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
     },
     [],
   );
+
+  useLayoutEffect(() => {
+    const node = stageObjectRef.current;
+    if (!node) return undefined;
+
+    const updateStageCenter = () => {
+      const viewportWidth = window.innerWidth || document.documentElement.clientWidth;
+      if (viewportWidth <= 0) return;
+
+      const rect = node.getBoundingClientRect();
+      const nextCenterRatio = Math.max(
+        0,
+        Math.min(1, (rect.left + rect.width / 2) / viewportWidth),
+      );
+      setStageCenterRatio((current) =>
+        Math.abs(current - nextCenterRatio) < 0.001 ? current : nextCenterRatio,
+      );
+    };
+
+    updateStageCenter();
+    const observer = new ResizeObserver(updateStageCenter);
+    observer.observe(node);
+    window.addEventListener("resize", updateStageCenter);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateStageCenter);
+    };
+  }, []);
 
   const selectedIndexFromState = showcase.items.findIndex((item) => item.id === selectedItemId);
   const selectedIndexFromProjection = showcase.items.findIndex(
@@ -164,6 +209,7 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
     () => ({
       key: selectedItem?.id ?? showcase.id,
       mode: showcase.mode,
+      stageCenterRatio,
       render: ({ reducedMotion }: { reducedMotion: boolean }) => (
         <>
           {showcase.mode === "collection" ? (
@@ -202,6 +248,7 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
       showcase.backgroundRef,
       showcase.id,
       showcase.mode,
+      stageCenterRatio,
       transitionDirection,
       transitionPhase,
     ],
@@ -245,6 +292,44 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
     const nextIndex = (selectedIndex + direction + itemCount) % itemCount;
     const nextItem = showcase.items[nextIndex];
     if (nextItem) requestSelection(nextItem.id, direction);
+  }
+
+  function beginStageSwipe(event: ReactPointerEvent<HTMLDivElement>) {
+    if (itemCount <= 1 || transitionPhase !== "idle") return;
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+
+    stageSwipeRef.current = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      committed: false,
+    };
+    event.currentTarget.setPointerCapture?.(event.pointerId);
+  }
+
+  function updateStageSwipe(event: ReactPointerEvent<HTMLDivElement>) {
+    const swipe = stageSwipeRef.current;
+    if (!swipe || swipe.pointerId !== event.pointerId || swipe.committed) return;
+
+    const direction = resolveShowcaseSwipeDirection({
+      deltaX: event.clientX - swipe.startX,
+      deltaY: event.clientY - swipe.startY,
+    });
+    if (direction === null) return;
+
+    swipe.committed = true;
+    event.preventDefault();
+    moveSelection(direction);
+  }
+
+  function finishStageSwipe(event: ReactPointerEvent<HTMLDivElement>) {
+    const swipe = stageSwipeRef.current;
+    if (!swipe || swipe.pointerId !== event.pointerId) return;
+
+    stageSwipeRef.current = null;
+    if (event.currentTarget.hasPointerCapture?.(event.pointerId)) {
+      event.currentTarget.releasePointerCapture?.(event.pointerId);
+    }
   }
 
   async function handlePurchase(offer: StoreShowcaseOffer | null) {
@@ -373,7 +458,18 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
           ‹
         </button>
 
-        <div className={styles.stageObject} data-showcase-object-type={selectedItem.type}>
+        <div
+          ref={stageObjectRef}
+          className={styles.stageObject}
+          style={{ pointerEvents: "auto" }}
+          data-showcase-object-type={selectedItem.type}
+          data-showcase-swipe-surface
+          data-swipe-enabled={itemCount > 1 ? "true" : "false"}
+          onPointerDown={beginStageSwipe}
+          onPointerMove={updateStageSwipe}
+          onPointerUp={finishStageSwipe}
+          onPointerCancel={finishStageSwipe}
+        >
           {sceneFallback || territoryGeometryFallback ? (
             <div
               className={styles.previewFallback}
