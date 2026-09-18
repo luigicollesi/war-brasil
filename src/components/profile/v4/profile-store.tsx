@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo } from "react";
+import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
 import type {
   CosmeticCatalogItem,
   EconomyOffer,
@@ -10,6 +11,10 @@ import type {
   StorefrontCollection,
 } from "@/src/lib/economy/economy-contract";
 import { cosmeticPreviewSource } from "@/src/lib/economy/cosmetic-preview";
+import {
+  ShowcasePurchaseError,
+  purchaseShowcaseOffer,
+} from "@/src/lib/client/store-showcase/purchase-showcase-offer";
 import { ProfileCosmeticImage } from "./profile-cosmetic-image";
 import commerceStyles from "./profile-store-commerce.module.css";
 import styles from "./profile-store.module.css";
@@ -62,6 +67,36 @@ function promotionLabel(discountBps: number) {
   return `${Math.round(discountBps / 100)}% OFF`;
 }
 
+type StorePurchaseMessage = Readonly<{
+  kind: "success" | "error";
+  text: string;
+}>;
+
+function storePurchaseErrorMessage(error: ShowcasePurchaseError) {
+  if (error.code === "ECONOMY_PRICE_CHANGED") {
+    return error.currentPrice === null
+      ? "O preço mudou. Atualize a Intendência antes de tentar novamente."
+      : `O preço mudou para ${INTEGER_FORMAT.format(error.currentPrice)} CR.`;
+  }
+  if (error.code === "ECONOMY_INSUFFICIENT_BALANCE") {
+    return "Créditos insuficientes para concluir esta compra.";
+  }
+  if (error.code === "ECONOMY_OFFER_ALREADY_OWNED") {
+    return "Este conteúdo já pertence ao seu Arsenal.";
+  }
+  return error.retryable
+    ? "Não foi possível confirmar a compra. Tente novamente."
+    : error.message;
+}
+
+function shouldRefreshStoreAfterError(error: ShowcasePurchaseError) {
+  return (
+    error.code === "ECONOMY_PRICE_CHANGED" ||
+    error.code === "ECONOMY_OFFER_ALREADY_OWNED" ||
+    error.code === "ECONOMY_OFFER_UNAVAILABLE"
+  );
+}
+
 function CampaignCreditAmount({ amount }: { amount: number }) {
   return (
     <span
@@ -75,6 +110,10 @@ function CampaignCreditAmount({ amount }: { amount: number }) {
 }
 
 export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnapshot }) {
+  const router = useRouter();
+  const [pendingOfferId, setPendingOfferId] = useState<string | null>(null);
+  const [purchaseMessage, setPurchaseMessage] = useState<StorePurchaseMessage | null>(null);
+
   const featuredCollection = useMemo(
     () => storefront.collections.find((collection) => collection.featured) ?? storefront.collections[0] ?? null,
     [storefront.collections],
@@ -122,6 +161,40 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
     return offers;
   }, [collectionOfferIds, storefront.offers]);
 
+  async function handlePurchase(offer: EconomyOffer) {
+    if (offer.fullyOwned || !offer.purchasable || pendingOfferId !== null) return;
+
+    setPendingOfferId(offer.id);
+    setPurchaseMessage(null);
+
+    try {
+      await purchaseShowcaseOffer({
+        offerId: offer.id,
+        expectedPrice: offer.price,
+      });
+      setPurchaseMessage({
+        kind: "success",
+        text: `Compra de ${offer.name} confirmada. Arsenal e saldo atualizados.`,
+      });
+      router.refresh();
+    } catch (error) {
+      if (error instanceof ShowcasePurchaseError) {
+        setPurchaseMessage({
+          kind: "error",
+          text: storePurchaseErrorMessage(error),
+        });
+        if (shouldRefreshStoreAfterError(error)) router.refresh();
+      } else {
+        setPurchaseMessage({
+          kind: "error",
+          text: "A compra não pôde ser confirmada agora.",
+        });
+      }
+    } finally {
+      setPendingOfferId(null);
+    }
+  }
+
   return (
     <div className={styles.store} data-profile-v4-surface="store">
       <nav className={styles.storeNav} aria-label="Navegação da Intendência">
@@ -130,6 +203,17 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
         <a href="#store-territories">TERRITÓRIOS</a>
         <a href="#store-collections">COLEÇÕES</a>
       </nav>
+
+      {purchaseMessage ? (
+        <div
+          className={commerceStyles.purchaseFeedback}
+          data-kind={purchaseMessage.kind}
+          role="status"
+          aria-live="polite"
+        >
+          <span>{purchaseMessage.text}</span>
+        </div>
+      ) : null}
 
       <section id="store-highlights" className={styles.hero} aria-labelledby="store-title">
         <div className={styles.heroCopy}>
@@ -252,9 +336,24 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
                   </Link>
                   <div className={commerceStyles.productCommerce}>
                     <CampaignCreditAmount amount={offer.price} />
-                    <Link className={styles.inspectLink} href={showcaseHref("offer", offer.id)}>
-                      INSPECIONAR
-                    </Link>
+                    <button
+                      type="button"
+                      aria-label={`Comprar ${offer.name}`}
+                      disabled={
+                        offer.fullyOwned ||
+                        !offer.purchasable ||
+                        pendingOfferId !== null
+                      }
+                      onClick={() => void handlePurchase(offer)}
+                    >
+                      {offer.fullyOwned
+                        ? "POSSUÍDO"
+                        : pendingOfferId === offer.id
+                          ? "PROCESSANDO..."
+                          : offer.purchasable
+                            ? "COMPRAR"
+                            : "INDISPONÍVEL"}
+                    </button>
                   </div>
                 </article>
               );
@@ -324,12 +423,24 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
                   {offer ? (
                     <div className={commerceStyles.productCommerce}>
                       <CampaignCreditAmount amount={offer.price} />
-                      <Link
-                        className={styles.inspectLink}
-                        href={showcaseHref("offer", offer.id, skin.id)}
+                      <button
+                        type="button"
+                        aria-label={`Comprar ${skin.name}`}
+                        disabled={
+                          offer.fullyOwned ||
+                          !offer.purchasable ||
+                          pendingOfferId !== null
+                        }
+                        onClick={() => void handlePurchase(offer)}
                       >
-                        INSPECIONAR
-                      </Link>
+                        {offer.fullyOwned
+                          ? "POSSUÍDO"
+                          : pendingOfferId === offer.id
+                            ? "PROCESSANDO..."
+                            : offer.purchasable
+                              ? "COMPRAR"
+                              : "INDISPONÍVEL"}
+                      </button>
                     </div>
                   ) : null}
                 </article>
