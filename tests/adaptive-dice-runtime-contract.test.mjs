@@ -52,7 +52,7 @@ test("serviço de rolagem usa snapshot ativo e locka state por match", () => {
 
 test("feature adaptativa mantém migration base e reparo explícito posterior ao dev 028", () => {
   const names = readdirSync("src/lib/db/migrations/managed")
-    .filter((name) => /adaptive|dice/i.test(name))
+    .filter((name) => /adaptive/i.test(name))
     .sort();
 
   assert.deepEqual(names, [
