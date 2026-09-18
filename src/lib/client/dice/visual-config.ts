@@ -1,5 +1,7 @@
 export const DICE_VISUAL_RADIUS_RATIO = 0.15;
 export const DICE_VISUAL_SEGMENTS = 12;
+export const DICE_VISUAL_PIP_COLOR = "#0b0b0b";
+export const DICE_VISUAL_TEXTURE_RESOLUTION = 512;
 
 export type DiceVisualGeometry = Readonly<{
   size: number;
