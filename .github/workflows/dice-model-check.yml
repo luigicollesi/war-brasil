@@ -32,6 +32,12 @@ jobs:
         run: npm run test:compile
       - name: Focused 3D TypeScript
         run: |
+          cat > dice-model-css.d.ts <<'EOF'
+          declare module "*.module.css" {
+            const classes: Record<string, string>;
+            export default classes;
+          }
+          EOF
           cat > tsconfig.dice-check.json <<'EOF'
           {
             "extends": "./tsconfig.json",
@@ -40,6 +46,7 @@ jobs:
               "incremental": false
             },
             "include": [
+              "dice-model-css.d.ts",
               "src/components/dice-3d/dice-model-3d.tsx",
               "src/components/dice-3d/die-visual.tsx",
               "src/components/dice-3d/die-3d.tsx",
