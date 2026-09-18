@@ -60,3 +60,21 @@ test("DieVisual legado delega ao modelo canônico sem manter renderer paralelo",
   assert.doesNotMatch(legacy, /meshPhysicalMaterial/);
   assert.doesNotMatch(legacy, /onBeforeCompile/);
 });
+
+test("jogo compõe a textura 3D com a mesma bodyColor usada pela loja", () => {
+  const showcase = source(
+    "src/components/profile/v4/store-showcase/dice-showcase-model.tsx",
+  );
+  const fullscreen = source(
+    "src/components/dice-3d/fullscreen-dice-cinematic.tsx",
+  );
+
+  assert.match(
+    showcase,
+    /useDiceFaceTextures\(\{[\s\S]*skin,[\s\S]*assetRef,[\s\S]*bodyColor,/,
+  );
+  assert.match(
+    fullscreen,
+    /useDiceFaceTextures\(\{[\s\S]*skin,[\s\S]*pipColor,[\s\S]*assetRef,[\s\S]*bodyColor,[\s\S]*\}\)/,
+  );
+});
