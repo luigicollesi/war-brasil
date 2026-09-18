@@ -3,7 +3,6 @@
 import { useMemo } from "react";
 import { validateDiceValues } from "@/src/lib/client/dice/dice-values";
 import type { DiceValue } from "@/src/lib/client/dice/types";
-import { playerColorHex } from "@/src/lib/client/player-color";
 import type { GameBattle } from "@/src/lib/game-contract";
 import type { PlayerColor } from "@/src/lib/lobby";
 import { FullscreenDiceCinematic } from "./fullscreen-dice-cinematic";
@@ -65,7 +64,6 @@ export function BattleDiceCinematic({
       values={values}
       seed={seed}
       skin={side}
-      pipColor={playerColorHex(color)}
       assetRef={assetRef}
       bodyColor={bodyColor}
       bodyHighlightColor={bodyHighlightColor}
