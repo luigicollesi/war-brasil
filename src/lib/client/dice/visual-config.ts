@@ -11,11 +11,16 @@ export const DICE_VISUAL_TEXTURE_RESOLUTION = 512;
 export const DICE_VISUAL_TEXTURE_UV_SCALE = 0.94;
 
 /**
- * Rounded-edge highlight thresholds, normalized against half the die size.
- * Raise START values to confine the body/highlight transition closer to the edge.
+ * Edge dissolve thresholds, normalized against half the die size.
+ * Outside this narrow band the WebP color is preserved exactly.
+ * Raise START to make the colored edge thinner.
  */
-export const DICE_VISUAL_BEVEL_HIGHLIGHT_START = 0.8;
-export const DICE_VISUAL_BEVEL_HIGHLIGHT_END = 0.95;
+export const DICE_VISUAL_EDGE_DISSOLVE_START = 0.84;
+export const DICE_VISUAL_EDGE_DISSOLVE_END = 0.96;
+
+/**
+ * Controls only the color progression inside the already-masked edge/corner.
+ */
 export const DICE_VISUAL_CORNER_HIGHLIGHT_START = 0.76;
 export const DICE_VISUAL_CORNER_HIGHLIGHT_END = 0.94;
 
