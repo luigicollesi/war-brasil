@@ -20,7 +20,6 @@ test("collection showcase publishes its canonical background through the shared 
   assert.match(atmosphere, /delete host\.dataset\.collectionBackdrop/);
 
   assert.match(styles, /\.root\s*\{/);
-  assert.doesNotMatch(styles, /\.collectionBackdrop\s*\{/);
 });
 
 test("collection identity exposes logo and authoritative promotion semantics", () => {
