@@ -1,4 +1,5 @@
 import type { DiceVector3 } from "../types";
+import { diceVisualGeometry } from "../visual-config";
 
 export type DicePhysicsConfig = {
   timeStep: number;
@@ -23,12 +24,14 @@ export type DicePhysicsConfig = {
   maxSimulationSteps: number;
 };
 
+const DICE_GAME_VISUAL_GEOMETRY = diceVisualGeometry(1);
+
 export const DICE_PHYSICS: DicePhysicsConfig = {
   timeStep: 1 / 60,
   gravity: [0, -18, 0],
-  dieSize: 1,
-  dieRadius: 0.1,
-  dieSegments: 8,
+  dieSize: DICE_GAME_VISUAL_GEOMETRY.size,
+  dieRadius: DICE_GAME_VISUAL_GEOMETRY.radius,
+  dieSegments: DICE_GAME_VISUAL_GEOMETRY.segments,
   colliderHalfExtent: 0.455,
   colliderBorderRadius: 0.07,
   friction: 0.72,
