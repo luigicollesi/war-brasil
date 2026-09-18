@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { DieVisual } from "@/src/components/dice-3d/die-visual";
+import { DiceModel3D } from "@/src/components/dice-3d/dice-model-3d";
 import { useDiceFaceTextures } from "@/src/components/dice-3d/use-dice-face-textures";
 import { getSharedRoundedDieGeometry } from "@/src/lib/client/dice/dice-assets-manager";
 import type { DiceSkin } from "@/src/lib/client/dice/types";
@@ -46,13 +46,12 @@ export function DiceShowcaseModel({
 
   return (
     <group name="StoreShowcaseDie" position={[0, 0.08, 0]} scale={1.08}>
-      <DieVisual
+      <DiceModel3D
         geometry={geometry}
         textures={textures}
         size={1.9}
         radius={0.285}
         bodyColor={bodyColor}
-        surfaceWrappedFaces
       />
     </group>
   );
