@@ -8,13 +8,9 @@
   gap: clamp(42px, 5vw, 72px);
 }
 
-.store > :not(.storeAtmosphere) {
-  z-index: 1;
-}
-
 .storeAtmosphere {
   position: absolute;
-  z-index: 0;
+  z-index: -1;
   inset: -56px -5vw -96px;
   overflow: hidden;
   pointer-events: none;
