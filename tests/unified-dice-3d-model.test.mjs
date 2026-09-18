@@ -146,3 +146,20 @@ test("modelo canônico centraliza zoom da arte e faixa de highlight", () => {
     assert.match(model, new RegExp(name));
   }
 });
+
+
+test("borda dissolve sobre a WebP sem alterar a arte fora da transição", () => {
+  const visualConfig = source("src/lib/client/dice/visual-config.ts");
+  const model = source("src/components/dice-3d/dice-model-3d.tsx");
+
+  assert.match(visualConfig, /DICE_VISUAL_EDGE_DISSOLVE_START = 0\.84/);
+  assert.match(visualConfig, /DICE_VISUAL_EDGE_DISSOLVE_END = 0\.96/);
+
+  assert.match(model, /vec3 diceTextureColor = diffuseColor\.rgb/);
+  assert.match(model, /float diceEdgeMask = smoothstep/);
+  assert.match(model, /vec3 diceEdgeColor = mix\(diceBodyColor, diceBodyHighlightColor, diceCornerFactor\)/);
+  assert.match(
+    model,
+    /diffuseColor\.rgb = mix\(diceTextureColor, diceEdgeColor, diceEdgeMask\)/,
+  );
+});
