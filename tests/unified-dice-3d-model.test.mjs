@@ -69,14 +69,12 @@ test("jogo compõe a textura 3D com a mesma bodyColor usada pela loja", () => {
     "src/components/dice-3d/fullscreen-dice-cinematic.tsx",
   );
 
-  assert.match(
-    showcase,
-    /useDiceFaceTextures\(\{\s*skin,\s*assetRef,\s*bodyColor,/,
-  );
-  assert.match(
-    fullscreen,
-    /useDiceFaceTextures\(\{\s*skin,\s*pipColor,\s*assetRef,\s*bodyColor\s*\}\)/,
-  );
+  for (const consumer of [showcase, fullscreen]) {
+    assert.match(consumer, /useDiceFaceTextures/);
+    assert.match(consumer, /bodyColor/);
+    assert.match(consumer, /DICE_VISUAL_PIP_COLOR/);
+    assert.match(consumer, /DICE_VISUAL_TEXTURE_RESOLUTION/);
+  }
 });
 
 test("loja e jogo derivam a mesma geometria visual canônica", () => {
