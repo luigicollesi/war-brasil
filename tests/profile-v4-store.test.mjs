@@ -155,3 +155,51 @@ test("PROFILE V4 collection banners keep the full artwork and use wider cards", 
     /\.collectionBannerButton\s*>\s*img\s*\{[\s\S]*height:\s*auto;[\s\S]*object-fit:\s*contain;/,
   );
 });
+
+
+test("PROFILE V4 store V1 presents sections and products as one borderless continuous surface", async () => {
+  const styles = await source("src/components/profile/v4/profile-store.module.css");
+  const commerce = await source("src/components/profile/v4/profile-store-commerce.module.css");
+
+  assert.match(
+    styles,
+    /\.hero,\s*[\s\S]*?\.catalog,\s*[\s\S]*?\.treasury\s*\{[\s\S]*?border:\s*0;[\s\S]*?background:\s*transparent;[\s\S]*?box-shadow:\s*none;/,
+  );
+  assert.match(
+    styles,
+    /\.productCard\s*\{[\s\S]*?border:\s*0;[\s\S]*?background:\s*transparent;/,
+  );
+  assert.match(
+    styles,
+    /\.collectionBannerCard\s*\{[\s\S]*?border:\s*0;[\s\S]*?background:\s*transparent;/,
+  );
+  assert.match(styles, /\.productCopy\s*\{[\s\S]*?border-top:\s*0;/);
+  assert.match(styles, /\.collectionBannerMeta\s*\{[\s\S]*?border-top:\s*0;/);
+  assert.match(styles, /\.storeNav\s*\{[\s\S]*?border:\s*0;/);
+  assert.match(
+    commerce,
+    /\.productCommerce\s*\{[\s\S]*?border-top:\s*0;[\s\S]*?background:\s*transparent;/,
+  );
+  assert.match(
+    commerce,
+    /\.creditPack\s*\{[\s\S]*?border:\s*0;[\s\S]*?background:\s*transparent;/,
+  );
+});
+
+test("PROFILE V4 store V1 uses spacing and image lift instead of card outlines for hierarchy", async () => {
+  const styles = await source("src/components/profile/v4/profile-store.module.css");
+
+  assert.match(styles, /\.store\s*\{[\s\S]*?gap:\s*clamp\(/);
+  assert.match(
+    styles,
+    /\.productVisual img\s*\{[\s\S]*?transition:[^;}]*transform[^;}]*filter/,
+  );
+  assert.match(
+    styles,
+    /\.productCard:hover\s+\.productVisual img\s*\{[\s\S]*?transform:\s*translateY\(-3px\)\s+scale\(1\.015\)/,
+  );
+  assert.doesNotMatch(
+    styles,
+    /\.collectionBannerCard\[data-featured="true"\]\s*\{[\s\S]*?border-color:/,
+  );
+});
