@@ -255,3 +255,18 @@ test("PROFILE V4 store V2 gives hero and catalog sections static 2.5D depth cues
   assert.doesNotMatch(styles, /\.heroVisual::before,[\s\S]*?border:\s*1px solid/);
   assert.match(styles, /@media\s*\(max-width:\s*520px\)[\s\S]*\.atmospherePlateSecondary\s*\{[\s\S]*display:\s*none/);
 });
+
+
+test("PROFILE V4 V2 atmosphere stays behind the sticky store navigation without flattening sibling z-indexes", async () => {
+  const styles = await source("src/components/profile/v4/profile-store.module.css");
+
+  assert.match(
+    styles,
+    /\.storeAtmosphere\s*\{[\s\S]*?z-index:\s*-1;/,
+  );
+  assert.doesNotMatch(
+    styles,
+    /\.store\s*>\s*:not\(\.storeAtmosphere\)\s*\{[\s\S]*?z-index:/,
+  );
+  assert.match(styles, /\.storeNav\s*\{[\s\S]*?z-index:\s*8;/);
+});
