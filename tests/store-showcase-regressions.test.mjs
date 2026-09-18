@@ -55,21 +55,19 @@ test("showcase dice reads catalog body_color and applies it to texture and physi
   assert.match(textureManager, /options\.bodyColor \?\? "default-body"/);
 });
 
-test("dice face paints body_color below transparent cosmetic artwork", () => {
-  const baseColorIndex = textureCreator.indexOf(
-    "drawBodyColor(context, resolution, resolvedBodyColor)",
-  );
-  const artworkIndex = textureCreator.indexOf(
-    "context.drawImage(image, 0, 0, resolution, resolution)",
-  );
-
-  assert.ok(baseColorIndex >= 0, "body color base was not drawn");
-  assert.ok(artworkIndex >= 0, "cosmetic artwork was not drawn");
-  assert.ok(
-    baseColorIndex < artworkIndex,
-    "body color must be painted before transparent cosmetic artwork",
+test("dice face preserves cosmetic alpha so the shader reveals the physical body", () => {
+  assert.doesNotMatch(textureCreator, /drawBodyColor/);
+  assert.match(
+    textureCreator,
+    /context\.drawImage\(image, 0, 0, resolution, resolution\)/,
   );
   assert.match(textureCreator, /BODY_COLOR_PATTERN = \/\^#\[0-9a-f\]\{6\}\$\/i/);
+
+  assert.match(diceModel, /float diceArtworkAlpha = diffuseColor\.a/);
+  assert.match(
+    diceModel,
+    /diffuseColor\.rgb = mix\(diceBodySurfaceColor, diceArtworkColor, diceArtworkAlpha\)/,
+  );
 });
 
 test("3d texture delivery stays same-origin instead of redirecting the browser to R2", () => {
