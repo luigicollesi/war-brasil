@@ -21,7 +21,7 @@ import type {
   PredeterminedDiceRoll,
 } from "@/src/lib/client/dice/types";
 import { DICE_PHYSICS } from "@/src/lib/client/dice/physics/dice-physics-config";
-import { DieVisual } from "./die-visual";
+import { DiceModel3D } from "./dice-model-3d";
 
 function smoothStep(value: number) {
   const t = Math.min(1, Math.max(0, value));
@@ -290,7 +290,7 @@ export function DiceTrajectoryReplay({
             scale={initialScale}
           >
             <group quaternion={remap.rotation} scale={visualScale}>
-              <DieVisual
+              <DiceModel3D
                 geometry={geometry}
                 textures={textures}
                 size={DICE_PHYSICS.dieSize}
