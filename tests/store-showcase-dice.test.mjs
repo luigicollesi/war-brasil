@@ -12,7 +12,8 @@ test("showcase die reuses canonical geometry and face texture pipeline", () => {
   assert.match(model, /getSharedRoundedDieGeometry/);
   assert.match(model, /useDiceFaceTextures/);
   assert.match(model, /assetRef/);
-  assert.match(model, /pipColor:\s*["']#0b0b0b["']/);
+  assert.match(model, /pipColor:\s*DICE_VISUAL_PIP_COLOR/);
+  assert.match(model, /resolution:\s*DICE_VISUAL_TEXTURE_RESOLUTION/);
 
   assert.doesNotMatch(model, /<boxGeometry\b/);
   assert.doesNotMatch(model, /createRoundedDieGeometry/);
