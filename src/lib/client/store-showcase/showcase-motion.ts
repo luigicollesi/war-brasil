@@ -1,7 +1,6 @@
 export const SHOWCASE_IDLE_REVOLUTION_SECONDS = 8;
-export const SHOWCASE_INTERACTION_RESUME_MS = 900;
-export const SHOWCASE_DRAG_RADIANS_PER_PIXEL = 0.008;
-export const SHOWCASE_MAX_PITCH = Math.PI * 0.28;
+export const SHOWCASE_SWIPE_THRESHOLD_PX = 52;
+export const SHOWCASE_SWIPE_AXIS_DOMINANCE = 1.15;
 export const SHOWCASE_ITEM_TRANSITION_MS = 300;
 export const SHOWCASE_ITEM_TRANSITION_PHASE_MS = SHOWCASE_ITEM_TRANSITION_MS / 2;
 
@@ -28,22 +27,18 @@ export function showcaseTransitionProgress({
   return 1 - Math.pow(1 - linear, 3);
 }
 
-export function resolveShowcaseDragRotation({
-  yaw,
-  pitch,
+export function resolveShowcaseSwipeDirection({
   deltaX,
   deltaY,
 }: {
-  yaw: number;
-  pitch: number;
   deltaX: number;
   deltaY: number;
-}) {
-  return {
-    yaw: yaw + deltaX * SHOWCASE_DRAG_RADIANS_PER_PIXEL,
-    pitch: Math.max(
-      -SHOWCASE_MAX_PITCH,
-      Math.min(SHOWCASE_MAX_PITCH, pitch + deltaY * SHOWCASE_DRAG_RADIANS_PER_PIXEL),
-    ),
-  };
+}): -1 | 1 | null {
+  const horizontalDistance = Math.abs(deltaX);
+  const verticalDistance = Math.abs(deltaY);
+
+  if (horizontalDistance < SHOWCASE_SWIPE_THRESHOLD_PX) return null;
+  if (horizontalDistance < verticalDistance * SHOWCASE_SWIPE_AXIS_DOMINANCE) return null;
+
+  return deltaX < 0 ? 1 : -1;
 }
