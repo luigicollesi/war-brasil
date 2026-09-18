@@ -252,7 +252,10 @@ test("PROFILE V4 store V2 gives hero and catalog sections static 2.5D depth cues
   assert.match(styles, /\[data-store-zone="territories"\]::after\s*\{[\s\S]*radial-gradient/);
   assert.match(styles, /\[data-store-zone="collections"\]::after\s*\{[\s\S]*(?:linear|radial)-gradient/);
   assert.match(styles, /\.heroVisual::before[\s\S]*clip-path:\s*polygon\(/);
-  assert.doesNotMatch(styles, /\.heroVisual::before,[\s\S]*?border:\s*1px solid/);
+  assert.doesNotMatch(
+    styles,
+    /\.heroVisual::before,\s*\.heroVisual::after\s*\{[^}]*border:/,
+  );
   assert.match(styles, /@media\s*\(max-width:\s*520px\)[\s\S]*\.atmospherePlateSecondary\s*\{[\s\S]*display:\s*none/);
 });
 
