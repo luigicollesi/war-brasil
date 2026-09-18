@@ -95,14 +95,12 @@ function WebGLContextGuard({ onUnavailable }: { onUnavailable: () => void }) {
 
 function SceneClearDirector({ transparent }: { transparent: boolean }) {
   const gl = useThree((state) => state.gl);
-  const scene = useThree((state) => state.scene);
   const invalidate = useThree((state) => state.invalidate);
 
   useEffect(() => {
-    scene.background = null;
     gl.setClearColor(COMMAND_FOUNDATION_TOKENS.color.void, transparent ? 0 : 1);
     invalidate();
-  }, [gl, invalidate, scene, transparent]);
+  }, [gl, invalidate, transparent]);
 
   return null;
 }
