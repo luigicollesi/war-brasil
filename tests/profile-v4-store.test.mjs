@@ -262,11 +262,11 @@ test("PROFILE V4 V2 atmosphere stays behind the sticky store navigation without 
 
   assert.match(
     styles,
-    /\.storeAtmosphere\s*\{[\s\S]*?z-index:\s*-1;/,
+    /\.storeAtmosphere\s*\{[^}]*z-index:\s*-1;/,
   );
   assert.doesNotMatch(
     styles,
-    /\.store\s*>\s*:not\(\.storeAtmosphere\)\s*\{[\s\S]*?z-index:/,
+    /\.store\s*>\s*:not\(\.storeAtmosphere\)\s*\{[^}]*z-index:/,
   );
   assert.match(styles, /\.storeNav\s*\{[\s\S]*?z-index:\s*8;/);
 });
