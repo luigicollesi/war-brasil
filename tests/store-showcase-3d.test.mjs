@@ -42,11 +42,12 @@ test("showcase scene has fixed-camera exhibition controls without Rapier", () =>
   assert.match(motion, /idleAngularVelocity/);
 });
 
-test("pedestal identity is stable and lighting switches between standard and collection modes", () => {
+test("pedestal identity is stable and collection atmosphere stays outside the shared light rig", () => {
   assert.match(pedestal, /name="StoreShowcasePedestal"/);
   assert.match(pedestal, /mode === "collection"/);
   assert.match(canvas, /StoreShowcasePedestal/);
-  assert.match(canvas, /showcaseScene\.mode === "collection"/);
-  assert.match(canvas, /SHOWCASE_COLLECTION_LIGHT/);
   assert.match(canvas, /SHOWCASE_STANDARD_LIGHT/);
+  assert.match(canvas, /alpha: true/);
+  assert.match(canvas, /SceneClearDirector/);
+  assert.doesNotMatch(canvas, /SHOWCASE_COLLECTION_LIGHT/);
 });
