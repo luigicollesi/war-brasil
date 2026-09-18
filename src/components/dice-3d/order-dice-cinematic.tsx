@@ -1,6 +1,5 @@
 "use client";
 
-import { playerColorHex } from "@/src/lib/client/player-color";
 import {
   ORDER_ROLL_DICE_ANIMATION_MS,
   ORDER_ROLL_RESULT_HOLD_MS,
@@ -49,7 +48,6 @@ export function OrderDiceCinematic({
       values={[value]}
       seed={seed}
       skin="neutral"
-      pipColor={playerColorHex(color)}
       assetRef={assetRef}
       bodyColor={bodyColor}
       bodyHighlightColor={bodyHighlightColor}
