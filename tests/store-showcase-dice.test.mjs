@@ -27,3 +27,44 @@ test("showcase routes dice items into the canonical 3d die without changing the 
   assert.match(showcase, /slot=\{selectedItem\.slot\}/);
   assert.doesNotMatch(model, /OrbitControls/);
 });
+
+
+test("showcase dice uses canonical unit geometry and presentation presets for framing", () => {
+  const presentation = read("src/lib/client/store-showcase/showcase-presentation.ts");
+  const controller = read(
+    "src/components/profile/v4/store-showcase/showcase-object-controller.tsx",
+  );
+  const canvas = read("src/components/pre-game/foundation/command-scene-canvas.tsx");
+  const runtime = read(
+    "src/components/pre-game/foundation/pre-game-command-runtime.tsx",
+  );
+
+  assert.match(model, /const SHOWCASE_DIE_SIZE = 1;/);
+  assert.doesNotMatch(model, /scale=\{1\.08\}/);
+
+  assert.match(presentation, /type ShowcaseObjectType = "dice" \| "territory"/);
+  assert.match(presentation, /dice:\s*\{/);
+  assert.match(presentation, /territory:\s*\{/);
+  assert.match(presentation, /objectScale:/);
+  assert.match(presentation, /cameraFov:/);
+  assert.match(presentation, /cameraDistance:/);
+
+  assert.match(runtime, /objectType:\s*ShowcaseObjectType/);
+  assert.match(controller, /resolveShowcasePresentation\(objectType, compact\)/);
+  assert.doesNotMatch(controller, /DESKTOP_SHOWCASE_SCALE/);
+  assert.match(canvas, /resolveShowcasePresentation\(objectType, compact\)/);
+  assert.match(canvas, /ShowcaseCameraDirector objectType=\{showcaseScene\.objectType\}/);
+});
+
+test("dice framing preset is farther and narrower than the legacy showcase camera", () => {
+  const presentation = read("src/lib/client/store-showcase/showcase-presentation.ts");
+
+  assert.match(
+    presentation,
+    /dice:\s*\{[\s\S]*desktop:\s*\{[\s\S]*objectScale:\s*1\.55,[\s\S]*cameraFov:\s*30,[\s\S]*cameraDistance:\s*6\.4/,
+  );
+  assert.match(
+    presentation,
+    /dice:\s*\{[\s\S]*compact:\s*\{[\s\S]*objectScale:\s*1\.65,[\s\S]*cameraFov:\s*34,[\s\S]*cameraDistance:\s*5\.8/,
+  );
+});
