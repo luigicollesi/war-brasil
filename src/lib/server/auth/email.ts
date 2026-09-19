@@ -4,8 +4,15 @@ import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { after } from "next/server";
+import {
+  readAuthServerEnvironment,
+  type AuthEmailTransport,
+} from "./environment";
 
 const RESEND_EMAIL_ENDPOINT = "https://api.resend.com/emails";
+const GOOGLE_OAUTH_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
+const GMAIL_SEND_ENDPOINT =
+  "https://gmail.googleapis.com/gmail/v1/users/me/messages/send";
 const EMAIL_DELIVERY_TIMEOUT_MS = 8_000;
 
 export type AuthEmailMessage = {
@@ -19,6 +26,24 @@ type AuthEmailSinkMessage = AuthEmailMessage & {
   capturedAt: string;
 };
 
+type ResendAuthEmailTransport = {
+  kind: "resend";
+  from: string;
+  apiKey: string;
+};
+
+type GmailOAuthAuthEmailTransport = {
+  kind: "gmail-oauth";
+  from: string;
+  clientId: string;
+  clientSecret: string;
+  refreshToken: string;
+};
+
+type ResolvedAuthEmailTransport =
+  | ResendAuthEmailTransport
+  | GmailOAuthAuthEmailTransport;
+
 function escapeHtml(value: string) {
   return value
     .replace(/&/g, "&amp;")
@@ -26,6 +51,10 @@ function escapeHtml(value: string) {
     .replace(/>/g, "&gt;")
     .replace(/\"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+function safeHeaderValue(value: string) {
+  return value.replace(/[\r\n]+/g, " ").trim();
 }
 
 export function isNonDeliverableAuthAddress(value: string) {
@@ -40,55 +69,98 @@ export function isNonDeliverableAuthAddress(value: string) {
 function buildActionEmail({
   actionLabel,
   description,
+  eyebrow,
+  headline,
   subject,
   url,
 }: {
   actionLabel: string;
   description: string;
+  eyebrow: string;
+  headline: string;
   subject: string;
   url: string;
 }) {
   const safeUrl = escapeHtml(url);
+  const safeActionLabel = escapeHtml(actionLabel);
+  const safeDescription = escapeHtml(description);
+  const safeEyebrow = escapeHtml(eyebrow);
+  const safeHeadline = escapeHtml(headline);
+  const safeSubject = escapeHtml(subject);
+
   const text = [
-    "WAR-BRASIL",
+    "WAR BRASIL // IDENTIDADE DE COMANDO",
+    "",
+    headline,
     "",
     description,
     "",
-    url,
+    `${actionLabel}: ${url}`,
     "",
     "O link é válido por 1 hora.",
     "Se você não solicitou esta ação, ignore esta mensagem.",
   ].join("\n");
+
   const html = `<!doctype html>
 <html lang="pt-BR">
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <title>${safeSubject}</title>
   </head>
-  <body style="margin:0;background:#101512;color:#efe4c9;font-family:Arial,Helvetica,sans-serif;">
-    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;background:#101512;">
+  <body style="margin:0;background:#070d0a;color:#eee8da;font-family:Arial,Helvetica,sans-serif;">
+    <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;">${safeDescription}</div>
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;border-collapse:collapse;background:#070d0a;">
       <tr>
-        <td align="center" style="padding:32px 16px;">
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:620px;border-collapse:separate;background:#182019;border:1px solid #92733b;border-radius:16px;overflow:hidden;">
+        <td align="center" style="padding:36px 16px;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;max-width:640px;border-collapse:separate;border-spacing:0;background:#101914;border:1px solid #5f4c28;border-radius:18px;overflow:hidden;box-shadow:0 24px 64px rgba(0,0,0,.34);">
             <tr>
-              <td style="padding:22px 28px;border-bottom:1px solid #92733b;background:#111713;">
-                <div style="font-size:11px;font-weight:800;letter-spacing:3px;color:#c5a45c;">WAR-BRASIL</div>
-                <div style="margin-top:8px;font-size:24px;font-weight:800;color:#efe4c9;">${escapeHtml(subject)}</div>
-              </td>
-            </tr>
-            <tr>
-              <td style="padding:36px 28px;">
-                <p style="margin:0;font-size:16px;line-height:1.7;color:#d8d1c1;">${escapeHtml(description)}</p>
-                <table role="presentation" cellspacing="0" cellpadding="0" style="margin-top:28px;">
+              <td style="padding:24px 30px;border-bottom:1px solid #3f3520;background:linear-gradient(135deg,#14271c,#0c1510);">
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                   <tr>
-                    <td>
-                      <a href="${safeUrl}" style="display:inline-block;padding:14px 22px;border-radius:4px;background:#c5a45c;color:#111713;text-decoration:none;font-size:13px;font-weight:900;letter-spacing:1.5px;">${escapeHtml(actionLabel)}</a>
+                    <td valign="middle">
+                      <div style="font-size:10px;font-weight:900;letter-spacing:3px;color:#d0aa57;">WAR BRASIL // IDENTIDADE DE COMANDO</div>
+                      <div style="margin-top:8px;font-size:13px;font-weight:700;letter-spacing:1.8px;color:#8fa58f;">PROTOCOLO DE AUTENTICAÇÃO</div>
+                    </td>
+                    <td width="54" align="right" valign="middle">
+                      <div style="width:44px;height:44px;line-height:44px;text-align:center;border:1px solid #d0aa57;color:#d0aa57;font-weight:900;letter-spacing:1px;">WB</div>
                     </td>
                   </tr>
                 </table>
-                <p style="margin:28px 0 0;font-size:13px;line-height:1.7;color:#a9a293;">Se o botão não funcionar, copie e cole este link no navegador:</p>
-                <p style="margin:8px 0 0;font-size:12px;line-height:1.6;word-break:break-all;"><a href="${safeUrl}" style="color:#d3b66e;">${safeUrl}</a></p>
-                <p style="margin:24px 0 0;font-size:12px;line-height:1.7;color:#8f897d;">O link é válido por 1 hora. Se você não solicitou esta ação, ignore esta mensagem.</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:38px 30px 34px;">
+                <div style="font-size:11px;font-weight:900;letter-spacing:2.4px;color:#d0aa57;">${safeEyebrow}</div>
+                <h1 style="margin:10px 0 0;font-size:32px;line-height:1.08;color:#f3ead6;letter-spacing:-.7px;">${safeHeadline}</h1>
+                <p style="margin:18px 0 0;font-size:16px;line-height:1.75;color:#c9c2b2;">${safeDescription}</p>
+
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:30px;">
+                  <tr>
+                    <td align="center">
+                      <a href="${safeUrl}" style="display:inline-block;padding:16px 28px;border:1px solid #e0bd6c;border-radius:5px;background:#d0aa57;color:#101913;text-decoration:none;font-size:13px;font-weight:900;letter-spacing:1.6px;box-shadow:0 10px 28px rgba(208,170,87,.16);">${safeActionLabel}</a>
+                    </td>
+                  </tr>
+                </table>
+
+                <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:30px;border-collapse:separate;background:#0b120e;border:1px solid #273429;border-radius:8px;">
+                  <tr>
+                    <td style="padding:16px 18px;">
+                      <div style="font-size:10px;font-weight:900;letter-spacing:1.7px;color:#8fa58f;">PROTOCOLO DE SEGURANÇA</div>
+                      <div style="margin-top:7px;font-size:12px;line-height:1.7;color:#9e988b;">O link é válido por 1 hora e só deve ser usado por você. Se você não iniciou esta solicitação, nenhuma ação é necessária.</div>
+                    </td>
+                  </tr>
+                </table>
+
+                <p style="margin:26px 0 0;font-size:12px;line-height:1.7;color:#8d877b;">Se o botão não funcionar, copie e cole este link no navegador:</p>
+                <p style="margin:7px 0 0;font-size:11px;line-height:1.6;word-break:break-all;"><a href="${safeUrl}" style="color:#d0aa57;">${safeUrl}</a></p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:18px 30px;border-top:1px solid #273429;background:#0b120e;color:#666f66;font-size:10px;line-height:1.6;letter-spacing:.8px;">
+                COMANDO TERRITORIAL // CANAL AUTOMÁTICO DE AUTENTICAÇÃO<br>
+                Não responda a esta mensagem.
               </td>
             </tr>
           </table>
@@ -103,9 +175,12 @@ function buildActionEmail({
 
 export function buildVerificationEmail(url: string) {
   return buildActionEmail({
-    actionLabel: "VERIFICAR EMAIL",
-    description: "Confirme seu email para liberar sua identidade de Comando.",
-    subject: "Verificação de email",
+    actionLabel: "CONFIRMAR EMAIL",
+    description:
+      "Confirme este endereço para ativar sua identidade, concluir o cadastro e liberar o acesso ao Comando do WAR Brasil.",
+    eyebrow: "NOVO REGISTRO // VALIDAÇÃO",
+    headline: "Bem-vindo ao Comando",
+    subject: "Confirme seu email | WAR Brasil",
     url,
   });
 }
@@ -113,8 +188,11 @@ export function buildVerificationEmail(url: string) {
 export function buildPasswordResetEmail(url: string) {
   return buildActionEmail({
     actionLabel: "REDEFINIR SENHA",
-    description: "Use este link para definir uma nova senha para sua conta War-Brasil.",
-    subject: "Redefinição de senha",
+    description:
+      "Autorize a redefinição de credencial para criar uma nova senha de acesso à sua conta WAR Brasil.",
+    eyebrow: "RECUPERAÇÃO // CREDENCIAL",
+    headline: "Redefina seu acesso",
+    subject: "Redefinição de senha | WAR Brasil",
     url,
   });
 }
@@ -142,13 +220,37 @@ async function captureAuthEmailForTest(message: AuthEmailMessage) {
   return true;
 }
 
-function productionTransportConfig() {
-  const from = process.env.AUTH_EMAIL_FROM?.trim();
-  const apiKey = process.env.EMAIL_TRANSPORT_SECRET?.trim();
-  if (!from || !apiKey) {
-    throw new Error("Transportador de email de autenticação não configurado.");
+export function resolveAuthEmailTransport(): ResolvedAuthEmailTransport | null {
+  const environment = readAuthServerEnvironment();
+  const from = environment.email.from;
+  const transport = environment.email.transport as AuthEmailTransport | undefined;
+
+  if (!from) return null;
+
+  if (
+    transport === "gmail-oauth" &&
+    environment.email.googleClientId &&
+    environment.email.googleClientSecret &&
+    environment.email.googleRefreshToken
+  ) {
+    return {
+      kind: "gmail-oauth",
+      from,
+      clientId: environment.email.googleClientId,
+      clientSecret: environment.email.googleClientSecret,
+      refreshToken: environment.email.googleRefreshToken,
+    };
   }
-  return { from, apiKey };
+
+  if (transport === "resend" && environment.email.transportSecret) {
+    return {
+      kind: "resend",
+      from,
+      apiKey: environment.email.transportSecret,
+    };
+  }
+
+  return null;
 }
 
 async function deliveryIdempotencyKey(message: AuthEmailMessage) {
@@ -162,8 +264,10 @@ async function deliveryIdempotencyKey(message: AuthEmailMessage) {
   return `war-auth-${hex}`;
 }
 
-async function deliverWithResend(message: AuthEmailMessage) {
-  const { from, apiKey } = productionTransportConfig();
+async function deliverWithResend(
+  message: AuthEmailMessage,
+  transport: ResendAuthEmailTransport,
+) {
   const idempotencyKey = await deliveryIdempotencyKey(message);
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), EMAIL_DELIVERY_TIMEOUT_MS);
@@ -174,12 +278,12 @@ async function deliverWithResend(message: AuthEmailMessage) {
       method: "POST",
       signal: controller.signal,
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${transport.apiKey}`,
         "Content-Type": "application/json",
         "Idempotency-Key": idempotencyKey,
       },
       body: JSON.stringify({
-        from,
+        from: transport.from,
         to: [message.to],
         subject: message.subject,
         html: message.html,
@@ -195,6 +299,122 @@ async function deliverWithResend(message: AuthEmailMessage) {
   }
 }
 
+async function requestGmailAccessToken(
+  transport: GmailOAuthAuthEmailTransport,
+) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), EMAIL_DELIVERY_TIMEOUT_MS);
+  timeout.unref?.();
+
+  try {
+    const body = new URLSearchParams({
+      client_id: transport.clientId,
+      client_secret: transport.clientSecret,
+      refresh_token: transport.refreshToken,
+      grant_type: "refresh_token",
+    });
+    const response = await fetch(GOOGLE_OAUTH_TOKEN_ENDPOINT, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body,
+    });
+
+    const payload = (await response.json().catch(() => null)) as
+      | { access_token?: string }
+      | null;
+    if (!response.ok || !payload?.access_token) {
+      throw new Error(
+        `Google OAuth respondeu HTTP ${response.status} ao renovar credencial de email.`,
+      );
+    }
+
+    return payload.access_token;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function encodeMimeSubject(subject: string) {
+  return `=?UTF-8?B?${Buffer.from(subject, "utf8").toString("base64")}?=`;
+}
+
+function buildGmailRawMessage(
+  message: AuthEmailMessage,
+  transport: GmailOAuthAuthEmailTransport,
+) {
+  const boundary = `war-brasil-${randomUUID()}`;
+  const textPart = Buffer.from(message.text, "utf8").toString("base64");
+  const htmlPart = Buffer.from(message.html, "utf8").toString("base64");
+  const mime = [
+    `From: ${safeHeaderValue(transport.from)}`,
+    `To: ${safeHeaderValue(message.to)}`,
+    `Subject: ${encodeMimeSubject(message.subject)}`,
+    "MIME-Version: 1.0",
+    `Content-Type: multipart/alternative; boundary="${boundary}"`,
+    "",
+    `--${boundary}`,
+    'Content-Type: text/plain; charset="UTF-8"',
+    "Content-Transfer-Encoding: base64",
+    "",
+    textPart,
+    `--${boundary}`,
+    'Content-Type: text/html; charset="UTF-8"',
+    "Content-Transfer-Encoding: base64",
+    "",
+    htmlPart,
+    `--${boundary}--`,
+    "",
+  ].join("\r\n");
+
+  return Buffer.from(mime, "utf8").toString("base64url");
+}
+
+async function deliverWithGmail(
+  message: AuthEmailMessage,
+  transport: GmailOAuthAuthEmailTransport,
+) {
+  const accessToken = await requestGmailAccessToken(transport);
+  const raw = buildGmailRawMessage(message, transport);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), EMAIL_DELIVERY_TIMEOUT_MS);
+  timeout.unref?.();
+
+  try {
+    const response = await fetch(GMAIL_SEND_ENDPOINT, {
+      method: "POST",
+      signal: controller.signal,
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ raw }),
+    });
+
+    if (!response.ok) {
+      throw new Error(
+        `Gmail API respondeu HTTP ${response.status} ao enviar email de autenticação.`,
+      );
+    }
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function deliverAuthEmail(
+  message: AuthEmailMessage,
+  transport: ResolvedAuthEmailTransport,
+) {
+  if (transport.kind === "gmail-oauth") {
+    await deliverWithGmail(message, transport);
+    return;
+  }
+
+  await deliverWithResend(message, transport);
+}
+
 export async function sendAuthEmail(message: AuthEmailMessage) {
   if (isNonDeliverableAuthAddress(message.to)) {
     return;
@@ -204,14 +424,20 @@ export async function sendAuthEmail(message: AuthEmailMessage) {
     return;
   }
 
-  if (process.env.CI === "true" || process.env.NODE_ENV !== "production") {
-    console.info(
-      `[auth-email] delivery=sink subject=${JSON.stringify(message.subject)}`,
-    );
+  const transport = resolveAuthEmailTransport();
+  if (transport) {
+    await deliverAuthEmail(message, transport);
     return;
   }
 
-  await deliverWithResend(message);
+  if (process.env.CI === "true" || !transport) {
+    if (process.env.NODE_ENV === "production" && process.env.CI !== "true") {
+      throw new Error("Transportador de email de autenticação não configurado.");
+    }
+    console.info(
+      `[auth-email] delivery=sink subject=${JSON.stringify(message.subject)}`,
+    );
+  }
 }
 
 export function dispatchAuthEmail(message: AuthEmailMessage) {
