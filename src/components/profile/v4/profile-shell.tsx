@@ -90,14 +90,18 @@ export function ProfileShell({
       window.setTimeout(resolve, transitionDelay);
     });
 
-    const { error } = await authClient.signOut();
-    if (error) {
-      setLogoutState("error");
-      return;
-    }
+    try {
+      const { error } = await authClient.signOut();
+      if (error) {
+        setLogoutState("error");
+        return;
+      }
 
-    await transition;
-    router.replace("/");
+      await transition;
+      router.replace("/");
+    } catch {
+      setLogoutState("error");
+    }
   }
 
   return (
