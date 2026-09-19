@@ -162,6 +162,63 @@ export function buildVerificationEmail(url: string) {
   });
 }
 
+export function buildRegistrationCodeEmail(code: string) {
+  const safeCode = escapeHtml(code);
+  const subject = "Seu código de confirmação | WAR Brasil";
+  const text = [
+    "WAR BRASIL // IDENTIDADE DE COMANDO",
+    "",
+    "Confirme seu email",
+    "",
+    `Código de confirmação: ${code}`,
+    "",
+    "O código é válido por 10 minutos.",
+    "Se você não iniciou este cadastro, ignore esta mensagem.",
+  ].join("\n");
+
+  const html = `<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="dark">
+    <title>${subject}</title>
+  </head>
+  <body style="margin:0;background:#070d0a;color:#eee8da;font-family:Arial,Helvetica,sans-serif;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;border-collapse:collapse;background:#070d0a;">
+      <tr>
+        <td align="center" style="padding:36px 16px;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;max-width:640px;border-collapse:separate;background:#101914;border:1px solid #5f4c28;border-radius:18px;overflow:hidden;">
+            <tr>
+              <td style="padding:24px 30px;border-bottom:1px solid #3f3520;background:#14271c;">
+                <div style="font-size:10px;font-weight:900;letter-spacing:3px;color:#d0aa57;">WAR BRASIL // IDENTIDADE DE COMANDO</div>
+                <div style="margin-top:8px;font-size:13px;font-weight:700;letter-spacing:1.8px;color:#8fa58f;">NOVO REGISTRO // VALIDAÇÃO</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:38px 30px 34px;text-align:center;">
+                <h1 style="margin:0;font-size:30px;line-height:1.1;color:#f3ead6;">Confirme seu email</h1>
+                <p style="margin:18px 0 0;font-size:15px;line-height:1.7;color:#c9c2b2;">Digite este código no WAR Brasil para concluir a criação da sua conta.</p>
+                <div style="margin:30px auto 0;display:inline-block;padding:18px 26px;border:1px solid #e0bd6c;border-radius:7px;background:#0b120e;color:#e0bd6c;font-size:34px;font-weight:900;letter-spacing:10px;">${safeCode}</div>
+                <p style="margin:28px 0 0;font-size:12px;line-height:1.7;color:#8d877b;">O código é válido por 10 minutos. Se você não iniciou este cadastro, ignore esta mensagem.</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:18px 30px;border-top:1px solid #273429;background:#0b120e;color:#666f66;font-size:10px;line-height:1.6;letter-spacing:.8px;">
+                COMANDO TERRITORIAL // CANAL AUTOMÁTICO DE AUTENTICAÇÃO<br>
+                Não responda a esta mensagem.
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+
+  return { html, subject, text };
+}
+
 export function buildPasswordResetEmail(url: string) {
   return buildActionEmail({
     actionLabel: "REDEFINIR SENHA",
