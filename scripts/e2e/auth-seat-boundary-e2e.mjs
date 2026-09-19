@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
-import { Client } from "pg";
+import { waitForRegistrationCode } from "./registration-otp-helper.mjs";
 
 const playwrightRuntimeDir = path.resolve(
   process.env.PLAYWRIGHT_RUNTIME_DIR ?? ".e2e-runtime/node_modules/playwright",
@@ -12,11 +12,15 @@ const playwright = await import(
 
 const BASE_URL = process.env.LOBBY_E2E_BASE_URL ?? "http://localhost:3000";
 const DATABASE_URL = process.env.LOBBY_E2E_DATABASE_URL ?? process.env.DATABASE_URL;
+const EMAIL_SINK_DIR = process.env.AUTH_EMAIL_SINK_DIR;
 const PASSWORD = "WarBrasil-Seat-E2E-2026!";
 const PLAYER_COOKIE = "war_brasil_player";
 
 if (!DATABASE_URL) {
   throw new Error("DATABASE_URL é obrigatória para o E2E account+seat.");
+}
+if (!EMAIL_SINK_DIR) {
+  throw new Error("AUTH_EMAIL_SINK_DIR é obrigatória para o E2E account+seat.");
 }
 
 async function apiJson(page, url, init = {}) {
@@ -35,24 +39,6 @@ async function apiJson(page, url, init = {}) {
   );
 }
 
-async function verifyEmail(email) {
-  const db = new Client({ connectionString: DATABASE_URL });
-  await db.connect();
-  try {
-    const result = await db.query(
-      `UPDATE auth."user"
-          SET "emailVerified" = TRUE,
-              "updatedAt" = NOW()
-        WHERE email = $1
-        RETURNING id`,
-      [email],
-    );
-    assert.equal(result.rowCount, 1, `conta E2E não encontrada para ${email}`);
-  } finally {
-    await db.end();
-  }
-}
-
 async function createAuthenticatedActor(browser, index) {
   const context = await browser.newContext({
     extraHTTPHeaders: { "x-forwarded-for": `198.51.100.${index + 10}` },
@@ -68,14 +54,14 @@ async function createAuthenticatedActor(browser, index) {
   });
   assert.equal(registration.status, 200, JSON.stringify(registration.body));
 
-  await verifyEmail(email);
-
-  const signIn = await apiJson(page, "/api/auth/sign-in/email", {
+  const code = await waitForRegistrationCode(email, EMAIL_SINK_DIR);
+  const verification = await apiJson(page, "/api/auth/register/verify", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password: PASSWORD, rememberMe: true }),
+    body: JSON.stringify({ email, code }),
   });
-  assert.equal(signIn.status, 200, JSON.stringify(signIn.body));
+  assert.equal(verification.status, 200, JSON.stringify(verification.body));
+  assert.equal(verification.body?.authenticated, true);
 
   const onboarding = await apiJson(page, "/api/auth/command-access", {
     method: "PUT",
