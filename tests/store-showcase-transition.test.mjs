@@ -9,28 +9,36 @@ const controller = read("src/components/profile/v4/store-showcase/showcase-objec
 const showcase = read("src/components/profile/v4/store-showcase/store-showcase.tsx");
 const canvas = read("src/components/pre-game/foundation/command-scene-canvas.tsx");
 
-test("item replacement uses one short 300ms transition split into exit and enter phases", () => {
-  assert.match(motion, /SHOWCASE_ITEM_TRANSITION_MS\s*=\s*300/);
-  assert.match(motion, /SHOWCASE_ITEM_TRANSITION_PHASE_MS\s*=\s*SHOWCASE_ITEM_TRANSITION_MS\s*\/\s*2/);
+test("persistent carousel uses one simultaneous 460ms slide instead of exit-enter halves", () => {
+  assert.match(motion, /SHOWCASE_ITEM_TRANSITION_MS\s*=\s*460/);
+  assert.doesNotMatch(motion, /SHOWCASE_ITEM_TRANSITION_PHASE_MS/);
+  assert.match(motion, /type ShowcaseTransitionPhase = "idle" \| "slide"/);
   assert.match(motion, /showcaseTransitionProgress/);
-  assert.match(motion, /prefersReducedMotion/);
+  assert.match(motion, /linear \* linear \* \(3 - 2 \* linear\)/);
 
-  assert.match(showcase, /transitionPhase/);
-  assert.match(showcase, /"exit"/);
-  assert.match(showcase, /"enter"/);
-  assert.match(showcase, /SHOWCASE_ITEM_TRANSITION_PHASE_MS/);
+  assert.match(showcase, /setTransitionPhase\("slide"\)/);
+  assert.doesNotMatch(showcase, /setTransitionPhase\("exit"\)/);
+  assert.doesNotMatch(showcase, /setTransitionPhase\("enter"\)/);
+  assert.match(showcase, /SHOWCASE_ITEM_TRANSITION_MS/);
 });
 
-test("old and new models transition on the same anchored object group", () => {
-  assert.match(controller, /transitionPhase/);
-  assert.match(controller, /transitionDirection/);
-  assert.match(controller, /showcaseTransitionProgress/);
-  assert.match(controller, /group\.position\.x/);
+test("current and target models slide simultaneously in opposite directions", () => {
+  assert.match(controller, /transitionPhase === "slide"/);
+  assert.match(controller, /isSelected/);
+  assert.match(controller, /isTarget/);
+  assert.match(
+    controller,
+    /isSelected[\s\S]*-transitionDirection \* SHOWCASE_STANDBY_X \* progress/,
+  );
+  assert.match(
+    controller,
+    /isTarget[\s\S]*transitionDirection \* SHOWCASE_STANDBY_X \* \(1 - progress\)/,
+  );
+  assert.match(controller, /Math\.sin\(Math\.PI \* progress\)/);
   assert.match(controller, /group\.scale\.setScalar/);
 
   assert.match(showcase, /<ShowcaseObjectController/);
-  assert.match(showcase, /transitionPhase=\{transitionPhase\}/);
-  assert.match(showcase, /transitionDirection=\{transitionDirection\}/);
+  assert.match(showcase, /transitionTargetItemId=\{transitionTargetItemId\}/);
 });
 
 test("transition never remounts or translates camera and pedestal", () => {
