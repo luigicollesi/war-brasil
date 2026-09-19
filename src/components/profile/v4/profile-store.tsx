@@ -197,6 +197,12 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
 
   return (
     <div className={styles.store} data-profile-v4-surface="store">
+      <div className={styles.storeFixedAtmosphere} aria-hidden="true">
+        <span className={styles.fixedCommandStripe} />
+        <span className={styles.fixedArmorPlate} />
+        <span className={styles.fixedLightSweep} />
+      </div>
+
       <div className={styles.storeAtmosphere} aria-hidden="true">
         <span className={styles.atmosphereBase} />
         <span className={styles.atmosphereOptical} />
@@ -204,6 +210,10 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
         <span className={styles.atmospherePlateSecondary} />
         <span className={styles.atmosphereGhostType}>14</span>
         <span className={styles.atmosphereLight} />
+        <span className={styles.atmosphereLeftMass} />
+        <span className={styles.atmosphereLowerMass} />
+        <span className={styles.signalClusterLeft}>WB/14 // SUPPLY</span>
+        <span className={styles.signalClusterRight}>LOGISTICS // INT</span>
         <span className={styles.atmosphereVignette} />
       </div>
 
@@ -232,6 +242,7 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
         data-store-layer="00"
         aria-labelledby="store-title"
       >
+        <span className={styles.operationAxis} aria-hidden="true" />
         <div className={styles.heroCopy}>
           <small>
             {featuredCollection?.featured
@@ -324,6 +335,7 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
         data-store-layer="01"
         aria-labelledby="catalog-title"
       >
+        <span className={styles.supplyNetwork} aria-hidden="true" />
         <header className={styles.sectionHeading}>
           <span>
             <small>DADOS // CATÁLOGO PERMANENTE</small>
@@ -396,6 +408,7 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
         data-store-layer="02"
         aria-labelledby="territories-title"
       >
+        <span className={styles.frontLine} aria-hidden="true" />
         <header className={styles.sectionHeading}>
           <span>
             <small>TERRITÓRIOS // CATÁLOGO PERMANENTE</small>
@@ -490,6 +503,7 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
         data-store-layer="03"
         aria-labelledby="collections-title"
       >
+        <span className={styles.repairPlate} aria-hidden="true" />
         <header className={styles.sectionHeading}>
           <span>
             <small>COLEÇÕES // EDIÇÕES ESPECIAIS</small>
@@ -549,6 +563,7 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
         data-store-layer="04"
         aria-labelledby="treasury-title"
       >
+        <span className={styles.lowerArmor} aria-hidden="true" />
         <span className={styles.treasuryCoin} aria-hidden="true">
           <Image src="/coin.svg" alt="" width={72} height={72} />
         </span>
