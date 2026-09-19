@@ -101,6 +101,10 @@ test("PROFILE V4 logout uses Better Auth signOut before returning to animated ho
   assert.match(shell, /import \{ authClient \} from "@\/client\/auth-client"/);
   assert.match(shell, /const PROFILE_LOGOUT_TRANSITION_MS = 280/);
   assert.match(shell, /await authClient\.signOut\(\)/);
+  assert.match(
+    shell,
+    /try \{[\s\S]*authClient\.signOut\(\)[\s\S]*\} catch \{[\s\S]*setLogoutState\("error"\)/,
+  );
   assert.match(shell, /router\.replace\("\/"\)/);
   assert.match(shell, /data-session-state=\{logoutState\}/);
   assert.doesNotMatch(shell, /document\.cookie/);
