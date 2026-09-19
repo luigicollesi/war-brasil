@@ -34,7 +34,7 @@ type RegisterResponse = {
   errors?: Record<string, string>;
 };
 
-const RESEND_COOLDOWN_MS = 60_000;
+const RESEND_COOLDOWN_SECONDS = 60;
 
 const PROVIDERS: Array<{ id: AuthProvider; label: string; mark: string }> = [
   { id: "google", label: "Continuar com Google", mark: "G" },
@@ -59,8 +59,9 @@ export function CommandAuthModal({
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState(notice);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
-  const [resendCoolingDown, setResendCoolingDown] = useState(false);
+  const [resendSecondsRemaining, setResendSecondsRemaining] = useState(0);
   const [isPending, startTransition] = useTransition();
+  const resendTimerActive = resendSecondsRemaining > 0;
 
   useEffect(() => {
     if (!open) {
@@ -90,16 +91,16 @@ export function CommandAuthModal({
   }, [initialMode, notice, open]);
 
   useEffect(() => {
-    if (!resendCoolingDown) {
+    if (!resendTimerActive) {
       return;
     }
 
-    const cooldown = window.setTimeout(() => {
-      setResendCoolingDown(false);
-    }, RESEND_COOLDOWN_MS);
+    const cooldown = window.setInterval(() => {
+      setResendSecondsRemaining((current) => Math.max(0, current - 1));
+    }, 1_000);
 
-    return () => window.clearTimeout(cooldown);
-  }, [resendCoolingDown]);
+    return () => window.clearInterval(cooldown);
+  }, [resendTimerActive]);
 
   const close = () => {
     if (!isPending) {
@@ -204,7 +205,7 @@ export function CommandAuthModal({
         return;
       }
 
-      setResendCoolingDown(true);
+      setResendSecondsRemaining(RESEND_COOLDOWN_SECONDS);
       setMode("verification");
       setMessage(payload.message ?? "Confira seu email para concluir o cadastro.");
     });
@@ -215,12 +216,12 @@ export function CommandAuthModal({
       changeMode("login");
       return;
     }
-    if (resendCoolingDown) {
+    if (resendSecondsRemaining > 0) {
       return;
     }
 
     setMessage("");
-    setResendCoolingDown(true);
+    setResendSecondsRemaining(RESEND_COOLDOWN_SECONDS);
     startTransition(async () => {
       const { error } = await authClient.sendVerificationEmail({
         email,
@@ -550,12 +551,12 @@ export function CommandAuthModal({
                 type="button"
                 className={styles.primaryButton}
                 onClick={resendVerification}
-                disabled={isPending || resendCoolingDown}
+                disabled={isPending || resendSecondsRemaining > 0}
               >
                 {isPending
                   ? "SOLICITANDO..."
-                  : resendCoolingDown
-                    ? "REENVIO DISPONÍVEL EM 60 S"
+                  : resendSecondsRemaining > 0
+                    ? `REENVIO DISPONÍVEL EM ${resendSecondsRemaining} S`
                     : "REENVIAR EMAIL"}
               </button>
               <button
