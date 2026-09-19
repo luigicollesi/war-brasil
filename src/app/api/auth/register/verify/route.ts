@@ -122,7 +122,14 @@ export async function POST(request: Request) {
         headers,
       },
     );
-  } catch {
+  } catch (error) {
+    console.error("[auth-register] verify failed", {
+      error:
+        error instanceof Error
+          ? { name: error.name, message: error.message }
+          : { name: "UnknownError" },
+    });
+
     return Response.json(
       {
         ok: false,
