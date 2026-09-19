@@ -196,7 +196,7 @@ try {
       "forgot-password distinguiu conta existente de inexistente",
     );
 
-    const resetMessage = await waitForEmail(email, "Redefinição de senha");
+    const resetMessage = await waitForEmail(email, "Redefinição de senha | WAR Brasil");
     assert.match(resetMessage.html ?? "", /REDEFINIR SENHA/);
     assert.match(resetMessage.text ?? "", /válido por 1 hora/i);
 
