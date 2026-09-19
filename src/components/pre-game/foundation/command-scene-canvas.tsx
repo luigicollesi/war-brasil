@@ -175,9 +175,13 @@ function ShowcaseCameraDirector({
   const set = useThree((state) => state.set);
   const invalidate = useThree((state) => state.invalidate);
   const canvasSize = useThree((state) => state.size);
-  const presentation = resolveShowcasePresentation(objectType, compact);
   const cameraAspect =
     canvasSize.height > 0 ? canvasSize.width / canvasSize.height : 1;
+  const presentation = resolveShowcasePresentation(
+    objectType,
+    compact,
+    cameraAspect,
+  );
 
   useEffect(() => {
     const cameraX = compact ? 0 : SHOWCASE_DESKTOP_CAMERA_X;
