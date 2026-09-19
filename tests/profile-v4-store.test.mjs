@@ -619,3 +619,95 @@ test("PROFILE V4 final reduced-motion mode removes interaction lift sweep and bu
     /\.productCommerce button\[data-processing="true"\]\s*\{[^}]*animation:\s*none;/,
   );
 });
+
+
+test("PROFILE V4 featured collection hero uses the collection bundle offer for direct purchase", async () => {
+  const store = await source("src/components/profile/v4/profile-store.tsx");
+
+  assert.match(store, /const featuredCollectionBundleOffer = useMemo\(/);
+  assert.match(store, /featuredCollection\.bundleOfferIds/);
+  assert.match(store, /storefront\.offers\.find\(\(offer\) => offer\.id === offerId\)/);
+  assert.match(
+    store,
+    /handlePurchase\(featuredCollectionBundleOffer\)/,
+  );
+  assert.match(
+    store,
+    /data-processing=\{pendingOfferId === featuredCollectionBundleOffer\.id \? "true" : undefined\}/,
+  );
+});
+
+test("PROFILE V4 featured collection hero turns the large banner into the showcase entry point", async () => {
+  const store = await source("src/components/profile/v4/profile-store.tsx");
+  const styles = await source("src/components/profile/v4/profile-store.module.css");
+
+  assert.match(store, /className=\{styles\.featuredHeroBanner\}/);
+  assert.match(
+    store,
+    /href=\{showcaseHref\("collection", featuredCollection\.id\)\}/,
+  );
+  assert.match(
+    styles,
+    /\.featuredHeroBanner\s*\{[^}]*display:\s*block;[^}]*overflow:\s*hidden;/,
+  );
+  assert.match(
+    styles,
+    /\.featuredHeroBanner img\s*\{[^}]*width:\s*100%;[^}]*height:\s*100%;[^}]*object-fit:\s*cover;/,
+  );
+});
+
+test("PROFILE V4 featured collection hero makes the promotion dominant and shows before-after pricing", async () => {
+  const store = await source("src/components/profile/v4/profile-store.tsx");
+  const styles = await source("src/components/profile/v4/profile-store.module.css");
+
+  assert.match(store, /className=\{styles\.featuredPromo\}/);
+  assert.match(store, /promotionLabel\(featuredCollection\.promotionDiscountBps\)/);
+  assert.match(store, /featuredCollectionBundleOffer\.basePrice/);
+  assert.match(store, /featuredCollectionBundleOffer\.price/);
+  assert.match(
+    styles,
+    /\.featuredPromo strong\s*\{[^}]*font-size:\s*clamp\(2\.8rem,\s*6vw,\s*6\.4rem\)/,
+  );
+  assert.match(
+    styles,
+    /\.featuredOldPrice\s*\{[^}]*text-decoration:\s*line-through;/,
+  );
+});
+
+test("PROFILE V4 featured collection hero keeps purchase controls separate from the clickable banner", async () => {
+  const store = await source("src/components/profile/v4/profile-store.tsx");
+  const styles = await source("src/components/profile/v4/profile-store.module.css");
+
+  assert.match(store, /className=\{styles\.featuredHeroCommerce\}/);
+  assert.match(store, /COMPRAR COLEÇÃO/);
+  assert.match(
+    styles,
+    /\.featuredHeroCommerce\s*\{[^}]*pointer-events:\s*auto;/,
+  );
+  assert.match(
+    styles,
+    /\.featuredHeroCommerce button\s*\{[^}]*min-height:\s*44px;/,
+  );
+});
+
+test("PROFILE V4 featured collection hero becomes a full-width promotion on desktop and stacks on mobile", async () => {
+  const styles = await source("src/components/profile/v4/profile-store.module.css");
+  const mobile = styles.slice(styles.indexOf("@media (max-width: 520px)"));
+
+  assert.match(
+    styles,
+    /\.featuredHero\s*\{[^}]*grid-template-columns:\s*1fr;[^}]*min-height:\s*clamp\(/,
+  );
+  assert.match(
+    styles,
+    /\.featuredHeroOverlay\s*\{[^}]*position:\s*absolute;[^}]*inset:/,
+  );
+  assert.match(
+    mobile,
+    /\.featuredHeroOverlay\s*\{[^}]*position:\s*relative;/,
+  );
+  assert.match(
+    mobile,
+    /\.featuredHeroCommerce\s*\{[^}]*grid-template-columns:\s*1fr;/,
+  );
+});
