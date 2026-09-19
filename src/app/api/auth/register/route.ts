@@ -1,6 +1,6 @@
 import {
   buildRegistrationCodeEmail,
-  dispatchAuthEmail,
+  sendAuthEmail,
 } from "@/server/auth/email";
 import {
   beginPendingRegistration,
@@ -62,7 +62,7 @@ export async function POST(request: Request) {
 
     if (pending.dispatched && pending.code) {
       const message = buildRegistrationCodeEmail(pending.code);
-      dispatchAuthEmail({ ...message, to: email });
+      await sendAuthEmail({ ...message, to: email });
     }
 
     return genericRegistrationResponse(pending.retryAfterSeconds);
