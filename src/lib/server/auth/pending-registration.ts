@@ -30,6 +30,7 @@ type PendingRegistrationRow = {
 export type BeginPendingRegistrationResult = {
   code: string | null;
   dispatched: boolean;
+  reason: "created" | "existing_account" | "cooldown" | "missing";
   retryAfterSeconds: number;
 };
 
@@ -167,6 +168,7 @@ export async function beginPendingRegistration(input: {
       return {
         code: null,
         dispatched: false,
+        reason: "existing_account",
         retryAfterSeconds: REGISTRATION_RESEND_COOLDOWN_SECONDS,
       };
     }
@@ -188,6 +190,7 @@ export async function beginPendingRegistration(input: {
       return {
         code: null,
         dispatched: false,
+        reason: "cooldown",
         retryAfterSeconds,
       };
     }
@@ -236,6 +239,7 @@ export async function beginPendingRegistration(input: {
     return {
       code,
       dispatched: true,
+      reason: "created",
       retryAfterSeconds: REGISTRATION_RESEND_COOLDOWN_SECONDS,
     };
   } catch (error) {
@@ -270,6 +274,7 @@ export async function resendPendingRegistration(
       return {
         code: null,
         dispatched: false,
+        reason: "existing_account",
         retryAfterSeconds: REGISTRATION_RESEND_COOLDOWN_SECONDS,
       };
     }
@@ -290,6 +295,7 @@ export async function resendPendingRegistration(
       return {
         code: null,
         dispatched: false,
+        reason: "missing",
         retryAfterSeconds: REGISTRATION_RESEND_COOLDOWN_SECONDS,
       };
     }
@@ -300,6 +306,7 @@ export async function resendPendingRegistration(
       return {
         code: null,
         dispatched: false,
+        reason: "cooldown",
         retryAfterSeconds,
       };
     }
@@ -324,6 +331,7 @@ export async function resendPendingRegistration(
     return {
       code,
       dispatched: true,
+      reason: "created",
       retryAfterSeconds: REGISTRATION_RESEND_COOLDOWN_SECONDS,
     };
   } catch (error) {
