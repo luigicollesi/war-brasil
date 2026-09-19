@@ -363,3 +363,52 @@ test("PROFILE V4 store atmosphere is viewport-clipped and cannot expand page scr
     /\.storeAtmosphere\s*\{[^}]*inset:\s*-/,
   );
 });
+
+
+test("PROFILE V4 store V2.1 keeps war-machine fixed layers above the dark base veil but below content", async () => {
+  const styles = await source("src/components/profile/v4/profile-store.module.css");
+
+  assert.match(
+    styles,
+    /\.storeAtmosphere\s*\{[^}]*z-index:\s*-2;/,
+  );
+  assert.match(
+    styles,
+    /\.storeFixedAtmosphere\s*\{[^}]*z-index:\s*-1;/,
+  );
+  assert.match(
+    styles,
+    /\.atmosphereBase\s*\{[^}]*opacity:\s*0\.[5-8]\d?;/,
+  );
+  assert.match(
+    styles,
+    /\.atmosphereVignette\s*\{[^}]*opacity:\s*0\.[5-8]\d?;/,
+  );
+});
+
+test("PROFILE V4 store navigation docks immediately below the desktop profile header", async () => {
+  const styles = await source("src/components/profile/v4/profile-store.module.css");
+
+  assert.match(
+    styles,
+    /\.storeNav\s*\{[^}]*position:\s*sticky;[^}]*z-index:\s*29;[^}]*top:\s*78px;/,
+  );
+  assert.match(
+    styles,
+    /\.hero,\s*[\s\S]*?\.catalog,\s*[\s\S]*?\.treasury\s*\{[^}]*scroll-margin-top:\s*14\dpx;/,
+  );
+});
+
+test("PROFILE V4 store navigation recomposes for bottom-chrome tablet and mobile layouts", async () => {
+  const styles = await source("src/components/profile/v4/profile-store.module.css");
+  const compact = styles.slice(styles.indexOf("@media (max-width: 980px)"));
+
+  assert.match(
+    compact,
+    /\.storeNav\s*\{[^}]*top:\s*8px;/,
+  );
+  assert.match(
+    compact,
+    /\.hero,\s*[\s\S]*?\.catalog,\s*[\s\S]*?\.treasury\s*\{[^}]*scroll-margin-top:\s*6\dpx;/,
+  );
+});
