@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   CosmeticCatalogItem,
   EconomyOffer,
@@ -30,6 +30,19 @@ const AVAILABILITY_DATE_FORMAT = new Intl.DateTimeFormat("pt-BR", {
 });
 
 type ShowcaseKind = "offer" | "collection";
+
+const STORE_NAV_SECTIONS = [
+  { zone: "hero", id: "store-highlights" },
+  { zone: "dice", id: "store-dice" },
+  { zone: "territories", id: "store-territories" },
+  { zone: "collections", id: "store-collections" },
+] as const;
+
+type StoreNavSection = (typeof STORE_NAV_SECTIONS)[number]["zone"];
+
+function isStoreNavSection(value: string | undefined): value is StoreNavSection {
+  return STORE_NAV_SECTIONS.some((section) => section.zone === value);
+}
 
 function showcaseHref(kind: ShowcaseKind, id: string, selectedItemId?: string) {
   const base = `/profile/store/showcase/${kind}/${encodeURIComponent(id)}`;
@@ -111,8 +124,63 @@ function CampaignCreditAmount({ amount }: { amount: number }) {
 
 export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnapshot }) {
   const router = useRouter();
+  const storeRef = useRef<HTMLDivElement>(null);
   const [pendingOfferId, setPendingOfferId] = useState<string | null>(null);
   const [purchaseMessage, setPurchaseMessage] = useState<StorePurchaseMessage | null>(null);
+  const [activeSection, setActiveSection] = useState<StoreNavSection>("hero");
+
+  useEffect(() => {
+    const store = storeRef.current;
+    if (!store) return undefined;
+
+    const animatedSections = Array.from(
+      store.querySelectorAll<HTMLElement>("[data-store-zone]"),
+    );
+    const navSections = STORE_NAV_SECTIONS.map(({ id }) =>
+      store.querySelector<HTMLElement>(`#${id}`),
+    ).filter((section): section is HTMLElement => section !== null);
+
+    if (typeof IntersectionObserver === "undefined") {
+      animatedSections.forEach((section) => {
+        section.setAttribute("data-v3-active", "true");
+      });
+      return undefined;
+    }
+
+    const revealObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return;
+          const target = entry.target as HTMLElement;
+          target.setAttribute("data-v3-active", "true");
+          revealObserver.unobserve(target);
+        });
+      },
+      { threshold: 0.16 },
+    );
+
+    const navObserver = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((entry) => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        const zone = (visible[0]?.target as HTMLElement | undefined)?.dataset.storeZone;
+        if (isStoreNavSection(zone)) setActiveSection(zone);
+      },
+      {
+        rootMargin: "-26% 0px -58% 0px",
+        threshold: [0, 0.15, 0.35, 0.6],
+      },
+    );
+
+    animatedSections.forEach((section) => revealObserver.observe(section));
+    navSections.forEach((section) => navObserver.observe(section));
+
+    return () => {
+      revealObserver.disconnect();
+      navObserver.disconnect();
+    };
+  }, []);
 
   const featuredCollection = useMemo(
     () => storefront.collections.find((collection) => collection.featured) ?? storefront.collections[0] ?? null,
@@ -196,7 +264,7 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
   }
 
   return (
-    <div className={styles.store} data-profile-v4-surface="store">
+    <div ref={storeRef} className={styles.store} data-profile-v4-surface="store">
       <div className={styles.storeFixedAtmosphere} aria-hidden="true">
         <span className={styles.fixedCommandStripe} />
         <span className={styles.fixedArmorPlate} />
@@ -218,10 +286,34 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
       </div>
 
       <nav className={styles.storeNav} aria-label="Navegação da Intendência">
-        <a href="#store-highlights">DESTAQUES</a>
-        <a href="#store-dice">DADOS</a>
-        <a href="#store-territories">TERRITÓRIOS</a>
-        <a href="#store-collections">COLEÇÕES</a>
+        <a
+          href="#store-highlights"
+          data-active={activeSection === "hero" ? "true" : "false"}
+          aria-current={activeSection === "hero" ? "location" : undefined}
+        >
+          DESTAQUES
+        </a>
+        <a
+          href="#store-dice"
+          data-active={activeSection === "dice" ? "true" : "false"}
+          aria-current={activeSection === "dice" ? "location" : undefined}
+        >
+          DADOS
+        </a>
+        <a
+          href="#store-territories"
+          data-active={activeSection === "territories" ? "true" : "false"}
+          aria-current={activeSection === "territories" ? "location" : undefined}
+        >
+          TERRITÓRIOS
+        </a>
+        <a
+          href="#store-collections"
+          data-active={activeSection === "collections" ? "true" : "false"}
+          aria-current={activeSection === "collections" ? "location" : undefined}
+        >
+          COLEÇÕES
+        </a>
       </nav>
 
       {purchaseMessage ? (
