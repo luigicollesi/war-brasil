@@ -92,3 +92,57 @@ test("PROFILE V4 owns its background and keeps document scrolling as the only ve
   );
   assert.doesNotMatch(styles, /\.page\s*\{[^}]*overflow-x:\s*hidden;/);
 });
+
+
+test("PROFILE V4 logout uses Better Auth signOut before returning to animated home", async () => {
+  const shell = await source("src/components/profile/v4/profile-shell.tsx");
+
+  assert.match(shell, /import \{ useRouter \} from "next\/navigation"/);
+  assert.match(shell, /import \{ authClient \} from "@\/client\/auth-client"/);
+  assert.match(shell, /const PROFILE_LOGOUT_TRANSITION_MS = 280/);
+  assert.match(shell, /await authClient\.signOut\(\)/);
+  assert.match(shell, /router\.replace\("\/"\)/);
+  assert.match(shell, /data-session-state=\{logoutState\}/);
+  assert.doesNotMatch(shell, /document\.cookie/);
+});
+
+test("PROFILE V4 logout button exposes pending retry and keyboard-safe states", async () => {
+  const shell = await source("src/components/profile/v4/profile-shell.tsx");
+  const styles = await source("src/components/profile/v4/profile-shell.module.css");
+
+  assert.match(shell, /className=\{styles\.logoutButton\}/);
+  assert.match(shell, /aria-label="Encerrar sessão"/);
+  assert.match(shell, /disabled=\{logoutState === "closing"\}/);
+  assert.match(shell, /logoutState === "closing"\s*\?\s*"SAINDO\.\.\."/);
+  assert.match(shell, /logoutState === "error"\s*\?\s*"TENTAR NOVAMENTE"/);
+
+  assert.match(
+    styles,
+    /\.logoutButton\s*\{[^}]*min-height:\s*38px;[^}]*border:/,
+  );
+  assert.match(
+    styles,
+    /\.logoutButton:focus-visible\s*\{[^}]*outline:/,
+  );
+});
+
+test("PROFILE V4 logout animates profile chrome out and respects reduced motion", async () => {
+  const styles = await source("src/components/profile/v4/profile-shell.module.css");
+
+  assert.match(
+    styles,
+    /\.page\[data-session-state="closing"\]\s+\.commandBar\s*\{[^}]*opacity:\s*0;[^}]*transform:/,
+  );
+  assert.match(
+    styles,
+    /\.page\[data-session-state="closing"\]\s+\.surface\s*\{[^}]*opacity:\s*0;[^}]*transform:/,
+  );
+  assert.match(
+    styles,
+    /\.page\[data-session-state="closing"\]\s+\.ambient\s*\{[^}]*opacity:\s*0;/,
+  );
+  assert.match(
+    styles,
+    /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.commandBar,[\s\S]*\.surface,[\s\S]*\.ambient[\s\S]*\{[^}]*transition:\s*none;/,
+  );
+});
