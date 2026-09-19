@@ -85,7 +85,7 @@ export function readAuthServerEnvironment(): AuthServerEnvironment {
   const discordClientId = readOptional("DISCORD_CLIENT_ID");
   const discordClientSecret = readOptional("DISCORD_CLIENT_SECRET");
 
-  return {
+  const environment: AuthServerEnvironment = {
     allowedHosts: parseAllowedHosts(readOptional("AUTH_ALLOWED_HOSTS")),
     authDatabaseUrl,
     baseUrl: readOptional("BETTER_AUTH_URL"),
@@ -108,6 +108,17 @@ export function readAuthServerEnvironment(): AuthServerEnvironment {
     },
     secret: readOptional("BETTER_AUTH_SECRET"),
   };
+
+  if (
+    Boolean(environment.email.from) !==
+    Boolean(environment.email.transportSecret)
+  ) {
+    throw new Error(
+      "Configuração parcial de email de autenticação: configure AUTH_EMAIL_FROM e EMAIL_TRANSPORT_SECRET juntos.",
+    );
+  }
+
+  return environment;
 }
 
 export function assertAuthRuntimeConfiguration(
