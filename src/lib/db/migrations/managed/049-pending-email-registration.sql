@@ -1,6 +1,8 @@
 -- Pending email/password registrations.
 -- No auth.user/auth.account row exists until the email OTP is confirmed.
 
+-- Up Migration
+
 CREATE TABLE IF NOT EXISTS auth.pending_registration (
   id UUID PRIMARY KEY DEFAULT pg_catalog.gen_random_uuid(),
   email TEXT NOT NULL UNIQUE,
