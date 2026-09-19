@@ -60,6 +60,12 @@ export async function POST(request: Request) {
   try {
     const pending = await beginPendingRegistration({ email, password });
 
+    console.info("[auth-register] register dispatch", {
+      dispatched: pending.dispatched,
+      reason: pending.reason,
+      retryAfterSeconds: pending.retryAfterSeconds,
+    });
+
     if (pending.dispatched && pending.code) {
       const message = buildRegistrationCodeEmail(pending.code);
       await sendAuthEmail({ ...message, to: email });
