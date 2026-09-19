@@ -82,3 +82,19 @@ test("3d texture delivery stays same-origin instead of redirecting the browser t
     assert.doesNotMatch(route, /Location:\s*location/);
   }
 });
+
+
+test("showcase item transition exits opposite to navigation and enters from navigation direction", () => {
+  assert.match(
+    controller,
+    /transitionPhase === "enter"[\s\S]*group\.position\.x = transitionDirection \* 0\.32/,
+  );
+  assert.match(
+    controller,
+    /transitionPhase === "exit"[\s\S]*group\.position\.x = -transitionDirection \* 0\.32 \* progress/,
+  );
+  assert.match(
+    controller,
+    /else \{[\s\S]*group\.position\.x =\s*transitionDirection \* 0\.32 \* \(1 - progress\)/,
+  );
+});
