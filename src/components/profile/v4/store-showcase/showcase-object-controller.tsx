@@ -14,6 +14,7 @@ import {
 } from "@/src/lib/client/store-showcase/showcase-motion";
 
 const SHOWCASE_STANDBY_X = 8;
+const SHOWCASE_SLIDE_LIFT_Y = 0.14;
 
 export function ShowcaseObjectController({
   children,
@@ -71,38 +72,36 @@ export function ShowcaseObjectController({
     const group = groupRef.current;
     if (!group) return;
 
+    group.position.y = 0;
+
     if (reducedMotion || transitionPhase === "idle") {
       group.position.x = isSelected
         ? 0
         : standbyDirection * SHOWCASE_STANDBY_X;
       group.scale.setScalar(
-        presentation.objectScale * (isSelected ? 1 : 0.92),
+        presentation.objectScale * (isSelected ? 1 : 0.9),
       );
       invalidate();
       return;
     }
 
-    if (transitionPhase === "exit") {
-      group.position.x = isSelected
-        ? 0
-        : standbyDirection * SHOWCASE_STANDBY_X;
-      group.scale.setScalar(
-        presentation.objectScale * (isSelected ? 1 : 0.92),
-      );
+    if (transitionPhase === "slide") {
+      if (isSelected) {
+        group.position.x = 0;
+        group.scale.setScalar(presentation.objectScale);
+      } else if (isTarget) {
+        group.position.x = transitionDirection * SHOWCASE_STANDBY_X;
+        group.scale.setScalar(presentation.objectScale * 0.9);
+      } else {
+        group.position.x = standbyDirection * SHOWCASE_STANDBY_X;
+        group.scale.setScalar(presentation.objectScale * 0.9);
+      }
       invalidate();
-      return;
     }
-
-    group.position.x = isSelected
-      ? transitionDirection * SHOWCASE_STANDBY_X
-      : standbyDirection * SHOWCASE_STANDBY_X;
-    group.scale.setScalar(
-      presentation.objectScale * (isSelected ? 0.92 : 0.92),
-    );
-    invalidate();
   }, [
     invalidate,
     isSelected,
+    isTarget,
     presentation,
     reducedMotion,
     standbyDirection,
@@ -114,34 +113,39 @@ export function ShowcaseObjectController({
     const group = groupRef.current;
     if (!group || reducedMotion) return;
 
-    if (transitionPhase === "exit" && isSelected) {
+    if (transitionPhase === "slide" && isSelected) {
       const progress = showcaseTransitionProgress({
         elapsedMs: performance.now() - transitionStartedAt.current,
         prefersReducedMotion: false,
       });
       group.position.x =
         -transitionDirection * SHOWCASE_STANDBY_X * progress;
+      group.position.y =
+        SHOWCASE_SLIDE_LIFT_Y * Math.sin(Math.PI * progress);
       group.scale.setScalar(
-        presentation.objectScale * (1 - 0.08 * progress),
+        presentation.objectScale * (1 - 0.1 * progress),
       );
       if (progress < 1) invalidate();
       return;
     }
 
-    if (transitionPhase === "enter" && isSelected) {
+    if (transitionPhase === "slide" && isTarget) {
       const progress = showcaseTransitionProgress({
         elapsedMs: performance.now() - transitionStartedAt.current,
         prefersReducedMotion: false,
       });
       group.position.x =
         transitionDirection * SHOWCASE_STANDBY_X * (1 - progress);
+      group.position.y =
+        SHOWCASE_SLIDE_LIFT_Y * Math.sin(Math.PI * progress);
       group.scale.setScalar(
-        presentation.objectScale * (0.92 + 0.08 * progress),
+        presentation.objectScale * (0.9 + 0.1 * progress),
       );
       if (progress < 1) invalidate();
       return;
     }
 
+    if (!isSelected && !isTarget) return;
     if (!isSelected) return;
     group.rotation.y += idleAngularVelocity({ prefersReducedMotion: false }) * delta;
   });
@@ -158,7 +162,7 @@ export function ShowcaseObjectController({
         presentation.rotation[1],
         presentation.rotation[2],
       ]}
-      scale={presentation.objectScale * (isSelected ? 1 : 0.92)}
+      scale={presentation.objectScale * (isSelected ? 1 : 0.9)}
     >
       {children}
     </group>
