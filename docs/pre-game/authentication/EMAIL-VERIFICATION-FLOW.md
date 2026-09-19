@@ -1,248 +1,293 @@
-# Fluxo de Verificação de Email — Credentials
+# Fluxo de Confirmação de Email — Credentials
 
-**Escopo:** cadastro, envio, pendência, confirmação, reenvio e login de Email + senha.  
-**Referências normativas:** `SPEC.md`, `EVAL.md`, `PROVIDER-STRATEGY.md`.
+**Escopo:** cadastro Email + senha, OTP, promoção para conta Better Auth, reenvio e onboarding.  
+**Fonte de verdade:** implementação em `src/lib/server/auth/pending-registration.ts` e rotas `/api/auth/register/*`.
 
-## 1. Objetivo
+## 1. Princípio
 
-Reproduzir a experiência do Contrapista sem copiar sua implementação custom de token/tabela.
+No War-Brasil, uma linha em `auth.user` representa uma conta real.
 
-No War-Brasil:
+Portanto, **cadastro ainda não confirmado não cria `auth.user` nem `auth.account`**.
 
-- Better Auth cria e mantém o credentials user;
-- Better Auth mantém o estado `emailVerified` e verification token;
-- o War-Brasil fornece apenas a boundary de entrega do email e a UX;
-- conta credentials não verificada nunca recebe sessão/Command Access.
-
-## 2. Estado de produto
+Antes da confirmação existe somente:
 
 ```text
-register-form
-   ↓ submit válido
-creating-account
-   ↓
+auth.pending_registration
+```
+
+Essa linha é temporária e descartável.
+
+Depois da confirmação:
+
+- o cadastro pendente é promovido para `auth.user`;
+- a credential é criada em `auth.account`;
+- `emailVerified=true` já nasce verdadeiro;
+- a linha temporária é removida;
+- Better Auth cria a sessão;
+- o usuário segue para o onboarding de `profile.commanders`.
+
+## 2. Fluxo normativo
+
+```text
+email + senha + confirmar senha + termos
+            ↓
+POST /api/auth/register
+            ↓
+auth.pending_registration
+            ↓
+OTP de 6 dígitos por email
+            ↓
 verification-pending
-   │
-   ├── resend -> verification-pending
-   ├── back-to-login -> login-form
-   └── link aberto fora/dentro da página
-                ↓
-        verified | invalid
-                ↓
-              Home
+            ↓
+POST /api/auth/register/verify
+            ↓
+OTP válido?
+  ├─ não → permanece pendente
+  └─ sim
+       ↓
+   auth.user (emailVerified=true)
+       +
+   auth.account (credential)
+       ↓
+   pending_registration removido
+       ↓
+   sessão Better Auth
+       ↓
+   onboarding nome + @handle
+       ↓
+   profile.commanders + economy state
+       ↓
+   command-open
 ```
 
-`verified` não significa `authenticated`.
+## 3. Dados temporários
 
-Após `verified`, o usuário faz login normalmente.
+`auth.pending_registration` contém somente o necessário para concluir o cadastro:
 
-## 3. Signup
+- email normalizado;
+- senha temporária criptografada com AES-256-GCM;
+- HMAC-SHA256 do OTP;
+- contador de tentativas;
+- aceite dos termos;
+- expiração do OTP;
+- cooldown de reenvio;
+- timestamps.
 
-Entrada mínima:
+A tabela **não contém**:
+
+- senha em texto puro;
+- OTP em texto puro;
+- sessão;
+- profile;
+- wallet/loadout;
+- handle.
+
+A senha temporária existe apenas para permitir a criação da credential e a abertura da sessão depois que o usuário provar posse do email. Após a promoção, a linha inteira é removida.
+
+## 4. OTP
+
+Contrato atual:
 
 ```text
-email
-password
-termsAccepted
+tamanho:       6 dígitos
+validade:      10 minutos
+tentativas:    máximo 5
+reenvio:       cooldown de 60 segundos
 ```
 
-Handle/display name pertencem ao onboarding comum de perfil e não precisam ser reservados antes da posse do email ser confirmada.
+O código bruto é enviado por email, mas nunca persistido. O banco recebe somente um HMAC usando segredo server-only.
 
-Isso reduz:
+Código incorreto incrementa `attempts`. Ao atingir o limite, é obrigatório solicitar novo código.
 
-- reserva abusiva de handles por emails não verificados;
-- divergência entre credentials e OAuth;
-- duplicação de lógica de onboarding.
+Reenvio:
 
-### 3.1 Segurança contra enumeração
+- gera um novo OTP;
+- invalida o anterior;
+- zera tentativas;
+- renova expiração;
+- preserva resposta pública não-enumerável.
 
-O fluxo público MUST NOT depender de resposta `email já cadastrado`.
+## 5. Cadastro
 
-Com `requireEmailVerification=true`, usar o comportamento de proteção a enumeração disponível na versão Better Auth fixada.
+`POST /api/auth/register` valida:
 
-Para signup com email existente, a resposta pública SHOULD permanecer compatível com uma resposta genérica de sucesso/pêndencia, sem revelar se:
+- email;
+- senha de 8–128 caracteres;
+- aceite legal;
+- Origin first-party.
 
-- o email não existe;
-- existe e está pendente;
-- existe e já está verificado.
+O endpoint não chama `/sign-up/email`.
 
-O servidor não cria conta duplicada.
-
-Erros de formato de email, política de senha e aceite legal podem continuar sendo específicos porque não revelam existência de conta.
-
-## 4. Configuração normativa
-
-Comportamento equivalente esperado:
+O Better Auth está configurado com:
 
 ```ts
 emailAndPassword: {
   enabled: true,
+  disableSignUp: true,
   requireEmailVerification: true,
   autoSignIn: false,
 }
+```
 
-emailVerification: {
-  sendOnSignUp: true,
-  sendOnSignIn: false,
-  autoSignInAfterVerification: false,
-  expiresIn: 3600,
-  sendVerificationEmail: sendWarBrasilVerificationEmail,
+`disableSignUp=true` impede que o endpoint credentials nativo seja usado como caminho alternativo para criar usuário antes do OTP.
+
+## 6. Confirmação
+
+`POST /api/auth/register/verify` recebe:
+
+```json
+{
+  "email": "usuario@example.com",
+  "code": "482913"
 }
 ```
 
-A versão exata da API deve ser validada na versão pinada do Better Auth.
+Para OTP válido, uma transação PostgreSQL:
 
-## 5. Email
+1. bloqueia a linha pendente;
+2. valida expiração/tentativas/HMAC;
+3. confirma que não surgiu uma conta existente;
+4. descriptografa a senha temporária apenas em memória;
+5. calcula o hash compatível com Better Auth;
+6. cria `auth.user` já com `emailVerified=true`;
+7. cria `auth.account` com `providerId='credential'`;
+8. remove `auth.pending_registration`;
+9. commit.
 
-Boundary:
+Depois do commit, `auth.api.signInEmail()` cria a sessão e os cookies Better Auth.
 
-```ts
-sendWarBrasilVerificationEmail({ user, url })
-  -> sendAuthEmail({ to, subject, text, html })
-```
+A falha de criação da sessão não desfaz uma conta confirmada; nesse caso o usuário ainda pode entrar normalmente com email e senha.
 
-O War-Brasil usa `url` entregue pelo Better Auth. Não monta token próprio.
+## 7. Estado da UI
 
-Conteúdo:
+Depois do signup:
 
 ```text
-WAR-BRASIL
-VERIFICAÇÃO DE EMAIL
+CONFIRME SEU EMAIL
 
-Confirme seu email para liberar sua identidade de Comando.
+Enviamos um código para lu***@example.com.
 
-[ VERIFICAR EMAIL ]
+[ 000000 ]
 
-Se o botão não funcionar, copie o link abaixo.
+[ CONFIRMAR EMAIL ]
 
-Link válido por 1 hora.
-Se você não criou essa conta, ignore esta mensagem.
+Novo código em 42 s
 ```
 
-A versão final deve seguir a identidade visual verde/vermelho/dourado sem sacrificar compatibilidade de clientes de email.
+A UI:
 
-## 6. Entrega assíncrona e timing
+- usa `autocomplete="one-time-code"`;
+- mascara o email;
+- não mantém senha;
+- não coloca OTP na URL;
+- informa validade de 10 minutos;
+- oferece reenvio após cooldown.
 
-`sendVerificationEmail` não deve introduzir diferença temporal desnecessária que ajude enumeração.
+OTP confirmado chama `onAuthenticated()`, e o Home consulta `/api/auth/command-access`.
 
-Quando a plataforma for serverless:
+Como ainda não existe `profile.commanders`, o resultado abre `CommandOnboardingModal`.
 
-- usar mecanismo de `waitUntil`/background suportado quando necessário;
-- garantir que o envio não seja cancelado após a resposta;
-- falha interna de provider não expõe API key, stack ou detalhe operacional ao client.
+## 8. Onboarding
 
-## 7. `verification-pending`
+Depois da confirmação:
 
-A UI mostra:
+```text
+sessão Better Auth
+      ↓
+CommandOnboardingModal
+      ↓
+displayName + @handle
+      ↓
+PUT /api/auth/command-access
+      ↓
+profile.commanders
+      ↓
+ensureEconomyState()
+      ↓
+command-open
+```
 
-- título `CONFIRME SEU EMAIL`;
-- confirmação de que um link foi enviado;
-- validade de uma hora;
-- botão `REENVIAR EMAIL`;
-- botão/link `VOLTAR PARA ENTRAR`;
-- email mascarado quando exibido fora do input original;
-- nenhuma senha preenchida.
+O email nunca é usado como handle.
 
-A UI não mostra:
+## 9. Reenvio
 
-- token;
-- user ID interno;
-- status bruto `emailVerified` de outros usuários;
-- detalhes do provider de email.
+`POST /api/auth/register/resend`:
 
-## 8. Reenvio
+- exige Origin first-party;
+- só opera sobre cadastro pendente;
+- respeita `resend_available_at`;
+- troca o HMAC/OTP atual;
+- retorna resposta genérica.
 
-Reenvio usa `authClient.sendVerificationEmail`/API equivalente da versão pinada.
+Resposta pública:
+
+```text
+Se existir um cadastro pendente para esse endereço, enviaremos um novo código.
+```
+
+## 10. Email
+
+O transporte permanece server-only e usa Resend através de `sendAuthEmail()`.
+
+O email contém:
+
+- branding WAR Brasil;
+- OTP de 6 dígitos;
+- validade de 10 minutos;
+- aviso para ignorar cadastro não solicitado;
+- HTML + texto simples.
+
+Não contém link de confirmação.
+
+Password reset continua sendo um fluxo separado e continua usando o mecanismo/token do Better Auth.
+
+## 11. OAuth
+
+Google e Discord não usam `pending_registration`.
+
+```text
+Google / Discord
+       ↓
+provider comprova identidade
+       ↓
+Better Auth
+       ↓
+sessão
+       ↓
+onboarding caso profile incompleto
+```
+
+## 12. Segurança e enumeração
 
 MUST:
 
-- rate limit server-side;
-- cooldown visual;
-- resposta pública genérica;
-- callback interno allowlisted;
-- não mandar email para `.invalid`;
-- não criar token/tabela paralela.
+- nunca armazenar senha ou OTP temporário em texto puro;
+- nunca logar OTP;
+- nunca retornar password hash/ciphertext;
+- impedir signup credentials nativo;
+- usar transação para promoção pendente → conta;
+- impedir replay removendo a linha pendente;
+- manter respostas de cadastro/reenvio não-enumeráveis;
+- rejeitar mutation com Origin não confiável;
+- não enviar email para domínios `.invalid`.
 
-Resposta recomendada:
+## 13. Limpeza
 
-```text
-Se existir uma conta pendente para esse endereço, enviaremos um novo link.
-```
+Cadastros pendentes antigos são descartáveis.
 
-## 9. Clique no link
-
-Link válido:
-
-1. Better Auth valida token;
-2. marca email como verificado;
-3. executa somente side-effects idempotentes aprovados;
-4. **não cria sessão**;
-5. redireciona para `/`/callback interno;
-6. Home mostra confirmação curta;
-7. usuário pode abrir o modal em modo login.
-
-Link inválido, expirado ou reutilizado:
-
-- não verifica conta;
-- não cria sessão;
-- retorna à Home com estado de erro genérico/recuperável;
-- oferece reenviar a partir do fluxo de login/pending quando apropriado.
-
-Não é obrigatório distinguir publicamente `expired` de `invalid`; a UX pode usar `LINK INVÁLIDO OU EXPIRADO`.
-
-## 10. Provisionamento e onboarding
-
-Credentials user não verificado não deve gerar recursos de domínio desnecessários.
-
-O provisionamento completo de `profile.commanders`, wallets/loadout e acesso ao Comando SHOULD ocorrer somente depois que existir identidade autenticável/verificada e o usuário entrar no pipeline de onboarding.
-
-OAuth continua usando o mesmo onboarding comum.
-
-Isso evita criar wallet/profile completos para spam de cadastros nunca verificados.
-
-## 11. Login antes da verificação
-
-Quando email e senha estiverem corretos, mas `emailVerified=false`:
-
-- Better Auth rejeita criação de sessão;
-- UI pode encaminhar para `verification-pending`;
-- UI oferece reenvio;
-- nenhuma rota protegida é liberada.
-
-Uma tentativa com senha errada não deve fornecer detalhe que ajude a distinguir conta existente.
-
-## 12. Fluxo após verificação
-
-```text
-email verificado
-    ↓
-login email + senha
-    ↓
-sessão válida
-    ↓
-profile.commanders completo?
-  ├─ não -> onboarding
-  └─ sim -> command-open
-```
-
-A confirmação de email não reserva handle antecipadamente.
-
-## 13. Transportador de email
-
-O Contrapista usa Gmail API, mas o War-Brasil não acopla o contrato a Gmail.
-
-`sendAuthEmail()` pode receber implementação com Gmail, Resend, SES, SMTP ou outro transportador transacional, desde que passe os mesmos EVALs.
-
-Configuração do transportador é server-only:
-
-```text
-AUTH_EMAIL_FROM
-<EMAIL_TRANSPORT_SECRET>
-# SMTP_URL somente se SMTP for escolhido
-```
-
-Nenhuma credential de email usa `NEXT_PUBLIC_`.
+O serviço remove oportunisticamente registros com mais de 24 horas, enquanto o OTP individual expira em 10 minutos.
 
 ## 14. Definition of Done
 
-Cadastrar Email + senha sempre termina em `verification-pending`, nunca em sessão. O email contém link Better Auth válido por uma hora. Clicar confirma o email, mas não faz auto-login. Login posterior autentica e segue para onboarding/Comando. Duplicate signup e resend não enumeram contas, e nenhum token/password hash custom é persistido fora das estruturas oficiais do Better Auth.
+O fluxo credentials está correto quando:
+
+1. signup válido cria somente `auth.pending_registration`;
+2. antes do OTP não existe `auth.user`;
+3. email contém OTP de 6 dígitos;
+4. OTP inválido/expirado não cria conta;
+5. OTP válido cria `auth.user + auth.account` já verificados;
+6. a linha pendente é removida;
+7. a confirmação cria uma sessão Better Auth;
+8. a Home abre imediatamente o onboarding de nome/@handle;
+9. o onboarding cria `profile.commanders` e o estado econômico;
+10. replay do OTP não produz nova ação privilegiada.
