@@ -4,15 +4,9 @@ import { randomUUID } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { after } from "next/server";
-import {
-  readAuthServerEnvironment,
-  type AuthEmailTransport,
-} from "./environment";
+import { readAuthServerEnvironment } from "./environment";
 
 const RESEND_EMAIL_ENDPOINT = "https://api.resend.com/emails";
-const GOOGLE_OAUTH_TOKEN_ENDPOINT = "https://oauth2.googleapis.com/token";
-const GMAIL_SEND_ENDPOINT =
-  "https://gmail.googleapis.com/gmail/v1/users/me/messages/send";
 const EMAIL_DELIVERY_TIMEOUT_MS = 8_000;
 
 export type AuthEmailMessage = {
@@ -27,22 +21,9 @@ type AuthEmailSinkMessage = AuthEmailMessage & {
 };
 
 type ResendAuthEmailTransport = {
-  kind: "resend";
   from: string;
   apiKey: string;
 };
-
-type GmailOAuthAuthEmailTransport = {
-  kind: "gmail-oauth";
-  from: string;
-  clientId: string;
-  clientSecret: string;
-  refreshToken: string;
-};
-
-type ResolvedAuthEmailTransport =
-  | ResendAuthEmailTransport
-  | GmailOAuthAuthEmailTransport;
 
 function escapeHtml(value: string) {
   return value
@@ -51,10 +32,6 @@ function escapeHtml(value: string) {
     .replace(/>/g, "&gt;")
     .replace(/\"/g, "&quot;")
     .replace(/'/g, "&#39;");
-}
-
-function safeHeaderValue(value: string) {
-  return value.replace(/[\r\n]+/g, " ").trim();
 }
 
 export function isNonDeliverableAuthAddress(value: string) {
@@ -220,37 +197,13 @@ async function captureAuthEmailForTest(message: AuthEmailMessage) {
   return true;
 }
 
-export function resolveAuthEmailTransport(): ResolvedAuthEmailTransport | null {
+export function resolveResendTransport(): ResendAuthEmailTransport | null {
   const environment = readAuthServerEnvironment();
   const from = environment.email.from;
-  const transport = environment.email.transport as AuthEmailTransport | undefined;
+  const apiKey = environment.email.transportSecret;
 
-  if (!from) return null;
-
-  if (
-    transport === "gmail-oauth" &&
-    environment.email.googleClientId &&
-    environment.email.googleClientSecret &&
-    environment.email.googleRefreshToken
-  ) {
-    return {
-      kind: "gmail-oauth",
-      from,
-      clientId: environment.email.googleClientId,
-      clientSecret: environment.email.googleClientSecret,
-      refreshToken: environment.email.googleRefreshToken,
-    };
-  }
-
-  if (transport === "resend" && environment.email.transportSecret) {
-    return {
-      kind: "resend",
-      from,
-      apiKey: environment.email.transportSecret,
-    };
-  }
-
-  return null;
+  if (!from || !apiKey) return null;
+  return { from, apiKey };
 }
 
 async function deliveryIdempotencyKey(message: AuthEmailMessage) {
@@ -299,122 +252,6 @@ async function deliverWithResend(
   }
 }
 
-async function requestGmailAccessToken(
-  transport: GmailOAuthAuthEmailTransport,
-) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), EMAIL_DELIVERY_TIMEOUT_MS);
-  timeout.unref?.();
-
-  try {
-    const body = new URLSearchParams({
-      client_id: transport.clientId,
-      client_secret: transport.clientSecret,
-      refresh_token: transport.refreshToken,
-      grant_type: "refresh_token",
-    });
-    const response = await fetch(GOOGLE_OAUTH_TOKEN_ENDPOINT, {
-      method: "POST",
-      signal: controller.signal,
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body,
-    });
-
-    const payload = (await response.json().catch(() => null)) as
-      | { access_token?: string }
-      | null;
-    if (!response.ok || !payload?.access_token) {
-      throw new Error(
-        `Google OAuth respondeu HTTP ${response.status} ao renovar credencial de email.`,
-      );
-    }
-
-    return payload.access_token;
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-function encodeMimeSubject(subject: string) {
-  return `=?UTF-8?B?${Buffer.from(subject, "utf8").toString("base64")}?=`;
-}
-
-function buildGmailRawMessage(
-  message: AuthEmailMessage,
-  transport: GmailOAuthAuthEmailTransport,
-) {
-  const boundary = `war-brasil-${randomUUID()}`;
-  const textPart = Buffer.from(message.text, "utf8").toString("base64");
-  const htmlPart = Buffer.from(message.html, "utf8").toString("base64");
-  const mime = [
-    `From: ${safeHeaderValue(transport.from)}`,
-    `To: ${safeHeaderValue(message.to)}`,
-    `Subject: ${encodeMimeSubject(message.subject)}`,
-    "MIME-Version: 1.0",
-    `Content-Type: multipart/alternative; boundary="${boundary}"`,
-    "",
-    `--${boundary}`,
-    'Content-Type: text/plain; charset="UTF-8"',
-    "Content-Transfer-Encoding: base64",
-    "",
-    textPart,
-    `--${boundary}`,
-    'Content-Type: text/html; charset="UTF-8"',
-    "Content-Transfer-Encoding: base64",
-    "",
-    htmlPart,
-    `--${boundary}--`,
-    "",
-  ].join("\r\n");
-
-  return Buffer.from(mime, "utf8").toString("base64url");
-}
-
-async function deliverWithGmail(
-  message: AuthEmailMessage,
-  transport: GmailOAuthAuthEmailTransport,
-) {
-  const accessToken = await requestGmailAccessToken(transport);
-  const raw = buildGmailRawMessage(message, transport);
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), EMAIL_DELIVERY_TIMEOUT_MS);
-  timeout.unref?.();
-
-  try {
-    const response = await fetch(GMAIL_SEND_ENDPOINT, {
-      method: "POST",
-      signal: controller.signal,
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ raw }),
-    });
-
-    if (!response.ok) {
-      throw new Error(
-        `Gmail API respondeu HTTP ${response.status} ao enviar email de autenticação.`,
-      );
-    }
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-async function deliverAuthEmail(
-  message: AuthEmailMessage,
-  transport: ResolvedAuthEmailTransport,
-) {
-  if (transport.kind === "gmail-oauth") {
-    await deliverWithGmail(message, transport);
-    return;
-  }
-
-  await deliverWithResend(message, transport);
-}
-
 export async function sendAuthEmail(message: AuthEmailMessage) {
   if (isNonDeliverableAuthAddress(message.to)) {
     return;
@@ -424,20 +261,19 @@ export async function sendAuthEmail(message: AuthEmailMessage) {
     return;
   }
 
-  const transport = resolveAuthEmailTransport();
+  const transport = resolveResendTransport();
   if (transport) {
-    await deliverAuthEmail(message, transport);
+    await deliverWithResend(message, transport);
     return;
   }
 
-  if (process.env.CI === "true" || !transport) {
-    if (process.env.NODE_ENV === "production" && process.env.CI !== "true") {
-      throw new Error("Transportador de email de autenticação não configurado.");
-    }
-    console.info(
-      `[auth-email] delivery=sink subject=${JSON.stringify(message.subject)}`,
-    );
+  if (process.env.NODE_ENV === "production" && process.env.CI !== "true") {
+    throw new Error("Transportador de email de autenticação não configurado.");
   }
+
+  console.info(
+    `[auth-email] delivery=sink subject=${JSON.stringify(message.subject)}`,
+  );
 }
 
 export function dispatchAuthEmail(message: AuthEmailMessage) {
