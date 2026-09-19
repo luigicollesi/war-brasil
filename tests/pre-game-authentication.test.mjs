@@ -247,3 +247,42 @@ test("Lobby E2E usa sessão Better Auth real e não bypass de CI", () => {
   assert.match(lobbyE2e, /profileComplete/);
   assert.doesNotMatch(lobbyE2e, /AUTH_BYPASS|SKIP_AUTH|DISABLE_AUTH/);
 });
+
+
+test("email auth suporta Gmail OAuth2 por refresh token sem expor credenciais ao cliente", () => {
+  for (const name of [
+    "AUTH_EMAIL_TRANSPORT",
+    "AUTH_EMAIL_GOOGLE_CLIENT_ID",
+    "AUTH_EMAIL_GOOGLE_CLIENT_SECRET",
+    "AUTH_EMAIL_GOOGLE_REFRESH_TOKEN",
+  ]) {
+    assert.match(environment, new RegExp(name));
+    assert.match(envExample, new RegExp(name));
+  }
+
+  assert.match(email, /https:\/\/oauth2\.googleapis\.com\/token/);
+  assert.match(email, /https:\/\/gmail\.googleapis\.com\/gmail\/v1\/users\/me\/messages\/send/);
+  assert.match(email, /grant_type.*refresh_token/);
+  assert.match(email, /Authorization: `Bearer \$\{accessToken\}`/);
+  assert.doesNotMatch(authModal, /AUTH_EMAIL_GOOGLE_/);
+  assert.doesNotMatch(authClient, /AUTH_EMAIL_GOOGLE_/);
+});
+
+test("email configurado entrega também em desenvolvimento em vez de virar somente log", () => {
+  assert.match(email, /resolveAuthEmailTransport/);
+  assert.match(email, /if \(transport\) \{[\s\S]*await deliverAuthEmail\(message, transport\)/);
+  assert.match(
+    email,
+    /if \(process\.env\.CI === "true" \|\| !transport\)[\s\S]*delivery=sink/,
+  );
+});
+
+test("email de verificação usa identidade visual de comando e CTA dominante", () => {
+  assert.match(email, /IDENTIDADE DE COMANDO/);
+  assert.match(email, /CONFIRMAR EMAIL/);
+  assert.match(email, /Bem-vindo ao Comando/);
+  assert.match(email, /background:#d0aa57/);
+  assert.match(email, /display:inline-block/);
+  assert.match(email, /padding:16px 28px/);
+  assert.match(email, /Se o botão não funcionar/);
+});
