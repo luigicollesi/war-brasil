@@ -1,10 +1,10 @@
 import "server-only";
 
 import { betterAuth } from "better-auth";
+import { hashPassword, verifyPassword } from "better-auth/crypto";
 import { authPool } from "./auth-pool";
 import {
   buildPasswordResetEmail,
-  buildVerificationEmail,
   dispatchAuthEmail,
 } from "./email";
 import {
@@ -105,24 +105,19 @@ export const auth = betterAuth({
   },
   emailAndPassword: {
     enabled: true,
+    disableSignUp: true,
     requireEmailVerification: true,
     autoSignIn: false,
     minPasswordLength: 8,
     maxPasswordLength: 128,
     resetPasswordTokenExpiresIn: AUTH_TOKEN_TTL_SECONDS,
     revokeSessionsOnPasswordReset: true,
+    password: {
+      hash: hashPassword,
+      verify: verifyPassword,
+    },
     sendResetPassword: async ({ user, url }) => {
       const email = buildPasswordResetEmail(url);
-      dispatchAuthEmail({ ...email, to: user.email });
-    },
-  },
-  emailVerification: {
-    sendOnSignUp: false,
-    sendOnSignIn: false,
-    autoSignInAfterVerification: false,
-    expiresIn: AUTH_TOKEN_TTL_SECONDS,
-    sendVerificationEmail: async ({ user, url }) => {
-      const email = buildVerificationEmail(url);
       dispatchAuthEmail({ ...email, to: user.email });
     },
   },
