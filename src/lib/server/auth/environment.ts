@@ -80,7 +80,7 @@ function isObviouslyUnsafeAuthSecret(value: string | undefined) {
 
 function isObviouslyUnsafeTransportSecret(value: string | undefined) {
   if (!value || value.length < 16) return true;
-  return /SENTINEL_DO_NOT_SHIP|changeme|change-me|replace-me/i.test(value);
+  return /SENTINEL_DO_NOT_SHIP|configure-|changeme|change-me|replace-me/i.test(value);
 }
 
 function inferEmailTransport({
@@ -185,7 +185,10 @@ export function assertAuthRuntimeConfiguration(
   }
 
   if (environment.email.transport === "gmail-oauth") {
-    if (!environment.email.googleClientId) {
+    if (
+      !environment.email.googleClientId ||
+      /SENTINEL_DO_NOT_SHIP|configure-/i.test(environment.email.googleClientId)
+    ) {
       missing.push("AUTH_EMAIL_GOOGLE_CLIENT_ID");
     }
     if (isObviouslyUnsafeTransportSecret(environment.email.googleClientSecret)) {
