@@ -3,6 +3,7 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { Client } from "pg";
+import { waitForRegistrationCode } from "./registration-otp-helper.mjs";
 
 const playwrightRuntimeDir = path.resolve(
   process.env.PLAYWRIGHT_RUNTIME_DIR ?? ".e2e-runtime/node_modules/playwright",
@@ -138,10 +139,17 @@ try {
     const email = `reset-${identity}@e2e.war-brasil.test`;
     await register(page, email);
 
-    const verificationMessage = await waitForEmail(email, "Verificação de email");
-    await page.goto(actionUrl(verificationMessage), {
-      waitUntil: "domcontentloaded",
+    const registrationCode = await waitForRegistrationCode(
+      email,
+      EMAIL_SINK_DIR,
+    );
+    const verification = await apiJson(page, "/api/auth/register/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, code: registrationCode }),
     });
+    assert.equal(verification.status, 200, JSON.stringify(verification.body));
+    assert.equal(verification.body?.authenticated, true);
 
     const verified = await db.query(
       `SELECT "emailVerified" AS verified
@@ -150,6 +158,13 @@ try {
       [email],
     );
     assert.equal(verified.rows[0]?.verified, true, "fixture não foi verificada");
+
+    const verificationSignOut = await signOut(page);
+    assert.equal(
+      verificationSignOut.status,
+      200,
+      JSON.stringify(verificationSignOut.body),
+    );
 
     const initialSignIn = await signIn(page, email, OLD_PASSWORD);
     assert.equal(initialSignIn.status, 200, JSON.stringify(initialSignIn.body));
