@@ -19,6 +19,22 @@ const commandAccessRoute = readFileSync(
 const authClient = readFileSync("src/lib/client/auth-client.ts", "utf8");
 const authRoute = readFileSync("src/app/api/auth/[...all]/route.ts", "utf8");
 const registerRoute = readFileSync("src/app/api/auth/register/route.ts", "utf8");
+const verifyRegistrationRoute = readFileSync(
+  "src/app/api/auth/register/verify/route.ts",
+  "utf8",
+);
+const resendRegistrationRoute = readFileSync(
+  "src/app/api/auth/register/resend/route.ts",
+  "utf8",
+);
+const pendingRegistration = readFileSync(
+  "src/lib/server/auth/pending-registration.ts",
+  "utf8",
+);
+const pendingRegistrationMigration = readFileSync(
+  "src/lib/db/migrations/managed/038-pending-email-registration.sql",
+  "utf8",
+);
 const proxy = readFileSync("src/proxy.ts", "utf8");
 const email = readFileSync("src/lib/server/auth/email.ts", "utf8");
 const envExample = readFileSync(".env.example", "utf8");
@@ -50,6 +66,9 @@ const authSources = [
   authClient,
   authRoute,
   registerRoute,
+  verifyRegistrationRoute,
+  resendRegistrationRoute,
+  pendingRegistration,
   proxy,
   email,
 ].join("\n");
@@ -80,15 +99,16 @@ test("launch auth possui somente Google, Discord e credentials", () => {
   assert.doesNotMatch(authModal, /apple|Continuar com Apple/i);
 });
 
-test("credentials exige email verificado e delega o envio inicial ao endpoint de registro", () => {
+test("credentials só cria conta após OTP e bloqueia signup direto do Better Auth", () => {
   assert.match(auth, /requireEmailVerification: true/);
+  assert.match(auth, /emailAndPassword:[\s\S]*disableSignUp: true/);
   assert.match(auth, /emailAndPassword:[\s\S]*autoSignIn: false/);
-  assert.match(auth, /sendOnSignUp: false/);
-  assert.match(auth, /sendOnSignIn: false/);
-  assert.match(auth, /autoSignInAfterVerification: false/);
+  assert.match(auth, /hash: hashPassword/);
+  assert.match(auth, /verify: verifyPassword/);
   assert.match(auth, /AUTH_TOKEN_TTL_SECONDS = 60 \* 60/);
   assert.match(auth, /resetPasswordTokenExpiresIn: AUTH_TOKEN_TTL_SECONDS/);
   assert.match(auth, /revokeSessionsOnPasswordReset: true/);
+  assert.doesNotMatch(auth, /sendOnSignUp|sendVerificationEmail/);
 });
 
 test("linking é explícito e não confia em coincidência de email", () => {
@@ -147,6 +167,8 @@ test("mutações auth browser por POST exigem origem first-party", () => {
   assert.match(requestOrigin, /environment\.baseUrl/);
   assert.match(requestOrigin, /status: 403/);
   assert.match(registerRoute, /rejectUntrustedAuthMutationOrigin\(request\)/);
+  assert.match(verifyRegistrationRoute, /rejectUntrustedAuthMutationOrigin\(request\)/);
+  assert.match(resendRegistrationRoute, /rejectUntrustedAuthMutationOrigin\(request\)/);
   assert.doesNotMatch(requestOrigin, /EXTERNAL_POST_CALLBACK_PREFIX|isExternalAuthProviderCallback/);
   assert.doesNotMatch(requestOrigin, /trustedProxyHeaders|x-forwarded-host|x-forwarded-proto/i);
 });
@@ -166,13 +188,17 @@ test("nenhuma variável auth server-only é publicada com NEXT_PUBLIC", () => {
   assert.doesNotMatch(envExample, /APPLE_/);
 });
 
-test("emails auth não geram token próprio nem registram URL/token", () => {
-  assert.match(email, /buildVerificationEmail/);
-  assert.match(email, /buildPasswordResetEmail/);
-  assert.match(email, /CONFIRMAR EMAIL/);
-  assert.match(email, /O link é válido por 1 hora/);
-  assert.doesNotMatch(email, /randomBytes|createHash|token_hash|verification_tokens/);
-  assert.doesNotMatch(email, /console\.(?:log|info|error)\([^)]*url/i);
+test("cadastro usa OTP próprio temporário sem persistir código ou senha em texto puro", () => {
+  assert.match(email, /buildRegistrationCodeEmail/);
+  assert.match(email, /código é válido por 10 minutos/i);
+  assert.match(pendingRegistration, /randomInt/);
+  assert.match(pendingRegistration, /createHmac\("sha256"/);
+  assert.match(pendingRegistration, /aes-256-gcm/);
+  assert.match(pendingRegistration, /hashPassword\(password\)/);
+  assert.match(pendingRegistrationMigration, /password_ciphertext TEXT NOT NULL/);
+  assert.match(pendingRegistrationMigration, /verification_code_hash TEXT NOT NULL/);
+  assert.doesNotMatch(pendingRegistrationMigration, /\bpassword\s+TEXT|verification_code\s+TEXT/i);
+  assert.doesNotMatch(email, /console\.(?:log|info|error)\([^)]*code/i);
 });
 
 test("validador de produção exige segredo forte e configuração dos dois OAuth providers", () => {
@@ -241,7 +267,7 @@ test("create/join vinculam conta e snapshot público ao assento na transação",
 
 test("Lobby E2E usa sessão Better Auth real e não bypass de CI", () => {
   assert.match(lobbyE2e, /\/api\/auth\/register/);
-  assert.match(lobbyE2e, /UPDATE auth\."user"/);
+  assert.match(lobbyE2e, /\/api\/auth\/register\/verify/);
   assert.match(lobbyE2e, /\/api\/auth\/sign-in\/email/);
   assert.match(lobbyE2e, /\/api\/auth\/command-access/);
   assert.match(lobbyE2e, /profileComplete/);
@@ -270,30 +296,30 @@ test("email configurado entrega via Resend também em desenvolvimento", () => {
   );
 });
 
-test("email de verificação usa identidade visual de comando e CTA dominante", () => {
+test("email de cadastro apresenta OTP na identidade visual de comando", () => {
   assert.match(email, /IDENTIDADE DE COMANDO/);
-  assert.match(email, /CONFIRMAR EMAIL/);
-  assert.match(email, /Bem-vindo ao Comando/);
-  assert.match(email, /background:#d0aa57/);
-  assert.match(email, /display:inline-block/);
-  assert.match(email, /padding:16px 28px/);
-  assert.match(email, /Se o botão não funcionar/);
+  assert.match(email, /Seu código de confirmação/);
+  assert.match(email, /Confirme seu email/);
+  assert.match(email, /letter-spacing:10px/);
+  assert.match(email, /10 minutos/);
 });
 
 
-test("registro customizado dispara exatamente o fluxo automático de verificação inclusive para conta pendente existente", () => {
-  assert.match(auth, /sendOnSignUp:\s*false/);
-  assert.doesNotMatch(auth, /sendOnSignUp:\s*true/);
+test("registro permanece temporário até confirmação e promoção é atômica", () => {
+  assert.match(registerRoute, /beginPendingRegistration\(\{ email, password \}\)/);
+  assert.match(registerRoute, /buildRegistrationCodeEmail\(pending\.code\)/);
+  assert.doesNotMatch(registerRoute, /sign-up\/email|sendVerificationEmail/);
 
-  assert.match(registerRoute, /const VERIFICATION_CALLBACK_URL = "\/\?emailVerified=success&continue=command"/);
-  assert.match(
-    registerRoute,
-    /if \(response\.ok\) \{[\s\S]*await auth\.api\.sendVerificationEmail\(\{[\s\S]*body:\s*\{[\s\S]*email,[\s\S]*callbackURL:\s*VERIFICATION_CALLBACK_URL/,
-  );
-  assert.match(
-    registerRoute,
-    /await auth\.api\.sendVerificationEmail[\s\S]*return genericRegistrationResponse\(\)/,
-  );
+  assert.match(verifyRegistrationRoute, /verifyPendingRegistration\(email, code\)/);
+  assert.match(verifyRegistrationRoute, /auth\.api\.signInEmail/);
+  assert.match(verifyRegistrationRoute, /next: "onboarding"/);
+
+  assert.match(pendingRegistration, /INSERT INTO auth\."user"/);
+  assert.match(pendingRegistration, /"emailVerified"/);
+  assert.match(pendingRegistration, /VALUES\(\$1, 'Comandante', \$2, TRUE/);
+  assert.match(pendingRegistration, /INSERT INTO auth\."account"/);
+  assert.match(pendingRegistration, /'credential'/);
+  assert.match(pendingRegistration, /DELETE FROM auth\.pending_registration WHERE email = \$1/);
 });
 
 test("registro não informa sucesso de envio se nem remetente nem Resend estiverem configurados parcialmente", () => {
