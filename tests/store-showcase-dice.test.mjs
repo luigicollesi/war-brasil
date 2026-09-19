@@ -68,3 +68,36 @@ test("dice framing preset is farther and narrower than the legacy showcase camer
     /dice:\s*\{[\s\S]*compact:\s*\{[\s\S]*objectScale:\s*1\.65,[\s\S]*cameraFov:\s*34,[\s\S]*cameraDistance:\s*5\.8/,
   );
 });
+
+
+test("portrait showcase uses a dedicated narrow-screen presentation instead of tablet compact framing", () => {
+  const presentation = read("src/lib/client/store-showcase/showcase-presentation.ts");
+  const controller = read(
+    "src/components/profile/v4/store-showcase/showcase-object-controller.tsx",
+  );
+  const canvas = read("src/components/pre-game/foundation/command-scene-canvas.tsx");
+
+  assert.match(presentation, /SHOWCASE_PORTRAIT_ASPECT_MAX = 0\.78/);
+  assert.match(presentation, /portrait:\s*ShowcasePresentation/);
+  assert.match(
+    presentation,
+    /function resolveShowcaseViewport\([\s\S]*aspectRatio <= SHOWCASE_PORTRAIT_ASPECT_MAX[\s\S]*return "portrait"/,
+  );
+  assert.match(
+    presentation,
+    /dice:\s*\{[\s\S]*portrait:\s*\{[\s\S]*objectScale:\s*0\.98,[\s\S]*cameraFov:\s*36,[\s\S]*cameraDistance:\s*6\.8/,
+  );
+  assert.match(
+    presentation,
+    /territory:\s*\{[\s\S]*portrait:\s*\{[\s\S]*objectScale:\s*0\.55,[\s\S]*cameraFov:\s*38,[\s\S]*cameraDistance:\s*6\.8/,
+  );
+
+  assert.match(
+    controller,
+    /resolveShowcasePresentation\(objectType, compact, viewportAspect\)/,
+  );
+  assert.match(
+    canvas,
+    /resolveShowcasePresentation\(objectType, compact, cameraAspect\)/,
+  );
+});
