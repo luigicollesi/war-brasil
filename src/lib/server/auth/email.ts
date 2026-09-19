@@ -289,9 +289,20 @@ async function deliverWithResend(
       }),
     });
 
+    const payload = (await response.json().catch(() => null)) as
+      | { id?: string; message?: string; name?: string }
+      | null;
+
     if (!response.ok) {
-      throw new Error(`Transportador de email respondeu HTTP ${response.status}.`);
+      const detail = payload?.message || payload?.name || "sem detalhe";
+      throw new Error(
+        `Transportador de email respondeu HTTP ${response.status}: ${detail}.`,
+      );
     }
+
+    console.info(
+      `[auth-email] delivery=accepted provider=resend status=${response.status} id=${payload?.id ?? "unknown"}`,
+    );
   } finally {
     clearTimeout(timeout);
   }
@@ -308,6 +319,7 @@ export async function sendAuthEmail(message: AuthEmailMessage) {
 
   const transport = resolveResendTransport();
   if (transport) {
+    console.info("[auth-email] delivery=attempt provider=resend");
     await deliverWithResend(message, transport);
     return;
   }
