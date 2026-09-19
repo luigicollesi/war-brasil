@@ -24,12 +24,8 @@
 
 .atmosphereBase {
   inset: 0;
-  opacity: 0.68;
-  background:
-    radial-gradient(ellipse 70% 34% at 14% 7%, rgb(16 39 27 / 42%), transparent 72%),
-    radial-gradient(ellipse 54% 28% at 82% 40%, rgb(6 21 15 / 72%), transparent 76%),
-    radial-gradient(ellipse 58% 24% at 42% 80%, rgb(10 29 20 / 48%), transparent 75%),
-    linear-gradient(145deg, rgb(2 8 6 / 10%), rgb(2 8 6 / 62%));
+  opacity: 0;
+  background: transparent;
 }
 
 .atmosphereOptical {
@@ -59,6 +55,7 @@
     radial-gradient(circle at 26% 18%, #000 0 16%, transparent 48%),
     radial-gradient(circle at 74% 64%, #000 0 12%, transparent 40%);
   mix-blend-mode: screen;
+  animation: storeOpticalDrift 61s linear infinite;
 }
 
 .atmospherePlatePrimary {
@@ -97,6 +94,7 @@
   opacity: 0.026;
   text-shadow: 0 36px 80px rgb(0 0 0 / 40%);
   user-select: none;
+  animation: storeGhostDrift 73s ease-in-out infinite alternate;
 }
 
 .atmosphereGhostType::after {
@@ -124,7 +122,7 @@
 
 .atmosphereVignette {
   inset: 0;
-  opacity: 0.68;
+  opacity: 0.48;
   background:
     radial-gradient(
       ellipse 74% 44% at 50% 34%,
@@ -168,9 +166,10 @@
 }
 
 .storeNav a:hover,
-.storeNav a:focus-visible {
+.storeNav a:focus-visible,
+.storeNav a[data-active="true"] {
   color: var(--ivory);
-  background: transparent;
+  background: rgb(208 170 87 / 3%);
   box-shadow: inset 0 -2px 0 rgb(208 170 87 / 72%);
   outline: none;
 }
@@ -947,6 +946,7 @@
     linear-gradient(128deg, rgb(16 39 27 / 38%), rgb(6 21 15 / 4%) 76%);
   clip-path: polygon(0 14%, 78% 0, 100% 38%, 73% 100%, 6% 82%);
   filter: drop-shadow(34px 38px 58px rgb(0 0 0 / 15%));
+  animation: storeMassBreath 79s ease-in-out infinite alternate;
 }
 
 .atmosphereLowerMass {
@@ -963,6 +963,7 @@
     ),
     linear-gradient(165deg, rgb(3 13 10 / 2%), rgb(16 39 27 / 48%));
   clip-path: polygon(0 30%, 21% 0, 66% 14%, 100% 0, 94% 100%, 12% 88%);
+  animation: storeMassBreath 83s ease-in-out infinite alternate-reverse;
 }
 
 .signalClusterLeft,
@@ -1026,11 +1027,14 @@
 }
 
 .operationAxis {
+  --v3-section-opacity: 0.58;
   left: -6%;
   bottom: 3%;
   width: min(84%, 980px);
   height: 32px;
-  opacity: 0.58;
+  opacity: 0.06;
+  transform: scaleX(0.08);
+  transform-origin: left center;
   background:
     repeating-linear-gradient(
       90deg,
@@ -1062,11 +1066,13 @@
 }
 
 .supplyNetwork {
+  --v3-section-opacity: 0.46;
   top: 12%;
   left: -3%;
   width: 62%;
   height: 78%;
-  opacity: 0.46;
+  opacity: 0.06;
+  transform: translate3d(0, 12px, 0);
   background:
     radial-gradient(circle at 9% 23%, rgb(208 170 87 / 34%) 0 3px, transparent 4px),
     radial-gradient(circle at 31% 56%, rgb(238 232 218 / 25%) 0 3px, transparent 4px),
@@ -1075,6 +1081,18 @@
     linear-gradient(26deg, transparent 22%, rgb(208 170 87 / 10%) 22.3% 22.7%, transparent 23%),
     linear-gradient(151deg, transparent 40%, rgb(238 232 218 / 8%) 40.3% 40.7%, transparent 41%);
   mask-image: linear-gradient(90deg, #000, #000 72%, transparent);
+}
+
+.supplyNetwork::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background:
+    radial-gradient(circle at 12% 34%, rgb(208 170 87 / 34%) 0 6px, transparent 24px),
+    linear-gradient(90deg, transparent 0 18%, rgb(208 170 87 / 9%) 30%, transparent 46%);
+  transform: translate3d(-18%, 0, 0);
+  pointer-events: none;
 }
 
 .supplyNetwork::after {
@@ -1090,11 +1108,13 @@
 }
 
 .frontLine {
+  --v3-section-opacity: 0.32;
   top: 6%;
   right: -5%;
   width: 72%;
   height: 84%;
-  opacity: 0.32;
+  opacity: 0.05;
+  transform: translate3d(18px, 0, 0);
   background:
     repeating-linear-gradient(
       136deg,
@@ -1118,12 +1138,27 @@
   transform: rotate(-5deg);
 }
 
+.frontLine::after {
+  content: "";
+  position: absolute;
+  top: 58%;
+  right: 28%;
+  width: 9px;
+  height: 9px;
+  opacity: 0;
+  background: rgb(141 37 43 / 72%);
+  box-shadow: 0 0 0 8px rgb(141 37 43 / 4%);
+  transform: rotate(45deg) scale(0.7);
+}
+
 .repairPlate {
+  --v3-section-opacity: 0.34;
   top: 8%;
   left: -8%;
   width: 52%;
   height: 84%;
-  opacity: 0.34;
+  opacity: 0.06;
+  transform: translate3d(-24px, 0, 0) rotate(-0.4deg);
   background:
     radial-gradient(circle at 8% 14%, rgb(238 232 218 / 12%) 0 2px, transparent 3px),
     radial-gradient(circle at 88% 78%, rgb(208 170 87 / 12%) 0 2px, transparent 3px),
@@ -1136,6 +1171,23 @@
     linear-gradient(145deg, rgb(16 39 27 / 49%), rgb(3 13 10 / 5%));
   clip-path: polygon(0 16%, 76% 0, 100% 24%, 85% 100%, 17% 88%);
   filter: drop-shadow(24px 28px 42px rgb(0 0 0 / 14%));
+}
+
+.repairPlate::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  background:
+    linear-gradient(
+      112deg,
+      transparent 26%,
+      rgb(208 170 87 / 3%) 43%,
+      rgb(208 170 87 / 15%) 50%,
+      transparent 58%
+    );
+  transform: translate3d(-120%, 0, 0);
+  pointer-events: none;
 }
 
 .repairPlate::after {
@@ -1157,10 +1209,12 @@
 }
 
 .lowerArmor {
+  --v3-section-opacity: 0.4;
   inset-inline: -5%;
   bottom: -34%;
   height: 156%;
-  opacity: 0.4;
+  opacity: 0.06;
+  transform: translate3d(0, 18px, 0);
   background:
     repeating-linear-gradient(
       90deg,
@@ -1182,6 +1236,41 @@
   font-size: 0.56rem;
   font-weight: 900;
   letter-spacing: 0.17em;
+}
+
+
+[data-store-zone="hero"][data-v3-active="true"] .operationAxis {
+  animation: storeOperationReveal 1.35s cubic-bezier(0.2, 0.72, 0.2, 1) both;
+}
+
+[data-store-zone="dice"][data-v3-active="true"] .supplyNetwork {
+  animation: storeSupplyReveal 0.9s cubic-bezier(0.2, 0.72, 0.2, 1) both;
+}
+
+[data-store-zone="dice"][data-v3-active="true"] .supplyNetwork::before {
+  animation: storeSupplyPulse 9s linear 1.2s infinite;
+}
+
+[data-store-zone="territories"][data-v3-active="true"] .frontLine {
+  animation:
+    storeFrontReveal 0.95s cubic-bezier(0.2, 0.72, 0.2, 1) both,
+    storeFrontCrawl 18s linear 1s infinite;
+}
+
+[data-store-zone="territories"][data-v3-active="true"] .frontLine::after {
+  animation: storeThreatPulse 10s ease-in-out 1.1s infinite;
+}
+
+[data-store-zone="collections"][data-v3-active="true"] .repairPlate {
+  animation: storeRepairReveal 0.95s cubic-bezier(0.2, 0.72, 0.2, 1) both;
+}
+
+[data-store-zone="collections"][data-v3-active="true"] .repairPlate::before {
+  animation: storeRepairSweep 9s ease-in-out 1.2s infinite;
+}
+
+[data-store-zone="treasury"][data-v3-active="true"] .lowerArmor {
+  animation: storeTreasuryReveal 1s cubic-bezier(0.2, 0.72, 0.2, 1) both;
 }
 
 @keyframes storeCommandDrift {
@@ -1210,6 +1299,149 @@
   to {
     transform: translate3d(4%, 2%, 0) scale(1.035);
     opacity: 0.76;
+  }
+}
+
+
+@keyframes storeOpticalDrift {
+  from {
+    background-position: 0 0, 0 0, 0 0;
+  }
+  to {
+    background-position: 44px 0, 0 28px, -24px 18px;
+  }
+}
+
+@keyframes storeGhostDrift {
+  from {
+    transform: translate3d(-5px, -4px, 0);
+    opacity: 0.02;
+  }
+  to {
+    transform: translate3d(8px, 7px, 0);
+    opacity: 0.034;
+  }
+}
+
+@keyframes storeMassBreath {
+  from {
+    transform: translate3d(-5px, 2px, 0) scale(0.992);
+  }
+  to {
+    transform: translate3d(7px, -4px, 0) scale(1.012);
+  }
+}
+
+@keyframes storeOperationReveal {
+  from {
+    opacity: 0;
+    transform: scaleX(0.08);
+  }
+  to {
+    opacity: var(--v3-section-opacity);
+    transform: scaleX(1);
+  }
+}
+
+@keyframes storeSupplyReveal {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 12px, 0);
+  }
+  to {
+    opacity: var(--v3-section-opacity);
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes storeSupplyPulse {
+  0%,
+  70%,
+  100% {
+    opacity: 0;
+    transform: translate3d(-18%, 0, 0);
+  }
+  78% {
+    opacity: 0.82;
+  }
+  92% {
+    opacity: 0;
+    transform: translate3d(92%, 0, 0);
+  }
+}
+
+@keyframes storeFrontReveal {
+  from {
+    opacity: 0;
+    transform: translate3d(18px, 0, 0);
+  }
+  to {
+    opacity: var(--v3-section-opacity);
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+@keyframes storeFrontCrawl {
+  from {
+    background-position: 0 0;
+  }
+  to {
+    background-position: 74px 0;
+  }
+}
+
+@keyframes storeThreatPulse {
+  0%,
+  82%,
+  100% {
+    opacity: 0;
+    transform: rotate(45deg) scale(0.7);
+  }
+  88% {
+    opacity: 0.72;
+    transform: rotate(45deg) scale(1);
+  }
+  94% {
+    opacity: 0.12;
+    transform: rotate(45deg) scale(1.45);
+  }
+}
+
+@keyframes storeRepairReveal {
+  from {
+    opacity: 0;
+    transform: translate3d(-24px, 0, 0) rotate(-0.4deg);
+  }
+  to {
+    opacity: var(--v3-section-opacity);
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+}
+
+@keyframes storeRepairSweep {
+  0%,
+  68%,
+  100% {
+    opacity: 0;
+    transform: translate3d(-120%, 0, 0);
+  }
+  76% {
+    opacity: 0.68;
+  }
+  90% {
+    opacity: 0;
+    transform: translate3d(120%, 0, 0);
+  }
+}
+
+@keyframes storeTreasuryReveal {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 18px, 0);
+  }
+  to {
+    opacity: var(--v3-section-opacity);
+    transform: translate3d(0, 0, 0);
   }
 }
 
@@ -1337,27 +1569,30 @@
   }
 
   .operationAxis {
+    --v3-section-opacity: 0.42;
     left: -14%;
     bottom: 1%;
     width: clamp(250px, 94vw, 430px);
     height: 24px;
-    opacity: 0.42;
+    opacity: 0.04;
   }
 
   .supplyNetwork {
+    --v3-section-opacity: 0.26;
     top: 18%;
     left: -18%;
     width: 92%;
     height: 68%;
-    opacity: 0.26;
+    opacity: 0.04;
   }
 
   .frontLine {
+    --v3-section-opacity: 0.24;
     top: 10%;
     right: -31%;
     width: clamp(280px, 92vw, 430px);
     height: 76%;
-    opacity: 0.24;
+    opacity: 0.04;
   }
 
   .frontLine::before {
@@ -1366,11 +1601,12 @@
   }
 
   .repairPlate {
+    --v3-section-opacity: 0.24;
     top: 7%;
     left: -42%;
     width: 110%;
     height: 76%;
-    opacity: 0.24;
+    opacity: 0.04;
   }
 
   .repairPlate::after {
@@ -1379,10 +1615,11 @@
   }
 
   .lowerArmor {
+    --v3-section-opacity: 0.3;
     inset-inline: -24%;
     bottom: -30%;
     height: 142%;
-    opacity: 0.3;
+    opacity: 0.04;
   }
 
   .lowerArmor::after {
@@ -1396,6 +1633,7 @@
 
   .atmosphereOptical {
     opacity: 0.18;
+    animation-duration: 92s;
   }
 
   .atmospherePlatePrimary {
@@ -1414,6 +1652,7 @@
     right: -14%;
     font-size: clamp(8rem, 42vw, 13rem);
     opacity: 0.02;
+    animation-duration: 106s;
   }
 
   .catalog::before {
@@ -1511,6 +1750,30 @@
   .fixedArmorPlate,
   .fixedLightSweep {
     animation: none;
+  }
+
+  .atmosphereOptical,
+  .atmosphereGhostType,
+  .atmosphereLeftMass,
+  .atmosphereLowerMass {
+    animation: none;
+  }
+
+  .operationAxis,
+  .supplyNetwork,
+  .frontLine,
+  .repairPlate,
+  .lowerArmor {
+    animation: none;
+    transform: none;
+    opacity: var(--v3-section-opacity);
+  }
+
+  .supplyNetwork::before,
+  .frontLine::after,
+  .repairPlate::before {
+    animation: none;
+    opacity: 0;
   }
 
   .storeNav a,
