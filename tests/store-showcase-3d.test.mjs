@@ -51,3 +51,24 @@ test("pedestal identity is stable and collection atmosphere stays outside the sh
   assert.match(canvas, /SceneClearDirector/);
   assert.doesNotMatch(canvas, /SHOWCASE_COLLECTION_LIGHT/);
 });
+
+
+test("showcase camera derives perspective aspect from the live canvas size", () => {
+  assert.match(canvas, /const canvasSize = useThree\(\(state\) => state\.size\);/);
+  assert.match(
+    canvas,
+    /const cameraAspect =\s*canvasSize\.height > 0\s*\? canvasSize\.width \/ canvasSize\.height\s*:\s*1;/,
+  );
+  assert.match(
+    canvas,
+    /new PerspectiveCamera\(\s*presentation\.cameraFov,\s*cameraAspect,\s*0\.1,\s*40,?\s*\)/,
+  );
+  assert.match(
+    canvas,
+    /\[cameraAspect, compact, invalidate, presentation, set\]/,
+  );
+  assert.doesNotMatch(
+    canvas,
+    /new PerspectiveCamera\(\s*presentation\.cameraFov,\s*1,\s*0\.1,\s*40/,
+  );
+});
