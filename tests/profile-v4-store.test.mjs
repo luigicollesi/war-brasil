@@ -341,3 +341,25 @@ test("PROFILE V4 store V2.1 recomposes the war atmosphere for mobile instead of 
   assert.match(mobile, /\.repairPlate\s*\{[\s\S]*left:/);
   assert.match(mobile, /\.lowerArmor\s*\{[\s\S]*inset-inline:/);
 });
+
+
+test("PROFILE V4 store atmosphere is viewport-clipped and cannot expand page scroll bounds", async () => {
+  const styles = await source("src/components/profile/v4/profile-store.module.css");
+
+  assert.match(
+    styles,
+    /\.storeFixedAtmosphere\s*\{[^}]*position:\s*fixed;[^}]*inset:\s*0;[^}]*overflow:\s*clip;[^}]*contain:\s*paint;/,
+  );
+  assert.match(
+    styles,
+    /\.storeAtmosphere\s*\{[^}]*inset:\s*0;[^}]*overflow:\s*clip;/,
+  );
+  assert.doesNotMatch(
+    styles,
+    /\.storeAtmosphere\s*\{[^}]*inset:\s*-\d/,
+  );
+  assert.doesNotMatch(
+    styles.slice(styles.indexOf("@media (max-width: 520px)")),
+    /\.storeAtmosphere\s*\{[^}]*inset:\s*-/,
+  );
+});
