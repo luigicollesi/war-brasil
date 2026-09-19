@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
-import { mkdir, readdir, readFile } from "node:fs/promises";
+import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { chromium } from "@playwright/test";
+import { waitForRegistrationCode } from "./registration-otp-helper.mjs";
 
 const BASE_URL = process.env.PLAYWRIGHT_TEST_BASE_URL ?? "http://127.0.0.1:3000";
 const EMAIL_SINK_DIR = process.env.AUTH_EMAIL_SINK_DIR;
@@ -30,34 +31,6 @@ async function browserJson(page, url, init = {}) {
   );
 }
 
-async function waitForEmail(to, subject) {
-  const deadline = Date.now() + 10_000;
-  while (Date.now() < deadline) {
-    const entries = await readdir(EMAIL_SINK_DIR).catch(() => []);
-    for (const entry of entries) {
-      if (!entry.endsWith(".json")) continue;
-      const raw = await readFile(path.join(EMAIL_SINK_DIR, entry), "utf8").catch(
-        () => null,
-      );
-      if (!raw) continue;
-      try {
-        const message = JSON.parse(raw);
-        if (message?.to === to && message?.subject === subject) return message;
-      } catch {
-        // A leitura pode coincidir com a escrita atômica do sink; tentamos novamente.
-      }
-    }
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-  throw new Error(`email Doctrine E2E não capturado para subject=${subject}`);
-}
-
-function actionUrl(message) {
-  const match = String(message?.text ?? "").match(/https?:\/\/[^\s]+/);
-  assert.ok(match?.[0], "email de verificação não contém URL de ação");
-  return match[0];
-}
-
 await mkdir(EMAIL_SINK_DIR, { recursive: true });
 await mkdir(path.dirname(STORAGE_STATE_PATH), { recursive: true });
 
@@ -80,15 +53,14 @@ try {
   assert.equal(register.status, 200, JSON.stringify(register.body));
   assert.equal(register.body?.ok, true, JSON.stringify(register.body));
 
-  const verificationMessage = await waitForEmail(email, "Verificação de email");
-  await page.goto(actionUrl(verificationMessage), { waitUntil: "domcontentloaded" });
-
-  const signIn = await browserJson(page, "/api/auth/sign-in/email", {
+  const code = await waitForRegistrationCode(email, EMAIL_SINK_DIR);
+  const verification = await browserJson(page, "/api/auth/register/verify", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password: PASSWORD, rememberMe: true }),
+    body: JSON.stringify({ email, code }),
   });
-  assert.equal(signIn.status, 200, JSON.stringify(signIn.body));
+  assert.equal(verification.status, 200, JSON.stringify(verification.body));
+  assert.equal(verification.body?.authenticated, true);
 
   const session = await browserJson(page, "/api/auth/get-session");
   assert.equal(session.status, 200, JSON.stringify(session.body));
