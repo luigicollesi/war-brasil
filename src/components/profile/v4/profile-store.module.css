@@ -455,7 +455,7 @@
   overflow: visible;
   border: 0;
   background: transparent;
-  transition: transform 180ms ease, filter 180ms ease;
+  transition: transform 180ms ease, opacity 180ms ease;
 }
 
 .productCard:hover,
@@ -469,7 +469,6 @@
 
 .productCard:hover .productVisual img {
   transform: translateY(-3px) scale(1.015);
-  filter: drop-shadow(0 24px 34px rgb(0 0 0 / 48%));
 }
 
 .productSelect {
@@ -506,7 +505,7 @@
   max-height: 210px;
   object-fit: contain;
   filter: drop-shadow(0 18px 28px rgb(0 0 0 / 40%));
-  transition: transform 180ms ease, filter 180ms ease;
+  transition: transform 180ms ease, opacity 180ms ease;
 }
 
 .productFallback {
@@ -555,7 +554,7 @@
   overflow: visible;
   border: 0;
   background: transparent;
-  transition: transform 180ms ease, filter 180ms ease;
+  transition: transform 180ms ease, opacity 180ms ease;
 }
 
 .collectionBannerCard[data-featured="true"] {
@@ -564,7 +563,6 @@
 
 .collectionBannerCard:hover {
   transform: translateY(-3px);
-  filter: drop-shadow(0 22px 38px rgb(0 0 0 / 28%));
 }
 
 .collectionBannerButton {
@@ -586,12 +584,11 @@
   width: 100%;
   height: auto;
   object-fit: contain;
-  transition: transform 180ms ease, filter 180ms ease;
+  transition: transform 180ms ease, opacity 180ms ease;
 }
 
 .collectionBannerCard:hover .collectionBannerButton > img {
   transform: translateY(-2px) scale(1.006);
-  filter: drop-shadow(0 18px 30px rgb(0 0 0 / 30%));
 }
 
 .collectionBannerMeta {
@@ -1667,7 +1664,7 @@
   }
 
   .storeNav a {
-    min-height: 38px;
+    min-height: 44px;
     padding-inline: 10px;
     font-size: 0.55rem;
   }
@@ -1745,6 +1742,258 @@
   }
 }
 
+
+/* V4 FINAL — interaction polish */
+
+.storeNav a {
+  position: relative;
+}
+
+.storeNav a::after {
+  content: "";
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  bottom: 0;
+  height: 2px;
+  background: var(--brass);
+  opacity: 0;
+  transform: scaleX(0.35);
+  transform-origin: center;
+  transition: transform 160ms ease, opacity 160ms ease;
+}
+
+.storeNav a:hover::after,
+.storeNav a:focus-visible::after,
+.storeNav a[data-active="true"]::after {
+  opacity: 0.9;
+  transform: scaleX(1);
+}
+
+.productCard {
+  transition: transform 180ms ease, opacity 180ms ease;
+}
+
+.productCard:hover,
+.productCard:focus-within {
+  transform: translateY(-4px);
+}
+
+.productVisual {
+  position: relative;
+  isolation: isolate;
+}
+
+.productVisual::before {
+  content: "";
+  position: absolute;
+  inset: 9%;
+  z-index: 0;
+  opacity: 0;
+  background:
+    radial-gradient(circle at 50% 50%, rgb(208 170 87 / 15%), transparent 62%);
+  transform: scale(0.92);
+  transition: transform 180ms ease, opacity 180ms ease;
+  pointer-events: none;
+}
+
+.productVisual img,
+.productVisual > span {
+  position: relative;
+  z-index: 1;
+}
+
+.productVisual img {
+  transition: transform 180ms ease;
+}
+
+.productCard:hover .productVisual img,
+.productCard:focus-within .productVisual img {
+  transform: translateY(-4px) scale(1.02);
+}
+
+.productCard:hover .productVisual::before,
+.productCard:focus-within .productVisual::before {
+  opacity: 1;
+  transform: scale(1.06);
+}
+
+.productCopy small,
+.productCopy strong,
+.productCopy em {
+  transition: color 160ms ease, opacity 160ms ease;
+}
+
+.productCard:hover .productCopy strong,
+.productCard:focus-within .productCopy strong {
+  color: #fffaf0;
+}
+
+.productCard:hover .productCopy em,
+.productCard:focus-within .productCopy em {
+  color: rgb(238 232 218 / 64%);
+}
+
+.productSelect:focus-visible,
+.collectionBannerButton:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 5px;
+}
+
+.collectionBannerCard {
+  transition: transform 180ms ease, opacity 180ms ease;
+}
+
+.collectionBannerCard:hover,
+.collectionBannerCard:focus-within {
+  transform: translateY(-4px);
+}
+
+.collectionBannerButton {
+  position: relative;
+  isolation: isolate;
+}
+
+.collectionBannerButton::before {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  inset: -18% -34%;
+  opacity: 0;
+  background:
+    linear-gradient(
+      112deg,
+      transparent 35%,
+      rgb(208 170 87 / 5%) 44%,
+      rgb(208 170 87 / 22%) 50%,
+      transparent 58%
+    );
+  transform: translate3d(-130%, 0, 0);
+  transition: transform 430ms ease, opacity 180ms ease;
+  pointer-events: none;
+}
+
+.collectionBannerCard:hover .collectionBannerButton::before,
+.collectionBannerCard:focus-within .collectionBannerButton::before {
+  opacity: 1;
+  transform: translate3d(130%, 0, 0);
+}
+
+.collectionBannerButton > img {
+  position: relative;
+  z-index: 1;
+  transition: transform 220ms ease;
+}
+
+.collectionBannerCard:hover .collectionBannerButton > img,
+.collectionBannerCard:focus-within .collectionBannerButton > img {
+  transform: translateY(-3px) scale(1.01);
+}
+
+.collectionBannerMeta strong,
+.collectionBannerMeta small,
+.collectionBannerMeta em {
+  transition: color 160ms ease, opacity 160ms ease, background 160ms ease;
+}
+
+.collectionBannerCard:hover .collectionBannerMeta strong,
+.collectionBannerCard:focus-within .collectionBannerMeta strong {
+  color: #fffaf0;
+}
+
+.collectionBannerCard:hover .collectionBannerMeta em,
+.collectionBannerCard:focus-within .collectionBannerMeta em {
+  background: rgb(208 170 87 / 13%);
+}
+
+.heroAction {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 4px;
+  padding: 0 18px;
+  color: #101913;
+  border: 1px solid var(--brass);
+  background: var(--brass);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.62rem;
+  font-weight: 900;
+  letter-spacing: 0.09em;
+  text-decoration: none;
+  transition: transform 160ms ease, background 160ms ease, color 160ms ease;
+}
+
+.heroAction:hover,
+.heroAction:focus-visible {
+  transform: translateY(-1px);
+  background: #e0bd6c;
+}
+
+.heroAction:active {
+  transform: translateY(1px);
+}
+
+.heroAction:focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 4px;
+}
+
+.heroVisual > img {
+  transition: transform 220ms ease;
+}
+
+.heroVisual::after {
+  transition: transform 240ms ease, opacity 240ms ease;
+}
+
+.heroVisual:hover > img,
+.hero:focus-within .heroVisual > img {
+  transform: translateY(-3px) scale(1.012);
+}
+
+.heroVisual:hover::after,
+.hero:focus-within .heroVisual::after {
+  opacity: 1;
+  transform: translate3d(7px, -2px, 0);
+}
+
+@media (hover: none) {
+  .productCard:hover {
+    transform: none;
+  }
+
+  .productCard:hover .productVisual img {
+    transform: none;
+  }
+
+  .productCard:hover .productVisual::before {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+
+  .collectionBannerCard:hover {
+    transform: none;
+  }
+
+  .collectionBannerCard:hover .collectionBannerButton > img {
+    transform: none;
+  }
+
+  .collectionBannerCard:hover .collectionBannerButton::before {
+    opacity: 0;
+    transform: translate3d(-130%, 0, 0);
+  }
+
+  .heroVisual:hover > img {
+    transform: none;
+  }
+
+  .heroVisual:hover::after {
+    transform: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .fixedCommandStripe,
   .fixedArmorPlate,
@@ -1777,13 +2026,39 @@
   }
 
   .storeNav a,
+  .storeNav a::after,
   .productCard,
-  .collectionBannerCard {
+  .productVisual img,
+  .productVisual::before,
+  .collectionBannerCard,
+  .collectionBannerButton::before,
+  .collectionBannerButton > img,
+  .heroAction,
+  .heroVisual > img,
+  .heroVisual::after {
     transition: none;
   }
 
   .productCard:hover,
-  .collectionBannerCard:hover {
+  .productCard:focus-within,
+  .collectionBannerCard:hover,
+  .collectionBannerCard:focus-within {
     transform: none;
+  }
+
+  .productCard:hover .productVisual img,
+  .productCard:focus-within .productVisual img,
+  .collectionBannerCard:hover .collectionBannerButton > img,
+  .collectionBannerCard:focus-within .collectionBannerButton > img,
+  .heroVisual:hover > img,
+  .hero:focus-within .heroVisual > img,
+  .heroAction:hover,
+  .heroAction:focus-visible,
+  .heroAction:active {
+    transform: none;
+  }
+
+  .collectionBannerButton::before {
+    display: none;
   }
 }
