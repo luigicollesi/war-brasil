@@ -112,18 +112,18 @@ test("showcase mounts every 3d item once and keeps inactive objects parked offsc
   assert.doesNotMatch(showcase, /style=\{\{[^}]*left:\s*[^}]*SHOWCASE_STANDBY/);
 });
 
-test("showcase carousel gives outgoing and incoming 3d objects independent directions", () => {
+test("showcase carousel moves current and target simultaneously during one slide", () => {
   assert.match(
     controller,
-    /if \(transitionPhase === "exit" && isSelected\)[\s\S]*group\.position\.x =\s*-transitionDirection \* SHOWCASE_STANDBY_X \* progress/,
+    /if \(transitionPhase === "slide" && isSelected\)[\s\S]*-transitionDirection \* SHOWCASE_STANDBY_X \* progress/,
   );
   assert.match(
     controller,
-    /if \(transitionPhase === "enter" && isSelected\)[\s\S]*group\.position\.x =\s*transitionDirection \* SHOWCASE_STANDBY_X \* \(1 - progress\)/,
+    /if \(transitionPhase === "slide" && isTarget\)[\s\S]*transitionDirection \* SHOWCASE_STANDBY_X \* \(1 - progress\)/,
   );
   assert.match(
     controller,
-    /if \(!isSelected\) return;/,
+    /if \(!isSelected && !isTarget\) return;/,
   );
 });
 
