@@ -50,9 +50,15 @@ test("showcase dice uses canonical unit geometry and presentation presets for fr
   assert.match(presentation, /cameraDistance:/);
 
   assert.match(runtime, /objectType:\s*ShowcaseObjectType/);
-  assert.match(controller, /resolveShowcasePresentation\(objectType, compact\)/);
+  assert.match(
+    controller,
+    /resolveShowcasePresentation\(\s*objectType,\s*compact,\s*viewportAspect,\s*\)/,
+  );
   assert.doesNotMatch(controller, /DESKTOP_SHOWCASE_SCALE/);
-  assert.match(canvas, /resolveShowcasePresentation\(objectType, compact\)/);
+  assert.match(
+    canvas,
+    /resolveShowcasePresentation\(\s*objectType,\s*compact,\s*cameraAspect,\s*\)/,
+  );
   assert.match(canvas, /ShowcaseCameraDirector objectType=\{showcaseScene\.objectType\}/);
 });
 
@@ -94,10 +100,10 @@ test("portrait showcase uses a dedicated narrow-screen presentation instead of t
 
   assert.match(
     controller,
-    /resolveShowcasePresentation\(objectType, compact, viewportAspect\)/,
+    /resolveShowcasePresentation\(\s*objectType,\s*compact,\s*viewportAspect,\s*\)/,
   );
   assert.match(
     canvas,
-    /resolveShowcasePresentation\(objectType, compact, cameraAspect\)/,
+    /resolveShowcasePresentation\(\s*objectType,\s*compact,\s*cameraAspect,\s*\)/,
   );
 });
