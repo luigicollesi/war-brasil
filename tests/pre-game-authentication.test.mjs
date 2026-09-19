@@ -332,3 +332,19 @@ test("registro não informa sucesso de envio se nem remetente nem Resend estiver
   );
   assert.match(environment, /Configuração parcial de email de autenticação/);
 });
+
+
+test("promoção de credencial separa accountId text de userId uuid", () => {
+  assert.match(
+    pendingRegistration,
+    /VALUES\(\$1, \$2, 'credential', \$3, \$4, NOW\(\), NOW\(\)\)/,
+  );
+  assert.match(
+    pendingRegistration,
+    /\[randomUUID\(\), userId, userId, passwordHash\]/,
+  );
+  assert.doesNotMatch(
+    pendingRegistration,
+    /VALUES\(\$1, \$2, 'credential', \$2, \$3, NOW\(\), NOW\(\)\)/,
+  );
+});
