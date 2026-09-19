@@ -209,6 +209,7 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
     () => ({
       key: selectedItem?.id ?? showcase.id,
       mode: showcase.mode,
+      objectType: selectedItem?.type ?? "dice",
       stageCenterRatio,
       render: ({ reducedMotion }: { reducedMotion: boolean }) => (
         <>
@@ -219,6 +220,7 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
             reducedMotion={reducedMotion}
             transitionPhase={transitionPhase}
             transitionDirection={transitionDirection}
+            objectType={selectedItem?.type ?? "dice"}
           >
             {selectedItem?.type === "dice" ? (
               <DiceShowcaseModel
