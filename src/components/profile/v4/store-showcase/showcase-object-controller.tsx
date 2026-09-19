@@ -29,8 +29,15 @@ export function ShowcaseObjectController({
   const groupRef = useRef<Group>(null);
   const transitionStartedAt = useRef(0);
   const invalidate = useThree((state) => state.invalidate);
-  const compact = useThree((state) => state.size.width <= 900);
-  const presentation = resolveShowcasePresentation(objectType, compact);
+  const viewportSize = useThree((state) => state.size);
+  const compact = viewportSize.width <= 900;
+  const viewportAspect =
+    viewportSize.height > 0 ? viewportSize.width / viewportSize.height : 1;
+  const presentation = resolveShowcasePresentation(
+    objectType,
+    compact,
+    viewportAspect,
+  );
 
   useEffect(() => {
     transitionStartedAt.current = performance.now();
