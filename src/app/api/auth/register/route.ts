@@ -3,6 +3,7 @@ import { rejectUntrustedAuthMutationOrigin } from "@/server/auth/request-origin"
 
 const MIN_PASSWORD_LENGTH = 8;
 const MAX_PASSWORD_LENGTH = 128;
+const VERIFICATION_CALLBACK_URL = "/?emailVerified=success&continue=command";
 
 function genericRegistrationResponse() {
   return Response.json({
@@ -59,7 +60,7 @@ export async function POST(request: Request) {
         email,
         name: "Comandante",
         password,
-        callbackURL: "/?emailVerified=success&continue=command",
+        callbackURL: VERIFICATION_CALLBACK_URL,
       }),
     },
   );
@@ -67,6 +68,13 @@ export async function POST(request: Request) {
   const response = await auth.handler(forwardedRequest);
 
   if (response.ok) {
+    await auth.api.sendVerificationEmail({
+      body: {
+        email,
+        callbackURL: VERIFICATION_CALLBACK_URL,
+      },
+      headers,
+    });
     return genericRegistrationResponse();
   }
 
