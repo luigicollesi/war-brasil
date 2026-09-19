@@ -91,7 +91,7 @@ test("portrait showcase uses a dedicated narrow-screen presentation instead of t
   );
   assert.match(
     presentation,
-    /dice:\s*\{[\s\S]*portrait:\s*\{[\s\S]*objectScale:\s*0\.98,[\s\S]*cameraFov:\s*36,[\s\S]*cameraDistance:\s*6\.8/,
+    /dice:\s*\{[\s\S]*portrait:\s*\{[\s\S]*objectScale:\s*0\.86,[\s\S]*cameraFov:\s*36,[\s\S]*cameraDistance:\s*6\.8/,
   );
   assert.match(
     presentation,
