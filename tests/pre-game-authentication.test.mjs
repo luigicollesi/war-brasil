@@ -279,3 +279,29 @@ test("email de verificação usa identidade visual de comando e CTA dominante", 
   assert.match(email, /padding:16px 28px/);
   assert.match(email, /Se o botão não funcionar/);
 });
+
+
+test("registro customizado dispara exatamente o fluxo automático de verificação inclusive para conta pendente existente", () => {
+  assert.match(auth, /sendOnSignUp:\s*false/);
+  assert.doesNotMatch(auth, /sendOnSignUp:\s*true/);
+
+  assert.match(registerRoute, /const VERIFICATION_CALLBACK_URL = "\/\?emailVerified=success&continue=command"/);
+  assert.match(
+    registerRoute,
+    /if \(response\.ok\) \{[\s\S]*await auth\.api\.sendVerificationEmail\(\{[\s\S]*body:\s*\{[\s\S]*email,[\s\S]*callbackURL:\s*VERIFICATION_CALLBACK_URL/,
+  );
+  assert.match(
+    registerRoute,
+    /await auth\.api\.sendVerificationEmail[\s\S]*return genericRegistrationResponse\(\)/,
+  );
+});
+
+test("registro não informa sucesso de envio se nem remetente nem Resend estiverem configurados parcialmente", () => {
+  assert.match(environment, /AUTH_EMAIL_FROM/);
+  assert.match(environment, /EMAIL_TRANSPORT_SECRET/);
+  assert.match(
+    environment,
+    /if \(Boolean\(environment\.email\.from\) !== Boolean\(environment\.email\.transportSecret\)\)/,
+  );
+  assert.match(environment, /Configuração parcial de email de autenticação/);
+});
