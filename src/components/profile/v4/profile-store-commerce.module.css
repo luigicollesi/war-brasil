@@ -25,7 +25,7 @@
 .purchaseButton,
 .productCommerce button,
 .creditPack button {
-  min-height: 38px;
+  min-height: 44px;
   border: 1px solid rgb(208 170 87 / 52%);
   background: rgb(208 170 87 / 9%);
   color: #eee8da;
@@ -33,7 +33,12 @@
   font-size: 0.58rem;
   font-weight: 900;
   letter-spacing: 0.09em;
-  transition: background 160ms ease, border-color 160ms ease, color 160ms ease;
+  transition:
+    transform 140ms ease,
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    opacity 160ms ease;
 }
 
 .purchaseButton:not(:disabled),
@@ -48,6 +53,18 @@
   border-color: #d0aa57;
   background: #d0aa57;
   color: #101913;
+  transform: translateY(-1px);
+}
+
+.purchaseButton:not(:disabled):focus-visible,
+.productCommerce button:not(:disabled):focus-visible {
+  outline: 2px solid #d0aa57;
+  outline-offset: 3px;
+}
+
+.purchaseButton:not(:disabled):active,
+.productCommerce button:not(:disabled):active {
+  transform: translateY(1px);
 }
 
 .purchaseButton:disabled,
@@ -57,6 +74,24 @@
   border-color: rgb(238 232 218 / 10%);
   background: rgb(238 232 218 / 3%);
   color: rgb(238 232 218 / 35%);
+}
+
+.productCommerce button[data-processing="true"] {
+  cursor: progress;
+  border-color: rgb(208 170 87 / 30%);
+  background: rgb(208 170 87 / 7%);
+  color: rgb(238 232 218 / 58%);
+  animation: storePurchaseBusy 1.4s ease-in-out infinite;
+}
+
+@keyframes storePurchaseBusy {
+  0%,
+  100% {
+    opacity: 0.58;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
 .purchaseFeedback {
@@ -191,5 +226,18 @@
   .productCommerce button,
   .creditPack button {
     transition: none;
+  }
+
+  .purchaseButton:not(:disabled):hover,
+  .purchaseButton:not(:disabled):focus-visible,
+  .purchaseButton:not(:disabled):active,
+  .productCommerce button:not(:disabled):hover,
+  .productCommerce button:not(:disabled):focus-visible,
+  .productCommerce button:not(:disabled):active {
+    transform: none;
+  }
+
+  .productCommerce button[data-processing="true"] {
+    animation: none;
   }
 }
