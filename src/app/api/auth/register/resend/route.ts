@@ -43,7 +43,14 @@ export async function POST(request: Request) {
       message:
         "Se existir um cadastro pendente para esse endereço, enviaremos um novo código.",
     });
-  } catch {
+  } catch (error) {
+    console.error("[auth-register] resend failed", {
+      error:
+        error instanceof Error
+          ? { name: error.name, message: error.message }
+          : { name: "UnknownError" },
+    });
+
     return Response.json(
       {
         ok: false,
