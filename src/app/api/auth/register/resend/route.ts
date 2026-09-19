@@ -1,6 +1,6 @@
 import {
   buildRegistrationCodeEmail,
-  dispatchAuthEmail,
+  sendAuthEmail,
 } from "@/server/auth/email";
 import {
   normalizeRegistrationEmail,
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
 
     if (result.dispatched && result.code) {
       const message = buildRegistrationCodeEmail(result.code);
-      dispatchAuthEmail({ ...message, to: email });
+      await sendAuthEmail({ ...message, to: email });
     }
 
     return Response.json({
