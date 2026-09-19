@@ -806,6 +806,408 @@
   letter-spacing: 0.1em;
 }
 
+
+/* V2.1 — WAR MACHINE / COMMAND MATERIAL */
+
+.storeFixedAtmosphere {
+  position: fixed;
+  z-index: -2;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.storeFixedAtmosphere > span {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.fixedCommandStripe {
+  top: -18vh;
+  left: -5vw;
+  width: clamp(150px, 15vw, 250px);
+  height: 138vh;
+  overflow: hidden;
+  opacity: 0.34;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgb(208 170 87 / 10%) 0 1px,
+      transparent 1px 22px
+    ),
+    linear-gradient(
+      180deg,
+      rgb(16 39 27 / 62%),
+      rgb(6 21 15 / 18%) 54%,
+      rgb(141 37 43 / 8%)
+    );
+  clip-path: polygon(9% 0, 84% 0, 100% 100%, 24% 100%);
+  filter: drop-shadow(30px 0 45px rgb(0 0 0 / 19%));
+  animation: storeCommandDrift 38s ease-in-out infinite alternate;
+}
+
+.fixedCommandStripe::before {
+  content: "";
+  position: absolute;
+  inset: 6% 27% 5% 43%;
+  background:
+    repeating-linear-gradient(
+      180deg,
+      rgb(238 232 218 / 13%) 0 28px,
+      transparent 28px 43px
+    );
+  opacity: 0.5;
+}
+
+.fixedCommandStripe::after {
+  content: "WB/14  //  INTENDÊNCIA  //  OPERACIONAL";
+  position: absolute;
+  top: 18%;
+  left: 48%;
+  color: rgb(238 232 218 / 24%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.57rem;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+  white-space: nowrap;
+  transform: rotate(79deg);
+  transform-origin: left center;
+}
+
+.fixedArmorPlate {
+  top: 6vh;
+  right: -11vw;
+  width: clamp(330px, 34vw, 680px);
+  height: 72vh;
+  opacity: 0.28;
+  background:
+    radial-gradient(circle at 15% 18%, rgb(208 170 87 / 8%) 0 2px, transparent 3px),
+    radial-gradient(circle at 80% 76%, rgb(238 232 218 / 7%) 0 2px, transparent 3px),
+    repeating-linear-gradient(
+      17deg,
+      transparent 0 34px,
+      rgb(238 232 218 / 2.4%) 34px 35px,
+      transparent 35px 70px
+    ),
+    linear-gradient(146deg, rgb(16 39 27 / 54%), rgb(3 13 10 / 10%));
+  clip-path: polygon(20% 0, 100% 5%, 90% 88%, 58% 100%, 0 73%, 8% 18%);
+  filter: drop-shadow(-34px 38px 62px rgb(0 0 0 / 24%));
+  animation: storeArmorDrift 46s ease-in-out infinite alternate;
+}
+
+.fixedArmorPlate::after {
+  content: "PANEL 03  /  WB-MAT";
+  position: absolute;
+  right: 20%;
+  bottom: 18%;
+  color: rgb(208 170 87 / 23%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+}
+
+.fixedLightSweep {
+  inset: -12%;
+  opacity: 0.64;
+  background:
+    radial-gradient(ellipse 34% 24% at 12% 28%, rgb(16 39 27 / 28%), transparent 74%),
+    radial-gradient(ellipse 28% 20% at 82% 66%, rgb(208 170 87 / 8%), transparent 72%),
+    linear-gradient(
+      114deg,
+      transparent 30%,
+      rgb(208 170 87 / 2.5%) 44%,
+      rgb(208 170 87 / 7%) 50%,
+      transparent 60%
+    );
+  mix-blend-mode: screen;
+  animation: storeLightDrift 31s ease-in-out infinite alternate;
+}
+
+.atmosphereLeftMass {
+  top: 25%;
+  left: -13%;
+  width: 65%;
+  height: 23%;
+  opacity: 0.36;
+  background:
+    repeating-linear-gradient(
+      135deg,
+      transparent 0 38px,
+      rgb(238 232 218 / 2.4%) 38px 39px,
+      transparent 39px 77px
+    ),
+    linear-gradient(128deg, rgb(16 39 27 / 38%), rgb(6 21 15 / 4%) 76%);
+  clip-path: polygon(0 14%, 78% 0, 100% 38%, 73% 100%, 6% 82%);
+  filter: drop-shadow(34px 38px 58px rgb(0 0 0 / 15%));
+}
+
+.atmosphereLowerMass {
+  top: 77%;
+  left: -9%;
+  width: 118%;
+  height: 21%;
+  opacity: 0.31;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgb(208 170 87 / 2.8%) 0 1px,
+      transparent 1px 46px
+    ),
+    linear-gradient(165deg, rgb(3 13 10 / 2%), rgb(16 39 27 / 48%));
+  clip-path: polygon(0 30%, 21% 0, 66% 14%, 100% 0, 94% 100%, 12% 88%);
+}
+
+.signalClusterLeft,
+.signalClusterRight {
+  color: rgb(238 232 218 / 14%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.54rem;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  white-space: nowrap;
+}
+
+.signalClusterLeft {
+  top: 34%;
+  left: 1.5%;
+  padding-left: 62px;
+}
+
+.signalClusterLeft::before {
+  content: "◇  ▣  ○──○";
+  position: absolute;
+  left: 0;
+  color: rgb(208 170 87 / 20%);
+  letter-spacing: 0.08em;
+}
+
+.signalClusterLeft::after {
+  content: "";
+  position: absolute;
+  top: 1.45rem;
+  left: 1px;
+  width: 180px;
+  height: 1px;
+  background: linear-gradient(90deg, rgb(208 170 87 / 20%), transparent);
+}
+
+.signalClusterRight {
+  top: 69%;
+  right: 1.5%;
+  padding-right: 64px;
+  text-align: right;
+}
+
+.signalClusterRight::before {
+  content: "///  ╳  BR-03";
+  position: absolute;
+  right: 0;
+  color: rgb(141 37 43 / 18%);
+  letter-spacing: 0.08em;
+}
+
+.operationAxis,
+.supplyNetwork,
+.frontLine,
+.repairPlate,
+.lowerArmor {
+  position: absolute;
+  z-index: -1;
+  display: block;
+  pointer-events: none;
+}
+
+.operationAxis {
+  left: -6%;
+  bottom: 3%;
+  width: min(84%, 980px);
+  height: 32px;
+  opacity: 0.58;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgb(208 170 87 / 14%) 0 54px,
+      transparent 54px 76px
+    );
+  mask-image: linear-gradient(90deg, transparent, #000 7% 88%, transparent);
+}
+
+.operationAxis::before {
+  content: "";
+  position: absolute;
+  top: 15px;
+  left: 0;
+  right: 32px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgb(208 170 87 / 34%) 15% 92%, transparent);
+}
+
+.operationAxis::after {
+  content: "";
+  position: absolute;
+  top: 7px;
+  right: 1px;
+  width: 25px;
+  height: 18px;
+  background: rgb(208 170 87 / 24%);
+  clip-path: polygon(0 0, 100% 50%, 0 100%, 26% 50%);
+}
+
+.supplyNetwork {
+  top: 12%;
+  left: -3%;
+  width: 62%;
+  height: 78%;
+  opacity: 0.46;
+  background:
+    radial-gradient(circle at 9% 23%, rgb(208 170 87 / 34%) 0 3px, transparent 4px),
+    radial-gradient(circle at 31% 56%, rgb(238 232 218 / 25%) 0 3px, transparent 4px),
+    radial-gradient(circle at 58% 27%, rgb(208 170 87 / 28%) 0 3px, transparent 4px),
+    radial-gradient(circle at 81% 67%, rgb(238 232 218 / 20%) 0 3px, transparent 4px),
+    linear-gradient(26deg, transparent 22%, rgb(208 170 87 / 10%) 22.3% 22.7%, transparent 23%),
+    linear-gradient(151deg, transparent 40%, rgb(238 232 218 / 8%) 40.3% 40.7%, transparent 41%);
+  mask-image: linear-gradient(90deg, #000, #000 72%, transparent);
+}
+
+.supplyNetwork::after {
+  content: "SUPPLY NODE A  //  WB-S01";
+  position: absolute;
+  left: 5%;
+  bottom: 8%;
+  color: rgb(238 232 218 / 13%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.52rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+
+.frontLine {
+  top: 6%;
+  right: -5%;
+  width: 72%;
+  height: 84%;
+  opacity: 0.32;
+  background:
+    repeating-linear-gradient(
+      136deg,
+      transparent 0 24px,
+      rgb(141 37 43 / 12%) 24px 27px,
+      transparent 27px 52px
+    );
+  clip-path: polygon(16% 0, 100% 12%, 78% 34%, 98% 55%, 70% 77%, 88% 100%, 0 82%, 18% 54%, 0 28%);
+}
+
+.frontLine::before {
+  content: "///  CONFLICT ZONE  //  BR-02";
+  position: absolute;
+  top: 47%;
+  right: 9%;
+  color: rgb(141 37 43 / 20%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.54rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  transform: rotate(-5deg);
+}
+
+.repairPlate {
+  top: 8%;
+  left: -8%;
+  width: 52%;
+  height: 84%;
+  opacity: 0.34;
+  background:
+    radial-gradient(circle at 8% 14%, rgb(238 232 218 / 12%) 0 2px, transparent 3px),
+    radial-gradient(circle at 88% 78%, rgb(208 170 87 / 12%) 0 2px, transparent 3px),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0 58px,
+      rgb(238 232 218 / 2.8%) 58px 59px,
+      transparent 59px 116px
+    ),
+    linear-gradient(145deg, rgb(16 39 27 / 49%), rgb(3 13 10 / 5%));
+  clip-path: polygon(0 16%, 76% 0, 100% 24%, 85% 100%, 17% 88%);
+  filter: drop-shadow(24px 28px 42px rgb(0 0 0 / 14%));
+}
+
+.repairPlate::after {
+  content: "WB-14  //  PANEL 03  //  FIELD REPAIR";
+  position: absolute;
+  left: 12%;
+  bottom: 15%;
+  color: rgb(208 170 87 / 18%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.52rem;
+  font-weight: 900;
+  letter-spacing: 0.16em;
+}
+
+.treasury {
+  position: relative;
+  isolation: isolate;
+  overflow: visible;
+}
+
+.lowerArmor {
+  inset-inline: -5%;
+  bottom: -34%;
+  height: 156%;
+  opacity: 0.4;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgb(238 232 218 / 2.5%) 0 1px,
+      transparent 1px 54px
+    ),
+    linear-gradient(170deg, rgb(16 39 27 / 55%), rgb(3 13 10 / 7%));
+  clip-path: polygon(0 31%, 15% 8%, 57% 16%, 72% 0, 100% 20%, 94% 100%, 6% 91%);
+  filter: drop-shadow(0 -26px 46px rgb(0 0 0 / 16%));
+}
+
+.lowerArmor::after {
+  content: "04  //  LOGISTICS COMMAND  //  WB/14";
+  position: absolute;
+  right: 7%;
+  bottom: 16%;
+  color: rgb(238 232 218 / 15%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.56rem;
+  font-weight: 900;
+  letter-spacing: 0.17em;
+}
+
+@keyframes storeCommandDrift {
+  from {
+    transform: translate3d(-14px, -8px, 0) rotate(-11.5deg);
+  }
+  to {
+    transform: translate3d(13px, 14px, 0) rotate(-10.3deg);
+  }
+}
+
+@keyframes storeArmorDrift {
+  from {
+    transform: translate3d(7px, -10px, 0) rotate(1.8deg);
+  }
+  to {
+    transform: translate3d(-13px, 12px, 0) rotate(0.7deg);
+  }
+}
+
+@keyframes storeLightDrift {
+  from {
+    transform: translate3d(-3%, -1%, 0) scale(1);
+    opacity: 0.54;
+  }
+  to {
+    transform: translate3d(4%, 2%, 0) scale(1.035);
+    opacity: 0.76;
+  }
+}
+
 @media (max-width: 1080px) {
   .hero {
     grid-template-columns: minmax(0, 1fr) minmax(300px, 0.8fr);
@@ -854,6 +1256,120 @@
 @media (max-width: 520px) {
   .store {
     gap: clamp(28px, 8vw, 44px);
+  }
+
+  .storeFixedAtmosphere {
+    overflow: hidden;
+  }
+
+  .fixedCommandStripe {
+    top: -10vh;
+    left: -18vw;
+    width: clamp(108px, 34vw, 150px);
+    height: 118vh;
+    opacity: 0.22;
+    animation-name: storeCommandDriftMobile;
+  }
+
+  .fixedCommandStripe::after {
+    top: 24%;
+    left: 54%;
+    font-size: 0.48rem;
+  }
+
+  .fixedArmorPlate {
+    display: none;
+  }
+
+  .fixedLightSweep {
+    opacity: 0.45;
+    animation-name: storeLightDriftMobile;
+  }
+
+  .atmosphereLeftMass {
+    top: 29%;
+    left: -48%;
+    width: 132%;
+    height: 17%;
+    opacity: 0.22;
+  }
+
+  .atmosphereLowerMass {
+    top: 82%;
+    left: -26%;
+    width: 150%;
+    height: 15%;
+    opacity: 0.22;
+  }
+
+  .signalClusterLeft {
+    top: 41%;
+    left: 0;
+    padding-left: 42px;
+    font-size: 0.46rem;
+    opacity: 0.72;
+  }
+
+  .signalClusterLeft::after {
+    width: 112px;
+  }
+
+  .signalClusterRight {
+    display: none;
+  }
+
+  .operationAxis {
+    left: -14%;
+    bottom: 1%;
+    width: clamp(250px, 94vw, 430px);
+    height: 24px;
+    opacity: 0.42;
+  }
+
+  .supplyNetwork {
+    top: 18%;
+    left: -18%;
+    width: 92%;
+    height: 68%;
+    opacity: 0.26;
+  }
+
+  .frontLine {
+    top: 10%;
+    right: -31%;
+    width: clamp(280px, 92vw, 430px);
+    height: 76%;
+    opacity: 0.24;
+  }
+
+  .frontLine::before {
+    right: 22%;
+    font-size: 0.45rem;
+  }
+
+  .repairPlate {
+    top: 7%;
+    left: -42%;
+    width: 110%;
+    height: 76%;
+    opacity: 0.24;
+  }
+
+  .repairPlate::after {
+    left: 39%;
+    font-size: 0.44rem;
+  }
+
+  .lowerArmor {
+    inset-inline: -24%;
+    bottom: -30%;
+    height: 142%;
+    opacity: 0.3;
+  }
+
+  .lowerArmor::after {
+    right: 18%;
+    font-size: 0.45rem;
   }
 
   .storeAtmosphere {
@@ -951,7 +1467,34 @@
   }
 }
 
+
+@keyframes storeCommandDriftMobile {
+  from {
+    transform: translate3d(-4px, -3px, 0) rotate(-11deg);
+  }
+  to {
+    transform: translate3d(5px, 6px, 0) rotate(-10.4deg);
+  }
+}
+
+@keyframes storeLightDriftMobile {
+  from {
+    transform: translate3d(-1.5%, 0, 0) scale(1);
+    opacity: 0.38;
+  }
+  to {
+    transform: translate3d(2%, 1%, 0) scale(1.02);
+    opacity: 0.52;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .fixedCommandStripe,
+  .fixedArmorPlate,
+  .fixedLightSweep {
+    animation: none;
+  }
+
   .storeNav a,
   .productCard,
   .collectionBannerCard {
