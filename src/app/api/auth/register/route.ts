@@ -1,14 +1,21 @@
-import { auth } from "@/server/auth/auth";
+import {
+  buildRegistrationCodeEmail,
+  dispatchAuthEmail,
+} from "@/server/auth/email";
+import {
+  beginPendingRegistration,
+  normalizeRegistrationEmail,
+} from "@/server/auth/pending-registration";
 import { rejectUntrustedAuthMutationOrigin } from "@/server/auth/request-origin";
 
 const MIN_PASSWORD_LENGTH = 8;
 const MAX_PASSWORD_LENGTH = 128;
-const VERIFICATION_CALLBACK_URL = "/?emailVerified=success&continue=command";
 
-function genericRegistrationResponse() {
+function genericRegistrationResponse(retryAfterSeconds = 60) {
   return Response.json({
     ok: true,
-    message: "Confira seu email para concluir o cadastro.",
+    retryAfterSeconds,
+    message: "Enviamos um código de confirmação para seu email.",
   });
 }
 
@@ -24,7 +31,10 @@ export async function POST(request: Request) {
     termsAccepted?: unknown;
   } | null;
 
-  const email = typeof body?.email === "string" ? body.email.trim() : "";
+  const email =
+    typeof body?.email === "string"
+      ? normalizeRegistrationEmail(body.email)
+      : "";
   const password =
     typeof body?.password === "string" ? body.password : "";
   const termsAccepted = body?.termsAccepted === true;
@@ -47,54 +57,22 @@ export async function POST(request: Request) {
     return Response.json({ ok: false, errors }, { status: 400 });
   }
 
-  const headers = new Headers(request.headers);
-  headers.set("content-type", "application/json");
-  headers.delete("content-length");
+  try {
+    const pending = await beginPendingRegistration({ email, password });
 
-  const forwardedRequest = new Request(
-    new URL("/api/auth/sign-up/email", request.url),
-    {
-      method: "POST",
-      headers,
-      body: JSON.stringify({
-        email,
-        name: "Comandante",
-        password,
-        callbackURL: VERIFICATION_CALLBACK_URL,
-      }),
-    },
-  );
+    if (pending.dispatched && pending.code) {
+      const message = buildRegistrationCodeEmail(pending.code);
+      dispatchAuthEmail({ ...message, to: email });
+    }
 
-  const response = await auth.handler(forwardedRequest);
-
-  if (response.ok) {
-    await auth.api.sendVerificationEmail({
-      body: {
-        email,
-        callbackURL: VERIFICATION_CALLBACK_URL,
-      },
-      headers,
-    });
-    return genericRegistrationResponse();
-  }
-
-  if (response.status === 429) {
+    return genericRegistrationResponse(pending.retryAfterSeconds);
+  } catch {
     return Response.json(
       {
         ok: false,
-        message: "Muitas tentativas. Aguarde antes de tentar novamente.",
+        message: "Não foi possível iniciar o cadastro agora.",
       },
-      { status: 429 },
+      { status: 503 },
     );
   }
-
-  // Não propagar mensagens que permitam distinguir conta existente de conta
-  // inexistente. Erros de formato/política já foram tratados acima.
-  return Response.json(
-    {
-      ok: false,
-      message: "Não foi possível iniciar o cadastro agora.",
-    },
-    { status: response.status >= 500 ? 503 : 400 },
-  );
 }
