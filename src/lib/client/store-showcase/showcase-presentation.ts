@@ -1,5 +1,7 @@
 export type ShowcaseObjectType = "dice" | "territory";
 
+export const SHOWCASE_PORTRAIT_ASPECT_MAX = 0.78;
+
 export type ShowcasePresentation = Readonly<{
   objectScale: number;
   cameraFov: number;
@@ -12,7 +14,10 @@ export type ShowcasePresentation = Readonly<{
 type ShowcasePresentationByViewport = Readonly<{
   desktop: ShowcasePresentation;
   compact: ShowcasePresentation;
+  portrait: ShowcasePresentation;
 }>;
+
+type ShowcaseViewport = keyof ShowcasePresentationByViewport;
 
 const SHOWCASE_PRESENTATION: Readonly<
   Record<ShowcaseObjectType, ShowcasePresentationByViewport>
@@ -34,6 +39,14 @@ const SHOWCASE_PRESENTATION: Readonly<
       cameraTargetY: 0.04,
       rotation: [-0.1, -0.42, 0],
     },
+    portrait: {
+      objectScale: 0.98,
+      cameraFov: 36,
+      cameraDistance: 6.8,
+      cameraY: 0.28,
+      cameraTargetY: 0.02,
+      rotation: [-0.08, -0.36, 0],
+    },
   },
   territory: {
     desktop: {
@@ -52,12 +65,36 @@ const SHOWCASE_PRESENTATION: Readonly<
       cameraTargetY: 0,
       rotation: [-0.12, -0.52, 0],
     },
+    portrait: {
+      objectScale: 0.55,
+      cameraFov: 38,
+      cameraDistance: 6.8,
+      cameraY: 0.28,
+      cameraTargetY: 0,
+      rotation: [-0.12, -0.52, 0],
+    },
   },
 };
+
+export function resolveShowcaseViewport(
+  compact: boolean,
+  aspectRatio: number,
+): ShowcaseViewport {
+  if (!compact) return "desktop";
+  if (
+    Number.isFinite(aspectRatio) &&
+    aspectRatio <= SHOWCASE_PORTRAIT_ASPECT_MAX
+  ) {
+    return "portrait";
+  }
+  return "compact";
+}
 
 export function resolveShowcasePresentation(
   objectType: ShowcaseObjectType,
   compact: boolean,
+  aspectRatio = 1,
 ): ShowcasePresentation {
-  return SHOWCASE_PRESENTATION[objectType][compact ? "compact" : "desktop"];
+  const viewport = resolveShowcaseViewport(compact, aspectRatio);
+  return SHOWCASE_PRESENTATION[objectType][viewport];
 }
