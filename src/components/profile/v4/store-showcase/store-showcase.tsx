@@ -20,7 +20,7 @@ import {
   purchaseShowcaseOffer,
 } from "@/src/lib/client/store-showcase/purchase-showcase-offer";
 import {
-  SHOWCASE_ITEM_TRANSITION_PHASE_MS,
+  SHOWCASE_ITEM_TRANSITION_MS,
   resolveShowcaseSwipeDirection,
   type ShowcaseTransitionPhase,
 } from "@/src/lib/client/store-showcase/showcase-motion";
@@ -298,21 +298,16 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
     clearTransitionTimers();
     setTransitionTargetItemId(targetItemId);
     setTransitionDirection(direction);
-    setTransitionPhase("exit");
+    setTransitionPhase("slide");
 
-    const swapTimer = window.setTimeout(() => {
+    const settleTimer = window.setTimeout(() => {
       setSelectedItemId(targetItemId);
-      setTransitionPhase("enter");
+      setTransitionPhase("idle");
+      setTransitionTargetItemId(null);
+      transitionTimers.current = [];
+    }, SHOWCASE_ITEM_TRANSITION_MS);
 
-      const settleTimer = window.setTimeout(() => {
-        setTransitionPhase("idle");
-        setTransitionTargetItemId(null);
-        transitionTimers.current = [];
-      }, SHOWCASE_ITEM_TRANSITION_PHASE_MS);
-      transitionTimers.current = [settleTimer];
-    }, SHOWCASE_ITEM_TRANSITION_PHASE_MS);
-
-    transitionTimers.current = [swapTimer];
+    transitionTimers.current = [settleTimer];
   }
 
   function moveSelection(direction: -1 | 1) {
