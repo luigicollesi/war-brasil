@@ -230,10 +230,6 @@ test("PROFILE V4 store V2 builds a static tactical optical atmosphere from layer
   assert.match(styles, /\.atmospherePlateSecondary\s*\{[\s\S]*clip-path:\s*polygon\(/);
   assert.match(styles, /\.atmosphereLight\s*\{[\s\S]*radial-gradient/);
   assert.match(styles, /\.atmosphereVignette\s*\{[\s\S]*radial-gradient/);
-  assert.doesNotMatch(
-    styles,
-    /\.atmosphere(?:Base|Optical|PlatePrimary|PlateSecondary|GhostType|Light|Vignette)\s*\{[^}]*animation:/s,
-  );
   assert.doesNotMatch(store, /@react-three|three\/|<Canvas\b/);
 });
 
@@ -265,13 +261,13 @@ test("PROFILE V4 V2 atmosphere stays behind the sticky store navigation without 
 
   assert.match(
     styles,
-    /\.storeAtmosphere\s*\{[^}]*z-index:\s*-1;/,
+    /\.storeAtmosphere\s*\{[^}]*z-index:\s*-2;/,
   );
   assert.doesNotMatch(
     styles,
     /\.store\s*>\s*:not\(\.storeAtmosphere\)\s*\{[^}]*z-index:/,
   );
-  assert.match(styles, /\.storeNav\s*\{[\s\S]*?z-index:\s*8;/);
+  assert.match(styles, /\.storeNav\s*\{[\s\S]*?z-index:\s*29;/);
 });
 
 
@@ -319,9 +315,6 @@ test("PROFILE V4 store V2.1 moves only selected fixed atmosphere layers and resp
   assert.match(styles, /\.fixedCommandStripe\s*\{[\s\S]*animation:\s*storeCommandDrift/);
   assert.match(styles, /\.fixedArmorPlate\s*\{[\s\S]*animation:\s*storeArmorDrift/);
   assert.match(styles, /\.fixedLightSweep\s*\{[\s\S]*animation:\s*storeLightDrift/);
-  assert.doesNotMatch(styles, /\.operationAxis\s*\{[^}]*animation:/s);
-  assert.doesNotMatch(styles, /\.supplyNetwork\s*\{[^}]*animation:/s);
-  assert.doesNotMatch(styles, /\.frontLine\s*\{[^}]*animation:/s);
   assert.match(
     styles,
     /@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*\.fixedCommandStripe,[\s\S]*\.fixedArmorPlate,[\s\S]*\.fixedLightSweep\s*\{[\s\S]*animation:\s*none/,
@@ -378,11 +371,11 @@ test("PROFILE V4 store V2.1 keeps war-machine fixed layers above the dark base v
   );
   assert.match(
     styles,
-    /\.atmosphereBase\s*\{[^}]*opacity:\s*0\.[5-8]\d?;/,
+    /\.atmosphereBase\s*\{[^}]*opacity:\s*0;[^}]*background:\s*transparent;/,
   );
   assert.match(
     styles,
-    /\.atmosphereVignette\s*\{[^}]*opacity:\s*0\.[5-8]\d?;/,
+    /\.atmosphereVignette\s*\{[^}]*opacity:\s*0\.[3-7]\d?;/,
   );
 });
 
@@ -410,5 +403,93 @@ test("PROFILE V4 store navigation recomposes for bottom-chrome tablet and mobile
   assert.match(
     compact,
     /\.hero,\s*[\s\S]*?\.catalog,\s*[\s\S]*?\.treasury\s*\{[^}]*scroll-margin-top:\s*6\dpx;/,
+  );
+});
+
+
+test("PROFILE V4 store V3 uses IntersectionObserver instead of scroll-frame listeners for section activity", async () => {
+  const store = await source("src/components/profile/v4/profile-store.tsx");
+
+  assert.match(store, /useEffect/);
+  assert.match(store, /new IntersectionObserver/);
+  assert.match(store, /data-v3-active/);
+  assert.match(store, /setActiveSection/);
+  assert.doesNotMatch(store, /addEventListener\(\s*["']scroll["']/);
+  assert.doesNotMatch(store, /requestAnimationFrame/);
+});
+
+test("PROFILE V4 store V3 exposes the active catalog section through the sticky navigation", async () => {
+  const store = await source("src/components/profile/v4/profile-store.tsx");
+  const styles = await source("src/components/profile/v4/profile-store.module.css");
+
+  assert.match(store, /const \[activeSection, setActiveSection\]/);
+  assert.match(store, /data-active=\{activeSection === "hero" \? "true" : "false"\}/);
+  assert.match(store, /data-active=\{activeSection === "dice" \? "true" : "false"\}/);
+  assert.match(store, /data-active=\{activeSection === "territories" \? "true" : "false"\}/);
+  assert.match(store, /data-active=\{activeSection === "collections" \? "true" : "false"\}/);
+  assert.match(styles, /\.storeNav a\[data-active="true"\]/);
+});
+
+test("PROFILE V4 store V3 animates distant atmosphere on long independent cycles", async () => {
+  const styles = await source("src/components/profile/v4/profile-store.module.css");
+
+  for (const keyframe of [
+    "storeOpticalDrift",
+    "storeGhostDrift",
+    "storeMassBreath",
+  ]) {
+    assert.match(styles, new RegExp(`@keyframes\\s+${keyframe}`));
+  }
+
+  assert.match(styles, /\.atmosphereOptical\s*\{[^}]*animation:\s*storeOpticalDrift\s+6\d?s/);
+  assert.match(styles, /\.atmosphereGhostType\s*\{[^}]*animation:\s*storeGhostDrift\s+7\d?s/);
+  assert.match(styles, /\.atmosphereLeftMass\s*\{[^}]*animation:\s*storeMassBreath\s+7\d?s/);
+  assert.match(styles, /\.atmosphereLowerMass\s*\{[^}]*animation:\s*storeMassBreath\s+8\d?s/);
+});
+
+test("PROFILE V4 store V3 activates war-machine section animations only after visibility", async () => {
+  const styles = await source("src/components/profile/v4/profile-store.module.css");
+
+  assert.match(styles, /\[data-store-zone="hero"\]\[data-v3-active="true"\]\s+\.operationAxis/);
+  assert.match(styles, /\[data-store-zone="dice"\]\[data-v3-active="true"\]\s+\.supplyNetwork/);
+  assert.match(styles, /\[data-store-zone="territories"\]\[data-v3-active="true"\]\s+\.frontLine/);
+  assert.match(styles, /\[data-store-zone="collections"\]\[data-v3-active="true"\]\s+\.repairPlate/);
+  assert.match(styles, /\[data-store-zone="treasury"\]\[data-v3-active="true"\]\s+\.lowerArmor/);
+
+  for (const keyframe of [
+    "storeOperationReveal",
+    "storeSupplyReveal",
+    "storeSupplyPulse",
+    "storeFrontReveal",
+    "storeFrontCrawl",
+    "storeThreatPulse",
+    "storeRepairReveal",
+    "storeRepairSweep",
+    "storeTreasuryReveal",
+  ]) {
+    assert.match(styles, new RegExp(`@keyframes\\s+${keyframe}`));
+  }
+});
+
+test("PROFILE V4 store V3 reduced-motion mode freezes ambient loops and exposes final section states", async () => {
+  const styles = await source("src/components/profile/v4/profile-store.module.css");
+  const reduced = styles.slice(styles.indexOf("@media (prefers-reduced-motion: reduce)"));
+
+  assert.match(
+    reduced,
+    /\.atmosphereOptical,[\s\S]*\.atmosphereGhostType,[\s\S]*\.atmosphereLeftMass,[\s\S]*\.atmosphereLowerMass[\s\S]*\{[\s\S]*animation:\s*none/,
+  );
+  assert.match(
+    reduced,
+    /\.operationAxis,[\s\S]*\.supplyNetwork,[\s\S]*\.frontLine,[\s\S]*\.repairPlate,[\s\S]*\.lowerArmor[\s\S]*\{[\s\S]*transform:\s*none/,
+  );
+});
+
+test("PROFILE V4 store V3 removes the dark-green intermediate veil below products", async () => {
+  const styles = await source("src/components/profile/v4/profile-store.module.css");
+
+  assert.match(
+    styles,
+    /\.atmosphereBase\s*\{[^}]*inset:\s*0;[^}]*opacity:\s*0;[^}]*background:\s*transparent;/,
   );
 });
