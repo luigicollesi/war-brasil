@@ -72,11 +72,7 @@ try {
       termsAccepted: true,
     });
     assertRejected(forgedRegistration, "Origin externo em cadastro");
-    assert.equal(
-      forgedRegistration.location,
-      null,
-      "cadastro com Origin externo não pode produzir redirect",
-    );
+    assert.equal(forgedRegistration.location, null);
 
     const registration = await apiJson(page, "/api/auth/register", {
       method: "POST",
@@ -89,22 +85,18 @@ try {
     });
     assert.equal(registration.status, 200, JSON.stringify(registration.body));
 
-    const externalVerificationCallback = await apiJson(
-      page,
-      "/api/auth/send-verification-email",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email,
-          callbackURL: `${EVIL_ORIGIN}/verification-complete`,
-        }),
-      },
+    const forgedResend = await externalOriginPost("/api/auth/register/resend", {
+      email,
+    });
+    assertRejected(forgedResend, "Origin externo em resend");
+    assert.equal(forgedResend.location, null);
+
+    const forgedVerification = await externalOriginPost(
+      "/api/auth/register/verify",
+      { email, code: "000000" },
     );
-    assertRejected(
-      externalVerificationCallback,
-      "callback externo de verification",
-    );
+    assertRejected(forgedVerification, "Origin externo em confirmação OTP");
+    assert.equal(forgedVerification.location, null);
 
     const externalResetRedirect = await apiJson(
       page,
@@ -120,20 +112,6 @@ try {
     );
     assertRejected(externalResetRedirect, "redirect externo de password reset");
 
-    const forgedOriginVerification = await externalOriginPost(
-      "/api/auth/send-verification-email",
-      {
-        email,
-        callbackURL: "/?continue=command",
-      },
-    );
-    assertRejected(forgedOriginVerification, "Origin externo em verification");
-    assert.equal(
-      forgedOriginVerification.location,
-      null,
-      "Origin externo não pode produzir redirect",
-    );
-
     const forgedOriginReset = await externalOriginPost(
       "/api/auth/request-password-reset",
       {
@@ -142,14 +120,10 @@ try {
       },
     );
     assertRejected(forgedOriginReset, "Origin externo em password reset");
-    assert.equal(
-      forgedOriginReset.location,
-      null,
-      "Origin externo não pode produzir redirect",
-    );
+    assert.equal(forgedOriginReset.location, null);
 
     console.log(
-      "[auth-origin-redirect-e2e] cadastro, Origin externo e callbacks/redirects externos foram rejeitados.",
+      "[auth-origin-redirect-e2e] cadastro, OTP mutations e redirects externos foram rejeitados.",
     );
   } finally {
     await context.close();
