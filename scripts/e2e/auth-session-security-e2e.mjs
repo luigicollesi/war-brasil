@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
-import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { Client } from "pg";
+import { waitForRegistrationCode } from "./registration-otp-helper.mjs";
 
 const playwrightRuntimeDir = path.resolve(
   process.env.PLAYWRIGHT_RUNTIME_DIR ?? ".e2e-runtime/node_modules/playwright",
@@ -39,39 +39,6 @@ async function apiJson(page, url, init = {}) {
   );
 }
 
-async function waitForEmail(to, subject) {
-  const deadline = Date.now() + 8_000;
-
-  while (Date.now() < deadline) {
-    const entries = await readdir(EMAIL_SINK_DIR).catch(() => []);
-    for (const entry of entries) {
-      if (!entry.endsWith(".json")) continue;
-      const raw = await readFile(path.join(EMAIL_SINK_DIR, entry), "utf8").catch(
-        () => null,
-      );
-      if (!raw) continue;
-
-      try {
-        const message = JSON.parse(raw);
-        if (message?.to === to && message?.subject === subject) {
-          return message;
-        }
-      } catch {
-        // Arquivo ainda pode estar sendo escrito; o polling tenta novamente.
-      }
-    }
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-
-  throw new Error(`email E2E não capturado para subject=${subject}`);
-}
-
-function actionUrl(message) {
-  const match = String(message?.text ?? "").match(/https?:\/\/[^\s]+/);
-  assert.ok(match?.[0], "email não contém URL de ação textual");
-  return match[0];
-}
-
 async function registerAndVerify(page, email) {
   const registration = await apiJson(page, "/api/auth/register", {
     method: "POST",
@@ -84,8 +51,21 @@ async function registerAndVerify(page, email) {
   });
   assert.equal(registration.status, 200, JSON.stringify(registration.body));
 
-  const verificationMessage = await waitForEmail(email, "Verificação de email");
-  await page.goto(actionUrl(verificationMessage), { waitUntil: "domcontentloaded" });
+  const code = await waitForRegistrationCode(email, EMAIL_SINK_DIR);
+  const verification = await apiJson(page, "/api/auth/register/verify", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, code }),
+  });
+  assert.equal(verification.status, 200, JSON.stringify(verification.body));
+  assert.equal(verification.body?.authenticated, true);
+
+  const logout = await apiJson(page, "/api/auth/sign-out", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+  assert.equal(logout.status, 200, JSON.stringify(logout.body));
 }
 
 async function signIn(page, email) {
