@@ -9,12 +9,22 @@ usage() {
   echo "Uso: bash scripts/auth-email-google-exchange.sh 'http://localhost:3000/api/google/callback?code=...&state=...'" >&2
 }
 
-if [[ $# -ne 1 ]]; then
+if [[ $# -gt 1 ]]; then
   usage
   exit 2
 fi
 
-CALLBACK_URL="$1"
+if [[ $# -eq 1 ]]; then
+  CALLBACK_URL="$1"
+else
+  printf "Cole a URL completa retornada pelo Google e pressione Enter:\n> "
+  IFS= read -r CALLBACK_URL
+fi
+
+if [[ -z "$CALLBACK_URL" ]]; then
+  echo "Erro: nenhuma URL de callback foi informada." >&2
+  exit 2
+fi
 
 read_env_value() {
   local key="$1"
