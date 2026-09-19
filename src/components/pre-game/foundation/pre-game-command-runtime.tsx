@@ -81,8 +81,9 @@ function mergeSceneIntent(
 
 export function PreGameCommandRuntime({ children }: { children: ReactNode }) {
   const pathname = usePathname();
+  const profileOwnsBackground = PROFILE_SHELL_ROUTES.has(pathname);
   const profileOwnsChrome =
-    PROFILE_SHELL_ROUTES.has(pathname) ||
+    profileOwnsBackground ||
     pathname.startsWith("/profile/store/showcase/");
   const routeIntent = useMemo(
     () => resolvePreGameSceneIntent(pathname),
@@ -137,18 +138,22 @@ export function PreGameCommandRuntime({ children }: { children: ReactNode }) {
   if (!intent) return <>{children}</>;
 
   return (
-    <SceneStateContext.Provider value={sceneState}>
+    <SceneStateContext.Provider value={profileOwnsBackground ? "ready" : sceneState}>
       <SceneDirectiveContext.Provider value={publishDirective}>
         <ShowcaseSceneContext.Provider value={publishShowcaseScene}>
-          <CommandShell
-            intent={intent}
-            chrome={!profileOwnsChrome}
-            showModeRail={pathname !== "/"}
-            onSceneStateChange={setSceneState}
-            showcaseScene={showcaseScene}
-          >
-            {children}
-          </CommandShell>
+          {profileOwnsBackground ? (
+            <>{children}</>
+          ) : (
+            <CommandShell
+              intent={intent}
+              chrome={!profileOwnsChrome}
+              showModeRail={pathname !== "/"}
+              onSceneStateChange={setSceneState}
+              showcaseScene={showcaseScene}
+            >
+              {children}
+            </CommandShell>
+          )}
         </ShowcaseSceneContext.Provider>
       </SceneDirectiveContext.Provider>
     </SceneStateContext.Provider>
