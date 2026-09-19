@@ -80,10 +80,10 @@ test("launch auth possui somente Google, Discord e credentials", () => {
   assert.doesNotMatch(authModal, /apple|Continuar com Apple/i);
 });
 
-test("credentials exige email verificado e nunca auto-autentica cadastro/verificação", () => {
+test("credentials exige email verificado e delega o envio inicial ao endpoint de registro", () => {
   assert.match(auth, /requireEmailVerification: true/);
   assert.match(auth, /emailAndPassword:[\s\S]*autoSignIn: false/);
-  assert.match(auth, /sendOnSignUp: true/);
+  assert.match(auth, /sendOnSignUp: false/);
   assert.match(auth, /sendOnSignIn: false/);
   assert.match(auth, /autoSignInAfterVerification: false/);
   assert.match(auth, /AUTH_TOKEN_TTL_SECONDS = 60 \* 60/);
@@ -301,7 +301,7 @@ test("registro não informa sucesso de envio se nem remetente nem Resend estiver
   assert.match(environment, /EMAIL_TRANSPORT_SECRET/);
   assert.match(
     environment,
-    /if \(Boolean\(environment\.email\.from\) !== Boolean\(environment\.email\.transportSecret\)\)/,
+    /if \([\s\S]*Boolean\(environment\.email\.from\) !==[\s\S]*Boolean\(environment\.email\.transportSecret\)[\s\S]*\)/,
   );
   assert.match(environment, /Configuração parcial de email de autenticação/);
 });
