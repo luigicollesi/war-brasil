@@ -273,3 +273,71 @@ test("PROFILE V4 V2 atmosphere stays behind the sticky store navigation without 
   );
   assert.match(styles, /\.storeNav\s*\{[\s\S]*?z-index:\s*8;/);
 });
+
+
+test("PROFILE V4 store V2.1 distributes military visual language across fixed and scrolling layers", async () => {
+  const store = await source("src/components/profile/v4/profile-store.tsx");
+  const styles = await source("src/components/profile/v4/profile-store.module.css");
+
+  for (const layer of [
+    "storeFixedAtmosphere",
+    "fixedCommandStripe",
+    "fixedArmorPlate",
+    "fixedLightSweep",
+    "atmosphereLeftMass",
+    "atmosphereLowerMass",
+    "signalClusterLeft",
+    "signalClusterRight",
+    "operationAxis",
+    "supplyNetwork",
+    "frontLine",
+    "repairPlate",
+    "lowerArmor",
+  ]) {
+    assert.match(store, new RegExp(`styles\\.${layer}`));
+  }
+
+  assert.match(
+    styles,
+    /\.storeFixedAtmosphere\s*\{[^}]*position:\s*fixed;[^}]*pointer-events:\s*none;/,
+  );
+  assert.match(styles, /\.fixedCommandStripe\s*\{[\s\S]*clip-path:\s*polygon\(/);
+  assert.match(styles, /\.fixedArmorPlate\s*\{[\s\S]*clip-path:\s*polygon\(/);
+  assert.match(styles, /\.operationAxis\s*\{[\s\S]*(?:linear|repeating-linear)-gradient/);
+  assert.match(styles, /\.supplyNetwork\s*\{[\s\S]*radial-gradient/);
+  assert.match(styles, /\.frontLine\s*\{[\s\S]*repeating-linear-gradient/);
+  assert.match(styles, /\.repairPlate\s*\{[\s\S]*clip-path:\s*polygon\(/);
+  assert.match(styles, /\.lowerArmor\s*\{[\s\S]*clip-path:\s*polygon\(/);
+});
+
+test("PROFILE V4 store V2.1 moves only selected fixed atmosphere layers and respects reduced motion", async () => {
+  const styles = await source("src/components/profile/v4/profile-store.module.css");
+
+  assert.match(styles, /@keyframes\s+storeCommandDrift/);
+  assert.match(styles, /@keyframes\s+storeArmorDrift/);
+  assert.match(styles, /@keyframes\s+storeLightDrift/);
+  assert.match(styles, /\.fixedCommandStripe\s*\{[\s\S]*animation:\s*storeCommandDrift/);
+  assert.match(styles, /\.fixedArmorPlate\s*\{[\s\S]*animation:\s*storeArmorDrift/);
+  assert.match(styles, /\.fixedLightSweep\s*\{[\s\S]*animation:\s*storeLightDrift/);
+  assert.doesNotMatch(styles, /\.operationAxis\s*\{[^}]*animation:/s);
+  assert.doesNotMatch(styles, /\.supplyNetwork\s*\{[^}]*animation:/s);
+  assert.doesNotMatch(styles, /\.frontLine\s*\{[^}]*animation:/s);
+  assert.match(
+    styles,
+    /@media\s*\(prefers-reduced-motion:\s*reduce\)[\s\S]*\.fixedCommandStripe,[\s\S]*\.fixedArmorPlate,[\s\S]*\.fixedLightSweep\s*\{[\s\S]*animation:\s*none/,
+  );
+});
+
+test("PROFILE V4 store V2.1 recomposes the war atmosphere for mobile instead of shrinking desktop", async () => {
+  const styles = await source("src/components/profile/v4/profile-store.module.css");
+  const mobile = styles.slice(styles.indexOf("@media (max-width: 520px)"));
+
+  assert.match(mobile, /\.fixedArmorPlate\s*\{[\s\S]*display:\s*none;/);
+  assert.match(mobile, /\.signalClusterRight\s*\{[\s\S]*display:\s*none;/);
+  assert.match(mobile, /\.fixedCommandStripe\s*\{[\s\S]*width:\s*clamp\(/);
+  assert.match(mobile, /\.operationAxis\s*\{[\s\S]*width:\s*clamp\(/);
+  assert.match(mobile, /\.supplyNetwork\s*\{[\s\S]*opacity:/);
+  assert.match(mobile, /\.frontLine\s*\{[\s\S]*width:\s*clamp\(/);
+  assert.match(mobile, /\.repairPlate\s*\{[\s\S]*left:/);
+  assert.match(mobile, /\.lowerArmor\s*\{[\s\S]*inset-inline:/);
+});
