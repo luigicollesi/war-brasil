@@ -192,7 +192,11 @@ test("PROFILE V4 store V1 uses spacing and image lift instead of card outlines f
   assert.match(styles, /\.store\s*\{[\s\S]*?gap:\s*clamp\(/);
   assert.match(
     styles,
-    /\.productVisual img\s*\{[\s\S]*?transition:[^;}]*transform[^;}]*filter/,
+    /\.productVisual img\s*\{[\s\S]*?transition:[^;}]*transform/,
+  );
+  assert.doesNotMatch(
+    styles,
+    /\.productVisual img\s*\{[^}]*transition:[^;}]*filter/,
   );
   assert.match(
     styles,
@@ -491,5 +495,127 @@ test("PROFILE V4 store V3 removes the dark-green intermediate veil below product
   assert.match(
     styles,
     /\.atmosphereBase\s*\{[^}]*inset:\s*0;[^}]*opacity:\s*0;[^}]*background:\s*transparent;/,
+  );
+});
+
+
+test("PROFILE V4 final gives products hover and keyboard-focus lift without animating filters", async () => {
+  const styles = await source("src/components/profile/v4/profile-store.module.css");
+
+  assert.match(
+    styles,
+    /\.productCard:hover,\s*\.productCard:focus-within\s*\{[^}]*transform:\s*translateY\(-4px\)/,
+  );
+  assert.match(
+    styles,
+    /\.productCard:hover\s+\.productVisual::before,\s*\.productCard:focus-within\s+\.productVisual::before\s*\{[^}]*opacity:\s*1;[^}]*transform:\s*scale\(1\.06\)/,
+  );
+  assert.match(
+    styles,
+    /\.productSelect:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--brass\);[^}]*outline-offset:\s*5px;/,
+  );
+  assert.doesNotMatch(
+    styles,
+    /\.productCard:hover\s+\.productVisual img\s*\{[^}]*filter:/,
+  );
+});
+
+test("PROFILE V4 final makes collection banners premium through transform-and-opacity microinteractions", async () => {
+  const styles = await source("src/components/profile/v4/profile-store.module.css");
+
+  assert.match(
+    styles,
+    /\.collectionBannerButton::before\s*\{[^}]*linear-gradient[\s\S]*transform:\s*translate3d\(-130%,\s*0,\s*0\);/,
+  );
+  assert.match(
+    styles,
+    /\.collectionBannerCard:hover\s+\.collectionBannerButton::before,\s*\.collectionBannerCard:focus-within\s+\.collectionBannerButton::before\s*\{[^}]*opacity:\s*1;[^}]*transform:\s*translate3d\(130%,\s*0,\s*0\);/,
+  );
+  assert.match(
+    styles,
+    /\.collectionBannerButton:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--brass\)/,
+  );
+});
+
+test("PROFILE V4 final gives the hero restrained hover and focus response", async () => {
+  const styles = await source("src/components/profile/v4/profile-store.module.css");
+
+  assert.match(styles, /\.heroAction\s*\{[^}]*min-height:\s*44px;/);
+  assert.match(
+    styles,
+    /\.heroAction:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--brass\)/,
+  );
+  assert.match(
+    styles,
+    /\.heroVisual:hover\s*>\s*img,\s*\.hero:focus-within\s+\.heroVisual\s*>\s*img\s*\{[^}]*transform:\s*translateY\(-3px\)\s+scale\(1\.012\)/,
+  );
+  assert.match(
+    styles,
+    /\.heroVisual:hover::after,\s*\.hero:focus-within\s+\.heroVisual::after\s*\{[^}]*opacity:\s*1;/,
+  );
+});
+
+test("PROFILE V4 final purchase controls expose hover focus pressed disabled and processing states", async () => {
+  const store = await source("src/components/profile/v4/profile-store.tsx");
+  const commerce = await source("src/components/profile/v4/profile-store-commerce.module.css");
+
+  assert.ok(
+    (store.match(/data-processing=\{pendingOfferId === offer\.id \? "true" : undefined\}/g) ?? []).length >= 2,
+  );
+  assert.match(
+    commerce,
+    /\.purchaseButton,\s*\.productCommerce button,\s*\.creditPack button\s*\{[^}]*min-height:\s*44px;/,
+  );
+  assert.match(
+    commerce,
+    /\.purchaseButton:not\(:disabled\):focus-visible,[\s\S]*\.productCommerce button:not\(:disabled\):focus-visible\s*\{[^}]*outline:\s*2px solid #d0aa57;/,
+  );
+  assert.match(
+    commerce,
+    /\.purchaseButton:not\(:disabled\):active,[\s\S]*\.productCommerce button:not\(:disabled\):active\s*\{[^}]*transform:\s*translateY\(1px\)/,
+  );
+  assert.match(
+    commerce,
+    /\.productCommerce button\[data-processing="true"\]\s*\{[^}]*animation:\s*storePurchaseBusy/,
+  );
+});
+
+test("PROFILE V4 final removes sticky-hover motion on touch layouts while preserving focus semantics", async () => {
+  const styles = await source("src/components/profile/v4/profile-store.module.css");
+  const touch = styles.slice(styles.indexOf("@media (hover: none)"));
+
+  assert.match(
+    touch,
+    /\.productCard:hover\s*\{[^}]*transform:\s*none;/,
+  );
+  assert.match(
+    touch,
+    /\.collectionBannerCard:hover\s*\{[^}]*transform:\s*none;/,
+  );
+  assert.match(
+    touch,
+    /\.heroVisual:hover\s*>\s*img\s*\{[^}]*transform:\s*none;/,
+  );
+});
+
+test("PROFILE V4 final reduced-motion mode removes interaction lift sweep and busy pulse", async () => {
+  const styles = await source("src/components/profile/v4/profile-store.module.css");
+  const commerce = await source("src/components/profile/v4/profile-store-commerce.module.css");
+  const reduced = styles.slice(styles.indexOf("@media (prefers-reduced-motion: reduce)"));
+  const commerceReduced = commerce.slice(
+    commerce.indexOf("@media (prefers-reduced-motion: reduce)"),
+  );
+
+  assert.match(
+    reduced,
+    /\.productCard:hover,[\s\S]*\.productCard:focus-within,[\s\S]*\.collectionBannerCard:hover,[\s\S]*\.collectionBannerCard:focus-within[\s\S]*\{[^}]*transform:\s*none;/,
+  );
+  assert.match(
+    reduced,
+    /\.collectionBannerButton::before\s*\{[^}]*display:\s*none;/,
+  );
+  assert.match(
+    commerceReduced,
+    /\.productCommerce button\[data-processing="true"\]\s*\{[^}]*animation:\s*none;/,
   );
 });
