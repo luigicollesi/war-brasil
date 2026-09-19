@@ -1,6 +1,7 @@
 "use client";
 
 import { usePathname } from "next/navigation";
+import type { ShowcaseObjectType } from "@/src/lib/client/store-showcase/showcase-presentation";
 import {
   createContext,
   useCallback,
@@ -34,6 +35,7 @@ export type ShowcaseSceneMode = "standard" | "collection";
 export type ShowcaseScenePayload = Readonly<{
   key: string;
   mode: ShowcaseSceneMode;
+  objectType: ShowcaseObjectType;
   stageCenterRatio: number;
   render: (context: { reducedMotion: boolean }) => ReactNode;
 }>;
