@@ -32,6 +32,12 @@ type RegisterResponse = {
   ok?: boolean;
   message?: string;
   errors?: Record<string, string>;
+  retryAfterSeconds?: number;
+};
+
+type VerificationResponse = RegisterResponse & {
+  authenticated?: boolean;
+  next?: "onboarding";
 };
 
 const RESEND_COOLDOWN_SECONDS = 60;
@@ -44,6 +50,13 @@ const PROVIDERS: Array<{ id: AuthProvider; label: string; mark: string }> = [
 function readFormValue(formData: FormData, key: string) {
   const value = formData.get(key);
   return typeof value === "string" ? value : "";
+}
+
+function maskEmailAddress(value: string) {
+  const [local, domain] = value.split("@");
+  if (!local || !domain) return value;
+  const visible = local.slice(0, Math.min(2, local.length));
+  return `${visible}${"*".repeat(Math.max(3, local.length - visible.length))}@${domain}`;
 }
 
 export function CommandAuthModal({
@@ -205,15 +218,19 @@ export function CommandAuthModal({
         return;
       }
 
-      setResendSecondsRemaining(RESEND_COOLDOWN_SECONDS);
+      setResendSecondsRemaining(
+        payload.retryAfterSeconds ?? RESEND_COOLDOWN_SECONDS,
+      );
       setMode("verification");
-      setMessage(payload.message ?? "Confira seu email para concluir o cadastro.");
+      setMessage(
+        payload.message ?? "Confira seu email para obter o código de confirmação.",
+      );
     });
   };
 
   const resendVerification = () => {
     if (!email) {
-      changeMode("login");
+      changeMode("register");
       return;
     }
     if (resendSecondsRemaining > 0) {
@@ -221,18 +238,66 @@ export function CommandAuthModal({
     }
 
     setMessage("");
-    setResendSecondsRemaining(RESEND_COOLDOWN_SECONDS);
     startTransition(async () => {
-      const { error } = await authClient.sendVerificationEmail({
-        email,
-        callbackURL: "/?emailVerified=success&continue=command",
+      const response = await fetch("/api/auth/register/resend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
       });
+      const payload = (await response.json().catch(() => ({}))) as RegisterResponse;
 
-      setMessage(
-        error?.status === 429
-          ? "Limite de solicitações atingido. Aguarde antes de pedir outro link."
-          : "Se existir uma conta pendente para esse endereço, enviaremos um novo link.",
+      if (!response.ok || !payload.ok) {
+        setMessage(
+          payload.message ?? "Não foi possível solicitar um novo código agora.",
+        );
+        return;
+      }
+
+      setResendSecondsRemaining(
+        payload.retryAfterSeconds ?? RESEND_COOLDOWN_SECONDS,
       );
+      setMessage(
+        payload.message ??
+          "Se existir um cadastro pendente para esse endereço, enviaremos um novo código.",
+      );
+    });
+  };
+
+  const submitVerification = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const code = readFormValue(formData, "code").replace(/\D/g, "").slice(0, 6);
+
+    setMessage("");
+    setFieldErrors({});
+
+    if (!email) {
+      setMode("register");
+      setMessage("Informe novamente seu email para iniciar o cadastro.");
+      return;
+    }
+
+    if (!/^\d{6}$/.test(code)) {
+      setFieldErrors({ code: "Digite os 6 dígitos enviados para seu email." });
+      return;
+    }
+
+    startTransition(async () => {
+      const response = await fetch("/api/auth/register/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, code }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as VerificationResponse;
+
+      if (!response.ok || !payload.ok || !payload.authenticated) {
+        setMessage(
+          payload.message ?? "Não foi possível confirmar este código agora.",
+        );
+        return;
+      }
+
+      await onAuthenticated();
     });
   };
 
@@ -369,7 +434,7 @@ export function CommandAuthModal({
             </h2>
             <p>
               {mode === "verification"
-                ? "O cadastro só é liberado depois que o endereço de email for confirmado."
+                ? "Digite o código de 6 dígitos enviado para seu email. A conta só será criada depois da confirmação."
                 : mode === "reset"
                   ? "Escolha uma nova credencial para sua conta War-Brasil."
                   : "Use uma das credenciais autorizadas abaixo."}
@@ -539,14 +604,43 @@ export function CommandAuthModal({
           {mode === "verification" ? (
             <div className={styles.verificationPanel}>
               <div className={styles.verificationSeal} aria-hidden="true">
-                @
+                #
               </div>
               <p>
                 {email
-                  ? `Enviamos a confirmação para ${email}.`
-                  : "Abra o link de confirmação enviado para o seu email."}
+                  ? `Enviamos um código para ${maskEmailAddress(email)}.`
+                  : "Informe novamente seu email para receber um código de confirmação."}
               </p>
-              <p className={styles.muted}>O link é válido por 1 hora.</p>
+              <p className={styles.muted}>O código é válido por 10 minutos.</p>
+
+              <form className={styles.form} onSubmit={submitVerification}>
+                <label>
+                  <span>Código de confirmação</span>
+                  <input
+                    name="code"
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="one-time-code"
+                    pattern="[0-9]{6}"
+                    minLength={6}
+                    maxLength={6}
+                    placeholder="000000"
+                    disabled={isPending}
+                    aria-invalid={Boolean(fieldErrors.code)}
+                    required
+                  />
+                  {fieldErrors.code ? (
+                    <small className={styles.fieldError}>{fieldErrors.code}</small>
+                  ) : (
+                    <small>Digite os 6 dígitos recebidos por email.</small>
+                  )}
+                </label>
+
+                <button className={styles.primaryButton} disabled={isPending}>
+                  {isPending ? "CONFIRMANDO..." : "CONFIRMAR EMAIL"}
+                </button>
+              </form>
+
               <button
                 type="button"
                 className={styles.primaryButton}
@@ -556,8 +650,8 @@ export function CommandAuthModal({
                 {isPending
                   ? "SOLICITANDO..."
                   : resendSecondsRemaining > 0
-                    ? `REENVIO DISPONÍVEL EM ${resendSecondsRemaining} S`
-                    : "REENVIAR EMAIL"}
+                    ? `NOVO CÓDIGO EM ${resendSecondsRemaining} S`
+                    : "REENVIAR CÓDIGO"}
               </button>
               <button
                 type="button"
