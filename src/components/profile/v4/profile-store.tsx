@@ -350,21 +350,23 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
         <span className={styles.operationAxis} aria-hidden="true" />
         {featuredCollection?.featured ? (
           <>
-            <Link
-              className={styles.featuredHeroBanner}
-              href={showcaseHref("collection", featuredCollection.id)}
-              aria-label={`Inspecionar coleção ${featuredCollection.name} no Expositor`}
-            >
-              <ProfileCosmeticImage
-                src={featuredCollection.assets.banner}
-                alt={`Banner da coleção ${featuredCollection.name}`}
-                width={1440}
-                height={800}
-                priority
-                fallbackClassName={styles.featuredHeroBannerFallback}
-                fallbackLabel="COLEÇÃO"
-              />
-            </Link>
+            <div className={styles.featuredHeroMedia}>
+              <Link
+                className={styles.featuredHeroBanner}
+                href={showcaseHref("collection", featuredCollection.id)}
+                aria-label={`Inspecionar coleção ${featuredCollection.name} no Expositor`}
+              >
+                <ProfileCosmeticImage
+                  src={featuredCollection.assets.banner}
+                  alt={`Banner da coleção ${featuredCollection.name}`}
+                  width={1440}
+                  height={800}
+                  priority
+                  fallbackClassName={styles.featuredHeroBannerFallback}
+                  fallbackLabel="COLEÇÃO"
+                />
+              </Link>
+            </div>
 
             <div className={styles.featuredHeroOverlay}>
               <div className={styles.featuredHeroCopy}>
