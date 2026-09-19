@@ -711,3 +711,28 @@ test("PROFILE V4 featured collection hero becomes a full-width promotion on desk
     /\.featuredHeroCommerce\s*\{[^}]*grid-template-columns:\s*1fr;/,
   );
 });
+
+
+test("PROFILE V4 featured hero mobile banner is centered inside a symmetric clipped media container", async () => {
+  const store = await source("src/components/profile/v4/profile-store.tsx");
+  const styles = await source("src/components/profile/v4/profile-store.module.css");
+  const mobile = styles.slice(styles.indexOf("@media (max-width: 520px)"));
+
+  assert.match(store, /className=\{styles\.featuredHeroMedia\}/);
+  assert.match(
+    styles,
+    /\.featuredHeroMedia\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*0;[^}]*overflow:\s*hidden;/,
+  );
+  assert.match(
+    styles,
+    /\.featuredHeroBanner\s*\{[^}]*width:\s*100%;[^}]*height:\s*100%;/,
+  );
+  assert.match(
+    mobile,
+    /\.featuredHeroMedia\s*\{[^}]*position:\s*relative;[^}]*width:\s*calc\(100% - 24px\);[^}]*margin-inline:\s*auto;[^}]*overflow:\s*hidden;/,
+  );
+  assert.match(
+    mobile,
+    /\.featuredHeroBanner img\s*\{[^}]*object-position:\s*center;/,
+  );
+});
