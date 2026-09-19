@@ -32,7 +32,7 @@ const pendingRegistration = readFileSync(
   "utf8",
 );
 const pendingRegistrationMigration = readFileSync(
-  "src/lib/db/migrations/managed/041-pending-email-registration.sql",
+  "src/lib/db/migrations/managed/049-pending-email-registration.sql",
   "utf8",
 );
 const proxy = readFileSync("src/proxy.ts", "utf8");
