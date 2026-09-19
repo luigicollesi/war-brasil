@@ -40,7 +40,7 @@ const SHOWCASE_PRESENTATION: Readonly<
       rotation: [-0.1, -0.42, 0],
     },
     portrait: {
-      objectScale: 0.98,
+      objectScale: 0.86,
       cameraFov: 36,
       cameraDistance: 6.8,
       cameraY: 0.28,
