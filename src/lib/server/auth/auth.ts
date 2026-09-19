@@ -20,8 +20,6 @@ const AUTH_RATE_LIMIT_WINDOW_SECONDS = 60;
 const AUTH_RATE_LIMIT_MAX = 100;
 const CREDENTIAL_LOGIN_WINDOW_SECONDS = 60;
 const CREDENTIAL_LOGIN_MAX = 5;
-const CREDENTIAL_SIGNUP_WINDOW_SECONDS = 10 * 60;
-const CREDENTIAL_SIGNUP_MAX = 5;
 const AUTH_EMAIL_ACTION_WINDOW_SECONDS = 10 * 60;
 const AUTH_EMAIL_ACTION_MAX = 3;
 
@@ -84,14 +82,6 @@ export const auth = betterAuth({
       "/sign-in/email": {
         window: CREDENTIAL_LOGIN_WINDOW_SECONDS,
         max: CREDENTIAL_LOGIN_MAX,
-      },
-      "/sign-up/email": {
-        window: CREDENTIAL_SIGNUP_WINDOW_SECONDS,
-        max: CREDENTIAL_SIGNUP_MAX,
-      },
-      "/send-verification-email": {
-        window: AUTH_EMAIL_ACTION_WINDOW_SECONDS,
-        max: AUTH_EMAIL_ACTION_MAX,
       },
       "/request-password-reset": {
         window: AUTH_EMAIL_ACTION_WINDOW_SECONDS,
