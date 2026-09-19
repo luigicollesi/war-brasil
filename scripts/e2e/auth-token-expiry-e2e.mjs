@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
-import { createHmac } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { Client } from "pg";
+import { waitForRegistrationCode } from "./registration-otp-helper.mjs";
 
 const playwrightRuntimeDir = path.resolve(
   process.env.PLAYWRIGHT_RUNTIME_DIR ?? ".e2e-runtime/node_modules/playwright",
@@ -15,19 +15,14 @@ const playwright = await import(
 const BASE_URL = process.env.LOBBY_E2E_BASE_URL ?? "http://localhost:3000";
 const DATABASE_URL = process.env.LOBBY_E2E_DATABASE_URL ?? process.env.DATABASE_URL;
 const EMAIL_SINK_DIR = process.env.AUTH_EMAIL_SINK_DIR;
-const BETTER_AUTH_SECRET = process.env.BETTER_AUTH_SECRET;
 const PASSWORD = "WarBrasil-Expiry-E2E-2026!";
 const NEW_PASSWORD = "WarBrasil-Expiry-New-E2E-2026!";
-const EXPECTED_TOKEN_TTL_SECONDS = 60 * 60;
 
 if (!DATABASE_URL) {
   throw new Error("DATABASE_URL é obrigatória para o E2E temporal de auth.");
 }
 if (!EMAIL_SINK_DIR) {
   throw new Error("AUTH_EMAIL_SINK_DIR é obrigatória para o E2E temporal de auth.");
-}
-if (!BETTER_AUTH_SECRET) {
-  throw new Error("BETTER_AUTH_SECRET é obrigatória para o E2E temporal de auth.");
 }
 
 async function apiJson(page, url, init = {}) {
@@ -57,6 +52,7 @@ async function register(page, email) {
     }),
   });
   assert.equal(response.status, 200, JSON.stringify(response.body));
+  assert.equal(response.body?.ok, true);
 }
 
 async function signIn(page, email, password = PASSWORD) {
@@ -67,9 +63,16 @@ async function signIn(page, email, password = PASSWORD) {
   });
 }
 
+async function signOut(page) {
+  return apiJson(page, "/api/auth/sign-out", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+}
+
 async function waitForEmail(to, subject) {
   const deadline = Date.now() + 8_000;
-
   while (Date.now() < deadline) {
     const entries = await readdir(EMAIL_SINK_DIR).catch(() => []);
     for (const entry of entries) {
@@ -78,19 +81,15 @@ async function waitForEmail(to, subject) {
         () => null,
       );
       if (!raw) continue;
-
       try {
         const message = JSON.parse(raw);
-        if (message?.to === to && message?.subject === subject) {
-          return message;
-        }
+        if (message?.to === to && message?.subject === subject) return message;
       } catch {
         // O polling tenta novamente se coincidir com a escrita do sink.
       }
     }
     await new Promise((resolve) => setTimeout(resolve, 100));
   }
-
   throw new Error(`email E2E não capturado para subject=${subject}`);
 }
 
@@ -100,33 +99,27 @@ function actionUrl(message) {
   return match[0];
 }
 
-function verificationTokenFromActionUrl(value) {
-  const token = new URL(value).searchParams.get("token");
-  assert.ok(token, "URL de verification não contém token");
-  return token;
+function tokenFromResetActionUrl(value) {
+  const url = new URL(value);
+  const queryToken = url.searchParams.get("token");
+  if (queryToken) return queryToken;
+
+  const segments = url.pathname.split("/").filter(Boolean);
+  const resetIndex = segments.lastIndexOf("reset-password");
+  const pathToken = resetIndex >= 0 ? segments[resetIndex + 1] : null;
+  return pathToken ? decodeURIComponent(pathToken) : null;
 }
 
-function decodeJwtPayload(token) {
-  const parts = token.split(".");
-  assert.equal(parts.length, 3, "verification token deveria ser JWT compacto");
-  return JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8"));
-}
-
-function signExpiredVerificationJwt(email) {
-  const now = Math.floor(Date.now() / 1000);
-  const header = Buffer.from(JSON.stringify({ alg: "HS256" })).toString("base64url");
-  const payload = Buffer.from(
-    JSON.stringify({
-      email: email.toLowerCase(),
-      iat: now - 2 * EXPECTED_TOKEN_TTL_SECONDS,
-      exp: now - EXPECTED_TOKEN_TTL_SECONDS,
-    }),
-  ).toString("base64url");
-  const signingInput = `${header}.${payload}`;
-  const signature = createHmac("sha256", BETTER_AUTH_SECRET)
-    .update(signingInput)
-    .digest("base64url");
-  return `${signingInput}.${signature}`;
+async function expireRegistrationCode(db, email) {
+  const result = await db.query(
+    `UPDATE auth.pending_registration
+        SET code_expires_at = NOW() - INTERVAL '1 minute',
+            updated_at = NOW()
+      WHERE email = $1
+      RETURNING id`,
+    [email],
+  );
+  assert.equal(result.rowCount, 1, "cadastro pendente não localizado para expiração");
 }
 
 async function expireResetToken(db, token) {
@@ -139,7 +132,6 @@ async function expireResetToken(db, token) {
       RETURNING id`,
     [`reset-password:${token}`],
   );
-
   assert.equal(
     result.rowCount,
     1,
@@ -147,26 +139,14 @@ async function expireResetToken(db, token) {
   );
 }
 
-async function isVerified(db, email) {
+async function accountExists(db, email) {
   const result = await db.query(
     `SELECT "emailVerified" AS verified
        FROM auth."user"
       WHERE email = $1`,
     [email],
   );
-  assert.equal(result.rowCount, 1, `usuário E2E ausente: ${email}`);
-  return result.rows[0].verified === true;
-}
-
-function tokenFromResetActionUrl(value) {
-  const url = new URL(value);
-  const queryToken = url.searchParams.get("token");
-  if (queryToken) return queryToken;
-
-  const segments = url.pathname.split("/").filter(Boolean);
-  const resetIndex = segments.lastIndexOf("reset-password");
-  const pathToken = resetIndex >= 0 ? segments[resetIndex + 1] : null;
-  return pathToken ? decodeURIComponent(pathToken) : null;
+  return result.rows[0] ?? null;
 }
 
 const browser = await playwright.chromium.launch({ headless: true });
@@ -183,56 +163,67 @@ try {
     await page.goto(`${BASE_URL}/`, { waitUntil: "domcontentloaded" });
     const identity = `${process.pid}-${Date.now()}`;
 
-    const expiredVerificationEmail = `expired-verify-${identity}@e2e.war-brasil.test`;
-    await register(page, expiredVerificationEmail);
-    const verificationMessage = await waitForEmail(
-      expiredVerificationEmail,
-      "Verificação de email",
+    const expiredOtpEmail = `expired-otp-${identity}@e2e.war-brasil.test`;
+    await register(page, expiredOtpEmail);
+    const expiredOtp = await waitForRegistrationCode(
+      expiredOtpEmail,
+      EMAIL_SINK_DIR,
     );
-    const liveVerificationToken = verificationTokenFromActionUrl(
-      actionUrl(verificationMessage),
-    );
-    const livePayload = decodeJwtPayload(liveVerificationToken);
-    assert.equal(
-      livePayload.exp - livePayload.iat,
-      EXPECTED_TOKEN_TTL_SECONDS,
-      "verification JWT real não possui TTL de 1 hora",
-    );
-    assert.equal(
-      livePayload.email,
-      expiredVerificationEmail,
-      "verification JWT real não pertence ao email esperado",
-    );
+    await expireRegistrationCode(db, expiredOtpEmail);
 
-    const expiredVerificationToken = signExpiredVerificationJwt(
-      expiredVerificationEmail,
-    );
-    const expiredVerificationUrl = new URL("/api/auth/verify-email", BASE_URL);
-    expiredVerificationUrl.searchParams.set("token", expiredVerificationToken);
-    expiredVerificationUrl.searchParams.set("callbackURL", "/?auth=email-verified");
-
-    await page.goto(expiredVerificationUrl.href, { waitUntil: "domcontentloaded" });
-    assert.equal(
-      await isVerified(db, expiredVerificationEmail),
-      false,
-      "verification JWT autenticamente assinado mas expirado verificou a conta",
-    );
-
-    const expiredVerificationSignIn = await signIn(
+    const expiredVerification = await apiJson(
       page,
-      expiredVerificationEmail,
+      "/api/auth/register/verify",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: expiredOtpEmail, code: expiredOtp }),
+      },
     );
+    assert.equal(
+      expiredVerification.status,
+      410,
+      `OTP expirado deveria retornar 410, recebeu ${expiredVerification.status}`,
+    );
+    assert.equal(
+      await accountExists(db, expiredOtpEmail),
+      null,
+      "OTP expirado não pode criar auth.user",
+    );
+
+    const expiredOtpSignIn = await signIn(page, expiredOtpEmail);
     assert.ok(
-      expiredVerificationSignIn.status >= 400 &&
-        expiredVerificationSignIn.status < 500,
-      `conta não verificada por token expirado deveria falhar login, recebeu ${expiredVerificationSignIn.status}`,
+      expiredOtpSignIn.status >= 400 && expiredOtpSignIn.status < 500,
+      `cadastro não promovido deveria falhar login, recebeu ${expiredOtpSignIn.status}`,
     );
 
     const resetEmail = `expired-reset-${identity}@e2e.war-brasil.test`;
     await register(page, resetEmail);
-    const validVerification = await waitForEmail(resetEmail, "Verificação de email");
-    await page.goto(actionUrl(validVerification), { waitUntil: "domcontentloaded" });
-    assert.equal(await isVerified(db, resetEmail), true, "fixture de reset não foi verificada");
+    const resetRegistrationCode = await waitForRegistrationCode(
+      resetEmail,
+      EMAIL_SINK_DIR,
+    );
+    const registrationVerification = await apiJson(
+      page,
+      "/api/auth/register/verify",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: resetEmail,
+          code: resetRegistrationCode,
+        }),
+      },
+    );
+    assert.equal(
+      registrationVerification.status,
+      200,
+      JSON.stringify(registrationVerification.body),
+    );
+    assert.equal((await accountExists(db, resetEmail))?.verified, true);
+
+    const logout = await signOut(page);
+    assert.equal(logout.status, 200, JSON.stringify(logout.body));
 
     const requestReset = await apiJson(page, "/api/auth/request-password-reset", {
       method: "POST",
@@ -244,7 +235,7 @@ try {
     });
     assert.equal(requestReset.status, 200, JSON.stringify(requestReset.body));
 
-    const resetMessage = await waitForEmail(resetEmail, "Redefinição de senha");
+    const resetMessage = await waitForEmail(resetEmail, "Redefinição de senha | WAR Brasil");
     const rawResetUrl = actionUrl(resetMessage);
     const expiredResetToken = tokenFromResetActionUrl(rawResetUrl);
     assert.ok(expiredResetToken, "URL de reset não expôs token Better Auth na ação server-side");
@@ -277,7 +268,7 @@ try {
     );
 
     console.log(
-      "[auth-token-expiry-e2e] TTL real de verification e expiração de verification/reset falharam fechados.",
+      "[auth-token-expiry-e2e] expiração de OTP e password reset falharam fechados.",
     );
   } finally {
     await context.close();
