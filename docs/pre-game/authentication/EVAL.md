@@ -36,62 +36,62 @@ Aprovação exige **todos os BLOCKERs aplicáveis**. Score visual/UX não compen
 | ID | Critério | Evidência mínima |
 | --- | --- | --- |
 | AUTH-018 | cadastro valida email/senha/aceite legal no servidor | integration |
-| AUTH-019 | signup credentials cria estado não verificado, não sessão | integration + cookie inspection |
-| AUTH-020 | signup bem-sucedido dispara email de verificação | integration/email harness |
+| AUTH-019 | signup cria somente `auth.pending_registration`, sem `auth.user` e sem sessão | integration + DB/cookie inspection |
+| AUTH-020 | signup aceito dispara email com OTP de 6 dígitos | integration/email harness |
 | AUTH-021 | modal entra em `verification-pending` após signup | e2e |
-| AUTH-022 | senha é limpa do estado/formulário após signup | e2e/client inspection |
-| AUTH-023 | `command-open` permanece bloqueado após signup não verificado | e2e |
-| AUTH-024 | recurso protegido retorna 401/403 para credentials não verificada | integration |
-| AUTH-025 | Better Auth é fonte de verdade da verification | source/schema |
-| AUTH-026 | não existe tabela custom War-Brasil `email_verification_tokens` | migration/schema/static |
-| AUTH-027 | não existe segunda tabela contendo pending password hash | schema/static |
+| AUTH-022 | senha não permanece exposta no estado/formulário após signup | e2e/client inspection |
+| AUTH-023 | `command-open` permanece bloqueado enquanto cadastro é pendente | e2e |
+| AUTH-024 | `auth.user` não existe antes da confirmação do OTP | integration/schema |
+| AUTH-025 | Better Auth permanece fonte de verdade para conta permanente, credential e sessão | source/schema |
+| AUTH-026 | existe somente a tabela temporária aprovada `auth.pending_registration` | migration/schema/static |
+| AUTH-027 | pending nunca armazena senha ou OTP em texto puro | schema/source/static |
 | AUTH-028 | signup duplicado não cria duas contas credentials equivalentes | integration/concurrency |
 
-## 4. Gates BLOCKER — email de verificação
+## 4. Gates BLOCKER — confirmação por OTP
 
 | ID | Critério | Evidência mínima |
 | --- | --- | --- |
-| AUTH-029 | token de verificação expira em 3600 s / 1h | config/integration temporal |
-| AUTH-030 | email contém CTA de verificação | email snapshot |
-| AUTH-031 | email contém link textual fallback | email snapshot |
-| AUTH-032 | email informa validade de 1 hora | email snapshot |
+| AUTH-029 | OTP expira em 600 s / 10 min | source/integration temporal |
+| AUTH-030 | email contém OTP de exatamente 6 dígitos | email snapshot |
+| AUTH-031 | email de cadastro não contém link/token de confirmação | email snapshot |
+| AUTH-032 | email informa validade de 10 minutos | email snapshot |
 | AUTH-033 | email possui HTML e texto simples | email harness |
 | AUTH-034 | email informa que pode ser ignorado se cadastro não foi solicitado | email snapshot |
-| AUTH-035 | link válido marca email como verificado | integration |
-| AUTH-036 | link válido não cria sessão automaticamente | browser/cookie inspection |
-| AUTH-037 | após verificação usuário retorna para rota interna permitida/Home | e2e |
-| AUTH-038 | Home apresenta sucesso de verificação sem mostrar token | e2e |
-| AUTH-039 | token inválido não verifica conta | adversarial integration |
-| AUTH-040 | token expirado não verifica conta | temporal integration |
-| AUTH-041 | token já utilizado não concede segunda ação privilegiada | replay test |
-| AUTH-042 | token/URL de verification não aparece em logs | log inspection |
-| AUTH-043 | token não aparece em analytics/telemetria client | network/analytics inspection |
-| AUTH-044 | password hash nunca aparece no email/payload | email/network inspection |
+| AUTH-035 | OTP válido cria `auth.user` já com `emailVerified=true` | integration |
+| AUTH-036 | OTP válido cria `auth.account` credential e sessão Better Auth | browser/DB inspection |
+| AUTH-037 | confirmação válida segue diretamente para onboarding quando profile incompleto | e2e |
+| AUTH-038 | OTP nunca aparece em URL/querystring da Home | e2e/network |
+| AUTH-039 | OTP inválido não cria conta | adversarial integration |
+| AUTH-040 | OTP expirado não cria conta | temporal integration |
+| AUTH-041 | OTP já utilizado não concede segunda ação privilegiada | replay test |
+| AUTH-042 | OTP não aparece em logs | log inspection |
+| AUTH-043 | OTP não aparece em analytics/telemetria client | network/analytics inspection |
+| AUTH-044 | password/hash/ciphertext nunca aparece no email/payload client | email/network inspection |
 
-## 5. Gates BLOCKER — login credentials após verificação
+## 5. Gates BLOCKER — login credentials após confirmação
 
 | ID | Critério | Evidência mínima |
 | --- | --- | --- |
-| AUTH-045 | email verificado + senha correta cria sessão | e2e |
-| AUTH-046 | email não verificado + senha correta não cria sessão | integration |
+| AUTH-045 | conta confirmada + senha correta cria/restaura sessão | e2e |
+| AUTH-046 | não existe caminho de signup credentials nativo que crie usuário pendente | integration/source |
 | AUTH-047 | senha incorreta não cria sessão | integration |
 | AUTH-048 | mensagens não retornam password/hash/details internos | response inspection |
 | AUTH-049 | login credentials possui rate limit | integration |
 | AUTH-050 | excesso retorna 429 recuperável | integration |
 
-## 6. Gates BLOCKER — reenvio de verification
+## 6. Gates BLOCKER — reenvio de OTP
 
 | ID | Critério | Evidência mínima |
 | --- | --- | --- |
 | AUTH-051 | `verification-pending` oferece reenvio explícito | e2e |
-| AUTH-052 | reenvio usa API/primitives Better Auth | source |
-| AUTH-053 | reenvio não gera token custom War-Brasil | source/schema |
-| AUTH-054 | reenvio possui rate limit server-side | integration |
-| AUTH-055 | UI possui cooldown contra spam de clique | e2e |
+| AUTH-052 | reenvio opera somente sobre `auth.pending_registration` | source/schema |
+| AUTH-053 | reenvio persiste somente HMAC do novo OTP | source/schema |
+| AUTH-054 | reenvio possui cooldown server-side de 60 s | integration |
+| AUTH-055 | UI possui cooldown regressivo contra spam de clique | e2e |
 | AUTH-056 | resposta pública de reenvio é não-enumerável | adversarial integration |
-| AUTH-057 | reenvio não revela se conta já foi verificada | adversarial integration |
-| AUTH-058 | email sintético `.invalid` de Discord nunca recebe verification | integration |
-| AUTH-059 | callback de reenvio permanece em allowlist interna | adversarial integration |
+| AUTH-057 | reenvio não revela se conta já existe | adversarial integration |
+| AUTH-058 | email sintético `.invalid` nunca recebe OTP/reset | integration |
+| AUTH-059 | novo OTP invalida o código anterior e zera tentativas | integration |
 
 ## 7. Gates BLOCKER — password reset
 
@@ -393,40 +393,43 @@ Conta A tenta comando com seat B. Esperado: 403.
 
 ```text
 [ ] providers de launch = google, discord, credentials
-[ ] não existe provider Apple
-[ ] não existe provider GitHub
-[ ] não existe quarto provider
+[ ] não existe provider Apple/GitHub/quarto provider
 [ ] não existe NEXT_PUBLIC_* de auth
-[ ] não existe tabela custom email_verification_tokens do War-Brasil
-[ ] não existe pending password hash paralelo
+[ ] existe auth.pending_registration
+[ ] pending password é ciphertext autenticado, nunca plaintext
+[ ] OTP persistido somente como HMAC
+[ ] emailAndPassword.disableSignUp = true
 [ ] emailAndPassword exige verification
-[ ] auto sign-in no signup credentials está desabilitado
-[ ] auto sign-in pós-verification está desabilitado
-[ ] verification TTL = 3600s
-[ ] sendOnSignUp está habilitado
-[ ] resend usa Better Auth
+[ ] auth.user só é criado após OTP válido
+[ ] auth.account credential é criado junto da promoção
+[ ] OTP TTL = 600s
+[ ] máximo de tentativas = 5
+[ ] resend cooldown = 60s
 [ ] módulos client não importam server auth/DB/email secrets
 [ ] provider tokens não entram no session payload
 [ ] linking implícito por email está desligado
 [ ] trustedProviders está vazio
 [ ] trustedProxyHeaders continua desligado/ausente
-[ ] callback/returnTo possui allowlist interna
 ```
 
 ## 25. Inspeção dinâmica obrigatória
 
 ```text
-[ ] signup credentials envia email
+[ ] signup credentials envia OTP
+[ ] signup credentials não cria auth.user
 [ ] signup credentials não seta cookie de sessão
-[ ] verification válida muda emailVerified
-[ ] verification válida não seta sessão automaticamente
-[ ] verification inválida/expirada não confirma conta
-[ ] login após verification funciona
+[ ] OTP válido cria auth.user(emailVerified=true)
+[ ] OTP válido cria auth.account credential
+[ ] OTP válido remove pending_registration
+[ ] OTP válido cria sessão Better Auth
+[ ] OTP válido abre onboarding quando profile está incompleto
+[ ] OTP inválido/expirado não cria conta
+[ ] replay de OTP falha
 [ ] reload restaura sessão válida
 [ ] logout remove acesso
 [ ] document.cookie não revela auth session token
 [ ] localStorage/sessionStorage/IndexedDB não contêm auth token
-[ ] email HTML/text não contêm password/hash
+[ ] email HTML/text não contêm password/hash/ciphertext
 [ ] browser não recebe provider access/refresh token
 ```
 
@@ -446,4 +449,4 @@ Aprovação UX: **>= 85**.
 
 ## 27. Definition of Done
 
-O launch expõe exclusivamente Google, Discord e Email + senha. Credentials não autentica até que o usuário confirme, por link de 1 hora, o email enviado no cadastro. O clique verifica mas não auto-loga, replicando a experiência do Contrapista com primitives nativas do Better Auth. Reenvio/reset são seguros e rate-limited, OAuth não faz merge implícito por email, secrets não cruzam a fronteira do servidor e todos os gates deste EVAL e do `DATABASE-EVAL.md` aplicável estão verdes.
+O launch expõe exclusivamente Google, Discord e Email + senha. No credentials, o cadastro permanece em `auth.pending_registration` até que o usuário confirme um OTP de 6 dígitos válido por 10 minutos. Antes disso não existe `auth.user`, `auth.account` nem sessão. A confirmação promove a conta em transação, cria a credential, remove o estado temporário, estabelece sessão Better Auth e abre o onboarding de comandante. Reenvio/reset são seguros e rate-limited, OAuth não faz merge implícito por email, secrets não cruzam a fronteira do servidor e todos os gates deste EVAL e do `DATABASE-EVAL.md` aplicável estão verdes.
