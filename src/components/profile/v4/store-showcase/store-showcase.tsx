@@ -116,12 +116,15 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
   const router = useRouter();
   const sceneState = useCommandSceneState();
   const [selectedItemId, setSelectedItemId] = useState(showcase.selectedItemId);
-  const [failedTerritoryItemId, setFailedTerritoryItemId] = useState<string | null>(null);
+  const [failedTerritoryItemIds, setFailedTerritoryItemIds] = useState<ReadonlySet<string>>(
+    () => new Set<string>(),
+  );
   const [pendingOfferId, setPendingOfferId] = useState<string | null>(null);
   const [purchaseMessage, setPurchaseMessage] = useState<PurchaseMessage | null>(null);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [transitionPhase, setTransitionPhase] = useState<ShowcaseTransitionPhase>("idle");
   const [transitionDirection, setTransitionDirection] = useState<-1 | 1>(1);
+  const [transitionTargetItemId, setTransitionTargetItemId] = useState<string | null>(null);
   const transitionTimers = useRef<number[]>([]);
   const selectedStripItemRef = useRef<HTMLButtonElement | null>(null);
   const stageObjectRef = useRef<HTMLDivElement | null>(null);
@@ -190,7 +193,8 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
   const itemCount = showcase.items.length;
   const sceneFallback = sceneState === "fallback";
   const territoryGeometryFallback =
-    selectedItem?.type === "territory" && selectedItem.id === failedTerritoryItemId;
+    selectedItem?.type === "territory" &&
+    failedTerritoryItemIds.has(selectedItem.id);
 
   useEffect(() => {
     selectedStripItemRef.current?.scrollIntoView({
@@ -207,7 +211,7 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
 
   const showcaseScene = useMemo(
     () => ({
-      key: selectedItem?.id ?? showcase.id,
+      key: showcase.id,
       mode: showcase.mode,
       objectType: selectedItem?.type ?? "dice",
       stageCenterRatio,
@@ -216,43 +220,62 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
           {showcase.mode === "collection" ? (
             <CollectionShowcaseAtmosphere backgroundRef={showcase.backgroundRef} />
           ) : null}
-          <ShowcaseObjectController
-            reducedMotion={reducedMotion}
-            transitionPhase={transitionPhase}
-            transitionDirection={transitionDirection}
-            objectType={selectedItem?.type ?? "dice"}
-          >
-            {selectedItem?.type === "dice" ? (
-              <DiceShowcaseModel
-                assetRef={selectedItem.assetRef}
-                slot={selectedItem.slot}
-              />
-            ) : selectedItem?.type === "territory" &&
-              selectedItem.id !== failedTerritoryItemId ? (
-              <ShowcaseModelErrorBoundary
-                key={selectedItem.id}
-                onError={() => setFailedTerritoryItemId(selectedItem.id)}
-              >
-                <TerritoryShowcaseModel
-                  cosmeticId={selectedItem.id}
-                  assetRef={selectedItem.assetRef}
-                  effectKey={selectedItem.effectKey}
+
+          {showcase.items.map((item, itemIndex) => (
+            <ShowcaseObjectController
+              key={item.id}
+              reducedMotion={reducedMotion}
+              transitionPhase={transitionPhase}
+              transitionDirection={transitionDirection}
+              objectType={item.type}
+              itemId={item.id}
+              itemIndex={itemIndex}
+              selectedIndex={selectedIndex}
+              selectedItemId={selectedItem?.id ?? null}
+              transitionTargetItemId={transitionTargetItemId}
+            >
+              {item.type === "dice" ? (
+                <DiceShowcaseModel
+                  assetRef={item.assetRef}
+                  slot={item.slot}
                 />
-              </ShowcaseModelErrorBoundary>
-            ) : null}
-          </ShowcaseObjectController>
+              ) : item.type === "territory" &&
+                !failedTerritoryItemIds.has(item.id) ? (
+                <ShowcaseModelErrorBoundary
+                  key={item.id}
+                  onError={() =>
+                    setFailedTerritoryItemIds((current) => {
+                      if (current.has(item.id)) return current;
+                      const next = new Set(current);
+                      next.add(item.id);
+                      return next;
+                    })
+                  }
+                >
+                  <TerritoryShowcaseModel
+                    cosmeticId={item.id}
+                    assetRef={item.assetRef}
+                    effectKey={item.effectKey}
+                  />
+                </ShowcaseModelErrorBoundary>
+              ) : null}
+            </ShowcaseObjectController>
+          ))}
         </>
       ),
     }),
     [
-      failedTerritoryItemId,
+      failedTerritoryItemIds,
+      selectedIndex,
       selectedItem,
       showcase.backgroundRef,
       showcase.id,
+      showcase.items,
       showcase.mode,
       stageCenterRatio,
       transitionDirection,
       transitionPhase,
+      transitionTargetItemId,
     ],
   );
   useShowcaseScene(showcaseScene, Boolean(selectedItem));
@@ -267,11 +290,13 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
     setPurchaseMessage(null);
 
     if (prefersReducedMotion) {
+      setTransitionTargetItemId(null);
       setSelectedItemId(targetItemId);
       return;
     }
 
     clearTransitionTimers();
+    setTransitionTargetItemId(targetItemId);
     setTransitionDirection(direction);
     setTransitionPhase("exit");
 
@@ -281,6 +306,7 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
 
       const settleTimer = window.setTimeout(() => {
         setTransitionPhase("idle");
+        setTransitionTargetItemId(null);
         transitionTimers.current = [];
       }, SHOWCASE_ITEM_TRANSITION_PHASE_MS);
       transitionTimers.current = [settleTimer];
