@@ -150,18 +150,6 @@ function buildActionEmail({
   return { html, subject, text };
 }
 
-export function buildVerificationEmail(url: string) {
-  return buildActionEmail({
-    actionLabel: "CONFIRMAR EMAIL",
-    description:
-      "Confirme este endereço para ativar sua identidade, concluir o cadastro e liberar o acesso ao Comando do WAR Brasil.",
-    eyebrow: "NOVO REGISTRO // VALIDAÇÃO",
-    headline: "Bem-vindo ao Comando",
-    subject: "Confirme seu email | WAR Brasil",
-    url,
-  });
-}
-
 export function buildRegistrationCodeEmail(code: string) {
   const safeCode = escapeHtml(code);
   const subject = "Seu código de confirmação | WAR Brasil";
