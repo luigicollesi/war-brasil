@@ -600,14 +600,14 @@ MUST NOT:
 - criar auth custom do zero;
 - copiar `email_verification_tokens` do Contrapista;
 - criar sessão credentials antes da confirmação;
-- auto-login após clicar no link de verificação;
+- criar `auth.user` ou sessão antes de um OTP válido;
 - guardar password hash em tabela War-Brasil paralela;
 - usar email como handle/autoridade/linking implícito;
 - ler cookie HttpOnly via JS;
 - expor segredo via `NEXT_PUBLIC_*`;
 - persistir token em local/session storage;
 - proteger API só escondendo botão;
-- logar token/link de verificação;
+- logar OTP, password ciphertext ou qualquer credencial temporária;
 - confiar em callback externo arbitrário.
 
 ## 29. Definition of Done
