@@ -2,7 +2,9 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import type { ReactNode } from "react";
+import { useRouter } from "next/navigation";
+import { useState, type ReactNode } from "react";
+import { authClient } from "@/client/auth-client";
 import { useCommandSceneDirective } from "@/src/components/pre-game/foundation";
 import styles from "./profile-shell.module.css";
 
@@ -18,6 +20,8 @@ export type ProfileShellWallet =
       available: false;
       reason?: string;
     }>;
+
+const PROFILE_LOGOUT_TRANSITION_MS = 280;
 
 const NAV_ITEMS: ReadonlyArray<{
   id: ProfileSurface;
@@ -70,7 +74,31 @@ export function ProfileShell({
   evaluationFixture?: boolean;
   children: ReactNode;
 }) {
+  const router = useRouter();
+  const [logoutState, setLogoutState] = useState<"idle" | "closing" | "error">("idle");
   useCommandSceneDirective(SCENE_DIRECTIVES[activeSurface]);
+
+  async function handleLogout() {
+    if (logoutState === "closing") return;
+
+    setLogoutState("closing");
+    const reducedMotion =
+      typeof window !== "undefined" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const transitionDelay = reducedMotion ? 0 : PROFILE_LOGOUT_TRANSITION_MS;
+    const transition = new Promise<void>((resolve) => {
+      window.setTimeout(resolve, transitionDelay);
+    });
+
+    const { error } = await authClient.signOut();
+    if (error) {
+      setLogoutState("error");
+      return;
+    }
+
+    await transition;
+    router.replace("/");
+  }
 
   return (
     <main
@@ -79,6 +107,7 @@ export function ProfileShell({
       data-profile-v4
       data-active-surface={activeSurface}
       data-evaluation-fixture={evaluationFixture || undefined}
+      data-session-state={logoutState}
     >
       <div className={styles.ambient} aria-hidden="true">
         <span className={styles.scanline} />
@@ -143,6 +172,25 @@ export function ProfileShell({
           >
             +
           </Link>
+          {!evaluationFixture ? (
+            <button
+              type="button"
+              className={styles.logoutButton}
+              aria-label="Encerrar sessão"
+              disabled={logoutState === "closing"}
+              data-state={logoutState}
+              onClick={() => void handleLogout()}
+            >
+              <span className={styles.logoutIcon} aria-hidden="true">↪</span>
+              <span className={styles.logoutLabel}>
+                {logoutState === "closing"
+                  ? "SAINDO..."
+                  : logoutState === "error"
+                    ? "TENTAR NOVAMENTE"
+                    : "SAIR"}
+              </span>
+            </button>
+          ) : null}
         </div>
       </header>
 
