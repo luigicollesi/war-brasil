@@ -7,11 +7,15 @@ const modal = readFileSync(
   "utf8",
 );
 
-test("verification inicia e reaplica cooldown visual de reenvio", () => {
-  assert.match(modal, /RESEND_COOLDOWN_MS = 60_000/);
-  assert.match(modal, /setResendCoolingDown\(true\)/);
-  assert.match(modal, /disabled=\{isPending \|\| resendCoolingDown\}/);
-  assert.match(modal, /REENVIO DISPONÍVEL EM 60 S/);
+test("verification exibe cooldown regressivo real de 60 a 0 segundos", () => {
+  assert.match(modal, /RESEND_COOLDOWN_SECONDS = 60/);
+  assert.match(modal, /const \[resendSecondsRemaining, setResendSecondsRemaining\] = useState\(0\)/);
+  assert.match(modal, /window\.setInterval/);
+  assert.match(modal, /Math\.max\(0, current - 1\)/);
+  assert.match(modal, /setResendSecondsRemaining\(RESEND_COOLDOWN_SECONDS\)/);
+  assert.match(modal, /disabled=\{isPending \|\| resendSecondsRemaining > 0\}/);
+  assert.match(modal, /REENVIO DISPONÍVEL EM \$\{resendSecondsRemaining\} S/);
+  assert.doesNotMatch(modal, /REENVIO DISPONÍVEL EM 60 S/);
 });
 
 test("resend e forgot-password mantêm resposta pública não-enumerável", () => {
