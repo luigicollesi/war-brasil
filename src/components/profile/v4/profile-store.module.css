@@ -11,8 +11,8 @@
 .storeAtmosphere {
   position: absolute;
   z-index: -1;
-  inset: -56px -5vw -96px;
-  overflow: hidden;
+  inset: 0;
+  overflow: clip;
   pointer-events: none;
 }
 
@@ -813,7 +813,8 @@
   position: fixed;
   z-index: -2;
   inset: 0;
-  overflow: hidden;
+  overflow: clip;
+  contain: paint;
   pointer-events: none;
 }
 
@@ -1373,7 +1374,7 @@
   }
 
   .storeAtmosphere {
-    inset: -28px -18px -64px;
+    inset: 0;
   }
 
   .atmosphereOptical {
