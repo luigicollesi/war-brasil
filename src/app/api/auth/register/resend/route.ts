@@ -32,6 +32,12 @@ export async function POST(request: Request) {
   try {
     const result = await resendPendingRegistration(email);
 
+    console.info("[auth-register] resend dispatch", {
+      dispatched: result.dispatched,
+      reason: result.reason,
+      retryAfterSeconds: result.retryAfterSeconds,
+    });
+
     if (result.dispatched && result.code) {
       const message = buildRegistrationCodeEmail(result.code);
       await sendAuthEmail({ ...message, to: email });
