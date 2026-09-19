@@ -13,7 +13,7 @@ import {
 import type { CosmeticCatalogItem } from "@/src/lib/economy/economy-contract";
 import { useDiceBodyColor } from "./use-dice-body-color";
 
-const SHOWCASE_DIE_SIZE = 1.9;
+const SHOWCASE_DIE_SIZE = 1;
 const SHOWCASE_DIE_GEOMETRY = diceVisualGeometry(SHOWCASE_DIE_SIZE);
 
 function skinForSlot(slot: CosmeticCatalogItem["slot"]): DiceSkin {
@@ -53,7 +53,7 @@ export function DiceShowcaseModel({
   if (!textures || (assetRef && bodyColor === undefined)) return null;
 
   return (
-    <group name="StoreShowcaseDie" position={[0, 0.08, 0]} scale={1.08}>
+    <group name="StoreShowcaseDie" position={[0, 0.08, 0]}>
       <DiceModel3D
         geometry={geometry}
         textures={textures}
