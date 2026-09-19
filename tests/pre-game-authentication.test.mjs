@@ -251,8 +251,8 @@ test("Lobby E2E usa sessão Better Auth real e não bypass de CI", () => {
 
 test("email auth usa somente Resend sem seletor de transportador", () => {
   assert.match(email, /https:\/\/api\.resend\.com\/emails/);
-  assert.match(email, /EMAIL_TRANSPORT_SECRET/);
-  assert.match(email, /AUTH_EMAIL_FROM/);
+  assert.match(environment, /EMAIL_TRANSPORT_SECRET/);
+  assert.match(environment, /AUTH_EMAIL_FROM/);
   assert.doesNotMatch(email, /gmail\.googleapis\.com|oauth2\.googleapis\.com/);
   assert.doesNotMatch(environment, /AUTH_EMAIL_TRANSPORT|AUTH_EMAIL_GOOGLE_/);
   assert.doesNotMatch(envExample, /AUTH_EMAIL_TRANSPORT|AUTH_EMAIL_GOOGLE_/);
