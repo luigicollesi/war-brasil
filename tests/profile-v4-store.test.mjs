@@ -736,3 +736,26 @@ test("PROFILE V4 featured hero mobile banner is centered inside a symmetric clip
     /\.featuredHeroBanner img\s*\{[^}]*object-position:\s*center;/,
   );
 });
+
+
+test("PROFILE V4 mobile keeps dice and territory catalogs in two columns while collections stay single-column", async () => {
+  const styles = await source("src/components/profile/v4/profile-store.module.css");
+  const mobile = styles.slice(styles.indexOf("@media (max-width: 520px)"));
+
+  assert.match(
+    mobile,
+    /\.catalogGrid\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\);/,
+  );
+  assert.match(
+    mobile,
+    /\.collectionGrid\s*\{[^}]*grid-template-columns:\s*1fr;/,
+  );
+  assert.match(
+    mobile,
+    /\.productSelect\s*\{[^}]*grid-template-rows:\s*minmax\(120px,\s*auto\)\s+auto;/,
+  );
+  assert.match(
+    mobile,
+    /\.productVisual\s*\{[^}]*min-height:\s*120px;[^}]*padding:\s*8px;/,
+  );
+});
