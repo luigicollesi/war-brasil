@@ -28,13 +28,17 @@ const metadataRepository = read(
 const diceRoute = read("src/app/api/assets/dice/route.ts");
 const territoryRoute = read("src/app/api/assets/territory-skins/route.ts");
 
-test("showcase owns its chrome and keeps the object farther and left-aligned on desktop", () => {
+test("showcase owns its chrome and derives object scale from the presentation contract", () => {
+  const presentation = read(
+    "src/lib/client/store-showcase/showcase-presentation.ts",
+  );
+
   assert.match(runtime, /pathname\.startsWith\("\/profile\/store\/showcase\/"\)/);
-  assert.match(controller, /const DESKTOP_SHOWCASE_SCALE = 0\.92/);
-  assert.match(controller, /const DESKTOP_SHOWCASE_X = -0\.43/);
-  assert.match(controller, /state\.size\.width > 900/);
-  assert.match(controller, /group\.position\.x = viewX/);
-  assert.match(controller, /group\.scale\.setScalar\(viewScale\)/);
+  assert.match(controller, /state\.size\.width <= 900/);
+  assert.match(controller, /resolveShowcasePresentation\(objectType, compact\)/);
+  assert.match(controller, /group\.scale\.setScalar\(presentation\.objectScale\)/);
+  assert.match(presentation, /territory:\s*\{/);
+  assert.doesNotMatch(controller, /DESKTOP_SHOWCASE_SCALE/);
 });
 
 test("showcase dice reads catalog body_color and applies it to texture and physical body", () => {
