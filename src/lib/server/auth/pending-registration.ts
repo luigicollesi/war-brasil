@@ -446,8 +446,8 @@ export async function verifyPendingRegistration(
          "createdAt",
          "updatedAt"
        )
-       VALUES($1, $2, 'credential', $2, $3, NOW(), NOW())`,
-      [randomUUID(), userId, passwordHash],
+       VALUES($1, $2, 'credential', $3, $4, NOW(), NOW())`,
+      [randomUUID(), userId, userId, passwordHash],
     );
 
     await client.query(
