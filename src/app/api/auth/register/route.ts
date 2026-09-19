@@ -66,7 +66,14 @@ export async function POST(request: Request) {
     }
 
     return genericRegistrationResponse(pending.retryAfterSeconds);
-  } catch {
+  } catch (error) {
+    console.error("[auth-register] register failed", {
+      error:
+        error instanceof Error
+          ? { name: error.name, message: error.message }
+          : { name: "UnknownError" },
+    });
+
     return Response.json(
       {
         ok: false,
