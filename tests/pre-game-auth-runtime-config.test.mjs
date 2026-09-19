@@ -39,7 +39,11 @@ test("validador fail-fast cobre URL HTTPS, banco, secret forte, email e provider
     "DISCORD_CLIENT_ID",
     "DISCORD_CLIENT_SECRET",
     "AUTH_EMAIL_FROM",
+    "AUTH_EMAIL_TRANSPORT",
     "EMAIL_TRANSPORT_SECRET",
+    "AUTH_EMAIL_GOOGLE_CLIENT_ID",
+    "AUTH_EMAIL_GOOGLE_CLIENT_SECRET",
+    "AUTH_EMAIL_GOOGLE_REFRESH_TOKEN",
   ]) {
     assert.ok(
       environmentSource.includes(required),
@@ -52,4 +56,14 @@ test("validador fail-fast cobre URL HTTPS, banco, secret forte, email e provider
   assert.match(environmentSource, /!url\.username && !url\.password/);
   assert.match(environmentSource, /isValidEmailFrom/);
   assert.match(environmentSource, /isObviouslyUnsafeTransportSecret/);
+});
+
+
+test("produção aceita email por Resend ou Gmail OAuth e exige refresh token completo quando selecionado", () => {
+  assert.match(environmentSource, /"gmail-oauth"/);
+  assert.match(environmentSource, /"resend"/);
+  assert.match(environmentSource, /AUTH_EMAIL_GOOGLE_CLIENT_ID/);
+  assert.match(environmentSource, /AUTH_EMAIL_GOOGLE_CLIENT_SECRET/);
+  assert.match(environmentSource, /AUTH_EMAIL_GOOGLE_REFRESH_TOKEN/);
+  assert.match(environmentSource, /EMAIL_TRANSPORT_SECRET/);
 });
