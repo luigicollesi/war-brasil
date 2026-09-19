@@ -265,13 +265,14 @@ test("create/join vinculam conta e snapshot público ao assento na transação",
   }
 });
 
-test("Lobby E2E usa sessão Better Auth real e não bypass de CI", () => {
+test("Lobby E2E usa promoção OTP e sessão Better Auth real sem bypass de CI", () => {
   assert.match(lobbyE2e, /\/api\/auth\/register/);
+  assert.match(lobbyE2e, /waitForRegistrationCode/);
   assert.match(lobbyE2e, /\/api\/auth\/register\/verify/);
-  assert.match(lobbyE2e, /\/api\/auth\/sign-in\/email/);
+  assert.match(lobbyE2e, /authenticated/);
   assert.match(lobbyE2e, /\/api\/auth\/command-access/);
   assert.match(lobbyE2e, /profileComplete/);
-  assert.doesNotMatch(lobbyE2e, /AUTH_BYPASS|SKIP_AUTH|DISABLE_AUTH/);
+  assert.doesNotMatch(lobbyE2e, /UPDATE auth\."user"|AUTH_BYPASS|SKIP_AUTH|DISABLE_AUTH/);
 });
 
 
