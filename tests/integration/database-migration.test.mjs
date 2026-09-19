@@ -57,7 +57,7 @@ const physicalTables = new Map([
       "territory_connections",
     ],
   ],
-  ["auth", ["account", "rateLimit", "session", "user", "verification"]],
+  ["auth", ["account", "pending_registration", "rateLimit", "session", "user", "verification"]],
   [
     "profile",
     ["commander_titles", "commanders", "cosmetic_loadout", "privacy_settings"],
@@ -115,6 +115,7 @@ const managedHistory = [
   "046-game-modes-objective-supremacy.sql",
   "047-economy-storefront-collection-promotions.sql",
   "048-dice-body-gradient.sql",
+  "049-pending-email-registration.sql",
 ];
 
 function urlForDatabase(name) {
@@ -468,6 +469,26 @@ async function assertAuthProfileSchema(client) {
   assert.equal(rateLimitColumnTypes.get("key"), "text");
   assert.equal(rateLimitColumnTypes.get("count"), "integer");
   assert.equal(rateLimitColumnTypes.get("lastRequest"), "bigint");
+
+  const pendingColumns = await client.query(`
+    SELECT column_name
+    FROM information_schema.columns
+    WHERE table_schema='auth' AND table_name='pending_registration'
+  `);
+  const pendingColumnNames = new Set(
+    pendingColumns.rows.map((row) => row.column_name),
+  );
+  for (const name of [
+    "email",
+    "password_ciphertext",
+    "verification_code_hash",
+    "attempts",
+    "terms_accepted_at",
+    "code_expires_at",
+    "resend_available_at",
+  ]) {
+    assert.equal(pendingColumnNames.has(name), true, name);
+  }
 }
 
 async function assertOrganizedDatabase(connectionString) {
@@ -719,7 +740,7 @@ async function assertLegacyRoomRollout(connectionString) {
 if (!databaseUrl) {
   test("migrations de banco exigem DATABASE_URL", { skip: true }, () => {});
 } else {
-  test("026-048 migram banco v025, preservam catálogos e são idempotentes", async () => {
+  test("026-049 migram banco v025, preservam catálogos e são idempotentes", async () => {
     await withTemporaryDatabase("legacy", async (connectionString) => {
       await applySql(connectionString, "tests/fixtures/db/schema-v025.sql");
       await applySql(
