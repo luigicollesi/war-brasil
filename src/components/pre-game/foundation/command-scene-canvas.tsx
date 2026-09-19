@@ -15,6 +15,10 @@ import {
 } from "three";
 import { SVGLoader } from "three/addons/loaders/SVGLoader.js";
 import { StoreShowcasePedestal } from "@/src/components/profile/v4/store-showcase/showcase-pedestal";
+import {
+  resolveShowcasePresentation,
+  type ShowcaseObjectType,
+} from "@/src/lib/client/store-showcase/showcase-presentation";
 import { COMMAND_FOUNDATION_TOKENS } from "./foundation-tokens";
 import { ProfileOrbAssembly } from "./profile-orb-assembly";
 import type { ShowcaseScenePayload } from "./pre-game-command-runtime";
@@ -161,22 +165,35 @@ function CameraDirector({
   return null;
 }
 
-function ShowcaseCameraDirector({ compact }: { compact: boolean }) {
+function ShowcaseCameraDirector({
+  compact,
+  objectType,
+}: {
+  compact: boolean;
+  objectType: ShowcaseObjectType;
+}) {
   const set = useThree((state) => state.set);
   const invalidate = useThree((state) => state.invalidate);
+  const presentation = resolveShowcasePresentation(objectType, compact);
 
   useEffect(() => {
-    const camera = new PerspectiveCamera(compact ? 39 : 36, 1, 0.1, 40);
-    camera.position.set(
-      compact ? 0 : SHOWCASE_DESKTOP_CAMERA_X,
-      compact ? 0.35 : 0.15,
-      compact ? 6.2 : 5.5,
+    const cameraX = compact ? 0 : SHOWCASE_DESKTOP_CAMERA_X;
+    const camera = new PerspectiveCamera(
+      presentation.cameraFov,
+      1,
+      0.1,
+      40,
     );
-    camera.lookAt(compact ? 0 : SHOWCASE_DESKTOP_CAMERA_X, 0, 0);
+    camera.position.set(
+      cameraX,
+      presentation.cameraY,
+      presentation.cameraDistance,
+    );
+    camera.lookAt(cameraX, presentation.cameraTargetY, 0);
     camera.updateProjectionMatrix();
     set({ camera });
     invalidate();
-  }, [compact, invalidate, set]);
+  }, [compact, invalidate, presentation, set]);
 
   return null;
 }
@@ -802,7 +819,7 @@ function ShowcaseSceneWorld({
 
   return (
     <>
-      <ShowcaseCameraDirector compact={compact} />
+      <ShowcaseCameraDirector objectType={showcaseScene.objectType} compact={compact} />
       <ambientLight color="#87958c" intensity={0.78} />
       <directionalLight color={SHOWCASE_STANDARD_LIGHT} intensity={3.4} position={[-4, 5.5, 6.5]} />
       <pointLight color={SHOWCASE_STANDARD_LIGHT} intensity={13} distance={12} position={[4.2, 2.8, 4]} />
