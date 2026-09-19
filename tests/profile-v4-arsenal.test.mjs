@@ -45,3 +45,36 @@ test("PROFILE V4 territory bay preserves PlayerColor through the shared territor
   assert.match(arsenal, /item\.slot === "territory_skin"/);
   assert.match(arsenal, /assetRef=\{cosmeticPreviewSource\(item\)\}/);
 });
+
+
+test("PROFILE V4 arsenal uses borderless store-like cards with hover and focus identification", async () => {
+  const styles = await source("src/components/profile/v4/profile-arsenal.module.css");
+
+  assert.match(
+    styles,
+    /\.hero,\s*\.bays,\s*\.inventory\s*\{[^}]*border:\s*0;[^}]*background:\s*transparent;/,
+  );
+  assert.match(styles, /\.bay\s*\{[^}]*border:\s*0;[^}]*background:\s*transparent;/);
+  assert.match(
+    styles,
+    /\.inventoryCard\s*\{[^}]*border:\s*0;[^}]*background:\s*transparent;/,
+  );
+  assert.match(
+    styles,
+    /\.inspector\s*\{[^}]*border:\s*0;[^}]*background:\s*transparent;/,
+  );
+
+  assert.match(styles, /\.bay:hover\s*\{[^}]*transform:\s*translateY\(-4px\)/);
+  assert.match(
+    styles,
+    /\.inventoryCard:hover,\s*\.inventoryCard:focus-visible\s*\{[^}]*transform:\s*translateY\(-4px\)/,
+  );
+  assert.match(
+    styles,
+    /\.inventoryCard:hover \.cardVisual::before,[\s\S]*\.inventoryCard\[data-selected="true"\] \.cardVisual::before\s*\{[^}]*opacity:\s*1;[^}]*transform:\s*scale\(1\.06\)/,
+  );
+  assert.match(
+    styles,
+    /@media\s*\(hover:\s*none\)[\s\S]*\.bay:hover,[\s\S]*\.inventoryCard:hover\s*\{[^}]*transform:\s*none;/,
+  );
+});
