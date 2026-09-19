@@ -470,6 +470,7 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
                         !offer.purchasable ||
                         pendingOfferId !== null
                       }
+                      data-processing={pendingOfferId === offer.id ? "true" : undefined}
                       onClick={() => void handlePurchase(offer)}
                     >
                       {offer.fullyOwned
@@ -564,7 +565,8 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
                           !offer.purchasable ||
                           pendingOfferId !== null
                         }
-                        onClick={() => void handlePurchase(offer)}
+                        data-processing={pendingOfferId === offer.id ? "true" : undefined}
+                      onClick={() => void handlePurchase(offer)}
                       >
                         {offer.fullyOwned
                           ? "POSSUÍDO"
