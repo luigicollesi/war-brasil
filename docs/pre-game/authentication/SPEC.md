@@ -231,9 +231,9 @@ MUST:
 - não permitir provider vinculado sobrescrever `profile.commanders`;
 - impedir que o usuário remova o último método de acesso sem fluxo de recuperação aprovado.
 
-## 12. Email + senha — cadastro verificado
+## 12. Email + senha — cadastro confirmado por OTP
 
-O fluxo de produto MUST reproduzir a experiência do Contrapista: **cadastrar não significa entrar**. O usuário recebe um email, confirma o endereço e só depois pode autenticar-se.
+Uma tentativa de cadastro credentials **não é uma conta** até que o usuário prove posse do email.
 
 ### 12.1 Fluxo normativo
 
@@ -242,169 +242,145 @@ CRIAR CONTA
    ↓
 email + senha + aceite legal
    ↓
-validação server-side
+auth.pending_registration
    ↓
-Better Auth cria credentials user não verificado
+OTP de 6 dígitos por email
    ↓
-sendVerificationEmail()
+SEM auth.user / SEM sessão
    ↓
-modal -> verification-pending
+usuário confirma OTP
    ↓
-SEM sessão / SEM command-open
+transação cria auth.user(emailVerified=true)
+           + auth.account(credential)
    ↓
-usuário clica VERIFICAR EMAIL
+pending_registration é removido
    ↓
-Better Auth valida token
-   ↓
-emailVerified = true
-   ↓
-redirect Home com resultado
-   ↓
-usuário entra com email + senha
+sessão Better Auth
    ↓
 perfil completo?
  ├─ não -> onboarding
  └─ sim -> command-open
 ```
 
-### 12.2 Configuração desejada
+### 12.2 Better Auth
 
-A implementação deverá equivaler a:
+Credentials MUST manter:
 
 ```ts
 emailAndPassword: {
   enabled: true,
+  disableSignUp: true,
   requireEmailVerification: true,
   autoSignIn: false,
 }
-
-emailVerification: {
-  sendOnSignUp: true,
-  sendOnSignIn: false,
-  autoSignInAfterVerification: false,
-  expiresIn: 60 * 60,
-  sendVerificationEmail: sendWarBrasilVerificationEmail,
-}
 ```
 
-Os nomes exatos das opções MUST ser validados contra a versão pinada antes do merge.
+O signup nativo fica desabilitado para impedir qualquer criação de `auth.user` antes do OTP.
 
-### 12.3 Regras obrigatórias
+O hash permanente da senha continua compatível com o Better Auth e permanece em `auth.account`.
 
-- token/link válido por **3600 segundos / 1 hora**;
-- signup credentials não cria sessão;
-- verification não cria sessão automaticamente;
-- credentials user não verificado não acessa recursos autenticados;
-- senha é removida do estado do formulário após signup bem-sucedido;
-- browser nunca recebe password hash;
-- browser nunca recebe verification token exceto como parte do link que o próprio usuário abriu;
-- token não é logado;
-- token inválido/expirado retorna estado recuperável e não confirma conta;
-- callback volta para rota interna permitida, preferencialmente `/`;
-- sucesso/erro de verificação é apresentado sem manter token no estado da UI.
+### 12.3 Pending registration
 
-### 12.4 Diferença interna para o Contrapista
+War-Brasil MUST possuir `auth.pending_registration` como storage efêmero pré-conta.
 
-O Contrapista possui `email_verification_tokens` custom e armazena cadastro pendente/password hash nessa tabela até o clique.
+MUST armazenar:
 
-War-Brasil MUST NOT replicar isso.
+- email normalizado;
+- password **ciphertext** autenticado, nunca plaintext;
+- HMAC do OTP, nunca OTP bruto;
+- contador de tentativas;
+- aceite legal;
+- expiração;
+- cooldown de reenvio.
 
-Com Better Auth:
+MUST NOT criar antes da confirmação:
 
-- `auth.user` MAY existir antes da confirmação;
-- `emailVerified=false` representa a pendência;
-- tabela/primitives Better Auth são a fonte de verdade da verification;
-- `requireEmailVerification=true` impede sessão antes da confirmação;
-- não existe segunda tabela War-Brasil de pending credentials;
-- password hash existe somente no storage esperado do Better Auth.
+- `auth.user`;
+- `auth.account`;
+- sessão;
+- `profile.commanders`;
+- wallet/loadout/economy.
+
+### 12.4 OTP
+
+Contrato:
+
+- 6 dígitos;
+- validade de 10 minutos;
+- máximo de 5 tentativas;
+- cooldown de reenvio de 60 segundos;
+- novo envio invalida o código anterior;
+- replay após promoção falha porque a linha pendente já foi removida.
 
 ## 13. Estado `verification-pending`
 
 Depois do cadastro credentials aceito:
 
-- formulário deixa de mostrar senha preenchida;
-- modal muda para uma tela de confirmação;
-- mostra endereço mascarado ou o endereço digitado apenas no contexto privado atual;
-- informa que o link vale por 1 hora;
-- oferece `Reenviar email` após cooldown;
-- oferece `Voltar para entrar`;
-- não abre sessão;
-- fechar o modal não cancela o cadastro pendente.
+- senha deixa o estado visível da UI;
+- modal solicita OTP;
+- email é mascarado;
+- input usa `autocomplete="one-time-code"`;
+- UI informa validade de 10 minutos;
+- UI oferece `REENVIAR CÓDIGO`;
+- não existe sessão nem conta permanente antes da confirmação.
 
 Texto base:
 
 ```text
 CONFIRME SEU EMAIL
-Enviamos um link de verificação. Ele é válido por 1 hora.
-Abra o email para concluir seu cadastro antes de entrar no Comando.
+Enviamos um código de 6 dígitos.
+Digite o código para concluir a criação da sua conta.
 ```
 
-## 14. Reenvio de verificação
+## 14. Reenvio
 
-Reenvio MUST usar a API oficial Better Auth (`sendVerificationEmail` ou equivalente na versão pinada), nunca token custom.
+Reenvio usa `POST /api/auth/register/resend` e o mesmo registro temporário.
 
 MUST:
 
-- possuir rate limit server-side;
-- possuir cooldown visual;
+- rate-limit/cooldown server-side;
+- gerar novo OTP;
+- invalidar o anterior;
+- zerar contador de tentativas;
 - devolver resposta não-enumerável;
-- não revelar se conta existe ou já foi verificada;
-- não enviar para endereço sintético `.invalid`;
-- manter callback URL em allowlist interna;
-- não imprimir token/URL em log.
+- não enviar para `.invalid`;
+- não logar OTP.
 
-Resposta pública recomendada:
+Resposta pública:
 
 ```text
-Se existir uma conta pendente para esse endereço, enviaremos um novo link.
+Se existir um cadastro pendente para esse endereço, enviaremos um novo código.
 ```
 
-## 15. Login credentials não verificado
+## 15. Confirmação e sessão
 
-`emailAndPassword.requireEmailVerification=true` MUST impedir sessão.
+`POST /api/auth/register/verify` MUST promover o cadastro dentro de uma transação PostgreSQL.
 
-A UI MAY reconhecer o erro de email não verificado quando ele resulta de uma tentativa com credenciais válidas e oferecer o estado `verification-pending`/reenvio.
+Para OTP válido:
 
-MUST NOT:
+- criar `auth.user` já com `emailVerified=true`;
+- criar `auth.account` com `providerId='credential'`;
+- remover `auth.pending_registration`;
+- só então criar sessão através do Better Auth;
+- seguir diretamente para onboarding quando `profile.commanders` estiver incompleto.
 
-- liberar command-open;
-- retornar password-specific detail;
-- permitir enumeração em endpoint público de resend;
-- gerar sessão temporária de jogo como substituto da conta.
+OTP inválido/expirado MUST NOT criar `auth.user`.
 
-## 16. Email de verificação
+## 16. Email de confirmação
 
-`emailVerification.sendVerificationEmail` chama somente uma boundary server-only, por exemplo:
-
-```ts
-sendAuthEmail({ to, subject, text, html })
-```
+O email de cadastro chama a boundary server-only `sendAuthEmail()`.
 
 MUST:
 
-- usar a URL/token fornecidos pelo Better Auth;
-- não implementar geração de token própria;
+- conter OTP de 6 dígitos;
+- informar validade de 10 minutos;
 - possuir HTML + texto simples;
-- remetente configurado server-side;
-- credential do transportador server-only;
-- não logar destinatário + token/URL juntos;
-- não aguardar envio de forma que crie timing side-channel evitável; em serverless usar `waitUntil`/mecanismo equivalente quando aplicável.
+- usar transportador/credencial server-only;
+- não conter senha/hash/ciphertext;
+- não conter link/token de confirmação;
+- não aguardar entrega de forma que introduza side-channel evitável.
 
-### 16.1 Conteúdo visual
-
-O email segue a experiência do Contrapista adaptada ao War-Brasil:
-
-- branding War-Brasil;
-- heading de verificação;
-- CTA `VERIFICAR EMAIL`;
-- link textual de fallback;
-- `Link válido por 1 hora`;
-- aviso para ignorar se não solicitou cadastro;
-- HTML responsivo;
-- texto simples equivalente;
-- dark mode quando possível sem comprometer clientes de email.
-
-O transportador de email é intercambiável. Gmail, Resend, SES ou SMTP não podem alterar o contrato de autenticação.
+O password reset continua separado e usa primitives/tokens Better Auth.
 
 ## 17. Recuperação de senha
 
@@ -636,4 +612,4 @@ MUST NOT:
 
 ## 29. Definition of Done
 
-O usuário pode entrar com Google, Discord ou email+senha. Credentials segue o fluxo Contrapista de confirmação por email de 1 hora: signup envia mensagem, não cria sessão, link verifica email, retorna à Home e o usuário então faz login. OAuth e credentials convergem para a mesma conta War-Brasil e para o mesmo onboarding de perfil. Segredos permanecem server-only, nenhuma quarta opção aparece no produto e todos os gates de `EVAL.md` passam.
+O usuário pode entrar com Google, Discord ou email+senha. Credentials permanece em `auth.pending_registration` até a confirmação de um OTP de 6 dígitos; somente então `auth.user`/`auth.account` são criados, a sessão Better Auth é estabelecida e o onboarding de comandante é aberto. OAuth converge para o mesmo onboarding. Segredos permanecem server-only e todos os gates de `EVAL.md` devem passar.
