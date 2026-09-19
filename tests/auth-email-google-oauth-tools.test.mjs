@@ -37,6 +37,8 @@ test("exchange helper accepts pasted localhost callback URL and prints refresh-t
   const exchange = read(exchangePath);
 
   assert.match(exchange, /Uso:.*auth-email-google-exchange\.sh/);
+  assert.match(exchange, /read -r CALLBACK_URL/);
+  assert.match(exchange, /Cole a URL completa/);
   assert.match(exchange, /new URL/);
   assert.match(exchange, /searchParams\.get\("code"\)/);
   assert.match(exchange, /searchParams\.get\("state"\)/);
