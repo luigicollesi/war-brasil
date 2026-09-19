@@ -186,6 +186,19 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
     () => storefront.collections.find((collection) => collection.featured) ?? storefront.collections[0] ?? null,
     [storefront.collections],
   );
+  const featuredCollectionBundleOffer = useMemo(() => {
+    if (!featuredCollection?.featured) return null;
+
+    const bundleOffers = featuredCollection.bundleOfferIds
+      .map((offerId) => storefront.offers.find((offer) => offer.id === offerId) ?? null)
+      .filter((offer): offer is EconomyOffer => offer !== null);
+
+    return (
+      bundleOffers.find((offer) => offer.purchasable || offer.fullyOwned) ??
+      bundleOffers[0] ??
+      null
+    );
+  }, [featuredCollection, storefront.offers]);
   const collectionOfferIds = useMemo(
     () => new Set(storefront.collections.flatMap((collection) => collection.offerIds)),
     [storefront.collections],
@@ -329,95 +342,150 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
 
       <section
         id="store-highlights"
-        className={styles.hero}
+        className={`${styles.hero} ${featuredCollection?.featured ? styles.featuredHero : ""}`}
         data-store-zone="hero"
         data-store-layer="00"
         aria-labelledby="store-title"
       >
         <span className={styles.operationAxis} aria-hidden="true" />
-        <div className={styles.heroCopy}>
-          <small>
-            {featuredCollection?.featured
-              ? "DESTAQUE ESPECIAL // COLEÇÃO"
-              : activeCampaign
-                ? "OPERAÇÃO ATIVA // INTENDÊNCIA"
-                : "INTENDÊNCIA // ARSENAL COSMÉTICO"}
-          </small>
-          <h1 id="store-title">
-            {featuredCollection?.featured
-              ? featuredCollection.name
-              : activeCampaign?.title ?? "Remessas do Comando"}
-          </h1>
-          <p>
-            {featuredCollection?.featured
-              ? featuredCollection.description ?? "Coleção especial em destaque na Intendência."
-              : activeCampaign?.description ??
-                "Explore coleções e equipamentos. A inspeção detalhada e a aquisição acontecem no Expositor."}
-          </p>
-          {featuredCollection?.featured ? (
+        {featuredCollection?.featured ? (
+          <>
             <Link
-              className={styles.heroAction}
+              className={styles.featuredHeroBanner}
               href={showcaseHref("collection", featuredCollection.id)}
+              aria-label={`Inspecionar coleção ${featuredCollection.name} no Expositor`}
             >
-              INSPECIONAR COLEÇÃO
+              <ProfileCosmeticImage
+                src={featuredCollection.assets.banner}
+                alt={`Banner da coleção ${featuredCollection.name}`}
+                width={1440}
+                height={800}
+                priority
+                fallbackClassName={styles.featuredHeroBannerFallback}
+                fallbackLabel="COLEÇÃO"
+              />
             </Link>
-          ) : featured ? (
-            <Link className={styles.heroAction} href={showcaseHref("offer", featured.id)}>
-              INSPECIONAR DESTAQUE
-            </Link>
-          ) : null}
-        </div>
-        <div className={styles.heroVisual}>
-          {featuredCollection?.featured ? (
-            <ProfileCosmeticImage
-              src={featuredCollection.assets.banner}
-              alt={`Banner da coleção ${featuredCollection.name}`}
-              width={900}
-              height={500}
-              priority
-              fallbackLabel="COLEÇÃO"
-            />
-          ) : activeCampaign && campaignFeaturedOffer ? (
-            <ProfileCosmeticImage
-              src={itemArtwork(previewItem(campaignFeaturedOffer))}
-              alt={`Destaque da operação ${activeCampaign.title}`}
-              width={520}
-              height={520}
-              priority
-              fallbackLabel="OPERAÇÃO"
-            />
-          ) : (
-            <ProfileCosmeticImage
-              src={featured ? itemArtwork(previewItem(featured)) : null}
-              alt={featured ? `Destaque ${featured.name}` : "Destaque do catálogo"}
-              width={520}
-              height={520}
-              priority
-              fallbackLabel="SEM PRÉVIA"
-            />
-          )}
-          <div>
-            <small>
-              {featuredCollection?.featured
-                ? `ESPECIAL // ${promotionLabel(featuredCollection.promotionDiscountBps)}`
-                : activeCampaign
-                  ? "OPERAÇÃO EM CURSO"
-                  : "DESTAQUE ATUAL"}
-            </small>
-            <strong>
-              {featuredCollection?.featured
-                ? featuredCollection.name
-                : activeCampaign?.title ?? featured?.name ?? "Nenhuma remessa disponível"}
-            </strong>
-            {featuredCollection?.featured ? (
-              <span>{collectionProgressLabel(featuredCollection)}</span>
-            ) : activeCampaign?.endsAt ? (
-              <span>Até {formattedAvailabilityDate(activeCampaign.endsAt)}</span>
-            ) : featured ? (
-              <CampaignCreditAmount amount={featured.price} />
-            ) : null}
-          </div>
-        </div>
+
+            <div className={styles.featuredHeroOverlay}>
+              <div className={styles.featuredHeroCopy}>
+                <small>DESTAQUE ESPECIAL // COLEÇÃO</small>
+                <h1 id="store-title">{featuredCollection.name}</h1>
+                <span className={styles.featuredHeroHint}>CLIQUE NO BANNER PARA INSPECIONAR NO EXPOSITOR</span>
+              </div>
+
+              {featuredCollection.promotionDiscountBps > 0 ? (
+                <div className={styles.featuredPromo} aria-label={promotionLabel(featuredCollection.promotionDiscountBps)}>
+                  <strong>{promotionLabel(featuredCollection.promotionDiscountBps).replace(" OFF", "")}</strong>
+                  <span>OFF</span>
+                </div>
+              ) : null}
+
+              <div className={styles.featuredHeroCommerce}>
+                <div className={styles.featuredPriceBlock}>
+                  {featuredCollectionBundleOffer ? (
+                    <>
+                      {featuredCollectionBundleOffer.basePrice > featuredCollectionBundleOffer.price ? (
+                        <span className={styles.featuredOldPrice}>
+                          <CampaignCreditAmount amount={featuredCollectionBundleOffer.basePrice} />
+                        </span>
+                      ) : null}
+                      <span className={styles.featuredCurrentPrice}>
+                        <small>PREÇO DA COLEÇÃO</small>
+                        <CampaignCreditAmount amount={featuredCollectionBundleOffer.price} />
+                      </span>
+                    </>
+                  ) : (
+                    <span className={styles.featuredCurrentPrice}>
+                      <small>COLEÇÃO ESPECIAL</small>
+                      <strong>{collectionProgressLabel(featuredCollection)}</strong>
+                    </span>
+                  )}
+                </div>
+
+                {featuredCollectionBundleOffer ? (
+                  <button
+                    type="button"
+                    aria-label={`Comprar coleção ${featuredCollection.name}`}
+                    disabled={
+                      featuredCollectionBundleOffer.fullyOwned ||
+                      !featuredCollectionBundleOffer.purchasable ||
+                      pendingOfferId !== null
+                    }
+                    data-processing={
+                      pendingOfferId === featuredCollectionBundleOffer.id ? "true" : undefined
+                    }
+                    onClick={() => void handlePurchase(featuredCollectionBundleOffer)}
+                  >
+                    {featuredCollectionBundleOffer.fullyOwned
+                      ? "COLEÇÃO POSSUÍDA"
+                      : pendingOfferId === featuredCollectionBundleOffer.id
+                        ? "PROCESSANDO..."
+                        : featuredCollectionBundleOffer.purchasable
+                          ? "COMPRAR COLEÇÃO"
+                          : "INDISPONÍVEL"}
+                  </button>
+                ) : (
+                  <Link
+                    className={styles.featuredInspectFallback}
+                    href={showcaseHref("collection", featuredCollection.id)}
+                  >
+                    VER NO EXPOSITOR
+                  </Link>
+                )}
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className={styles.heroCopy}>
+              <small>
+                {activeCampaign
+                  ? "OPERAÇÃO ATIVA // INTENDÊNCIA"
+                  : "INTENDÊNCIA // ARSENAL COSMÉTICO"}
+              </small>
+              <h1 id="store-title">{activeCampaign?.title ?? "Remessas do Comando"}</h1>
+              <p>
+                {activeCampaign?.description ??
+                  "Explore coleções e equipamentos. A inspeção detalhada e a aquisição acontecem no Expositor."}
+              </p>
+              {featured ? (
+                <Link className={styles.heroAction} href={showcaseHref("offer", featured.id)}>
+                  INSPECIONAR DESTAQUE
+                </Link>
+              ) : null}
+            </div>
+            <div className={styles.heroVisual}>
+              {activeCampaign && campaignFeaturedOffer ? (
+                <ProfileCosmeticImage
+                  src={itemArtwork(previewItem(campaignFeaturedOffer))}
+                  alt={`Destaque da operação ${activeCampaign.title}`}
+                  width={520}
+                  height={520}
+                  priority
+                  fallbackLabel="OPERAÇÃO"
+                />
+              ) : (
+                <ProfileCosmeticImage
+                  src={featured ? itemArtwork(previewItem(featured)) : null}
+                  alt={featured ? `Destaque ${featured.name}` : "Destaque do catálogo"}
+                  width={520}
+                  height={520}
+                  priority
+                  fallbackLabel="SEM PRÉVIA"
+                />
+              )}
+              <div>
+                <small>{activeCampaign ? "OPERAÇÃO EM CURSO" : "DESTAQUE ATUAL"}</small>
+                <strong>{activeCampaign?.title ?? featured?.name ?? "Nenhuma remessa disponível"}</strong>
+                {activeCampaign?.endsAt ? (
+                  <span>Até {formattedAvailabilityDate(activeCampaign.endsAt)}</span>
+                ) : featured ? (
+                  <CampaignCreditAmount amount={featured.price} />
+                ) : null}
+              </div>
+            </div>
+          </>
+        )}
       </section>
 
       <section
