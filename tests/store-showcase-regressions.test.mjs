@@ -10,6 +10,12 @@ const runtime = read(
 const controller = read(
   "src/components/profile/v4/store-showcase/showcase-object-controller.tsx",
 );
+const showcase = read(
+  "src/components/profile/v4/store-showcase/store-showcase.tsx",
+);
+const showcaseStyles = read(
+  "src/components/profile/v4/store-showcase/store-showcase.module.css",
+);
 const model = read(
   "src/components/profile/v4/store-showcase/dice-showcase-model.tsx",
 );
@@ -34,8 +40,11 @@ test("showcase owns its chrome and derives object scale from the presentation co
   );
 
   assert.match(runtime, /pathname\.startsWith\("\/profile\/store\/showcase\/"\)/);
-  assert.match(controller, /state\.size\.width <= 900/);
-  assert.match(controller, /resolveShowcasePresentation\(objectType, compact\)/);
+  assert.match(controller, /viewportSize\.width <= 900/);
+  assert.match(
+    controller,
+    /resolveShowcasePresentation\(\s*objectType,\s*compact,\s*viewportAspect,\s*\)/,
+  );
   assert.match(controller, /group\.scale\.setScalar\(presentation\.objectScale\)/);
   assert.match(presentation, /territory:\s*\{/);
   assert.doesNotMatch(controller, /DESKTOP_SHOWCASE_SCALE/);
@@ -84,17 +93,42 @@ test("3d texture delivery stays same-origin instead of redirecting the browser t
 });
 
 
-test("showcase item transition exits opposite to navigation and enters from navigation direction", () => {
+test("showcase mounts every 3d item once and keeps inactive objects parked offscreen in WebGL", () => {
+  assert.match(showcase, /key:\s*showcase\.id,/);
+  assert.doesNotMatch(showcase, /key:\s*selectedItem\?\.id/);
+  assert.match(showcase, /showcase\.items\.map\(\(item, itemIndex\) => \(/);
+  assert.match(
+    showcase,
+    /<ShowcaseObjectController[\s\S]*key=\{item\.id\}[\s\S]*itemId=\{item\.id\}[\s\S]*itemIndex=\{itemIndex\}/,
+  );
+  assert.match(showcase, /transitionTargetItemId=\{transitionTargetItemId\}/);
+  assert.match(controller, /const SHOWCASE_STANDBY_X = 8;/);
+  assert.match(controller, /const isSelected = itemId === selectedItemId;/);
+  assert.match(controller, /const isTarget = itemId === transitionTargetItemId;/);
+  assert.match(controller, /group\.position\.x = standbyDirection \* SHOWCASE_STANDBY_X/);
+
+  assert.match(showcaseStyles, /\.root\s*\{[^}]*overflow:\s*hidden;/);
+  assert.match(showcaseStyles, /\.stage\s*\{[^}]*overflow:\s*hidden;/);
+  assert.doesNotMatch(showcase, /style=\{\{[^}]*left:\s*[^}]*SHOWCASE_STANDBY/);
+});
+
+test("showcase carousel gives outgoing and incoming 3d objects independent directions", () => {
   assert.match(
     controller,
-    /else if \(transitionPhase === "enter"\) \{[^}]*group\.position\.x = transitionDirection \* 0\.32;/,
+    /if \(transitionPhase === "exit" && isSelected\)[\s\S]*group\.position\.x =\s*-transitionDirection \* SHOWCASE_STANDBY_X \* progress/,
   );
   assert.match(
     controller,
-    /if \(transitionPhase === "exit"\) \{[^}]*group\.position\.x = -transitionDirection \* 0\.32 \* progress;/,
+    /if \(transitionPhase === "enter" && isSelected\)[\s\S]*group\.position\.x =\s*transitionDirection \* SHOWCASE_STANDBY_X \* \(1 - progress\)/,
   );
   assert.match(
     controller,
-    /\} else \{[^}]*group\.position\.x =\s*transitionDirection \* 0\.32 \* \(1 - progress\);/,
+    /if \(!isSelected\) return;/,
   );
+});
+
+test("showcase keeps failed territory models isolated per mounted item", () => {
+  assert.match(showcase, /failedTerritoryItemIds/);
+  assert.match(showcase, /new Set\(current\)/);
+  assert.match(showcase, /failedTerritoryItemIds\.has\(item\.id\)/);
 });
