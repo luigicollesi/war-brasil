@@ -249,31 +249,24 @@ test("Lobby E2E usa sessão Better Auth real e não bypass de CI", () => {
 });
 
 
-test("email auth suporta Gmail OAuth2 por refresh token sem expor credenciais ao cliente", () => {
-  for (const name of [
-    "AUTH_EMAIL_TRANSPORT",
-    "AUTH_EMAIL_GOOGLE_CLIENT_ID",
-    "AUTH_EMAIL_GOOGLE_CLIENT_SECRET",
-    "AUTH_EMAIL_GOOGLE_REFRESH_TOKEN",
-  ]) {
-    assert.match(environment, new RegExp(name));
-    assert.match(envExample, new RegExp(name));
-  }
-
-  assert.match(email, /https:\/\/oauth2\.googleapis\.com\/token/);
-  assert.match(email, /https:\/\/gmail\.googleapis\.com\/gmail\/v1\/users\/me\/messages\/send/);
-  assert.match(email, /grant_type.*refresh_token/);
-  assert.match(email, /Authorization: `Bearer \$\{accessToken\}`/);
-  assert.doesNotMatch(authModal, /AUTH_EMAIL_GOOGLE_/);
-  assert.doesNotMatch(authClient, /AUTH_EMAIL_GOOGLE_/);
+test("email auth usa somente Resend sem seletor de transportador", () => {
+  assert.match(email, /https:\/\/api\.resend\.com\/emails/);
+  assert.match(email, /EMAIL_TRANSPORT_SECRET/);
+  assert.match(email, /AUTH_EMAIL_FROM/);
+  assert.doesNotMatch(email, /gmail\.googleapis\.com|oauth2\.googleapis\.com/);
+  assert.doesNotMatch(environment, /AUTH_EMAIL_TRANSPORT|AUTH_EMAIL_GOOGLE_/);
+  assert.doesNotMatch(envExample, /AUTH_EMAIL_TRANSPORT|AUTH_EMAIL_GOOGLE_/);
 });
 
-test("email configurado entrega também em desenvolvimento em vez de virar somente log", () => {
-  assert.match(email, /resolveAuthEmailTransport/);
-  assert.match(email, /if \(transport\) \{[\s\S]*await deliverAuthEmail\(message, transport\)/);
+test("email configurado entrega via Resend também em desenvolvimento", () => {
+  assert.match(email, /resolveResendTransport/);
   assert.match(
     email,
-    /if \(process\.env\.CI === "true" \|\| !transport\)[\s\S]*delivery=sink/,
+    /if \(transport\) \{[\s\S]*await deliverWithResend\(message, transport\)/,
+  );
+  assert.match(
+    email,
+    /process\.env\.NODE_ENV === "production"[\s\S]*Transportador de email de autenticação não configurado/,
   );
 });
 
