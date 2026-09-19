@@ -5,7 +5,6 @@ import {
   useEffect,
   useRef,
   useState,
-  useTransition,
 } from "react";
 import { authClient } from "@/client/auth-client";
 import styles from "./command-auth-modal.module.css";
@@ -41,6 +40,43 @@ type VerificationResponse = RegisterResponse & {
 };
 
 const RESEND_COOLDOWN_SECONDS = 60;
+const AUTH_REQUEST_TIMEOUT_MS = 15_000;
+
+type PendingAction =
+  | "social"
+  | "login"
+  | "register"
+  | "resend"
+  | "verify"
+  | "forgot"
+  | "reset";
+
+async function fetchJsonWithTimeout<T>(
+  input: string,
+  init: RequestInit,
+  timeoutMs = AUTH_REQUEST_TIMEOUT_MS,
+) {
+  const controller = new AbortController();
+  const timeout = window.setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    const response = await fetch(input, {
+      ...init,
+      signal: controller.signal,
+    });
+    const payload = (await response.json().catch(() => ({}))) as T;
+    return { response, payload };
+  } finally {
+    window.clearTimeout(timeout);
+  }
+}
+
+function authRequestFailureMessage(error: unknown) {
+  if (error instanceof DOMException && error.name === "AbortError") {
+    return "A resposta do servidor demorou demais. Tente novamente.";
+  }
+  return "Não foi possível concluir a solicitação agora.";
+}
 
 const PROVIDERS: Array<{ id: AuthProvider; label: string; mark: string }> = [
   { id: "google", label: "Continuar com Google", mark: "G" },
@@ -73,8 +109,32 @@ export function CommandAuthModal({
   const [message, setMessage] = useState(notice);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [resendSecondsRemaining, setResendSecondsRemaining] = useState(0);
-  const [isPending, startTransition] = useTransition();
+  const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
+  const isPending = pendingAction !== null;
   const resendTimerActive = resendSecondsRemaining > 0;
+
+  const runPendingAction = async (
+    action: PendingAction,
+    task: () => Promise<void>,
+  ) => {
+    if (pendingAction !== null) return;
+
+    setPendingAction(action);
+    try {
+      await task();
+    } catch (error) {
+      console.error("[auth-ui] request failed", {
+        action,
+        error:
+          error instanceof Error
+            ? { name: error.name, message: error.message }
+            : { name: "UnknownError" },
+      });
+      setMessage(authRequestFailureMessage(error));
+    } finally {
+      setPendingAction(null);
+    }
+  };
 
   useEffect(() => {
     if (!open) {
@@ -131,7 +191,7 @@ export function CommandAuthModal({
     setMessage("");
     setFieldErrors({});
 
-    startTransition(async () => {
+    void runPendingAction("social", async () => {
       const { error } = await authClient.signIn.social({
         provider,
         callbackURL: "/?continue=command",
@@ -153,7 +213,7 @@ export function CommandAuthModal({
     setMessage("");
     setFieldErrors({});
 
-    startTransition(async () => {
+    void runPendingAction("login", async () => {
       const { error } = await authClient.signIn.email({
         email: nextEmail,
         password,
@@ -164,7 +224,7 @@ export function CommandAuthModal({
         if (error.status === 403) {
           setMode("verification");
           setMessage(
-            "Confirme seu email antes de entrar. Você pode solicitar um novo link abaixo.",
+            "Confirme seu email antes de entrar. Você pode solicitar um novo código abaixo.",
           );
           return;
         }
@@ -198,33 +258,47 @@ export function CommandAuthModal({
       return;
     }
 
-    startTransition(async () => {
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: nextEmail,
-          password,
-          termsAccepted,
-        }),
-      });
-      const payload = (await response.json().catch(() => ({}))) as RegisterResponse;
-
-      if (!response.ok || !payload.ok) {
-        setFieldErrors(payload.errors ?? {});
-        setMessage(
-          payload.message ?? "Revise os campos destacados e tente novamente.",
+    void runPendingAction("register", async () => {
+      try {
+        const { response, payload } = await fetchJsonWithTimeout<RegisterResponse>(
+          "/api/auth/register",
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              email: nextEmail,
+              password,
+              termsAccepted,
+            }),
+          },
         );
-        return;
-      }
 
-      setResendSecondsRemaining(
-        payload.retryAfterSeconds ?? RESEND_COOLDOWN_SECONDS,
-      );
-      setMode("verification");
-      setMessage(
-        payload.message ?? "Confira seu email para obter o código de confirmação.",
-      );
+        if (!response.ok || !payload.ok) {
+          setFieldErrors(payload.errors ?? {});
+          setMessage(
+            payload.message ?? "Revise os campos destacados e tente novamente.",
+          );
+          return;
+        }
+
+        setResendSecondsRemaining(
+          payload.retryAfterSeconds ?? RESEND_COOLDOWN_SECONDS,
+        );
+        setMode("verification");
+        setMessage(
+          payload.message ?? "Confira seu email para obter o código de confirmação.",
+        );
+      } catch (error) {
+        if (error instanceof DOMException && error.name === "AbortError") {
+          setResendSecondsRemaining(RESEND_COOLDOWN_SECONDS);
+          setMode("verification");
+          setMessage(
+            "O envio foi iniciado, mas a resposta demorou. Se você recebeu o código, digite-o abaixo.",
+          );
+          return;
+        }
+        throw error;
+      }
     });
   };
 
@@ -238,13 +312,15 @@ export function CommandAuthModal({
     }
 
     setMessage("");
-    startTransition(async () => {
-      const response = await fetch("/api/auth/register/resend", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      const payload = (await response.json().catch(() => ({}))) as RegisterResponse;
+    void runPendingAction("resend", async () => {
+      const { response, payload } = await fetchJsonWithTimeout<RegisterResponse>(
+        "/api/auth/register/resend",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        },
+      );
 
       if (!response.ok || !payload.ok) {
         setMessage(
@@ -282,13 +358,15 @@ export function CommandAuthModal({
       return;
     }
 
-    startTransition(async () => {
-      const response = await fetch("/api/auth/register/verify", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, code }),
-      });
-      const payload = (await response.json().catch(() => ({}))) as VerificationResponse;
+    void runPendingAction("verify", async () => {
+      const { response, payload } = await fetchJsonWithTimeout<VerificationResponse>(
+        "/api/auth/register/verify",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, code }),
+        },
+      );
 
       if (!response.ok || !payload.ok || !payload.authenticated) {
         setMessage(
@@ -309,7 +387,7 @@ export function CommandAuthModal({
     setEmail(nextEmail);
     setMessage("");
 
-    startTransition(async () => {
+    void runPendingAction("forgot", async () => {
       const { error } = await authClient.requestPasswordReset({
         email: nextEmail,
         redirectTo: "/?auth=reset-password",
@@ -341,7 +419,7 @@ export function CommandAuthModal({
       return;
     }
 
-    startTransition(async () => {
+    void runPendingAction("reset", async () => {
       const { error } = await authClient.resetPassword({
         newPassword: password,
         token: resetToken,
