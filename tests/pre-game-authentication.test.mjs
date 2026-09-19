@@ -169,7 +169,7 @@ test("nenhuma variável auth server-only é publicada com NEXT_PUBLIC", () => {
 test("emails auth não geram token próprio nem registram URL/token", () => {
   assert.match(email, /buildVerificationEmail/);
   assert.match(email, /buildPasswordResetEmail/);
-  assert.match(email, /VERIFICAR EMAIL/);
+  assert.match(email, /CONFIRMAR EMAIL/);
   assert.match(email, /O link é válido por 1 hora/);
   assert.doesNotMatch(email, /randomBytes|createHash|token_hash|verification_tokens/);
   assert.doesNotMatch(email, /console\.(?:log|info|error)\([^)]*url/i);
