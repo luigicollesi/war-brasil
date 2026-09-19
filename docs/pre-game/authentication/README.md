@@ -5,7 +5,7 @@ Documentos desta trilha:
 - `SPEC.md` — fluxo funcional, segurança, cookies, três métodos de autenticação e fronteira server/client;
 - `EVAL.md` — gates de autenticação, verificação de email, providers, secrets, modal, abuso e migrations;
 - `PROVIDER-STRATEGY.md` — contrato estrito de launch para Google, Discord e Email + senha;
-- `EMAIL-VERIFICATION-FLOW.md` — ciclo detalhado de cadastro credentials → email → confirmação → login, baseado na UX do Contrapista;
+- `EMAIL-VERIFICATION-FLOW.md` — ciclo detalhado de cadastro credentials → pending registration → OTP → conta → onboarding;
 - `ACCESS-GATE.md` — gate de navegação Next.js + autenticação obrigatória no backend;
 - `ACCESS-GATE-EVAL.md` — testes BLOCKER de redirect, 401/403, sessão inválida, ownership e realtime;
 - `DATABASE-PLAN.md` — arquitetura PostgreSQL preparada para substituir as fixtures atuais da PROFILE;
@@ -67,42 +67,42 @@ Nenhum handler pode confiar em `userId`, `playerId`, `roomCode` ou presença de 
 
 ## Email + senha
 
-Credentials segue a experiência do Contrapista para criação de conta:
+Credentials usa cadastro em duas fases:
 
 ```text
 cadastro
   ↓
-envia email de verificação
+auth.pending_registration
   ↓
-verification-pending
+OTP de 6 dígitos por email
   ↓
-SEM sessão
+SEM auth.user / SEM sessão
   ↓
-clique em link válido por 1 hora
+confirmação do OTP
   ↓
-email confirmado
+auth.user(emailVerified=true)
++ auth.account(credential)
   ↓
-retorno à Home
-  ↓
-login normal
+sessão Better Auth
   ↓
 onboarding se necessário
 ```
 
-A experiência é reaproveitada, mas a implementação interna não copia o schema custom do Contrapista. Better Auth permanece dono do usuário, password hash e verification token.
-
 Normas centrais:
 
-- `requireEmailVerification = true` ou equivalente da versão pinada;
-- envio automático no signup;
-- nenhuma sessão no signup;
-- nenhum auto-login após verification;
-- token de 1 hora;
-- reenvio explícito e rate-limited;
+- `emailAndPassword.disableSignUp = true`;
+- nenhum `auth.user` antes do OTP;
+- OTP válido por 10 minutos;
+- máximo de 5 tentativas;
+- reenvio com cooldown de 60 segundos;
+- senha temporária criptografada, nunca plaintext;
+- OTP persistido somente como HMAC;
+- promoção para conta permanente dentro de transação;
+- replay não funciona porque `pending_registration` é removido;
+- confirmação cria sessão e segue para onboarding;
 - duplicate signup/reenvio não podem enumerar contas;
-- password reset real;
-- email delivery atrás de boundary server-only `sendAuthEmail()`;
-- nenhuma tabela War-Brasil paralela de pending credentials/verification.
+- password reset continua sendo responsabilidade do Better Auth;
+- email delivery permanece atrás de `sendAuthEmail()`.
 
 ## Fluxo completo
 
