@@ -8,9 +8,11 @@ const SENTINELS = [
   ["GOOGLE_CLIENT_SECRET", process.env.GOOGLE_CLIENT_SECRET],
   ["DISCORD_CLIENT_SECRET", process.env.DISCORD_CLIENT_SECRET],
   ["EMAIL_TRANSPORT_SECRET", process.env.EMAIL_TRANSPORT_SECRET],
+  ["AUTH_EMAIL_GOOGLE_CLIENT_SECRET", process.env.AUTH_EMAIL_GOOGLE_CLIENT_SECRET],
+  ["AUTH_EMAIL_GOOGLE_REFRESH_TOKEN", process.env.AUTH_EMAIL_GOOGLE_REFRESH_TOKEN],
 ].filter(([, value]) => typeof value === "string" && value.length > 0);
 
-if (SENTINELS.length !== 6) {
+if (SENTINELS.length !== 8) {
   throw new Error(
     "Leak scan exige sentinels falsos completos de banco e autenticação no ambiente de CI.",
   );
