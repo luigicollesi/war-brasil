@@ -50,7 +50,7 @@ export function ShowcaseObjectController({
       group.position.x = 0;
       group.scale.setScalar(presentation.objectScale);
     } else if (transitionPhase === "enter") {
-      group.position.x = -transitionDirection * 0.32;
+      group.position.x = transitionDirection * 0.32;
       group.scale.setScalar(presentation.objectScale * 0.92);
     } else {
       group.position.x = 0;
@@ -76,13 +76,13 @@ export function ShowcaseObjectController({
       });
 
       if (transitionPhase === "exit") {
-        group.position.x = transitionDirection * 0.32 * progress;
+        group.position.x = -transitionDirection * 0.32 * progress;
         group.scale.setScalar(
           presentation.objectScale * (1 - 0.08 * progress),
         );
       } else {
         group.position.x =
-          -transitionDirection * 0.32 * (1 - progress);
+          transitionDirection * 0.32 * (1 - progress);
         group.scale.setScalar(
           presentation.objectScale * (0.92 + 0.08 * progress),
         );
