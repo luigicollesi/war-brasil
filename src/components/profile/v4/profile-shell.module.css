@@ -8,7 +8,8 @@
   --profile-red: #b53137;
   position: relative;
   min-height: 100dvh;
-  overflow-x: hidden;
+  overflow-x: clip;
+  overflow-y: visible;
   color: var(--profile-ivory);
   background:
     radial-gradient(circle at 12% 8%, rgb(30 82 60 / 24%), transparent 31rem),
