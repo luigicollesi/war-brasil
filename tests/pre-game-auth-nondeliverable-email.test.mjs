@@ -4,6 +4,7 @@ import test from "node:test";
 
 const auth = readFileSync("src/lib/server/auth/auth.ts", "utf8");
 const email = readFileSync("src/lib/server/auth/email.ts", "utf8");
+const environment = readFileSync("src/lib/server/auth/environment.ts", "utf8");
 
 test("fallback social sem email usa somente domínio reservado .invalid", () => {
   assert.match(auth, /@discord\.placeholder\.invalid/);
@@ -25,12 +26,12 @@ test("boundary de email rejeita qualquer domínio .invalid antes do transportado
 
 test("produção envia email por transport HTTP com timeout e idempotência", () => {
   assert.match(email, /https:\/\/api\.resend\.com\/emails/);
-  assert.match(email, /EMAIL_TRANSPORT_SECRET/);
-  assert.match(email, /AUTH_EMAIL_FROM/);
+  assert.match(environment, /EMAIL_TRANSPORT_SECRET/);
+  assert.match(environment, /AUTH_EMAIL_FROM/);
   assert.match(email, /Idempotency-Key/);
   assert.match(email, /AbortController/);
   assert.match(email, /EMAIL_DELIVERY_TIMEOUT_MS = 8_000/);
-  assert.match(email, /await deliverWithResend\(message\)/);
+  assert.match(email, /await deliverWithResend\(message, transport\)/);
 });
 
 test("dispatch usa Next after para sobreviver ao fim da resposta sem bloquear auth", () => {
