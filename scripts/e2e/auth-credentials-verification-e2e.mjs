@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
-import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { Client } from "pg";
 import { assertProfileSocialFlow } from "./profile-social-flow.mjs";
+import { waitForRegistrationCode } from "./registration-otp-helper.mjs";
 
 const playwrightRuntimeDir = path.resolve(
   process.env.PLAYWRIGHT_RUNTIME_DIR ?? ".e2e-runtime/node_modules/playwright",
@@ -71,40 +71,6 @@ async function register(page, email) {
   assert.equal(response.body?.ok, true);
 }
 
-async function waitForEmail(to, subject) {
-  const deadline = Date.now() + 8_000;
-
-  while (Date.now() < deadline) {
-    const entries = await readdir(EMAIL_SINK_DIR).catch(() => []);
-    for (const entry of entries) {
-      if (!entry.endsWith(".json")) continue;
-      const raw = await readFile(path.join(EMAIL_SINK_DIR, entry), "utf8").catch(
-        () => null,
-      );
-      if (!raw) continue;
-
-      try {
-        const message = JSON.parse(raw);
-        if (message?.to === to && message?.subject === subject) {
-          return message;
-        }
-      } catch {
-        // O writer usa rename-free atomicidade de um único writeFile; uma leitura
-        // que coincida com a criação pode simplesmente tentar novamente.
-      }
-    }
-    await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-
-  throw new Error(`email E2E não capturado para subject=${subject}`);
-}
-
-function actionUrl(message) {
-  const match = String(message?.text ?? "").match(/https?:\/\/[^\s]+/);
-  assert.ok(match?.[0], "email não contém URL de ação textual");
-  return match[0];
-}
-
 async function userVerificationState(db, email) {
   const result = await db.query(
     `SELECT "emailVerified" AS verified
@@ -112,7 +78,7 @@ async function userVerificationState(db, email) {
       WHERE email = $1`,
     [email],
   );
-  assert.equal(result.rowCount, 1, "usuário credentials não foi persistido");
+  if (!result.rowCount) return null;
   return result.rows[0].verified === true;
 }
 
@@ -269,23 +235,18 @@ async function createSocialPeer(browser, db, identity) {
     await page.goto(`${BASE_URL}/robots.txt`, { waitUntil: "domcontentloaded" });
     await register(page, email);
 
-    const verified = await db.query(
-      `UPDATE auth."user"
-          SET "emailVerified"=TRUE,
-              "updatedAt"=NOW()
-        WHERE email=$1
-        RETURNING id`,
-      [email],
-    );
-    assert.equal(verified.rowCount, 1, "peer social E2E não foi persistido");
-    const userId = verified.rows[0].id;
-
-    const signIn = await apiJson(page, "/api/auth/sign-in/email", {
+    const code = await waitForRegistrationCode(email, EMAIL_SINK_DIR);
+    const verification = await apiJson(page, "/api/auth/register/verify", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password: PASSWORD, rememberMe: true }),
+      body: JSON.stringify({ email, code }),
     });
-    assert.equal(signIn.status, 200, JSON.stringify(signIn.body));
+    assert.equal(verification.status, 200, JSON.stringify(verification.body));
+    assert.equal(verification.body?.authenticated, true);
+
+    const session = await getSession(page);
+    const userId = session?.user?.id;
+    assert.ok(userId, "peer social E2E não recebeu sessão após OTP");
 
     const onboarding = await apiJson(page, "/api/auth/command-access", {
       method: "PUT",
@@ -316,86 +277,88 @@ try {
     await page.goto(`${BASE_URL}/`, { waitUntil: "domcontentloaded" });
 
     const identity = `${process.pid}-${Date.now()}`;
+
+    const invalidEmail = `invalid-${identity}@e2e.war-brasil.test`;
+    await register(page, invalidEmail);
+    const invalidCode = await waitForRegistrationCode(
+      invalidEmail,
+      EMAIL_SINK_DIR,
+    );
+    assert.equal(
+      await userVerificationState(db, invalidEmail),
+      null,
+      "cadastro pendente não pode criar auth.user",
+    );
+    const wrongCode = invalidCode === "000000" ? "999999" : "000000";
+    const invalidVerification = await apiJson(
+      page,
+      "/api/auth/register/verify",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: invalidEmail, code: wrongCode }),
+      },
+    );
+    assert.equal(invalidVerification.status, 400, JSON.stringify(invalidVerification.body));
+    assert.equal(
+      await userVerificationState(db, invalidEmail),
+      null,
+      "OTP inválido não pode promover cadastro",
+    );
+    assert.equal(
+      (await getSession(page))?.user ?? null,
+      null,
+      "OTP inválido não pode criar sessão",
+    );
+
     const verifiedEmail = `verify-${identity}@e2e.war-brasil.test`;
     await register(page, verifiedEmail);
 
     assert.equal(
       await userVerificationState(db, verifiedEmail),
-      false,
-      "signup credentials não pode nascer verificado",
+      null,
+      "signup credentials deve existir apenas em pending_registration",
     );
     assert.equal(
       (await getSession(page))?.user ?? null,
       null,
-      "signup credentials não pode criar sessão",
+      "signup pendente não pode criar sessão",
     );
 
-    const verificationMessage = await waitForEmail(
+    const verificationCode = await waitForRegistrationCode(
       verifiedEmail,
-      "Verificação de email",
+      EMAIL_SINK_DIR,
     );
-    assert.match(verificationMessage.html ?? "", /VERIFICAR EMAIL/);
-    assert.match(verificationMessage.text ?? "", /válido por 1 hora/i);
-    const verificationUrl = actionUrl(verificationMessage);
-
-    await page.goto(verificationUrl, { waitUntil: "domcontentloaded" });
-    const verifiedUrl = new URL(page.url());
-    assert.equal(verifiedUrl.pathname, "/");
-    assert.equal(verifiedUrl.searchParams.get("emailVerified"), "success");
-    assert.equal(
-      await userVerificationState(db, verifiedEmail),
-      true,
-      "link válido não marcou emailVerified",
-    );
-    assert.equal(
-      (await getSession(page))?.user ?? null,
-      null,
-      "verification não pode autenticar automaticamente",
-    );
-
-    await page.goto(verificationUrl, { waitUntil: "domcontentloaded" });
-    assert.equal(
-      await userVerificationState(db, verifiedEmail),
-      true,
-      "replay não pode regredir verification",
-    );
-    assert.equal(
-      (await getSession(page))?.user ?? null,
-      null,
-      "replay do link não pode criar sessão",
-    );
-
-    const invalidEmail = `invalid-${identity}@e2e.war-brasil.test`;
-    await register(page, invalidEmail);
-    const invalidMessage = await waitForEmail(invalidEmail, "Verificação de email");
-    const validSecondUrl = new URL(actionUrl(invalidMessage));
-    assert.ok(validSecondUrl.searchParams.has("token"), "URL Better Auth sem token");
-    validSecondUrl.searchParams.set("token", "invalid-e2e-token");
-
-    await page.goto(validSecondUrl.toString(), { waitUntil: "domcontentloaded" });
-    assert.equal(
-      await userVerificationState(db, invalidEmail),
-      false,
-      "token inválido não pode verificar conta",
-    );
-    assert.equal(
-      (await getSession(page))?.user ?? null,
-      null,
-      "token inválido não pode criar sessão",
-    );
-
-    const signIn = await apiJson(page, "/api/auth/sign-in/email", {
+    const verification = await apiJson(page, "/api/auth/register/verify", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: verifiedEmail,
-        password: PASSWORD,
-        rememberMe: true,
-      }),
+      body: JSON.stringify({ email: verifiedEmail, code: verificationCode }),
     });
-    assert.equal(signIn.status, 200, JSON.stringify(signIn.body));
+    assert.equal(verification.status, 200, JSON.stringify(verification.body));
+    assert.equal(verification.body?.authenticated, true);
+    assert.equal(
+      await userVerificationState(db, verifiedEmail),
+      true,
+      "OTP válido deve criar auth.user já verificado",
+    );
+
     const authenticatedSession = await getSession(page);
-    assert.ok(authenticatedSession?.user, "login pós-verification não criou sessão");
+    assert.ok(
+      authenticatedSession?.user,
+      "confirmação OTP deve criar sessão imediatamente",
+    );
+
+    const replay = await apiJson(page, "/api/auth/register/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: verifiedEmail, code: verificationCode }),
+    });
+    assert.notEqual(replay.status, 200, "OTP consumido não pode ser reutilizado");
+    assert.equal(
+      await userVerificationState(db, verifiedEmail),
+      true,
+      "replay não pode regredir conta já confirmada",
+    );
 
     await assertSessionBoundPresence(page, authenticatedSession);
     const primaryProfile = await assertOwnedTitleBoundary(
@@ -421,7 +384,7 @@ try {
     }
 
     console.log(
-      "[auth-verification-e2e] signup sem sessão, verification, presença vinculada, títulos por ownership e grafo social com duas sessões reais confirmados.",
+      "[auth-verification-e2e] pending signup sem auth.user, OTP, sessão imediata, presença, títulos e grafo social confirmados.",
     );
   } finally {
     await context.close();
