@@ -93,7 +93,7 @@ A implementação SHOULD preferir o mecanismo oficial mais recente do Better Aut
 
 ## 5. Email + senha
 
-Email + senha é o método independente de provider e segue a experiência do Contrapista para verificação de cadastro.
+Email + senha é o método credentials independente de provider.
 
 ### 5.1 Fluxo obrigatório
 
@@ -102,60 +102,51 @@ CADASTRO EMAIL + SENHA
         ↓
 validar dados + termos
         ↓
-Better Auth cria conta credentials não verificada
+auth.pending_registration
         ↓
-enviar email de verificação
+OTP de 6 dígitos
         ↓
-modal mostra "Confira seu email"
+NENHUM auth.user / NENHUMA sessão
         ↓
-NENHUMA sessão / NENHUM command-open
+usuário confirma OTP
         ↓
-usuário abre link de verificação
+auth.user(emailVerified=true)
++ auth.account(credential)
         ↓
-Better Auth valida token e marca email verificado
+pending removido
         ↓
-redirect para Home com resultado de verificação
-        ↓
-usuário faz login normalmente
+sessão Better Auth
         ↓
 profile completo?
   ├─ não -> onboarding
   └─ sim -> command-open
 ```
 
-A experiência é equivalente ao Contrapista, mas a implementação usa o mecanismo nativo do Better Auth. War-Brasil MUST NOT copiar a tabela custom `email_verification_tokens` nem persistir password hash em uma segunda tabela de pendência.
+O signup credentials nativo do Better Auth fica desabilitado. Better Auth continua responsável pela autenticação permanente, hash compatível, sessões e password reset depois que a identidade é promovida.
 
-### 5.2 Configuração Better Auth desejada
-
-A versão fixada deve suportar comportamento equivalente a:
+### 5.2 Contrato
 
 ```ts
 emailAndPassword: {
   enabled: true,
+  disableSignUp: true,
   requireEmailVerification: true,
   autoSignIn: false,
-}
-
-emailVerification: {
-  sendOnSignUp: true,
-  sendOnSignIn: false,
-  autoSignInAfterVerification: false,
-  expiresIn: 60 * 60,
-  sendVerificationEmail: sendWarBrasilVerificationEmail,
 }
 ```
 
 Normas:
 
-- link válido por **1 hora**;
-- cadastro não abre sessão;
-- clique no link não abre sessão automaticamente;
-- login credentials de email não verificado não pode produzir sessão;
-- após cadastro bem-sucedido, senha sai do estado do formulário;
-- UI permanece em estado `verification-pending`;
-- botão de reenvio é explícito e rate-limited;
-- reenvio responde de forma não-enumerável;
-- callback final retorna à Home sem incluir token na UI/log.
+- antes do OTP existe somente `auth.pending_registration`;
+- senha temporária fica criptografada;
+- OTP fica apenas como HMAC;
+- código possui 6 dígitos e expira em 10 minutos;
+- máximo de 5 tentativas;
+- reenvio tem cooldown de 60 segundos;
+- confirmação promove a conta em transação;
+- `auth.user` já nasce com `emailVerified=true`;
+- confirmação estabelece a sessão e abre onboarding;
+- resposta de cadastro/reenvio é não-enumerável.
 
 ## 6. Email transacional
 
@@ -172,7 +163,7 @@ sendAuthEmail({
 })
 ```
 
-`sendVerificationEmail` e password reset do Better Auth chamam essa boundary.
+O envio do OTP de cadastro e o password reset chamam essa boundary. O primeiro é do fluxo `pending_registration`; o segundo continua vindo do Better Auth.
 
 O transportador (Resend/SES/SMTP/Gmail ou equivalente) pode ser decidido separadamente sem alterar o fluxo de autenticação.
 
