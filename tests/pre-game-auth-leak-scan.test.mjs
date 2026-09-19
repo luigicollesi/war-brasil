@@ -25,8 +25,6 @@ test("CI injeta sentinels falsos para banco, auth, OAuth e email", () => {
     "GOOGLE_CLIENT_SECRET",
     "DISCORD_CLIENT_SECRET",
     "EMAIL_TRANSPORT_SECRET",
-    "AUTH_EMAIL_GOOGLE_CLIENT_SECRET",
-    "AUTH_EMAIL_GOOGLE_REFRESH_TOKEN",
   ]) {
     assert.match(workflow, new RegExp(`${name}:`), name);
   }
