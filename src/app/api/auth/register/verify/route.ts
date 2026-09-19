@@ -8,9 +8,12 @@ import { rejectUntrustedAuthMutationOrigin } from "@/server/auth/request-origin"
 const CODE_PATTERN = /^\d{6}$/;
 
 function copySetCookieHeaders(source: Headers, target: Headers) {
+  const sourceWithCookies = source as Headers & {
+    getSetCookie?: () => string[];
+  };
   const cookies =
-    typeof source.getSetCookie === "function"
-      ? source.getSetCookie()
+    typeof sourceWithCookies.getSetCookie === "function"
+      ? sourceWithCookies.getSetCookie()
       : source.get("set-cookie")
         ? [source.get("set-cookie")!]
         : [];
