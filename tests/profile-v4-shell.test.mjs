@@ -63,10 +63,12 @@ test("PROFILE V4 and store showcase own their page chrome while compact profile 
   assert.match(runtime, /"\/profile"/);
   assert.match(runtime, /"\/profile\/arsenal"/);
   assert.match(runtime, /"\/profile\/store"/);
+  assert.match(runtime, /const profileOwnsBackground =\s*PROFILE_SHELL_ROUTES\.has\(pathname\)/);
   assert.match(
     runtime,
-    /const profileOwnsChrome =\s*PROFILE_SHELL_ROUTES\.has\(pathname\) \|\|\s*pathname\.startsWith\("\/profile\/store\/showcase\/"\)/,
+    /const profileOwnsChrome =\s*profileOwnsBackground \|\|\s*pathname\.startsWith\("\/profile\/store\/showcase\/"\)/,
   );
+  assert.match(runtime, /profileOwnsBackground\s*\?\s*<>\{children\}<\/>\s*:\s*\(/);
   assert.match(runtime, /chrome=\{!profileOwnsChrome\}/);
   assert.doesNotMatch(runtime, /startsWith\("\/profile\/"\)/);
   assert.doesNotMatch(shell, /className=\{styles\.mobileNav\}/);
@@ -78,4 +80,15 @@ test("PROFILE V4 and store showcase own their page chrome while compact profile 
     styles,
     /@media \(max-width: 980px\)[\s\S]*?\.primaryNav\s*\{[\s\S]*?display:\s*grid;/,
   );
+});
+
+
+test("PROFILE V4 owns its background and keeps document scrolling as the only vertical scroll container", async () => {
+  const styles = await source("src/components/profile/v4/profile-shell.module.css");
+
+  assert.match(
+    styles,
+    /\.page\s*\{[^}]*overflow-x:\s*clip;[^}]*overflow-y:\s*visible;/,
+  );
+  assert.doesNotMatch(styles, /\.page\s*\{[^}]*overflow-x:\s*hidden;/);
 });
