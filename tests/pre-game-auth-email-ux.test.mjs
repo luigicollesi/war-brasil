@@ -36,3 +36,22 @@ test("resend e forgot-password mantêm resposta pública não-enumerável", () =
   );
   assert.doesNotMatch(modal, /conta não existe|email não cadastrado|usuário não encontrado/i);
 });
+
+
+test("auth modal não usa async Transition como mutex de requests", () => {
+  assert.doesNotMatch(modal, /useTransition|startTransition/);
+  assert.match(modal, /AUTH_REQUEST_TIMEOUT_MS = 15_000/);
+  assert.match(modal, /AbortController/);
+  assert.match(modal, /setPendingAction\(action\)/);
+  assert.match(modal, /finally \{[\s\S]*setPendingAction\(null\)/);
+});
+
+test("cadastro recupera UI mesmo se a resposta HTTP travar após o envio", () => {
+  assert.match(modal, /fetchJsonWithTimeout<RegisterResponse>/);
+  assert.match(modal, /error instanceof DOMException && error\.name === "AbortError"/);
+  assert.match(modal, /setMode\("verification"\)/);
+  assert.match(
+    modal,
+    /O envio foi iniciado, mas a resposta demorou\. Se você recebeu o código, digite-o abaixo\./,
+  );
+});
