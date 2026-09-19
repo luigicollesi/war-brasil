@@ -154,15 +154,15 @@ export async function beginPendingRegistration(input: {
       [PENDING_REGISTRATION_RETENTION_HOURS],
     );
 
-    const existingAccount = await client.query<{ email_verified: boolean }>(
-      `SELECT "emailVerified" AS email_verified
+    const existingAccount = await client.query(
+      `SELECT 1
          FROM auth."user"
         WHERE lower(email) = lower($1)
         LIMIT 1`,
       [email],
     );
 
-    if (existingAccount.rowCount && existingAccount.rows[0]?.email_verified) {
+    if (existingAccount.rowCount) {
       await client.query("COMMIT");
       return {
         code: null,
@@ -261,7 +261,6 @@ export async function resendPendingRegistration(
       `SELECT 1
          FROM auth."user"
         WHERE lower(email) = lower($1)
-          AND "emailVerified" = TRUE
         LIMIT 1`,
       [email],
     );
