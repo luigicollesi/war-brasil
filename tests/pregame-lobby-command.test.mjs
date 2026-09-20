@@ -135,10 +135,9 @@ test("autorização de conflito não cria nova espera antes da navegação", () 
   assert.match(lobby, /snapshot\.room\.status !== "waiting"/);
   assert.match(lobby, /router\.replace\(`\/game\/\$\{snapshot\.room\.code\}`\)/);
   assert.match(lobby, /CONFLITO AUTORIZADO/);
-  const navigationEffect = lobby.slice(
-    lobby.indexOf("useEffect(() =>"),
-    lobby.indexOf("async function updateMe"),
-  );
+  const navigationStart = lobby.indexOf("useEffect(() =>");
+  const heartbeatStart = lobby.indexOf("useEffect(() =>", navigationStart + 1);
+  const navigationEffect = lobby.slice(navigationStart, heartbeatStart);
   assert.doesNotMatch(navigationEffect, /setTimeout|setInterval/);
 });
 
