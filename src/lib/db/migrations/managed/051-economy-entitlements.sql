@@ -86,6 +86,41 @@ SELECT background.id,COUNT(owned.user_id)::bigint
  GROUP BY background.id
 ON CONFLICT (background_id) DO NOTHING;
 
+
+CREATE OR REPLACE FUNCTION catalog.ensure_commander_title_stats_row()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $
+BEGIN
+  INSERT INTO catalog.commander_title_stats(title_id,acquisition_count)
+  VALUES(NEW.id,0)
+  ON CONFLICT (title_id) DO NOTHING;
+  RETURN NEW;
+END
+$;
+
+DROP TRIGGER IF EXISTS commander_title_stats_after_insert ON catalog.commander_titles;
+CREATE TRIGGER commander_title_stats_after_insert
+AFTER INSERT ON catalog.commander_titles
+FOR EACH ROW EXECUTE FUNCTION catalog.ensure_commander_title_stats_row();
+
+CREATE OR REPLACE FUNCTION catalog.ensure_profile_background_stats_row()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $
+BEGIN
+  INSERT INTO catalog.profile_background_stats(background_id,acquisition_count)
+  VALUES(NEW.id,0)
+  ON CONFLICT (background_id) DO NOTHING;
+  RETURN NEW;
+END
+$;
+
+DROP TRIGGER IF EXISTS profile_background_stats_after_insert ON catalog.profile_backgrounds;
+CREATE TRIGGER profile_background_stats_after_insert
+AFTER INSERT ON catalog.profile_backgrounds
+FOR EACH ROW EXECUTE FUNCTION catalog.ensure_profile_background_stats_row();
+
 CREATE TABLE IF NOT EXISTS economy.purchase_entitlements (
   purchase_id UUID NOT NULL
     REFERENCES economy.purchases(id) ON DELETE RESTRICT,
