@@ -17,6 +17,6 @@ test("cosmético retired já possuído continua elegível para equipagem", () =>
 test("compra continua exigindo itens available e não adquire retired", () => {
   assert.match(
     service,
-    /pricingRows\.some\(\(item\) => item\.status !== "available" \|\| item\.is_default\)/,
+    /pricingRows\.some\(\(item\) => !item\.available \|\| item\.is_default\)/,
   );
 });
