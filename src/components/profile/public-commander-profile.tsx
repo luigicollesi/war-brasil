@@ -1,312 +1,215 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { useCommandSceneDirective } from "@/src/components/pre-game/foundation";
-import type {
-  PublicCommanderProfileSnapshot,
-  PublicMatchSummary,
-  PublicPlayerMatchHistory,
-} from "@/src/lib/profile/profile-command-contract";
-import {
-  commanderStatusLabel,
-  formatOperationDate,
-  initialsFrom,
-} from "./command-quarters/profile-command-format";
+import type { PublicCommanderProfileSnapshot } from "@/src/lib/profile/profile-command-contract";
+import { ProfileDisplayStage } from "./profile-display-stage";
+import { ProfileTitleRenderer } from "./profile-title-renderer";
 import styles from "./public-commander-profile.module.css";
 
-const RELATIONSHIP_COPY: Record<PublicCommanderProfileSnapshot["relationship"], string> = {
-  self: "Seu próprio comando",
-  none: "Sem vínculo de comando",
-  "outgoing-request": "Solicitação enviada",
-  "incoming-request": "Solicitação recebida",
-  friend: "Rede de Comando",
-};
-
-const RESULT_COPY: Record<PublicMatchSummary["result"], string> = {
-  victory: "Vitória",
-  defeat: "Derrota",
-  unknown: "Indisponível",
-};
-
-const MODE_COPY: Record<PublicMatchSummary["mode"], string> = {
-  classic: "Clássico",
-  custom: "Personalizada",
-  unknown: "Modo não registrado",
-};
+type BusyAction = "request" | "accept" | "invite" | null;
 
 export function PublicCommanderProfileView({
   snapshot,
+  incomingRequestId,
 }: {
   snapshot: PublicCommanderProfileSnapshot;
+  incomingRequestId: string | null;
 }) {
   const router = useRouter();
-  const [busy, setBusy] = useState<"request" | "remove" | "block" | null>(null);
+  const [busy, setBusy] = useState<BusyAction>(null);
   const [feedback, setFeedback] = useState<{
     kind: "error" | "success";
     message: string;
   } | null>(null);
-  const [history, setHistory] = useState<PublicPlayerMatchHistory>(snapshot.history.data);
-  const [historyLoading, setHistoryLoading] = useState(false);
-  const [historyError, setHistoryError] = useState<string | null>(null);
-
-  useCommandSceneDirective({
-    focus: "insignia",
-    conflictLevel: 0,
-    territoryExplode: 0,
-    orbitalAlignment: 1,
-  });
 
   const identity = snapshot.identity;
 
-  async function mutate(
-    action: "request" | "remove" | "block",
-    url: string,
-    init: RequestInit,
-    successMessage: string,
-  ) {
+  async function sendFriendRequest() {
     if (busy) return;
-    setBusy(action);
+    setBusy("request");
     setFeedback(null);
     try {
-      const response = await fetch(url, init);
+      const response = await fetch("/api/profile/friends/requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ handle: identity.handle }),
+      });
       const body = (await response.json().catch(() => null)) as
         | { message?: string }
         | null;
       if (!response.ok) {
-        throw new Error(body?.message ?? "A operação social não pôde ser concluída.");
+        throw new Error(body?.message ?? "Não foi possível enviar a solicitação.");
       }
-      setFeedback({ kind: "success", message: successMessage });
-      if (action === "block") {
-        router.push("/profile");
-      } else {
-        router.refresh();
-      }
+      setFeedback({
+        kind: "success",
+        message: `Solicitação enviada para @${identity.handle}.`,
+      });
+      router.refresh();
     } catch (error) {
       setFeedback({
         kind: "error",
         message:
           error instanceof Error
             ? error.message
-            : "A operação social não pôde ser concluída.",
+            : "Não foi possível enviar a solicitação.",
       });
     } finally {
       setBusy(null);
     }
   }
 
-  function sendFriendRequest() {
-    return mutate(
-      "request",
-      "/api/profile/friends/requests",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ handle: identity.handle }),
-      },
-      `Solicitação enviada para @${identity.handle}.`,
-    );
-  }
-
-  function removeFriend() {
-    return mutate(
-      "remove",
-      `/api/profile/friends/${encodeURIComponent(identity.handle)}`,
-      { method: "DELETE" },
-      `@${identity.handle} removido da Rede de Comando.`,
-    );
-  }
-
-  function blockCommander() {
-    return mutate(
-      "block",
-      "/api/profile/blocks",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ handle: identity.handle }),
-      },
-      `@${identity.handle} bloqueado.`,
-    );
-  }
-
-  async function loadMoreHistory() {
-    if (
-      historyLoading ||
-      !history.hasMore ||
-      !history.nextCursor ||
-      snapshot.history.availability === "unavailable"
-    ) {
-      return;
-    }
-
-    setHistoryLoading(true);
-    setHistoryError(null);
+  async function acceptFriendRequest() {
+    if (busy || !incomingRequestId) return;
+    setBusy("accept");
+    setFeedback(null);
     try {
       const response = await fetch(
-        `/api/profile/commanders/${encodeURIComponent(identity.handle)}/history?cursor=${encodeURIComponent(history.nextCursor)}`,
-        { cache: "no-store" },
+        `/api/profile/friends/requests/${encodeURIComponent(incomingRequestId)}/accept`,
+        { method: "POST" },
       );
       const body = (await response.json().catch(() => null)) as
-        | (PublicPlayerMatchHistory & { message?: string })
         | { message?: string }
         | null;
-      if (!response.ok || !body || !("matches" in body) || !Array.isArray(body.matches)) {
-        throw new Error(body?.message ?? "Não foi possível carregar outros registros.");
+      if (!response.ok) {
+        throw new Error(body?.message ?? "Não foi possível aceitar a solicitação.");
       }
-
-      setHistory((current) => ({
-        matches: [...current.matches, ...body.matches],
-        hasMore: body.hasMore,
-        nextCursor: body.nextCursor,
-      }));
+      setFeedback({ kind: "success", message: "Aliança confirmada." });
+      router.refresh();
     } catch (error) {
-      setHistoryError(
-        error instanceof Error
-          ? error.message
-          : "Não foi possível carregar outros registros.",
-      );
+      setFeedback({
+        kind: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Não foi possível aceitar a solicitação.",
+      });
     } finally {
-      setHistoryLoading(false);
+      setBusy(null);
     }
   }
 
-  const canBlock = snapshot.relationship !== "self";
+  async function inviteToGame() {
+    if (busy) return;
+    setBusy("invite");
+    setFeedback(null);
+    try {
+      const response = await fetch(
+        `/api/profile/commanders/${encodeURIComponent(identity.handle)}/game-invitations`,
+        { method: "POST" },
+      );
+      const body = (await response.json().catch(() => null)) as
+        | { roomCode?: string; message?: string }
+        | null;
+      if (!response.ok || !body?.roomCode) {
+        throw new Error(body?.message ?? "Não foi possível criar o convite.");
+      }
+
+      router.push(`/lobby/${encodeURIComponent(body.roomCode)}`);
+    } catch (error) {
+      setFeedback({
+        kind: "error",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Não foi possível criar o convite.",
+      });
+      setBusy(null);
+    }
+  }
 
   return (
-    <main className={styles.page} data-scene-fallback="html">
+    <main className={styles.page} data-public-profile-display>
+      <div
+        className={styles.background}
+        style={{
+          backgroundImage: `url("${snapshot.appearance.background.assetRef}")`,
+        }}
+        aria-hidden="true"
+      />
+      <div className={styles.scrim} aria-hidden="true" />
+
       <header className={styles.header}>
-        <Link href="/profile">← Quartel do Comandante</Link>
-        <span>Arquivo público · @{identity.handle}</span>
-      </header>
-
-      <div className={styles.layout}>
-        <section className={styles.dossier} aria-labelledby="public-commander-name">
-          <div className={styles.identity}>
-            <small>
-              SIGILO {initialsFrom(identity.displayName)} · @{identity.handle}
+        <section className={styles.identity} aria-labelledby="public-profile-name">
+          <span className={styles.identityTopline}>
+            <strong id="public-profile-name">{identity.displayName}</strong>
+            <small data-presence={identity.presence.state}>
+              <i aria-hidden="true" />
+              @{identity.handle}
             </small>
-            <h1 id="public-commander-name">{identity.displayName}</h1>
-            <p>{identity.title ?? "Sem título equipado"}</p>
-          </div>
-
-          {identity.bio ? <p className={styles.bio}>{identity.bio}</p> : null}
-
-          <span className={styles.relationship}>
-            {RELATIONSHIP_COPY[snapshot.relationship]}
           </span>
 
-          <div className={styles.socialActions} aria-label="Ações da Rede de Comando">
-            {snapshot.relationship === "none" ? (
-              <button
-                type="button"
-                className={styles.primaryAction}
-                disabled={busy !== null}
-                onClick={() => void sendFriendRequest()}
-              >
-                {busy === "request" ? "Enviando sinal" : "Conectar comandante"}
-              </button>
-            ) : null}
-            {snapshot.relationship === "friend" ? (
-              <button
-                type="button"
-                className={styles.secondaryAction}
-                disabled={busy !== null}
-                onClick={() => void removeFriend()}
-              >
-                {busy === "remove" ? "Removendo" : "Remover da rede"}
-              </button>
-            ) : null}
-            {canBlock ? (
-              <button
-                type="button"
-                className={styles.dangerAction}
-                disabled={busy !== null}
-                onClick={() => void blockCommander()}
-              >
-                {busy === "block" ? "Bloqueando" : "Bloquear"}
-              </button>
-            ) : null}
-          </div>
-
-          {feedback ? (
-            <p
-              className={styles.socialFeedback}
-              data-kind={feedback.kind}
-              role={feedback.kind === "error" ? "alert" : "status"}
-            >
-              {feedback.message}
-            </p>
-          ) : null}
-
-          <div className={styles.statusGrid}>
-            <div>
-              <small>Estado</small>
-              <strong>{commanderStatusLabel(identity.presence, identity.activity)}</strong>
-            </div>
-            <div>
-              <small>Último registro</small>
-              <strong>
-                {identity.presence.lastSeenAt
-                  ? formatOperationDate(identity.presence.lastSeenAt)
-                  : "Indisponível"}
-              </strong>
-            </div>
-          </div>
+          {snapshot.appearance.title ? (
+            <ProfileTitleRenderer
+              title={snapshot.appearance.title}
+              className={styles.title}
+            />
+          ) : (
+            <strong className={styles.untitled}>SEM TÍTULO EQUIPADO</strong>
+          )}
         </section>
 
-        <section className={styles.history} aria-labelledby="public-history-title">
-          <div className={styles.historyHeader}>
-            <span>Memória operacional</span>
-            <strong id="public-history-title">Livro de Campanha</strong>
-          </div>
+        <nav className={styles.actions} aria-label="Ações do perfil">
+          <button
+            type="button"
+            className={styles.backAction}
+            onClick={() => router.back()}
+          >
+            ← VOLTAR
+          </button>
 
-          {snapshot.history.availability === "unavailable" ? (
-            <div className={styles.empty}>
-              <strong>Arquivo restrito</strong>
-              <span>{snapshot.history.unavailableReason}</span>
-            </div>
-          ) : history.matches.length === 0 ? (
-            <div className={styles.empty}>
-              <strong>Nenhum registro público</strong>
-              <span>Este comandante ainda não possui operações registradas.</span>
-            </div>
-          ) : (
-            <ol className={styles.records} aria-label="Operações públicas recentes">
-              {history.matches.map((match) => (
-                <li key={`${match.operationCode}-${match.playedAt}`} className={styles.record}>
-                  <span>
-                    <small>{formatOperationDate(match.playedAt)}</small>
-                    <strong>{match.operationCode}</strong>
-                  </span>
-                  <em data-result={match.result}>{RESULT_COPY[match.result]}</em>
-                  <span>
-                    <small>{MODE_COPY[match.mode]}</small>
-                    <strong>{match.durationMinutes} min</strong>
-                  </span>
-                </li>
-              ))}
-            </ol>
-          )}
-
-          {snapshot.history.availability !== "unavailable" && history.hasMore ? (
+          {snapshot.relationship === "friend" ? (
             <button
               type="button"
-              className={styles.historyLoadMore}
-              disabled={historyLoading}
-              onClick={() => void loadMoreHistory()}
+              className={styles.primaryAction}
+              disabled={busy !== null}
+              onClick={() => void inviteToGame()}
             >
-              {historyLoading ? "Consultando arquivo..." : "Carregar mais registros"}
+              {busy === "invite" ? "CRIANDO SALA..." : "CHAMAR PARA JOGAR"}
             </button>
           ) : null}
-          {historyError ? (
-            <p className={styles.historyError} role="alert">
-              {historyError}
-            </p>
+
+          {snapshot.relationship === "none" ? (
+            <button
+              type="button"
+              className={styles.primaryAction}
+              disabled={busy !== null}
+              onClick={() => void sendFriendRequest()}
+            >
+              {busy === "request" ? "ENVIANDO..." : "SOLICITAR AMIZADE"}
+            </button>
           ) : null}
-        </section>
-      </div>
+
+          {snapshot.relationship === "incoming-request" ? (
+            <button
+              type="button"
+              className={styles.primaryAction}
+              disabled={busy !== null || !incomingRequestId}
+              onClick={() => void acceptFriendRequest()}
+            >
+              {busy === "accept" ? "ACEITANDO..." : "ACEITAR AMIZADE"}
+            </button>
+          ) : null}
+
+          {snapshot.relationship === "outgoing-request" ? (
+            <button type="button" className={styles.pendingAction} disabled>
+              SOLICITAÇÃO ENVIADA
+            </button>
+          ) : null}
+        </nav>
+      </header>
+
+      {feedback ? (
+        <p
+          className={styles.feedback}
+          data-kind={feedback.kind}
+          role={feedback.kind === "error" ? "alert" : "status"}
+        >
+          {feedback.message}
+        </p>
+      ) : null}
+
+      <ProfileDisplayStage arsenal={snapshot.appearance.arsenal} />
     </main>
   );
 }
