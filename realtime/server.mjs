@@ -18,9 +18,11 @@ import {
 } from "./protocol.mjs";
 import { RedisRoomSubscriber } from "./redis-room-subscriber.mjs";
 import { GameRealtimeRegistry } from "./registry.mjs";
+import { UserRealtimeRegistry } from "./user-registry.mjs";
 import {
   realtimeTicketConfigured,
   verifyRealtimeTicket,
+  verifyUserRealtimeTicket,
 } from "./ticket.mjs";
 
 if (process.env.GAME_REALTIME_ENABLED !== "true") {
@@ -139,6 +141,7 @@ function authorizeInternalRequest(request, response) {
 const origins = allowedOrigins();
 const pool = new Pool({ connectionString, max: 5 });
 const registry = new GameRealtimeRegistry();
+const userRegistry = new UserRealtimeRegistry();
 const presenceStore = new RedisPresenceStore({
   url: redisUrl,
   ttlSeconds: process.env.PROFILE_PRESENCE_TTL_SECONDS,
@@ -301,6 +304,42 @@ const wss = new WebSocketServer({
   },
 });
 
+const userWss = new WebSocketServer({
+  noServer: true,
+  maxPayload: GAME_REALTIME_MAX_PAYLOAD_BYTES,
+  perMessageDeflate: false,
+  handleProtocols(protocols) {
+    return protocols.has(GAME_REALTIME_SUBPROTOCOL)
+      ? GAME_REALTIME_SUBPROTOCOL
+      : false;
+  },
+});
+
+function setupUserConnection(socket, userId) {
+  const context = userRegistry.add(socket, userId);
+
+  socket.on("pong", () => userRegistry.markAlive(socket));
+  socket.on("close", () => userRegistry.remove(socket));
+  socket.on("error", () => undefined);
+  socket.on("message", () => {
+    // User notification sockets are server-push only.
+    socket.close(1008, "Canal de notificação é somente leitura");
+  });
+
+  if (socket.readyState === WebSocket.OPEN) {
+    socket.send(
+      JSON.stringify({
+        protocolVersion: 2,
+        type: "user.realtime.ready",
+        serverTime: Date.now(),
+        payload: {},
+      }),
+    );
+  }
+
+  return context;
+}
+
 async function setupConnection(socket, identity) {
   try {
     await acquireRoomSource(identity.roomId);
@@ -387,6 +426,8 @@ function statusBody() {
     authMode,
     connections: registry.size(),
     rooms: registry.roomCount(),
+    userConnections: userRegistry.size(),
+    users: userRegistry.userCount(),
     sourceRooms: redisSource ? redisSource.roomCount() : null,
     metrics: realtimeMetricsSnapshot(),
   };
@@ -460,9 +501,41 @@ async function handleInternalPresenceBatch(request, response) {
   }
 }
 
+async function handleInternalUserNotification(request, response) {
+  if (!authorizeInternalRequest(request, response)) return;
+
+  try {
+    const body = await readJsonBody(request);
+    if (
+      !body ||
+      typeof body !== "object" ||
+      Array.isArray(body) ||
+      Object.keys(body).length !== 1 ||
+      typeof body.userId !== "string" ||
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(body.userId)
+    ) {
+      writeJson(response, 422, { error: "Notificação de usuário inválida." });
+      return;
+    }
+
+    const delivery = userRegistry.notify(body.userId);
+    writeJson(response, 200, delivery);
+  } catch {
+    writeJson(response, 400, { error: "Payload de notificação inválido." });
+  }
+}
+
 const server = http.createServer((request, response) => {
   if (request.method === "POST" && request.url === "/internal/ephemeral") {
     void handleInternalEphemeral(request, response);
+    return;
+  }
+
+  if (
+    request.method === "POST" &&
+    request.url === "/internal/user-notification"
+  ) {
+    void handleInternalUserNotification(request, response);
     return;
   }
 
@@ -526,6 +599,22 @@ server.on("upgrade", async (request, socket, head) => {
     }
 
     const url = new URL(request.url ?? "/", "http://realtime.local");
+
+    if (url.pathname === "/user-realtime") {
+      const ticket = url.searchParams.get("ticket");
+      const payload = ticket ? verifyUserRealtimeTicket(ticket) : null;
+      if (!payload) {
+        recordRealtimeMetric("authRejected", { reason: "user_ticket" });
+        rejectUpgrade(socket, 401, "Credencial realtime de usuário inválida");
+        return;
+      }
+
+      userWss.handleUpgrade(request, socket, head, (ws) => {
+        setupUserConnection(ws, payload.userId);
+      });
+      return;
+    }
+
     if (url.pathname !== GAME_REALTIME_PATH) {
       rejectUpgrade(socket, 404, "Endpoint realtime não encontrado");
       return;
@@ -558,7 +647,10 @@ server.on("upgrade", async (request, socket, head) => {
   }
 });
 
-const heartbeat = setInterval(() => registry.heartbeat(), 30_000);
+const heartbeat = setInterval(() => {
+  registry.heartbeat();
+  userRegistry.heartbeat();
+}, 30_000);
 heartbeat.unref?.();
 
 if (!primarySource) {
@@ -592,6 +684,7 @@ async function shutdown() {
   });
   clearInterval(heartbeat);
   registry.closeAll(1012, "Servidor reiniciando");
+  userRegistry.closeAll(1012, "Servidor reiniciando");
   presenceStore.stop();
   if (redisSource && redisSource !== primarySource) {
     await redisSource.stop();
