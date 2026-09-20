@@ -12,7 +12,10 @@ import {
   type ReactNode,
 } from "react";
 import { CommandShell } from "./command-shell";
-import { resolvePreGameSceneIntent } from "./pre-game-route-intent";
+import {
+  isStandalonePublicProfileRoute,
+  resolvePreGameSceneIntent,
+} from "./pre-game-route-intent";
 import type {
   CommandConflictLevel,
   CommandEntranceState,
@@ -84,8 +87,11 @@ function mergeSceneIntent(
 export function PreGameCommandRuntime({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const profileOwnsBackground = PROFILE_SHELL_ROUTES.has(pathname);
+  const standalonePublicProfile = isStandalonePublicProfileRoute(pathname);
+  const profileOwnsSurface = profileOwnsBackground || standalonePublicProfile;
   const profileOwnsChrome =
     profileOwnsBackground ||
+    standalonePublicProfile ||
     pathname.startsWith("/profile/store/showcase/");
   const routeIntent = useMemo(
     () => resolvePreGameSceneIntent(pathname),
@@ -140,10 +146,10 @@ export function PreGameCommandRuntime({ children }: { children: ReactNode }) {
   if (!intent) return <>{children}</>;
 
   return (
-    <SceneStateContext.Provider value={profileOwnsBackground ? "ready" : sceneState}>
+    <SceneStateContext.Provider value={profileOwnsSurface ? "ready" : sceneState}>
       <SceneDirectiveContext.Provider value={publishDirective}>
         <ShowcaseSceneContext.Provider value={publishShowcaseScene}>
-          {profileOwnsBackground ? (
+          {profileOwnsSurface ? (
             <>{children}</>
           ) : (
             <CommandShell
