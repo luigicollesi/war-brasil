@@ -76,6 +76,7 @@ test("Workers Builds usa OpenNext e Wrangler pinados pelo lockfile", () => {
   );
   assert.equal(pkg.scripts["cloudflare:deploy"], "opennextjs-cloudflare deploy");
   assert.equal(pkg.scripts["cloudflare:upload"], "opennextjs-cloudflare upload");
+  assert.equal(pkg.scripts["cloudflare:smoke"], "node scripts/cloudflare-smoke.mjs");
   assert.doesNotMatch(pkg.scripts["cloudflare:deploy"], /npm install|cloudflare:prepare/);
 });
 
