@@ -10,6 +10,18 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
+  "secrets": {
+    "required": [
+      "DATABASE_URL",
+      "AUTH_DATABASE_URL",
+      "BETTER_AUTH_SECRET",
+      "GOOGLE_CLIENT_SECRET",
+      "DISCORD_CLIENT_SECRET",
+      "EMAIL_TRANSPORT_SECRET",
+      "ASSET_STORAGE_ACCESS_KEY_ID",
+      "ASSET_STORAGE_SECRET_ACCESS_KEY"
+    ]
+  },
   "observability": {
     "enabled": true
   }
