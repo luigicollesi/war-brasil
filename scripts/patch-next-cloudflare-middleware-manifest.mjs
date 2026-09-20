@@ -42,6 +42,21 @@ export function patchNextServerSource(source) {
   return { changed: true, source: patched };
 }
 
+export async function checkInstalledNextServerPatch(
+  filePath = resolve(process.cwd(), DEFAULT_NEXT_SERVER_PATH),
+) {
+  const source = await readFile(filePath, "utf8");
+  const result = patchNextServerSource(source);
+
+  console.log(
+    result.changed
+      ? "Cloudflare Next patch é necessário e aplicável à versão instalada."
+      : "Cloudflare Next patch já está presente na versão instalada.",
+  );
+
+  return result.changed;
+}
+
 export async function patchInstalledNextServer(
   filePath = resolve(process.cwd(), DEFAULT_NEXT_SERVER_PATH),
 ) {
@@ -65,5 +80,9 @@ const isDirectExecution =
   import.meta.url === pathToFileURL(resolve(process.argv[1])).href;
 
 if (isDirectExecution) {
-  await patchInstalledNextServer();
+  if (process.argv.includes("--check")) {
+    await checkInstalledNextServerPatch();
+  } else {
+    await patchInstalledNextServer();
+  }
 }
