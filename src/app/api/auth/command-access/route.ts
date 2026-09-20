@@ -1,4 +1,5 @@
 import {
+  CommanderAgeGateRequiredError,
   CommanderHandleConflictError,
   getCommandAccessState,
   saveCommanderIdentity,
@@ -69,6 +70,17 @@ export async function PUT(request: Request) {
       profile,
     });
   } catch (error) {
+    if (error instanceof CommanderAgeGateRequiredError) {
+      return Response.json(
+        {
+          ok: false,
+          code: "age_gate_required",
+          message: "Informe sua data de nascimento antes de definir o comandante.",
+        },
+        { status: 403 },
+      );
+    }
+
     if (error instanceof CommanderHandleConflictError) {
       return Response.json(
         {
