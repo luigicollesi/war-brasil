@@ -24,6 +24,7 @@ import {
   resolveRoomInvitation,
 } from "./invitation-repository";
 import { insertInvitationRejectedNotification } from "../profile/notification-repository";
+import { publishUserNotificationChange } from "../realtime/user-notification-publisher";
 
 const INVITATION_ID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -129,6 +130,7 @@ export async function createFriendRoomInvitation(input: Readonly<{
       input.actorUserId,
       target.user_id,
     );
+    await publishUserNotificationChange(target.user_id);
     return {
       invitationId: invitation.id,
       roomCode: room.code,
@@ -328,6 +330,7 @@ export async function rejectGameInvitation(
     );
     await insertInvitationRejectedNotification(invitationId, client);
     await client.query("COMMIT");
+    await publishUserNotificationChange(invitation.inviter_user_id);
     return { invitationId, rejected: true };
   } catch (error) {
     await client.query("ROLLBACK").catch(() => undefined);
