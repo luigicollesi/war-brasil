@@ -63,18 +63,24 @@ import {
   type StorefrontOfferRow,
 } from "./economy-storefront-repository";
 import {
-  incrementCosmeticAcquisitionCounts,
   listActiveStorefrontOfferProducts,
   listActiveStorefrontQuoteItems,
-  listLockedProductQuoteItems,
   lockOfferProductForPurchase,
-  lockProductCosmeticStats,
   lockStorefrontCollectionPromotion,
   snapshotPurchaseCommercialContext,
-  snapshotPurchaseItemPrices,
   type StorefrontOfferProductRow,
   type StorefrontQuoteItemRow,
 } from "./storefront-quote-repository";
+import {
+  grantEntitlementOwnership,
+  incrementEntitlementAcquisitionCount,
+  insertLegacyCosmeticPurchaseItem,
+  insertPurchaseEntitlement,
+  listLockedProductEntitlementsForPurchase,
+  listPurchasedEntitlements,
+  lockProductEntitlementStats,
+  type ProductEntitlementQuoteRow,
+} from "./entitlement-repository";
 
 export class EconomyServiceError extends Error {
   constructor(
@@ -411,6 +417,104 @@ function unitPriceFromRow(row: StorefrontQuoteItemRow) {
   }
 }
 
+function quoteEntitlementFromRow(
+  row: ProductEntitlementQuoteRow,
+): StorefrontQuoteItem {
+  const acquisitionCount = integerAmount(
+    row.acquisition_count,
+    "ECONOMY_CATALOG_INVALID",
+    0,
+  );
+  const entitlementKey = `${row.entitlement_kind}:${row.entitlement_id}`;
+
+  if (row.pricing_model === "fixed") {
+    if (row.fixed_price === null) {
+      throw new EconomyServiceError(
+        "ECONOMY_CATALOG_INVALID",
+        "Um entitlement de preço fixo está sem preço configurado.",
+        503,
+      );
+    }
+    return {
+      cosmeticId: entitlementKey,
+      owned: row.owned,
+      pricing: {
+        type: "fixed",
+        price: positiveAmount(row.fixed_price, "ECONOMY_CATALOG_INVALID"),
+      },
+    };
+  }
+
+  if (row.tier_from === null || row.tier_price === null) {
+    throw new EconomyServiceError(
+      "ECONOMY_CATALOG_INVALID",
+      "Um entitlement progressivo não possui tier para o contador atual.",
+      503,
+    );
+  }
+
+  return {
+    cosmeticId: entitlementKey,
+    owned: row.owned,
+    pricing: {
+      type: "progressive",
+      acquisitionCount,
+      tiers: [
+        {
+          acquisitionsFrom: integerAmount(
+            row.tier_from,
+            "ECONOMY_CATALOG_INVALID",
+            0,
+          ),
+          acquisitionsUntil:
+            row.tier_until === null
+              ? null
+              : integerAmount(
+                  row.tier_until,
+                  "ECONOMY_CATALOG_INVALID",
+                  0,
+                ),
+          price: positiveAmount(row.tier_price, "ECONOMY_CATALOG_INVALID"),
+        },
+      ],
+    },
+  };
+}
+
+function quoteEntitlements(
+  rows: ReadonlyArray<ProductEntitlementQuoteRow>,
+  discountBps: number,
+  promotionDiscountBps: number,
+) {
+  try {
+    return quoteStorefrontProduct(
+      rows.map(quoteEntitlementFromRow),
+      discountBps,
+      promotionDiscountBps,
+    );
+  } catch (error) {
+    if (error instanceof EconomyServiceError) throw error;
+    throw new EconomyServiceError(
+      "ECONOMY_CATALOG_INVALID",
+      "A configuração econômica dos entitlements é inválida.",
+      503,
+    );
+  }
+}
+
+function entitlementUnitPrice(row: ProductEntitlementQuoteRow) {
+  try {
+    return resolveStorefrontUnitPrice(quoteEntitlementFromRow(row).pricing);
+  } catch (error) {
+    if (error instanceof EconomyServiceError) throw error;
+    throw new EconomyServiceError(
+      "ECONOMY_CATALOG_INVALID",
+      "O preço unitário do entitlement é inválido.",
+      503,
+    );
+  }
+}
+
 function offersFromRows(
   offerRows: StorefrontOfferRow[],
   itemRows: StorefrontOfferItemRow[],
@@ -659,11 +763,19 @@ export async function purchaseOffer(
         );
       }
 
-      const acquiredRows = await listPurchaseGrantedItems(userId, existing.id, client);
+      const [acquiredRows, entitlementRows] = await Promise.all([
+        listPurchaseGrantedItems(userId, existing.id, client),
+        listPurchasedEntitlements(userId, existing.id, client),
+      ]);
       const result = {
         purchaseId: existing.id,
         wallet,
         acquiredItems: acquiredRows.map(cosmeticFromRow),
+        acquiredEntitlements: entitlementRows.map((row) => ({
+          kind: row.entitlement_kind,
+          id: row.entitlement_id,
+          unitPrice: Number(row.unit_price),
+        })),
         offer: {
           id: existing.offer_id,
           ownedCount: existing.offer_item_count,
@@ -702,26 +814,28 @@ export async function purchaseOffer(
       offer.collection_id,
       client,
     );
-    const lockedStats = await lockProductCosmeticStats(offer.product_id, client);
-    const pricingRows = await listLockedProductQuoteItems(
+    const lockedStats = await lockProductEntitlementStats(
+      offer.product_id,
+      client,
+    );
+    const pricingRows = await listLockedProductEntitlementsForPurchase(
       userId,
-      offer.offer_id,
       offer.product_id,
       client,
     );
     if (
       pricingRows.length === 0 ||
       lockedStats.length !== pricingRows.length ||
-      pricingRows.some((item) => item.status !== "available" || item.is_default)
+      pricingRows.some((item) => !item.available || item.is_default)
     ) {
       throw new EconomyServiceError(
         "ECONOMY_CATALOG_INVALID",
-        "A composição da oferta está inconsistente.",
+        "A composição de entitlements da oferta está inconsistente.",
         503,
       );
     }
 
-    const quote = quoteFromRows(
+    const quote = quoteEntitlements(
       pricingRows,
       offer.bundle_discount_bps,
       promotionDiscountBps,
@@ -730,7 +844,7 @@ export async function purchaseOffer(
     if (quote.fullyOwned || missingRows.length === 0) {
       throw new EconomyServiceError(
         "ECONOMY_OFFER_ALREADY_OWNED",
-        "Todos os cosméticos desta oferta já pertencem ao comandante.",
+        "Todos os itens desta oferta já pertencem ao comandante.",
         409,
       );
     }
@@ -785,53 +899,56 @@ export async function purchaseOffer(
       await insertPurchaseLedgerEntry(userId, purchaseId, price, client);
     }
 
-    const grantItems = missingRows.map((item) => ({
-      id: item.cosmetic_id,
-      slot: item.slot,
-    }));
-    const grantedIds = await grantPurchasedCosmetics(
-      userId,
-      purchaseId,
-      grantItems,
-      client,
-    );
-    if (grantedIds.length !== missingRows.length) {
-      throw new EconomyServiceError(
-        "ECONOMY_INVENTORY_CONFLICT",
-        "O inventário mudou durante a compra. Nenhuma alteração foi confirmada.",
-        409,
+    for (const entitlement of missingRows) {
+      const granted = await grantEntitlementOwnership(
+        userId,
+        entitlement,
+        client,
       );
+      if (!granted) {
+        throw new EconomyServiceError(
+          "ECONOMY_INVENTORY_CONFLICT",
+          "A propriedade dos itens mudou durante a compra. Nenhuma alteração foi confirmada.",
+          409,
+        );
+      }
+
+      const unitPrice = entitlementUnitPrice(entitlement);
+      await insertPurchaseEntitlement(
+        purchaseId,
+        entitlement,
+        unitPrice,
+        client,
+      );
+      await insertLegacyCosmeticPurchaseItem(
+        purchaseId,
+        entitlement,
+        unitPrice,
+        client,
+      );
+
+      if (!(await incrementEntitlementAcquisitionCount(entitlement, client))) {
+        throw new EconomyServiceError(
+          "ECONOMY_CATALOG_INVALID",
+          "O contador de aquisição do entitlement está inconsistente.",
+          503,
+        );
+      }
     }
 
-    const advancedCounters = await incrementCosmeticAcquisitionCounts(
-      grantedIds,
-      client,
-    );
-    if (advancedCounters.length !== grantedIds.length) {
-      throw new EconomyServiceError(
-        "ECONOMY_CATALOG_INVALID",
-        "Os contadores de aquisição da oferta estão inconsistentes.",
-        503,
-      );
-    }
-
-    const grantedIdSet = new Set(grantedIds);
-    await snapshotPurchaseItemPrices(
-      purchaseId,
-      missingRows
-        .filter((item) => grantedIdSet.has(item.cosmetic_id))
-        .map((item) => ({
-          cosmeticId: item.cosmetic_id,
-          unitPrice: unitPriceFromRow(item),
-        })),
-      client,
-    );
-
-    const acquiredRows = await listPurchaseGrantedItems(userId, purchaseId, client);
+    const [acquiredRows, entitlementRows] = await Promise.all([
+      listPurchaseGrantedItems(userId, purchaseId, client),
+      listPurchasedEntitlements(userId, purchaseId, client),
+    ]);
     const result = {
       purchaseId,
       wallet: walletFromRow({ ...lockedWallet!, balance: updatedBalance }),
       acquiredItems: acquiredRows.map(cosmeticFromRow),
+      acquiredEntitlements: entitlementRows.map((row) => ({
+        kind: row.entitlement_kind,
+        id: row.entitlement_id,
+        unitPrice: Number(row.unit_price),
+      })),
       offer: {
         id: offer.offer_id,
         ownedCount: pricingRows.length,
