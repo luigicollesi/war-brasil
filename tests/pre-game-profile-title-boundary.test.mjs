@@ -45,15 +45,17 @@ test("equip checks active ownership before updating the authenticated commander"
   );
 });
 
-test("settings UI loads real unlocks on demand and mutates title separately", () => {
+test("settings UI loads owned appearance on demand and mutates title through the unified appearance API", () => {
   const panel = read(
     "src/components/profile/command-quarters/profile-settings-panel.tsx",
   );
 
-  assert.match(panel, /fetch\("\/api\/profile\/titles", \{[\s\S]*method: "GET"/);
-  assert.match(panel, /void loadTitles\(\)/);
-  assert.match(panel, /method: "PUT"/);
-  assert.match(panel, /JSON\.stringify\(\{ titleId: selectedTitleId \|\| null \}\)/);
-  assert.match(panel, /Nenhum título cosmético desbloqueado nesta conta/);
+  assert.match(panel, /fetch\("\/api\/profile\/appearance"/);
+  assert.match(panel, /void loadAppearance\(\)/);
+  assert.match(panel, /method: "PATCH"/);
+  assert.match(panel, /payload\.titleId = selectedTitleId/);
+  assert.match(panel, /appearanceView === "titles"/);
+  assert.match(panel, /ProfileTitleRenderer/);
+  assert.doesNotMatch(panel, /\/api\/profile\/titles/);
   assert.doesNotMatch(panel, /const .*TITLES.*=\s*\[/i);
 });
