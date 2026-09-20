@@ -20,6 +20,8 @@ import {
   listIncomingRoomInvitations,
   listOutgoingRoomInvitations,
   lockIncomingRoomInvitation,
+  lockWaitingRoomByInvitationReference,
+  readIncomingRoomInvitationRoomReference,
   lockOutgoingRoomInvitation,
   resolveRoomInvitation,
 } from "./invitation-repository";
@@ -173,6 +175,23 @@ export async function acceptGameInvitation(input: Readonly<{
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+
+    const reference = await readIncomingRoomInvitationRoomReference(
+      invitationId,
+      input.inviteeUserId,
+      client,
+    );
+    if (!reference) {
+      throw new GameInvitationError(
+        "GAME_INVITATION_NOT_FOUND",
+        "Convite de partida não encontrado.",
+        404,
+      );
+    }
+
+    if (reference.room_id) {
+      await lockWaitingRoomByInvitationReference(reference.room_id, client);
+    }
 
     const invitation = await lockIncomingRoomInvitation(
       invitationId,
