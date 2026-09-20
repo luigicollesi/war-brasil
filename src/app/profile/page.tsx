@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { connection } from "next/server";
 import { ProfileDossier } from "@/src/components/profile/v4/profile-dossier";
 import { ProfileShell, type ProfileShellWallet } from "@/src/components/profile/v4/profile-shell";
+import { auth } from "@/src/lib/server/auth/auth";
+import { getOwnProfileAppearance } from "@/src/lib/server/profile/profile-appearance-service";
 import { getCurrentProfileCommandSnapshot } from "@/src/lib/server/profile/profile-command-snapshot-service";
 
 export const metadata: Metadata = {
@@ -17,6 +20,15 @@ export default async function ProfilePage() {
   await connection();
   const snapshot = await getCurrentProfileCommandSnapshot();
   const identity = snapshot.identity.data;
+  const session = await auth.api.getSession({
+    headers: await headers(),
+    query: { disableCookieCache: true },
+  });
+  const appearance = session
+    ? await getOwnProfileAppearance(session.user.id).catch(() => null)
+    : null;
+  const equippedBackground =
+    appearance?.backgrounds.find((item) => item.equipped)?.assetRef ?? null;
   const walletData = snapshot.wallet.data?.campaignCredit ?? null;
   const wallet: ProfileShellWallet =
     snapshot.wallet.availability === "available" && walletData
@@ -36,6 +48,7 @@ export default async function ProfilePage() {
       displayName={identity?.displayName ?? "Comandante"}
       handle={identity?.handle ?? null}
       wallet={wallet}
+      backgroundAssetRef={equippedBackground}
       evaluationFixture={snapshot.isEvaluationFixture}
     >
       <ProfileDossier snapshot={snapshot} />
