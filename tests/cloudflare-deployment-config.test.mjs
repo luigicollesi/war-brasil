@@ -9,6 +9,7 @@ const openNextConfig = readFileSync("open-next.config.ts", "utf8");
 const wrangler = readFileSync("wrangler.jsonc", "utf8");
 const headers = readFileSync("public/_headers", "utf8");
 const middleware = readFileSync("src/middleware.ts", "utf8");
+const gitignore = readFileSync(".gitignore", "utf8");
 
 test("Cloudflare usa o bundle OpenNext como entrypoint do Worker", () => {
   assert.match(wrangler, /"main": "\.open-next\/worker\.js"/);
@@ -69,4 +70,10 @@ test("external Node services permanecem desligados no Worker OpenNext", () => {
   assert.match(pkg.scripts["cloudflare:build"], /NEXT_PUBLIC_GAME_REALTIME_MODE=off/);
   assert.match(pkg.scripts["cloudflare:build"], /GAME_REALTIME_ENABLED=false/);
   assert.match(pkg.scripts["cloudflare:preview"], /NEXT_PUBLIC_GAME_REALTIME_MODE=off/);
+});
+
+
+test("segredos locais do Wrangler não entram no Git", () => {
+  assert.match(gitignore, /^\.dev\.vars\*$/m);
+  assert.match(gitignore, /^\.env\*$/m);
 });
