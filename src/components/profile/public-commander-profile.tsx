@@ -27,10 +27,7 @@ export function PublicCommanderProfileView({
   const identity = snapshot.identity;
 
   useEffect(() => {
-    if (snapshot.relationship !== "friend") {
-      setInvitePending(false);
-      return;
-    }
+    if (snapshot.relationship !== "friend") return;
 
     let active = true;
     void fetch("/api/profile/game-invitations", {
