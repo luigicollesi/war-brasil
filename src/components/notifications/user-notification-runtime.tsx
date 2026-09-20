@@ -125,7 +125,7 @@ export function UserNotificationRuntime() {
 
     let stopped = false;
     let socket: WebSocket | null = null;
-    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+    let reconnectTimer: number | null = null;
 
     const scheduleReconnect = () => {
       if (stopped || reconnectTimer) return;
