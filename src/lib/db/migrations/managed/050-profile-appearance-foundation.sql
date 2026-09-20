@@ -1,6 +1,6 @@
 -- Profile appearance foundation: rich commander titles and profile backgrounds.
 -- Profile appearance entitlements are economic/social cosmetics and intentionally
--- do not use inventory.cosmetics or game.player_cosmetic_loadouts.
+-- remain separate from gameplay inventory and frozen match snapshot storage.
 --
 -- Up Migration
 
