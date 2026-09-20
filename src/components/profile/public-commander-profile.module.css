@@ -12,7 +12,7 @@
 
 .background {
   position: absolute;
-  z-index: -3;
+  z-index: 0;
   inset: 0;
   background-position: center;
   background-size: cover;
@@ -21,7 +21,7 @@
 
 .scrim {
   position: absolute;
-  z-index: -2;
+  z-index: 1;
   inset: 0;
   pointer-events: none;
   background:
