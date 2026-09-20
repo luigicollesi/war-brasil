@@ -52,6 +52,7 @@ export function LobbyClient({ code }: LobbyClientProps) {
     snapshot && snapshot.players.length >= 2 && sceneReadyPlayers === snapshot.players.length,
   );
   const sceneStartAuthorized = Boolean(snapshot && snapshot.room.status !== "waiting");
+  const waitingRoomActive = snapshot?.room.status === "waiting";
 
   useCommandSceneDirective(
     {
@@ -68,7 +69,7 @@ export function LobbyClient({ code }: LobbyClientProps) {
     }
   }, [router, snapshot]);
   useEffect(() => {
-    if (!snapshot || snapshot.room.status !== "waiting") return;
+    if (!waitingRoomActive) return;
 
     let stopped = false;
     const heartbeat = async () => {
@@ -97,7 +98,7 @@ export function LobbyClient({ code }: LobbyClientProps) {
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [code, snapshot?.room.status]);
+  }, [code, waitingRoomActive]);
 
 
   async function updateMe(
