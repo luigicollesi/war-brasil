@@ -4,7 +4,7 @@
 
 CREATE TABLE IF NOT EXISTS game.room_invitations (
   id UUID PRIMARY KEY DEFAULT pg_catalog.gen_random_uuid(),
-  room_id UUID NOT NULL
+  room_id BIGINT NOT NULL
     REFERENCES game.rooms(id) ON DELETE CASCADE,
   inviter_user_id UUID NOT NULL
     REFERENCES auth."user"(id) ON DELETE CASCADE,
