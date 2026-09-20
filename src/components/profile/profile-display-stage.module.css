@@ -1,5 +1,6 @@
 .stage {
   position: relative;
+  z-index: 2;
   min-height: 0;
   height: 100%;
   overflow: hidden;
