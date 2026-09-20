@@ -285,7 +285,7 @@ V1 does not render the entire collection as simultaneous hidden live 3D models.
 
 **Pass**
 
-Inspection/review confirms only current primary model is mounted/rendered at full detail; adjacent assets may be prefetched without mounting full scenes.
+Inspection/review confirms only the current primary model is mounted/rendered at full detail while idle. During the bounded item transition, only the outgoing current model and the explicit incoming target may coexist; after settling, the outgoing model is unmounted. Adjacent assets may be prefetched without mounting full scenes.
 
 ---
 
@@ -697,7 +697,7 @@ Item navigation remains responsive on supported devices.
 At minimum:
 
 - one primary Canvas for the showcase screen;
-- one active high-detail showcased model;
+- one active high-detail showcased model at rest; during the bounded item transition only current + explicit target may coexist;
 - adjacent items may preload textures only;
 - geometry/texture caches are reused;
 - no unbounded texture creation occurs while cycling repeatedly through the same items.
