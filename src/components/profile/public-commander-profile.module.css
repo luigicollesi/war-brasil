@@ -259,10 +259,8 @@
     gap: 8px;
   }
 
-  .actions .backAction {
-    display: none;
-  }
-
+  .backAction,
+  .backAction,
   .primaryAction,
   .pendingAction {
     min-height: 34px;
