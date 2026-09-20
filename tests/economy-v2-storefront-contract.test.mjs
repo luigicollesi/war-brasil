@@ -88,11 +88,12 @@ test("storefront V2 deriva catálogo comercial no servidor sem regra React hardc
   assert.doesNotMatch(storefront, /price\s*[:=]\s*400/);
 });
 
-test("Intendência V4 delegates acquisition to showcase while preserving authoritative prices", () => {
+test("Intendência V4 routes inspection to showcase and keeps retained direct purchase authoritative", () => {
   assert.match(storefront, /showcaseHref\("offer"/);
   assert.match(storefront, /INSPECIONAR/);
-  assert.doesNotMatch(storefront, /\/api\/economy\/purchases/);
-  assert.doesNotMatch(storefront, /expectedPrice/);
+  assert.match(storefront, /purchaseShowcaseOffer/);
+  assert.match(storefront, /expectedPrice:\s*offer\.price/);
+  assert.doesNotMatch(storefront, /fetch\([^)]*\/api\/economy\/purchases/);
 
   assert.match(showcaseProjection, /price:\s*offer\.price/);
   assert.match(showcaseProjection, /basePrice:\s*offer\.basePrice/);
@@ -110,5 +111,8 @@ test("campanha usa coin.svg como identidade primária e packs BRL permanecem des
   assert.match(storefront, /priceBrlCents/);
   assert.match(storefront, /EM BREVE/);
   assert.match(storefront, /disabled/);
-  assert.doesNotMatch(storefront, /stripe|mercado\s*pago|checkout/i);
+  assert.doesNotMatch(
+    storefront,
+    /from\s+["']stripe|Stripe\s*\(|MercadoPago|checkoutUrl|paymentIntent|\/api\/payments/i,
+  );
 });
