@@ -16,13 +16,13 @@ const home = readFileSync(
   "src/components/pre-game/home/command-home-client.tsx",
   "utf8",
 );
-const proxy = readFileSync("src/proxy.ts", "utf8");
+const middleware = readFileSync("src/middleware.ts", "utf8");
 
 test("Termos e Privacidade são documentos públicos navegáveis", () => {
   assert.match(terms, /title: "Termos de Uso"/);
   assert.match(privacy, /title: "Política de Privacidade"/);
-  assert.match(proxy, /pathname === "\/terms"/);
-  assert.match(proxy, /pathname === "\/privacy"/);
+  assert.match(middleware, /pathname === "\/terms"/);
+  assert.match(middleware, /pathname === "\/privacy"/);
   assert.match(home, /href="\/terms"/);
   assert.match(home, /href="\/privacy"/);
 });
