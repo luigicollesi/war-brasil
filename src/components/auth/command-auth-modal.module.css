@@ -389,6 +389,11 @@
   accent-color: #b49148;
 }
 
+.checkRow a {
+  color: #d0aa57;
+  text-underline-offset: 3px;
+}
+
 .formActionsRow {
   display: flex;
   justify-content: flex-end;
