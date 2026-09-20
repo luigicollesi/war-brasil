@@ -204,3 +204,40 @@
     scroll-behavior: auto;
   }
 }
+
+
+.legalNote {
+  margin: -2px 0 0;
+  color: rgba(238, 233, 220, 0.52);
+  font-size: 0.72rem;
+  line-height: 1.55;
+}
+
+.legalNote a {
+  color: #daba72;
+  text-underline-offset: 3px;
+}
+
+.blocked {
+  display: grid;
+  align-content: center;
+  gap: 16px;
+  min-height: 360px;
+}
+
+.blocked h2 {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 3rem);
+  line-height: 0.95;
+}
+
+.blocked p {
+  max-width: 52ch;
+  margin: 0;
+  color: rgba(238, 233, 220, 0.68);
+  line-height: 1.65;
+}
+
+.blocked .primary {
+  margin-top: 10px;
+}
