@@ -152,18 +152,19 @@ test("cookies/sessão têm cache curto, mas backend sensível força validação
   assert.match(authGuard, /status: 403/);
 });
 
-test("Proxy deixa Home e documentos legais públicos sem substituir backend auth", () => {
+test("Proxy mantém navegação protegida sem carregar Better Auth/PostgreSQL", () => {
   assert.match(proxy, /pathname === "\/"/);
   assert.match(proxy, /pathname === "\/terms"/);
   assert.match(proxy, /pathname === "\/privacy"/);
   assert.match(proxy, /api\/auth/);
   assert.match(proxy, /api\/internal/);
-  assert.match(proxy, /auth\.api\.getSession/);
+  assert.match(proxy, /SESSION_COOKIE_SUFFIX = "war-brasil\.session_token"/);
+  assert.match(proxy, /request\.cookies[\s\S]*getAll\(\)/);
   assert.match(proxy, /authentication_required/);
   assert.match(proxy, /status: 401/);
-  assert.match(proxy, /authentication_unavailable/);
-  assert.match(proxy, /status: 503/);
   assert.match(proxy, /NextResponse\.redirect\(new URL\("\/", request\.url\)\)/);
+  assert.doesNotMatch(proxy, /from ["'].*auth["']/);
+  assert.doesNotMatch(proxy, /auth\.api\.getSession|\bpg\b|authPool|DATABASE_URL/);
   assert.match(authGuard, /withAuthenticatedApi/);
 });
 
