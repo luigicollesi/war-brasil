@@ -34,6 +34,8 @@ const physicalTables = new Map([
       "campaigns",
       "collection_assets",
       "collections",
+      "commander_title_pricing",
+      "commander_title_stats",
       "commander_titles",
       "cosmetic_assets",
       "cosmetic_pricing",
@@ -51,8 +53,12 @@ const physicalTables = new Map([
       "offer_items",
       "offers",
       "price_tiers",
+      "product_entitlements",
       "product_items",
       "products",
+      "profile_background_pricing",
+      "profile_background_stats",
+      "profile_backgrounds",
       "territory_card_symbols",
       "territory_connections",
     ],
@@ -60,11 +66,24 @@ const physicalTables = new Map([
   ["auth", ["account", "pending_registration", "rateLimit", "session", "user", "verification"]],
   [
     "profile",
-    ["commander_titles", "commanders", "cosmetic_loadout", "privacy_settings"],
+    [
+      "commander_backgrounds",
+      "commander_titles",
+      "commanders",
+      "cosmetic_loadout",
+      "privacy_settings",
+    ],
   ],
   [
     "economy",
-    ["currencies", "ledger_entries", "purchase_items", "purchases", "wallets"],
+    [
+      "currencies",
+      "ledger_entries",
+      "purchase_entitlements",
+      "purchase_items",
+      "purchases",
+      "wallets",
+    ],
   ],
   ["inventory", ["cosmetics"]],
   ["social", ["blocks", "friend_requests", "friendships"]],
@@ -116,6 +135,9 @@ const managedHistory = [
   "047-economy-storefront-collection-promotions.sql",
   "048-dice-body-gradient.sql",
   "049-pending-email-registration.sql",
+  "050-profile-appearance-foundation.sql",
+  "051-economy-entitlements.sql",
+  "052-game-room-invitations.sql",
 ];
 
 function urlForDatabase(name) {
@@ -356,7 +378,12 @@ async function assertAuthProfileSchema(client) {
   const commanderColumnNames = new Set(
     commanderColumns.rows.map((row) => row.column_name),
   );
-  for (const name of ["bio", "last_seen_at", "equipped_title_id"]) {
+  for (const name of [
+    "bio",
+    "last_seen_at",
+    "equipped_title_id",
+    "equipped_background_id",
+  ]) {
     assert.equal(commanderColumnNames.has(name), true, name);
   }
   assert.equal(commanderColumnNames.has("portrait_source"), false, "portrait_source removido");
@@ -373,6 +400,7 @@ async function assertAuthProfileSchema(client) {
   for (const name of [
     "commanders_bio_not_blank_check",
     "commanders_equipped_title_owned_fkey",
+    "commanders_equipped_background_owned_fkey",
   ]) {
     assert.equal(profileConstraintNames.has(name), true, name);
   }
@@ -387,8 +415,19 @@ async function assertAuthProfileSchema(client) {
   const userId = authUser.rows[0].id;
 
   await client.query(
-    `INSERT INTO profile.commanders(user_id,handle,display_name)
-     VALUES($1,'profile-migration','Profile Migration')`,
+    `INSERT INTO profile.commander_backgrounds(
+       user_id,background_id,acquisition_source
+     )
+     VALUES($1,'profile.background.default','default')`,
+    [userId],
+  );
+  await client.query(
+    `INSERT INTO profile.commanders(
+       user_id,handle,display_name,equipped_background_id
+     )
+     VALUES(
+       $1,'profile-migration','Profile Migration','profile.background.default'
+     )`,
     [userId],
   );
   await client.query(
@@ -447,12 +486,14 @@ async function assertAuthProfileSchema(client) {
     `SELECT
        (SELECT COUNT(*)::int FROM profile.commanders WHERE user_id=$1) AS commanders,
        (SELECT COUNT(*)::int FROM profile.commander_titles WHERE user_id=$1) AS titles,
+       (SELECT COUNT(*)::int FROM profile.commander_backgrounds WHERE user_id=$1) AS backgrounds,
        (SELECT COUNT(*)::int FROM profile.privacy_settings WHERE user_id=$1) AS privacy`,
     [userId],
   );
   assert.deepEqual(cascaded.rows[0], {
     commanders: 0,
     titles: 0,
+    backgrounds: 0,
     privacy: 0,
   });
 
@@ -740,7 +781,7 @@ async function assertLegacyRoomRollout(connectionString) {
 if (!databaseUrl) {
   test("migrations de banco exigem DATABASE_URL", { skip: true }, () => {});
 } else {
-  test("026-049 migram banco v025, preservam catálogos e são idempotentes", async () => {
+  test("026-052 migram banco v025, preservam catálogos e são idempotentes", async () => {
     await withTemporaryDatabase("legacy", async (connectionString) => {
       await applySql(connectionString, "tests/fixtures/db/schema-v025.sql");
       await applySql(
