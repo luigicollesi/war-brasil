@@ -32,7 +32,10 @@
     "realtime:start": "npm --prefix realtime start",
     "realtime:test": "npm --prefix realtime test",
     "worker:start": "node worker/server.mjs",
-    "worker:test": "node --check worker/server.mjs && node --test \"worker/test/*.test.mjs\""
+    "worker:test": "node --check worker/server.mjs && node --test \"worker/test/*.test.mjs\"",
+    "cloudflare:build": "npx @opennextjs/cloudflare@1.20.6 build",
+    "cloudflare:deploy": "npx @opennextjs/cloudflare@1.20.6 deploy",
+    "cloudflare:preview": "npx @opennextjs/cloudflare@1.20.6 preview"
   },
   "dependencies": {
     "@react-three/fiber": "9.7.0",
