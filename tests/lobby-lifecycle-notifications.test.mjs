@@ -46,7 +46,10 @@ test("global notification runtime recovers offline invites and rejection notific
   assert.match(layout, /<UserNotificationRuntime \/>/);
   assert.match(runtime, /\/api\/profile\/game-invitations/);
   assert.match(runtime, /\/api\/profile\/notifications/);
-  assert.match(runtime, /setInterval[\s\S]*2500/);
+  assert.match(runtime, /new WebSocket/);
+  assert.match(runtime, /user\.notifications\.changed/);
+  assert.match(runtime, /\/api\/profile\/realtime-ticket/);
+  assert.match(runtime, /setInterval[\s\S]*15_000/);
   assert.match(runtime, /ENTRAR NA SALA/);
   assert.match(runtime, /RECUSAR/);
   assert.match(runtime, /router\.push\(`\/lobby\//);
