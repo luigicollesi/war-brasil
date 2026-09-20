@@ -72,6 +72,7 @@ const physicalTables = new Map([
       "commander_titles",
       "commanders",
       "cosmetic_loadout",
+      "notifications",
       "privacy_settings",
     ],
   ],
@@ -139,6 +140,7 @@ const managedHistory = [
   "050-profile-appearance-foundation.sql",
   "051-economy-entitlements.sql",
   "052-game-room-invitations.sql",
+  "053-lobby-presence-notifications.sql",
 ];
 
 function urlForDatabase(name) {
@@ -331,6 +333,7 @@ async function assertAuthProfileSchema(client) {
     "user_id",
     "display_name_snapshot",
     "handle_snapshot",
+    "lobby_last_seen_at",
   ]) {
     assert.equal(playerColumnNames.has(name), true, name);
   }
@@ -782,7 +785,7 @@ async function assertLegacyRoomRollout(connectionString) {
 if (!databaseUrl) {
   test("migrations de banco exigem DATABASE_URL", { skip: true }, () => {});
 } else {
-  test("026-052 migram banco v025, preservam catálogos e são idempotentes", async () => {
+  test("026-053 migram banco v025, preservam catálogos e são idempotentes", async () => {
     await withTemporaryDatabase("legacy", async (connectionString) => {
       await applySql(connectionString, "tests/fixtures/db/schema-v025.sql");
       await applySql(
