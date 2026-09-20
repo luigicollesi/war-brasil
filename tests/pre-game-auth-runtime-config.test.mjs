@@ -20,13 +20,15 @@ test("produção real executa o validador de configuração antes de criar Bette
   );
 });
 
-test("exceção do harness exige CI explícito e sink de email controlado", () => {
+test("exceções de validação cobrem apenas harness controlado e fase de build do Next", () => {
   assert.match(authSource, /process\.env\.CI === "true"/);
   assert.match(authSource, /AUTH_EMAIL_SINK_DIR/);
   assert.match(
     authSource,
-    /process\.env\.NODE_ENV === "production" && !isControlledCiHarness/,
+    /process\.env\["NEXT_PHASE"\] === "phase-production-build"/,
   );
+  assert.match(authSource, /!isControlledCiHarness/);
+  assert.match(authSource, /!isNextProductionBuild/);
 });
 
 test("validador fail-fast cobre URL HTTPS, banco, secret forte, email e providers aprovados", () => {
