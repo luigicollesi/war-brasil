@@ -33,6 +33,7 @@ function cinematicSeed(
 export function BattleDiceCinematic({
   battle,
   side,
+  color,
   assetRef,
   bodyColor,
   bodyHighlightColor,
@@ -63,6 +64,7 @@ export function BattleDiceCinematic({
       values={values}
       seed={seed}
       skin={side}
+      color={color}
       assetRef={assetRef}
       bodyColor={bodyColor}
       bodyHighlightColor={bodyHighlightColor}
