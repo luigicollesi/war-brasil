@@ -134,6 +134,16 @@ async function transitionRoomToOrderRoll(client: PoolClient, roomId: string) {
   if ((result.rowCount ?? 0) !== 1) {
     throw new RoomError("A partida não está disponível para iniciar.", 409);
   }
+
+  await client.query(
+    `UPDATE game.room_invitations
+        SET state='cancelled',
+            resolved_reason='room_started',
+            resolved_at=NOW()
+      WHERE room_id=$1
+        AND state='pending'`,
+    [roomId],
+  );
 }
 
 export async function startGame(client: PoolClient, roomId: string) {
