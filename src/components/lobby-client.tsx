@@ -45,6 +45,7 @@ export function LobbyClient({ code }: LobbyClientProps) {
   const [actionError, setActionError] = useState<LobbyActionError>(null);
   const [pendingAction, setPendingAction] = useState<LobbyPendingAction>(null);
   const [copied, setCopied] = useState(false);
+  const [leaving, setLeaving] = useState(false);
 
   const sceneReadyPlayers = snapshot?.players.filter((player) => player.isReady).length ?? 0;
   const sceneAllReady = Boolean(
@@ -66,6 +67,38 @@ export function LobbyClient({ code }: LobbyClientProps) {
       router.replace(`/game/${snapshot.room.id}`);
     }
   }, [router, snapshot]);
+  useEffect(() => {
+    if (!snapshot || snapshot.room.status !== "waiting") return;
+
+    let stopped = false;
+    const heartbeat = async () => {
+      if (stopped) return;
+      await fetch(
+        `/api/rooms/${encodeURIComponent(code)}/heartbeat`,
+        { method: "POST", cache: "no-store" },
+      ).catch(() => undefined);
+    };
+
+    void heartbeat();
+    const intervalId = window.setInterval(() => {
+      void heartbeat();
+    }, 20_000);
+
+    const onFocus = () => void heartbeat();
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void heartbeat();
+    };
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      stopped = true;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [code, snapshot?.room.status]);
+
 
   async function updateMe(
     patch: Record<string, unknown>,
@@ -210,6 +243,32 @@ export function LobbyClient({ code }: LobbyClientProps) {
     }
   }
 
+  async function leaveRoom() {
+    if (leaving || pendingAction !== null) return;
+    setLeaving(true);
+    setActionError(null);
+    try {
+      const response = await fetch(
+        `/api/rooms/${encodeURIComponent(code)}/me`,
+        { method: "DELETE", cache: "no-store" },
+      );
+      const body = (await response.json().catch(() => null)) as
+        | { error?: string }
+        | null;
+      if (!response.ok) {
+        throw new Error(body?.error ?? "Não foi possível sair da sala.");
+      }
+      router.replace("/matchmaking");
+    } catch (error) {
+      setActionError({
+        scope: "profile",
+        message:
+          error instanceof Error ? error.message : "Não foi possível sair da sala.",
+      });
+      setLeaving(false);
+    }
+  }
+
   async function copyRoomCode() {
     setActionError(null);
 
@@ -336,6 +395,8 @@ export function LobbyClient({ code }: LobbyClientProps) {
       onAddBot={() => void addBot()}
       onRemoveBot={removeBot}
       onToggleReady={() => void updateMe({ isReady: !me.isReady }, "ready")}
+      onLeaveRoom={() => void leaveRoom()}
+      leaving={leaving}
     />
   );
 }
