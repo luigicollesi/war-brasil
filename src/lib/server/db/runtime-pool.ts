@@ -17,6 +17,12 @@ type CloudflareRequestContext = Readonly<{
 
 const WORKER_CONNECTION_TIMEOUT_MS = 8_000;
 const WORKER_IDLE_TIMEOUT_MS = 1_000;
+const WORKER_MAX_CONNECTIONS = 5;
+
+function workerMaxConnections(configured: number | undefined) {
+  if (!configured || !Number.isFinite(configured)) return 4;
+  return Math.max(1, Math.min(WORKER_MAX_CONNECTIONS, Math.floor(configured)));
+}
 
 function cloudflareRequestContext(): CloudflareRequestContext | null {
   try {
@@ -70,7 +76,7 @@ function createWorkerRequestPool(
   const pool = new Pool({
     ...configured,
     ...(hyperdrive ? { connectionString: hyperdrive } : {}),
-    max: 1,
+    max: workerMaxConnections(configured.max),
     connectionTimeoutMillis:
       configured.connectionTimeoutMillis ?? WORKER_CONNECTION_TIMEOUT_MS,
     idleTimeoutMillis:

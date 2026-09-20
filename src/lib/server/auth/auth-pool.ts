@@ -64,7 +64,7 @@ const persistentAuthPool =
 export const authPool = createRuntimePool({
   label: "auth database",
   persistentPool: persistentAuthPool,
-  workerConfig: () => authPoolConfig(1),
+  workerConfig: () => authPoolConfig(2),
 });
 
 if (process.env.NODE_ENV !== "production") {

@@ -24,7 +24,8 @@ const smoke = readFileSync("scripts/cloudflare-smoke.mjs", "utf8");
 test("Cloudflare resolve pg Pool por ExecutionContext sem compartilhar I/O entre requests", () => {
   assert.match(runtimePool, /getCloudflareContext/);
   assert.match(runtimePool, /WeakMap<object, Pool>/);
-  assert.match(runtimePool, /max: 1/);
+  assert.match(runtimePool, /WORKER_MAX_CONNECTIONS = 5/);
+  assert.match(runtimePool, /workerMaxConnections/);
   assert.match(runtimePool, /maxUses: 1/);
   assert.match(runtimePool, /connectionTimeoutMillis/);
   assert.match(runtimePool, /idleTimeoutMillis/);
@@ -39,7 +40,7 @@ test("Node mantém Pool persistente enquanto Worker usa facade request-scoped", 
   assert.match(databasePool, /max: process\.env\["NEXT_PHASE"\]/);
   assert.match(authPool, /persistentAuthPool/);
   assert.match(authPool, /createRuntimePool/);
-  assert.match(authPool, /workerConfig: \(\) => authPoolConfig\(1\)/);
+  assert.match(authPool, /workerConfig: \(\) => authPoolConfig\(2\)/);
 });
 
 test("auth preserva conexão direta e search_path dedicado sem pool Worker global", () => {
