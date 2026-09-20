@@ -19,8 +19,14 @@ test("verification exibe OTP e cooldown regressivo real", () => {
 });
 
 test("confirmação e reenvio usam endpoints próprios do pending registration", () => {
-  assert.match(modal, /fetch\("\/api\/auth\/register\/verify"/);
-  assert.match(modal, /fetch\("\/api\/auth\/register\/resend"/);
+  assert.match(
+    modal,
+    /fetchJsonWithTimeout<VerificationResponse>\(\s*"\/api\/auth\/register\/verify"/,
+  );
+  assert.match(
+    modal,
+    /fetchJsonWithTimeout<RegisterResponse>\(\s*"\/api\/auth\/register\/resend"/,
+  );
   assert.match(modal, /await onAuthenticated\(\)/);
   assert.doesNotMatch(modal, /sendVerificationEmail/);
 });
