@@ -196,6 +196,46 @@ export async function listOwnedCosmetics(
   return result.rows;
 }
 
+export async function listEquippedProfileCosmetics(
+  userId: string,
+  db: EconomyQueryable = pool,
+): Promise<CosmeticRow[]> {
+  const result = await db.query<CosmeticRow>(
+    `SELECT item.id,
+            item.slug,
+            item.name,
+            item.description,
+            item.slot,
+            item.rarity,
+            item.asset_ref,
+            item.body_color,
+            item.body_highlight_color,
+            item.preview_ref,
+            item.effect_key,
+            item.status,
+            item.is_default,
+            TRUE AS owned,
+            TRUE AS equipped
+       FROM profile.cosmetic_loadout loadout
+       JOIN catalog.cosmetics item
+         ON item.id=loadout.cosmetic_id
+        AND item.slot=loadout.slot
+      WHERE loadout.user_id=$1::uuid
+        AND loadout.slot IN (
+          'dice_attack','dice_defense','dice_neutral','territory_skin'
+        )
+      ORDER BY CASE loadout.slot
+        WHEN 'dice_attack' THEN 1
+        WHEN 'dice_defense' THEN 2
+        WHEN 'dice_neutral' THEN 3
+        WHEN 'territory_skin' THEN 4
+        ELSE 5
+      END`,
+    [userId],
+  );
+  return result.rows;
+}
+
 export async function listStorefrontSetItems(
   userId: string,
   db: EconomyQueryable = pool,
