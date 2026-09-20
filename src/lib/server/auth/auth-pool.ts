@@ -1,6 +1,7 @@
 import "server-only";
 
-import { Pool } from "pg";
+import { Pool, type PoolConfig } from "pg";
+import { createRuntimePool } from "../db/runtime-pool";
 import { readAuthServerEnvironment } from "./environment";
 
 const globalForAuthPostgres = globalThis as typeof globalThis & {
@@ -19,15 +20,12 @@ function isNeonPooledConnectionString(value: string) {
   }
 }
 
-function createAuthPool() {
+function authConnectionString() {
   const { authDatabaseUrl } = readAuthServerEnvironment();
 
   if (!authDatabaseUrl) {
     if (process.env["NEXT_PHASE"] === "phase-production-build") {
-      return new Pool({
-        max: 1,
-        options: "-c search_path=auth",
-      });
+      return undefined;
     }
 
     throw new Error(
@@ -41,15 +39,34 @@ function createAuthPool() {
     );
   }
 
-  return new Pool({
-    connectionString: authDatabaseUrl,
-    max: 4,
-    options: "-c search_path=auth",
-  });
+  return authDatabaseUrl;
 }
 
-export const authPool = globalForAuthPostgres.warBrasilAuthPool ?? createAuthPool();
+function authPoolConfig(max: number): PoolConfig {
+  return {
+    connectionString: authConnectionString(),
+    max,
+    options: "-c search_path=auth",
+  };
+}
+
+function createPersistentAuthPool() {
+  return new Pool(
+    authPoolConfig(
+      process.env["NEXT_PHASE"] === "phase-production-build" ? 1 : 4,
+    ),
+  );
+}
+
+const persistentAuthPool =
+  globalForAuthPostgres.warBrasilAuthPool ?? createPersistentAuthPool();
+
+export const authPool = createRuntimePool({
+  label: "auth database",
+  persistentPool: persistentAuthPool,
+  workerConfig: () => authPoolConfig(1),
+});
 
 if (process.env.NODE_ENV !== "production") {
-  globalForAuthPostgres.warBrasilAuthPool = authPool;
+  globalForAuthPostgres.warBrasilAuthPool = persistentAuthPool;
 }

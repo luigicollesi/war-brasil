@@ -51,6 +51,15 @@ async function main() {
     console.log(`PASS ${pathname} -> 200`);
   }
 
+  const health = await expectStatus(baseUrl, "/api/health", 200);
+  const healthPayload = await health.json().catch(() => null);
+  assert.equal(
+    healthPayload?.ok,
+    true,
+    "/api/health: bancos principal/auth não estão saudáveis",
+  );
+  console.log("PASS /api/health -> 200 ok");
+
   const protectedPage = await request(baseUrl, "/profile");
   assert.ok(
     [301, 302, 303, 307, 308].includes(protectedPage.status),
