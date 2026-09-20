@@ -23,6 +23,13 @@ function createAuthPool() {
   const { authDatabaseUrl } = readAuthServerEnvironment();
 
   if (!authDatabaseUrl) {
+    if (process.env["NEXT_PHASE"] === "phase-production-build") {
+      return new Pool({
+        max: 1,
+        options: "-c search_path=auth",
+      });
+    }
+
     throw new Error(
       "AUTH_DATABASE_URL ou DATABASE_URL não está configurada para autenticação.",
     );
