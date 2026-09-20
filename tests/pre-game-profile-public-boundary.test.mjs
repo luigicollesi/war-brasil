@@ -13,7 +13,8 @@ test("public commander route uses a dedicated server projection and supports sel
   assert.doesNotMatch(page, /redirect\("\/profile"\)/);
   assert.match(page, /snapshot\.relationship === "incoming-request"/);
   assert.match(page, /incomingRequests\.find/);
-  assert.doesNotMatch(page, /ProfileCommandSnapshot|profile-command-data/);
+  assert.doesNotMatch(page, /profile-command-data/);
+  assert.match(page, /getCurrentProfileCommandSnapshot/);
 
   assert.match(snapshot, /auth\.api\.getSession/);
   assert.match(snapshot, /session\.user\.id/);
