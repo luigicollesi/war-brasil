@@ -1,10 +1,7 @@
 import "server-only";
 
 import { AssetStorageConfigError } from "../assets/asset-storage-config";
-import {
-  collectionAssetDeliveryPath,
-  resolveCollectionAssetReadUrl,
-} from "../assets/collection-asset-storage";
+import { resolveCollectionAssetReadUrl } from "../assets/collection-asset-storage";
 import { createPresignedAssetUrl } from "../assets/asset-storage-s3";
 import { getAssetStorageConfig } from "../assets/asset-storage-service";
 
@@ -42,11 +39,6 @@ export function assertProfileAppearanceAssetKey(value: string) {
 
 export function profileAppearanceAssetDeliveryPath(objectKey: string) {
   const key = assertProfileAppearanceAssetKey(objectKey);
-
-  if (isSharedCollectionBackgroundAssetKey(key)) {
-    return collectionAssetDeliveryPath(key);
-  }
-
   return `/api/assets/profile-appearance?key=${encodeURIComponent(key)}`;
 }
 
