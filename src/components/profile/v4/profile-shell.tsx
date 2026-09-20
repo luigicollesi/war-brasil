@@ -64,6 +64,7 @@ export function ProfileShell({
   displayName,
   handle,
   wallet,
+  backgroundAssetRef = null,
   evaluationFixture = false,
   children,
 }: {
@@ -71,6 +72,7 @@ export function ProfileShell({
   displayName: string;
   handle: string | null;
   wallet: ProfileShellWallet;
+  backgroundAssetRef?: string | null;
   evaluationFixture?: boolean;
   children: ReactNode;
 }) {
@@ -113,6 +115,17 @@ export function ProfileShell({
       data-evaluation-fixture={evaluationFixture || undefined}
       data-session-state={logoutState}
     >
+      {backgroundAssetRef ? (
+        <>
+          <div
+            className={styles.profileBackdrop}
+            style={{ backgroundImage: `url("${backgroundAssetRef}")` }}
+            aria-hidden="true"
+          />
+          <div className={styles.profileBackdropScrim} aria-hidden="true" />
+        </>
+      ) : null}
+
       <div className={styles.ambient} aria-hidden="true">
         <span className={styles.scanline} />
         <span className={styles.radial} />
