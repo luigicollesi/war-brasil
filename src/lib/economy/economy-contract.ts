@@ -1,3 +1,5 @@
+import type { PurchasedEntitlement } from "./entitlement-contract";
+
 export const ECONOMY_CURRENCY_ID = "campaign-credit" as const;
 
 export const COSMETIC_SLOTS = [
@@ -152,6 +154,7 @@ export type PurchaseOfferResult = Readonly<{
   purchaseId: string;
   wallet: CampaignCreditWallet;
   acquiredItems: ReadonlyArray<CosmeticCatalogItem>;
+  acquiredEntitlements: ReadonlyArray<PurchasedEntitlement>;
   offer: Readonly<{
     id: string;
     ownedCount: number;
