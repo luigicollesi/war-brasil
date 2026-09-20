@@ -72,9 +72,10 @@ test("jogo compõe a textura 3D com a mesma bodyColor usada pela loja", () => {
   for (const consumer of [showcase, fullscreen]) {
     assert.match(consumer, /useDiceFaceTextures/);
     assert.match(consumer, /bodyColor/);
-    assert.match(consumer, /DICE_VISUAL_PIP_COLOR/);
     assert.match(consumer, /DICE_VISUAL_TEXTURE_RESOLUTION/);
   }
+  assert.match(showcase, /DICE_VISUAL_PIP_COLOR/);
+  assert.match(fullscreen, /pipColor: playerColorHex\(color\)/);
 });
 
 test("loja e jogo derivam a mesma geometria visual canônica", () => {
@@ -101,7 +102,7 @@ test("loja e jogo derivam a mesma geometria visual canônica", () => {
   );
 });
 
-test("loja e cinematic 3D usam a mesma composição visual de textura", () => {
+test("loja e cinematic 3D compartilham composição, mas jogo usa pips da cor do jogador", () => {
   const visualConfig = source("src/lib/client/dice/visual-config.ts");
   const showcase = source(
     "src/components/profile/v4/store-showcase/dice-showcase-model.tsx",
@@ -119,10 +120,12 @@ test("loja e cinematic 3D usam a mesma composição visual de textura", () => {
   assert.match(visualConfig, /DICE_VISUAL_CORNER_HIGHLIGHT_END = 0\.94/);
 
   for (const consumer of [showcase, fullscreen]) {
-    assert.match(consumer, /DICE_VISUAL_PIP_COLOR/);
     assert.match(consumer, /DICE_VISUAL_TEXTURE_RESOLUTION/);
   }
 
+  assert.match(showcase, /DICE_VISUAL_PIP_COLOR/);
+  assert.match(fullscreen, /playerColorHex\(color\)/);
+  assert.doesNotMatch(fullscreen, /DICE_VISUAL_PIP_COLOR/);
   assert.doesNotMatch(fullscreen, /pipColor\?: string/);
 });
 
