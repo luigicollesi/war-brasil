@@ -48,7 +48,7 @@ export async function expireStaleInvitations(
 ) {
   await db.query(
     `UPDATE game.room_invitations
-        SET state='expired',resolved_at=NOW()
+        SET state='expired',resolved_reason='expired',resolved_at=NOW()
       WHERE state='pending'
         AND expires_at<=NOW()
         AND (inviter_user_id=$1::uuid OR invitee_user_id=$1::uuid)`,
