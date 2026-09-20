@@ -90,14 +90,14 @@ ON CONFLICT (background_id) DO NOTHING;
 CREATE OR REPLACE FUNCTION catalog.ensure_commander_title_stats_row()
 RETURNS TRIGGER
 LANGUAGE plpgsql
-AS $
+AS $body$
 BEGIN
   INSERT INTO catalog.commander_title_stats(title_id,acquisition_count)
   VALUES(NEW.id,0)
   ON CONFLICT (title_id) DO NOTHING;
   RETURN NEW;
 END
-$;
+$body$;
 
 DROP TRIGGER IF EXISTS commander_title_stats_after_insert ON catalog.commander_titles;
 CREATE TRIGGER commander_title_stats_after_insert
@@ -107,14 +107,14 @@ FOR EACH ROW EXECUTE FUNCTION catalog.ensure_commander_title_stats_row();
 CREATE OR REPLACE FUNCTION catalog.ensure_profile_background_stats_row()
 RETURNS TRIGGER
 LANGUAGE plpgsql
-AS $
+AS $body$
 BEGIN
   INSERT INTO catalog.profile_background_stats(background_id,acquisition_count)
   VALUES(NEW.id,0)
   ON CONFLICT (background_id) DO NOTHING;
   RETURN NEW;
 END
-$;
+$body$;
 
 DROP TRIGGER IF EXISTS profile_background_stats_after_insert ON catalog.profile_backgrounds;
 CREATE TRIGGER profile_background_stats_after_insert
