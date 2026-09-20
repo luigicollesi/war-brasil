@@ -55,9 +55,12 @@ test("Middleware Edge não carrega Better Auth, pg ou DATABASE_URL", () => {
   assert.match(middleware, /export function middleware/);
 });
 
-test("Workers Builds prepara OpenNext no build e reutiliza no deploy", () => {
-  assert.match(pkg.scripts["cloudflare:build"], /cloudflare:prepare/);
+test("Workers Builds usa OpenNext e Wrangler pinados pelo lockfile", () => {
+  assert.equal(pkg.dependencies["@opennextjs/cloudflare"], "1.20.6");
+  assert.equal(pkg.devDependencies.wrangler, "4.135.0");
+  assert.equal(pkg.scripts["cloudflare:prepare"], undefined);
   assert.match(pkg.scripts["cloudflare:build"], /cloudflare:patch-next/);
+  assert.doesNotMatch(pkg.scripts["cloudflare:build"], /npm install|cloudflare:prepare/);
   assert.equal(
     pkg.scripts["cloudflare:patch-next"],
     "node scripts/patch-next-cloudflare-middleware-manifest.mjs",
