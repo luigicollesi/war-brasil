@@ -161,6 +161,7 @@ async function validateIncomingInvitation(
         invitation.expires_at.getTime() <= Date.now()
       ) {
         await resolveRoomInvitation(invitation.id, "expired", client);
+        await client.query("COMMIT");
       }
       throw new GameInvitationError(
         "GAME_INVITATION_EXPIRED",
@@ -170,6 +171,7 @@ async function validateIncomingInvitation(
     }
     if (invitation.room_status !== "waiting") {
       await resolveRoomInvitation(invitation.id, "cancelled", client);
+      await client.query("COMMIT");
       throw new GameInvitationError(
         "GAME_INVITATION_ROOM_UNAVAILABLE",
         "A sala vinculada a este convite não está mais disponível.",
