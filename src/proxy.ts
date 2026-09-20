@@ -29,9 +29,9 @@ function authUnavailableResponse() {
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // A Home é a única página de produto pública. Better Auth e endpoints
+  // Home e documentos legais são públicos. Better Auth e endpoints
   // machine-to-machine com autenticação própria ficam fora deste matcher.
-  if (pathname === "/") {
+  if (pathname === "/" || pathname === "/terms" || pathname === "/privacy") {
     return NextResponse.next();
   }
 
