@@ -30,22 +30,33 @@ test("Termos e Privacidade são documentos públicos navegáveis", () => {
 test("layout legal é minimalista e não cria cards com borda", () => {
   assert.match(layout, /LegalDocument/);
   assert.match(styles, /\.shell \{/);
+  assert.match(styles, /\.documentGrid \{/);
+  assert.match(styles, /\.index \{/);
   assert.match(styles, /\.section \{/);
-  assert.doesNotMatch(
-    styles,
-    /\.shell\s*\{[^}]*\bborder\s*:/s,
-  );
-  assert.doesNotMatch(
-    styles,
-    /\.section\s*\{[^}]*\bborder\s*:/s,
-  );
+  assert.doesNotMatch(styles, /\.shell\s*\{[^}]*\bborder\s*:/s);
+  assert.doesNotMatch(styles, /\.section\s*\{[^}]*\bborder\s*:/s);
 });
 
 test("documentos registram idade mínima e privacidade da data de nascimento", () => {
-  assert.match(terms, /10 anos de idade ou mais/);
+  assert.match(terms, /10 anos ou mais/);
   assert.match(terms, /idade inferior a 10 anos/);
-  assert.match(terms, /declaração deliberadamente falsa de idade/);
-  assert.match(privacy, /Data de nascimento/);
-  assert.match(privacy, /não é exibida no perfil público/);
+  assert.match(terms, /idade falsa/);
+  assert.match(terms, /não se responsabiliza/);
+  assert.match(privacy, /Data de nascimento e idade/);
+  assert.match(privacy, /não fazem parte do perfil público/);
   assert.match(privacy, /idade inferior a 10 anos/);
+  assert.match(privacy, /LGPD/);
+});
+
+
+test("documentos seguem hierarquia legível com resumo e índice", () => {
+  assert.match(layout, /highlights/);
+  assert.match(layout, /Neste documento/);
+  assert.match(layout, /section\.summary/);
+  assert.match(styles, /position: sticky/);
+  assert.match(terms, /Jogo justo e conduta/);
+  assert.match(terms, /Créditos, itens e cosméticos/);
+  assert.match(privacy, /Compartilhamento e prestadores/);
+  assert.match(privacy, /Transferências internacionais/);
+  assert.match(privacy, /Cookies e armazenamento local/);
 });
