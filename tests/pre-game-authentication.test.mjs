@@ -16,6 +16,10 @@ const commandAccessRoute = readFileSync(
   "src/app/api/auth/command-access/route.ts",
   "utf8",
 );
+const commandAccessAgeRoute = readFileSync(
+  "src/app/api/auth/command-access/age/route.ts",
+  "utf8",
+);
 const authClient = readFileSync("src/lib/client/auth-client.ts", "utf8");
 const authRoute = readFileSync("src/app/api/auth/[...all]/route.ts", "utf8");
 const registerRoute = readFileSync("src/app/api/auth/register/route.ts", "utf8");
@@ -33,6 +37,10 @@ const pendingRegistration = readFileSync(
 );
 const pendingRegistrationMigration = readFileSync(
   "src/lib/db/migrations/managed/049-pending-email-registration.sql",
+  "utf8",
+);
+const ageEligibilityMigration = readFileSync(
+  "src/lib/db/migrations/managed/057-auth-age-eligibility.sql",
   "utf8",
 );
 const proxy = readFileSync("src/proxy.ts", "utf8");
@@ -63,6 +71,7 @@ const authSources = [
   requestOrigin,
   commandAccess,
   commandAccessRoute,
+  commandAccessAgeRoute,
   authClient,
   authRoute,
   registerRoute,
@@ -135,8 +144,10 @@ test("cookies/sessão têm cache curto, mas backend sensível força validação
   assert.match(authGuard, /status: 403/);
 });
 
-test("Proxy deixa apenas Home pública e não substitui backend auth", () => {
+test("Proxy deixa Home e documentos legais públicos sem substituir backend auth", () => {
   assert.match(proxy, /pathname === "\/"/);
+  assert.match(proxy, /pathname === "\/terms"/);
+  assert.match(proxy, /pathname === "\/privacy"/);
   assert.match(proxy, /api\/auth/);
   assert.match(proxy, /api\/internal/);
   assert.match(proxy, /auth\.api\.getSession/);
@@ -210,20 +221,24 @@ test("validador de produção exige segredo forte e configuração dos dois OAut
   assert.doesNotMatch(environment, /APPLE_/);
 });
 
-test("completude do Comando é lida de profile.commanders no servidor", () => {
+test("completude do Comando exige idade verificada e identidade pública", () => {
   assert.match(commandAccess, /FROM profile\.commanders/);
+  assert.match(commandAccess, /auth\.user_age_eligibility/);
   assert.match(commandAccess, /session\.user\.id/);
-  assert.match(commandAccess, /profileComplete: Boolean\(handle && displayName\)/);
+  assert.match(commandAccess, /identityComplete = Boolean\(handle && displayName\)/);
+  assert.match(commandAccess, /profileComplete: ageGateComplete && identityComplete/);
   assert.match(commandAccessRoute, /getAuthenticatedSession\(request\)/);
   assert.match(commandAccessRoute, /getCommandAccessState\(session\)/);
   assert.match(commandAccessRoute, /authenticationRequiredResponse/);
 });
 
-test("onboarding grava somente para a conta da sessão e trata handle concorrente", () => {
+test("onboarding grava somente para a conta da sessão, exige idade e trata handle concorrente", () => {
   assert.match(commandAccess, /INSERT INTO profile\.commanders\(user_id, handle, display_name\)/);
   assert.match(commandAccess, /\[session\.user\.id, handle, displayName\]/);
+  assert.match(commandAccess, /CommanderAgeGateRequiredError/);
   assert.match(commandAccess, /error\.code === "23505"/);
   assert.match(commandAccessRoute, /validateCommanderIdentity\(input\)/);
+  assert.match(commandAccessRoute, /age_gate_required/);
   assert.match(commandAccessRoute, /status: 409/);
   assert.doesNotMatch(commandAccessRoute, /body\?\.userId|body\?\.user_id/);
 });
@@ -238,11 +253,19 @@ test("Home nunca abre o Comando apenas pela sessão client; sempre consulta o ga
   assert.doesNotMatch(home, /if \(authSession\) \{\s*setCommandOpen\(true\)/);
 });
 
-test("onboarding coleta somente identidade pública e conclui pelo endpoint autenticado", () => {
+test("onboarding coleta nascimento antes da identidade pública e exclui conta abaixo da idade mínima", () => {
+  assert.match(onboarding, /name="birthDate"/);
+  assert.match(onboarding, /fetch\("\/api\/auth\/command-access\/age"/);
   assert.match(onboarding, /name="displayName"/);
   assert.match(onboarding, /name="handle"/);
   assert.match(onboarding, /fetch\("\/api\/auth\/command-access"/);
   assert.match(onboarding, /method: "PUT"/);
+  assert.match(commandAccessAgeRoute, /validateCommanderBirthDate/);
+  assert.match(commandAccessAgeRoute, /minimum_age_not_met/);
+  assert.match(commandAccess, /DELETE FROM auth\."user"/);
+  assert.match(commandAccess, /COMMAND_MINIMUM_AGE = 10/);
+  assert.match(ageEligibilityMigration, /CREATE TABLE IF NOT EXISTS auth\.user_age_eligibility/);
+  assert.match(ageEligibilityMigration, /birth_date DATE NOT NULL/);
   assert.doesNotMatch(onboarding, /name="email"|name="userId"|name="user_id"/);
   assert.match(onboarding, /aria-modal="true"/);
 });
