@@ -13,6 +13,7 @@ import {
   expireStaleInvitations,
   insertRoomInvitation,
   listIncomingRoomInvitations,
+  listOutgoingRoomInvitations,
   lockIncomingRoomInvitation,
   lockOutgoingRoomInvitation,
   resolveRoomInvitation,
@@ -128,8 +129,12 @@ export async function createFriendRoomInvitation(input: Readonly<{
   }
 }
 
-export async function listIncomingGameInvitations(userId: string) {
-  return listIncomingRoomInvitations(userId);
+export async function listGameInvitations(userId: string) {
+  const [incoming, outgoing] = await Promise.all([
+    listIncomingRoomInvitations(userId),
+    listOutgoingRoomInvitations(userId),
+  ]);
+  return { incoming, outgoing };
 }
 
 export async function acceptGameInvitation(input: Readonly<{
