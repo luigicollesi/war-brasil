@@ -17,6 +17,7 @@ export function OrderDiceCinematic({
   playerId,
   value,
   rolledAt,
+  color,
   assetRef,
   bodyColor,
   bodyHighlightColor,
@@ -47,6 +48,7 @@ export function OrderDiceCinematic({
       values={[value]}
       seed={seed}
       skin="neutral"
+      color={color}
       assetRef={assetRef}
       bodyColor={bodyColor}
       bodyHighlightColor={bodyHighlightColor}
