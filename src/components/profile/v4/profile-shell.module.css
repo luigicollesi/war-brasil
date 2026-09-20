@@ -602,3 +602,55 @@
     filter: none;
   }
 }
+
+
+.profileBackdrop {
+  position: fixed;
+  z-index: -4;
+  inset: 0;
+  background-position: center;
+  background-size: cover;
+  pointer-events: none;
+}
+
+.profileBackdropScrim {
+  position: fixed;
+  z-index: -3;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgb(3 9 7 / 68%) 0%, rgb(3 9 7 / 26%) 24%, rgb(3 9 7 / 34%) 62%, rgb(3 9 7 / 74%) 100%),
+    linear-gradient(90deg, rgb(3 9 7 / 44%), transparent 56%);
+}
+
+.page:has(.profileBackdrop) {
+  background: #07130f;
+}
+
+.page:has(.profileBackdrop) .ambient {
+  opacity: 0.32;
+}
+
+.page:has(.profileBackdrop) .commandBar {
+  min-height: 64px;
+  border-bottom-color: rgb(238 232 218 / 8%);
+  background: rgb(4 12 9 / 66%);
+  box-shadow: none;
+  backdrop-filter: blur(16px);
+}
+
+.page:has(.profileBackdrop) .commandIdentity,
+.page:has(.profileBackdrop) .walletCluster,
+.page:has(.profileBackdrop) .navItem {
+  border-color: transparent;
+}
+
+.page:has(.profileBackdrop) .navItem:hover,
+.page:has(.profileBackdrop) .navItem:focus-visible,
+.page:has(.profileBackdrop) .navItem[data-active="true"] {
+  background: transparent;
+}
+
+.page:has(.profileBackdrop) .surface {
+  width: min(100%, 1480px);
+}
