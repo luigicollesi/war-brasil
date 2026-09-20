@@ -20,12 +20,17 @@ test("showcase die reuses canonical geometry and face texture pipeline", () => {
   assert.doesNotMatch(model, /rapier/i);
 });
 
-test("showcase mounts every dice item into its own canonical 3d die", () => {
-  assert.match(showcase, /showcase\.items\.map\(\(item, itemIndex\) => \(/);
+test("showcase mounts canonical dice only for the bounded active scene set", () => {
+  assert.match(showcase, /const activeSceneItems = useMemo/);
+  assert.match(showcase, /activeSceneItems\.map\(\(\{ item, itemIndex \}\) => \(/);
   assert.match(showcase, /item\.type === "dice"/);
   assert.match(showcase, /<DiceShowcaseModel/);
   assert.match(showcase, /assetRef=\{item\.assetRef\}/);
   assert.match(showcase, /slot=\{item\.slot\}/);
+  assert.doesNotMatch(
+    showcase,
+    /showcase\.items\.map\(\(item, itemIndex\) =>\s*\(\s*<ShowcaseObjectController/s,
+  );
   assert.doesNotMatch(model, /OrbitControls/);
 });
 
