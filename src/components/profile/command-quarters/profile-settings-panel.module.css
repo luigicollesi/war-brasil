@@ -262,3 +262,228 @@
     animation: none !important;
   }
 }
+
+
+.appearanceEntry {
+  width: 100%;
+  min-height: 64px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 2px;
+  color: var(--command-ivory, #eee8da);
+  border: 0;
+  border-bottom: 1px solid rgb(238 232 218 / 8%);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.appearanceEntry > span {
+  min-width: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.appearanceEntry small,
+.titleOption small,
+.backgroundCopy small {
+  color: rgb(208 170 87 / 68%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.49rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.appearanceEntry strong {
+  overflow: hidden;
+  color: rgb(238 232 218 / 78%);
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.appearanceEntry em {
+  color: var(--command-brass-bright, #d0aa57);
+  font-size: 1.25rem;
+  font-style: normal;
+  transition: transform 160ms ease;
+}
+
+.appearanceEntry:hover em,
+.appearanceEntry:focus-visible em {
+  transform: translateX(3px);
+}
+
+.appearanceEntry:hover,
+.appearanceEntry:focus-visible {
+  color: var(--command-ivory, #eee8da);
+  outline: none;
+}
+
+.appearanceEntry:disabled {
+  opacity: 0.45;
+  cursor: wait;
+}
+
+.appearanceScreen {
+  min-height: 0;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+  overflow-y: auto;
+  padding: 16px;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(208 170 87 / 30%) transparent;
+}
+
+.titleOption {
+  width: 100%;
+  min-height: 82px;
+  display: grid;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 4px;
+  color: var(--command-ivory, #eee8da);
+  border: 0;
+  border-bottom: 1px solid rgb(238 232 218 / 7%);
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 160ms ease, opacity 160ms ease;
+}
+
+.titleOption > span {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.titleOption em {
+  color: rgb(238 232 218 / 38%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.48rem;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
+.titleOption[data-selected="true"] em {
+  color: var(--command-brass-bright, #d0aa57);
+}
+
+.titleOption:hover,
+.titleOption:focus-visible {
+  transform: translateX(3px);
+  outline: none;
+}
+
+.titleOption[data-selected="true"] {
+  background: linear-gradient(90deg, rgb(208 170 87 / 8%), transparent 74%);
+}
+
+.titleOption:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.titlePreview {
+  max-width: 100%;
+  font-size: clamp(1.25rem, 4.5vw, 2rem);
+}
+
+.noTitle {
+  color: rgb(238 232 218 / 48%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+}
+
+.backgroundGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.backgroundOption {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: 112px auto;
+  padding: 0;
+  color: var(--command-ivory, #eee8da);
+  border: 0;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 160ms ease;
+}
+
+.backgroundOption:hover,
+.backgroundOption:focus-visible {
+  transform: translateY(-3px);
+  outline: none;
+}
+
+.backgroundPreview {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  background-position: center;
+  background-size: cover;
+  box-shadow: 0 16px 34px rgb(0 0 0 / 24%);
+}
+
+.backgroundOption[data-selected="true"] .backgroundPreview::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  box-shadow: inset 0 0 0 2px var(--command-brass-bright, #d0aa57);
+}
+
+.backgroundCopy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  padding: 8px 0 4px;
+}
+
+.backgroundCopy strong {
+  overflow: hidden;
+  font-size: 0.7rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.applyAppearance {
+  position: sticky;
+  bottom: 0;
+  min-height: 44px;
+  margin-top: 6px;
+  color: #151008;
+  border: 0;
+  background: linear-gradient(135deg, #d0aa57, #a97d32);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+}
+
+.applyAppearance:disabled {
+  opacity: 0.48;
+  cursor: wait;
+}
+
+@media (max-width: 520px) {
+  .backgroundGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .backgroundOption {
+    grid-template-rows: 150px auto;
+  }
+}
