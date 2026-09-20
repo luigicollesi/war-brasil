@@ -26,8 +26,14 @@ const AUTH_EMAIL_ACTION_MAX = 3;
 const environment = readAuthServerEnvironment();
 const isControlledCiHarness =
   process.env.CI === "true" && Boolean(process.env.AUTH_EMAIL_SINK_DIR?.trim());
+const isNextProductionBuild =
+  process.env["NEXT_PHASE"] === "phase-production-build";
 
-if (process.env.NODE_ENV === "production" && !isControlledCiHarness) {
+if (
+  process.env.NODE_ENV === "production" &&
+  !isControlledCiHarness &&
+  !isNextProductionBuild
+) {
   assertAuthRuntimeConfiguration(environment);
 }
 
