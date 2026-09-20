@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { GameInvitationSummary } from "@/src/lib/game-invitations/game-invitation-contract";
 import type { UserNotification } from "@/src/lib/profile/user-notification-contract";
+import { GAME_REALTIME_SUBPROTOCOL } from "@/src/lib/game-realtime-contract";
 import { useSession } from "@/src/lib/client/auth-client";
 import styles from "./user-notification-runtime.module.css";
 
@@ -15,6 +16,42 @@ type InvitationResponse = {
 type NotificationResponse = {
   notifications?: UserNotification[];
 };
+
+function websocketHostname() {
+  const hostname = window.location.hostname;
+  return hostname.includes(":") ? `[${hostname}]` : hostname;
+}
+
+function userRealtimeUrl(ticket: string) {
+  const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const configured = process.env.NEXT_PUBLIC_GAME_REALTIME_URL?.trim();
+  const configuredPort = process.env.NEXT_PUBLIC_GAME_REALTIME_PORT?.trim();
+  const url = configured
+    ? new URL(configured, window.location.href)
+    : configuredPort
+      ? new URL(
+          `${protocol}//${websocketHostname()}:${configuredPort}/user-realtime`,
+        )
+      : new URL(`${protocol}//${window.location.host}/user-realtime`);
+
+  url.pathname = "/user-realtime";
+  url.search = "";
+  url.searchParams.set("ticket", ticket);
+  return url.toString();
+}
+
+async function fetchUserRealtimeTicket() {
+  const response = await fetch("/api/profile/realtime-ticket", {
+    method: "POST",
+    cache: "no-store",
+  });
+  if (!response.ok) throw new Error("Ticket realtime indisponível.");
+  const body = (await response.json()) as { ticket?: unknown };
+  if (typeof body.ticket !== "string" || body.ticket.length < 32) {
+    throw new Error("Ticket realtime inválido.");
+  }
+  return body.ticket;
+}
 
 export function UserNotificationRuntime() {
   const router = useRouter();
@@ -60,7 +97,7 @@ export function UserNotificationRuntime() {
     void poll();
     const intervalId = window.setInterval(() => {
       void poll();
-    }, 2500);
+    }, 15_000);
 
     const onFocus = () => void poll();
     const onVisibility = () => {
@@ -74,6 +111,70 @@ export function UserNotificationRuntime() {
       window.clearInterval(intervalId);
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [isPending, refresh, session?.user]);
+
+  useEffect(() => {
+    if (
+      isPending ||
+      !session?.user ||
+      process.env.NEXT_PUBLIC_GAME_REALTIME_MODE === "off"
+    ) {
+      return;
+    }
+
+    let stopped = false;
+    let socket: WebSocket | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const scheduleReconnect = () => {
+      if (stopped || reconnectTimer) return;
+      reconnectTimer = window.setTimeout(() => {
+        reconnectTimer = null;
+        void connect();
+      }, 2000);
+    };
+
+    const connect = async () => {
+      try {
+        const ticket = await fetchUserRealtimeTicket();
+        if (stopped) return;
+
+        const nextSocket = new WebSocket(
+          userRealtimeUrl(ticket),
+          GAME_REALTIME_SUBPROTOCOL,
+        );
+        socket = nextSocket;
+
+        nextSocket.onmessage = (message) => {
+          if (typeof message.data !== "string") return;
+          try {
+            const event = JSON.parse(message.data) as {
+              type?: unknown;
+            };
+            if (event.type === "user.notifications.changed") {
+              void refresh();
+            }
+          } catch {
+            // Invalid push data is ignored; REST polling remains authoritative.
+          }
+        };
+        nextSocket.onerror = () => undefined;
+        nextSocket.onclose = () => {
+          if (socket === nextSocket) socket = null;
+          scheduleReconnect();
+        };
+      } catch {
+        scheduleReconnect();
+      }
+    };
+
+    void connect();
+
+    return () => {
+      stopped = true;
+      if (reconnectTimer) window.clearTimeout(reconnectTimer);
+      socket?.close(1000, "notification runtime closed");
     };
   }, [isPending, refresh, session?.user]);
 
