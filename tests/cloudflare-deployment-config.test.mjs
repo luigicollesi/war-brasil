@@ -62,6 +62,10 @@ test("Workers Builds prepara OpenNext no build e reutiliza no deploy", () => {
     pkg.scripts["cloudflare:patch-next"],
     "node scripts/patch-next-cloudflare-middleware-manifest.mjs",
   );
+  assert.equal(
+    pkg.scripts["cloudflare:check-next-patch"],
+    "node scripts/patch-next-cloudflare-middleware-manifest.mjs --check",
+  );
   assert.equal(pkg.scripts["cloudflare:deploy"], "opennextjs-cloudflare deploy");
   assert.equal(pkg.scripts["cloudflare:upload"], "opennextjs-cloudflare upload");
   assert.doesNotMatch(pkg.scripts["cloudflare:deploy"], /npm install|cloudflare:prepare/);
