@@ -5,7 +5,11 @@ import {
   roomErrorResponse,
 } from "@/src/lib/api-response";
 import { getPlayerSession } from "@/src/lib/player-session";
-import { RoomError, updateLobbyPlayer } from "@/src/lib/rooms";
+import {
+  leaveWaitingRoom,
+  RoomError,
+  updateLobbyPlayer,
+} from "@/src/lib/rooms";
 import { assertAuthenticatedPlayerSeat } from "@/server/auth/player-seat-guard";
 
 type RouteContext = {
@@ -32,6 +36,28 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
       route: request.nextUrl.pathname,
       resource: { code },
       input: body,
+    });
+  }
+}
+
+
+export async function DELETE(request: NextRequest, { params }: RouteContext) {
+  let code: string | undefined;
+  try {
+    const session = getPlayerSession(request);
+    if (!session) {
+      throw new RoomError("Entre em uma sala antes de sair dela.", 401);
+    }
+
+    ({ code } = await params);
+    await assertAuthenticatedPlayerSeat(request, session, { roomCode: code });
+    const result = await leaveWaitingRoom(code, session);
+    return noStoreJson({ ok: true, ...result });
+  } catch (error) {
+    return roomErrorResponse(error, {
+      operation: "leave_waiting_room",
+      route: request.nextUrl.pathname,
+      resource: { code },
     });
   }
 }
