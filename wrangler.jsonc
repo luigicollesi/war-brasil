@@ -10,6 +10,12 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
+  // OpenNext deploys only the Next.js Worker. Keep external Node services off
+  // until their production runtimes are deployed separately.
+  "vars": {
+    "GAME_REALTIME_ENABLED": "false",
+    "GAME_AUTOMATION_WORKER_MODE": "off"
+  },
   "secrets": {
     "required": [
       "DATABASE_URL",
