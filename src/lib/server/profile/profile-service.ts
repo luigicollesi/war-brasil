@@ -129,10 +129,13 @@ export async function getPublicCommanderHistory(
   };
 }
 
+type PublicCommanderProfileRecord = PublicCommanderProfileDto &
+  Readonly<{ ownerUserId: string }>;
+
 export async function getPublicCommanderProfile(
   actorUserId: string,
   handle: string,
-): Promise<PublicCommanderProfileDto | null> {
+): Promise<PublicCommanderProfileRecord | null> {
   const row = await findCommanderByHandle(handle);
   if (!row) return null;
   const identity = identityFromRow(row);
@@ -172,7 +175,7 @@ export async function getPublicCommanderProfile(
       : null;
 
   return {
-    userId: row.user_id,
+    ownerUserId: row.user_id,
     identity: {
       ...identity,
       presence: !presenceVisible
