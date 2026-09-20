@@ -107,6 +107,40 @@ export async function listIncomingRoomInvitations(
   return result.rows.map(invitationFromRow);
 }
 
+export async function listOutgoingRoomInvitations(
+  userId: string,
+  db: InvitationQueryable = pool,
+): Promise<GameInvitationSummary[]> {
+  await expireStaleInvitations(userId, db);
+  const result = await db.query<InvitationRow>(
+    `SELECT invitation.id,
+            invitation.room_id,
+            room.code AS room_code,
+            invitation.inviter_user_id,
+            invitation.invitee_user_id,
+            inviter.handle AS inviter_handle,
+            inviter.display_name AS inviter_display_name,
+            invitee.handle AS invitee_handle,
+            invitee.display_name AS invitee_display_name,
+            invitation.state,
+            invitation.created_at,
+            invitation.expires_at
+       FROM game.room_invitations invitation
+       JOIN game.rooms room ON room.id=invitation.room_id
+       JOIN profile.commanders inviter
+         ON inviter.user_id=invitation.inviter_user_id
+       JOIN profile.commanders invitee
+         ON invitee.user_id=invitation.invitee_user_id
+      WHERE invitation.inviter_user_id=$1::uuid
+        AND invitation.state='pending'
+        AND invitation.expires_at>NOW()
+        AND room.status='waiting'
+      ORDER BY invitation.created_at DESC,invitation.id`,
+    [userId],
+  );
+  return result.rows.map(invitationFromRow);
+}
+
 export async function lockIncomingRoomInvitation(
   invitationId: string,
   inviteeUserId: string,
