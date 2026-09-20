@@ -67,8 +67,8 @@ export async function getPublicCommanderProfileSnapshot(
   if (!profile) return null;
 
   const [appearance, equippedCosmetics] = await Promise.all([
-    getPublicProfileAppearance(profile.userId),
-    listEquippedProfileCosmetics(profile.userId),
+    getPublicProfileAppearance(profile.ownerUserId),
+    listEquippedProfileCosmetics(profile.ownerUserId),
   ]);
   const history = profile.history.data ?? emptyHistory();
 
