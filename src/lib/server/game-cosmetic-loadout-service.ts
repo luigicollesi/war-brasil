@@ -225,22 +225,26 @@ export async function capturePlayerCosmeticLoadouts(
                 ELSE COALESCE(equipped.id, player_slot.default_id)
               END AS cosmetic_id,
               CASE
-                WHEN player_slot.is_bot THEN COALESCE(bot_cosmetic.asset_ref, player_slot.default_asset_ref)
+                WHEN player_slot.is_bot AND bot_cosmetic.id IS NOT NULL THEN bot_cosmetic.asset_ref
+                WHEN player_slot.is_bot THEN player_slot.default_asset_ref
                 WHEN equipped.id IS NOT NULL THEN equipped.asset_ref
                 ELSE player_slot.default_asset_ref
               END AS asset_ref,
               CASE
-                WHEN player_slot.is_bot THEN COALESCE(bot_cosmetic.effect_key, player_slot.default_effect_key)
+                WHEN player_slot.is_bot AND bot_cosmetic.id IS NOT NULL THEN bot_cosmetic.effect_key
+                WHEN player_slot.is_bot THEN player_slot.default_effect_key
                 WHEN equipped.id IS NOT NULL THEN equipped.effect_key
                 ELSE player_slot.default_effect_key
               END AS effect_key,
               CASE
-                WHEN player_slot.is_bot THEN COALESCE(bot_cosmetic.body_color, player_slot.default_body_color)
+                WHEN player_slot.is_bot AND bot_cosmetic.id IS NOT NULL THEN bot_cosmetic.body_color
+                WHEN player_slot.is_bot THEN player_slot.default_body_color
                 WHEN equipped.id IS NOT NULL THEN equipped.body_color
                 ELSE player_slot.default_body_color
               END AS body_color,
               CASE
-                WHEN player_slot.is_bot THEN COALESCE(bot_cosmetic.body_highlight_color, player_slot.default_body_highlight_color)
+                WHEN player_slot.is_bot AND bot_cosmetic.id IS NOT NULL THEN bot_cosmetic.body_highlight_color
+                WHEN player_slot.is_bot THEN player_slot.default_body_highlight_color
                 WHEN equipped.id IS NOT NULL THEN equipped.body_highlight_color
                 ELSE player_slot.default_body_highlight_color
               END AS body_highlight_color
