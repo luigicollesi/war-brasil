@@ -50,6 +50,6 @@ test("public profile projection exposes only equipped appearance and gameplay co
   assert.match(snapshot, /territorySkin/);
   assert.match(
     repository,
-    /loadout\.slot IN \(\s*'dice_attack','dice_defense','dice_neutral','territory_skin'\s*\)/,
+    /slot IN \('dice_attack','dice_defense','dice_neutral','territory_skin'\)/,
   );
 });
