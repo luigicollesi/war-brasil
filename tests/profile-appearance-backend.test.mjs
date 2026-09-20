@@ -55,3 +55,21 @@ test("public profile projection exposes only equipped appearance and gameplay co
     /slot IN \('dice_attack','dice_defense','dice_neutral','territory_skin'\)/,
   );
 });
+
+test("profile backgrounds can reuse managed collection background assets", async () => {
+  const migration = await source(
+    "src/lib/db/migrations/managed/054-profile-background-shared-assets.sql",
+  );
+  const storage = await source(
+    "src/lib/server/profile/profile-appearance-asset-storage.ts",
+  );
+
+  assert.match(migration, /store\/collections\//);
+  assert.match(migration, /profile\.background\.cosmic-night/);
+  assert.match(migration, /store\/collections\/viking\/background\.webp/);
+  assert.match(migration, /store\/collections\/ceu-noturno\/background\.webp/);
+
+  assert.match(storage, /SHARED_COLLECTION_BACKGROUND_KEY_PATTERN/);
+  assert.match(storage, /collectionAssetDeliveryPath\(key\)/);
+  assert.match(storage, /resolveCollectionAssetReadUrl\(key, options\)/);
+});
