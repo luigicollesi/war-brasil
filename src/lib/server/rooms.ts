@@ -784,7 +784,7 @@ export async function cleanupStaleWaitingRoomSeats(
           AND player.lobby_last_seen_at
               <= NOW() - ($1::int * INTERVAL '1 second')
         ORDER BY player.lobby_last_seen_at,player.id
-        FOR UPDATE OF player SKIP LOCKED
+        FOR UPDATE OF room,player SKIP LOCKED
         LIMIT $2`,
       [staleAfterSeconds, limit],
     );
