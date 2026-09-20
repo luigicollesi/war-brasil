@@ -1,13 +1,19 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { ProfileTitleRenderer } from "@/src/components/profile/profile-title-renderer";
 import type {
   CommanderIdentity,
   FriendRequestPolicy,
   ProfilePrivacySettings,
   ProfileVisibility,
 } from "@/src/lib/profile/profile-command-contract";
+import type {
+  CommanderBackgroundAppearance,
+  CommanderTitleAppearance,
+  ProfileAppearanceSnapshot,
+} from "@/src/lib/profile/profile-appearance-contract";
 import styles from "./profile-settings-panel.module.css";
 
 type Feedback = Readonly<{
@@ -22,14 +28,7 @@ type EditablePrivacyUpdate = {
   friendRequestPolicy?: FriendRequestPolicy;
 };
 
-type OwnedTitle = Readonly<{
-  id: string;
-  name: string;
-  description: string | null;
-  rarity: "common" | "uncommon" | "rare" | "epic" | "legendary";
-  isActive: boolean;
-  equipped: boolean;
-}>;
+type AppearanceView = "root" | "titles" | "backgrounds";
 
 const VISIBILITY_OPTIONS: ReadonlyArray<{
   value: ProfileVisibility;
@@ -59,12 +58,13 @@ export function ProfileSettingsPanel({
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [titleBusy, setTitleBusy] = useState(false);
-  const [titlesLoading, setTitlesLoading] = useState(false);
+  const [appearanceBusy, setAppearanceBusy] = useState(false);
+  const [appearanceLoading, setAppearanceLoading] = useState(false);
+  const [appearanceView, setAppearanceView] = useState<AppearanceView>("root");
+  const [appearance, setAppearance] = useState<ProfileAppearanceSnapshot | null>(null);
+  const [selectedTitleId, setSelectedTitleId] = useState<string | null>(null);
+  const [selectedBackgroundId, setSelectedBackgroundId] = useState("");
   const [feedback, setFeedback] = useState<Feedback>(null);
-  const [ownedTitles, setOwnedTitles] = useState<OwnedTitle[]>([]);
-  const [equippedTitleId, setEquippedTitleId] = useState("");
-  const [selectedTitleId, setSelectedTitleId] = useState("");
   const [displayName, setDisplayName] = useState(identity.displayName);
   const [bio, setBio] = useState(identity.bio ?? "");
   const [presenceVisibility, setPresenceVisibility] = useState<ProfileVisibility>(
@@ -79,92 +79,135 @@ export function ProfileSettingsPanel({
   const [friendRequestPolicy, setFriendRequestPolicy] = useState<FriendRequestPolicy>(
     privacy.friendRequestPolicy,
   );
-  const locked = busy || titleBusy;
+
+  const locked = busy || appearanceBusy;
 
   useEffect(() => {
     if (!open) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !locked) setOpen(false);
+      if (event.key === "Escape" && !locked) {
+        if (appearanceView !== "root") {
+          setAppearanceView("root");
+        } else {
+          setOpen(false);
+        }
+      }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [locked, open]);
+  }, [appearanceView, locked, open]);
 
-  const loadTitles = async () => {
-    setTitlesLoading(true);
+  const selectedTitle = useMemo(
+    () =>
+      appearance?.titles.find((title) => title.id === selectedTitleId) ?? null,
+    [appearance, selectedTitleId],
+  );
+
+  const selectedBackground = useMemo(
+    () =>
+      appearance?.backgrounds.find(
+        (background) => background.id === selectedBackgroundId,
+      ) ?? null,
+    [appearance, selectedBackgroundId],
+  );
+
+  async function loadAppearance() {
+    setAppearanceLoading(true);
     try {
-      const response = await fetch("/api/profile/titles", {
-        method: "GET",
+      const response = await fetch("/api/profile/appearance", {
         cache: "no-store",
       });
       const body = (await response.json().catch(() => null)) as
-        | { titles?: OwnedTitle[]; message?: string }
+        | (ProfileAppearanceSnapshot & { message?: string })
+        | { message?: string }
         | null;
-      if (!response.ok || !Array.isArray(body?.titles)) {
-        throw new Error(body?.message ?? "Não foi possível carregar os títulos.");
+
+      if (
+        !response.ok ||
+        !body ||
+        !("titles" in body) ||
+        !Array.isArray(body.titles) ||
+        !Array.isArray(body.backgrounds)
+      ) {
+        throw new Error(body?.message ?? "Não foi possível carregar a aparência.");
       }
 
-      const equipped = body.titles.find((title) => title.equipped)?.id ?? "";
-      setOwnedTitles(body.titles);
-      setEquippedTitleId(equipped);
-      setSelectedTitleId(equipped);
+      setAppearance(body);
+      setSelectedTitleId(body.equippedTitleId);
+      setSelectedBackgroundId(body.equippedBackgroundId);
     } catch (error) {
-      setOwnedTitles([]);
-      setEquippedTitleId("");
-      setSelectedTitleId("");
+      setAppearance(null);
       setFeedback({
         kind: "error",
         message:
           error instanceof Error
             ? error.message
-            : "Não foi possível carregar os títulos.",
+            : "Não foi possível carregar a aparência.",
       });
     } finally {
-      setTitlesLoading(false);
+      setAppearanceLoading(false);
     }
-  };
+  }
 
-  const openPanel = () => {
+  function openPanel() {
     setDisplayName(identity.displayName);
     setBio(identity.bio ?? "");
     setPresenceVisibility(privacy.presenceVisibility);
     setActivityVisibility(privacy.activityVisibility);
     setHistoryVisibility(privacy.historyVisibility);
     setFriendRequestPolicy(privacy.friendRequestPolicy);
+    setAppearanceView("root");
     setFeedback(null);
     setOpen(true);
-    void loadTitles();
-  };
+    void loadAppearance();
+  }
 
-  const equipTitle = async () => {
-    if (titleBusy || titlesLoading || selectedTitleId === equippedTitleId) return;
+  async function applyAppearance() {
+    if (!appearance || appearanceBusy) return;
 
-    setTitleBusy(true);
+    const titleChanged = selectedTitleId !== appearance.equippedTitleId;
+    const backgroundChanged =
+      selectedBackgroundId !== appearance.equippedBackgroundId;
+
+    if (!titleChanged && !backgroundChanged) {
+      setAppearanceView("root");
+      return;
+    }
+
+    const payload: { titleId?: string | null; backgroundId?: string } = {};
+    if (titleChanged) payload.titleId = selectedTitleId;
+    if (backgroundChanged) payload.backgroundId = selectedBackgroundId;
+
+    setAppearanceBusy(true);
     setFeedback(null);
     try {
-      const response = await fetch("/api/profile/titles", {
-        method: "PUT",
+      const response = await fetch("/api/profile/appearance", {
+        method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ titleId: selectedTitleId || null }),
+        body: JSON.stringify(payload),
       });
       const body = (await response.json().catch(() => null)) as
         | { message?: string }
         | null;
       if (!response.ok) {
-        throw new Error(body?.message ?? "Não foi possível equipar o título.");
+        throw new Error(body?.message ?? "Não foi possível aplicar a aparência.");
       }
 
-      setEquippedTitleId(selectedTitleId);
-      setOwnedTitles((current) =>
-        current.map((title) => ({
+      setAppearance({
+        ...appearance,
+        equippedTitleId: selectedTitleId,
+        equippedBackgroundId: selectedBackgroundId,
+        titles: appearance.titles.map((title) => ({
           ...title,
           equipped: title.id === selectedTitleId,
         })),
-      );
-      setFeedback({
-        kind: "success",
-        message: selectedTitleId ? "Título equipado." : "Título removido.",
+        backgrounds: appearance.backgrounds.map((background) => ({
+          ...background,
+          equipped: background.id === selectedBackgroundId,
+        })),
       });
+      setAppearanceView("root");
+      setFeedback({ kind: "success", message: "Aparência atualizada." });
       router.refresh();
     } catch (error) {
       setFeedback({
@@ -172,14 +215,14 @@ export function ProfileSettingsPanel({
         message:
           error instanceof Error
             ? error.message
-            : "Não foi possível equipar o título.",
+            : "Não foi possível aplicar a aparência.",
       });
     } finally {
-      setTitleBusy(false);
+      setAppearanceBusy(false);
     }
-  };
+  }
 
-  const submit = async (event: FormEvent<HTMLFormElement>) => {
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (busy) return;
 
@@ -248,7 +291,53 @@ export function ProfileSettingsPanel({
     } finally {
       setBusy(false);
     }
-  };
+  }
+
+  function titleOption(title: CommanderTitleAppearance) {
+    return (
+      <button
+        key={title.id}
+        type="button"
+        className={styles.titleOption}
+        data-selected={selectedTitleId === title.id ? "true" : "false"}
+        disabled={!title.isActive && !title.equipped}
+        onClick={() => setSelectedTitleId(title.id)}
+      >
+        <ProfileTitleRenderer title={title} className={styles.titlePreview} />
+        <span>
+          <small>{title.rarity}</small>
+          <em>{selectedTitleId === title.id ? "SELECIONADO" : "USAR TÍTULO"}</em>
+        </span>
+      </button>
+    );
+  }
+
+  function backgroundOption(background: CommanderBackgroundAppearance) {
+    return (
+      <button
+        key={background.id}
+        type="button"
+        className={styles.backgroundOption}
+        data-selected={selectedBackgroundId === background.id ? "true" : "false"}
+        disabled={!background.isActive && !background.equipped}
+        onClick={() => setSelectedBackgroundId(background.id)}
+      >
+        <span
+          className={styles.backgroundPreview}
+          style={{
+            backgroundImage: `url("${
+              background.previewRef ?? background.assetRef
+            }")`,
+          }}
+          aria-hidden="true"
+        />
+        <span className={styles.backgroundCopy}>
+          <strong>{background.name}</strong>
+          <small>{background.rarity}</small>
+        </span>
+      </button>
+    );
+  }
 
   return (
     <>
@@ -275,173 +364,225 @@ export function ProfileSettingsPanel({
             <header className={styles.header}>
               <span>
                 <small>Arquivo pessoal · @{identity.handle}</small>
-                <strong id="profile-settings-title">Ajustar Dossiê</strong>
+                <strong id="profile-settings-title">
+                  {appearanceView === "root"
+                    ? "Ajustar Dossiê"
+                    : appearanceView === "titles"
+                      ? "Escolher título"
+                      : "Profile Background"}
+                </strong>
               </span>
               <button
                 type="button"
                 className={styles.close}
-                aria-label="Fechar configurações"
+                aria-label={
+                  appearanceView === "root"
+                    ? "Fechar configurações"
+                    : "Voltar para Ajustar Dossiê"
+                }
                 disabled={locked}
-                onClick={() => setOpen(false)}
+                onClick={() =>
+                  appearanceView === "root"
+                    ? setOpen(false)
+                    : setAppearanceView("root")
+                }
               >
-                ×
+                {appearanceView === "root" ? "×" : "←"}
               </button>
             </header>
 
-            <form className={styles.form} onSubmit={submit}>
-              <section className={styles.section} aria-labelledby="profile-identity-settings">
-                <strong className={styles.sectionTitle} id="profile-identity-settings">
-                  Identidade pública
-                </strong>
-                <label className={styles.field}>
-                  <span>Nome de comando</span>
-                  <input
-                    value={displayName}
-                    maxLength={48}
-                    required
-                    autoComplete="nickname"
-                    onChange={(event) => setDisplayName(event.target.value)}
-                  />
-                </label>
-                <label className={styles.field}>
-                  <span>Handle permanente</span>
-                  <input value={`@${identity.handle}`} disabled readOnly />
-                </label>
-                <label className={styles.field}>
-                  <span>Biografia</span>
-                  <textarea
-                    value={bio}
-                    maxLength={240}
-                    placeholder="Registre uma breve descrição pública do comandante."
-                    onChange={(event) => setBio(event.target.value)}
-                  />
-                </label>
-              </section>
-
-              <section className={styles.section} aria-labelledby="profile-title-settings">
-                <strong className={styles.sectionTitle} id="profile-title-settings">
-                  Título cosmético
-                </strong>
-                <label className={styles.field}>
-                  <span>Título em exibição</span>
-                  <select
-                    value={selectedTitleId}
-                    disabled={titlesLoading || titleBusy}
-                    onChange={(event) => setSelectedTitleId(event.target.value)}
-                  >
-                    <option value="">Sem título</option>
-                    {ownedTitles.map((title) => (
-                      <option
-                        key={title.id}
-                        value={title.id}
-                        disabled={!title.isActive && !title.equipped}
-                      >
-                        {title.name} · {title.rarity}
-                        {!title.isActive ? " · indisponível" : ""}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <p className={styles.hint}>
-                  {titlesLoading
-                    ? "Sincronizando títulos desbloqueados..."
-                    : ownedTitles.length === 0
-                      ? "Nenhum título cosmético desbloqueado nesta conta."
-                      : "Somente títulos desbloqueados e ativos podem ser equipados."}
-                </p>
+            {appearanceView === "titles" ? (
+              <div className={styles.appearanceScreen}>
                 <button
                   type="button"
-                  className={styles.secondaryAction}
-                  disabled={
-                    titlesLoading || titleBusy || selectedTitleId === equippedTitleId
-                  }
-                  onClick={() => void equipTitle()}
+                  className={styles.titleOption}
+                  data-selected={selectedTitleId === null ? "true" : "false"}
+                  onClick={() => setSelectedTitleId(null)}
                 >
-                  {titleBusy ? "Equipando..." : "Aplicar título"}
+                  <strong className={styles.noTitle}>SEM TÍTULO</strong>
+                  <span>
+                    <small>padrão</small>
+                    <em>{selectedTitleId === null ? "SELECIONADO" : "USAR"}</em>
+                  </span>
                 </button>
-              </section>
-
-              <section className={styles.section} aria-labelledby="profile-privacy-settings">
-                <strong className={styles.sectionTitle} id="profile-privacy-settings">
-                  Regras de exposição
-                </strong>
-                <label className={styles.field}>
-                  <span>Presença</span>
-                  <select
-                    value={presenceVisibility}
-                    onChange={(event) =>
-                      setPresenceVisibility(event.target.value as ProfileVisibility)
-                    }
-                  >
-                    {VISIBILITY_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className={styles.field}>
-                  <span>Atividade</span>
-                  <select
-                    value={activityVisibility}
-                    onChange={(event) =>
-                      setActivityVisibility(event.target.value as ProfileVisibility)
-                    }
-                  >
-                    {VISIBILITY_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className={styles.field}>
-                  <span>Histórico de campanha</span>
-                  <select
-                    value={historyVisibility}
-                    onChange={(event) =>
-                      setHistoryVisibility(event.target.value as ProfileVisibility)
-                    }
-                  >
-                    {VISIBILITY_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className={styles.field}>
-                  <span>Solicitações de aliança</span>
-                  <select
-                    value={friendRequestPolicy}
-                    onChange={(event) =>
-                      setFriendRequestPolicy(event.target.value as FriendRequestPolicy)
-                    }
-                  >
-                    {REQUEST_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </section>
-
-              <footer className={styles.footer}>
-                {feedback ? (
-                  <p
-                    className={styles.feedback}
-                    data-kind={feedback.kind}
-                    role={feedback.kind === "error" ? "alert" : "status"}
-                  >
-                    {feedback.message}
-                  </p>
-                ) : null}
-                <button className={styles.submit} type="submit" disabled={busy}>
-                  {busy ? "Sincronizando..." : "Salvar alterações"}
+                {appearance?.titles.map(titleOption)}
+                <button
+                  type="button"
+                  className={styles.applyAppearance}
+                  disabled={appearanceBusy || appearanceLoading}
+                  onClick={() => void applyAppearance()}
+                >
+                  {appearanceBusy ? "APLICANDO..." : "APLICAR TÍTULO"}
                 </button>
-              </footer>
-            </form>
+              </div>
+            ) : appearanceView === "backgrounds" ? (
+              <div className={styles.appearanceScreen}>
+                <div className={styles.backgroundGrid}>
+                  {appearance?.backgrounds.map(backgroundOption)}
+                </div>
+                <button
+                  type="button"
+                  className={styles.applyAppearance}
+                  disabled={
+                    appearanceBusy ||
+                    appearanceLoading ||
+                    !selectedBackgroundId
+                  }
+                  onClick={() => void applyAppearance()}
+                >
+                  {appearanceBusy ? "APLICANDO..." : "APLICAR BACKGROUND"}
+                </button>
+              </div>
+            ) : (
+              <form className={styles.form} onSubmit={submit}>
+                <section className={styles.section} aria-labelledby="profile-identity-settings">
+                  <strong className={styles.sectionTitle} id="profile-identity-settings">
+                    Identidade pública
+                  </strong>
+                  <label className={styles.field}>
+                    <span>Nome de comando</span>
+                    <input
+                      value={displayName}
+                      maxLength={48}
+                      required
+                      autoComplete="nickname"
+                      onChange={(event) => setDisplayName(event.target.value)}
+                    />
+                  </label>
+                  <label className={styles.field}>
+                    <span>Handle permanente</span>
+                    <input value={`@${identity.handle}`} disabled readOnly />
+                  </label>
+                  <label className={styles.field}>
+                    <span>Biografia</span>
+                    <textarea
+                      value={bio}
+                      maxLength={240}
+                      placeholder="Registre uma breve descrição pública do comandante."
+                      onChange={(event) => setBio(event.target.value)}
+                    />
+                  </label>
+                </section>
+
+                <section className={styles.section} aria-labelledby="profile-appearance-settings">
+                  <strong className={styles.sectionTitle} id="profile-appearance-settings">
+                    Aparência pública
+                  </strong>
+
+                  <button
+                    type="button"
+                    className={styles.appearanceEntry}
+                    disabled={appearanceLoading}
+                    onClick={() => setAppearanceView("titles")}
+                  >
+                    <span>
+                      <small>TÍTULO</small>
+                      <strong>
+                        {selectedTitle?.displayText ?? "Sem título equipado"}
+                      </strong>
+                    </span>
+                    <em>›</em>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={styles.appearanceEntry}
+                    disabled={appearanceLoading}
+                    onClick={() => setAppearanceView("backgrounds")}
+                  >
+                    <span>
+                      <small>PROFILE BACKGROUND</small>
+                      <strong>
+                        {selectedBackground?.name ??
+                          (appearanceLoading ? "Carregando..." : "Indisponível")}
+                      </strong>
+                    </span>
+                    <em>›</em>
+                  </button>
+                </section>
+
+                <section className={styles.section} aria-labelledby="profile-privacy-settings">
+                  <strong className={styles.sectionTitle} id="profile-privacy-settings">
+                    Regras de exposição
+                  </strong>
+                  <label className={styles.field}>
+                    <span>Presença</span>
+                    <select
+                      value={presenceVisibility}
+                      onChange={(event) =>
+                        setPresenceVisibility(event.target.value as ProfileVisibility)
+                      }
+                    >
+                      {VISIBILITY_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className={styles.field}>
+                    <span>Atividade</span>
+                    <select
+                      value={activityVisibility}
+                      onChange={(event) =>
+                        setActivityVisibility(event.target.value as ProfileVisibility)
+                      }
+                    >
+                      {VISIBILITY_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className={styles.field}>
+                    <span>Histórico de campanha</span>
+                    <select
+                      value={historyVisibility}
+                      onChange={(event) =>
+                        setHistoryVisibility(event.target.value as ProfileVisibility)
+                      }
+                    >
+                      {VISIBILITY_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className={styles.field}>
+                    <span>Solicitações de aliança</span>
+                    <select
+                      value={friendRequestPolicy}
+                      onChange={(event) =>
+                        setFriendRequestPolicy(event.target.value as FriendRequestPolicy)
+                      }
+                    >
+                      {REQUEST_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </section>
+
+                <footer className={styles.footer}>
+                  {feedback ? (
+                    <p
+                      className={styles.feedback}
+                      data-kind={feedback.kind}
+                      role={feedback.kind === "error" ? "alert" : "status"}
+                    >
+                      {feedback.message}
+                    </p>
+                  ) : null}
+                  <button className={styles.submit} type="submit" disabled={busy}>
+                    {busy ? "Sincronizando..." : "Salvar alterações"}
+                  </button>
+                </footer>
+              </form>
+            )}
           </section>
         </>
       ) : null}
