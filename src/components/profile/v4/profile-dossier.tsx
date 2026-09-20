@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { ProfileTitleRenderer } from "@/src/components/profile/profile-title-renderer";
+import type { CommanderTitleAppearance } from "@/src/lib/profile/profile-appearance-contract";
 import { ProfileCampaignStation } from "@/src/components/profile/command-quarters/profile-campaign-station";
 import {
   commanderStatusLabel,
@@ -26,7 +28,13 @@ function activityLabel(snapshot: ProfileCommandSnapshot) {
   return "Atividade indisponível";
 }
 
-export function ProfileDossier({ snapshot }: { snapshot: ProfileCommandSnapshot }) {
+export function ProfileDossier({
+  snapshot,
+  appearanceTitle = null,
+}: {
+  snapshot: ProfileCommandSnapshot;
+  appearanceTitle?: CommanderTitleAppearance | null;
+}) {
   const identity = snapshot.identity.data;
   const privacy = snapshot.privacy.data;
   const [selectedOperation, setSelectedOperation] = useState<MatchSummary | null>(
@@ -64,9 +72,15 @@ export function ProfileDossier({ snapshot }: { snapshot: ProfileCommandSnapshot 
           <h1 id="dossier-title">{identity.displayName}</h1>
           <div className={styles.identityMeta}>
             <span>@{identity.handle}</span>
-            <span aria-hidden="true">/</span>
-            <strong>{identity.title ?? "Sem título equipado"}</strong>
           </div>
+          {appearanceTitle ? (
+            <ProfileTitleRenderer
+              title={appearanceTitle}
+              className={styles.dossierTitle}
+            />
+          ) : identity.title ? (
+            <strong className={styles.fallbackTitle}>{identity.title}</strong>
+          ) : null}
           <p className={styles.bio}>
             {identity.bio ?? "Nenhum registro biográfico foi adicionado a este Dossiê."}
           </p>
