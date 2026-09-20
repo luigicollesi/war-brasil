@@ -66,7 +66,7 @@ export async function insertRoomInvitation(
     `INSERT INTO game.room_invitations(
        room_id,inviter_user_id,invitee_user_id
      )
-     VALUES($1::uuid,$2::uuid,$3::uuid)
+     VALUES($1::bigint,$2::uuid,$3::uuid)
      RETURNING id,expires_at`,
     [roomId, inviterUserId, inviteeUserId],
   );
@@ -181,7 +181,7 @@ export async function deleteWaitingRoomOwnedByUser(
 ) {
   await db.query(
     `DELETE FROM game.rooms room
-      WHERE room.id=$1::uuid
+      WHERE room.id=$1::bigint
         AND room.status='waiting'
         AND EXISTS (
           SELECT 1
