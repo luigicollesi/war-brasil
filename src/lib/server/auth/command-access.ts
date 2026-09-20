@@ -126,16 +126,14 @@ export async function saveCommanderIdentity(
       handle: string;
       display_name: string;
     }>(
-      `INSERT INTO profile.commanders(
-         user_id, handle, display_name, equipped_background_id
-       )
-       VALUES($1, $2, $3, $4)
+      `INSERT INTO profile.commanders(user_id, handle, display_name)
+       VALUES($1, $2, $3)
        ON CONFLICT (user_id) DO UPDATE
        SET handle = EXCLUDED.handle,
            display_name = EXCLUDED.display_name,
            updated_at = NOW()
        RETURNING handle, display_name`,
-      [session.user.id, handle, displayName, defaultBackgroundId],
+      [session.user.id, handle, displayName],
     );
 
     await ensureEconomyState(session.user.id, client);
