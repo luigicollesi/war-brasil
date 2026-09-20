@@ -52,6 +52,7 @@ export type OwnCommanderProfileDto = Readonly<{
 }>;
 
 export type PublicCommanderProfileDto = Readonly<{
+  userId: string;
   identity: CommanderIdentityDto;
   relationship: Exclude<CommanderRelationship, "blocked">;
   history: Readonly<{
