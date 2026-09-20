@@ -111,6 +111,7 @@ export async function initializeEconomyState(
      SELECT $1::uuid, item.id, item.slot, 'default'
        FROM catalog.cosmetics item
       WHERE item.is_default=TRUE
+        AND item.slot IN ('dice_attack','dice_defense','dice_neutral','territory_skin')
      ON CONFLICT (user_id, cosmetic_id) DO NOTHING`,
     [userId],
   );
@@ -120,6 +121,7 @@ export async function initializeEconomyState(
      SELECT $1::uuid, item.slot, item.id
        FROM catalog.cosmetics item
       WHERE item.is_default=TRUE
+        AND item.slot IN ('dice_attack','dice_defense','dice_neutral','territory_skin')
      ON CONFLICT (user_id, slot) DO NOTHING`,
     [userId],
   );
