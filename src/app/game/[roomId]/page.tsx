@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { GameClient } from "@/src/components/game-client-v2";
 import { MapZoomController } from "@/src/components/map-zoom-controller";
 import { MobileCommandHubController } from "@/src/components/mobile-command-hub-controller";
@@ -6,6 +7,7 @@ import { MobileTerritoryInfoController } from "@/src/components/mobile-territory
 import { PhaseTransitionConfirmationController } from "@/src/components/phase-transition-confirmation-controller";
 import { RoadVisibilityProvider } from "@/src/components/road-visibility-provider";
 import { ServerConnectionIndicator } from "@/src/components/server-connection-indicator";
+import { resolveGameRoomReference } from "@/src/lib/rooms";
 import "./game-polish.css";
 import "./game-quantity.css";
 import "./game-interaction-fix.css";
@@ -31,13 +33,18 @@ export const metadata: Metadata = {
 };
 
 export default async function GamePage({ params }: GamePageProps) {
-  const { roomId } = await params;
+  const { roomId: publicReference } = await params;
+  const room = await resolveGameRoomReference(publicReference);
+
+  if (/^\d+$/.test(publicReference)) {
+    redirect(`/game/${room.code}`);
+  }
 
   return (
     <main className="game-screen" aria-label="Partida Bellum Civile">
       <div className="game-runtime">
         <RoadVisibilityProvider>
-          <GameClient roomId={roomId} />
+          <GameClient roomId={room.id} />
           <MobileCommandHubController />
           <MobileTerritoryInfoController />
           <PhaseTransitionConfirmationController />
