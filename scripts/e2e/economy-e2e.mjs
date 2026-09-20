@@ -3,6 +3,7 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { chromium } from "@playwright/test";
 import { Client } from "pg";
+import { completeCommanderOnboarding } from "./command-access-helper.mjs";
 
 const BASE_URL = process.env.PLAYWRIGHT_TEST_BASE_URL ?? "http://127.0.0.1:3000";
 const DATABASE_URL = process.env.DATABASE_URL;
@@ -305,13 +306,10 @@ try {
   assert.match(userId ?? "", /^[0-9a-f-]{36}$/i);
 
   const handle = `economy_${process.pid}_${String(Date.now()).slice(-6)}`;
-  const onboarding = await apiJson(page, "/api/auth/command-access", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ handle, displayName: "Comandante Economia E2E" }),
+  await completeCommanderOnboarding(page, {
+    handle,
+    displayName: "Comandante Economia E2E",
   });
-  assert.equal(onboarding.status, 200, JSON.stringify(onboarding.body));
-  assert.equal(onboarding.body?.profileComplete, true);
   assertFreshCommanderState(await readEconomyState(userId));
 
   await page.goto(`${BASE_URL}/profile`, { waitUntil: "domcontentloaded" });

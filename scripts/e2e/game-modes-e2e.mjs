@@ -3,6 +3,7 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { Client } from "pg";
+import { completeCommanderOnboarding } from "./command-access-helper.mjs";
 
 const playwrightRuntimeDir = path.resolve(
   process.env.PLAYWRIGHT_RUNTIME_DIR ?? ".e2e-runtime/node_modules/playwright",
@@ -100,15 +101,10 @@ async function authenticate(page) {
   });
   assert.equal(signIn.status, 200, JSON.stringify(signIn.body));
 
-  const onboarding = await apiJson(page, "/api/auth/command-access", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      handle: `mode_${identity}`,
-      displayName: `Modo E2E ${actorSequence}`,
-    }),
+  await completeCommanderOnboarding(page, {
+    handle: `mode_${identity}`,
+    displayName: `Modo E2E ${actorSequence}`,
   });
-  assert.equal(onboarding.status, 200, JSON.stringify(onboarding.body));
 }
 
 async function createActor(browser, viewport = { width: 1440, height: 900 }) {
