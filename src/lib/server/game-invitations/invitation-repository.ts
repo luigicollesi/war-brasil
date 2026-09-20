@@ -169,6 +169,39 @@ export async function listOutgoingRoomInvitations(
   return result.rows.map(invitationFromRow);
 }
 
+export async function readIncomingRoomInvitationRoomReference(
+  invitationId: string,
+  inviteeUserId: string,
+  db: InvitationQueryable,
+) {
+  const result = await db.query<{
+    room_id: string | null;
+    room_code: string;
+  }>(
+    `SELECT room_id::text,
+            room_code_snapshot AS room_code
+       FROM game.room_invitations
+      WHERE id=$1::uuid
+        AND invitee_user_id=$2::uuid`,
+    [invitationId, inviteeUserId],
+  );
+  return result.rows[0] ?? null;
+}
+
+export async function lockWaitingRoomByInvitationReference(
+  roomId: string,
+  db: InvitationQueryable,
+) {
+  const result = await db.query<{ id: string }>(
+    `SELECT id::text
+       FROM game.rooms
+      WHERE id=$1::bigint
+      FOR UPDATE`,
+    [roomId],
+  );
+  return result.rows[0] ?? null;
+}
+
 export async function lockIncomingRoomInvitation(
   invitationId: string,
   inviteeUserId: string,
