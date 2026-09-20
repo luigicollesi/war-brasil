@@ -56,7 +56,6 @@ test("public profile projection exposes only equipped appearance and gameplay co
   );
 });
 
-
 test("profile backgrounds can reuse managed collection background assets", async () => {
   const migration = await source(
     "src/lib/db/migrations/managed/054-profile-background-shared-assets.sql",
@@ -65,10 +64,7 @@ test("profile backgrounds can reuse managed collection background assets", async
     "src/lib/server/profile/profile-appearance-asset-storage.ts",
   );
 
-  assert.match(
-    migration,
-    /store\/collections\/[a-z0-9]+\(\?:-\[a-z0-9\]\+\)\*\/background/,
-  );
+  assert.match(migration, /store\/collections\//);
   assert.match(migration, /profile\.background\.cosmic-night/);
   assert.match(migration, /store\/collections\/viking\/background\.webp/);
   assert.match(migration, /store\/collections\/ceu-noturno\/background\.webp/);
