@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { PublicCommanderProfileSnapshot } from "@/src/lib/profile/profile-command-contract";
 import { ProfileDisplayStage } from "./profile-display-stage";
 import { ProfileTitleRenderer } from "./profile-title-renderer";
@@ -22,8 +22,42 @@ export function PublicCommanderProfileView({
     kind: "error" | "success";
     message: string;
   } | null>(null);
+  const [invitePending, setInvitePending] = useState(false);
 
   const identity = snapshot.identity;
+
+  useEffect(() => {
+    if (snapshot.relationship !== "friend") {
+      setInvitePending(false);
+      return;
+    }
+
+    let active = true;
+    void fetch("/api/profile/game-invitations", {
+      cache: "no-store",
+    })
+      .then(async (response) => {
+        if (!response.ok) return null;
+        return (await response.json()) as {
+          outgoing?: ReadonlyArray<{
+            invitee?: { handle?: string };
+          }>;
+        };
+      })
+      .then((body) => {
+        if (!active || !body?.outgoing) return;
+        setInvitePending(
+          body.outgoing.some(
+            (invitation) => invitation.invitee?.handle === identity.handle,
+          ),
+        );
+      })
+      .catch(() => undefined);
+
+    return () => {
+      active = false;
+    };
+  }, [identity.handle, snapshot.relationship]);
 
   async function sendFriendRequest() {
     if (busy) return;
@@ -163,10 +197,14 @@ export function PublicCommanderProfileView({
             <button
               type="button"
               className={styles.primaryAction}
-              disabled={busy !== null}
+              disabled={busy !== null || invitePending}
               onClick={() => void inviteToGame()}
             >
-              {busy === "invite" ? "CRIANDO SALA..." : "CHAMAR PARA JOGAR"}
+              {invitePending
+                ? "CONVITE ENVIADO"
+                : busy === "invite"
+                  ? "CRIANDO SALA..."
+                  : "CHAMAR PARA JOGAR"}
             </button>
           ) : null}
 
