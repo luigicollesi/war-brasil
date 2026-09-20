@@ -29,14 +29,14 @@ ALTER TABLE catalog.commander_titles
 CREATE OR REPLACE FUNCTION catalog.default_commander_title_display_text()
 RETURNS TRIGGER
 LANGUAGE plpgsql
-AS $
+AS $body$
 BEGIN
   IF NEW.display_text IS NULL OR btrim(NEW.display_text)='' THEN
     NEW.display_text := NEW.name;
   END IF;
   RETURN NEW;
 END
-$;
+$body$;
 
 DROP TRIGGER IF EXISTS commander_title_display_text_default
   ON catalog.commander_titles;
@@ -197,7 +197,7 @@ ALTER TABLE profile.commanders
 CREATE OR REPLACE FUNCTION profile.ensure_commander_default_background()
 RETURNS TRIGGER
 LANGUAGE plpgsql
-AS $
+AS $body$
 DECLARE
   default_background_id TEXT;
 BEGIN
@@ -226,7 +226,7 @@ BEGIN
   NEW.equipped_background_id := default_background_id;
   RETURN NEW;
 END
-$;
+$body$;
 
 DROP TRIGGER IF EXISTS commander_default_background_before_insert
   ON profile.commanders;
