@@ -721,16 +721,33 @@ export async function leaveWaitingRoom(
       );
     }
 
-    const removed = await client.query<{ id: string }>(
+    const removed = await client.query<{
+      id: string;
+      user_id: string | null;
+    }>(
       `DELETE FROM game.players
         WHERE room_id=$1
           AND player_session=$2
           AND is_bot=FALSE
-        RETURNING id`,
+        RETURNING id,user_id`,
       [room.id, playerSession],
     );
     if (!removed.rowCount) {
       throw new RoomError("Você não pertence a esta sala.", 404);
+    }
+
+    const removedUserId = removed.rows[0]?.user_id;
+    if (removedUserId) {
+      await client.query(
+        `UPDATE game.room_invitations
+            SET state='cancelled',
+                resolved_reason='host_left',
+                resolved_at=NOW()
+          WHERE room_id=$1
+            AND inviter_user_id=$2::uuid
+            AND state='pending'`,
+        [room.id, removedUserId],
+      );
     }
 
     await resetHumanReadiness(client, room.id);
