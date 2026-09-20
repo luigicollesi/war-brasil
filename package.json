@@ -38,7 +38,8 @@
     "cloudflare:preview": "npm run cloudflare:prepare && npm run cloudflare:patch-next && NEXT_PUBLIC_GAME_REALTIME_MODE=off GAME_REALTIME_ENABLED=false opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "cloudflare:prepare": "npm install --no-save --package-lock=false @opennextjs/cloudflare@1.20.6 wrangler@4.135.0",
     "cloudflare:upload": "opennextjs-cloudflare upload",
-    "cloudflare:patch-next": "node scripts/patch-next-cloudflare-middleware-manifest.mjs"
+    "cloudflare:patch-next": "node scripts/patch-next-cloudflare-middleware-manifest.mjs",
+    "cloudflare:check-next-patch": "node scripts/patch-next-cloudflare-middleware-manifest.mjs --check"
   },
   "dependencies": {
     "@react-three/fiber": "9.7.0",
