@@ -14,7 +14,8 @@
   // until their production runtimes are deployed separately.
   "vars": {
     "GAME_REALTIME_ENABLED": "false",
-    "GAME_AUTOMATION_WORKER_MODE": "off"
+    "GAME_AUTOMATION_WORKER_MODE": "off",
+    "ASSET_STORAGE_BUCKET": "war-brasil-assets-prod"
   },
   "secrets": {
     "required": [
