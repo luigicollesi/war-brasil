@@ -132,16 +132,20 @@ export async function listIncomingGameInvitations(userId: string) {
   return listIncomingRoomInvitations(userId);
 }
 
-async function validateIncomingInvitation(
-  inviteeUserId: string,
-  invitationId: string,
-) {
+export async function acceptGameInvitation(input: Readonly<{
+  inviteeUserId: string;
+  invitationId: string;
+  playerSession: string;
+  identity: AuthenticatedPlayerIdentity;
+}>) {
+  const invitationId = normalizeInvitationId(input.invitationId);
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+
     const invitation = await lockIncomingRoomInvitation(
-      normalizeInvitationId(invitationId),
-      inviteeUserId,
+      invitationId,
+      input.inviteeUserId,
       client,
     );
     if (!invitation) {
@@ -152,23 +156,24 @@ async function validateIncomingInvitation(
       );
     }
 
-    if (
-      invitation.state !== "pending" ||
-      invitation.expires_at.getTime() <= Date.now()
-    ) {
-      if (
-        invitation.state === "pending" &&
-        invitation.expires_at.getTime() <= Date.now()
-      ) {
-        await resolveRoomInvitation(invitation.id, "expired", client);
-        await client.query("COMMIT");
-      }
+    if (invitation.state !== "pending") {
       throw new GameInvitationError(
-        "GAME_INVITATION_EXPIRED",
+        "GAME_INVITATION_UNAVAILABLE",
         "Este convite de partida não está mais disponível.",
         409,
       );
     }
+
+    if (invitation.expires_at.getTime() <= Date.now()) {
+      await resolveRoomInvitation(invitation.id, "expired", client);
+      await client.query("COMMIT");
+      throw new GameInvitationError(
+        "GAME_INVITATION_EXPIRED",
+        "Este convite de partida expirou.",
+        409,
+      );
+    }
+
     if (invitation.room_status !== "waiting") {
       await resolveRoomInvitation(invitation.id, "cancelled", client);
       await client.query("COMMIT");
@@ -180,57 +185,26 @@ async function validateIncomingInvitation(
     }
 
     await requireFriendRelationship(
-      inviteeUserId,
+      input.inviteeUserId,
       invitation.inviter_user_id,
       client,
     );
-    await client.query("COMMIT");
-    return invitation;
-  } catch (error) {
-    await client.query("ROLLBACK").catch(() => undefined);
-    throw error;
-  } finally {
-    client.release();
-  }
-}
 
-export async function acceptGameInvitation(input: Readonly<{
-  inviteeUserId: string;
-  invitationId: string;
-  playerSession: string;
-  identity: AuthenticatedPlayerIdentity;
-}>) {
-  const invitation = await validateIncomingInvitation(
-    input.inviteeUserId,
-    input.invitationId,
-  );
-
-  await joinRoom(invitation.room_code, input.playerSession, input.identity);
-
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
-    const locked = await lockIncomingRoomInvitation(
-      invitation.id,
-      input.inviteeUserId,
-      client,
-    );
-    if (!locked) {
+    try {
+      await joinRoom(invitation.room_code, input.playerSession, input.identity);
+    } catch (error) {
+      await resolveRoomInvitation(invitation.id, "cancelled", client);
+      await client.query("COMMIT");
       throw new GameInvitationError(
-        "GAME_INVITATION_NOT_FOUND",
-        "Convite de partida não encontrado.",
-        404,
-      );
-    }
-    if (locked.state === "pending") {
-      await resolveRoomInvitation(locked.id, "accepted", client);
-    } else if (locked.state !== "accepted") {
-      throw new GameInvitationError(
-        "GAME_INVITATION_UNAVAILABLE",
-        "O convite foi resolvido antes da entrada na sala.",
+        "GAME_INVITATION_ROOM_UNAVAILABLE",
+        error instanceof Error
+          ? error.message
+          : "A sala vinculada a este convite não está mais disponível.",
         409,
       );
     }
+
+    await resolveRoomInvitation(invitation.id, "accepted", client);
     await client.query("COMMIT");
     return { invitationId: invitation.id, roomCode: invitation.room_code };
   } catch (error) {
