@@ -11,133 +11,120 @@
 --
 -- Up Migration
 
-DO $body$
-DECLARE
-  first_run BOOLEAN;
-BEGIN
-  SELECT NOT EXISTS (
-    SELECT 1
-      FROM catalog.cosmetics
-     WHERE id='dice.attack.brazil'
+INSERT INTO catalog.cosmetics(
+  id,slug,name,description,slot,rarity,asset_ref,preview_ref,effect_key,
+  status,is_default,collection_id,body_color,body_highlight_color
+)
+VALUES
+  (
+    'dice.attack.brazil',
+    'dado-ataque-brazil',
+    'Ataque — Brazil',
+    'Visual Brazil do dado ofensivo.',
+    'dice_attack',
+    NULL,
+    'cosmetics/dice/brazil/attack.webp',
+    NULL,
+    NULL,
+    'available',
+    FALSE,
+    NULL,
+    '#BB7807',
+    NULL
+  ),
+  (
+    'dice.defense.brazil',
+    'dado-defesa-brazil',
+    'Defesa — Brazil',
+    'Visual Brazil do dado defensivo.',
+    'dice_defense',
+    NULL,
+    'cosmetics/dice/brazil/defense.webp',
+    NULL,
+    NULL,
+    'available',
+    FALSE,
+    NULL,
+    '#BB7807',
+    NULL
+  ),
+  (
+    'dice.neutral.brazil',
+    'dado-neutro-brazil',
+    'Neutro — Brazil',
+    'Visual Brazil para iniciativa e rolagens neutras.',
+    'dice_neutral',
+    NULL,
+    'cosmetics/dice/brazil/neutral.webp',
+    NULL,
+    NULL,
+    'available',
+    FALSE,
+    NULL,
+    '#BB7807',
+    NULL
   )
-  INTO first_run;
+ON CONFLICT (id) DO UPDATE
+SET slug=EXCLUDED.slug,
+    name=EXCLUDED.name,
+    description=EXCLUDED.description,
+    rarity=EXCLUDED.rarity,
+    asset_ref=EXCLUDED.asset_ref,
+    preview_ref=EXCLUDED.preview_ref,
+    effect_key=EXCLUDED.effect_key,
+    status=EXCLUDED.status,
+    is_default=FALSE,
+    collection_id=NULL,
+    body_color=EXCLUDED.body_color,
+    body_highlight_color=EXCLUDED.body_highlight_color,
+    updated_at=NOW();
 
-  INSERT INTO catalog.cosmetics(
-    id,slug,name,description,slot,rarity,asset_ref,preview_ref,effect_key,
-    status,is_default,collection_id,body_color,body_highlight_color
-  )
-  VALUES
-    (
-      'dice.attack.brazil',
-      'dado-ataque-brazil',
-      'Ataque — Brazil',
-      'Visual Brazil do dado ofensivo.',
-      'dice_attack',
-      NULL,
-      'cosmetics/dice/brazil/attack.webp',
-      NULL,
-      NULL,
-      'available',
-      FALSE,
-      NULL,
-      '#BB7807',
-      NULL
-    ),
-    (
-      'dice.defense.brazil',
-      'dado-defesa-brazil',
-      'Defesa — Brazil',
-      'Visual Brazil do dado defensivo.',
-      'dice_defense',
-      NULL,
-      'cosmetics/dice/brazil/defense.webp',
-      NULL,
-      NULL,
-      'available',
-      FALSE,
-      NULL,
-      '#BB7807',
-      NULL
-    ),
-    (
-      'dice.neutral.brazil',
-      'dado-neutro-brazil',
-      'Neutro — Brazil',
-      'Visual Brazil para iniciativa e rolagens neutras.',
-      'dice_neutral',
-      NULL,
-      'cosmetics/dice/brazil/neutral.webp',
-      NULL,
-      NULL,
-      'available',
-      FALSE,
-      NULL,
-      '#BB7807',
-      NULL
-    )
-  ON CONFLICT (id) DO UPDATE
-  SET slug=EXCLUDED.slug,
-      name=EXCLUDED.name,
-      description=EXCLUDED.description,
-      rarity=EXCLUDED.rarity,
-      asset_ref=EXCLUDED.asset_ref,
-      preview_ref=EXCLUDED.preview_ref,
-      effect_key=EXCLUDED.effect_key,
-      status=EXCLUDED.status,
-      is_default=FALSE,
-      collection_id=NULL,
-      body_color=EXCLUDED.body_color,
-      body_highlight_color=EXCLUDED.body_highlight_color,
-      updated_at=NOW();
+INSERT INTO catalog.cosmetic_assets(
+  cosmetic_id,role,object_key,mime_type,version
+)
+VALUES
+  ('dice.attack.brazil','primary','cosmetics/dice/brazil/attack.webp','image/webp',1),
+  ('dice.defense.brazil','primary','cosmetics/dice/brazil/defense.webp','image/webp',1),
+  ('dice.neutral.brazil','primary','cosmetics/dice/brazil/neutral.webp','image/webp',1)
+ON CONFLICT (cosmetic_id,role) DO UPDATE
+SET object_key=EXCLUDED.object_key,
+    mime_type=EXCLUDED.mime_type,
+    updated_at=NOW();
 
-  INSERT INTO catalog.cosmetic_assets(
-    cosmetic_id,role,object_key,mime_type,version
-  )
-  VALUES
-    ('dice.attack.brazil','primary','cosmetics/dice/brazil/attack.webp','image/webp',1),
-    ('dice.defense.brazil','primary','cosmetics/dice/brazil/defense.webp','image/webp',1),
-    ('dice.neutral.brazil','primary','cosmetics/dice/brazil/neutral.webp','image/webp',1)
-  ON CONFLICT (cosmetic_id,role) DO UPDATE
-  SET object_key=EXCLUDED.object_key,
-      mime_type=EXCLUDED.mime_type,
-      updated_at=NOW();
+-- Preserve the semantic identity of the old default for current owners before
+-- the stable *.default ids are repurposed below.
+INSERT INTO inventory.cosmetics(
+  user_id,cosmetic_id,slot,acquisition_source,acquired_at
+)
+SELECT owned.user_id,
+       CASE owned.slot
+         WHEN 'dice_attack' THEN 'dice.attack.brazil'
+         WHEN 'dice_defense' THEN 'dice.defense.brazil'
+         WHEN 'dice_neutral' THEN 'dice.neutral.brazil'
+       END,
+       owned.slot,
+       owned.acquisition_source,
+       owned.acquired_at
+  FROM inventory.cosmetics owned
+ WHERE owned.cosmetic_id IN (
+   'dice.attack.default',
+   'dice.defense.default',
+   'dice.neutral.default'
+ )
+ON CONFLICT (user_id,cosmetic_id) DO NOTHING;
 
-  IF first_run THEN
-    INSERT INTO inventory.cosmetics(
-      user_id,cosmetic_id,slot,acquisition_source,acquired_at
-    )
-    SELECT owned.user_id,
-           CASE owned.slot
-             WHEN 'dice_attack' THEN 'dice.attack.brazil'
-             WHEN 'dice_defense' THEN 'dice.defense.brazil'
-             WHEN 'dice_neutral' THEN 'dice.neutral.brazil'
-           END,
-           owned.slot,
-           owned.acquisition_source,
-           owned.acquired_at
-      FROM inventory.cosmetics owned
-     WHERE owned.cosmetic_id IN (
-       'dice.attack.default',
-       'dice.defense.default',
-       'dice.neutral.default'
-     )
-    ON CONFLICT (user_id,cosmetic_id) DO NOTHING;
-
-    UPDATE profile.cosmetic_loadout
-       SET cosmetic_id=CASE slot
-             WHEN 'dice_attack' THEN 'dice.attack.brazil'
-             WHEN 'dice_defense' THEN 'dice.defense.brazil'
-             WHEN 'dice_neutral' THEN 'dice.neutral.brazil'
-           END,
-           updated_at=NOW()
-     WHERE cosmetic_id IN (
-       'dice.attack.default',
-       'dice.defense.default',
-       'dice.neutral.default'
-     );
-  END IF;
-END
-$body$;
+UPDATE profile.cosmetic_loadout
+   SET cosmetic_id=CASE slot
+         WHEN 'dice_attack' THEN 'dice.attack.brazil'
+         WHEN 'dice_defense' THEN 'dice.defense.brazil'
+         WHEN 'dice_neutral' THEN 'dice.neutral.brazil'
+       END,
+       updated_at=NOW()
+ WHERE cosmetic_id IN (
+   'dice.attack.default',
+   'dice.defense.default',
+   'dice.neutral.default'
+ );
 
 -- Simple Silver is no longer merchandise: it becomes the canonical built-in
 -- default. Keep the legacy catalog/store records retired for referential safety.
