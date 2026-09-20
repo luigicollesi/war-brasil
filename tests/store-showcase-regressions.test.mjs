@@ -93,23 +93,28 @@ test("3d texture delivery stays same-origin instead of redirecting the browser t
 });
 
 
-test("showcase mounts every 3d item once and keeps inactive objects parked offscreen in WebGL", () => {
+test("showcase keeps a bounded current-plus-target WebGL scene instead of parking the full catalogue", () => {
   assert.match(showcase, /key:\s*showcase\.id,/);
   assert.doesNotMatch(showcase, /key:\s*selectedItem\?\.id/);
-  assert.match(showcase, /showcase\.items\.map\(\(item, itemIndex\) => \(/);
+  assert.match(showcase, /const activeSceneItems = useMemo/);
+  assert.match(showcase, /transitionPhase !== "slide"/);
+  assert.match(showcase, /transitionTargetItem\.id === selectedItem\.id/);
+  assert.match(showcase, /activeSceneItems\.map\(\(\{ item, itemIndex \}\) => \(/);
   assert.match(
     showcase,
     /<ShowcaseObjectController[\s\S]*key=\{item\.id\}[\s\S]*itemId=\{item\.id\}[\s\S]*itemIndex=\{itemIndex\}/,
+  );
+  assert.doesNotMatch(
+    showcase,
+    /showcase\.items\.map\(\(item, itemIndex\) =>\s*\(\s*<ShowcaseObjectController/s,
   );
   assert.match(showcase, /transitionTargetItemId=\{transitionTargetItemId\}/);
   assert.match(controller, /const SHOWCASE_STANDBY_X = 8;/);
   assert.match(controller, /const isSelected = itemId === selectedItemId;/);
   assert.match(controller, /const isTarget = itemId === transitionTargetItemId;/);
-  assert.match(controller, /group\.position\.x = standbyDirection \* SHOWCASE_STANDBY_X/);
 
   assert.match(showcaseStyles, /\.root\s*\{[^}]*overflow:\s*hidden;/);
   assert.match(showcaseStyles, /\.stage\s*\{[^}]*overflow:\s*hidden;/);
-  assert.doesNotMatch(showcase, /style=\{\{[^}]*left:\s*[^}]*SHOWCASE_STANDBY/);
 });
 
 test("showcase carousel moves current and target simultaneously during one slide", () => {
