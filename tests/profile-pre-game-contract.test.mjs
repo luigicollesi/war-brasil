@@ -30,7 +30,12 @@ test("rota PROFILE resolve snapshot autenticado em request-time e renderiza Doss
   assert.match(page, /await connection\(\);\s*\n\s*const snapshot = await getCurrentProfileCommandSnapshot\(\)/);
   assert.match(page, /<ProfileShell/);
   assert.match(page, /activeSurface="dossier"/);
-  assert.match(page, /<ProfileDossier snapshot=\{snapshot\} \/>/);
+  assert.match(page, /getOwnProfileAppearance/);
+  assert.match(page, /backgroundAssetRef=\{equippedBackground\}/);
+  assert.match(
+    page,
+    /<ProfileDossier snapshot=\{snapshot\} appearanceTitle=\{equippedTitle\} \/>/,
+  );
   assert.doesNotMatch(page, /ProfileCommandHub/);
   assert.doesNotMatch(page, /profile-command-data/);
   assert.doesNotMatch(page, /searchParams|useSearchParams/);
