@@ -133,7 +133,7 @@ test("holograma Brasil é decorativo e fallback funcional continua na Foundation
 
 test("autorização de conflito não cria nova espera antes da navegação", () => {
   assert.match(lobby, /snapshot\.room\.status !== "waiting"/);
-  assert.match(lobby, /router\.replace\(`\/game\/\$\{snapshot\.room\.id\}`\)/);
+  assert.match(lobby, /router\.replace\(`\/game\/\$\{snapshot\.room\.code\}`\)/);
   assert.match(lobby, /CONFLITO AUTORIZADO/);
   const navigationEffect = lobby.slice(
     lobby.indexOf("useEffect(() =>"),
@@ -148,4 +148,19 @@ test("identidade visual mantém verde militar, latão e vermelho reservado ao co
   assert.match(formationStyles, /data-start-authorized="true"/);
   assert.match(readyStyles, /data-start-authorized="true"/);
   assert.doesNotMatch(visualStyles, /cyan|#00ffff|#00e5ff/i);
+});
+
+
+test("lobby mantém heartbeat do assento e saída explícita sem unload destrutivo", () => {
+  assert.match(lobby, /\/api\/rooms\/\$\{encodeURIComponent\(code\)\}\/heartbeat/);
+  assert.match(lobby, /20_000/);
+  assert.match(lobby, /method: "DELETE"/);
+  assert.match(lobby, /router\.replace\("\/matchmaking"\)/);
+  assert.match(workspace, /SAIR DA SALA/);
+  assert.doesNotMatch(lobby, /beforeunload|pagehide/);
+});
+
+test("partida navega publicamente pelo código da sala", () => {
+  assert.match(lobby, /snapshot\.room\.code/);
+  assert.doesNotMatch(lobby, /\/game\/\$\{snapshot\.room\.id\}/);
 });
