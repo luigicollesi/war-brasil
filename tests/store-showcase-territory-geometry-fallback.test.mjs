@@ -22,9 +22,11 @@ test("SHOWCASE-36 isolates territory geometry failure and swaps only the model t
   assert.match(boundary, /componentDidCatch|getDerivedStateFromError/);
   assert.match(boundary, /onError/);
   assert.match(showcase, /ShowcaseModelErrorBoundary/);
-  assert.match(showcase, /failedTerritoryItemId/);
+  assert.match(showcase, /failedTerritoryItemIds/);
+  assert.match(showcase, /setFailedTerritoryItemIds/);
+  assert.match(showcase, /new Set\(current\)/);
   assert.match(showcase, /TerritoryShowcaseFallback/);
-  assert.match(showcase, /selectedItem\.id\s*===\s*failedTerritoryItemId/);
+  assert.match(showcase, /failedTerritoryItemIds\.has\(selectedItem\.id\)/);
   assert.match(showcase, /data-showcase-geometry-fallback/);
 });
 
