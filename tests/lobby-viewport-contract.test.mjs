@@ -95,7 +95,7 @@ test("LobbyClient continua controlador único dos contratos funcionais", () => {
   assert.match(lobbyClient, /fetch\(`\/api\/rooms\/\$\{encodeURIComponent\(code\)\}\/me`/);
   assert.match(lobbyClient, /fetch\(`\/api\/rooms\/\$\{encodeURIComponent\(code\)\}\/bots`/);
   assert.match(lobbyClient, /method: "DELETE"/);
-  assert.match(lobbyClient, /router\.replace\(`\/game\/\$\{snapshot\.room\.id\}`\)/);
+  assert.match(lobbyClient, /router\.replace\(`\/game\/\$\{snapshot\.room\.code\}`\)/);
   assert.doesNotMatch(workspace, /fetch\(|useLobbySync|router\.replace/);
   assert.doesNotMatch(formation, /fetch\(|useLobbySync/);
   assert.doesNotMatch(station, /fetch\(|useLobbySync/);
