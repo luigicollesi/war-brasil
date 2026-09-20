@@ -19,6 +19,7 @@ const physicalTables = new Map([
       "player_objectives",
       "players",
       "rematch_votes",
+      "room_invitations",
       "rooms",
       "round_events",
       "territories",
