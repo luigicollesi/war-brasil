@@ -3,6 +3,7 @@ import "server-only";
 import type { AuthSession } from "./auth";
 import { authPool } from "./auth-pool";
 import { ensureEconomyState } from "../economy/economy-service";
+import { ensureProfileAppearanceState } from "../profile/profile-appearance-service";
 
 const HANDLE_MIN_LENGTH = 3;
 const HANDLE_MAX_LENGTH = 32;
@@ -113,18 +114,28 @@ export async function saveCommanderIdentity(
 
   try {
     await client.query("BEGIN");
+    const defaultBackgroundId = await ensureProfileAppearanceState(
+      session.user.id,
+      client,
+    );
+    if (!defaultBackgroundId) {
+      throw new Error("PROFILE_BACKGROUND_DEFAULT_MISSING");
+    }
+
     const result = await client.query<{
       handle: string;
       display_name: string;
     }>(
-      `INSERT INTO profile.commanders(user_id, handle, display_name)
-       VALUES($1, $2, $3)
+      `INSERT INTO profile.commanders(
+         user_id, handle, display_name, equipped_background_id
+       )
+       VALUES($1, $2, $3, $4)
        ON CONFLICT (user_id) DO UPDATE
        SET handle = EXCLUDED.handle,
            display_name = EXCLUDED.display_name,
            updated_at = NOW()
        RETURNING handle, display_name`,
-      [session.user.id, handle, displayName],
+      [session.user.id, handle, displayName, defaultBackgroundId],
     );
 
     await ensureEconomyState(session.user.id, client);
