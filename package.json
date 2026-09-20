@@ -34,9 +34,10 @@
     "worker:start": "node worker/server.mjs",
     "worker:test": "node --check worker/server.mjs && node --test \"worker/test/*.test.mjs\"",
     "cloudflare:build": "npm run cloudflare:prepare && opennextjs-cloudflare build",
-    "cloudflare:deploy": "npm run cloudflare:prepare && opennextjs-cloudflare deploy",
-    "cloudflare:preview": "npm run cloudflare:prepare && opennextjs-cloudflare preview",
-    "cloudflare:prepare": "npm install --no-save --package-lock=false @opennextjs/cloudflare@1.20.6 wrangler@4.135.0"
+    "cloudflare:deploy": "opennextjs-cloudflare deploy",
+    "cloudflare:preview": "npm run cloudflare:prepare && opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "cloudflare:prepare": "npm install --no-save --package-lock=false @opennextjs/cloudflare@1.20.6 wrangler@4.135.0",
+    "cloudflare:upload": "opennextjs-cloudflare upload"
   },
   "dependencies": {
     "@react-three/fiber": "9.7.0",
