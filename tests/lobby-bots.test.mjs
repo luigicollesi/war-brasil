@@ -150,6 +150,7 @@ test("bots recebem quatro cosméticos aleatórios disponíveis no snapshot de in
   );
   assert.match(gameCosmeticLoadout, /LEFT JOIN LATERAL/);
   assert.match(gameCosmeticLoadout, /candidate\.status='available'/);
+  assert.match(gameCosmeticLoadout, /candidate\.is_default=FALSE/);
   assert.match(gameCosmeticLoadout, /candidate\.slot=player_slot\.slot/);
   assert.match(gameCosmeticLoadout, /ORDER BY random\(\)/);
   assert.match(gameCosmeticLoadout, /LIMIT 1/);
