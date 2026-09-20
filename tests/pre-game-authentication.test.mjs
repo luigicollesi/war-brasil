@@ -62,6 +62,10 @@ const rooms = readFileSync("src/lib/server/rooms.ts", "utf8");
 const createRoomRoute = readFileSync("src/app/api/rooms/route.ts", "utf8");
 const joinRoomRoute = readFileSync("src/app/api/rooms/join/route.ts", "utf8");
 const lobbyE2e = readFileSync("scripts/e2e/lobby-e2e.mjs", "utf8");
+const commandAccessE2eHelper = readFileSync(
+  "scripts/e2e/command-access-helper.mjs",
+  "utf8",
+);
 
 const authSources = [
   auth,
@@ -297,14 +301,20 @@ test("create/join vinculam conta e snapshot público ao assento na transação",
   }
 });
 
-test("Lobby E2E usa promoção OTP e sessão Better Auth real sem bypass de CI", () => {
+test("Lobby E2E usa promoção OTP, age gate e sessão Better Auth real sem bypass de CI", () => {
   assert.match(lobbyE2e, /\/api\/auth\/register/);
   assert.match(lobbyE2e, /waitForRegistrationCode/);
   assert.match(lobbyE2e, /\/api\/auth\/register\/verify/);
   assert.match(lobbyE2e, /authenticated/);
-  assert.match(lobbyE2e, /\/api\/auth\/command-access/);
-  assert.match(lobbyE2e, /profileComplete/);
-  assert.doesNotMatch(lobbyE2e, /UPDATE auth\."user"|AUTH_BYPASS|SKIP_AUTH|DISABLE_AUTH/);
+  assert.match(lobbyE2e, /completeCommanderOnboarding/);
+  assert.match(commandAccessE2eHelper, /\/api\/auth\/command-access\/age/);
+  assert.match(commandAccessE2eHelper, /ageGateComplete/);
+  assert.match(commandAccessE2eHelper, /\/api\/auth\/command-access/);
+  assert.match(commandAccessE2eHelper, /profileComplete/);
+  assert.doesNotMatch(
+    lobbyE2e + commandAccessE2eHelper,
+    /UPDATE auth\."user"|AUTH_BYPASS|SKIP_AUTH|DISABLE_AUTH/,
+  );
 });
 
 
