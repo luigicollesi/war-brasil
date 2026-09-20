@@ -3,7 +3,10 @@ import "server-only";
 import type { AuthenticatedPlayerIdentity } from "../rooms";
 import { createRoom, joinRoom } from "../rooms";
 import { pool } from "../db/pool";
-import { findCommanderByHandle } from "../profile/profile-repository";
+import {
+  findCommanderByHandle,
+  type ProfileQueryable,
+} from "../profile/profile-repository";
 import { getSocialRelationship } from "../profile/social-repository";
 import {
   deleteWaitingRoomOwnedByUser,
@@ -53,7 +56,7 @@ function isUniqueViolation(error: unknown) {
 async function requireFriendRelationship(
   actorUserId: string,
   targetUserId: string,
-  db = pool,
+  db: ProfileQueryable = pool,
 ) {
   const relationship = await getSocialRelationship(
     actorUserId,
