@@ -17,6 +17,7 @@ if (!connectionString) {
 
 const migrationsDir = resolve("src/lib/db/migrations/managed");
 const migrationNamePattern = /^\d{3}-[a-z0-9-]+\.sql$/;
+const migrationHistoryReferencePattern = /\bops\.pgmigrations\b/i;
 const client = new Client({ connectionString });
 
 function managedMigrationFiles() {
@@ -24,6 +25,19 @@ function managedMigrationFiles() {
     .filter((entry) => entry.isFile() && entry.name.endsWith(".sql"))
     .map((entry) => entry.name)
     .sort((left, right) => left.localeCompare(right));
+}
+
+function assertManagedMigrationSequence(files) {
+  let expectedVersion = 26;
+  for (const fileName of files) {
+    const version = Number.parseInt(fileName.slice(0, 3), 10);
+    if (version !== expectedVersion) {
+      throw new Error(
+        `Sequência de migrations gerenciadas inválida: esperado ${String(expectedVersion).padStart(3, "0")}, encontrado ${fileName}.`,
+      );
+    }
+    expectedVersion += 1;
+  }
 }
 
 function migrationUpSql(fileName) {
@@ -51,6 +65,11 @@ function migrationUpSql(fileName) {
 
   if (!sql) {
     throw new Error(`Migration ${fileName} não possui comandos de up.`);
+  }
+  if (migrationHistoryReferencePattern.test(sql)) {
+    throw new Error(
+      `Migration ${fileName} não pode acessar ops.pgmigrations; o histórico é responsabilidade exclusiva do runner.`,
+    );
   }
   return sql;
 }
@@ -268,6 +287,7 @@ try {
   await assertMigrationBaseline();
 
   const files = managedMigrationFiles();
+  assertManagedMigrationSequence(files);
   const appliedResult = await client.query(
     "SELECT name FROM ops.pgmigrations ORDER BY id",
   );

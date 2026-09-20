@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { spawnSync } from "node:child_process";
 import test from "node:test";
 import { Client } from "pg";
 
@@ -19,6 +18,19 @@ const preEconomyHistory = [
   "035-social-graph.sql",
   "036-match-history-snapshots.sql",
   "037-profile-remove-portraits.sql",
+];
+
+const economyHistory = [
+  "038-economy-cosmetics-foundation.sql",
+  "039-game-cosmetic-loadout-snapshots.sql",
+  "040-r2-webp-cosmetic-catalog.sql",
+  "041-economy-v2-commerce.sql",
+  "042-territory-skins-v1.sql",
+  "043-economy-storefront-v2.sql",
+  "044-economy-storefront-territory-commerce.sql",
+  "045-economy-storefront-launch-catalog.sql",
+  "046-game-modes-objective-supremacy.sql",
+  "047-economy-storefront-collection-promotions.sql",
 ];
 
 function migrationUpSql(path) {
@@ -53,17 +65,29 @@ async function withTemporaryDatabase(callback) {
   }
 }
 
-function runPrepare(connectionString) {
-  const result = spawnSync(process.execPath, ["scripts/prepare-dev-db.mjs"], {
-    cwd: process.cwd(),
-    encoding: "utf8",
-    env: { ...process.env, DATABASE_URL: connectionString },
-  });
-  assert.equal(
-    result.status,
-    0,
-    `prepare-dev-db falhou:\n${result.stdout}\n${result.stderr}`,
-  );
+async function applyManagedMigrations(connectionString, names) {
+  const client = new Client({ connectionString });
+  await client.connect();
+  try {
+    for (const name of names) {
+      await client.query("BEGIN");
+      try {
+        await client.query(
+          migrationUpSql(`src/lib/db/migrations/managed/${name}`),
+        );
+        await client.query(
+          "INSERT INTO ops.pgmigrations(name) VALUES($1)",
+          [name],
+        );
+        await client.query("COMMIT");
+      } catch (error) {
+        await client.query("ROLLBACK");
+        throw error;
+      }
+    }
+  } finally {
+    await client.end();
+  }
 }
 
 async function prepareDatabaseThrough037(connectionString) {
@@ -130,7 +154,7 @@ async function createPreEconomyCommander(connectionString, label) {
 if (!databaseUrl) {
   test("economy migration exige DATABASE_URL", { skip: true }, () => {});
 } else {
-  test("038→047 converge catálogo, Storefront V2, territory commerce e backfill idempotente", async () => {
+  test("038→047 converge catálogo, Storefront V2 e territory commerce no recorte histórico", async () => {
     await withTemporaryDatabase(async (connectionString) => {
       await prepareDatabaseThrough037(connectionString);
       const userId = await createPreEconomyCommander(
@@ -138,8 +162,7 @@ if (!databaseUrl) {
         "EconomyBackfill",
       );
 
-      runPrepare(connectionString);
-      runPrepare(connectionString);
+      await applyManagedMigrations(connectionString, economyHistory);
 
       const client = new Client({ connectionString });
       await client.connect();
@@ -426,7 +449,7 @@ if (!databaseUrl) {
         connectionString,
         "EconomyConstraints",
       );
-      runPrepare(connectionString);
+      await applyManagedMigrations(connectionString, economyHistory);
 
       const client = new Client({ connectionString });
       await client.connect();

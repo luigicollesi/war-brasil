@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import test from "node:test";
 import { Client } from "pg";
@@ -64,7 +64,18 @@ const physicalTables = new Map([
       "territory_connections",
     ],
   ],
-  ["auth", ["account", "pending_registration", "rateLimit", "session", "user", "verification"]],
+  [
+    "auth",
+    [
+      "account",
+      "pending_registration",
+      "rateLimit",
+      "session",
+      "user",
+      "user_age_eligibility",
+      "verification",
+    ],
+  ],
   [
     "profile",
     [
@@ -112,36 +123,15 @@ const compatibilityViews = [
   "territory_connections",
 ].sort();
 
-const managedHistory = [
-  "026-organize-database-schemas.sql",
-  "027-normalize-schema-table-names.sql",
-  "028-normalize-rooms-phase-constraint.sql",
-  "029-adaptive-combat-dice.sql",
-  "030-repair-adaptive-dice-state-schema.sql",
-  "031-auth-foundation.sql",
-  "032-profile-identity-game-binding.sql",
-  "033-auth-rate-limit.sql",
-  "034-profile-v3-foundation.sql",
-  "035-social-graph.sql",
-  "036-match-history-snapshots.sql",
-  "037-profile-remove-portraits.sql",
-  "038-economy-cosmetics-foundation.sql",
-  "039-game-cosmetic-loadout-snapshots.sql",
-  "040-r2-webp-cosmetic-catalog.sql",
-  "041-economy-v2-commerce.sql",
-  "042-territory-skins-v1.sql",
-  "043-economy-storefront-v2.sql",
-  "044-economy-storefront-territory-commerce.sql",
-  "045-economy-storefront-launch-catalog.sql",
-  "046-game-modes-objective-supremacy.sql",
-  "047-economy-storefront-collection-promotions.sql",
-  "048-dice-body-gradient.sql",
-  "049-pending-email-registration.sql",
-  "050-profile-appearance-foundation.sql",
-  "051-economy-entitlements.sql",
-  "052-game-room-invitations.sql",
-  "053-lobby-presence-notifications.sql",
-];
+const managedHistory = readdirSync("src/lib/db/migrations/managed", {
+  withFileTypes: true,
+})
+  .filter(
+    (entry) =>
+      entry.isFile() && /^\d{3}-[a-z0-9-]+\.sql$/.test(entry.name),
+  )
+  .map((entry) => entry.name)
+  .sort((left, right) => left.localeCompare(right));
 
 function urlForDatabase(name) {
   const url = new URL(databaseUrl);
@@ -534,6 +524,24 @@ async function assertAuthProfileSchema(client) {
   ]) {
     assert.equal(pendingColumnNames.has(name), true, name);
   }
+
+  const ageEligibilityColumns = await client.query(`
+    SELECT column_name
+    FROM information_schema.columns
+    WHERE table_schema='auth' AND table_name='user_age_eligibility'
+  `);
+  const ageEligibilityColumnNames = new Set(
+    ageEligibilityColumns.rows.map((row) => row.column_name),
+  );
+  for (const name of [
+    "user_id",
+    "birth_date",
+    "minimum_age_at_verification",
+    "verification_method",
+    "verified_at",
+  ]) {
+    assert.equal(ageEligibilityColumnNames.has(name), true, name);
+  }
 }
 
 async function assertOrganizedDatabase(connectionString) {
@@ -785,7 +793,7 @@ async function assertLegacyRoomRollout(connectionString) {
 if (!databaseUrl) {
   test("migrations de banco exigem DATABASE_URL", { skip: true }, () => {});
 } else {
-  test("026-053 migram banco v025, preservam catálogos e são idempotentes", async () => {
+  test("migrations gerenciadas 026+ migram banco v025, preservam catálogos e são idempotentes", async () => {
     await withTemporaryDatabase("legacy", async (connectionString) => {
       await applySql(connectionString, "tests/fixtures/db/schema-v025.sql");
       await applySql(

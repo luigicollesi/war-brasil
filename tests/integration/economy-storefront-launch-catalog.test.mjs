@@ -48,7 +48,7 @@ async function prepareDatabase(connectionString) {
 }
 
 test(
-  "launch catalog separates permanent basics from premium collections",
+  "launch catalog promotes built-in defaults while premium collections remain commercial",
   { skip: !databaseUrl },
   async () => {
     await withTemporaryDatabase("store_launch", async (connectionString) => {
@@ -72,7 +72,57 @@ test(
           ]),
         );
         assert.ok(simpleSilver.rows.every((row) => row.collection_id === null));
-        assert.ok(simpleSilver.rows.every((row) => row.status === "available"));
+        assert.ok(simpleSilver.rows.every((row) => row.status === "retired"));
+
+        const defaultDice = await client.query(`
+          SELECT id, slot, asset_ref, status, is_default
+          FROM catalog.cosmetics
+          WHERE id IN (
+            'dice.attack.default',
+            'dice.defense.default',
+            'dice.neutral.default'
+          )
+          ORDER BY slot
+        `);
+        assert.equal(defaultDice.rowCount, 3);
+        assert.deepEqual(
+          new Set(defaultDice.rows.map((row) => row.asset_ref)),
+          new Set([
+            "cosmetics/dice/default/attack.webp",
+            "cosmetics/dice/default/defense.webp",
+            "cosmetics/dice/default/neutral.webp",
+          ]),
+        );
+        assert.ok(
+          defaultDice.rows.every(
+            (row) => row.status === "available" && row.is_default === true,
+          ),
+        );
+
+        const brazilDice = await client.query(`
+          SELECT id, slot, asset_ref, status, is_default
+          FROM catalog.cosmetics
+          WHERE id IN (
+            'dice.attack.brazil',
+            'dice.defense.brazil',
+            'dice.neutral.brazil'
+          )
+          ORDER BY slot
+        `);
+        assert.equal(brazilDice.rowCount, 3);
+        assert.deepEqual(
+          new Set(brazilDice.rows.map((row) => row.asset_ref)),
+          new Set([
+            "cosmetics/dice/brazil/attack.webp",
+            "cosmetics/dice/brazil/defense.webp",
+            "cosmetics/dice/brazil/neutral.webp",
+          ]),
+        );
+        assert.ok(
+          brazilDice.rows.every(
+            (row) => row.status === "available" && row.is_default === false,
+          ),
+        );
 
         const pricing = await client.query(`
           SELECT split_part(cosmetic_id, '.', 3) AS theme,
@@ -106,7 +156,10 @@ test(
           ORDER BY id
         `);
         const byId = Object.fromEntries(bundles.rows.map((row) => [row.id, row]));
-        for (const id of ["product.simple-silver", "product.exercito", "product.lancas"]) {
+        assert.equal(byId["product.simple-silver"].collection_id, null);
+        assert.equal(byId["product.simple-silver"].bundle_discount_bps, 1111);
+        assert.equal(byId["product.simple-silver"].active, false);
+        for (const id of ["product.exercito", "product.lancas"]) {
           assert.equal(byId[id].collection_id, null);
           assert.equal(byId[id].bundle_discount_bps, 1111);
           assert.equal(byId[id].active, true);
@@ -132,7 +185,12 @@ test(
           ORDER BY id
         `);
         const offerById = Object.fromEntries(offers.rows.map((row) => [row.id, row]));
-        for (const id of ["offer.simple-silver", "offer.exercito", "offer.lancas"]) {
+        assert.equal(Number(offerById["offer.simple-silver"].price), 400);
+        assert.equal(offerById["offer.simple-silver"].status, "retired");
+        assert.equal(offerById["offer.simple-silver"].active, false);
+        assert.equal(offerById["offer.simple-silver"].starts_at, null);
+        assert.equal(offerById["offer.simple-silver"].ends_at, null);
+        for (const id of ["offer.exercito", "offer.lancas"]) {
           assert.equal(Number(offerById[id].price), 400);
           assert.equal(offerById[id].status, "available");
           assert.equal(offerById[id].active, true);

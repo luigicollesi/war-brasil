@@ -245,9 +245,5 @@ ON CONFLICT (cosmetic_id) DO UPDATE
 SET acquisition_count=EXCLUDED.acquisition_count,
     updated_at=NOW();
 
-INSERT INTO ops.pgmigrations(name)
-VALUES('055-dice-default-brazil.sql')
-ON CONFLICT (name) DO NOTHING;
-
 -- Down Migration
 -- Forward corrections are preferred because ownership/loadout history is durable.

@@ -22,9 +22,5 @@ COMMENT ON COLUMN auth.user_age_eligibility.birth_date IS
 COMMENT ON COLUMN auth.user_age_eligibility.minimum_age_at_verification IS
   'Minimum age policy enforced when the birth date was accepted.';
 
-INSERT INTO ops.pgmigrations(name)
-VALUES('057-auth-age-eligibility.sql')
-ON CONFLICT (name) DO NOTHING;
-
 -- Down Migration
 -- Forward fixes are preferred because age eligibility is security/policy state.
