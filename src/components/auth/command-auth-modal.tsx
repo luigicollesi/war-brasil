@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   type FormEvent,
   useEffect,
@@ -659,7 +660,15 @@ export function CommandAuthModal({
                   aria-invalid={Boolean(fieldErrors.termsAccepted)}
                 />
                 <span>
-                  Aceito os termos de uso e a política de privacidade do War-Brasil.
+                  Aceito os{" "}
+                  <Link href="/terms" target="_blank">
+                    Termos de Uso
+                  </Link>{" "}
+                  e a{" "}
+                  <Link href="/privacy" target="_blank">
+                    Política de Privacidade
+                  </Link>{" "}
+                  do Bellum Civile.
                 </span>
               </label>
               {fieldErrors.termsAccepted ? (
