@@ -61,6 +61,15 @@
   gap: 10px;
 }
 
+.classification {
+  color: rgb(208 170 87 / 66%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.52rem;
+  font-weight: 850;
+  letter-spacing: 0.14em;
+  text-shadow: 0 3px 12px rgb(0 0 0 / 70%);
+}
+
 .identityTopline {
   display: grid;
   gap: 3px;
