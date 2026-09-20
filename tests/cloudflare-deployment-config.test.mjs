@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const pkg = JSON.parse(readFileSync("package.json", "utf8"));
+const lock = JSON.parse(readFileSync("package-lock.json", "utf8"));
 
 const nextConfig = readFileSync("next.config.ts", "utf8");
 const openNextConfig = readFileSync("open-next.config.ts", "utf8");
@@ -58,6 +59,10 @@ test("Middleware Edge não carrega Better Auth, pg ou DATABASE_URL", () => {
 test("Workers Builds usa OpenNext e Wrangler pinados pelo lockfile", () => {
   assert.equal(pkg.dependencies["@opennextjs/cloudflare"], "1.20.6");
   assert.equal(pkg.devDependencies.wrangler, "4.135.0");
+  assert.equal(lock.packages[""].dependencies["@opennextjs/cloudflare"], "1.20.6");
+  assert.equal(lock.packages[""].devDependencies.wrangler, "4.135.0");
+  assert.equal(lock.packages["node_modules/@opennextjs/cloudflare"].version, "1.20.6");
+  assert.equal(lock.packages["node_modules/wrangler"].version, "4.135.0");
   assert.equal(pkg.scripts["cloudflare:prepare"], undefined);
   assert.match(pkg.scripts["cloudflare:build"], /cloudflare:patch-next/);
   assert.doesNotMatch(pkg.scripts["cloudflare:build"], /npm install|cloudflare:prepare/);
