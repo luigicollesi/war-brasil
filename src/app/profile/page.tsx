@@ -29,6 +29,8 @@ export default async function ProfilePage() {
     : null;
   const equippedBackground =
     appearance?.backgrounds.find((item) => item.equipped)?.assetRef ?? null;
+  const equippedTitle =
+    appearance?.titles.find((item) => item.equipped) ?? null;
   const walletData = snapshot.wallet.data?.campaignCredit ?? null;
   const wallet: ProfileShellWallet =
     snapshot.wallet.availability === "available" && walletData
@@ -51,7 +53,7 @@ export default async function ProfilePage() {
       backgroundAssetRef={equippedBackground}
       evaluationFixture={snapshot.isEvaluationFixture}
     >
-      <ProfileDossier snapshot={snapshot} />
+      <ProfileDossier snapshot={snapshot} appearanceTitle={equippedTitle} />
     </ProfileShell>
   );
 }
