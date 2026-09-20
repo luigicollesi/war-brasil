@@ -203,7 +203,28 @@ export async function listEquippedProfileCosmetics(
   db: EconomyQueryable = pool,
 ): Promise<CosmeticRow[]> {
   const result = await db.query<CosmeticRow>(
-    `SELECT item.id,
+    `WITH defaults AS (
+       SELECT DISTINCT ON (slot)
+              id,slug,name,description,slot,rarity,asset_ref,
+              body_color,body_highlight_color,preview_ref,effect_key,
+              status,is_default
+         FROM catalog.cosmetics
+        WHERE is_default=TRUE
+          AND slot IN ('dice_attack','dice_defense','dice_neutral','territory_skin')
+        ORDER BY slot,id
+     ),
+     resolved AS (
+       SELECT defaults.slot,
+              COALESCE(equipped.id,defaults.id) AS resolved_id
+         FROM defaults
+         LEFT JOIN profile.cosmetic_loadout loadout
+           ON loadout.user_id=$1::uuid
+          AND loadout.slot=defaults.slot
+         LEFT JOIN catalog.cosmetics equipped
+           ON equipped.id=loadout.cosmetic_id
+          AND equipped.slot=defaults.slot
+     )
+     SELECT item.id,
             item.slug,
             item.name,
             item.description,
@@ -218,15 +239,9 @@ export async function listEquippedProfileCosmetics(
             item.is_default,
             TRUE AS owned,
             TRUE AS equipped
-       FROM profile.cosmetic_loadout loadout
-       JOIN catalog.cosmetics item
-         ON item.id=loadout.cosmetic_id
-        AND item.slot=loadout.slot
-      WHERE loadout.user_id=$1::uuid
-        AND loadout.slot IN (
-          'dice_attack','dice_defense','dice_neutral','territory_skin'
-        )
-      ORDER BY CASE loadout.slot
+       FROM resolved
+       JOIN catalog.cosmetics item ON item.id=resolved.resolved_id
+      ORDER BY CASE item.slot
         WHEN 'dice_attack' THEN 1
         WHEN 'dice_defense' THEN 2
         WHEN 'dice_neutral' THEN 3
