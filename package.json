@@ -33,9 +33,9 @@
     "realtime:test": "npm --prefix realtime test",
     "worker:start": "node worker/server.mjs",
     "worker:test": "node --check worker/server.mjs && node --test \"worker/test/*.test.mjs\"",
-    "cloudflare:build": "npm run cloudflare:prepare && opennextjs-cloudflare build",
+    "cloudflare:build": "npm run cloudflare:prepare && NEXT_PUBLIC_GAME_REALTIME_MODE=off GAME_REALTIME_ENABLED=false opennextjs-cloudflare build",
     "cloudflare:deploy": "opennextjs-cloudflare deploy",
-    "cloudflare:preview": "npm run cloudflare:prepare && opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "cloudflare:preview": "npm run cloudflare:prepare && NEXT_PUBLIC_GAME_REALTIME_MODE=off GAME_REALTIME_ENABLED=false opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "cloudflare:prepare": "npm install --no-save --package-lock=false @opennextjs/cloudflare@1.20.6 wrangler@4.135.0",
     "cloudflare:upload": "opennextjs-cloudflare upload"
   },
