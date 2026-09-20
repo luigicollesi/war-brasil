@@ -1,7 +1,11 @@
 import "server-only";
 
 import type { AuthenticatedPlayerIdentity } from "../rooms";
-import { createRoom, joinRoom } from "../rooms";
+import {
+  createRoom,
+  joinRoomWithClient,
+  RoomError,
+} from "../rooms";
 import { pool } from "../db/pool";
 import {
   findCommanderByHandle,
@@ -11,6 +15,7 @@ import { getSocialRelationship } from "../profile/social-repository";
 import {
   deleteWaitingRoomOwnedByUser,
   expireStaleInvitations,
+  findPendingInvitationBetween,
   insertRoomInvitation,
   listIncomingRoomInvitations,
   listOutgoingRoomInvitations,
@@ -18,6 +23,7 @@ import {
   lockOutgoingRoomInvitation,
   resolveRoomInvitation,
 } from "./invitation-repository";
+import { insertInvitationRejectedNotification } from "../profile/notification-repository";
 
 const INVITATION_ID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -98,10 +104,28 @@ export async function createFriendRoomInvitation(input: Readonly<{
   await requireFriendRelationship(input.actorUserId, target.user_id);
   await expireStaleInvitations(input.actorUserId);
 
+  const existing = await findPendingInvitationBetween(
+    input.actorUserId,
+    target.user_id,
+  );
+  if (existing) {
+    return {
+      invitationId: existing.id,
+      roomCode: existing.room_code,
+      expiresAt: existing.expires_at.toISOString(),
+      target: {
+        handle: target.handle,
+        displayName: target.display_name,
+      },
+      reused: true,
+    };
+  }
+
   const room = await createRoom(input.playerSession, input.identity);
   try {
     const invitation = await insertRoomInvitation(
       room.id,
+      room.code,
       input.actorUserId,
       target.user_id,
     );
@@ -179,12 +203,32 @@ export async function acceptGameInvitation(input: Readonly<{
       );
     }
 
-    if (invitation.room_status !== "waiting") {
-      await resolveRoomInvitation(invitation.id, "cancelled", client);
+    if (!invitation.room_exists) {
+      await resolveRoomInvitation(
+        invitation.id,
+        "cancelled",
+        client,
+        "room_deleted",
+      );
       await client.query("COMMIT");
       throw new GameInvitationError(
-        "GAME_INVITATION_ROOM_UNAVAILABLE",
-        "A sala vinculada a este convite não está mais disponível.",
+        "GAME_INVITATION_ROOM_NOT_FOUND",
+        "Essa sala já foi encerrada.",
+        409,
+      );
+    }
+
+    if (invitation.room_status !== "waiting") {
+      await resolveRoomInvitation(
+        invitation.id,
+        "cancelled",
+        client,
+        "room_started",
+      );
+      await client.query("COMMIT");
+      throw new GameInvitationError(
+        "GAME_INVITATION_ROOM_STARTED",
+        "A partida dessa sala já começou.",
         409,
       );
     }
@@ -196,20 +240,56 @@ export async function acceptGameInvitation(input: Readonly<{
     );
 
     try {
-      await joinRoom(invitation.room_code, input.playerSession, input.identity);
-    } catch (error) {
-      await resolveRoomInvitation(invitation.id, "cancelled", client);
-      await client.query("COMMIT");
-      throw new GameInvitationError(
-        "GAME_INVITATION_ROOM_UNAVAILABLE",
-        error instanceof Error
-          ? error.message
-          : "A sala vinculada a este convite não está mais disponível.",
-        409,
+      await joinRoomWithClient(
+        client,
+        invitation.room_code,
+        input.playerSession,
+        input.identity,
       );
+    } catch (error) {
+      if (
+        error instanceof RoomError &&
+        error.debug?.reason === "room_full"
+      ) {
+        await resolveRoomInvitation(
+          invitation.id,
+          "cancelled",
+          client,
+          "room_full",
+        );
+        await client.query("COMMIT");
+        throw new GameInvitationError(
+          "GAME_INVITATION_ROOM_FULL",
+          "A sala atingiu o limite de jogadores.",
+          409,
+        );
+      }
+      if (
+        error instanceof RoomError &&
+        error.debug?.reason === "room_started"
+      ) {
+        await resolveRoomInvitation(
+          invitation.id,
+          "cancelled",
+          client,
+          "room_started",
+        );
+        await client.query("COMMIT");
+        throw new GameInvitationError(
+          "GAME_INVITATION_ROOM_STARTED",
+          "A partida dessa sala já começou.",
+          409,
+        );
+      }
+      throw error;
     }
 
-    await resolveRoomInvitation(invitation.id, "accepted", client);
+    await resolveRoomInvitation(
+      invitation.id,
+      "accepted",
+      client,
+      "accepted",
+    );
     await client.query("COMMIT");
     return { invitationId: invitation.id, roomCode: invitation.room_code };
   } catch (error) {
@@ -240,7 +320,13 @@ export async function rejectGameInvitation(
         404,
       );
     }
-    await resolveRoomInvitation(invitationId, "rejected", client);
+    await resolveRoomInvitation(
+      invitationId,
+      "rejected",
+      client,
+      "rejected",
+    );
+    await insertInvitationRejectedNotification(invitationId, client);
     await client.query("COMMIT");
     return { invitationId, rejected: true };
   } catch (error) {
@@ -271,7 +357,12 @@ export async function cancelGameInvitation(
         404,
       );
     }
-    await resolveRoomInvitation(invitationId, "cancelled", client);
+    await resolveRoomInvitation(
+      invitationId,
+      "cancelled",
+      client,
+      "cancelled",
+    );
     await client.query("COMMIT");
     return { invitationId, cancelled: true };
   } catch (error) {
