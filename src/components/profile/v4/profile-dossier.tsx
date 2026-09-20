@@ -95,8 +95,16 @@ export function ProfileDossier({ snapshot }: { snapshot: ProfileCommandSnapshot 
           </div>
           {privacy && !snapshot.isEvaluationFixture ? (
             <div className={styles.settingsSlot}>
-              <small>AJUSTAR DOSSIÊ</small>
-              <ProfileSettingsPanel identity={identity} privacy={privacy} />
+              <small>APARÊNCIA PÚBLICA</small>
+              <span className={styles.profileActions}>
+                <Link
+                  href={`/profile/${encodeURIComponent(identity.handle)}`}
+                  className={styles.viewProfile}
+                >
+                  VER PERFIL
+                </Link>
+                <ProfileSettingsPanel identity={identity} privacy={privacy} />
+              </span>
             </div>
           ) : null}
         </aside>
