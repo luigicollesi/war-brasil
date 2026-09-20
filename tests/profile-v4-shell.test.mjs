@@ -41,7 +41,8 @@ test("PROFILE V4 keeps dossier identity image-free", async () => {
   assert.doesNotMatch(dossier, /<Image\b/);
   assert.doesNotMatch(dossier, /<img\b/);
   assert.doesNotMatch(dossier, /session\.user\.image/);
-  assert.match(dossier, /Ajustar Dossiê/i);
+  assert.match(dossier, /ProfileSettingsPanel/);
+  assert.match(dossier, /APARÊNCIA PÚBLICA/i);
 });
 
 test("PROFILE V4 dossier monogram is an interface insignia, not a portrait slot", async () => {
