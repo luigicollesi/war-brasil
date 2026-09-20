@@ -262,7 +262,8 @@ async function attachIdentityToExistingSeat(
       `UPDATE game.players
        SET user_id = $1,
            display_name_snapshot = $2,
-           handle_snapshot = $3
+           handle_snapshot = $3,
+           lobby_last_seen_at = NOW()
        WHERE id = $4`,
       [
         identity.userId,
@@ -327,9 +328,10 @@ export async function createRoom(
              color,
              user_id,
              display_name_snapshot,
-             handle_snapshot
+             handle_snapshot,
+             lobby_last_seen_at
            )
-           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+           VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
           [
             room.id,
             playerSession,
@@ -352,7 +354,8 @@ export async function createRoom(
   throw new RoomError("Não foi possível gerar um código de sala. Tente novamente.", 503);
 }
 
-export async function joinRoom(
+export async function joinRoomWithClient(
+  client: PoolClient,
   codeValue: unknown,
   playerSession: string,
   identity: AuthenticatedPlayerIdentity | null = null,
@@ -360,54 +363,85 @@ export async function joinRoom(
   const code = normalizeRoomCode(codeValue);
   if (!code) throw new RoomError("Código de sala inválido.", 422);
 
-  return withTransaction(async (client) => {
-    const room = await findRoomForUpdate(client, code);
-    if (room.status !== "waiting") {
-      throw new RoomError("Esta partida já começou.", 409);
-    }
+  const room = await findRoomForUpdate(client, code);
+  if (room.status !== "waiting") {
+    throw new RoomError("Esta partida já começou.", 409, {
+      reason: "room_started",
+    });
+  }
 
-    if (identity) {
-      const reusedSeat = await attachIdentityToExistingSeat(
-        client,
-        room.id,
-        playerSession,
-        identity,
-      );
-      if (reusedSeat) return room;
-    } else {
-      const existingPlayer = await client.query<{ id: string }>(
-        `SELECT id FROM game.players
-         WHERE room_id = $1 AND player_session = $2`,
-        [room.id, playerSession],
-      );
-      if (existingPlayer.rows[0]) return room;
-    }
-
-    const color = await findAvailableColor(client, room.id);
-    await client.query(
-      `INSERT INTO game.players (
-         room_id,
-         player_session,
-         faction_name,
-         color,
-         user_id,
-         display_name_snapshot,
-         handle_snapshot
-       )
-       VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-      [
-        room.id,
-        playerSession,
-        DEFAULT_FACTION_NAME,
-        color,
-        identity?.userId ?? null,
-        identity?.displayName ?? null,
-        identity?.handle ?? null,
-      ],
+  if (identity) {
+    const reusedSeat = await attachIdentityToExistingSeat(
+      client,
+      room.id,
+      playerSession,
+      identity,
     );
+    if (reusedSeat) return room;
+  } else {
+    const existingPlayer = await client.query<{ id: string }>(
+      `SELECT id FROM game.players
+       WHERE room_id = $1 AND player_session = $2
+       FOR UPDATE`,
+      [room.id, playerSession],
+    );
+    if (existingPlayer.rows[0]) {
+      await client.query(
+        `UPDATE game.players
+            SET lobby_last_seen_at=NOW()
+          WHERE id=$1`,
+        [existingPlayer.rows[0].id],
+      );
+      return room;
+    }
+  }
 
-    return room;
-  });
+  let color: PlayerColor;
+  try {
+    color = await findAvailableColor(client, room.id);
+  } catch (error) {
+    if (error instanceof RoomError && error.status === 409) {
+      throw new RoomError("Esta sala já está cheia.", 409, {
+        reason: "room_full",
+      });
+    }
+    throw error;
+  }
+
+  await client.query(
+    `INSERT INTO game.players (
+       room_id,
+       player_session,
+       faction_name,
+       color,
+       user_id,
+       display_name_snapshot,
+       handle_snapshot,
+       lobby_last_seen_at
+     )
+     VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())`,
+    [
+      room.id,
+      playerSession,
+      DEFAULT_FACTION_NAME,
+      color,
+      identity?.userId ?? null,
+      identity?.displayName ?? null,
+      identity?.handle ?? null,
+    ],
+  );
+
+  return room;
+}
+
+export async function joinRoom(
+  codeValue: unknown,
+  playerSession: string,
+  identity: AuthenticatedPlayerIdentity | null = null,
+) {
+  return withTransaction((client) =>
+    joinRoomWithClient(client, codeValue, playerSession, identity),
+  );
 }
 
 export async function addBotToRoom(codeValue: unknown, playerSession: string) {
@@ -575,6 +609,157 @@ export async function updateRoomSettings(
     room.ruleset = ruleset;
     room.balanced_dice_enabled = balancedDiceEnabled;
     return room;
+  });
+}
+
+export async function heartbeatWaitingRoom(
+  codeValue: unknown,
+  playerSession: string,
+) {
+  const code = normalizeRoomCode(codeValue);
+  if (!code) throw new RoomError("Código de sala inválido.", 422);
+
+  return withTransaction(async (client) => {
+    const room = await findRoomForUpdate(client, code);
+    if (room.status !== "waiting") {
+      return { roomCode: room.code, active: false };
+    }
+
+    const updated = await client.query<{ id: string }>(
+      `UPDATE game.players
+          SET lobby_last_seen_at=NOW()
+        WHERE room_id=$1
+          AND player_session=$2
+          AND is_bot=FALSE
+        RETURNING id`,
+      [room.id, playerSession],
+    );
+    if (!updated.rowCount) {
+      throw new RoomError("Você não pertence a esta sala.", 403);
+    }
+
+    return { roomCode: room.code, active: true };
+  });
+}
+
+async function deleteRoomIfNoHumans(client: PoolClient, roomId: string) {
+  const humans = await client.query<{ exists: boolean }>(
+    `SELECT EXISTS(
+       SELECT 1
+         FROM game.players
+        WHERE room_id=$1
+          AND is_bot=FALSE
+     ) AS exists`,
+    [roomId],
+  );
+  if (humans.rows[0]?.exists) return false;
+
+  await client.query(
+    `UPDATE game.room_invitations
+        SET state='cancelled',
+            resolved_reason='room_empty',
+            resolved_at=NOW()
+      WHERE room_id=$1
+        AND state='pending'`,
+    [roomId],
+  );
+  const deleted = await client.query(
+    `DELETE FROM game.rooms
+      WHERE id=$1
+        AND status='waiting'`,
+    [roomId],
+  );
+  return (deleted.rowCount ?? 0) > 0;
+}
+
+export async function leaveWaitingRoom(
+  codeValue: unknown,
+  playerSession: string,
+) {
+  const code = normalizeRoomCode(codeValue);
+  if (!code) throw new RoomError("Código de sala inválido.", 422);
+
+  return withTransaction(async (client) => {
+    const room = await findRoomForUpdate(client, code);
+    if (room.status !== "waiting") {
+      throw new RoomError(
+        "Não é possível abandonar o assento por esta rota após o início da partida.",
+        409,
+      );
+    }
+
+    const removed = await client.query<{ id: string }>(
+      `DELETE FROM game.players
+        WHERE room_id=$1
+          AND player_session=$2
+          AND is_bot=FALSE
+        RETURNING id`,
+      [room.id, playerSession],
+    );
+    if (!removed.rowCount) {
+      throw new RoomError("Você não pertence a esta sala.", 404);
+    }
+
+    await resetHumanReadiness(client, room.id);
+    const roomDeleted = await deleteRoomIfNoHumans(client, room.id);
+    return { roomCode: room.code, roomDeleted };
+  });
+}
+
+export async function cleanupStaleWaitingRoomSeats(
+  staleAfterSeconds = 90,
+  limit = 100,
+) {
+  if (!Number.isSafeInteger(staleAfterSeconds) || staleAfterSeconds < 30) {
+    throw new Error("staleAfterSeconds inválido.");
+  }
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 500) {
+    throw new Error("limit inválido.");
+  }
+
+  return withTransaction(async (client) => {
+    const stale = await client.query<{
+      player_id: string;
+      room_id: string;
+    }>(
+      `SELECT player.id::text AS player_id,
+              player.room_id::text AS room_id
+         FROM game.players player
+         JOIN game.rooms room ON room.id=player.room_id
+        WHERE room.status='waiting'
+          AND player.is_bot=FALSE
+          AND player.lobby_last_seen_at IS NOT NULL
+          AND player.lobby_last_seen_at
+              <= NOW() - ($1::int * INTERVAL '1 second')
+        ORDER BY player.lobby_last_seen_at,player.id
+        FOR UPDATE OF player SKIP LOCKED
+        LIMIT $2`,
+      [staleAfterSeconds, limit],
+    );
+
+    const affectedRooms = new Set<string>();
+    for (const row of stale.rows) {
+      const removed = await client.query(
+        `DELETE FROM game.players
+          WHERE id=$1::bigint
+            AND lobby_last_seen_at
+                <= NOW() - ($2::int * INTERVAL '1 second')`,
+        [row.player_id, staleAfterSeconds],
+      );
+      if (removed.rowCount) affectedRooms.add(row.room_id);
+    }
+
+    let deletedRooms = 0;
+    for (const roomId of affectedRooms) {
+      await resetHumanReadiness(client, roomId);
+      if (await deleteRoomIfNoHumans(client, roomId)) deletedRooms += 1;
+    }
+
+    return {
+      removedSeats: stale.rows.length,
+      affectedRooms: affectedRooms.size,
+      deletedRooms,
+    };
   });
 }
 
