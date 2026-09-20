@@ -396,3 +396,109 @@
     transition: none;
   }
 }
+
+
+/* Profile V5 visual refinement: spacing and hierarchy replace card chrome. */
+.identityPanel,
+.module {
+  border: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
+
+.identityPanel::before,
+.module::before {
+  display: none;
+}
+
+.identityPanel {
+  min-height: 250px;
+}
+
+.identitySignal {
+  border-right: 0;
+  background: transparent;
+}
+
+.identityStatus {
+  border-left: 0;
+  background: linear-gradient(90deg, transparent, rgb(3 9 7 / 24%));
+}
+
+.identityStatus > div {
+  border-bottom-color: rgb(238 232 218 / 6%);
+}
+
+.secondaryGrid {
+  gap: clamp(28px, 4vw, 64px);
+}
+
+.secondaryGrid > .module + .module {
+  position: relative;
+}
+
+.secondaryGrid > .module + .module::after {
+  content: "";
+  position: absolute;
+  top: 24px;
+  bottom: 24px;
+  left: calc(clamp(28px, 4vw, 64px) / -2);
+  width: 1px;
+  background: linear-gradient(180deg, transparent, rgb(238 232 218 / 9%), transparent);
+}
+
+.moduleHeader {
+  padding-inline: 4px;
+  border-bottom-color: rgb(238 232 218 / 7%);
+  background: transparent;
+}
+
+.moduleBody {
+  padding-inline: 4px;
+}
+
+.settingsSlot {
+  gap: 8px !important;
+}
+
+.profileActions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+}
+
+.viewProfile {
+  min-height: 40px;
+  display: grid;
+  place-items: center;
+  color: var(--brass);
+  border: 0;
+  background: transparent;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.56rem;
+  font-weight: 850;
+  letter-spacing: 0.1em;
+  text-decoration: none;
+  transition: color 160ms ease, transform 160ms ease;
+}
+
+.viewProfile:hover,
+.viewProfile:focus-visible {
+  color: var(--ivory);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+@media (max-width: 820px) {
+  .secondaryGrid > .module + .module::after {
+    display: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .profileActions {
+    grid-template-columns: 1fr;
+  }
+}
