@@ -11,14 +11,14 @@ ALTER TABLE catalog.profile_backgrounds
 ALTER TABLE catalog.profile_backgrounds
   ADD CONSTRAINT profile_backgrounds_asset_ref_check
     CHECK (
-      asset_ref ~ '^cosmetics/profile-backgrounds/[a-z0-9]+(?:[-_][a-z0-9]+)*\\.webp$'
-      OR asset_ref ~ '^store/collections/[a-z0-9]+(?:-[a-z0-9]+)*/background\\.webp$'
+      asset_ref ~ '^cosmetics/profile-backgrounds/[a-z0-9]+(?:[-_][a-z0-9]+)*\.webp$'
+      OR asset_ref ~ '^store/collections/[a-z0-9]+(?:-[a-z0-9]+)*/background\.webp$'
     ),
   ADD CONSTRAINT profile_backgrounds_preview_ref_check
     CHECK (
       preview_ref IS NULL
-      OR preview_ref ~ '^cosmetics/profile-backgrounds/[a-z0-9]+(?:[-_][a-z0-9]+)*\\.webp$'
-      OR preview_ref ~ '^store/collections/[a-z0-9]+(?:-[a-z0-9]+)*/background\\.webp$'
+      OR preview_ref ~ '^cosmetics/profile-backgrounds/[a-z0-9]+(?:[-_][a-z0-9]+)*\.webp$'
+      OR preview_ref ~ '^store/collections/[a-z0-9]+(?:-[a-z0-9]+)*/background\.webp$'
     );
 
 -- Bootstrap the default profile background with an existing dark war-themed asset.
