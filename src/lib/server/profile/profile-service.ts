@@ -172,6 +172,7 @@ export async function getPublicCommanderProfile(
       : null;
 
   return {
+    userId: row.user_id,
     identity: {
       ...identity,
       presence: !presenceVisible
