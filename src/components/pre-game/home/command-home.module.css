@@ -387,17 +387,41 @@
 
 .footer {
   position: absolute;
-  z-index: 14;
+  z-index: 42;
   right: clamp(24px, 4vw, 64px);
   bottom: 14px;
   left: clamp(24px, 4vw, 64px);
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 24px;
   color: rgb(238 232 218 / 26%);
   font-family: var(--font-geist-mono), monospace;
   font-size: .45rem;
   letter-spacing: .16em;
-  pointer-events: none;
+}
+
+.footer > span:last-child {
+  justify-self: end;
+}
+
+.legalLinks {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+}
+
+.legalLinks a {
+  color: rgb(238 232 218 / 42%);
+  text-decoration: none;
+  transition: color 160ms ease;
+}
+
+.legalLinks a:hover,
+.legalLinks a:focus-visible {
+  color: var(--command-brass-bright, #d0aa57);
+  outline: none;
 }
 
 @keyframes commandReveal {
@@ -509,7 +533,20 @@
   }
 
   .footer {
+    top: max(12px, env(safe-area-inset-top));
+    right: 14px;
+    bottom: auto;
+    left: auto;
+    display: block;
+    font-size: .42rem;
+  }
+
+  .footer > span {
     display: none;
+  }
+
+  .legalLinks {
+    gap: 12px;
   }
 }
 
