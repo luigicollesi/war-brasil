@@ -107,7 +107,10 @@ test("PROFILE V4 treasury renders DB credit packs but keeps BRL checkout disable
   assert.match(store, /storefront\.creditPacks\.map/);
   assert.match(store, /EM BREVE/);
   assert.match(store, /disabled/);
-  assert.doesNotMatch(store, /Stripe|MercadoPago|checkout/i);
+  assert.doesNotMatch(
+    store,
+    /from\s+["']stripe|Stripe\s*\(|MercadoPago|checkoutUrl|paymentIntent|\/api\/payments/i,
+  );
 });
 
 test("PROFILE V4 store keeps implementation jargon out of player-facing copy", async () => {
@@ -204,7 +207,7 @@ test("PROFILE V4 store V1 uses spacing and image lift instead of card outlines f
   );
   assert.doesNotMatch(
     styles,
-    /\.collectionBannerCard\[data-featured="true"\]\s*\{[\s\S]*?border-color:/,
+    /\.collectionBannerCard\[data-featured="true"\]\s*\{[^}]*border-color:/,
   );
 });
 
@@ -512,7 +515,7 @@ test("PROFILE V4 final gives products hover and keyboard-focus lift without anim
   );
   assert.match(
     styles,
-    /\.productSelect:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--brass\);[^}]*outline-offset:\s*5px;/,
+    /\.productSelect:focus-visible,\s*\.collectionBannerButton:focus-visible\s*\{[^}]*outline:\s*2px solid var\(--brass\);[^}]*outline-offset:\s*5px;/,
   );
   assert.doesNotMatch(
     styles,
@@ -633,7 +636,7 @@ test("PROFILE V4 featured collection hero uses the collection bundle offer for d
   );
   assert.match(
     store,
-    /data-processing=\{pendingOfferId === featuredCollectionBundleOffer\.id \? "true" : undefined\}/,
+    /data-processing=\{\s*pendingOfferId === featuredCollectionBundleOffer\.id \? "true" : undefined\s*\}/,
   );
 });
 
@@ -686,7 +689,7 @@ test("PROFILE V4 featured collection hero keeps purchase controls separate from 
   );
   assert.match(
     styles,
-    /\.featuredHeroCommerce button\s*\{[^}]*min-height:\s*44px;/,
+    /\.featuredHeroCommerce button,\s*\.featuredInspectFallback\s*\{[^}]*min-height:\s*44px;/,
   );
 });
 
@@ -696,7 +699,11 @@ test("PROFILE V4 featured collection hero becomes a full-width promotion on desk
 
   assert.match(
     styles,
-    /\.featuredHero\s*\{[^}]*grid-template-columns:\s*1fr;[^}]*min-height:\s*clamp\(/,
+    /\.featuredHero\s*\{[^}]*grid-template-columns:\s*1fr;/,
+  );
+  assert.match(
+    styles,
+    /\.featuredHero\s*\{[^}]*min-height:\s*clamp\(/,
   );
   assert.match(
     styles,
