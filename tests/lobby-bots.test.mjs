@@ -15,6 +15,10 @@ const gameSnapshot = readFileSync(
   "src/lib/server/game-snapshot-service.ts",
   "utf8",
 );
+const gameCosmeticLoadout = readFileSync(
+  "src/lib/server/game-cosmetic-loadout-service.ts",
+  "utf8",
+);
 const lobbyClient = readFileSync("src/components/lobby-client.tsx", "utf8");
 const lobbyFormation = readFileSync(
   "src/components/lobby-formation-panel.tsx",
@@ -135,4 +139,23 @@ test("migration da fase 1 permanece independente do scheduler da fase 2", () => 
 
   assert.doesNotMatch(migration, /bot_next_action_at/);
   assert.match(automationMigration, /bot_next_action_at/);
+});
+
+
+test("bots recebem quatro cosméticos aleatórios disponíveis no snapshot de início", () => {
+  assert.match(gameCosmeticLoadout, /player\.is_bot/);
+  assert.match(
+    gameCosmeticLoadout,
+    /slot IN \('dice_attack','dice_defense','dice_neutral','territory_skin'\)/,
+  );
+  assert.match(gameCosmeticLoadout, /LEFT JOIN LATERAL/);
+  assert.match(gameCosmeticLoadout, /candidate\.status='available'/);
+  assert.match(gameCosmeticLoadout, /candidate\.slot=player_slot\.slot/);
+  assert.match(gameCosmeticLoadout, /ORDER BY random\(\)/);
+  assert.match(gameCosmeticLoadout, /LIMIT 1/);
+  assert.match(gameCosmeticLoadout, /player_slot\.is_bot=FALSE/);
+  assert.match(
+    gameCosmeticLoadout,
+    /WHEN player_slot\.is_bot AND bot_cosmetic\.id IS NOT NULL THEN bot_cosmetic\.asset_ref/,
+  );
 });
