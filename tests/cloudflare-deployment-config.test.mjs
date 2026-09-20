@@ -55,3 +55,9 @@ test("Workers Builds prepara OpenNext no build e reutiliza no deploy", () => {
   assert.equal(pkg.scripts["cloudflare:upload"], "opennextjs-cloudflare upload");
   assert.doesNotMatch(pkg.scripts["cloudflare:deploy"], /npm install|cloudflare:prepare/);
 });
+
+
+test("external Node services permanecem desligados no Worker OpenNext", () => {
+  assert.match(wrangler, /"GAME_REALTIME_ENABLED": "false"/);
+  assert.match(wrangler, /"GAME_AUTOMATION_WORKER_MODE": "off"/);
+});
