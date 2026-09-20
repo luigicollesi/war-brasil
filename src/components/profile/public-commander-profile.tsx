@@ -131,6 +131,7 @@ export function PublicCommanderProfileView({
 
       <header className={styles.header}>
         <section className={styles.identity} aria-labelledby="public-profile-name">
+          <small className={styles.classification}>SIGILO // ARQUIVO PÚBLICO</small>
           <span className={styles.identityTopline}>
             <strong id="public-profile-name">{identity.displayName}</strong>
             <small data-presence={identity.presence.state}>
