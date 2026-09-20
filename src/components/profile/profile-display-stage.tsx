@@ -41,9 +41,12 @@ function RotatingObject({
   useFrame((_, delta) => {
     const group = ref.current;
     if (!group || reducedMotion) return;
-    group.rotation.y += delta * (hovered ? 0.48 : 0.16);
-    const target = scale * (hovered ? 1.08 : 1);
-    const nextScale = group.scale.x + (target - group.scale.x) * 0.08;
+
+    group.rotation.y += delta * (hovered ? 0.42 : 0.14);
+
+    const targetScale = scale * (hovered ? 1.07 : 1);
+    const easing = 1 - Math.exp(-delta * 10);
+    const nextScale = group.scale.x + (targetScale - group.scale.x) * easing;
     group.scale.setScalar(nextScale);
   });
 
@@ -68,64 +71,79 @@ function ProfileStageScene({
   arsenal: PublicProfileArsenal;
   reducedMotion: boolean;
 }) {
-  const compact = useThree((state) => state.size.width <= 720);
-  const diceScale = compact ? 0.92 : 1.05;
-  const territoryScale = compact ? 0.62 : 0.74;
+  const { camera, size, viewport } = useThree();
+  const compact = size.width <= 720;
+
+  const worldPosition = (
+    screenX: number,
+    screenY: number,
+  ): [number, number, number] => [
+    camera.position.x + (screenX - 0.5) * viewport.width,
+    camera.position.y + (0.5 - screenY) * viewport.height,
+    0,
+  ];
 
   const positions = compact
     ? {
-        attack: [-1.55, 1.05, 0] as [number, number, number],
-        defense: [1.55, 1.05, 0] as [number, number, number],
-        neutral: [-1.55, -1.55, 0] as [number, number, number],
-        territory: [1.55, -1.5, 0] as [number, number, number],
+        attack: worldPosition(0.27, 0.39),
+        defense: worldPosition(0.73, 0.39),
+        neutral: worldPosition(0.27, 0.68),
+        territory: worldPosition(0.73, 0.68),
       }
     : {
-        attack: [-4.35, 0, 0] as [number, number, number],
-        defense: [-1.45, 0, 0] as [number, number, number],
-        neutral: [1.45, 0, 0] as [number, number, number],
-        territory: [4.4, 0, 0] as [number, number, number],
+        attack: worldPosition(0.14, 0.52),
+        defense: worldPosition(0.38, 0.52),
+        neutral: worldPosition(0.62, 0.52),
+        territory: worldPosition(0.86, 0.52),
       };
+
+  const diceScale = compact ? 1.08 : 1.42;
+  const territoryScale = compact ? 0.82 : 1.04;
 
   return (
     <>
-      <ambientLight intensity={1.65} />
-      <directionalLight position={[-5, 7, 8]} intensity={3.1} />
-      <directionalLight position={[5, 3, 5]} intensity={1.4} />
-      <pointLight position={[0, -1, 5]} intensity={2.4} distance={12} />
+      <ambientLight intensity={1.7} />
+      <directionalLight position={[-5, 7, 8]} intensity={3.15} />
+      <directionalLight position={[5, 3, 5]} intensity={1.5} />
+      <pointLight position={[0, -1, 5]} intensity={2.5} distance={14} />
+
       <Suspense fallback={null}>
         <RotatingObject
           position={positions.attack}
           scale={diceScale}
           reducedMotion={reducedMotion}
-          baseRotation={[0.28, -0.45, -0.08]}
+          baseRotation={[0.32, -0.52, -0.05]}
         >
           <DiceShowcaseModel
             slot="dice_attack"
             assetRef={arsenal.diceAttack.assetRef}
           />
         </RotatingObject>
+
         <RotatingObject
           position={positions.defense}
           scale={diceScale}
           reducedMotion={reducedMotion}
-          baseRotation={[0.28, 0.25, 0.08]}
+          baseRotation={[0.32, -0.44, 0.04]}
         >
           <DiceShowcaseModel
             slot="dice_defense"
             assetRef={arsenal.diceDefense.assetRef}
           />
         </RotatingObject>
+
         <RotatingObject
           position={positions.neutral}
           scale={diceScale}
           reducedMotion={reducedMotion}
-          baseRotation={[0.28, 0.65, -0.05]}
+          baseRotation={[0.32, -0.49, -0.02]}
         >
           <DiceShowcaseModel
             slot="dice_neutral"
             assetRef={arsenal.diceNeutral.assetRef}
           />
         </RotatingObject>
+
         <RotatingObject
           position={positions.territory}
           scale={territoryScale}
@@ -150,10 +168,26 @@ export function ProfileDisplayStage({
 }) {
   const reducedMotion = useReducedMotion();
   const items = [
-    { id: arsenal.diceAttack.id, label: "ATAQUE", name: arsenal.diceAttack.name },
-    { id: arsenal.diceDefense.id, label: "DEFESA", name: arsenal.diceDefense.name },
-    { id: arsenal.diceNeutral.id, label: "NEUTRO", name: arsenal.diceNeutral.name },
-    { id: arsenal.territorySkin.id, label: "TERRITÓRIO", name: arsenal.territorySkin.name },
+    {
+      slot: "attack",
+      label: "ATAQUE",
+      name: arsenal.diceAttack.name,
+    },
+    {
+      slot: "defense",
+      label: "DEFESA",
+      name: arsenal.diceDefense.name,
+    },
+    {
+      slot: "neutral",
+      label: "NEUTRO",
+      name: arsenal.diceNeutral.name,
+    },
+    {
+      slot: "territory",
+      label: "TERRITÓRIO",
+      name: arsenal.territorySkin.name,
+    },
   ] as const;
 
   return (
@@ -162,7 +196,7 @@ export function ProfileDisplayStage({
         <Canvas
           dpr={[1, 1.5]}
           orthographic
-          camera={{ position: [0, 1.4, 10], zoom: 72, near: 0.1, far: 100 }}
+          camera={{ position: [0, 0.8, 10], zoom: 72, near: 0.1, far: 100 }}
           gl={{ alpha: true, antialias: true }}
         >
           <ProfileStageScene arsenal={arsenal} reducedMotion={reducedMotion} />
@@ -171,9 +205,13 @@ export function ProfileDisplayStage({
 
       <div className={styles.labels}>
         {items.map((item) => (
-          <span key={item.id} className={styles.label}>
+          <span
+            key={item.slot}
+            className={styles.label}
+            data-showcase-slot={item.slot}
+          >
             <small>{item.label}</small>
-            <strong>{item.name}</strong>
+            <strong title={item.name}>{item.name}</strong>
           </span>
         ))}
       </div>
