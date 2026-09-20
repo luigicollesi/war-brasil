@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { PublicCommanderProfileView } from "@/src/components/profile/public-commander-profile";
 import { getPublicCommanderProfileSnapshot } from "@/src/lib/server/profile/public-profile-snapshot-service";
 
@@ -23,7 +23,5 @@ export default async function PublicCommanderProfilePage({
 
   const snapshot = await getPublicCommanderProfileSnapshot(normalizedHandle);
   if (!snapshot) notFound();
-  if (snapshot.relationship === "self") redirect("/profile");
-
   return <PublicCommanderProfileView snapshot={snapshot} />;
 }
