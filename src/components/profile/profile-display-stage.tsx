@@ -43,7 +43,8 @@ function RotatingObject({
     if (!group || reducedMotion) return;
     group.rotation.y += delta * (hovered ? 0.48 : 0.16);
     const target = scale * (hovered ? 1.08 : 1);
-    group.scale.lerp({ x: target, y: target, z: target } as never, 0.08);
+    const nextScale = group.scale.x + (target - group.scale.x) * 0.08;
+    group.scale.setScalar(nextScale);
   });
 
   return (
