@@ -43,3 +43,21 @@ test("game invitation mutations are session-derived and origin protected", async
     assert.doesNotMatch(route, /body\.userId|payload\.userId|input\.userId/);
   }
 });
+
+
+test("game invitation listing exposes both inbox and outbox for future profile actions", async () => {
+  const repository = await source(
+    "src/lib/server/game-invitations/invitation-repository.ts",
+  );
+  const service = await source(
+    "src/lib/server/game-invitations/invitation-service.ts",
+  );
+  const route = await source(
+    "src/app/api/profile/game-invitations/route.ts",
+  );
+
+  assert.match(repository, /listIncomingRoomInvitations/);
+  assert.match(repository, /listOutgoingRoomInvitations/);
+  assert.match(service, /Promise\.all\(\[[\s\S]*listIncomingRoomInvitations[\s\S]*listOutgoingRoomInvitations/);
+  assert.match(route, /listGameInvitations\(session\.user\.id\)/);
+});
