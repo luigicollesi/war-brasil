@@ -40,12 +40,12 @@
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
-  gap: 24px;
+  gap: 32px;
   padding:
-    max(28px, env(safe-area-inset-top))
-    max(32px, env(safe-area-inset-right))
+    max(34px, env(safe-area-inset-top))
+    max(40px, env(safe-area-inset-right))
     0
-    max(32px, env(safe-area-inset-left));
+    max(40px, env(safe-area-inset-left));
   pointer-events: none;
 }
 
@@ -58,13 +58,13 @@
   min-width: 0;
   display: grid;
   align-content: start;
-  gap: 10px;
+  gap: 12px;
 }
 
 .classification {
   color: rgb(208 170 87 / 66%);
   font-family: var(--font-geist-mono), monospace;
-  font-size: 0.52rem;
+  font-size: clamp(0.56rem, 0.65vw, 0.68rem);
   font-weight: 850;
   letter-spacing: 0.14em;
   text-shadow: 0 3px 12px rgb(0 0 0 / 70%);
@@ -79,10 +79,15 @@
 .identityTopline > strong {
   color: var(--profile-ivory);
   font-family: var(--font-wb-display), sans-serif;
-  font-size: clamp(1.55rem, 2.2vw, 2.7rem);
-  font-weight: 700;
-  line-height: 0.96;
-  text-shadow: 0 8px 24px rgb(0 0 0 / 48%);
+  max-width: 16ch;
+  font-size: clamp(2.2rem, 3.2vw, 4.15rem);
+  font-weight: 760;
+  line-height: 0.92;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+  text-shadow:
+    0 10px 30px rgb(0 0 0 / 62%),
+    0 2px 8px rgb(0 0 0 / 78%);
 }
 
 .identityTopline small {
@@ -91,8 +96,9 @@
   gap: 7px;
   color: rgb(238 232 218 / 64%);
   font-family: var(--font-geist-mono), monospace;
-  font-size: clamp(0.6rem, 0.75vw, 0.76rem);
-  letter-spacing: 0.08em;
+  font-size: clamp(0.68rem, 0.82vw, 0.9rem);
+  font-weight: 650;
+  letter-spacing: 0.085em;
   text-shadow: 0 3px 12px rgb(0 0 0 / 70%);
 }
 
@@ -109,16 +115,23 @@
 }
 
 .title {
-  margin-top: 4px;
-  font-size: clamp(3rem, 6vw, 7.3rem);
+  margin-top: 10px;
+  font-size: clamp(3.9rem, 7.1vw, 8.8rem);
+  filter: drop-shadow(0 14px 28px rgb(0 0 0 / 42%));
 }
 
 .untitled {
-  margin-top: 7px;
-  color: rgb(238 232 218 / 34%);
+  width: fit-content;
+  margin-top: 10px;
+  padding: 8px 12px 8px 14px;
+  border-left: 2px solid rgb(208 170 87 / 72%);
+  color: rgb(238 232 218 / 58%);
+  background: linear-gradient(90deg, rgb(208 170 87 / 10%), transparent);
   font-family: var(--font-geist-mono), monospace;
-  font-size: clamp(0.62rem, 0.85vw, 0.82rem);
-  letter-spacing: 0.15em;
+  font-size: clamp(0.82rem, 1.05vw, 1.05rem);
+  font-weight: 780;
+  letter-spacing: 0.16em;
+  text-shadow: 0 4px 14px rgb(0 0 0 / 68%);
 }
 
 .actions {
@@ -126,38 +139,48 @@
   justify-content: flex-end;
   align-items: center;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
 }
 
 .backAction,
 .primaryAction,
 .pendingAction {
-  min-height: 40px;
-  padding: 0 4px;
-  border: 0;
-  color: rgb(238 232 218 / 70%);
-  background: transparent;
+  min-height: 48px;
+  padding: 0 18px;
+  border: 1px solid rgb(238 232 218 / 18%);
+  color: rgb(238 232 218 / 78%);
+  background: rgb(3 9 7 / 56%);
+  backdrop-filter: blur(10px);
   font-family: var(--font-geist-mono), monospace;
-  font-size: 0.58rem;
-  font-weight: 850;
-  letter-spacing: 0.12em;
+  font-size: clamp(0.62rem, 0.72vw, 0.72rem);
+  font-weight: 900;
+  letter-spacing: 0.11em;
   text-transform: uppercase;
   text-shadow: 0 3px 12px rgb(0 0 0 / 70%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 3%),
+    0 10px 26px rgb(0 0 0 / 16%);
   cursor: pointer;
-  transition: color 160ms ease, transform 160ms ease;
+  transition:
+    color 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
 }
 
 .backAction::after,
 .primaryAction::after {
   content: "";
-  display: block;
-  width: 100%;
+  position: absolute;
+  right: 12px;
+  bottom: 7px;
+  left: 12px;
   height: 1px;
-  margin-top: 5px;
-  background: var(--profile-brass);
-  transform: scaleX(0);
-  transform-origin: left;
-  transition: transform 160ms ease;
+  background: currentColor;
+  opacity: 0;
+  transform: scaleX(0.45);
+  transition: opacity 160ms ease, transform 160ms ease;
 }
 
 .backAction:hover,
@@ -165,7 +188,12 @@
 .primaryAction:hover,
 .primaryAction:focus-visible {
   color: var(--profile-ivory);
-  transform: translateY(-1px);
+  border-color: rgb(238 232 218 / 36%);
+  background: rgb(8 17 13 / 76%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 5%),
+    0 12px 30px rgb(0 0 0 / 24%);
+  transform: translateY(-2px);
   outline: none;
 }
 
@@ -173,15 +201,43 @@
 .backAction:focus-visible::after,
 .primaryAction:hover::after,
 .primaryAction:focus-visible::after {
+  opacity: 0.72;
   transform: scaleX(1);
 }
 
+.backAction,
 .primaryAction {
-  color: var(--profile-brass);
+  position: relative;
+}
+
+.primaryAction {
+  border-color: rgb(208 170 87 / 52%);
+  color: #f0cc76;
+  background:
+    linear-gradient(180deg, rgb(208 170 87 / 15%), rgb(208 170 87 / 7%)),
+    rgb(3 9 7 / 68%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 236 180 / 6%),
+    0 10px 28px rgb(0 0 0 / 20%),
+    0 0 24px rgb(208 170 87 / 5%);
+}
+
+.primaryAction:hover,
+.primaryAction:focus-visible {
+  border-color: rgb(208 170 87 / 82%);
+  color: #ffe09b;
+  background:
+    linear-gradient(180deg, rgb(208 170 87 / 24%), rgb(208 170 87 / 10%)),
+    rgb(3 9 7 / 78%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 236 180 / 10%),
+    0 13px 32px rgb(0 0 0 / 26%),
+    0 0 28px rgb(208 170 87 / 9%);
 }
 
 .pendingAction {
-  color: rgb(238 232 218 / 34%);
+  border-color: rgb(238 232 218 / 10%);
+  color: rgb(238 232 218 / 38%);
   cursor: default;
 }
 
@@ -243,29 +299,42 @@
   }
 
   .identityTopline > strong {
-    font-size: clamp(1.35rem, 7vw, 2rem);
+    max-width: 11ch;
+    font-size: clamp(1.85rem, 9vw, 2.75rem);
+  }
+
+  .identityTopline small {
+    font-size: 0.68rem;
   }
 
   .title {
-    max-width: 14ch;
-    font-size: clamp(2.35rem, 12vw, 4.5rem);
+    max-width: 12ch;
+    margin-top: 6px;
+    font-size: clamp(2.8rem, 13vw, 5rem);
+  }
+
+  .untitled {
+    margin-top: 6px;
+    padding: 6px 9px 6px 10px;
+    font-size: 0.66rem;
+    letter-spacing: 0.11em;
   }
 
   .actions {
     position: fixed;
     top: max(14px, env(safe-area-inset-top));
     right: 14px;
-    max-width: 46vw;
-    gap: 8px;
+    max-width: 58vw;
+    gap: 7px;
   }
 
   .backAction,
-  .backAction,
   .primaryAction,
   .pendingAction {
-    min-height: 34px;
-    font-size: 0.48rem;
-    letter-spacing: 0.08em;
+    min-height: 40px;
+    padding: 0 11px;
+    font-size: 0.5rem;
+    letter-spacing: 0.07em;
   }
 
   .feedback {
