@@ -183,10 +183,12 @@ async function lockRoomCommanderCosmeticStates(
 }
 
 /**
- * Copies each player's current profile loadout into game.* exactly when a match
- * starts. After this function succeeds, runtime reads no longer need profile,
- * inventory, or mutable catalog rows for cosmetic presentation. Asset and body
- * colors are frozen here; delivery URLs are projected only while building DTOs.
+ * Copies each human player's current profile loadout into game.* exactly when a
+ * match starts. Bots receive one independently randomized available cosmetic per
+ * gameplay slot at the same boundary. After this function succeeds, runtime reads
+ * no longer need profile, inventory, or mutable catalog rows for presentation.
+ * Asset and body colors are frozen here; delivery URLs are projected only while
+ * building DTOs.
  */
 export async function capturePlayerCosmeticLoadouts(
   client: PoolClient,
@@ -201,35 +203,68 @@ export async function capturePlayerCosmeticLoadouts(
         WHERE is_default=TRUE
           AND slot IN ('dice_attack','dice_defense','dice_neutral','territory_skin')
      ),
-     resolved AS (
+     player_slots AS (
        SELECT player.id AS player_id,
+              player.user_id,
+              player.is_bot,
+              defaults.id AS default_id,
               defaults.slot,
-              COALESCE(equipped.id, defaults.id) AS cosmetic_id,
-              CASE
-                WHEN equipped.id IS NOT NULL THEN equipped.asset_ref
-                ELSE defaults.asset_ref
-              END AS asset_ref,
-              CASE
-                WHEN equipped.id IS NOT NULL THEN equipped.effect_key
-                ELSE defaults.effect_key
-              END AS effect_key,
-              CASE
-                WHEN equipped.id IS NOT NULL THEN equipped.body_color
-                ELSE defaults.body_color
-              END AS body_color,
-              CASE
-                WHEN equipped.id IS NOT NULL THEN equipped.body_highlight_color
-                ELSE defaults.body_highlight_color
-              END AS body_highlight_color
+              defaults.asset_ref AS default_asset_ref,
+              defaults.effect_key AS default_effect_key,
+              defaults.body_color AS default_body_color,
+              defaults.body_highlight_color AS default_body_highlight_color
          FROM game.players player
          CROSS JOIN defaults
+        WHERE player.room_id=$1
+     ),
+     resolved AS (
+       SELECT player_slot.player_id,
+              player_slot.slot,
+              CASE
+                WHEN player_slot.is_bot THEN COALESCE(bot_cosmetic.id, player_slot.default_id)
+                ELSE COALESCE(equipped.id, player_slot.default_id)
+              END AS cosmetic_id,
+              CASE
+                WHEN player_slot.is_bot THEN COALESCE(bot_cosmetic.asset_ref, player_slot.default_asset_ref)
+                WHEN equipped.id IS NOT NULL THEN equipped.asset_ref
+                ELSE player_slot.default_asset_ref
+              END AS asset_ref,
+              CASE
+                WHEN player_slot.is_bot THEN COALESCE(bot_cosmetic.effect_key, player_slot.default_effect_key)
+                WHEN equipped.id IS NOT NULL THEN equipped.effect_key
+                ELSE player_slot.default_effect_key
+              END AS effect_key,
+              CASE
+                WHEN player_slot.is_bot THEN COALESCE(bot_cosmetic.body_color, player_slot.default_body_color)
+                WHEN equipped.id IS NOT NULL THEN equipped.body_color
+                ELSE player_slot.default_body_color
+              END AS body_color,
+              CASE
+                WHEN player_slot.is_bot THEN COALESCE(bot_cosmetic.body_highlight_color, player_slot.default_body_highlight_color)
+                WHEN equipped.id IS NOT NULL THEN equipped.body_highlight_color
+                ELSE player_slot.default_body_highlight_color
+              END AS body_highlight_color
+         FROM player_slots player_slot
          LEFT JOIN profile.cosmetic_loadout loadout
-           ON loadout.user_id=player.user_id
-          AND loadout.slot=defaults.slot
+           ON player_slot.is_bot=FALSE
+          AND loadout.user_id=player_slot.user_id
+          AND loadout.slot=player_slot.slot
          LEFT JOIN catalog.cosmetics equipped
            ON equipped.id=loadout.cosmetic_id
           AND equipped.slot=loadout.slot
-        WHERE player.room_id=$1
+         LEFT JOIN LATERAL (
+           SELECT candidate.id,
+                  candidate.asset_ref,
+                  candidate.effect_key,
+                  candidate.body_color,
+                  candidate.body_highlight_color
+             FROM catalog.cosmetics candidate
+            WHERE player_slot.is_bot=TRUE
+              AND candidate.slot=player_slot.slot
+              AND candidate.status='available'
+            ORDER BY random()
+            LIMIT 1
+         ) bot_cosmetic ON TRUE
      )
      INSERT INTO game.player_cosmetic_loadouts(
        player_id,slot,cosmetic_id,asset_ref,effect_key,
