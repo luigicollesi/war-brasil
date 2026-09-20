@@ -15,10 +15,9 @@ import { validateDiceValues } from "@/src/lib/client/dice/dice-values";
 import { installDice3DDependencyWarningFilter } from "@/src/lib/client/dice/install-3d-dependency-warning-filter";
 import { DICE_PHYSICS } from "@/src/lib/client/dice/physics/dice-physics-config";
 import type { DiceSkin, DiceValue } from "@/src/lib/client/dice/types";
-import {
-  DICE_VISUAL_PIP_COLOR,
-  DICE_VISUAL_TEXTURE_RESOLUTION,
-} from "@/src/lib/client/dice/visual-config";
+import { playerColorHex } from "@/src/lib/client/player-color";
+import type { PlayerColor } from "@/src/lib/lobby";
+import { DICE_VISUAL_TEXTURE_RESOLUTION } from "@/src/lib/client/dice/visual-config";
 import styles from "./battle-dice-cinematic.module.css";
 import { PredeterminedDiceRoll } from "./predetermined-dice-roll";
 import {
@@ -93,6 +92,7 @@ function CinematicScene({
   values,
   seed,
   skin,
+  color,
   assetRef,
   bodyColor,
   bodyHighlightColor,
@@ -104,6 +104,7 @@ function CinematicScene({
   values: readonly DiceValue[];
   seed: string;
   skin: DiceSkin;
+  color: PlayerColor;
   assetRef?: string | null;
   bodyColor?: string | null;
   bodyHighlightColor?: string | null;
@@ -118,7 +119,7 @@ function CinematicScene({
     skin,
     assetRef,
     bodyColor,
-    pipColor: DICE_VISUAL_PIP_COLOR,
+    pipColor: playerColorHex(color),
     resolution: DICE_VISUAL_TEXTURE_RESOLUTION,
   });
   const portrait =
@@ -186,6 +187,7 @@ export function FullscreenDiceCinematic({
   values,
   seed,
   skin,
+  color,
   assetRef,
   bodyColor,
   bodyHighlightColor,
@@ -198,6 +200,7 @@ export function FullscreenDiceCinematic({
   values: readonly number[];
   seed: string;
   skin: DiceSkin;
+  color: PlayerColor;
   assetRef?: string | null;
   bodyColor?: string | null;
   bodyHighlightColor?: string | null;
@@ -297,6 +300,7 @@ export function FullscreenDiceCinematic({
               values={safeValues}
               seed={seed}
               skin={skin}
+              color={color}
               assetRef={assetRef}
               bodyColor={bodyColor}
               bodyHighlightColor={bodyHighlightColor}
