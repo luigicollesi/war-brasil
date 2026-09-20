@@ -18,6 +18,8 @@ test("profile appearance persists rich titles and mandatory profile backgrounds 
   assert.match(migration, /equipped_background_id/);
   assert.match(migration, /commanders_equipped_background_owned_fkey/);
   assert.match(migration, /commander_default_background_before_insert/);
+  assert.match(migration, /AS \$body\$/);
+  assert.doesNotMatch(migration, /LANGUAGE plpgsql\s+AS \$\s*$/m);
   assert.doesNotMatch(migration, /INSERT INTO inventory\.cosmetics[\s\S]*profile\.background/);
   assert.doesNotMatch(migration, /game\.player_cosmetic_loadouts/);
 });
