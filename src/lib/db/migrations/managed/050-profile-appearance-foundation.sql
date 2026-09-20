@@ -194,6 +194,46 @@ ON CONFLICT (user_id,background_id) DO NOTHING;
 ALTER TABLE profile.commanders
   ADD COLUMN IF NOT EXISTS equipped_background_id TEXT;
 
+CREATE OR REPLACE FUNCTION profile.ensure_commander_default_background()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $
+DECLARE
+  default_background_id TEXT;
+BEGIN
+  IF NEW.equipped_background_id IS NOT NULL THEN
+    RETURN NEW;
+  END IF;
+
+  SELECT id
+    INTO default_background_id
+    FROM catalog.profile_backgrounds
+   WHERE is_default=TRUE
+     AND is_active=TRUE
+   ORDER BY id
+   LIMIT 1;
+
+  IF default_background_id IS NULL THEN
+    RAISE EXCEPTION 'PROFILE_BACKGROUND_DEFAULT_MISSING';
+  END IF;
+
+  INSERT INTO profile.commander_backgrounds(
+    user_id,background_id,acquisition_source
+  )
+  VALUES(NEW.user_id,default_background_id,'default')
+  ON CONFLICT (user_id,background_id) DO NOTHING;
+
+  NEW.equipped_background_id := default_background_id;
+  RETURN NEW;
+END
+$;
+
+DROP TRIGGER IF EXISTS commander_default_background_before_insert
+  ON profile.commanders;
+CREATE TRIGGER commander_default_background_before_insert
+BEFORE INSERT ON profile.commanders
+FOR EACH ROW EXECUTE FUNCTION profile.ensure_commander_default_background();
+
 UPDATE profile.commanders
    SET equipped_background_id='profile.background.default'
  WHERE equipped_background_id IS NULL;
