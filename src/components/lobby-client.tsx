@@ -64,7 +64,7 @@ export function LobbyClient({ code }: LobbyClientProps) {
 
   useEffect(() => {
     if (snapshot && snapshot.room.status !== "waiting") {
-      router.replace(`/game/${snapshot.room.id}`);
+      router.replace(`/game/${snapshot.room.code}`);
     }
   }, [router, snapshot]);
   useEffect(() => {
@@ -121,8 +121,8 @@ export function LobbyClient({ code }: LobbyClientProps) {
         throw new Error(data.error ?? "Não foi possível salvar suas escolhas.");
       }
 
-      if (data.room?.status !== "waiting" && data.room?.id) {
-        router.replace(`/game/${data.room.id}`);
+      if (data.room?.status !== "waiting") {
+        router.replace(`/game/${code.toUpperCase()}`);
         return;
       }
 
