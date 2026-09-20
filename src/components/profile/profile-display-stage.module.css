@@ -1,0 +1,78 @@
+.stage {
+  position: relative;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.labels {
+  position: absolute;
+  left: 5%;
+  right: 5%;
+  bottom: clamp(16px, 3.5vh, 42px);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  pointer-events: none;
+}
+
+.label {
+  min-width: 0;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding-inline: 8px;
+  text-align: center;
+  text-shadow: 0 3px 16px rgb(0 0 0 / 80%);
+}
+
+.label small {
+  color: rgb(208 170 87 / 88%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: clamp(0.49rem, 0.65vw, 0.62rem);
+  font-weight: 900;
+  letter-spacing: 0.14em;
+}
+
+.label strong {
+  overflow: hidden;
+  width: 100%;
+  color: rgb(238 232 218 / 74%);
+  font-size: clamp(0.62rem, 0.82vw, 0.78rem);
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .stage {
+    min-height: 52dvh;
+  }
+
+  .canvas {
+    inset: -10% -58% -4%;
+    transform: scale(0.72);
+  }
+
+  .labels {
+    left: 8px;
+    right: 8px;
+    bottom: 10px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: min(20dvh, 132px) 8px;
+  }
+
+  .label strong {
+    font-size: 0.58rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas {
+    animation: none;
+  }
+}
