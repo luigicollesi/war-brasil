@@ -18,6 +18,10 @@ export type DiceTextureOptions = {
   skin: DiceSkin;
   pipColor?: string;
   resolution?: number;
+  /** Frozen game snapshot asset. Null/undefined uses the procedural fallback. */
+  assetRef?: string | null;
+  /** Physical die body color persisted in catalog.cosmetics.body_color. */
+  bodyColor?: string | null;
 };
 
 export type DiceLaunchState = {

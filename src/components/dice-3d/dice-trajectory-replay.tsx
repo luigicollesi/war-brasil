@@ -21,7 +21,7 @@ import type {
   PredeterminedDiceRoll,
 } from "@/src/lib/client/dice/types";
 import { DICE_PHYSICS } from "@/src/lib/client/dice/physics/dice-physics-config";
-import { DieVisual } from "./die-visual";
+import { DiceModel3D } from "./dice-model-3d";
 
 function smoothStep(value: number) {
   const t = Math.min(1, Math.max(0, value));
@@ -73,6 +73,8 @@ export function DiceTrajectoryReplay({
   roll,
   geometry,
   textures,
+  bodyColor,
+  bodyHighlightColor,
   playbackDurationMs,
   initialElapsedMs = 0,
   visualScale = 1,
@@ -85,6 +87,8 @@ export function DiceTrajectoryReplay({
   roll: PredeterminedDiceRoll;
   geometry: BufferGeometry;
   textures: DiceFaceTextureSet;
+  bodyColor?: string | null;
+  bodyHighlightColor?: string | null;
   playbackDurationMs?: number;
   initialElapsedMs?: number;
   visualScale?: number;
@@ -286,11 +290,13 @@ export function DiceTrajectoryReplay({
             scale={initialScale}
           >
             <group quaternion={remap.rotation} scale={visualScale}>
-              <DieVisual
+              <DiceModel3D
                 geometry={geometry}
                 textures={textures}
                 size={DICE_PHYSICS.dieSize}
                 radius={DICE_PHYSICS.dieRadius}
+                bodyColor={bodyColor}
+                bodyHighlightColor={bodyHighlightColor}
               />
             </group>
           </group>

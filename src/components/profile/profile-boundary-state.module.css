@@ -1,0 +1,272 @@
+.page {
+  position: relative;
+  min-height: calc(100dvh - 71px);
+  overflow: hidden;
+  padding: clamp(2rem, 5vw, 4rem) 0 clamp(3.5rem, 7vw, 6rem);
+  color: var(--wb-text);
+  background:
+    radial-gradient(circle at 50% 28%, rgba(214, 169, 62, .08), transparent 24rem),
+    linear-gradient(180deg, rgba(4, 13, 10, .08), rgba(2, 8, 6, .52));
+}
+
+.page::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, transparent 0 12%, rgba(214,169,62,.025) 12.1% 12.2%, transparent 12.3% 87%, rgba(214,169,62,.025) 87.1% 87.2%, transparent 87.3%),
+    linear-gradient(rgba(255,255,255,.012) 1px, transparent 1px);
+  background-size: auto, 100% 72px;
+}
+
+.chamber {
+  position: relative;
+  display: grid;
+  min-height: clamp(34rem, 65vw, 44rem);
+  grid-template-columns: minmax(18rem, .9fr) minmax(0, 1.1fr);
+  align-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.055);
+  border-top-color: rgba(214,169,62,.17);
+  background:
+    radial-gradient(circle at 27% 45%, rgba(214,169,62,.08), transparent 28%),
+    linear-gradient(90deg, rgba(13,31,24,.76), rgba(5,17,13,.62));
+  box-shadow: 0 30px 80px rgba(0,0,0,.3), inset 0 -60px 100px rgba(0,0,0,.23);
+}
+
+.architecture {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.columnLeft,
+.columnRight {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: clamp(1.5rem, 4vw, 3.25rem);
+  border-inline: 1px solid rgba(214,169,62,.09);
+  background: linear-gradient(90deg, rgba(255,255,255,.018), rgba(0,0,0,.18));
+}
+
+.columnLeft { left: 0; }
+.columnRight { right: 0; transform: scaleX(-1); }
+
+.ceilingRail {
+  position: absolute;
+  top: 9%;
+  left: 8%;
+  right: 8%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(214,169,62,.25), transparent);
+}
+
+.vault {
+  --vault-accent: #d0aa57;
+  --vault-soft: rgba(208,170,87,.09);
+  position: relative;
+  z-index: 2;
+  display: grid;
+  width: min(62vw, 24rem);
+  max-width: calc(100% - 3rem);
+  aspect-ratio: 1;
+  justify-self: center;
+  place-items: center;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 45% 35%, rgba(255,255,255,.05), transparent 25%),
+    radial-gradient(circle, #16271f 0 45%, #08120e 46% 59%, #222d27 60% 61%, #060b09 62% 100%);
+  box-shadow:
+    0 32px 70px rgba(0,0,0,.48),
+    inset 0 0 0 1px rgba(255,255,255,.06),
+    inset 0 -18px 40px rgba(0,0,0,.5);
+}
+
+.page[data-state="error"] .vault {
+  --vault-accent: #a4262c;
+  --vault-soft: rgba(164,38,44,.12);
+}
+
+.vaultOuter,
+.vaultInner {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.vaultOuter {
+  inset: 8%;
+  border: 1px solid color-mix(in srgb, var(--vault-accent) 55%, transparent);
+  box-shadow: inset 0 0 0 7px rgba(0,0,0,.18), 0 0 0 1px rgba(255,255,255,.025);
+}
+
+.vaultInner {
+  inset: 24%;
+  border: 8px double color-mix(in srgb, var(--vault-accent) 44%, transparent);
+  transform: rotate(18deg);
+}
+
+.vaultCore {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  width: 34%;
+  aspect-ratio: 1;
+  place-items: center;
+  transform: rotate(45deg);
+  border: 1px solid color-mix(in srgb, var(--vault-accent) 70%, transparent);
+  color: #ead89d;
+  background: #102019;
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: clamp(2rem, 5vw, 3.5rem);
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-shadow: 0 5px 18px rgba(0,0,0,.4);
+}
+
+.vaultCore::first-letter { color: inherit; }
+
+.scanLine {
+  position: absolute;
+  z-index: 4;
+  left: 20%;
+  right: 20%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #d7b867, transparent);
+  box-shadow: 0 0 16px rgba(214,169,62,.36);
+  animation: archive-scan 2.6s ease-in-out infinite;
+}
+
+.lockMark {
+  position: absolute;
+  z-index: 4;
+  right: 17%;
+  bottom: 17%;
+  display: grid;
+  width: 2.5rem;
+  aspect-ratio: 1;
+  place-items: center;
+  border: 1px solid rgba(164,38,44,.55);
+  color: #d27577;
+  background: rgba(38,7,9,.82);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.copy {
+  position: relative;
+  z-index: 2;
+  max-width: 40rem;
+  padding: clamp(2rem, 5vw, 4rem) clamp(2rem, 5vw, 4.5rem) clamp(2rem, 5vw, 4rem) 1rem;
+}
+
+.copy h1 {
+  margin-top: .7rem;
+  color: var(--wb-ivory);
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: clamp(2.8rem, 6vw, 5.2rem);
+  font-weight: 700;
+  line-height: .9;
+  letter-spacing: -.025em;
+  text-transform: uppercase;
+}
+
+.copy > p:last-of-type {
+  max-width: 35rem;
+  margin-top: 1.25rem;
+  color: #96a59d;
+  font-size: clamp(.92rem, 1.4vw, 1rem);
+  line-height: 1.7;
+}
+
+.statusLine {
+  display: inline-flex;
+  min-height: 2.6rem;
+  margin-top: 1.45rem;
+  align-items: center;
+  gap: .65rem;
+  border: 1px solid rgba(214,169,62,.15);
+  padding: .55rem .75rem;
+  color: #bdc4be;
+  background: rgba(5,17,13,.64);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: .66rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.statusLine > span {
+  width: .42rem;
+  height: .42rem;
+  border-radius: 50%;
+  background: #d0aa57;
+  box-shadow: 0 0 0 4px rgba(208,170,87,.08);
+}
+
+.page[data-state="error"] .statusLine {
+  border-color: rgba(164,38,44,.22);
+}
+
+.page[data-state="error"] .statusLine > span {
+  background: #a4262c;
+  box-shadow: 0 0 0 4px rgba(164,38,44,.1);
+}
+
+.action { margin-top: 1.55rem; }
+
+@keyframes archive-scan {
+  0%, 100% { top: 27%; opacity: .38; }
+  50% { top: 73%; opacity: .9; }
+}
+
+@media (max-width: 820px) {
+  .chamber {
+    grid-template-columns: 1fr;
+    padding: 2rem 0 0;
+  }
+
+  .vault {
+    width: min(68vw, 20rem);
+  }
+
+  .copy {
+    max-width: none;
+    padding: 2.2rem 1.35rem 2.6rem;
+    text-align: center;
+  }
+
+  .copy > p:last-of-type { margin-inline: auto; }
+  .statusLine { justify-content: center; }
+}
+
+@media (max-width: 480px) {
+  .page { padding-top: 1rem; }
+  .chamber { min-height: calc(100dvh - 7rem); }
+  .vault { width: min(76vw, 17rem); }
+  .copy h1 { font-size: clamp(2.6rem, 14vw, 3.8rem); }
+  .statusLine { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scanLine {
+    top: 50%;
+    opacity: .5;
+    animation: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .chamber,
+  .vault,
+  .vaultOuter,
+  .vaultInner,
+  .vaultCore,
+  .statusLine,
+  .lockMark {
+    border: 1px solid CanvasText;
+  }
+}

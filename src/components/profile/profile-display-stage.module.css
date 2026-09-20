@@ -1,0 +1,143 @@
+.stage {
+  position: relative;
+  z-index: 2;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
+.canvas {
+  position: absolute;
+  inset: 0;
+}
+
+.labels {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.label {
+  position: absolute;
+  top: 70%;
+  display: grid;
+  width: min(22vw, 340px);
+  justify-items: center;
+  gap: 5px;
+  transform: translateX(-50%);
+  text-align: center;
+  text-shadow: 0 3px 16px rgb(0 0 0 / 80%);
+}
+
+.label::before {
+  content: "";
+  position: absolute;
+  top: -64px;
+  left: 50%;
+  width: clamp(110px, 11vw, 180px);
+  height: 28px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: radial-gradient(
+    ellipse at center,
+    rgb(208 170 87 / 14%) 0%,
+    rgb(208 170 87 / 6%) 38%,
+    transparent 74%
+  );
+  filter: blur(2px);
+}
+
+.label:nth-child(1) {
+  left: 14%;
+}
+
+.label:nth-child(2) {
+  left: 38%;
+}
+
+.label:nth-child(3) {
+  left: 62%;
+}
+
+.label:nth-child(4) {
+  left: 86%;
+}
+
+.label small {
+  color: rgb(208 170 87 / 92%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: clamp(0.54rem, 0.7vw, 0.68rem);
+  font-weight: 900;
+  letter-spacing: 0.14em;
+}
+
+.label strong {
+  overflow: hidden;
+  width: 100%;
+  color: rgb(238 232 218 / 80%);
+  font-size: clamp(0.68rem, 0.86vw, 0.84rem);
+  font-weight: 650;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .stage {
+    min-height: 100dvh;
+  }
+
+  .label {
+    width: 43vw;
+  }
+
+  .label:nth-child(1),
+  .label:nth-child(2) {
+    top: 49%;
+  }
+
+  .label:nth-child(3),
+  .label:nth-child(4) {
+    top: 78%;
+  }
+
+  .label:nth-child(1),
+  .label:nth-child(3) {
+    left: 27%;
+  }
+
+  .label:nth-child(2),
+  .label:nth-child(4) {
+    left: 73%;
+  }
+
+  .label::before {
+    top: -46px;
+    width: 104px;
+    height: 22px;
+  }
+
+  .label small {
+    font-size: 0.5rem;
+  }
+
+  .label strong {
+    font-size: 0.62rem;
+  }
+}
+
+@media (max-height: 760px) and (min-width: 721px) {
+  .label {
+    top: 72%;
+  }
+
+  .label::before {
+    top: -54px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .canvas {
+    animation: none;
+  }
+}

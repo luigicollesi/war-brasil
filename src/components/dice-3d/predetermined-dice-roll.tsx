@@ -24,6 +24,8 @@ type PredeterminedDiceRollProps = {
   values: readonly DiceValue[];
   seed: string;
   textures: DiceFaceTextureSet;
+  bodyColor?: string | null;
+  bodyHighlightColor?: string | null;
   preparingFallback?: ReactNode;
   failureFallback?: ReactNode;
   launchOffset?: DiceVector3;
@@ -42,6 +44,8 @@ function PredeterminedDiceRollInstance({
   values,
   seed,
   textures,
+  bodyColor,
+  bodyHighlightColor,
   preparingFallback = null,
   failureFallback = null,
   launchOffset,
@@ -104,6 +108,8 @@ function PredeterminedDiceRollInstance({
       roll={roll}
       geometry={geometry}
       textures={textures}
+      bodyColor={bodyColor}
+      bodyHighlightColor={bodyHighlightColor}
       playbackDurationMs={playbackDurationMs}
       initialElapsedMs={initialElapsedMs}
       visualScale={visualScale}

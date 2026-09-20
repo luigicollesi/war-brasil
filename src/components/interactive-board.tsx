@@ -26,6 +26,7 @@ import {
 } from "@/src/lib/client/map/map-runtime-events";
 import {
   neutralTerritoryMaterial,
+  normalizeTerritoryEffectKey,
   territoryMaterial,
 } from "@/src/lib/client/map/territory-material";
 import { buildTerritoryHitLayer } from "@/src/lib/client/map/territory-hit-geometry";
@@ -63,6 +64,7 @@ export type BoardTerritory = {
   ownerPlayerId: string;
   ownerName: string;
   ownerColor: PlayerColor;
+  territoryEffectKey: string | null;
   troops: number;
 };
 
@@ -562,14 +564,19 @@ export function InteractiveBoard({
       if (!nodes) continue;
 
       const revealed = !opening || opening.revealedTerritoryIds.has(id);
-      const materialKey = revealed ? `owner:${territory.ownerColor}` : "neutral";
+      const territoryEffectKey = normalizeTerritoryEffectKey(
+        territory.territoryEffectKey,
+      );
+      const materialKey = revealed
+        ? `owner:${territory.ownerColor}:effect:${territoryEffectKey}`
+        : "neutral";
 
       if (materialSignatureRef.current.get(id) !== materialKey) {
         applyTerritoryMaterial(
           id,
           nodes,
           revealed
-            ? territoryMaterial(territory.ownerColor)
+            ? territoryMaterial(territory.ownerColor, territoryEffectKey)
             : neutralTerritoryMaterial(),
         );
         materialSignatureRef.current.set(id, materialKey);

@@ -1,0 +1,145 @@
+name: Doctrine E2E
+
+on:
+  pull_request:
+    branches:
+      - dev
+    paths:
+      - "src/app/rules/**"
+      - "src/components/doctrine/**"
+      - "src/components/pre-game/foundation/**"
+      - "src/lib/doctrine-presentation.ts"
+      - "src/lib/server/auth/**"
+      - "src/app/api/assets/**"
+      - "src/app/api/economy/**"
+      - "src/app/profile/store/**"
+      - "src/components/profile/store/**"
+      - "src/components/profile/command-quarters/**"
+      - "src/lib/economy/**"
+      - "src/lib/server/assets/**"
+      - "src/lib/server/economy/**"
+      - "src/lib/db/migrations/managed/040-r2-webp-cosmetic-catalog.sql"
+      - "src/proxy.ts"
+      - "scripts/e2e/prepare-doctrine-auth.mjs"
+      - "scripts/e2e/economy-e2e.mjs"
+      - "tests/e2e/doctrine.spec.mjs"
+      - ".github/workflows/doctrine-e2e.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  doctrine-e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: war
+          POSTGRES_PASSWORD: war
+          POSTGRES_DB: war_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U war -d war_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      CI: "true"
+      NEXT_TELEMETRY_DISABLED: "1"
+      DATABASE_URL: postgresql://war:war@127.0.0.1:5432/war_ci
+      ASSET_STORAGE_URL: s3://E2EACCESSKEY:E2ESECRETKEY@e2eaccount.r2.cloudflarestorage.com/war-brasil-assets-prod?region=auto
+      PLAYWRIGHT_TEST_BASE_URL: http://127.0.0.1:3000
+      DOCTRINE_EVIDENCE_DIR: test-results/doctrine-evidence
+      ECONOMY_E2E_ARTIFACT_DIR: test-results/economy-eval
+      DOCTRINE_AUTH_STORAGE_STATE: /tmp/war-brasil-doctrine-auth-state.json
+      BETTER_AUTH_SECRET: AUTH_SENTINEL_DO_NOT_SHIP_0123456789ABCDEF
+      BETTER_AUTH_URL: http://127.0.0.1:3000
+      AUTH_ALLOWED_HOSTS: 127.0.0.1:3000,localhost:3000
+      AUTH_EMAIL_SINK_DIR: /tmp/war-brasil-doctrine-auth-email-sink
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install application dependencies
+        run: npm ci
+
+      - name: Install pinned Playwright harness
+        run: npm install --no-save --package-lock=false @playwright/test@1.63.0
+
+      - name: Install Chromium and system dependencies
+        run: npx playwright install --with-deps chromium
+
+      - name: Prepare converged database
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile } from "node:fs/promises";
+          import { Client } from "pg";
+          const client = new Client({ connectionString: process.env.DATABASE_URL });
+          await client.connect();
+          try {
+            await client.query(await readFile("src/lib/db/schema.sql", "utf8"));
+          } finally {
+            await client.end();
+          }
+          NODE
+          npm run db:migrate
+
+      - name: Build application
+        run: npm run build
+
+      - name: Start production application
+        run: |
+          mkdir -p "$AUTH_EMAIL_SINK_DIR"
+          npm run start -- -p 3000 > /tmp/doctrine-next.log 2>&1 &
+          echo $! > /tmp/doctrine-next.pid
+
+      - name: Wait for application
+        run: |
+          for attempt in {1..45}; do
+            if curl -fsS http://127.0.0.1:3000/ >/dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/doctrine-next.log
+          exit 1
+
+      - name: Prepare authenticated browser state
+        run: node scripts/e2e/prepare-doctrine-auth.mjs
+
+      - name: Run Doctrine browser gates
+        run: npx playwright test tests/e2e/doctrine.spec.mjs --workers=1 --reporter=line
+
+      - name: Run Economy browser gates
+        run: node scripts/e2e/economy-e2e.mjs
+
+      - name: Print application log on failure
+        if: failure()
+        run: cat /tmp/doctrine-next.log || true
+
+      - name: Upload Doctrine evaluation evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: doctrine-eval-evidence
+          path: test-results/doctrine-evidence
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Upload Economy evaluation evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v5
+        with:
+          name: economy-eval-evidence
+          path: test-results/economy-eval
+          if-no-files-found: warn
+          retention-days: 30

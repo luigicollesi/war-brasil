@@ -12,12 +12,23 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      BETTER_AUTH_SECRET: AUTH_SENTINEL_DO_NOT_SHIP_0123456789ABCDEF
+      BETTER_AUTH_URL: http://localhost:3000
+      AUTH_ALLOWED_HOSTS: localhost:3000
+      GOOGLE_CLIENT_SECRET: GOOGLE_SENTINEL_DO_NOT_SHIP
+      DISCORD_CLIENT_SECRET: DISCORD_SENTINEL_DO_NOT_SHIP
+      AUTH_EMAIL_FROM: WAR Brasil CI <auth@example.com>
+      EMAIL_TRANSPORT_SECRET: EMAIL_SENTINEL_DO_NOT_SHIP
+      ASSET_STORAGE_URL: s3://E2EACCESSKEY:E2ESECRETKEY@e2eaccount.r2.cloudflarestorage.com/war-brasil-assets-prod?region=auto
+      DB_PASSWORD_SENTINEL: DB_SENTINEL_DO_NOT_SHIP_2026
+      AUTH_EMAIL_SINK_DIR: /tmp/war-brasil-auth-email-sink
     services:
       postgres:
         image: postgres:18
         env:
           POSTGRES_USER: war
-          POSTGRES_PASSWORD: war
+          POSTGRES_PASSWORD: DB_SENTINEL_DO_NOT_SHIP_2026
           POSTGRES_DB: war_ci
         ports:
           - 5432:5432
@@ -25,6 +36,15 @@ jobs:
           --health-cmd "pg_isready -U war -d war_ci"
           --health-interval 10s
           --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:8-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
           --health-retries 5
     steps:
       - uses: actions/checkout@v7
@@ -43,8 +63,106 @@ jobs:
       - name: Test database migrations
         run: npm run test:db
         env:
-          DATABASE_URL: postgresql://war:war@127.0.0.1:5432/war_ci
-      - run: npm run realtime:test
-      - run: npm run build
+          DATABASE_URL: postgresql://war:DB_SENTINEL_DO_NOT_SHIP_2026@127.0.0.1:5432/war_ci
+      - name: Test realtime and Redis presence
+        run: npm run realtime:test
         env:
-          DATABASE_URL: postgresql://war:war@127.0.0.1:5432/war_ci
+          PROFILE_PRESENCE_TEST_REDIS_URL: redis://127.0.0.1:6379
+      - name: Prepare isolated Auth/Lobby E2E database
+        run: node scripts/e2e/prepare-lobby-db.mjs
+        env:
+          DATABASE_URL: postgresql://war:DB_SENTINEL_DO_NOT_SHIP_2026@127.0.0.1:5432/war_ci
+          LOBBY_E2E_DATABASE_URL: postgresql://war:DB_SENTINEL_DO_NOT_SHIP_2026@127.0.0.1:5432/war_lobby_e2e
+      - name: Build against converged auth schema
+        run: npm run build
+        env:
+          DATABASE_URL: postgresql://war:DB_SENTINEL_DO_NOT_SHIP_2026@127.0.0.1:5432/war_lobby_e2e
+      - name: Scan public build artifacts for auth secret leaks
+        run: node scripts/ci/assert-no-auth-secret-leaks.mjs
+        env:
+          DATABASE_URL: postgresql://war:DB_SENTINEL_DO_NOT_SHIP_2026@127.0.0.1:5432/war_lobby_e2e
+      - name: Install pinned Playwright runtime
+        run: |
+          mkdir -p .e2e-runtime
+          npm install --prefix .e2e-runtime --no-save --no-package-lock playwright@1.63.0
+          ./.e2e-runtime/node_modules/.bin/playwright install --with-deps chromium
+      - name: Run Auth, Profile presence, Lobby, Game modes, Economy game and Store Showcase E2E
+        run: |
+          rm -rf "$AUTH_EMAIL_SINK_DIR"
+          mkdir -p "$AUTH_EMAIL_SINK_DIR"
+
+          node realtime/server.mjs > /tmp/war-brasil-realtime-e2e.log 2>&1 &
+          REALTIME_PID=$!
+          npm start > /tmp/war-brasil-e2e.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true; kill "$REALTIME_PID" 2>/dev/null || true; rm -rf "$AUTH_EMAIL_SINK_DIR"' EXIT
+
+          READY=0
+          for attempt in {1..60}; do
+            if curl --fail --silent http://localhost:3000/ > /dev/null; then
+              READY=1
+              break
+            fi
+            sleep 1
+          done
+
+          if [ "$READY" -ne 1 ]; then
+            cat /tmp/war-brasil-e2e.log
+            cat /tmp/war-brasil-realtime-e2e.log
+            exit 1
+          fi
+
+          PRESENCE_READY=0
+          for attempt in {1..60}; do
+            STATUS="$(curl --silent http://127.0.0.1:3001/health || true)"
+            if [[ "$STATUS" == *'"ready":true'* && "$STATUS" == *'"presenceAvailable":true'* ]]; then
+              PRESENCE_READY=1
+              break
+            fi
+            sleep 1
+          done
+
+          if [ "$PRESENCE_READY" -ne 1 ]; then
+            cat /tmp/war-brasil-realtime-e2e.log
+            exit 1
+          fi
+
+          node scripts/e2e/auth-credentials-verification-e2e.mjs
+          node scripts/e2e/auth-origin-redirect-e2e.mjs
+          node scripts/e2e/auth-rate-limit-e2e.mjs
+          node scripts/e2e/auth-seat-boundary-e2e.mjs
+          npm run test:e2e:lobby
+          node scripts/e2e/game-modes-e2e.mjs
+          node scripts/e2e/game-modes-victory-e2e.mjs
+          node scripts/e2e/economy-game-e2e.mjs
+          node scripts/e2e/store-showcase-e2e.mjs
+        env:
+          DATABASE_URL: postgresql://war:DB_SENTINEL_DO_NOT_SHIP_2026@127.0.0.1:5432/war_lobby_e2e
+          LOBBY_E2E_DATABASE_URL: postgresql://war:DB_SENTINEL_DO_NOT_SHIP_2026@127.0.0.1:5432/war_lobby_e2e
+          LOBBY_E2E_BASE_URL: http://localhost:3000
+          PLAYWRIGHT_RUNTIME_DIR: .e2e-runtime/node_modules/playwright
+          GAME_MODES_E2E_ARTIFACT_DIR: test-results/game-modes-eval
+          ECONOMY_GAME_E2E_ARTIFACT_DIR: test-results/economy-game-eval
+          STORE_SHOWCASE_E2E_ARTIFACT_DIR: test-results/store-showcase-eval
+          GAME_REALTIME_ENABLED: "true"
+          GAME_REALTIME_PORT: "3001"
+          GAME_REALTIME_EVENT_SOURCE: postgres
+          GAME_REALTIME_AUTH_MODE: cookie
+          GAME_REALTIME_REDIS_URL: redis://127.0.0.1:6379
+          GAME_REALTIME_INTERNAL_URL: http://127.0.0.1:3001
+          GAME_REALTIME_INTERNAL_TOKEN: PROFILE_PRESENCE_E2E_INTERNAL_SENTINEL_2026
+          PROFILE_PRESENCE_E2E_REQUIRED: "1"
+      - name: Upload Lobby, Game modes, Economy game and Store Showcase EVAL evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lobby-eval-evidence
+          path: |
+            test-results/lobby-eval
+            test-results/game-modes-eval
+            test-results/economy-game-eval
+            test-results/store-showcase-eval
+            /tmp/war-brasil-e2e.log
+            /tmp/war-brasil-realtime-e2e.log
+          if-no-files-found: warn
+          retention-days: 14

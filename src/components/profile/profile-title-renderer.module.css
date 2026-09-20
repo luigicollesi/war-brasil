@@ -1,0 +1,78 @@
+.title {
+  display: block;
+  width: fit-content;
+  max-width: min(100%, 19ch);
+  color: #eee8da;
+  font-weight: 800;
+  line-height: 0.88;
+  letter-spacing: 0.025em;
+  text-wrap: balance;
+  text-transform: uppercase;
+  text-shadow: 0 12px 34px rgb(0 0 0 / 48%);
+}
+
+.commandDisplay {
+  font-family: var(--font-wb-display), sans-serif;
+}
+
+.military {
+  font-family: var(--font-wb-display), sans-serif;
+  letter-spacing: 0.06em;
+}
+
+.stencil {
+  font-family: var(--font-wb-display), sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.095em;
+}
+
+.serif {
+  font-family: Georgia, "Times New Roman", serif;
+  letter-spacing: 0.015em;
+}
+
+.standard {
+  color: #eee8da;
+}
+
+.imperialGold {
+  color: transparent;
+  background: linear-gradient(180deg, #fff2b3 0%, #d0aa57 45%, #855f22 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+  filter: drop-shadow(0 8px 24px rgb(208 170 87 / 18%));
+}
+
+.bloodCommand {
+  color: transparent;
+  background: linear-gradient(180deg, #f07878 0%, #b53137 48%, #5f1116 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+}
+
+.silverSteel {
+  color: transparent;
+  background: linear-gradient(180deg, #ffffff 0%, #c9cfcd 42%, #6d7774 100%);
+  background-clip: text;
+  -webkit-background-clip: text;
+}
+
+.nightSky {
+  color: transparent;
+  background:
+    radial-gradient(circle at 22% 24%, rgb(255 255 255 / 88%) 0 1px, transparent 1.5px),
+    linear-gradient(180deg, #d9e8ff 0%, #8194c8 40%, #3a426b 100%);
+  background-size: 34px 34px, auto;
+  background-clip: text;
+  -webkit-background-clip: text;
+}
+
+.title[data-textured="true"] {
+  background-image:
+    var(--profile-title-texture),
+    linear-gradient(180deg, #fff7cf 0%, #d0aa57 56%, #79551e 100%);
+  background-size: cover, auto;
+  background-position: center;
+  background-clip: text;
+  -webkit-background-clip: text;
+}

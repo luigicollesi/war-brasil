@@ -15,6 +15,9 @@ import { validateDiceValues } from "@/src/lib/client/dice/dice-values";
 import { installDice3DDependencyWarningFilter } from "@/src/lib/client/dice/install-3d-dependency-warning-filter";
 import { DICE_PHYSICS } from "@/src/lib/client/dice/physics/dice-physics-config";
 import type { DiceSkin, DiceValue } from "@/src/lib/client/dice/types";
+import { playerColorHex } from "@/src/lib/client/player-color";
+import type { PlayerColor } from "@/src/lib/lobby";
+import { DICE_VISUAL_TEXTURE_RESOLUTION } from "@/src/lib/client/dice/visual-config";
 import styles from "./battle-dice-cinematic.module.css";
 import { PredeterminedDiceRoll } from "./predetermined-dice-roll";
 import {
@@ -89,7 +92,10 @@ function CinematicScene({
   values,
   seed,
   skin,
-  pipColor,
+  color,
+  assetRef,
+  bodyColor,
+  bodyHighlightColor,
   replayDurationMs,
   visualScale,
   onComplete,
@@ -98,7 +104,10 @@ function CinematicScene({
   values: readonly DiceValue[];
   seed: string;
   skin: DiceSkin;
-  pipColor?: string;
+  color: PlayerColor;
+  assetRef?: string | null;
+  bodyColor?: string | null;
+  bodyHighlightColor?: string | null;
   replayDurationMs: number;
   visualScale: number;
   onComplete: () => void;
@@ -106,7 +115,13 @@ function CinematicScene({
 }) {
   const size = useThree((state) => state.size);
   const gl = useThree((state) => state.gl);
-  const textureState = useDiceFaceTextures({ skin, pipColor });
+  const textureState = useDiceFaceTextures({
+    skin,
+    assetRef,
+    bodyColor,
+    pipColor: playerColorHex(color),
+    resolution: DICE_VISUAL_TEXTURE_RESOLUTION,
+  });
   const portrait =
     size.height > 0 && size.width / size.height < PORTRAIT_ASPECT_THRESHOLD;
 
@@ -153,6 +168,8 @@ function CinematicScene({
           values={values}
           seed={seed}
           textures={textureState.textures}
+          bodyColor={bodyColor}
+          bodyHighlightColor={bodyHighlightColor}
           preparingFallback={null}
           failureFallback={null}
           playbackDurationMs={replayDurationMs}
@@ -170,7 +187,10 @@ export function FullscreenDiceCinematic({
   values,
   seed,
   skin,
-  pipColor,
+  color,
+  assetRef,
+  bodyColor,
+  bodyHighlightColor,
   label,
   replayDurationMs,
   resultHoldMs,
@@ -180,7 +200,10 @@ export function FullscreenDiceCinematic({
   values: readonly number[];
   seed: string;
   skin: DiceSkin;
-  pipColor?: string;
+  color: PlayerColor;
+  assetRef?: string | null;
+  bodyColor?: string | null;
+  bodyHighlightColor?: string | null;
   label: string;
   replayDurationMs: number;
   resultHoldMs: number;
@@ -277,7 +300,10 @@ export function FullscreenDiceCinematic({
               values={safeValues}
               seed={seed}
               skin={skin}
-              pipColor={pipColor}
+              color={color}
+              assetRef={assetRef}
+              bodyColor={bodyColor}
+              bodyHighlightColor={bodyHighlightColor}
               replayDurationMs={replayDurationMs}
               visualScale={visualScale}
               onComplete={handleReplayComplete}

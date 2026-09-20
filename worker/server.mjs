@@ -4,12 +4,14 @@ import { hostname } from "node:os";
 import { loadEnvFile } from "node:process";
 import pg from "pg";
 import { advanceDueAutomation } from "./advance-client.mjs";
+import { cleanupStaleLobbies } from "./lobby-cleanup-client.mjs";
 import {
   automationWorkerBatchSize,
   automationWorkerConcurrency,
   automationWorkerInternalBaseUrl,
   automationWorkerLeaseMs,
   automationWorkerMode,
+  lobbyCleanupIntervalMs,
   automationWorkerPollMs,
   automationWorkerToken,
 } from "./config.mjs";
@@ -56,9 +58,11 @@ const pool = new Pool({
 });
 const pollMs = automationWorkerPollMs();
 const batchSize = automationWorkerBatchSize();
+const cleanupIntervalMs = lobbyCleanupIntervalMs();
 const observedSchedules = new Map();
 let timer = null;
 let stopping = false;
+let nextLobbyCleanupAt = 0;
 
 function scheduleKey(row) {
   const dueAt =
@@ -200,9 +204,32 @@ async function scanActive() {
   };
 }
 
+async function cleanupLobbyIfDue() {
+  if (mode !== "active") return;
+  const now = Date.now();
+  if (now < nextLobbyCleanupAt) return;
+  nextLobbyCleanupAt = now + cleanupIntervalMs;
+
+  try {
+    const result = await cleanupStaleLobbies({
+      baseUrl: internalBaseUrl,
+      token: workerToken,
+    });
+    recordAutomationWorkerMetric("lobby.cleanup", {
+      ...result,
+      intervalMs: cleanupIntervalMs,
+    });
+  } catch (error) {
+    recordAutomationWorkerMetric("lobby.cleanup_failure", {
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
 async function scan() {
   const startedAt = Date.now();
   const result = mode === "shadow" ? await scanShadow() : await scanActive();
+  await cleanupLobbyIfDue();
 
   recordAutomationWorkerMetric(`${mode}.scan`, {
     queueDepth: result.queueDepth,
@@ -243,6 +270,7 @@ recordAutomationWorkerMetric("started", {
   batchSize,
   concurrency,
   leaseMs,
+  cleanupIntervalMs,
   instanceId,
 });
 void tick();

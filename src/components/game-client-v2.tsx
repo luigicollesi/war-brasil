@@ -180,6 +180,7 @@ function GameReadyClient({
                 ownerPlayerId: territory.ownerPlayerId,
                 ownerName: owner.factionName,
                 ownerColor: territory.ownerColor,
+                territoryEffectKey: owner.cosmetics.territoryEffect.effectKey,
                 troops: territory.troops,
               },
             ]
@@ -412,6 +413,11 @@ function GameReadyClient({
           value={lastOrderRoll.value}
           rolledAt={lastOrderRoll.rolledAt}
           color={lastOrderRollPlayer.color}
+          assetRef={lastOrderRollPlayer.cosmetics.diceNeutral.assetRef}
+          bodyColor={lastOrderRollPlayer.cosmetics.diceNeutral.bodyColor}
+          bodyHighlightColor={
+            lastOrderRollPlayer.cosmetics.diceNeutral.bodyHighlightColor
+          }
           onComplete={() => setCompletedOrderPresentationId(orderPresentationId)}
         />
       ) : null}
@@ -439,7 +445,7 @@ function GameReadyClient({
           className="rounded-xl bg-[#fff0eb] px-4 py-3 text-sm text-[#a33c33]"
           role="alert"
         >
-          {error}
+          {error || "Não foi possível atualizar a partida."}
         </p>
       ) : null}
     </div>
@@ -447,13 +453,7 @@ function GameReadyClient({
 }
 
 type OrderRollPanelProps = {
-  players: Array<{
-    id: string;
-    factionName: string;
-    color: PlayerColor;
-    isMe: boolean;
-    rolls: Array<{ round: number; value: number; rolledAt: string }>;
-  }>;
+  players: GameSnapshot["players"];
   eligiblePlayerIds: string[];
   currentRound: number;
   meId: string | undefined;
@@ -492,6 +492,7 @@ function OrderRollPanel({
           key={`${currentRound}-${shownPlayer?.id ?? "pending"}-${shownValue}`}
           value={shownValue}
           color={shownPlayer?.color ?? currentColor ?? "forest"}
+          assetRef={shownPlayer?.cosmetics.diceNeutral.assetRef}
           size="lg"
         />
         <button

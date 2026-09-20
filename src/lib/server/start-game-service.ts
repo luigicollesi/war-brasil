@@ -7,6 +7,7 @@ import {
   assignObjectives,
   ObjectiveConfigurationError,
 } from "@/src/lib/objectives/objective-assignment-service";
+import { capturePlayerCosmeticLoadouts } from "@/src/lib/server/game-cosmetic-loadout-service";
 import { initializeDiceBalanceForGame } from "@/src/lib/server/game-dice-balance-service";
 import { RoomError } from "@/src/lib/server/room-error";
 
@@ -133,16 +134,31 @@ async function transitionRoomToOrderRoll(client: PoolClient, roomId: string) {
   if ((result.rowCount ?? 0) !== 1) {
     throw new RoomError("A partida não está disponível para iniciar.", 409);
   }
+
+  await client.query(
+    `UPDATE game.room_invitations
+        SET state='cancelled',
+            resolved_reason='room_started',
+            resolved_at=NOW()
+      WHERE room_id=$1
+        AND state='pending'`,
+    [roomId],
+  );
 }
 
 export async function startGame(client: PoolClient, roomId: string) {
   const players = await loadPlayers(client, roomId);
 
   // Match creation and all runtime artifacts are part of the caller transaction.
-  // Any failure after this point rolls the complete start back.
-  await initializeDiceBalanceForGame(client, roomId);
+  // Any failure after this point rolls the complete start back. Cosmetics and
+  // rules are frozen first so the running match never depends on mutable room,
+  // profile or store state.
+  await capturePlayerCosmeticLoadouts(client, roomId);
+  const matchContext = await initializeDiceBalanceForGame(client, roomId);
   await createInitialTerritories(client, roomId, players);
-  await createObjectives(client, roomId, players);
+  if (matchContext.ruleset === "objective") {
+    await createObjectives(client, roomId, players);
+  }
   await createDeck(client, roomId);
   await transitionRoomToOrderRoll(client, roomId);
 }

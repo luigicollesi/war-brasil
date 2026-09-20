@@ -5,6 +5,7 @@ import { readGameCommandRequestMetadata } from "@/src/lib/server/game-command-re
 import { GAME_REVISION_HEADER } from "@/src/lib/game-sync-contract";
 import { getPlayerSession } from "@/src/lib/player-session";
 import { RoomError } from "@/src/lib/rooms";
+import { assertAuthenticatedPlayerSeat } from "@/server/auth/player-seat-guard";
 
 export async function POST(
   request: NextRequest,
@@ -18,8 +19,9 @@ export async function POST(
       throw new RoomError("Entre em uma sala antes de voltar ao lobby.", 401);
     }
 
-    const metadata = readGameCommandRequestMetadata(request);
     ({ roomId } = await params);
+    await assertAuthenticatedPlayerSeat(request, session, { roomId });
+    const metadata = readGameCommandRequestMetadata(request);
     const result = await returnEveryoneToLobbyCommand(roomId, session, metadata);
 
     return noStoreJson(

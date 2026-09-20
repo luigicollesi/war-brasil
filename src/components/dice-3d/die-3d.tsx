@@ -8,7 +8,7 @@ import type {
   DiceValue,
   DiceVector3,
 } from "@/src/lib/client/dice/types";
-import { DieVisual } from "./die-visual";
+import { DiceModel3D } from "./dice-model-3d";
 
 const WORLD_UP = new Vector3(0, 1, 0);
 
@@ -28,6 +28,8 @@ export function Die3D({
   size = 1,
   radius = 0.1,
   yaw = 0.34,
+  bodyColor,
+  bodyHighlightColor,
 }: {
   geometry: BufferGeometry;
   textures: DiceFaceTextureSet;
@@ -36,6 +38,8 @@ export function Die3D({
   size?: number;
   radius?: number;
   yaw?: number;
+  bodyColor?: string | null;
+  bodyHighlightColor?: string | null;
 }) {
   const quaternion = useMemo(
     () => topValueQuaternion(topValue, yaw),
@@ -44,11 +48,13 @@ export function Die3D({
 
   return (
     <group position={position} quaternion={quaternion}>
-      <DieVisual
+      <DiceModel3D
         geometry={geometry}
         textures={textures}
         size={size}
         radius={radius}
+        bodyColor={bodyColor}
+        bodyHighlightColor={bodyHighlightColor}
       />
     </group>
   );

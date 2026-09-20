@@ -20,13 +20,13 @@ export function SiteHeader({ theme = "light", roomCode }: SiteHeaderProps) {
         <Link
           href="/"
           className="flex items-center gap-3 rounded-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#d3a934]"
-          aria-label="WAR Brasil — início"
+          aria-label="Bellum Civile — início"
         >
           <span className="grid h-9 w-9 place-items-center rounded-full border border-[#d3a934]/50 bg-[#d3a934]/10 font-serif text-lg font-bold text-[#d3a934]">
-            W
+            B
           </span>
           <span className="text-sm font-black tracking-[0.16em]">
-            WAR <span className="text-[#d3a934]">BRASIL</span>
+            BELLUM <span className="text-[#d3a934]">CIVILE</span>
           </span>
         </Link>
 

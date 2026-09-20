@@ -5,13 +5,40 @@ import {
   persistPlayerSession,
 } from "@/src/lib/player-session";
 import { createRoom } from "@/src/lib/rooms";
+import { getCommandAccessState } from "@/server/auth/command-access";
+import {
+  authenticationRequiredResponse,
+  forbiddenResponse,
+  getAuthenticatedSession,
+} from "@/server/auth/auth-guard";
 
 export async function POST(request: NextRequest) {
+  const accountSession = await getAuthenticatedSession(request).catch(() => null);
+  if (!accountSession) {
+    return authenticationRequiredResponse();
+  }
+
+  const access = await getCommandAccessState(accountSession).catch(() => null);
+  if (
+    !access?.profileComplete ||
+    !access.profile.handle ||
+    !access.profile.displayName
+  ) {
+    return forbiddenResponse();
+  }
+
   try {
     const session = getOrCreatePlayerSession(request);
-    const room = await createRoom(session.value);
+    const room = await createRoom(session.value, {
+      userId: accountSession.user.id,
+      displayName: access.profile.displayName,
+      handle: access.profile.handle,
+    });
     return persistPlayerSession(noStoreJson({ room }), session);
   } catch (error) {
-    return roomErrorResponse(error, { operation: "create_room", route: request.nextUrl.pathname });
+    return roomErrorResponse(error, {
+      operation: "create_room",
+      route: request.nextUrl.pathname,
+    });
   }
 }

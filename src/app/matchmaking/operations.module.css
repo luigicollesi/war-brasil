@@ -1,0 +1,1033 @@
+.page {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  height: 100dvh;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: clamp(12px, 2.1vh, 22px);
+  box-sizing: border-box;
+  overflow: hidden;
+  padding-top: clamp(82px, 10.5vh, 118px);
+  padding-bottom: max(clamp(14px, 2.4vh, 28px), env(safe-area-inset-bottom));
+}
+
+.intro {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) minmax(250px, 0.62fr);
+  align-items: end;
+  gap: clamp(18px, 3vw, 42px);
+  min-height: 0;
+  animation: introEnter 430ms cubic-bezier(.22, 1, .36, 1) both;
+}
+
+.backLink {
+  display: inline-flex;
+  align-items: center;
+  align-self: center;
+  gap: 8px;
+  color: rgb(238 232 218 / 58%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: .62rem;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-decoration: none;
+  text-transform: uppercase;
+  transition: color 160ms ease, transform 160ms ease;
+}
+
+.backLink:hover {
+  color: var(--command-brass-bright, #d0aa57);
+  transform: translateX(-2px);
+}
+
+.backLink:focus-visible {
+  outline: 2px solid var(--command-brass-bright, #d0aa57);
+  outline-offset: 5px;
+}
+
+.introCopy {
+  min-width: 0;
+}
+
+.eyebrow,
+.machineCode,
+.gameModeEyebrow,
+.orderNumber {
+  font-family: var(--font-geist-mono), monospace;
+  font-size: .58rem;
+  font-weight: 750;
+  letter-spacing: .17em;
+  text-transform: uppercase;
+}
+
+.eyebrow {
+  color: var(--wb-gold);
+}
+
+.title {
+  margin-top: 6px;
+  color: var(--wb-text);
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: clamp(2.15rem, 4.4vw, 4.65rem);
+  font-weight: 760;
+  line-height: .9;
+  letter-spacing: -.028em;
+  text-transform: uppercase;
+}
+
+.lead {
+  max-width: 430px;
+  padding-left: 18px;
+  border-left: 1px solid rgb(214 169 62 / 32%);
+  color: var(--wb-text-muted);
+  font-size: clamp(.78rem, 1vw, .92rem);
+  line-height: 1.55;
+}
+
+.station {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  min-height: 0;
+  height: 100%;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
+  border: 1px solid rgb(214 169 62 / 27%);
+  border-radius: 8px;
+  background:
+    linear-gradient(90deg, rgb(255 255 255 / 2.2%) 1px, transparent 1px) 0 0 / 46px 46px,
+    linear-gradient(rgb(255 255 255 / 1.7%) 1px, transparent 1px) 0 0 / 46px 46px,
+    linear-gradient(155deg, rgb(13 33 26 / 94%), rgb(7 22 17 / 95%) 52%, rgb(5 17 13 / 96%));
+  box-shadow:
+    0 34px 86px rgb(0 0 0 / 42%),
+    inset 0 1px 0 rgb(255 255 255 / 3.5%);
+  backdrop-filter: blur(7px);
+  animation: stationEnter 520ms 70ms cubic-bezier(.22, 1, .36, 1) both;
+}
+
+.station::before,
+.station::after {
+  content: "";
+  position: absolute;
+  z-index: 5;
+  width: 8px;
+  height: 8px;
+  border: 1px solid rgb(214 169 62 / 44%);
+  background: #081611;
+  transform: rotate(45deg);
+  pointer-events: none;
+}
+
+.station::before {
+  top: 12px;
+  left: 12px;
+}
+
+.station::after {
+  right: 12px;
+  bottom: 12px;
+}
+
+.stationTopline {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  min-height: clamp(58px, 7.5vh, 74px);
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 10px clamp(20px, 2.8vw, 38px);
+  border-bottom: 1px solid rgb(214 169 62 / 17%);
+  background:
+    linear-gradient(90deg, rgb(214 169 62 / 6%), transparent 40%),
+    rgb(3 12 9 / 36%);
+}
+
+.machineCode {
+  color: rgb(214 169 62 / 67%);
+}
+
+.machineTitle {
+  margin-top: 2px;
+  color: var(--wb-text);
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: clamp(1.12rem, 1.7vw, 1.55rem);
+  font-weight: 700;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.systemState {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--wb-text-muted);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: .54rem;
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+.systemLamp,
+.statusLamp {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 auto;
+  border: 1px solid rgb(215 239 220 / 32%);
+  border-radius: 50%;
+  background: #4b9d69;
+  box-shadow: 0 0 0 4px rgb(75 157 105 / 7%);
+}
+
+.machineBody {
+  display: grid;
+  min-height: 0;
+  grid-template-columns: minmax(240px, .72fr) minmax(0, 1.28fr);
+}
+
+.classicMode,
+.customMode {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+
+.classicMode {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: clamp(16px, 3vh, 32px);
+  overflow: hidden;
+  padding: clamp(22px, 3.2vw, 46px);
+  border-right: 1px solid rgb(214 169 62 / 14%);
+  background:
+    linear-gradient(145deg, rgb(255 255 255 / 1.8%), transparent 42%),
+    radial-gradient(circle at 28% 22%, rgb(127 25 30 / 8%), transparent 42%),
+    rgb(2 10 8 / 27%);
+  opacity: .72;
+  animation: modeEnter 420ms 150ms cubic-bezier(.22, 1, .36, 1) both;
+}
+
+.classicMode::after {
+  content: "LOCKED // MATCHMAKING OFFLINE";
+  position: absolute;
+  right: -48px;
+  bottom: 52px;
+  color: rgb(238 232 218 / 4.5%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: clamp(1.2rem, 2.1vw, 2.25rem);
+  font-weight: 800;
+  letter-spacing: .12em;
+  transform: rotate(-90deg);
+  pointer-events: none;
+}
+
+.modeHeader,
+.customHeadingLine {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.gameModeIndex,
+.modeIndex {
+  color: rgb(214 169 62 / 70%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: .67rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.lockedBadge,
+.activeBadge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 8px;
+  border: 1px solid currentColor;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: .49rem;
+  font-weight: 800;
+  letter-spacing: .13em;
+  text-transform: uppercase;
+}
+
+.lockedBadge {
+  color: rgb(191 112 113 / 76%);
+  background: rgb(127 25 30 / 8%);
+}
+
+.activeBadge {
+  color: rgb(131 184 143 / 86%);
+  background: rgb(75 157 105 / 7%);
+}
+
+.gameModeCopy {
+  margin-block: auto;
+}
+
+.gameModeEyebrow {
+  color: rgb(214 169 62 / 58%);
+}
+
+.gameModeCopy h3,
+.customHeader h3 {
+  color: var(--wb-text);
+  font-family: var(--font-wb-display), sans-serif;
+  font-weight: 760;
+  letter-spacing: -.015em;
+  text-transform: uppercase;
+}
+
+.gameModeCopy h3 {
+  max-width: 340px;
+  margin-top: 7px;
+  font-size: clamp(2.35rem, 4.6vw, 5rem);
+  line-height: .84;
+}
+
+.classicDescription {
+  max-width: 390px;
+  margin-top: 16px;
+  color: rgb(238 232 218 / 46%);
+  font-size: clamp(.75rem, .95vw, .88rem);
+  line-height: 1.55;
+}
+
+.classicButton {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  width: 100%;
+  min-height: 54px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  border: 1px solid rgb(238 232 218 / 12%);
+  padding: 10px 14px;
+  background: rgb(255 255 255 / 2.4%);
+  color: rgb(238 232 218 / 34%);
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: .87rem;
+  font-weight: 720;
+  letter-spacing: .08em;
+  text-align: left;
+  text-transform: uppercase;
+  cursor: not-allowed;
+}
+
+.classicButton small {
+  color: rgb(191 112 113 / 64%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: .48rem;
+  letter-spacing: .1em;
+}
+
+.customMode {
+  display: grid;
+  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  padding: clamp(18px, 2.6vw, 38px) clamp(20px, 3.2vw, 46px) clamp(14px, 2vw, 28px);
+  background:
+    linear-gradient(112deg, rgb(255 255 255 / 1.8%), transparent 35%),
+    radial-gradient(circle at 70% 12%, rgb(214 169 62 / 7%), transparent 34%),
+    rgb(4 16 12 / 31%);
+  animation: modeEnter 440ms 210ms cubic-bezier(.22, 1, .36, 1) both;
+}
+
+.customMode::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 3px;
+  background: linear-gradient(180deg, transparent, rgb(214 169 62 / 34%), transparent);
+  pointer-events: none;
+}
+
+.customHeader {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(210px, .75fr);
+  align-items: end;
+  gap: clamp(18px, 3vw, 42px);
+  padding-bottom: clamp(12px, 2vh, 18px);
+}
+
+.customHeadingLine {
+  justify-content: flex-start;
+  margin-bottom: 6px;
+}
+
+.customHeader h3 {
+  margin-top: 5px;
+  font-size: clamp(1.75rem, 3vw, 3.15rem);
+  line-height: .9;
+}
+
+.customDescription {
+  max-width: 330px;
+  padding-left: 14px;
+  border-left: 1px solid rgb(214 169 62 / 22%);
+  color: var(--wb-text-muted);
+  font-size: .78rem;
+  line-height: 1.45;
+}
+
+.modeRail {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1px;
+  padding: 3px;
+  border: 1px solid rgb(214 169 62 / 16%);
+  background: rgb(0 0 0 / 26%);
+}
+
+.modeTab {
+  position: relative;
+  display: grid;
+  min-height: 58px;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 11px;
+  border: 0;
+  border-left: 2px solid transparent;
+  padding: 8px 12px;
+  background: rgb(255 255 255 / 2.2%);
+  color: var(--wb-text-muted);
+  text-align: left;
+  cursor: pointer;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+}
+
+.modeTab:hover:not(:disabled) {
+  background: rgb(255 255 255 / 4.2%);
+  color: var(--wb-text-soft);
+}
+
+.modeTab:focus-visible {
+  z-index: 2;
+  outline: 2px solid var(--wb-gold-bright);
+  outline-offset: 2px;
+}
+
+.modeTab:disabled {
+  cursor: not-allowed;
+  opacity: .4;
+}
+
+.modeTab[aria-selected="true"] {
+  border-left-color: var(--wb-gold);
+  background:
+    linear-gradient(90deg, rgb(214 169 62 / 11%), transparent 76%),
+    rgb(255 255 255 / 4.8%);
+  color: var(--wb-text);
+}
+
+.modeCopy {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.modeCopy strong {
+  overflow: hidden;
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: .88rem;
+  font-weight: 760;
+  letter-spacing: .06em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.modeCopy small {
+  color: var(--wb-text-muted);
+  font-size: .5rem;
+  font-weight: 650;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.modeLatch {
+  width: 7px;
+  height: 7px;
+  border: 1px solid rgb(214 169 62 / 38%);
+  background: #07140f;
+  transform: rotate(45deg);
+}
+
+.modeTab[aria-selected="true"] .modeLatch {
+  background: var(--wb-gold);
+  box-shadow: 0 0 0 4px rgb(214 169 62 / 7%);
+}
+
+.panelStack {
+  display: flex;
+  min-height: 0;
+  align-items: center;
+  padding: clamp(12px, 2.4vh, 28px) 2px clamp(8px, 1.6vh, 18px);
+}
+
+.modePanel {
+  width: 100%;
+  min-width: 0;
+  animation: panelIn 220ms cubic-bezier(.2, .8, .2, 1) both;
+}
+
+.modePanel[hidden] {
+  display: none;
+}
+
+.orderNumber {
+  color: rgb(214 169 62 / 63%);
+}
+
+.modePanel h4 {
+  max-width: 560px;
+  margin-top: 6px;
+  color: var(--wb-text);
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: clamp(1.9rem, 3.4vw, 3.8rem);
+  font-weight: 730;
+  line-height: .9;
+  letter-spacing: -.018em;
+  text-transform: uppercase;
+}
+
+.modePanel > p {
+  max-width: 590px;
+  margin-top: 10px;
+  color: var(--wb-text-muted);
+  font-size: clamp(.72rem, .9vw, .86rem);
+  line-height: 1.48;
+}
+
+.modePanel :global(.mt-7) {
+  margin-top: clamp(12px, 2vh, 22px);
+}
+
+.modePanel :global(.mt-3) {
+  margin-top: 7px;
+}
+
+.modePanel :global(.wb-button) {
+  min-height: 44px;
+}
+
+.modePanel :global(.wb-field) {
+  min-height: 44px;
+}
+
+.stationStatus {
+  display: grid;
+  min-height: 36px;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 9px;
+  border-top: 1px solid rgb(214 169 62 / 13%);
+  padding-top: 10px;
+  color: rgb(197 209 203 / 64%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: .52rem;
+  font-weight: 700;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
+.statusMode {
+  color: rgb(214 169 62 / 55%);
+}
+
+.station[data-status="error"] .statusLamp {
+  border-color: rgb(218 119 124 / 48%);
+  background: #a43a40;
+  box-shadow: 0 0 0 4px rgb(164 58 64 / 8%);
+}
+
+.station[data-status="pending"] .statusLamp {
+  border-color: rgb(240 200 90 / 42%);
+  background: var(--wb-gold);
+  box-shadow: 0 0 0 4px rgb(214 169 62 / 8%);
+}
+
+.station[data-status="success"] .statusLamp {
+  background: #68ad7a;
+}
+
+@keyframes introEnter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes stationEnter {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(.995);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes modeEnter {
+  from {
+    opacity: 0;
+    transform: translateY(7px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes panelIn {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 900px) {
+  .page {
+    gap: 12px;
+    padding-top: 76px;
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+  }
+
+  .intro {
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 14px 18px;
+  }
+
+  .lead {
+    display: none;
+  }
+
+  .title {
+    font-size: clamp(2rem, 7vw, 3.2rem);
+  }
+
+  .machineBody {
+    grid-template-columns: minmax(190px, .58fr) minmax(0, 1.42fr);
+  }
+
+  .classicMode {
+    padding: 20px;
+  }
+
+  .classicDescription {
+    display: none;
+  }
+
+  .gameModeCopy h3 {
+    font-size: clamp(2rem, 5.6vw, 3.5rem);
+  }
+
+  .customMode {
+    padding: 16px 20px 14px;
+  }
+
+  .customHeader {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .customDescription {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .page {
+    padding-top: 68px;
+  }
+
+  .intro {
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: center;
+  }
+
+  .eyebrow {
+    display: none;
+  }
+
+  .title {
+    margin-top: 0;
+    font-size: clamp(1.7rem, 8.4vw, 2.35rem);
+    line-height: .92;
+  }
+
+  .stationTopline {
+    min-height: 50px;
+    padding: 8px 16px;
+  }
+
+  .machineCode {
+    display: none;
+  }
+
+  .machineTitle {
+    margin: 0;
+    font-size: 1rem;
+  }
+
+  .systemState {
+    font-size: .46rem;
+  }
+
+  .machineBody {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(82px, .38fr) minmax(0, 1.62fr);
+  }
+
+  .classicMode {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-right: 0;
+    border-bottom: 1px solid rgb(214 169 62 / 14%);
+  }
+
+  .modeHeader {
+    position: absolute;
+    top: 10px;
+    right: 12px;
+  }
+
+  .modeHeader .gameModeIndex {
+    display: none;
+  }
+
+  .gameModeCopy {
+    margin: 0;
+  }
+
+  .gameModeEyebrow {
+    font-size: .48rem;
+  }
+
+  .gameModeCopy h3 {
+    margin-top: 3px;
+    font-size: clamp(1.5rem, 7.2vw, 2rem);
+    line-height: .9;
+  }
+
+  .classicMode::after {
+    display: none;
+  }
+
+  .classicButton {
+    width: auto;
+    min-width: 124px;
+    min-height: 42px;
+    margin-top: 18px;
+    padding: 7px 10px;
+    font-size: .68rem;
+  }
+
+  .classicButton small {
+    display: none;
+  }
+
+  .customMode {
+    padding: 12px 14px 10px;
+  }
+
+  .customHeader {
+    padding-bottom: 8px;
+  }
+
+  .customHeadingLine {
+    margin-bottom: 3px;
+  }
+
+  .customHeader h3 {
+    font-size: clamp(1.45rem, 7vw, 2rem);
+  }
+
+  .activeBadge {
+    min-height: 18px;
+    font-size: .43rem;
+  }
+
+  .modeTab {
+    min-height: 48px;
+    padding: 6px 9px;
+  }
+
+  .modeCopy strong {
+    font-size: .75rem;
+  }
+
+  .modeCopy small {
+    display: none;
+  }
+
+  .panelStack {
+    padding: 8px 0 5px;
+  }
+
+  .orderNumber {
+    font-size: .48rem;
+  }
+
+  .modePanel h4 {
+    margin-top: 4px;
+    font-size: clamp(1.55rem, 8vw, 2.25rem);
+  }
+
+  .modePanel > p {
+    margin-top: 6px;
+    font-size: .72rem;
+  }
+
+  .modePanel :global(.mt-7) {
+    margin-top: 9px;
+  }
+
+  .modePanel :global(.mt-3) {
+    margin-top: 5px;
+  }
+
+  .stationStatus {
+    min-height: 28px;
+    padding-top: 7px;
+    font-size: .46rem;
+  }
+
+  .statusMode {
+    display: none;
+  }
+}
+
+@media (max-height: 700px) {
+  .page {
+    gap: 8px;
+    padding-top: 68px;
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+
+  .intro {
+    gap: 12px 18px;
+  }
+
+  .lead,
+  .classicDescription,
+  .customDescription {
+    display: none;
+  }
+
+  .eyebrow {
+    font-size: .5rem;
+  }
+
+  .title {
+    margin-top: 3px;
+    font-size: clamp(1.65rem, 4.8vw, 2.7rem);
+  }
+
+  .stationTopline {
+    min-height: 46px;
+    padding-block: 6px;
+  }
+
+  .machineCode {
+    display: none;
+  }
+
+  .machineTitle {
+    margin: 0;
+    font-size: .98rem;
+  }
+
+  .classicMode {
+    gap: 10px;
+    padding-block: 16px;
+  }
+
+  .gameModeCopy h3 {
+    font-size: clamp(1.8rem, 4.2vw, 3.2rem);
+  }
+
+  .classicButton {
+    min-height: 44px;
+  }
+
+  .customMode {
+    padding-top: 12px;
+    padding-bottom: 10px;
+  }
+
+  .customHeader {
+    padding-bottom: 7px;
+  }
+
+  .customHeader h3 {
+    font-size: clamp(1.45rem, 2.6vw, 2.2rem);
+  }
+
+  .modeRail {
+    padding: 2px;
+  }
+
+  .modeTab {
+    min-height: 46px;
+  }
+
+  .panelStack {
+    padding-block: 7px 4px;
+  }
+
+  .modePanel h4 {
+    font-size: clamp(1.55rem, 3vw, 2.6rem);
+  }
+
+  .modePanel > p {
+    margin-top: 5px;
+    line-height: 1.35;
+  }
+
+  .modePanel :global(.mt-7) {
+    margin-top: 8px;
+  }
+
+  .modePanel :global(.mt-3) {
+    margin-top: 4px;
+  }
+
+  .stationStatus {
+    min-height: 27px;
+    padding-top: 6px;
+  }
+}
+
+@media (max-width: 640px) and (max-height: 580px) {
+  .page {
+    padding-top: 58px;
+    padding-bottom: max(6px, env(safe-area-inset-bottom));
+  }
+
+  .backLink {
+    font-size: .54rem;
+  }
+
+  .title {
+    font-size: 1.45rem;
+  }
+
+  .stationTopline {
+    display: none;
+  }
+
+  .machineBody {
+    grid-template-rows: 66px minmax(0, 1fr);
+  }
+
+  .classicMode {
+    padding: 8px 12px;
+  }
+
+  .gameModeEyebrow,
+  .lockedBadge,
+  .activeBadge,
+  .orderNumber,
+  .modePanel > p {
+    display: none;
+  }
+
+  .gameModeCopy h3 {
+    margin: 0;
+    font-size: 1.32rem;
+  }
+
+  .classicButton {
+    min-width: 110px;
+    min-height: 34px;
+    margin-top: 0;
+    font-size: .61rem;
+  }
+
+  .customMode {
+    padding: 8px 10px 7px;
+  }
+
+  .customHeader {
+    padding-bottom: 5px;
+  }
+
+  .customHeadingLine {
+    display: none;
+  }
+
+  .customHeader h3 {
+    margin: 0;
+    font-size: 1.28rem;
+  }
+
+  .modeTab {
+    min-height: 40px;
+  }
+
+  .panelStack {
+    padding-block: 4px 2px;
+  }
+
+  .modePanel h4 {
+    margin: 0;
+    font-size: 1.38rem;
+  }
+
+  .modePanel :global(.mt-7) {
+    margin-top: 5px;
+  }
+
+  .modePanel :global(.mt-3) {
+    margin-top: 2px;
+  }
+
+  .modePanel :global(.wb-button),
+  .modePanel :global(.wb-field) {
+    min-height: 38px;
+  }
+
+  .stationStatus {
+    min-height: 23px;
+    padding-top: 4px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .intro,
+  .station,
+  .classicMode,
+  .customMode,
+  .modePanel {
+    animation: none !important;
+  }
+
+  .backLink,
+  .modeTab {
+    transition: none !important;
+  }
+
+  .backLink:hover {
+    transform: none;
+  }
+}

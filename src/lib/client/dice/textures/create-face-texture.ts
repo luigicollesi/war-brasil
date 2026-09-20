@@ -10,10 +10,11 @@ import type { DiceSkin, DiceValue } from "../types";
 import {
   DEFAULT_DICE_PIP_COLOR,
   DEFAULT_DICE_TEXTURE_RESOLUTION,
-  DICE_SKIN_SOURCES,
+  DICE_PROCEDURAL_PALETTES,
 } from "./dice-skins";
 
 const imagePromises = new Map<string, Promise<HTMLImageElement>>();
+const BODY_COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
 
 function loadImage(src: string) {
   const cached = imagePromises.get(src);
@@ -27,6 +28,8 @@ function loadImage(src: string) {
 
     const image = new Image();
     image.decoding = "async";
+    // Dice assets are delivered through an authenticated same-origin proxy so
+    // the image remains origin-clean when composed into the canvas texture.
     image.onload = () => resolve(image);
     image.onerror = () => reject(new Error(`Não foi possível carregar ${src}.`));
     image.src = src;
@@ -49,6 +52,53 @@ function createCanvas(resolution: number) {
   canvas.width = resolution;
   canvas.height = resolution;
   return canvas;
+}
+
+function validBodyColor(bodyColor: string | null | undefined) {
+  return bodyColor && BODY_COLOR_PATTERN.test(bodyColor) ? bodyColor : null;
+}
+
+function drawProceduralBase(
+  context: CanvasRenderingContext2D,
+  skin: DiceSkin,
+  resolution: number,
+) {
+  const palette = DICE_PROCEDURAL_PALETTES[skin];
+  const gradient = context.createLinearGradient(0, 0, resolution, resolution);
+  gradient.addColorStop(0, palette.top);
+  gradient.addColorStop(1, palette.bottom);
+
+  context.save();
+  context.fillStyle = gradient;
+  context.fillRect(0, 0, resolution, resolution);
+
+  const inset = resolution * 0.045;
+  const radius = resolution * 0.11;
+  context.strokeStyle = palette.edge;
+  context.lineWidth = Math.max(2, resolution * 0.018);
+  context.beginPath();
+  context.roundRect(
+    inset,
+    inset,
+    resolution - inset * 2,
+    resolution - inset * 2,
+    radius,
+  );
+  context.stroke();
+
+  const highlight = context.createRadialGradient(
+    resolution * 0.28,
+    resolution * 0.22,
+    0,
+    resolution * 0.28,
+    resolution * 0.22,
+    resolution * 0.72,
+  );
+  highlight.addColorStop(0, palette.highlight);
+  highlight.addColorStop(1, "rgba(255,255,255,0)");
+  context.fillStyle = highlight;
+  context.fillRect(0, 0, resolution, resolution);
+  context.restore();
 }
 
 function drawPips(
@@ -83,14 +133,16 @@ export async function createDiceFaceTexture({
   value,
   pipColor = DEFAULT_DICE_PIP_COLOR,
   resolution = DEFAULT_DICE_TEXTURE_RESOLUTION,
+  assetRef,
+  bodyColor,
 }: {
   skin: DiceSkin;
   value: DiceValue;
   pipColor?: string;
   resolution?: number;
+  assetRef?: string | null;
+  bodyColor?: string | null;
 }): Promise<Texture> {
-  const source = DICE_SKIN_SOURCES[skin];
-  const image = await loadImage(source);
   const canvas = createCanvas(resolution);
   const context = canvas.getContext("2d", { alpha: true });
 
@@ -99,7 +151,24 @@ export async function createDiceFaceTexture({
   }
 
   context.clearRect(0, 0, resolution, resolution);
-  context.drawImage(image, 0, 0, resolution, resolution);
+
+  const hasBodyColor = validBodyColor(bodyColor) !== null;
+
+  let source = `procedural:${skin}`;
+  if (assetRef) {
+    try {
+      const image = await loadImage(assetRef);
+      context.drawImage(image, 0, 0, resolution, resolution);
+      source = assetRef;
+    } catch {
+      // Cosmetic delivery is presentation-only. A failed request degrades to
+      // a network-independent base without affecting authoritative dice state.
+      if (!hasBodyColor) drawProceduralBase(context, skin, resolution);
+    }
+  } else if (!hasBodyColor) {
+    drawProceduralBase(context, skin, resolution);
+  }
+
   drawPips(context, value, resolution, pipColor);
 
   const texture = new CanvasTexture(canvas);
@@ -108,7 +177,7 @@ export async function createDiceFaceTexture({
   texture.minFilter = LinearMipmapLinearFilter;
   texture.generateMipmaps = true;
   texture.needsUpdate = true;
-  texture.name = `war-brasil-die-${skin}-${value}`;
+  texture.name = `war-brasil-die-${skin}-${value}:${source}`;
 
   return texture;
 }

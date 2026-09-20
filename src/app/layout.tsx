@@ -1,8 +1,12 @@
 import type { Metadata } from "next";
 import { Barlow_Condensed, Geist_Mono, Inter } from "next/font/google";
+import { PreGameCommandRuntime } from "@/src/components/pre-game/foundation";
+import { ProfilePresenceHeartbeat } from "@/src/components/profile/profile-presence-heartbeat";
+import { UserNotificationRuntime } from "@/src/components/notifications/user-notification-runtime";
 import { getSiteUrl } from "@/src/lib/site-url";
 import "./globals.css";
 import "./war-identity.css";
+import "./lobby-ready-rail.css";
 import "./war-guide.css";
 import "./war-guide-primitives.css";
 import "./war-guide-geographic.css";
@@ -31,10 +35,10 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: getSiteUrl(),
-  applicationName: "WAR Brasil",
+  applicationName: "Bellum Civile",
   title: {
-    default: "WAR Brasil",
-    template: "%s | WAR Brasil",
+    default: "Bellum Civile",
+    template: "%s | Bellum Civile",
   },
   description:
     "Jogo de estratégia online no mapa do Brasil, com 42 territórios, barreiras e disputas entre facções.",
@@ -60,7 +64,11 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       data-scroll-behavior="smooth"
       className={`${interfaceFont.variable} ${displayFont.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full font-[var(--font-wb-ui)]">{children}</body>
+      <body className="min-h-full font-[var(--font-wb-ui)]">
+        <ProfilePresenceHeartbeat />
+        <UserNotificationRuntime />
+        <PreGameCommandRuntime>{children}</PreGameCommandRuntime>
+      </body>
     </html>
   );
 }

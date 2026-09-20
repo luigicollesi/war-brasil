@@ -2,12 +2,12 @@ import "server-only";
 
 import type { PoolClient } from "pg";
 import type { AttackMode } from "@/src/lib/game-barrier-rules";
-import { objectiveWon } from "@/src/lib/game-objective-service";
 import { MIN_TERRITORY_TROOPS } from "@/src/lib/game-rules";
 import {
   nextBattlePresentationTransition,
   type BattleStage,
 } from "@/src/lib/game-transitions";
+import { evaluateGameVictory } from "@/src/lib/server/game-victory-service";
 import { RoomError } from "@/src/lib/rooms";
 
 type BattleResult = {
@@ -109,7 +109,7 @@ async function evaluateEliminationObjectiveOwners(
 
   for (const candidate of candidates) {
     if (
-      await objectiveWon(
+      await evaluateGameVictory(
         client,
         roomId,
         candidate.player_id,
@@ -253,7 +253,7 @@ async function applyBattleOutcome(
       battle.attackerPlayerId,
     );
 
-    const conquerorWon = await objectiveWon(
+    const conquerorWon = await evaluateGameVictory(
       client,
       room.id,
       battle.attackerPlayerId,
@@ -269,7 +269,7 @@ async function applyBattleOutcome(
       );
     }
   } else {
-    await objectiveWon(
+    await evaluateGameVictory(
       client,
       room.id,
       battle.attackerPlayerId,

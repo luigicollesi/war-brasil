@@ -13,6 +13,7 @@ import {
 } from "@/src/lib/game-sync-contract";
 import { getPlayerSession } from "@/src/lib/player-session";
 import { RoomError } from "@/src/lib/rooms";
+import { assertAuthenticatedPlayerSeat } from "@/server/auth/player-seat-guard";
 
 type RouteContext = {
   params: Promise<{ roomId: string }>;
@@ -31,6 +32,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     }
 
     ({ roomId } = await params);
+    await assertAuthenticatedPlayerSeat(request, session, { roomId });
     const knownTopology = request.headers.get(GAME_TOPOLOGY_HEADER);
     const knownRevision = parseGameRevision(
       request.headers.get(GAME_REVISION_HEADER),

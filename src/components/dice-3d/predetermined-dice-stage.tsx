@@ -9,11 +9,15 @@ export function PredeterminedDiceStage({
   values,
   seed,
   textures,
+  bodyColor,
+  bodyHighlightColor,
   fallback,
 }: {
   values: readonly DiceValue[];
   seed: string;
   textures: DiceFaceTextureSet;
+  bodyColor?: string | null;
+  bodyHighlightColor?: string | null;
   fallback: ReactNode;
 }) {
   return (
@@ -29,6 +33,8 @@ export function PredeterminedDiceStage({
         values={values}
         seed={seed}
         textures={textures}
+        bodyColor={bodyColor}
+        bodyHighlightColor={bodyHighlightColor}
         preparingFallback={null}
         failureFallback={fallback}
       />

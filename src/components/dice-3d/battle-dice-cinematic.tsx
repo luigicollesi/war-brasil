@@ -3,7 +3,6 @@
 import { useMemo } from "react";
 import { validateDiceValues } from "@/src/lib/client/dice/dice-values";
 import type { DiceValue } from "@/src/lib/client/dice/types";
-import { playerColorHex } from "@/src/lib/client/player-color";
 import type { GameBattle } from "@/src/lib/game-contract";
 import type { PlayerColor } from "@/src/lib/lobby";
 import { FullscreenDiceCinematic } from "./fullscreen-dice-cinematic";
@@ -35,11 +34,17 @@ export function BattleDiceCinematic({
   battle,
   side,
   color,
+  assetRef,
+  bodyColor,
+  bodyHighlightColor,
   onComplete,
 }: {
   battle: GameBattle;
   side: BattleDiceCinematicSide;
   color: PlayerColor;
+  assetRef?: string | null;
+  bodyColor?: string | null;
+  bodyHighlightColor?: string | null;
   onComplete: () => void;
 }) {
   const values = useMemo(
@@ -59,7 +64,10 @@ export function BattleDiceCinematic({
       values={values}
       seed={seed}
       skin={side}
-      pipColor={playerColorHex(color)}
+      color={color}
+      assetRef={assetRef}
+      bodyColor={bodyColor}
+      bodyHighlightColor={bodyHighlightColor}
       label={side === "attack" ? "ATAQUE" : "DEFESA"}
       replayDurationMs={BATTLE_DICE_CINEMATIC_REPLAY_MS}
       resultHoldMs={BATTLE_DICE_CINEMATIC_RESULT_HOLD_MS}

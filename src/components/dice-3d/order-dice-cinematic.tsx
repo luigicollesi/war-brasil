@@ -1,6 +1,5 @@
 "use client";
 
-import { playerColorHex } from "@/src/lib/client/player-color";
 import {
   ORDER_ROLL_DICE_ANIMATION_MS,
   ORDER_ROLL_RESULT_HOLD_MS,
@@ -19,6 +18,9 @@ export function OrderDiceCinematic({
   value,
   rolledAt,
   color,
+  assetRef,
+  bodyColor,
+  bodyHighlightColor,
   onComplete,
 }: {
   roomId: string;
@@ -27,6 +29,9 @@ export function OrderDiceCinematic({
   value: number;
   rolledAt: string;
   color: PlayerColor;
+  assetRef?: string | null;
+  bodyColor?: string | null;
+  bodyHighlightColor?: string | null;
   onComplete: () => void;
 }) {
   const seed = [
@@ -43,7 +48,10 @@ export function OrderDiceCinematic({
       values={[value]}
       seed={seed}
       skin="neutral"
-      pipColor={playerColorHex(color)}
+      color={color}
+      assetRef={assetRef}
+      bodyColor={bodyColor}
+      bodyHighlightColor={bodyHighlightColor}
       label="ORDEM DE JOGO"
       replayDurationMs={ORDER_DICE_CINEMATIC_REPLAY_MS}
       resultHoldMs={ORDER_DICE_CINEMATIC_RESULT_HOLD_MS}

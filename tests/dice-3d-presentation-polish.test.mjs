@@ -90,21 +90,23 @@ test("apresentação usa cor oficial da facção e acabamento físico com contor
     "src/components/battle-static-dice-results.tsx",
     "utf8",
   );
-  const visual = readFileSync("src/components/dice-3d/die-visual.tsx", "utf8");
+  const visual = readFileSync("src/components/dice-3d/dice-model-3d.tsx", "utf8");
   const palette = readFileSync("src/lib/client/player-color.ts", "utf8");
 
   assert.match(arena, /pipColor: playerColorHex\(attackerColor\)/);
   assert.match(arena, /pipColor: playerColorHex\(defenderColor\)/);
   assert.match(palette, /PLAYER_COLORS\.map/);
-  assert.match(visual, /DICE_BODY_GOLD = "#d0ad5a"/);
   assert.match(visual, /DICE_EDGE_COLOR = "#111111"/);
+  assert.match(visual, /resolveDiceBodyColors/);
   assert.match(visual, /meshPhysicalMaterial/);
-  assert.match(visual, /clearcoat=\{0\.38\}/);
-  assert.match(visual, /clearcoatRoughness=\{0\.3\}/);
+  assert.match(visual, /clearcoat=\{0\.3\}/);
+  assert.match(visual, /clearcoatRoughness=\{0\.32\}/);
+  assert.match(visual, /diceEdgeMask/);
+  assert.match(visual, /diceCornerFactor/);
   assert.match(visual, /<lineSegments/);
   assert.match(visual, /<edgesGeometry args=\{\[geometry, 28\]\}/);
-  assert.match(visual, /opacity=\{0\.82\}/);
-  assert.doesNotMatch(visual, /color="#e8e3d8"/);
+  assert.match(visual, /opacity=\{0\.48\}/);
+  assert.doesNotMatch(visual, /DICE_BODY_GOLD/);
 
   assert.match(cinematic, /<FullscreenDiceCinematic/);
   assert.match(fullscreen, /MAX_DICE_TEXTURE_ANISOTROPY = 8/);

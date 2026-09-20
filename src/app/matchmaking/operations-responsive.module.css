@@ -1,0 +1,41 @@
+.pageAdaptive,
+.stationAdaptive {
+  min-width: 0;
+}
+
+.stationAdaptive input[name="roomCode"] {
+  scroll-margin-block: 24vh;
+}
+
+@media (max-width: 720px) and (max-height: 640px) {
+  .pageAdaptive {
+    padding-bottom: 28px;
+  }
+
+  .pageAdaptive > header {
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .pageAdaptive > header h1 {
+    margin-top: 8px;
+    font-size: clamp(2.2rem, 10.5vw, 3rem);
+    line-height: .9;
+  }
+
+  .pageAdaptive > header > p {
+    padding-left: 12px;
+    font-size: .84rem;
+    line-height: 1.45;
+  }
+
+  .stationAdaptive [role="tablist"] {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+  }
+
+  .stationAdaptive [role="tabpanel"] {
+    scroll-margin-top: 76px;
+  }
+}

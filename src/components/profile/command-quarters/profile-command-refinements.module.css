@@ -1,0 +1,342 @@
+.walletCurrencyCompact {
+  display: flex;
+  min-width: 112px;
+  min-height: 42px;
+  align-items: center;
+  gap: 9px;
+  border-left: 1px solid rgb(238 232 218 / 8%);
+  padding: 5px 12px;
+  background: rgb(5 10 7 / 48%);
+}
+
+.walletCurrencyPremium {
+  border-right: 1px solid rgb(208 170 87 / 18%);
+  background: linear-gradient(100deg, rgb(72 54 22 / 15%), rgb(5 10 7 / 54%));
+}
+
+.walletCurrencyCopy {
+  display: grid;
+  gap: 1px;
+}
+
+.sectionLabel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-top: 1px solid rgb(208 170 87 / 10%);
+  padding-top: 7px;
+  color: rgb(208 170 87 / 56%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.48rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.sectionLabel:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.signalTag,
+.relationTag {
+  color: rgb(238 232 218 / 35%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.46rem;
+  font-style: normal;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.networkCopy {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.networkProfileLink {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.networkProfileLink:hover,
+.networkProfileLink:focus-visible {
+  color: var(--command-brass-bright, #d0aa57);
+  outline: none;
+}
+
+.networkActions {
+  display: flex !important;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 4px !important;
+}
+
+.networkAction,
+.networkActionPrimary {
+  min-height: 28px;
+  border: 1px solid rgb(238 232 218 / 13%);
+  padding: 4px 7px;
+  color: rgb(238 232 218 / 58%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.43rem;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  background: rgb(255 255 255 / 2%);
+  cursor: pointer;
+}
+
+.networkActionPrimary {
+  border-color: rgb(208 170 87 / 30%);
+  color: var(--command-brass-bright, #d0aa57);
+  background: rgb(208 170 87 / 7%);
+}
+
+.networkActionDanger {
+  border-color: rgb(166 69 72 / 24%);
+  color: #b98585;
+}
+
+.networkAction:hover,
+.networkAction:focus-visible,
+.networkActionPrimary:hover,
+.networkActionPrimary:focus-visible {
+  border-color: rgb(208 170 87 / 50%);
+  color: var(--command-ivory, #eee8da);
+  outline: none;
+}
+
+.networkActionDanger:hover,
+.networkActionDanger:focus-visible {
+  border-color: rgb(180 76 80 / 56%);
+  color: #daa0a0;
+}
+
+.networkAction:disabled,
+.networkActionPrimary:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.networkFeedback {
+  margin: 0 0 6px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.5rem;
+  line-height: 1.45;
+  letter-spacing: 0.05em;
+}
+
+.networkFeedback[data-kind="success"] {
+  color: #93bda0;
+}
+
+.networkFeedback[data-kind="error"] {
+  color: #d68b8b;
+}
+
+.networkManager {
+  border: 1px solid rgb(208 170 87 / 14%);
+  background: rgb(4 8 6 / 44%);
+}
+
+.networkManager > summary {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 9px;
+  color: var(--command-brass-bright, #d0aa57);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.48rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  list-style: none;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.networkManager > summary::-webkit-details-marker {
+  display: none;
+}
+
+.networkManager > summary::before {
+  content: "+";
+  margin-right: 6px;
+  color: rgb(238 232 218 / 40%);
+}
+
+.networkManager[open] > summary::before {
+  content: "−";
+}
+
+.networkManager > summary span {
+  margin-left: auto;
+  color: rgb(238 232 218 / 38%);
+  font-weight: 600;
+}
+
+.networkManagerBody {
+  display: grid;
+  max-height: min(32dvh, 290px);
+  gap: 10px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  border-top: 1px solid rgb(208 170 87 / 10%);
+  padding: 9px;
+  scrollbar-width: thin;
+}
+
+.networkManagerBody > section {
+  display: grid;
+  gap: 5px;
+}
+
+.networkManagerBody > section > strong {
+  color: rgb(208 170 87 / 55%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.45rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.networkManagerList {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.networkManagerList > li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 34px;
+  border-top: 1px solid rgb(238 232 218 / 6%);
+  padding-top: 4px;
+}
+
+.networkManagerList > li:first-child {
+  border-top: 0;
+}
+
+.networkManagerList span,
+.networkManagerList a {
+  min-width: 0;
+}
+
+.networkManagerList small {
+  display: block;
+  overflow: hidden;
+  color: rgb(238 232 218 / 38%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.45rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.operationDossier {
+  display: grid;
+  gap: 6px;
+  border-top: 1px solid rgb(208 170 87 / 10%);
+  padding-top: 7px;
+}
+
+.operationDossierHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: rgb(208 170 87 / 56%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.48rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.operationDossierHeader strong {
+  color: var(--command-ivory, #eee8da);
+  font-size: 0.55rem;
+}
+
+.historyLoadMore {
+  justify-self: end;
+  min-height: 34px;
+  border: 1px solid rgb(208 170 87 / 24%);
+  padding: 7px 10px;
+  color: var(--command-brass-bright, #d0aa57);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.5rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgb(208 170 87 / 6%);
+  cursor: pointer;
+}
+
+.historyLoadMore:hover,
+.historyLoadMore:focus-visible {
+  border-color: rgb(208 170 87 / 48%);
+  background: rgb(208 170 87 / 10%);
+  outline: none;
+}
+
+.historyLoadMore:disabled {
+  opacity: 0.42;
+  cursor: wait;
+}
+
+.searchStatus {
+  margin: 0;
+  color: rgb(238 232 218 / 48%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.55rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 640px) {
+  .walletCurrencyCompact {
+    min-width: 0;
+    flex: 1;
+    padding-inline: 8px;
+  }
+
+  .sectionLabel,
+  .operationDossierHeader {
+    font-size: 0.45rem;
+  }
+
+  .networkActions {
+    flex-wrap: wrap;
+  }
+
+  .networkAction,
+  .networkActionPrimary {
+    min-height: 34px;
+    padding-inline: 8px;
+  }
+
+  .networkManager > summary {
+    min-height: 42px;
+  }
+
+  .networkManagerBody {
+    max-height: 36dvh;
+  }
+
+  .networkManagerList > li {
+    align-items: start;
+  }
+
+  .historyLoadMore {
+    width: 100%;
+    min-height: 44px;
+  }
+}

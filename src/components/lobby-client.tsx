@@ -1,10 +1,14 @@
 "use client";
 
-import Image from "next/image";
-import { FormEvent, useEffect, useState } from "react";
+import type { FormEvent } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { PLAYER_COLORS, type LobbyPlayer } from "@/src/lib/lobby";
+import { LobbyCommandWorkspace } from "@/src/components/lobby-command-workspace";
+import { PreGameBackButton } from "@/src/components/pre-game-back-button";
+import { useCommandSceneDirective } from "@/src/components/pre-game/foundation";
 import { useLobbySync } from "@/src/hooks/use-lobby-sync";
+import type { GameRuleset } from "@/src/lib/game-mode";
+import styles from "./lobby-client-state.module.css";
 
 type LobbyClientProps = {
   code: string;
@@ -25,18 +29,15 @@ type BotActionResponse = {
 type LobbyPendingAction =
   | "profile"
   | "ready"
+  | "settings"
   | "add-bot"
   | `remove-bot:${string}`
   | null;
 
 type LobbyActionError = {
-  scope: "profile" | "bot";
+  scope: "profile" | "ready" | "settings" | "bot" | "copy";
   message: string;
 } | null;
-
-function colorByValue(value: string) {
-  return PLAYER_COLORS.find((color) => color.value === value);
-}
 
 export function LobbyClient({ code }: LobbyClientProps) {
   const router = useRouter();
@@ -44,12 +45,61 @@ export function LobbyClient({ code }: LobbyClientProps) {
   const [actionError, setActionError] = useState<LobbyActionError>(null);
   const [pendingAction, setPendingAction] = useState<LobbyPendingAction>(null);
   const [copied, setCopied] = useState(false);
+  const [leaving, setLeaving] = useState(false);
+
+  const sceneReadyPlayers = snapshot?.players.filter((player) => player.isReady).length ?? 0;
+  const sceneAllReady = Boolean(
+    snapshot && snapshot.players.length >= 2 && sceneReadyPlayers === snapshot.players.length,
+  );
+  const sceneStartAuthorized = Boolean(snapshot && snapshot.room.status !== "waiting");
+  const waitingRoomActive = snapshot?.room.status === "waiting";
+
+  useCommandSceneDirective(
+    {
+      focus: "table",
+      conflictLevel: sceneStartAuthorized ? 3 : sceneAllReady ? 1 : 0,
+      orbitalAlignment: sceneStartAuthorized ? 1 : 0,
+    },
+    Boolean(snapshot),
+  );
 
   useEffect(() => {
     if (snapshot && snapshot.room.status !== "waiting") {
-      router.replace(`/game/${snapshot.room.id}`);
+      router.replace(`/game/${snapshot.room.code}`);
     }
   }, [router, snapshot]);
+  useEffect(() => {
+    if (!waitingRoomActive) return;
+
+    let stopped = false;
+    const heartbeat = async () => {
+      if (stopped) return;
+      await fetch(
+        `/api/rooms/${encodeURIComponent(code)}/heartbeat`,
+        { method: "POST", cache: "no-store" },
+      ).catch(() => undefined);
+    };
+
+    void heartbeat();
+    const intervalId = window.setInterval(() => {
+      void heartbeat();
+    }, 20_000);
+
+    const onFocus = () => void heartbeat();
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void heartbeat();
+    };
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      stopped = true;
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [code, waitingRoomActive]);
+
 
   async function updateMe(
     patch: Record<string, unknown>,
@@ -72,19 +122,59 @@ export function LobbyClient({ code }: LobbyClientProps) {
         throw new Error(data.error ?? "Não foi possível salvar suas escolhas.");
       }
 
-      if (data.room?.status !== "waiting" && data.room?.id) {
-        router.replace(`/game/${data.room.id}`);
+      if (data.room?.status !== "waiting") {
+        router.replace(`/game/${code.toUpperCase()}`);
         return;
       }
 
       await refresh();
     } catch (requestError) {
       setActionError({
-        scope: "profile",
+        scope: action,
         message:
           requestError instanceof Error
             ? requestError.message
             : "Não foi possível salvar suas escolhas.",
+      });
+    } finally {
+      setPendingAction(null);
+    }
+  }
+
+  async function updateSettings(patch: {
+    ruleset?: GameRuleset;
+    balancedDiceEnabled?: boolean;
+  }) {
+    if (pendingAction !== null) return;
+    setActionError(null);
+    setPendingAction("settings");
+
+    try {
+      const response = await fetch(
+        `/api/rooms/${encodeURIComponent(code)}/settings`,
+        {
+          method: "PATCH",
+          cache: "no-store",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(patch),
+        },
+      );
+      const data = (await response.json()) as RoomUpdateResponse;
+
+      if (!response.ok) {
+        throw new Error(
+          data.error ?? "Não foi possível atualizar as configurações da sala.",
+        );
+      }
+
+      await refresh();
+    } catch (requestError) {
+      setActionError({
+        scope: "settings",
+        message:
+          requestError instanceof Error
+            ? requestError.message
+            : "Não foi possível atualizar as configurações da sala.",
       });
     } finally {
       setPendingAction(null);
@@ -154,15 +244,48 @@ export function LobbyClient({ code }: LobbyClientProps) {
     }
   }
 
-  async function copyRoomCode() {
+  async function leaveRoom() {
+    if (leaving || pendingAction !== null) return;
+    setLeaving(true);
+    setActionError(null);
     try {
+      const response = await fetch(
+        `/api/rooms/${encodeURIComponent(code)}/me`,
+        { method: "DELETE", cache: "no-store" },
+      );
+      const body = (await response.json().catch(() => null)) as
+        | { error?: string }
+        | null;
+      if (!response.ok) {
+        throw new Error(body?.error ?? "Não foi possível sair da sala.");
+      }
+      router.replace("/matchmaking");
+    } catch (error) {
+      setActionError({
+        scope: "profile",
+        message:
+          error instanceof Error ? error.message : "Não foi possível sair da sala.",
+      });
+      setLeaving(false);
+    }
+  }
+
+  async function copyRoomCode() {
+    setActionError(null);
+
+    try {
+      if (!navigator.clipboard) {
+        throw new Error("Clipboard API indisponível");
+      }
+
       await navigator.clipboard.writeText(code.toUpperCase());
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1600);
     } catch {
+      setCopied(false);
       setActionError({
-        scope: "profile",
-        message: "Não foi possível copiar o código da sala.",
+        scope: "copy",
+        message: "Cópia automática indisponível. Selecione o código acima e copie manualmente.",
       });
     }
   }
@@ -175,336 +298,106 @@ export function LobbyClient({ code }: LobbyClientProps) {
 
   if (isLoading && !snapshot) {
     return (
-      <div className="py-20 text-center">
-        <p className="wb-kicker">Sala de comando</p>
-        <p className="mt-3 text-sm text-[var(--wb-text-muted)]">Conectando à sala…</p>
+      <div className={styles.statePage}>
+        <div className={styles.stateNavigation}>
+          <PreGameBackButton href="/matchmaking" />
+        </div>
+        <div className={styles.loadingState} aria-live="polite" aria-busy="true">
+          <div className={styles.stateMachine}>
+            <div className={styles.stateGlyph} aria-hidden="true" />
+            <p className="wb-kicker">Canal de comando</p>
+            <h1 className={styles.stateTitle}>Estabelecendo briefing</h1>
+            <p className={styles.stateText}>
+              Sincronizando a sala, os postos de comando e o estado de preparação.
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (!snapshot) {
     return (
-      <div className="py-20 text-center">
-        <p className="wb-kicker">Sala indisponível</p>
-        <p className="wb-error mt-3">{syncError || "Não foi possível encontrar esta sala."}</p>
+      <div className={styles.statePage}>
+        <div className={styles.stateNavigation}>
+          <PreGameBackButton href="/matchmaking" />
+        </div>
+        <div className={styles.fatalState}>
+          <div className={styles.stateMachine}>
+            <div className={styles.stateGlyph} aria-hidden="true" />
+            <p className="wb-kicker">Canal indisponível</p>
+            <h1 className={styles.stateTitle}>Briefing interrompido</h1>
+            <p className={styles.stateText} role="alert">
+              {syncError || "Não foi possível encontrar esta sala."}
+            </p>
+            <button
+              type="button"
+              className={`wb-button wb-button--secondary ${styles.retryButton}`}
+              onClick={() => void refresh()}
+            >
+              Tentar novamente
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
 
-  const { me, players, room, canManageBots } = snapshot;
-  const readyPlayers = players.filter((player) => player.isReady).length;
-  const allReady = players.length >= 2 && readyPlayers === players.length;
-  const emptySlots = Array.from({ length: Math.max(0, 6 - players.length) });
+  const { me, players, room, canManageBots, canManageRoom } = snapshot;
+  const readyPlayers = sceneReadyPlayers;
+  const allReady = sceneAllReady;
   const actionPending = pendingAction !== null;
+  const readyPending = pendingAction === "ready";
+  const settingsPending = pendingAction === "settings";
+  const roomCode = room.code.toUpperCase();
+  const startAuthorized = sceneStartAuthorized;
+  const copyError = actionError?.scope === "copy" ? actionError.message : null;
+  const readyError = actionError?.scope === "ready" ? actionError.message : null;
+  const settingsError =
+    actionError?.scope === "settings" ? actionError.message : null;
+  const consoleError =
+    actionError?.scope === "profile" || actionError?.scope === "bot"
+      ? actionError.message
+      : null;
+  const tableStatus = startAuthorized
+    ? "CONFLITO AUTORIZADO"
+    : allReady
+      ? "Validação final de comando"
+      : "Briefing em formação";
 
   return (
-    <>
-      <section className="wb-lobby-heading">
-        <div>
-          <p className="wb-kicker">Sala de comando</p>
-          <h1 className="mt-2 wb-display text-4xl leading-none sm:text-5xl">
-            Preparar operação
-          </h1>
-          <p className="mt-3 max-w-xl text-sm leading-6 text-[var(--wb-text-muted)]">
-            Defina sua facção, acompanhe os demais jogadores e marque-se como
-            pronto quando estiver preparado para iniciar.
-          </p>
-        </div>
-
-        <div className="flex flex-col items-start gap-3 sm:items-end">
-          <div className="wb-lobby-code">
-            <span className="wb-code-value">{room.code.toUpperCase()}</span>
-            <button
-              type="button"
-              onClick={() => void copyRoomCode()}
-              className="wb-button wb-button--ghost"
-              aria-label={`Copiar código da sala ${room.code.toUpperCase()}`}
-            >
-              {copied ? "Copiado" : "Copiar"}
-            </button>
-          </div>
-          <div className="flex items-center gap-4">
-            {copied ? <span className="wb-copy-feedback">Código copiado</span> : null}
-            <span className="wb-status">
-              <span className="wb-status-dot" aria-hidden="true" />
-              Sala sincronizada
-            </span>
-          </div>
-        </div>
-      </section>
-
-      {syncError ? (
-        <p className="wb-error mt-4" role="alert">
-          {syncError}
-        </p>
-      ) : null}
-
-      <div className="wb-lobby-grid">
-        <section className="wb-lobby-region" aria-labelledby="lobby-players-title">
-          <div className="flex items-center justify-between gap-3">
-            <h2 id="lobby-players-title" className="wb-section-title">
-              Jogadores
-            </h2>
-            <span className="text-[10px] font-bold tracking-[0.08em] text-[var(--wb-text-muted)]">
-              {players.length}/6
-            </span>
-          </div>
-
-          <ul className="wb-player-list">
-            {players.map((player, index) => (
-              <PlayerRow
-                key={player.id}
-                player={player}
-                index={index + 1}
-                canManageBots={canManageBots}
-                isRemoving={pendingAction === `remove-bot:${player.id}`}
-                actionPending={actionPending}
-                onRemoveBot={removeBot}
-              />
-            ))}
-            {emptySlots.map((_, index) => {
-              const isNextBotSlot = canManageBots && index === 0;
-              return (
-                <li
-                  key={`empty-${index}`}
-                  className={`wb-player-row${isNextBotSlot ? "" : " wb-empty-player"}`}
-                >
-                  <span className="wb-player-state">
-                    {String(players.length + index + 1).padStart(2, "0")}
-                  </span>
-                  <div>
-                    <p className="wb-player-name">Aguardando jogador</p>
-                    <p className="wb-player-meta">Vaga disponível</p>
-                  </div>
-                  {isNextBotSlot ? (
-                    <button
-                      type="button"
-                      disabled={actionPending}
-                      onClick={() => void addBot()}
-                      className="wb-button wb-button--ghost px-2 py-1 text-[10px]"
-                      aria-label="Adicionar bot na próxima vaga"
-                    >
-                      {pendingAction === "add-bot" ? "Adicionando…" : "+ Bot"}
-                    </button>
-                  ) : (
-                    <span className="wb-player-state">○</span>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-
-          {actionError?.scope === "bot" ? (
-            <p className="wb-error mt-3" role="alert">
-              {actionError.message}
-            </p>
-          ) : null}
-        </section>
-
-        <section className="wb-lobby-region" aria-labelledby="lobby-map-title">
-          <div className="wb-lobby-map">
-            <p className="wb-section-title">Campo da operação</p>
-            <h2 id="lobby-map-title" className="mt-2 wb-display text-3xl">
-              Brasil
-            </h2>
-            <Image
-              src="/war-brasil-42.production.svg"
-              alt="Mapa da partida com 42 territórios"
-              width={1254}
-              height={1254}
-              priority
-            />
-            <div className="wb-lobby-map-facts">
-              <span>42 territórios</span>
-              <span className="wb-diamond" aria-hidden="true" />
-              <span>5 regiões</span>
-            </div>
-          </div>
-        </section>
-
-        <aside className="wb-lobby-region" aria-labelledby="my-faction-title">
-          <h2 id="my-faction-title" className="wb-section-title">
-            Sua facção
-          </h2>
-
-          <form onSubmit={saveFaction} className="wb-faction-editor">
-            <label htmlFor="faction-name" className="wb-label">
-              Nome
-            </label>
-            <div className="flex gap-2">
-              <input
-                id="faction-name"
-                name="factionName"
-                key={me.factionName}
-                defaultValue={me.factionName}
-                maxLength={32}
-                disabled={actionPending}
-                className="wb-field min-w-0 flex-1"
-              />
-              <button
-                type="submit"
-                disabled={actionPending}
-                className="wb-button wb-button--ghost px-2"
-                aria-label="Salvar nome da facção"
-              >
-                Salvar
-              </button>
-            </div>
-          </form>
-
-          <div className="wb-faction-editor">
-            <p className="wb-label">Cor da facção</p>
-            <div className="wb-color-grid">
-              {PLAYER_COLORS.map((color) => {
-                const takenByAnotherPlayer = players.some(
-                  (player) => !player.isMe && player.color === color.value,
-                );
-                const isCurrentColor = me.color === color.value;
-
-                return (
-                  <button
-                    key={color.value}
-                    type="button"
-                    title={
-                      takenByAnotherPlayer
-                        ? `${color.label} indisponível`
-                        : isCurrentColor
-                          ? `${color.label} selecionado`
-                          : color.label
-                    }
-                    aria-label={
-                      takenByAnotherPlayer
-                        ? `${color.label}, indisponível`
-                        : `${color.label}${isCurrentColor ? ", selecionado" : ""}`
-                    }
-                    disabled={actionPending || takenByAnotherPlayer || isCurrentColor}
-                    onClick={() => void updateMe({ color: color.value })}
-                    className="wb-color-choice"
-                    data-selected={isCurrentColor ? "true" : "false"}
-                  >
-                    <span
-                      className="wb-color-swatch"
-                      style={{ backgroundColor: color.hex }}
-                      aria-hidden="true"
-                    />
-                    {isCurrentColor ? (
-                      <span className="absolute -right-1 -top-1 grid h-4 w-4 place-items-center rounded-full bg-[var(--wb-gold)] text-[9px] font-black text-[var(--wb-text-dark)]">
-                        ✓
-                      </span>
-                    ) : takenByAnotherPlayer ? (
-                      <span className="absolute -right-1 -top-1 grid h-4 w-4 place-items-center rounded-full bg-black/55 text-[9px] text-white">
-                        ×
-                      </span>
-                    ) : null}
-                  </button>
-                );
-              })}
-            </div>
-            <p className="mt-3 text-xs leading-5 text-[var(--wb-text-muted)]">
-              Alterar nome ou cor remove seu status de pronto.
-            </p>
-          </div>
-
-          {actionError?.scope === "profile" ? (
-            <p className="wb-error mt-5" role="alert">
-              {actionError.message}
-            </p>
-          ) : null}
-        </aside>
-      </div>
-
-      <section className="wb-ready-rail" aria-label="Preparação da partida">
-        <div className="wb-shell-inner wb-ready-inner">
-          <div className="wb-ready-progress">
-            <div>
-              <p className="wb-section-title">
-                {allReady ? "Todos prontos" : `${readyPlayers} de ${players.length} prontos`}
-              </p>
-              <div className="wb-ready-progress-dots mt-2" aria-hidden="true">
-                {players.map((player) => (
-                  <span key={player.id} data-ready={player.isReady ? "true" : "false"} />
-                ))}
-              </div>
-            </div>
-            {allReady ? (
-              <span className="wb-status ml-auto sm:ml-2">
-                <span className="wb-diamond" aria-hidden="true" />
-                Preparando tabuleiro
-              </span>
-            ) : null}
-          </div>
-
-          <button
-            type="button"
-            disabled={actionPending || allReady}
-            onClick={() => void updateMe({ isReady: !me.isReady }, "ready")}
-            className={`wb-button ${me.isReady ? "wb-button--secondary" : "wb-button--primary"}`}
-          >
-            {!me.isReady ? <span className="wb-diamond" aria-hidden="true" /> : null}
-            {allReady
-              ? "Preparando…"
-              : me.isReady
-                ? "Cancelar pronto"
-                : "Pronto para batalha"}
-          </button>
-        </div>
-      </section>
-    </>
-  );
-}
-
-function PlayerRow({
-  player,
-  index,
-  canManageBots,
-  isRemoving,
-  actionPending,
-  onRemoveBot,
-}: {
-  player: LobbyPlayer;
-  index: number;
-  canManageBots: boolean;
-  isRemoving: boolean;
-  actionPending: boolean;
-  onRemoveBot: (botId: string) => Promise<void>;
-}) {
-  const color = colorByValue(player.color);
-
-  return (
-    <li className="wb-player-row" data-me={player.isMe ? "true" : "false"}>
-      <span className="wb-player-state">{String(index).padStart(2, "0")}</span>
-      <div className="min-w-0">
-        <div className="flex items-center gap-2">
-          <span
-            className="wb-player-color"
-            style={{ backgroundColor: color?.hex }}
-            aria-hidden="true"
-          />
-          <p className="wb-player-name">
-            {player.factionName}
-            {player.isMe ? " · você" : ""}
-          </p>
-        </div>
-        <p className="wb-player-meta">
-          {color?.label ?? "Facção"}{player.isBot ? " · BOT" : ""}
-        </p>
-      </div>
-      <div className="flex items-center justify-end gap-2">
-        <span className="wb-player-state" data-ready={player.isReady ? "true" : "false"}>
-          {player.isReady ? "✓ Pronto" : "• Preparando"}
-        </span>
-        {player.isBot && canManageBots ? (
-          <button
-            type="button"
-            disabled={actionPending}
-            onClick={() => void onRemoveBot(player.id)}
-            className="wb-button wb-button--ghost px-2 py-1 text-[10px]"
-            aria-label={`Remover bot ${player.factionName}`}
-          >
-            {isRemoving ? "Removendo…" : "Remover"}
-          </button>
-        ) : null}
-      </div>
-    </li>
+    <LobbyCommandWorkspace
+      roomCode={roomCode}
+      ruleset={room.ruleset}
+      balancedDiceEnabled={room.balancedDiceEnabled}
+      players={players}
+      me={me}
+      canManageBots={canManageBots}
+      canManageRoom={canManageRoom}
+      readyPlayers={readyPlayers}
+      allReady={allReady}
+      startAuthorized={startAuthorized}
+      reconnecting={Boolean(syncError)}
+      actionPending={actionPending}
+      readyPending={readyPending}
+      settingsPending={settingsPending}
+      pendingAction={pendingAction}
+      copied={copied}
+      copyError={copyError}
+      consoleError={consoleError}
+      readyError={readyError}
+      settingsError={settingsError}
+      tableStatus={tableStatus}
+      onCopyRoomCode={() => void copyRoomCode()}
+      onRefresh={() => void refresh()}
+      onSaveFaction={saveFaction}
+      onColorChange={(color) => void updateMe({ color })}
+      onUpdateSettings={(patch) => void updateSettings(patch)}
+      onAddBot={() => void addBot()}
+      onRemoveBot={removeBot}
+      onToggleReady={() => void updateMe({ isReady: !me.isReady }, "ready")}
+      onLeaveRoom={() => void leaveRoom()}
+      leaving={leaving}
+    />
   );
 }

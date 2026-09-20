@@ -1,5 +1,6 @@
 import type { AttackMode } from "./game-barrier-rules";
 import type { CardSymbol } from "./game-config";
+import type { GameRuleset } from "./game-mode";
 import type { TradeCardDescriptor } from "./game-trade-rules";
 import type {
   AppliedEventTroopChange,
@@ -45,6 +46,21 @@ export type GameBattle = {
   defenderTroopsAfter?: number;
 };
 
+export type GameCosmeticSelection = {
+  cosmeticId: string;
+  assetRef: string | null;
+  effectKey: string | null;
+  bodyColor: string | null;
+  bodyHighlightColor: string | null;
+};
+
+export type GamePlayerCosmetics = {
+  diceAttack: GameCosmeticSelection;
+  diceDefense: GameCosmeticSelection;
+  diceNeutral: GameCosmeticSelection;
+  territoryEffect: GameCosmeticSelection;
+};
+
 export type GamePlayer = {
   id: string;
   factionName: string;
@@ -52,6 +68,7 @@ export type GamePlayer = {
   turnPosition: number | null;
   isMe: boolean;
   isBot: boolean;
+  cosmetics: GamePlayerCosmetics;
   rolls: Array<{ round: number; value: number; rolledAt: string }>;
 };
 
@@ -128,6 +145,7 @@ export type GameSnapshot = {
     id: string;
     code: string;
     status: GameStatus;
+    ruleset: GameRuleset;
     orderRollRound: number;
     orderRollPlayerId: string | null;
     lastOrderRollPlayerId: string | null;

@@ -2,6 +2,7 @@ import { NextRequest } from "next/server";
 import { noStoreJson, roomErrorResponse } from "@/src/lib/api-response";
 import { getPlayerSession } from "@/src/lib/player-session";
 import { addBotToRoom, RoomError } from "@/src/lib/rooms";
+import { assertAuthenticatedPlayerSeat } from "@/server/auth/player-seat-guard";
 
 type RouteContext = {
   params: Promise<{ code: string }>;
@@ -17,6 +18,7 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     }
 
     ({ code } = await params);
+    await assertAuthenticatedPlayerSeat(request, session, { roomCode: code });
     const bot = await addBotToRoom(code, session);
     return noStoreJson({ botId: bot.id }, { status: 201 });
   } catch (error) {

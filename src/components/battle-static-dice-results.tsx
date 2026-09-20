@@ -13,11 +13,13 @@ function StaticDiceSide({
   values,
   color,
   side,
+  assetRef,
 }: {
   label: string;
   values: readonly number[];
   color: PlayerColor;
   side: "attack" | "defense";
+  assetRef?: string | null;
 }) {
   if (values.length === 0) return null;
 
@@ -32,7 +34,13 @@ function StaticDiceSide({
             className="battle-die-slot"
             key={`${side}-static-${index}-${value}`}
           >
-            <GameDie value={value} color={color} className="battle-die" />
+            <GameDie
+              value={value}
+              color={color}
+              skin={side}
+              assetRef={assetRef}
+              className="battle-die"
+            />
           </div>
         ))}
       </div>
@@ -44,10 +52,14 @@ export function BattleStaticDiceResults({
   battle,
   attackerColor = "forest",
   defenderColor = "ruby",
+  attackAssetRef,
+  defenseAssetRef,
 }: {
   battle: GameBattle;
   attackerColor?: PlayerColor;
   defenderColor?: PlayerColor;
+  attackAssetRef?: string | null;
+  defenseAssetRef?: string | null;
 }) {
   useEffect(() => {
     const texture =
@@ -55,17 +67,25 @@ export function BattleStaticDiceResults({
         ? {
             skin: "attack" as const,
             pipColor: playerColorHex(attackerColor),
+            assetRef: attackAssetRef,
           }
         : battle.stage === "awaiting_defender_roll"
           ? {
               skin: "defense" as const,
               pipColor: playerColorHex(defenderColor),
+              assetRef: defenseAssetRef,
             }
           : null;
 
     if (!texture) return;
     void preloadDiceAssets({ texture }).catch(() => undefined);
-  }, [attackerColor, battle.stage, defenderColor]);
+  }, [
+    attackAssetRef,
+    attackerColor,
+    battle.stage,
+    defenseAssetRef,
+    defenderColor,
+  ]);
 
   const hasDice = battle.attacker.length > 0 || battle.defender.length > 0;
   if (!hasDice) return null;
@@ -81,12 +101,14 @@ export function BattleStaticDiceResults({
         values={battle.attacker}
         color={attackerColor}
         side="attack"
+        assetRef={attackAssetRef}
       />
       <StaticDiceSide
         label="Defesa"
         values={battle.defender}
         color={defenderColor}
         side="defense"
+        assetRef={defenseAssetRef}
       />
     </div>
   );

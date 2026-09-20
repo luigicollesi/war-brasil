@@ -14,8 +14,8 @@ import {
   type CommandPlayer,
 } from "@/src/lib/game-command-player";
 import type { GameCommandRequestMetadata } from "@/src/lib/game-command-request";
-import { objectiveWon } from "@/src/lib/game-objective-service";
 import { MIN_TERRITORY_TROOPS } from "@/src/lib/game-rules";
+import { evaluateGameVictory } from "@/src/lib/server/game-victory-service";
 import { RoomError } from "@/src/lib/rooms";
 
 type ConquestRoom = BattleRoomState & {
@@ -147,7 +147,7 @@ export async function executeCompleteConquest(
   room.pending_to_territory_id = null;
   await saveBattle(client, room, null);
 
-  await objectiveWon(client, room.id, player.id, "troops_changed");
+  await evaluateGameVictory(client, room.id, player.id, "troops_changed");
   return null;
 }
 

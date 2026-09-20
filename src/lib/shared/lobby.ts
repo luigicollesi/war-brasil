@@ -1,3 +1,5 @@
+import type { GameRuleset } from "./game-mode";
+
 export const PLAYER_COLORS = [
   { value: "forest", label: "Verde", hex: "#3f8b68" },
   { value: "ocean", label: "Azul", hex: "#3984c6" },
@@ -25,10 +27,13 @@ export type LobbySnapshot = {
     status: "waiting" | "order_roll" | "playing";
     createdAt: string;
     startedAt: string | null;
+    ruleset: GameRuleset;
+    balancedDiceEnabled: boolean;
   };
   players: LobbyPlayer[];
   me: LobbyPlayer;
   canManageBots: boolean;
+  canManageRoom: boolean;
 };
 
 export function isPlayerColor(value: unknown): value is PlayerColor {

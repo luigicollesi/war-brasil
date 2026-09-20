@@ -1,13 +1,14 @@
 "use client";
 
 import Image from "next/image";
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import type { DieRollAnimation } from "@/src/lib/game-battle-display";
 import {
   DICE_PIP_LAYOUT_PERCENT,
   normalizeDiceValue,
 } from "@/src/lib/client/dice/pip-layout";
-import type { DiceValue } from "@/src/lib/client/dice/types";
+import { DICE_PROCEDURAL_PALETTES } from "@/src/lib/client/dice/textures/dice-skins";
+import type { DiceSkin, DiceValue } from "@/src/lib/client/dice/types";
 import { playerColorHex } from "@/src/lib/client/player-color";
 import type { PlayerColor } from "@/src/lib/lobby";
 
@@ -28,6 +29,8 @@ const pipClass = {
 export function GameDie({
   value,
   color = "forest",
+  skin = "neutral",
+  assetRef,
   rolling = false,
   rollAnimation,
   size = "lg",
@@ -35,12 +38,19 @@ export function GameDie({
 }: {
   value: number;
   color?: PlayerColor;
+  skin?: DiceSkin;
+  assetRef?: string | null;
   rolling?: boolean;
   rollAnimation?: DieRollAnimation;
   size?: keyof typeof sizeClass;
   className?: string;
 }) {
+  const requestedAsset = assetRef?.trim() || null;
+  const [failedAsset, setFailedAsset] = useState<string | null>(null);
+  const imageSource =
+    requestedAsset && failedAsset !== requestedAsset ? requestedAsset : null;
   const safeValue = normalizeDiceValue(value);
+  const palette = DICE_PROCEDURAL_PALETTES[skin];
   const animationClass = rolling
     ? rollAnimation
       ? "battle-die-roll-animation"
@@ -58,16 +68,44 @@ export function GameDie({
     <div
       className={`game-die relative aspect-square overflow-hidden ${sizeClass[size]} ${animationClass} ${className}`}
       data-rolling={rolling ? "true" : "false"}
+      data-dice-skin={skin}
+      data-dice-source={imageSource ? "cosmetic" : "procedural"}
       style={rollStyle}
       aria-label={`Dado mostrando ${safeValue}`}
     >
-      <Image
-        src="/dado-brasil-hq.svg"
-        alt=""
-        fill
-        sizes={size === "lg" ? "128px" : size === "md" ? "96px" : "64px"}
-        className="object-cover"
-      />
+      {imageSource ? (
+        <Image
+          src={imageSource}
+          alt=""
+          fill
+          unoptimized
+          sizes={size === "lg" ? "128px" : size === "md" ? "96px" : "64px"}
+          className="object-cover"
+          onError={() => setFailedAsset(imageSource)}
+        />
+      ) : (
+        <>
+          <span
+            aria-hidden="true"
+            className="absolute inset-0"
+            style={{
+              background: `linear-gradient(145deg, ${palette.top}, ${palette.bottom})`,
+            }}
+          />
+          <span
+            aria-hidden="true"
+            className="absolute inset-[5%] rounded-[20%] border-2"
+            style={{ borderColor: palette.edge }}
+          />
+          <span
+            aria-hidden="true"
+            className="absolute inset-0"
+            style={{
+              background: `radial-gradient(circle at 28% 22%, ${palette.highlight}, rgba(255,255,255,0) 58%)`,
+            }}
+          />
+        </>
+      )}
       {DICE_PIP_LAYOUT_PERCENT[safeValue].map(([x, y], index) => (
         <span
           key={index}

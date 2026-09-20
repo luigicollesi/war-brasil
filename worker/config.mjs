@@ -56,3 +56,8 @@ export function automationWorkerToken(env = process.env) {
   const token = env.GAME_AUTOMATION_WORKER_TOKEN?.trim();
   return token || null;
 }
+
+
+export function lobbyCleanupIntervalMs(env = process.env) {
+  return positiveInteger(env.LOBBY_CLEANUP_INTERVAL_MS, 15_000, 5_000, 300_000);
+}

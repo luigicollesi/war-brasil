@@ -1,0 +1,903 @@
+"use client";
+
+import { Canvas, useFrame, useLoader, useThree } from "@react-three/fiber";
+import { Suspense, useEffect, useMemo, useRef, type ReactNode } from "react";
+import {
+  Color,
+  EdgesGeometry,
+  ExtrudeGeometry,
+  Group,
+  LineBasicMaterial,
+  MathUtils,
+  MeshStandardMaterial,
+  PerspectiveCamera,
+  Vector3,
+} from "three";
+import { SVGLoader } from "three/addons/loaders/SVGLoader.js";
+import { StoreShowcasePedestal } from "@/src/components/profile/v4/store-showcase/showcase-pedestal";
+import {
+  resolveShowcasePresentation,
+  type ShowcaseObjectType,
+} from "@/src/lib/client/store-showcase/showcase-presentation";
+import { COMMAND_FOUNDATION_TOKENS } from "./foundation-tokens";
+import { ProfileOrbAssembly } from "./profile-orb-assembly";
+import type { ShowcaseScenePayload } from "./pre-game-command-runtime";
+import type {
+  CommandSceneState,
+  NormalizedCommandSceneIntent,
+} from "./scene-contract";
+import { resolveCommandCameraPose } from "./scene-presets";
+import {
+  TerritoryGenesisPass,
+  type TerritoryGenesisPlate,
+} from "./territory-genesis-pass";
+
+const MAP_VIEWBOX_SIZE = 1254;
+const MAP_SCALE = COMMAND_FOUNDATION_TOKENS.scene.mapScale;
+const MAP_HALF_EXTENT = (MAP_VIEWBOX_SIZE * MAP_SCALE) / 2;
+const CANONICAL_TERRITORY_COUNT = 42;
+const PLATE_TONES = ["#26352a", "#2d3d30", "#223027", "#344437"] as const;
+const SHOWCASE_STANDARD_LIGHT = "#edf3ee";
+const SHOWCASE_DESKTOP_CAMERA_X = -0.65;
+
+type Position3 = [number, number, number];
+
+type SceneLayout = {
+  center: Position3;
+  objectScale: number;
+  globePosition: Position3;
+  globeScale: number;
+  insigniaPosition: Position3;
+  insigniaScale: number;
+};
+
+const DESKTOP_LAYOUT: SceneLayout = {
+  center: [0.72, -0.28, 0],
+  objectScale: 1,
+  globePosition: [-2.8, 0.74, 0.15],
+  globeScale: 1,
+  insigniaPosition: [2.95, 1.08, 0.14],
+  insigniaScale: 1,
+};
+
+const COMPACT_LAYOUT: SceneLayout = {
+  center: [1.05, 0.55, 0],
+  objectScale: 0.82,
+  globePosition: [-1.35, 1.85, 0.15],
+  globeScale: 0.72,
+  insigniaPosition: [2.4, 1.65, 0.14],
+  insigniaScale: 0.82,
+};
+
+type CommandSceneCanvasProps = {
+  intent: NormalizedCommandSceneIntent;
+  reducedMotion: boolean;
+  compact: boolean;
+  maxDpr: number;
+  showcaseScene?: ShowcaseScenePayload | null;
+  onScenePhaseChange: (state: CommandSceneState) => void;
+  onUnavailable: () => void;
+};
+
+type TerritoryPlate = TerritoryGenesisPlate;
+
+function WebGLContextGuard({ onUnavailable }: { onUnavailable: () => void }) {
+  const { gl } = useThree();
+
+  useEffect(() => {
+    const canvas = gl.domElement;
+    const handleContextLost = (event: Event) => {
+      event.preventDefault();
+      onUnavailable();
+    };
+
+    canvas.addEventListener("webglcontextlost", handleContextLost, false);
+    return () => canvas.removeEventListener("webglcontextlost", handleContextLost, false);
+  }, [gl, onUnavailable]);
+
+  return null;
+}
+
+function SceneClearDirector({ transparent }: { transparent: boolean }) {
+  const gl = useThree((state) => state.gl);
+  const invalidate = useThree((state) => state.invalidate);
+
+  useEffect(() => {
+    gl.setClearColor(COMMAND_FOUNDATION_TOKENS.color.void, transparent ? 0 : 1);
+    invalidate();
+  }, [gl, invalidate, transparent]);
+
+  return null;
+}
+
+function CameraDirector({
+  intent,
+  reducedMotion,
+  compact,
+}: {
+  intent: NormalizedCommandSceneIntent;
+  reducedMotion: boolean;
+  compact: boolean;
+}) {
+  const invalidate = useThree((state) => state.invalidate);
+  const pose = useMemo(
+    () => resolveCommandCameraPose(intent, compact),
+    [compact, intent],
+  );
+  const desiredPosition = useMemo(() => new Vector3(...pose.camera), [pose.camera]);
+  const desiredTarget = useMemo(() => new Vector3(...pose.target), [pose.target]);
+  const currentTarget = useRef(desiredTarget.clone());
+
+  useEffect(() => {
+    invalidate();
+  }, [desiredPosition, desiredTarget, invalidate, pose.fov, reducedMotion]);
+
+  useFrame((state, delta) => {
+    const activeCamera = state.camera;
+
+    if (reducedMotion) {
+      activeCamera.position.copy(desiredPosition);
+      currentTarget.current.copy(desiredTarget);
+      activeCamera.lookAt(desiredTarget);
+      if (activeCamera instanceof PerspectiveCamera) {
+        activeCamera.fov = pose.fov;
+        activeCamera.updateProjectionMatrix();
+      }
+      return;
+    }
+
+    const alpha = 1 - Math.exp(-COMMAND_FOUNDATION_TOKENS.motion.cameraDamping * delta);
+    activeCamera.position.lerp(desiredPosition, alpha);
+    currentTarget.current.lerp(desiredTarget, alpha);
+    activeCamera.lookAt(currentTarget.current);
+
+    if (activeCamera instanceof PerspectiveCamera) {
+      activeCamera.fov = MathUtils.damp(
+        activeCamera.fov,
+        pose.fov,
+        COMMAND_FOUNDATION_TOKENS.motion.cameraDamping,
+        delta,
+      );
+      activeCamera.updateProjectionMatrix();
+    }
+  });
+
+  return null;
+}
+
+function ShowcaseCameraDirector({
+  compact,
+  objectType,
+}: {
+  compact: boolean;
+  objectType: ShowcaseObjectType;
+}) {
+  const set = useThree((state) => state.set);
+  const invalidate = useThree((state) => state.invalidate);
+  const canvasSize = useThree((state) => state.size);
+  const cameraAspect =
+    canvasSize.height > 0 ? canvasSize.width / canvasSize.height : 1;
+  const presentation = resolveShowcasePresentation(
+    objectType,
+    compact,
+    cameraAspect,
+  );
+
+  useEffect(() => {
+    const cameraX = compact ? 0 : SHOWCASE_DESKTOP_CAMERA_X;
+    const camera = new PerspectiveCamera(
+      presentation.cameraFov,
+      cameraAspect,
+      0.1,
+      40,
+    );
+    camera.position.set(
+      cameraX,
+      presentation.cameraY,
+      presentation.cameraDistance,
+    );
+    camera.lookAt(cameraX, presentation.cameraTargetY, 0);
+    camera.updateProjectionMatrix();
+    set({ camera });
+    invalidate();
+  }, [cameraAspect, compact, invalidate, presentation, set]);
+
+  return null;
+}
+
+function StrategicGlobe({
+  intent,
+  reducedMotion,
+  layout,
+}: {
+  intent: NormalizedCommandSceneIntent;
+  reducedMotion: boolean;
+  layout: SceneLayout;
+}) {
+  const globeRef = useRef<Group>(null);
+  const invalidate = useThree((state) => state.invalidate);
+  const focused = intent.focus === "earth";
+  const recessedPosition = useMemo<Position3>(
+    () => [
+      layout.globePosition[0] - (layout.globeScale < 0.9 ? 0.55 : 0.9),
+      layout.globePosition[1] + 0.18,
+      layout.globePosition[2] - 1.15,
+    ],
+    [layout.globePosition, layout.globeScale],
+  );
+  const targetPosition = focused ? layout.globePosition : recessedPosition;
+  const targetScale = layout.globeScale * (focused ? 1 : 0.24);
+
+  useEffect(() => {
+    if (!reducedMotion || !globeRef.current) return;
+    globeRef.current.position.set(...targetPosition);
+    globeRef.current.scale.setScalar(targetScale);
+    globeRef.current.rotation.y = 0;
+    invalidate();
+  }, [invalidate, reducedMotion, targetPosition, targetScale]);
+
+  useFrame(({ clock }, delta) => {
+    const globe = globeRef.current;
+    if (!globe || reducedMotion) return;
+
+    globe.position.x = MathUtils.damp(
+      globe.position.x,
+      targetPosition[0],
+      COMMAND_FOUNDATION_TOKENS.motion.objectDamping,
+      delta,
+    );
+    globe.position.y = MathUtils.damp(
+      globe.position.y,
+      targetPosition[1],
+      COMMAND_FOUNDATION_TOKENS.motion.objectDamping,
+      delta,
+    );
+    globe.position.z = MathUtils.damp(
+      globe.position.z,
+      targetPosition[2],
+      COMMAND_FOUNDATION_TOKENS.motion.objectDamping,
+      delta,
+    );
+    const scale = MathUtils.damp(
+      globe.scale.x,
+      targetScale,
+      COMMAND_FOUNDATION_TOKENS.motion.objectDamping,
+      delta,
+    );
+    globe.scale.setScalar(scale);
+    globe.rotation.y = focused
+      ? clock.getElapsedTime() * 0.025
+      : MathUtils.damp(
+          globe.rotation.y,
+          0.18,
+          COMMAND_FOUNDATION_TOKENS.motion.objectDamping,
+          delta,
+        );
+  });
+
+  return (
+    <group
+      ref={globeRef}
+      name="StrategicGlobe"
+      position={targetPosition}
+      scale={targetScale}
+    >
+      <mesh>
+        <sphereGeometry args={[1.26, 28, 20]} />
+        <meshStandardMaterial
+          color="#1c2c22"
+          roughness={0.68}
+          metalness={0.18}
+          transparent
+          opacity={0.46}
+        />
+      </mesh>
+      <mesh>
+        <sphereGeometry args={[1.285, 20, 14]} />
+        <meshBasicMaterial color="#b28c48" wireframe transparent opacity={0.19} />
+      </mesh>
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <torusGeometry args={[1.42, 0.012, 6, 72]} />
+        <meshBasicMaterial color="#c9a459" transparent opacity={0.44} />
+      </mesh>
+      <mesh rotation={[0.22, 0.15, 0]}>
+        <torusGeometry args={[1.5, 0.01, 6, 72]} />
+        <meshBasicMaterial color="#776238" transparent opacity={0.31} />
+      </mesh>
+    </group>
+  );
+}
+
+function DomainTable({
+  layout,
+  openingActive,
+}: {
+  layout: SceneLayout;
+  openingActive: boolean;
+}) {
+  return (
+    <group
+      name="DomainTable"
+      position={[layout.center[0], layout.center[1], -0.38]}
+      scale={layout.objectScale}
+    >
+      <mesh rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[4.58, 4.76, 0.34, 96]} />
+        <meshStandardMaterial color="#101713" roughness={0.75} metalness={0.4} />
+      </mesh>
+      <mesh
+        name="DomainTable-GoldenRing"
+        position={[0, 0, 0.18]}
+        userData={{ finalOpacity: 1 }}
+      >
+        <ringGeometry args={[4.42, 4.54, 96]} />
+        <meshStandardMaterial
+          color="#98763c"
+          roughness={0.4}
+          metalness={COMMAND_FOUNDATION_TOKENS.material.brassMetalness}
+          transparent={openingActive}
+          opacity={openingActive ? 0 : 1}
+        />
+      </mesh>
+      <mesh position={[0, 0, 0.17]}>
+        <circleGeometry args={[4.4, 96]} />
+        <meshStandardMaterial color="#151e18" roughness={0.84} metalness={0.16} />
+      </mesh>
+    </group>
+  );
+}
+
+function readCanonicalTerritoryId(
+  path: { userData?: Record<string, unknown> },
+  pathIndex: number,
+) {
+  const node = path.userData?.node as SVGElement | undefined;
+  const rawId = node?.getAttribute("data-id");
+  const territoryId = Number(rawId);
+
+  if (
+    !Number.isInteger(territoryId) ||
+    territoryId < 1 ||
+    territoryId > CANONICAL_TERRITORY_COUNT
+  ) {
+    throw new Error(
+      `Território canônico inválido no path ${pathIndex + 1}: ${rawId ?? "ausente"}`,
+    );
+  }
+
+  return territoryId;
+}
+
+function readCanonicalFill(
+  path: { userData?: Record<string, unknown> },
+  pathIndex: number,
+) {
+  const node = path.userData?.node as SVGElement | undefined;
+  const fill = node?.getAttribute("fill");
+
+  if (!fill || fill === "none") {
+    throw new Error(`Cor canônica ausente no território ${pathIndex + 1}.`);
+  }
+
+  return fill;
+}
+
+function ScenePrimer({
+  enabled,
+  onPrimed,
+}: {
+  enabled: boolean;
+  onPrimed: () => void;
+}) {
+  const { gl, scene, camera, invalidate } = useThree();
+
+  useEffect(() => {
+    if (!enabled) return;
+    let cancelled = false;
+    let firstFrame = 0;
+    let secondFrame = 0;
+
+    const prime = () => {
+      try {
+        gl.compile(scene, camera);
+      } catch {
+        // Compilation warm-up is an optimization; rendering remains the fallback.
+      }
+      if (cancelled) return;
+
+      invalidate();
+      firstFrame = window.requestAnimationFrame(() => {
+        invalidate();
+        secondFrame = window.requestAnimationFrame(() => {
+          if (!cancelled) onPrimed();
+        });
+      });
+    };
+
+    prime();
+
+    return () => {
+      cancelled = true;
+      if (firstFrame) window.cancelAnimationFrame(firstFrame);
+      if (secondFrame) window.cancelAnimationFrame(secondFrame);
+    };
+  }, [camera, enabled, gl, invalidate, onPrimed, scene]);
+
+  return null;
+}
+
+function BrazilTerritoryAssembly({
+  intent,
+  layout,
+  reducedMotion,
+  onScenePhaseChange,
+}: {
+  intent: NormalizedCommandSceneIntent;
+  layout: SceneLayout;
+  reducedMotion: boolean;
+  onScenePhaseChange: (state: CommandSceneState) => void;
+}) {
+  const svg = useLoader(SVGLoader, "/war-brasil-42.production.svg");
+  const plateRefs = useRef<Array<Group | null>>([]);
+  const invalidate = useThree((state) => state.invalidate);
+  const introEnabled =
+    intent.mode === "entrance" &&
+    !reducedMotion &&
+    intent.entranceState !== "settled";
+
+  const materials = useMemo(
+    () =>
+      PLATE_TONES.map(
+        (color) =>
+          new MeshStandardMaterial({
+            color,
+            roughness: COMMAND_FOUNDATION_TOKENS.material.plateRoughness,
+            metalness: COMMAND_FOUNDATION_TOKENS.material.plateMetalness,
+          }),
+      ),
+    [],
+  );
+  const edgeMaterial = useMemo(
+    () =>
+      new LineBasicMaterial({
+        color: "#d0aa57",
+        transparent: true,
+        opacity: 0.78,
+      }),
+    [],
+  );
+
+  const plates = useMemo<TerritoryPlate[]>(() => {
+    const territoryIds = svg.paths.map(readCanonicalTerritoryId);
+    const uniqueIds = new Set(territoryIds);
+
+    if (
+      territoryIds.length !== CANONICAL_TERRITORY_COUNT ||
+      uniqueIds.size !== CANONICAL_TERRITORY_COUNT ||
+      !Array.from({ length: CANONICAL_TERRITORY_COUNT }, (_, index) => index + 1).every((id) =>
+        uniqueIds.has(id),
+      )
+    ) {
+      throw new Error(
+        "O mapa da Foundation deve conter exatamente os territórios canônicos 1–42.",
+      );
+    }
+
+    return svg.paths.flatMap((path, pathIndex) => {
+      const territoryId = territoryIds[pathIndex];
+      const canonicalColor = new Color(readCanonicalFill(path, pathIndex));
+
+      return path.toShapes().map((shape, shapeIndex) => {
+        const geometry = new ExtrudeGeometry(shape, {
+          depth: 14,
+          bevelEnabled: true,
+          bevelThickness: 2.2,
+          bevelSize: 1.3,
+          bevelSegments: 1,
+          curveSegments: 5,
+        });
+        geometry.computeVertexNormals();
+
+        return {
+          id: `${territoryId}-${shapeIndex}`,
+          territoryId,
+          geometry,
+          edges: new EdgesGeometry(geometry, 30),
+          canonicalColor: canonicalColor.clone(),
+        };
+      });
+    });
+  }, [svg]);
+
+  useEffect(() => {
+    if (introEnabled) return;
+    invalidate();
+    const frame = window.requestAnimationFrame(() => onScenePhaseChange("ready"));
+    return () => window.cancelAnimationFrame(frame);
+  }, [introEnabled, invalidate, onScenePhaseChange]);
+
+  useEffect(() => {
+    if (!reducedMotion) return;
+    for (const [plateIndex, plate] of plates.entries()) {
+      const group = plateRefs.current[plateIndex];
+      if (!group) continue;
+      const territoryIndex = plate.territoryId - 1;
+      group.position.z = intent.territoryExplode * ((territoryIndex % 3) * 2.1);
+    }
+    invalidate();
+  }, [intent.territoryExplode, invalidate, plates, reducedMotion]);
+
+  useFrame((_, delta) => {
+    if (reducedMotion) return;
+    for (const [plateIndex, plate] of plates.entries()) {
+      const group = plateRefs.current[plateIndex];
+      if (!group) continue;
+      const territoryIndex = plate.territoryId - 1;
+      const targetSeparation = intent.territoryExplode * ((territoryIndex % 3) * 2.1);
+      group.position.z = MathUtils.damp(
+        group.position.z,
+        targetSeparation,
+        COMMAND_FOUNDATION_TOKENS.motion.objectDamping,
+        delta,
+      );
+    }
+  });
+
+  useEffect(
+    () => () => {
+      for (const plate of plates) {
+        plate.geometry.dispose();
+        plate.edges.dispose();
+      }
+      for (const material of materials) material.dispose();
+      edgeMaterial.dispose();
+    },
+    [edgeMaterial, materials, plates],
+  );
+
+  return (
+    <group
+      name="BrazilTerritoryAssembly"
+      position={[layout.center[0], layout.center[1], 0.08]}
+      rotation={[-0.095, 0.035, -0.028]}
+      scale={layout.objectScale}
+    >
+      <group
+        scale={[MAP_SCALE, -MAP_SCALE, MAP_SCALE]}
+        position={[-MAP_HALF_EXTENT, MAP_HALF_EXTENT, 0]}
+      >
+        {plates.map((plate, plateIndex) => {
+          const territoryIndex = plate.territoryId - 1;
+          const initialSeparation = reducedMotion
+            ? intent.territoryExplode * ((territoryIndex % 3) * 2.1)
+            : 0;
+
+          return (
+            <group
+              key={plate.id}
+              ref={(node) => {
+                plateRefs.current[plateIndex] = node;
+              }}
+              position-z={initialSeparation}
+            >
+              <mesh geometry={plate.geometry}>
+                <primitive
+                  attach="material"
+                  object={materials[territoryIndex % materials.length]}
+                />
+              </mesh>
+              <lineSegments geometry={plate.edges} material={edgeMaterial} />
+            </group>
+          );
+        })}
+
+        {introEnabled ? (
+          <TerritoryGenesisPass
+            plates={plates}
+            entranceState={intent.entranceState}
+            onScenePhaseChange={onScenePhaseChange}
+          />
+        ) : null}
+      </group>
+
+      <ScenePrimer
+        enabled={introEnabled && intent.entranceState === "primed"}
+        onPrimed={() => onScenePhaseChange("primed")}
+      />
+    </group>
+  );
+}
+
+function OrbitalCrown({
+  intent,
+  reducedMotion,
+  layout,
+}: {
+  intent: NormalizedCommandSceneIntent;
+  reducedMotion: boolean;
+  layout: SceneLayout;
+}) {
+  const territoryRef = useRef<Group>(null);
+  const commandRef = useRef<Group>(null);
+  const conflictRef = useRef<Group>(null);
+  const invalidate = useThree((state) => state.invalidate);
+
+  useEffect(() => {
+    if (!reducedMotion) return;
+    const aligned = intent.orbitalAlignment === 1;
+    if (territoryRef.current) territoryRef.current.rotation.z = 0;
+    if (commandRef.current) commandRef.current.rotation.z = aligned ? 0 : 0.08;
+    if (conflictRef.current) conflictRef.current.rotation.z = aligned ? 0 : -0.11;
+    invalidate();
+  }, [intent.orbitalAlignment, invalidate, reducedMotion]);
+
+  useFrame(({ clock }, delta) => {
+    if (reducedMotion) return;
+    const elapsed = clock.getElapsedTime();
+    const aligned = intent.orbitalAlignment === 1;
+    const baseSpeed = COMMAND_FOUNDATION_TOKENS.motion.crownTurnsPerSecond * Math.PI * 2;
+    const damping = COMMAND_FOUNDATION_TOKENS.motion.objectDamping;
+
+    if (territoryRef.current) {
+      territoryRef.current.rotation.z = MathUtils.damp(
+        territoryRef.current.rotation.z,
+        aligned ? 0 : elapsed * baseSpeed,
+        damping,
+        delta,
+      );
+    }
+    if (commandRef.current) {
+      commandRef.current.rotation.z = MathUtils.damp(
+        commandRef.current.rotation.z,
+        aligned ? 0 : 0.08 - elapsed * baseSpeed * 0.72,
+        damping,
+        delta,
+      );
+    }
+    if (conflictRef.current) {
+      conflictRef.current.rotation.z = MathUtils.damp(
+        conflictRef.current.rotation.z,
+        aligned ? 0 : -0.11 + elapsed * baseSpeed * 0.48,
+        damping,
+        delta,
+      );
+    }
+  });
+
+  const conflictOpacity = 0.08 + intent.conflictLevel * 0.13;
+
+  return (
+    <group name="OrbitalCrown" position={layout.center} scale={layout.objectScale}>
+      <group ref={territoryRef} name="OrbitalCrown-Territory" rotation={[0.04, 0.08, 0]}>
+        <mesh>
+          <torusGeometry args={[4.02, 0.021, 8, 128]} />
+          <meshStandardMaterial color="#61745f" metalness={0.7} roughness={0.42} transparent opacity={0.7} />
+        </mesh>
+      </group>
+      <group ref={commandRef} name="OrbitalCrown-Command" rotation={[-0.12, 0.18, 0.08]}>
+        <mesh>
+          <torusGeometry args={[4.26, 0.016, 8, 128]} />
+          <meshStandardMaterial color="#d0aa57" metalness={0.82} roughness={0.34} transparent opacity={0.62} />
+        </mesh>
+      </group>
+      <group ref={conflictRef} name="OrbitalCrown-Conflict" rotation={[0.17, -0.14, -0.11]}>
+        <mesh>
+          <torusGeometry args={[4.48, 0.014, 8, 128]} />
+          <meshStandardMaterial
+            color="#a52b31"
+            emissive="#611318"
+            emissiveIntensity={0.25 + intent.conflictLevel * 0.18}
+            metalness={0.74}
+            roughness={0.39}
+            transparent
+            opacity={conflictOpacity}
+          />
+        </mesh>
+      </group>
+    </group>
+  );
+}
+
+function SceneInsignia({
+  intent,
+  reducedMotion,
+  layout,
+}: {
+  intent: NormalizedCommandSceneIntent;
+  reducedMotion: boolean;
+  layout: SceneLayout;
+}) {
+  return (
+    <ProfileOrbAssembly
+      intent={intent}
+      reducedMotion={reducedMotion}
+      position={layout.insigniaPosition}
+      scale={layout.insigniaScale}
+    />
+  );
+}
+
+function ArchitecturalRails({ compact }: { compact: boolean }) {
+  if (compact) return null;
+
+  return (
+    <group name="CommandArchitecture" position={[0, 0, -0.55]}>
+      <mesh position={[5.05, -1.4, 0]}>
+        <boxGeometry args={[0.035, 3.8, 0.12]} />
+        <meshStandardMaterial color="#7f6638" metalness={0.72} roughness={0.46} />
+      </mesh>
+      <mesh position={[-4.85, 2.65, -0.08]}>
+        <boxGeometry args={[2.35, 0.025, 0.1]} />
+        <meshStandardMaterial color="#4a4c3c" metalness={0.55} roughness={0.58} />
+      </mesh>
+      <mesh position={[4.4, 2.72, -0.12]}>
+        <boxGeometry args={[1.35, 0.018, 0.08]} />
+        <meshStandardMaterial color="#5f573d" metalness={0.58} roughness={0.55} />
+      </mesh>
+    </group>
+  );
+}
+
+function SceneFallbackGeometry({ layout }: { layout: SceneLayout }) {
+  return (
+    <mesh position={[layout.center[0], layout.center[1], 0]} scale={layout.objectScale}>
+      <ringGeometry args={[3.75, 3.78, 96]} />
+      <meshBasicMaterial color="#876d3f" transparent opacity={0.28} />
+    </mesh>
+  );
+}
+
+function CommandSceneWorld({
+  intent,
+  reducedMotion,
+  compact,
+  onScenePhaseChange,
+}: {
+  intent: NormalizedCommandSceneIntent;
+  reducedMotion: boolean;
+  compact: boolean;
+  onScenePhaseChange: (state: CommandSceneState) => void;
+}) {
+  const layout = compact ? COMPACT_LAYOUT : DESKTOP_LAYOUT;
+  const conflictIntensity = intent.conflictLevel * 5.2;
+  const openingActive =
+    intent.mode === "entrance" &&
+    !reducedMotion &&
+    intent.entranceState !== "settled";
+
+  return (
+    <>
+      <CameraDirector intent={intent} reducedMotion={reducedMotion} compact={compact} />
+      <ambientLight color="#869187" intensity={1.15} />
+      <directionalLight color="#eee1c2" intensity={2.35} position={[-5, 5, 8]} />
+      <pointLight color="#c18f4c" intensity={18} distance={14} position={[5.4, 3.2, 5]} />
+      <pointLight
+        color="#9e242b"
+        intensity={conflictIntensity}
+        distance={9}
+        position={[-3.8, -2.8, 3.3]}
+      />
+
+      <ArchitecturalRails compact={compact} />
+      <DomainTable layout={layout} openingActive={openingActive} />
+      <OrbitalCrown intent={intent} reducedMotion={reducedMotion} layout={layout} />
+      <SceneInsignia intent={intent} reducedMotion={reducedMotion} layout={layout} />
+      <StrategicGlobe intent={intent} reducedMotion={reducedMotion} layout={layout} />
+      <Suspense fallback={<SceneFallbackGeometry layout={layout} />}>
+        <BrazilTerritoryAssembly
+          intent={intent}
+          layout={layout}
+          reducedMotion={reducedMotion}
+          onScenePhaseChange={onScenePhaseChange}
+        />
+      </Suspense>
+    </>
+  );
+}
+
+function ShowcaseStageAnchor({
+  stageCenterRatio,
+  children,
+}: {
+  stageCenterRatio: number;
+  children: ReactNode;
+}) {
+  const viewportWidth = useThree((state) => state.viewport.width);
+  const normalizedCenterRatio = Math.max(0, Math.min(1, stageCenterRatio));
+  const offsetX = (normalizedCenterRatio - 0.5) * viewportWidth;
+
+  return (
+    <group name="StoreShowcaseStageAnchor" position={[offsetX, 0, 0]}>
+      {children}
+    </group>
+  );
+}
+
+function ShowcaseSceneWorld({
+  showcaseScene,
+  reducedMotion,
+  compact,
+}: {
+  showcaseScene: ShowcaseScenePayload;
+  reducedMotion: boolean;
+  compact: boolean;
+}) {
+  const sceneAnchorX = compact ? 0 : SHOWCASE_DESKTOP_CAMERA_X;
+
+  return (
+    <>
+      <ShowcaseCameraDirector objectType={showcaseScene.objectType} compact={compact} />
+      <ambientLight color="#87958c" intensity={0.78} />
+      <directionalLight color={SHOWCASE_STANDARD_LIGHT} intensity={3.4} position={[-4, 5.5, 6.5]} />
+      <pointLight color={SHOWCASE_STANDARD_LIGHT} intensity={13} distance={12} position={[4.2, 2.8, 4]} />
+      <pointLight color="#7b1f25" intensity={1.2} distance={8} position={[-4, -2.2, 3]} />
+      <group name="StoreShowcaseSceneAnchor" position={[sceneAnchorX, 0, 0]}>
+        <ShowcaseStageAnchor stageCenterRatio={showcaseScene.stageCenterRatio}>
+          <StoreShowcasePedestal mode={showcaseScene.mode} />
+          <group name="StoreShowcaseSceneContent" position={[0, 0.12, 0]}>
+            {showcaseScene.render({ reducedMotion })}
+          </group>
+        </ShowcaseStageAnchor>
+      </group>
+    </>
+  );
+}
+
+export function CommandSceneCanvas({
+  intent,
+  reducedMotion,
+  compact,
+  maxDpr,
+  showcaseScene = null,
+  onScenePhaseChange,
+  onUnavailable,
+}: CommandSceneCanvasProps) {
+  const initialPose = resolveCommandCameraPose(intent, compact);
+  const transparentCollection = showcaseScene?.mode === "collection";
+
+  useEffect(() => {
+    if (!showcaseScene) return;
+    const frame = window.requestAnimationFrame(() => onScenePhaseChange("ready"));
+    return () => window.cancelAnimationFrame(frame);
+  }, [onScenePhaseChange, showcaseScene]);
+
+  return (
+    <Canvas
+      className="command-foundation-canvas"
+      camera={{
+        position: [initialPose.camera[0], initialPose.camera[1], initialPose.camera[2]],
+        fov: initialPose.fov,
+        near: 0.1,
+        far: 40,
+      }}
+      dpr={[1, maxDpr]}
+      frameloop={reducedMotion ? "demand" : "always"}
+      gl={{
+        antialias: maxDpr > 1.05,
+        alpha: true,
+        powerPreference: "high-performance",
+      }}
+      onCreated={({ gl }) => {
+        gl.setClearColor(COMMAND_FOUNDATION_TOKENS.color.void, transparentCollection ? 0 : 1);
+      }}
+    >
+      <fog attach="fog" args={[COMMAND_FOUNDATION_TOKENS.color.void, 11.5, 19]} />
+      <SceneClearDirector transparent={transparentCollection} />
+      <WebGLContextGuard onUnavailable={onUnavailable} />
+      {showcaseScene ? (
+        <ShowcaseSceneWorld
+          showcaseScene={showcaseScene}
+          reducedMotion={reducedMotion}
+          compact={compact}
+        />
+      ) : (
+        <CommandSceneWorld
+          intent={intent}
+          reducedMotion={reducedMotion}
+          compact={compact}
+          onScenePhaseChange={onScenePhaseChange}
+        />
+      )}
+    </Canvas>
+  );
+}

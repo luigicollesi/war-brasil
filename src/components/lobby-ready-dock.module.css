@@ -1,0 +1,402 @@
+.dock {
+  position: relative;
+  display: grid;
+  min-height: 72px;
+  grid-template-columns: minmax(220px, .88fr) minmax(220px, .72fr) auto;
+  align-items: center;
+  gap: clamp(10px, 1.3vw, 18px);
+  overflow: hidden;
+  border: 1px solid rgb(214 169 62 / 25%);
+  border-radius: 2px;
+  padding: 8px 10px 8px 12px;
+  background:
+    linear-gradient(90deg, rgb(25 44 31 / 95%), rgb(4 13 9 / 98%) 35% 65%, rgb(25 44 31 / 95%)),
+    rgb(4 12 8 / 96%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 3%),
+    0 -8px 24px rgb(0 0 0 / 16%);
+  clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 13px, 100% 100%, 13px 100%, 0 calc(100% - 13px));
+}
+
+.dock::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 27%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--wb-gold), transparent);
+  opacity: .5;
+}
+
+.dock[data-start-authorized="true"] {
+  border-color: rgb(170 58 50 / 52%);
+  background:
+    linear-gradient(90deg, rgb(45 28 22 / 94%), rgb(14 7 6 / 98%) 35% 65%, rgb(45 28 22 / 94%)),
+    rgb(11 6 5 / 96%);
+}
+
+.readyCopy {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 11px;
+}
+
+.readyInsignia {
+  position: relative;
+  display: grid;
+  width: 35px;
+  height: 35px;
+  flex: 0 0 auto;
+  place-items: center;
+  transform: rotate(45deg);
+  border: 1px solid rgb(208 170 87 / 48%);
+  background: rgb(0 0 0 / 19%);
+  transition: transform 220ms ease, background 220ms ease, box-shadow 220ms ease;
+}
+
+.readyInsignia::before,
+.readyInsignia::after {
+  content: "";
+  position: absolute;
+}
+
+.readyInsignia::before {
+  inset: 7px;
+  border: 1px solid rgb(240 200 90 / 74%);
+}
+
+.readyInsignia::after {
+  width: 5px;
+  height: 5px;
+  background: var(--wb-gold);
+  opacity: .45;
+}
+
+.readyInsignia[data-ready="true"] {
+  transform: rotate(0deg);
+  background: rgb(208 170 87 / 11%);
+  box-shadow: 0 0 18px rgb(214 169 62 / 8%);
+}
+
+.readyInsignia[data-ready="true"]::before {
+  transform: rotate(45deg);
+  background: rgb(214 169 62 / 13%);
+}
+
+.readyInsignia[data-ready="true"]::after {
+  opacity: 1;
+}
+
+.readyText {
+  min-width: 0;
+}
+
+.railLabel {
+  overflow: hidden;
+  color: rgb(214 169 62 / 56%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: .34rem;
+  font-weight: 800;
+  letter-spacing: .14em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.readyTitle {
+  margin-top: 1px;
+  overflow: hidden;
+  color: var(--wb-text);
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: .92rem;
+  font-weight: 760;
+  letter-spacing: .025em;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.readyDetail {
+  margin-top: 1px;
+  overflow: hidden;
+  color: var(--wb-text-muted);
+  font-size: .5rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.startAuthorized {
+  color: #ef9f9f;
+}
+
+.errorText {
+  color: #f4aaa0;
+}
+
+.authorizationRail {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  grid-template-columns: repeat(6, minmax(26px, 1fr));
+  gap: 3px;
+  align-items: stretch;
+  border: 1px solid rgb(214 169 62 / 13%);
+  padding: 4px;
+  background: rgb(0 0 0 / 17%);
+}
+
+.authorizationRail::before {
+  content: "SYNC BUS";
+  position: absolute;
+  top: -7px;
+  left: 8px;
+  padding-inline: 4px;
+  background: rgb(5 14 10 / 98%);
+  color: rgb(214 169 62 / 35%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: .28rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.authorizationCell {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  height: 34px;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 7%);
+  padding: 3px 5px;
+  background: rgb(255 255 255 / 2.2%);
+  clip-path: polygon(0 0, calc(100% - 5px) 0, 100% 5px, 100% 100%, 0 100%);
+}
+
+.authorizationCell small {
+  color: var(--wb-text-muted);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: .35rem;
+  font-weight: 850;
+  letter-spacing: .04em;
+}
+
+.authorizationCell i {
+  display: block;
+  width: 100%;
+  height: 4px;
+  border: 1px solid rgb(255 255 255 / 8%);
+  background: rgb(255 255 255 / 3%);
+  box-shadow: inset 0 0 4px rgb(0 0 0 / 40%);
+}
+
+.authorizationCell[data-state="configuring"] {
+  border-color: rgb(214 169 62 / 18%);
+}
+
+.authorizationCell[data-state="configuring"] i {
+  width: 52%;
+  border-color: rgb(214 169 62 / 26%);
+  background: rgb(214 169 62 / 18%);
+}
+
+.authorizationCell[data-state="ready"] {
+  border-color: rgb(116 167 121 / 33%);
+  background: rgb(69 116 78 / 8%);
+}
+
+.authorizationCell[data-state="ready"] small {
+  color: #bad5bd;
+}
+
+.authorizationCell[data-state="ready"] i {
+  border-color: rgb(126 190 135 / 48%);
+  background: #6f9f74;
+  box-shadow: 0 0 8px rgb(92 165 103 / 18%);
+}
+
+.authorizationCell[data-state="empty"] {
+  opacity: .34;
+}
+
+.dock[data-start-authorized="true"] .authorizationCell[data-state="ready"] {
+  border-color: rgb(190 72 62 / 38%);
+}
+
+.dock[data-start-authorized="true"] .authorizationCell[data-state="ready"] i {
+  border-color: rgb(219 102 88 / 52%);
+  background: #a44d44;
+}
+
+.readyButton {
+  display: grid !important;
+  min-width: 190px;
+  min-height: 47px !important;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 9px;
+  white-space: nowrap;
+  clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+}
+
+.buttonPrefix {
+  display: grid;
+  height: 22px;
+  place-items: center;
+  border-right: 1px solid currentColor;
+  padding-right: 8px;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: .35rem;
+  letter-spacing: .08em;
+  opacity: .64;
+}
+
+@media (max-width: 980px) {
+  .dock {
+    grid-template-columns: minmax(190px, 1fr) minmax(170px, .7fr) auto;
+    gap: 8px;
+  }
+
+  .readyInsignia {
+    width: 30px;
+    height: 30px;
+  }
+
+  .readyTitle {
+    font-size: .8rem;
+  }
+
+  .authorizationCell {
+    height: 30px;
+    grid-template-columns: 1fr;
+    justify-items: center;
+    padding-inline: 3px;
+  }
+
+  .authorizationCell small {
+    display: none;
+  }
+
+  .readyButton {
+    min-width: 154px;
+  }
+}
+
+@media (max-width: 720px) {
+  .dock {
+    min-height: 65px;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 6px 7px 6px 8px;
+  }
+
+  .readyCopy {
+    gap: 7px;
+  }
+
+  .readyInsignia {
+    width: 27px;
+    height: 27px;
+  }
+
+  .readyTitle {
+    font-size: .7rem;
+  }
+
+  .readyDetail {
+    font-size: .43rem;
+  }
+
+  .railLabel {
+    display: none;
+  }
+
+  .authorizationRail {
+    position: absolute;
+    right: 7px;
+    bottom: 4px;
+    left: 8px;
+    height: 3px;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 2px;
+    border: 0;
+    padding: 0;
+    background: transparent;
+    pointer-events: none;
+  }
+
+  .authorizationRail::before,
+  .authorizationCell small {
+    display: none;
+  }
+
+  .authorizationCell {
+    height: 3px;
+    border: 0;
+    padding: 0;
+    background: rgb(255 255 255 / 7%);
+    clip-path: none;
+  }
+
+  .authorizationCell i {
+    width: 100% !important;
+    height: 3px;
+    border: 0;
+  }
+
+  .readyButton {
+    min-width: 142px;
+    min-height: 42px !important;
+    padding-inline: 9px !important;
+    font-size: .55rem !important;
+  }
+
+  .buttonPrefix {
+    display: none;
+  }
+}
+
+@media (max-width: 440px) {
+  .readyInsignia {
+    display: none;
+  }
+
+  .readyTitle {
+    font-size: .65rem;
+  }
+
+  .readyButton {
+    min-width: 130px;
+  }
+}
+
+@media (max-height: 580px) {
+  .dock {
+    min-height: 52px;
+    padding-block: 4px;
+  }
+
+  .readyInsignia {
+    width: 24px;
+    height: 24px;
+  }
+
+  .readyDetail,
+  .railLabel {
+    display: none;
+  }
+
+  .readyButton {
+    min-height: 35px !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .readyInsignia {
+    transition: none;
+  }
+}

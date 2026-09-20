@@ -32,7 +32,7 @@ test("troca clássica de cartas continua restrita ao reinforcement", () => {
 test("eliminação avalia primeiro o conquistador e depois donos da missão", () => {
   const battle = source("src/lib/server/game-battle-service.ts");
 
-  const conquerorCheck = battle.indexOf("const conquerorWon = await objectiveWon(");
+  const conquerorCheck = battle.indexOf("const conquerorWon = await evaluateGameVictory(");
   const indirectCheck = battle.indexOf("await evaluateEliminationObjectiveOwners(");
 
   assert.ok(conquerorCheck >= 0);

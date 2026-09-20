@@ -8,7 +8,7 @@ import {
 import { withObjectiveSchemaCompatibility } from "@/src/lib/objectives/objective-schema-compatibility";
 import { finishDiceBalanceMatchForRoom } from "@/src/lib/server/game-dice-balance-service";
 
-type ObjectiveEvent =
+export type ObjectiveEvent =
   | "any"
   | "troops_changed"
   | "territory_control_changed";
@@ -169,7 +169,7 @@ async function ownedTerritoryIds(
   ).rows.map((row) => row.territory_id);
 }
 
-export async function objectiveWon(
+export async function objectiveVictoryConditionMet(
   client: PoolClient,
   roomId: string,
   playerId: string,
@@ -268,6 +268,19 @@ export async function objectiveWon(
       }
     }
   }
+
+  return won;
+}
+
+// Compatibility wrapper for callers/tests that still exercise objective mode
+// directly. Gameplay command services use the centralized victory dispatcher.
+export async function objectiveWon(
+  client: PoolClient,
+  roomId: string,
+  playerId: string,
+  event: ObjectiveEvent = "any",
+) {
+  const won = await objectiveVictoryConditionMet(client, roomId, playerId, event);
 
   if (won) {
     await client.query(

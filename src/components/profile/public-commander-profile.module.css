@@ -1,0 +1,376 @@
+.page {
+  --profile-ivory: #eee8da;
+  --profile-brass: #d0aa57;
+  position: relative;
+  isolation: isolate;
+  width: 100vw;
+  height: 100dvh;
+  overflow: hidden;
+  color: var(--profile-ivory);
+  background: #07100c;
+}
+
+.background {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  background-position: center;
+  background-size: cover;
+  transform: scale(1.012);
+}
+
+.scrim {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, rgb(2 7 5 / 68%) 0%, rgb(2 7 5 / 18%) 26%, transparent 54%),
+    linear-gradient(90deg, rgb(2 7 5 / 66%) 0%, rgb(2 7 5 / 20%) 42%, transparent 67%),
+    linear-gradient(0deg, rgb(2 7 5 / 72%) 0%, transparent 32%),
+    radial-gradient(circle at 50% 48%, transparent 34%, rgb(1 4 3 / 30%) 100%);
+}
+
+.header {
+  position: absolute;
+  z-index: 6;
+  top: 0;
+  left: 0;
+  right: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 32px;
+  padding:
+    max(34px, env(safe-area-inset-top))
+    max(40px, env(safe-area-inset-right))
+    0
+    max(40px, env(safe-area-inset-left));
+  pointer-events: none;
+}
+
+.identity,
+.actions {
+  pointer-events: auto;
+}
+
+.identity {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+
+.classification {
+  color: rgb(208 170 87 / 66%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: clamp(0.56rem, 0.65vw, 0.68rem);
+  font-weight: 850;
+  letter-spacing: 0.14em;
+  text-shadow: 0 3px 12px rgb(0 0 0 / 70%);
+}
+
+.identityTopline {
+  display: grid;
+  gap: 3px;
+  width: fit-content;
+}
+
+.identityTopline > strong {
+  color: var(--profile-ivory);
+  font-family: var(--font-wb-display), sans-serif;
+  max-width: 16ch;
+  font-size: clamp(2.2rem, 3.2vw, 4.15rem);
+  font-weight: 760;
+  line-height: 0.92;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+  text-shadow:
+    0 10px 30px rgb(0 0 0 / 62%),
+    0 2px 8px rgb(0 0 0 / 78%);
+}
+
+.identityTopline small {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: rgb(238 232 218 / 64%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: clamp(0.68rem, 0.82vw, 0.9rem);
+  font-weight: 650;
+  letter-spacing: 0.085em;
+  text-shadow: 0 3px 12px rgb(0 0 0 / 70%);
+}
+
+.identityTopline small i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgb(238 232 218 / 32%);
+}
+
+.identityTopline small[data-presence="online"] i {
+  background: #7ec995;
+  box-shadow: 0 0 10px rgb(126 201 149 / 48%);
+}
+
+.title {
+  margin-top: 10px;
+  font-size: clamp(3.9rem, 7.1vw, 8.8rem);
+  filter: drop-shadow(0 14px 28px rgb(0 0 0 / 42%));
+}
+
+.untitled {
+  width: fit-content;
+  margin-top: 10px;
+  padding: 8px 12px 8px 14px;
+  border-left: 2px solid rgb(208 170 87 / 72%);
+  color: rgb(238 232 218 / 58%);
+  background: linear-gradient(90deg, rgb(208 170 87 / 10%), transparent);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: clamp(0.82rem, 1.05vw, 1.05rem);
+  font-weight: 780;
+  letter-spacing: 0.16em;
+  text-shadow: 0 4px 14px rgb(0 0 0 / 68%);
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.backAction,
+.primaryAction,
+.pendingAction {
+  min-height: 48px;
+  padding: 0 18px;
+  border: 1px solid rgb(238 232 218 / 18%);
+  color: rgb(238 232 218 / 78%);
+  background: rgb(3 9 7 / 56%);
+  backdrop-filter: blur(10px);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: clamp(0.62rem, 0.72vw, 0.72rem);
+  font-weight: 900;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  text-shadow: 0 3px 12px rgb(0 0 0 / 70%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 3%),
+    0 10px 26px rgb(0 0 0 / 16%);
+  cursor: pointer;
+  transition:
+    color 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease,
+    transform 160ms ease;
+}
+
+.backAction::after,
+.primaryAction::after {
+  content: "";
+  position: absolute;
+  right: 12px;
+  bottom: 7px;
+  left: 12px;
+  height: 1px;
+  background: currentColor;
+  opacity: 0;
+  transform: scaleX(0.45);
+  transition: opacity 160ms ease, transform 160ms ease;
+}
+
+.backAction:hover,
+.backAction:focus-visible,
+.primaryAction:hover,
+.primaryAction:focus-visible {
+  color: var(--profile-ivory);
+  border-color: rgb(238 232 218 / 36%);
+  background: rgb(8 17 13 / 76%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 5%),
+    0 12px 30px rgb(0 0 0 / 24%);
+  transform: translateY(-2px);
+  outline: none;
+}
+
+.backAction:hover::after,
+.backAction:focus-visible::after,
+.primaryAction:hover::after,
+.primaryAction:focus-visible::after {
+  opacity: 0.72;
+  transform: scaleX(1);
+}
+
+.backAction,
+.primaryAction {
+  position: relative;
+}
+
+.primaryAction {
+  border-color: rgb(208 170 87 / 52%);
+  color: #f0cc76;
+  background:
+    linear-gradient(180deg, rgb(208 170 87 / 15%), rgb(208 170 87 / 7%)),
+    rgb(3 9 7 / 68%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 236 180 / 6%),
+    0 10px 28px rgb(0 0 0 / 20%),
+    0 0 24px rgb(208 170 87 / 5%);
+}
+
+.primaryAction:hover,
+.primaryAction:focus-visible {
+  border-color: rgb(208 170 87 / 82%);
+  color: #ffe09b;
+  background:
+    linear-gradient(180deg, rgb(208 170 87 / 24%), rgb(208 170 87 / 10%)),
+    rgb(3 9 7 / 78%);
+  box-shadow:
+    inset 0 1px 0 rgb(255 236 180 / 10%),
+    0 13px 32px rgb(0 0 0 / 26%),
+    0 0 28px rgb(208 170 87 / 9%);
+}
+
+.pendingAction {
+  border-color: rgb(238 232 218 / 10%);
+  color: rgb(238 232 218 / 38%);
+  cursor: default;
+}
+
+.primaryAction:disabled,
+.backAction:disabled {
+  opacity: 0.46;
+  cursor: wait;
+}
+
+.feedback {
+  position: absolute;
+  z-index: 7;
+  top: max(94px, calc(env(safe-area-inset-top) + 74px));
+  right: max(32px, env(safe-area-inset-right));
+  max-width: min(420px, calc(100vw - 48px));
+  margin: 0;
+  padding: 8px 12px;
+  color: var(--profile-ivory);
+  background: rgb(3 9 7 / 76%);
+  backdrop-filter: blur(12px);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.56rem;
+  line-height: 1.45;
+}
+
+.feedback[data-kind="error"] {
+  color: #e2a1a1;
+}
+
+.feedback[data-kind="success"] {
+  color: #9bd2ab;
+}
+
+@media (max-width: 720px) {
+  .page {
+    min-height: 100dvh;
+    height: 100dvh;
+  }
+
+  .background {
+    background-position: center;
+  }
+
+  .scrim {
+    background:
+      linear-gradient(180deg, rgb(2 7 5 / 78%) 0%, rgb(2 7 5 / 28%) 32%, transparent 53%),
+      linear-gradient(0deg, rgb(2 7 5 / 80%) 0%, transparent 42%),
+      radial-gradient(circle at center, transparent 28%, rgb(1 4 3 / 28%) 100%);
+  }
+
+  .header {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    padding: max(18px, env(safe-area-inset-top)) 16px 0;
+  }
+
+  .identity {
+    gap: 5px;
+  }
+
+  .identityTopline > strong {
+    max-width: 11ch;
+    font-size: clamp(1.85rem, 9vw, 2.75rem);
+  }
+
+  .identityTopline small {
+    font-size: 0.68rem;
+  }
+
+  .title {
+    max-width: 12ch;
+    margin-top: 6px;
+    font-size: clamp(2.8rem, 13vw, 5rem);
+  }
+
+  .untitled {
+    margin-top: 6px;
+    padding: 6px 9px 6px 10px;
+    font-size: 0.66rem;
+    letter-spacing: 0.11em;
+  }
+
+  .actions {
+    position: fixed;
+    top: max(14px, env(safe-area-inset-top));
+    right: 14px;
+    max-width: 58vw;
+    gap: 7px;
+  }
+
+  .backAction,
+  .primaryAction,
+  .pendingAction {
+    min-height: 40px;
+    padding: 0 11px;
+    font-size: 0.5rem;
+    letter-spacing: 0.07em;
+  }
+
+  .feedback {
+    top: auto;
+    right: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom));
+    left: 12px;
+    max-width: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .background,
+  .backAction,
+  .primaryAction,
+  .backAction::after,
+  .primaryAction::after {
+    transition: none;
+    transform: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .background,
+  .scrim {
+    display: none;
+  }
+
+  .page {
+    color: CanvasText;
+    background: Canvas;
+  }
+
+  .backAction,
+  .primaryAction,
+  .pendingAction {
+    color: ButtonText;
+  }
+}

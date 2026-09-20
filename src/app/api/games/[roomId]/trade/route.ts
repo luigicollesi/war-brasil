@@ -10,6 +10,7 @@ import { RoomError } from "@/src/lib/rooms";
 import { readGameCommandRequestMetadata } from "@/src/lib/server/game-command-request";
 import { playerTradePatchCommand } from "@/src/lib/server/game-player-trade-patch-service";
 import { publishTradeDeclineResolution } from "@/src/lib/server/game-trade-resolution-notifier";
+import { assertAuthenticatedPlayerSeat } from "@/server/auth/player-seat-guard";
 
 export async function POST(
   request: NextRequest,
@@ -24,8 +25,9 @@ export async function POST(
       throw new RoomError("Entre em uma sala antes de jogar.", 401);
     }
 
-    const metadata = readGameCommandRequestMetadata(request);
     ({ roomId } = await params);
+    await assertAuthenticatedPlayerSeat(request, session, { roomId });
+    const metadata = readGameCommandRequestMetadata(request);
     body = await readJsonObject(request);
     const result = await playerTradePatchCommand(roomId, session, body, metadata);
 

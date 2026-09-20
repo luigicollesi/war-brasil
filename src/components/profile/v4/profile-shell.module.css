@@ -1,0 +1,658 @@
+.page {
+  --profile-ivory: #eee8da;
+  --profile-brass-bright: #d0aa57;
+  --profile-brass: #9d793b;
+  --profile-coal: #111b14;
+  --profile-green: #0b2a22;
+  --profile-green-deep: #071a15;
+  --profile-red: #b53137;
+  position: relative;
+  min-height: 100dvh;
+  overflow-x: clip;
+  overflow-y: visible;
+  color: var(--profile-ivory);
+  background:
+    radial-gradient(circle at 12% 8%, rgb(30 82 60 / 24%), transparent 31rem),
+    radial-gradient(circle at 86% 16%, rgb(157 121 59 / 12%), transparent 28rem),
+    linear-gradient(145deg, #07130f 0%, var(--profile-green-deep) 46%, #091611 100%);
+  isolation: isolate;
+}
+
+.ambient {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+  transition: opacity 240ms ease;
+}
+
+.scanline {
+  position: absolute;
+  inset: 0;
+  opacity: 0.12;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent 0,
+    transparent 3px,
+    rgb(238 232 218 / 8%) 4px
+  );
+  mask-image: linear-gradient(to bottom, transparent, #000 14%, #000 86%, transparent);
+}
+
+.radial {
+  position: absolute;
+  width: 42rem;
+  height: 42rem;
+  right: -16rem;
+  top: 20%;
+  border: 1px solid rgb(208 170 87 / 10%);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 5rem rgb(208 170 87 / 2%),
+    0 0 0 10rem rgb(208 170 87 / 1.5%);
+}
+
+.commandBar {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  min-height: 78px;
+  display: grid;
+  grid-template-columns: minmax(220px, 0.9fr) minmax(420px, 1.45fr) minmax(250px, 0.9fr);
+  align-items: stretch;
+  border-bottom: 1px solid rgb(208 170 87 / 24%);
+  background: rgb(5 18 14 / 89%);
+  box-shadow: 0 16px 40px rgb(0 0 0 / 18%);
+  backdrop-filter: blur(18px);
+  transition: transform 260ms ease, opacity 220ms ease;
+}
+
+.commandIdentity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+  padding: 12px 18px;
+  border-right: 1px solid rgb(208 170 87 / 16%);
+}
+
+.homeLink {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  color: var(--profile-ivory);
+  border: 1px solid rgb(208 170 87 / 38%);
+  background: rgb(208 170 87 / 5%);
+  text-decoration: none;
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+}
+
+.homeLink:hover,
+.homeLink:focus-visible {
+  transform: translateX(-2px);
+  border-color: var(--profile-brass-bright);
+  background: rgb(208 170 87 / 12%);
+}
+
+.commandCopy {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.commandCopy small,
+.navItem small,
+.walletReadout small {
+  color: rgb(208 170 87 / 76%);
+  font-size: 0.63rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.commandCopy strong {
+  overflow: hidden;
+  color: var(--profile-ivory);
+  font-size: 0.94rem;
+  letter-spacing: 0.025em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.commandCopy em {
+  overflow: hidden;
+  color: rgb(238 232 218 / 55%);
+  font-size: 0.72rem;
+  font-style: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.primaryNav {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.navItem {
+  position: relative;
+  display: grid;
+  align-content: center;
+  gap: 3px;
+  padding: 12px 20px;
+  color: rgb(238 232 218 / 60%);
+  border-right: 1px solid rgb(208 170 87 / 10%);
+  text-decoration: none;
+  transition: color 180ms ease, background 180ms ease;
+}
+
+.navItem::after {
+  content: "";
+  position: absolute;
+  left: 20px;
+  right: 20px;
+  bottom: -1px;
+  height: 2px;
+  background: var(--profile-brass-bright);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 220ms ease;
+}
+
+.navItem strong {
+  font-size: 0.9rem;
+  letter-spacing: 0.055em;
+  text-transform: uppercase;
+}
+
+.navItem:hover,
+.navItem:focus-visible,
+.navItem[data-active="true"] {
+  color: var(--profile-ivory);
+  background: linear-gradient(180deg, rgb(208 170 87 / 3%), rgb(208 170 87 / 8%));
+}
+
+.navItem[data-active="true"]::after {
+  transform: scaleX(1);
+}
+
+.walletCluster {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+}
+
+.walletReadout {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.coin {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 10px rgb(208 170 87 / 18%));
+}
+
+.walletReadout > span {
+  min-width: 0;
+  display: grid;
+  justify-items: end;
+  gap: 1px;
+}
+
+.walletReadout strong {
+  font-variant-numeric: tabular-nums;
+  color: var(--profile-ivory);
+  font-size: 1rem;
+  letter-spacing: 0.04em;
+}
+
+.walletUnavailable {
+  color: rgb(238 232 218 / 56%) !important;
+  font-size: 0.69rem !important;
+  letter-spacing: 0.1em !important;
+}
+
+.addCredits {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  color: var(--profile-brass-bright);
+  border: 1px solid rgb(208 170 87 / 42%);
+  background: rgb(208 170 87 / 7%);
+  font-size: 1.35rem;
+  text-decoration: none;
+  transition: transform 180ms ease, background 180ms ease, border-color 180ms ease;
+}
+
+.addCredits:hover,
+.addCredits:focus-visible {
+  transform: translateY(-1px);
+  border-color: var(--profile-brass-bright);
+  background: rgb(208 170 87 / 14%);
+}
+
+.logoutButton {
+  min-width: 64px;
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 12px;
+  color: rgb(238 232 218 / 72%);
+  border: 1px solid rgb(181 49 55 / 38%);
+  background: rgb(181 49 55 / 7%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease,
+    opacity 160ms ease;
+}
+
+.logoutButton:hover:not(:disabled),
+.logoutButton:focus-visible {
+  color: var(--profile-ivory);
+  border-color: rgb(181 49 55 / 78%);
+  background: rgb(181 49 55 / 16%);
+  transform: translateY(-1px);
+}
+
+.logoutButton:focus-visible {
+  outline: 2px solid var(--profile-brass-bright);
+  outline-offset: 3px;
+}
+
+.logoutButton:active:not(:disabled) {
+  transform: translateY(1px);
+}
+
+.logoutButton:disabled {
+  cursor: wait;
+  opacity: 0.48;
+}
+
+.logoutButton[data-state="error"] {
+  border-color: rgb(208 170 87 / 56%);
+  background: rgb(208 170 87 / 8%);
+  color: var(--profile-brass-bright);
+}
+
+.logoutIcon {
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.logoutLabel {
+  white-space: nowrap;
+}
+
+.page[data-session-state="closing"] {
+  pointer-events: none;
+}
+
+.page[data-session-state="closing"] .commandBar {
+  opacity: 0;
+  transform: translateY(-14px);
+}
+
+.page[data-session-state="closing"] .surface {
+  opacity: 0;
+  transform: translateY(10px) scale(0.995);
+}
+
+.page[data-session-state="closing"] .ambient {
+  opacity: 0;
+}
+
+
+.evalBadge {
+  position: fixed;
+  z-index: 35;
+  right: 20px;
+  top: 86px;
+  padding: 6px 9px;
+  color: var(--profile-brass-bright);
+  border: 1px solid rgb(208 170 87 / 28%);
+  background: rgb(5 18 14 / 82%);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.surface {
+  width: min(100%, 1540px);
+  min-height: calc(100dvh - 79px);
+  margin: 0 auto;
+  padding: clamp(22px, 3vw, 44px);
+  transition: transform 260ms ease, opacity 220ms ease;
+}
+
+.page :focus-visible {
+  outline: 2px solid var(--profile-brass-bright);
+  outline-offset: 3px;
+}
+
+@media (max-width: 980px) {
+  .commandBar {
+    position: fixed;
+    top: auto;
+    bottom: max(12px, env(safe-area-inset-bottom));
+    left: 12px;
+    right: 12px;
+    z-index: 40;
+    min-height: 72px;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    border: 1px solid rgb(208 170 87 / 25%);
+    background: rgb(5 18 14 / 94%);
+    box-shadow: 0 18px 50px rgb(0 0 0 / 45%);
+  }
+
+  .commandIdentity {
+    gap: 10px;
+    padding: 10px 12px;
+    border-right: 1px solid rgb(208 170 87 / 12%);
+  }
+
+  .commandCopy strong {
+    max-width: 16vw;
+  }
+
+  .primaryNav {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .navItem {
+    min-width: 0;
+    justify-items: center;
+    gap: 2px;
+    padding: 10px 8px;
+    text-align: center;
+  }
+
+  .navItem::after {
+    left: 10px;
+    right: 10px;
+  }
+
+  .navItem small {
+    font-size: 0.52rem;
+    letter-spacing: 0.12em;
+  }
+
+  .navItem strong {
+    font-size: 0.78rem;
+    letter-spacing: 0.04em;
+  }
+
+  .walletCluster {
+    grid-template-columns: minmax(0, 1fr) 38px auto;
+    gap: 7px;
+    padding: 8px 10px;
+    border-left: 1px solid rgb(208 170 87 / 12%);
+  }
+
+  .walletReadout {
+    gap: 6px;
+  }
+
+  .coin {
+    width: 28px;
+    height: 28px;
+  }
+
+  .addCredits {
+    width: 36px;
+    height: 36px;
+  }
+
+  .evalBadge {
+    top: 12px;
+  }
+
+  .surface {
+    min-height: 100dvh;
+    padding: 20px 16px calc(112px + env(safe-area-inset-bottom));
+  }
+}
+
+
+@media (max-width: 980px) {
+  .page[data-session-state="closing"] .commandBar {
+    transform: translateY(18px);
+  }
+}
+
+@media (max-width: 620px) {
+  .commandBar {
+    left: 8px;
+    right: 8px;
+    bottom: max(8px, env(safe-area-inset-bottom));
+    min-height: 64px;
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+  }
+
+  .commandIdentity {
+    gap: 0;
+    padding: 8px;
+  }
+
+  .homeLink {
+    width: 36px;
+    height: 36px;
+  }
+
+  .commandCopy {
+    display: none;
+  }
+
+  .navItem {
+    padding: 8px 4px;
+  }
+
+  .navItem small {
+    display: none;
+  }
+
+  .navItem strong {
+    overflow: hidden;
+    max-width: 100%;
+    font-size: 0.7rem;
+    letter-spacing: 0.025em;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .walletCluster {
+    grid-template-columns: auto 34px 36px;
+    gap: 5px;
+    padding: 7px 8px;
+  }
+
+  .coin {
+    display: none;
+  }
+
+  .walletReadout small {
+    display: none;
+  }
+
+  .walletReadout strong {
+    font-size: 0.76rem;
+  }
+
+  .walletUnavailable {
+    font-size: 0.52rem !important;
+    letter-spacing: 0.04em !important;
+  }
+
+  .addCredits {
+    width: 34px;
+    height: 34px;
+  }
+
+  .logoutButton {
+    min-width: 36px;
+    width: 36px;
+    min-height: 34px;
+    height: 34px;
+    padding: 0;
+  }
+
+  .logoutLabel {
+    display: none;
+  }
+
+  .surface {
+    min-height: 100dvh;
+    padding: 16px 12px calc(96px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .commandBar,
+  .surface,
+  .ambient,
+  .homeLink,
+  .navItem,
+  .navItem::after,
+  .addCredits,
+  .logoutButton {
+    transition: none;
+  }
+
+  .homeLink:hover,
+  .homeLink:focus-visible,
+  .addCredits:hover,
+  .addCredits:focus-visible,
+  .logoutButton:hover,
+  .logoutButton:focus-visible,
+  .logoutButton:active,
+  .page[data-session-state="closing"] .commandBar,
+  .page[data-session-state="closing"] .surface {
+    transform: none;
+  }
+
+  .scanline {
+    display: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .page,
+  .commandBar {
+    color: CanvasText;
+    background: Canvas;
+  }
+
+  .scanline,
+  .radial {
+    display: none;
+  }
+
+  .commandBar,
+  .commandIdentity,
+  .homeLink,
+  .navItem,
+  .walletCluster,
+  .addCredits {
+    border-color: CanvasText;
+  }
+
+  .homeLink,
+  .navItem,
+  .addCredits {
+    color: LinkText;
+  }
+
+  .navItem[data-active="true"] {
+    color: HighlightText;
+    background: Highlight;
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+
+  .commandCopy small,
+  .commandCopy strong,
+  .commandCopy em,
+  .walletReadout small,
+  .walletReadout strong,
+  .walletUnavailable {
+    color: CanvasText !important;
+  }
+
+  .coin {
+    filter: none;
+  }
+}
+
+
+.profileBackdrop {
+  position: fixed;
+  z-index: -3;
+  inset: 0;
+  background-color: #07130f;
+  background-position: center;
+  background-size: cover;
+  pointer-events: none;
+}
+
+.profileBackdropScrim {
+  position: fixed;
+  z-index: -2;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(rgb(0 0 0 / 18%), rgb(0 0 0 / 18%)),
+    linear-gradient(180deg, rgb(3 9 7 / 74%) 0%, rgb(3 9 7 / 34%) 24%, rgb(3 9 7 / 42%) 62%, rgb(3 9 7 / 80%) 100%),
+    linear-gradient(90deg, rgb(3 9 7 / 50%), transparent 58%);
+}
+
+.page:has(.profileBackdrop) {
+  background: transparent;
+}
+
+.page:has(.profileBackdrop) .ambient {
+  opacity: 0.32;
+}
+
+.page:has(.profileBackdrop) .commandBar {
+  min-height: 64px;
+  border-bottom-color: rgb(238 232 218 / 8%);
+  background: rgb(4 12 9 / 66%);
+  box-shadow: none;
+  backdrop-filter: blur(16px);
+}
+
+.page:has(.profileBackdrop) .commandIdentity,
+.page:has(.profileBackdrop) .walletCluster,
+.page:has(.profileBackdrop) .navItem {
+  border-color: transparent;
+}
+
+.page:has(.profileBackdrop) .navItem:hover,
+.page:has(.profileBackdrop) .navItem:focus-visible,
+.page:has(.profileBackdrop) .navItem[data-active="true"] {
+  background: transparent;
+}
+
+.page:has(.profileBackdrop) .surface {
+  width: min(100%, 1480px);
+}
