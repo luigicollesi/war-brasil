@@ -2,6 +2,7 @@ import {
   authenticationRequiredResponse,
   getAuthenticatedSession,
 } from "@/src/lib/server/auth/auth-guard";
+import { rejectUntrustedMutationOrigin } from "@/src/lib/server/auth/request-origin";
 import {
   cancelGameInvitation,
   GameInvitationError,
@@ -41,6 +42,9 @@ export async function GET(request: Request) {
 }
 
 export async function DELETE(request: Request) {
+  const originRejection = rejectUntrustedMutationOrigin(request);
+  if (originRejection) return originRejection;
+
   const session = await getAuthenticatedSession(request);
   if (!session) return authenticationRequiredResponse();
 
