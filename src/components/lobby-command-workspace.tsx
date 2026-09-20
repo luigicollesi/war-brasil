@@ -46,6 +46,8 @@ type LobbyCommandWorkspaceProps = {
   onAddBot: () => void;
   onRemoveBot: (botId: string) => Promise<void>;
   onToggleReady: () => void;
+  onLeaveRoom: () => void;
+  leaving: boolean;
 };
 
 export function LobbyCommandWorkspace({
@@ -78,6 +80,8 @@ export function LobbyCommandWorkspace({
   onAddBot,
   onRemoveBot,
   onToggleReady,
+  onLeaveRoom,
+  leaving,
 }: LobbyCommandWorkspaceProps) {
   const [mobilePanel, setMobilePanel] = useState<MobileLobbyPanel>("station");
 
@@ -139,6 +143,14 @@ export function LobbyCommandWorkspace({
           <p className={styles.occupancy}>
             <strong>{players.length}/6</strong> postos · <strong>{readyPlayers}</strong> prontos
           </p>
+          <button
+            type="button"
+            className={styles.leaveButton}
+            onClick={onLeaveRoom}
+            disabled={leaving || actionPending}
+          >
+            {leaving ? "SAINDO..." : "SAIR DA SALA"}
+          </button>
         </div>
       </header>
 
