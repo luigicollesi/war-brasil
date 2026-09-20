@@ -8,16 +8,15 @@ async function source(path) {
   return readFile(new URL(path, ROOT), "utf8");
 }
 
-test("PROFILE V4 discovery delegates purchase interaction to the dedicated showcase", async () => {
+test("PROFILE V4 discovery opens showcase while retained direct purchase confirms authoritative price", async () => {
   const store = await source("src/components/profile/v4/profile-store.tsx");
 
   assert.match(store, /function showcaseHref/);
   assert.match(store, /INSPECIONAR/);
-  assert.doesNotMatch(store, /fetch\("\/api\/economy\/purchases"/);
-  assert.doesNotMatch(store, /async function purchase\(/);
-  assert.doesNotMatch(store, /pendingOfferId/);
-  assert.doesNotMatch(store, /purchaseFeedback/);
-  assert.doesNotMatch(store, /expectedPrice/);
+  assert.match(store, /purchaseShowcaseOffer/);
+  assert.match(store, /pendingOfferId/);
+  assert.match(store, /expectedPrice:\s*offer\.price/);
+  assert.doesNotMatch(store, /fetch\([^)]*\/api\/economy\/purchases/);
 });
 
 test("purchase API remains session-derived and accepts only the authoritative purchase contract", async () => {
