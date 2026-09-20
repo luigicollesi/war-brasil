@@ -33,16 +33,16 @@
     "realtime:test": "npm --prefix realtime test",
     "worker:start": "node worker/server.mjs",
     "worker:test": "node --check worker/server.mjs && node --test \"worker/test/*.test.mjs\"",
-    "cloudflare:build": "npm run cloudflare:prepare && npm run cloudflare:patch-next && NEXT_PUBLIC_GAME_REALTIME_MODE=off GAME_REALTIME_ENABLED=false opennextjs-cloudflare build && npm run cloudflare:verify",
+    "cloudflare:build": "npm run cloudflare:patch-next && NEXT_PUBLIC_GAME_REALTIME_MODE=off GAME_REALTIME_ENABLED=false opennextjs-cloudflare build && npm run cloudflare:verify",
     "cloudflare:deploy": "opennextjs-cloudflare deploy",
-    "cloudflare:preview": "npm run cloudflare:prepare && npm run cloudflare:patch-next && NEXT_PUBLIC_GAME_REALTIME_MODE=off GAME_REALTIME_ENABLED=false opennextjs-cloudflare build && npm run cloudflare:verify && opennextjs-cloudflare preview",
-    "cloudflare:prepare": "npm install --no-save --package-lock=false @opennextjs/cloudflare@1.20.6 wrangler@4.135.0",
+    "cloudflare:preview": "npm run cloudflare:patch-next && NEXT_PUBLIC_GAME_REALTIME_MODE=off GAME_REALTIME_ENABLED=false opennextjs-cloudflare build && npm run cloudflare:verify && opennextjs-cloudflare preview",
     "cloudflare:upload": "opennextjs-cloudflare upload",
     "cloudflare:patch-next": "node scripts/patch-next-cloudflare-middleware-manifest.mjs",
     "cloudflare:check-next-patch": "node scripts/patch-next-cloudflare-middleware-manifest.mjs --check",
     "cloudflare:verify": "node scripts/verify-cloudflare-build.mjs"
   },
   "dependencies": {
+    "@opennextjs/cloudflare": "1.20.6",
     "@react-three/fiber": "9.7.0",
     "@react-three/rapier": "2.2.0",
     "better-auth": "1.7.4",
@@ -64,6 +64,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.3.4",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "wrangler": "4.135.0"
   }
 }
