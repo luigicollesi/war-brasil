@@ -51,8 +51,10 @@ test("combate usa skin de ataque do atacante e defesa do defensor", () => {
   assert.match(overlay, /attackAssetRef=\{attackAssetRef\}/);
   assert.match(overlay, /defenseAssetRef=\{defenseAssetRef\}/);
   assert.match(cinematic, /assetRef=\{assetRef\}/);
+  assert.match(cinematic, /color=\{color\}/);
   assert.match(fullscreen, /useDiceFaceTextures/);
-  assert.match(fullscreen, /DICE_VISUAL_PIP_COLOR/);
+  assert.match(fullscreen, /pipColor: playerColorHex\(color\)/);
+  assert.doesNotMatch(fullscreen, /DICE_VISUAL_PIP_COLOR/);
   assert.match(fullscreen, /DICE_VISUAL_TEXTURE_RESOLUTION/);
   assert.match(fullscreen, /bodyColor/);
   assert.match(staticResults, /skin=\{side\}/);
@@ -76,6 +78,7 @@ test("ordem de jogo usa o dado neutro congelado do jogador", () => {
     /assetRef=\{shownPlayer\?\.cosmetics\.diceNeutral\.assetRef\}/,
   );
   assert.match(cinematic, /assetRef=\{assetRef\}/);
+  assert.match(cinematic, /color=\{color\}/);
   assert.match(die, /requestedAsset = assetRef\?\.trim\(\) \|\| null/);
 });
 
