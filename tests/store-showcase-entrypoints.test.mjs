@@ -31,11 +31,12 @@ test("store discovery no longer owns permanent inspection or collection modal st
   assert.doesNotMatch(store, /aria-modal="true"/);
 });
 
-test("store cards are discovery surfaces; acquisition is delegated to showcase", () => {
+test("store cards navigate to showcase while retained purchase controls stay separate and authoritative", () => {
   const store = read(storePath);
 
-  assert.doesNotMatch(store, /async function purchase\(/);
-  assert.doesNotMatch(store, /pendingOfferId/);
-  assert.doesNotMatch(store, /purchaseFeedback/);
-  assert.match(store, /INSPECIONAR/);
+  assert.match(store, /showcaseHref\("offer",\s*offer\.id/);
+  assert.match(store, /purchaseShowcaseOffer/);
+  assert.match(store, /expectedPrice:\s*offer\.price/);
+  assert.match(store, /pendingOfferId/);
+  assert.doesNotMatch(store, /fetch\([^)]*\/api\/economy\/purchases/);
 });
