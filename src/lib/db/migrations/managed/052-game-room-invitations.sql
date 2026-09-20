@@ -27,7 +27,10 @@ CREATE TABLE IF NOT EXISTS game.room_invitations (
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS room_invitations_pending_pair_uidx
-  ON game.room_invitations(inviter_user_id,invitee_user_id)
+  ON game.room_invitations(
+    LEAST(inviter_user_id,invitee_user_id),
+    GREATEST(inviter_user_id,invitee_user_id)
+  )
   WHERE state='pending';
 
 CREATE UNIQUE INDEX IF NOT EXISTS room_invitations_pending_room_invitee_uidx
