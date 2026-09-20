@@ -30,3 +30,24 @@ test("purchase grants each entitlement to its authoritative ownership table atom
   assert.match(service, /insertPurchaseEntitlement/);
   assert.match(service, /client\.query\("ROLLBACK"\)/);
 });
+
+
+test("profile appearance storefront exposes owned state and authoritative offer pricing without gameplay inventory", async () => {
+  const route = await source("src/app/api/economy/profile-appearance/route.ts");
+  const repository = await source(
+    "src/lib/server/economy/profile-appearance-store-repository.ts",
+  );
+  const service = await source(
+    "src/lib/server/economy/profile-appearance-store-service.ts",
+  );
+
+  assert.match(route, /getAuthenticatedSession\(request\)/);
+  assert.match(repository, /catalog\.product_entitlements/);
+  assert.match(repository, /profile\.commander_titles owned/);
+  assert.match(repository, /profile\.commander_backgrounds owned/);
+  assert.match(repository, /catalog\.commander_title_pricing/);
+  assert.match(repository, /catalog\.profile_background_pricing/);
+  assert.match(service, /quoteStorefrontProduct/);
+  assert.match(service, /product_entitlement_count/);
+  assert.match(service, /profileAppearanceAssetDeliveryPath/);
+});
