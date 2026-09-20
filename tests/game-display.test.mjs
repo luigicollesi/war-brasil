@@ -85,8 +85,9 @@ test("combate separa cinematic 3D do resultado SVG estático", () => {
   assert.match(cinematic, /<FullscreenDiceCinematic/);
   assert.match(fullscreen, /createPortal/);
   assert.match(cinematic, /skin=\{side\}/);
-  assert.doesNotMatch(cinematic, /pipColor=\{playerColorHex\(color\)\}/);
-  assert.match(fullscreen, /DICE_VISUAL_PIP_COLOR/);
+  assert.match(cinematic, /color=\{color\}/);
+  assert.match(fullscreen, /playerColorHex\(color\)/);
+  assert.doesNotMatch(fullscreen, /DICE_VISUAL_PIP_COLOR/);
   assert.match(fullscreen, /DICE_VISUAL_TEXTURE_RESOLUTION/);
   assert.match(staticResults, /<GameDie/);
   assert.doesNotMatch(staticResults, /rolling=/);
