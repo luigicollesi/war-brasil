@@ -14,6 +14,8 @@ test("economy models product and purchase entitlements across three ownership do
   assert.match(migration, /CREATE TABLE IF NOT EXISTS catalog\.commander_title_pricing/);
   assert.match(migration, /CREATE TABLE IF NOT EXISTS catalog\.profile_background_pricing/);
   assert.match(migration, /FROM catalog\.product_items/);
+  assert.match(migration, /AS \$body\$/);
+  assert.doesNotMatch(migration, /LANGUAGE plpgsql\s+AS \$\s*$/m);
 });
 
 test("purchase grants each entitlement to its authoritative ownership table atomically", async () => {
