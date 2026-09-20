@@ -37,7 +37,6 @@ import {
   findCampaignCreditWallet,
   findOwnedCosmetic,
   findPurchaseReceiptByIdempotencyKey,
-  grantPurchasedCosmetics,
   initializeEconomyState,
   insertPurchaseLedgerEntry,
   listOwnedCosmetics,
@@ -394,19 +393,6 @@ function quoteFromRows(
       discountBps,
       promotionDiscountBps,
     );
-  } catch (error) {
-    if (error instanceof EconomyServiceError) throw error;
-    throw new EconomyServiceError(
-      "ECONOMY_CATALOG_INVALID",
-      "A configuração de preço da loja é inválida.",
-      503,
-    );
-  }
-}
-
-function unitPriceFromRow(row: StorefrontQuoteItemRow) {
-  try {
-    return resolveStorefrontUnitPrice(quoteItemFromRow(row).pricing);
   } catch (error) {
     if (error instanceof EconomyServiceError) throw error;
     throw new EconomyServiceError(
