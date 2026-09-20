@@ -134,7 +134,7 @@ export async function lockIncomingRoomInvitation(
        JOIN game.rooms room ON room.id=invitation.room_id
       WHERE invitation.id=$1::uuid
         AND invitation.invitee_user_id=$2::uuid
-      FOR UPDATE OF invitation,room`,
+      FOR UPDATE OF invitation`,
     [invitationId, inviteeUserId],
   );
   return result.rows[0] ?? null;
