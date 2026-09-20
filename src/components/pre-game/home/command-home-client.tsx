@@ -48,6 +48,8 @@ type Destination = {
 
 type CommandAccessResponse = {
   authenticated?: boolean;
+  ageGateComplete?: boolean;
+  identityComplete?: boolean;
   profileComplete?: boolean;
   profile?: {
     handle?: string | null;
@@ -117,6 +119,8 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
   const [authModalNotice, setAuthModalNotice] = useState("");
   const [authResetToken, setAuthResetToken] = useState<string | null>(null);
   const [onboardingOpen, setOnboardingOpen] = useState(false);
+  const [onboardingAgeGateComplete, setOnboardingAgeGateComplete] = useState(true);
+  const [onboardingIdentityComplete, setOnboardingIdentityComplete] = useState(false);
   const [onboardingHandle, setOnboardingHandle] = useState<string | null>(null);
   const [onboardingDisplayName, setOnboardingDisplayName] = useState<
     string | null
@@ -181,6 +185,8 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
 
     if (payload.authenticated) {
       setCommandOpen(false);
+      setOnboardingAgeGateComplete(payload.ageGateComplete !== false);
+      setOnboardingIdentityComplete(payload.identityComplete === true);
       setOnboardingHandle(payload.profile?.handle ?? null);
       setOnboardingDisplayName(
         payload.profile?.displayName ?? payload.suggestedDisplayName ?? null,
@@ -373,6 +379,13 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
     window.history.replaceState({}, "", "/");
   };
 
+  const handleUnderageAccountDeleted = async () => {
+    setOnboardingOpen(false);
+    setCommandOpen(false);
+    await refetchAuthSession();
+    window.history.replaceState({}, "", "/");
+  };
+
   const clearKeyboardFocus = (destination: HomeDestinationId) => {
     setKeyboardDestinationFocus((current) =>
       current === destination ? null : current,
@@ -508,8 +521,12 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
         )}
       </section>
 
-      <footer className={styles.footer} data-home-footer aria-hidden="true">
+      <footer className={styles.footer} data-home-footer>
         <span>DOMÍNIO TERRITORIAL // BRASIL</span>
+        <nav className={styles.legalLinks} aria-label="Documentos legais">
+          <Link href="/terms">TERMOS DE USO</Link>
+          <Link href="/privacy">PRIVACIDADE</Link>
+        </nav>
         <span>PROTOCOLO 42-T</span>
       </footer>
 
@@ -533,8 +550,11 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
         <CommandOnboardingModal
           initialDisplayName={onboardingDisplayName}
           initialHandle={onboardingHandle}
+          ageGateComplete={onboardingAgeGateComplete}
+          identityComplete={onboardingIdentityComplete}
           onClose={() => setOnboardingOpen(false)}
           onCompleted={handleOnboardingCompleted}
+          onAccountDeleted={handleUnderageAccountDeleted}
         />
       ) : null}
     </main>
