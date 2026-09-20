@@ -43,7 +43,7 @@ const ageEligibilityMigration = readFileSync(
   "src/lib/db/migrations/managed/057-auth-age-eligibility.sql",
   "utf8",
 );
-const proxy = readFileSync("src/proxy.ts", "utf8");
+const middleware = readFileSync("src/middleware.ts", "utf8");
 const email = readFileSync("src/lib/server/auth/email.ts", "utf8");
 const envExample = readFileSync(".env.example", "utf8");
 const home = readFileSync(
@@ -78,7 +78,7 @@ const authSources = [
   verifyRegistrationRoute,
   resendRegistrationRoute,
   pendingRegistration,
-  proxy,
+  middleware,
   email,
 ].join("\n");
 
@@ -152,19 +152,19 @@ test("cookies/sessão têm cache curto, mas backend sensível força validação
   assert.match(authGuard, /status: 403/);
 });
 
-test("Proxy mantém navegação protegida sem carregar Better Auth/PostgreSQL", () => {
-  assert.match(proxy, /pathname === "\/"/);
-  assert.match(proxy, /pathname === "\/terms"/);
-  assert.match(proxy, /pathname === "\/privacy"/);
-  assert.match(proxy, /api\/auth/);
-  assert.match(proxy, /api\/internal/);
-  assert.match(proxy, /SESSION_COOKIE_SUFFIX = "war-brasil\.session_token"/);
-  assert.match(proxy, /request\.cookies[\s\S]*getAll\(\)/);
-  assert.match(proxy, /authentication_required/);
-  assert.match(proxy, /status: 401/);
-  assert.match(proxy, /NextResponse\.redirect\(new URL\("\/", request\.url\)\)/);
-  assert.doesNotMatch(proxy, /from ["'].*auth["']/);
-  assert.doesNotMatch(proxy, /auth\.api\.getSession|\bpg\b|authPool|DATABASE_URL/);
+test("Middleware Edge mantém navegação protegida sem carregar Better Auth/PostgreSQL", () => {
+  assert.match(middleware, /pathname === "\/"/);
+  assert.match(middleware, /pathname === "\/terms"/);
+  assert.match(middleware, /pathname === "\/privacy"/);
+  assert.match(middleware, /api\/auth/);
+  assert.match(middleware, /api\/internal/);
+  assert.match(middleware, /SESSION_COOKIE_SUFFIX = "war-brasil\.session_token"/);
+  assert.match(middleware, /request\.cookies[\s\S]*getAll\(\)/);
+  assert.match(middleware, /authentication_required/);
+  assert.match(middleware, /status: 401/);
+  assert.match(middleware, /NextResponse\.redirect\(new URL\("\/", request\.url\)\)/);
+  assert.doesNotMatch(middleware, /from ["'].*auth["']/);
+  assert.doesNotMatch(middleware, /auth\.api\.getSession|\bpg\b|authPool|DATABASE_URL/);
   assert.match(authGuard, /withAuthenticatedApi/);
 });
 
