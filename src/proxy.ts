@@ -1,9 +1,19 @@
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-import { auth } from "@/server/auth/auth";
+
+const SESSION_COOKIE_SUFFIX = "war-brasil.session_token";
 
 function isBusinessApi(pathname: string) {
   return pathname === "/api" || pathname.startsWith("/api/");
+}
+
+function hasSessionCookie(request: NextRequest) {
+  return request.cookies
+    .getAll()
+    .some(
+      ({ name, value }) =>
+        Boolean(value) && name.endsWith(SESSION_COOKIE_SUFFIX),
+    );
 }
 
 function authenticationRequiredResponse() {
@@ -16,40 +26,17 @@ function authenticationRequiredResponse() {
   );
 }
 
-function authUnavailableResponse() {
-  return NextResponse.json(
-    {
-      error: "authentication_unavailable",
-      message: "O serviço de autenticação está temporariamente indisponível.",
-    },
-    { status: 503 },
-  );
-}
-
-export async function proxy(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Home e documentos legais são públicos. Better Auth e endpoints
-  // machine-to-machine com autenticação própria ficam fora deste matcher.
+  // O Proxy é apenas uma barreira leve de navegação. Ele nunca consulta
+  // Better Auth/PostgreSQL: a validação autoritativa continua nos Route
+  // Handlers e Server Components, fora do runtime de Middleware do OpenNext.
   if (pathname === "/" || pathname === "/terms" || pathname === "/privacy") {
     return NextResponse.next();
   }
 
-  let session: Awaited<ReturnType<typeof auth.api.getSession>> = null;
-
-  try {
-    session = await auth.api.getSession({
-      headers: request.headers,
-    });
-  } catch {
-    if (isBusinessApi(pathname)) {
-      return authUnavailableResponse();
-    }
-
-    return NextResponse.redirect(new URL("/", request.url));
-  }
-
-  if (session) {
+  if (hasSessionCookie(request)) {
     return NextResponse.next();
   }
 
