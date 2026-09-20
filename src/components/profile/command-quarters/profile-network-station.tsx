@@ -242,8 +242,8 @@ export function ProfileNetworkStation({ snapshot }: { snapshot: ProfileCommandSn
               <span>
                 <CommanderLink handle={friend.handle}>
                   <strong>{friend.displayName}</strong>
+                  <small>@{friend.handle} · {friend.contextLabel}</small>
                 </CommanderLink>
-                <small>{friend.contextLabel}</small>
               </span>
               <em>{commanderStatusLabel(friend.presence, friend.activity)}</em>
               <span className={refinementStyles.networkActions}>
@@ -284,10 +284,10 @@ export function ProfileNetworkStation({ snapshot }: { snapshot: ProfileCommandSn
                 <span className={refinementStyles.networkCopy}>
                   <CommanderLink handle={request.handle}>
                     <strong>{request.displayName}</strong>
+                    <small>
+                      @{request.handle} · {request.mutualContacts} contatos em comum · solicitação pendente
+                    </small>
                   </CommanderLink>
-                  <small>
-                    @{request.handle} · {request.mutualContacts} contatos em comum · solicitação pendente
-                  </small>
                 </span>
                 <span className={refinementStyles.networkActions}>
                   <button
@@ -460,8 +460,8 @@ export function ProfileNetworkStation({ snapshot }: { snapshot: ProfileCommandSn
                 <span>
                   <CommanderLink handle={contact.handle}>
                     <strong>{contact.displayName}</strong>
+                    <small>@{contact.handle} · {contact.operationCode} · {contact.contextLabel}</small>
                   </CommanderLink>
-                  <small>{contact.operationCode} · {contact.contextLabel}</small>
                 </span>
               </li>
             ))}
@@ -509,8 +509,8 @@ export function ProfileNetworkStation({ snapshot }: { snapshot: ProfileCommandSn
                   <span className={refinementStyles.networkCopy}>
                     <CommanderLink handle={result.handle}>
                       <strong>{result.displayName}</strong>
+                      <small>@{result.handle} · {result.mutualContacts} contatos em comum</small>
                     </CommanderLink>
-                    <small>@{result.handle} · {result.mutualContacts} contatos em comum</small>
                   </span>
                   <span className={refinementStyles.networkActions}>
                     <button
