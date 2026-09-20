@@ -70,6 +70,25 @@ test("profile backgrounds can reuse managed collection background assets", async
   assert.match(migration, /store\/collections\/ceu-noturno\/background\.webp/);
 
   assert.match(storage, /SHARED_COLLECTION_BACKGROUND_KEY_PATTERN/);
-  assert.match(storage, /collectionAssetDeliveryPath\(key\)/);
+  assert.match(storage, /\/api\/assets\/profile-appearance\?key=/);
   assert.match(storage, /resolveCollectionAssetReadUrl\(key, options\)/);
+  assert.doesNotMatch(storage, /collectionAssetDeliveryPath/);
+});
+
+
+test("profile background catalogue maps dedicated default plus Viking Cat Dog and Football assets", async () => {
+  const migration = await source(
+    "src/lib/db/migrations/managed/056-profile-background-catalog-assets.sql",
+  );
+
+  assert.match(migration, /profile\.background\.default/);
+  assert.match(migration, /cosmetics\/profile-backgrounds\/default\.webp/);
+  assert.match(migration, /profile\.background\.viking/);
+  assert.match(migration, /store\/collections\/viking\/background\.webp/);
+  assert.match(migration, /profile\.background\.cat/);
+  assert.match(migration, /store\/collections\/cat\/background\.webp/);
+  assert.match(migration, /profile\.background\.dog/);
+  assert.match(migration, /store\/collections\/dog\/background\.webp/);
+  assert.match(migration, /profile\.background\.football/);
+  assert.match(migration, /store\/collections\/football\/background\.webp/);
 });
