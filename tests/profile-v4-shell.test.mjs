@@ -64,13 +64,11 @@ test("PROFILE V4 and store showcase own their page chrome while compact profile 
   assert.match(runtime, /"\/profile\/arsenal"/);
   assert.match(runtime, /"\/profile\/store"/);
   assert.match(runtime, /const profileOwnsBackground =\s*PROFILE_SHELL_ROUTES\.has\(pathname\)/);
-  assert.match(
-    runtime,
-    /const profileOwnsChrome =\s*profileOwnsBackground \|\|\s*pathname\.startsWith\("\/profile\/store\/showcase\/"\)/,
-  );
-  assert.match(runtime, /profileOwnsBackground\s*\?\s*<>\{children\}<\/>\s*:\s*\(/);
+  assert.match(runtime, /const standalonePublicProfile = isStandalonePublicProfileRoute\(pathname\)/);
+  assert.match(runtime, /const profileOwnsSurface = profileOwnsBackground \|\| standalonePublicProfile/);
+  assert.match(runtime, /standalonePublicProfile \|\|[\s\S]*pathname\.startsWith\("\/profile\/store\/showcase\/"\)/);
+  assert.match(runtime, /profileOwnsSurface\s*\?\s*<>\{children\}<\/>\s*:\s*\(/);
   assert.match(runtime, /chrome=\{!profileOwnsChrome\}/);
-  assert.doesNotMatch(runtime, /startsWith\("\/profile\/"\)/);
   assert.doesNotMatch(shell, /className=\{styles\.mobileNav\}/);
   assert.match(
     styles,
