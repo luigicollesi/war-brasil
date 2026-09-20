@@ -16,6 +16,16 @@ function normalizePathname(pathname: string) {
   return pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
 }
 
+const PROFILE_INTERNAL_SEGMENTS = new Set(["arsenal", "store"]);
+
+export function isStandalonePublicProfileRoute(pathname: string) {
+  const normalizedPathname = normalizePathname(pathname);
+  const match = normalizedPathname.match(/^\/profile\/([^/]+)$/);
+  if (!match) return false;
+  const segment = decodeURIComponent(match[1] ?? "").trim().toLowerCase();
+  return Boolean(segment) && !PROFILE_INTERNAL_SEGMENTS.has(segment);
+}
+
 export function resolvePreGameSceneMode(pathname: string): CommandSceneMode | null {
   const normalizedPathname = normalizePathname(pathname);
   const exactMode = EXACT_ROUTE_MODES[normalizedPathname];
