@@ -614,7 +614,9 @@ Semantic HTML must announce:
 
 ### 17.1 One active 3D model
 
-V1 renders one primary showcased model at a time.
+V1 renders one primary showcased model at rest.
+
+During the short item-navigation transition, only the current model and the explicit target model may be mounted simultaneously. As soon as the transition settles, the outgoing model must be unmounted so the steady state returns to one high-detail model.
 
 Do not keep every collection item as a live high-detail 3D model behind the scenes.
 
