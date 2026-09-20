@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { PoolClient } from "pg";
 import type { AuthSession } from "./auth";
 import { authPool } from "./auth-pool";
 import { ensureEconomyState } from "../economy/economy-service";
@@ -10,9 +11,15 @@ const HANDLE_MAX_LENGTH = 32;
 const DISPLAY_NAME_MIN_LENGTH = 2;
 const DISPLAY_NAME_MAX_LENGTH = 48;
 const HANDLE_PATTERN = /^[A-Za-z0-9._-]+$/;
+export const COMMAND_MINIMUM_AGE = 10;
+const MAX_REASONABLE_AGE = 120;
+
+type CommandAccessQueryable = Pick<PoolClient, "query">;
 
 export type CommandAccessState = {
   authenticated: true;
+  ageGateComplete: boolean;
+  identityComplete: boolean;
   profileComplete: boolean;
   profile: {
     handle: string | null;
@@ -30,10 +37,27 @@ export type CommanderIdentityErrors = Partial<
   Record<keyof CommanderIdentityInput, string>
 >;
 
+export type CommanderBirthDateResult =
+  | Readonly<{
+      eligible: true;
+      accountDeleted: false;
+    }>
+  | Readonly<{
+      eligible: false;
+      accountDeleted: true;
+    }>;
+
 export class CommanderHandleConflictError extends Error {
   constructor() {
     super("Handle de comandante indisponível.");
     this.name = "CommanderHandleConflictError";
+  }
+}
+
+export class CommanderAgeGateRequiredError extends Error {
+  constructor() {
+    super("Verificação de idade necessária.");
+    this.name = "CommanderAgeGateRequiredError";
   }
 }
 
@@ -48,6 +72,88 @@ function publicDisplayNameSuggestion(session: AuthSession) {
   }
 
   return candidate.slice(0, DISPLAY_NAME_MAX_LENGTH);
+}
+
+async function ageEligibilityTableAvailable(db: CommandAccessQueryable) {
+  const result = await db.query<{ available: boolean }>(
+    `SELECT to_regclass('auth.user_age_eligibility') IS NOT NULL AS available`,
+  );
+  return result.rows[0]?.available === true;
+}
+
+async function hasAgeEligibility(
+  userId: string,
+  db: CommandAccessQueryable,
+) {
+  if (!(await ageEligibilityTableAvailable(db))) {
+    // Backward-compatible deployment order: code may reach production before
+    // migration 057. The age gate activates as soon as the table exists.
+    return true;
+  }
+
+  const result = await db.query(
+    `SELECT 1
+       FROM auth.user_age_eligibility
+      WHERE user_id=$1::uuid
+      LIMIT 1`,
+    [userId],
+  );
+  return Boolean(result.rowCount);
+}
+
+function parseBirthDate(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return null;
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    return null;
+  }
+
+  return { year, month, day, iso: value };
+}
+
+function ageAtDate(
+  birth: Readonly<{ year: number; month: number; day: number }>,
+  now = new Date(),
+) {
+  const currentYear = now.getUTCFullYear();
+  const currentMonth = now.getUTCMonth() + 1;
+  const currentDay = now.getUTCDate();
+
+  let age = currentYear - birth.year;
+  if (
+    currentMonth < birth.month ||
+    (currentMonth === birth.month && currentDay < birth.day)
+  ) {
+    age -= 1;
+  }
+  return age;
+}
+
+export function validateCommanderBirthDate(value: string) {
+  const birth = parseBirthDate(value.trim());
+  if (!birth) {
+    return "Informe uma data de nascimento válida.";
+  }
+
+  const age = ageAtDate(birth);
+  if (age < 0) {
+    return "A data de nascimento não pode estar no futuro.";
+  }
+  if (age > MAX_REASONABLE_AGE) {
+    return "Revise a data de nascimento informada.";
+  }
+
+  return null;
 }
 
 export function validateCommanderIdentity(
@@ -79,29 +185,99 @@ export function validateCommanderIdentity(
 export async function getCommandAccessState(
   session: AuthSession,
 ): Promise<CommandAccessState> {
-  const result = await authPool.query<{
-    handle: string | null;
-    display_name: string | null;
-  }>(
-    `SELECT handle, display_name
-       FROM profile.commanders
-      WHERE user_id = $1`,
-    [session.user.id],
-  );
+  const [profileResult, ageGateComplete] = await Promise.all([
+    authPool.query<{
+      handle: string | null;
+      display_name: string | null;
+    }>(
+      `SELECT handle, display_name
+         FROM profile.commanders
+        WHERE user_id = $1`,
+      [session.user.id],
+    ),
+    hasAgeEligibility(session.user.id, authPool),
+  ]);
 
-  const row = result.rows[0];
+  const row = profileResult.rows[0];
   const handle = cleanOptionalText(row?.handle);
   const displayName = cleanOptionalText(row?.display_name);
+  const identityComplete = Boolean(handle && displayName);
 
   return {
     authenticated: true,
-    profileComplete: Boolean(handle && displayName),
+    ageGateComplete,
+    identityComplete,
+    profileComplete: ageGateComplete && identityComplete,
     profile: {
       handle,
       displayName,
     },
     suggestedDisplayName: publicDisplayNameSuggestion(session),
   };
+}
+
+export async function saveCommanderBirthDate(
+  session: AuthSession,
+  birthDateValue: string,
+): Promise<CommanderBirthDateResult> {
+  const birth = parseBirthDate(birthDateValue.trim());
+  if (!birth || validateCommanderBirthDate(birth.iso)) {
+    throw new Error("INVALID_BIRTH_DATE");
+  }
+
+  const age = ageAtDate(birth);
+  const client = await authPool.connect();
+
+  try {
+    await client.query("BEGIN");
+
+    const account = await client.query(
+      `SELECT id
+         FROM auth."user"
+        WHERE id=$1::uuid
+        FOR UPDATE`,
+      [session.user.id],
+    );
+
+    if (!account.rowCount) {
+      throw new Error("AUTH_USER_MISSING");
+    }
+
+    if (age < COMMAND_MINIMUM_AGE) {
+      await client.query(
+        `DELETE FROM auth."user"
+          WHERE id=$1::uuid`,
+        [session.user.id],
+      );
+      await client.query("COMMIT");
+      return { eligible: false, accountDeleted: true };
+    }
+
+    if (!(await ageEligibilityTableAvailable(client))) {
+      throw new Error("AGE_GATE_SCHEMA_MISSING");
+    }
+
+    await client.query(
+      `INSERT INTO auth.user_age_eligibility(
+         user_id,
+         birth_date,
+         minimum_age_at_verification,
+         verification_method,
+         verified_at
+       )
+       VALUES($1::uuid,$2::date,$3,'self_declared',NOW())
+       ON CONFLICT (user_id) DO NOTHING`,
+      [session.user.id, birth.iso, COMMAND_MINIMUM_AGE],
+    );
+
+    await client.query("COMMIT");
+    return { eligible: true, accountDeleted: false };
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
 }
 
 export async function saveCommanderIdentity(
@@ -114,6 +290,11 @@ export async function saveCommanderIdentity(
 
   try {
     await client.query("BEGIN");
+
+    if (!(await hasAgeEligibility(session.user.id, client))) {
+      throw new CommanderAgeGateRequiredError();
+    }
+
     const defaultBackgroundId = await ensureProfileAppearanceState(
       session.user.id,
       client,
