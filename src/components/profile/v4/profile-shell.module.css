@@ -606,8 +606,9 @@
 
 .profileBackdrop {
   position: fixed;
-  z-index: -4;
+  z-index: -3;
   inset: 0;
+  background-color: #07130f;
   background-position: center;
   background-size: cover;
   pointer-events: none;
@@ -615,7 +616,7 @@
 
 .profileBackdropScrim {
   position: fixed;
-  z-index: -3;
+  z-index: -2;
   inset: 0;
   pointer-events: none;
   background:
@@ -624,7 +625,7 @@
 }
 
 .page:has(.profileBackdrop) {
-  background: #07130f;
+  background: transparent;
 }
 
 .page:has(.profileBackdrop) .ambient {
