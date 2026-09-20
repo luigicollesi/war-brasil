@@ -526,6 +526,39 @@ export async function removeBotFromRoom(
   });
 }
 
+export async function resolveGameRoomReference(referenceValue: unknown) {
+  if (typeof referenceValue !== "string") {
+    throw new RoomError("Partida inválida.", 422);
+  }
+
+  const reference = referenceValue.trim();
+  if (/^[A-Z0-9]{6}$/i.test(reference)) {
+    const result = await pool.query<{ id: string; code: string }>(
+      `SELECT id::text,code
+         FROM game.rooms
+        WHERE code=$1`,
+      [reference.toUpperCase()],
+    );
+    const room = result.rows[0];
+    if (!room) throw new RoomError("Sala não encontrada.", 404);
+    return room;
+  }
+
+  if (/^\d+$/.test(reference)) {
+    const result = await pool.query<{ id: string; code: string }>(
+      `SELECT id::text,code
+         FROM game.rooms
+        WHERE id=$1::bigint`,
+      [reference],
+    );
+    const room = result.rows[0];
+    if (!room) throw new RoomError("Sala não encontrada.", 404);
+    return room;
+  }
+
+  throw new RoomError("Partida inválida.", 422);
+}
+
 export async function getLobbySnapshot(codeValue: unknown, playerSession: string) {
   const code = normalizeRoomCode(codeValue);
   if (!code) throw new RoomError("Código de sala inválido.", 422);
