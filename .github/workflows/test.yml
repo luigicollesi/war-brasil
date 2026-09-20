@@ -53,6 +53,8 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      - name: Validate Cloudflare Next middleware patch compatibility
+        run: npm run cloudflare:check-next-patch
       - run: npm --prefix realtime ci
       - name: Audit root dependencies
         run: npm audit --audit-level=high
