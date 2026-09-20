@@ -1,3 +1,8 @@
+import type {
+  PublicCommanderBackgroundAppearance,
+  PublicCommanderTitleAppearance,
+} from "./profile-appearance-contract";
+
 export type ProfileCommandSource =
   | "local-static"
   | "authenticated-user"
@@ -208,9 +213,31 @@ export type PublicCommanderRelationship =
   | "incoming-request"
   | "friend";
 
+export type PublicProfileEquippedCosmetic = Readonly<{
+  id: string;
+  name: string;
+  slot: "dice_attack" | "dice_defense" | "dice_neutral" | "territory_skin";
+  assetRef: string | null;
+  effectKey: string | null;
+  bodyColor: string | null;
+  bodyHighlightColor: string | null;
+}>;
+
+export type PublicProfileArsenal = Readonly<{
+  diceAttack: PublicProfileEquippedCosmetic;
+  diceDefense: PublicProfileEquippedCosmetic;
+  diceNeutral: PublicProfileEquippedCosmetic;
+  territorySkin: PublicProfileEquippedCosmetic;
+}>;
+
 export type PublicCommanderProfileSnapshot = Readonly<{
   identity: CommanderIdentity;
   relationship: PublicCommanderRelationship;
+  appearance: Readonly<{
+    title: PublicCommanderTitleAppearance | null;
+    background: PublicCommanderBackgroundAppearance;
+    arsenal: PublicProfileArsenal;
+  }>;
   history: ProfileCommandSection<PublicPlayerMatchHistory>;
 }>;
 
