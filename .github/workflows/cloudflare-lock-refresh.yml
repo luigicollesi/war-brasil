@@ -1,0 +1,44 @@
+name: Cloudflare Lock Refresh
+
+on:
+  push:
+    branches:
+      - dev
+    paths:
+      - .github/workflows/cloudflare-lock-refresh.yml
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: Lock OpenNext and Wrangler
+        run: |
+          npm install --package-lock-only --save-exact @opennextjs/cloudflare@1.20.6
+          npm install --package-lock-only --save-dev --save-exact wrangler@4.135.0
+          node --input-type=module <<'NODE'
+          import { readFile, writeFile } from "node:fs/promises";
+          const pkg = JSON.parse(await readFile("package.json", "utf8"));
+          delete pkg.scripts["cloudflare:prepare"];
+          pkg.scripts["cloudflare:build"] =
+            "npm run cloudflare:patch-next && NEXT_PUBLIC_GAME_REALTIME_MODE=off GAME_REALTIME_ENABLED=false opennextjs-cloudflare build && npm run cloudflare:verify";
+          pkg.scripts["cloudflare:preview"] =
+            "npm run cloudflare:patch-next && NEXT_PUBLIC_GAME_REALTIME_MODE=off GAME_REALTIME_ENABLED=false opennextjs-cloudflare build && npm run cloudflare:verify && opennextjs-cloudflare preview";
+          await writeFile("package.json", JSON.stringify(pkg, null, 2) + "\n");
+          NODE
+      - name: Verify regenerated lock
+        run: npm ci
+      - name: Validate Next workaround
+        run: npm run cloudflare:check-next-patch
+      - uses: actions/upload-artifact@v7
+        with:
+          name: cloudflare-lock-refresh
+          path: |
+            package.json
+            package-lock.json
+          if-no-files-found: error
