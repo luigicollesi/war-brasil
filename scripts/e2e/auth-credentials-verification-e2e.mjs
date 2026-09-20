@@ -4,6 +4,10 @@ import { pathToFileURL } from "node:url";
 import { Client } from "pg";
 import { assertProfileSocialFlow } from "./profile-social-flow.mjs";
 import { waitForRegistrationCode } from "./registration-otp-helper.mjs";
+import {
+  completeCommanderAgeGate,
+  completeCommanderOnboarding,
+} from "./command-access-helper.mjs";
 
 const playwrightRuntimeDir = path.resolve(
   process.env.PLAYWRIGHT_RUNTIME_DIR ?? ".e2e-runtime/node_modules/playwright",
@@ -248,13 +252,10 @@ async function createSocialPeer(browser, db, identity) {
     const userId = session?.user?.id;
     assert.ok(userId, "peer social E2E não recebeu sessão após OTP");
 
-    const onboarding = await apiJson(page, "/api/auth/command-access", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ handle, displayName: "Social Peer E2E" }),
+    await completeCommanderOnboarding(page, {
+      handle,
+      displayName: "Social Peer E2E",
     });
-    assert.equal(onboarding.status, 200, JSON.stringify(onboarding.body));
-    assert.equal(onboarding.body?.profileComplete, true);
 
     return { context, page, userId, handle };
   } catch (error) {
@@ -361,6 +362,7 @@ try {
     );
 
     await assertSessionBoundPresence(page, authenticatedSession);
+    await completeCommanderAgeGate(page);
     const primaryProfile = await assertOwnedTitleBoundary(
       page,
       db,
@@ -384,7 +386,7 @@ try {
     }
 
     console.log(
-      "[auth-verification-e2e] pending signup sem auth.user, OTP, sessão imediata, presença, títulos e grafo social confirmados.",
+      "[auth-verification-e2e] pending signup sem auth.user, OTP, sessão imediata, age gate, presença, títulos e grafo social confirmados.",
     );
   } finally {
     await context.close();

@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import { waitForRegistrationCode } from "./registration-otp-helper.mjs";
+import { completeCommanderOnboarding } from "./command-access-helper.mjs";
 
 const playwrightRuntimeDir = path.resolve(
   process.env.PLAYWRIGHT_RUNTIME_DIR ?? ".e2e-runtime/node_modules/playwright",
@@ -63,16 +64,10 @@ async function createAuthenticatedActor(browser, index) {
   assert.equal(verification.status, 200, JSON.stringify(verification.body));
   assert.equal(verification.body?.authenticated, true);
 
-  const onboarding = await apiJson(page, "/api/auth/command-access", {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      handle: `seat_${process.pid}_${index}`,
-      displayName: `Seat Boundary ${index}`,
-    }),
+  await completeCommanderOnboarding(page, {
+    handle: `seat_${process.pid}_${index}`,
+    displayName: `Seat Boundary ${index}`,
   });
-  assert.equal(onboarding.status, 200, JSON.stringify(onboarding.body));
-  assert.equal(onboarding.body?.profileComplete, true);
 
   return { context, page };
 }
