@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
+const pkg = JSON.parse(readFileSync("package.json", "utf8"));
+
 const nextConfig = readFileSync("next.config.ts", "utf8");
 const openNextConfig = readFileSync("open-next.config.ts", "utf8");
 const wrangler = readFileSync("wrangler.jsonc", "utf8");
@@ -45,4 +47,11 @@ test("Middleware Edge não carrega Better Auth, pg ou DATABASE_URL", () => {
   assert.doesNotMatch(middleware, /auth\.api|better-auth|\bpg\b|DATABASE_URL|authPool/);
   assert.match(middleware, /war-brasil\.session_token/);
   assert.match(middleware, /export function middleware/);
+});
+
+test("Workers Builds prepara OpenNext no build e reutiliza no deploy", () => {
+  assert.match(pkg.scripts["cloudflare:build"], /cloudflare:prepare/);
+  assert.equal(pkg.scripts["cloudflare:deploy"], "opennextjs-cloudflare deploy");
+  assert.equal(pkg.scripts["cloudflare:upload"], "opennextjs-cloudflare upload");
+  assert.doesNotMatch(pkg.scripts["cloudflare:deploy"], /npm install|cloudflare:prepare/);
 });
