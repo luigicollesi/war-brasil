@@ -6,7 +6,7 @@ import { rejectUntrustedMutationOrigin } from "@/src/lib/server/auth/request-ori
 import {
   cancelGameInvitation,
   GameInvitationError,
-  listIncomingGameInvitations,
+  listGameInvitations,
 } from "@/src/lib/server/game-invitations/invitation-service";
 
 function invitationErrorResponse(error: unknown) {
@@ -31,9 +31,9 @@ export async function GET(request: Request) {
   if (!session) return authenticationRequiredResponse();
 
   try {
-    const invitations = await listIncomingGameInvitations(session.user.id);
+    const invitations = await listGameInvitations(session.user.id);
     return Response.json(
-      { invitations },
+      invitations,
       { headers: { "Cache-Control": "private, no-store" } },
     );
   } catch (error) {
