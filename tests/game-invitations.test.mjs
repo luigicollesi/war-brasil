@@ -97,3 +97,26 @@ test("game invitation listing exposes inbox and outbox", async () => {
     /Promise\.all\(\[[\s\S]*listIncomingRoomInvitations[\s\S]*listOutgoingRoomInvitations/,
   );
 });
+
+
+test("invitation acceptance locks room before invitation to avoid leave/accept deadlocks", async () => {
+  const repository = await source(
+    "src/lib/server/game-invitations/invitation-repository.ts",
+  );
+  const service = await source(
+    "src/lib/server/game-invitations/invitation-service.ts",
+  );
+  const rooms = await source("src/lib/server/rooms.ts");
+
+  assert.match(repository, /readIncomingRoomInvitationRoomReference/);
+  assert.match(repository, /lockWaitingRoomByInvitationReference/);
+
+  const referenceIndex = service.indexOf("readIncomingRoomInvitationRoomReference");
+  const roomLockIndex = service.indexOf("lockWaitingRoomByInvitationReference", referenceIndex);
+  const inviteLockIndex = service.indexOf("lockIncomingRoomInvitation", roomLockIndex);
+  assert.ok(referenceIndex >= 0);
+  assert.ok(roomLockIndex > referenceIndex);
+  assert.ok(inviteLockIndex > roomLockIndex);
+
+  assert.match(rooms, /FOR UPDATE OF room,player SKIP LOCKED/);
+});
