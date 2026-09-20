@@ -199,6 +199,7 @@ export async function capturePlayerCosmeticLoadouts(
        SELECT id, slot, asset_ref, effect_key, body_color, body_highlight_color
          FROM catalog.cosmetics
         WHERE is_default=TRUE
+          AND slot IN ('dice_attack','dice_defense','dice_neutral','territory_skin')
      ),
      resolved AS (
        SELECT player.id AS player_id,
