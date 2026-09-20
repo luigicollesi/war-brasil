@@ -58,19 +58,47 @@ export async function expireStaleInvitations(
 
 export async function insertRoomInvitation(
   roomId: string,
+  roomCode: string,
   inviterUserId: string,
   inviteeUserId: string,
   db: InvitationQueryable = pool,
 ) {
   const result = await db.query<{ id: string; expires_at: Date }>(
     `INSERT INTO game.room_invitations(
-       room_id,inviter_user_id,invitee_user_id
+       room_id,room_code_snapshot,inviter_user_id,invitee_user_id
      )
-     VALUES($1::bigint,$2::uuid,$3::uuid)
+     VALUES($1::bigint,$2,$3::uuid,$4::uuid)
      RETURNING id,expires_at`,
-    [roomId, inviterUserId, inviteeUserId],
+    [roomId, roomCode, inviterUserId, inviteeUserId],
   );
   return result.rows[0];
+}
+
+export async function findPendingInvitationBetween(
+  inviterUserId: string,
+  inviteeUserId: string,
+  db: InvitationQueryable = pool,
+) {
+  const result = await db.query<{
+    id: string;
+    room_code: string;
+    expires_at: Date;
+  }>(
+    `SELECT invitation.id,
+            invitation.room_code_snapshot AS room_code,
+            invitation.expires_at
+       FROM game.room_invitations invitation
+       JOIN game.rooms room ON room.id=invitation.room_id
+      WHERE invitation.inviter_user_id=$1::uuid
+        AND invitation.invitee_user_id=$2::uuid
+        AND invitation.state='pending'
+        AND invitation.expires_at>NOW()
+        AND room.status='waiting'
+      ORDER BY invitation.created_at DESC
+      LIMIT 1`,
+    [inviterUserId, inviteeUserId],
+  );
+  return result.rows[0] ?? null;
 }
 
 export async function listIncomingRoomInvitations(
@@ -81,7 +109,7 @@ export async function listIncomingRoomInvitations(
   const result = await db.query<InvitationRow>(
     `SELECT invitation.id,
             invitation.room_id,
-            room.code AS room_code,
+            invitation.room_code_snapshot AS room_code,
             invitation.inviter_user_id,
             invitation.invitee_user_id,
             inviter.handle AS inviter_handle,
@@ -115,7 +143,7 @@ export async function listOutgoingRoomInvitations(
   const result = await db.query<InvitationRow>(
     `SELECT invitation.id,
             invitation.room_id,
-            room.code AS room_code,
+            invitation.room_code_snapshot AS room_code,
             invitation.inviter_user_id,
             invitation.invitee_user_id,
             inviter.handle AS inviter_handle,
@@ -154,18 +182,20 @@ export async function lockIncomingRoomInvitation(
     invitee_user_id: string;
     state: GameInvitationState;
     expires_at: Date;
-    room_status: string;
+    room_status: string | null;
+    room_exists: boolean;
   }>(
     `SELECT invitation.id,
             invitation.room_id,
-            room.code AS room_code,
+            invitation.room_code_snapshot AS room_code,
             invitation.inviter_user_id,
             invitation.invitee_user_id,
             invitation.state,
             invitation.expires_at,
-            room.status AS room_status
+            room.status AS room_status,
+            (room.id IS NOT NULL) AS room_exists
        FROM game.room_invitations invitation
-       JOIN game.rooms room ON room.id=invitation.room_id
+       LEFT JOIN game.rooms room ON room.id=invitation.room_id
       WHERE invitation.id=$1::uuid
         AND invitation.invitee_user_id=$2::uuid
       FOR UPDATE OF invitation`,
@@ -198,13 +228,23 @@ export async function resolveRoomInvitation(
   invitationId: string,
   state: Exclude<GameInvitationState, "pending">,
   db: InvitationQueryable,
+  reason:
+    | "accepted"
+    | "rejected"
+    | "cancelled"
+    | "expired"
+    | "room_started"
+    | "room_full"
+    | "room_deleted"
+    | "room_empty"
+    | "host_left" = state,
 ) {
   await db.query(
     `UPDATE game.room_invitations
-        SET state=$2,resolved_at=NOW()
+        SET state=$2,resolved_reason=$3,resolved_at=NOW()
       WHERE id=$1::uuid
         AND state='pending'`,
-    [invitationId, state],
+    [invitationId, state, reason],
   );
 }
 
