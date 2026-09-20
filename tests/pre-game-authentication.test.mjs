@@ -98,6 +98,14 @@ test("auth de servidor permanece server-only e usa schema PostgreSQL dedicado", 
   assert.match(auth, /database: authPool/);
   assert.match(auth, /generateId: "uuid"/);
   assert.match(auth, /joins: true/);
+  assert.match(
+    authPool,
+    /process\.env\["NEXT_PHASE"\] === "phase-production-build"/,
+  );
+  assert.match(
+    authPool,
+    /AUTH_DATABASE_URL ou DATABASE_URL não está configurada para autenticação/,
+  );
 });
 
 test("launch auth possui somente Google, Discord e credentials", () => {
