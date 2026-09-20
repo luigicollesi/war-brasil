@@ -771,9 +771,11 @@ export async function cleanupStaleWaitingRoomSeats(
     const stale = await client.query<{
       player_id: string;
       room_id: string;
+      user_id: string | null;
     }>(
       `SELECT player.id::text AS player_id,
-              player.room_id::text AS room_id
+              player.room_id::text AS room_id,
+              player.user_id::text AS user_id
          FROM game.players player
          JOIN game.rooms room ON room.id=player.room_id
         WHERE room.status='waiting'
@@ -788,6 +790,7 @@ export async function cleanupStaleWaitingRoomSeats(
     );
 
     const affectedRooms = new Set<string>();
+    let removedSeats = 0;
     for (const row of stale.rows) {
       const removed = await client.query(
         `DELETE FROM game.players
@@ -796,7 +799,23 @@ export async function cleanupStaleWaitingRoomSeats(
                 <= NOW() - ($2::int * INTERVAL '1 second')`,
         [row.player_id, staleAfterSeconds],
       );
-      if (removed.rowCount) affectedRooms.add(row.room_id);
+      if (!removed.rowCount) continue;
+
+      removedSeats += 1;
+      affectedRooms.add(row.room_id);
+
+      if (row.user_id) {
+        await client.query(
+          `UPDATE game.room_invitations
+              SET state='cancelled',
+                  resolved_reason='host_left',
+                  resolved_at=NOW()
+            WHERE room_id=$1::bigint
+              AND inviter_user_id=$2::uuid
+              AND state='pending'`,
+          [row.room_id, row.user_id],
+        );
+      }
     }
 
     let deletedRooms = 0;
@@ -806,7 +825,7 @@ export async function cleanupStaleWaitingRoomSeats(
     }
 
     return {
-      removedSeats: stale.rows.length,
+      removedSeats,
       affectedRooms: affectedRooms.size,
       deletedRooms,
     };
