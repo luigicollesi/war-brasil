@@ -25,6 +25,25 @@ UPDATE catalog.commander_titles
 ALTER TABLE catalog.commander_titles
   ALTER COLUMN display_text SET NOT NULL;
 
+
+CREATE OR REPLACE FUNCTION catalog.default_commander_title_display_text()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $
+BEGIN
+  IF NEW.display_text IS NULL OR btrim(NEW.display_text)='' THEN
+    NEW.display_text := NEW.name;
+  END IF;
+  RETURN NEW;
+END
+$;
+
+DROP TRIGGER IF EXISTS commander_title_display_text_default
+  ON catalog.commander_titles;
+CREATE TRIGGER commander_title_display_text_default
+BEFORE INSERT OR UPDATE OF name,display_text ON catalog.commander_titles
+FOR EACH ROW EXECUTE FUNCTION catalog.default_commander_title_display_text();
+
 DO $$
 BEGIN
   IF NOT EXISTS (
