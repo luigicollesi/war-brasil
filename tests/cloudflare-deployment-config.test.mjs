@@ -6,7 +6,7 @@ const nextConfig = readFileSync("next.config.ts", "utf8");
 const openNextConfig = readFileSync("open-next.config.ts", "utf8");
 const wrangler = readFileSync("wrangler.jsonc", "utf8");
 const headers = readFileSync("public/_headers", "utf8");
-const proxy = readFileSync("src/proxy.ts", "utf8");
+const middleware = readFileSync("src/middleware.ts", "utf8");
 
 test("Cloudflare usa o bundle OpenNext como entrypoint do Worker", () => {
   assert.match(wrangler, /"main": "\.open-next\/worker\.js"/);
@@ -41,7 +41,8 @@ test("chunks estáticos do Next recebem cache imutável", () => {
   assert.match(headers, /immutable/);
 });
 
-test("Proxy não carrega Better Auth, pg ou DATABASE_URL", () => {
-  assert.doesNotMatch(proxy, /auth\.api|better-auth|\bpg\b|DATABASE_URL|authPool/);
-  assert.match(proxy, /war-brasil\.session_token/);
+test("Middleware Edge não carrega Better Auth, pg ou DATABASE_URL", () => {
+  assert.doesNotMatch(middleware, /auth\.api|better-auth|\bpg\b|DATABASE_URL|authPool/);
+  assert.match(middleware, /war-brasil\.session_token/);
+  assert.match(middleware, /export function middleware/);
 });
