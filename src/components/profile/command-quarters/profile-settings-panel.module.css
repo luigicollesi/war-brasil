@@ -1,25 +1,43 @@
 .trigger {
-  position: static;
+  position: relative;
   min-height: 40px;
   width: 100%;
-  border: 1px solid rgb(208 170 87 / 34%);
-  padding: 0 14px;
+  border: 0;
+  padding: 0 4px;
   color: var(--command-brass-bright, #d0aa57);
   font-family: var(--font-geist-mono), monospace;
   font-size: 0.57rem;
   font-weight: 800;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  background: linear-gradient(135deg, rgb(14 23 17 / 96%), rgb(6 11 8 / 96%));
+  background: transparent;
   box-shadow: none;
   cursor: pointer;
+  transition: color 160ms ease, transform 160ms ease;
+}
+
+.trigger::after {
+  content: "";
+  position: absolute;
+  left: 18%;
+  right: 18%;
+  bottom: 4px;
+  height: 1px;
+  background: var(--command-brass-bright, #d0aa57);
+  transform: scaleX(0);
+  transition: transform 160ms ease;
 }
 
 .trigger:hover,
 .trigger:focus-visible {
-  border-color: rgb(208 170 87 / 68%);
-  background: linear-gradient(135deg, rgb(28 38 27 / 98%), rgb(8 13 10 / 98%));
+  color: var(--command-ivory, #eee8da);
+  transform: translateY(-1px);
   outline: none;
+}
+
+.trigger:hover::after,
+.trigger:focus-visible::after {
+  transform: scaleX(1);
 }
 
 .backdrop {
