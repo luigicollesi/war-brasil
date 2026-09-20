@@ -49,11 +49,7 @@ export function UserNotificationRuntime() {
   }, [session?.user]);
 
   useEffect(() => {
-    if (isPending || !session?.user) {
-      setIncoming([]);
-      setNotifications([]);
-      return;
-    }
+    if (isPending || !session?.user) return;
 
     let stopped = false;
     const poll = async () => {
