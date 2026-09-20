@@ -191,6 +191,34 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
   const selectedItem = showcase.items[selectedIndex] ?? showcase.items[0];
   const selectedOffer = selectedItem?.singleOffer ?? null;
   const itemCount = showcase.items.length;
+  const transitionTargetIndex = transitionTargetItemId
+    ? showcase.items.findIndex((item) => item.id === transitionTargetItemId)
+    : -1;
+  const transitionTargetItem =
+    transitionTargetIndex >= 0 ? showcase.items[transitionTargetIndex] : null;
+  const activeSceneItems = useMemo(() => {
+    if (!selectedItem) return [];
+
+    const current = { item: selectedItem, itemIndex: selectedIndex };
+    if (
+      transitionPhase !== "slide" ||
+      !transitionTargetItem ||
+      transitionTargetItem.id === selectedItem.id
+    ) {
+      return [current];
+    }
+
+    return [
+      current,
+      { item: transitionTargetItem, itemIndex: transitionTargetIndex },
+    ];
+  }, [
+    selectedIndex,
+    selectedItem,
+    transitionPhase,
+    transitionTargetIndex,
+    transitionTargetItem,
+  ]);
   const sceneFallback = sceneState === "fallback";
   const territoryGeometryFallback =
     selectedItem?.type === "territory" &&
@@ -221,7 +249,7 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
             <CollectionShowcaseAtmosphere backgroundRef={showcase.backgroundRef} />
           ) : null}
 
-          {showcase.items.map((item, itemIndex) => (
+          {activeSceneItems.map(({ item, itemIndex }) => (
             <ShowcaseObjectController
               key={item.id}
               reducedMotion={reducedMotion}
@@ -270,7 +298,7 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
       selectedItem,
       showcase.backgroundRef,
       showcase.id,
-      showcase.items,
+      activeSceneItems,
       showcase.mode,
       stageCenterRatio,
       transitionDirection,
