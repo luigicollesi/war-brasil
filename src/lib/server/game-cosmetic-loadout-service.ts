@@ -266,6 +266,7 @@ export async function capturePlayerCosmeticLoadouts(
             WHERE player_slot.is_bot=TRUE
               AND candidate.slot=player_slot.slot
               AND candidate.status='available'
+              AND candidate.is_default=FALSE
             ORDER BY random()
             LIMIT 1
          ) bot_cosmetic ON TRUE
