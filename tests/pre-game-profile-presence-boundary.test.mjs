@@ -16,6 +16,19 @@ test("browser heartbeat derives target exclusively from authenticated session", 
   assert.doesNotMatch(route, /payload/);
 });
 
+test("presence outage is a successful degraded heartbeat, not an application 5xx", () => {
+  const route = read("src/app/api/profile/presence/heartbeat/route.ts");
+  const gateway = read("src/lib/server/profile/presence-gateway.ts");
+
+  assert.match(route, /availability: "unavailable", state: "unavailable"/);
+  assert.match(route, /status:\s*200/);
+  assert.match(route, /X-Profile-Presence/);
+  assert.doesNotMatch(route, /status:\s*503/);
+  assert.match(gateway, /PresenceRequestOptions/);
+  assert.match(gateway, /boundedTimeout/);
+  assert.match(gateway, /options\.timeoutMs/);
+});
+
 test("Next presence gateway remains server-only and fails closed as unavailable", () => {
   const gateway = read("src/lib/server/profile/presence-gateway.ts");
 
