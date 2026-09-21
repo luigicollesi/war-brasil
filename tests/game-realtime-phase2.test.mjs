@@ -37,7 +37,7 @@ test("hybrid reduz polling somente com realtime saudável e sem automação pend
   assert.equal(scheduler.nextDelay({ ...base, visible: false, realtimeMode: "hybrid", realtimeState: "connected" }), 60_000);
   assert.equal(scheduler.nextDelay({ ...base, realtimeMode: "shadow", realtimeState: "connected" }), 1_000);
   assert.equal(scheduler.nextDelay({ ...base, realtimeMode: "hybrid", realtimeState: "degraded" }), 1_000);
-  assert.equal(scheduler.nextDelay({ ...base, presentationPending: true, realtimeMode: "hybrid", realtimeState: "connected" }), 1_000);
+  assert.equal(scheduler.nextDelay({ ...base, presentationPending: true, realtimeMode: "hybrid", realtimeState: "connected" }), 1_500);
 });
 
 test("publisher realtime é best-effort, opcional, pós-commit e independente do transporte", () => {
