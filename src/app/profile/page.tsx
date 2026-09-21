@@ -22,11 +22,13 @@ export default async function ProfilePage() {
     headers: await headers(),
     query: { disableCookieCache: true },
   });
-  const snapshot = await getCurrentProfileCommandSnapshot(session);
+  const [snapshot, appearance] = await Promise.all([
+    getCurrentProfileCommandSnapshot(session, { includeStorefront: false }),
+    session
+      ? getOwnProfileAppearance(session.user.id).catch(() => null)
+      : Promise.resolve(null),
+  ]);
   const identity = snapshot.identity.data;
-  const appearance = session
-    ? await getOwnProfileAppearance(session.user.id).catch(() => null)
-    : null;
   const equippedBackground =
     appearance?.backgrounds.find((item) => item.equipped)?.assetRef ?? null;
   const equippedTitle =
