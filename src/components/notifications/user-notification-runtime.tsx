@@ -6,6 +6,7 @@ import type { GameInvitationSummary } from "@/src/lib/game-invitations/game-invi
 import type { UserNotification } from "@/src/lib/profile/user-notification-contract";
 import { GAME_REALTIME_SUBPROTOCOL } from "@/src/lib/game-realtime-contract";
 import { useSession } from "@/src/lib/client/auth-client";
+import { gameRealtimeMode } from "@/src/lib/client/transport/game-realtime-mode";
 import styles from "./user-notification-runtime.module.css";
 
 type InvitationResponse = {
@@ -46,7 +47,11 @@ async function fetchUserRealtimeTicket() {
     cache: "no-store",
   });
   if (!response.ok) throw new Error("Ticket realtime indisponível.");
-  const body = (await response.json()) as { ticket?: unknown };
+  const body = (await response.json()) as {
+    enabled?: unknown;
+    ticket?: unknown;
+  };
+  if (body.enabled === false) return null;
   if (typeof body.ticket !== "string" || body.ticket.length < 32) {
     throw new Error("Ticket realtime inválido.");
   }
@@ -118,7 +123,7 @@ export function UserNotificationRuntime() {
     if (
       isPending ||
       !session?.user ||
-      process.env.NEXT_PUBLIC_GAME_REALTIME_MODE === "off"
+      gameRealtimeMode() === "off"
     ) {
       return;
     }
@@ -138,7 +143,7 @@ export function UserNotificationRuntime() {
     const connect = async () => {
       try {
         const ticket = await fetchUserRealtimeTicket();
-        if (stopped) return;
+        if (stopped || !ticket) return;
 
         const nextSocket = new WebSocket(
           userRealtimeUrl(ticket),
