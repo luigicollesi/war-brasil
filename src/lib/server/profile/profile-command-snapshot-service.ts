@@ -67,11 +67,12 @@ export async function getCurrentProfileCommandSnapshot(
   }
 
   const session =
-    providedSession ??
-    (await auth.api.getSession({
-      headers: await headers(),
-      query: { disableCookieCache: true },
-    }));
+    providedSession !== undefined
+      ? providedSession
+      : await auth.api.getSession({
+          headers: await headers(),
+          query: { disableCookieCache: true },
+        });
 
   if (!session) {
     return guestSnapshot("Sessão autenticada necessária para abrir o Quartel do Comandante.");
