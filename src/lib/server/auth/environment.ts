@@ -79,7 +79,9 @@ function isObviouslyUnsafeTransportSecret(value: string | undefined) {
 
 export function readAuthServerEnvironment(): AuthServerEnvironment {
   const databaseUrl = readOptional("DATABASE_URL");
-  const authDatabaseUrl = readOptional("AUTH_DATABASE_URL") ?? databaseUrl;
+  const hyperdriveDatabaseUrl = readOptional("DATABASE_HYPERDRIVE_URL");
+  const authDatabaseUrl =
+    readOptional("AUTH_DATABASE_URL") ?? hyperdriveDatabaseUrl ?? databaseUrl;
   const googleClientId = readOptional("GOOGLE_CLIENT_ID");
   const googleClientSecret = readOptional("GOOGLE_CLIENT_SECRET");
   const discordClientId = readOptional("DISCORD_CLIENT_ID");
@@ -130,7 +132,9 @@ export function assertAuthRuntimeConfiguration(
     missing.push("DATABASE_URL");
   }
   if (!environment.authDatabaseUrl) {
-    missing.push("AUTH_DATABASE_URL ou DATABASE_URL");
+    missing.push(
+      "AUTH_DATABASE_URL, DATABASE_HYPERDRIVE_URL ou DATABASE_URL",
+    );
   }
   if (isObviouslyUnsafeAuthSecret(environment.secret)) {
     missing.push(`BETTER_AUTH_SECRET(>=${AUTH_SECRET_MIN_LENGTH} chars)`);
