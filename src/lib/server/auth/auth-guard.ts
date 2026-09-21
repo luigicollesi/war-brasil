@@ -18,6 +18,17 @@ export async function getAuthenticatedSession(request: Request) {
   });
 }
 
+/**
+ * Read-only hot paths may use Better Auth's short-lived signed cookie cache to
+ * avoid a PostgreSQL session lookup on every poll. Mutating/sensitive routes
+ * must keep using getAuthenticatedSession(), which always bypasses the cache.
+ */
+export async function getAuthenticatedSessionForRead(request: Request) {
+  return auth.api.getSession({
+    headers: request.headers,
+  });
+}
+
 export async function requireAuthenticatedSession(
   request: Request,
 ): Promise<AuthSession> {
