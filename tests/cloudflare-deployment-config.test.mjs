@@ -23,6 +23,7 @@ test("deploy valida secrets essenciais antes do runtime", () => {
   for (const name of [
     "DATABASE_URL",
     "DATABASE_HYPERDRIVE_URL",
+    "AUTH_DATABASE_URL",
     "BETTER_AUTH_SECRET",
     "BETTER_AUTH_URL",
     "GOOGLE_CLIENT_ID",
