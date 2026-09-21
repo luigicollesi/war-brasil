@@ -108,8 +108,18 @@ test("auth de servidor permanece server-only e usa schema PostgreSQL dedicado", 
   );
   assert.match(
     authPool,
-    /AUTH_DATABASE_URL ou DATABASE_URL não está configurada para autenticação/,
+    /AUTH_DATABASE_URL, DATABASE_HYPERDRIVE_URL ou DATABASE_URL não está configurada para autenticação/,
   );
+});
+
+test("auth prefere override dedicado, depois URL direta do Hyperdrive e por fim DATABASE_URL", () => {
+  assert.match(environment, /readOptional\("DATABASE_HYPERDRIVE_URL"\)/);
+  assert.match(
+    environment,
+    /readOptional\("AUTH_DATABASE_URL"\) \?\? hyperdriveDatabaseUrl \?\? databaseUrl/,
+  );
+  assert.match(envExample, /^DATABASE_HYPERDRIVE_URL=postgresql:\/\//m);
+  assert.match(envExample, /hostname sem "-pooler"/);
 });
 
 test("launch auth possui somente Google, Discord e credentials", () => {
