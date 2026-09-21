@@ -81,13 +81,14 @@ test("Workers Builds usa OpenNext e Wrangler pinados pelo lockfile", () => {
 });
 
 
-test("external Node services permanecem desligados no Worker OpenNext", () => {
+test("external Node services permanecem desligados no runtime e Workers Builds respeita variáveis configuradas", () => {
   assert.match(wrangler, /"GAME_REALTIME_ENABLED": "false"/);
   assert.match(wrangler, /"GAME_AUTOMATION_WORKER_MODE": "off"/);
   assert.match(wrangler, /"ASSET_STORAGE_BUCKET": "war-brasil-assets-prod"/);
-  assert.match(pkg.scripts["cloudflare:build"], /NEXT_PUBLIC_GAME_REALTIME_MODE=off/);
-  assert.match(pkg.scripts["cloudflare:build"], /GAME_REALTIME_ENABLED=false/);
-  assert.match(pkg.scripts["cloudflare:preview"], /NEXT_PUBLIC_GAME_REALTIME_MODE=off/);
+  assert.doesNotMatch(pkg.scripts["cloudflare:build"], /NEXT_PUBLIC_GAME_REALTIME_MODE=/);
+  assert.doesNotMatch(pkg.scripts["cloudflare:build"], /GAME_REALTIME_ENABLED=/);
+  assert.doesNotMatch(pkg.scripts["cloudflare:preview"], /NEXT_PUBLIC_GAME_REALTIME_MODE=/);
+  assert.match(pkg.scripts["cloudflare:build"], /opennextjs-cloudflare build/);
 });
 
 
