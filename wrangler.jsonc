@@ -17,10 +17,14 @@
     "GAME_AUTOMATION_WORKER_MODE": "off",
     "ASSET_STORAGE_BUCKET": "war-brasil-assets-prod"
   },
+  // DATABASE_HYPERDRIVE_URL is the direct/unpooled origin URL and remains a
+  // secret. DATABASE_HYPERDRIVE itself is a Cloudflare resource binding and is
+  // added separately after creating the Hyperdrive configuration and obtaining
+  // its ID. AUTH_DATABASE_URL remains supported as an optional auth-only override.
   "secrets": {
     "required": [
       "DATABASE_URL",
-      "AUTH_DATABASE_URL",
+      "DATABASE_HYPERDRIVE_URL",
       "BETTER_AUTH_SECRET",
       "BETTER_AUTH_URL",
       "GOOGLE_CLIENT_ID",
