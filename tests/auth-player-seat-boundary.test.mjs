@@ -12,7 +12,6 @@ const seatRoutes = [
   "src/app/api/rooms/[code]/me/route.ts",
   "src/app/api/rooms/[code]/bots/route.ts",
   "src/app/api/rooms/[code]/bots/[botId]/route.ts",
-  "src/app/api/games/[roomId]/route.ts",
   "src/app/api/games/[roomId]/advance/route.ts",
   "src/app/api/games/[roomId]/attack/route.ts",
   "src/app/api/games/[roomId]/attack/cancel/route.ts",
@@ -55,6 +54,38 @@ test("todas as rotas humanas de Lobby e Game validam conta mais assento", () => 
       `${path} perdeu a identidade efêmera do assento`,
     );
   }
+});
+
+test("snapshot GET usa sessão cacheada e valida account+seat na própria query read-only", () => {
+  const route = readFileSync(
+    "src/app/api/games/[roomId]/route.ts",
+    "utf8",
+  );
+  const snapshot = readFileSync(
+    "src/lib/server/game-snapshot-service.ts",
+    "utf8",
+  );
+  const authGuard = readFileSync(
+    "src/lib/server/auth/auth-guard.ts",
+    "utf8",
+  );
+
+  assert.match(route, /getAuthenticatedSessionForRead/);
+  assert.doesNotMatch(route, /assertAuthenticatedPlayerSeat/);
+  assert.match(route, /accountSession\.user\.id/);
+  assert.match(snapshot, /access_player\.player_session=\$2/);
+  assert.match(snapshot, /access_player\.user_id=\$3/);
+  assert.match(snapshot, /access_player\.is_bot=FALSE/);
+  assert.match(authGuard, /getAuthenticatedSessionForRead/);
+  assert.match(
+    authGuard,
+    /getAuthenticatedSessionForRead[\s\S]*auth\.api\.getSession\(\{[\s\S]*headers: request\.headers[\s\S]*\}\)/,
+  );
+  const readHelper =
+    authGuard.match(
+      /export async function getAuthenticatedSessionForRead[\s\S]*?\n\}/,
+    )?.[0] ?? "";
+  assert.doesNotMatch(readHelper, /disableCookieCache/);
 });
 
 test("ticket realtime só é emitido depois da validação account+seat", () => {
