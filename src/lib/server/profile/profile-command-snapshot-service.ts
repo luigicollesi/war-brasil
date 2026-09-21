@@ -10,7 +10,10 @@ import type {
 } from "@/src/lib/profile/profile-command-contract";
 import { getCurrentProfileCommandSnapshot as getEvaluationProfileCommandSnapshot } from "@/src/lib/profile/profile-command-data";
 import { auth, type AuthSession } from "../auth/auth";
-import { getEconomyStorefront } from "../economy/economy-service";
+import {
+  getEconomyStorefront,
+  getEconomyWallet,
+} from "../economy/economy-service";
 import { getCommanderActivity } from "./activity-service";
 import { getPlayerMatchHistory } from "./history-service";
 import { renewOwnPresence } from "./presence-gateway";
@@ -61,6 +64,7 @@ const PROFILE_SNAPSHOT_PRESENCE_TIMEOUT_MS = 350;
 
 export async function getCurrentProfileCommandSnapshot(
   providedSession?: AuthSession | null,
+  options: Readonly<{ includeStorefront?: boolean }> = {},
 ): Promise<ProfileCommandSnapshot> {
   if (process.env.PROFILE_EVAL_MODE === "1") {
     return getEvaluationProfileCommandSnapshot();
@@ -83,6 +87,32 @@ export async function getCurrentProfileCommandSnapshot(
     return guestSnapshot("Complete a identidade de comando antes de acessar o Quartel.");
   }
 
+  const includeStorefront = options.includeStorefront !== false;
+  const economyRead = includeStorefront
+    ? getEconomyStorefront(session.user.id).then((data) => ({
+        available: true as const,
+        wallet: data.wallet,
+        storefront: {
+          featuredItems: data.sets.map((set) => ({
+            slug: set.slug,
+            name: set.name,
+            category: "dice-set" as const,
+            artworkSrc: set.previewRef,
+            artworkAlt: `Prévia do conjunto ${set.name}`,
+            status:
+              set.status === "available"
+                ? "available" as const
+                : "announced" as const,
+            itemCount: set.items.length,
+          })),
+        } satisfies StoreShowcase,
+      }))
+    : getEconomyWallet(session.user.id).then((wallet) => ({
+        available: true as const,
+        wallet,
+        storefront: null,
+      }));
+
   const [activityResult, historyResult, livePresence, economyResult] =
     await Promise.all([
       getCommanderActivity(session.user.id)
@@ -103,12 +133,14 @@ export async function getCurrentProfileCommandSnapshot(
       renewOwnPresence(session.user.id, {
         timeoutMs: PROFILE_SNAPSHOT_PRESENCE_TIMEOUT_MS,
       }),
-      getEconomyStorefront(session.user.id)
-        .then((data) => ({ available: true as const, data }))
-        .catch((error: unknown) => {
-          console.error("Falha ao carregar economia no Profile.", error);
-          return { available: false as const, data: null };
-        }),
+      economyRead.catch((error: unknown) => {
+        console.error("Falha ao carregar economia no Profile.", error);
+        return {
+          available: false as const,
+          wallet: null,
+          storefront: null,
+        };
+      }),
     ]);
 
   const socialResult = await getPlayerSocialSnapshot(
@@ -154,37 +186,38 @@ export async function getCurrentProfileCommandSnapshot(
           "Rede de Comando temporariamente indisponível.",
         );
 
-  const walletSection: ProfileCommandSnapshot["wallet"] = economyResult.available
-    ? {
-        availability: "available",
-        source: "wallet-service",
-        data: { campaignCredit: economyResult.data.wallet },
-      }
+  const walletSection: ProfileCommandSnapshot["wallet"] =
+    economyResult.available && economyResult.wallet
+      ? {
+          availability: "available",
+          source: "wallet-service",
+          data: { campaignCredit: economyResult.wallet },
+        }
     : unavailableSection(
         null,
         "Tesouraria temporariamente indisponível. Os demais sistemas do Quartel continuam operacionais.",
       );
 
-  const storefrontSection: ProfileCommandSnapshot["storefront"] = economyResult.available
-    ? {
-        availability: economyResult.data.sets.length > 0 ? "available" : "empty",
-        source: "storefront-service",
-        data: {
-          featuredItems: economyResult.data.sets.map((set) => ({
-            slug: set.slug,
-            name: set.name,
-            category: "dice-set" as const,
-            artworkSrc: set.previewRef,
-            artworkAlt: `Prévia do conjunto ${set.name}`,
-            status: set.status === "available" ? "available" as const : "announced" as const,
-            itemCount: set.items.length,
-          })),
-        },
-      }
-    : unavailableSection<StoreShowcase>(
-        { featuredItems: [] },
-        "Intendência temporariamente indisponível. Tente novamente mais tarde.",
-      );
+  const storefrontSection: ProfileCommandSnapshot["storefront"] =
+    !includeStorefront
+      ? {
+          availability: "empty",
+          source: null,
+          data: { featuredItems: [] },
+        }
+      : economyResult.available && economyResult.storefront
+        ? {
+            availability:
+              economyResult.storefront.featuredItems.length > 0
+                ? "available"
+                : "empty",
+            source: "storefront-service",
+            data: economyResult.storefront,
+          }
+        : unavailableSection<StoreShowcase>(
+            { featuredItems: [] },
+            "Intendência temporariamente indisponível. Tente novamente mais tarde.",
+          );
 
   const hasPartialData =
     !activityResult.available ||
