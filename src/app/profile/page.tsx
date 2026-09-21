@@ -18,12 +18,12 @@ export const metadata: Metadata = {
 
 export default async function ProfilePage() {
   await connection();
-  const snapshot = await getCurrentProfileCommandSnapshot();
-  const identity = snapshot.identity.data;
   const session = await auth.api.getSession({
     headers: await headers(),
     query: { disableCookieCache: true },
   });
+  const snapshot = await getCurrentProfileCommandSnapshot(session);
+  const identity = snapshot.identity.data;
   const appearance = session
     ? await getOwnProfileAppearance(session.user.id).catch(() => null)
     : null;
