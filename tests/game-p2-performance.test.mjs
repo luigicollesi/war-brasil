@@ -5,6 +5,7 @@ import { nextGamePollDelay } from "../.test-build/game-polling.js";
 
 test("polling adapta intervalo a visibilidade, falhas e estado offline", () => {
   assert.equal(nextGamePollDelay({ visible: true, online: true, failures: 0, presentationPending: false }), 1_000);
+  assert.equal(nextGamePollDelay({ visible: true, online: true, failures: 0, presentationPending: true }), 1_500);
   assert.equal(nextGamePollDelay({ visible: false, online: true, failures: 0, presentationPending: false }), 5_000);
   assert.equal(nextGamePollDelay({ visible: false, online: true, failures: 0, presentationPending: true }), 2_500);
   assert.equal(nextGamePollDelay({ visible: true, online: true, failures: 1, presentationPending: false }), 2_000);
@@ -111,6 +112,23 @@ test("topologia fixa atravessa a rede apenas quando a versão muda", () => {
   assert.match(coordinator, /baseConnections/);
   assert.match(coordinator, /result\.payload\.connections \?\? this\.baseConnections/);
   assert.match(coordinator, /hydrateGameSnapshot\(result\.payload, baseConnections\)/);
+});
+
+test("snapshot evita query de topologia conhecida e colapsa leitura cosmética", () => {
+  const route = readFileSync("src/app/api/games/[roomId]/route.ts", "utf8");
+  const snapshot = readFileSync("src/lib/server/game-snapshot-service.ts", "utf8");
+  const cosmetics = readFileSync(
+    "src/lib/server/game-cosmetic-loadout-service.ts",
+    "utf8",
+  );
+
+  assert.match(route, /includeConnections: !topologyIsKnown/);
+  assert.match(snapshot, /options\.includeConnections === false/);
+  assert.match(cosmetics, /LEFT JOIN game\.player_cosmetic_loadouts snapshot/);
+  assert.equal(
+    (cosmetics.match(/export async function loadRoomPlayerCosmetics[\s\S]*?client\.query</g) ?? []).length,
+    1,
+  );
 });
 
 test("reforço e manobra retornam patches autoritativos ligados à revisão base", () => {
