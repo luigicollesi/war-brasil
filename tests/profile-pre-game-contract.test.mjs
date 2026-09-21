@@ -27,10 +27,11 @@ test("rota PROFILE resolve snapshot autenticado em request-time e renderiza Doss
   assert.match(page, /import \{ connection \} from "next\/server"/);
   assert.match(page, /server\/profile\/profile-command-snapshot-service/);
   assert.match(page, /getCurrentProfileCommandSnapshot/);
-  assert.match(page, /await connection\(\);\s*\n\s*const snapshot = await getCurrentProfileCommandSnapshot\(\)/);
+  assert.match(page, /await connection\(\);[\s\S]*auth\.api\.getSession[\s\S]*getCurrentProfileCommandSnapshot\(session\)/);
   assert.match(page, /<ProfileShell/);
   assert.match(page, /activeSurface="dossier"/);
   assert.match(page, /getOwnProfileAppearance/);
+  assert.equal((page.match(/auth\.api\.getSession/g) ?? []).length, 1);
   assert.match(page, /backgroundAssetRef=\{equippedBackground\}/);
   assert.match(
     page,
