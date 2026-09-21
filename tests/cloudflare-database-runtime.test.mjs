@@ -53,10 +53,7 @@ test("Node mantém Pool persistente enquanto Worker usa facade request-scoped", 
 test("auth preserva conexão direta e search_path dedicado sem pool Worker global", () => {
   assert.match(authPool, /options: "-c search_path=auth"/);
   assert.match(authPool, /isNeonPooledConnectionString/);
-  assert.match(
-    authPool,
-    /AUTH_DATABASE_URL, DATABASE_HYPERDRIVE_URL ou DATABASE_URL/,
-  );
+  assert.match(authPool, /AUTH_DATABASE_URL ou DATABASE_URL/);
   assert.doesNotMatch(
     authPool,
     /export const authPool = globalForAuthPostgres\.warBrasilAuthPool \?\?/,
