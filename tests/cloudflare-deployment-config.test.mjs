@@ -22,7 +22,7 @@ test("Cloudflare usa o bundle OpenNext como entrypoint do Worker", () => {
 test("deploy valida secrets essenciais antes do runtime", () => {
   for (const name of [
     "DATABASE_URL",
-    "AUTH_DATABASE_URL",
+    "DATABASE_HYPERDRIVE_URL",
     "BETTER_AUTH_SECRET",
     "BETTER_AUTH_URL",
     "GOOGLE_CLIENT_ID",
@@ -37,6 +37,15 @@ test("deploy valida secrets essenciais antes do runtime", () => {
   ]) {
     assert.ok(wrangler.includes(`"${name}"`), `secret obrigatório ausente: ${name}`);
   }
+});
+
+test("Hyperdrive mantém URL de origem direta como secret e binding separado", () => {
+  assert.match(wrangler, /"DATABASE_HYPERDRIVE_URL"/);
+  assert.match(
+    wrangler,
+    /DATABASE_HYPERDRIVE itself is a Cloudflare resource binding/,
+  );
+  assert.doesNotMatch(wrangler, /"DATABASE_HYPERDRIVE"\s*:\s*"postgres/i);
 });
 
 test("Cloudflare não depende de Images para assets WebP/SVG já otimizados", () => {
