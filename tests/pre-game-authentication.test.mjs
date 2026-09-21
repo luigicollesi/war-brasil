@@ -145,11 +145,18 @@ test("Discord possui fallback estável e não-entregável quando email falta", (
   assert.match(auth, /scope: \["identify", "email"\]/);
 });
 
-test("cookies/sessão têm cache curto, mas backend sensível força validação no banco", () => {
+test("cookies/sessão têm cache curto; mutações forçam banco e hot reads podem usar cache assinado", () => {
   assert.match(auth, /SESSION_MAX_AGE_SECONDS = 30 \* 24 \* 60 \* 60/);
-  assert.match(auth, /SESSION_COOKIE_CACHE_SECONDS = 5 \* 60/);
+  assert.match(auth, /SESSION_COOKIE_CACHE_SECONDS = 60/);
   assert.match(auth, /cookiePrefix: "war-brasil"/);
+  assert.match(authGuard, /export async function getAuthenticatedSession\(/);
   assert.match(authGuard, /disableCookieCache: true/);
+  assert.match(authGuard, /export async function getAuthenticatedSessionForRead\(/);
+  const readHelper =
+    authGuard.match(
+      /export async function getAuthenticatedSessionForRead[\s\S]*?\n\}/,
+    )?.[0] ?? "";
+  assert.doesNotMatch(readHelper, /disableCookieCache/);
   assert.match(authGuard, /authenticationRequiredResponse/);
   assert.match(authGuard, /status: 401/);
   assert.match(authGuard, /forbiddenResponse/);
