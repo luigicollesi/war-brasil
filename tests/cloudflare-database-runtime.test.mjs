@@ -29,6 +29,10 @@ test("Cloudflare resolve pg Pool por ExecutionContext sem compartilhar I/O entre
   assert.match(runtimePool, /maxUses: 1/);
   assert.match(runtimePool, /connectionTimeoutMillis/);
   assert.match(runtimePool, /idleTimeoutMillis/);
+  assert.match(runtimePool, /statement_timeout/);
+  assert.match(runtimePool, /query_timeout/);
+  assert.match(runtimePool, /lock_timeout/);
+  assert.match(runtimePool, /idle_in_transaction_session_timeout/);
   assert.match(runtimePool, /createWorkerRequestPool/);
   assert.match(runtimePool, /Reflect\.apply\(method, selected, args\)/);
 });
