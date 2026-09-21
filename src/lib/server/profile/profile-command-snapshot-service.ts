@@ -9,7 +9,7 @@ import type {
   StoreShowcase,
 } from "@/src/lib/profile/profile-command-contract";
 import { getCurrentProfileCommandSnapshot as getEvaluationProfileCommandSnapshot } from "@/src/lib/profile/profile-command-data";
-import { auth } from "../auth/auth";
+import { auth, type AuthSession } from "../auth/auth";
 import { getEconomyStorefront } from "../economy/economy-service";
 import { getCommanderActivity } from "./activity-service";
 import { getPlayerMatchHistory } from "./history-service";
@@ -57,15 +57,21 @@ function guestSnapshot(reason: string): ProfileCommandSnapshot {
   };
 }
 
-export async function getCurrentProfileCommandSnapshot(): Promise<ProfileCommandSnapshot> {
+const PROFILE_SNAPSHOT_PRESENCE_TIMEOUT_MS = 350;
+
+export async function getCurrentProfileCommandSnapshot(
+  providedSession?: AuthSession | null,
+): Promise<ProfileCommandSnapshot> {
   if (process.env.PROFILE_EVAL_MODE === "1") {
     return getEvaluationProfileCommandSnapshot();
   }
 
-  const session = await auth.api.getSession({
-    headers: await headers(),
-    query: { disableCookieCache: true },
-  });
+  const session =
+    providedSession ??
+    (await auth.api.getSession({
+      headers: await headers(),
+      query: { disableCookieCache: true },
+    }));
 
   if (!session) {
     return guestSnapshot("Sessão autenticada necessária para abrir o Quartel do Comandante.");
@@ -76,39 +82,76 @@ export async function getCurrentProfileCommandSnapshot(): Promise<ProfileCommand
     return guestSnapshot("Complete a identidade de comando antes de acessar o Quartel.");
   }
 
-  const [activity, history, livePresence, economyResult] = await Promise.all([
-    getCommanderActivity(session.user.id),
-    getPlayerMatchHistory(session.user.id, { limit: 20 }),
-    renewOwnPresence(session.user.id),
-    getEconomyStorefront(session.user.id)
-      .then((data) => ({ available: true as const, data }))
-      .catch((error: unknown) => {
-        console.error("Falha ao carregar economia no Profile.", error);
-        return { available: false as const, data: null };
+  const [activityResult, historyResult, livePresence, economyResult] =
+    await Promise.all([
+      getCommanderActivity(session.user.id)
+        .then((data) => ({ available: true as const, data }))
+        .catch((error: unknown) => {
+          console.error("Falha ao carregar atividade no Profile.", error);
+          return {
+            available: false as const,
+            data: { state: "unavailable" as const, matchMode: null },
+          };
+        }),
+      getPlayerMatchHistory(session.user.id, { limit: 20 })
+        .then((data) => ({ available: true as const, data }))
+        .catch((error: unknown) => {
+          console.error("Falha ao carregar histórico no Profile.", error);
+          return { available: false as const, data: emptyHistory() };
+        }),
+      renewOwnPresence(session.user.id, {
+        timeoutMs: PROFILE_SNAPSHOT_PRESENCE_TIMEOUT_MS,
       }),
-  ]);
-  const social = await getPlayerSocialSnapshot(
+      getEconomyStorefront(session.user.id)
+        .then((data) => ({ available: true as const, data }))
+        .catch((error: unknown) => {
+          console.error("Falha ao carregar economia no Profile.", error);
+          return { available: false as const, data: null };
+        }),
+    ]);
+
+  const socialResult = await getPlayerSocialSnapshot(
     session.user.id,
     profile.identity.handle,
-    history,
-  );
+    historyResult.data,
+  )
+    .then((data) => ({ available: true as const, data }))
+    .catch((error: unknown) => {
+      console.error("Falha ao carregar rede social no Profile.", error);
+      return { available: false as const, data: emptySocial() };
+    });
 
-  const historySection: ProfileCommandSnapshot["history"] = {
-    availability: history.matches.length > 0 ? "available" : "empty",
-    source: "match-history",
-    data: history,
-  };
+  const historySection: ProfileCommandSnapshot["history"] =
+    historyResult.available
+      ? {
+          availability:
+            historyResult.data.matches.length > 0 ? "available" : "empty",
+          source: "match-history",
+          data: historyResult.data,
+        }
+      : unavailableSection(
+          historyResult.data,
+          "Livro de Campanha temporariamente indisponível.",
+        );
+
+  const social = socialResult.data;
   const socialIsEmpty =
     social.totalFriends === 0 &&
     social.incomingRequests.length === 0 &&
     social.outgoingRequests.length === 0 &&
     social.blockedCommanders.length === 0 &&
     social.recentContacts.length === 0;
-  const socialSection: ProfileCommandSnapshot["social"] = {
-    availability: socialIsEmpty ? "empty" : "available",
-    source: "social-service",
-    data: social,
-  };
+  const socialSection: ProfileCommandSnapshot["social"] =
+    socialResult.available
+      ? {
+          availability: socialIsEmpty ? "empty" : "available",
+          source: "social-service",
+          data: social,
+        }
+      : unavailableSection(
+          social,
+          "Rede de Comando temporariamente indisponível.",
+        );
 
   const walletSection: ProfileCommandSnapshot["wallet"] = economyResult.available
     ? {
@@ -142,8 +185,15 @@ export async function getCurrentProfileCommandSnapshot(): Promise<ProfileCommand
         "Intendência temporariamente indisponível. Tente novamente mais tarde.",
       );
 
+  const hasPartialData =
+    !activityResult.available ||
+    !historyResult.available ||
+    !socialResult.available ||
+    !economyResult.available ||
+    livePresence.state === "unavailable";
+
   return {
-    state: economyResult.available ? "loaded" : "partial-data",
+    state: hasPartialData ? "partial-data" : "loaded",
     identity: {
       availability: "available",
       source: "authenticated-user",
@@ -157,7 +207,7 @@ export async function getCurrentProfileCommandSnapshot(): Promise<ProfileCommand
           lastSeenAt:
             livePresence.lastSeenAt ?? profile.identity.presence.lastSeenAt,
         },
-        activity,
+        activity: activityResult.data,
       },
     },
     privacy: {
