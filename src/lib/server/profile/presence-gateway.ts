@@ -4,6 +4,20 @@ import type { CommanderPresence } from "@/src/lib/profile/profile-command-contra
 
 const MAX_BATCH_SIZE = 100;
 const INTERNAL_TIMEOUT_MS = 1_500;
+const MIN_INTERNAL_TIMEOUT_MS = 100;
+const MAX_INTERNAL_TIMEOUT_MS = 5_000;
+
+type PresenceRequestOptions = Readonly<{
+  timeoutMs?: number;
+}>;
+
+function boundedTimeout(value: number | undefined) {
+  if (!value || !Number.isFinite(value)) return INTERNAL_TIMEOUT_MS;
+  return Math.max(
+    MIN_INTERNAL_TIMEOUT_MS,
+    Math.min(MAX_INTERNAL_TIMEOUT_MS, Math.trunc(value)),
+  );
+}
 
 type PresenceBatchResult = Readonly<{
   availability: "available" | "unavailable";
@@ -25,12 +39,19 @@ function internalConfig() {
   };
 }
 
-async function postInternal(path: string, body: unknown) {
+async function postInternal(
+  path: string,
+  body: unknown,
+  options: PresenceRequestOptions = {},
+) {
   const config = internalConfig();
   if (!config) return null;
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), INTERNAL_TIMEOUT_MS);
+  const timeout = setTimeout(
+    () => controller.abort(),
+    boundedTimeout(options.timeoutMs),
+  );
   timeout.unref?.();
 
   try {
@@ -55,8 +76,15 @@ async function postInternal(path: string, body: unknown) {
   }
 }
 
-export async function renewOwnPresence(userId: string): Promise<OwnPresenceHeartbeat> {
-  const payload = await postInternal("/internal/presence/heartbeat", { userId });
+export async function renewOwnPresence(
+  userId: string,
+  options: PresenceRequestOptions = {},
+): Promise<OwnPresenceHeartbeat> {
+  const payload = await postInternal(
+    "/internal/presence/heartbeat",
+    { userId },
+    options,
+  );
   if (
     payload?.availability !== "available" ||
     payload.state !== "online"
