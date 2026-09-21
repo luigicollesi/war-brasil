@@ -616,6 +616,16 @@ export async function ensureEconomyState(userId: string, db?: EconomyQueryable) 
   }
 }
 
+export async function getEconomyWallet(
+  userId: string,
+): Promise<CampaignCreditWallet> {
+  const existing = await findCampaignCreditWallet(userId);
+  if (existing) return walletFromRow(existing);
+
+  await ensureEconomyState(userId);
+  return walletFromRow(await findCampaignCreditWallet(userId));
+}
+
 export async function getEconomyStorefront(
   userId: string,
 ): Promise<EconomyStorefrontSnapshot> {
