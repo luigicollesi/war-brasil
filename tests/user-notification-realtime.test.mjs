@@ -10,6 +10,9 @@ test("user notification realtime uses a dedicated authenticated websocket channe
   const registry = await source("realtime/user-registry.mjs");
   const tickets = await source("realtime/ticket.mjs");
   const ticketRoute = await source("src/app/api/profile/realtime-ticket/route.ts");
+  const clientRuntime = await source(
+    "src/components/notifications/user-notification-runtime.tsx",
+  );
 
   assert.match(server, /\/user-realtime/);
   assert.match(server, /verifyUserRealtimeTicket/);
@@ -20,6 +23,11 @@ test("user notification realtime uses a dedicated authenticated websocket channe
   assert.match(tickets, /value\.kind === "user"/);
   assert.match(ticketRoute, /getAuthenticatedSession\(request\)/);
   assert.match(ticketRoute, /issueUserRealtimeTicket\(session\.user\.id\)/);
+  assert.match(ticketRoute, /GAME_REALTIME_ENABLED !== "true"/);
+  assert.match(ticketRoute, /\{ enabled: false \}/);
+  assert.match(clientRuntime, /gameRealtimeMode\(\) === "off"/);
+  assert.match(clientRuntime, /body\.enabled === false/);
+  assert.match(clientRuntime, /if \(stopped \|\| !ticket\) return/);
 });
 
 test("invitation changes publish only user invalidations after persistence", async () => {
