@@ -41,6 +41,16 @@ type GamePlayerSnapshotStateRow = {
   room_status: "waiting" | "order_roll" | "playing" | "finished";
 };
 
+type GamePlayerCosmeticSnapshotRow = GamePlayerSnapshotStateRow & {
+  player_id: string | null;
+  slot: GameCosmeticSlot | null;
+  cosmetic_id: string | null;
+  asset_ref: string | null;
+  effect_key: string | null;
+  body_color: string | null;
+  body_highlight_color: string | null;
+};
+
 function projectedSnapshotAssetRef(row: GameCosmeticSnapshotRow) {
   if (!row.asset_ref) return null;
   if (
@@ -333,47 +343,56 @@ export async function loadRoomPlayerCosmetics(
   client: PoolClient,
   roomId: string,
 ): Promise<Map<string, GamePlayerCosmetics>> {
-  const playerStates = (
-    await client.query<GamePlayerSnapshotStateRow>(
-      `SELECT player.id, room.status AS room_status
-         FROM game.players player
-         JOIN game.rooms room ON room.id=player.room_id
-        WHERE player.room_id=$1
-        ORDER BY player.joined_at,player.id`,
-      [roomId],
-    )
-  ).rows;
-
   const rows = (
-    await client.query<GameCosmeticSnapshotRow>(
-      `SELECT snapshot.player_id,
+    await client.query<GamePlayerCosmeticSnapshotRow>(
+      `SELECT player.id,
+              room.status AS room_status,
+              snapshot.player_id,
               snapshot.slot,
               snapshot.cosmetic_id,
               snapshot.asset_ref,
               snapshot.effect_key,
               snapshot.body_color,
               snapshot.body_highlight_color
-         FROM game.player_cosmetic_loadouts snapshot
-         JOIN game.players player ON player.id=snapshot.player_id
+         FROM game.players player
+         JOIN game.rooms room ON room.id=player.room_id
+         LEFT JOIN game.player_cosmetic_loadouts snapshot
+           ON snapshot.player_id=player.id
         WHERE player.room_id=$1
-        ORDER BY snapshot.player_id,snapshot.slot`,
+        ORDER BY player.joined_at,player.id,snapshot.slot NULLS LAST`,
       [roomId],
     )
   ).rows;
 
+  const playerStates = new Map<string, GamePlayerSnapshotStateRow>();
   const grouped = new Map<
     string,
     Partial<Record<GameCosmeticSlot, GameCosmeticSnapshotRow>>
   >();
 
   for (const row of rows) {
+    playerStates.set(row.id, {
+      id: row.id,
+      room_status: row.room_status,
+    });
+
+    if (!row.player_id || !row.slot || !row.cosmetic_id) continue;
+
     const current = grouped.get(row.player_id) ?? {};
-    current[row.slot] = row;
+    current[row.slot] = {
+      player_id: row.player_id,
+      slot: row.slot,
+      cosmetic_id: row.cosmetic_id,
+      asset_ref: row.asset_ref,
+      effect_key: row.effect_key,
+      body_color: row.body_color,
+      body_highlight_color: row.body_highlight_color,
+    };
     grouped.set(row.player_id, current);
   }
 
   const result = new Map<string, GamePlayerCosmetics>();
-  for (const player of playerStates) {
+  for (const player of playerStates.values()) {
     const playerRows = grouped.get(player.id) ?? {};
     if (player.room_status === "waiting") {
       result.set(player.id, waitingPlayerCosmetics(playerRows));
