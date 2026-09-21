@@ -27,10 +27,14 @@ test("rota PROFILE resolve snapshot autenticado em request-time e renderiza Doss
   assert.match(page, /import \{ connection \} from "next\/server"/);
   assert.match(page, /server\/profile\/profile-command-snapshot-service/);
   assert.match(page, /getCurrentProfileCommandSnapshot/);
-  assert.match(page, /await connection\(\);[\s\S]*auth\.api\.getSession[\s\S]*getCurrentProfileCommandSnapshot\(session\)/);
+  assert.match(
+    page,
+    /await connection\(\);[\s\S]*auth\.api\.getSession[\s\S]*getCurrentProfileCommandSnapshot\(session, \{ includeStorefront: false \}\)/,
+  );
   assert.match(page, /<ProfileShell/);
   assert.match(page, /activeSurface="dossier"/);
   assert.match(page, /getOwnProfileAppearance/);
+  assert.match(page, /Promise\.all/);
   assert.equal((page.match(/auth\.api\.getSession/g) ?? []).length, 1);
   assert.match(page, /backgroundAssetRef=\{equippedBackground\}/);
   assert.match(
@@ -117,6 +121,20 @@ test("Livro de Campanha pagina por cursor autenticado e permanece módulo secund
   assert.match(endpoint, /private, no-store/);
   assert.match(repository, /\(match\.finished_at, match\.id\) < \(\$2::timestamptz, \$3::bigint\)/);
   assert.doesNotMatch(repository, /\bOFFSET\b/i);
+});
+
+test("Dossiê usa leitura leve de carteira e não bloqueia a abertura no storefront completo", () => {
+  const page = source("src/app/profile/page.tsx");
+  const snapshot = source(
+    "src/lib/server/profile/profile-command-snapshot-service.ts",
+  );
+  const economy = source("src/lib/server/economy/economy-service.ts");
+
+  assert.match(page, /includeStorefront: false/);
+  assert.match(snapshot, /getEconomyWallet/);
+  assert.match(snapshot, /includeStorefront = options\.includeStorefront !== false/);
+  assert.match(economy, /export async function getEconomyWallet/);
+  assert.match(economy, /findCampaignCreditWallet\(userId\)/);
 });
 
 test("Intendência V4 consome o domínio Economy e não cria autoridade comercial local", () => {
