@@ -17,6 +17,10 @@ type CloudflareRequestContext = Readonly<{
 
 const WORKER_CONNECTION_TIMEOUT_MS = 8_000;
 const WORKER_IDLE_TIMEOUT_MS = 1_000;
+const WORKER_STATEMENT_TIMEOUT_MS = 12_000;
+const WORKER_QUERY_TIMEOUT_MS = 14_000;
+const WORKER_LOCK_TIMEOUT_MS = 4_000;
+const WORKER_IDLE_IN_TRANSACTION_TIMEOUT_MS = 8_000;
 const WORKER_MAX_CONNECTIONS = 5;
 
 function workerMaxConnections(configured: number | undefined) {
@@ -81,6 +85,15 @@ function createWorkerRequestPool(
       configured.connectionTimeoutMillis ?? WORKER_CONNECTION_TIMEOUT_MS,
     idleTimeoutMillis:
       configured.idleTimeoutMillis ?? WORKER_IDLE_TIMEOUT_MS,
+    statement_timeout:
+      configured.statement_timeout ?? WORKER_STATEMENT_TIMEOUT_MS,
+    query_timeout:
+      configured.query_timeout ?? WORKER_QUERY_TIMEOUT_MS,
+    lock_timeout:
+      configured.lock_timeout ?? WORKER_LOCK_TIMEOUT_MS,
+    idle_in_transaction_session_timeout:
+      configured.idle_in_transaction_session_timeout ??
+      WORKER_IDLE_IN_TRANSACTION_TIMEOUT_MS,
     // OpenNext/Cloudflare must never reuse the same PostgreSQL connection in
     // another Worker request. A checked-out transaction can still issue many
     // queries before release(); maxUses applies when the client returns.
