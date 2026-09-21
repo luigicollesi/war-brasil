@@ -10,7 +10,13 @@ export async function POST(request: Request) {
   if (presence.state === "unavailable") {
     return Response.json(
       { availability: "unavailable", state: "unavailable" },
-      { status: 503 },
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "private, no-store",
+          "X-Profile-Presence": "unavailable",
+        },
+      },
     );
   }
 
@@ -18,9 +24,17 @@ export async function POST(request: Request) {
     await persistCommanderLastSeen(actor.userId, presence.lastSeenAt);
   }
 
-  return Response.json({
-    availability: "available",
-    state: "online",
-    lastSeenAt: presence.lastSeenAt,
-  });
+  return Response.json(
+    {
+      availability: "available",
+      state: "online",
+      lastSeenAt: presence.lastSeenAt,
+    },
+    {
+      headers: {
+        "Cache-Control": "private, no-store",
+        "X-Profile-Presence": "available",
+      },
+    },
+  );
 }
