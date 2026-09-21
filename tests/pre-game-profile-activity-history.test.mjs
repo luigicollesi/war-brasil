@@ -15,6 +15,18 @@ test("Profile production snapshot derives authenticated identity without local f
   assert.doesNotMatch(snapshot, /LOCAL_PROFILE_COMMAND_SNAPSHOT|searchLocalCommanders/);
 });
 
+test("Profile snapshot bounds live presence and degrades secondary sources instead of suspending indefinitely", () => {
+  const snapshot = read("src/lib/server/profile/profile-command-snapshot-service.ts");
+
+  assert.match(snapshot, /PROFILE_SNAPSHOT_PRESENCE_TIMEOUT_MS = 350/);
+  assert.match(snapshot, /renewOwnPresence\(session\.user\.id,\s*\{[\s\S]*timeoutMs:/);
+  assert.match(snapshot, /Falha ao carregar atividade no Profile/);
+  assert.match(snapshot, /Falha ao carregar histórico no Profile/);
+  assert.match(snapshot, /Falha ao carregar rede social no Profile/);
+  assert.match(snapshot, /Falha ao carregar economia no Profile/);
+  assert.match(snapshot, /state: hasPartialData \? "partial-data" : "loaded"/);
+});
+
 test("presence and activity remain separate and Redis absence is unavailable", () => {
   const contract = read("src/lib/profile/profile-command-contract.ts");
   const service = read("src/lib/server/profile/profile-service.ts");
