@@ -1,13 +1,24 @@
 import "server-only";
 
 import { Pool, type PoolConfig } from "pg";
-import { isNeonPooledConnectionString } from "../db/connection-string";
 import { createRuntimePool } from "../db/runtime-pool";
 import { readAuthServerEnvironment } from "./environment";
 
 const globalForAuthPostgres = globalThis as typeof globalThis & {
   warBrasilAuthPool?: Pool;
 };
+
+function isNeonPooledConnectionString(value: string) {
+  try {
+    const url = new URL(value);
+    return (
+      url.hostname.endsWith(".neon.tech") &&
+      url.hostname.split(".")[0]?.endsWith("-pooler")
+    );
+  } catch {
+    return false;
+  }
+}
 
 function authConnectionString() {
   const { authDatabaseUrl } = readAuthServerEnvironment();
@@ -18,7 +29,7 @@ function authConnectionString() {
     }
 
     throw new Error(
-      "AUTH_DATABASE_URL, DATABASE_HYPERDRIVE_URL ou DATABASE_URL não está configurada para autenticação.",
+      "AUTH_DATABASE_URL ou DATABASE_URL não está configurada para autenticação.",
     );
   }
 
