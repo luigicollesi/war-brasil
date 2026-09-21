@@ -244,10 +244,16 @@ async function loadSnapshotObjective(
   );
 }
 
+type GameSnapshotQueryOptions = Readonly<{
+  includeConnections?: boolean;
+}>;
+
 export async function getGameSnapshotQuery(
   value: string,
   session: string,
+  accountUserId: string,
   knownRevision: number | null,
+  options: GameSnapshotQueryOptions = {},
 ) {
   const roomId = normalizeRoomId(value);
 
@@ -268,8 +274,10 @@ export async function getGameSnapshotQuery(
          JOIN game.players access_player
            ON access_player.room_id=gr.id
           AND access_player.player_session=$2
+          AND access_player.user_id=$3
+          AND access_player.is_bot=FALSE
          WHERE gr.id=$1`,
-        [roomId, session],
+        [roomId, session, accountUserId],
       )
     ).rows[0];
 
@@ -465,7 +473,10 @@ export async function getGameSnapshotQuery(
       );
     }
 
-    const connections = [...(await getBaseTerritoryConnections(client))];
+    const connections =
+      options.includeConnections === false
+        ? []
+        : [...(await getBaseTerritoryConnections(client))];
     const humanPlayerCount = players.filter((player) => !player.is_bot).length;
     const originalTerms = tradeOffer ? originalTradeTerms(tradeOffer) : null;
     const counterTerms = tradeOffer ? counterTradeTerms(tradeOffer) : null;
