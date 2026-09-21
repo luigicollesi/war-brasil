@@ -13,7 +13,7 @@ import {
 } from "@/src/lib/game-sync-contract";
 import { getPlayerSession } from "@/src/lib/player-session";
 import { RoomError } from "@/src/lib/rooms";
-import { assertAuthenticatedPlayerSeat } from "@/server/auth/player-seat-guard";
+import { getAuthenticatedSessionForRead } from "@/server/auth/auth-guard";
 
 type RouteContext = {
   params: Promise<{ roomId: string }>;
@@ -32,17 +32,24 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     }
 
     ({ roomId } = await params);
-    await assertAuthenticatedPlayerSeat(request, session, { roomId });
+    const accountSession = await getAuthenticatedSessionForRead(request);
+    if (!accountSession) {
+      throw new RoomError("Autenticação necessária para acessar esta partida.", 401);
+    }
+
     const knownTopology = request.headers.get(GAME_TOPOLOGY_HEADER);
     const knownRevision = parseGameRevision(
       request.headers.get(GAME_REVISION_HEADER),
     );
     const revisionForFastPath =
       knownTopology === GAME_TOPOLOGY_VERSION ? knownRevision : null;
+    const topologyIsKnown = knownTopology === GAME_TOPOLOGY_VERSION;
     const result = await getGameSnapshotQuery(
       roomId,
       session,
+      accountSession.user.id,
       revisionForFastPath,
+      { includeConnections: !topologyIsKnown },
     );
     const headers = {
       [GAME_REVISION_HEADER]: String(result.revision),
@@ -53,7 +60,7 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
       return noStoreEmpty({ status: 204, headers });
     }
 
-    if (knownTopology === GAME_TOPOLOGY_VERSION) {
+    if (topologyIsKnown) {
       const dynamicSnapshot: Partial<typeof result.snapshot> = {
         ...result.snapshot,
       };
