@@ -51,6 +51,9 @@ test("snapshot principal é read-only e retorna fast-path por revisão", () => {
 
   assert.match(snapshot, /gameQuery/);
   assert.match(snapshot, /knownRevision !== null && room\.revision === knownRevision/);
+  assert.match(snapshot, /access_player\.user_id=\$3/);
+  assert.match(snapshot, /access_player\.is_bot=FALSE/);
+  assert.match(snapshot, /options\.includeConnections === false/);
   assert.doesNotMatch(snapshot, /FOR UPDATE/);
 });
 
