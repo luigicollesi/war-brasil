@@ -2,6 +2,7 @@ import "server-only";
 
 import { Pool, type PoolConfig } from "pg";
 import type { DatabasePoolStats } from "../observability/game-operation-metrics";
+import { isNeonPooledConnectionString } from "./connection-string";
 import { createRuntimePool } from "./runtime-pool";
 
 const globalForPostgres = globalThis as typeof globalThis & {
@@ -22,6 +23,22 @@ function databaseConnectionString() {
   return connectionString;
 }
 
+function hyperdriveOriginConnectionString() {
+  const connectionString = process.env.DATABASE_HYPERDRIVE_URL?.trim();
+
+  if (!connectionString) {
+    return databaseConnectionString();
+  }
+
+  if (isNeonPooledConnectionString(connectionString)) {
+    throw new Error(
+      "DATABASE_HYPERDRIVE_URL deve usar a conexão Neon direta/unpooled (hostname sem -pooler).",
+    );
+  }
+
+  return connectionString;
+}
+
 function createPersistentPool() {
   return new Pool({
     connectionString: databaseConnectionString(),
@@ -36,11 +53,11 @@ export const pool = createRuntimePool({
   label: "database",
   persistentPool,
   workerConfig: (): PoolConfig => ({
-    connectionString: databaseConnectionString(),
+    connectionString: hyperdriveOriginConnectionString(),
   }),
-  // Optional production acceleration. When a DATABASE_HYPERDRIVE binding is
-  // present, Cloudflare requests use it transparently; otherwise DATABASE_URL
-  // remains the request-scoped fallback.
+  // Production acceleration. The real Cloudflare binding wins when present.
+  // Until it is bound, Cloudflare requests prefer DATABASE_HYPERDRIVE_URL
+  // (direct/unpooled) and keep DATABASE_URL as the final compatibility fallback.
   hyperdriveBinding: "DATABASE_HYPERDRIVE",
 });
 
