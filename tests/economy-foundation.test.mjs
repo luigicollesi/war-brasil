@@ -209,7 +209,7 @@ test("partida congela loadout em game.* e snapshot não lê Profile em runtime",
   const runtimeReader = gameCosmetics.slice(
     gameCosmetics.indexOf("export async function loadRoomPlayerCosmetics"),
   );
-  assert.match(runtimeReader, /FROM game\.player_cosmetic_loadouts snapshot/);
+  assert.match(runtimeReader, /(?:FROM|JOIN) game\.player_cosmetic_loadouts snapshot/);
   assert.doesNotMatch(runtimeReader, /profile\.|inventory\.|catalog\./);
 
   assert.match(gameSnapshot, /loadRoomPlayerCosmetics\(client, room\.id\)/);
