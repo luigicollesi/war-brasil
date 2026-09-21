@@ -41,6 +41,9 @@ test("Node mantém Pool persistente enquanto Worker usa facade request-scoped", 
   assert.match(databasePool, /persistentPool/);
   assert.match(databasePool, /createRuntimePool/);
   assert.match(databasePool, /hyperdriveBinding: "DATABASE_HYPERDRIVE"/);
+  assert.match(databasePool, /DATABASE_HYPERDRIVE_URL/);
+  assert.match(databasePool, /hyperdriveOriginConnectionString/);
+  assert.match(databasePool, /isNeonPooledConnectionString/);
   assert.match(databasePool, /max: process\.env\["NEXT_PHASE"\]/);
   assert.match(authPool, /persistentAuthPool/);
   assert.match(authPool, /createRuntimePool/);
@@ -50,7 +53,10 @@ test("Node mantém Pool persistente enquanto Worker usa facade request-scoped", 
 test("auth preserva conexão direta e search_path dedicado sem pool Worker global", () => {
   assert.match(authPool, /options: "-c search_path=auth"/);
   assert.match(authPool, /isNeonPooledConnectionString/);
-  assert.match(authPool, /AUTH_DATABASE_URL ou DATABASE_URL/);
+  assert.match(
+    authPool,
+    /AUTH_DATABASE_URL, DATABASE_HYPERDRIVE_URL ou DATABASE_URL/,
+  );
   assert.doesNotMatch(
     authPool,
     /export const authPool = globalForAuthPostgres\.warBrasilAuthPool \?\?/,
