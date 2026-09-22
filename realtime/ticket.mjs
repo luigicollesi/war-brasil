@@ -25,6 +25,8 @@ function validPayload(value, roomId, now) {
       /^\d+$/.test(value.roomId) &&
       typeof value.playerId === "string" &&
       /^\d+$/.test(value.playerId) &&
+      Number.isSafeInteger(value.revision) &&
+      value.revision >= 1 &&
       Number.isSafeInteger(value.exp) &&
       value.exp > now &&
       value.exp <= now + 120_000 &&
