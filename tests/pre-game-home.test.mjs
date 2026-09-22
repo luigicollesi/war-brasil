@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
 const page = readFileSync("src/app/page.tsx", "utf8");
+const commandPage = readFileSync("src/app/home/page.tsx", "utf8");
 const home = readFileSync("src/components/pre-game/home/command-home-client.tsx", "utf8");
 const content = readFileSync("src/components/pre-game/home/command-home-content.tsx", "utf8");
 const intent = readFileSync("src/components/pre-game/home/command-home-scene-intent.ts", "utf8");
@@ -34,8 +35,18 @@ test("HOME preserva metadata, canonical e structured data existentes", () => {
   assert.match(page, /twitter:/);
   assert.match(page, /application\/ld\+json/);
   assert.match(page, /"@type": "WebApplication"/);
-  assert.match(page, /<CommandHomeClient>/);
+  assert.match(page, /<CommandHomeClient mode="landing">/);
   assert.match(page, /<CommandHomeContent \/>/);
+});
+
+test("landing pública e Home autenticada reutilizam a mesma experiência sem duplicar a cena", () => {
+  assert.match(commandPage, /getAuthenticatedSessionForReadHeaders/);
+  assert.match(commandPage, /if \(!session\)[\s\S]*redirect\("\/"\)/);
+  assert.match(commandPage, /getCommandAccessState\(session\)/);
+  assert.match(commandPage, /<CommandHomeClient mode="command" initialAccess=\{access\}>/);
+  assert.match(home, /router\.replace\("\/home", \{ scroll: false \}\)/);
+  assert.match(home, /mode === "landing"/);
+  assert.match(home, /isCommandHome \? "stable" : "primed"/);
 });
 
 test("HOME consome somente contrato público e não controla progresso por frame", () => {
