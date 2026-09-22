@@ -29,6 +29,8 @@ jobs:
         run: node --test tests/cloudflare-deployment-config.test.mjs tests/cloudflare-next-middleware-patch.test.mjs tests/cloudflare-realtime-durable-object.test.mjs
       - name: Build Durable Object realtime Worker
         run: npm run cloudflare:realtime:build
+      - name: Build automation Queue Worker
+        run: npm run cloudflare:automation:build
       - name: Validate installed Next workaround
         run: npm run cloudflare:check-next-patch
       - name: Build and verify OpenNext worker
