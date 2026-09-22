@@ -24,6 +24,10 @@ test("Cloudflare realtime Worker uses hibernating SQLite Durable Objects", () =>
   assert.match(worker, /async webSocketMessage/);
   assert.match(worker, /async webSocketClose/);
   assert.match(worker, /Sec-WebSocket-Protocol/);
+  assert.match(worker, /blockConcurrencyWhile/);
+  assert.match(worker, /storage\.get\("latestRevision"\)/);
+  assert.match(worker, /storage\.put\("latestRevision", event\.revision\)/);
+  assert.match(worker, /Math\.max\(revision, this\.latestRevision\)/);
 });
 
 test("Cloudflare realtime validates tickets, origins and internal delivery", () => {
