@@ -127,6 +127,45 @@ export async function initializeEconomyState(
   );
 }
 
+export async function isEconomyStateInitialized(
+  userId: string,
+  db: EconomyQueryable = pool,
+) {
+  const result = await db.query<{ initialized: boolean }>(
+    `SELECT
+       EXISTS(
+         SELECT 1
+           FROM economy.wallets wallet
+          WHERE wallet.user_id=$1::uuid
+            AND wallet.currency_code='campaign-credit'
+       )
+       AND (
+         SELECT COUNT(*)::int
+           FROM profile.cosmetic_loadout loadout
+          WHERE loadout.user_id=$1::uuid
+            AND loadout.slot IN (
+              'dice_attack','dice_defense','dice_neutral','territory_skin'
+            )
+       ) >= 4
+       AND NOT EXISTS(
+         SELECT 1
+           FROM catalog.cosmetics item
+          WHERE item.is_default=TRUE
+            AND item.slot IN (
+              'dice_attack','dice_defense','dice_neutral','territory_skin'
+            )
+            AND NOT EXISTS(
+              SELECT 1
+                FROM inventory.cosmetics owned
+               WHERE owned.user_id=$1::uuid
+                 AND owned.cosmetic_id=item.id
+            )
+       ) AS initialized`,
+    [userId],
+  );
+  return result.rows[0]?.initialized === true;
+}
+
 export async function findCampaignCreditWallet(
   userId: string,
   db: EconomyQueryable = pool,
