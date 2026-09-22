@@ -290,7 +290,7 @@ async function batchPresence(request, env) {
   return json({ availability: "available", presences });
 }
 
-export default {
+const realtimeWorker = {
   async fetch(request, env) {
     const url = new URL(request.url);
 
@@ -360,6 +360,8 @@ export default {
     return new Response("Not found", { status: 404 });
   },
 };
+
+export default realtimeWorker;
 
 export class GameRoomRealtimeDurableObject extends DurableObject {
   constructor(ctx, env) {
