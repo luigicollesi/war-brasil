@@ -15,12 +15,27 @@ import {
 
 const imagePromises = new Map<string, Promise<HTMLImageElement>>();
 const BODY_COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
+const DICE_ASSET_KEY_PATTERN =
+  /^cosmetics\\/dice\\/[a-z0-9][a-z0-9-]*\\/(?:attack|defense|neutral)\\.webp$/;
 
-export function preloadDiceSourceImage(src: string) {
-  const cached = imagePromises.get(src);
-  if (cached) return cached;
+function diceAssetProxyFallback(src: string) {
+  if (typeof window === "undefined") return null;
 
-  const promise = new Promise<HTMLImageElement>((resolve, reject) => {
+  try {
+    const url = new URL(src, window.location.href);
+    if (url.origin === window.location.origin) return null;
+
+    const objectKey = decodeURIComponent(url.pathname.replace(/^\\/+/, ""));
+    if (!DICE_ASSET_KEY_PATTERN.test(objectKey)) return null;
+
+    return `/api/assets/dice?key=${encodeURIComponent(objectKey)}`;
+  } catch {
+    return null;
+  }
+}
+
+function loadDiceSourceImageCandidate(src: string) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
     if (typeof Image === "undefined") {
       reject(new Error("Texturas de dado só podem ser geradas no navegador."));
       return;
@@ -28,8 +43,8 @@ export function preloadDiceSourceImage(src: string) {
 
     const image = new Image();
     image.decoding = "async";
-    // Production dice artwork is delivered by the R2 custom domain. Anonymous
-    // CORS keeps the source origin-clean when it is composed into CanvasTexture.
+    // Cross-origin CDN assets need CORS to remain origin-clean for CanvasTexture.
+    // The same-origin authenticated fallback below also works with this mode.
     image.crossOrigin = "anonymous";
     image.onload = () => {
       if (typeof image.decode !== "function") {
@@ -43,6 +58,17 @@ export function preloadDiceSourceImage(src: string) {
     };
     image.onerror = () => reject(new Error(`Não foi possível carregar ${src}.`));
     image.src = src;
+  });
+}
+
+export function preloadDiceSourceImage(src: string) {
+  const cached = imagePromises.get(src);
+  if (cached) return cached;
+
+  const promise = loadDiceSourceImageCandidate(src).catch(async (primaryError) => {
+    const fallback = diceAssetProxyFallback(src);
+    if (!fallback) throw primaryError;
+    return loadDiceSourceImageCandidate(fallback);
   });
 
   imagePromises.set(src, promise);
@@ -188,6 +214,7 @@ export async function createDiceFaceTexture({
   texture.generateMipmaps = true;
   texture.needsUpdate = true;
   texture.name = `war-brasil-die-${skin}-${value}:${source}`;
+  texture.userData.diceSource = source;
 
   return texture;
 }
