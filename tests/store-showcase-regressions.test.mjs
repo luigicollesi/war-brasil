@@ -62,6 +62,7 @@ test("showcase dice carries catalog colors in the DTO without a metadata round t
 
 test("dice face preserves cosmetic alpha so the shader reveals the physical body", () => {
   assert.doesNotMatch(textureCreator, /drawBodyColor/);
+  assert.match(textureCreator, /image\.crossOrigin = "anonymous"/);
   assert.match(
     textureCreator,
     /context\.drawImage\(image, 0, 0, resolution, resolution\)/,
@@ -75,7 +76,7 @@ test("dice face preserves cosmetic alpha so the shader reveals the physical body
   );
 });
 
-test("3d texture delivery stays same-origin instead of redirecting the browser to R2", () => {
+test("legacy asset routes remain same-origin fallbacks while production uses the CDN", () => {
   for (const route of [diceRoute, territoryRoute]) {
     assert.match(route, /const upstream = await fetch\(location/);
     assert.match(route, /return proxiedAssetResponse\(upstream\)/);
