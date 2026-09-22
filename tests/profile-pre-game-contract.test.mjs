@@ -33,7 +33,7 @@ test("rota PROFILE resolve snapshot autenticado em request-time e renderiza Doss
   );
   assert.match(page, /<ProfileShell/);
   assert.match(page, /activeSurface="dossier"/);
-  assert.match(page, /getOwnProfileAppearance/);
+  assert.match(page, /getPublicProfileAppearance/);
   assert.match(page, /Promise\.all/);
   assert.equal(
     (page.match(/getAuthenticatedSessionForReadHeaders/g) ?? []).length,
