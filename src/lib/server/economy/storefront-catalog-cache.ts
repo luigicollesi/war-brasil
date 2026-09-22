@@ -15,7 +15,7 @@ import {
 } from "./storefront-quote-repository";
 
 const STOREFRONT_CATALOG_CACHE_KEY =
-  "https://cache.internal.bellumcivile/economy/storefront/catalog-v1";
+  "https://bellumcivile.com/__internal/cache/economy/storefront/catalog-v1";
 const STOREFRONT_CATALOG_CACHE_SECONDS = 10;
 
 export type StorefrontCatalogSnapshot = Readonly<{
