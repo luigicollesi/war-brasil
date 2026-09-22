@@ -9,6 +9,8 @@ on:
       - "src/components/battle-overlay.tsx"
       - "src/components/game-client-v2.tsx"
       - "src/components/profile/v4/store-showcase/dice-showcase-model.tsx"
+      - "src/lib/client/dice/dice-assets-manager.ts"
+      - "src/lib/client/dice/textures/**"
       - "src/lib/client/dice/visual-config.ts"
       - "src/lib/client/dice/physics/dice-physics-config.ts"
       - "src/lib/server/economy/economy-repository.ts"
