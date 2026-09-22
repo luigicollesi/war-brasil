@@ -27,6 +27,7 @@ const textureCreator = read(
 );
 const diceRoute = read("src/app/api/assets/dice/route.ts");
 const territoryRoute = read("src/app/api/assets/territory-skins/route.ts");
+const assetFallback = read("src/lib/server/assets/asset-fallback-route.ts");
 
 test("showcase owns its chrome and derives object scale from the presentation contract", () => {
   const presentation = read(
@@ -76,13 +77,14 @@ test("dice face preserves cosmetic alpha so the shader reveals the physical body
   );
 });
 
-test("legacy asset routes remain same-origin fallbacks while production uses the CDN", () => {
+test("legacy asset routes share a same-origin fallback while production uses the CDN", () => {
   for (const route of [diceRoute, territoryRoute]) {
-    assert.match(route, /const upstream = await fetch\(location/);
-    assert.match(route, /return proxiedAssetResponse\(upstream\)/);
-    assert.doesNotMatch(route, /status:\s*307/);
-    assert.doesNotMatch(route, /Location:\s*location/);
+    assert.match(route, /serveAuthenticatedAssetFallback/);
   }
+  assert.match(assetFallback, /const upstream = await fetch\(location/);
+  assert.match(assetFallback, /return proxiedAssetResponse\(upstream\)/);
+  assert.doesNotMatch(assetFallback, /status:\s*307/);
+  assert.doesNotMatch(assetFallback, /Location:\s*location/);
 });
 
 
