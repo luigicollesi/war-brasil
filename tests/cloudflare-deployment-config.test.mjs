@@ -35,6 +35,8 @@ test("deploy valida secrets essenciais antes do runtime", () => {
     "ASSET_STORAGE_URL",
     "ASSET_STORAGE_ACCESS_KEY_ID",
     "ASSET_STORAGE_SECRET_ACCESS_KEY",
+    "GAME_REALTIME_TICKET_SECRET",
+    "GAME_REALTIME_INTERNAL_TOKEN",
   ]) {
     assert.ok(wrangler.includes(`"${name}"`), `secret obrigatório ausente: ${name}`);
   }
@@ -90,9 +92,20 @@ test("Workers Builds usa OpenNext e Wrangler pinados pelo lockfile", () => {
   assert.doesNotMatch(pkg.scripts["cloudflare:deploy"], /npm install|cloudflare:prepare/);
 });
 
-
-test("external Node services permanecem desligados no runtime e Workers Builds respeita variáveis configuradas", () => {
-  assert.match(wrangler, /"GAME_REALTIME_ENABLED": "false"/);
+test("produção Cloudflare ativa realtime por Service Binding sem acoplar build a envs públicas", () => {
+  assert.match(wrangler, /"SITE_URL": "https:\/\/bellumcivile\.com"/);
+  assert.match(wrangler, /"AUTH_ALLOWED_HOSTS": "bellumcivile\.com"/);
+  assert.match(wrangler, /"GAME_REALTIME_ENABLED": "true"/);
+  assert.match(wrangler, /"GAME_REALTIME_DELIVERY_MODE": "cloudflare"/);
+  assert.match(
+    wrangler,
+    /"GAME_REALTIME_INTERNAL_URL": "https:\/\/realtime\.bellumcivile\.com"/,
+  );
+  assert.match(wrangler, /"GAME_REALTIME_TICKET_TTL_SECONDS": "45"/);
+  assert.match(
+    wrangler,
+    /"binding": "GAME_REALTIME_SERVICE"[\s\S]*"service": "war-brasil-realtime"/,
+  );
   assert.match(wrangler, /"GAME_AUTOMATION_WORKER_MODE": "off"/);
   assert.match(wrangler, /"ASSET_STORAGE_BUCKET": "war-brasil-assets-prod"/);
   assert.doesNotMatch(pkg.scripts["cloudflare:build"], /NEXT_PUBLIC_GAME_REALTIME_MODE=/);
@@ -101,12 +114,10 @@ test("external Node services permanecem desligados no runtime e Workers Builds r
   assert.match(pkg.scripts["cloudflare:build"], /opennextjs-cloudflare build/);
 });
 
-
 test("segredos locais do Wrangler não entram no Git", () => {
   assert.match(gitignore, /^\.dev\.vars\*$/m);
   assert.match(gitignore, /^\.env\*$/m);
 });
-
 
 test("Cloudflare Worker binds production R2 bucket for zero-hop asset reads", () => {
   const wrangler = readFileSync("wrangler.jsonc", "utf8");
