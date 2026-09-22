@@ -43,7 +43,7 @@ test("profile appearance storefront exposes owned state and authoritative offer 
     "src/lib/server/economy/profile-appearance-store-service.ts",
   );
 
-  assert.match(route, /getAuthenticatedSession\(request\)/);
+  assert.match(route, /getAuthenticatedSessionForRead\(request\)/);
   assert.match(repository, /catalog\.product_entitlements/);
   assert.match(repository, /profile\.commander_titles owned/);
   assert.match(repository, /profile\.commander_backgrounds owned/);
