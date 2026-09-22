@@ -119,6 +119,7 @@ test("global heartbeat is session-aware, periodic, identity-free and independent
   assert.match(heartbeat, /useSession\(\)/);
   assert.match(heartbeat, /if \(isPending \|\| !session\?\.user\)/);
   assert.match(heartbeat, /HEARTBEAT_INTERVAL_MS = 60_000/);
+  assert.match(heartbeat, /document\.visibilityState !== "visible"/);
   assert.match(heartbeat, /fetch\("\/api\/profile\/presence\/heartbeat"/);
   assert.doesNotMatch(heartbeat, /userId/);
   assert.doesNotMatch(heartbeat, /JSON\.stringify/);
