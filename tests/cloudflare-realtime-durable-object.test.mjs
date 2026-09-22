@@ -13,6 +13,8 @@ test("Cloudflare realtime Worker uses hibernating SQLite Durable Objects", () =>
   assert.match(config, /"USER_REALTIME"/);
   assert.match(config, /"type": "durable-object"/);
   assert.match(config, /"storage": "sqlite"/);
+  assert.match(config, /"GAME_REALTIME_TICKET_SECRET"/);
+  assert.match(config, /"GAME_REALTIME_INTERNAL_TOKEN"/);
   assert.doesNotMatch(config, /"new_classes"/);
 
   assert.match(worker, /extends DurableObject/);
