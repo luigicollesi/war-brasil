@@ -405,28 +405,26 @@ async function main() {
         await actor.page.waitForURL(/\/matchmaking$/, { timeout: 10_000 });
         await assertPersistentScene(actor.page, "operations");
 
-        await actor.page.locator('a[href="/"]').first().click();
-        await actor.page.waitForURL((url) => url.pathname === "/", { timeout: 10_000 });
+        await actor.page.locator('a[href="/home"]').first().click();
+        await actor.page.waitForURL((url) => url.pathname === "/home", { timeout: 10_000 });
         await assertPersistentScene(actor.page, "entrance");
 
-        await actor.page.getByRole("button", { name: "ENTRAR NO COMANDO", exact: true }).click();
         await actor.page.getByRole("link", { name: /DOUTRINA/ }).click();
         await actor.page.waitForURL(/\/rules(?:\?|$)/, { timeout: 10_000 });
         await assertPersistentScene(actor.page, "doctrine");
 
         await actor.page.goBack();
-        await actor.page.waitForURL((url) => url.pathname === "/", { timeout: 10_000 });
+        await actor.page.waitForURL((url) => url.pathname === "/home", { timeout: 10_000 });
         await assertPersistentScene(actor.page, "entrance");
 
-        await actor.page.getByRole("button", { name: "ENTRAR NO COMANDO", exact: true }).click();
         await actor.page.getByRole("link", { name: /COMANDO/ }).click();
         await actor.page.waitForURL(/\/profile$/, { timeout: 10_000 });
         await actor.page
           .locator("[data-profile-v4]")
           .waitFor({ state: "attached", timeout: 10_000 });
 
-        await actor.page.locator('a[href="/"]').first().click();
-        await actor.page.waitForURL((url) => url.pathname === "/", { timeout: 10_000 });
+        await actor.page.locator('a[href="/home"]').first().click();
+        await actor.page.waitForURL((url) => url.pathname === "/home", { timeout: 10_000 });
         await assertPersistentScene(actor.page, "entrance");
       } finally {
         await actor.context.close();
