@@ -104,7 +104,7 @@ test("assets:validate inclui territory skins do catálogo sem allowlist temátic
   assert.doesNotMatch(validator, /azulejo_brasil|azulejo_ornamental|ceu_estrelado|solar_ornamental/);
 });
 
-test("delivery usa endpoint autenticado, catálogo/snapshot como allowlist e proxy same-origin", () => {
+test("fallback de delivery mantém endpoint autenticado, allowlist e proxy same-origin", () => {
   const route = source("src/app/api/assets/territory-skins/route.ts");
   const repository = source("src/lib/server/assets/asset-storage-repository.ts");
   const service = source("src/lib/server/assets/asset-storage-service.ts");
@@ -131,13 +131,14 @@ test("delivery usa endpoint autenticado, catálogo/snapshot como allowlist e pro
   assert.match(service, /createPresignedAssetUrl/);
 });
 
-test("economy storefront projeta territory_skin pela rota interna de delivery", () => {
+test("economy storefront projeta territory_skin pela camada canônica de delivery", () => {
   const economyService = source("src/lib/server/economy/economy-service.ts");
 
+  assert.match(economyService, /from "\.\.\/assets\/asset-storage-service"/);
   assert.match(economyService, /territorySkinAssetDeliveryPath/);
   assert.match(
     economyService,
-    /if \(row\.slot === "territory_skin"\) \{\s*return territorySkinAssetDeliveryPath\(row\.asset_ref\);\s*\}/,
+    /if \(row\.slot === "territory_skin"\) \{\s*return territorySkinAssetDeliveryPath\(assetRef\);\s*\}/,
   );
   assert.doesNotMatch(economyService, /https?:\/\/[^"']*territory-skins/);
 });
