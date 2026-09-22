@@ -8,7 +8,7 @@ test("title API derives the actor from session and never accepts browser userId"
   const route = read("src/app/api/profile/titles/route.ts");
   const service = read("src/lib/server/profile/profile-title-service.ts");
 
-  assert.match(route, /getAuthenticatedSession\(request\)/);
+  assert.match(route, /getAuthenticatedSessionForRead\(request\)/);
   assert.match(route, /listOwnedCommanderTitles\(session\.user\.id\)/);
   assert.match(route, /requireProfileMutationActor\(request\)/);
   assert.match(route, /equipOwnedCommanderTitle\(actor\.userId, titleId\)/);
