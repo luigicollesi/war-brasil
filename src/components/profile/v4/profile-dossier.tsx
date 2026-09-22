@@ -48,7 +48,7 @@ export function ProfileDossier({
         <p>ARQUIVO DE COMANDO</p>
         <h1>Identidade de comandante indisponível</h1>
         <span>{snapshot.identity.unavailableReason ?? "Uma sessão autenticada é necessária."}</span>
-        <Link href="/">Retornar ao comando</Link>
+        <Link href="/home">Retornar ao comando</Link>
       </section>
     );
   }
