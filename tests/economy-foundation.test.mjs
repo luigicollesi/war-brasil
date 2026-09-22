@@ -26,7 +26,8 @@ const snapshotSharing = source("src/lib/shared/game-snapshot-sharing.ts");
 const storefrontRoute = source("src/app/api/economy/storefront/route.ts");
 const loadoutRoute = source("src/app/api/economy/loadout/route.ts");
 const storePage = source("src/app/profile/store/page.tsx");
-const storeUi = source("src/components/profile/store/economy-storefront.tsx");
+const storeUi = source("src/components/profile/v4/profile-store.tsx");
+const arsenalUi = source("src/components/profile/v4/profile-arsenal.tsx");
 
 test("histórico de migrations preserva 037 e evolui economia até Storefront V2", () => {
   assert.equal(
@@ -134,12 +135,17 @@ test("inicialização econômica é idempotente e não cria movimentação", () 
   assert.doesNotMatch(initialization, /UPDATE economy\.wallets|SET balance/i);
 });
 
-test("storefront é dirigido pelo catálogo e não por allowlist temática de React", () => {
+test("storefront V4 é dirigido pelo catálogo e não por allowlist temática de React", () => {
   assert.match(repository, /cosmetic_set\.storage_slug AS set_storage_slug/);
   assert.match(repository, /cosmetic_set\.sort_order AS set_sort_order/);
   assert.match(repository, /ORDER BY cosmetic_set\.sort_order, cosmetic_set\.id, membership\.position/);
-  assert.match(storeUi, /storefront\.sets\.map/);
-  assert.doesNotMatch(storeUi, /set\.exercito|set\.lancas|set\.viking|set\.gato|set\.cachorro|set\.futebol/);
+  assert.match(storeUi, /storefront\.collections/);
+  assert.match(storeUi, /storefront\.offers/);
+  assert.match(arsenalUi, /storefront\.ownedItems/);
+  assert.doesNotMatch(
+    storeUi + arsenalUi,
+    /set\.exercito|set\.lancas|set\.viking|set\.gato|set\.cachorro|set\.futebol/,
+  );
 });
 
 test("economia serializa inicialização, storefront, equipagem e captura da partida pelo comandante", () => {
