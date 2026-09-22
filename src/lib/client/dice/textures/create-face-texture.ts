@@ -28,8 +28,9 @@ function loadImage(src: string) {
 
     const image = new Image();
     image.decoding = "async";
-    // Dice assets are delivered through an authenticated same-origin proxy so
-    // the image remains origin-clean when composed into the canvas texture.
+    // Production dice artwork is delivered by the R2 custom domain. Anonymous
+    // CORS keeps the source origin-clean when it is composed into CanvasTexture.
+    image.crossOrigin = "anonymous";
     image.onload = () => resolve(image);
     image.onerror = () => reject(new Error(`Não foi possível carregar ${src}.`));
     image.src = src;
