@@ -19,7 +19,7 @@ export function ProfileV4Boundary({
   return (
     <main className={styles.page} data-profile-v4-boundary={variant}>
       <header className={styles.commandBar}>
-        <Link href="/" className={styles.homeLink} aria-label="Voltar ao comando">
+        <Link href="/home" className={styles.homeLink} aria-label="Voltar ao comando">
           ←
         </Link>
         <span className={styles.commandCopy}>
