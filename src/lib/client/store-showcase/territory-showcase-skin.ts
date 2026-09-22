@@ -25,9 +25,22 @@ export type TerritoryShowcaseSkin = Readonly<{
 
 function deliveredTerritorySkinAsset(assetRef: string | null) {
   const normalized = assetRef?.trim();
-  return normalized?.startsWith("/api/assets/territory-skins?key=")
-    ? normalized
-    : null;
+  if (!normalized) return null;
+  if (normalized.startsWith("/api/assets/territory-skins?key=")) {
+    return normalized;
+  }
+
+  try {
+    const url = new URL(normalized);
+    const objectKey = decodeURIComponent(url.pathname.replace(/^\/+/, ""));
+    return url.protocol === "https:" &&
+      objectKey.startsWith("cosmetics/territory-skins/") &&
+      objectKey.endsWith(".webp")
+      ? normalized
+      : null;
+  } catch {
+    return null;
+  }
 }
 
 export function resolveTerritoryShowcaseSkin(
