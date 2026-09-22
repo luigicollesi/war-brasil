@@ -14,6 +14,7 @@ import type { TradeCardDescriptor } from "@/src/lib/game-trade-rules";
 import type { GameRealtimeBusEvent } from "./realtime/game-realtime-bus";
 import { publishGameRealtimeBusEvent } from "./realtime/game-realtime-bus-runtime";
 import { publishGameRealtimeMetric } from "./observability/game-realtime-metrics";
+import { realtimeInternalFetch } from "./realtime/realtime-internal-client";
 
 const GAME_REALTIME_NOTIFY_MAX_BYTES = 7_000;
 
@@ -46,35 +47,16 @@ function gameRealtimePatchesEnabled() {
   return process.env.GAME_REALTIME_PATCHES_ENABLED === "true";
 }
 
-function directEphemeralUrl() {
-  const raw = process.env.GAME_REALTIME_INTERNAL_URL?.trim();
-  return raw ? raw.replace(/\/$/, "") : null;
-}
-
-function directEphemeralToken() {
-  return process.env.GAME_REALTIME_INTERNAL_TOKEN?.trim() || null;
-}
-
 async function publishEphemeralDirect(event: GameRealtimeEphemeralBusEvent) {
-  const baseUrl = directEphemeralUrl();
-  if (!baseUrl) return null;
-
-  const token = directEphemeralToken();
-  if (!token) {
-    throw new Error(
-      "GAME_REALTIME_INTERNAL_TOKEN é obrigatório para entrega realtime direta.",
-    );
-  }
-
-  const response = await fetch(`${baseUrl}/internal/ephemeral`, {
+  const response = await realtimeInternalFetch("/internal/ephemeral", {
     method: "POST",
     cache: "no-store",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(event),
   });
+  if (!response) return null;
 
   let body: unknown = null;
   try {
