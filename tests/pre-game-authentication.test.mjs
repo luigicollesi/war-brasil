@@ -91,6 +91,13 @@ test("auth fixa Better Auth e dependências server-only em versões exatas", () 
   assert.equal(pkg.dependencies["server-only"], "0.0.1");
 });
 
+test("auth cacheado mantém GET de sessão read-only e mutations podem forçar revalidação", () => {
+  assert.match(auth, /deferSessionRefresh: true/);
+  assert.match(auth, /cookieCache:\s*\{[\s\S]*enabled: true[\s\S]*maxAge: SESSION_COOKIE_CACHE_SECONDS/);
+  assert.match(authGuard, /getAuthenticatedSessionForRead/);
+  assert.match(authGuard, /disableCookieCache: true/);
+});
+
 test("auth de servidor permanece server-only e usa schema PostgreSQL dedicado", () => {
   assert.match(auth, /^import "server-only";/m);
   assert.match(environment, /^import "server-only";/m);
