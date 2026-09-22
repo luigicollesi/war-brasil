@@ -27,6 +27,20 @@ test("skin cosmética altera somente a fonte visual das texturas 3D", () => {
   assert.doesNotMatch(predetermined, /assetRef|cosmetic|catalog|profile/);
 });
 
+test("CDN de dados possui fallback same-origin e não fixa fallback procedural no cache cosmético", () => {
+  const texture = source("src/lib/client/dice/textures/create-face-texture.ts");
+  const assets = source("src/lib/client/dice/dice-assets-manager.ts");
+
+  assert.match(texture, /function diceAssetProxyFallback/);
+  assert.match(texture, /\/api\/assets\/dice\?key=/);
+  assert.match(texture, /loadDiceSourceImageCandidate\(src\)/);
+  assert.match(texture, /loadDiceSourceImageCandidate\(fallback\)/);
+  assert.match(texture, /texture\.userData\.diceSource = source/);
+
+  assert.match(assets, /texture\.userData\.diceSource !== options\.assetRef/);
+  assert.match(assets, /textureCache\.delete\(key\)/);
+});
+
 test("combate usa skin de ataque do atacante e defesa do defensor", () => {
   const overlay = source("src/components/battle-overlay.tsx");
   const cinematic = source(
