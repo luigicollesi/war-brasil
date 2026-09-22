@@ -11,7 +11,6 @@ import {
   diceVisualGeometry,
 } from "@/src/lib/client/dice/visual-config";
 import type { CosmeticCatalogItem } from "@/src/lib/economy/economy-contract";
-import { useDiceBodyColor } from "./use-dice-body-color";
 
 const SHOWCASE_DIE_SIZE = 1;
 const SHOWCASE_DIE_GEOMETRY = diceVisualGeometry(SHOWCASE_DIE_SIZE);
@@ -32,12 +31,15 @@ function skinForSlot(slot: CosmeticCatalogItem["slot"]): DiceSkin {
 export function DiceShowcaseModel({
   slot,
   assetRef,
+  bodyColor,
+  bodyHighlightColor,
 }: {
   slot: CosmeticCatalogItem["slot"];
   assetRef: string | null;
+  bodyColor: string | null;
+  bodyHighlightColor: string | null;
 }) {
   const skin = skinForSlot(slot);
-  const bodyColor = useDiceBodyColor(assetRef, slot);
   const geometry = useMemo(
     () => getSharedRoundedDieGeometry(SHOWCASE_DIE_GEOMETRY),
     [],
@@ -46,11 +48,12 @@ export function DiceShowcaseModel({
     skin,
     assetRef,
     bodyColor,
+    bodyHighlightColor,
     pipColor: DICE_VISUAL_PIP_COLOR,
     resolution: DICE_VISUAL_TEXTURE_RESOLUTION,
   });
 
-  if (!textures || (assetRef && bodyColor === undefined)) return null;
+  if (!textures) return null;
 
   return (
     <group name="StoreShowcaseDie" position={[0, 0.08, 0]}>
@@ -60,6 +63,7 @@ export function DiceShowcaseModel({
         size={SHOWCASE_DIE_GEOMETRY.size}
         radius={SHOWCASE_DIE_GEOMETRY.radius}
         bodyColor={bodyColor}
+        bodyHighlightColor={bodyHighlightColor}
       />
     </group>
   );
