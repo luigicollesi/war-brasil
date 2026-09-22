@@ -13,7 +13,7 @@ export function ProfilePresenceHeartbeat() {
 
     let stopped = false;
     const heartbeat = async () => {
-      if (stopped) return;
+      if (stopped || document.visibilityState !== "visible") return;
       await fetch("/api/profile/presence/heartbeat", {
         method: "POST",
         cache: "no-store",
