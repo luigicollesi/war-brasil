@@ -97,7 +97,7 @@ test("código da operação permanece copiável, selecionável e com recuperaç�
 });
 
 test("reconexão mantém última formação, anuncia estado e oferece retry", () => {
-  assert.match(sync, /setSnapshot\(data as LobbySnapshot\)/);
+  assert.match(sync, /setSnapshot\(nextSnapshot\)/);
   assert.match(workspace, /Reconectando/);
   assert.match(workspace, /Mantendo a última formação confirmada/);
   assert.match(workspace, /Sincronizar agora/);
