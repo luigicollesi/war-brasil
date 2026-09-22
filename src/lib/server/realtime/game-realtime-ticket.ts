@@ -12,6 +12,7 @@ type RealtimeTicketPayload = {
   v: typeof GAME_PROTOCOL_VERSION;
   roomId: string;
   playerId: string;
+  revision: number;
   exp: number;
   nonce: string;
 };
@@ -40,8 +41,8 @@ export async function issueGameRealtimeTicket(roomId: string, session: string) {
     throw new RoomError("Partida inválida para realtime.", 422);
   }
 
-  const result = await pool.query<{ player_id: string }>(
-    `SELECT rp.id::text player_id
+  const result = await pool.query<{ player_id: string; revision: number }>(
+    `SELECT rp.id::text player_id, room.revision
      FROM game.rooms room
      JOIN game.players rp
        ON rp.room_id=room.id
@@ -49,8 +50,10 @@ export async function issueGameRealtimeTicket(roomId: string, session: string) {
      WHERE room.id=$1`,
     [roomId, session],
   );
-  const playerId = result.rows[0]?.player_id;
-  if (!playerId) {
+  const player = result.rows[0];
+  const playerId = player?.player_id;
+  const revision = player?.revision;
+  if (!playerId || !Number.isSafeInteger(revision) || revision < 1) {
     throw new RoomError("Jogador sem acesso a esta partida.", 403);
   }
 
@@ -60,6 +63,7 @@ export async function issueGameRealtimeTicket(roomId: string, session: string) {
     v: GAME_PROTOCOL_VERSION,
     roomId,
     playerId,
+    revision,
     exp: expiresAt,
     nonce: randomUUID(),
   };
