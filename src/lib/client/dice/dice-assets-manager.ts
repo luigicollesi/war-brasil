@@ -66,6 +66,13 @@ export function getDiceFaceTextures(options: DiceTextureOptions) {
       texture.needsUpdate = true;
     }
 
+    const degradedCosmetic =
+      Boolean(options.assetRef) &&
+      Object.values(textures).some(
+        (texture) => texture.userData.diceSource !== options.assetRef,
+      );
+    if (degradedCosmetic) textureCache.delete(key);
+
     return textures;
   });
 
