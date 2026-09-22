@@ -29,6 +29,17 @@ test("worker começa desligado e reserva shadow/active", () => {
 test("worker aplica limites seguros para intervalo, batch, concorrência e lease", () => {
   assert.equal(automationWorkerPollMs({}), 500);
   assert.equal(
+    automationWorkerPollMs({ GAME_AUTOMATION_QUEUE_MODE: "active" }),
+    5_000,
+  );
+  assert.equal(
+    automationWorkerPollMs({
+      GAME_AUTOMATION_QUEUE_MODE: "active",
+      GAME_AUTOMATION_WORKER_POLL_MS: "750",
+    }),
+    750,
+  );
+  assert.equal(
     automationWorkerPollMs({ GAME_AUTOMATION_WORKER_POLL_MS: "100" }),
     100,
   );
