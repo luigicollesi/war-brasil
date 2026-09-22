@@ -16,10 +16,15 @@
       "bucket_name": "war-brasil-assets-prod"
     }
   ],
-  // Production realtime is deployed independently. Until the target Worker
-  // exists, keep the caller decoupled and use the Custom Domain below.
-  // GAME_REALTIME_SERVICE can be added later as an optimization after
-  // war-brasil-realtime has been published at least once.
+  // Production realtime is a separate Worker. The target now exists, so
+  // server-to-server delivery uses a Service Binding; the public Custom Domain
+  // remains configured as a safe fallback for runtimes without the binding.
+  "services": [
+    {
+      "binding": "GAME_REALTIME_SERVICE",
+      "service": "war-brasil-realtime"
+    }
+  ],
   "vars": {
     "SITE_URL": "https://bellumcivile.com",
     "AUTH_ALLOWED_HOSTS": "bellumcivile.com",
