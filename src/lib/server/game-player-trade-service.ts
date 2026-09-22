@@ -919,6 +919,9 @@ export async function signalPlayerTradeCard(
       [room.id, player.id, signalsUsed],
     );
 
+    await client.query("COMMIT");
+    transactionOpen = false;
+
     await publishGameTradeSignal(client, {
       roomId: room.id,
       playerId: player.id,
@@ -926,8 +929,6 @@ export async function signalPlayerTradeCard(
       card: descriptor,
     });
 
-    await client.query("COMMIT");
-    transactionOpen = false;
     return { signalsUsed };
   } catch (error) {
     if (transactionOpen) await client.query("ROLLBACK").catch(() => undefined);
