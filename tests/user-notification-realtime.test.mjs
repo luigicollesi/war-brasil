@@ -29,6 +29,9 @@ test("user notification realtime uses a dedicated authenticated websocket channe
   assert.match(clientRuntime, /body\.enabled === false/);
   assert.match(clientRuntime, /if \(!ticket\)[\s\S]*setRealtimeConnected\(false\)/);
   assert.match(clientRuntime, /realtimeConnected \? 60_000 : 15_000/);
+  assert.match(clientRuntime, /reconnectAttempt \+= 1/);
+  assert.match(clientRuntime, /Math\.min\([\s\S]*30_000/);
+  assert.match(clientRuntime, /reconnectAttempt = 0/);
 });
 
 test("invitation changes publish only user invalidations after persistence", async () => {
