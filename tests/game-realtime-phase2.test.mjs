@@ -46,13 +46,20 @@ test("publisher realtime é best-effort, opcional, pós-commit e independente do
   const bus = readFileSync("src/lib/server/realtime/game-realtime-bus.ts", "utf8");
   const runtime = readFileSync("src/lib/server/realtime/game-realtime-bus-runtime.ts", "utf8");
   const postgresAdapter = readFileSync("src/lib/server/realtime/postgres-game-realtime-bus.ts", "utf8");
-  assert.match(command, /await client\.query\("COMMIT"\)[\s\S]*await publishGameChange/);
-  assert.match(command, /if \(result\.changed\) \{[\s\S]*publishGameInvalidation/);
+  assert.match(
+    command,
+    /await client\.query\("COMMIT"\)[\s\S]*runPostResponseTask\("game\.command\.realtime"[\s\S]*publishCommittedGameChange/,
+  );
+  assert.match(
+    command,
+    /if \(result\.changed\) \{[\s\S]*runPostResponseTask\("game\.conditional\.realtime"[\s\S]*publishCommittedGameInvalidation/,
+  );
   assert.match(command, /rollbackIfNeeded\(client, transactionOpen\)/);
   assert.match(publisher, /process\.env\.GAME_REALTIME_ENABLED === "true"/);
   assert.match(publisher, /GAME_REALTIME_PATCHES_ENABLED === "true"/);
   assert.match(publisher, /if \(!gameRealtimeEnabled\(\)\) return/);
   assert.match(publisher, /publishGameRealtimeBusEvent/);
+  assert.match(publisher, /publishCommittedGameRealtimeBusEvent/);
   assert.doesNotMatch(publisher, /pg_notify/);
   assert.match(publisher, /GAME_REALTIME_NOTIFY_MAX_BYTES/);
   assert.match(publisher, /publishGameInvalidation/);
