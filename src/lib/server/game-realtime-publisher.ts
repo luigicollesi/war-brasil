@@ -12,7 +12,10 @@ import {
 } from "@/src/lib/game-private-patch";
 import type { TradeCardDescriptor } from "@/src/lib/game-trade-rules";
 import type { GameRealtimeBusEvent } from "./realtime/game-realtime-bus";
-import { publishGameRealtimeBusEvent } from "./realtime/game-realtime-bus-runtime";
+import {
+  publishCommittedGameRealtimeBusEvent,
+  publishGameRealtimeBusEvent,
+} from "./realtime/game-realtime-bus-runtime";
 import { publishGameRealtimeMetric } from "./observability/game-realtime-metrics";
 import { realtimeInternalFetch } from "./realtime/realtime-internal-client";
 
@@ -157,6 +160,31 @@ function privatePatchEvent(
   };
 }
 
+async function publishCommittedEvent(
+  event: GameRealtimeRevisionBusEvent,
+  metricName:
+    | "notify.publish"
+    | "notify.private"
+    | "notify.patch"
+    | "notify.private_patch",
+) {
+  try {
+    await publishCommittedGameRealtimeBusEvent(event);
+    publishGameRealtimeMetric({
+      name: metricName,
+      roomId: event.roomId,
+      revision: event.revision,
+    });
+  } catch (error) {
+    publishGameRealtimeMetric({
+      name: "notify.failure",
+      roomId: event.roomId,
+      revision: event.revision,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
+}
+
 async function publishEvent(
   client: PoolClient,
   event: GameRealtimeRevisionBusEvent,
@@ -181,6 +209,95 @@ async function publishEvent(
       error: error instanceof Error ? error.message : String(error),
     });
   }
+}
+
+export async function publishCommittedGameInvalidation(
+  roomId: string,
+  revision: number,
+) {
+  if (!gameRealtimeEnabled()) return;
+  await publishCommittedEvent(
+    invalidationEvent(roomId, revision),
+    "notify.publish",
+  );
+}
+
+export async function publishCommittedPlayerGamePatch(
+  input: {
+    roomId: string;
+    playerId: string;
+    baseRevision: number;
+    revision: number;
+    patch: GamePrivatePatch;
+  },
+) {
+  if (!gameRealtimeEnabled()) return;
+  if (!/^\d+$/.test(input.playerId)) return;
+
+  if (gameRealtimePatchesEnabled() && isGamePrivatePatch(input.patch)) {
+    const event = privatePatchEvent(
+      input.roomId,
+      input.playerId,
+      input.baseRevision,
+      input.revision,
+      input.patch,
+    );
+    const payloadBytes = Buffer.byteLength(JSON.stringify(event), "utf8");
+    if (payloadBytes <= GAME_REALTIME_NOTIFY_MAX_BYTES) {
+      await publishCommittedEvent(event, "notify.private_patch");
+      return;
+    }
+
+    publishGameRealtimeMetric({
+      name: "notify.private_patch_fallback",
+      roomId: input.roomId,
+      revision: input.revision,
+      payloadBytes,
+    });
+  }
+
+  await publishCommittedEvent(
+    invalidationEvent(input.roomId, input.revision, input.playerId),
+    "notify.private",
+  );
+}
+
+export async function publishCommittedGameChange(
+  input: {
+    roomId: string;
+    baseRevision: number;
+    revision: number;
+    patch?: GameCommandPatch | null;
+  },
+) {
+  if (!gameRealtimeEnabled()) return;
+
+  if (
+    gameRealtimePatchesEnabled() &&
+    input.patch &&
+    isGameCommandPatch(input.patch)
+  ) {
+    const event = patchEvent(
+      input.roomId,
+      input.baseRevision,
+      input.revision,
+      input.patch,
+    );
+    const payloadBytes = Buffer.byteLength(JSON.stringify(event), "utf8");
+    if (payloadBytes <= GAME_REALTIME_NOTIFY_MAX_BYTES) {
+      await publishCommittedEvent(event, "notify.patch");
+      return;
+    }
+
+    publishGameRealtimeMetric({
+      name: "notify.patch_fallback",
+      roomId: input.roomId,
+      revision: input.revision,
+      payloadBytes,
+    });
+  }
+
+  await publishCommittedGameInvalidation(input.roomId, input.revision);
 }
 
 export async function publishGameInvalidation(
