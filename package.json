@@ -11,7 +11,7 @@
     "build": "node scripts/generate-region-outlines.mjs && next build",
     "start": "next start",
     "lint": "eslint --max-warnings=0",
-    "test:compile": "tsc -p tsconfig.test.json",
+    "test:compile": "node scripts/test/compile-white-box.mjs",
     "test:run": "node --test \"tests/*.test.mjs\"",
     "test": "npm run test:whitebox",
     "test:db": "npm run test:blackbox:db",
