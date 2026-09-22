@@ -1,65 +1,71 @@
 {
-  "$schema": "./node_modules/wrangler/config-schema.json",
-  "name": "war-brasil",
-  "main": ".open-next/worker.js",
-  "compatibility_date": "2026-09-20",
-  "compatibility_flags": [
-    "nodejs_compat"
-  ],
-  "assets": {
-    "directory": ".open-next/assets",
-    "binding": "ASSETS"
-  },
-  "r2_buckets": [
-    {
-      "binding": "ASSET_STORAGE",
-      "bucket_name": "war-brasil-assets-prod"
-    }
-  ],
-  // Production realtime is a separate Worker. The target now exists, so
-  // server-to-server delivery uses a Service Binding; the public Custom Domain
-  // remains configured as a safe fallback for runtimes without the binding.
-  "services": [
-    {
-      "binding": "GAME_REALTIME_SERVICE",
-      "service": "war-brasil-realtime"
-    }
-  ],
-  "vars": {
-    "SITE_URL": "https://bellumcivile.com",
-    "AUTH_ALLOWED_HOSTS": "bellumcivile.com",
-    "GAME_REALTIME_ENABLED": "true",
-    "GAME_REALTIME_DELIVERY_MODE": "cloudflare",
-    "GAME_REALTIME_INTERNAL_URL": "https://realtime.bellumcivile.com",
-    "GAME_REALTIME_TICKET_TTL_SECONDS": "45",
-    "GAME_AUTOMATION_WORKER_MODE": "off",
-    "GAME_AUTOMATION_QUEUE_MODE": "off",
-    "ASSET_STORAGE_BUCKET": "war-brasil-assets-prod",
-    "ASSET_PUBLIC_BASE_URL": "https://assets.bellumcivile.com"
-  },
-  // DATABASE_HYPERDRIVE_URL is the direct/unpooled origin URL and remains a
-  // secret. DATABASE_HYPERDRIVE itself is a Cloudflare resource binding and
-  // still requires the real Hyperdrive configuration ID before it can be
-  // declared here. AUTH_DATABASE_URL remains the dedicated direct auth
-  // connection.
-  "secrets": {
-    "required": [
-      "DATABASE_URL",
-      "DATABASE_HYPERDRIVE_URL",
-      "AUTH_DATABASE_URL",
-      "BETTER_AUTH_SECRET",
-      "BETTER_AUTH_URL",
-      "GOOGLE_CLIENT_ID",
-      "GOOGLE_CLIENT_SECRET",
-      "DISCORD_CLIENT_ID",
-      "DISCORD_CLIENT_SECRET",
-      "AUTH_EMAIL_FROM",
-      "EMAIL_TRANSPORT_SECRET",
-      "GAME_REALTIME_TICKET_SECRET",
-      "GAME_REALTIME_INTERNAL_TOKEN"
-    ]
-  },
-  "observability": {
-    "enabled": true
-  }
+	"$schema": "./node_modules/wrangler/config-schema.json",
+	"name": "war-brasil",
+	"main": ".open-next/worker.js",
+	"compatibility_date": "2026-09-20",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"assets": {
+		"directory": ".open-next/assets",
+		"binding": "ASSETS"
+	},
+	"r2_buckets": [
+		{
+			"binding": "ASSET_STORAGE",
+			"bucket_name": "war-brasil-assets-prod"
+		}
+	],
+	// Production realtime is a separate Worker. The target now exists, so
+	// server-to-server delivery uses a Service Binding; the public Custom Domain
+	// remains configured as a safe fallback for runtimes without the binding.
+	"services": [
+		{
+			"binding": "GAME_REALTIME_SERVICE",
+			"service": "war-brasil-realtime"
+		}
+	],
+	"vars": {
+		"SITE_URL": "https://bellumcivile.com",
+		"AUTH_ALLOWED_HOSTS": "bellumcivile.com",
+		"GAME_REALTIME_ENABLED": "true",
+		"GAME_REALTIME_DELIVERY_MODE": "cloudflare",
+		"GAME_REALTIME_INTERNAL_URL": "https://realtime.bellumcivile.com",
+		"GAME_REALTIME_TICKET_TTL_SECONDS": "45",
+		"GAME_AUTOMATION_WORKER_MODE": "off",
+		"GAME_AUTOMATION_QUEUE_MODE": "off",
+		"ASSET_STORAGE_BUCKET": "war-brasil-assets-prod",
+		"ASSET_PUBLIC_BASE_URL": "https://assets.bellumcivile.com"
+	},
+	// DATABASE_HYPERDRIVE_URL is the direct/unpooled origin URL and remains a
+	// secret. DATABASE_HYPERDRIVE itself is a Cloudflare resource binding and
+	// still requires the real Hyperdrive configuration ID before it can be
+	// declared here. AUTH_DATABASE_URL remains the dedicated direct auth
+	// connection.
+	"secrets": {
+		"required": [
+			"DATABASE_URL",
+			"DATABASE_HYPERDRIVE_URL",
+			"AUTH_DATABASE_URL",
+			"BETTER_AUTH_SECRET",
+			"BETTER_AUTH_URL",
+			"GOOGLE_CLIENT_ID",
+			"GOOGLE_CLIENT_SECRET",
+			"DISCORD_CLIENT_ID",
+			"DISCORD_CLIENT_SECRET",
+			"AUTH_EMAIL_FROM",
+			"EMAIL_TRANSPORT_SECRET",
+			"GAME_REALTIME_TICKET_SECRET",
+			"GAME_REALTIME_INTERNAL_TOKEN"
+		]
+	},
+	"observability": {
+		"enabled": true
+	},
+	"hyperdrive": [
+		{
+			"binding": "DATABASE_HYPERDRIVE",
+			"id": "5c25051a1ad840288538a23d1a466555"
+		}
+	]
 }
