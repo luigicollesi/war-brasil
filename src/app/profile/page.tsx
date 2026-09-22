@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import { connection } from "next/server";
 import { ProfileDossier } from "@/src/components/profile/v4/profile-dossier";
 import { ProfileShell, type ProfileShellWallet } from "@/src/components/profile/v4/profile-shell";
-import { auth } from "@/src/lib/server/auth/auth";
+import { getAuthenticatedSessionForReadHeaders } from "@/src/lib/server/auth/auth-guard";
 import { getOwnProfileAppearance } from "@/src/lib/server/profile/profile-appearance-service";
 import { getCurrentProfileCommandSnapshot } from "@/src/lib/server/profile/profile-command-snapshot-service";
 
@@ -18,10 +18,7 @@ export const metadata: Metadata = {
 
 export default async function ProfilePage() {
   await connection();
-  const session = await auth.api.getSession({
-    headers: await headers(),
-    query: { disableCookieCache: true },
-  });
+  const session = await getAuthenticatedSessionForReadHeaders(await headers());
   const [snapshot, appearance] = await Promise.all([
     getCurrentProfileCommandSnapshot(session, { includeStorefront: false }),
     session
