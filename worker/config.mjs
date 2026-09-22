@@ -19,7 +19,14 @@ function positiveInteger(value, fallback, minimum, maximum) {
 }
 
 export function automationWorkerPollMs(env = process.env) {
-  return positiveInteger(env.GAME_AUTOMATION_WORKER_POLL_MS, 500, 100, 60_000);
+  const queueMode = env.GAME_AUTOMATION_QUEUE_MODE?.trim();
+  const fallback = queueMode === "active" ? 5_000 : 500;
+  return positiveInteger(
+    env.GAME_AUTOMATION_WORKER_POLL_MS,
+    fallback,
+    100,
+    60_000,
+  );
 }
 
 export function automationWorkerBatchSize(env = process.env) {
