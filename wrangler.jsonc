@@ -16,18 +16,30 @@
       "bucket_name": "war-brasil-assets-prod"
     }
   ],
-  // OpenNext deploys only the Next.js Worker. Keep external Node services off
-  // until their production runtimes are deployed separately.
+  // Production realtime is a separate Cloudflare Worker. Internal calls prefer
+  // the Service Binding below; the public URL remains only as a fallback.
+  "services": [
+    {
+      "binding": "GAME_REALTIME_SERVICE",
+      "service": "war-brasil-realtime"
+    }
+  ],
   "vars": {
-    "GAME_REALTIME_ENABLED": "false",
+    "SITE_URL": "https://bellumcivile.com",
+    "AUTH_ALLOWED_HOSTS": "bellumcivile.com",
+    "GAME_REALTIME_ENABLED": "true",
+    "GAME_REALTIME_DELIVERY_MODE": "cloudflare",
+    "GAME_REALTIME_INTERNAL_URL": "https://realtime.bellumcivile.com",
+    "GAME_REALTIME_TICKET_TTL_SECONDS": "45",
     "GAME_AUTOMATION_WORKER_MODE": "off",
     "GAME_AUTOMATION_QUEUE_MODE": "off",
     "ASSET_STORAGE_BUCKET": "war-brasil-assets-prod"
   },
   // DATABASE_HYPERDRIVE_URL is the direct/unpooled origin URL and remains a
-  // secret. DATABASE_HYPERDRIVE itself is a Cloudflare resource binding and is
-  // added separately after creating the Hyperdrive configuration and obtaining
-  // its ID. AUTH_DATABASE_URL remains the dedicated direct auth connection.
+  // secret. DATABASE_HYPERDRIVE itself is a Cloudflare resource binding and
+  // still requires the real Hyperdrive configuration ID before it can be
+  // declared here. AUTH_DATABASE_URL remains the dedicated direct auth
+  // connection.
   "secrets": {
     "required": [
       "DATABASE_URL",
@@ -43,7 +55,9 @@
       "EMAIL_TRANSPORT_SECRET",
       "ASSET_STORAGE_URL",
       "ASSET_STORAGE_ACCESS_KEY_ID",
-      "ASSET_STORAGE_SECRET_ACCESS_KEY"
+      "ASSET_STORAGE_SECRET_ACCESS_KEY",
+      "GAME_REALTIME_TICKET_SECRET",
+      "GAME_REALTIME_INTERNAL_TOKEN"
     ]
   },
   "observability": {
