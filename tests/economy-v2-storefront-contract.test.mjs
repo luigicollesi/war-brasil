@@ -11,6 +11,10 @@ const service = readFileSync(
   "src/lib/server/economy/economy-service.ts",
   "utf8",
 );
+const catalogCache = readFileSync(
+  "src/lib/server/economy/storefront-catalog-cache.ts",
+  "utf8",
+);
 const storefront = readFileSync(
   "src/components/profile/v4/profile-store.tsx",
   "utf8",
@@ -77,10 +81,10 @@ test("storefront V2 deriva catálogo comercial no servidor sem regra React hardc
   assert.match(repository, /export async function listStorefrontCreditPacks/);
   assert.match(repository, /catalog\.credit_packs/);
 
-  assert.match(service, /listStorefrontOffers/);
+  assert.match(catalogCache, /listStorefrontOffers/);
   assert.match(service, /listActiveStorefrontQuoteItems/);
   assert.match(service, /quoteStorefrontProduct/);
-  assert.match(service, /listStorefrontCreditPacks/);
+  assert.match(catalogCache, /listStorefrontCreditPacks/);
   assert.match(service, /\boffers,\s*creditPacks:/);
   assert.match(service, /creditPacks:/);
 
