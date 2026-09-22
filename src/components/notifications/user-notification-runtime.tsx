@@ -167,10 +167,13 @@ export function UserNotificationRuntime() {
         socket = nextSocket;
 
         nextSocket.onopen = () => {
-          if (socket === nextSocket && !stopped) {
-            reconnectAttempt = 0;
-            setRealtimeConnected(true);
+          if (socket !== nextSocket || stopped) return;
+          if (nextSocket.protocol !== GAME_REALTIME_SUBPROTOCOL) {
+            nextSocket.close(1002, "Subprotocolo realtime incompatível");
+            return;
           }
+          reconnectAttempt = 0;
+          setRealtimeConnected(true);
         };
         nextSocket.onmessage = (message) => {
           if (typeof message.data !== "string") return;
