@@ -25,8 +25,10 @@ No generated `cpg.bin` is committed to Git. On a generated-CPG cache miss, GitHu
 2. Gameplay domain rules are transport-independent. HTTP/WebSocket/realtime layers adapt or accelerate synchronization rather than define rules.
 3. Gameplay mutations commit through server/database command boundaries before realtime invalidation is emitted.
 4. Realtime carries revision/readiness signals for both waiting-room and in-game state; recovery remains snapshot-based from authoritative state.
-5. Durable automation is scheduled from PostgreSQL state and executed by the worker; process-local timers are not authoritative.
-6. `src/lib/shared` cannot depend on React, Next.js, browser, PostgreSQL, `client/` or `server/`. `client/` may depend on `shared/` but not `server/`; `server/` may depend on `shared/` but not `client/`.
+5. Durable automation is scheduled from PostgreSQL state. Cloudflare Queue may accelerate delivery, but `automation_due_at` / `automation_kind` remain canonical and the polling worker remains a reconciliation path during rollout.
+6. Read-only authenticated hot paths may use Better Auth's short-lived signed cookie cache; mutations, tickets, purchases and other sensitive authorization boundaries must revalidate the session strongly.
+7. Best-effort effects that occur only after an authoritative COMMIT may use Cloudflare `waitUntil()`; anything required to determine the response must remain awaited.
+8. `src/lib/shared` cannot depend on React, Next.js, browser, PostgreSQL, `client/` or `server/`. `client/` may depend on `shared/` but not `server/`; `server/` may depend on `shared/` but not `client/`.
 
 ## Critical flows
 
@@ -37,9 +39,13 @@ client/UI
   -> src/app/api HTTP adapter
   -> src/lib/server command/service
   -> PostgreSQL transaction + revision + COMMIT
-  -> transport-independent realtime bus
-       -> pg_notify -> Node gateway (local/compatibility), or
-       -> Cloudflare Worker -> Durable Object (production rollout)
+  -> response-critical result is complete
+  -> best-effort post-commit effects
+       -> Cloudflare waitUntil() when available
+       -> transport-independent realtime bus
+            -> pg_notify -> Node gateway (local/compatibility), or
+            -> Cloudflare Worker -> Durable Object (production rollout)
+       -> optional Cloudflare Queue automation fast path
   -> client invalidation/patch
   -> authoritative HTTP snapshot refresh when required
 ```
