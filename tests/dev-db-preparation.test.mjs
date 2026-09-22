@@ -38,9 +38,10 @@ test("ambiente dev prepara migrations gerenciadas antes de subir Next e realtime
   );
   assert.equal(packageJson.scripts["db:migrate"], "node scripts/prepare-dev-db.mjs");
   assert.equal(
-    packageJson.scripts["test:db"],
+    packageJson.scripts["test:blackbox:db"],
     'node --test "tests/integration/*.test.mjs"',
   );
+  assert.equal(packageJson.scripts["test:db"], "npm run test:blackbox:db");
   assert.match(dev, /scripts\/prepare-dev-db\.mjs/);
   assert.match(dev, /node_modules\/next\/dist\/bin\/next/);
   assert.match(dev, /realtime\/server\.mjs/);
@@ -242,7 +243,7 @@ test("CI usa PostgreSQL real e runtime Node atual", () => {
   assert.match(workflow, /actions\/setup-node@v7/);
   assert.match(workflow, /node-version-file:\s*\.nvmrc/);
   assert.match(workflow, /image:\s*postgres:18/);
-  assert.match(workflow, /npm run test:db/);
+  assert.match(workflow, /npm run test:blackbox:db/);
   assert.doesNotMatch(workflow, /node-version:\s*20/);
   assert.equal(packageJson.scripts["test:run"], 'node --test "tests/*.test.mjs"');
   assert.equal(
