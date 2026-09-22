@@ -21,6 +21,7 @@
   "vars": {
     "GAME_REALTIME_ENABLED": "false",
     "GAME_AUTOMATION_WORKER_MODE": "off",
+    "GAME_AUTOMATION_QUEUE_MODE": "off",
     "ASSET_STORAGE_BUCKET": "war-brasil-assets-prod"
   },
   // DATABASE_HYPERDRIVE_URL is the direct/unpooled origin URL and remains a
