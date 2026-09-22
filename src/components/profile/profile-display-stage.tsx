@@ -117,6 +117,8 @@ function ProfileStageScene({
           <DiceShowcaseModel
             slot="dice_attack"
             assetRef={arsenal.diceAttack.assetRef}
+            bodyColor={arsenal.diceAttack.bodyColor}
+            bodyHighlightColor={arsenal.diceAttack.bodyHighlightColor}
           />
         </RotatingObject>
 
@@ -129,6 +131,8 @@ function ProfileStageScene({
           <DiceShowcaseModel
             slot="dice_defense"
             assetRef={arsenal.diceDefense.assetRef}
+            bodyColor={arsenal.diceDefense.bodyColor}
+            bodyHighlightColor={arsenal.diceDefense.bodyHighlightColor}
           />
         </RotatingObject>
 
@@ -141,6 +145,8 @@ function ProfileStageScene({
           <DiceShowcaseModel
             slot="dice_neutral"
             assetRef={arsenal.diceNeutral.assetRef}
+            bodyColor={arsenal.diceNeutral.bodyColor}
+            bodyHighlightColor={arsenal.diceNeutral.bodyHighlightColor}
           />
         </RotatingObject>
 
