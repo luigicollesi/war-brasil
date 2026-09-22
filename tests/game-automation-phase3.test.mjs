@@ -101,7 +101,7 @@ test("command boundary reconcilia agenda dentro do lock antes da revision e do c
   const command = source("src/lib/server/game-command.ts");
   const execute = command.indexOf("const value = await execute(client)");
   const reconcile = command.indexOf(
-    "await reconcileGameAutomationSchedule(client, roomId)",
+    "reconcileGameAutomationSchedule(",
     execute,
   );
   const revision = command.indexOf(
