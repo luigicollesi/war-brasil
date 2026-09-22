@@ -1,0 +1,34 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "war-brasil-automation-queue",
+  "main": "worker/cloudflare/automation-queue.ts",
+  "compatibility_date": "2026-09-21",
+  "workers_dev": false,
+  "services": [
+    {
+      "binding": "GAME_APP_SERVICE",
+      "service": "war-brasil"
+    }
+  ],
+  "queues": {
+    "consumers": [
+      {
+        "queue": "war-brasil-automation",
+        "max_batch_size": 10,
+        "max_batch_timeout": 1,
+        "max_retries": 10,
+        "dead_letter_queue": "war-brasil-automation-dlq",
+        "max_concurrency": 10,
+        "retry_delay": 5
+      }
+    ]
+  },
+  "secrets": {
+    "required": [
+      "GAME_AUTOMATION_WORKER_TOKEN"
+    ]
+  },
+  "observability": {
+    "enabled": true
+  }
+}
