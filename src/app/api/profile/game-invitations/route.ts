@@ -1,6 +1,7 @@
 import {
   authenticationRequiredResponse,
   getAuthenticatedSession,
+  getAuthenticatedSessionForRead,
 } from "@/src/lib/server/auth/auth-guard";
 import { rejectUntrustedMutationOrigin } from "@/src/lib/server/auth/request-origin";
 import {
@@ -27,7 +28,7 @@ function invitationErrorResponse(error: unknown) {
 }
 
 export async function GET(request: Request) {
-  const session = await getAuthenticatedSession(request);
+  const session = await getAuthenticatedSessionForRead(request);
   if (!session) return authenticationRequiredResponse();
 
   try {
