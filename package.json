@@ -40,7 +40,9 @@
     "cloudflare:patch-next": "node scripts/patch-next-cloudflare-middleware-manifest.mjs",
     "cloudflare:check-next-patch": "node scripts/patch-next-cloudflare-middleware-manifest.mjs --check",
     "cloudflare:verify": "node scripts/verify-cloudflare-build.mjs",
-    "cloudflare:smoke": "node scripts/cloudflare-smoke.mjs"
+    "cloudflare:smoke": "node scripts/cloudflare-smoke.mjs",
+    "cloudflare:realtime:build": "wrangler deploy --dry-run --config wrangler.realtime.jsonc",
+    "cloudflare:realtime:deploy": "wrangler deploy --config wrangler.realtime.jsonc"
   },
   "dependencies": {
     "@opennextjs/cloudflare": "1.20.6",
