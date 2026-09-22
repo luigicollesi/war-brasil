@@ -266,6 +266,8 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
                 <DiceShowcaseModel
                   assetRef={item.assetRef}
                   slot={item.slot}
+                  bodyColor={item.bodyColor}
+                  bodyHighlightColor={item.bodyHighlightColor}
                 />
               ) : item.type === "territory" &&
                 !failedTerritoryItemIds.has(item.id) ? (
