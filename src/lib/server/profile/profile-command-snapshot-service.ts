@@ -9,7 +9,8 @@ import type {
   StoreShowcase,
 } from "@/src/lib/profile/profile-command-contract";
 import { getCurrentProfileCommandSnapshot as getEvaluationProfileCommandSnapshot } from "@/src/lib/profile/profile-command-data";
-import { auth, type AuthSession } from "../auth/auth";
+import type { AuthSession } from "../auth/auth";
+import { getAuthenticatedSessionForReadHeaders } from "../auth/auth-guard";
 import {
   getEconomyStorefront,
   getEconomyWallet,
@@ -73,10 +74,7 @@ export async function getCurrentProfileCommandSnapshot(
   const session =
     providedSession !== undefined
       ? providedSession
-      : await auth.api.getSession({
-          headers: await headers(),
-          query: { disableCookieCache: true },
-        });
+      : await getAuthenticatedSessionForReadHeaders(await headers());
 
   if (!session) {
     return guestSnapshot("Sessão autenticada necessária para abrir o Quartel do Comandante.");
