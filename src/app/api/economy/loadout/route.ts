@@ -7,7 +7,7 @@ import { rejectUntrustedMutationOrigin } from "@/src/lib/server/auth/request-ori
 import {
   EconomyServiceError,
   equipCosmetic,
-  getEconomyStorefront,
+  getEconomyLoadout,
   parseEquipCosmeticInput,
 } from "@/src/lib/server/economy/economy-service";
 
@@ -34,9 +34,9 @@ export async function GET(request: Request) {
   if (!session) return authenticationRequiredResponse();
 
   try {
-    const storefront = await getEconomyStorefront(session.user.id);
+    const loadout = await getEconomyLoadout(session.user.id);
     return Response.json(
-      { loadout: storefront.loadout },
+      { loadout },
       { headers: { "Cache-Control": "private, no-store" } },
     );
   } catch (error) {
@@ -64,8 +64,8 @@ export async function PUT(request: Request) {
   try {
     const input = parseEquipCosmeticInput(payload);
     await equipCosmetic(session.user.id, input.slot, input.cosmeticId);
-    const storefront = await getEconomyStorefront(session.user.id);
-    return Response.json({ ok: true, loadout: storefront.loadout });
+    const loadout = await getEconomyLoadout(session.user.id);
+    return Response.json({ ok: true, loadout });
   } catch (error) {
     return economyErrorResponse(error);
   }
