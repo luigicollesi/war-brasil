@@ -65,6 +65,7 @@ export function UserNotificationRuntime() {
   const [notifications, setNotifications] = useState<UserNotification[]>([]);
   const [busyInvitationId, setBusyInvitationId] = useState<string | null>(null);
   const [invitationError, setInvitationError] = useState<string | null>(null);
+  const [realtimeConnected, setRealtimeConnected] = useState(false);
 
   const activeInvitation = incoming[0] ?? null;
   const activeNotification = notifications[0] ?? null;
@@ -100,9 +101,12 @@ export function UserNotificationRuntime() {
     };
 
     void poll();
-    const intervalId = window.setInterval(() => {
-      void poll();
-    }, 15_000);
+    const intervalId = window.setInterval(
+      () => {
+        void poll();
+      },
+      realtimeConnected ? 60_000 : 15_000,
+    );
 
     const onFocus = () => void poll();
     const onVisibility = () => {
@@ -117,7 +121,7 @@ export function UserNotificationRuntime() {
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [isPending, refresh, session?.user]);
+  }, [isPending, realtimeConnected, refresh, session?.user]);
 
   useEffect(() => {
     if (
@@ -143,7 +147,11 @@ export function UserNotificationRuntime() {
     const connect = async () => {
       try {
         const ticket = await fetchUserRealtimeTicket();
-        if (stopped || !ticket) return;
+        if (stopped) return;
+        if (!ticket) {
+          setRealtimeConnected(false);
+          return;
+        }
 
         const nextSocket = new WebSocket(
           userRealtimeUrl(ticket),
@@ -151,6 +159,11 @@ export function UserNotificationRuntime() {
         );
         socket = nextSocket;
 
+        nextSocket.onopen = () => {
+          if (socket === nextSocket && !stopped) {
+            setRealtimeConnected(true);
+          }
+        };
         nextSocket.onmessage = (message) => {
           if (typeof message.data !== "string") return;
           try {
@@ -164,12 +177,16 @@ export function UserNotificationRuntime() {
             // Invalid push data is ignored; REST polling remains authoritative.
           }
         };
-        nextSocket.onerror = () => undefined;
+        nextSocket.onerror = () => {
+          if (!stopped) setRealtimeConnected(false);
+        };
         nextSocket.onclose = () => {
           if (socket === nextSocket) socket = null;
+          if (!stopped) setRealtimeConnected(false);
           scheduleReconnect();
         };
       } catch {
+        if (!stopped) setRealtimeConnected(false);
         scheduleReconnect();
       }
     };
