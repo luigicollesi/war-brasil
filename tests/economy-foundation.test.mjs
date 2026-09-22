@@ -18,6 +18,8 @@ const gameCosmetics = source("src/lib/server/game-cosmetic-loadout-service.ts");
 const assetConfig = source("src/lib/server/assets/asset-storage-config.ts");
 const assetSigning = source("src/lib/server/assets/asset-storage-s3.ts");
 const assetService = source("src/lib/server/assets/asset-storage-service.ts");
+const assetDelivery = source("src/lib/server/assets/asset-delivery.ts");
+const assetFallback = source("src/lib/server/assets/asset-fallback-route.ts");
 const assetRoute = source("src/app/api/assets/dice/route.ts");
 const startGame = source("src/lib/server/start-game-service.ts");
 const gameSnapshot = source("src/lib/server/game-snapshot-service.ts");
@@ -191,16 +193,21 @@ test("APIs derivam ator da sessão e preservam leitura + equipagem autenticada",
   }
 });
 
-test("ASSET_STORAGE_URL permanece server-only e dados usam entrega autenticada", () => {
+test("assets usam CDN público e fallback autenticado sem expor credenciais", () => {
   assert.match(assetConfig, /ASSET_STORAGE_ENV = "ASSET_STORAGE_URL"/);
   assert.match(assetConfig, /war-brasil-assets-prod/);
   assert.match(assetConfig, /r2\\\.cloudflarestorage\\\.com/);
   assert.match(assetSigning, /AWS4-HMAC-SHA256/);
   assert.match(assetSigning, /image\/webp/);
-  assert.match(assetService, /\/api\/assets\/dice\?key=/);
-  assert.match(assetRoute, /getAuthenticatedSessionForRead\(request\)/);
-  assert.match(assetRoute, /isKnownDiceAssetKey\(objectKey\)/);
-  assert.match(assetRoute, /resolveDiceAssetReadUrl\(objectKey/);
+  assert.match(assetService, /assetDeliveryPath/);
+  assert.match(assetService, /fallbackPath: "\/api\/assets\/dice"/);
+  assert.match(assetDelivery, /publicAssetDeliveryUrl/);
+  assert.match(assetFallback, /getAuthenticatedSessionForRead\(request\)/);
+  assert.match(assetFallback, /readBoundAssetResponse/);
+  assert.match(assetFallback, /options\.resolveReadUrl/);
+  assert.match(assetRoute, /serveAuthenticatedAssetFallback/);
+  assert.match(assetRoute, /isKnownDiceAssetKey/);
+  assert.match(assetRoute, /resolveDiceAssetReadUrl/);
   assert.doesNotMatch(assetRoute, /process\.env\.ASSET_STORAGE_URL|secretAccessKey|accessKeyId/);
   assert.equal(existsSync("src/app/api/assets/dice/route.ts"), true);
 });
