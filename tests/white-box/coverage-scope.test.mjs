@@ -16,6 +16,9 @@ const COVERAGE_ROOTS = [
 ];
 
 const SOURCE_ALIAS_PREFIX = "@/src/lib/";
+const NON_DETERMINISTIC_OUTPUTS = new Set([
+  ".test-build/events/event-repository.js",
+]);
 
 registerHooks({
   resolve(specifier, context, nextResolve) {
@@ -43,7 +46,11 @@ async function collectJavaScriptFiles(directory) {
       files.push(...(await collectJavaScriptFiles(path)));
       continue;
     }
-    if (entry.isFile() && entry.name.endsWith(".js")) {
+    if (
+      entry.isFile() &&
+      entry.name.endsWith(".js") &&
+      !NON_DETERMINISTIC_OUTPUTS.has(path)
+    ) {
       files.push(path);
     }
   }
