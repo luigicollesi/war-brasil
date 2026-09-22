@@ -1,6 +1,6 @@
 import {
   authenticationRequiredResponse,
-  getAuthenticatedSession,
+  getAuthenticatedSessionForRead,
 } from "@/src/lib/server/auth/auth-guard";
 import { readBoundAssetResponse } from "@/src/lib/server/assets/asset-r2-binding";
 import { assertTerritorySkinAssetKey } from "@/src/lib/server/assets/asset-storage-config";
@@ -36,7 +36,7 @@ function proxiedAssetResponse(upstream: Response) {
 }
 
 export async function GET(request: Request) {
-  const session = await getAuthenticatedSession(request);
+  const session = await getAuthenticatedSessionForRead(request);
   if (!session) return authenticationRequiredResponse();
 
   const requestedKey = new URL(request.url).searchParams.get("key")?.trim();
