@@ -540,9 +540,14 @@ war-brasil-assets-prod
 
 Development and production must not share a mutable bucket namespace.
 
-### 15.2 Planned server-only access variables
+### 15.2 Server-side access boundaries
 
-The implementation should reuse the parent Economy V2 storage contract and extend it only as needed:
+Production Cloudflare Workers use the `ASSET_STORAGE` R2 binding as the
+authoritative server-side capability. No S3 API credential is required in the
+production Worker runtime.
+
+The S3-compatible variables remain available only for Node/local tooling,
+asset validation and non-Worker administrative scripts:
 
 ```text
 ASSET_STORAGE_URL
@@ -568,9 +573,9 @@ Postgres object key
   -> R2 on cache miss
 ```
 
-The authenticated `/api/assets/*` routes and the `ASSET_STORAGE` binding remain fallback/private compatibility boundaries; they are not the production hot path for public cosmetic images.
+The authenticated `/api/assets/*` routes remain compatibility/private fallbacks; inside Cloudflare they read R2 through the binding first and do not perform a network-authenticated S3 request.
 
-All credential-bearing variables are server-only and must never use a public/client environment prefix. `ASSET_PUBLIC_BASE_URL` contains no credential and is a normal production runtime variable.
+All credential-bearing variables are server-only and must never use a public/client environment prefix. `ASSET_PUBLIC_BASE_URL` contains no credential and is a normal production runtime variable. A browser-visible shared secret must never be added to public cosmetic URLs.
 
 ### 15.3 Key strategy
 
