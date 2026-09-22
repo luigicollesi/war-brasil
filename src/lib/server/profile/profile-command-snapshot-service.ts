@@ -111,46 +111,54 @@ export async function getCurrentProfileCommandSnapshot(
         storefront: null,
       }));
 
-  const [activityResult, historyResult, livePresence, economyResult] =
-    await Promise.all([
-      getCommanderActivity(session.user.id)
-        .then((data) => ({ available: true as const, data }))
-        .catch((error: unknown) => {
-          console.error("Falha ao carregar atividade no Profile.", error);
-          return {
-            available: false as const,
-            data: { state: "unavailable" as const, matchMode: null },
-          };
-        }),
-      getPlayerMatchHistory(session.user.id, { limit: 20 })
-        .then((data) => ({ available: true as const, data }))
-        .catch((error: unknown) => {
-          console.error("Falha ao carregar histórico no Profile.", error);
-          return { available: false as const, data: emptyHistory() };
-        }),
-      renewOwnPresence(session.user.id, {
-        timeoutMs: PROFILE_SNAPSHOT_PRESENCE_TIMEOUT_MS,
-      }),
-      economyRead.catch((error: unknown) => {
-        console.error("Falha ao carregar economia no Profile.", error);
-        return {
-          available: false as const,
-          wallet: null,
-          storefront: null,
-        };
-      }),
-    ]);
+  const historyRead = getPlayerMatchHistory(session.user.id, { limit: 20 })
+    .then((data) => ({ available: true as const, data }))
+    .catch((error: unknown) => {
+      console.error("Falha ao carregar histórico no Profile.", error);
+      return { available: false as const, data: emptyHistory() };
+    });
 
-  const socialResult = await getPlayerSocialSnapshot(
+  const socialRead = getPlayerSocialSnapshot(
     session.user.id,
     profile.identity.handle,
-    historyResult.data,
+    historyRead.then((result) => result.data),
   )
     .then((data) => ({ available: true as const, data }))
     .catch((error: unknown) => {
       console.error("Falha ao carregar rede social no Profile.", error);
       return { available: false as const, data: emptySocial() };
     });
+
+  const [
+    activityResult,
+    historyResult,
+    livePresence,
+    economyResult,
+    socialResult,
+  ] = await Promise.all([
+    getCommanderActivity(session.user.id)
+      .then((data) => ({ available: true as const, data }))
+      .catch((error: unknown) => {
+        console.error("Falha ao carregar atividade no Profile.", error);
+        return {
+          available: false as const,
+          data: { state: "unavailable" as const, matchMode: null },
+        };
+      }),
+    historyRead,
+    renewOwnPresence(session.user.id, {
+      timeoutMs: PROFILE_SNAPSHOT_PRESENCE_TIMEOUT_MS,
+    }),
+    economyRead.catch((error: unknown) => {
+      console.error("Falha ao carregar economia no Profile.", error);
+      return {
+        available: false as const,
+        wallet: null,
+        storefront: null,
+      };
+    }),
+    socialRead,
+  ]);
 
   const historySection: ProfileCommandSnapshot["history"] =
     historyResult.available
