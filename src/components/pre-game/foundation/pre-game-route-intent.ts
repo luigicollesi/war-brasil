@@ -5,6 +5,7 @@ import type {
 
 const EXACT_ROUTE_MODES: Readonly<Record<string, CommandSceneMode>> = {
   "/": "entrance",
+  "/home": "entrance",
   "/matchmaking": "operations",
   "/rules": "doctrine",
   "/profile": "profile",
