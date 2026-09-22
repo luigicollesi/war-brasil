@@ -16,7 +16,7 @@ test("public commander route uses a dedicated server projection and supports sel
   assert.doesNotMatch(page, /profile-command-data/);
   assert.match(page, /getCurrentProfileCommandSnapshot/);
 
-  assert.match(snapshot, /auth\.api\.getSession/);
+  assert.match(snapshot, /getAuthenticatedSessionForReadHeaders/);
   assert.match(snapshot, /session\.user\.id/);
   assert.match(snapshot, /getPublicCommanderProfile\(session\.user\.id, handle\)/);
   assert.match(snapshot, /getPublicProfileAppearance/);
