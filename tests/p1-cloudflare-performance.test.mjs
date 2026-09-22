@@ -42,11 +42,12 @@ test("P1: storefront reads avoid a long transaction and loadout avoids full cata
   assert.match(service, /ensureEconomyStateForRead/);
   assert.match(service, /export async function getEconomyLoadout/);
   assert.match(storefront, /const userOverlayPromise = Promise\.all/);
-  assert.match(storefront, /const catalogPromise = Promise\.all/);
+  assert.match(storefront, /const catalogPromise = getStorefrontCatalogSnapshot\(\)/);
   assert.match(
     storefront,
     /await Promise\.all\(\[userOverlayPromise, catalogPromise\]\)/,
   );
+  assert.match(storefront, /getStorefrontCatalogSnapshot\(\{ bypassCache: true \}\)/);
   assert.doesNotMatch(storefront, /query\("BEGIN"\)|query\("COMMIT"\)/);
   assert.match(loadoutRoute, /getEconomyLoadout\(session\.user\.id\)/);
   assert.doesNotMatch(loadoutRoute, /getEconomyStorefront/);
@@ -89,8 +90,11 @@ test("P1: automation Queue is an optional fast path over canonical PostgreSQL sc
   const consumer = read("worker/cloudflare/automation-queue.ts");
   const config = read("wrangler.automation.jsonc");
   const mainWrangler = read("wrangler.jsonc");
+  const env = read(".env.example");
 
   assert.match(producer, /GAME_AUTOMATION_QUEUE/);
+  assert.match(producer, /GAME_AUTOMATION_QUEUE_MODE/);
+  assert.match(producer, /"off" \| "shadow" \| "active"/);
   assert.match(producer, /expectedRevision: input\.revision/);
   assert.match(producer, /delaySeconds: queueDelaySeconds/);
   assert.match(
@@ -104,8 +108,32 @@ test("P1: automation Queue is an optional fast path over canonical PostgreSQL sc
   assert.match(consumer, /message\.ack\(\)/);
   assert.match(consumer, /message\.retry/);
   assert.match(consumer, /expectedRevision/);
+  assert.match(consumer, /message\.body\.mode === "shadow"/);
   assert.match(config, /"queue": "war-brasil-automation"/);
   assert.match(config, /"dead_letter_queue": "war-brasil-automation-dlq"/);
   assert.match(config, /"binding": "GAME_APP_SERVICE"/);
-  assert.doesNotMatch(mainWrangler, /GAME_AUTOMATION_QUEUE/);
+  assert.match(mainWrangler, /"GAME_AUTOMATION_QUEUE_MODE": "off"/);
+  assert.doesNotMatch(mainWrangler, /"binding": "GAME_AUTOMATION_QUEUE"/);
+  assert.match(env, /GAME_AUTOMATION_QUEUE_MODE=off/);
+});
+
+
+test("P1: shared storefront catalog uses short Cloudflare cache with fresh fallback", () => {
+  const cache = read(
+    "src/lib/server/economy/storefront-catalog-cache.ts",
+  );
+  const service = read("src/lib/server/economy/economy-service.ts");
+
+  assert.match(cache, /STOREFRONT_CATALOG_CACHE_SECONDS = 10/);
+  assert.match(cache, /caches\?: CacheStorage/);
+  assert.match(cache, /cache\.match\(cacheKey\)/);
+  assert.match(cache, /cache\.put\(cacheKey, response\)/);
+  assert.match(cache, /listStorefrontOffers\(\)/);
+  assert.match(cache, /listActiveStorefrontOfferProducts\(\)/);
+  assert.match(service, /getStorefrontCatalogSnapshot\(\)/);
+  assert.match(
+    service,
+    /getStorefrontCatalogSnapshot\(\{ bypassCache: true \}\)/,
+  );
+  assert.match(service, /ECONOMY_CATALOG_INVALID/);
 });
