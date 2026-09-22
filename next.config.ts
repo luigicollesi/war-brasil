@@ -5,6 +5,13 @@ const nextConfig: NextConfig = {
     // Store/game artwork is already shipped as optimized SVG/WebP assets.
     // Avoid requiring the paid Cloudflare Images binding at runtime.
     unoptimized: true,
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "assets.bellumcivile.com",
+        pathname: "/**",
+      },
+    ],
   },
   outputFileTracingIncludes: {
     "**/*": [
