@@ -53,5 +53,9 @@ test("mixed showcases pass the selected territory cosmetic into the same shared 
   assert.match(showcase, /<TerritoryShowcaseModel/);
   assert.match(showcase, /cosmeticId=\{selectedItem\.id\}/);
   assert.match(showcase, /assetRef=\{selectedItem\.assetRef\}/);
+  assert.match(
+    read("src/lib/client/store-showcase/territory-showcase-skin.ts"),
+    /objectKey\.startsWith\("cosmetics\/territory-skins\/"\)/,
+  );
   assert.match(showcase, /effectKey=\{selectedItem\.effectKey\}/);
 });
