@@ -327,6 +327,8 @@ export function BattleOverlay({
         defenderColor={defender?.color ?? "ruby"}
         attackAssetRef={attackAssetRef}
         defenseAssetRef={defenseAssetRef}
+        attackBodyColor={attackBodyColor}
+        defenseBodyColor={defenseBodyColor}
       />
 
       {battle.stage === "show_comparison" ||

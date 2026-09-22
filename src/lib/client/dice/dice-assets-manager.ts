@@ -7,6 +7,7 @@ import type {
   RoundedDieGeometryOptions,
 } from "./types";
 import { createDiceFaceTexture } from "./textures/create-face-texture";
+export { preloadDiceSourceImage } from "./textures/create-face-texture";
 import {
   DEFAULT_DICE_PIP_COLOR,
   DEFAULT_DICE_TEXTURE_RESOLUTION,

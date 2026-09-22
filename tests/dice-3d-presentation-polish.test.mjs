@@ -92,6 +92,8 @@ test("apresentação usa cor oficial da facção e acabamento físico com contor
   );
   const visual = readFileSync("src/components/dice-3d/dice-model-3d.tsx", "utf8");
   const palette = readFileSync("src/lib/client/player-color.ts", "utf8");
+  const overlay = readFileSync("src/components/battle-overlay.tsx", "utf8");
+  const layout = readFileSync("src/app/layout.tsx", "utf8");
 
   assert.match(arena, /pipColor: playerColorHex\(attackerColor\)/);
   assert.match(arena, /pipColor: playerColorHex\(defenderColor\)/);
@@ -121,5 +123,15 @@ test("apresentação usa cor oficial da facção e acabamento físico com contor
   assert.match(staticResults, /skin: "defense"/);
   assert.match(staticResults, /pipColor: playerColorHex\(attackerColor\)/);
   assert.match(staticResults, /pipColor: playerColorHex\(defenderColor\)/);
+  assert.match(staticResults, /preloadDiceSourceImage/);
+  assert.match(staticResults, /bodyColor: attackBodyColor/);
+  assert.match(staticResults, /bodyColor: defenseBodyColor/);
+  assert.match(staticResults, /resolution: DICE_VISUAL_TEXTURE_RESOLUTION/);
+  assert.match(overlay, /attackBodyColor=\{attackBodyColor\}/);
+  assert.match(overlay, /defenseBodyColor=\{defenseBodyColor\}/);
+  assert.match(layout, /ASSET_PUBLIC_BASE_URL/);
+  assert.match(layout, /rel="preconnect"/);
+  assert.match(layout, /rel="dns-prefetch"/);
+  assert.match(layout, /crossOrigin="anonymous"/);
   assert.doesNotMatch(staticResults, /Promise\.all/);
 });

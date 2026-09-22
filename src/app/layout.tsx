@@ -33,6 +33,21 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+function assetPublicOrigin() {
+  const configured = process.env.ASSET_PUBLIC_BASE_URL?.trim();
+  if (!configured) return null;
+
+  try {
+    const url = new URL(configured);
+    if (process.env.NODE_ENV === "production" && url.protocol !== "https:") {
+      return null;
+    }
+    return url.origin;
+  } catch {
+    return null;
+  }
+}
+
 export const metadata: Metadata = {
   metadataBase: getSiteUrl(),
   applicationName: "Bellum Civile",
@@ -58,12 +73,20 @@ export const metadata: Metadata = {
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
+  const assetOrigin = assetPublicOrigin();
+
   return (
     <html
       lang="pt-BR"
       data-scroll-behavior="smooth"
       className={`${interfaceFont.variable} ${displayFont.variable} ${geistMono.variable} h-full antialiased`}
     >
+      {assetOrigin ? (
+        <head>
+          <link rel="preconnect" href={assetOrigin} crossOrigin="anonymous" />
+          <link rel="dns-prefetch" href={assetOrigin} />
+        </head>
+      ) : null}
       <body className="min-h-full font-[var(--font-wb-ui)]">
         <ProfilePresenceHeartbeat />
         <UserNotificationRuntime />

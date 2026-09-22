@@ -16,7 +16,7 @@ import {
 const imagePromises = new Map<string, Promise<HTMLImageElement>>();
 const BODY_COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
 
-function loadImage(src: string) {
+export function preloadDiceSourceImage(src: string) {
   const cached = imagePromises.get(src);
   if (cached) return cached;
 
@@ -31,7 +31,16 @@ function loadImage(src: string) {
     // Production dice artwork is delivered by the R2 custom domain. Anonymous
     // CORS keeps the source origin-clean when it is composed into CanvasTexture.
     image.crossOrigin = "anonymous";
-    image.onload = () => resolve(image);
+    image.onload = () => {
+      if (typeof image.decode !== "function") {
+        resolve(image);
+        return;
+      }
+      void image.decode().then(
+        () => resolve(image),
+        () => resolve(image),
+      );
+    };
     image.onerror = () => reject(new Error(`Não foi possível carregar ${src}.`));
     image.src = src;
   });
@@ -158,7 +167,7 @@ export async function createDiceFaceTexture({
   let source = `procedural:${skin}`;
   if (assetRef) {
     try {
-      const image = await loadImage(assetRef);
+      const image = await preloadDiceSourceImage(assetRef);
       context.drawImage(image, 0, 0, resolution, resolution);
       source = assetRef;
     } catch {

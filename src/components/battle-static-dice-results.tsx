@@ -2,9 +2,13 @@
 
 import { useEffect } from "react";
 import { GameDie } from "@/src/components/game-die";
-import { preloadDiceAssets } from "@/src/lib/client/dice/dice-assets-manager";
+import {
+  preloadDiceAssets,
+  preloadDiceSourceImage,
+} from "@/src/lib/client/dice/dice-assets-manager";
 import { validateDiceValues } from "@/src/lib/client/dice/dice-values";
 import { playerColorHex } from "@/src/lib/client/player-color";
+import { DICE_VISUAL_TEXTURE_RESOLUTION } from "@/src/lib/client/dice/visual-config";
 import type { PlayerColor } from "@/src/lib/lobby";
 import type { GameBattle } from "@/src/lib/game-contract";
 
@@ -54,13 +58,24 @@ export function BattleStaticDiceResults({
   defenderColor = "ruby",
   attackAssetRef,
   defenseAssetRef,
+  attackBodyColor,
+  defenseBodyColor,
 }: {
   battle: GameBattle;
   attackerColor?: PlayerColor;
   defenderColor?: PlayerColor;
   attackAssetRef?: string | null;
   defenseAssetRef?: string | null;
+  attackBodyColor?: string | null;
+  defenseBodyColor?: string | null;
 }) {
+  useEffect(() => {
+    for (const assetRef of [attackAssetRef, defenseAssetRef]) {
+      if (!assetRef) continue;
+      void preloadDiceSourceImage(assetRef).catch(() => undefined);
+    }
+  }, [attackAssetRef, defenseAssetRef]);
+
   useEffect(() => {
     const texture =
       battle.stage === "awaiting_attacker_roll"
@@ -68,12 +83,16 @@ export function BattleStaticDiceResults({
             skin: "attack" as const,
             pipColor: playerColorHex(attackerColor),
             assetRef: attackAssetRef,
+            bodyColor: attackBodyColor,
+            resolution: DICE_VISUAL_TEXTURE_RESOLUTION,
           }
         : battle.stage === "awaiting_defender_roll"
           ? {
               skin: "defense" as const,
               pipColor: playerColorHex(defenderColor),
               assetRef: defenseAssetRef,
+              bodyColor: defenseBodyColor,
+              resolution: DICE_VISUAL_TEXTURE_RESOLUTION,
             }
           : null;
 
@@ -81,9 +100,11 @@ export function BattleStaticDiceResults({
     void preloadDiceAssets({ texture }).catch(() => undefined);
   }, [
     attackAssetRef,
+    attackBodyColor,
     attackerColor,
     battle.stage,
     defenseAssetRef,
+    defenseBodyColor,
     defenderColor,
   ]);
 
