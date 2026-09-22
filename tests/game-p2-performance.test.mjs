@@ -70,12 +70,13 @@ test("mudanças apenas de tropas não reavaliam objetivos de domínio", () => {
   const service = readFileSync("src/lib/server/game-troop-command-service.ts", "utf8");
   const reinforcementRoute = readFileSync("src/app/api/games/[roomId]/reinforce/route.ts", "utf8");
   const tradeRoute = readFileSync("src/app/api/games/[roomId]/cards/trade/route.ts", "utf8");
-  const tradePatchService = readFileSync("src/lib/server/game-card-redemption-patch-command-service.ts", "utf8");
   assert.match(service, /"troops_changed"/);
   assert.match(service, /changedTroops/);
+  assert.match(service, /executeTradeCards/);
+  assert.match(service, /readPlayerHandPrivatePatch/);
+  assert.match(service, /syncEffects/);
   assert.match(reinforcementRoute, /game-troop-command-service/);
-  assert.match(tradeRoute, /game-card-redemption-patch-command-service/);
-  assert.match(tradePatchService, /executeTradeCards/);
+  assert.match(tradeRoute, /game-troop-command-service/);
 });
 
 test("combate avalia objetivo somente quando controle territorial muda", () => {

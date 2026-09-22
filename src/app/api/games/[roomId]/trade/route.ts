@@ -8,7 +8,7 @@ import { GAME_REVISION_HEADER } from "@/src/lib/game-sync-contract";
 import { getPlayerSession } from "@/src/lib/player-session";
 import { RoomError } from "@/src/lib/rooms";
 import { readGameCommandRequestMetadata } from "@/src/lib/server/game-command-request";
-import { playerTradePatchCommand } from "@/src/lib/server/game-player-trade-patch-service";
+import { playerTradeCommand } from "@/src/lib/server/game-player-trade-service";
 import { publishTradeDeclineResolution } from "@/src/lib/server/game-trade-resolution-notifier";
 import { assertAuthenticatedPlayerSeat } from "@/server/auth/player-seat-guard";
 
@@ -29,7 +29,7 @@ export async function POST(
     await assertAuthenticatedPlayerSeat(request, session, { roomId });
     const metadata = readGameCommandRequestMetadata(request);
     body = await readJsonObject(request);
-    const result = await playerTradePatchCommand(roomId, session, body, metadata);
+    const result = await playerTradeCommand(roomId, session, body, metadata);
 
     if (body.action === "decline") {
       await publishTradeDeclineResolution(roomId, session, body.offerId).catch(

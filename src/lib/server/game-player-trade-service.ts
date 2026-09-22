@@ -14,6 +14,7 @@ import { RoomError } from "@/src/lib/rooms";
 import { pool } from "./db/pool";
 import { publishGameTradeSignal } from "./game-realtime-publisher";
 import { beginReinforcementForPlayer } from "./game-turn-service";
+import { buildTradeCommandSyncEffects } from "./game-trade-read-model";
 
 type TradeRoom = {
   id: string;
@@ -871,6 +872,9 @@ export async function playerTradeCommand(
     async (client) => {
       const player = await resolveCommandPlayerBySession(client, roomId, session);
       return executePlayerTradeAction(client, roomId, player.id, input);
+    },
+    {
+      syncEffects: (client) => buildTradeCommandSyncEffects(client, roomId, input),
     },
   );
 }
