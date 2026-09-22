@@ -69,7 +69,7 @@ test("tabuleiro deriva efeito do dono sem criar fetch, estado ou hitbox cosméti
   assert.match(board, /:effect:\$\{territoryEffectKey\}:asset:/);
   assert.match(
     board,
-    /territoryMaterial\(territory\.ownerColor, territoryEffectKey\)/,
+    /territoryMaterial\(\s*territory\.ownerColor,\s*territoryEffectKey,?\s*\)/,
   );
 
   // Marcadores de tropas permanecem ancorados apenas à PlayerColor. O efeito
