@@ -1,6 +1,6 @@
 import {
   authenticationRequiredResponse,
-  getAuthenticatedSession,
+  getAuthenticatedSessionForRead,
 } from "@/src/lib/server/auth/auth-guard";
 import {
   EconomyServiceError,
@@ -26,7 +26,7 @@ function economyErrorResponse(error: unknown) {
 }
 
 export async function GET(request: Request) {
-  const session = await getAuthenticatedSession(request);
+  const session = await getAuthenticatedSessionForRead(request);
   if (!session) return authenticationRequiredResponse();
 
   try {
