@@ -133,7 +133,7 @@ export function ProfileShell({
 
       <header className={styles.commandBar}>
         <div className={styles.commandIdentity}>
-          <Link href="/" className={styles.homeLink} aria-label="Retornar ao comando principal">
+          <Link href="/home" className={styles.homeLink} aria-label="Retornar ao comando principal">
             <span aria-hidden="true">←</span>
           </Link>
           <span className={styles.commandCopy}>
