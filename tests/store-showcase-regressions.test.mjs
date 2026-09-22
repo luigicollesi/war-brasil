@@ -20,16 +20,10 @@ const model = read(
   "src/components/profile/v4/store-showcase/dice-showcase-model.tsx",
 );
 const diceModel = read("src/components/dice-3d/dice-model-3d.tsx");
-const bodyColorHook = read(
-  "src/components/profile/v4/store-showcase/use-dice-body-color.ts",
-);
 const textureHook = read("src/components/dice-3d/use-dice-face-textures.ts");
 const textureManager = read("src/lib/client/dice/dice-assets-manager.ts");
 const textureCreator = read(
   "src/lib/client/dice/textures/create-face-texture.ts",
-);
-const metadataRepository = read(
-  "src/lib/server/assets/dice-asset-metadata-repository.ts",
 );
 const diceRoute = read("src/app/api/assets/dice/route.ts");
 const territoryRoute = read("src/app/api/assets/territory-skins/route.ts");
@@ -50,17 +44,15 @@ test("showcase owns its chrome and derives object scale from the presentation co
   assert.doesNotMatch(controller, /DESKTOP_SHOWCASE_SCALE/);
 });
 
-test("showcase dice reads catalog body_color and applies it to texture and physical body", () => {
-  assert.match(metadataRepository, /SELECT body_color/);
-  assert.match(metadataRepository, /FROM catalog\.cosmetics/);
-  assert.match(metadataRepository, /asset_ref=\$1/);
-  assert.match(metadataRepository, /slot=\$2/);
-
-  assert.match(bodyColorHook, /\/api\/assets\/dice\/metadata/);
-  assert.match(model, /useDiceBodyColor\(assetRef, slot\)/);
-  assert.match(model, /bodyColor,?/);
-  assert.match(model, /bodyColor=\{bodyColor\}/);
-  assert.match(diceModel, /bodyColor\?: string \| null/);
+test("showcase dice carries catalog colors in the DTO without a metadata round trip", () => {
+  const projection = read("src/lib/economy/store-showcase.ts");
+  assert.match(projection, /bodyColor: item\.bodyColor/);
+  assert.match(projection, /bodyHighlightColor: item\.bodyHighlightColor/);
+  assert.match(showcase, /bodyColor=\{item\.bodyColor\}/);
+  assert.match(showcase, /bodyHighlightColor=\{item\.bodyHighlightColor\}/);
+  assert.match(model, /bodyColor: string \| null/);
+  assert.match(model, /bodyHighlightColor: string \| null/);
+  assert.doesNotMatch(model, /\/api\/assets\/dice\/metadata|useDiceBodyColor/);
   assert.match(diceModel, /resolveDiceBodyColors\(bodyColor, bodyHighlightColor\)/);
   assert.match(diceModel, /diceBodyColor/);
   assert.match(diceModel, /diceBodyHighlightColor/);
