@@ -44,6 +44,7 @@ const ageEligibilityMigration = readFileSync(
   "utf8",
 );
 const middleware = readFileSync("src/middleware.ts", "utf8");
+const commandHomePage = readFileSync("src/app/home/page.tsx", "utf8");
 const email = readFileSync("src/lib/server/auth/email.ts", "utf8");
 const envExample = readFileSync(".env.example", "utf8");
 const home = readFileSync(
@@ -184,6 +185,14 @@ test("Middleware Edge mantém navegação protegida sem carregar Better Auth/Pos
   assert.doesNotMatch(middleware, /from ["'].*auth["']/);
   assert.doesNotMatch(middleware, /auth\.api\.getSession|\bpg\b|authPool|DATABASE_URL/);
   assert.match(authGuard, /withAuthenticatedApi/);
+});
+
+test("Home autenticada valida sessão no servidor e auth social retorna para /home", () => {
+  assert.match(commandHomePage, /getAuthenticatedSessionForReadHeaders/);
+  assert.match(commandHomePage, /if \(!session\)[\s\S]*redirect\("\/"\)/);
+  assert.match(commandHomePage, /getCommandAccessState\(session\)/);
+  assert.match(authModal, /callbackURL: "\/home"/);
+  assert.doesNotMatch(middleware, /pathname === "\/home"/);
 });
 
 test("handler e client usam integrações oficiais Better Auth para Next e React", () => {
