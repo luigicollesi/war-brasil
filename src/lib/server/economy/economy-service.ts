@@ -51,11 +51,8 @@ import {
   type WalletRow,
 } from "./economy-repository";
 import {
-  listStorefrontCampaigns,
   listStorefrontCollections,
-  listStorefrontCreditPacks,
   listStorefrontOfferItems,
-  listStorefrontOffers,
   listStorefrontTerritorySkins,
   type CreditPackRow,
   type StorefrontCampaignRow,
@@ -64,7 +61,6 @@ import {
   type StorefrontOfferRow,
 } from "./economy-storefront-repository";
 import {
-  listActiveStorefrontOfferProducts,
   listActiveStorefrontQuoteItems,
   lockOfferProductForPurchase,
   lockStorefrontCollectionPromotion,
@@ -72,6 +68,7 @@ import {
   type StorefrontOfferProductRow,
   type StorefrontQuoteItemRow,
 } from "./storefront-quote-repository";
+import { getStorefrontCatalogSnapshot } from "./storefront-catalog-cache";
 import {
   grantEntitlementOwnership,
   incrementEntitlementAcquisitionCount,
@@ -655,12 +652,7 @@ export async function getEconomyStorefront(
     listActiveStorefrontQuoteItems(userId),
   ]);
 
-  const catalogPromise = Promise.all([
-    listStorefrontOffers(),
-    listActiveStorefrontOfferProducts(),
-    listStorefrontCampaigns(),
-    listStorefrontCreditPacks(),
-  ]);
+  const catalogPromise = getStorefrontCatalogSnapshot();
 
   const [
     [
@@ -672,21 +664,45 @@ export async function getEconomyStorefront(
       offerItemRows,
       quoteRows,
     ],
-    [offerRows, productRows, campaignRows, creditPackRows],
+    catalog,
   ] = await Promise.all([userOverlayPromise, catalogPromise]);
 
-  const offers = offersFromRows(offerRows, offerItemRows, productRows, quoteRows);
+  let activeCatalog = catalog;
+  let offers: EconomyOffer[];
+  try {
+    offers = offersFromRows(
+      activeCatalog.offerRows,
+      offerItemRows,
+      activeCatalog.productRows,
+      quoteRows,
+    );
+  } catch (error) {
+    if (
+      !(error instanceof EconomyServiceError) ||
+      error.code !== "ECONOMY_CATALOG_INVALID"
+    ) {
+      throw error;
+    }
+
+    activeCatalog = await getStorefrontCatalogSnapshot({ bypassCache: true });
+    offers = offersFromRows(
+      activeCatalog.offerRows,
+      offerItemRows,
+      activeCatalog.productRows,
+      quoteRows,
+    );
+  }
 
   return {
     wallet: walletFromRow(walletRow),
     loadout: loadoutFromOwned(ownedRows),
     ownedItems: ownedRows.map(cosmeticFromRow),
     sets: setsFromRows(setRows),
-    collections: collectionsFromRows(collectionRows, productRows),
-    campaigns: campaignsFromRows(campaignRows),
+    collections: collectionsFromRows(collectionRows, activeCatalog.productRows),
+    campaigns: campaignsFromRows(activeCatalog.campaignRows),
     territorySkins: territorySkinRows.map(cosmeticFromRow),
     offers,
-    creditPacks: creditPacksFromRows(creditPackRows),
+    creditPacks: creditPacksFromRows(activeCatalog.creditPackRows),
   } satisfies EconomyStorefrontSnapshot;
 }
 
