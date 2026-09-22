@@ -120,6 +120,7 @@ export const auth = betterAuth({
   session: {
     expiresIn: SESSION_MAX_AGE_SECONDS,
     updateAge: SESSION_UPDATE_AGE_SECONDS,
+    deferSessionRefresh: true,
     cookieCache: {
       enabled: true,
       maxAge: SESSION_COOKIE_CACHE_SECONDS,
