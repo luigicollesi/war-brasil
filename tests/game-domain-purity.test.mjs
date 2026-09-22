@@ -69,7 +69,15 @@ test("configuração dedicada mantém a compilação dos testes fora do tsconfig
   assert.match(config, /"rootDir"\s*:\s*"src\/lib"/);
   assert.match(config, /"module"\s*:\s*"commonjs"/);
   assert.equal(packageJson.scripts["test:compile"], "tsc -p tsconfig.test.json");
-  assert.match(packageJson.scripts.test, /^npm run test:compile && npm run test:run(?: && .+)?$/);
+  assert.match(
+    packageJson.scripts["test:whitebox"],
+    /^npm run test:compile && npm run test:run(?: && .+)?$/,
+  );
+  assert.equal(packageJson.scripts.test, "npm run test:whitebox");
+  assert.match(
+    packageJson.scripts["test:whitebox:coverage:70"],
+    /run-white-box-coverage\.mjs --threshold=70/,
+  );
   assert.doesNotMatch(packageJson.scripts["test:compile"], /tsconfig\.json(?:\s|$)/);
 });
 
