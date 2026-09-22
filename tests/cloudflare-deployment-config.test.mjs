@@ -92,7 +92,7 @@ test("Workers Builds usa OpenNext e Wrangler pinados pelo lockfile", () => {
   assert.doesNotMatch(pkg.scripts["cloudflare:deploy"], /npm install|cloudflare:prepare/);
 });
 
-test("produção Cloudflare ativa realtime sem exigir Service Binding no primeiro deploy", () => {
+test("produção Cloudflare ativa realtime com Service Binding para o Worker publicado", () => {
   assert.match(wrangler, /"SITE_URL": "https:\/\/bellumcivile\.com"/);
   assert.match(wrangler, /"AUTH_ALLOWED_HOSTS": "bellumcivile\.com"/);
   assert.match(wrangler, /"GAME_REALTIME_ENABLED": "true"/);
@@ -102,7 +102,10 @@ test("produção Cloudflare ativa realtime sem exigir Service Binding no primeir
     /"GAME_REALTIME_INTERNAL_URL": "https:\/\/realtime\.bellumcivile\.com"/,
   );
   assert.match(wrangler, /"GAME_REALTIME_TICKET_TTL_SECONDS": "45"/);
-  assert.doesNotMatch(wrangler, /"binding": "GAME_REALTIME_SERVICE"/);
+  assert.match(
+    wrangler,
+    /"binding": "GAME_REALTIME_SERVICE"[\s\S]*"service": "war-brasil-realtime"/,
+  );
   assert.match(wrangler, /"GAME_AUTOMATION_WORKER_MODE": "off"/);
   assert.match(wrangler, /"ASSET_STORAGE_BUCKET": "war-brasil-assets-prod"/);
   assert.doesNotMatch(pkg.scripts["cloudflare:build"], /NEXT_PUBLIC_GAME_REALTIME_MODE=/);
