@@ -195,7 +195,7 @@ export function CommandAuthModal({
     void runPendingAction("social", async () => {
       const { error } = await authClient.signIn.social({
         provider,
-        callbackURL: "/?continue=command",
+        callbackURL: "/home",
       });
 
       if (error) {
