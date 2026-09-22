@@ -152,7 +152,7 @@ test("Doutrina oferece retorno persistente ao comando dentro do índice", () => 
   assert.match(experience, /className=\{ux\.indexTitleRow\}/);
   assert.match(experience, /className=\{ux\.backButton\}/);
   assert.match(experience, /aria-label="Voltar ao comando"/);
-  assert.match(experience, /href="\/"/);
+  assert.match(experience, /href="\/home"/);
   assert.match(experience, /VOLTaR/i);
 });
 
