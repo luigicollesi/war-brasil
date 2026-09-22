@@ -552,15 +552,25 @@ ASSET_STORAGE_ACCESS_KEY_ID
 ASSET_STORAGE_SECRET_ACCESS_KEY
 ```
 
-Optional delivery/CDN configuration may add:
+Production delivery uses the R2 Custom Domain as the canonical public read path:
 
 ```text
-ASSET_PUBLIC_BASE_URL
+ASSET_PUBLIC_BASE_URL=https://assets.bellumcivile.com
 ```
 
-All credential-bearing variables are server-only and must never use a public/client environment prefix.
+Postgres continues to store only stable object keys. Server-side DTO projection converts those keys into delivery URLs. Normal public image reads must therefore follow:
 
-The exact values and R2 policies are configured when buckets are provisioned during implementation.
+```text
+Postgres object key
+  -> publicAssetDeliveryUrl()
+  -> assets.bellumcivile.com/<object-key>
+  -> Cloudflare cache
+  -> R2 on cache miss
+```
+
+The authenticated `/api/assets/*` routes and the `ASSET_STORAGE` binding remain fallback/private compatibility boundaries; they are not the production hot path for public cosmetic images.
+
+All credential-bearing variables are server-only and must never use a public/client environment prefix. `ASSET_PUBLIC_BASE_URL` contains no credential and is a normal production runtime variable.
 
 ### 15.3 Key strategy
 
