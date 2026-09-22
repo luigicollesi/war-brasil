@@ -34,7 +34,7 @@ test("Profile social mutation boundary rejects untrusted browser origins", () =>
 
 test("commander search uses authenticated real DAL and returns only semantic relationship state", () => {
   const source = read("src/app/api/profile/commanders/search/route.ts");
-  assert.match(source, /getAuthenticatedSession\(request\)/);
+  assert.match(source, /getAuthenticatedSessionForRead\(request\)/);
   assert.match(source, /searchCommanderDirectory\(session\.user\.id, query\)/);
   assert.match(source, /relationship:\s*commander\.relationship/);
   assert.doesNotMatch(source, /searchProfileCommanders/);
