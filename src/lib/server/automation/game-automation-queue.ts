@@ -5,6 +5,13 @@ import type { GameAutomationSchedule } from "./game-automation-schedule";
 
 const MAX_QUEUE_DELAY_SECONDS = 24 * 60 * 60;
 
+type AutomationQueueMode = "off" | "shadow" | "active";
+
+function automationQueueMode(): AutomationQueueMode {
+  const value = process.env.GAME_AUTOMATION_QUEUE_MODE?.trim();
+  return value === "shadow" || value === "active" ? value : "off";
+}
+
 type AutomationQueue = {
   send(
     body: unknown,
@@ -45,11 +52,20 @@ export async function enqueueGameAutomationSchedule(input: Readonly<{
   schedule: GameAutomationSchedule;
 }>) {
   const queue = automationQueueBinding();
-  if (!queue || !input.schedule.kind || !input.schedule.dueAt) return false;
+  const mode = automationQueueMode();
+  if (
+    mode === "off" ||
+    !queue ||
+    !input.schedule.kind ||
+    !input.schedule.dueAt
+  ) {
+    return false;
+  }
 
   await queue.send(
     {
       v: 1,
+      mode,
       roomId: input.roomId,
       expectedRevision: input.revision,
       kind: input.schedule.kind,
