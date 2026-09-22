@@ -1,10 +1,12 @@
 # SPEC — Home / Entrada no Comando
 
-**Rota:** `/`  
-**Cena:** `entrance`  
+**Rotas:** `/` (landing pública) e `/home` (comando autenticado)  
+**Cena:** `entrance` compartilhada  
 **Baseline final:** estado estável da Home em `dev`
 
 Segue `../quality-standard.md`, `../visual-language.md`, `../opening-animation-standard.md` e os conceitos `CORE` aplicáveis em `../traceability.md`.
+
+A rota `/` é exclusivamente a porta de entrada: executa a cerimônia e oferece `ENTRAR NO COMANDO`. Após uma sessão válida, a navegação segue para `/home`. A rota `/home` reutiliza a mesma composição e a mesma Foundation, porém inicia estabilizada e expõe diretamente o estado autenticado ou o onboarding necessário; não repete a Genesis.
 
 ## Fantasia
 
