@@ -105,16 +105,23 @@ function recentContactsFromHistory(
 export async function getPlayerSocialSnapshot(
   userId: string,
   userHandle: string,
-  history: PlayerMatchHistory,
+  history: PlayerMatchHistory | Promise<PlayerMatchHistory>,
 ): Promise<PlayerSocialSnapshot> {
-  const [friendRows, incomingRows, outgoingRows, blockedRows, totalFriends] =
-    await Promise.all([
-      listFriendRows(userId, 50),
-      listIncomingFriendRequestRows(userId, 50),
-      listOutgoingFriendRequestRows(userId, 50),
-      listBlockedCommanderRows(userId, 50),
-      countFriends(userId),
-    ]);
+  const [
+    friendRows,
+    incomingRows,
+    outgoingRows,
+    blockedRows,
+    totalFriends,
+    resolvedHistory,
+  ] = await Promise.all([
+    listFriendRows(userId, 50),
+    listIncomingFriendRequestRows(userId, 50),
+    listOutgoingFriendRequestRows(userId, 50),
+    listBlockedCommanderRows(userId, 50),
+    countFriends(userId),
+    Promise.resolve(history),
+  ]);
 
   const presence = await getPresenceStates(
     friendRows
@@ -148,7 +155,7 @@ export async function getPlayerSocialSnapshot(
     incomingRequests,
     outgoingRequests,
     blockedCommanders,
-    recentContacts: recentContactsFromHistory(userHandle, history),
+    recentContacts: recentContactsFromHistory(userHandle, resolvedHistory),
     totalFriends,
   };
 }
