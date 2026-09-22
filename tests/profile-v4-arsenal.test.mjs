@@ -11,7 +11,7 @@ async function source(path) {
 test("PROFILE V4 arsenal has a dedicated authenticated route and shared shell", async () => {
   const page = await source("src/app/profile/arsenal/page.tsx");
 
-  assert.match(page, /auth\.api\.getSession/);
+  assert.match(page, /getAuthenticatedSessionForReadHeaders/);
   assert.match(page, /redirect\("\/"\)/);
   assert.match(page, /activeSurface="arsenal"/);
   assert.match(page, /<ProfileArsenal/);
