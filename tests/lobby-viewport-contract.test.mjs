@@ -18,7 +18,7 @@ const backButton = readFileSync("src/components/pre-game-back-button.tsx", "utf8
 const lobbyLayoutStyles = [workspaceStyles, formationStyles, stationStyles, readyStyles].join("\n");
 
 test("Matchmaking e Lobby usam retorno explícito sem depender do histórico", () => {
-  assert.match(matchmaking, /<PreGameBackButton href="\/" label="Voltar ao Início" \/>/);
+  assert.match(matchmaking, /<PreGameBackButton href="\/home" label="Voltar ao Comando" \/>/);
   assert.match(workspace, /<PreGameBackButton href="\/matchmaking"/);
   assert.match(workspace, /label="Voltar para Operações"/);
   assert.match(lobbyClient, /<PreGameBackButton href="\/matchmaking" \/>/);
