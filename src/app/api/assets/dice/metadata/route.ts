@@ -1,6 +1,6 @@
 import {
   authenticationRequiredResponse,
-  getAuthenticatedSession,
+  getAuthenticatedSessionForRead,
 } from "@/src/lib/server/auth/auth-guard";
 import { assertDiceAssetKey } from "@/src/lib/server/assets/asset-storage-config";
 import { findDiceBodyColor } from "@/src/lib/server/assets/dice-asset-metadata-repository";
@@ -24,7 +24,7 @@ function unavailableMetadataResponse(status = 404) {
 }
 
 export async function GET(request: Request) {
-  const session = await getAuthenticatedSession(request);
+  const session = await getAuthenticatedSessionForRead(request);
   if (!session) return authenticationRequiredResponse();
 
   const url = new URL(request.url);
