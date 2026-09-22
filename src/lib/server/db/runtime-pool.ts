@@ -94,10 +94,11 @@ function createWorkerRequestPool(
     idle_in_transaction_session_timeout:
       configured.idle_in_transaction_session_timeout ??
       WORKER_IDLE_IN_TRANSACTION_TIMEOUT_MS,
-    // OpenNext/Cloudflare must never reuse the same PostgreSQL connection in
-    // another Worker request. A checked-out transaction can still issue many
-    // queries before release(); maxUses applies when the client returns.
-    maxUses: 1,
+    // This Pool is already scoped to the current ExecutionContext, so pg
+    // clients may be reused by multiple queries within this request without
+    // crossing the Workers request boundary. Keep pg's default maxUses
+    // (Infinity): Hyperdrive owns the origin-level connection pool and avoids
+    // paying a fresh Worker-to-Hyperdrive connection for every query.
   } as PoolConfig);
 
   pool.on("error", (error) => {
@@ -115,7 +116,8 @@ function createWorkerRequestPool(
  * correct lifecycle for the current runtime:
  *
  * - Node/next dev: one persistent Pool, matching the existing behavior.
- * - Cloudflare/OpenNext: one Pool per ExecutionContext with maxUses=1.
+ * - Cloudflare/OpenNext: one Pool per ExecutionContext; clients are reused only
+ *   within that request and never shared with another request context.
  *
  * The facade itself is safe to export globally because it owns no Worker I/O.
  * Every method resolves the active request pool when it is invoked, even if a

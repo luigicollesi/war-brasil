@@ -38,10 +38,9 @@
 		"ASSET_PUBLIC_BASE_URL": "https://assets.bellumcivile.com"
 	},
 	// DATABASE_HYPERDRIVE_URL is the direct/unpooled origin URL and remains a
-	// secret. DATABASE_HYPERDRIVE itself is a Cloudflare resource binding and
-	// still requires the real Hyperdrive configuration ID before it can be
-	// declared here. AUTH_DATABASE_URL remains the dedicated direct auth
-	// connection.
+	// secret/fallback. Production database traffic uses the DATABASE_HYPERDRIVE
+	// resource binding declared below; its configuration ID is not a credential.
+	// AUTH_DATABASE_URL remains the dedicated direct auth connection.
 	"secrets": {
 		"required": [
 			"DATABASE_URL",

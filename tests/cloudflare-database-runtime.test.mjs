@@ -20,13 +20,14 @@ const health = readFileSync(
 );
 const middleware = readFileSync("src/middleware.ts", "utf8");
 const smoke = readFileSync("scripts/cloudflare-smoke.mjs", "utf8");
+const wrangler = readFileSync("wrangler.jsonc", "utf8");
 
-test("Cloudflare resolve pg Pool por ExecutionContext sem compartilhar I/O entre requests", () => {
+test("Cloudflare resolve pg Pool por ExecutionContext e reutiliza conexões apenas no request", () => {
   assert.match(runtimePool, /getCloudflareContext/);
   assert.match(runtimePool, /WeakMap<object, Pool>/);
   assert.match(runtimePool, /WORKER_MAX_CONNECTIONS = 5/);
   assert.match(runtimePool, /workerMaxConnections/);
-  assert.match(runtimePool, /maxUses: 1/);
+  assert.doesNotMatch(runtimePool, /maxUses:\\s*:\\s*1/);
   assert.match(runtimePool, /connectionTimeoutMillis/);
   assert.match(runtimePool, /idleTimeoutMillis/);
   assert.match(runtimePool, /statement_timeout/);
@@ -35,6 +36,19 @@ test("Cloudflare resolve pg Pool por ExecutionContext sem compartilhar I/O entre
   assert.match(runtimePool, /idle_in_transaction_session_timeout/);
   assert.match(runtimePool, /createWorkerRequestPool/);
   assert.match(runtimePool, /Reflect\.apply\(method, selected, args\)/);
+});
+
+test("Wrangler declara Hyperdrive real para o banco principal", () => {
+  assert.match(wrangler, /"hyperdrive"\\s*:/);
+  assert.match(
+    wrangler,
+    /"binding"\\s*:\\s*"DATABASE_HYPERDRIVE"/,
+  );
+  assert.match(wrangler, /"id"\\s*:\\s*"[a-f0-9]{32}"/i);
+  assert.doesNotMatch(
+    wrangler,
+    /<your-hyperdrive-id-here>|ID_REAL_DO_HYPERDRIVE/,
+  );
 });
 
 test("Node mantém Pool persistente enquanto Worker usa facade request-scoped", () => {
