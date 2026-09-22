@@ -11,30 +11,31 @@ export async function publishLobbyChangeByCode(codeValue: string) {
   const code = codeValue.trim().toUpperCase();
   if (!ROOM_CODE_PATTERN.test(code)) return false;
 
-  await runPostResponseTask("lobby.realtime", async () => {
-    try {
-      const result = await pool.query<{ id: string; revision: number }>(
-        `UPDATE game.rooms
-            SET revision=revision+1
-          WHERE code=$1
-          RETURNING id::text,revision`,
-        [code],
-      );
-      const room = result.rows[0];
-      if (!room) return;
+  try {
+    const result = await pool.query<{ id: string; revision: number }>(
+      `UPDATE game.rooms
+          SET revision=revision+1
+        WHERE code=$1
+        RETURNING id::text,revision`,
+      [code],
+    );
+    const room = result.rows[0];
+    if (!room) return false;
 
-      await publishCommittedGameRealtimeBusEvent({
+    await runPostResponseTask("lobby.realtime", () =>
+      publishCommittedGameRealtimeBusEvent({
         kind: "invalidate",
         scope: "room",
         roomId: room.id,
         revision: room.revision,
-      });
-    } catch (error) {
-      console.warn("[lobby-realtime] invalidation failed", {
-        code,
-        reason: error instanceof Error ? error.message : String(error),
-      });
-    }
-  });
-  return true;
+      }),
+    );
+    return true;
+  } catch (error) {
+    console.warn("[lobby-realtime] invalidation failed", {
+      code,
+      reason: error instanceof Error ? error.message : String(error),
+    });
+    return false;
+  }
 }
