@@ -135,13 +135,20 @@ export function UserNotificationRuntime() {
     let stopped = false;
     let socket: WebSocket | null = null;
     let reconnectTimer: number | null = null;
+    let reconnectAttempt = 0;
 
     const scheduleReconnect = () => {
       if (stopped || reconnectTimer) return;
+      reconnectAttempt += 1;
+      const baseDelay = Math.min(
+        30_000,
+        1_000 * 2 ** Math.min(reconnectAttempt - 1, 5),
+      );
+      const jitter = 0.85 + Math.random() * 0.3;
       reconnectTimer = window.setTimeout(() => {
         reconnectTimer = null;
         void connect();
-      }, 2000);
+      }, Math.round(baseDelay * jitter));
     };
 
     const connect = async () => {
@@ -161,6 +168,7 @@ export function UserNotificationRuntime() {
 
         nextSocket.onopen = () => {
           if (socket === nextSocket && !stopped) {
+            reconnectAttempt = 0;
             setRealtimeConnected(true);
           }
         };
