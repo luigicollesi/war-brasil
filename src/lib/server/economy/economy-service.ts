@@ -26,9 +26,11 @@ import {
   resolveStorefrontUnitPrice,
   type StorefrontQuoteItem,
 } from "@/src/lib/economy/storefront-pricing";
-import { territorySkinAssetDeliveryPath } from "../../economy/territory-skin-contract";
 import { collectionAssetDeliveryPath } from "../assets/collection-asset-storage";
-import { diceAssetDeliveryPath } from "../assets/asset-storage-service";
+import {
+  diceAssetDeliveryPath,
+  territorySkinAssetDeliveryPath,
+} from "../assets/asset-storage-service";
 import { pool } from "../db/pool";
 import {
   createPurchaseReceipt,
@@ -92,15 +94,22 @@ export class EconomyServiceError extends Error {
   }
 }
 
-function projectedAssetRef(row: CosmeticRow) {
-  if (!row.asset_ref) return null;
+function projectedCosmeticAssetRef(
+  row: Pick<CosmeticRow, "slot">,
+  assetRef: string | null,
+) {
+  if (!assetRef) return null;
   if (row.slot === "territory_skin") {
-    return territorySkinAssetDeliveryPath(row.asset_ref);
+    return territorySkinAssetDeliveryPath(assetRef);
   }
-  if (row.asset_ref.startsWith("cosmetics/dice/")) {
-    return diceAssetDeliveryPath(row.asset_ref);
+  if (assetRef.startsWith("cosmetics/dice/")) {
+    return diceAssetDeliveryPath(assetRef);
   }
-  return row.asset_ref;
+  return assetRef;
+}
+
+function projectedAssetRef(row: CosmeticRow) {
+  return projectedCosmeticAssetRef(row, row.asset_ref);
 }
 
 function cosmeticFromRow(row: CosmeticRow): CosmeticCatalogItem {
@@ -115,7 +124,7 @@ function cosmeticFromRow(row: CosmeticRow): CosmeticCatalogItem {
     isDefault: row.is_default,
     owned: row.owned,
     equipped: row.equipped,
-    previewRef: row.preview_ref,
+    previewRef: projectedCosmeticAssetRef(row, row.preview_ref),
     assetRef: projectedAssetRef(row),
     effectKey: row.effect_key,
     bodyColor: row.body_color,
