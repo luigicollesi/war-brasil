@@ -43,6 +43,8 @@
     "cloudflare:smoke": "node scripts/cloudflare-smoke.mjs",
     "cloudflare:realtime:build": "wrangler deploy --dry-run --config wrangler.realtime.jsonc",
     "cloudflare:realtime:deploy": "wrangler deploy --config wrangler.realtime.jsonc",
+    "cloudflare:automation:build": "wrangler deploy --dry-run --config wrangler.automation.jsonc",
+    "cloudflare:automation:deploy": "wrangler deploy --config wrangler.automation.jsonc",
     "test:whitebox": "npm run test:compile && npm run test:run && npm run worker:test",
     "test:whitebox:coverage": "npm run test:compile && node scripts/test/run-white-box-coverage.mjs && npm run worker:test",
     "test:whitebox:coverage:70": "npm run test:compile && node scripts/test/run-white-box-coverage.mjs --threshold=70 && npm run worker:test",
