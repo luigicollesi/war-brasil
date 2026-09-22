@@ -7,6 +7,7 @@ import {
 } from "@/components/auth/command-auth-modal";
 import { CommandOnboardingModal } from "@/components/auth/command-onboarding-modal";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import {
   useCallback,
@@ -46,7 +47,7 @@ type Destination = {
   detail: string;
 };
 
-type CommandAccessResponse = {
+export type CommandAccessResponse = {
   authenticated?: boolean;
   ageGateComplete?: boolean;
   identityComplete?: boolean;
@@ -60,6 +61,8 @@ type CommandAccessResponse = {
 
 type CommandHomeClientProps = {
   children: ReactNode;
+  mode?: "landing" | "command";
+  initialAccess?: CommandAccessResponse | null;
 };
 
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
@@ -102,10 +105,20 @@ function getServerReducedMotionSnapshot() {
   return false;
 }
 
-export function CommandHomeClient({ children }: CommandHomeClientProps) {
-  const [ceremonyPhase, setCeremonyPhase] = useState<HomeCeremonyPhase>("primed");
-  const [ritualActive, setRitualActive] = useState(true);
-  const [commandOpen, setCommandOpen] = useState(false);
+export function CommandHomeClient({
+  children,
+  mode = "landing",
+  initialAccess = null,
+}: CommandHomeClientProps) {
+  const router = useRouter();
+  const isCommandHome = mode === "command";
+  const [ceremonyPhase, setCeremonyPhase] = useState<HomeCeremonyPhase>(
+    isCommandHome ? "stable" : "primed",
+  );
+  const [ritualActive, setRitualActive] = useState(!isCommandHome);
+  const [commandOpen, setCommandOpen] = useState(
+    initialAccess?.authenticated === true && initialAccess.profileComplete === true,
+  );
   const [keyboardDestinationFocus, setKeyboardDestinationFocus] =
     useState<HomeDestinationId | null>(null);
   const [pointerDestinationFocus, setPointerDestinationFocus] =
@@ -118,13 +131,21 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
     useState<CommandAuthMode>("login");
   const [authModalNotice, setAuthModalNotice] = useState("");
   const [authResetToken, setAuthResetToken] = useState<string | null>(null);
-  const [onboardingOpen, setOnboardingOpen] = useState(false);
-  const [onboardingAgeGateComplete, setOnboardingAgeGateComplete] = useState(true);
-  const [onboardingIdentityComplete, setOnboardingIdentityComplete] = useState(false);
-  const [onboardingHandle, setOnboardingHandle] = useState<string | null>(null);
+  const [onboardingOpen, setOnboardingOpen] = useState(
+    initialAccess?.authenticated === true && initialAccess.profileComplete !== true,
+  );
+  const [onboardingAgeGateComplete, setOnboardingAgeGateComplete] = useState(
+    initialAccess?.ageGateComplete !== false,
+  );
+  const [onboardingIdentityComplete, setOnboardingIdentityComplete] = useState(
+    initialAccess?.identityComplete === true,
+  );
+  const [onboardingHandle, setOnboardingHandle] = useState<string | null>(
+    initialAccess?.profile?.handle ?? null,
+  );
   const [onboardingDisplayName, setOnboardingDisplayName] = useState<
     string | null
-  >(null);
+  >(initialAccess?.profile?.displayName ?? initialAccess?.suggestedDisplayName ?? null);
   const {
     data: authSession,
     isPending: authSessionPending,
@@ -177,6 +198,12 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
   );
 
   const applyCommandAccess = useCallback((payload: CommandAccessResponse) => {
+    if (mode === "landing" && payload.authenticated) {
+      setOnboardingOpen(false);
+      setCommandOpen(false);
+      return payload.profileComplete ? "command-open" as const : "onboarding" as const;
+    }
+
     if (payload.authenticated && payload.profileComplete) {
       setOnboardingOpen(false);
       setCommandOpen(true);
@@ -196,7 +223,7 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
     }
 
     return "unauthenticated" as const;
-  }, []);
+  }, [mode]);
 
   const checkCommandAccess = useCallback(
     async (openLoginOnUnauthorized = true) => {
@@ -273,6 +300,10 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
     return () => window.cancelAnimationFrame(frame);
   }, [ceremonyPhase, ritualActive, sceneState, visitMode]);
 
+  const navigateToCommandHome = useCallback(() => {
+    router.replace("/home", { scroll: false });
+  }, [router]);
+
   useEffect(() => {
     if (authSessionPending) {
       return;
@@ -302,13 +333,16 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
         setRitualActive(false);
         setAuthModalOpen(false);
         void checkCommandAccess(false).then((result) => {
+          if (result === "command-open" || result === "onboarding") {
+            navigateToCommandHome();
+            return;
+          }
           if (result === "unauthenticated") {
             openAuthModal(
               "login",
               "A sessão retornada não pôde ser validada. Entre novamente.",
             );
           }
-          window.history.replaceState({}, "", "/");
         });
         return;
       }
@@ -328,6 +362,7 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
     authSession,
     authSessionPending,
     checkCommandAccess,
+    navigateToCommandHome,
     openAuthModal,
   ]);
 
@@ -344,7 +379,11 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
     settleCeremony();
     setKeyboardDestinationFocus(null);
     setPointerDestinationFocus(null);
-    void checkCommandAccess();
+    void checkCommandAccess().then((result) => {
+      if (result === "command-open" || result === "onboarding") {
+        navigateToCommandHome();
+      }
+    });
   };
 
   const handleAuthenticated = async () => {
@@ -362,7 +401,9 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
       return;
     }
 
-    window.history.replaceState({}, "", "/");
+    if (result === "command-open" || result === "onboarding") {
+      navigateToCommandHome();
+    }
   };
 
   const handleOnboardingCompleted = async () => {
@@ -376,14 +417,16 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
       return;
     }
 
-    window.history.replaceState({}, "", "/");
+    if (mode === "landing") {
+      navigateToCommandHome();
+    }
   };
 
   const handleUnderageAccountDeleted = async () => {
     setOnboardingOpen(false);
     setCommandOpen(false);
     await refetchAuthSession();
-    window.history.replaceState({}, "", "/");
+    router.replace("/", { scroll: false });
   };
 
   const clearKeyboardFocus = (destination: HomeDestinationId) => {
@@ -540,7 +583,7 @@ export function CommandHomeClient({ children }: CommandHomeClientProps) {
           setAuthModalNotice("");
           setAuthResetToken(null);
           if (window.location.search) {
-            window.history.replaceState({}, "", "/");
+            window.history.replaceState({}, "", mode === "command" ? "/home" : "/");
           }
         }}
         onAuthenticated={handleAuthenticated}
