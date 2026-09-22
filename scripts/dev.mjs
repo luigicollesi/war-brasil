@@ -57,6 +57,9 @@ if (realtimeEnabled) {
   if (!env.GAME_REALTIME_INTERNAL_TOKEN) {
     env.GAME_REALTIME_INTERNAL_TOKEN = `${randomUUID()}${randomUUID()}`;
   }
+  if (!env.GAME_REALTIME_TICKET_SECRET) {
+    env.GAME_REALTIME_TICKET_SECRET = `${randomUUID()}${randomUUID()}`;
+  }
 } else if (!env.NEXT_PUBLIC_GAME_REALTIME_MODE) {
   env.NEXT_PUBLIC_GAME_REALTIME_MODE = "off";
 }
