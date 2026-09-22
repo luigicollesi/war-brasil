@@ -1,7 +1,19 @@
 import "server-only";
 
+let cachedConfiguredValue: string | undefined;
+let cachedBaseUrl: string | null = null;
+let hasCachedBaseUrl = false;
+
 function normalizedPublicAssetBaseUrl() {
   const configured = process.env.ASSET_PUBLIC_BASE_URL?.trim();
+  if (hasCachedBaseUrl && configured === cachedConfiguredValue) {
+    return cachedBaseUrl;
+  }
+
+  cachedConfiguredValue = configured;
+  hasCachedBaseUrl = true;
+  cachedBaseUrl = null;
+
   if (!configured) return null;
 
   try {
@@ -11,11 +23,18 @@ function normalizedPublicAssetBaseUrl() {
     }
     url.search = "";
     url.hash = "";
-    url.pathname = url.pathname.replace(/\/$/, "");
-    return url;
+    url.pathname = url.pathname.replace(/\/+$/, "");
+    cachedBaseUrl = url.toString().replace(/\/$/, "");
+    return cachedBaseUrl;
   } catch {
     return null;
   }
+}
+
+export function resetPublicAssetDeliveryUrlForTests() {
+  cachedConfiguredValue = undefined;
+  cachedBaseUrl = null;
+  hasCachedBaseUrl = false;
 }
 
 export function publicAssetDeliveryUrl(objectKey: string) {
@@ -26,7 +45,5 @@ export function publicAssetDeliveryUrl(objectKey: string) {
     .split("/")
     .map((segment) => encodeURIComponent(segment))
     .join("/");
-  const prefix = base.pathname ? `${base.pathname}/` : "/";
-  base.pathname = `${prefix}${encodedPath}`;
-  return base.toString();
+  return `${base}/${encodedPath}`;
 }
