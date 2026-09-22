@@ -151,7 +151,7 @@ test("economia serializa inicialização, storefront, equipagem e captura da par
 
   assert.match(service, /getEconomyStorefront[\s\S]*ensureEconomyStateForRead\(userId\)/);
   assert.match(service, /const userOverlayPromise = Promise\.all/);
-  assert.match(service, /const catalogPromise = Promise\.all/);
+  assert.match(service, /const catalogPromise = getStorefrontCatalogSnapshot\(\)/);
   assert.match(service, /await Promise\.all\(\[userOverlayPromise, catalogPromise\]\)/);
   assert.match(
     service,
