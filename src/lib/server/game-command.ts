@@ -8,6 +8,7 @@ import {
 import type { GamePrivatePatch } from "@/src/lib/game-private-patch";
 import type { GameCommandRequestMetadata } from "@/src/lib/game-command-request";
 import { RoomError } from "@/src/lib/rooms";
+import { enqueueGameAutomationSchedule } from "./automation/game-automation-queue";
 import { reconcileGameAutomationSchedule } from "./automation/game-automation-schedule";
 import { databasePoolStats, pool } from "./db/pool";
 import {
@@ -158,7 +159,10 @@ export async function gameCommand<T>(
 
     const value = await execute(client);
     const defaultPublicPatch = isGameCommandPatch(value) ? value : null;
-    await reconcileGameAutomationSchedule(client, roomId);
+    const automationSchedule = await reconcileGameAutomationSchedule(
+      client,
+      roomId,
+    );
 
     const syncEffects = options.syncEffects
       ? await options.syncEffects(client, value)
@@ -199,6 +203,14 @@ export async function gameCommand<T>(
     await client.query("COMMIT");
     transactionOpen = false;
     outcome = "success";
+
+    await runPostResponseTask("game.automation.queue", async () => {
+      await enqueueGameAutomationSchedule({
+        roomId,
+        revision,
+        schedule: automationSchedule,
+      });
+    });
 
     await runPostResponseTask("game.command.realtime", async () => {
       await publishCommittedGameChange({
@@ -246,10 +258,22 @@ export async function gameConditionalCommand<T>(
     const currentRevision = await lockRoomRevision(client, roomId);
 
     if (currentRevision !== expectedRevision) {
-      await reconcileGameAutomationSchedule(client, roomId);
+      const automationSchedule = await reconcileGameAutomationSchedule(
+        client,
+        roomId,
+      );
       await client.query("COMMIT");
       transactionOpen = false;
       outcome = "success";
+
+      await runPostResponseTask("game.automation.queue", async () => {
+        await enqueueGameAutomationSchedule({
+          roomId,
+          revision: currentRevision,
+          schedule: automationSchedule,
+        });
+      });
+
       return {
         value: null,
         revision: currentRevision,
@@ -258,7 +282,10 @@ export async function gameConditionalCommand<T>(
     }
 
     const result = await execute(client);
-    await reconcileGameAutomationSchedule(client, roomId);
+    const automationSchedule = await reconcileGameAutomationSchedule(
+      client,
+      roomId,
+    );
     const revision = result.changed
       ? await bumpGameRevision(client, roomId)
       : currentRevision;
@@ -266,6 +293,14 @@ export async function gameConditionalCommand<T>(
     await client.query("COMMIT");
     transactionOpen = false;
     outcome = "success";
+
+    await runPostResponseTask("game.automation.queue", async () => {
+      await enqueueGameAutomationSchedule({
+        roomId,
+        revision,
+        schedule: automationSchedule,
+      });
+    });
 
     if (result.changed) {
       await runPostResponseTask("game.conditional.realtime", () =>
