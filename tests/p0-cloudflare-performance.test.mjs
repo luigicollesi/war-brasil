@@ -48,9 +48,14 @@ test("OpenNext Worker binds R2 directly and delivery can bypass Next via custom 
   );
   const binding = read("src/lib/server/assets/asset-r2-binding.ts");
   const env = read(".env.example");
+  const cors = read("config/r2-cors.production.json");
 
   assert.match(wrangler, /"binding": "ASSET_STORAGE"/);
   assert.match(wrangler, /"bucket_name": "war-brasil-assets-prod"/);
+  assert.match(
+    wrangler,
+    /"ASSET_PUBLIC_BASE_URL": "https:\/\/assets\.bellumcivile\.com"/,
+  );
   assert.match(storage, /publicAssetDeliveryUrl/);
   assert.match(collection, /publicAssetDeliveryUrl/);
   assert.match(appearance, /publicAssetDeliveryUrl/);
@@ -58,6 +63,9 @@ test("OpenNext Worker binds R2 directly and delivery can bypass Next via custom 
   assert.match(binding, /env\.ASSET_STORAGE/);
   assert.match(binding, /bucket\.get\(objectKey\)/);
   assert.match(env, /ASSET_PUBLIC_BASE_URL=https:\/\/assets\.bellumcivile\.com/);
+  assert.match(cors, /https:\/\/bellumcivile\.com/);
+  assert.match(cors, /"GET"/);
+  assert.match(cors, /"HEAD"/);
 });
 
 test("asset API fallbacks prefer R2 binding before signed S3 fetches", () => {
