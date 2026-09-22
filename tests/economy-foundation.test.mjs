@@ -258,7 +258,7 @@ test("rematch descarta snapshot anterior e structural sharing observa cosmético
 });
 
 test("store autenticada usa cena Profile e comércio autoritativo da Economy V2", () => {
-  assert.match(storePage, /auth\.api\.getSession/);
+  assert.match(storePage, /getAuthenticatedSessionForReadHeaders/);
   assert.match(storePage, /getEconomyStorefront\(session\.user\.id\)/);
   assert.match(storeUi, /data-scene="profile"/);
   assert.match(storeUi, /storefront\.offers\.map/);
