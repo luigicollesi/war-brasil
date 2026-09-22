@@ -26,7 +26,9 @@ jobs:
           cache: npm
       - run: npm ci
       - name: Run Cloudflare deployment contract tests
-        run: node --test tests/cloudflare-deployment-config.test.mjs tests/cloudflare-next-middleware-patch.test.mjs
+        run: node --test tests/cloudflare-deployment-config.test.mjs tests/cloudflare-next-middleware-patch.test.mjs tests/cloudflare-realtime-durable-object.test.mjs
+      - name: Build Durable Object realtime Worker
+        run: npm run cloudflare:realtime:build
       - name: Validate installed Next workaround
         run: npm run cloudflare:check-next-patch
       - name: Build and verify OpenNext worker
