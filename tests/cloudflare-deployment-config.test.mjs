@@ -32,9 +32,6 @@ test("deploy valida secrets essenciais antes do runtime", () => {
     "DISCORD_CLIENT_SECRET",
     "AUTH_EMAIL_FROM",
     "EMAIL_TRANSPORT_SECRET",
-    "ASSET_STORAGE_URL",
-    "ASSET_STORAGE_ACCESS_KEY_ID",
-    "ASSET_STORAGE_SECRET_ACCESS_KEY",
     "GAME_REALTIME_TICKET_SECRET",
     "GAME_REALTIME_INTERNAL_TOKEN",
   ]) {
@@ -123,4 +120,7 @@ test("Cloudflare Worker binds production R2 bucket for zero-hop asset reads", ()
   const wrangler = readFileSync("wrangler.jsonc", "utf8");
   assert.match(wrangler, /"binding": "ASSET_STORAGE"/);
   assert.match(wrangler, /"bucket_name": "war-brasil-assets-prod"/);
+  assert.doesNotMatch(wrangler, /"ASSET_STORAGE_URL"/);
+  assert.doesNotMatch(wrangler, /"ASSET_STORAGE_ACCESS_KEY_ID"/);
+  assert.doesNotMatch(wrangler, /"ASSET_STORAGE_SECRET_ACCESS_KEY"/);
 });
