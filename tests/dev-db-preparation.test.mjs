@@ -49,6 +49,11 @@ test("ambiente dev prepara migrations gerenciadas antes de subir Next e realtime
   assert.match(dev, /env\.NEXT_PUBLIC_GAME_REALTIME_MODE = "hybrid"/);
   assert.match(dev, /NEXT_PUBLIC_GAME_REALTIME_PORT/);
   assert.match(dev, /GAME_REALTIME_ALLOWED_ORIGINS/);
+  assert.match(dev, /GAME_REALTIME_TICKET_SECRET/);
+  assert.match(
+    dev,
+    /env\.GAME_REALTIME_TICKET_SECRET = `\$\{randomUUID\(\)\}\$\{randomUUID\(\)\}`/,
+  );
   assert.match(dev, /networkInterfaces\(\)/);
   assert.match(dev, /realtime\/node_modules\/ws\/package\.json/);
   assert.match(dev, /\["--prefix", "realtime", "ci"\]/);
