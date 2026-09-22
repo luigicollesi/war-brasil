@@ -4,7 +4,7 @@ import {
   readJsonObject,
   roomErrorResponse,
 } from "@/src/lib/api-response";
-import { attackPatchCommand as attackCommand } from "@/src/lib/server/game-combat-patch-command-service";
+import { attackCommand } from "@/src/lib/server/game-combat-command-service";
 import { readGameCommandRequestMetadata } from "@/src/lib/server/game-command-request";
 import { GAME_REVISION_HEADER } from "@/src/lib/game-sync-contract";
 import { getPlayerSession } from "@/src/lib/player-session";

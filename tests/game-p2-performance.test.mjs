@@ -86,12 +86,13 @@ test("combate avalia objetivo somente quando controle territorial muda", () => {
   assert.match(source, /"territory_control_changed"/);
 });
 
-test("transferência pós-conquista reavalia somente objetivos afetados por tropas", () => {
+test("transferência pós-conquista mantém patch e regra na mesma command boundary", () => {
   const route = readFileSync("src/app/api/games/[roomId]/conquest/route.ts", "utf8");
-  const patchService = readFileSync("src/lib/server/game-conquest-patch-command-service.ts", "utf8");
   const service = readFileSync("src/lib/server/game-conquest-command-service.ts", "utf8");
-  assert.match(route, /game-conquest-patch-command-service/);
-  assert.match(patchService, /executeCompleteConquest/);
+  assert.match(route, /game-conquest-command-service/);
+  assert.match(service, /executeCompleteConquest/);
+  assert.match(service, /readTerritoryCommandPatches/);
+  assert.match(service, /syncEffects/);
   assert.match(service, /"troops_changed"/);
   assert.match(service, /advanceBattlePresentation/);
   assert.match(service, /saveBattle/);

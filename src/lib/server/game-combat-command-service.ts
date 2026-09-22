@@ -22,6 +22,7 @@ import { resolveBattle } from "@/src/lib/game-rules";
 import { rollCombatDice } from "@/src/lib/server/dice-roll-service";
 import { findTerritoryConnection } from "@/src/lib/territory-connections";
 import { RoomError } from "@/src/lib/rooms";
+import { readRoomCommandPatch } from "./game-command-sync-read-model";
 
 type CombatRoom = BattleRoomState & {
   status: "order_roll" | "playing" | "finished";
@@ -54,6 +55,16 @@ function positiveInteger(value: unknown, message: string) {
     throw new RoomError(message, 422);
   }
   return value;
+}
+
+function roomSyncEffects(roomId: string) {
+  return {
+    syncEffects: async (client: PoolClient) => ({
+      publicPatch: {
+        room: await readRoomCommandPatch(client, roomId),
+      },
+    }),
+  };
 }
 
 async function loadRoom(client: PoolClient, roomId: string) {
@@ -415,6 +426,7 @@ export async function attackCommand(
       const player = await resolveCommandPlayerBySession(client, roomId, session);
       return executeAttack(client, roomId, player, normalizedInput);
     },
+    roomSyncEffects(roomId),
   );
 }
 
@@ -434,6 +446,7 @@ export async function cancelBattleCommand(
       const player = await resolveCommandPlayerBySession(client, roomId, session);
       return executeCancelBattle(client, roomId, player);
     },
+    roomSyncEffects(roomId),
   );
 }
 
@@ -453,5 +466,6 @@ export async function rollBattleDiceCommand(
       const player = await resolveCommandPlayerBySession(client, roomId, session);
       return executeRollBattleDice(client, roomId, player);
     },
+    roomSyncEffects(roomId),
   );
 }

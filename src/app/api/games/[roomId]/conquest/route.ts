@@ -4,7 +4,7 @@ import {
   readJsonObject,
   roomErrorResponse,
 } from "@/src/lib/api-response";
-import { completeConquestPatchCommand as completeConquestCommand } from "@/src/lib/server/game-conquest-patch-command-service";
+import { completeConquestCommand } from "@/src/lib/server/game-conquest-command-service";
 import { readGameCommandRequestMetadata } from "@/src/lib/server/game-command-request";
 import { GAME_REVISION_HEADER } from "@/src/lib/game-sync-contract";
 import { getPlayerSession } from "@/src/lib/player-session";

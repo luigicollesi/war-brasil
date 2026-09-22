@@ -17,6 +17,10 @@ import type { GameCommandRequestMetadata } from "@/src/lib/game-command-request"
 import { MIN_TERRITORY_TROOPS } from "@/src/lib/game-rules";
 import { evaluateGameVictory } from "@/src/lib/server/game-victory-service";
 import { RoomError } from "@/src/lib/rooms";
+import {
+  readRoomCommandPatch,
+  readTerritoryCommandPatches,
+} from "./game-command-sync-read-model";
 
 type ConquestRoom = BattleRoomState & {
   status: "order_roll" | "playing" | "finished";
@@ -158,10 +162,8 @@ export async function completeConquestCommand(
   metadata?: GameCommandRequestMetadata | null,
 ) {
   const roomId = normalizeRoomId(value);
-  const troops = positiveInteger(
-    input.troops,
-    "Quantidade de tropas inválida.",
-  );
+  const troops = positiveInteger(input.troops, "Quantidade de tropas inválida.");
+  let affectedTerritoryIds: number[] = [];
 
   return playerGameCommand(
     roomId,
@@ -171,7 +173,34 @@ export async function completeConquestCommand(
     { troops },
     async (client) => {
       const player = await resolveCommandPlayerBySession(client, roomId, session);
+      const pending = (
+        await client.query<{
+          pending_from_territory_id: number | null;
+          pending_to_territory_id: number | null;
+        }>(
+          `SELECT pending_from_territory_id,pending_to_territory_id
+           FROM game.rooms
+           WHERE id=$1`,
+          [roomId],
+        )
+      ).rows[0];
+      affectedTerritoryIds = [
+        pending?.pending_from_territory_id,
+        pending?.pending_to_territory_id,
+      ].filter((id): id is number => typeof id === "number");
       return executeCompleteConquest(client, roomId, player, troops);
+    },
+    {
+      syncEffects: async (client) => ({
+        publicPatch: {
+          room: await readRoomCommandPatch(client, roomId),
+          territories: await readTerritoryCommandPatches(
+            client,
+            roomId,
+            affectedTerritoryIds,
+          ),
+        },
+      }),
     },
   );
 }

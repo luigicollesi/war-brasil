@@ -17,6 +17,11 @@ import { advanceGameRound } from "@/src/lib/game-round-service";
 import { isOrderRollActorAvailable } from "@/src/lib/game-transitions";
 import { evaluateGameVictory } from "@/src/lib/server/game-victory-service";
 import { RoomError } from "@/src/lib/rooms";
+import {
+  readPlayerHandPrivatePatch,
+  readRoomCommandPatch,
+  readTerritoryMovementPatches,
+} from "./game-command-sync-read-model";
 import { executePlayerTradeAction } from "./game-player-trade-service";
 import { beginPlayerTurnPhase } from "./game-turn-service";
 
@@ -378,6 +383,8 @@ export async function phaseCommand(
   metadata?: GameCommandRequestMetadata | null,
 ) {
   const roomId = normalizeRoomId(value);
+  let actorPlayerId: string | null = null;
+  let roundBefore: number | null = null;
 
   return playerGameCommand(
     roomId,
@@ -387,7 +394,60 @@ export async function phaseCommand(
     input,
     async (client) => {
       const player = await resolveCommandPlayerBySession(client, roomId, session);
+      actorPlayerId = player.id;
+      roundBefore =
+        (
+          await client.query<{ round_number: number }>(
+            "SELECT round_number FROM game.rooms WHERE id=$1",
+            [roomId],
+          )
+        ).rows[0]?.round_number ?? null;
       return executePhaseAction(client, roomId, player, input);
+    },
+    {
+      syncEffects: async (client) => {
+        const playerId = actorPlayerId;
+        if (!playerId) return {};
+
+        if (input.action === "finishTrade" || input.action === "finishCards") {
+          return {};
+        }
+
+        const room = await readRoomCommandPatch(client, roomId);
+
+        if (input.action === "finishAttack") {
+          return {
+            publicPatch: {
+              room,
+              territories: await readTerritoryMovementPatches(
+                client,
+                roomId,
+                playerId,
+              ),
+            },
+          };
+        }
+
+        if (input.action === "endTurn") {
+          if (roundBefore !== null && room.roundNumber !== roundBefore) {
+            return {};
+          }
+          return {
+            publicPatch: {
+              room,
+              territories: await readTerritoryMovementPatches(client, roomId),
+            },
+            privatePatches: [
+              {
+                playerId,
+                patch: await readPlayerHandPrivatePatch(client, roomId, playerId),
+              },
+            ],
+          };
+        }
+
+        return {};
+      },
     },
   );
 }
