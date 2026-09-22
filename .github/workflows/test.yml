@@ -61,9 +61,10 @@ jobs:
       - name: Audit realtime dependencies
         run: npm --prefix realtime audit --audit-level=high
       - run: npm run lint
-      - run: npm test
+      - name: White-box tests with core coverage report
+        run: npm run test:whitebox:coverage
       - name: Test database migrations
-        run: npm run test:db
+        run: npm run test:blackbox:db
         env:
           DATABASE_URL: postgresql://war:DB_SENTINEL_DO_NOT_SHIP_2026@127.0.0.1:5432/war_ci
       - name: Test realtime and Redis presence
@@ -129,15 +130,7 @@ jobs:
             exit 1
           fi
 
-          node scripts/e2e/auth-credentials-verification-e2e.mjs
-          node scripts/e2e/auth-origin-redirect-e2e.mjs
-          node scripts/e2e/auth-rate-limit-e2e.mjs
-          node scripts/e2e/auth-seat-boundary-e2e.mjs
-          npm run test:e2e:lobby
-          node scripts/e2e/game-modes-e2e.mjs
-          node scripts/e2e/game-modes-victory-e2e.mjs
-          node scripts/e2e/economy-game-e2e.mjs
-          node scripts/e2e/store-showcase-e2e.mjs
+          npm run test:blackbox:e2e
         env:
           DATABASE_URL: postgresql://war:DB_SENTINEL_DO_NOT_SHIP_2026@127.0.0.1:5432/war_lobby_e2e
           LOBBY_E2E_DATABASE_URL: postgresql://war:DB_SENTINEL_DO_NOT_SHIP_2026@127.0.0.1:5432/war_lobby_e2e
