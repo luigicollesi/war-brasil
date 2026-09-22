@@ -6,7 +6,7 @@ import type {
   PublicPlayerMatchHistory,
   PublicProfileEquippedCosmetic,
 } from "@/src/lib/profile/profile-command-contract";
-import { auth } from "../auth/auth";
+import { getAuthenticatedSessionForReadHeaders } from "../auth/auth-guard";
 import {
   diceAssetDeliveryPath,
   territorySkinAssetDeliveryPath,
@@ -57,10 +57,7 @@ function requireCosmetic(
 export async function getPublicCommanderProfileSnapshot(
   handle: string,
 ): Promise<PublicCommanderProfileSnapshot | null> {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-    query: { disableCookieCache: true },
-  });
+  const session = await getAuthenticatedSessionForReadHeaders(await headers());
   if (!session) return null;
 
   const profile = await getPublicCommanderProfile(session.user.id, handle);
