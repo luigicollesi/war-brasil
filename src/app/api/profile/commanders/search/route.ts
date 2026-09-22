@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import {
   authenticationRequiredResponse,
-  getAuthenticatedSession,
   getAuthenticatedSessionForRead,
 } from "@/src/lib/server/auth/auth-guard";
 import { searchCommanderDirectory } from "@/src/lib/server/profile/profile-service";
