@@ -588,6 +588,24 @@ The implementation phase later proves dev-bucket connectivity with a harmless se
 
 ---
 
+### STORE-38 — Public cosmetic reads bypass the application Worker
+
+**Requirement**
+
+Public cosmetic and collection image reads use the production R2 Custom Domain rather than invoking Better Auth, catalogue allowlist queries or the OpenNext Worker for every image.
+
+**Pass**
+
+- production declares `ASSET_PUBLIC_BASE_URL=https://assets.bellumcivile.com`;
+- DB rows continue to contain object keys rather than complete CDN URLs;
+- server DTO projection resolves dice, territory skins, collection assets and profile appearance assets through the shared public delivery layer;
+- cross-origin Canvas/WebGL consumers use CORS-safe loading;
+- the R2 bucket has a CORS policy allowing `GET`/`HEAD` from `https://bellumcivile.com`;
+- authenticated `/api/assets/*` endpoints remain fallback/private compatibility paths rather than the normal production image path;
+- no client-side metadata request is required merely to render dice body colors already present in the catalogue DTO.
+
+---
+
 ### STORE-37 — Parent Economy V2 docs are reconciled before implementation is declared complete
 
 **Requirement**
