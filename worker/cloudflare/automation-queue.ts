@@ -108,10 +108,12 @@ async function processMessage(message: QueueMessage, env: Env) {
   }
 }
 
-export default {
+const automationQueueWorker = {
   async queue(batch: QueueBatch, env: Env) {
     await Promise.all(
       batch.messages.map((message) => processMessage(message, env)),
     );
   },
 };
+
+export default automationQueueWorker;
