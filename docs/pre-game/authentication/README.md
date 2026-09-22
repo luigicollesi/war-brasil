@@ -25,7 +25,7 @@ A conta War-Brasil é a identidade principal; providers são credenciais vincula
 
 ## Gate de acesso
 
-Sem sessão autenticada válida, a **Home (`/`) é a única página de produto pública**.
+Sem sessão autenticada válida, a **landing (`/`) é a única página de produto pública**. A rota `/home` é a Home autenticada e exige sessão válida.
 
 O projeto usa Next.js 16.3.4; portanto o antigo middleware de navegação deve ser implementado como `proxy.ts`.
 
@@ -113,7 +113,7 @@ proxy.ts
    ├── / -> HOME
    └── outra página -> /
 
-HOME
+LANDING /
    ↓ ENTRAR NO COMANDO
 Better Auth
    ├── Google
@@ -121,6 +121,8 @@ Better Auth
    └── Email + senha
           ↓
       sessão válida
+          ↓
+        /home
           ↓
       onboarding se necessário
           ↓
