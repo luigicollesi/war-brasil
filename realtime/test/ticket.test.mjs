@@ -20,6 +20,7 @@ test("ticket realtime valida assinatura, sala, versão e expiração", () => {
     v: GAME_PROTOCOL_VERSION,
     roomId: "42",
     playerId: "7",
+    revision: 12,
     exp: now + 45_000,
     nonce: randomUUID(),
   });
@@ -27,6 +28,10 @@ test("ticket realtime valida assinatura, sala, versão e expiração", () => {
   assert.equal(
     verifyRealtimeTicket(value, "42", { now, secret })?.playerId,
     "7",
+  );
+  assert.equal(
+    verifyRealtimeTicket(value, "42", { now, secret })?.revision,
+    12,
   );
   assert.equal(verifyRealtimeTicket(value, "43", { now, secret }), null);
   assert.equal(verifyRealtimeTicket(value, "42", { now: now + 46_000, secret }), null);
