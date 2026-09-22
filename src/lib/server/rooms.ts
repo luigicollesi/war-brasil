@@ -563,8 +563,8 @@ export async function getLobbySnapshot(codeValue: unknown, playerSession: string
   const code = normalizeRoomCode(codeValue);
   if (!code) throw new RoomError("Código de sala inválido.", 422);
 
-  const roomResult = await pool.query<RoomRow>(
-    `SELECT id,code,status,created_at,started_at,ruleset,balanced_dice_enabled
+  const roomResult = await pool.query<RoomRow & { revision: number }>(
+    `SELECT id,code,status,created_at,started_at,ruleset,balanced_dice_enabled,revision
      FROM game.rooms
      WHERE code = $1`,
     [code],
@@ -581,7 +581,10 @@ export async function getLobbySnapshot(codeValue: unknown, playerSession: string
     [room.id, playerSession],
   );
 
-  return toSnapshot(room, playerResult.rows);
+  return {
+    snapshot: toSnapshot(room, playerResult.rows),
+    revision: room.revision,
+  };
 }
 
 export async function updateRoomSettings(

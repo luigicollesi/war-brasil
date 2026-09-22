@@ -35,15 +35,18 @@ test("lobby usa snapshot vigente como fonte de verdade e assentos estáveis", ()
   assert.doesNotMatch(visualComponents, /setPlayers|setReadyPlayers|setStations|useReducer/);
 });
 
-test("entrada, saída e ready continuam sincronizados sem reload manual", () => {
-  assert.match(sync, /const POLLING_INTERVAL_MS = 1_000/);
-  assert.match(sync, /createLobbySyncCoordinator/);
-  assert.match(sync, /coordinator\.sync\(\)/);
+test("entrada, saída e ready usam realtime com watchdog HTTP sem reload manual", () => {
+  assert.match(sync, /FALLBACK_POLLING_INTERVAL_MS = 2_000/);
+  assert.match(sync, /REALTIME_WATCHDOG_INTERVAL_MS = 30_000/);
+  assert.match(sync, /createGameRealtimeTransport/);
+  assert.match(sync, /gameRealtimeMode/);
+  assert.match(sync, /event\.type !== "game\.invalidate"/);
+  assert.match(sync, /coordinator\.refreshAfterCurrent\(\)/);
   assert.match(sync, /refreshRef\.current = coordinator\.refreshAfterCurrent/);
   assert.match(syncCoordinator, /if \(inFlight\) return inFlight/);
   assert.match(syncCoordinator, /await current/);
   assert.match(syncCoordinator, /return sync\(\)/);
-  assert.match(sync, /setSnapshot\(data as LobbySnapshot\)/);
+  assert.match(sync, /setSnapshot\(nextSnapshot\)/);
   assert.match(lobby, /await refresh\(\)/);
   assert.doesNotMatch(lobby, /location\.reload|window\.location\.reload/);
 });
@@ -152,7 +155,7 @@ test("identidade visual mantém verde militar, latão e vermelho reservado ao co
 
 test("lobby mantém heartbeat do assento e saída explícita sem unload destrutivo", () => {
   assert.match(lobby, /\/api\/rooms\/\$\{encodeURIComponent\(code\)\}\/heartbeat/);
-  assert.match(lobby, /20_000/);
+  assert.match(lobby, /30_000/);
   assert.match(lobby, /method: "DELETE"/);
   assert.match(lobby, /router\.replace\("\/matchmaking"\)/);
   assert.match(workspace, /SAIR DA SALA/);

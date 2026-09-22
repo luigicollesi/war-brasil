@@ -4,6 +4,7 @@ import {
   roomErrorResponse,
 } from "@/src/lib/api-response";
 import { getPlayerSession } from "@/src/lib/player-session";
+import { GAME_REVISION_HEADER } from "@/src/lib/game-sync-contract";
 import {
   getLobbySnapshot,
   RoomError,
@@ -31,8 +32,10 @@ export async function GET(request: NextRequest, { params }: RouteContext) {
     const session = requirePlayerSession(request);
     ({ code } = await params);
     await assertAuthenticatedPlayerSeat(request, session, { roomCode: code });
-    const snapshot = await getLobbySnapshot(code, session);
-    return noStoreJson(snapshot);
+    const { snapshot, revision } = await getLobbySnapshot(code, session);
+    return noStoreJson(snapshot, {
+      headers: { [GAME_REVISION_HEADER]: String(revision) },
+    });
   } catch (error) {
     return roomErrorResponse(error, {
       operation: "get_lobby_snapshot",

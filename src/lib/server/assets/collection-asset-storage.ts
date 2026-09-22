@@ -8,6 +8,7 @@ import {
   type WebPAssetObjectMetadata,
 } from "./asset-storage-s3";
 import { getAssetStorageConfig } from "./asset-storage-service";
+import { publicAssetDeliveryUrl } from "./public-asset-url";
 
 const COLLECTION_ASSET_KEY_PATTERN =
   /^store\/collections\/[a-z0-9]+(?:-[a-z0-9]+)*\/[a-z0-9]+(?:[-_][a-z0-9]+)*\.webp$/;
@@ -28,7 +29,10 @@ export function assertCollectionAssetKey(value: string): string {
 
 export function collectionAssetDeliveryPath(objectKey: string) {
   const key = assertCollectionAssetKey(objectKey);
-  return `/api/assets/collections?key=${encodeURIComponent(key)}`;
+  return (
+    publicAssetDeliveryUrl(key) ??
+    `/api/assets/collections?key=${encodeURIComponent(key)}`
+  );
 }
 
 export function resolveCollectionAssetReadUrl(

@@ -11,6 +11,7 @@ import {
   updateLobbyPlayer,
 } from "@/src/lib/rooms";
 import { assertAuthenticatedPlayerSeat } from "@/server/auth/player-seat-guard";
+import { publishLobbyChangeByCode } from "@/src/lib/server/realtime/lobby-realtime-publisher";
 
 type RouteContext = {
   params: Promise<{ code: string }>;
@@ -29,6 +30,7 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     await assertAuthenticatedPlayerSeat(request, session, { roomCode: code });
     body = await readJsonObject(request);
     const room = await updateLobbyPlayer(code, session, body);
+    await publishLobbyChangeByCode(room.code);
     return noStoreJson({ room });
   } catch (error) {
     return roomErrorResponse(error, {
@@ -52,6 +54,7 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
     ({ code } = await params);
     await assertAuthenticatedPlayerSeat(request, session, { roomCode: code });
     const result = await leaveWaitingRoom(code, session);
+    await publishLobbyChangeByCode(code);
     return noStoreJson({ ok: true, ...result });
   } catch (error) {
     return roomErrorResponse(error, {

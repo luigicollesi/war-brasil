@@ -24,7 +24,7 @@ No generated `cpg.bin` is committed to Git. On a generated-CPG cache miss, GitHu
 1. PostgreSQL is the sole authority for persistent gameplay state. Client state, realtime transports, caches and process memory must not define gameplay outcomes.
 2. Gameplay domain rules are transport-independent. HTTP/WebSocket/realtime layers adapt or accelerate synchronization rather than define rules.
 3. Gameplay mutations commit through server/database command boundaries before realtime invalidation is emitted.
-4. Realtime carries revision/readiness signals; recovery remains snapshot-based from authoritative state.
+4. Realtime carries revision/readiness signals for both waiting-room and in-game state; recovery remains snapshot-based from authoritative state.
 5. Durable automation is scheduled from PostgreSQL state and executed by the worker; process-local timers are not authoritative.
 6. `src/lib/shared` cannot depend on React, Next.js, browser, PostgreSQL, `client/` or `server/`. `client/` may depend on `shared/` but not `server/`; `server/` may depend on `shared/` but not `client/`.
 
@@ -42,6 +42,18 @@ client/UI
        -> Cloudflare Worker -> Durable Object (production rollout)
   -> client invalidation/patch
   -> authoritative HTTP snapshot refresh when required
+```
+
+### Lobby synchronization
+
+```text
+lobby mutation
+  -> existing PostgreSQL transaction + COMMIT
+  -> bump shared room revision
+  -> existing realtime bus / GameRoom Durable Object
+  -> game.invalidate
+  -> lobby authoritative HTTP refresh
+  -> 30s HTTP watchdog while socket is healthy
 ```
 
 ### Durable automatic progression

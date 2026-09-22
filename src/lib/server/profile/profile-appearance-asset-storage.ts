@@ -4,6 +4,7 @@ import { AssetStorageConfigError } from "../assets/asset-storage-config";
 import { resolveCollectionAssetReadUrl } from "../assets/collection-asset-storage";
 import { createPresignedAssetUrl } from "../assets/asset-storage-s3";
 import { getAssetStorageConfig } from "../assets/asset-storage-service";
+import { publicAssetDeliveryUrl } from "../assets/public-asset-url";
 
 const PROFILE_BACKGROUND_KEY_PATTERN =
   /^cosmetics\/profile-backgrounds\/[a-z0-9]+(?:[-_][a-z0-9]+)*\.webp$/;
@@ -39,7 +40,10 @@ export function assertProfileAppearanceAssetKey(value: string) {
 
 export function profileAppearanceAssetDeliveryPath(objectKey: string) {
   const key = assertProfileAppearanceAssetKey(objectKey);
-  return `/api/assets/profile-appearance?key=${encodeURIComponent(key)}`;
+  return (
+    publicAssetDeliveryUrl(key) ??
+    `/api/assets/profile-appearance?key=${encodeURIComponent(key)}`
+  );
 }
 
 export function resolveProfileAppearanceAssetReadUrl(

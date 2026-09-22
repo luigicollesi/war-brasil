@@ -6,6 +6,7 @@ import {
   assertTerritorySkinAssetKey,
   type AssetStorageConfig,
 } from "./asset-storage-config";
+import { publicAssetDeliveryUrl } from "./public-asset-url";
 import {
   createPresignedAssetUrl,
   createPresignedDiceAssetUrl,
@@ -27,12 +28,18 @@ export function resetAssetStorageConfigForTests() {
 
 export function diceAssetDeliveryPath(objectKey: string) {
   const key = assertDiceAssetKey(objectKey);
-  return `/api/assets/dice?key=${encodeURIComponent(key)}`;
+  return (
+    publicAssetDeliveryUrl(key) ??
+    `/api/assets/dice?key=${encodeURIComponent(key)}`
+  );
 }
 
 export function territorySkinAssetDeliveryPath(objectKey: string) {
   const key = assertTerritorySkinAssetKey(objectKey);
-  return `/api/assets/territory-skins?key=${encodeURIComponent(key)}`;
+  return (
+    publicAssetDeliveryUrl(key) ??
+    `/api/assets/territory-skins?key=${encodeURIComponent(key)}`
+  );
 }
 
 export function resolveDiceAssetReadUrl(

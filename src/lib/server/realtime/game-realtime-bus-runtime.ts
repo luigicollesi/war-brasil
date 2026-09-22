@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { PoolClient } from "pg";
+import { pool } from "../db/pool";
 import type { GameRealtimeBusEvent } from "./game-realtime-bus";
 import { publishCloudflareGameRealtimeEvent } from "./cloudflare-game-realtime-bus";
 import { postgresGameRealtimeBus } from "./postgres-game-realtime-bus";
@@ -36,6 +37,34 @@ export async function publishGameRealtimeBusEvent(
     postgresGameRealtimeBus.publish(event, {
       postgresClient: client,
     }),
+    publishCloudflareGameRealtimeEvent(event),
+  ]);
+}
+
+
+async function publishCommittedPostgresEvent(event: GameRealtimeBusEvent) {
+  const client = await pool.connect();
+  try {
+    await postgresGameRealtimeBus.publish(event, { postgresClient: client });
+  } finally {
+    client.release();
+  }
+}
+
+export async function publishCommittedGameRealtimeBusEvent(
+  event: GameRealtimeBusEvent,
+) {
+  const mode = gameRealtimeDeliveryMode();
+  if (mode === "cloudflare") {
+    await publishCloudflareGameRealtimeEvent(event);
+    return;
+  }
+  if (mode === "postgres") {
+    await publishCommittedPostgresEvent(event);
+    return;
+  }
+  await Promise.all([
+    publishCommittedPostgresEvent(event),
     publishCloudflareGameRealtimeEvent(event),
   ]);
 }

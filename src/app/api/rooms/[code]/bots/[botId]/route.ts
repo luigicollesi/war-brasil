@@ -3,6 +3,7 @@ import { noStoreJson, roomErrorResponse } from "@/src/lib/api-response";
 import { getPlayerSession } from "@/src/lib/player-session";
 import { removeBotFromRoom, RoomError } from "@/src/lib/rooms";
 import { assertAuthenticatedPlayerSeat } from "@/server/auth/player-seat-guard";
+import { publishLobbyChangeByCode } from "@/src/lib/server/realtime/lobby-realtime-publisher";
 
 type RouteContext = {
   params: Promise<{ code: string; botId: string }>;
@@ -21,6 +22,7 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
     ({ code, botId } = await params);
     await assertAuthenticatedPlayerSeat(request, session, { roomCode: code });
     await removeBotFromRoom(code, botId, session);
+    await publishLobbyChangeByCode(code);
     return noStoreJson({ removed: true });
   } catch (error) {
     return roomErrorResponse(error, {

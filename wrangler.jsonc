@@ -10,6 +10,12 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
+  "r2_buckets": [
+    {
+      "binding": "ASSET_STORAGE",
+      "bucket_name": "war-brasil-assets-prod"
+    }
+  ],
   // OpenNext deploys only the Next.js Worker. Keep external Node services off
   // until their production runtimes are deployed separately.
   "vars": {

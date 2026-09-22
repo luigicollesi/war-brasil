@@ -15,6 +15,7 @@ import {
   getOrCreatePlayerSession,
   persistPlayerSession,
 } from "@/src/lib/player-session";
+import { publishLobbyChangeByCode } from "@/src/lib/server/realtime/lobby-realtime-publisher";
 
 function invitationErrorResponse(error: unknown) {
   if (error instanceof GameInvitationError) {
@@ -62,6 +63,7 @@ export async function POST(
         displayName: access.profile.displayName,
       },
     });
+    await publishLobbyChangeByCode(result.roomCode);
     return persistPlayerSession(
       noStoreJson({ ok: true, ...result }),
       playerSession,

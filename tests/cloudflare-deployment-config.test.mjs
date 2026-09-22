@@ -106,3 +106,10 @@ test("segredos locais do Wrangler não entram no Git", () => {
   assert.match(gitignore, /^\.dev\.vars\*$/m);
   assert.match(gitignore, /^\.env\*$/m);
 });
+
+
+test("Cloudflare Worker binds production R2 bucket for zero-hop asset reads", () => {
+  const wrangler = readFileSync("wrangler.jsonc", "utf8");
+  assert.match(wrangler, /"binding": "ASSET_STORAGE"/);
+  assert.match(wrangler, /"bucket_name": "war-brasil-assets-prod"/);
+});

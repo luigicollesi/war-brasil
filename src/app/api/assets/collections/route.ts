@@ -2,6 +2,7 @@ import {
   authenticationRequiredResponse,
   getAuthenticatedSession,
 } from "@/src/lib/server/auth/auth-guard";
+import { readBoundAssetResponse } from "@/src/lib/server/assets/asset-r2-binding";
 import {
   assertCollectionAssetKey,
   resolveCollectionAssetReadUrl,
@@ -32,6 +33,13 @@ export async function GET(request: Request) {
     const objectKey = assertCollectionAssetKey(requestedKey);
     if (!(await isKnownCollectionAssetKey(objectKey))) {
       return unavailableAssetResponse(404);
+    }
+
+    const boundResponse = await readBoundAssetResponse(objectKey);
+    if (boundResponse) {
+      return boundResponse.status === 404
+        ? unavailableAssetResponse(404)
+        : boundResponse;
     }
 
     const location = resolveCollectionAssetReadUrl(objectKey, {

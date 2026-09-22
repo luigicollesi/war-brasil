@@ -83,7 +83,7 @@ export function LobbyClient({ code }: LobbyClientProps) {
     void heartbeat();
     const intervalId = window.setInterval(() => {
       void heartbeat();
-    }, 20_000);
+    }, 30_000);
 
     const onFocus = () => void heartbeat();
     const onVisibility = () => {

@@ -9,6 +9,7 @@ import {
   persistPlayerSession,
 } from "@/src/lib/player-session";
 import { joinRoom } from "@/src/lib/rooms";
+import { publishLobbyChangeByCode } from "@/src/lib/server/realtime/lobby-realtime-publisher";
 import { getCommandAccessState } from "@/server/auth/command-access";
 import {
   authenticationRequiredResponse,
@@ -40,6 +41,7 @@ export async function POST(request: NextRequest) {
       displayName: access.profile.displayName,
       handle: access.profile.handle,
     });
+    await publishLobbyChangeByCode(room.code);
     return persistPlayerSession(noStoreJson({ room }), session);
   } catch (error) {
     return roomErrorResponse(error, {

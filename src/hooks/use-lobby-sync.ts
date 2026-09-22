@@ -3,8 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { LobbySnapshot } from "@/src/lib/lobby";
 import { createLobbySyncCoordinator } from "@/src/lib/client/lobby-sync-coordinator";
+import { createGameRealtimeTransport } from "@/src/lib/client/transport/create-game-realtime-transport";
+import { gameRealtimeMode } from "@/src/lib/client/transport/game-realtime-mode";
+import {
+  GAME_REVISION_HEADER,
+  parseGameRevision,
+} from "@/src/lib/game-sync-contract";
 
-const POLLING_INTERVAL_MS = 1_000;
+const FALLBACK_POLLING_INTERVAL_MS = 2_000;
+const REALTIME_WATCHDOG_INTERVAL_MS = 30_000;
 const REQUEST_TIMEOUT_MS = 4_000;
 const TERMINAL_SYNC_STATUSES = new Set([401, 403, 404]);
 
@@ -19,6 +26,18 @@ export function useLobbySync(code: string) {
     let requestController: AbortController | null = null;
     let pollTimeoutId = 0;
     let pollingStopped = false;
+    let activeRoomId: string | null = null;
+    let latestRevision = 0;
+
+    const realtimeMode = gameRealtimeMode();
+    const realtimeTransport = createGameRealtimeTransport(realtimeMode);
+    let realtimeState = realtimeTransport.state();
+
+    function nextPollDelay() {
+      return realtimeMode === "hybrid" && realtimeState === "connected"
+        ? REALTIME_WATCHDOG_INTERVAL_MS
+        : FALLBACK_POLLING_INTERVAL_MS;
+    }
 
     const coordinator = createLobbySyncCoordinator(async () => {
       const controller = new AbortController();
@@ -34,13 +53,13 @@ export function useLobbySync(code: string) {
           cache: "no-store",
           signal: controller.signal,
         });
+        const revision = parseGameRevision(
+          response.headers.get(GAME_REVISION_HEADER),
+        );
         const data: unknown = await response.json();
 
         if (!response.ok) {
-          if (TERMINAL_SYNC_STATUSES.has(response.status)) {
-            pollingStopped = true;
-          }
-
+          if (TERMINAL_SYNC_STATUSES.has(response.status)) pollingStopped = true;
           const message =
             typeof data === "object" &&
             data !== null &&
@@ -52,8 +71,19 @@ export function useLobbySync(code: string) {
         }
 
         pollingStopped = false;
+        const nextSnapshot = data as LobbySnapshot;
+        activeRoomId = nextSnapshot.room.id;
+        if (revision !== null) latestRevision = Math.max(latestRevision, revision);
+
+        if (realtimeMode !== "off") {
+          void realtimeTransport.connect({
+            roomId: nextSnapshot.room.id,
+            revision,
+          });
+        }
+
         if (isActive) {
-          setSnapshot(data as LobbySnapshot);
+          setSnapshot(nextSnapshot);
           setError("");
         }
       } catch (requestError) {
@@ -79,13 +109,45 @@ export function useLobbySync(code: string) {
     async function poll() {
       await coordinator.sync();
       if (isActive && !pollingStopped) {
-        pollTimeoutId = window.setTimeout(() => void poll(), POLLING_INTERVAL_MS);
+        pollTimeoutId = window.setTimeout(() => void poll(), nextPollDelay());
       }
     }
 
-    // Refresh disparado por uma mutação precisa observar um GET iniciado depois
-    // da mutação. Reaproveitar um polling já em voo pode devolver um snapshot
-    // anterior ao commit e atrasar a convergência visual da sala.
+    const unsubscribeRealtime = realtimeTransport.subscribe((event) => {
+      if (
+        !isActive ||
+        realtimeMode !== "hybrid" ||
+        !activeRoomId ||
+        event.roomId !== activeRoomId
+      ) {
+        return;
+      }
+      if (event.type !== "game.invalidate" && event.type !== "realtime.ready") {
+        return;
+      }
+      if (event.payload.revision <= latestRevision) return;
+      void coordinator.refreshAfterCurrent();
+    });
+
+    const unsubscribeRealtimeState = realtimeTransport.subscribeState((state) => {
+      const previous = realtimeState;
+      realtimeState = state;
+      if (!isActive || realtimeMode !== "hybrid" || previous === state) return;
+
+      if (
+        state === "connected" ||
+        state === "reconnecting" ||
+        state === "degraded" ||
+        state === "closed"
+      ) {
+        window.clearTimeout(pollTimeoutId);
+        pollTimeoutId = window.setTimeout(
+          () => void poll(),
+          state === "connected" ? REALTIME_WATCHDOG_INTERVAL_MS : 0,
+        );
+      }
+    });
+
     refreshRef.current = coordinator.refreshAfterCurrent;
     void poll();
 
@@ -93,6 +155,9 @@ export function useLobbySync(code: string) {
       isActive = false;
       window.clearTimeout(pollTimeoutId);
       requestController?.abort();
+      unsubscribeRealtime();
+      unsubscribeRealtimeState();
+      realtimeTransport.disconnect();
       refreshRef.current = async () => {};
     };
   }, [code]);
