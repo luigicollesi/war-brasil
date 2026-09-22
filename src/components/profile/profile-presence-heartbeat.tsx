@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { useSession } from "@/src/lib/client/auth-client";
 
-const HEARTBEAT_INTERVAL_MS = 30_000;
+const HEARTBEAT_INTERVAL_MS = 60_000;
 
 export function ProfilePresenceHeartbeat() {
   const { data: session, isPending } = useSession();
