@@ -16,7 +16,6 @@ import type {
 } from "./game-realtime-transport";
 
 const MAX_RECONNECT_DELAY_MS = 15_000;
-const PING_INTERVAL_MS = 30_000;
 const DEGRADED_AFTER_ATTEMPTS = 4;
 
 type WebSocketGameRealtimeTransportOptions = {
@@ -55,6 +54,9 @@ async function fetchRealtimeTicket(roomId: string) {
     throw new Error(`Não foi possível obter ticket realtime (${response.status}).`);
   }
   const body: unknown = await response.json();
+  if (body && typeof body === "object" && "enabled" in body && body.enabled === false) {
+    return null;
+  }
   if (
     !body ||
     typeof body !== "object" ||
@@ -81,7 +83,6 @@ export class WebSocketGameRealtimeTransport implements GameRealtimeTransport {
   private currentState: GameRealtimeState = "idle";
   private reconnectAttempt = 0;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-  private pingTimer: ReturnType<typeof setInterval> | null = null;
   private manuallyClosed = false;
   private opening = false;
 
@@ -125,7 +126,6 @@ export class WebSocketGameRealtimeTransport implements GameRealtimeTransport {
   disconnect() {
     this.manuallyClosed = true;
     this.clearReconnectTimer();
-    this.clearPingTimer();
     const socket = this.socket;
     this.socket = null;
     if (
@@ -154,7 +154,13 @@ export class WebSocketGameRealtimeTransport implements GameRealtimeTransport {
     let ticket: string | undefined;
     try {
       if (this.options.authMode === "ticket") {
-        ticket = await fetchRealtimeTicket(input.roomId);
+        const issuedTicket = await fetchRealtimeTicket(input.roomId);
+        if (!issuedTicket) {
+          this.opening = false;
+          this.transition("degraded");
+          return;
+        }
+        ticket = issuedTicket;
       }
     } catch {
       this.opening = false;
@@ -211,7 +217,6 @@ export class WebSocketGameRealtimeTransport implements GameRealtimeTransport {
       if (parsed.type === "realtime.ready") {
         this.reconnectAttempt = 0;
         this.transition("connected");
-        this.startPingTimer();
         this.sendPing();
       } else if (parsed.type === "realtime.pong") {
         this.serverClock.recordSample(
@@ -227,7 +232,6 @@ export class WebSocketGameRealtimeTransport implements GameRealtimeTransport {
     socket.onerror = () => undefined;
     socket.onclose = (event) => {
       if (this.socket === socket) this.socket = null;
-      this.clearPingTimer();
       if (this.manuallyClosed) {
         this.transition("closed");
         return;
@@ -276,16 +280,6 @@ export class WebSocketGameRealtimeTransport implements GameRealtimeTransport {
       nonce: pingNonce(),
     };
     socket.send(JSON.stringify(message));
-  }
-
-  private startPingTimer() {
-    this.clearPingTimer();
-    this.pingTimer = setInterval(() => this.sendPing(), PING_INTERVAL_MS);
-  }
-
-  private clearPingTimer() {
-    if (this.pingTimer) clearInterval(this.pingTimer);
-    this.pingTimer = null;
   }
 
   private clearReconnectTimer() {
