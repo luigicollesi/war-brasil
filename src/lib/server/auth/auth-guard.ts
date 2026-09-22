@@ -29,6 +29,14 @@ export async function getAuthenticatedSessionForRead(request: Request) {
   });
 }
 
+export async function getAuthenticatedSessionForReadHeaders(
+  requestHeaders: HeadersInit,
+) {
+  return auth.api.getSession({
+    headers: new Headers(requestHeaders),
+  });
+}
+
 export async function requireAuthenticatedSession(
   request: Request,
 ): Promise<AuthSession> {
