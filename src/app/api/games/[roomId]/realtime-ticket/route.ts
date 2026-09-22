@@ -22,9 +22,13 @@ export async function POST(request: NextRequest, { params }: RouteContext) {
     }
 
     ({ roomId } = await params);
+    if (process.env.GAME_REALTIME_ENABLED !== "true") {
+      return noStoreJson({ enabled: false });
+    }
+
     await assertAuthenticatedPlayerSeat(request, session, { roomId });
     const result = await issueGameRealtimeTicket(roomId, session);
-    return noStoreJson(result);
+    return noStoreJson({ enabled: true, ...result });
   } catch (error) {
     return roomErrorResponse(error, {
       operation: "issue_game_realtime_ticket",
