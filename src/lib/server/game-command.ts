@@ -21,10 +21,11 @@ import {
   type GameRevision,
 } from "./game-revision";
 import {
-  publishGameChange,
-  publishGameInvalidation,
-  publishPlayerGamePatch,
+  publishCommittedGameChange,
+  publishCommittedGameInvalidation,
+  publishCommittedPlayerGamePatch,
 } from "./game-realtime-publisher";
+import { runPostResponseTask } from "./cloudflare/post-response-task";
 import { publishGameCommandMetric } from "./observability/game-command-metrics";
 import { startGameOperationMetric } from "./observability/game-operation-metrics";
 
@@ -126,7 +127,9 @@ export async function gameCommand<T>(
       transactionOpen = false;
       outcome = "success";
 
-      await publishGameInvalidation(client, roomId, baseRevision);
+      await runPostResponseTask("game.replay.realtime", () =>
+        publishCommittedGameInvalidation(roomId, baseRevision),
+      );
       return preparedReceipt.replay as GameCommandResult<T>;
     }
 
@@ -197,21 +200,23 @@ export async function gameCommand<T>(
     transactionOpen = false;
     outcome = "success";
 
-    await publishGameChange(client, {
-      roomId,
-      baseRevision,
-      revision,
-      patch: publicPatch,
-    });
-    for (const delivery of privatePatches) {
-      await publishPlayerGamePatch(client, {
+    await runPostResponseTask("game.command.realtime", async () => {
+      await publishCommittedGameChange({
         roomId,
-        playerId: delivery.playerId,
         baseRevision,
         revision,
-        patch: delivery.patch,
+        patch: publicPatch,
       });
-    }
+      for (const delivery of privatePatches) {
+        await publishCommittedPlayerGamePatch({
+          roomId,
+          playerId: delivery.playerId,
+          baseRevision,
+          revision,
+          patch: delivery.patch,
+        });
+      }
+    });
 
     return result;
   } catch (error) {
@@ -263,7 +268,9 @@ export async function gameConditionalCommand<T>(
     outcome = "success";
 
     if (result.changed) {
-      await publishGameInvalidation(client, roomId, revision);
+      await runPostResponseTask("game.conditional.realtime", () =>
+        publishCommittedGameInvalidation(roomId, revision),
+      );
     }
 
     return {
