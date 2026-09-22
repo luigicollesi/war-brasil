@@ -1,6 +1,5 @@
 import {
   authenticationRequiredResponse,
-  getAuthenticatedSession,
   getAuthenticatedSessionForRead,
 } from "@/src/lib/server/auth/auth-guard";
 import { listUnreadNotifications } from "@/src/lib/server/profile/notification-repository";
