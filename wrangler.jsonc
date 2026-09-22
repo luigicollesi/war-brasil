@@ -34,7 +34,8 @@
     "GAME_REALTIME_TICKET_TTL_SECONDS": "45",
     "GAME_AUTOMATION_WORKER_MODE": "off",
     "GAME_AUTOMATION_QUEUE_MODE": "off",
-    "ASSET_STORAGE_BUCKET": "war-brasil-assets-prod"
+    "ASSET_STORAGE_BUCKET": "war-brasil-assets-prod",
+    "ASSET_PUBLIC_BASE_URL": "https://assets.bellumcivile.com"
   },
   // DATABASE_HYPERDRIVE_URL is the direct/unpooled origin URL and remains a
   // secret. DATABASE_HYPERDRIVE itself is a Cloudflare resource binding and
