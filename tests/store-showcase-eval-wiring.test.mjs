@@ -4,6 +4,7 @@ import test from "node:test";
 
 const E2E_PATH = "scripts/e2e/store-showcase-e2e.mjs";
 const WORKFLOW_PATH = ".github/workflows/test.yml";
+const BLACK_BOX_RUNNER_PATH = "scripts/e2e/run-black-box-suite.mjs";
 
 const read = (path) => readFileSync(path, "utf8");
 
@@ -54,10 +55,12 @@ test("SHOWCASE-28 browser eval proves stale price fails closed and requires expl
   assert.match(e2e, /setCollectionPromotionDiscount\(football\.id,\s*4000\)/);
 });
 
-test("main CI executes showcase browser eval and retains its evidence", () => {
+test("main CI executes showcase through the black-box suite and retains its evidence", () => {
   const workflow = read(WORKFLOW_PATH);
+  const blackBoxRunner = read(BLACK_BOX_RUNNER_PATH);
 
-  assert.match(workflow, /node scripts\/e2e\/store-showcase-e2e\.mjs/);
+  assert.match(workflow, /npm run test:blackbox:e2e/);
+  assert.match(blackBoxRunner, /scripts\/e2e\/store-showcase-e2e\.mjs/);
   assert.match(workflow, /STORE_SHOWCASE_E2E_ARTIFACT_DIR:\s*test-results\/store-showcase-eval/);
   assert.match(workflow, /test-results\/store-showcase-eval/);
 });
