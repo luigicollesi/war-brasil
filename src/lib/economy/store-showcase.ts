@@ -36,6 +36,8 @@ export type StoreShowcaseItem = Readonly<{
   previewRef: string | null;
   assetRef: string | null;
   effectKey: string | null;
+  bodyColor: string | null;
+  bodyHighlightColor: string | null;
   singleOffer: StoreShowcaseOffer | null;
 }>;
 
@@ -115,6 +117,8 @@ function projectItems(
     previewRef: item.previewRef,
     assetRef: item.assetRef,
     effectKey: item.effectKey,
+    bodyColor: item.bodyColor,
+    bodyHighlightColor: item.bodyHighlightColor,
     singleOffer: singleOfferByItemId[item.id] ?? null,
   }));
 }
