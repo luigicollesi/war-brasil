@@ -19,7 +19,7 @@ test("skin cosmética altera somente a fonte visual das texturas 3D", () => {
 
   assert.match(types, /assetRef\?: string \| null/);
   assert.match(texture, /if \(assetRef\)/);
-  assert.match(texture, /loadImage\(assetRef\)/);
+  assert.match(texture, /preloadDiceSourceImage\(assetRef\)/);
   assert.match(texture, /drawProceduralBase\(context, skin, resolution\)/);
   assert.match(texture, /drawPips\(context, value, resolution, pipColor\)/);
   assert.match(assets, /options\.assetRef \?\? "procedural"/);
