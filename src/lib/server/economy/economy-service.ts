@@ -38,6 +38,7 @@ import {
   findOwnedCosmetic,
   findPurchaseReceiptByIdempotencyKey,
   initializeEconomyState,
+  isEconomyStateInitialized,
   insertPurchaseLedgerEntry,
   listOwnedCosmetics,
   listPurchaseGrantedItems,
@@ -616,6 +617,18 @@ export async function ensureEconomyState(userId: string, db?: EconomyQueryable) 
   }
 }
 
+async function ensureEconomyStateForRead(userId: string) {
+  if (await isEconomyStateInitialized(userId)) return;
+  await ensureEconomyState(userId);
+}
+
+export async function getEconomyLoadout(
+  userId: string,
+): Promise<CosmeticLoadout> {
+  await ensureEconomyStateForRead(userId);
+  return loadoutFromOwned(await listOwnedCosmetics(userId));
+}
+
 export async function getEconomyWallet(
   userId: string,
 ): Promise<CampaignCreditWallet> {
@@ -629,44 +642,51 @@ export async function getEconomyWallet(
 export async function getEconomyStorefront(
   userId: string,
 ): Promise<EconomyStorefrontSnapshot> {
-  const client = await pool.connect();
-  try {
-    await client.query("BEGIN");
-    await ensureLockedEconomyState(userId, client);
+  await ensureEconomyStateForRead(userId);
 
-    const walletRow = await findCampaignCreditWallet(userId, client);
-    const ownedRows = await listOwnedCosmetics(userId, client);
-    const setRows = await listStorefrontSetItems(userId, client);
-    const collectionRows = await listStorefrontCollections(userId, client);
-    const territorySkinRows = await listStorefrontTerritorySkins(userId, client);
-    const offerRows = await listStorefrontOffers(client);
-    const offerItemRows = await listStorefrontOfferItems(userId, client);
-    const productRows = await listActiveStorefrontOfferProducts(client);
-    const quoteRows = await listActiveStorefrontQuoteItems(userId, client);
-    const campaignRows = await listStorefrontCampaigns(client);
-    const creditPackRows = await listStorefrontCreditPacks(client);
-    const offers = offersFromRows(offerRows, offerItemRows, productRows, quoteRows);
+  const userOverlayPromise = Promise.all([
+    findCampaignCreditWallet(userId),
+    listOwnedCosmetics(userId),
+    listStorefrontSetItems(userId),
+    listStorefrontCollections(userId),
+    listStorefrontTerritorySkins(userId),
+    listStorefrontOfferItems(userId),
+    listActiveStorefrontQuoteItems(userId),
+  ]);
 
-    const snapshot = {
-      wallet: walletFromRow(walletRow),
-      loadout: loadoutFromOwned(ownedRows),
-      ownedItems: ownedRows.map(cosmeticFromRow),
-      sets: setsFromRows(setRows),
-      collections: collectionsFromRows(collectionRows, productRows),
-      campaigns: campaignsFromRows(campaignRows),
-      territorySkins: territorySkinRows.map(cosmeticFromRow),
-      offers,
-      creditPacks: creditPacksFromRows(creditPackRows),
-    } satisfies EconomyStorefrontSnapshot;
+  const catalogPromise = Promise.all([
+    listStorefrontOffers(),
+    listActiveStorefrontOfferProducts(),
+    listStorefrontCampaigns(),
+    listStorefrontCreditPacks(),
+  ]);
 
-    await client.query("COMMIT");
-    return snapshot;
-  } catch (error) {
-    await client.query("ROLLBACK");
-    throw error;
-  } finally {
-    client.release();
-  }
+  const [
+    [
+      walletRow,
+      ownedRows,
+      setRows,
+      collectionRows,
+      territorySkinRows,
+      offerItemRows,
+      quoteRows,
+    ],
+    [offerRows, productRows, campaignRows, creditPackRows],
+  ] = await Promise.all([userOverlayPromise, catalogPromise]);
+
+  const offers = offersFromRows(offerRows, offerItemRows, productRows, quoteRows);
+
+  return {
+    wallet: walletFromRow(walletRow),
+    loadout: loadoutFromOwned(ownedRows),
+    ownedItems: ownedRows.map(cosmeticFromRow),
+    sets: setsFromRows(setRows),
+    collections: collectionsFromRows(collectionRows, productRows),
+    campaigns: campaignsFromRows(campaignRows),
+    territorySkins: territorySkinRows.map(cosmeticFromRow),
+    offers,
+    creditPacks: creditPacksFromRows(creditPackRows),
+  } satisfies EconomyStorefrontSnapshot;
 }
 
 export function parseEquipCosmeticInput(payload: unknown): EquipCosmeticInput {
