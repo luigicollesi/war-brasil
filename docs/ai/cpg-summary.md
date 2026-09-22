@@ -16,7 +16,7 @@ No generated `cpg.bin` is committed to Git. On a generated-CPG cache miss, GitHu
 - `src/lib/server/` — authoritative services, transactions and persistence boundaries.
 - `src/lib/*.ts` — some legacy compatibility reexports; new logic belongs in `client/`, `server/` or `shared/`.
 - `realtime/` — realtime delivery runtimes: the Node gateway used locally/for compatibility and the Cloudflare Durable Object WebSocket gateway; neither is authoritative game state.
-- `worker/` — durable automatic game progression driven from persisted scheduling state.
+- `worker/` — durable automatic game progression: the Node reconciler/poller plus the optional Cloudflare Queue consumer.
 - `scripts/` — finite development/database tooling. `scripts/context/` implements the CPG infrastructure itself and is intentionally excluded from the graph to avoid self-indexing.
 
 ## Architectural invariants
@@ -25,10 +25,11 @@ No generated `cpg.bin` is committed to Git. On a generated-CPG cache miss, GitHu
 2. Gameplay domain rules are transport-independent. HTTP/WebSocket/realtime layers adapt or accelerate synchronization rather than define rules.
 3. Gameplay mutations commit through server/database command boundaries before realtime invalidation is emitted.
 4. Realtime carries revision/readiness signals for both waiting-room and in-game state; recovery remains snapshot-based from authoritative state.
-5. Durable automation is scheduled from PostgreSQL state. Cloudflare Queue may accelerate delivery, but `automation_due_at` / `automation_kind` remain canonical and the polling worker remains a reconciliation path during rollout.
+5. Durable automation is scheduled from PostgreSQL state. Cloudflare Queue may accelerate delivery, but `automation_due_at` / `automation_kind` remain canonical and the polling worker remains a reconciliation path during rollout. Queue rollout is `off -> shadow -> active`; active Queue mode slows the default poller cadence so it behaves as a safety net rather than the primary trigger.
 6. Read-only authenticated hot paths may use Better Auth's short-lived signed cookie cache; mutations, tickets, purchases and other sensitive authorization boundaries must revalidate the session strongly.
 7. Best-effort effects that occur only after an authoritative COMMIT may use Cloudflare `waitUntil()`; anything required to determine the response must remain awaited.
-8. `src/lib/shared` cannot depend on React, Next.js, browser, PostgreSQL, `client/` or `server/`. `client/` may depend on `shared/` but not `server/`; `server/` may depend on `shared/` but not `client/`.
+8. Economy reads may cache only shared storefront catalog metadata briefly at the Cloudflare edge. Wallet, ownership, equipped state, quotes/tier pricing and all purchase validation remain fresh/authoritative; catalog-cache inconsistencies must retry against PostgreSQL.
+9. `src/lib/shared` cannot depend on React, Next.js, browser, PostgreSQL, `client/` or `server/`. `client/` may depend on `shared/` but not `server/`; `server/` may depend on `shared/` but not `client/`.
 
 ## Critical flows
 
@@ -66,7 +67,10 @@ lobby mutation
 
 ```text
 PostgreSQL automation_due_at / automation_kind
-  -> worker
+  -> optional Queue producer after COMMIT
+       -> shadow: delivery-only validation
+       -> active: Cloudflare Queue consumer -> Service Binding
+  -> Node poller/reconciler remains available
   -> authoritative server command
   -> PostgreSQL transaction + revision
   -> realtime invalidation
