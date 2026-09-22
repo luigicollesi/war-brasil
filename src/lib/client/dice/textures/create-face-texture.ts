@@ -16,7 +16,7 @@ import {
 const imagePromises = new Map<string, Promise<HTMLImageElement>>();
 const BODY_COLOR_PATTERN = /^#[0-9a-f]{6}$/i;
 const DICE_ASSET_KEY_PATTERN =
-  /^cosmetics\\/dice\\/[a-z0-9][a-z0-9-]*\\/(?:attack|defense|neutral)\\.webp$/;
+  /^cosmetics\/dice\/[a-z0-9][a-z0-9-]*\/(?:attack|defense|neutral)\.webp$/;
 
 function diceAssetProxyFallback(src: string) {
   if (typeof window === "undefined") return null;
@@ -25,7 +25,7 @@ function diceAssetProxyFallback(src: string) {
     const url = new URL(src, window.location.href);
     if (url.origin === window.location.origin) return null;
 
-    const objectKey = decodeURIComponent(url.pathname.replace(/^\\/+/, ""));
+    const objectKey = decodeURIComponent(url.pathname.replace(/^\/+/, ""));
     if (!DICE_ASSET_KEY_PATTERN.test(objectKey)) return null;
 
     return `/api/assets/dice?key=${encodeURIComponent(objectKey)}`;
