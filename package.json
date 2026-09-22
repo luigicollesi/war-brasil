@@ -50,7 +50,9 @@
     "test:whitebox:coverage:70": "npm run test:compile && node scripts/test/run-white-box-coverage.mjs --threshold=70 && npm run worker:test",
     "test:blackbox:db": "node --test \"tests/integration/*.test.mjs\"",
     "test:blackbox:e2e": "node scripts/e2e/run-black-box-suite.mjs smoke",
-    "test:blackbox:e2e:full": "node scripts/e2e/run-black-box-suite.mjs full"
+    "test:blackbox:e2e:full": "node scripts/e2e/run-black-box-suite.mjs full",
+    "cloudflare:assets:cors:set": "wrangler r2 bucket cors set war-brasil-assets-prod --file config/r2-cors.production.json",
+    "cloudflare:assets:cors:list": "wrangler r2 bucket cors list war-brasil-assets-prod"
   },
   "dependencies": {
     "@opennextjs/cloudflare": "1.20.6",
