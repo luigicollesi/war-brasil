@@ -90,6 +90,10 @@ test("runtime mantém DTO legado, mas projeta image skin por chave transitória 
     client,
     /territoryEffectKey: owner\.cosmetics\.territoryEffect\.effectKey/,
   );
+  assert.match(
+    client,
+    /territoryAssetRef: owner\.cosmetics\.territoryEffect\.assetRef/,
+  );
 });
 
 test("conquista troca skin pela do novo dono congelado no snapshot", () => {
@@ -109,6 +113,6 @@ test("assinatura existente reaplica material/skin sem criar estado React por ter
   const board = source("src/components/interactive-board.tsx");
 
   assert.match(board, /materialSignatureRef = useRef\(new Map<number, string>\(\)\)/);
-  assert.match(board, /:effect:\$\{territoryEffectKey\}/);
+  assert.match(board, /:effect:\$\{territoryEffectKey\}:asset:/);
   assert.doesNotMatch(board, /useState<.*territorySkin|setTerritorySkin/i);
 });
