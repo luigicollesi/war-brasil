@@ -53,7 +53,12 @@ export async function issueGameRealtimeTicket(roomId: string, session: string) {
   const player = result.rows[0];
   const playerId = player?.player_id;
   const revision = player?.revision;
-  if (!playerId || !Number.isSafeInteger(revision) || revision < 1) {
+  if (
+    !playerId ||
+    typeof revision !== "number" ||
+    !Number.isSafeInteger(revision) ||
+    revision < 1
+  ) {
     throw new RoomError("Jogador sem acesso a esta partida.", 403);
   }
 
