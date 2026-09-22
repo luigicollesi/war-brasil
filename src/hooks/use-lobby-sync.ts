@@ -106,10 +106,15 @@ export function useLobbySync(code: string) {
       }
     });
 
+    function schedulePoll(delay = nextPollDelay()) {
+      window.clearTimeout(pollTimeoutId);
+      pollTimeoutId = window.setTimeout(() => void poll(), delay);
+    }
+
     async function poll() {
       await coordinator.sync();
       if (isActive && !pollingStopped) {
-        pollTimeoutId = window.setTimeout(() => void poll(), nextPollDelay());
+        schedulePoll();
       }
     }
 
@@ -140,9 +145,7 @@ export function useLobbySync(code: string) {
         state === "degraded" ||
         state === "closed"
       ) {
-        window.clearTimeout(pollTimeoutId);
-        pollTimeoutId = window.setTimeout(
-          () => void poll(),
+        schedulePoll(
           state === "connected" ? REALTIME_WATCHDOG_INTERVAL_MS : 0,
         );
       }
