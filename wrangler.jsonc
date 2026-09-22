@@ -38,8 +38,10 @@
 		"ASSET_PUBLIC_BASE_URL": "https://assets.bellumcivile.com"
 	},
 	// DATABASE_HYPERDRIVE_URL is the direct/unpooled origin URL and remains a
-	// secret/fallback. Production database traffic uses the DATABASE_HYPERDRIVE
-	// resource binding declared below; its configuration ID is not a credential.
+	// runtime secret/fallback. Production database traffic uses the
+	// DATABASE_HYPERDRIVE resource binding declared below. Workers Builds must
+	// separately expose CLOUDFLARE_HYPERDRIVE_LOCAL_CONNECTION_STRING_DATABASE_HYPERDRIVE
+	// as a build secret so Wrangler/OpenNext can materialize the binding locally.
 	// AUTH_DATABASE_URL remains the dedicated direct auth connection.
 	"secrets": {
 		"required": [
