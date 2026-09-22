@@ -1,5 +1,6 @@
 type AutomationMessage = {
   v: 1;
+  mode: "shadow" | "active";
   roomId: string;
   expectedRevision: number;
   kind: "presentation" | "bot";
@@ -32,6 +33,7 @@ function isAutomationMessage(value: unknown): value is AutomationMessage {
   const message = value as Record<string, unknown>;
   return (
     message.v === 1 &&
+    (message.mode === "shadow" || message.mode === "active") &&
     typeof message.roomId === "string" &&
     /^\d+$/.test(message.roomId) &&
     typeof message.expectedRevision === "number" &&
@@ -92,6 +94,17 @@ async function advanceAutomation(env: Env, body: AutomationMessage) {
 
 async function processMessage(message: QueueMessage, env: Env) {
   if (!isAutomationMessage(message.body)) {
+    message.ack();
+    return;
+  }
+
+  if (message.body.mode === "shadow") {
+    console.log("[automation-queue] shadow delivery", {
+      roomId: message.body.roomId,
+      expectedRevision: message.body.expectedRevision,
+      kind: message.body.kind,
+      dueAt: message.body.dueAt,
+    });
     message.ack();
     return;
   }
