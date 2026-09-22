@@ -1,6 +1,5 @@
 import {
   authenticationRequiredResponse,
-  getAuthenticatedSession,
   getAuthenticatedSessionForRead,
 } from "@/src/lib/server/auth/auth-guard";
 import { requireProfileMutationActor } from "@/src/lib/server/profile/social-http";
