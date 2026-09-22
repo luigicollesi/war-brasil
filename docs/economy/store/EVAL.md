@@ -468,17 +468,10 @@ No account token/access key/secret appears in browser bundles, repository source
 
 **Pass**
 
-Implementation uses server-only configuration for the S3-compatible connection, following the contract:
-
-```text
-ASSET_STORAGE_URL
-ASSET_STORAGE_REGION
-ASSET_STORAGE_BUCKET
-ASSET_STORAGE_ACCESS_KEY_ID
-ASSET_STORAGE_SECRET_ACCESS_KEY
-```
-
-Optional `ASSET_PUBLIC_BASE_URL` contains no secret.
+- the production Worker accesses R2 through the `ASSET_STORAGE` binding and does not require S3 credentials;
+- S3-compatible credentials are restricted to Node/local tooling and administrative validation;
+- `ASSET_PUBLIC_BASE_URL` contains no secret;
+- no shared secret is embedded in public asset URLs or browser code.
 
 ---
 
