@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { CommanderPresence } from "@/src/lib/profile/profile-command-contract";
+import { realtimeInternalFetch } from "../realtime/realtime-internal-client";
 
 const MAX_BATCH_SIZE = 100;
 const INTERNAL_TIMEOUT_MS = 1_500;
@@ -29,24 +30,11 @@ export type OwnPresenceHeartbeat = CommanderPresence &
     shouldPersistLastSeen: boolean;
   }>;
 
-function internalConfig() {
-  const rawUrl = process.env.GAME_REALTIME_INTERNAL_URL?.trim();
-  const token = process.env.GAME_REALTIME_INTERNAL_TOKEN?.trim();
-  if (!rawUrl || !token) return null;
-  return {
-    baseUrl: rawUrl.replace(/\/$/, ""),
-    token,
-  };
-}
-
 async function postInternal(
   path: string,
   body: unknown,
   options: PresenceRequestOptions = {},
 ) {
-  const config = internalConfig();
-  if (!config) return null;
-
   const controller = new AbortController();
   const timeout = setTimeout(
     () => controller.abort(),
@@ -55,17 +43,17 @@ async function postInternal(
   timeout.unref?.();
 
   try {
-    const response = await fetch(`${config.baseUrl}${path}`, {
+    const response = await realtimeInternalFetch(path, {
       method: "POST",
       cache: "no-store",
       signal: controller.signal,
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${config.token}`,
       },
       body: JSON.stringify(body),
     });
 
+    if (!response) return null;
     const payload = await response.json().catch(() => null);
     if (!response.ok || !payload || typeof payload !== "object") return null;
     return payload as Record<string, unknown>;
