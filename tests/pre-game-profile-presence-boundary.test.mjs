@@ -31,13 +31,17 @@ test("presence outage is a successful degraded heartbeat, not an application 5xx
 
 test("Next presence gateway remains server-only and fails closed as unavailable", () => {
   const gateway = read("src/lib/server/profile/presence-gateway.ts");
+  const internal = read(
+    "src/lib/server/realtime/realtime-internal-client.ts",
+  );
 
   assert.match(gateway, /import "server-only"/);
-  assert.match(gateway, /GAME_REALTIME_INTERNAL_URL/);
-  assert.match(gateway, /GAME_REALTIME_INTERNAL_TOKEN/);
+  assert.match(gateway, /realtimeInternalFetch/);
   assert.match(gateway, /\/internal\/presence\/heartbeat/);
   assert.match(gateway, /\/internal\/presence\/batch/);
-  assert.match(gateway, /Authorization:\s*`Bearer \$\{config\.token\}`/);
+  assert.match(internal, /GAME_REALTIME_INTERNAL_URL/);
+  assert.match(internal, /GAME_REALTIME_INTERNAL_TOKEN/);
+  assert.match(internal, /Authorization/);
   assert.match(gateway, /shouldPersistLastSeen: payload\.persistLastSeen === true/);
   assert.match(gateway, /return \{ availability: "unavailable", presences: new Map\(\) \}/);
   assert.doesNotMatch(gateway, /@redis\/client/);
@@ -114,7 +118,7 @@ test("global heartbeat is session-aware, periodic, identity-free and independent
 
   assert.match(heartbeat, /useSession\(\)/);
   assert.match(heartbeat, /if \(isPending \|\| !session\?\.user\)/);
-  assert.match(heartbeat, /HEARTBEAT_INTERVAL_MS = 30_000/);
+  assert.match(heartbeat, /HEARTBEAT_INTERVAL_MS = 60_000/);
   assert.match(heartbeat, /fetch\("\/api\/profile\/presence\/heartbeat"/);
   assert.doesNotMatch(heartbeat, /userId/);
   assert.doesNotMatch(heartbeat, /JSON\.stringify/);
