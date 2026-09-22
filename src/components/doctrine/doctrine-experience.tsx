@@ -175,7 +175,7 @@ export function DoctrineExperience({
           <div className={ux.indexTitleRow}>
             <h1 id="doctrine-index-title">DOUTRINA</h1>
             <Link
-              href="/"
+              href="/home"
               className={ux.backButton}
               aria-label="Voltar ao comando"
               prefetch={false}
@@ -296,7 +296,7 @@ export function DoctrineExperience({
                   <b>{nextChapter.eyebrow}</b>
                 </Link>
               ) : (
-                <Link href="/" className={styles.returnCommand}>
+                <Link href="/home" className={styles.returnCommand}>
                   <span>ENCERRAR</span>
                   <b>Voltar ao comando</b>
                 </Link>
