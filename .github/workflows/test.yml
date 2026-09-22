@@ -62,7 +62,7 @@ jobs:
         run: npm --prefix realtime audit --audit-level=high
       - run: npm run lint
       - name: White-box tests with core coverage report
-        run: npm run test:whitebox:coverage
+        run: npm run test:whitebox:coverage:70
       - name: Test database migrations
         run: npm run test:blackbox:db
         env:
