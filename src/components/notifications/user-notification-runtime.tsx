@@ -96,7 +96,7 @@ export function UserNotificationRuntime() {
 
     let stopped = false;
     const poll = async () => {
-      if (stopped) return;
+      if (stopped || document.visibilityState !== "visible") return;
       await refresh().catch(() => undefined);
     };
 
@@ -136,9 +136,16 @@ export function UserNotificationRuntime() {
     let socket: WebSocket | null = null;
     let reconnectTimer: number | null = null;
     let reconnectAttempt = 0;
+    let refreshPending = false;
 
     const scheduleReconnect = () => {
-      if (stopped || reconnectTimer) return;
+      if (
+        stopped ||
+        reconnectTimer ||
+        document.visibilityState !== "visible"
+      ) {
+        return;
+      }
       reconnectAttempt += 1;
       const baseDelay = Math.min(
         30_000,
@@ -152,6 +159,8 @@ export function UserNotificationRuntime() {
     };
 
     const connect = async () => {
+      if (stopped || document.visibilityState !== "visible") return;
+
       try {
         const ticket = await fetchUserRealtimeTicket();
         if (stopped) return;
@@ -182,7 +191,11 @@ export function UserNotificationRuntime() {
               type?: unknown;
             };
             if (event.type === "user.notifications.changed") {
-              void refresh();
+              if (document.visibilityState === "visible") {
+                void refresh();
+              } else {
+                refreshPending = true;
+              }
             }
           } catch {
             // Invalid push data is ignored; REST polling remains authoritative.
@@ -202,11 +215,27 @@ export function UserNotificationRuntime() {
       }
     };
 
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== "visible" || stopped) return;
+
+      if (refreshPending) {
+        refreshPending = false;
+        void refresh();
+      }
+
+      if (!socket && !reconnectTimer) {
+        reconnectAttempt = 0;
+        void connect();
+      }
+    };
+
+    document.addEventListener("visibilitychange", onVisibilityChange);
     void connect();
 
     return () => {
       stopped = true;
       if (reconnectTimer) window.clearTimeout(reconnectTimer);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
       socket?.close(1000, "notification runtime closed");
     };
   }, [isPending, refresh, session?.user]);
