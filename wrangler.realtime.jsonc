@@ -14,6 +14,12 @@
     "GAME_REALTIME_ALLOWED_ORIGINS": "https://bellumcivile.com",
     "GAME_REALTIME_MAX_BUFFERED_BYTES": "65536"
   },
+  "secrets": {
+    "required": [
+      "GAME_REALTIME_TICKET_SECRET",
+      "GAME_REALTIME_INTERNAL_TOKEN"
+    ]
+  },
   "durable_objects": {
     "bindings": [
       {
