@@ -5,7 +5,7 @@
 
 ## 1. Regra de produto
 
-Enquanto não houver sessão autenticada válida, a única página de produto navegável do War-Brasil é a **Home (`/`)**.
+Enquanto não houver sessão autenticada válida, a única página de produto navegável do War-Brasil é a **landing (`/`)**. A **Home autenticada (`/home`)** é protegida e representa o Comando depois da entrada.
 
 ```text
 request de página
@@ -34,6 +34,7 @@ A implementação SHOULD centralizar a regra de navegação em `proxy.ts`.
 Sem sessão válida:
 
 - `/` -> **ALLOW**;
+- `/home` sem sessão -> **REDIRECT `/`**;
 - qualquer outra página de produto -> **REDIRECT `/`**;
 - query/hash do destino protegido MUST NOT ser usado como redirect externo;
 - não renderizar parcialmente a página protegida antes do redirect.
@@ -49,13 +50,14 @@ Exemplos:
 operations/...    -> /
 ```
 
-A Home continua responsável por abrir o modal de autenticação a partir de `ENTRAR NO COMANDO`.
+A landing continua responsável por abrir o modal de autenticação a partir de `ENTRAR NO COMANDO`. Sessão válida leva para `/home`, onde onboarding ou Comando autorizado são resolvidos.
 
 ### 2.2 Usuário autenticado
 
 Com sessão válida:
 
-- `/` continua acessível;
+- `/` continua acessível como landing e não abre automaticamente o Comando;
+- `/home` é o destino canônico pós-autenticação;
 - páginas protegidas podem ser acessadas;
 - regras adicionais continuam aplicáveis (onboarding, ownership de partida, papel/seat, etc.).
 
@@ -237,7 +239,7 @@ proxy.ts
    ├── / -> HOME
    └── outra página -> /
 
-HOME
+LANDING /
    ↓ ENTRAR NO COMANDO
 Better Auth
    ├── Google
@@ -245,6 +247,8 @@ Better Auth
    └── Email + senha
           ↓
       sessão válida
+          ↓
+        /home
           ↓
       onboarding se necessário
           ↓
