@@ -258,7 +258,11 @@ Não pode existir nesta entrega:
 
 ### 11.1 Configuração server-only
 
-Configuração planejada/implementada no servidor:
+Em produção Cloudflare, o Worker usa o binding `ASSET_STORAGE` como capability
+direta para o R2 e não precisa de credenciais S3 no runtime.
+
+As variáveis S3 permanecem server-only para desenvolvimento Node, validação e
+tooling administrativo fora do Worker:
 
 ```text
 ASSET_STORAGE_URL
