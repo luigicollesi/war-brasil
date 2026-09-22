@@ -48,7 +48,6 @@ export function DiceShowcaseModel({
     skin,
     assetRef,
     bodyColor,
-    bodyHighlightColor,
     pipColor: DICE_VISUAL_PIP_COLOR,
     resolution: DICE_VISUAL_TEXTURE_RESOLUTION,
   });
