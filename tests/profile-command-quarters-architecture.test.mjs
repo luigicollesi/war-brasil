@@ -9,21 +9,27 @@ function source(path) {
   return readFileSync(path, "utf8");
 }
 
-test("PROFILE V2 remove artefatos da V1 para manter uma única fonte de verdade", () => {
+test("PROFILE V4 mantém uma única composição privada e não restaura controllers legados", () => {
   for (const path of [
     "src/components/profile/profile-hall.tsx",
     "src/components/profile/profile-hall.module.css",
     "src/components/profile/profile-environment-state.tsx",
     "src/components/profile/profile-environment-state.module.css",
     "src/components/profile/profile-state.module.css",
+    "src/components/profile/command-quarters/profile-command-hub.tsx",
+    "src/components/profile/command-quarters/profile-quartermaster-station.tsx",
+    "src/components/profile/profile-command-shell.tsx",
+    "src/components/profile/profile-command-shell.module.css",
+    "src/components/profile/profile-boundary-state.tsx",
+    "src/components/profile/profile-boundary-state.module.css",
     "src/lib/profile/profile-data.ts",
     "tests/profile-data.test.mjs",
   ]) {
-    assert.equal(existsSync(path), false, `${path} não deve voltar à PROFILE V2`);
+    assert.equal(existsSync(path), false, `${path} não deve voltar à PROFILE V4`);
   }
 });
 
-test("módulos do Quartel não importam Three, Canvas ou câmera diretamente", () => {
+test("módulos especializados do Quartel não importam Three, Canvas ou câmera diretamente", () => {
   const files = readdirSync(quartersDir).filter((name) => /\.(ts|tsx)$/.test(name));
   const combined = files.map((name) => source(join(quartersDir, name))).join("\n");
 
@@ -31,14 +37,14 @@ test("módulos do Quartel não importam Three, Canvas ou câmera diretamente", (
     combined,
     /@react-three\/fiber|from ["']three["']|command-scene-canvas|\bCanvas\b|cameraPosition|\bfov\b/i,
   );
-  assert.match(combined, /useCommandSceneDirective/);
 });
 
-test("controller central delega social, histórico e Intendência", () => {
-  const hub = source(join(quartersDir, "profile-command-hub.tsx"));
+test("Dossiê V4 delega social histórico e configurações aos módulos especializados", () => {
+  const dossier = source("src/components/profile/v4/profile-dossier.tsx");
 
-  assert.match(hub, /ProfileNetworkStation/);
-  assert.match(hub, /ProfileCampaignStation/);
-  assert.match(hub, /ProfileQuartermasterStation/);
-  assert.doesNotMatch(hub, /async function handleSearch/);
+  assert.match(dossier, /ProfileNetworkStation/);
+  assert.match(dossier, /ProfileCampaignStation/);
+  assert.match(dossier, /ProfileSettingsPanel/);
+  assert.doesNotMatch(dossier, /ProfileCommandHub|ProfileQuartermasterStation/);
+  assert.doesNotMatch(dossier, /async function handleSearch/);
 });

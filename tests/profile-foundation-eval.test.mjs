@@ -9,25 +9,22 @@ function source(path) {
 const foundationEval = source(
   "src/components/pre-game/foundation/eval-fixtures.ts",
 );
-const profileHub = source(
-  "src/components/profile/command-quarters/profile-command-hub.tsx",
-);
+const profileShell = source("src/components/profile/v4/profile-shell.tsx");
 const routeIntent = source(
   "src/components/pre-game/foundation/pre-game-route-intent.ts",
 );
 
-test("PROFILE V2 usa somente intenção semântica da Foundation", () => {
+test("PROFILE V4 usa somente intenção semântica da Foundation", () => {
   assert.match(foundationEval, /profile:\s*\{[\s\S]*?mode: "profile"/);
   assert.match(foundationEval, /profile:\s*\{[\s\S]*?focus: "insignia"/);
   assert.match(routeIntent, /"\/profile": "profile"/);
-  assert.match(profileHub, /useCommandSceneDirective\(SCENE_DIRECTIVES\[activeStation\]\)/);
-  assert.match(profileHub, /dossier:\s*\{[\s\S]*?focus: "insignia"/);
-  assert.match(profileHub, /treasury:\s*\{[\s\S]*?focus: "table"/);
-  assert.match(profileHub, /network:\s*\{[\s\S]*?focus: "table"/);
-  assert.match(profileHub, /campaigns:\s*\{[\s\S]*?focus: "brazil"/);
-  assert.match(profileHub, /quartermaster:\s*\{[\s\S]*?focus: "table"/);
-  assert.doesNotMatch(profileHub, /\bmode\s*:/);
-  assert.doesNotMatch(profileHub, /@react-three\/fiber|command-scene-canvas|\bthree\b|Canvas|cameraPosition|\bfov\b/i);
+  assert.match(routeIntent, /startsWith\("\/profile\/"\)/);
+  assert.match(profileShell, /useCommandSceneDirective\(SCENE_DIRECTIVES\[activeSurface\]\)/);
+  assert.match(profileShell, /dossier:\s*\{[\s\S]*?focus: "insignia"/);
+  assert.match(profileShell, /arsenal:\s*\{[\s\S]*?focus: "table"/);
+  assert.match(profileShell, /store:\s*\{[\s\S]*?focus: "table"/);
+  assert.doesNotMatch(profileShell, /\bmode\s*:/);
+  assert.doesNotMatch(profileShell, /@react-three\/fiber|command-scene-canvas|\bthree\b|Canvas|cameraPosition|\bfov\b/i);
 });
 
 test("matriz visual canônica cobre desktop e mobile normativos da PROFILE", () => {

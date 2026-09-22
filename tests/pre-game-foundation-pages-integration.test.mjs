@@ -42,9 +42,6 @@ const doctrineCss = source(
 const profilePage = source("src/app/profile/page.tsx");
 const profileLoading = source("src/app/profile/loading.tsx");
 const profileError = source("src/app/profile/error.tsx");
-const profileBridgeCss = source(
-  "src/components/profile/profile-command-shell.module.css",
-);
 const profileV4Shell = source("src/components/profile/v4/profile-shell.tsx");
 
 const consumerSources = [
@@ -100,7 +97,7 @@ test("Foundation mantém renderer, atmosfera e chrome presos ao viewport", () =>
   assert.match(commandCss, /\.shellContent\s*\{[\s\S]*?min-height: 100dvh;/);
 });
 
-test("Foundation fornece clearances e páginas longas os consomem", () => {
+test("Foundation fornece clearances às páginas que compartilham o chrome global", () => {
   assert.match(commandShell, /--command-content-top/);
   assert.match(commandShell, /--command-content-inline/);
   assert.match(commandShell, /--command-content-bottom/);
@@ -109,8 +106,6 @@ test("Foundation fornece clearances e páginas longas os consomem", () => {
   assert.match(operationsCss, /var\(--command-content-bottom/);
   assert.match(doctrineCss, /var\(--command-content-top/);
   assert.match(doctrineCss, /var\(--command-content-bottom/);
-  assert.match(profileBridgeCss, /var\(--command-content-top/);
-  assert.match(profileBridgeCss, /var\(--command-content-inline/);
 });
 
 test("Lobby reserva o chrome dentro de 100dvh e mantém ready no fluxo sem cobrir o editor", () => {

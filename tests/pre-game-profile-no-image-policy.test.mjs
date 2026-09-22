@@ -19,11 +19,11 @@ const searchRoute = readFileSync(
   "utf8",
 );
 const ownProfile = readFileSync(
-  "src/components/profile/command-quarters/profile-command-hub.tsx",
+  "src/components/profile/v4/profile-dossier.tsx",
   "utf8",
 );
 const ownProfileCss = readFileSync(
-  "src/components/profile/command-quarters/profile-command-hub.module.css",
+  "src/components/profile/v4/profile-dossier.module.css",
   "utf8",
 );
 const publicProfile = readFileSync(
@@ -72,7 +72,8 @@ test("UI PROFILE usa identidade textual e nunca imagem de comandante", () => {
     publicProfile,
     /next\/image|identity\.portrait|<Image\b|\bPortrait\b/,
   );
-  assert.match(ownProfile, /IdentityMark/);
+  assert.match(ownProfile, /initialsFrom\(identity\.displayName\)/);
+  assert.match(ownProfile, /styles\.monogram/);
   assert.match(publicProfile, /SIGILO/);
 });
 
