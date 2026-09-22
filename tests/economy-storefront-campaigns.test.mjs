@@ -8,6 +8,10 @@ const repository = readFileSync(
   "utf8",
 );
 const service = readFileSync("src/lib/server/economy/economy-service.ts", "utf8");
+const catalogCache = readFileSync(
+  "src/lib/server/economy/storefront-catalog-cache.ts",
+  "utf8",
+);
 const store = readFileSync("src/components/profile/v4/profile-store.tsx", "utf8");
 const showcaseProjection = readFileSync("src/lib/economy/store-showcase.ts", "utf8");
 
@@ -40,7 +44,7 @@ test("STORE-16/20: snapshot exposes active campaigns independently from collecti
   assert.match(contract, /campaigns:\s*ReadonlyArray<StorefrontCampaign>/);
   assert.match(repository, /catalog\.campaigns/);
   assert.match(repository, /catalog\.campaign_offers/);
-  assert.match(service, /listStorefrontCampaigns/);
+  assert.match(catalogCache, /listStorefrontCampaigns/);
   assert.match(service, /campaigns:/);
   assert.match(store, /storefront\.campaigns/);
 });
