@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { ProfileTitleRenderer } from "@/src/components/profile/profile-title-renderer";
-import type { CommanderTitleAppearance } from "@/src/lib/profile/profile-appearance-contract";
+import type { PublicCommanderTitleAppearance } from "@/src/lib/profile/profile-appearance-contract";
 import { ProfileCampaignStation } from "@/src/components/profile/command-quarters/profile-campaign-station";
 import {
   commanderStatusLabel,
@@ -33,7 +33,7 @@ export function ProfileDossier({
   appearanceTitle = null,
 }: {
   snapshot: ProfileCommandSnapshot;
-  appearanceTitle?: CommanderTitleAppearance | null;
+  appearanceTitle?: PublicCommanderTitleAppearance | null;
 }) {
   const identity = snapshot.identity.data;
   const privacy = snapshot.privacy.data;
