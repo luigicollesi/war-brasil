@@ -60,8 +60,13 @@ test("tabuleiro deriva efeito do dono sem criar fetch, estado ou hitbox cosméti
     /territoryEffectKey: owner\.cosmetics\.territoryEffect\.effectKey/,
   );
   assert.match(board, /territoryEffectKey: string \| null/);
+  assert.match(board, /territoryAssetRef: string \| null/);
+  assert.match(
+    client,
+    /territoryAssetRef: owner\.cosmetics\.territoryEffect\.assetRef/,
+  );
   assert.match(board, /normalizeTerritoryEffectKey/);
-  assert.match(board, /:effect:\$\{territoryEffectKey\}/);
+  assert.match(board, /:effect:\$\{territoryEffectKey\}:asset:/);
   assert.match(
     board,
     /territoryMaterial\(territory\.ownerColor, territoryEffectKey\)/,
