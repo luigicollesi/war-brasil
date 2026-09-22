@@ -9,7 +9,7 @@ test("Profile production snapshot derives authenticated identity without local f
   const snapshot = read("src/lib/server/profile/profile-command-snapshot-service.ts");
 
   assert.match(page, /server\/profile\/profile-command-snapshot-service/);
-  assert.match(snapshot, /auth\.api\.getSession/);
+  assert.match(snapshot, /getAuthenticatedSessionForReadHeaders/);
   assert.match(snapshot, /session\.user\.id/);
   assert.match(snapshot, /getOwnCommanderProfile\(session\.user\.id\)/);
   assert.doesNotMatch(snapshot, /LOCAL_PROFILE_COMMAND_SNAPSHOT|searchLocalCommanders/);
