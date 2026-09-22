@@ -20,9 +20,14 @@ test("dev conecta Next ao endpoint interno do gateway para sinais efêmeros", ()
 
 test("publisher exige entrega direta para todos os jogadores realtime conectados", () => {
   const publisher = source("src/lib/server/game-realtime-publisher.ts");
+  const internal = source(
+    "src/lib/server/realtime/realtime-internal-client.ts",
+  );
 
   assert.match(publisher, /\/internal\/ephemeral/);
-  assert.match(publisher, /Authorization: `Bearer \$\{token\}`/);
+  assert.match(publisher, /realtimeInternalFetch/);
+  assert.match(internal, /Authorization/);
+  assert.match(internal, /GAME_REALTIME_INTERNAL_TOKEN/);
   assert.match(publisher, /body\.connectedPlayers < 2/);
   assert.match(publisher, /body\.deliveredPlayers !== body\.connectedPlayers/);
   assert.match(publisher, /pelo menos dois jogadores conectados ao realtime/);
