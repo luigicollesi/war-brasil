@@ -1,3 +1,5 @@
+import { GAME_PROTOCOL_VERSION } from "../protocol.mjs";
+
 const MIN_TICKET_SECRET_LENGTH = 32;
 const MAX_TICKET_LENGTH = 2048;
 const MAX_TICKET_FUTURE_MS = 120_000;
@@ -81,7 +83,7 @@ export async function verifyGameRealtimeTicket(
   if (
     !value ||
     typeof value !== "object" ||
-    value.v !== 2 ||
+    value.v !== GAME_PROTOCOL_VERSION ||
     typeof value.roomId !== "string" ||
     value.roomId !== expectedRoomId ||
     !/^\d+$/.test(value.roomId) ||
@@ -107,7 +109,7 @@ export async function verifyUserRealtimeTicket(
   if (
     !value ||
     typeof value !== "object" ||
-    value.v !== 2 ||
+    value.v !== GAME_PROTOCOL_VERSION ||
     value.kind !== "user" ||
     typeof value.userId !== "string" ||
     !UUID_PATTERN.test(value.userId) ||
