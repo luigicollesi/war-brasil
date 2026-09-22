@@ -6,7 +6,7 @@ import { ProfileEconomyUnavailable } from "@/src/components/profile/v4/profile-e
 import { ProfileShell } from "@/src/components/profile/v4/profile-shell";
 import { ProfileStore } from "@/src/components/profile/v4/profile-store";
 import type { EconomyStorefrontSnapshot } from "@/src/lib/economy/economy-contract";
-import { auth } from "@/src/lib/server/auth/auth";
+import { getAuthenticatedSessionForReadHeaders } from "@/src/lib/server/auth/auth-guard";
 import {
   EconomyServiceError,
   getEconomyStorefront,
@@ -24,10 +24,7 @@ const economyUnavailableReason =
 
 export default async function ProfileStorePage() {
   await connection();
-  const session = await auth.api.getSession({
-    headers: await headers(),
-    query: { disableCookieCache: true },
-  });
+  const session = await getAuthenticatedSessionForReadHeaders(await headers());
 
   if (!session) redirect("/");
 
