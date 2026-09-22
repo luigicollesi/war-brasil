@@ -46,6 +46,7 @@ test("OpenNext Worker binds R2 directly and delivery can bypass Next via custom 
   const appearance = read(
     "src/lib/server/profile/profile-appearance-asset-storage.ts",
   );
+  const delivery = read("src/lib/server/assets/asset-delivery.ts");
   const binding = read("src/lib/server/assets/asset-r2-binding.ts");
   const env = read(".env.example");
   const cors = read("config/r2-cors.production.json");
@@ -57,9 +58,10 @@ test("OpenNext Worker binds R2 directly and delivery can bypass Next via custom 
     wrangler,
     /"ASSET_PUBLIC_BASE_URL": "https:\/\/assets\.bellumcivile\.com"/,
   );
-  assert.match(storage, /publicAssetDeliveryUrl/);
-  assert.match(collection, /publicAssetDeliveryUrl/);
-  assert.match(appearance, /publicAssetDeliveryUrl/);
+  assert.match(storage, /assetDeliveryPath/);
+  assert.match(collection, /assetDeliveryPath/);
+  assert.match(appearance, /assetDeliveryPath/);
+  assert.match(delivery, /publicAssetDeliveryUrl/);
   assert.match(binding, /getCloudflareContext/);
   assert.match(binding, /env\.ASSET_STORAGE/);
   assert.match(binding, /bucket\.get\(objectKey\)/);
@@ -77,15 +79,19 @@ test("OpenNext Worker binds R2 directly and delivery can bypass Next via custom 
   );
 });
 
-test("asset API fallbacks prefer R2 binding before signed S3 fetches", () => {
+test("asset API fallbacks share one binding-first delivery boundary", () => {
+  const fallback = read("src/lib/server/assets/asset-fallback-route.ts");
+  assert.match(fallback, /readBoundAssetResponse/);
+  assert.match(fallback, /const boundResponse = await readBoundAssetResponse/);
+  assert.match(fallback, /getAuthenticatedSessionForRead/);
+  assert.match(fallback, /options\.resolveReadUrl/);
+
   for (const path of [
     "src/app/api/assets/dice/route.ts",
     "src/app/api/assets/territory-skins/route.ts",
     "src/app/api/assets/collections/route.ts",
     "src/app/api/assets/profile-appearance/route.ts",
   ]) {
-    const route = read(path);
-    assert.match(route, /readBoundAssetResponse/);
-    assert.match(route, /const boundResponse = await readBoundAssetResponse/);
+    assert.match(read(path), /serveAuthenticatedAssetFallback/);
   }
 });
