@@ -148,4 +148,4 @@ npm run test:blackbox:e2e:full
 
 The main Test workflow reports white-box core coverage on every push/PR, then runs database contracts, realtime/Redis checks, a production build and the black-box E2E smoke suite.
 
-The explicit `test:whitebox:coverage:70` command is the target gate. It can replace the report-only command in CI once the measured baseline reaches 70% without exclusions added solely to satisfy the number.
+The main CI runs `test:whitebox:coverage:70`, so 70% line coverage is an enforced gate for the deterministic core. The first measured baseline before enabling the gate was 78.74% lines, 73.53% branches and 81.22% functions.
