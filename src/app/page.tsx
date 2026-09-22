@@ -96,7 +96,7 @@ export default function Home() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
-      <CommandHomeClient>
+      <CommandHomeClient mode="landing">
         <CommandHomeContent />
       </CommandHomeClient>
     </>
