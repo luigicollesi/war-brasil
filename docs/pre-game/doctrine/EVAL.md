@@ -20,7 +20,7 @@ Avaliar conforme `../quality-standard.md` e `../traceability.md`.
 | DOC-12 | fase de Trocas aparece antes de Reforços e distingue negociação de resgate | review contra `game-turn-service` + trade service + e2e |
 | DOC-13 | índice permanece `fixed` à viewport: esquerda no desktop e topo útil no mobile, sem cobrir o início do artigo | desktop/mobile interaction test |
 | DOC-14 | transição entre capítulos preserva contexto sem alterar scroll/foco e é removida em reduced-motion | interaction test + reduced-motion |
-| DOC-15 | ação Voltar permanece disponível no índice em qualquer capítulo e retorna ao comando (`/`) | interaction test desktop/mobile |
+| DOC-15 | ação Voltar permanece disponível no índice em qualquer capítulo e retorna ao comando (`/home`) | interaction test desktop/mobile |
 
 ## Score / 100
 
@@ -43,7 +43,7 @@ Aprovação: >= 85 + todos os BLOCKERs.
 - rolar um capítulo longo no desktop e confirmar que o índice não muda de posição e permanece fixado à esquerda;
 - em 390x844, rolar o conteúdo e confirmar que a barra de índice não muda de posição e permanece fixada no topo útil;
 - confirmar que o conteúdo reserva largura/altura do índice e não começa encoberto;
-- acionar Voltar em um capítulo intermediário e confirmar navegação para `/`;
+- acionar Voltar em um capítulo intermediário e confirmar navegação para `/home`;
 - operar somente por teclado;
 - viewport 390x844 com índice horizontal/fixed acessível;
 - reduced-motion;
