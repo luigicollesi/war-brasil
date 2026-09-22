@@ -65,6 +65,7 @@ export type BoardTerritory = {
   ownerName: string;
   ownerColor: PlayerColor;
   territoryEffectKey: string | null;
+  territoryAssetRef: string | null;
   troops: number;
 };
 
@@ -568,16 +569,23 @@ export function InteractiveBoard({
         territory.territoryEffectKey,
       );
       const materialKey = revealed
-        ? `owner:${territory.ownerColor}:effect:${territoryEffectKey}`
+        ? `owner:${territory.ownerColor}:effect:${territoryEffectKey}:asset:${territory.territoryAssetRef ?? "none"}`
         : "neutral";
 
       if (materialSignatureRef.current.get(id) !== materialKey) {
+        const baseMaterial = territoryMaterial(
+          territory.ownerColor,
+          territoryEffectKey,
+        );
+        const deliveredMaterial =
+          territory.territoryAssetRef && revealed
+            ? { ...baseMaterial, skinAssetRef: territory.territoryAssetRef }
+            : baseMaterial;
+
         applyTerritoryMaterial(
           id,
           nodes,
-          revealed
-            ? territoryMaterial(territory.ownerColor, territoryEffectKey)
-            : neutralTerritoryMaterial(),
+          revealed ? deliveredMaterial : neutralTerritoryMaterial(),
         );
         materialSignatureRef.current.set(id, materialKey);
       }
