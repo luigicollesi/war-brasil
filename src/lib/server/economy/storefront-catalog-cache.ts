@@ -39,7 +39,7 @@ async function loadFreshStorefrontCatalog(): Promise<StorefrontCatalogSnapshot> 
 
 function cacheApi(): Cache | null {
   const cachesApi = (globalThis as typeof globalThis & {
-    caches?: CacheStorage;
+    caches?: CacheStorage & { default?: Cache };
   }).caches;
   return cachesApi?.default ?? null;
 }
