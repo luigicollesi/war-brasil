@@ -32,6 +32,10 @@ test("user notification realtime uses a dedicated authenticated websocket channe
   assert.match(clientRuntime, /reconnectAttempt \+= 1/);
   assert.match(clientRuntime, /Math\.min\([\s\S]*30_000/);
   assert.match(clientRuntime, /reconnectAttempt = 0/);
+  assert.match(
+    clientRuntime,
+    /nextSocket\.protocol !== GAME_REALTIME_SUBPROTOCOL/,
+  );
 });
 
 test("invitation changes publish only user invalidations after persistence", async () => {
