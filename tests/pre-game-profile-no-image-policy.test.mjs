@@ -83,7 +83,9 @@ test("layout PROFILE não reserva slot visual legado para retrato", () => {
   assert.doesNotMatch(publicProfileCss, /portrait\s+img/i);
 });
 
-test("configuração exclusiva de imagem remota de perfil foi removida", () => {
-  assert.doesNotMatch(nextConfig, /PROFILE_REMOTE_PORTRAIT_HOSTS|remotePatterns/);
+test("imagem remota permite somente o CDN canônico de assets, nunca retratos OAuth", () => {
+  assert.doesNotMatch(nextConfig, /PROFILE_REMOTE_PORTRAIT_HOSTS/);
+  assert.match(nextConfig, /remotePatterns/);
+  assert.match(nextConfig, /hostname: "assets\.bellumcivile\.com"/);
   assert.equal(existsSync("src/lib/profile/profile-portrait-policy.ts"), false);
 });
