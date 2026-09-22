@@ -16,7 +16,6 @@ import {
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const DEFAULT_MAX_BUFFERED_BYTES = 64 * 1024;
-const DEFAULT_LAST_SEEN_THROTTLE_SECONDS = 60;
 const MAX_PRESENCE_BATCH = 100;
 
 function json(body, status = 200, headers = {}) {
@@ -90,12 +89,6 @@ function maxBufferedBytes(env) {
     : DEFAULT_MAX_BUFFERED_BYTES;
 }
 
-function lastSeenThrottleSeconds(env) {
-  const parsed = Number(env.PROFILE_LAST_SEEN_THROTTLE_SECONDS);
-  return Number.isFinite(parsed) && parsed >= 30 && parsed <= 900
-    ? Math.floor(parsed)
-    : DEFAULT_LAST_SEEN_THROTTLE_SECONDS;
-}
 
 function validUserId(value) {
   return typeof value === "string" && UUID_PATTERN.test(value);
@@ -252,9 +245,13 @@ async function heartbeatPresence(request, env) {
     return json({ error: "PRESENCE_HEARTBEAT_INVALID" }, 422);
   }
 
-  return env.USER_REALTIME.getByName(body.userId).fetch(
-    new Request("https://user.internal/presence-heartbeat", { method: "POST" }),
-  );
+  const observedAt = new Date().toISOString();
+  return json({
+    availability: "available",
+    state: "online",
+    observedAt,
+    persistLastSeen: true,
+  });
 }
 
 async function batchPresence(request, env) {
@@ -590,29 +587,6 @@ export class UserRealtimeDurableObject extends DurableObject {
       return json({ delivered });
     }
 
-    if (request.method === "POST" && url.pathname === "/presence-heartbeat") {
-      const now = Date.now();
-      const observedAt = new Date(now).toISOString();
-      const lastPersistAt =
-        (await this.ctx.storage.get("lastPersistAt")) ?? 0;
-      const persistLastSeen =
-        typeof lastPersistAt !== "number" ||
-        now - lastPersistAt >= lastSeenThrottleSeconds(this.env) * 1000;
-
-      if (persistLastSeen) {
-        await this.ctx.storage.put({
-          lastPersistAt: now,
-          lastObservedAt: observedAt,
-        });
-      }
-
-      return json({
-        availability: "available",
-        state: "online",
-        observedAt,
-        persistLastSeen,
-      });
-    }
 
     if (request.method === "GET" && url.pathname === "/presence") {
       const sockets = this.ctx.getWebSockets();
