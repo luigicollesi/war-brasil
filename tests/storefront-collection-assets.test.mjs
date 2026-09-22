@@ -44,9 +44,10 @@ test("collection assets aceitam object keys WebP explícitas sem inferir papel p
 
   assert.match(collectionStorage, /export function assertCollectionAssetKey/);
   assert.match(collectionStorage, /"COLLECTION_ASSET_KEY_INVALID"/);
+  assert.match(collectionStorage, /publicAssetDeliveryUrl\(key\)/);
   assert.match(
     collectionStorage,
-    /return `\/api\/assets\/collections\?key=\$\{encodeURIComponent\(key\)\}`;/,
+    /`\/api\/assets\/collections\?key=\$\{encodeURIComponent\(key\)\}`/,
   );
 });
 
