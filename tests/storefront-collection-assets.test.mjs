@@ -44,11 +44,8 @@ test("collection assets aceitam object keys WebP explícitas sem inferir papel p
 
   assert.match(collectionStorage, /export function assertCollectionAssetKey/);
   assert.match(collectionStorage, /"COLLECTION_ASSET_KEY_INVALID"/);
-  assert.match(collectionStorage, /publicAssetDeliveryUrl\(key\)/);
-  assert.match(
-    collectionStorage,
-    /`\/api\/assets\/collections\?key=\$\{encodeURIComponent\(key\)\}`/,
-  );
+  assert.match(collectionStorage, /assetDeliveryPath\(objectKey/);
+  assert.match(collectionStorage, /fallbackPath: "\/api\/assets\/collections"/);
 });
 
 test("configuração HTTPS usa bucket de produção por compatibilidade e aceita override dev/prod", () => {
