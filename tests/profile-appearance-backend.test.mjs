@@ -29,7 +29,7 @@ test("appearance API derives ownership server-side and never accepts arbitrary C
   const service = await source("src/lib/server/profile/profile-appearance-service.ts");
   const contract = await source("src/lib/profile/profile-appearance-contract.ts");
 
-  assert.match(route, /getAuthenticatedSession\(request\)/);
+  assert.match(route, /getAuthenticatedSessionForRead\(request\)/);
   assert.match(route, /requireProfileMutationActor\(request\)/);
   assert.match(service, /ownsActiveCommanderTitle/);
   assert.match(service, /ownsActiveProfileBackground/);
