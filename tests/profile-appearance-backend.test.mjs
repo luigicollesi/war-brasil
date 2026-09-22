@@ -70,7 +70,7 @@ test("profile backgrounds can reuse managed collection background assets", async
   assert.match(migration, /store\/collections\/ceu-noturno\/background\.webp/);
 
   assert.match(storage, /SHARED_COLLECTION_BACKGROUND_KEY_PATTERN/);
-  assert.match(storage, /\/api\/assets\/profile-appearance\?key=/);
+  assert.match(storage, /fallbackPath: "\/api\/assets\/profile-appearance"/);
   assert.match(storage, /resolveCollectionAssetReadUrl\(key, options\)/);
   assert.doesNotMatch(storage, /collectionAssetDeliveryPath/);
 });
