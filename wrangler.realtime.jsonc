@@ -1,0 +1,41 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "war-brasil-realtime",
+  "main": "realtime/cloudflare/worker.mjs",
+  "compatibility_date": "2026-09-21",
+  "workers_dev": false,
+  "route": {
+    "pattern": "realtime.bellumcivile.com",
+    "custom_domain": true
+  },
+  "vars": {
+    "GAME_REALTIME_ALLOWED_ORIGINS": "https://bellumcivile.com",
+    "GAME_REALTIME_MAX_BUFFERED_BYTES": "65536",
+    "PROFILE_LAST_SEEN_THROTTLE_SECONDS": "60"
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "GAME_ROOM_REALTIME",
+        "class_name": "GameRoomRealtimeDurableObject"
+      },
+      {
+        "name": "USER_REALTIME",
+        "class_name": "UserRealtimeDurableObject"
+      }
+    ]
+  },
+  "exports": {
+    "GameRoomRealtimeDurableObject": {
+      "type": "durable-object",
+      "storage": "sqlite"
+    },
+    "UserRealtimeDurableObject": {
+      "type": "durable-object",
+      "storage": "sqlite"
+    }
+  },
+  "observability": {
+    "enabled": true
+  }
+}
