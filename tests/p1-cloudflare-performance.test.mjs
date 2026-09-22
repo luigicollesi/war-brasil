@@ -21,7 +21,16 @@ test("P1: read-only auth uses signed cookie cache while mutations keep strong se
   assert.match(loadout, /getAuthenticatedSessionForRead\(request\)/);
   assert.match(loadout, /getAuthenticatedSession\(request\)/);
   assert.match(purchases, /getAuthenticatedSession\(request\)/);
-  assert.match(ticket, /getAuthenticatedSession\(request\)/);
+  assert.match(ticket, /getAuthenticatedSessionForRead\(request\)/);
+  assert.doesNotMatch(ticket, /getAuthenticatedSession\(request\)/);
+});
+
+test("P1: Better Auth disables unused OpenTelemetry instrumentation on Worker hot paths", () => {
+  const auth = read("src/lib/server/auth/auth.ts");
+
+  assert.match(auth, /experimental:\s*\{/);
+  assert.match(auth, /instrumentation:\s*\{/);
+  assert.match(auth, /enabled:\s*false/);
 });
 
 test("P1: storefront reads avoid a long transaction and loadout avoids full catalog", () => {

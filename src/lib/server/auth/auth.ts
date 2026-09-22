@@ -74,6 +74,14 @@ const discordProvider = environment.providerAvailability.discord
 
 export const auth = betterAuth({
   appName: "War-Brasil",
+  // Better Auth 1.7.4 enables OpenTelemetry span creation by default. The app
+  // does not export those spans, so disable the instrumentation overhead on
+  // Cloudflare's CPU-sensitive auth hot paths.
+  experimental: {
+    instrumentation: {
+      enabled: false,
+    },
+  },
   database: authPool,
   basePath: "/api/auth",
   ...(resolveBaseUrl() ? { baseURL: resolveBaseUrl() } : {}),

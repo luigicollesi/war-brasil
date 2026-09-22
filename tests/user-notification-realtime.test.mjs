@@ -21,7 +21,8 @@ test("user notification realtime uses a dedicated authenticated websocket channe
   assert.match(registry, /user\.notifications\.changed/);
   assert.match(tickets, /verifyUserRealtimeTicket/);
   assert.match(tickets, /value\.kind === "user"/);
-  assert.match(ticketRoute, /getAuthenticatedSession\(request\)/);
+  assert.match(ticketRoute, /getAuthenticatedSessionForRead\(request\)/);
+  assert.doesNotMatch(ticketRoute, /getAuthenticatedSession\(request\)/);
   assert.match(ticketRoute, /issueUserRealtimeTicket\(session\.user\.id\)/);
   assert.match(ticketRoute, /GAME_REALTIME_ENABLED !== "true"/);
   assert.match(ticketRoute, /\{ enabled: false \}/);
