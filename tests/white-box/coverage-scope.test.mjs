@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { readdir } from "node:fs/promises";
+import { registerHooks } from "node:module";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import test from "node:test";
@@ -13,6 +14,24 @@ const COVERAGE_ROOTS = [
   ".test-build/client/sync",
   ".test-build/client/operations",
 ];
+
+const SOURCE_ALIAS_PREFIX = "@/src/lib/";
+
+registerHooks({
+  resolve(specifier, context, nextResolve) {
+    if (specifier.startsWith(SOURCE_ALIAS_PREFIX)) {
+      const relativePath = specifier.slice(SOURCE_ALIAS_PREFIX.length);
+      return {
+        url: pathToFileURL(
+          resolve(".test-build", `${relativePath}.js`),
+        ).href,
+        shortCircuit: true,
+      };
+    }
+
+    return nextResolve(specifier, context);
+  },
+});
 
 async function collectJavaScriptFiles(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
