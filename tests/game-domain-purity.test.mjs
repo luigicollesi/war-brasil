@@ -68,7 +68,13 @@ test("configuração dedicada mantém a compilação dos testes fora do tsconfig
   assert.match(config, /"outDir"\s*:\s*"\.test-build"/);
   assert.match(config, /"rootDir"\s*:\s*"src\/lib"/);
   assert.match(config, /"module"\s*:\s*"commonjs"/);
-  assert.equal(packageJson.scripts["test:compile"], "tsc -p tsconfig.test.json");
+  assert.equal(
+    packageJson.scripts["test:compile"],
+    "node scripts/test/compile-white-box.mjs",
+  );
+  const compile = readFileSync("scripts/test/compile-white-box.mjs", "utf8");
+  assert.match(compile, /rm\("\.test-build"/);
+  assert.match(compile, /tsconfig\.test\.json/);
   assert.match(
     packageJson.scripts["test:whitebox"],
     /^npm run test:compile && npm run test:run(?: && .+)?$/,
