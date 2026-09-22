@@ -38,7 +38,8 @@ test("Cloudflare realtime validates tickets, origins and internal delivery", () 
   assert.match(worker, /\/internal\/presence\/batch/);
   assert.match(worker, /GAME_REALTIME_INTERNAL_TOKEN/);
   assert.match(ticket, /crypto\.subtle\.verify/);
-  assert.match(ticket, /value\.revision >= 1/);
+  assert.match(ticket, /Number\.isSafeInteger\(value\.revision\)/);
+  assert.match(ticket, /value\.revision < 1/);
 });
 
 test("server realtime delivery can switch from postgres to Cloudflare without changing domain commands", () => {
