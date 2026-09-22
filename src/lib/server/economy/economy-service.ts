@@ -40,6 +40,7 @@ import {
   initializeEconomyState,
   isEconomyStateInitialized,
   insertPurchaseLedgerEntry,
+  listEquippedProfileCosmetics,
   listOwnedCosmetics,
   listPurchaseGrantedItems,
   listStorefrontSetItems,
@@ -626,7 +627,7 @@ export async function getEconomyLoadout(
   userId: string,
 ): Promise<CosmeticLoadout> {
   await ensureEconomyStateForRead(userId);
-  return loadoutFromOwned(await listOwnedCosmetics(userId));
+  return loadoutFromOwned(await listEquippedProfileCosmetics(userId));
 }
 
 export async function getEconomyWallet(
