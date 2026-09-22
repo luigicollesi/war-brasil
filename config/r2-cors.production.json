@@ -1,0 +1,23 @@
+{
+  "rules": [
+    {
+      "allowed": {
+        "origins": [
+          "https://bellumcivile.com"
+        ],
+        "methods": [
+          "GET",
+          "HEAD"
+        ]
+      },
+      "exposeHeaders": [
+        "ETag",
+        "Content-Length",
+        "Content-Type",
+        "Cache-Control",
+        "cf-cache-status"
+      ],
+      "maxAgeSeconds": 86400
+    }
+  ]
+}
