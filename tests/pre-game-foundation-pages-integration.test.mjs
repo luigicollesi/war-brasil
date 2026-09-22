@@ -17,6 +17,7 @@ const commandCss = source(
   "src/components/pre-game/foundation/command-foundation.module.css",
 );
 const homePage = source("src/app/page.tsx");
+const commandHomePage = source("src/app/home/page.tsx");
 const homeClient = source(
   "src/components/pre-game/home/command-home-client.tsx",
 );
@@ -46,6 +47,7 @@ const profileV4Shell = source("src/components/profile/v4/profile-shell.tsx");
 
 const consumerSources = [
   homePage,
+  commandHomePage,
   homeClient,
   operationsPage,
   operationsClient,
@@ -64,6 +66,7 @@ test("as cinco experiências compartilham um único runtime no RootLayout", () =
   assert.match(layout, /<PreGameCommandRuntime>\{children\}<\/PreGameCommandRuntime>/);
 
   assert.match(routeIntent, /"\/": "entrance"/);
+  assert.match(routeIntent, /"\/home": "entrance"/);
   assert.match(routeIntent, /"\/matchmaking": "operations"/);
   assert.match(routeIntent, /startsWith\("\/lobby\/"\).*"lobby"/s);
   assert.match(routeIntent, /"\/rules": "doctrine"/);
