@@ -28,6 +28,8 @@ const loadoutRoute = source("src/app/api/economy/loadout/route.ts");
 const storePage = source("src/app/profile/store/page.tsx");
 const storeUi = source("src/components/profile/v4/profile-store.tsx");
 const arsenalUi = source("src/components/profile/v4/profile-arsenal.tsx");
+const profileShell = source("src/components/profile/v4/profile-shell.tsx");
+const showcasePage = source("src/app/profile/store/showcase/[kind]/[id]/page.tsx");
 
 test("histórico de migrations preserva 037 e evolui economia até Storefront V2", () => {
   assert.equal(
@@ -263,11 +265,12 @@ test("rematch descarta snapshot anterior e structural sharing observa cosmético
   assert.match(snapshotSharing, /left\.cosmetics, right\.cosmetics/);
 });
 
-test("store autenticada usa cena Profile e comércio autoritativo da Economy V2", () => {
+test("store autenticada usa ProfileShell e comércio autoritativo da Economy V2", () => {
   assert.match(storePage, /getAuthenticatedSessionForReadHeaders/);
   assert.match(storePage, /getEconomyStorefront\(session\.user\.id\)/);
-  assert.match(storeUi, /data-scene="profile"/);
-  assert.match(storeUi, /storefront\.offers\.map/);
+  assert.match(storePage, /activeSurface="store"/);
+  assert.match(profileShell, /data-scene="profile"/);
+  assert.match(storeUi, /storefront\.offers/);
   assert.match(storeUi, /offer\.price/);
   assert.match(storeUi, /src="\/coin\.svg"/);
   assert.match(storeUi, /"COMPRAR"/);
@@ -276,12 +279,12 @@ test("store autenticada usa cena Profile e comércio autoritativo da Economy V2"
   assert.doesNotMatch(storeUi, /offer\.(exercito|lancas|viking|gato|cachorro|futebol)/);
 });
 
-test("listagem não baixa catálogo HQ e detalhe monta somente o asset selecionado", () => {
+test("listagem V4 delega inspeção ao Expositor sem reintroduzir prévia inline legada", () => {
   assert.doesNotMatch(storeUi, /\/dados\//);
-  assert.match(storeUi, />D6</);
-  assert.match(storeUi, /previewOpen/);
-  assert.match(storeUi, /selectedPreviewItem\?\.assetRef/);
-  assert.match(storeUi, /src=\{selectedPreviewItem\.assetRef\}/);
-  assert.match(storeUi, /loading="lazy"/);
-  assert.match(storeUi, /unoptimized/);
+  assert.match(storeUi, /cosmeticPreviewSource/);
+  assert.match(storeUi, /function showcaseHref/);
+  assert.match(storeUi, /\/profile\/store\/showcase\//);
+  assert.doesNotMatch(storeUi, /previewOpen|selectedPreviewItem|data-preview-detail/);
+  assert.match(showcasePage, /resolveStoreShowcaseView/);
+  assert.match(showcasePage, /<StoreShowcase showcase=\{showcase\} \/>/);
 });
