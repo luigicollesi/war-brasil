@@ -15,7 +15,7 @@ No generated `cpg.bin` is committed to Git. On a generated-CPG cache miss, GitHu
 - `src/lib/client/` — browser-side synchronization, transport and client-only state.
 - `src/lib/server/` — authoritative services, transactions and persistence boundaries.
 - `src/lib/*.ts` — some legacy compatibility reexports; new logic belongs in `client/`, `server/` or `shared/`.
-- `realtime/` — realtime gateway/delivery process; it is not authoritative game state.
+- `realtime/` — realtime delivery runtimes: the Node gateway used locally/for compatibility and the Cloudflare Durable Object WebSocket gateway; neither is authoritative game state.
 - `worker/` — durable automatic game progression driven from persisted scheduling state.
 - `scripts/` — finite development/database tooling. `scripts/context/` implements the CPG infrastructure itself and is intentionally excluded from the graph to avoid self-indexing.
 
@@ -36,11 +36,12 @@ No generated `cpg.bin` is committed to Git. On a generated-CPG cache miss, GitHu
 client/UI
   -> src/app/api HTTP adapter
   -> src/lib/server command/service
-  -> PostgreSQL transaction + revision
-  -> best-effort pg_notify
-  -> realtime gateway
-  -> client invalidation
-  -> authoritative HTTP snapshot refresh
+  -> PostgreSQL transaction + revision + COMMIT
+  -> transport-independent realtime bus
+       -> pg_notify -> Node gateway (local/compatibility), or
+       -> Cloudflare Worker -> Durable Object (production rollout)
+  -> client invalidation/patch
+  -> authoritative HTTP snapshot refresh when required
 ```
 
 ### Durable automatic progression
