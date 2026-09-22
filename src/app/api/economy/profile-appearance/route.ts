@@ -1,11 +1,11 @@
 import {
   authenticationRequiredResponse,
-  getAuthenticatedSession,
+  getAuthenticatedSessionForRead,
 } from "@/src/lib/server/auth/auth-guard";
 import { getProfileAppearanceStorefront } from "@/src/lib/server/economy/profile-appearance-store-service";
 
 export async function GET(request: Request) {
-  const session = await getAuthenticatedSession(request);
+  const session = await getAuthenticatedSessionForRead(request);
   if (!session) return authenticationRequiredResponse();
 
   try {
