@@ -29,13 +29,16 @@ test("rota PROFILE resolve snapshot autenticado em request-time e renderiza Doss
   assert.match(page, /getCurrentProfileCommandSnapshot/);
   assert.match(
     page,
-    /await connection\(\);[\s\S]*auth\.api\.getSession[\s\S]*getCurrentProfileCommandSnapshot\(session, \{ includeStorefront: false \}\)/,
+    /await connection\(\);[\s\S]*getAuthenticatedSessionForReadHeaders[\s\S]*getCurrentProfileCommandSnapshot\(session, \{ includeStorefront: false \}\)/,
   );
   assert.match(page, /<ProfileShell/);
   assert.match(page, /activeSurface="dossier"/);
   assert.match(page, /getOwnProfileAppearance/);
   assert.match(page, /Promise\.all/);
-  assert.equal((page.match(/auth\.api\.getSession/g) ?? []).length, 1);
+  assert.equal(
+    (page.match(/getAuthenticatedSessionForReadHeaders/g) ?? []).length,
+    2,
+  );
   assert.match(page, /backgroundAssetRef=\{equippedBackground\}/);
   assert.match(
     page,
@@ -91,7 +94,7 @@ test("Rede de Comando cobre amigos, sinais, recentes e busca autenticada sob dem
   assert.match(network, /\/api\/profile\/commanders\/search\?q=/);
   assert.match(network, /aria-live="polite"/);
   assert.match(network, /maxLength=\{64\}/);
-  assert.match(endpoint, /getAuthenticatedSession\(request\)/);
+  assert.match(endpoint, /getAuthenticatedSessionForRead\(request\)/);
   assert.match(endpoint, /searchCommanderDirectory\(session\.user\.id, query\)/);
   assert.match(endpoint, /MAX_QUERY_LENGTH = 64/);
   assert.match(endpoint, /private, no-store/);
@@ -115,7 +118,7 @@ test("Livro de Campanha pagina por cursor autenticado e permanece módulo secund
   assert.match(campaign, /fora da sua rede/);
   assert.match(campaign, /\/api\/profile\/history\?cursor=/);
   assert.match(campaign, /Carregar mais registros/);
-  assert.match(endpoint, /getAuthenticatedSession\(request\)/);
+  assert.match(endpoint, /getAuthenticatedSessionForRead\(request\)/);
   assert.match(endpoint, /getPlayerMatchHistory\(session\.user\.id/);
   assert.match(endpoint, /decodeMatchHistoryCursor/);
   assert.match(endpoint, /private, no-store/);
