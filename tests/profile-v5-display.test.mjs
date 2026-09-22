@@ -51,8 +51,8 @@ test("private dossier loads equipped background and exposes public display actio
   const shell = await source("src/components/profile/v4/profile-shell.tsx");
   const dossier = await source("src/components/profile/v4/profile-dossier.tsx");
 
-  assert.match(page, /getOwnProfileAppearance/);
-  assert.match(page, /backgrounds\.find\(\(item\) => item\.equipped\)/);
+  assert.match(page, /getPublicProfileAppearance/);
+  assert.match(page, /appearance\?\.background\.assetRef/);
   assert.match(page, /backgroundAssetRef=\{equippedBackground\}/);
   assert.match(shell, /profileBackdrop/);
   assert.match(dossier, /VER PERFIL/);
