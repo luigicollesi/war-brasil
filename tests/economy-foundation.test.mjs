@@ -149,10 +149,10 @@ test("economia serializa inicialização, storefront, equipagem e captura da par
     /FROM profile\.commanders[\s\S]*WHERE user_id=\$1::uuid[\s\S]*FOR UPDATE/,
   );
 
-  assert.match(
-    service,
-    /getEconomyStorefront[\s\S]*client\.query\("BEGIN"\)[\s\S]*ensureLockedEconomyState\(userId, client\)[\s\S]*findCampaignCreditWallet\(userId, client\)[\s\S]*client\.query\("COMMIT"\)/,
-  );
+  assert.match(service, /getEconomyStorefront[\s\S]*ensureEconomyStateForRead\(userId\)/);
+  assert.match(service, /const userOverlayPromise = Promise\.all/);
+  assert.match(service, /const catalogPromise = Promise\.all/);
+  assert.match(service, /await Promise\.all\(\[userOverlayPromise, catalogPromise\]\)/);
   assert.match(
     service,
     /equipCosmetic[\s\S]*client\.query\("BEGIN"\)[\s\S]*ensureLockedEconomyState\(userId, client\)[\s\S]*findOwnedCosmetic\(userId, cosmeticId, client\)[\s\S]*equipOwnedCosmetic\(userId, slot, cosmeticId, client\)[\s\S]*client\.query\("COMMIT"\)/,
@@ -170,9 +170,10 @@ test("economia serializa inicialização, storefront, equipagem e captura da par
 });
 
 test("APIs derivam ator da sessão e preservam leitura + equipagem autenticada", () => {
-  assert.match(storefrontRoute, /getAuthenticatedSession\(request\)/);
+  assert.match(storefrontRoute, /getAuthenticatedSessionForRead\(request\)/);
   assert.match(storefrontRoute, /getEconomyStorefront\(session\.user\.id\)/);
-  assert.match(loadoutRoute, /getAuthenticatedSession\(request\)/);
+  assert.match(loadoutRoute, /getAuthenticatedSessionForRead\(request\)/);
+  assert.match(loadoutRoute, /getEconomyLoadout\(session\.user\.id\)/);
   assert.match(loadoutRoute, /rejectUntrustedMutationOrigin\(request\)/);
   assert.match(loadoutRoute, /equipCosmetic\(session\.user\.id/);
   assert.doesNotMatch(storefrontRoute + loadoutRoute, /payload\.userId|body\.userId|input\.userId/);
@@ -189,7 +190,7 @@ test("ASSET_STORAGE_URL permanece server-only e dados usam entrega autenticada",
   assert.match(assetSigning, /AWS4-HMAC-SHA256/);
   assert.match(assetSigning, /image\/webp/);
   assert.match(assetService, /\/api\/assets\/dice\?key=/);
-  assert.match(assetRoute, /getAuthenticatedSession\(request\)/);
+  assert.match(assetRoute, /getAuthenticatedSessionForRead\(request\)/);
   assert.match(assetRoute, /isKnownDiceAssetKey\(objectKey\)/);
   assert.match(assetRoute, /resolveDiceAssetReadUrl\(objectKey/);
   assert.doesNotMatch(assetRoute, /process\.env\.ASSET_STORAGE_URL|secretAccessKey|accessKeyId/);
