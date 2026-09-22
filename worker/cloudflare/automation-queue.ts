@@ -61,23 +61,25 @@ async function advanceAutomation(env: Env, body: AutomationMessage) {
   const token = internalToken(env);
   if (!token) throw new Error("GAME_AUTOMATION_WORKER_TOKEN ausente.");
 
-  const request = new Request(
-    "https://war-brasil.internal/api/internal/automation/advance",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        roomId: body.roomId,
-        expectedRevision: body.expectedRevision,
-      }),
+  const init: RequestInit = {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
     },
-  );
+    body: JSON.stringify({
+      roomId: body.roomId,
+      expectedRevision: body.expectedRevision,
+    }),
+  };
 
   if (env.GAME_APP_SERVICE) {
-    return env.GAME_APP_SERVICE.fetch(request);
+    return env.GAME_APP_SERVICE.fetch(
+      new Request(
+        "https://war-brasil.internal/api/internal/automation/advance",
+        init,
+      ),
+    );
   }
 
   const baseUrl = internalBaseUrl(env);
@@ -85,7 +87,7 @@ async function advanceAutomation(env: Env, body: AutomationMessage) {
     throw new Error("GAME_APP_SERVICE ou GAME_AUTOMATION_INTERNAL_BASE_URL é obrigatório.");
   }
 
-  return fetch(`${baseUrl}/api/internal/automation/advance`, request);
+  return fetch(`${baseUrl}/api/internal/automation/advance`, init);
 }
 
 async function processMessage(message: QueueMessage, env: Env) {
