@@ -368,6 +368,13 @@ export class GameRoomRealtimeDurableObject extends DurableObject {
     super(ctx, env);
     this.ctx = ctx;
     this.env = env;
+    this.latestRevision = 0;
+    this.ctx.blockConcurrencyWhile(async () => {
+      const stored = await this.ctx.storage.get("latestRevision");
+      if (typeof stored === "number" && Number.isSafeInteger(stored) && stored >= 1) {
+        this.latestRevision = stored;
+      }
+    });
   }
 
   async fetch(request) {
@@ -389,17 +396,20 @@ export class GameRoomRealtimeDurableObject extends DurableObject {
 
       const pair = new WebSocketPair();
       const [client, server] = Object.values(pair);
+      const readyRevision = Math.max(revision, this.latestRevision);
       const attachment = {
         roomId,
         playerId,
-        lastRevisionSent: revision,
+        lastRevisionSent: readyRevision,
         lastPrivateRevisionSent: 0,
         lastPrivatePatchRevisionSent: 0,
       };
 
       this.ctx.acceptWebSocket(server, [`player:${playerId}`]);
       server.serializeAttachment(attachment);
-      server.send(serverEvent("realtime.ready", roomId, { revision }));
+      server.send(
+        serverEvent("realtime.ready", roomId, { revision: readyRevision }),
+      );
 
       return new Response(null, {
         status: 101,
@@ -415,10 +425,22 @@ export class GameRoomRealtimeDurableObject extends DurableObject {
       const body = await readJsonBody(request);
       const event = body ? parseNotificationPayload(JSON.stringify(body)) : null;
       if (!event) return json({ error: "REALTIME_EVENT_INVALID" }, 422);
-      return json(this.broadcast(event));
+      return json(await this.publish(event));
     }
 
     return new Response("Not found", { status: 404 });
+  }
+
+  async publish(event) {
+    if (
+      "revision" in event &&
+      Number.isSafeInteger(event.revision) &&
+      event.revision > this.latestRevision
+    ) {
+      this.latestRevision = event.revision;
+      await this.ctx.storage.put("latestRevision", event.revision);
+    }
+    return this.broadcast(event);
   }
 
   socketsForEvent(event) {
