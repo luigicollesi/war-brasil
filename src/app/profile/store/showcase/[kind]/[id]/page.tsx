@@ -7,7 +7,7 @@ import {
   resolveStoreShowcaseView,
   type StoreShowcaseKind,
 } from "@/src/lib/economy/store-showcase";
-import { auth } from "@/src/lib/server/auth/auth";
+import { getAuthenticatedSessionForReadHeaders } from "@/src/lib/server/auth/auth-guard";
 import {
   EconomyServiceError,
   getEconomyStorefront,
@@ -34,10 +34,7 @@ export default async function StoreShowcasePage({
   searchParams,
 }: StoreShowcasePageProps) {
   await connection();
-  const session = await auth.api.getSession({
-    headers: await headers(),
-    query: { disableCookieCache: true },
-  });
+  const session = await getAuthenticatedSessionForReadHeaders(await headers());
 
   if (!session) redirect("/");
 
