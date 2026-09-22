@@ -1,22 +1,25 @@
 import "server-only";
 
+import { runPostResponseTask } from "../cloudflare/post-response-task";
 import { realtimeInternalFetch } from "./realtime-internal-client";
 
 export async function publishUserNotificationChange(userId: string) {
-  try {
-    const response = await realtimeInternalFetch(
-      "/internal/user-notification",
-      {
-        method: "POST",
-        cache: "no-store",
-        headers: {
-          "Content-Type": "application/json",
+  await runPostResponseTask("user.notification.realtime", async () => {
+    try {
+      await realtimeInternalFetch(
+        "/internal/user-notification",
+        {
+          method: "POST",
+          cache: "no-store",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ userId }),
         },
-        body: JSON.stringify({ userId }),
-      },
-    );
-    return response?.ok ?? false;
-  } catch {
-    return false;
-  }
+      );
+    } catch {
+      // Notifications are recovered by HTTP polling if realtime delivery fails.
+    }
+  });
+  return true;
 }
