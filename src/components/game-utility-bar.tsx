@@ -10,12 +10,16 @@ import { useGameMapVisibility } from "@/src/components/road-visibility-provider"
 type GameUtilityBarProps = {
   anomalyTitle?: string;
   onOpenAnomaly?: () => void;
+  onLeaveGame?: () => void;
+  leavingGame?: boolean;
   disabled?: boolean;
 };
 
 export function GameUtilityBar({
   anomalyTitle,
   onOpenAnomaly,
+  onLeaveGame,
+  leavingGame = false,
   disabled = false,
 }: GameUtilityBarProps) {
   const {
@@ -74,6 +78,24 @@ export function GameUtilityBar({
           >
             <AnomalyIcon />
             <span className="game-utility-label">Anomalia</span>
+          </button>
+        </>
+      ) : null}
+
+      {onLeaveGame ? (
+        <>
+          <span className="game-utility-divider" aria-hidden="true" />
+          <button
+            type="button"
+            className="game-utility-button disabled:cursor-not-allowed disabled:opacity-40"
+            onClick={onLeaveGame}
+            disabled={leavingGame}
+            title="Sair desta partida"
+          >
+            <span aria-hidden="true">↩</span>
+            <span className="game-utility-label">
+              {leavingGame ? "Saindo…" : "Sair"}
+            </span>
           </button>
         </>
       ) : null}
