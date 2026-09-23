@@ -33,6 +33,16 @@ const inviteService = readFileSync(
 const lobby = readFileSync("src/components/lobby-client.tsx", "utf8");
 const game = readFileSync("src/components/game-client-v2.tsx", "utf8");
 const home = readFileSync("src/app/home/page.tsx", "utf8");
+const realtimeWorker = readFileSync("realtime/cloudflare/worker.mjs", "utf8");
+const realtimeWrangler = readFileSync("wrangler.realtime.jsonc", "utf8");
+const targetedCleanup = readFileSync(
+  "src/app/api/internal/lobby/cleanup-seat/route.ts",
+  "utf8",
+);
+const cleanupAuth = readFileSync(
+  "src/lib/server/auth/lobby-cleanup-auth.ts",
+  "utf8",
+);
 
 test("participação ativa é autoritativa por conta e serializada antes de room locks", () => {
   assert.match(participationService, /player\.user_id=\$1::uuid/);
@@ -102,4 +112,20 @@ test("cleanup de presença é exclusivo de waiting e não cria eviction durante 
     ),
     /room\.status='playing'|room\.status='order_roll'/,
   );
+});
+
+
+test("realtime usa alarm sob demanda para reconciliar desconexão sem poller global", () => {
+  assert.match(realtimeWorker, /LOBBY_DISCONNECT_GRACE_MS = 20_000/);
+  assert.match(realtimeWorker, /scheduleLobbyCleanupWatch/);
+  assert.match(realtimeWorker, /async alarm\(\)/);
+  assert.match(realtimeWorker, /storage\.setAlarm/);
+  assert.match(realtimeWorker, /storage\.deleteAlarm/);
+  assert.match(realtimeWorker, /\/api\/internal\/lobby\/cleanup-seat/);
+  assert.match(realtimeWorker, /webSocketClose\(socket\)/);
+  assert.match(realtimeWrangler, /GAME_APP_INTERNAL_URL/);
+  assert.match(targetedCleanup, /cleanupStaleWaitingRoomSeat/);
+  assert.match(targetedCleanup, /publishLobbyChangeByCode/);
+  assert.match(cleanupAuth, /GAME_REALTIME_INTERNAL_TOKEN/);
+  assert.match(cleanupAuth, /timingSafeEqual/);
 });
