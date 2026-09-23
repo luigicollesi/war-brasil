@@ -25,6 +25,12 @@ type BotActionResponse = {
   error?: string;
 };
 
+type ParticipationResponse = {
+  participation?: {
+    target?: string;
+  } | null;
+};
+
 type LobbyPendingAction =
   | "profile"
   | "ready"
@@ -63,26 +69,68 @@ export function LobbyClient({ code }: LobbyClientProps) {
   );
 
   useEffect(() => {
-    if (snapshot && snapshot.room.status !== "waiting") {
-      router.replace(`/game/${snapshot.room.code}`);
-    }
+    if (!snapshot || snapshot.room.status === "waiting") return;
+
+    let cancelled = false;
+    void fetch("/api/participation", {
+      method: "POST",
+      cache: "no-store",
+    })
+      .then(async (response) => {
+        const body = (await response.json().catch(() => null)) as
+          | ParticipationResponse
+          | null;
+        if (cancelled) return;
+        const target = body?.participation?.target;
+        router.replace(
+          typeof target === "string"
+            ? target
+            : `/game/${snapshot.room.code}`,
+        );
+      })
+      .catch(() => {
+        if (!cancelled) {
+          router.replace(`/game/${snapshot.room.code}`);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [router, snapshot]);
+
   useEffect(() => {
     if (!waitingRoomActive) return;
 
     let stopped = false;
-    const heartbeat = async () => {
+    let inFlight = false;
+    let timerId: number | null = null;
+
+    const schedule = () => {
       if (stopped) return;
-      await fetch(
-        `/api/rooms/${encodeURIComponent(code)}/heartbeat`,
-        { method: "POST", cache: "no-store" },
-      ).catch(() => undefined);
+      if (timerId !== null) window.clearTimeout(timerId);
+      timerId = window.setTimeout(() => {
+        void heartbeat();
+      }, 5_000);
+    };
+
+    const heartbeat = async () => {
+      if (stopped || inFlight) return;
+      inFlight = true;
+      try {
+        await fetch(
+          `/api/rooms/${encodeURIComponent(code)}/heartbeat`,
+          { method: "POST", cache: "no-store" },
+        );
+      } catch {
+        // Lobby sync/realtime remain responsible for surfacing connectivity.
+      } finally {
+        inFlight = false;
+        schedule();
+      }
     };
 
     void heartbeat();
-    const intervalId = window.setInterval(() => {
-      void heartbeat();
-    }, 30_000);
 
     const onFocus = () => void heartbeat();
     const onVisibility = () => {
@@ -93,7 +141,7 @@ export function LobbyClient({ code }: LobbyClientProps) {
     document.addEventListener("visibilitychange", onVisibility);
     return () => {
       stopped = true;
-      window.clearInterval(intervalId);
+      if (timerId !== null) window.clearTimeout(timerId);
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisibility);
     };
@@ -293,7 +341,11 @@ export function LobbyClient({ code }: LobbyClientProps) {
     return (
       <div className={styles.statePage}>
         <div className={styles.stateNavigation}>
-          <PreGameBackButton href="/matchmaking" />
+          <PreGameBackButton
+            label={leaving ? "Saindo da operação…" : "Voltar para Operações"}
+            onClick={() => void leaveRoom()}
+            disabled={leaving || pendingAction !== null}
+          />
         </div>
         <div className={styles.loadingState} aria-live="polite" aria-busy="true">
           <div className={styles.stateMachine}>
@@ -313,7 +365,11 @@ export function LobbyClient({ code }: LobbyClientProps) {
     return (
       <div className={styles.statePage}>
         <div className={styles.stateNavigation}>
-          <PreGameBackButton href="/matchmaking" />
+          <PreGameBackButton
+            label={leaving ? "Saindo da operação…" : "Voltar para Operações"}
+            onClick={() => void leaveRoom()}
+            disabled={leaving || pendingAction !== null}
+          />
         </div>
         <div className={styles.fatalState}>
           <div className={styles.stateMachine}>
@@ -388,7 +444,7 @@ export function LobbyClient({ code }: LobbyClientProps) {
       onAddBot={() => void addBot()}
       onRemoveBot={removeBot}
       onToggleReady={() => void updateMe({ isReady: !me.isReady }, "ready")}
-      onLeaveRoom={() => void leaveRoom()}
+      onBackToOperations={() => void leaveRoom()}
       leaving={leaving}
     />
   );
