@@ -171,6 +171,7 @@ export async function executeReinforcement(
           phase: "finished",
           reinforcementsRemaining: remaining,
           winnerPlayerId: player.id,
+          winnerPlayerIds: [player.id],
         }
       : {
           phase: remaining === 0 ? "attack" : "reinforcement",
