@@ -287,9 +287,11 @@ test("title rarity controls size centrally across profile surfaces", () => {
     assert.ok(rendererStyles.includes('data-title-rarity="' + rarity + '"'));
   }
 
-  assert.match(rendererStyles, /--profile-title-size-base/);
-  assert.match(dossierStyles, /--profile-title-size-base:/);
-  assert.match(publicStyles, /--profile-title-size-base:/);
+  assert.match(rendererStyles, /--profile-title-size-legendary/);
+  assert.match(rendererStyles, /data-title-rarity="legendary"[\s\S]*font-size:\s*var\(--profile-title-size-legendary\)/);
+  assert.match(rendererStyles, /data-title-rarity="epic"[\s\S]*calc\(var\(--profile-title-size-legendary\) - 0\.28rem\)/);
+  assert.match(dossierStyles, /--profile-title-size-legendary:\s*clamp\(2rem, 4\.2vw, 4\.8rem\)/);
+  assert.match(publicStyles, /--profile-title-size-legendary:\s*clamp\(3\.9rem, 7\.1vw, 8\.8rem\)/);
   assert.doesNotMatch(dossierStyles, /\.dossierTitle\s*\{[^}]*font-size:/s);
   assert.doesNotMatch(publicStyles, /\.title\s*\{[^}]*font-size:/s);
 });
