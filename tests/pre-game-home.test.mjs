@@ -65,6 +65,7 @@ test("landing pública exibe aviso ficcional antes de liberar a Genesis", () => 
   assert.match(introStyles, /position: fixed/);
   assert.match(introStyles, /background: #000/);
   assert.match(introStyles, /z-index:/);
+  assert.match(introStyles, /data-landing-prelude="active"[\s\S]*data-command-chrome/);
   assert.match(introStyles, /animation: landingPreludeSequence 6400ms/);
   assert.match(introStyles, /@keyframes landingPreludeSequence/);
   assert.match(introStyles, /animation-duration: 5400ms/);
