@@ -56,7 +56,10 @@ export async function loadBotStrategicState(
     await client.query<StateBot>(
       `SELECT id,card_trade_count
        FROM game.players
-       WHERE room_id=$1 AND id=$2 AND is_bot=TRUE`,
+       WHERE room_id=$1
+         AND id=$2
+         AND is_bot=TRUE
+         AND left_at IS NULL`,
       [roomId, botId],
     )
   ).rows[0];
@@ -108,6 +111,7 @@ export async function loadBotStrategicState(
       `SELECT id,turn_position,is_bot
        FROM game.players
        WHERE room_id=$1
+         AND left_at IS NULL
        ORDER BY joined_at,id`,
       [roomId],
     )
