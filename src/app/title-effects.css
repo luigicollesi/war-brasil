@@ -52,9 +52,24 @@
  * through custom-property animation slots in the component stylesheet.
  */
 
-@keyframes wb-title-angle-drift {
-  from { --profile-title-angle: 154deg; }
-  to { --profile-title-angle: 212deg; }
+@keyframes wb-title-gradient-drift {
+  0%,
+  100% {
+    --profile-title-fill-x: 50%;
+    --profile-title-fill-y: 50%;
+  }
+  25% {
+    --profile-title-fill-x: 68%;
+    --profile-title-fill-y: 40%;
+  }
+  50% {
+    --profile-title-fill-x: 56%;
+    --profile-title-fill-y: 66%;
+  }
+  75% {
+    --profile-title-fill-x: 32%;
+    --profile-title-fill-y: 44%;
+  }
 }
 
 @keyframes wb-title-sheen {
@@ -174,11 +189,18 @@
 }
 
 @keyframes wb-title-aura-drift {
-  from {
-    background-position: 0% 50%;
+  0%,
+  100% {
+    background-position: 50% 50%;
   }
-  to {
-    background-position: 100% 50%;
+  25% {
+    background-position: 72% 44%;
+  }
+  50% {
+    background-position: 58% 62%;
+  }
+  75% {
+    background-position: 28% 46%;
   }
 }
 
