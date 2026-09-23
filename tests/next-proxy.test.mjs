@@ -49,10 +49,8 @@ test("matcher real do Proxy inclui negócio e exclui auth, health, internal e as
 });
 
 test("Proxy preserva allowlist pública, 401 de API e redirect de página protegida", () => {
-  assert.match(
-    proxySource,
-    /pathname === "\/"[\s\S]*pathname === "\/terms"[\s\S]*pathname === "\/privacy"/,
-  );
+  assert.match(proxySource, /pathname === "\/terms"[\s\S]*pathname === "\/privacy"/);
+  assert.match(proxySource, /pathname === "\/"/);
   assert.match(
     proxySource,
     /NextResponse\.json\([\s\S]*authentication_required[\s\S]*status: 401/,
@@ -61,4 +59,12 @@ test("Proxy preserva allowlist pública, 401 de API e redirect de página proteg
     proxySource,
     /NextResponse\.redirect\(new URL\("\/", request\.url\)\)/,
   );
+});
+
+test("Proxy usa somente hint HttpOnly para reconduzir participação e continua sem banco", () => {
+  assert.match(proxySource, /ACTIVE_PARTICIPATION_COOKIE/);
+  assert.match(proxySource, /parseActiveParticipationHint/);
+  assert.match(proxySource, /pathnameMatchesActiveParticipation/);
+  assert.match(proxySource, /activeParticipationTarget/);
+  assert.doesNotMatch(proxySource, /authPool|DATABASE_URL|from "pg"|from 'pg'/);
 });
