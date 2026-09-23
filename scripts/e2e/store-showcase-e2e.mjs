@@ -30,22 +30,6 @@ const VIEWPORTS = [
 if (!DATABASE_URL) throw new Error("DATABASE_URL E2E é obrigatória para Store Showcase E2E.");
 mkdirSync(ARTIFACT_DIR, { recursive: true });
 
-) {
-  return page.evaluate(
-    async ({ requestUrl, requestInit }) => {
-      const response = await fetch(requestUrl, requestInit);
-      let body = null;
-      try {
-        body = await response.json();
-      } catch {
-        body = null;
-      }
-      return { status: response.status, body };
-    },
-    { requestUrl: url, requestInit: init },
-  );
-}
-
 async function withDb(callback) {
   const db = new Client({ connectionString: DATABASE_URL });
   await db.connect();
