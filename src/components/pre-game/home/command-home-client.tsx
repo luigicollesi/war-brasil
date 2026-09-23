@@ -8,7 +8,7 @@ import {
 import { CommandOnboardingModal } from "@/components/auth/command-onboarding-modal";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import type { ReactNode } from "react";
+import type { AnimationEvent as ReactAnimationEvent, ReactNode } from "react";
 import {
   useCallback,
   useEffect,
@@ -24,7 +24,7 @@ import {
   type HomeCeremonyPhase,
   type HomeDestinationId,
 } from "./command-home-scene-intent";
-import "./command-home-intro.module.css";
+import introStyles from "./command-home-intro.module.css";
 import styles from "./command-home.module.css";
 
 type VisitMode = "first" | "reduced";
@@ -115,6 +115,8 @@ export function CommandHomeClient({
   const [ceremonyPhase, setCeremonyPhase] = useState<HomeCeremonyPhase>(
     isCommandHome ? "stable" : "primed",
   );
+  const [landingPreludeComplete, setLandingPreludeComplete] =
+    useState(isCommandHome);
   const [ritualActive, setRitualActive] = useState(!isCommandHome);
   const [commandOpen, setCommandOpen] = useState(
     initialAccess?.authenticated === true && initialAccess.profileComplete === true,
@@ -270,6 +272,7 @@ export function CommandHomeClient({
       visitMode !== "first" ||
       !ritualActive ||
       ceremonyPhase !== "primed" ||
+      !landingPreludeComplete ||
       sceneState !== "primed"
     ) {
       return;
@@ -280,7 +283,13 @@ export function CommandHomeClient({
     });
 
     return () => window.cancelAnimationFrame(frame);
-  }, [ceremonyPhase, ritualActive, sceneState, visitMode]);
+  }, [
+    ceremonyPhase,
+    landingPreludeComplete,
+    ritualActive,
+    sceneState,
+    visitMode,
+  ]);
 
   useEffect(() => {
     if (
@@ -365,6 +374,13 @@ export function CommandHomeClient({
     navigateToCommandHome,
     openAuthModal,
   ]);
+
+  const handleLandingPreludeAnimationEnd = (
+    event: ReactAnimationEvent<HTMLElement>,
+  ) => {
+    if (event.currentTarget !== event.target) return;
+    setLandingPreludeComplete(true);
+  };
 
   const settleCeremony = () => {
     setCeremonyPhase("stable");
@@ -461,6 +477,7 @@ export function CommandHomeClient({
     <main
       className={styles.root}
       data-home-state={homeState}
+      data-landing-prelude={landingPreludeComplete ? "complete" : "active"}
       data-home-transition={homeTransition}
       data-home-opening-phase={sceneState}
       data-scene="foundation"
@@ -474,6 +491,23 @@ export function CommandHomeClient({
       data-destination-focus={destinationFocus ?? "none"}
       data-transitioning-to={transitioningTo ?? "none"}
     >
+      {!landingPreludeComplete ? (
+        <section
+          className={introStyles.landingPrelude}
+          aria-label="Aviso de conteúdo fictício"
+          aria-live="polite"
+          onAnimationEnd={handleLandingPreludeAnimationEnd}
+        >
+          <p className={introStyles.landingPreludeCopy}>
+            Todo o conteúdo apresentado nesta página é meramente ilustrativo.
+            <span>
+              A geografia, os acontecimentos e os eventos históricos retratados
+              são fictícios.
+            </span>
+          </p>
+        </section>
+      ) : null}
+
       {children}
 
       <section
