@@ -46,7 +46,9 @@ export async function beginPlayerTurnPhase(
          ON c.room_id=p.room_id
         AND c.owner_player_id=p.id
         AND c.zone='hand'
-       WHERE p.room_id=$1 AND p.id=$2
+       WHERE p.room_id=$1
+         AND p.id=$2
+         AND p.left_at IS NULL
        GROUP BY p.id,p.is_bot`,
       [roomId, playerId],
     )
