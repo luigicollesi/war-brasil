@@ -243,3 +243,36 @@ test("gradient aura layers do not inherit the title's solid shadow stack", () =>
   assert.match(auraBlock, /text-shadow:\s*none/);
   assert.match(auraBlock, /-webkit-text-stroke:\s*0/);
 });
+
+
+test("gradient drift loops from the same visual state without moving glyph geometry", () => {
+  const styles = read("src/components/profile/profile-title-renderer.module.css");
+  const effects = read("src/app/title-effects.css");
+
+  assert.match(
+    styles,
+    /data-motion="drift"[\s\S]*wb-title-gradient-drift 12s ease-in-out infinite/,
+  );
+  assert.doesNotMatch(
+    styles,
+    /data-motion="drift"[\s\S]{0,180}infinite alternate/,
+  );
+  assert.match(
+    styles,
+    /data-aura-motion="drift"[\s\S]*wb-title-aura-drift 10s ease-in-out infinite/,
+  );
+
+  assert.match(
+    effects,
+    /@keyframes wb-title-gradient-drift[\s\S]*0%,[\s\S]*100%[\s\S]*--profile-title-fill-x: 50%[\s\S]*--profile-title-fill-y: 50%/,
+  );
+  assert.match(
+    effects,
+    /@keyframes wb-title-aura-drift[\s\S]*0%,[\s\S]*100%[\s\S]*background-position: 50% 50%/,
+  );
+  assert.doesNotMatch(effects, /@keyframes wb-title-angle-drift/);
+  assert.doesNotMatch(
+    effects,
+    /@keyframes wb-title-gradient-drift[\s\S]{0,500}--profile-title-angle:/,
+  );
+});
