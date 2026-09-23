@@ -115,7 +115,7 @@
 }
 
 .title {
-  --profile-title-size-base: clamp(3.15rem, 5.7vw, 7rem);
+  --profile-title-size-legendary: clamp(3.9rem, 7.1vw, 8.8rem);
   margin-top: 10px;
   filter: drop-shadow(0 14px 28px rgb(0 0 0 / 42%));
 }
@@ -308,7 +308,7 @@
   }
 
   .title {
-    --profile-title-size-base: clamp(2.25rem, 10.5vw, 4.1rem);
+    --profile-title-size-legendary: clamp(2.8rem, 13vw, 5rem);
     max-width: 12ch;
     margin-top: 6px;
   }
