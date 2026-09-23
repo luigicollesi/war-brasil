@@ -33,6 +33,14 @@
   margin-top: .55em;
 }
 
+/* CommandHomeClient lives inside shellContent (z-content), while Foundation
+   chrome is a higher sibling stacking context. Hide it explicitly so the
+   prelude is a genuinely full-screen black frame even in fallback mode. */
+:global([data-command-scene-mode="entrance"]:has([data-landing-prelude="active"]) [data-command-chrome]) {
+  opacity: 0 !important;
+  transition: none !important;
+}
+
 @keyframes landingPreludeSequence {
   0%,
   3.125% {
