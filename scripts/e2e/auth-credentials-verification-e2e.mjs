@@ -2,10 +2,7 @@ import assert from "node:assert/strict";
 import { Client } from "pg";
 import { apiJson, loadPlaywrightRuntime } from "./runtime-helper.mjs";
 import { waitForRegistrationCode } from "./registration-otp-helper.mjs";
-import {
-  completeCommanderAgeGate,
-  completeCommanderOnboarding,
-} from "./command-access-helper.mjs";
+import { completeCommanderAgeGate } from "./command-access-helper.mjs";
 
 const playwright = await loadPlaywrightRuntime();
 
