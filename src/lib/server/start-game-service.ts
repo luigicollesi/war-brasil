@@ -32,7 +32,7 @@ function shuffledRange(length: number) {
 async function loadPlayers(client: PoolClient, roomId: string) {
   const players = (
     await client.query<StartPlayer>(
-      "SELECT id FROM game.players WHERE room_id=$1 ORDER BY joined_at,id",
+      "SELECT id FROM game.players WHERE room_id=$1 AND left_at IS NULL ORDER BY joined_at,id",
       [roomId],
     )
   ).rows;
@@ -147,6 +147,8 @@ async function transitionRoomToOrderRoll(client: PoolClient, roomId: string) {
 }
 
 export async function startGame(client: PoolClient, roomId: string) {
+  await client.query("DELETE FROM game.room_winners WHERE room_id=$1", [roomId]);
+
   await client.query(
     `UPDATE game.players
      SET faction_name=display_name_snapshot
