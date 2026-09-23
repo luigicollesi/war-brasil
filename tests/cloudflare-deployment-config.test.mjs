@@ -60,7 +60,7 @@ test("chunks estáticos do Next recebem cache imutável", () => {
 });
 
 test("Proxy Next 16 usa cookie otimista sem carregar auth server-side, pg ou DATABASE_URL", () => {
-  assert.match(proxy, /from "better-auth\\/cookies"/);
+  assert.match(proxy, /from "better-auth\/cookies"/);
   assert.match(proxy, /getSessionCookie/);
   assert.match(proxy, /cookiePrefix: "war-brasil"/);
   assert.doesNotMatch(proxy, /auth\.api|\bpg\b|DATABASE_URL|authPool/);
