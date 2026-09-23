@@ -86,8 +86,26 @@ test("rotas mutáveis principais usam command services versionados", () => {
     const source = readFileSync(path, "utf8");
     assert.match(source, commandPattern);
     assert.doesNotMatch(source, /from "@\/src\/lib\/game"/);
-    assert.match(source, /GAME_REVISION_HEADER/);
   }
+
+  const sharedResponse = readFileSync(
+    "src/lib/server/game-command-response.ts",
+    "utf8",
+  );
+  assert.match(sharedResponse, /GAME_REVISION_HEADER/);
+
+  for (const path of routes.map(([path]) => path).filter((path) => !path.endsWith("/roll/route.ts"))) {
+    assert.match(
+      readFileSync(path, "utf8"),
+      /gameCommand(?:Patch|Value)Response/,
+      path,
+    );
+  }
+
+  assert.match(
+    readFileSync("src/app/api/games/[roomId]/roll/route.ts", "utf8"),
+    /GAME_REVISION_HEADER/,
+  );
 });
 
 test("avanço automático usa expectedRevision e um command condicional", () => {
