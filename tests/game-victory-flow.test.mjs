@@ -6,6 +6,11 @@ function source(path) {
   return readFileSync(path, "utf8");
 }
 
+const victoryService = source("src/lib/server/game-victory-service.ts");
+const diceBalanceService = source(
+  "src/lib/server/game-dice-balance-service.ts",
+);
+
 test("indicador de conexão publica sua reserva real e utility bar consome a medida", () => {
   const indicator = source("src/components/server-connection-indicator.tsx");
   const roads = source("src/app/game/[roomId]/game-roads.css");
