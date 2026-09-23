@@ -318,6 +318,34 @@
   clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
 }
 
+.stationProfileLink {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  border-radius: 2px;
+  cursor: pointer;
+}
+
+.stationProfileLink:focus-visible {
+  outline: 2px solid var(--wb-gold-bright);
+  outline-offset: -3px;
+}
+
+.station[data-profile-link="true"] {
+  transition:
+    border-color 140ms ease,
+    box-shadow 140ms ease,
+    transform 140ms ease;
+}
+
+.station[data-profile-link="true"]:hover {
+  border-color: color-mix(in srgb, var(--station-color) 72%, var(--wb-gold));
+  box-shadow:
+    inset 0 1px rgb(255 255 255 / 4%),
+    0 12px 30px rgb(0 0 0 / 24%);
+  transform: translateY(-1px);
+}
+
 .station::before {
   content: "";
   position: absolute;
