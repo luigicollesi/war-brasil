@@ -782,6 +782,112 @@ export async function leaveWaitingRoom(
   });
 }
 
+export async function cleanupStaleWaitingRoomSeat(
+  roomIdValue: unknown,
+  playerIdValue: unknown,
+  staleAfterSeconds = 20,
+) {
+  const roomId =
+    typeof roomIdValue === "string" && /^\d+$/.test(roomIdValue)
+      ? roomIdValue
+      : null;
+  const playerId = normalizePlayerId(playerIdValue);
+  if (!roomId || !playerId) {
+    throw new RoomError("Assento de lobby inválido.", 422);
+  }
+  if (!Number.isSafeInteger(staleAfterSeconds) || staleAfterSeconds < 10) {
+    throw new Error("staleAfterSeconds inválido.");
+  }
+
+  return withTransaction(async (client) => {
+    const seat = (
+      await client.query<{
+        room_code: string;
+        status: "waiting" | "order_roll" | "playing" | "finished";
+        user_id: string | null;
+        lobby_last_seen_at: Date | null;
+      }>(
+        `SELECT room.code AS room_code,
+                room.status,
+                player.user_id::text AS user_id,
+                player.lobby_last_seen_at
+           FROM game.rooms room
+           JOIN game.players player ON player.room_id=room.id
+          WHERE room.id=$1::bigint
+            AND player.id=$2::bigint
+            AND player.is_bot=FALSE
+          FOR UPDATE OF room,player`,
+        [roomId, playerId],
+      )
+    ).rows[0];
+
+    if (!seat || seat.status !== "waiting") {
+      return {
+        resolved: true,
+        removed: false,
+        roomDeleted: false,
+        roomCode: seat?.room_code ?? null,
+      };
+    }
+
+    const stale = (
+      await client.query<{ stale: boolean }>(
+        `SELECT $1::timestamptz IS NOT NULL
+                AND $1::timestamptz
+                    <= NOW() - ($2::int * INTERVAL '1 second') AS stale`,
+        [seat.lobby_last_seen_at, staleAfterSeconds],
+      )
+    ).rows[0]?.stale === true;
+
+    if (!stale) {
+      return {
+        resolved: false,
+        removed: false,
+        roomDeleted: false,
+        roomCode: seat.room_code,
+      };
+    }
+
+    const removed = await client.query(
+      `DELETE FROM game.players
+        WHERE id=$1::bigint
+          AND room_id=$2::bigint
+          AND is_bot=FALSE`,
+      [playerId, roomId],
+    );
+    if (!removed.rowCount) {
+      return {
+        resolved: true,
+        removed: false,
+        roomDeleted: false,
+        roomCode: seat.room_code,
+      };
+    }
+
+    if (seat.user_id) {
+      await client.query(
+        `UPDATE game.room_invitations
+            SET state='cancelled',
+                resolved_reason='host_left',
+                resolved_at=NOW()
+          WHERE room_id=$1::bigint
+            AND inviter_user_id=$2::uuid
+            AND state='pending'`,
+        [roomId, seat.user_id],
+      );
+    }
+
+    await resetHumanReadiness(client, roomId);
+    const roomDeleted = await deleteRoomIfNoHumans(client, roomId);
+    return {
+      resolved: true,
+      removed: true,
+      roomDeleted,
+      roomCode: seat.room_code,
+    };
+  });
+}
+
 export async function cleanupStaleWaitingRoomSeats(
   staleAfterSeconds = 20,
   limit = 100,
