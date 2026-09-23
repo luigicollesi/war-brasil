@@ -39,6 +39,20 @@ test("HOME preserva metadata, canonical e structured data existentes", () => {
   assert.match(page, /<CommandHomeContent \/>/);
 });
 
+test("landing autenticada pré-carrega /home e usa transição curta antes do replace", () => {
+  assert.match(home, /href="\/home"/);
+  assert.match(home, /prefetch=\{true\}/);
+  assert.match(home, /data-home-prefetch/);
+  assert.match(home, /commandHomeNavigationPending/);
+  assert.match(home, /onAnimationEnd=\{handleCommandHomeTransitionEnd\}/);
+  assert.match(home, /router\.replace\("\/home", \{ scroll: false \}\)/);
+  assert.doesNotMatch(home, /setTimeout/);
+  assert.match(styles, /\.commandHomePrefetch/);
+  assert.match(styles, /\.commandHomeRouteTransition/);
+  assert.match(styles, /animation: commandHomeRouteTransition/);
+  assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
+});
+
 test("landing pública e Home autenticada reutilizam a mesma experiência sem duplicar a cena", () => {
   assert.match(commandPage, /getAuthenticatedSessionForReadHeaders/);
   assert.match(commandPage, /if \(!session\)[\s\S]*redirect\("\/"\)/);
