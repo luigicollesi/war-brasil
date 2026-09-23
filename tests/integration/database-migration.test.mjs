@@ -324,6 +324,7 @@ async function assertAuthProfileSchema(client) {
     "display_name_snapshot",
     "handle_snapshot",
     "lobby_last_seen_at",
+    "left_at",
   ]) {
     assert.equal(playerColumnNames.has(name), true, name);
   }
@@ -355,6 +356,7 @@ async function assertAuthProfileSchema(client) {
   for (const name of [
     "players_room_user_uq",
     "players_user_room_idx",
+    "players_active_user_idx",
     "commanders_handle_normalized_uq",
     "commanders_display_name_normalized_idx",
     "commander_titles_title_user_idx",
@@ -708,6 +710,7 @@ async function assertOrganizedDatabase(connectionString) {
       "command_receipts_room_created_idx",
       "players_room_user_uq",
       "players_user_room_idx",
+      "players_active_user_idx",
       "commanders_handle_normalized_uq",
       "commanders_display_name_normalized_idx",
       "commander_titles_title_user_idx",
