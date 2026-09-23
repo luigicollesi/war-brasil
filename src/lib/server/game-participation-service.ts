@@ -56,6 +56,7 @@ async function readActiveParticipationRows(
          JOIN game.rooms room ON room.id=player.room_id
         WHERE player.user_id=$1::uuid
           AND player.is_bot=FALSE
+          AND player.left_at IS NULL
         ORDER BY
           CASE room.status
             WHEN 'playing' THEN 0
