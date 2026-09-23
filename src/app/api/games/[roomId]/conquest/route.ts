@@ -1,6 +1,5 @@
-import { noStoreJson } from "@/src/lib/api-response";
 import { completeConquestCommand } from "@/src/lib/server/game-conquest-command-service";
-import { GAME_REVISION_HEADER } from "@/src/lib/game-sync-contract";
+import { gameCommandPatchResponse } from "@/src/lib/server/game-command-response";
 import { createGameJsonCommandRoute } from "@/src/lib/server/game-command-route";
 
 export const POST = createGameJsonCommandRoute({
@@ -12,19 +11,6 @@ export const POST = createGameJsonCommandRoute({
       body,
       metadata,
     );
-
-    return noStoreJson(
-      {
-        revision: result.revision,
-        baseRevision: result.baseRevision,
-        ...(result.patch ? { patch: result.patch } : {}),
-        ...(result.privatePatch ? { privatePatch: result.privatePatch } : {}),
-      },
-      {
-        headers: {
-          [GAME_REVISION_HEADER]: String(result.revision),
-        },
-      },
-    );
+    return gameCommandPatchResponse(result);
   },
 });
