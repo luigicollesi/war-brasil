@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { GameRuleset } from "@/src/lib/game-mode";
 import styles from "./lobby-room-settings.module.css";
 
@@ -51,6 +52,7 @@ export function LobbyRoomSettings({
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const rootRef = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -60,7 +62,13 @@ export function LobbyRoomSettings({
     }
 
     function onPointerDown(event: PointerEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+      const target = event.target as Node;
+      if (
+        !rootRef.current?.contains(target) &&
+        !panelRef.current?.contains(target)
+      ) {
+        setOpen(false);
+      }
     }
 
     window.addEventListener("keydown", onKeyDown);
@@ -93,13 +101,16 @@ export function LobbyRoomSettings({
         </button>
       ) : null}
 
-      {canManageRoom && open ? (
-        <div
-          id={panelId}
-          className={styles.panel}
-          role="dialog"
-          aria-label="Configurações da sala"
-        >
+      {canManageRoom && open && typeof document !== "undefined"
+        ? createPortal(
+            <div className={styles.portalLayer}>
+              <div
+                ref={panelRef}
+                id={panelId}
+                className={styles.panel}
+                role="dialog"
+                aria-label="Configurações da sala"
+              >
           <div className={styles.panelHeading}>
             <h2>Configuração</h2>
           </div>
@@ -152,8 +163,11 @@ export function LobbyRoomSettings({
               {error}
             </p>
           ) : null}
-        </div>
-      ) : null}
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
