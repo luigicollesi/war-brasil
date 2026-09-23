@@ -1,9 +1,14 @@
 import type { Metadata } from "next";
-import { Barlow_Condensed, Geist_Mono, Inter } from "next/font/google";
 import { PreGameCommandRuntime } from "@/src/components/pre-game/foundation";
 import { ProfilePresenceHeartbeat } from "@/src/components/profile/profile-presence-heartbeat";
 import { UserNotificationRuntime } from "@/src/components/notifications/user-notification-runtime";
 import { getSiteUrl } from "@/src/lib/site-url";
+import {
+  displayFont,
+  geistMono,
+  interfaceFont,
+  profileTitleFontVariables,
+} from "./fonts";
 import "./globals.css";
 import "./war-identity.css";
 import "./lobby-ready-rail.css";
@@ -16,22 +21,6 @@ import "./war-guide-final-sections.css";
 import "./war-guide-scenes.css";
 import "./war-guide-responsive.css";
 import "./war-guide-mobile-map.css";
-
-const interfaceFont = Inter({
-  variable: "--font-wb-ui",
-  subsets: ["latin"],
-});
-
-const displayFont = Barlow_Condensed({
-  variable: "--font-wb-display",
-  subsets: ["latin"],
-  weight: ["600", "700", "800"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
 function assetPublicOrigin() {
   const configured = process.env.ASSET_PUBLIC_BASE_URL?.trim();
@@ -79,7 +68,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="pt-BR"
       data-scroll-behavior="smooth"
-      className={`${interfaceFont.variable} ${displayFont.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${interfaceFont.variable} ${displayFont.variable} ${geistMono.variable} ${profileTitleFontVariables} h-full antialiased`}
     >
       {assetOrigin ? (
         <head>

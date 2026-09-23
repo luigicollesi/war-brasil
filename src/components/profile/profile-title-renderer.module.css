@@ -15,15 +15,45 @@
   font-family: var(--font-wb-display), sans-serif;
 }
 
+.commandMono {
+  font-family: var(--font-geist-mono), monospace;
+  font-weight: 700;
+  letter-spacing: 0.055em;
+}
+
 .military {
   font-family: var(--font-wb-display), sans-serif;
   letter-spacing: 0.06em;
 }
 
-.stencil {
-  font-family: var(--font-wb-display), sans-serif;
+.militaryStencil {
+  font-family: var(--font-wb-title-military-stencil), Impact, sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.055em;
+}
+
+.imperial {
+  font-family: var(--font-wb-title-imperial), Georgia, serif;
   font-weight: 700;
-  letter-spacing: 0.095em;
+  letter-spacing: 0.035em;
+}
+
+.tacticalTech {
+  font-family: var(--font-wb-title-tactical-tech), var(--font-wb-display), sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.propaganda {
+  font-family: var(--font-wb-title-propaganda), var(--font-wb-display), sans-serif;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+}
+
+.ceremonial {
+  font-family: var(--font-wb-title-ceremonial), Georgia, "Times New Roman", serif;
+  font-weight: 600;
+  letter-spacing: 0.045em;
 }
 
 .serif {

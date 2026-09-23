@@ -12,11 +12,23 @@ const STYLE_CLASS: Readonly<Record<string, string>> = {
 
 const FONT_CLASS: Readonly<Record<string, string>> = {
   "command-display": styles.commandDisplay,
+  "command-mono": styles.commandMono,
+  "military-stencil": styles.militaryStencil,
+  imperial: styles.imperial,
+  "tactical-tech": styles.tacticalTech,
+  propaganda: styles.propaganda,
+  ceremonial: styles.ceremonial,
+
+  // Legacy aliases remain readable while catalog rows migrate to canonical keys.
   display: styles.commandDisplay,
   military: styles.military,
-  stencil: styles.stencil,
+  stencil: styles.militaryStencil,
   serif: styles.serif,
 };
+
+function resolveTitleFontClass(fontKey: string) {
+  return FONT_CLASS[fontKey] ?? styles.commandDisplay;
+}
 
 export function ProfileTitleRenderer({
   title,
@@ -28,10 +40,10 @@ export function ProfileTitleRenderer({
   if (!title) return null;
 
   const styleClass = STYLE_CLASS[title.styleKey] ?? styles.standard;
-  const fontClass = FONT_CLASS[title.fontKey] ?? styles.commandDisplay;
+  const fontClass = resolveTitleFontClass(title.fontKey);
   const textureStyle = title.textureRef
     ? ({
-        "--profile-title-texture": `url("${title.textureRef}")`,
+        "--profile-title-texture": 'url("' + title.textureRef + '")',
       } as CSSProperties)
     : undefined;
 

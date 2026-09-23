@@ -59,3 +59,53 @@ test("settings UI loads owned appearance on demand and mutates title through the
   assert.doesNotMatch(panel, /\/api\/profile\/titles/);
   assert.doesNotMatch(panel, /const .*TITLES.*=\s*\[/i);
 });
+
+test("title font keys resolve to self-hosted Next font variables with safe fallback", () => {
+  const fonts = read("src/app/fonts.ts");
+  const layout = read("src/app/layout.tsx");
+  const renderer = read("src/components/profile/profile-title-renderer.tsx");
+  const styles = read("src/components/profile/profile-title-renderer.module.css");
+
+  for (const loader of [
+    "Black_Ops_One",
+    "Cinzel",
+    "Oxanium",
+    "Bebas_Neue",
+    "Cormorant_SC",
+  ]) {
+    assert.match(fonts, new RegExp("\\b" + loader + "\\b"));
+  }
+
+  assert.equal((fonts.match(/preload:\s*false/g) ?? []).length, 5);
+  assert.match(layout, /profileTitleFontVariables/);
+
+  for (const key of [
+    "command-display",
+    "command-mono",
+    "military-stencil",
+    "imperial",
+    "tactical-tech",
+    "propaganda",
+    "ceremonial",
+  ]) {
+    assert.ok(renderer.includes('"' + key + '"') || renderer.includes(key + ":"));
+  }
+
+  for (const variable of [
+    "--font-wb-title-military-stencil",
+    "--font-wb-title-imperial",
+    "--font-wb-title-tactical-tech",
+    "--font-wb-title-propaganda",
+    "--font-wb-title-ceremonial",
+  ]) {
+    assert.ok(fonts.includes(variable));
+    assert.ok(styles.includes("var(" + variable + ")"));
+  }
+
+  assert.match(
+    renderer,
+    /return FONT_CLASS\[fontKey\] \?\? styles\.commandDisplay/,
+  );
+  assert.match(renderer, /stencil: styles\.militaryStencil/);
+  assert.match(renderer, /serif: styles\.serif/);
+});
