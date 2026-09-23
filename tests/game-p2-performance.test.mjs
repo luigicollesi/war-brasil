@@ -137,15 +137,16 @@ test("reforço e manobra retornam patches autoritativos ligados à revisão base
   const command = readFileSync("src/lib/server/game-command.ts", "utf8");
   const reinforce = readFileSync("src/app/api/games/[roomId]/reinforce/route.ts", "utf8");
   const maneuver = readFileSync("src/app/api/games/[roomId]/maneuver/route.ts", "utf8");
+  const response = readFileSync("src/lib/server/game-command-response.ts", "utf8");
   const maneuverService = readFileSync("src/lib/server/game-maneuver-command-service.ts", "utf8");
   assert.match(command, /const baseRevision = await lockRoomRevision/);
   assert.match(command, /const result: GameCommandResult<T> = \{/);
   assert.match(command, /publicPatch \? \{ patch: publicPatch \}/);
   assert.match(command, /requesterPrivatePatch/);
-  assert.match(reinforce, /baseRevision: result\.baseRevision/);
-  assert.match(reinforce, /result\.patch/);
-  assert.match(maneuver, /baseRevision: result\.baseRevision/);
-  assert.match(maneuver, /result\.patch/);
+  assert.match(response, /baseRevision: result\.baseRevision/);
+  assert.match(response, /result\.patch/);
+  assert.match(reinforce, /gameCommandPatchResponse/);
+  assert.match(maneuver, /gameCommandPatchResponse/);
   assert.match(maneuverService, /RETURNING troops,moved_in_turn/);
 });
 
