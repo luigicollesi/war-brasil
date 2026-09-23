@@ -1,10 +1,6 @@
 import type { CSSProperties } from "react";
 import type { PublicCommanderTitleAppearance } from "@/src/lib/profile/profile-appearance-contract";
-import {
-  getTitleStyleEffect,
-  parseTitleStyleKey,
-  titleStyleCssVariables,
-} from "@/src/lib/profile/title-style";
+import { resolveCommanderTitleDesign } from "@/src/lib/profile/title-design";
 import styles from "./profile-title-renderer.module.css";
 
 const FONT_CLASS: Readonly<Record<string, string>> = {
@@ -37,16 +33,12 @@ export function ProfileTitleRenderer({
   if (!title) return null;
 
   const fontClass = resolveTitleFontClass(title.fontKey);
-  const visual = parseTitleStyleKey(title.styleKey, title.rarity);
-  const outline = getTitleStyleEffect(visual, "outline");
-  const shadow = getTitleStyleEffect(visual, "shadow");
-  const glow = getTitleStyleEffect(visual, "glow");
-  const halo = getTitleStyleEffect(visual, "halo");
-  const sparkle = getTitleStyleEffect(visual, "sparkle");
-  const ember = getTitleStyleEffect(visual, "ember");
+  const design = resolveCommanderTitleDesign(title);
+  const { visual } = design;
+  const { outline, shadow, glow, halo, sparkle, ember } = design.effects;
 
   const visualStyle = {
-    ...titleStyleCssVariables(visual),
+    ...design.cssVariables,
     ...(title.textureRef
       ? { "--profile-title-texture": 'url("' + title.textureRef + '")' }
       : {}),
@@ -69,9 +61,13 @@ export function ProfileTitleRenderer({
       data-shadow={shadow ? "true" : undefined}
       data-shadow-strength={shadow?.strength}
       data-glow={glow ? "true" : undefined}
+      data-glow-gradient={glow?.paletteTo ? "true" : undefined}
+      data-glow-palette-to={glow?.paletteTo ?? undefined}
       data-glow-strength={glow?.strength}
       data-glow-motion={glow?.motion}
       data-halo={halo ? "true" : undefined}
+      data-halo-gradient={halo?.paletteTo ? "true" : undefined}
+      data-halo-palette-to={halo?.paletteTo ?? undefined}
       data-halo-strength={halo?.strength}
       data-halo-motion={halo?.motion}
       data-sparkle={sparkle ? "true" : undefined}
@@ -83,6 +79,26 @@ export function ProfileTitleRenderer({
       data-textured={title.textureRef ? "true" : "false"}
       style={visualStyle}
     >
+      {design.gradientAura.halo ? (
+        <span
+          aria-hidden="true"
+          className={[styles.auraLayer, styles.haloAura].join(" ")}
+          data-aura-motion={design.gradientAura.halo.motion}
+          data-aura-strength={design.gradientAura.halo.strength}
+        >
+          {title.displayText}
+        </span>
+      ) : null}
+      {design.gradientAura.glow ? (
+        <span
+          aria-hidden="true"
+          className={[styles.auraLayer, styles.glowAura].join(" ")}
+          data-aura-motion={design.gradientAura.glow.motion}
+          data-aura-strength={design.gradientAura.glow.strength}
+        >
+          {title.displayText}
+        </span>
+      ) : null}
       {title.displayText}
     </strong>
   );

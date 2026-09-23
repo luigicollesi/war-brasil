@@ -4,6 +4,12 @@
   initial-value: 180deg;
 }
 
+@property --profile-title-aura-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 90deg;
+}
+
 @property --profile-title-fill-x {
   syntax: "<percentage>";
   inherits: false;
@@ -143,4 +149,53 @@
 @keyframes wb-title-ember-flow {
   from { --profile-title-ember-x: -15%; }
   to { --profile-title-ember-x: 115%; }
+}
+
+
+@keyframes wb-title-aura-breathe {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.035);
+  }
+}
+
+@keyframes wb-title-aura-flicker {
+  0%, 9%, 13%, 66%, 70%, 100% {
+    opacity: 1;
+  }
+  10%, 67% {
+    opacity: 0.58;
+  }
+  12%, 69% {
+    opacity: 0.82;
+  }
+}
+
+@keyframes wb-title-aura-drift {
+  from {
+    background-position: 0% 50%;
+  }
+  to {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes wb-title-aura-rotate {
+  from {
+    --profile-title-aura-angle: 0deg;
+  }
+  to {
+    --profile-title-aura-angle: 360deg;
+  }
+}
+
+@keyframes wb-title-aura-cycle {
+  from {
+    background-position: 0% 50%;
+  }
+  to {
+    background-position: 200% 50%;
+  }
 }

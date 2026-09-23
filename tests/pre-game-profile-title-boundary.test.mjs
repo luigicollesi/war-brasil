@@ -182,3 +182,50 @@ test("title style keys use a composable allow-listed visual grammar", () => {
   assert.match(styles, /color-mix\(/);
   assert.doesNotMatch(renderer, /STYLE_CLASS/);
 });
+
+
+test("title gradient auras support glow and halo but never gradient shadow", () => {
+  const resolver = read("src/lib/profile/title-style.ts");
+  const design = read("src/lib/profile/title-design.ts");
+  const renderer = read("src/components/profile/profile-title-renderer.tsx");
+  const styles = read("src/components/profile/profile-title-renderer.module.css");
+  const effects = read("src/app/title-effects.css");
+
+  assert.match(resolver, /GRADIENT_AURA_EFFECTS/);
+  assert.match(resolver, /new Set<TitleEffectKind>\(\["glow", "halo"\]\)/);
+  assert.match(resolver, /paletteTo: TitlePaletteKey \| null/);
+  assert.match(resolver, /Gradient shadows and other gradient effects are intentionally unsupported/);
+  assert.match(resolver, /"drift"/);
+  assert.match(resolver, /"rotate"/);
+  assert.match(resolver, /"cycle"/);
+  assert.match(resolver, /validateTitleStyleKeyForCatalog/);
+
+  assert.match(design, /resolveCommanderTitleDesign/);
+  assert.match(design, /gradientAura/);
+  assert.match(renderer, /styles\.glowAura/);
+  assert.match(renderer, /styles\.haloAura/);
+  assert.match(renderer, /aria-hidden="true"/);
+  assert.match(styles, /data-aura-motion="drift"/);
+  assert.match(styles, /data-aura-motion="rotate"/);
+  assert.match(styles, /data-aura-motion="cycle"/);
+  assert.match(effects, /@keyframes wb-title-aura-drift/);
+  assert.match(effects, /@keyframes wb-title-aura-rotate/);
+  assert.match(effects, /@keyframes wb-title-aura-cycle/);
+});
+
+test("title design still comes directly from catalog appearance columns", () => {
+  const repository = read(
+    "src/lib/server/profile/profile-appearance-repository.ts",
+  );
+  const service = read("src/lib/server/profile/profile-appearance-service.ts");
+  const renderer = read("src/components/profile/profile-title-renderer.tsx");
+
+  assert.match(repository, /title\.display_text/);
+  assert.match(repository, /title\.rarity/);
+  assert.match(repository, /title\.font_key/);
+  assert.match(repository, /title\.style_key/);
+  assert.match(repository, /title\.texture_ref/);
+  assert.match(service, /fontKey: row\.font_key/);
+  assert.match(service, /styleKey: row\.style_key/);
+  assert.match(renderer, /resolveCommanderTitleDesign\(title\)/);
+});

@@ -6,7 +6,9 @@
   --profile-title-outline: #eee8da;
   --profile-title-shadow: #070809;
   --profile-title-glow: #d7cfae;
+  --profile-title-glow-to: #d7cfae;
   --profile-title-halo: #d7cfae;
+  --profile-title-halo-to: #d7cfae;
   --profile-title-sparkle: #ffffff;
   --profile-title-ember: #f1923d;
 
@@ -43,9 +45,12 @@
   --profile-title-sparkle-animation: none;
   --profile-title-ember-animation: none;
 
+  position: relative;
+  z-index: 0;
   display: block;
   width: fit-content;
   max-width: min(100%, 19ch);
+  overflow: visible;
   isolation: isolate;
   color: transparent;
   font-weight: 800;
@@ -86,6 +91,120 @@
     var(--profile-title-halo-animation),
     var(--profile-title-sparkle-animation),
     var(--profile-title-ember-animation);
+}
+
+/* Gradient aura layers ---------------------------------------------------- */
+
+.auraLayer {
+  --profile-title-aura-angle: 90deg;
+  --profile-title-aura-animation: none;
+  --profile-title-aura-blur: 0.3em;
+  --profile-title-aura-opacity: 0.56;
+
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  user-select: none;
+  color: transparent;
+  opacity: var(--profile-title-aura-opacity);
+  filter: blur(var(--profile-title-aura-blur));
+  background-size: 240% 240%;
+  background-position: 50% 50%;
+  background-repeat: no-repeat;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: var(--profile-title-aura-animation);
+}
+
+.glowAura {
+  z-index: -1;
+  background-image:
+    linear-gradient(
+      var(--profile-title-aura-angle),
+      var(--profile-title-glow) 0%,
+      var(--profile-title-glow-to) 50%,
+      var(--profile-title-glow) 100%
+    );
+}
+
+.haloAura {
+  z-index: -2;
+  background-image:
+    linear-gradient(
+      var(--profile-title-aura-angle),
+      var(--profile-title-halo) 0%,
+      var(--profile-title-halo-to) 50%,
+      var(--profile-title-halo) 100%
+    );
+}
+
+.glowAura[data-aura-strength="soft"] {
+  --profile-title-aura-blur: 0.22em;
+  --profile-title-aura-opacity: 0.38;
+}
+
+.glowAura[data-aura-strength="medium"] {
+  --profile-title-aura-blur: 0.38em;
+  --profile-title-aura-opacity: 0.58;
+}
+
+.glowAura[data-aura-strength="strong"] {
+  --profile-title-aura-blur: 0.58em;
+  --profile-title-aura-opacity: 0.76;
+}
+
+.haloAura[data-aura-strength="soft"] {
+  --profile-title-aura-blur: 0.55em;
+  --profile-title-aura-opacity: 0.22;
+}
+
+.haloAura[data-aura-strength="medium"] {
+  --profile-title-aura-blur: 0.82em;
+  --profile-title-aura-opacity: 0.34;
+}
+
+.haloAura[data-aura-strength="strong"] {
+  --profile-title-aura-blur: 1.12em;
+  --profile-title-aura-opacity: 0.46;
+}
+
+.auraLayer[data-aura-motion="breathe"] {
+  --profile-title-aura-animation:
+    wb-title-aura-breathe 5.8s ease-in-out infinite;
+}
+
+.auraLayer[data-aura-motion="flicker"] {
+  --profile-title-aura-animation:
+    wb-title-aura-flicker 6.8s steps(1, end) infinite;
+}
+
+.auraLayer[data-aura-motion="drift"] {
+  --profile-title-aura-animation:
+    wb-title-aura-drift 9.5s ease-in-out infinite alternate;
+}
+
+.auraLayer[data-aura-motion="rotate"] {
+  --profile-title-aura-animation:
+    wb-title-aura-rotate 12s linear infinite;
+}
+
+.auraLayer[data-aura-motion="cycle"] {
+  --profile-title-aura-animation:
+    wb-title-aura-cycle 8.5s linear infinite;
+}
+
+/* A gradient aura replaces the solid text-shadow glow/halo layer. */
+
+.title[data-glow-gradient="true"] {
+  --profile-title-glow-layer: 0 0 0 transparent;
+}
+
+.title[data-halo-gradient="true"] {
+  --profile-title-halo-layer: 0 0 0 transparent;
 }
 
 /* Typography registry ----------------------------------------------------- */
@@ -550,8 +669,12 @@
 /* Accessibility and fallback ------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
-  .title {
+  .title,
+  .auraLayer {
     animation: none !important;
+  }
+
+  .title {
     --profile-title-angle: 180deg;
     --profile-title-fill-x: 50%;
     --profile-title-fill-y: 50%;
@@ -561,6 +684,10 @@
 }
 
 @media (forced-colors: active) {
+  .auraLayer {
+    display: none;
+  }
+
   .title {
     color: CanvasText;
     -webkit-text-fill-color: CanvasText;

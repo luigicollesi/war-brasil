@@ -80,6 +80,9 @@ export const TITLE_EFFECT_MOTIONS = [
   "twinkle",
   "flicker",
   "flow",
+  "drift",
+  "rotate",
+  "cycle",
 ] as const;
 export type TitleEffectMotion = "none" | (typeof TITLE_EFFECT_MOTIONS)[number];
 
@@ -88,11 +91,18 @@ const EFFECT_MOTION_ALLOWLIST: Readonly<
 > = {
   outline: ["none"],
   shadow: ["none"],
-  glow: ["none", "breathe", "flicker"],
-  halo: ["none", "breathe"],
+  glow: ["none", "breathe", "flicker", "drift", "rotate", "cycle"],
+  halo: ["none", "breathe", "drift", "rotate", "cycle"],
   sparkle: ["none", "twinkle", "flow"],
   ember: ["none", "flicker", "flow"],
 };
+
+const GRADIENT_AURA_EFFECTS = new Set<TitleEffectKind>(["glow", "halo"]);
+const GRADIENT_AURA_MOTIONS = new Set<TitleEffectMotion>([
+  "drift",
+  "rotate",
+  "cycle",
+]);
 
 const EFFECT_ORDER: Readonly<Record<TitleEffectKind, number>> = {
   outline: 0,
@@ -156,6 +166,17 @@ const EFFECT_COMPLEXITY: Readonly<Record<TitleEffectKind, number>> = {
   ember: 2,
 };
 
+const EFFECT_MOTION_COMPLEXITY: Readonly<Record<TitleEffectMotion, number>> = {
+  none: 0,
+  breathe: 1,
+  twinkle: 1,
+  flicker: 1,
+  flow: 1,
+  drift: 2,
+  rotate: 2,
+  cycle: 2,
+};
+
 export const TITLE_RARITY_STYLE_BUDGET: Readonly<
   Record<ProfileAppearanceRarity, number>
 > = {
@@ -169,6 +190,7 @@ export const TITLE_RARITY_STYLE_BUDGET: Readonly<
 export type ParsedTitleEffect = Readonly<{
   kind: TitleEffectKind;
   palette: TitlePaletteKey;
+  paletteTo: TitlePaletteKey | null;
   strength: TitleEffectStrength;
   strengthExplicit: boolean;
   motion: TitleEffectMotion;
@@ -233,10 +255,27 @@ function parseEffect(
   segment: string,
   rarity: ProfileAppearanceRarity,
 ): ParsedTitleEffect | null {
-  const [kindToken, paletteToken, ...modifiers] = segment.split("-");
-  if (!kindToken || !paletteToken || !isEffectKind(kindToken) || !isPalette(paletteToken)) {
+  const [kindToken, paletteToken, ...rawModifiers] = segment.split("-");
+  if (
+    !kindToken ||
+    !paletteToken ||
+    !isEffectKind(kindToken) ||
+    !isPalette(paletteToken)
+  ) {
     return null;
   }
+
+  const modifiers = [...rawModifiers];
+  let paletteTo: TitlePaletteKey | null = null;
+
+  if (modifiers[0] && isPalette(modifiers[0])) {
+    if (!GRADIENT_AURA_EFFECTS.has(kindToken)) {
+      // Gradient shadows and other gradient effects are intentionally unsupported.
+      return null;
+    }
+    paletteTo = modifiers.shift() as TitlePaletteKey;
+  }
+
   if (modifiers.length > 2) return null;
 
   let strength = DEFAULT_STRENGTH_BY_RARITY[rarity];
@@ -257,10 +296,12 @@ function parseEffect(
   }
 
   if (!EFFECT_MOTION_ALLOWLIST[kindToken].includes(motion)) return null;
+  if (GRADIENT_AURA_MOTIONS.has(motion) && !paletteTo) return null;
 
   return {
     kind: kindToken,
     palette: paletteToken,
+    paletteTo,
     strength,
     strengthExplicit,
     motion,
@@ -268,9 +309,10 @@ function parseEffect(
 }
 
 function canonicalEffect(effect: ParsedTitleEffect) {
+  const paletteTo = effect.paletteTo ? `-${effect.paletteTo}` : "";
   const strength = effect.strengthExplicit ? `-${effect.strength}` : "";
   const motion = effect.motion === "none" ? "" : `-${effect.motion}`;
-  return `${effect.kind}-${effect.palette}${strength}${motion}`;
+  return `${effect.kind}-${effect.palette}${paletteTo}${strength}${motion}`;
 }
 
 function styleComplexity(
@@ -285,7 +327,8 @@ function styleComplexity(
       (total, effect) =>
         total +
         EFFECT_COMPLEXITY[effect.kind] +
-        (effect.motion === "none" ? 0 : 1),
+        (effect.paletteTo ? 1 : 0) +
+        EFFECT_MOTION_COMPLEXITY[effect.motion],
       0,
     )
   );
@@ -370,6 +413,15 @@ function effectPalette(
   return TITLE_PALETTES[effect?.palette ?? fallback];
 }
 
+function effectPaletteTo(
+  style: ParsedTitleStyle,
+  kind: TitleEffectKind,
+  fallback: TitlePaletteKey,
+) {
+  const effect = getTitleStyleEffect(style, kind);
+  return TITLE_PALETTES[effect?.paletteTo ?? effect?.palette ?? fallback];
+}
+
 export function titleStyleCssVariables(
   style: ParsedTitleStyle,
 ): Readonly<Record<string, string>> {
@@ -383,8 +435,23 @@ export function titleStyleCssVariables(
     "--profile-title-outline": effectPalette(style, "outline", style.palette).base,
     "--profile-title-shadow": effectPalette(style, "shadow", "black").dark,
     "--profile-title-glow": effectPalette(style, "glow", style.palette).accent,
+    "--profile-title-glow-to": effectPaletteTo(style, "glow", style.palette).accent,
     "--profile-title-halo": effectPalette(style, "halo", style.palette).accent,
+    "--profile-title-halo-to": effectPaletteTo(style, "halo", style.palette).accent,
     "--profile-title-sparkle": effectPalette(style, "sparkle", "white").light,
     "--profile-title-ember": effectPalette(style, "ember", "ember").accent,
   };
+}
+
+export function validateTitleStyleKeyForCatalog(
+  styleKey: string,
+  rarity: ProfileAppearanceRarity,
+) {
+  const parsed = parseTitleStyleKey(styleKey, rarity);
+  return {
+    valid: parsed.valid,
+    canonicalKey: parsed.canonicalKey,
+    rarityCompatible: parsed.rarityCompatible,
+    complexity: parsed.complexity,
+  } as const;
 }
