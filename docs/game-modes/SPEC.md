@@ -85,7 +85,7 @@ PostgreSQL MUST ser a única fonte de verdade para:
 - ruleset congelado do match;
 - flag de balanceamento congelada do match;
 - perfil de dados efetivamente resolvido para o match;
-- vencedor e estado terminal.
+- vencedor ou conjunto de vencedores e estado terminal.
 
 Frontend, realtime, process memory e worker MUST NOT definir ou inferir essas regras como autoridade independente.
 
@@ -309,7 +309,8 @@ Ao satisfazer a condição:
 
 - `game.rooms.status` MUST tornar-se `finished`;
 - `game.rooms.phase` MUST tornar-se `finished`;
-- `winner_player_id` MUST ser o jogador que passou a controlar todos os territórios;
+- `winner_player_id` MAY permanecer como ponte de compatibilidade para um vencedor principal;
+- o conjunto normalizado de vencedores MUST ser autoritativo quando uma mutação puder concluir mais de um objetivo simultaneamente;
 - a finalização MUST ocorrer na mesma transação autoritativa da mutação que determinou a vitória, ou no mesmo command boundary transacional antes do commit;
 - o mecanismo existente de encerramento do balanceamento de dados MUST ser respeitado;
 - nenhum terceiro jogador pode vencer por uma eliminação realizada por outro jogador.
@@ -370,6 +371,38 @@ Quando um jogador perde seu último território:
 - cartas da mão MUST seguir a regra vigente de transferência para o conquistador;
 - em `objective`, avaliações de objetivos de eliminação continuam válidas;
 - em `supremacy`, apenas a vitória do conquistador por domínio total deve ser avaliada.
+
+## Saída voluntária durante a partida
+
+Uma desconexão de rede após o início da partida MUST NOT remover automaticamente o jogador. O assento continua ativo e a conta deve ser reconduzida à partida ao reconectar.
+
+A saída definitiva durante `order_roll`, `playing` ou `finished` MUST ocorrer somente por ação explícita do próprio jogador.
+
+Ao sair de uma partida ainda não terminada, a mutação MUST ocorrer em um único command boundary transacional e:
+
+- persistir `left_at` no participante em vez de apagar sua linha histórica;
+- remover o participante da ordem ativa;
+- descartar todas as cartas de sua mão;
+- cancelar negociações pendentes que dependam dele;
+- neutralizar batalha/conquista pendente que tenha ficado inválida pela saída;
+- redistribuir seus territórios somente entre participantes ainda ativos;
+- preservar as tropas existentes nos territórios redistribuídos;
+- priorizar sempre os jogadores com menor quantidade atual de territórios, sorteando apenas entre empatados nesse mínimo;
+- corrigir o jogador atual e a rodada quando o participante que saiu possuía a vez;
+- reavaliar condições de vitória somente depois que a redistribuição inteira estiver persistida.
+
+A avaliação decorrente da redistribuição MUST observar todos os candidatos contra o mesmo estado final do tabuleiro antes de encerrar a partida. Se dois ou mais jogadores concluírem seus objetivos simultaneamente, todos MUST ser registrados como vencedores.
+
+`game.room_winners` é a representação normalizada do resultado plural. `game.rooms.winner_player_id` permanece somente como compatibilidade para consumidores legados.
+
+Quando apenas um participante ativo permanecer após a saída e nenhuma condição específica já tiver encerrado o jogo, ele vence por abandono dos demais. Quando nenhum participante ativo permanecer, a partida MAY terminar sem vencedor.
+
+Depois que `left_at` é persistido:
+
+- comandos novos e snapshots privados do jogador MUST ser rejeitados;
+- retries idempotentes do mesmo comando de saída MAY consultar o receipt já persistido;
+- o jogador MUST deixar de contar como participação ativa para o conector de navegação;
+- seu registro histórico MUST continuar disponível até o lifecycle seguro de limpeza/reset da sala.
 
 ## Balanceamento de sorte
 
