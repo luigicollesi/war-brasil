@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
-import path from "node:path";
-import { pathToFileURL } from "node:url";
 import { Client } from "pg";
+import { apiJson, loadPlaywrightRuntime } from "./runtime-helper.mjs";
 import { assertProfileSocialFlow } from "./profile-social-flow.mjs";
 import { waitForRegistrationCode } from "./registration-otp-helper.mjs";
 import {
@@ -9,12 +8,7 @@ import {
   completeCommanderOnboarding,
 } from "./command-access-helper.mjs";
 
-const playwrightRuntimeDir = path.resolve(
-  process.env.PLAYWRIGHT_RUNTIME_DIR ?? ".e2e-runtime/node_modules/playwright",
-);
-const playwright = await import(
-  pathToFileURL(path.join(playwrightRuntimeDir, "index.mjs")).href
-);
+const playwright = await loadPlaywrightRuntime();
 
 const BASE_URL = process.env.LOBBY_E2E_BASE_URL ?? "http://localhost:3000";
 const DATABASE_URL = process.env.LOBBY_E2E_DATABASE_URL ?? process.env.DATABASE_URL;
@@ -39,7 +33,7 @@ if (PRESENCE_E2E_REQUIRED && (!PRESENCE_INTERNAL_URL || !PRESENCE_INTERNAL_TOKEN
   );
 }
 
-async function apiJson(page, url, init = {}) {
+) {
   return page.evaluate(
     async ({ requestUrl, requestInit }) => {
       const response = await fetch(requestUrl, requestInit);
