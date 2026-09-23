@@ -53,6 +53,7 @@
     "src/lib/shared/combat-dice-engine.ts",
     "src/lib/shared/game-command-canonical.ts",
     "src/lib/shared/game-command-request.ts",
+    "src/lib/shared/game-departure-rules.ts",
     "src/lib/shared/game-realtime-contract.ts",
     "src/lib/client/map/board-presentation.ts",
     "src/lib/client/map/map-runtime-events.ts",
