@@ -161,7 +161,7 @@ test("todas as rotas humanas usadas por runGameCommand propagam metadata", () =>
   for (const path of wrappedRoutes) {
     const route = source(path);
     assert.match(route, /createGame(?:Json)?CommandRoute/, path);
-    assert.match(route, /metadata\)/, path);
+    assert.match(route, /async execute\(\{[^}]*metadata[^}]*\}\)/, path);
   }
 });
 
