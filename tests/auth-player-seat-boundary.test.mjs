@@ -61,6 +61,9 @@ test("todas as rotas humanas de Lobby e Game validam conta mais assento", () => 
   const helper = readFileSync("src/lib/server/game-command-route.ts", "utf8");
   assert.match(helper, /assertAuthenticatedPlayerSeat/);
   assert.match(helper, /getPlayerSession\(request\)/);
+  assert.match(helper, /readGameCommandRequestMetadata\(request\)/);
+  assert.match(helper, /readJsonObject\(request\)/);
+  assert.match(helper, /roomErrorResponse\(error,/);
 
   for (const path of wrappedSeatRoutes) {
     const source = readFileSync(path, "utf8");
@@ -68,6 +71,11 @@ test("todas as rotas humanas de Lobby e Game validam conta mais assento", () => 
       source,
       /createGameJsonCommandRoute/,
       `${path} não usa a boundary compartilhada de command route`,
+    );
+    assert.doesNotMatch(
+      source,
+      /getPlayerSession\(request\)|assertAuthenticatedPlayerSeat\(|readGameCommandRequestMetadata\(request\)|readJsonObject\(request\)|roomErrorResponse\(error,/,
+      `${path} voltou a duplicar o envelope HTTP compartilhado`,
     );
   }
 });
