@@ -42,6 +42,8 @@ type RoomRow = {
 type PlayerRow = {
   id: string;
   faction_name: string;
+  display_name_snapshot: string | null;
+  handle_snapshot: string | null;
   color: PlayerColor;
   is_ready: boolean;
   is_bot: boolean;
@@ -76,31 +78,24 @@ function createRoomCode() {
   return randomUUID().replaceAll("-", "").slice(0, ROOM_CODE_LENGTH).toUpperCase();
 }
 
-function validateFactionName(value: unknown) {
-  if (typeof value !== "string") {
-    throw new RoomError("Informe um nome de facção válido.", 422);
-  }
-
-  const name = value.trim().replace(/\s+/g, " ");
-  if (!/^[\p{L}\p{N}][\p{L}\p{N} .'-]{1,31}$/u.test(name)) {
-    throw new RoomError(
-      "O nome da facção deve ter entre 2 e 32 caracteres válidos.",
-      422,
-    );
-  }
-
-  return name;
-}
-
 function toSnapshot(room: RoomRow, players: PlayerRow[]): LobbySnapshot {
-  const mappedPlayers = players.map((player) => ({
-    id: player.id,
-    factionName: player.faction_name,
-    color: player.color,
-    isReady: player.is_ready,
-    isMe: Boolean(player.is_me),
-    isBot: player.is_bot,
-  }));
+  const mappedPlayers = players.map((player) => {
+    const displayName =
+      player.is_bot
+        ? player.faction_name
+        : player.display_name_snapshot ?? player.faction_name;
+
+    return {
+      id: player.id,
+      factionName: player.faction_name,
+      displayName,
+      handle: player.is_bot ? null : player.handle_snapshot,
+      color: player.color,
+      isReady: player.is_ready,
+      isMe: Boolean(player.is_me),
+      isBot: player.is_bot,
+    };
+  });
   const me = mappedPlayers.find((player) => player.isMe);
 
   if (!me) {
@@ -261,6 +256,7 @@ async function attachIdentityToExistingSeat(
     await client.query(
       `UPDATE game.players
        SET user_id = $1,
+           faction_name = $2,
            display_name_snapshot = $2,
            handle_snapshot = $3,
            lobby_last_seen_at = NOW()
@@ -290,6 +286,7 @@ async function attachIdentityToExistingSeat(
   await client.query(
     `UPDATE game.players
      SET player_session = $1,
+         faction_name = $2,
          display_name_snapshot = $2,
          handle_snapshot = $3
      WHERE id = $4`,
@@ -335,7 +332,7 @@ export async function createRoom(
           [
             room.id,
             playerSession,
-            DEFAULT_FACTION_NAME,
+            identity?.displayName ?? DEFAULT_FACTION_NAME,
             DEFAULT_COLORS[0],
             identity?.userId ?? null,
             identity?.displayName ?? null,
@@ -423,7 +420,7 @@ export async function joinRoomWithClient(
     [
       room.id,
       playerSession,
-      DEFAULT_FACTION_NAME,
+      identity?.displayName ?? DEFAULT_FACTION_NAME,
       color,
       identity?.userId ?? null,
       identity?.displayName ?? null,
@@ -573,7 +570,8 @@ export async function getLobbySnapshot(codeValue: unknown, playerSession: string
   if (!room) throw new RoomError("Sala não encontrada.", 404);
 
   const playerResult = await pool.query<PlayerRow>(
-    `SELECT id, faction_name, color, is_ready, is_bot,
+    `SELECT id, faction_name, display_name_snapshot, handle_snapshot,
+            color, is_ready, is_bot,
             player_session = $2 AS is_me
      FROM game.players
      WHERE room_id = $1
@@ -843,11 +841,16 @@ export async function updateLobbyPlayer(
   const code = normalizeRoomCode(codeValue);
   if (!code) throw new RoomError("Código de sala inválido.", 422);
 
-  const hasFactionName = Object.hasOwn(input, "factionName");
   const hasColor = Object.hasOwn(input, "color");
   const hasReady = Object.hasOwn(input, "isReady");
-  if (!hasFactionName && !hasColor && !hasReady) {
+  if (!hasColor && !hasReady) {
     throw new RoomError("Nenhuma alteração foi informada.", 400);
+  }
+  if (Object.hasOwn(input, "factionName")) {
+    throw new RoomError(
+      "O nome exibido na sala é definido pelo perfil do comandante.",
+      422,
+    );
   }
 
   return withTransaction(async (client) => {
@@ -866,9 +869,6 @@ export async function updateLobbyPlayer(
     const player = playerResult.rows[0];
     if (!player) throw new RoomError("Você não pertence a esta sala.", 403);
 
-    const factionName = hasFactionName
-      ? validateFactionName(input.factionName)
-      : player.faction_name;
     const colorValue = hasColor ? input.color : player.color;
     if (!isPlayerColor(colorValue)) {
       throw new RoomError("Escolha uma cor disponível na paleta.", 422);
@@ -886,8 +886,7 @@ export async function updateLobbyPlayer(
       }
     }
 
-    const profileChanged =
-      factionName !== player.faction_name || color !== player.color;
+    const profileChanged = color !== player.color;
     const requestedReady = hasReady ? input.isReady : player.is_ready;
     if (typeof requestedReady !== "boolean") {
       throw new RoomError("O status de pronto deve ser verdadeiro ou falso.", 422);
@@ -896,9 +895,9 @@ export async function updateLobbyPlayer(
 
     await client.query(
       `UPDATE game.players
-       SET faction_name = $1, color = $2, is_ready = $3
-       WHERE id = $4`,
-      [factionName, color, isReady, player.id],
+       SET color = $1, is_ready = $2
+       WHERE id = $3`,
+      [color, isReady, player.id],
     );
 
     const readinessResult = await client.query<ReadinessRow>(
