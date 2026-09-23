@@ -247,3 +247,24 @@ test("snapshot aciona o mesmo polling para apresentação e ator bot", () => {
   assert.match(sync, /\/advance/);
   assert.doesNotMatch(sync, /bot.*setInterval|setInterval.*bot/i);
 });
+
+
+test("automação e apresentação ignoram jogadores que abandonaram a partida", () => {
+  const runner = readFileSync("src/lib/server/bots/bot-runner.ts", "utf8");
+  const schedule = readFileSync(
+    "src/lib/server/automation/game-automation-schedule.ts",
+    "utf8",
+  );
+  const presentation = readFileSync(
+    "src/lib/server/game-presentation-service.ts",
+    "utf8",
+  );
+  const botState = readFileSync(
+    "src/lib/server/bots/bot-state-service.ts",
+    "utf8",
+  );
+
+  for (const source of [runner, schedule, presentation, botState]) {
+    assert.match(source, /left_at IS NULL/);
+  }
+});
