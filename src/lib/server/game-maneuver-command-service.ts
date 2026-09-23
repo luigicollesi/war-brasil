@@ -221,6 +221,7 @@ export async function executeManeuver(
             status: "finished" as const,
             phase: "finished" as const,
             winnerPlayerId: player.id,
+            winnerPlayerIds: [player.id],
           },
         }
       : {}),
