@@ -779,10 +779,10 @@ export async function leaveWaitingRoom(
 }
 
 export async function cleanupStaleWaitingRoomSeats(
-  staleAfterSeconds = 90,
+  staleAfterSeconds = 20,
   limit = 100,
 ) {
-  if (!Number.isSafeInteger(staleAfterSeconds) || staleAfterSeconds < 30) {
+  if (!Number.isSafeInteger(staleAfterSeconds) || staleAfterSeconds < 10) {
     throw new Error("staleAfterSeconds inválido.");
   }
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 500) {
@@ -793,10 +793,12 @@ export async function cleanupStaleWaitingRoomSeats(
     const stale = await client.query<{
       player_id: string;
       room_id: string;
+      room_code: string;
       user_id: string | null;
     }>(
       `SELECT player.id::text AS player_id,
               player.room_id::text AS room_id,
+              room.code AS room_code,
               player.user_id::text AS user_id
          FROM game.players player
          JOIN game.rooms room ON room.id=player.room_id
@@ -812,6 +814,7 @@ export async function cleanupStaleWaitingRoomSeats(
     );
 
     const affectedRooms = new Set<string>();
+    const affectedRoomCodes = new Map<string, string>();
     let removedSeats = 0;
     for (const row of stale.rows) {
       const removed = await client.query(
@@ -825,6 +828,7 @@ export async function cleanupStaleWaitingRoomSeats(
 
       removedSeats += 1;
       affectedRooms.add(row.room_id);
+      affectedRoomCodes.set(row.room_id, row.room_code);
 
       if (row.user_id) {
         await client.query(
@@ -841,15 +845,22 @@ export async function cleanupStaleWaitingRoomSeats(
     }
 
     let deletedRooms = 0;
+    const changedRoomCodes: string[] = [];
     for (const roomId of affectedRooms) {
       await resetHumanReadiness(client, roomId);
-      if (await deleteRoomIfNoHumans(client, roomId)) deletedRooms += 1;
+      if (await deleteRoomIfNoHumans(client, roomId)) {
+        deletedRooms += 1;
+        continue;
+      }
+      const roomCode = affectedRoomCodes.get(roomId);
+      if (roomCode) changedRoomCodes.push(roomCode);
     }
 
     return {
       removedSeats,
       affectedRooms: affectedRooms.size,
       deletedRooms,
+      changedRoomCodes,
     };
   });
 }
