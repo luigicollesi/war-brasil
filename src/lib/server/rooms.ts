@@ -5,6 +5,10 @@ import type { PoolClient } from "pg";
 import { pool } from "@/src/lib/db/pool";
 import { isGameRuleset, type GameRuleset } from "@/src/lib/game-mode";
 import { isPlayerColor, type LobbySnapshot, type PlayerColor } from "@/src/lib/lobby";
+import {
+  assertActiveParticipationAvailable,
+  lockActiveParticipationForUser,
+} from "@/src/lib/server/game-participation-service";
 import { RoomError } from "@/src/lib/server/room-error";
 import { startGame } from "@/src/lib/server/start-game-service";
 
@@ -309,6 +313,11 @@ export async function createRoom(
 
     try {
       return await withTransaction(async (client) => {
+        if (identity) {
+          await lockActiveParticipationForUser(client, identity.userId);
+          await assertActiveParticipationAvailable(client, identity.userId);
+        }
+
         const roomResult = await client.query<RoomRow>(
           `INSERT INTO game.rooms (code)
            VALUES ($1)
@@ -360,7 +369,14 @@ export async function joinRoomWithClient(
   const code = normalizeRoomCode(codeValue);
   if (!code) throw new RoomError("Código de sala inválido.", 422);
 
+  if (identity) {
+    await lockActiveParticipationForUser(client, identity.userId);
+  }
+
   const room = await findRoomForUpdate(client, code);
+  if (identity) {
+    await assertActiveParticipationAvailable(client, identity.userId, room.id);
+  }
   if (room.status !== "waiting") {
     throw new RoomError("Esta partida já começou.", 409, {
       reason: "room_started",
@@ -446,6 +462,10 @@ export async function addBotToRoom(codeValue: unknown, playerSession: string) {
   if (!code) throw new RoomError("Código de sala inválido.", 422);
 
   return withTransaction(async (client) => {
+    if (userId) {
+      await lockActiveParticipationForUser(client, userId);
+    }
+
     const room = await findRoomForUpdate(client, code);
     if (room.status !== "waiting") {
       throw new RoomError("Esta partida já começou.", 409);
@@ -709,6 +729,7 @@ async function deleteRoomIfNoHumans(client: PoolClient, roomId: string) {
 export async function leaveWaitingRoom(
   codeValue: unknown,
   playerSession: string,
+  userId: string | null = null,
 ) {
   const code = normalizeRoomCode(codeValue);
   if (!code) throw new RoomError("Código de sala inválido.", 422);
