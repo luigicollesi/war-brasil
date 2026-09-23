@@ -1,12 +1,14 @@
 # SPEC — Títulos por Conquistas
 
-Status: **catálogo definido; concessão automática ainda não implementada**
+Status: **catálogo definido; Beta Tester automático implementado; demais conquistas pendentes**
 
 Este documento especializa `docs/pre-game/profile/SPEC.md` para títulos cosméticos
 desbloqueados por conquistas, participação no beta e marcos econômicos.
 
 A migration `058-commander-title-achievement-catalog.sql` cria somente os registros
-em `catalog.commander_titles`. Ela MUST NOT conceder ownership automaticamente.
+em `catalog.commander_titles`. A migration `059-beta-tester-auto-grant.sql` adiciona
+o grant automático de `title.beta-tester` para novas linhas persistidas em
+`auth."user"`. As demais condições deste documento continuam sem concessão automática.
 
 ## 1. Objetivo
 
@@ -52,26 +54,32 @@ compra desbloqueia a conquista; o título não é o item diretamente comprado.
 
 ## 4. Beta Tester
 
-### 4.1 Janela de elegibilidade
+### 4.1 Concessão automática atual
 
-A implementação futura MUST possuir uma janela/flag autoritativa de beta.
+Enquanto o beta estiver em vigor, toda nova linha persistida em `auth."user"`
+MUST receber `title.beta-tester` com `acquisition_source='promotion'`.
 
-Enquanto essa janela estiver ativa, uma conta efetivamente criada e persistida
-deve ser elegível a `title.beta-tester`.
+A migration `059-beta-tester-auto-grant.sql` implementa essa regra por um
+trigger `AFTER INSERT` no banco. Isso garante o mesmo comportamento para
+credentials, Google, Discord e métodos futuros que persistam uma nova conta na
+tabela autoritativa.
 
-Registros temporários de cadastro, tentativas de e-mail ou cadastros não
-confirmados MUST NOT conceder o título.
+Registros temporários em `auth.pending_registration`, tentativas de e-mail,
+OTP inválido ou qualquer fluxo que não crie `auth."user"` MUST NOT conceder o
+título.
 
-### 4.2 Rollout
+O grant MUST usar `ON CONFLICT (user_id,title_id) DO NOTHING` e incrementar
+`catalog.commander_title_stats.acquisition_count` somente quando uma nova
+ownership for realmente inserida.
 
-Quando a concessão for implementada durante o beta, SHOULD existir uma operação
-idempotente de backfill para contas já criadas dentro da janela elegível.
+### 4.2 Escopo temporal
 
-Após o encerramento oficial do beta:
+Esta entrega aplica o grant a contas criadas depois da instalação da migration
+`059`. Ela não executa backfill geral das contas históricas.
 
-- novas contas MUST NOT receber o título;
-- ownership já concedido MUST permanecer;
-- a data de encerramento/flag MUST ser controlada no servidor, nunca no cliente.
+Quando o beta terminar, uma forward migration ou configuração autoritativa MUST
+desativar/remover o trigger para impedir grants a novas contas, preservando todo
+ownership já concedido.
 
 ## 5. Vitórias
 
@@ -216,13 +224,13 @@ Esta entrega NÃO implementa:
 - contadores de domínio total;
 - integração com provedor de pagamento;
 - cálculo de gasto BRL;
-- backfill de Beta Tester;
-- grants automáticos;
+- backfill geral de Beta Tester para contas históricas;
+- grants automáticos das demais conquistas;
 - notificações de conquista;
 - equipagem automática.
 
-Ela apenas:
+Ela:
 
-1. define o catálogo visual;
-2. persiste os nove títulos;
-3. documenta as condições autoritativas para implementação posterior.
+1. define e persiste o catálogo visual dos nove títulos;
+2. concede automaticamente Beta Tester a novas contas persistidas;
+3. documenta as demais condições autoritativas para implementação posterior.

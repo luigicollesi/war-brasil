@@ -6,6 +6,8 @@ const read = (path) => readFileSync(path, "utf8");
 
 const migrationPath =
   "src/lib/db/migrations/managed/058-commander-title-achievement-catalog.sql";
+const betaGrantMigrationPath =
+  "src/lib/db/migrations/managed/059-beta-tester-auto-grant.sql";
 const specPath = "docs/pre-game/profile/title-achievements/SPEC.md";
 
 const expectedTitles = [
@@ -40,7 +42,7 @@ test("achievement title migration seeds the agreed catalogue without pricing", (
 test("achievement title spec keeps grants deferred and conditions server-authoritative", () => {
   const spec = read(specPath);
 
-  assert.match(spec, /concessão automática ainda não implementada/i);
+  assert.match(spec, /Beta Tester automático implementado/i);
   assert.match(spec, /acquisition_source='promotion'/);
   assert.match(spec, /acquisition_source='reward'/);
   assert.match(spec, /1\.000 vitórias/);
@@ -50,4 +52,33 @@ test("achievement title spec keeps grants deferred and conditions server-authori
   assert.match(spec, /MUST NOT depender de um literal `42`/);
   assert.match(spec, /Débitos de `campaign-credit` MUST NOT ser interpretados como valor BRL/);
   assert.match(spec, /grantCommanderTitle/);
+});
+
+
+test("new auth users receive Beta Tester through an idempotent database trigger", () => {
+  const migration = read(betaGrantMigrationPath);
+
+  assert.match(migration, /CREATE OR REPLACE FUNCTION profile\.grant_beta_tester_on_auth_user_insert/);
+  assert.match(migration, /AFTER INSERT ON auth\."user"/);
+  assert.match(migration, /title\.beta-tester/);
+  assert.match(migration, /acquisition_source/);
+  assert.match(migration, /'promotion'/);
+  assert.match(migration, /ON CONFLICT \(user_id, title_id\) DO NOTHING/);
+  assert.match(migration, /commander_title_stats/);
+  assert.doesNotMatch(migration, /pending_registration/);
+});
+
+test("owned title reading remains database-driven through appearance repository and service", () => {
+  const repository = read("src/lib/server/profile/profile-appearance-repository.ts");
+  const service = read("src/lib/server/profile/profile-appearance-service.ts");
+
+  assert.match(repository, /FROM profile\.commander_titles owned/);
+  assert.match(repository, /JOIN catalog\.commander_titles title ON title\.id=owned\.title_id/);
+  assert.match(repository, /title\.display_text/);
+  assert.match(repository, /title\.font_key/);
+  assert.match(repository, /title\.style_key/);
+  assert.match(repository, /title\.texture_ref/);
+  assert.match(service, /displayText: row\.display_text/);
+  assert.match(service, /fontKey: row\.font_key/);
+  assert.match(service, /styleKey: row\.style_key/);
 });
