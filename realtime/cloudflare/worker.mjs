@@ -17,6 +17,9 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const DEFAULT_MAX_BUFFERED_BYTES = 64 * 1024;
 const MAX_PRESENCE_BATCH = 100;
+const LOBBY_DISCONNECT_GRACE_MS = 20_000;
+const LOBBY_CLEANUP_RETRY_MS = 20_000;
+const LOBBY_CLEANUP_KEY_PREFIX = "lobby-cleanup:";
 
 function json(body, status = 200, headers = {}) {
   return Response.json(body, {
@@ -89,6 +92,48 @@ function maxBufferedBytes(env) {
     : DEFAULT_MAX_BUFFERED_BYTES;
 }
 
+function applicationInternalBaseUrl(env) {
+  const raw = env.GAME_APP_INTERNAL_URL?.trim();
+  if (!raw) return null;
+
+  try {
+    const url = new URL(raw);
+    if (!["http:", "https:"].includes(url.protocol)) return null;
+    return url.toString().replace(/\/$/, "");
+  } catch {
+    return null;
+  }
+}
+
+async function requestLobbySeatCleanup(env, roomId, playerId) {
+  const baseUrl = applicationInternalBaseUrl(env);
+  const token = env.GAME_REALTIME_INTERNAL_TOKEN?.trim();
+  if (!baseUrl || !token || token.length < 32) {
+    return false;
+  }
+
+  try {
+    const response = await fetch(`${baseUrl}/api/internal/lobby/cleanup-seat`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ roomId, playerId }),
+    });
+    if (!response.ok) return false;
+
+    const body = await response.json().catch(() => null);
+    return Boolean(
+      body &&
+        typeof body === "object" &&
+        !Array.isArray(body) &&
+        body.resolved === true,
+    );
+  } catch {
+    return false;
+  }
+}
 
 function validUserId(value) {
   return typeof value === "string" && UUID_PATTERN.test(value);
@@ -407,6 +452,7 @@ export class GameRoomRealtimeDurableObject extends DurableObject {
 
       this.ctx.acceptWebSocket(server, [`player:${playerId}`]);
       server.serializeAttachment(attachment);
+      await this.cancelLobbyCleanupWatch(playerId);
       server.send(
         serverEvent("realtime.ready", roomId, { revision: readyRevision }),
       );
@@ -429,6 +475,100 @@ export class GameRoomRealtimeDurableObject extends DurableObject {
     }
 
     return new Response("Not found", { status: 404 });
+  }
+
+  cleanupKey(playerId) {
+    return `${LOBBY_CLEANUP_KEY_PREFIX}${playerId}`;
+  }
+
+  async rescheduleLobbyCleanupAlarm() {
+    const pending = await this.ctx.storage.list({
+      prefix: LOBBY_CLEANUP_KEY_PREFIX,
+    });
+    let earliest = null;
+
+    for (const value of pending.values()) {
+      const dueAt =
+        value &&
+        typeof value === "object" &&
+        Number.isFinite(value.dueAt)
+          ? Number(value.dueAt)
+          : null;
+      if (dueAt === null) continue;
+      earliest = earliest === null ? dueAt : Math.min(earliest, dueAt);
+    }
+
+    if (earliest === null) {
+      await this.ctx.storage.deleteAlarm();
+      return;
+    }
+
+    const scheduled = await this.ctx.storage.getAlarm();
+    const next = Math.max(Date.now(), earliest);
+    if (scheduled === null || Math.abs(scheduled - next) > 250) {
+      await this.ctx.storage.setAlarm(next);
+    }
+  }
+
+  async cancelLobbyCleanupWatch(playerId) {
+    await this.ctx.storage.delete(this.cleanupKey(playerId));
+    await this.rescheduleLobbyCleanupAlarm();
+  }
+
+  async scheduleLobbyCleanupWatch(roomId, playerId) {
+    await this.ctx.storage.put(this.cleanupKey(playerId), {
+      roomId,
+      playerId,
+      dueAt: Date.now() + LOBBY_DISCONNECT_GRACE_MS,
+    });
+    await this.rescheduleLobbyCleanupAlarm();
+  }
+
+  async alarm() {
+    const now = Date.now();
+    const pending = await this.ctx.storage.list({
+      prefix: LOBBY_CLEANUP_KEY_PREFIX,
+    });
+
+    for (const [key, value] of pending) {
+      if (
+        !value ||
+        typeof value !== "object" ||
+        !validPlayerId(value.playerId) ||
+        typeof value.roomId !== "string" ||
+        !/^\d+$/.test(value.roomId) ||
+        !Number.isFinite(value.dueAt)
+      ) {
+        await this.ctx.storage.delete(key);
+        continue;
+      }
+
+      if (Number(value.dueAt) > now) continue;
+
+      const connected = this.ctx
+        .getWebSockets(`player:${value.playerId}`)
+        .some((socket) => socket.readyState === 1);
+      if (connected) {
+        await this.ctx.storage.delete(key);
+        continue;
+      }
+
+      const resolved = await requestLobbySeatCleanup(
+        this.env,
+        value.roomId,
+        value.playerId,
+      );
+      if (resolved) {
+        await this.ctx.storage.delete(key);
+      } else {
+        await this.ctx.storage.put(key, {
+          ...value,
+          dueAt: Date.now() + LOBBY_CLEANUP_RETRY_MS,
+        });
+      }
+    }
+
+    await this.rescheduleLobbyCleanupAlarm();
   }
 
   async publish(event) {
@@ -544,8 +684,27 @@ export class GameRoomRealtimeDurableObject extends DurableObject {
     );
   }
 
-  async webSocketClose() {
+  async webSocketClose(socket) {
     // With compatibility dates >= 2026-04-07 the runtime completes close frames.
+    const attachment = socketAttachment(socket);
+    if (
+      !attachment ||
+      !validPlayerId(attachment.playerId) ||
+      typeof attachment.roomId !== "string" ||
+      !/^\d+$/.test(attachment.roomId)
+    ) {
+      return;
+    }
+
+    const stillConnected = this.ctx
+      .getWebSockets(`player:${attachment.playerId}`)
+      .some((candidate) => candidate !== socket && candidate.readyState === 1);
+    if (!stillConnected) {
+      await this.scheduleLobbyCleanupWatch(
+        attachment.roomId,
+        attachment.playerId,
+      );
+    }
   }
 
   async webSocketError(socket) {
