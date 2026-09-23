@@ -524,7 +524,7 @@
 
 
 .dossierTitle {
-  --profile-title-size-base: clamp(1.65rem, 2.65vw, 3.1rem);
+  --profile-title-size-legendary: clamp(2rem, 4.2vw, 4.8rem);
   max-width: min(100%, 22ch);
 }
 
