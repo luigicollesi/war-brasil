@@ -57,12 +57,19 @@
   outline-offset: 2px;
 }
 
+.portalLayer {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  pointer-events: none;
+}
+
 .panel {
   position: absolute;
-  z-index: 40;
-  top: calc(100% + 0.58rem);
-  right: 0;
+  top: 82px;
+  right: clamp(10px, 1.4vw, 18px);
   width: min(19rem, calc(100vw - 2rem));
+  pointer-events: auto;
   padding: 0.78rem;
   border: 1px solid rgb(194 154 82 / 46%);
   background:
@@ -237,8 +244,6 @@
   }
 
   .panel {
-    position: fixed;
-    z-index: 90;
     top: auto;
     right: 0.65rem;
     bottom: 0.65rem;
