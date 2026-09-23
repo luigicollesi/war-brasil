@@ -1,33 +1,11 @@
-import { NextRequest } from "next/server";
-import {
-  noStoreJson,
-  readJsonObject,
-  roomErrorResponse,
-} from "@/src/lib/api-response";
+import { noStoreJson } from "@/src/lib/api-response";
 import { reinforceCommand } from "@/src/lib/game-troop-command-service";
-import { readGameCommandRequestMetadata } from "@/src/lib/server/game-command-request";
 import { GAME_REVISION_HEADER } from "@/src/lib/game-sync-contract";
-import { getPlayerSession } from "@/src/lib/player-session";
-import { RoomError } from "@/src/lib/rooms";
-import { assertAuthenticatedPlayerSeat } from "@/server/auth/player-seat-guard";
+import { createGameJsonCommandRoute } from "@/src/lib/server/game-command-route";
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ roomId: string }> },
-) {
-  let roomId: string | undefined;
-  let body: Record<string, unknown> | undefined;
-
-  try {
-    const session = getPlayerSession(request);
-    if (!session) {
-      throw new RoomError("Entre em uma sala antes de jogar.", 401);
-    }
-
-    ({ roomId } = await params);
-    await assertAuthenticatedPlayerSeat(request, session, { roomId });
-    const metadata = readGameCommandRequestMetadata(request);
-    body = await readJsonObject(request);
+export const POST = createGameJsonCommandRoute({
+  operation: "reinforce",
+  async execute({ roomId, session, body, metadata }) {
     const result = await reinforceCommand(roomId, session, body, metadata);
 
     return noStoreJson(
@@ -43,12 +21,5 @@ export async function POST(
         },
       },
     );
-  } catch (error) {
-    return roomErrorResponse(error, {
-      operation: "reinforce",
-      route: request.nextUrl.pathname,
-      resource: { roomId },
-      input: body,
-    });
-  }
-}
+  },
+});
