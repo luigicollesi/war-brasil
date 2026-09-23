@@ -12,7 +12,8 @@
   ],
   "vars": {
     "GAME_REALTIME_ALLOWED_ORIGINS": "https://bellumcivile.com",
-    "GAME_REALTIME_MAX_BUFFERED_BYTES": "65536"
+    "GAME_REALTIME_MAX_BUFFERED_BYTES": "65536",
+    "GAME_APP_INTERNAL_URL": "https://bellumcivile.com"
   },
   "secrets": {
     "required": [
