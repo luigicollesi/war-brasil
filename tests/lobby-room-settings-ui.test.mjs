@@ -3,6 +3,10 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const settings = readFileSync("src/components/lobby-room-settings.tsx", "utf8");
+const settingsStyles = readFileSync(
+  "src/components/lobby-room-settings.module.css",
+  "utf8",
+);
 const client = readFileSync("src/components/lobby-client.tsx", "utf8");
 const workspace = readFileSync("src/components/lobby-command-workspace.tsx", "utf8");
 
@@ -28,4 +32,14 @@ test("lobby muta settings por endpoint dedicado e converge via refresh", () => {
   assert.match(client, /await refresh\(\)/);
   assert.match(client, /canManageRoom/);
   assert.match(workspace, /LobbyRoomSettings/);
+});
+
+
+test("modal de configurações escapa do overflow do command bar por portal", () => {
+  assert.match(settings, /createPortal/);
+  assert.match(settings, /document\.body/);
+  assert.match(settings, /panelRef/);
+  assert.match(settingsStyles, /\.portalLayer\s*\{[\s\S]*?position:\s*fixed/);
+  assert.match(settingsStyles, /z-index:\s*1000/);
+  assert.match(settingsStyles, /\.panel\s*\{[\s\S]*?pointer-events:\s*auto/);
 });
