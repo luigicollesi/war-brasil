@@ -10,6 +10,10 @@ import {
   RoomError,
   updateLobbyPlayer,
 } from "@/src/lib/rooms";
+import {
+  clearActiveParticipationCookie,
+  persistActiveParticipationCookie,
+} from "@/src/lib/server/auth/active-participation-cookie";
 import { assertAuthenticatedPlayerSeat } from "@/server/auth/player-seat-guard";
 import { publishLobbyChangeByCode } from "@/src/lib/server/realtime/lobby-realtime-publisher";
 
@@ -31,7 +35,10 @@ export async function PATCH(request: NextRequest, { params }: RouteContext) {
     body = await readJsonObject(request);
     const room = await updateLobbyPlayer(code, session, body);
     await publishLobbyChangeByCode(room.code);
-    return noStoreJson({ room });
+    return persistActiveParticipationCookie(noStoreJson({ room }), {
+      kind: room.status === "waiting" ? "lobby" : "game",
+      roomCode: room.code,
+    });
   } catch (error) {
     return roomErrorResponse(error, {
       operation: "update_lobby_player",
@@ -52,10 +59,20 @@ export async function DELETE(request: NextRequest, { params }: RouteContext) {
     }
 
     ({ code } = await params);
-    await assertAuthenticatedPlayerSeat(request, session, { roomCode: code });
-    const result = await leaveWaitingRoom(code, session);
+    const { accountSession } = await assertAuthenticatedPlayerSeat(
+      request,
+      session,
+      { roomCode: code },
+    );
+    const result = await leaveWaitingRoom(
+      code,
+      session,
+      accountSession.user.id,
+    );
     await publishLobbyChangeByCode(code);
-    return noStoreJson({ ok: true, ...result });
+    return clearActiveParticipationCookie(
+      noStoreJson({ ok: true, ...result }),
+    );
   } catch (error) {
     return roomErrorResponse(error, {
       operation: "leave_waiting_room",
