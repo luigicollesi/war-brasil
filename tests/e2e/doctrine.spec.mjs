@@ -134,14 +134,14 @@ test("botão Voltar permanece disponível no índice e retorna ao comando", asyn
 
   const back = page.getByRole("link", { name: "Voltar ao comando" });
   await expect(back).toBeVisible();
-  await expect(back).toHaveAttribute("href", "/");
+  await expect(back).toHaveAttribute("href", "/home");
 
   await back.click();
-  await page.waitForURL(`${BASE_URL}/`);
-  expect(new URL(page.url()).pathname).toBe("/");
+  await page.waitForURL(`${BASE_URL}/home`);
+  expect(new URL(page.url()).pathname).toBe("/home");
 });
 
-test("mobile 390x844 mantém índice fixado no topo, aceita touch e não cria overflow horizontal", async ({ browser }) => {
+test("mobile 390x844 mantém navegador e ações fixos no rodapé sem overflow horizontal", async ({ browser }) => {
   const context = await browser.newContext({
     storageState: AUTH_STORAGE_STATE,
     viewport: { width: 390, height: 844 },
@@ -157,6 +157,20 @@ test("mobile 390x844 mantém índice fixado no topo, aceita touch e não cria ov
 
   const before = await index.boundingBox();
   expect(before).not.toBeNull();
+  expect(before.y).toBeGreaterThan(700);
+  expect(before.y + before.height).toBeLessThanOrEqual(845);
+
+  const actions = page.getByRole("navigation", {
+    name: "Navegação entre capítulos",
+  });
+  await expect(actions).toBeVisible();
+  expect(await actions.evaluate((element) => getComputedStyle(element).position)).toBe(
+    "fixed",
+  );
+  const actionsBox = await actions.boundingBox();
+  expect(actionsBox).not.toBeNull();
+  expect(actionsBox.y + actionsBox.height).toBeLessThanOrEqual(before.y + 1);
+
   await expect(page.getByRole("link", { name: "Voltar ao comando" })).toBeVisible();
 
   await chapterLink(page, "ataque").tap();
