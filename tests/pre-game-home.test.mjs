@@ -54,7 +54,7 @@ test("landing pública exibe aviso ficcional antes de liberar a Genesis", () => 
   assert.match(home, /data-landing-prelude=\{landingPreludeComplete \? "complete" : "active"\}/);
   assert.match(home, /aria-label="Aviso de conteúdo fictício"/);
   assert.match(home, /Todo o conteúdo apresentado nesta página é meramente ilustrativo/);
-  assert.match(home, /geografia, os acontecimentos e os eventos históricos retratados[\\s\\S]*são fictícios/);
+  assert.match(home, /geografia, os acontecimentos e os eventos históricos retratados[\s\S]*são fictícios/);
   assert.match(home, /onAnimationEnd=\{handleLandingPreludeAnimationEnd\}/);
   assert.match(
     home,
