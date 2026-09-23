@@ -7,30 +7,83 @@ type GameVictoryModalProps = {
   snapshot: GameSnapshot;
   isVoting: boolean;
   isReturningToLobby: boolean;
+  isLeavingGame: boolean;
   error: string;
   onVoteRematch: () => void;
   onReturnToLobby: () => void;
+  onLeaveGame: () => void;
 };
+
+function winnerSummary(snapshot: GameSnapshot) {
+  const winners = snapshot.room.winnerPlayerIds
+    .map((id) => snapshot.players.find((player) => player.id === id))
+    .filter((player): player is GameSnapshot["players"][number] => Boolean(player));
+  const meWon = winners.some((winner) => winner.isMe);
+  const otherWinners = winners.filter((winner) => !winner.isMe);
+
+  if (winners.length === 0) {
+    return {
+      title: "Partida encerrada",
+      message: "A partida foi encerrada sem um vencedor registrado.",
+    };
+  }
+
+  if (winners.length === 1) {
+    const winner = winners[0];
+    return winner.isMe
+      ? {
+          title: "Você venceu",
+          message:
+            "Seu objetivo foi concluído. O tabuleiro está paralisado até o grupo decidir o próximo passo.",
+        }
+      : {
+          title: `${winner.factionName} venceu`,
+          message: `${winner.factionName} concluiu seu objetivo. O tabuleiro está paralisado.`,
+        };
+  }
+
+  if (meWon) {
+    const others =
+      otherWinners.length === 1
+        ? otherWinners[0].factionName
+        : `${otherWinners.length} outros jogadores`;
+    return {
+      title: `Você e ${others} venceram`,
+      message:
+        "Mais de um objetivo foi concluído no mesmo estado autoritativo do tabuleiro.",
+    };
+  }
+
+  const names = winners.map((winner) => winner.factionName);
+  const label =
+    names.length === 2
+      ? `${names[0]} e ${names[1]}`
+      : `${names.slice(0, -1).join(", ")} e ${names.at(-1)}`;
+  return {
+    title: `${label} venceram`,
+    message:
+      "Mais de um objetivo foi concluído no mesmo estado autoritativo do tabuleiro.",
+  };
+}
 
 export function GameVictoryModal({
   snapshot,
   isVoting,
   isReturningToLobby,
+  isLeavingGame,
   error,
   onVoteRematch,
   onReturnToLobby,
+  onLeaveGame,
 }: GameVictoryModalProps) {
-  const winner = snapshot.players.find(
-    (player) => player.id === snapshot.room.winnerPlayerId,
-  );
-  const winnerIsMe = Boolean(winner?.isMe);
+  const summary = winnerSummary(snapshot);
   const rematch = snapshot.room.rematch;
-  const busy = isVoting || isReturningToLobby;
+  const busy = isVoting || isReturningToLobby || isLeavingGame;
 
   return (
     <GameModal
       eyebrow="PARTIDA ENCERRADA"
-      title={winnerIsMe ? "Você venceu" : `${winner?.factionName ?? "Uma facção"} venceu`}
+      title={summary.title}
       tone="event"
       className="victory-modal w-full max-w-lg p-6 text-white sm:p-8"
     >
@@ -38,11 +91,7 @@ export function GameVictoryModal({
         ★
       </div>
 
-      <p className="victory-message">
-        {winnerIsMe
-          ? "Seu objetivo foi concluído. O tabuleiro está paralisado até o grupo decidir o próximo passo."
-          : `${winner?.factionName ?? "O vencedor"} concluiu seu objetivo. O tabuleiro está paralisado.`}
-      </p>
+      <p className="victory-message">{summary.message}</p>
 
       {rematch ? (
         <div className="victory-rematch-status" aria-live="polite">
@@ -87,10 +136,19 @@ export function GameVictoryModal({
         >
           {isReturningToLobby ? "Voltando ao lobby…" : "Voltar todos ao lobby"}
         </button>
+
+        <button
+          type="button"
+          className="game-secondary-action h-12 rounded-xl px-5 text-xs font-bold uppercase tracking-[.12em] disabled:cursor-not-allowed disabled:opacity-55"
+          disabled={busy}
+          onClick={onLeaveGame}
+        >
+          {isLeavingGame ? "Saindo…" : "Sair da partida"}
+        </button>
       </div>
 
       <p className="victory-lobby-note">
-        Reiniciar exige o voto de todos. Voltar ao lobby leva imediatamente todos os jogadores para a sala {snapshot.room.code}.
+        Reiniciar exige o voto de todos. Voltar ao lobby leva imediatamente os jogadores ainda ativos para a sala {snapshot.room.code}.
       </p>
 
       {error ? (
