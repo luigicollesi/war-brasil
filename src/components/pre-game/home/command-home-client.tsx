@@ -127,6 +127,10 @@ export function CommandHomeClient({
     useState<HomeDestinationId | null>(null);
   const [transitioningTo, setTransitioningTo] =
     useState<HomeDestinationId | null>(null);
+  const [commandHomePrefetchReady, setCommandHomePrefetchReady] =
+    useState(false);
+  const [commandHomeNavigationPending, setCommandHomeNavigationPending] =
+    useState(false);
   const [authChecking, setAuthChecking] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authModalMode, setAuthModalMode] =
@@ -310,8 +314,29 @@ export function CommandHomeClient({
   }, [ceremonyPhase, ritualActive, sceneState, visitMode]);
 
   const navigateToCommandHome = useCallback(() => {
+    setCommandHomePrefetchReady(true);
+    router.prefetch("/home");
+
+    if (reducedMotion) {
+      router.replace("/home", { scroll: false });
+      return;
+    }
+
+    setCommandHomeNavigationPending(true);
+  }, [reducedMotion, router]);
+
+  const handleCommandHomeTransitionEnd = (
+    event: ReactAnimationEvent<HTMLElement>,
+  ) => {
+    if (
+      event.currentTarget !== event.target ||
+      !commandHomeNavigationPending
+    ) {
+      return;
+    }
+
     router.replace("/home", { scroll: false });
-  }, [router]);
+  };
 
   useEffect(() => {
     if (authSessionPending) {
@@ -508,6 +533,21 @@ export function CommandHomeClient({
         </section>
       ) : null}
 
+      {commandHomePrefetchReady ? (
+        <Link
+          href="/home"
+          replace
+          scroll={false}
+          prefetch={true}
+          tabIndex={-1}
+          aria-hidden="true"
+          className={styles.commandHomePrefetch}
+          data-home-prefetch
+        >
+          Pré-carregar comando
+        </Link>
+      ) : null}
+
       {children}
 
       <section
@@ -606,6 +646,14 @@ export function CommandHomeClient({
         </nav>
         <span>PROTOCOLO 42-T</span>
       </footer>
+
+      {commandHomeNavigationPending ? (
+        <div
+          className={styles.commandHomeRouteTransition}
+          aria-hidden="true"
+          onAnimationEnd={handleCommandHomeTransitionEnd}
+        />
+      ) : null}
 
       <CommandAuthModal
         open={authModalOpen}
