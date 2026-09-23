@@ -136,9 +136,11 @@ test("holograma Brasil é decorativo e fallback funcional continua na Foundation
   assert.match(readyStyles, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
-test("autorização de conflito não cria nova espera antes da navegação", () => {
-  assert.match(lobby, /snapshot\.room\.status !== "waiting"/);
-  assert.match(lobby, /router\.replace\(`\/game\/\$\{snapshot\.room\.code\}`\)/);
+test("autorização de conflito reconcilia participação antes da navegação", () => {
+  assert.match(lobby, /snapshot\.room\.status === "waiting"/);
+  assert.match(lobby, /fetch\("\/api\/participation"/);
+  assert.match(lobby, /router\.replace/);
+  assert.match(lobby, /`\/game\/\$\{snapshot\.room\.code\}`/);
   assert.match(lobby, /CONFLITO AUTORIZADO/);
   const navigationStart = lobby.indexOf("useEffect(() =>");
   const heartbeatStart = lobby.indexOf("useEffect(() =>", navigationStart + 1);
@@ -155,12 +157,14 @@ test("identidade visual mantém verde militar, latão e vermelho reservado ao co
 });
 
 
-test("lobby mantém heartbeat do assento e saída explícita sem unload destrutivo", () => {
+test("lobby mantém lease curto e usa Voltar como única saída explícita", () => {
   assert.match(lobby, /\/api\/rooms\/\$\{encodeURIComponent\(code\)\}\/heartbeat/);
-  assert.match(lobby, /30_000/);
+  assert.match(lobby, /5_000/);
+  assert.match(lobby, /inFlight/);
   assert.match(lobby, /method: "DELETE"/);
   assert.match(lobby, /router\.replace\("\/matchmaking"\)/);
-  assert.match(workspace, /SAIR DA SALA/);
+  assert.match(workspace, /onBackToOperations/);
+  assert.doesNotMatch(workspace, /SAIR DA SALA|leaveButton/);
   assert.doesNotMatch(lobby, /beforeunload|pagehide/);
 });
 
