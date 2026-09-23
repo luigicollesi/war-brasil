@@ -8,7 +8,7 @@ Avaliar conforme `../quality-standard.md` e `../traceability.md`.
 | --- | --- | --- |
 | LOB-01 | entrada/saída atualiza UI sem reload manual | multi-client integration/e2e |
 | LOB-02 | ready/unready permanece sincronizado entre clientes | multi-client integration |
-| LOB-03 | facção/cor continuam respeitando regras vigentes | regression test |
+| LOB-03 | nome de exibição/handle vêm do perfil e cor continua respeitando regras vigentes | regression test |
 | LOB-04 | início ocorre uma única vez quando condições vigentes são satisfeitas | integration/e2e |
 | LOB-05 | reconexão/erro têm estado textual e recuperável | e2e/manual |
 | LOB-06 | código da sala é legível, selecionável/copiável | interaction test |
@@ -66,7 +66,7 @@ Aprovação: >= 85 + todos os BLOCKERs.
 - `LOB-S17`: 390x844 alternando Formação/Sua estação sem scroll;
 - `LOB-S18`: 390x580 mantendo ready e controles prioritários;
 - `LOB-S19`: seis jogadores não aumentam a altura da rota;
-- `LOB-S20`: credencial longa/nome de facção máximo não cresce a estação;
+- `LOB-S20`: nome de exibição/handle longos não crescem a estação;
 - `LOB-S21`: 6 canais de autorização em vazio/configurando/pronto;
 - `LOB-S22`: start-authorized muda autoridade visual sem adicionar espera.
 
@@ -114,11 +114,13 @@ Validar no código:
 - formação usa exatamente seis posições sem crescer verticalmente com a ocupação;
 - desktop possui nexus central com `/war-brasil-42.production.svg` tratado como decoração;
 - mobile oculta nexus central e recompõe postos em `2×3`;
-- estação compacta credencial/descrições antes de inputs e cores;
+- estação compacta credencial/descrições antes da identidade somente leitura e das cores;
 - trilho de autorização possui seis células e deriva estados de `players`;
 - nenhum dos quatro painéis principais usa `overflow-y: auto` ou `scroll`;
 - animações do nexus/insígnias são desativadas em `prefers-reduced-motion`;
 - seletor mobile altera apenas estado visual local;
+- jogadores humanos não possuem editor local de nome de facção; `displayName`/`handle` vêm do snapshot autoritativo;
+- cards humanos apontam para `/profile/[handle]` em nova aba sem tornar bots navegáveis;
 - `LobbyClient` continua sendo o controlador de requests/realtime;
 - controle Voltar aponta explicitamente para `/matchmaking` e não dispara mutação de sala.
 
