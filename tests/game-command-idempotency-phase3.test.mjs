@@ -142,23 +142,33 @@ test("cliente envia uma identidade por comando e faz no máximo uma repetição"
 });
 
 test("todas as rotas humanas usadas por runGameCommand propagam metadata", () => {
-  const routes = [
+  const directRoutes = [
     "src/app/api/games/[roomId]/roll/route.ts",
-    "src/app/api/games/[roomId]/phase/route.ts",
-    "src/app/api/games/[roomId]/reinforce/route.ts",
-    "src/app/api/games/[roomId]/maneuver/route.ts",
     "src/app/api/games/[roomId]/attack/route.ts",
     "src/app/api/games/[roomId]/attack/cancel/route.ts",
     "src/app/api/games/[roomId]/attack/roll/route.ts",
-    "src/app/api/games/[roomId]/conquest/route.ts",
-    "src/app/api/games/[roomId]/cards/trade/route.ts",
     "src/app/api/games/[roomId]/rematch/route.ts",
     "src/app/api/games/[roomId]/return-lobby/route.ts",
   ];
+  const wrappedRoutes = [
+    "src/app/api/games/[roomId]/phase/route.ts",
+    "src/app/api/games/[roomId]/reinforce/route.ts",
+    "src/app/api/games/[roomId]/maneuver/route.ts",
+    "src/app/api/games/[roomId]/conquest/route.ts",
+    "src/app/api/games/[roomId]/cards/trade/route.ts",
+  ];
 
-  for (const path of routes) {
+  for (const path of directRoutes) {
     const route = source(path);
     assert.match(route, /readGameCommandRequestMetadata\(request\)/, path);
+    assert.match(route, /metadata\)/, path);
+  }
+
+  const helper = source("src/lib/server/game-command-route.ts");
+  assert.match(helper, /readGameCommandRequestMetadata\(request\)/);
+  for (const path of wrappedRoutes) {
+    const route = source(path);
+    assert.match(route, /createGameJsonCommandRoute/, path);
     assert.match(route, /metadata\)/, path);
   }
 });
