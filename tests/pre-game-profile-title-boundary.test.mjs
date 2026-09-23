@@ -114,6 +114,7 @@ test("title style keys use a composable allow-listed visual grammar", () => {
   const resolver = read("src/lib/profile/title-style.ts");
   const renderer = read("src/components/profile/profile-title-renderer.tsx");
   const styles = read("src/components/profile/profile-title-renderer.module.css");
+  const effects = read("src/app/title-effects.css");
 
   assert.match(resolver, /TITLE_STYLE_MAX_LENGTH = 48/);
   assert.match(resolver, /export const TITLE_PALETTES/);
@@ -176,7 +177,8 @@ test("title style keys use a composable allow-listed visual grammar", () => {
 
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(styles, /@media \(forced-colors: active\)/);
-  assert.match(styles, /@property --profile-title-angle/);
+  assert.match(effects, /@property --profile-title-angle/);
+  assert.match(effects, /@keyframes wb-title-sheen/);
   assert.match(styles, /color-mix\(/);
   assert.doesNotMatch(renderer, /STYLE_CLASS/);
 });

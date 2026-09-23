@@ -10,6 +10,7 @@ import {
   profileTitleFontVariables,
 } from "./fonts";
 import "./globals.css";
+import "./title-effects.css";
 import "./war-identity.css";
 import "./lobby-ready-rail.css";
 import "./war-guide.css";
