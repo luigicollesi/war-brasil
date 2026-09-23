@@ -735,6 +735,10 @@ export async function leaveWaitingRoom(
   if (!code) throw new RoomError("Código de sala inválido.", 422);
 
   return withTransaction(async (client) => {
+    if (userId) {
+      await lockActiveParticipationForUser(client, userId);
+    }
+
     const room = await findRoomForUpdate(client, code);
     if (room.status !== "waiting") {
       throw new RoomError(
