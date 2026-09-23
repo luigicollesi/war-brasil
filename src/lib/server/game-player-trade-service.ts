@@ -190,7 +190,9 @@ async function loadPlayer(
     await client.query<TradePlayer>(
       `SELECT id,is_bot,turn_position,trade_signals_used
        FROM game.players
-       WHERE room_id=$1 AND id=$2${lock ? " FOR UPDATE" : ""}`,
+       WHERE room_id=$1
+         AND id=$2
+         AND left_at IS NULL${lock ? " FOR UPDATE" : ""}`,
       [roomId, playerId],
     )
   ).rows[0] ?? null;
@@ -205,7 +207,9 @@ async function playerBySession(
     await client.query<TradePlayer>(
       `SELECT id,is_bot,turn_position,trade_signals_used
        FROM game.players
-       WHERE room_id=$1 AND player_session=$2
+       WHERE room_id=$1
+         AND player_session=$2
+         AND left_at IS NULL
        FOR UPDATE`,
       [roomId, session],
     )
