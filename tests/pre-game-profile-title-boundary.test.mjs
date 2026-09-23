@@ -229,3 +229,16 @@ test("title design still comes directly from catalog appearance columns", () => 
   assert.match(service, /styleKey: row\.style_key/);
   assert.match(renderer, /resolveCommanderTitleDesign\(title\)/);
 });
+
+
+test("gradient aura layers do not inherit the title's solid shadow stack", () => {
+  const styles = read("src/components/profile/profile-title-renderer.module.css");
+
+  const auraStart = styles.indexOf(".auraLayer");
+  const glowStart = styles.indexOf(".glowAura", auraStart);
+  assert.ok(auraStart >= 0 && glowStart > auraStart);
+
+  const auraBlock = styles.slice(auraStart, glowStart);
+  assert.match(auraBlock, /text-shadow:\s*none/);
+  assert.match(auraBlock, /-webkit-text-stroke:\s*0/);
+});

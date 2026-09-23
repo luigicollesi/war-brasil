@@ -109,6 +109,8 @@
   pointer-events: none;
   user-select: none;
   color: transparent;
+  text-shadow: none;
+  -webkit-text-stroke: 0;
   opacity: var(--profile-title-aura-opacity);
   filter: blur(var(--profile-title-aura-blur));
   background-size: 240% 240%;
