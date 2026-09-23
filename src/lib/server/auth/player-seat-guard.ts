@@ -12,6 +12,7 @@ export async function assertAuthenticatedPlayerSeat(
   request: Request,
   playerSession: string,
   scope: PlayerSeatScope,
+  options: { allowDeparted?: boolean } = {},
 ) {
   const accountSession = await getAuthenticatedSession(request);
   if (!accountSession) {
@@ -27,9 +28,14 @@ export async function assertAuthenticatedPlayerSeat(
             AND player.player_session = $2
             AND player.user_id = $3
             AND player.is_bot = FALSE
-            AND player.left_at IS NULL
+            AND (player.left_at IS NULL OR $4::boolean=TRUE)
           LIMIT 1`,
-        [scope.roomCode, playerSession, accountSession.user.id],
+        [
+          scope.roomCode,
+          playerSession,
+          accountSession.user.id,
+          options.allowDeparted === true,
+        ],
       )
     : await pool.query<{ player_id: string }>(
         `SELECT player.id AS player_id
@@ -38,9 +44,14 @@ export async function assertAuthenticatedPlayerSeat(
             AND player.player_session = $2
             AND player.user_id = $3
             AND player.is_bot = FALSE
-            AND player.left_at IS NULL
+            AND (player.left_at IS NULL OR $4::boolean=TRUE)
           LIMIT 1`,
-        [scope.roomId, playerSession, accountSession.user.id],
+        [
+          scope.roomId,
+          playerSession,
+          accountSession.user.id,
+          options.allowDeparted === true,
+        ],
       );
 
   const seat = result.rows[0];
