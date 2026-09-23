@@ -10,6 +10,7 @@ const smokeSuite = [
   "scripts/e2e/lobby-e2e.mjs",
   "scripts/e2e/game-modes-e2e.mjs",
   "scripts/e2e/game-modes-victory-e2e.mjs",
+  "scripts/e2e/game-player-exit-e2e.mjs",
   "scripts/e2e/economy-game-e2e.mjs",
   "scripts/e2e/store-showcase-e2e.mjs",
 ];
