@@ -1,6 +1,12 @@
 import { getSessionCookie } from "better-auth/cookies";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import {
+  ACTIVE_PARTICIPATION_COOKIE,
+  activeParticipationTarget,
+  parseActiveParticipationHint,
+  pathnameMatchesActiveParticipation,
+} from "@/src/lib/shared/active-participation";
 
 function isBusinessApi(pathname: string) {
   return pathname === "/api" || pathname.startsWith("/api/");
@@ -27,14 +33,32 @@ function authenticationRequiredResponse() {
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Proxy faz somente uma checagem otimista do cookie para navegação.
-  // A sessão real e a autorização continuam sendo validadas perto dos dados,
-  // em Server Components e Route Handlers.
-  if (pathname === "/" || pathname === "/terms" || pathname === "/privacy") {
+  // Proxy faz somente checagens otimistas de cookies para navegação.
+  // A participação e a autorização reais continuam validadas perto dos dados.
+  if (pathname === "/terms" || pathname === "/privacy") {
     return NextResponse.next();
   }
 
-  if (hasSessionCookie(request)) {
+  const authenticated = hasSessionCookie(request);
+  if (authenticated && !isBusinessApi(pathname)) {
+    const participation = parseActiveParticipationHint(
+      request.cookies.get(ACTIVE_PARTICIPATION_COOKIE)?.value,
+    );
+    if (
+      participation &&
+      !pathnameMatchesActiveParticipation(pathname, participation)
+    ) {
+      return NextResponse.redirect(
+        new URL(activeParticipationTarget(participation), request.url),
+      );
+    }
+  }
+
+  if (pathname === "/") {
+    return NextResponse.next();
+  }
+
+  if (authenticated) {
     return NextResponse.next();
   }
 
