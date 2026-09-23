@@ -99,7 +99,7 @@ test("inicialização continua incluindo todos os jogadores da sala", () => {
 
   assert.match(
     loadPlayers,
-    /SELECT id FROM game\.players WHERE room_id\s*=\s*\$1 ORDER BY joined_at,id/,
+    /SELECT id FROM game\.players WHERE room_id\s*=\s*\$1 AND left_at IS NULL ORDER BY joined_at,id/,
   );
   assert.doesNotMatch(loadPlayers, /is_bot\s*=\s*FALSE/);
   assert.match(startGame, /SET faction_name=display_name_snapshot/);
