@@ -201,7 +201,7 @@ test("Doutrina mobile fixa navegador e ações no rodapé sem cobrir conteúdo",
   );
 
   assert.match(experience, /className=\{ux\.mobileReturnButton\}/);
-  assert.match(experience, />COMANDO</);
+  assert.match(experience, />\s*COMANDO\s*</);
   assert.match(
     uxCss,
     /@media \(max-width: 760px\)[\s\S]*\.indexPanel\s*\{[\s\S]*bottom: 0/,
@@ -242,7 +242,8 @@ test("layout da Doutrina fixa índice no viewport, recompõe mobile e respeita r
   assert.match(uxCss, /100dvh/);
   assert.match(uxCss, /margin-left: var\(--doctrine-index-width\)/);
   assert.match(uxCss, /--doctrine-mobile-index-height/);
-  assert.match(uxCss, /padding-top: var\(--doctrine-mobile-index-height\)/);
+  assert.match(uxCss, /--doctrine-mobile-actions-height/);
+  assert.match(uxCss, /padding-bottom: calc\(/);
   assert.match(uxCss, /overflow-y: auto/);
   assert.match(uxCss, /view-transition-name: doctrine-chapter/);
   assert.match(uxCss, /data-doctrine-direction="forward"/);
