@@ -191,7 +191,7 @@ export async function executeRollOrderDie(
 
   const players = (
     await client.query<OrderPlayer>(
-      "SELECT id FROM game.players WHERE room_id=$1 ORDER BY joined_at,id",
+      "SELECT id FROM game.players WHERE room_id=$1 AND left_at IS NULL ORDER BY joined_at,id",
       [room.id],
     )
   ).rows;
