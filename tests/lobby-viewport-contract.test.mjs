@@ -17,12 +17,15 @@ const backButton = readFileSync("src/components/pre-game-back-button.tsx", "utf8
 
 const lobbyLayoutStyles = [workspaceStyles, formationStyles, stationStyles, readyStyles].join("\n");
 
-test("Matchmaking e Lobby usam retorno explícito sem depender do histórico", () => {
+test("Matchmaking mantém link de retorno e Lobby usa saída explícita antes de navegar", () => {
   assert.match(matchmaking, /<PreGameBackButton href="\/home" label="Voltar ao Comando" \/>/);
-  assert.match(workspace, /<PreGameBackButton href="\/matchmaking"/);
-  assert.match(workspace, /label="Voltar para Operações"/);
-  assert.match(lobbyClient, /<PreGameBackButton href="\/matchmaking" \/>/);
+  assert.match(workspace, /label=\{leaving \? "Saindo da operação…" : "Voltar para Operações"\}/);
+  assert.match(workspace, /onClick=\{onBackToOperations\}/);
+  assert.doesNotMatch(workspace, /SAIR DA SALA|onLeaveRoom/);
+  assert.match(lobbyClient, /method: "DELETE"/);
+  assert.match(lobbyClient, /router\.replace\("\/matchmaking"\)/);
   assert.match(backButton, /<Link href=\{href\}/);
+  assert.match(backButton, /<button[\s\S]*?onClick=\{onClick\}/);
   assert.doesNotMatch(backButton, /router\.back|history\.back/);
 });
 
@@ -98,7 +101,8 @@ test("LobbyClient continua controlador único dos contratos funcionais", () => {
   assert.match(lobbyClient, /fetch\(`\/api\/rooms\/\$\{encodeURIComponent\(code\)\}\/me`/);
   assert.match(lobbyClient, /fetch\(`\/api\/rooms\/\$\{encodeURIComponent\(code\)\}\/bots`/);
   assert.match(lobbyClient, /method: "DELETE"/);
-  assert.match(lobbyClient, /router\.replace\(`\/game\/\$\{snapshot\.room\.code\}`\)/);
+  assert.match(lobbyClient, /fetch\("\/api\/participation"/);
+  assert.match(lobbyClient, /router\.replace\([\s\S]*?snapshot\.room\.code/);
   assert.doesNotMatch(workspace, /fetch\(|useLobbySync|router\.replace/);
   assert.doesNotMatch(formation, /fetch\(|useLobbySync/);
   assert.doesNotMatch(station, /fetch\(|useLobbySync/);
