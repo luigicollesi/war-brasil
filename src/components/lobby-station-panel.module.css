@@ -244,23 +244,43 @@
   gap: clamp(11px, 1.7vh, 17px);
 }
 
-.nameEditor {
-  margin: 0;
-}
-
-.nameLine {
+.displayIdentity {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 6px;
+  min-width: 0;
+  gap: 5px;
 }
 
-.nameLine :global(.wb-field) {
+.displayIdentityValue {
+  display: flex;
+  min-width: 0;
   min-height: 40px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: 1px solid rgb(214 169 62 / 16%);
+  padding: 7px 9px;
+  background: rgb(0 0 0 / 16%);
 }
 
-.saveButton {
-  min-height: 40px !important;
-  padding-inline: 9px !important;
+.displayIdentityValue strong,
+.displayIdentityValue span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.displayIdentityValue strong {
+  color: var(--wb-text);
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: .76rem;
+  font-weight: 720;
+}
+
+.displayIdentityValue span {
+  color: var(--wb-text-muted);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: .46rem;
+  letter-spacing: .04em;
 }
 
 .colorEditor {
