@@ -22,7 +22,7 @@ import { RoomError } from "@/src/lib/server/room-error";
 type DepartureRoom = {
   id: string;
   code: string;
-  status: "order_roll" | "playing" | "finished";
+  status: "waiting" | "order_roll" | "playing" | "finished";
   current_player_id: string | null;
   round_number: number;
   jurassic_tunnel_territory_id: number | null;
