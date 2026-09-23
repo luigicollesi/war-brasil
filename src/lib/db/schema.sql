@@ -91,10 +91,6 @@ CREATE TABLE IF NOT EXISTS game.players (
 
 CREATE INDEX IF NOT EXISTS players_room_id_idx ON game.players(room_id);
 
-CREATE INDEX IF NOT EXISTS players_active_user_idx
-  ON game.players(user_id, room_id)
-  WHERE user_id IS NOT NULL AND left_at IS NULL;
-
 CREATE TABLE IF NOT EXISTS ops.command_receipts (
   room_id BIGINT NOT NULL REFERENCES game.rooms(id) ON DELETE CASCADE,
   player_id BIGINT NOT NULL REFERENCES game.players(id) ON DELETE CASCADE,
