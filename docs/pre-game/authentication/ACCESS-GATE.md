@@ -93,11 +93,20 @@ MUST:
 
 ### 4.1 Validação da sessão
 
-Como Next.js 16 permite runtime Node no Proxy, a implementação MAY validar a sessão completa com Better Auth.
+O Proxy faz somente uma checagem **otimista** do cookie de sessão para navegação e redirect. Ele MUST NOT consultar PostgreSQL nem chamar a validação completa de sessão em toda request.
 
-Se for adotada uma checagem otimista baseada somente na presença de cookie por motivo de desempenho, ela MUST ser tratada apenas como UX/redirect. Toda página/route handler protegida ainda valida a sessão no servidor.
+Essa decisão segue diretamente as recomendações oficiais:
 
-Preferência desta trilha: validar sessão real quando o custo medido for aceitável; não sacrificar a proteção server-side mesmo que o Proxy faça validação completa.
+- Next.js recomenda, para checks otimistas no Proxy, ler a sessão a partir do cookie e evitar database checks porque o Proxy executa em todas as rotas cobertas, inclusive requests de prefetch;
+- Better Auth recomenda `getSessionCookie(request)` para redirects otimistas e alerta que a presença do cookie não valida a sessão;
+- como o projeto usa `advanced.cookiePrefix = "war-brasil"`, o mesmo `cookiePrefix` MUST ser informado ao helper do Better Auth.
+
+Portanto, presença de cookie no Proxy significa somente **prosseguir até a validação autoritativa**. Toda página, Route Handler ou operação protegida MUST continuar validando a sessão no servidor perto da fonte de dados.
+
+Referências oficiais:
+
+- https://nextjs.org/docs/app/guides/authentication#optimistic-checks-with-proxy-optional
+- https://better-auth.com/docs/integrations/next#auth-protection
 
 ## 5. Backend Access Middleware
 

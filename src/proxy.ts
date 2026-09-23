@@ -1,19 +1,17 @@
+import { getSessionCookie } from "better-auth/cookies";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
-
-const SESSION_COOKIE_SUFFIX = "war-brasil.session_token";
 
 function isBusinessApi(pathname: string) {
   return pathname === "/api" || pathname.startsWith("/api/");
 }
 
 function hasSessionCookie(request: NextRequest) {
-  return request.cookies
-    .getAll()
-    .some(
-      ({ name, value }) =>
-        Boolean(value) && name.endsWith(SESSION_COOKIE_SUFFIX),
-    );
+  return Boolean(
+    getSessionCookie(request, {
+      cookiePrefix: "war-brasil",
+    }),
+  );
 }
 
 function authenticationRequiredResponse() {
@@ -26,12 +24,12 @@ function authenticationRequiredResponse() {
   );
 }
 
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // O Middleware é apenas uma barreira leve de navegação. Ele nunca consulta
-  // Better Auth/PostgreSQL: a validação autoritativa continua nos Route
-  // Handlers e Server Components, fora do runtime de Middleware do OpenNext.
+  // Proxy faz somente uma checagem otimista do cookie para navegação.
+  // A sessão real e a autorização continuam sendo validadas perto dos dados,
+  // em Server Components e Route Handlers.
   if (pathname === "/" || pathname === "/terms" || pathname === "/privacy") {
     return NextResponse.next();
   }

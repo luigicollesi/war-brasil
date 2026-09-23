@@ -18,7 +18,7 @@ const health = readFileSync(
   "src/app/api/health/route.ts",
   "utf8",
 );
-const middleware = readFileSync("src/middleware.ts", "utf8");
+const proxy = readFileSync("src/proxy.ts", "utf8");
 const smoke = readFileSync("scripts/cloudflare-smoke.mjs", "utf8");
 const wrangler = readFileSync("wrangler.jsonc", "utf8");
 
@@ -79,7 +79,7 @@ test("health público prova banco principal e schema auth na implantação real"
   assert.match(health, /authPool\.query/);
   assert.match(health, /current_schema\(\)/);
   assert.match(health, /schema_name !== "auth"/);
-  assert.match(middleware, /api\/health/);
+  assert.match(proxy, /api\/health/);
   assert.match(smoke, /\/api\/health/);
   assert.match(smoke, /healthPayload\?\.ok/);
 });

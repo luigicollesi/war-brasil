@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, unlinkSync, writeFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import test from "node:test";
 import { NextRequest } from "next/server.js";
@@ -46,33 +46,45 @@ test("matcher real do Proxy inclui negócio e exclui auth, health, internal e as
 
 test("Proxy mantém allowlist pública, redirect de página e 401 de API", async () => {
   assert.equal(existsSync(proxyPath), true, "src/proxy.ts deve existir antes do teste funcional");
-  const moduleUrl = pathToFileURL(proxyPath).href;
-  const { proxy } = await import(moduleUrl);
 
-  const publicResponse = await proxy(new NextRequest("http://localhost/terms"));
-  assert.equal(publicResponse.headers.get("x-middleware-next"), "1");
-
-  const protectedResponse = await proxy(
-    new NextRequest("http://localhost/profile"),
+  const runtimePath = `.proxy-runtime-${process.pid}.ts`;
+  writeFileSync(
+    runtimePath,
+    proxySource.replaceAll('"next/server"', '"next/server.js"'),
+    "utf8",
   );
-  assert.equal(protectedResponse.status, 307);
-  assert.equal(protectedResponse.headers.get("location"), "http://localhost/");
 
-  const apiResponse = await proxy(
-    new NextRequest("http://localhost/api/rooms"),
-  );
-  assert.equal(apiResponse.status, 401);
-  assert.deepEqual(await apiResponse.json(), {
-    error: "authentication_required",
-    message: "Autenticação necessária para acessar este recurso.",
-  });
+  try {
+    const moduleUrl = `${pathToFileURL(runtimePath).href}?pid=${process.pid}`;
+    const { proxy } = await import(moduleUrl);
 
-  const authenticatedResponse = await proxy(
-    new NextRequest("http://localhost/profile", {
-      headers: {
-        cookie: "war-brasil.session_token=opaque-session-token",
-      },
-    }),
-  );
-  assert.equal(authenticatedResponse.headers.get("x-middleware-next"), "1");
+    const publicResponse = await proxy(new NextRequest("http://localhost/terms"));
+    assert.equal(publicResponse.headers.get("x-middleware-next"), "1");
+
+    const protectedResponse = await proxy(
+      new NextRequest("http://localhost/profile"),
+    );
+    assert.equal(protectedResponse.status, 307);
+    assert.equal(protectedResponse.headers.get("location"), "http://localhost/");
+
+    const apiResponse = await proxy(
+      new NextRequest("http://localhost/api/rooms"),
+    );
+    assert.equal(apiResponse.status, 401);
+    assert.deepEqual(await apiResponse.json(), {
+      error: "authentication_required",
+      message: "Autenticação necessária para acessar este recurso.",
+    });
+
+    const authenticatedResponse = await proxy(
+      new NextRequest("http://localhost/profile", {
+        headers: {
+          cookie: "war-brasil.session_token=opaque-session-token",
+        },
+      }),
+    );
+    assert.equal(authenticatedResponse.headers.get("x-middleware-next"), "1");
+  } finally {
+    unlinkSync(runtimePath);
+  }
 });
