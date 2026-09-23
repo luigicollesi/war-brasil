@@ -7,6 +7,7 @@ import { isGameCommandPatch } from "@/src/lib/game-command-patch";
 import type { GameCommandRequestMetadata } from "@/src/lib/game-command-request";
 import { isGamePrivatePatch } from "@/src/lib/game-private-patch";
 import type { GameCommandResult } from "@/src/lib/game-revision";
+import { RoomError } from "@/src/lib/rooms";
 import { resolveCommandPlayerBySession } from "./game-command-player";
 import { publishGameCommandMetric } from "./observability/game-command-metrics";
 

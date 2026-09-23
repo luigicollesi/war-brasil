@@ -16,10 +16,6 @@ type FinishRoom = {
   status: "waiting" | "order_roll" | "playing" | "finished";
 };
 
-type FinishPlayer = {
-  id: string;
-};
-
 function normalizeRoomId(value: string) {
   if (!/^\d+$/.test(value)) {
     throw new RoomError("Partida não encontrada.", 404);
