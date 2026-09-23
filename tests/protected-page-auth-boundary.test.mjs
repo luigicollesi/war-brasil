@@ -12,7 +12,7 @@ test("Profile valida sessão autoritativa antes de consultar dados privados", ()
 
   const sessionIndex = profilePage.indexOf("const session = await getAuthenticatedSessionForReadHeaders");
   const redirectIndex = profilePage.indexOf('redirect("/")');
-  const snapshotIndex = profilePage.indexOf("getCurrentProfileCommandSnapshot");
+  const snapshotIndex = profilePage.indexOf("getCurrentProfileCommandSnapshot(session");
 
   assert.ok(sessionIndex >= 0);
   assert.ok(redirectIndex > sessionIndex);
