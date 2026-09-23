@@ -354,6 +354,7 @@ function sameRoom(left: GameSnapshot["room"], right: GameSnapshot["room"]) {
     sameActiveEvent(left.activeEvent, right.activeEvent) &&
     left.reinforcementsRemaining === right.reinforcementsRemaining &&
     left.winnerPlayerId === right.winnerPlayerId &&
+    sameStrings(left.winnerPlayerIds, right.winnerPlayerIds) &&
     sameRematch(left.rematch, right.rematch) &&
     pendingEqual &&
     sameBattle(left.battle, right.battle)
