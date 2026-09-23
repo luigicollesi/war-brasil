@@ -33,22 +33,6 @@ if (PRESENCE_E2E_REQUIRED && (!PRESENCE_INTERNAL_URL || !PRESENCE_INTERNAL_TOKEN
   );
 }
 
-) {
-  return page.evaluate(
-    async ({ requestUrl, requestInit }) => {
-      const response = await fetch(requestUrl, requestInit);
-      let body = null;
-      try {
-        body = await response.json();
-      } catch {
-        body = null;
-      }
-      return { status: response.status, body };
-    },
-    { requestUrl: url, requestInit: init },
-  );
-}
-
 async function getSession(page) {
   const response = await apiJson(page, "/api/auth/get-session");
   assert.equal(response.status, 200, JSON.stringify(response.body));
