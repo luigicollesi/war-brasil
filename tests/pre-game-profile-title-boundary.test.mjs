@@ -64,7 +64,6 @@ test("title font keys resolve to self-hosted Next font variables with safe fallb
   const fonts = read("src/app/fonts.ts");
   const layout = read("src/app/layout.tsx");
   const renderer = read("src/components/profile/profile-title-renderer.tsx");
-  const design = read("src/lib/profile/title-design.ts");
   const styles = read("src/components/profile/profile-title-renderer.module.css");
 
   for (const loader of [
@@ -113,6 +112,7 @@ test("title font keys resolve to self-hosted Next font variables with safe fallb
 
 test("title style keys use a composable allow-listed visual grammar", () => {
   const resolver = read("src/lib/profile/title-style.ts");
+  const design = read("src/lib/profile/title-design.ts");
   const renderer = read("src/components/profile/profile-title-renderer.tsx");
   const styles = read("src/components/profile/profile-title-renderer.module.css");
   const effects = read("src/app/title-effects.css");
