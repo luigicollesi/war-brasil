@@ -7,6 +7,27 @@
   color: var(--command-ivory, #eee8da);
 }
 
+.commandHomePrefetch {
+  position: fixed;
+  z-index: -1;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.commandHomeRouteTransition {
+  position: fixed;
+  z-index: 95;
+  inset: 0;
+  pointer-events: auto;
+  background: #070a08;
+  animation: commandHomeRouteTransition 180ms cubic-bezier(.2, .78, .2, 1) both;
+}
+
 .skipToCommand {
   position: absolute;
   z-index: 60;
@@ -424,6 +445,16 @@
   outline: none;
 }
 
+@keyframes commandHomeRouteTransition {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: .82;
+  }
+}
+
 @keyframes commandReveal {
   from {
     opacity: 0;
@@ -588,7 +619,8 @@
   .enterButton,
   .destination,
   .destinationArrow,
-  .openCommand {
+  .openCommand,
+  .commandHomeRouteTransition {
     animation: none !important;
     transition: none !important;
   }
