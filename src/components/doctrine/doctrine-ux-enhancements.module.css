@@ -70,6 +70,10 @@
   outline-offset: 3px;
 }
 
+.mobileReturnButton {
+  display: none;
+}
+
 .chapterNav {
   min-height: 0;
   overflow-y: auto;
@@ -183,63 +187,79 @@
 
 @media (max-width: 760px) {
   .shell {
-    --doctrine-mobile-index-height: 108px;
-    padding-top: var(--doctrine-mobile-index-height);
+    --doctrine-mobile-index-height: 68px;
+    --doctrine-mobile-actions-height: 58px;
+    padding-top: 0;
+    padding-bottom: calc(
+      var(--doctrine-mobile-index-height) +
+      var(--doctrine-mobile-actions-height) +
+      env(safe-area-inset-bottom)
+    );
   }
 
   .indexPanel {
     position: fixed;
-    z-index: 12;
+    z-index: 14;
     left: 0;
     right: 0;
-    top: var(--command-content-top, 88px);
+    top: auto;
+    bottom: 0;
     width: auto;
-    height: var(--doctrine-mobile-index-height);
-    min-height: var(--doctrine-mobile-index-height);
-    max-height: var(--doctrine-mobile-index-height);
-    padding: 8px 16px 6px;
+    height: calc(
+      var(--doctrine-mobile-index-height) + env(safe-area-inset-bottom)
+    );
+    min-height: calc(
+      var(--doctrine-mobile-index-height) + env(safe-area-inset-bottom)
+    );
+    max-height: calc(
+      var(--doctrine-mobile-index-height) + env(safe-area-inset-bottom)
+    );
+    padding: 7px 10px max(7px, env(safe-area-inset-bottom));
+    border-top: 1px solid var(--d-line);
     border-right: 0;
-    border-bottom: 1px solid var(--d-line);
-    background: rgba(7, 13, 10, 0.96);
-    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.24);
+    border-bottom: 0;
+    background: rgba(7, 13, 10, 0.97);
+    box-shadow: 0 -14px 30px rgba(0, 0, 0, 0.28);
     backdrop-filter: blur(14px);
   }
 
   .content {
     margin-left: 0;
+    padding-bottom: calc(
+      var(--doctrine-mobile-index-height) +
+      var(--doctrine-mobile-actions-height) +
+      env(safe-area-inset-bottom) +
+      28px
+    );
   }
 
   .indexPanel > div:first-child,
+  .indexTitleRow,
   .indexPanel > p,
   .indexPanel > div:last-child {
     display: none;
   }
 
-  .indexTitleRow {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 10px;
-  }
-
-  .indexPanel h1 {
-    margin: 0;
-    font-size: 18px;
-    line-height: 1;
-    letter-spacing: 0.08em;
-  }
-
-  .backButton {
-    order: 0;
-    min-height: 30px;
-    padding-inline: 9px;
-    font-size: 7px;
-  }
-
   .chapterNav {
+    height: 100%;
+    margin: 0;
+    padding: 2px 0;
     overflow-x: auto;
     overflow-y: hidden;
     scrollbar-gutter: auto;
+  }
+
+  .mobileReturnButton {
+    display: grid;
+    place-items: center;
+    min-height: 44px;
+    padding: 0 12px;
+    color: var(--d-gold-bright);
+    border: 1px solid rgba(205, 180, 107, 0.24);
+    background: rgba(205, 180, 107, 0.055);
+    text-decoration: none;
+    font: 700 8px/1 var(--font-geist-mono), monospace;
+    letter-spacing: 0.11em;
   }
 
   .phaseRail {
@@ -254,7 +274,7 @@
 
 @media (max-width: 420px) {
   .shell {
-    --doctrine-mobile-index-height: 106px;
+    --doctrine-mobile-index-height: 64px;
   }
 
   .playerTradeStage {
