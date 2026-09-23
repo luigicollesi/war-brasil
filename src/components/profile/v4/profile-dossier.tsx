@@ -61,7 +61,10 @@ export function ProfileDossier({
           <i />
         </div>
 
-        <div className={styles.identityMain}>
+        <div
+          className={styles.identityMain}
+          data-has-title={appearanceTitle || identity.title ? "true" : "false"}
+        >
           <div className={styles.eyebrowRow}>
             <span>DOSSIÊ // COMANDANTE</span>
             <span className={styles.presence} data-presence={identity.presence.state}>
