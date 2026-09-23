@@ -7,7 +7,7 @@ const seatGuard = readFileSync(
   "utf8",
 );
 
-const seatRoutes = [
+const directSeatRoutes = [
   "src/app/api/rooms/[code]/route.ts",
   "src/app/api/rooms/[code]/me/route.ts",
   "src/app/api/rooms/[code]/bots/route.ts",
@@ -16,17 +16,20 @@ const seatRoutes = [
   "src/app/api/games/[roomId]/attack/route.ts",
   "src/app/api/games/[roomId]/attack/cancel/route.ts",
   "src/app/api/games/[roomId]/attack/roll/route.ts",
-  "src/app/api/games/[roomId]/cards/trade/route.ts",
-  "src/app/api/games/[roomId]/conquest/route.ts",
-  "src/app/api/games/[roomId]/maneuver/route.ts",
-  "src/app/api/games/[roomId]/phase/route.ts",
   "src/app/api/games/[roomId]/realtime-ticket/route.ts",
-  "src/app/api/games/[roomId]/reinforce/route.ts",
   "src/app/api/games/[roomId]/rematch/route.ts",
   "src/app/api/games/[roomId]/return-lobby/route.ts",
   "src/app/api/games/[roomId]/roll/route.ts",
   "src/app/api/games/[roomId]/trade/route.ts",
   "src/app/api/games/[roomId]/trade/signal/route.ts",
+];
+
+const wrappedSeatRoutes = [
+  "src/app/api/games/[roomId]/cards/trade/route.ts",
+  "src/app/api/games/[roomId]/conquest/route.ts",
+  "src/app/api/games/[roomId]/maneuver/route.ts",
+  "src/app/api/games/[roomId]/phase/route.ts",
+  "src/app/api/games/[roomId]/reinforce/route.ts",
 ];
 
 test("player seat guard exige sessão Better Auth e ownership da mesma conta", () => {
@@ -41,7 +44,7 @@ test("player seat guard exige sessão Better Auth e ownership da mesma conta", (
 });
 
 test("todas as rotas humanas de Lobby e Game validam conta mais assento", () => {
-  for (const path of seatRoutes) {
+  for (const path of directSeatRoutes) {
     const source = readFileSync(path, "utf8");
     assert.match(
       source,
@@ -52,6 +55,19 @@ test("todas as rotas humanas de Lobby e Game validam conta mais assento", () => 
       source,
       /getPlayerSession\(request\)/,
       `${path} perdeu a identidade efêmera do assento`,
+    );
+  }
+
+  const helper = readFileSync("src/lib/server/game-command-route.ts", "utf8");
+  assert.match(helper, /assertAuthenticatedPlayerSeat/);
+  assert.match(helper, /getPlayerSession\(request\)/);
+
+  for (const path of wrappedSeatRoutes) {
+    const source = readFileSync(path, "utf8");
+    assert.match(
+      source,
+      /createGameJsonCommandRoute/,
+      `${path} não usa a boundary compartilhada de command route`,
     );
   }
 });
