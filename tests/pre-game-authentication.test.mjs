@@ -177,8 +177,8 @@ test("Proxy Next 16 mantém navegação otimista sem consultar Better Auth/Postg
   assert.match(proxy, /pathname === "\/privacy"/);
   assert.match(proxy, /api\/auth/);
   assert.match(proxy, /api\/internal/);
-  assert.match(proxy, /from "better-auth\\/cookies"/);
-  assert.match(proxy, /getSessionCookie\\(request,[\\s\\S]*cookiePrefix: "war-brasil"/);
+  assert.match(proxy, /from "better-auth\/cookies"/);
+  assert.match(proxy, /getSessionCookie\(request,[\s\S]*cookiePrefix: "war-brasil"/);
   assert.match(proxy, /authentication_required/);
   assert.match(proxy, /status: 401/);
   assert.match(proxy, /NextResponse\.redirect\(new URL\("\/", request\.url\)\)/);
