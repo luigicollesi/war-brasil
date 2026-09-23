@@ -61,8 +61,10 @@ test("qualquer jogador humano pode devolver a sala finalizada ao mesmo lobby", (
     service,
     /SET is_ready=is_bot,turn_position=NULL,bot_next_action_at=NULL/,
   );
-  assert.match(client, /snapshot\?\.room\.status === "waiting"/);
-  assert.match(client, /router\.replace\(`\/lobby\/\$\{snapshot\.room\.code\}`\)/);
+  assert.match(client, /snapshot\?\.room\.status !== "waiting"/);
+  assert.match(client, /refreshParticipationTarget/);
+  assert.match(client, /`\/lobby\/\$\{snapshot\.room\.code\}`/);
+  assert.match(client, /router\.replace\(target\)/);
   assert.doesNotMatch(gameRoute, /status as string\) === "waiting"/);
 });
 
