@@ -189,6 +189,36 @@ test("demonstrações reutilizam assets reais e explicam negociação sem confun
   assert.doesNotMatch(demos, /Canvas|@react-three|three\//i);
 });
 
+test("Doutrina mobile fixa navegador e ações no rodapé sem cobrir conteúdo", () => {
+  const experience = source(
+    "src/components/doctrine/doctrine-experience.tsx",
+  );
+  const css = source(
+    "src/components/doctrine/doctrine-experience.module.css",
+  );
+  const uxCss = source(
+    "src/components/doctrine/doctrine-ux-enhancements.module.css",
+  );
+
+  assert.match(experience, /className=\{ux\.mobileReturnButton\}/);
+  assert.match(experience, />COMANDO</);
+  assert.match(
+    uxCss,
+    /@media \(max-width: 760px\)[\s\S]*\.indexPanel\s*\{[\s\S]*bottom: 0/,
+  );
+  assert.match(
+    uxCss,
+    /@media \(max-width: 760px\)[\s\S]*\.content\s*\{[\s\S]*padding-bottom:/,
+  );
+  assert.match(uxCss, /\.mobileReturnButton/);
+  assert.match(
+    css,
+    /@media \(max-width: 760px\)[\s\S]*\.prevNext\s*\{[\s\S]*position: fixed/,
+  );
+  assert.match(css, /env\(safe-area-inset-bottom\)/);
+  assert.match(css, /min-height: 44px/);
+});
+
 test("layout da Doutrina fixa índice no viewport, recompõe mobile e respeita reduced motion", () => {
   const css = source(
     "src/components/doctrine/doctrine-experience.module.css",
