@@ -49,7 +49,10 @@ async function playerFor(
     await client.query<FinishPlayer>(
       `SELECT id
        FROM game.players
-       WHERE room_id=$1 AND player_session=$2 AND is_bot=FALSE
+       WHERE room_id=$1
+         AND player_session=$2
+         AND is_bot=FALSE
+         AND left_at IS NULL
        FOR UPDATE`,
       [roomId, session],
     )
@@ -91,6 +94,11 @@ async function resetRoomToWaiting(client: PoolClient, roomId: string) {
   // A rematch therefore cannot inherit pressure or an active profile snapshot.
   await finishDiceBalanceMatchForRoom(client, roomId);
   await clearGameArtifacts(client, roomId);
+  await client.query("DELETE FROM game.room_winners WHERE room_id=$1", [roomId]);
+  await client.query(
+    "DELETE FROM game.players WHERE room_id=$1 AND left_at IS NOT NULL",
+    [roomId],
+  );
 
   await client.query(
     `UPDATE game.players
@@ -151,7 +159,8 @@ export async function voteRematchCommand(
            FROM game.players p
            LEFT JOIN game.rematch_votes v
              ON v.room_id=p.room_id AND v.player_id=p.id
-           WHERE p.room_id=$1`,
+           WHERE p.room_id=$1
+             AND p.left_at IS NULL`,
           [room.id],
         )
       ).rows[0];
