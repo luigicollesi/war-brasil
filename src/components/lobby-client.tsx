@@ -1,6 +1,5 @@
 "use client";
 
-import type { FormEvent } from "react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LobbyCommandWorkspace } from "@/src/components/lobby-command-workspace";
@@ -290,12 +289,6 @@ export function LobbyClient({ code }: LobbyClientProps) {
     }
   }
 
-  function saveFaction(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    void updateMe({ factionName: formData.get("factionName") });
-  }
-
   if (isLoading && !snapshot) {
     return (
       <div className={styles.statePage}>
@@ -390,7 +383,6 @@ export function LobbyClient({ code }: LobbyClientProps) {
       tableStatus={tableStatus}
       onCopyRoomCode={() => void copyRoomCode()}
       onRefresh={() => void refresh()}
-      onSaveFaction={saveFaction}
       onColorChange={(color) => void updateMe({ color })}
       onUpdateSettings={(patch) => void updateSettings(patch)}
       onAddBot={() => void addBot()}
