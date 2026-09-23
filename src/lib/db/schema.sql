@@ -81,12 +81,19 @@ CREATE TABLE IF NOT EXISTS game.players (
   bot_next_action_at TIMESTAMPTZ,
   turn_position SMALLINT,
   joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  left_at TIMESTAMPTZ
+    CONSTRAINT players_left_at_after_joined_check
+      CHECK (left_at IS NULL OR left_at >= joined_at),
   UNIQUE (room_id, color),
   UNIQUE (room_id, player_session),
   UNIQUE (room_id, turn_position)
 );
 
 CREATE INDEX IF NOT EXISTS players_room_id_idx ON game.players(room_id);
+
+CREATE INDEX IF NOT EXISTS players_active_user_idx
+  ON game.players(user_id, room_id)
+  WHERE user_id IS NOT NULL AND left_at IS NULL;
 
 CREATE TABLE IF NOT EXISTS ops.command_receipts (
   room_id BIGINT NOT NULL REFERENCES game.rooms(id) ON DELETE CASCADE,
@@ -171,6 +178,16 @@ ALTER TABLE game.rooms
 ALTER TABLE game.rooms
   ADD CONSTRAINT rooms_winner_player_fkey
   FOREIGN KEY (winner_player_id) REFERENCES game.players(id) ON DELETE SET NULL;
+
+CREATE TABLE IF NOT EXISTS game.room_winners (
+  room_id BIGINT NOT NULL REFERENCES game.rooms(id) ON DELETE CASCADE,
+  player_id BIGINT NOT NULL REFERENCES game.players(id) ON DELETE CASCADE,
+  declared_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (room_id, player_id)
+);
+
+CREATE INDEX IF NOT EXISTS room_winners_player_idx
+  ON game.room_winners(player_id, room_id);
 
 CREATE TABLE IF NOT EXISTS game.rematch_votes (
   room_id BIGINT NOT NULL REFERENCES game.rooms(id) ON DELETE CASCADE,
