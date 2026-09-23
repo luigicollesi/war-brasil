@@ -158,6 +158,7 @@ export type GameSnapshot = {
     activeEvent: ActiveGameEvent | null;
     reinforcementsRemaining: number;
     winnerPlayerId: string | null;
+    winnerPlayerIds: string[];
     automaticAdvancePending: boolean;
     rematch: GameRematchState | null;
     pendingConquest: {
