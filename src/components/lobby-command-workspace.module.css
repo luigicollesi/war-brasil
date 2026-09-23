@@ -453,36 +453,3 @@
     scroll-behavior: auto;
   }
 }
-
-
-.leaveButton {
-  min-height: 26px;
-  border: 0;
-  padding: 0;
-  color: rgb(244 170 160 / 72%);
-  background: transparent;
-  font-family: var(--font-geist-mono), monospace;
-  font-size: .43rem;
-  font-weight: 850;
-  letter-spacing: .1em;
-  cursor: pointer;
-  transition: color 140ms ease, transform 140ms ease;
-}
-
-.leaveButton:hover,
-.leaveButton:focus-visible {
-  color: #f4aaa0;
-  transform: translateX(-2px);
-  outline: none;
-}
-
-.leaveButton:disabled {
-  opacity: .42;
-  cursor: wait;
-}
-
-@media (max-width: 720px) {
-  .leaveButton {
-    font-size: .38rem;
-  }
-}
