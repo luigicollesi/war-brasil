@@ -186,7 +186,42 @@
 
 .auraLayer[data-aura-motion="drift"] {
   --profile-title-aura-animation:
-    wb-title-aura-drift 9.5s ease-in-out infinite alternate;
+    wb-title-aura-drift 10s ease-in-out infinite;
+}
+
+/*
+ * Drift must move only the gradient, never the glyph geometry. Keep its aura
+ * tighter than static/breathing glow so the animated color cannot wash over
+ * the readable title face.
+ */
+.glowAura[data-aura-motion="drift"][data-aura-strength="soft"] {
+  --profile-title-aura-blur: 0.14em;
+  --profile-title-aura-opacity: 0.28;
+}
+
+.glowAura[data-aura-motion="drift"][data-aura-strength="medium"] {
+  --profile-title-aura-blur: 0.24em;
+  --profile-title-aura-opacity: 0.42;
+}
+
+.glowAura[data-aura-motion="drift"][data-aura-strength="strong"] {
+  --profile-title-aura-blur: 0.34em;
+  --profile-title-aura-opacity: 0.56;
+}
+
+.haloAura[data-aura-motion="drift"][data-aura-strength="soft"] {
+  --profile-title-aura-blur: 0.38em;
+  --profile-title-aura-opacity: 0.16;
+}
+
+.haloAura[data-aura-motion="drift"][data-aura-strength="medium"] {
+  --profile-title-aura-blur: 0.56em;
+  --profile-title-aura-opacity: 0.24;
+}
+
+.haloAura[data-aura-motion="drift"][data-aura-strength="strong"] {
+  --profile-title-aura-blur: 0.76em;
+  --profile-title-aura-opacity: 0.32;
 }
 
 .auraLayer[data-aura-motion="rotate"] {
@@ -427,8 +462,14 @@
 /* Primary motion functions ----------------------------------------------- */
 
 .title[data-motion="drift"] {
+  /*
+   * A closed background-position orbit keeps the glyphs fixed and gives the
+   * gradient a seamless loop. The previous angle interpolation made contrast
+   * bands rotate through letter edges and reduced legibility.
+   */
+  --profile-title-fill-size: 220% 220%;
   --profile-title-motion-animation:
-    wb-title-angle-drift 12s ease-in-out infinite alternate;
+    wb-title-gradient-drift 12s ease-in-out infinite;
 }
 
 .title[data-motion="sheen"] {
