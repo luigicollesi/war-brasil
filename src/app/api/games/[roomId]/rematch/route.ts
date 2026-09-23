@@ -1,27 +1,12 @@
-import { NextRequest } from "next/server";
-import { noStoreJson, roomErrorResponse } from "@/src/lib/api-response";
+import { noStoreJson } from "@/src/lib/api-response";
 import { voteRematchCommand } from "@/src/lib/game-finish-command-service";
-import { readGameCommandRequestMetadata } from "@/src/lib/server/game-command-request";
 import { GAME_REVISION_HEADER } from "@/src/lib/game-sync-contract";
-import { getPlayerSession } from "@/src/lib/player-session";
-import { RoomError } from "@/src/lib/rooms";
-import { assertAuthenticatedPlayerSeat } from "@/server/auth/player-seat-guard";
+import { createGameCommandRoute } from "@/src/lib/server/game-command-route";
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ roomId: string }> },
-) {
-  let roomId: string | undefined;
-
-  try {
-    const session = getPlayerSession(request);
-    if (!session) {
-      throw new RoomError("Entre em uma sala antes de votar na revanche.", 401);
-    }
-
-    ({ roomId } = await params);
-    await assertAuthenticatedPlayerSeat(request, session, { roomId });
-    const metadata = readGameCommandRequestMetadata(request);
+export const POST = createGameCommandRoute({
+  operation: "vote_rematch",
+  missingSessionMessage: "Entre em uma sala antes de votar na revanche.",
+  async execute({ roomId, session, metadata }) {
     const result = await voteRematchCommand(roomId, session, metadata);
 
     return noStoreJson(
@@ -35,11 +20,5 @@ export async function POST(
         },
       },
     );
-  } catch (error) {
-    return roomErrorResponse(error, {
-      operation: "vote_rematch",
-      route: request.nextUrl.pathname,
-      resource: { roomId },
-    });
-  }
-}
+  },
+});
