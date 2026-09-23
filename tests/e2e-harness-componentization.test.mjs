@@ -21,5 +21,6 @@ test("E2E reutiliza loader Playwright e cliente JSON sem duplicar implementaçã
     assert.match(source, /from "\.\/runtime-helper\.mjs"/, path);
     assert.doesNotMatch(source, /async function apiJson\(/, path);
     assert.doesNotMatch(source, /pathToFileURL\(/, path);
+    assert.doesNotMatch(source, /^\) \{/m, path);
   }
 });
