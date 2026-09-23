@@ -1,7 +1,10 @@
 import type { GameSnapshot } from "./game-contract";
 import { effectiveGameConnections } from "./game-effective-connections";
 
-export type GameSnapshotPayload = Omit<GameSnapshot, "connections"> & {
+export type GameSnapshotPayload = Omit<GameSnapshot, "connections" | "room"> & {
+  room: Omit<GameSnapshot["room"], "winnerPlayerIds"> & {
+    winnerPlayerIds?: string[];
+  };
   connections?: GameSnapshot["connections"];
 };
 
@@ -13,6 +16,12 @@ export function hydrateGameSnapshot(
 ): GameSnapshot {
   return {
     ...payload,
+    room: {
+      ...payload.room,
+      winnerPlayerIds:
+        payload.room.winnerPlayerIds ??
+        (payload.room.winnerPlayerId ? [payload.room.winnerPlayerId] : []),
+    },
     connections: effectiveGameConnections(
       baseConnections,
       payload.room.activeEvent?.resolvedEffects ?? [],
