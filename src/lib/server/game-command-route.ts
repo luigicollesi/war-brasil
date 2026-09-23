@@ -22,6 +22,7 @@ type GameCommandContext<TBody> = {
 type GameCommandRouteOptions<TBody> = {
   operation: string;
   missingSessionMessage?: string;
+  allowDepartedSeat?: boolean;
   execute: (
     context: GameCommandContext<TBody>,
   ) => Response | Promise<Response>;
@@ -31,6 +32,7 @@ function createGameCommandEnvelope<TBody>(
   {
     operation,
     missingSessionMessage = "Entre em uma sala antes de jogar.",
+    allowDepartedSeat = false,
     execute,
   }: GameCommandRouteOptions<TBody>,
   readBody: (request: NextRequest) => Promise<TBody>,
@@ -49,7 +51,12 @@ function createGameCommandEnvelope<TBody>(
       }
 
       ({ roomId } = await params);
-      await assertAuthenticatedPlayerSeat(request, session, { roomId });
+      await assertAuthenticatedPlayerSeat(
+        request,
+        session,
+        { roomId },
+        { allowDeparted: allowDepartedSeat },
+      );
       const metadata = readGameCommandRequestMetadata(request);
       body = await readBody(request);
 
