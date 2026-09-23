@@ -121,6 +121,7 @@ async function advanceOrderRollPresentation(
       `SELECT id
        FROM game.players
        WHERE room_id=$1
+         AND left_at IS NULL
        ORDER BY joined_at,id`,
       [room.id],
     )
