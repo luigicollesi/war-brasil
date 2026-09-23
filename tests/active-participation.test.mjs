@@ -47,6 +47,7 @@ const cleanupAuth = readFileSync(
 test("participação ativa é autoritativa por conta e serializada antes de room locks", () => {
   assert.match(participationService, /player\.user_id=\$1::uuid/);
   assert.match(participationService, /player\.is_bot=FALSE/);
+  assert.match(participationService, /player\.left_at IS NULL/);
   assert.match(participationService, /pg_advisory_xact_lock/);
   assert.match(participationService, /hashtextextended/);
   assert.match(participationService, /LIMIT 2/);
@@ -128,4 +129,24 @@ test("realtime usa alarm sob demanda para reconciliar desconexão sem poller glo
   assert.match(targetedCleanup, /publishLobbyChangeByCode/);
   assert.match(cleanupAuth, /GAME_REALTIME_INTERNAL_TOKEN/);
   assert.match(cleanupAuth, /timingSafeEqual/);
+});
+
+
+test("assentos abandonados são rejeitados nos boundaries de jogo", () => {
+  const seatGuard = readFileSync(
+    "src/lib/server/auth/player-seat-guard.ts",
+    "utf8",
+  );
+  const commandPlayer = readFileSync(
+    "src/lib/server/game-command-player.ts",
+    "utf8",
+  );
+  const snapshot = readFileSync(
+    "src/lib/server/game-snapshot-service.ts",
+    "utf8",
+  );
+  assert.match(seatGuard, /player\.left_at IS NULL/g);
+  assert.match(commandPlayer, /left_at IS NULL/);
+  assert.match(snapshot, /access_player\.left_at IS NULL/);
+  assert.match(snapshot, /WHERE room_id=\$1[\s\S]*?AND left_at IS NULL/);
 });
