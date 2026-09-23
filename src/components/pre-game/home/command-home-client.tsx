@@ -315,7 +315,6 @@ export function CommandHomeClient({
 
   const navigateToCommandHome = useCallback(() => {
     setCommandHomePrefetchReady(true);
-    router.prefetch("/home");
 
     if (reducedMotion) {
       router.replace("/home", { scroll: false });
