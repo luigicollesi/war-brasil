@@ -30,6 +30,10 @@ const activeDepartureMigration = readFileSync(
   "src/lib/db/migrations/managed/060-player-active-departure.sql",
   "utf8",
 );
+const roomWinnersMigration = readFileSync(
+  "src/lib/db/migrations/managed/061-room-winners.sql",
+  "utf8",
+);
 
 test("ambiente dev prepara migrations gerenciadas antes de subir Next e realtime", () => {
   assert.match(
@@ -262,4 +266,11 @@ test("migration de abandono mantém assento histórico e índice de participaç�
   assert.match(activeDepartureMigration, /players_left_at_after_joined_check/);
   assert.match(activeDepartureMigration, /players_active_user_idx/);
   assert.match(activeDepartureMigration, /left_at IS NULL/);
+});
+
+
+test("migration de vencedores preserva compatibilidade singular e normaliza empate", () => {
+  assert.match(roomWinnersMigration, /CREATE TABLE IF NOT EXISTS game\.room_winners/);
+  assert.match(roomWinnersMigration, /PRIMARY KEY \(room_id, player_id\)/);
+  assert.match(roomWinnersMigration, /room_winners_player_idx/);
 });
