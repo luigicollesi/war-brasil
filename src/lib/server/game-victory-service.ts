@@ -94,6 +94,23 @@ export async function finalizeGameVictories(
   return true;
 }
 
+export async function finalizeGameWithoutWinner(
+  client: PoolClient,
+  roomId: string,
+) {
+  const result = await client.query(
+    `UPDATE game.rooms
+     SET status='finished',phase='finished',winner_player_id=NULL
+     WHERE id=$1 AND status<>'finished'`,
+    [roomId],
+  );
+
+  if ((result.rowCount ?? 0) !== 1) return false;
+  await client.query("DELETE FROM game.room_winners WHERE room_id=$1", [roomId]);
+  await finishDiceBalanceMatchForRoom(client, roomId);
+  return true;
+}
+
 export async function evaluateGameVictory(
   client: PoolClient,
   roomId: string,
