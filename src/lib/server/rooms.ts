@@ -843,14 +843,14 @@ export async function updateLobbyPlayer(
 
   const hasColor = Object.hasOwn(input, "color");
   const hasReady = Object.hasOwn(input, "isReady");
-  if (!hasColor && !hasReady) {
-    throw new RoomError("Nenhuma alteração foi informada.", 400);
-  }
   if (Object.hasOwn(input, "factionName")) {
     throw new RoomError(
       "O nome exibido na sala é definido pelo perfil do comandante.",
       422,
     );
+  }
+  if (!hasColor && !hasReady) {
+    throw new RoomError("Nenhuma alteração foi informada.", 400);
   }
 
   return withTransaction(async (client) => {
