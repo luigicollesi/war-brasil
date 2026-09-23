@@ -4,6 +4,7 @@ import test from "node:test";
 
 const identity = readFileSync("src/app/war-identity.css", "utf8");
 const layout = readFileSync("src/app/layout.tsx", "utf8");
+const fonts = readFileSync("src/app/fonts.ts", "utf8");
 const home = readFileSync("src/app/page.tsx", "utf8");
 const homeClient = readFileSync("src/components/pre-game/home/command-home-client.tsx", "utf8");
 const matchmaking = readFileSync("src/app/matchmaking/page.tsx", "utf8");
@@ -26,7 +27,8 @@ test("identidade centraliza paleta, tipografia e runtime do pré-jogo", () => {
   assert.match(identity, /--wb-gold:/);
   assert.match(identity, /--wb-text:/);
   assert.match(layout, /war-identity\.css/);
-  assert.match(layout, /Barlow_Condensed/);
+  assert.match(fonts, /Barlow_Condensed/);
+  assert.match(layout, /displayFont/);
   assert.match(layout, /<PreGameCommandRuntime>\{children\}<\/PreGameCommandRuntime>/);
   assert.match(shell, /wb-shell/);
   assert.match(home, /<CommandHomeClient mode="landing">/);
