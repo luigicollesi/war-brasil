@@ -147,6 +147,15 @@ async function transitionRoomToOrderRoll(client: PoolClient, roomId: string) {
 }
 
 export async function startGame(client: PoolClient, roomId: string) {
+  await client.query(
+    `UPDATE game.players
+     SET faction_name=display_name_snapshot
+     WHERE room_id=$1
+       AND is_bot=FALSE
+       AND display_name_snapshot IS NOT NULL`,
+    [roomId],
+  );
+
   const players = await loadPlayers(client, roomId);
 
   // Match creation and all runtime artifacts are part of the caller transaction.
