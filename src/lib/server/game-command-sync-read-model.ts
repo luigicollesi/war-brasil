@@ -81,6 +81,25 @@ export async function readRoomCommandPatch(
     throw new RoomError("Partida não encontrada.", 404);
   }
 
+  const winnerPlayerIds =
+    room.status === "finished"
+      ? (
+          await client.query<{ player_id: string }>(
+            `SELECT player_id::text
+             FROM game.room_winners
+             WHERE room_id=$1
+             ORDER BY player_id`,
+            [roomId],
+          )
+        ).rows.map((winner) => winner.player_id)
+      : [];
+  const effectiveWinnerPlayerIds =
+    winnerPlayerIds.length > 0
+      ? winnerPlayerIds
+      : room.winner_player_id
+        ? [room.winner_player_id]
+        : [];
+
   const battle = isBattle(room.last_battle) ? room.last_battle : null;
   const actorId = requiredActorId(room, battle);
   const actorIsBot = actorId
@@ -106,6 +125,7 @@ export async function readRoomCommandPatch(
     jurassicTunnelDestinationId: room.jurassic_tunnel_territory_id,
     reinforcementsRemaining: room.reinforcements_remaining,
     winnerPlayerId: room.winner_player_id,
+    winnerPlayerIds: effectiveWinnerPlayerIds,
     automaticAdvancePending,
     pendingConquest:
       room.pending_from_territory_id !== null &&
