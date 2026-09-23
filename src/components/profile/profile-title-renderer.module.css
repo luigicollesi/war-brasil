@@ -11,7 +11,7 @@
   --profile-title-halo-to: #d7cfae;
   --profile-title-sparkle: #ffffff;
   --profile-title-ember: #f1923d;
-  --profile-title-size-base: 1.4rem;
+  --profile-title-size-legendary: 1.4rem;
 
   --profile-title-texture-image: none;
   --profile-title-sparkle-image: none;
@@ -54,7 +54,7 @@
   overflow: visible;
   isolation: isolate;
   color: transparent;
-  font-size: var(--profile-title-size-base);
+  font-size: var(--profile-title-size-legendary);
   font-weight: 800;
   line-height: 0.88;
   letter-spacing: 0.025em;
@@ -96,28 +96,28 @@
 }
 
 /*
- * Rarity controls title prominence globally. Surfaces provide only the
- * responsive base size; the same rarity delta is then reused everywhere the
- * title renderer appears.
+ * Rarity controls title prominence globally. Each surface provides the
+ * exact Legendary size that titles used before rarity scaling; lower
+ * rarities step down from it and never exceed that established maximum.
  */
 .title[data-title-rarity="common"] {
-  font-size: max(0.75rem, calc(var(--profile-title-size-base) - 0.5rem));
+  font-size: max(0.75rem, calc(var(--profile-title-size-legendary) - 1.02rem));
 }
 
 .title[data-title-rarity="uncommon"] {
-  font-size: max(0.85rem, calc(var(--profile-title-size-base) - 0.28rem));
+  font-size: max(0.85rem, calc(var(--profile-title-size-legendary) - 0.8rem));
 }
 
 .title[data-title-rarity="rare"] {
-  font-size: var(--profile-title-size-base);
+  font-size: max(0.95rem, calc(var(--profile-title-size-legendary) - 0.52rem));
 }
 
 .title[data-title-rarity="epic"] {
-  font-size: calc(var(--profile-title-size-base) + 0.24rem);
+  font-size: max(1rem, calc(var(--profile-title-size-legendary) - 0.28rem));
 }
 
 .title[data-title-rarity="legendary"] {
-  font-size: calc(var(--profile-title-size-base) + 0.52rem);
+  font-size: var(--profile-title-size-legendary);
 }
 
 /* Gradient aura layers ---------------------------------------------------- */
