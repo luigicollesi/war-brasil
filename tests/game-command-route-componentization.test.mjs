@@ -23,7 +23,7 @@ test("game command route helper centraliza apenas o envelope HTTP repetido", () 
   assert.match(helper, /roomErrorResponse\(error,/);
 
   const sessionIndex = helper.indexOf("getPlayerSession(request)");
-  const seatIndex = helper.indexOf("assertAuthenticatedPlayerSeat");
+  const seatIndex = helper.indexOf("assertAuthenticatedPlayerSeat(request");
   const metadataIndex = helper.indexOf("readGameCommandRequestMetadata(request)");
   const bodyIndex = helper.indexOf("readJsonObject(request)");
   const executeIndex = helper.indexOf("execute({");
