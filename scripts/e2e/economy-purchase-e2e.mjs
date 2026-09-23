@@ -19,22 +19,6 @@ const OFFERS = Object.freeze({
 
 let actorSequence = 0;
 
-) {
-  return page.evaluate(
-    async ({ requestUrl, requestInit }) => {
-      const response = await fetch(requestUrl, requestInit);
-      let body = null;
-      try {
-        body = await response.json();
-      } catch {
-        body = null;
-      }
-      return { status: response.status, body };
-    },
-    { requestUrl: url, requestInit: init },
-  );
-}
-
 async function apiJsonConcurrent(page, requests) {
   return page.evaluate(async (input) => {
     return Promise.all(
