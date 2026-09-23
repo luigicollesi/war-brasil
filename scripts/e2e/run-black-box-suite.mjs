@@ -2,6 +2,8 @@ import { spawn } from "node:child_process";
 
 const smokeSuite = [
   "scripts/e2e/auth-credentials-verification-e2e.mjs",
+  "scripts/e2e/auth-password-reset-e2e.mjs",
+  "scripts/e2e/auth-session-security-e2e.mjs",
   "scripts/e2e/auth-origin-redirect-e2e.mjs",
   "scripts/e2e/auth-rate-limit-e2e.mjs",
   "scripts/e2e/auth-seat-boundary-e2e.mjs",
@@ -15,8 +17,6 @@ const smokeSuite = [
 const fullSuite = [
   ...smokeSuite,
   "scripts/e2e/auth-home-command-access-e2e.mjs",
-  "scripts/e2e/auth-password-reset-e2e.mjs",
-  "scripts/e2e/auth-session-security-e2e.mjs",
   "scripts/e2e/auth-token-expiry-e2e.mjs",
   "scripts/e2e/economy-e2e.mjs",
   "scripts/e2e/economy-purchase-e2e.mjs",
