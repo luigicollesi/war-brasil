@@ -19,7 +19,7 @@ A referência de experiência é diegética: a interface deve parecer parte de u
 
 - membros;
 - host;
-- nome/facção/cor;
+- nome de exibição/handle/cor;
 - ready/unready;
 - entrada/saída;
 - reconexão;
@@ -113,16 +113,17 @@ No mobile, a Mesa de Guerra central MAY desaparecer completamente para liberar o
 
 A estação local MUST manter acessíveis:
 
-- nome da facção;
-- salvar nome;
+- nome de exibição e `@handle` vindos do perfil autenticado, em modo somente leitura;
 - seis cores vigentes;
 - indisponibilidade de cores ocupadas;
 - feedback de erro;
-- informação de que alterar identidade revoga ready quando aplicável.
+- informação de que alterar a cor revoga ready quando aplicável.
 
-A identidade atual SHOULD possuir uma credencial/insígnia visível derivada do nome e cor confirmados pelo servidor.
+A identidade atual SHOULD possuir uma credencial/insígnia visível derivada do nome de exibição, handle e cor confirmados pelo servidor.
 
 A credencial é ornamental/identitária e MUST ser compactada ou removida antes dos controles em viewport baixo.
+
+A UI MUST NOT permitir um nome de facção paralelo para jogadores humanos. Bots MAY continuar usando nomes de facção próprios do catálogo.
 
 A UI MUST NOT alterar regras ou endpoints para caber no novo layout.
 
