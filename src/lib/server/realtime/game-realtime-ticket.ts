@@ -47,6 +47,7 @@ export async function issueGameRealtimeTicket(roomId: string, session: string) {
      JOIN game.players rp
        ON rp.room_id=room.id
       AND rp.player_session=$2
+      AND rp.left_at IS NULL
      WHERE room.id=$1`,
     [roomId, session],
   );
