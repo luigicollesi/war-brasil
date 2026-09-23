@@ -1,3 +1,70 @@
+.landingPrelude {
+  position: fixed;
+  z-index: 1000;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding:
+    max(32px, env(safe-area-inset-top))
+    max(24px, env(safe-area-inset-right))
+    max(32px, env(safe-area-inset-bottom))
+    max(24px, env(safe-area-inset-left));
+  background: #000;
+  color: rgb(238 232 218 / 0%);
+  animation: landingPreludeSequence 6400ms linear both;
+  isolation: isolate;
+}
+
+.landingPreludeCopy {
+  width: min(760px, 100%);
+  margin: 0;
+  color: inherit;
+  font-family: var(--font-wb-ui), sans-serif;
+  font-size: clamp(.92rem, 1.6vw, 1.12rem);
+  font-weight: 400;
+  line-height: 1.75;
+  letter-spacing: .015em;
+  text-align: center;
+  text-wrap: balance;
+}
+
+.landingPreludeCopy span {
+  display: block;
+  margin-top: .55em;
+}
+
+@keyframes landingPreludeSequence {
+  0%,
+  3.125% {
+    background: rgb(0 0 0 / 100%);
+    color: rgb(238 232 218 / 0%);
+  }
+
+  17.1875%,
+  84.375% {
+    background: rgb(0 0 0 / 100%);
+    color: rgb(238 232 218 / 88%);
+  }
+
+  100% {
+    background: rgb(0 0 0 / 0%);
+    color: rgb(238 232 218 / 0%);
+  }
+}
+
+@keyframes landingPreludeReduced {
+  0%,
+  99.9% {
+    background: #000;
+    color: rgb(238 232 218 / 88%);
+  }
+
+  100% {
+    background: rgb(0 0 0 / 0%);
+    color: rgb(238 232 218 / 0%);
+  }
+}
+
 :global([data-command-scene-mode="entrance"]:has([data-visit="first"])) {
   --home-intro-duration: 3000ms;
   --home-intro-easing: cubic-bezier(.22, .58, .21, 1);
@@ -150,6 +217,12 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .landingPrelude {
+    animation-name: landingPreludeReduced;
+    animation-duration: 5400ms;
+    animation-timing-function: steps(1, end);
+  }
+
   :global([data-command-scene-mode="entrance"] [data-command-fallback]),
   :global([data-command-scene-mode="entrance"] [data-command-canvas-layer]),
   :global([data-command-scene-mode="entrance"] [data-command-atmosphere]),
