@@ -92,11 +92,17 @@ test("contratos do lobby e do jogo expõem isBot sem criar entidade paralela", (
 });
 
 test("inicialização continua incluindo todos os jogadores da sala", () => {
+  const loadPlayers = startGame.slice(
+    startGame.indexOf("async function loadPlayers"),
+    startGame.indexOf("async function createInitialTerritories"),
+  );
+
   assert.match(
-    startGame,
+    loadPlayers,
     /SELECT id FROM game\.players WHERE room_id\s*=\s*\$1 ORDER BY joined_at,id/,
   );
-  assert.doesNotMatch(startGame, /is_bot\s*=\s*FALSE/);
+  assert.doesNotMatch(loadPlayers, /is_bot\s*=\s*FALSE/);
+  assert.match(startGame, /SET faction_name=display_name_snapshot/);
 });
 
 test("rotas de lobby delegam criação e remoção ao domínio", () => {
