@@ -1,27 +1,11 @@
-import { NextRequest } from "next/server";
-import { noStoreJson, roomErrorResponse } from "@/src/lib/api-response";
-import { cancelBattleCommand } from "@/src/lib/server/game-combat-command-service";
-import { readGameCommandRequestMetadata } from "@/src/lib/server/game-command-request";
+import { noStoreJson } from "@/src/lib/api-response";
 import { GAME_REVISION_HEADER } from "@/src/lib/game-sync-contract";
-import { getPlayerSession } from "@/src/lib/player-session";
-import { RoomError } from "@/src/lib/rooms";
-import { assertAuthenticatedPlayerSeat } from "@/server/auth/player-seat-guard";
+import { cancelBattleCommand } from "@/src/lib/server/game-combat-command-service";
+import { createGameCommandRoute } from "@/src/lib/server/game-command-route";
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: Promise<{ roomId: string }> },
-) {
-  let roomId: string | undefined;
-
-  try {
-    const session = getPlayerSession(request);
-    if (!session) {
-      throw new RoomError("Entre em uma sala antes de jogar.", 401);
-    }
-
-    ({ roomId } = await params);
-    await assertAuthenticatedPlayerSeat(request, session, { roomId });
-    const metadata = readGameCommandRequestMetadata(request);
+export const POST = createGameCommandRoute({
+  operation: "cancel_attack",
+  async execute({ roomId, session, metadata }) {
     const result = await cancelBattleCommand(roomId, session, metadata);
 
     return noStoreJson(
@@ -38,11 +22,5 @@ export async function POST(
         },
       },
     );
-  } catch (error) {
-    return roomErrorResponse(error, {
-      operation: "cancel_attack",
-      route: request.nextUrl.pathname,
-      resource: { roomId },
-    });
-  }
-}
+  },
+});
