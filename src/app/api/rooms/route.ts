@@ -5,6 +5,7 @@ import {
   persistPlayerSession,
 } from "@/src/lib/player-session";
 import { createRoom } from "@/src/lib/rooms";
+import { persistActiveParticipationCookie } from "@/src/lib/server/auth/active-participation-cookie";
 import { getCommandAccessState } from "@/server/auth/command-access";
 import {
   authenticationRequiredResponse,
@@ -34,7 +35,11 @@ export async function POST(request: NextRequest) {
       displayName: access.profile.displayName,
       handle: access.profile.handle,
     });
-    return persistPlayerSession(noStoreJson({ room }), session);
+    const response = persistPlayerSession(noStoreJson({ room }), session);
+    return persistActiveParticipationCookie(response, {
+      kind: "lobby",
+      roomCode: room.code,
+    });
   } catch (error) {
     return roomErrorResponse(error, {
       operation: "create_room",
