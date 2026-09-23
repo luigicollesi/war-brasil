@@ -22,7 +22,7 @@ Avaliar conforme `../quality-standard.md` e `../traceability.md`.
 | LOB-14 | `/lobby/[code]` não exige scroll de página em 1440x900 e 1366x768 | visual regression |
 | LOB-15 | `/lobby/[code]` não exige scroll de página em 390x844 | visual regression |
 | LOB-16 | viewport baixo 390x580 mantém código, painel ativo e ready alcançáveis | visual/manual |
-| LOB-17 | Voltar leva deterministicamente a `/matchmaking` sem mutar sala/ready | static + interaction |
+| LOB-17 | Voltar encerra autoritativamente o assento e só então leva a `/matchmaking` | static + interaction |
 | LOB-18 | 1–6 jogadores não alteram a altura total da composição | visual + multi-state |
 | LOB-19 | mobile alterna `Formação` / `Sua estação` sem duplicar estado realtime | inspection/interaction |
 | LOB-20 | Mesa de Guerra Brasil permanece ornamental e não introduz dependência funcional | static + fallback |
@@ -31,6 +31,9 @@ Avaliar conforme `../quality-standard.md` e `../traceability.md`.
 | LOB-23 | mobile remove/compacta ornamento antes de inputs, cores e ready | visual regression |
 | LOB-24 | trilho de autorização representa 6 canais derivados do snapshot, sem estado paralelo | static + integration |
 | LOB-25 | animações ornamentais respeitam `prefers-reduced-motion` | static + manual |
+| LOB-26 | participação ativa reconduz navegação ao lobby enquanto o assento existe | integration + navigation |
+| LOB-27 | assento `waiting` sem heartbeat por 20 s é removido; partida iniciada não sofre eviction | integration + worker |
+| LOB-28 | último humano removido de lobby elimina a sala | integration |
 
 ## Score / 100
 
@@ -68,7 +71,11 @@ Aprovação: >= 85 + todos os BLOCKERs.
 - `LOB-S19`: seis jogadores não aumentam a altura da rota;
 - `LOB-S20`: nome de exibição/handle longos não crescem a estação;
 - `LOB-S21`: 6 canais de autorização em vazio/configurando/pronto;
-- `LOB-S22`: start-authorized muda autoridade visual sem adicionar espera.
+- `LOB-S22`: start-authorized muda autoridade visual sem adicionar espera;
+- `LOB-S23`: tentar navegar para Home/Profile durante participação ativa retorna ao lobby;
+- `LOB-S24`: ausência de heartbeat por 20 s remove assento waiting e atualiza sobreviventes;
+- `LOB-S25`: último humano removido apaga a sala waiting;
+- `LOB-S26`: após início da partida, ausência de heartbeat não remove o jogador.
 
 ## Visual regression
 
@@ -122,7 +129,10 @@ Validar no código:
 - jogadores humanos não possuem editor local de nome de facção; `displayName`/`handle` vêm do snapshot autoritativo;
 - cards humanos apontam para `/profile/[handle]` em nova aba sem tornar bots navegáveis;
 - `LobbyClient` continua sendo o controlador de requests/realtime;
-- controle Voltar aponta explicitamente para `/matchmaking` e não dispara mutação de sala.
+- controle Voltar é a única saída explícita e executa a mutation antes de navegar para `/matchmaking`;
+- não existe botão separado `SAIR DA SALA`;
+- participação ativa é autoritativa por `user_id`, com cookie usado somente como hint de navegação;
+- cleanup de presença continua limitado a salas `waiting` e publica invalidação para salas sobreviventes.
 
 ## Gate de rastreabilidade
 
