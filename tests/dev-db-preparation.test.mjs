@@ -26,6 +26,10 @@ const schemaNamingMigration = readFileSync(
   "src/lib/db/migrations/managed/027-normalize-schema-table-names.sql",
   "utf8",
 );
+const activeDepartureMigration = readFileSync(
+  "src/lib/db/migrations/managed/060-player-active-departure.sql",
+  "utf8",
+);
 
 test("ambiente dev prepara migrations gerenciadas antes de subir Next e realtime", () => {
   assert.match(
@@ -250,4 +254,12 @@ test("CI usa PostgreSQL real e runtime Node atual", () => {
     packageJson.scripts["worker:test"],
     'node --check worker/server.mjs && node --test "worker/test/*.test.mjs"',
   );
+});
+
+
+test("migration de abandono mantém assento histórico e índice de participação ativa", () => {
+  assert.match(activeDepartureMigration, /ADD COLUMN IF NOT EXISTS left_at TIMESTAMPTZ/);
+  assert.match(activeDepartureMigration, /players_left_at_after_joined_check/);
+  assert.match(activeDepartureMigration, /players_active_user_idx/);
+  assert.match(activeDepartureMigration, /left_at IS NULL/);
 });
