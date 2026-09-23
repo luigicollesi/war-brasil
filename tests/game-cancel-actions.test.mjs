@@ -31,7 +31,7 @@ test("attack cancellation is server-authoritative and only allowed before the fi
 
 test("attack cancel route uses the versioned command boundary", () => {
   assert.match(cancelRouteSource, /cancelBattleCommand/);
-  assert.match(cancelRouteSource, /GAME_REVISION_HEADER/);
+  assert.match(cancelRouteSource, /gameCommandValueResponse/);
   assert.match(cancelRouteSource, /operation: "cancel_attack"/);
 });
 
