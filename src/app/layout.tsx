@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { ActiveParticipationRuntime } from "@/src/components/active-participation-runtime";
 import { PreGameCommandRuntime } from "@/src/components/pre-game/foundation";
 import { ProfilePresenceHeartbeat } from "@/src/components/profile/profile-presence-heartbeat";
 import { UserNotificationRuntime } from "@/src/components/notifications/user-notification-runtime";
@@ -80,7 +81,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full font-[var(--font-wb-ui)]">
         <ProfilePresenceHeartbeat />
         <UserNotificationRuntime />
-        <PreGameCommandRuntime>{children}</PreGameCommandRuntime>
+        <ActiveParticipationRuntime>
+          <PreGameCommandRuntime>{children}</PreGameCommandRuntime>
+        </ActiveParticipationRuntime>
       </body>
     </html>
   );
