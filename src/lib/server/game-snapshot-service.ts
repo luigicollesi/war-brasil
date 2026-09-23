@@ -57,6 +57,7 @@ type SnapshotPlayer = {
   is_me: boolean;
   is_bot: boolean;
   trade_signals_used: number;
+  left_at: Date | null;
 };
 
 type SnapshotTerritory = {
@@ -296,12 +297,12 @@ export async function getGameSnapshotQuery(
     const players = (
       await client.query<SnapshotPlayer>(
         `SELECT id,faction_name,color,turn_position,is_bot,trade_signals_used,
-                player_session=$2 is_me
+                left_at,player_session=$2 is_me
          FROM game.players
          WHERE room_id=$1
-           AND left_at IS NULL
+           AND (left_at IS NULL OR $3='finished')
          ORDER BY turn_position NULLS LAST,joined_at,id`,
-        [room.id, session],
+        [room.id, session, room.status],
       )
     ).rows;
     const me = players.find((player) => player.is_me);
@@ -499,7 +500,9 @@ export async function getGameSnapshotQuery(
       options.includeConnections === false
         ? []
         : [...(await getBaseTerritoryConnections(client))];
-    const humanPlayerCount = players.filter((player) => !player.is_bot).length;
+    const humanPlayerCount = players.filter(
+      (player) => !player.is_bot && player.left_at === null,
+    ).length;
     const originalTerms = tradeOffer ? originalTradeTerms(tradeOffer) : null;
     const counterTerms = tradeOffer ? counterTradeTerms(tradeOffer) : null;
 
