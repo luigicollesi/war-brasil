@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { GameClient } from "@/src/components/game-client-v2";
 import { MapZoomController } from "@/src/components/map-zoom-controller";
@@ -8,6 +9,7 @@ import { PhaseTransitionConfirmationController } from "@/src/components/phase-tr
 import { RoadVisibilityProvider } from "@/src/components/road-visibility-provider";
 import { ServerConnectionIndicator } from "@/src/components/server-connection-indicator";
 import { resolveGameRoomReference } from "@/src/lib/rooms";
+import { getAuthenticatedSessionForReadHeaders } from "@/src/lib/server/auth/auth-guard";
 import "./game-polish.css";
 import "./game-quantity.css";
 import "./game-interaction-fix.css";
@@ -33,6 +35,12 @@ export const metadata: Metadata = {
 };
 
 export default async function GamePage({ params }: GamePageProps) {
+  const session = await getAuthenticatedSessionForReadHeaders(await headers());
+
+  if (!session) {
+    redirect("/");
+  }
+
   const { roomId: publicReference } = await params;
   const room = await resolveGameRoomReference(publicReference);
 
