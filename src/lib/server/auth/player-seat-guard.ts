@@ -27,6 +27,7 @@ export async function assertAuthenticatedPlayerSeat(
             AND player.player_session = $2
             AND player.user_id = $3
             AND player.is_bot = FALSE
+            AND player.left_at IS NULL
           LIMIT 1`,
         [scope.roomCode, playerSession, accountSession.user.id],
       )
@@ -37,6 +38,7 @@ export async function assertAuthenticatedPlayerSeat(
             AND player.player_session = $2
             AND player.user_id = $3
             AND player.is_bot = FALSE
+            AND player.left_at IS NULL
           LIMIT 1`,
         [scope.roomId, playerSession, accountSession.user.id],
       );
