@@ -3,7 +3,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import test from "node:test";
 import { NextRequest } from "next/server.js";
-import { unstable_doesProxyMatch } from "next/experimental/testing/server.js";
+import nextTestingServer from "next/experimental/testing/server.js";\n\nconst { unstable_doesProxyMatch } = nextTestingServer;
 
 const proxyPath = "src/proxy.ts";
 const middlewarePath = "src/middleware.ts";
