@@ -43,7 +43,7 @@ test("Hyperdrive mantém URL de origem direta como secret e binding separado", (
   assert.match(wrangler, /"DATABASE_HYPERDRIVE_URL"/);
   assert.match(
     wrangler,
-    /DATABASE_HYPERDRIVE itself is a Cloudflare resource binding/,
+    /"hyperdrive"\s*:\s*\[[\s\S]*"binding"\s*:\s*"DATABASE_HYPERDRIVE"[\s\S]*"id"\s*:\s*"[a-f0-9]{32}"/i,
   );
   assert.doesNotMatch(wrangler, /"DATABASE_HYPERDRIVE"\s*:\s*"postgres/i);
 });
