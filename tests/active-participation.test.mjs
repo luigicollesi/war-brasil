@@ -32,6 +32,7 @@ const inviteService = readFileSync(
 );
 const lobby = readFileSync("src/components/lobby-client.tsx", "utf8");
 const game = readFileSync("src/components/game-client-v2.tsx", "utf8");
+const home = readFileSync("src/app/home/page.tsx", "utf8");
 
 test("participação ativa é autoritativa por conta e serializada antes de room locks", () => {
   assert.match(participationService, /player\.user_id=\$1::uuid/);
@@ -70,6 +71,15 @@ test("create join e convites atualizam somente o hint de navegação após suces
   assert.match(joinRoute, /persistActiveParticipationCookie/);
   assert.match(inviteService, /GAME_INVITATION_ACTIVE_PARTICIPATION/);
   assert.match(rooms, /assertActiveParticipationAvailable/);
+});
+
+test("login verifica participação antes de renderizar o Comando", () => {
+  assert.match(home, /findActiveParticipationForUser\(session\.user\.id\)/);
+  assert.match(home, /redirect\(participation\.target\)/);
+  assert.ok(
+    home.indexOf("findActiveParticipationForUser") <
+      home.indexOf("getCommandAccessState(session)"),
+  );
 });
 
 test("runtime reconduz navegação e transições lobby-game reconciliam o hint", () => {
