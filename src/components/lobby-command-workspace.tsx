@@ -44,7 +44,7 @@ type LobbyCommandWorkspaceProps = {
   onAddBot: () => void;
   onRemoveBot: (botId: string) => Promise<void>;
   onToggleReady: () => void;
-  onLeaveRoom: () => void;
+  onBackToOperations: () => void;
   leaving: boolean;
 };
 
@@ -77,7 +77,7 @@ export function LobbyCommandWorkspace({
   onAddBot,
   onRemoveBot,
   onToggleReady,
-  onLeaveRoom,
+  onBackToOperations,
   leaving,
 }: LobbyCommandWorkspaceProps) {
   const [mobilePanel, setMobilePanel] = useState<MobileLobbyPanel>("station");
@@ -91,7 +91,11 @@ export function LobbyCommandWorkspace({
       data-mobile-panel={mobilePanel}
     >
       <header className={styles.commandBar}>
-        <PreGameBackButton href="/matchmaking" label="Voltar para Operações" />
+        <PreGameBackButton
+          label={leaving ? "Saindo da operação…" : "Voltar para Operações"}
+          onClick={onBackToOperations}
+          disabled={leaving || actionPending}
+        />
 
         <div className={styles.commandHeading}>
           <p className="wb-kicker">Sala de guerra · comando de mobilização</p>
@@ -140,14 +144,6 @@ export function LobbyCommandWorkspace({
           <p className={styles.occupancy}>
             <strong>{players.length}/6</strong> postos · <strong>{readyPlayers}</strong> prontos
           </p>
-          <button
-            type="button"
-            className={styles.leaveButton}
-            onClick={onLeaveRoom}
-            disabled={leaving || actionPending}
-          >
-            {leaving ? "SAINDO..." : "SAIR DA SALA"}
-          </button>
         </div>
       </header>
 
