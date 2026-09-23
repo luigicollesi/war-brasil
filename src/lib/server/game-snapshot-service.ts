@@ -372,6 +372,26 @@ export async function getGameSnapshotQuery(
         ? await loadSnapshotObjective(client, room.id, me.id)
         : null;
 
+    const winnerPlayerIds =
+      room.status === "finished"
+        ? (
+            await client.query<{ player_id: string }>(
+              `SELECT player_id::text
+               FROM game.room_winners
+               WHERE room_id=$1
+               ORDER BY player_id`,
+              [room.id],
+            )
+          ).rows.map((winner) => winner.player_id)
+        : [];
+
+    const effectiveWinnerPlayerIds =
+      winnerPlayerIds.length > 0
+        ? winnerPlayerIds
+        : room.winner_player_id
+          ? [room.winner_player_id]
+          : [];
+
     const rematchVotes =
       room.status === "finished"
         ? (
@@ -518,6 +538,7 @@ export async function getGameSnapshotQuery(
           : null,
         reinforcementsRemaining: room.reinforcements_remaining,
         winnerPlayerId: room.winner_player_id,
+        winnerPlayerIds: effectiveWinnerPlayerIds,
         automaticAdvancePending,
         rematch:
           room.status === "finished"
