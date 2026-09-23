@@ -21,6 +21,7 @@ export type GameCommandPatch = {
     jurassicTunnelDestinationId?: number | null;
     reinforcementsRemaining?: number;
     winnerPlayerId?: string | null;
+    winnerPlayerIds?: string[];
     automaticAdvancePending?: boolean;
     pendingConquest?: GameSnapshot["room"]["pendingConquest"];
     battle?: GameBattle | null;
@@ -75,6 +76,7 @@ const ROOM_PATCH_KEYS = new Set([
   "jurassicTunnelDestinationId",
   "reinforcementsRemaining",
   "winnerPlayerId",
+  "winnerPlayerIds",
   "automaticAdvancePending",
   "pendingConquest",
   "battle",
@@ -304,6 +306,15 @@ function validRoomPatch(value: unknown) {
   if (
     value.winnerPlayerId !== undefined &&
     !validNullablePlayerId(value.winnerPlayerId)
+  ) {
+    return false;
+  }
+  if (
+    value.winnerPlayerIds !== undefined &&
+    (!Array.isArray(value.winnerPlayerIds) ||
+      value.winnerPlayerIds.length > 6 ||
+      new Set(value.winnerPlayerIds).size !== value.winnerPlayerIds.length ||
+      !value.winnerPlayerIds.every(validNumericPlayerId))
   ) {
     return false;
   }
