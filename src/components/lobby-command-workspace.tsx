@@ -1,6 +1,5 @@
 "use client";
 
-import type { FormEvent } from "react";
 import { useState } from "react";
 import { PreGameBackButton } from "@/src/components/pre-game-back-button";
 import type { GameRuleset } from "@/src/lib/game-mode";
@@ -37,7 +36,6 @@ type LobbyCommandWorkspaceProps = {
   tableStatus: string;
   onCopyRoomCode: () => void;
   onRefresh: () => void;
-  onSaveFaction: (event: FormEvent<HTMLFormElement>) => void;
   onColorChange: (color: string) => void;
   onUpdateSettings: (patch: {
     ruleset?: GameRuleset;
@@ -74,7 +72,6 @@ export function LobbyCommandWorkspace({
   tableStatus,
   onCopyRoomCode,
   onRefresh,
-  onSaveFaction,
   onColorChange,
   onUpdateSettings,
   onAddBot,
@@ -206,7 +203,6 @@ export function LobbyCommandWorkspace({
           actionPending={actionPending}
           pendingAction={pendingAction}
           consoleError={consoleError}
-          onSaveFaction={onSaveFaction}
           onColorChange={onColorChange}
         />
       </div>
