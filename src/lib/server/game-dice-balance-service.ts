@@ -276,7 +276,7 @@ async function snapshotMatchParticipants(
   client: PoolClient,
   roomId: string,
   matchId: string,
-  winnerPlayerId: string | null,
+  winnerPlayerIds: string[] | null,
 ) {
   await client.query(
     `INSERT INTO game.match_participants (
@@ -293,13 +293,13 @@ async function snapshotMatchParticipants(
        player.color,
        player.is_bot,
        CASE
-         WHEN $3::bigint IS NULL THEN NULL
-         ELSE player.id=$3::bigint
+         WHEN $3::bigint[] IS NULL THEN NULL
+         ELSE player.id=ANY($3::bigint[])
        END
      FROM game.players player
      WHERE player.room_id=$2
      ON CONFLICT (match_id,player_id_snapshot) DO NOTHING`,
-    [matchId, roomId, winnerPlayerId],
+    [matchId, roomId, winnerPlayerIds],
   );
 }
 
@@ -310,11 +310,27 @@ export async function finishDiceBalanceMatchForRoom(
   const room = await lockRoomMatchContext(client, roomId);
   if (room.current_match_id === null) return;
 
+  const pluralWinners = (
+    await client.query<{ player_id: string }>(
+      `SELECT player_id::text
+       FROM game.room_winners
+       WHERE room_id=$1
+       ORDER BY player_id`,
+      [roomId],
+    )
+  ).rows.map((row) => row.player_id);
+  const winnerPlayerIds =
+    pluralWinners.length > 0
+      ? pluralWinners
+      : room.winner_player_id
+        ? [room.winner_player_id]
+        : null;
+
   await snapshotMatchParticipants(
     client,
     roomId,
     room.current_match_id,
-    room.winner_player_id,
+    winnerPlayerIds,
   );
 
   await client.query(
