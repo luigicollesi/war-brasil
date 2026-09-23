@@ -7,11 +7,12 @@ import { isGameCommandPatch } from "@/src/lib/game-command-patch";
 import type { GameCommandRequestMetadata } from "@/src/lib/game-command-request";
 import { isGamePrivatePatch } from "@/src/lib/game-private-patch";
 import type { GameCommandResult } from "@/src/lib/game-revision";
-import { RoomError } from "@/src/lib/rooms";
+import { resolveCommandPlayerBySession } from "./game-command-player";
 import { publishGameCommandMetric } from "./observability/game-command-metrics";
 
 export type GameCommandReceiptRequest = GameCommandRequestMetadata & {
   session: string;
+  accountUserId?: string;
   commandName: string;
   payload: unknown;
 };
@@ -39,34 +40,18 @@ function gameCommandRequestFingerprint(commandName: string, payload: unknown) {
     .digest("hex");
 }
 
-async function resolveReceiptPlayerId(
-  client: PoolClient,
-  roomId: string,
-  session: string,
-) {
-  const player = (
-    await client.query<{ id: string }>(
-      `SELECT id
-       FROM game.players
-       WHERE room_id=$1 AND player_session=$2
-       FOR UPDATE`,
-      [roomId, session],
-    )
-  ).rows[0];
-
-  if (!player) {
-    throw new RoomError("Você não pertence a esta partida.", 403);
-  }
-
-  return player.id;
-}
-
 export async function prepareGameCommandReceipt(
   client: PoolClient,
   roomId: string,
   request: GameCommandReceiptRequest,
 ): Promise<PreparedGameCommandReceipt> {
-  const playerId = await resolveReceiptPlayerId(client, roomId, request.session);
+  const player = await resolveCommandPlayerBySession(
+    client,
+    roomId,
+    request.session,
+    request.accountUserId,
+  );
+  const playerId = player.id;
   const fingerprint = gameCommandRequestFingerprint(
     request.commandName,
     request.payload,

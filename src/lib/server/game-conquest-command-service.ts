@@ -160,6 +160,7 @@ export async function completeConquestCommand(
   session: string,
   input: Record<string, unknown>,
   metadata?: GameCommandRequestMetadata | null,
+  accountUserId?: string,
 ) {
   const roomId = normalizeRoomId(value);
   const troops = positiveInteger(input.troops, "Quantidade de tropas inválida.");
@@ -191,6 +192,7 @@ export async function completeConquestCommand(
       return executeCompleteConquest(client, roomId, player, troops);
     },
     {
+      accountUserId,
       syncEffects: async (client) => ({
         publicPatch: {
           room: await readRoomCommandPatch(client, roomId),

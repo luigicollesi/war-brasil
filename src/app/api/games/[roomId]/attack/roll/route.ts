@@ -4,8 +4,8 @@ import { createGameCommandRoute } from "@/src/lib/server/game-command-route";
 
 export const POST = createGameCommandRoute({
   operation: "roll_battle_dice",
-  async execute({ roomId, session, metadata }) {
-    const result = await rollBattleDiceCommand(roomId, session, metadata);
+  async execute({ roomId, session, accountUserId, metadata }) {
+    const result = await rollBattleDiceCommand(roomId, session, metadata, accountUserId);
     return gameCommandValueResponse(result);
   },
 });

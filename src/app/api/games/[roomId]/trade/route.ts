@@ -10,7 +10,7 @@ import { RoomError } from "@/src/lib/rooms";
 import { readGameCommandRequestMetadata } from "@/src/lib/server/game-command-request";
 import { playerTradeCommand } from "@/src/lib/server/game-player-trade-service";
 import { publishTradeDeclineResolution } from "@/src/lib/server/game-trade-resolution-notifier";
-import { assertAuthenticatedPlayerSeat } from "@/server/auth/player-seat-guard";
+import { getAuthenticatedSession } from "@/src/lib/server/auth/auth-guard";
 
 export async function POST(
   request: NextRequest,
@@ -26,10 +26,22 @@ export async function POST(
     }
 
     ({ roomId } = await params);
-    await assertAuthenticatedPlayerSeat(request, session, { roomId });
+    const accountSession = await getAuthenticatedSession(request);
+    if (!accountSession) {
+      throw new RoomError(
+        "Autenticação necessária para acessar este assento.",
+        401,
+      );
+    }
     const metadata = readGameCommandRequestMetadata(request);
     body = await readJsonObject(request);
-    const result = await playerTradeCommand(roomId, session, body, metadata);
+    const result = await playerTradeCommand(
+      roomId,
+      session,
+      body,
+      metadata,
+      accountSession.user.id,
+    );
 
     if (body.action === "decline") {
       await publishTradeDeclineResolution(roomId, session, body.offerId).catch(

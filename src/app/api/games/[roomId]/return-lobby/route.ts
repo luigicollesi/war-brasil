@@ -6,8 +6,8 @@ import { createGameCommandRoute } from "@/src/lib/server/game-command-route";
 export const POST = createGameCommandRoute({
   operation: "return_everyone_to_lobby",
   missingSessionMessage: "Entre em uma sala antes de voltar ao lobby.",
-  async execute({ roomId, session, metadata }) {
-    const result = await returnEveryoneToLobbyCommand(roomId, session, metadata);
+  async execute({ roomId, session, accountUserId, metadata }) {
+    const result = await returnEveryoneToLobbyCommand(roomId, session, metadata, accountUserId);
 
     return noStoreJson(
       {

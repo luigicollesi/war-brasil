@@ -6,7 +6,7 @@ import type { GameCommandRequestMetadata } from "@/src/lib/game-command-request"
 import { getPlayerSession } from "@/src/lib/player-session";
 import { RoomError } from "@/src/lib/rooms";
 import { readGameCommandRequestMetadata } from "@/src/lib/server/game-command-request";
-import { assertAuthenticatedPlayerSeat } from "@/server/auth/player-seat-guard";
+import { getAuthenticatedSession } from "@/src/lib/server/auth/auth-guard";
 
 type GameRoomRouteContext = {
   params: Promise<{ roomId: string }>;
@@ -15,6 +15,7 @@ type GameRoomRouteContext = {
 type GameCommandContext<TBody> = {
   roomId: string;
   session: string;
+  accountUserId: string;
   metadata: GameCommandRequestMetadata | null;
   body: TBody;
 };
@@ -22,7 +23,6 @@ type GameCommandContext<TBody> = {
 type GameCommandRouteOptions<TBody> = {
   operation: string;
   missingSessionMessage?: string;
-  allowDepartedSeat?: boolean;
   execute: (
     context: GameCommandContext<TBody>,
   ) => Response | Promise<Response>;
@@ -32,7 +32,6 @@ function createGameCommandEnvelope<TBody>(
   {
     operation,
     missingSessionMessage = "Entre em uma sala antes de jogar.",
-    allowDepartedSeat = false,
     execute,
   }: GameCommandRouteOptions<TBody>,
   readBody: (request: NextRequest) => Promise<TBody>,
@@ -51,16 +50,23 @@ function createGameCommandEnvelope<TBody>(
       }
 
       ({ roomId } = await params);
-      await assertAuthenticatedPlayerSeat(
-        request,
-        session,
-        { roomId },
-        { allowDeparted: allowDepartedSeat },
-      );
+      const accountSession = await getAuthenticatedSession(request);
+      if (!accountSession) {
+        throw new RoomError(
+          "Autenticação necessária para acessar este assento.",
+          401,
+        );
+      }
       const metadata = readGameCommandRequestMetadata(request);
       body = await readBody(request);
 
-      return await execute({ roomId, session, metadata, body });
+      return await execute({
+        roomId,
+        session,
+        accountUserId: accountSession.user.id,
+        metadata,
+        body,
+      });
     } catch (error) {
       return roomErrorResponse(error, {
         operation,

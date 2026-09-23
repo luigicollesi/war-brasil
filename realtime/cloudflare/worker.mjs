@@ -17,6 +17,8 @@ const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const DEFAULT_MAX_BUFFERED_BYTES = 64 * 1024;
 const MAX_PRESENCE_BATCH = 100;
+const USER_LAST_SEEN_PERSIST_INTERVAL_MS = 5 * 60_000;
+const USER_LAST_SEEN_PERSISTED_AT_KEY = "lastPersistedAt";
 const LOBBY_DISCONNECT_GRACE_MS = 20_000;
 const LOBBY_CLEANUP_RETRY_MS = 20_000;
 const LOBBY_CLEANUP_KEY_PREFIX = "lobby-cleanup:";
@@ -290,13 +292,21 @@ async function heartbeatPresence(request, env) {
     return json({ error: "PRESENCE_HEARTBEAT_INVALID" }, 422);
   }
 
-  const observedAt = new Date().toISOString();
-  return json({
-    availability: "available",
-    state: "online",
-    observedAt,
-    persistLastSeen: true,
-  });
+  try {
+    return await env.USER_REALTIME.getByName(body.userId).fetch(
+      new Request("https://user.internal/heartbeat", { method: "POST" }),
+    );
+  } catch {
+    return json(
+      {
+        availability: "unavailable",
+        state: "unavailable",
+        observedAt: null,
+        persistLastSeen: false,
+      },
+      503,
+    );
+  }
 }
 
 async function batchPresence(request, env) {
@@ -753,6 +763,29 @@ export class UserRealtimeDurableObject extends DurableObject {
           "Sec-WebSocket-Protocol": GAME_REALTIME_SUBPROTOCOL,
           "Cache-Control": "no-store",
         },
+      });
+    }
+
+    if (request.method === "POST" && url.pathname === "/heartbeat") {
+      const now = Date.now();
+      const observedAt = new Date(now).toISOString();
+      const lastPersistedAt = await this.ctx.storage.get(
+        USER_LAST_SEEN_PERSISTED_AT_KEY,
+      );
+      const persistLastSeen =
+        typeof lastPersistedAt !== "number" ||
+        now - lastPersistedAt >= USER_LAST_SEEN_PERSIST_INTERVAL_MS;
+
+      await this.ctx.storage.put("lastObservedAt", observedAt);
+      if (persistLastSeen) {
+        await this.ctx.storage.put(USER_LAST_SEEN_PERSISTED_AT_KEY, now);
+      }
+
+      return json({
+        availability: "available",
+        state: "online",
+        observedAt,
+        persistLastSeen,
       });
     }
 

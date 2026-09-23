@@ -10,7 +10,7 @@ export type GameCommandMetricName =
   | "receipt.conflict"
   | "revision.stale";
 
-type GameCommandMetric = {
+export type GameCommandMetric = {
   name: GameCommandMetricName;
   roomId: string;
   commandName: string;

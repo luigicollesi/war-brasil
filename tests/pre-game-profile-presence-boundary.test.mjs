@@ -127,3 +127,29 @@ test("global heartbeat is session-aware, periodic, identity-free and independent
   assert.doesNotMatch(runtime, /ProfilePresenceHeartbeat/);
   assert.match(runtime, /if \(!intent\) return <>\{children\}<\/>;/);
 });
+
+
+test("Cloudflare presence leases durable last-seen writes in the user Durable Object", () => {
+  const worker = read("realtime/cloudflare/worker.mjs");
+
+  assert.match(worker, /USER_LAST_SEEN_PERSIST_INTERVAL_MS = 5 \* 60_000/);
+  assert.match(worker, /USER_LAST_SEEN_PERSISTED_AT_KEY = "lastPersistedAt"/);
+  assert.match(
+    worker,
+    /env\.USER_REALTIME\.getByName\(body\.userId\)\.fetch\([\s\S]*user\.internal\/heartbeat/,
+  );
+  assert.match(
+    worker,
+    /request\.method === "POST" && url\.pathname === "\/heartbeat"/,
+  );
+  assert.match(
+    worker,
+    /now - lastPersistedAt >= USER_LAST_SEEN_PERSIST_INTERVAL_MS/,
+  );
+
+  const internalHeartbeat = worker.match(
+    /async function heartbeatPresence[\s\S]*?\n}\n\nasync function batchPresence/,
+  )?.[0] ?? "";
+  assert.ok(internalHeartbeat);
+  assert.doesNotMatch(internalHeartbeat, /persistLastSeen:\s*true/);
+});

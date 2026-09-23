@@ -15,7 +15,10 @@ import {
 } from "@/src/lib/game-order-rules";
 import { advanceGameRound } from "@/src/lib/game-round-service";
 import { isOrderRollActorAvailable } from "@/src/lib/game-transitions";
-import { evaluateGameVictory } from "@/src/lib/server/game-victory-service";
+import {
+  evaluateGameVictories,
+  finalizeGameVictories,
+} from "@/src/lib/server/game-victory-service";
 import { RoomError } from "@/src/lib/rooms";
 import {
   readPlayerHandPrivatePatch,
@@ -118,12 +121,14 @@ async function drawCard(
       [order[index], order[swapIndex]] = [order[swapIndex], order[index]];
     }
 
-    for (const [index, item] of discard.entries()) {
+    if (discard.length > 0) {
       await client.query(
-        `UPDATE game.cards
-         SET zone='deck',deck_order=$2
-         WHERE id=$1`,
-        [item.id, order[index]],
+        `UPDATE game.cards card
+            SET zone='deck',deck_order=ordering.deck_order
+           FROM unnest($2::bigint[],$3::int[]) AS ordering(id,deck_order)
+          WHERE card.room_id=$1
+            AND card.id=ordering.id`,
+        [room.id, discard.map((item) => item.id), order],
       );
     }
 
@@ -162,15 +167,16 @@ async function evaluateRoundTroopWinners(
     )
   ).rows;
 
-  for (const candidate of players) {
-    if (
-      await evaluateGameVictory(client, roomId, candidate.id, "troops_changed")
-    ) {
-      return true;
-    }
-  }
+  const winners = await evaluateGameVictories(
+    client,
+    roomId,
+    players.map((player) => player.id),
+    "troops_changed",
+  );
+  const firstWinner = winners[0];
+  if (!firstWinner) return false;
 
-  return false;
+  return finalizeGameVictories(client, roomId, [firstWinner]);
 }
 
 export async function executeRollOrderDie(
@@ -360,6 +366,7 @@ export async function rollOrderDieCommand(
   value: string,
   session: string,
   metadata?: GameCommandRequestMetadata | null,
+  accountUserId?: string,
 ) {
   const roomId = normalizeRoomId(value);
 
@@ -373,6 +380,7 @@ export async function rollOrderDieCommand(
       const player = await resolveCommandPlayerBySession(client, roomId, session);
       return executeRollOrderDie(client, roomId, player);
     },
+    { accountUserId },
   );
 }
 
@@ -381,6 +389,7 @@ export async function phaseCommand(
   session: string,
   input: Record<string, unknown>,
   metadata?: GameCommandRequestMetadata | null,
+  accountUserId?: string,
 ) {
   const roomId = normalizeRoomId(value);
   let actorPlayerId: string | null = null;
@@ -405,6 +414,7 @@ export async function phaseCommand(
       return executePhaseAction(client, roomId, player, input);
     },
     {
+      accountUserId,
       syncEffects: async (client) => {
         const playerId = actorPlayerId;
         if (!playerId) return {};

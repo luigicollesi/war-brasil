@@ -669,27 +669,47 @@ export async function heartbeatWaitingRoom(
   const code = normalizeRoomCode(codeValue);
   if (!code) throw new RoomError("Código de sala inválido.", 422);
 
-  return withTransaction(async (client) => {
-    const room = await findRoomForUpdate(client, code);
-    if (room.status !== "waiting") {
-      return { roomCode: room.code, active: false };
-    }
+  const state = (
+    await pool.query<{
+      room_code: string;
+      room_status: RoomRow["status"];
+      player_id: string | null;
+    }>(
+      `WITH target_room AS (
+         SELECT id,code,status
+           FROM game.rooms
+          WHERE code=$1
+       ),
+       refreshed AS (
+         UPDATE game.players player
+            SET lobby_last_seen_at=NOW()
+           FROM target_room room
+          WHERE player.room_id=room.id
+            AND room.status='waiting'
+            AND player.player_session=$2
+            AND player.is_bot=FALSE
+         RETURNING player.id
+       )
+       SELECT room.code AS room_code,
+              room.status AS room_status,
+              refreshed.id::text AS player_id
+         FROM target_room room
+         LEFT JOIN refreshed ON TRUE`,
+      [code, playerSession],
+    )
+  ).rows[0];
 
-    const updated = await client.query<{ id: string }>(
-      `UPDATE game.players
-          SET lobby_last_seen_at=NOW()
-        WHERE room_id=$1
-          AND player_session=$2
-          AND is_bot=FALSE
-        RETURNING id`,
-      [room.id, playerSession],
-    );
-    if (!updated.rowCount) {
-      throw new RoomError("Você não pertence a esta sala.", 403);
-    }
+  if (!state) {
+    throw new RoomError("Sala não encontrada.", 404);
+  }
+  if (state.room_status !== "waiting") {
+    return { roomCode: state.room_code, active: false };
+  }
+  if (!state.player_id) {
+    throw new RoomError("Você não pertence a esta sala.", 403);
+  }
 
-    return { roomCode: room.code, active: true };
-  });
+  return { roomCode: state.room_code, active: true };
 }
 
 async function deleteRoomIfNoHumans(client: PoolClient, roomId: string) {

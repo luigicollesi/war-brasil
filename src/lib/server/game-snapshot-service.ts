@@ -1,6 +1,7 @@
 import "server-only";
 
 import type { PoolClient } from "pg";
+import { pool } from "@/src/lib/db/pool";
 import type { PlayerColor } from "@/src/lib/lobby";
 import {
   isPresentationAdvancePending,
@@ -249,6 +250,33 @@ type GameSnapshotQueryOptions = Readonly<{
   includeConnections?: boolean;
 }>;
 
+async function readSnapshotRevisionFastPath(
+  roomId: string,
+  session: string,
+  accountUserId: string,
+) {
+  const row = (
+    await pool.query<{ revision: number }>(
+      `SELECT room.revision
+         FROM game.rooms room
+         JOIN game.players access_player
+           ON access_player.room_id=room.id
+          AND access_player.player_session=$2
+          AND access_player.user_id=$3
+          AND access_player.is_bot=FALSE
+          AND access_player.left_at IS NULL
+        WHERE room.id=$1`,
+      [roomId, session, accountUserId],
+    )
+  ).rows[0];
+
+  if (!row) {
+    throw new RoomError("Partida não encontrada ou jogador sem acesso.", 404);
+  }
+
+  return row.revision;
+}
+
 export async function getGameSnapshotQuery(
   value: string,
   session: string,
@@ -257,6 +285,20 @@ export async function getGameSnapshotQuery(
   options: GameSnapshotQueryOptions = {},
 ) {
   const roomId = normalizeRoomId(value);
+
+  if (knownRevision !== null) {
+    const revision = await readSnapshotRevisionFastPath(
+      roomId,
+      session,
+      accountUserId,
+    );
+    if (revision === knownRevision) {
+      return {
+        revision,
+        snapshot: null as GameSnapshot | null,
+      };
+    }
+  }
 
   return gameQuery(async (client) => {
     const room = (

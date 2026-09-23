@@ -18,6 +18,9 @@ type NotificationResponse = {
   notifications?: UserNotification[];
 };
 
+const REALTIME_WATCHDOG_INTERVAL_MS = 5 * 60_000;
+const FALLBACK_POLL_INTERVAL_MS = 15_000;
+
 function websocketHostname() {
   const hostname = window.location.hostname;
   return hostname.includes(":") ? `[${hostname}]` : hostname;
@@ -105,7 +108,9 @@ export function UserNotificationRuntime() {
       () => {
         void poll();
       },
-      realtimeConnected ? 60_000 : 15_000,
+      realtimeConnected
+        ? REALTIME_WATCHDOG_INTERVAL_MS
+        : FALLBACK_POLL_INTERVAL_MS,
     );
 
     const onFocus = () => void poll();

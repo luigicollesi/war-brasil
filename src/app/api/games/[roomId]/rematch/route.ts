@@ -6,8 +6,8 @@ import { createGameCommandRoute } from "@/src/lib/server/game-command-route";
 export const POST = createGameCommandRoute({
   operation: "vote_rematch",
   missingSessionMessage: "Entre em uma sala antes de votar na revanche.",
-  async execute({ roomId, session, metadata }) {
-    const result = await voteRematchCommand(roomId, session, metadata);
+  async execute({ roomId, session, accountUserId, metadata }) {
+    const result = await voteRematchCommand(roomId, session, metadata, accountUserId);
 
     return noStoreJson(
       {

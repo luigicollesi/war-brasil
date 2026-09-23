@@ -305,6 +305,13 @@ CREATE TABLE IF NOT EXISTS game.cards (
   UNIQUE (room_id, territory_id)
 );
 
+CREATE INDEX IF NOT EXISTS cards_room_zone_idx
+  ON game.cards(room_id, zone, deck_order);
+
+CREATE INDEX IF NOT EXISTS cards_hand_idx
+  ON game.cards(room_id, owner_player_id)
+  WHERE zone='hand';
+
 CREATE TABLE IF NOT EXISTS game.trade_offers (
   id BIGSERIAL PRIMARY KEY,
   room_id BIGINT NOT NULL REFERENCES game.rooms(id) ON DELETE CASCADE,

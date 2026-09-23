@@ -210,6 +210,9 @@ async function assignBalancedObjectives(
   const shuffledRules = [...rules];
   shuffleInPlace(shuffledRules);
 
+  const objectiveValues: string[] = [];
+  const parameters: Array<string | null> = [];
+
   for (const [index, player] of players.entries()) {
     const rule = shuffledRules[index];
     const targetPlayerId = targetPlayerFor(
@@ -223,21 +226,27 @@ async function assignBalancedObjectives(
       player,
       rule,
     );
+    const offset = parameters.length;
 
-    await client.query(
-      `INSERT INTO game.player_objectives
-         (room_id,player_id,objective_id,objective_rule_id,target_player_id,resolved_params)
-       VALUES ($1,$2,$3,$4,$5,$6::jsonb)`,
-      [
-        roomId,
-        player.id,
-        rule.objective_id,
-        rule.objective_rule_id,
-        targetPlayerId,
-        JSON.stringify(resolvedParams),
-      ],
+    objectiveValues.push(
+      `($${offset + 1},$${offset + 2},$${offset + 3},$${offset + 4},$${offset + 5},$${offset + 6}::jsonb)`,
+    );
+    parameters.push(
+      roomId,
+      player.id,
+      rule.objective_id,
+      rule.objective_rule_id,
+      targetPlayerId,
+      JSON.stringify(resolvedParams),
     );
   }
+
+  await client.query(
+    `INSERT INTO game.player_objectives
+       (room_id,player_id,objective_id,objective_rule_id,target_player_id,resolved_params)
+     VALUES ${objectiveValues.join(",")}`,
+    parameters,
+  );
 }
 
 async function assignLegacyObjectives(

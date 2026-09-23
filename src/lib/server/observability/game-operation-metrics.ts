@@ -18,7 +18,7 @@ export type DatabasePoolStats = {
   waiting: number;
 };
 
-type GameOperationMetric = {
+export type GameOperationMetric = {
   name: GameOperationName;
   outcome: GameOperationOutcome;
   durationMs: number;

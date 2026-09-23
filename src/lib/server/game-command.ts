@@ -12,6 +12,10 @@ import { enqueueGameAutomationSchedule } from "./automation/game-automation-queu
 import { reconcileGameAutomationSchedule } from "./automation/game-automation-schedule";
 import { databasePoolStats, pool } from "./db/pool";
 import {
+  clearCommandPlayerCache,
+  primeCommandPlayer,
+} from "./game-command-player";
+import {
   prepareGameCommandReceipt,
   saveGameCommandReceipt,
   type GameCommandReceiptRequest,
@@ -46,7 +50,13 @@ type GameCommandSyncEffects = {
   privatePatches?: GamePrivatePatchDelivery[];
 };
 
+type GameCommandActor = {
+  session: string;
+  accountUserId?: string;
+};
+
 type GameCommandOptions<T> = {
+  actor?: GameCommandActor;
   realtimePatch?: (value: T) => GameCommandPatch | null | undefined;
   syncEffects?: (
     client: PoolClient,
@@ -81,14 +91,19 @@ export async function playerGameCommand<T>(
   commandName: string,
   payload: unknown,
   execute: (client: PoolClient) => Promise<T>,
-  options: Omit<GameCommandOptions<T>, "request"> = {},
+  options: Omit<GameCommandOptions<T>, "request" | "actor"> & {
+    accountUserId?: string;
+  } = {},
 ) {
+  const { accountUserId, ...commandOptions } = options;
   return gameCommand(roomId, execute, {
-    ...options,
+    ...commandOptions,
+    actor: { session, accountUserId },
     request: metadata
       ? {
           ...metadata,
           session,
+          ...(accountUserId ? { accountUserId } : {}),
           commandName,
           payload,
         }
@@ -110,6 +125,14 @@ export async function gameCommand<T>(
     await client.query("BEGIN");
     transactionOpen = true;
     const baseRevision = await lockRoomRevision(client, roomId);
+    if (options.actor) {
+      await primeCommandPlayer(
+        client,
+        roomId,
+        options.actor.session,
+        options.actor.accountUserId,
+      );
+    }
     const preparedReceipt = options.request
       ? await prepareGameCommandReceipt(client, roomId, options.request)
       : null;
@@ -235,6 +258,7 @@ export async function gameCommand<T>(
     await rollbackIfNeeded(client, transactionOpen);
     throw error;
   } finally {
+    clearCommandPlayerCache(client);
     client.release();
     finishMetric(outcome, databasePoolStats());
   }

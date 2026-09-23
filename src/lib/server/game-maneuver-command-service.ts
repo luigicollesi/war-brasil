@@ -245,6 +245,7 @@ export async function maneuverCommand(
   session: string,
   input: Record<string, unknown>,
   metadata?: GameCommandRequestMetadata | null,
+  accountUserId?: string,
 ) {
   const roomId = normalizeRoomId(value);
   const fromTerritoryId = positiveInteger(
@@ -271,5 +272,6 @@ export async function maneuverCommand(
       const player = await resolveCommandPlayerBySession(client, roomId, session);
       return executeManeuver(client, roomId, player, normalizedInput);
     },
+    { accountUserId },
   );
 }

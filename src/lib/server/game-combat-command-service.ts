@@ -404,6 +404,7 @@ export async function attackCommand(
   session: string,
   input: Record<string, unknown>,
   metadata?: GameCommandRequestMetadata | null,
+  accountUserId?: string,
 ) {
   const roomId = normalizeRoomId(value);
   const fromTerritoryId = positiveInteger(
@@ -426,7 +427,7 @@ export async function attackCommand(
       const player = await resolveCommandPlayerBySession(client, roomId, session);
       return executeAttack(client, roomId, player, normalizedInput);
     },
-    roomSyncEffects(roomId),
+    { ...roomSyncEffects(roomId), accountUserId },
   );
 }
 
@@ -434,6 +435,7 @@ export async function cancelBattleCommand(
   value: string,
   session: string,
   metadata?: GameCommandRequestMetadata | null,
+  accountUserId?: string,
 ) {
   const roomId = normalizeRoomId(value);
   return playerGameCommand(
@@ -446,7 +448,7 @@ export async function cancelBattleCommand(
       const player = await resolveCommandPlayerBySession(client, roomId, session);
       return executeCancelBattle(client, roomId, player);
     },
-    roomSyncEffects(roomId),
+    { ...roomSyncEffects(roomId), accountUserId },
   );
 }
 
@@ -454,6 +456,7 @@ export async function rollBattleDiceCommand(
   value: string,
   session: string,
   metadata?: GameCommandRequestMetadata | null,
+  accountUserId?: string,
 ) {
   const roomId = normalizeRoomId(value);
   return playerGameCommand(
@@ -466,6 +469,6 @@ export async function rollBattleDiceCommand(
       const player = await resolveCommandPlayerBySession(client, roomId, session);
       return executeRollBattleDice(client, roomId, player);
     },
-    roomSyncEffects(roomId),
+    { ...roomSyncEffects(roomId), accountUserId },
   );
 }

@@ -14,7 +14,6 @@ const directSeatRoutes = [
   "src/app/api/rooms/[code]/bots/[botId]/route.ts",
   "src/app/api/games/[roomId]/advance/route.ts",
   "src/app/api/games/[roomId]/realtime-ticket/route.ts",
-  "src/app/api/games/[roomId]/trade/route.ts",
   "src/app/api/games/[roomId]/trade/signal/route.ts",
 ];
 
@@ -43,7 +42,7 @@ test("player seat guard exige sessão Better Auth e ownership da mesma conta", (
   assert.match(seatGuard, /403/);
 });
 
-test("todas as rotas humanas de Lobby e Game validam conta mais assento", () => {
+test("Lobby mantém seat guard e comandos validam conta na rota e assento na transação", () => {
   for (const path of directSeatRoutes) {
     const source = readFileSync(path, "utf8");
     assert.match(
@@ -59,7 +58,9 @@ test("todas as rotas humanas de Lobby e Game validam conta mais assento", () => 
   }
 
   const helper = readFileSync("src/lib/server/game-command-route.ts", "utf8");
-  assert.match(helper, /assertAuthenticatedPlayerSeat/);
+  assert.match(helper, /getAuthenticatedSession\(request\)/);
+  assert.match(helper, /accountUserId: accountSession\.user\.id/);
+  assert.doesNotMatch(helper, /assertAuthenticatedPlayerSeat/);
   assert.match(helper, /getPlayerSession\(request\)/);
   assert.match(helper, /readGameCommandRequestMetadata\(request\)/);
   assert.match(helper, /createGameCommandRoute/);
@@ -76,7 +77,7 @@ test("todas as rotas humanas de Lobby e Game validam conta mais assento", () => 
     );
     assert.doesNotMatch(
       source,
-      /getPlayerSession\(request\)|assertAuthenticatedPlayerSeat\(|readGameCommandRequestMetadata\(request\)|readJsonObject\(request\)|roomErrorResponse\(error,/,
+      /getPlayerSession\(request\)|getAuthenticatedSession\(request\)|assertAuthenticatedPlayerSeat\(|readGameCommandRequestMetadata\(request\)|readJsonObject\(request\)|roomErrorResponse\(error,/,
       `${path} voltou a duplicar o envelope HTTP compartilhado`,
     );
   }
@@ -122,4 +123,27 @@ test("ticket realtime só é emitido depois da validação account+seat", () => 
   const guardIndex = source.indexOf("assertAuthenticatedPlayerSeat");
   const issueIndex = source.indexOf("issueGameRealtimeTicket(roomId, session)");
   assert.ok(guardIndex >= 0 && issueIndex > guardIndex);
+});
+
+
+test("command routes defer seat ownership to the locked command boundary", () => {
+  const helper = readFileSync("src/lib/server/game-command-route.ts", "utf8");
+  const player = readFileSync("src/lib/server/game-command-player.ts", "utf8");
+  const trade = readFileSync(
+    "src/app/api/games/[roomId]/trade/route.ts",
+    "utf8",
+  );
+
+  assert.match(helper, /getAuthenticatedSession\(request\)/);
+  assert.match(helper, /accountUserId: accountSession\.user\.id/);
+  assert.doesNotMatch(helper, /assertAuthenticatedPlayerSeat/);
+
+  assert.match(player, /player_session=\$2|player_session = \$2/);
+  assert.match(player, /user_id=\$3::uuid|user_id = \$3::uuid/);
+  assert.match(player, /left_at IS NULL/);
+  assert.match(player, /FOR UPDATE/);
+
+  assert.match(trade, /getAuthenticatedSession\(request\)/);
+  assert.match(trade, /accountSession\.user\.id/);
+  assert.doesNotMatch(trade, /assertAuthenticatedPlayerSeat/);
 });

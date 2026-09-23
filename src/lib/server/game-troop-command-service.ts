@@ -288,6 +288,7 @@ export async function reinforceCommand(
   session: string,
   input: Record<string, unknown>,
   metadata?: GameCommandRequestMetadata | null,
+  accountUserId?: string,
 ) {
   const roomId = normalizeRoomId(value);
   const territoryId = positiveInteger(
@@ -307,6 +308,7 @@ export async function reinforceCommand(
       const player = await resolveCommandPlayerBySession(client, roomId, session);
       return executeReinforcement(client, roomId, player, normalizedInput);
     },
+    { accountUserId },
   );
 }
 
@@ -315,6 +317,7 @@ export async function tradeCardsCommand(
   session: string,
   input: Record<string, unknown>,
   metadata?: GameCommandRequestMetadata | null,
+  accountUserId?: string,
 ) {
   const roomId = normalizeRoomId(value);
   const ids = Array.isArray(input.cardIds)
@@ -353,6 +356,7 @@ export async function tradeCardsCommand(
       return executeTradeCards(client, roomId, player, ids);
     },
     {
+      accountUserId,
       syncEffects: async (client) => {
         const actorId = playerId;
         if (!actorId) return {};

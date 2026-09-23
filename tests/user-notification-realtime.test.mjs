@@ -29,7 +29,12 @@ test("user notification realtime uses a dedicated authenticated websocket channe
   assert.match(clientRuntime, /gameRealtimeMode\(\) === "off"/);
   assert.match(clientRuntime, /body\.enabled === false/);
   assert.match(clientRuntime, /if \(!ticket\)[\s\S]*setRealtimeConnected\(false\)/);
-  assert.match(clientRuntime, /realtimeConnected \? 60_000 : 15_000/);
+  assert.match(clientRuntime, /REALTIME_WATCHDOG_INTERVAL_MS = 5 \* 60_000/);
+  assert.match(clientRuntime, /FALLBACK_POLL_INTERVAL_MS = 15_000/);
+  assert.match(
+    clientRuntime,
+    /realtimeConnected[\s\S]*REALTIME_WATCHDOG_INTERVAL_MS[\s\S]*FALLBACK_POLL_INTERVAL_MS/,
+  );
   assert.match(clientRuntime, /reconnectAttempt \+= 1/);
   assert.match(clientRuntime, /Math\.min\([\s\S]*30_000/);
   assert.match(clientRuntime, /reconnectAttempt = 0/);

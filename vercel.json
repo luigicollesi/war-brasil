@@ -5,5 +5,8 @@
       "*": false,
       "main": true
     }
-  }
+  },
+  "regions": [
+    "gru1"
+  ]
 }

@@ -4,8 +4,8 @@ import { createGameJsonCommandRoute } from "@/src/lib/server/game-command-route"
 
 export const POST = createGameJsonCommandRoute({
   operation: "attack",
-  async execute({ roomId, session, body, metadata }) {
-    const result = await attackCommand(roomId, session, body, metadata);
+  async execute({ roomId, session, accountUserId, body, metadata }) {
+    const result = await attackCommand(roomId, session, body, metadata, accountUserId);
     return gameCommandValueResponse(result);
   },
 });

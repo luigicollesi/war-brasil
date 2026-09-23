@@ -2,6 +2,7 @@ import "server-only";
 
 import type { PoolClient } from "pg";
 import { playerGameCommand } from "@/src/lib/game-command";
+import { resolveCommandPlayerBySession } from "@/src/lib/server/game-command-player";
 import type { GameCommandRequestMetadata } from "@/src/lib/game-command-request";
 import { finishDiceBalanceMatchForRoom } from "@/src/lib/server/game-dice-balance-service";
 import { RoomError } from "@/src/lib/server/room-error";
@@ -38,31 +39,6 @@ async function loadRoom(client: PoolClient, roomId: string) {
 
   if (!room) throw new RoomError("Partida não encontrada.", 404);
   return room;
-}
-
-async function playerFor(
-  client: PoolClient,
-  roomId: string,
-  session: string,
-) {
-  const player = (
-    await client.query<FinishPlayer>(
-      `SELECT id
-       FROM game.players
-       WHERE room_id=$1
-         AND player_session=$2
-         AND is_bot=FALSE
-         AND left_at IS NULL
-       FOR UPDATE`,
-      [roomId, session],
-    )
-  ).rows[0];
-
-  if (!player) {
-    throw new RoomError("Você não pertence a esta partida.", 403);
-  }
-
-  return player;
 }
 
 function assertFinished(room: FinishRoom) {
@@ -126,6 +102,7 @@ export async function voteRematchCommand(
   value: string,
   session: string,
   metadata?: GameCommandRequestMetadata | null,
+  accountUserId?: string,
 ) {
   const roomId = normalizeRoomId(value);
 
@@ -138,7 +115,11 @@ export async function voteRematchCommand(
     async (client) => {
       const room = await loadRoom(client, roomId);
       assertFinished(room);
-      const player = await playerFor(client, room.id, session);
+      const player = await resolveCommandPlayerBySession(
+        client,
+        room.id,
+        session,
+      );
 
       await client.query(
         `INSERT INTO game.rematch_votes(room_id,player_id)
@@ -184,6 +165,7 @@ export async function voteRematchCommand(
         requiredCount: humanCount,
       };
     },
+    { accountUserId },
   );
 }
 
@@ -191,6 +173,7 @@ export async function returnEveryoneToLobbyCommand(
   value: string,
   session: string,
   metadata?: GameCommandRequestMetadata | null,
+  accountUserId?: string,
 ) {
   const roomId = normalizeRoomId(value);
 
@@ -203,7 +186,7 @@ export async function returnEveryoneToLobbyCommand(
     async (client) => {
       const room = await loadRoom(client, roomId);
       assertFinished(room);
-      await playerFor(client, room.id, session);
+      await resolveCommandPlayerBySession(client, room.id, session);
 
       await resetRoomToWaiting(client, room.id);
 
@@ -211,5 +194,6 @@ export async function returnEveryoneToLobbyCommand(
         code: room.code,
       };
     },
+    { accountUserId },
   );
 }

@@ -99,21 +99,37 @@ async function createDeck(client: PoolClient, roomId: string) {
     throw new RoomError("Os símbolos das cartas de território estão incompletos.", 503);
   }
 
+  const cardValues: string[] = [];
+  const parameters: Array<string | number> = [];
+
   for (const [index, card] of symbols.rows.entries()) {
-    await client.query(
-      `INSERT INTO game.cards (room_id,territory_id,symbol,deck_order)
-       VALUES ($1,$2,$3,$4)`,
-      [roomId, card.territory_id, card.symbol, deckOrders[index]],
+    const offset = parameters.length;
+    cardValues.push(
+      `($${offset + 1},$${offset + 2},$${offset + 3},FALSE,$${offset + 4})`,
+    );
+    parameters.push(
+      roomId,
+      card.territory_id,
+      card.symbol,
+      deckOrders[index],
     );
   }
 
   for (let index = 0; index < WILD_CARD_COUNT; index += 1) {
-    await client.query(
-      `INSERT INTO game.cards (room_id,is_wild,deck_order)
-       VALUES ($1,TRUE,$2)`,
-      [roomId, deckOrders[TERRITORY_COUNT + index]],
+    const offset = parameters.length;
+    cardValues.push(
+      `($${offset + 1},NULL,NULL,TRUE,$${offset + 2})`,
     );
+    parameters.push(roomId, deckOrders[TERRITORY_COUNT + index]);
   }
+
+  await client.query(
+    `INSERT INTO game.cards (
+       room_id,territory_id,symbol,is_wild,deck_order
+     )
+     VALUES ${cardValues.join(",")}`,
+    parameters,
+  );
 }
 
 async function transitionRoomToOrderRoll(client: PoolClient, roomId: string) {

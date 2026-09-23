@@ -864,6 +864,7 @@ export async function playerTradeCommand(
   session: string,
   input: Record<string, unknown>,
   metadata?: GameCommandRequestMetadata | null,
+  accountUserId?: string,
 ) {
   const roomId = normalizeRoomId(value);
 
@@ -878,6 +879,7 @@ export async function playerTradeCommand(
       return executePlayerTradeAction(client, roomId, player.id, input);
     },
     {
+      accountUserId,
       syncEffects: (client) => buildTradeCommandSyncEffects(client, roomId, input),
     },
   );
