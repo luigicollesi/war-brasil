@@ -49,6 +49,27 @@ test("landing pública e Home autenticada reutilizam a mesma experiência sem du
   assert.match(home, /isCommandHome \? "stable" : "primed"/);
 });
 
+test("landing pública exibe aviso ficcional antes de liberar a Genesis", () => {
+  assert.match(home, /const \[landingPreludeComplete, setLandingPreludeComplete\] = useState\(isCommandHome\)/);
+  assert.match(home, /data-landing-prelude=\{landingPreludeComplete \? "complete" : "active"\}/);
+  assert.match(home, /aria-label="Aviso de conteúdo fictício"/);
+  assert.match(home, /Todo o conteúdo apresentado nesta experiência é meramente ilustrativo/);
+  assert.match(home, /geografia, os acontecimentos e os eventos históricos retratados são fictícios/);
+  assert.match(home, /onAnimationEnd=\{handleLandingPreludeAnimationEnd\}/);
+  assert.match(
+    home,
+    /ceremonyPhase !== "primed"[\s\S]*!landingPreludeComplete[\s\S]*sceneState !== "primed"/,
+  );
+
+  assert.match(introStyles, /\.landingPrelude \{/);
+  assert.match(introStyles, /position: fixed/);
+  assert.match(introStyles, /background: #000/);
+  assert.match(introStyles, /z-index:/);
+  assert.match(introStyles, /animation: landingPreludeSequence 6400ms/);
+  assert.match(introStyles, /@keyframes landingPreludeSequence/);
+  assert.match(introStyles, /@media \(prefers-reduced-motion: reduce\)/);
+});
+
 test("HOME consome somente contrato público e não controla progresso por frame", () => {
   assert.match(home, /useCommandSceneDirective/);
   assert.match(home, /useCommandSceneState/);
