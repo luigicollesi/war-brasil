@@ -72,3 +72,16 @@ test("Ajustar Dossiê selects owned titles and profile backgrounds through appea
   assert.match(settings, /background\.previewRef \?\? background\.assetRef/);
   assert.doesNotMatch(settings, /\/api\/profile\/titles/);
 });
+
+
+test("desktop dossier reserves the viewport when a title is equipped", async () => {
+  const dossier = await source("src/components/profile/v4/profile-dossier.tsx");
+  const dossierStyles = await source("src/components/profile/v4/profile-dossier.module.css");
+  const shellStyles = await source("src/components/profile/v4/profile-shell.module.css");
+
+  assert.match(dossier, /data-has-title=\{appearanceTitle \|\| identity\.title/);
+  assert.match(dossierStyles, /grid-template-rows:\s*minmax\(272px, 0\.82fr\) minmax\(0, 1\.18fr\)/);
+  assert.match(dossierStyles, /identityMain\[data-has-title="true"\]/);
+  assert.match(shellStyles, /data-active-surface="dossier"[\s\S]*height:\s*100dvh/);
+  assert.match(shellStyles, /data-active-surface="dossier"[\s\S]*\.surface[\s\S]*overflow:\s*hidden/);
+});
