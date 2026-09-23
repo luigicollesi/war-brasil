@@ -64,9 +64,12 @@ test("Mobile remove o nexus literal e recompõe seis postos em 2x3", () => {
   assert.match(workspace, />\s*Sua estação\s*/);
 });
 
-test("Credencial local mantém controles reais no DOM e compacta antes deles", () => {
+test("Credencial local usa identidade do perfil e mantém apenas cor como customização", () => {
   assert.match(station, /className=\{styles\.commandCredential\}/);
-  assert.match(station, /id="faction-name"/);
+  assert.match(station, /Nome de exibição/);
+  assert.match(station, /me\.displayName/);
+  assert.match(station, /me\.handle/);
+  assert.doesNotMatch(station, /id="faction-name"|name="factionName"/);
   assert.match(station, /className=\{styles\.colorEditor\}/);
   assert.match(stationStyles, /@media \(max-width: 720px\) and \(max-height: 580px\)/);
   assert.match(stationStyles, /\.commandCredential,[\s\S]*?display:\s*none/);
@@ -100,4 +103,12 @@ test("LobbyClient continua controlador único dos contratos funcionais", () => {
   assert.doesNotMatch(formation, /fetch\(|useLobbySync/);
   assert.doesNotMatch(station, /fetch\(|useLobbySync/);
   assert.doesNotMatch(ready, /fetch\(|useLobbySync/);
+});
+
+test("cards humanos da formação abrem o perfil público em nova aba", () => {
+  assert.match(formation, /href=\{\`\/profile\/\$\{encodeURIComponent\(player\.handle\)\}\`\}/);
+  assert.match(formation, /target="_blank"/);
+  assert.match(formation, /rel="noopener noreferrer"/);
+  assert.match(formation, /player\.displayName/);
+  assert.match(formationStyles, /\.stationProfileLink/);
 });
