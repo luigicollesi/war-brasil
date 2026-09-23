@@ -233,10 +233,7 @@ function isEffectMotion(value: string): value is Exclude<TitleEffectMotion, "non
   return (TITLE_EFFECT_MOTIONS as readonly string[]).includes(value);
 }
 
-function fallbackStyle(
-  sourceKey: string,
-  rarity: ProfileAppearanceRarity,
-): ParsedTitleStyle {
+function fallbackStyle(sourceKey: string): ParsedTitleStyle {
   return {
     sourceKey,
     canonicalKey: "ivory-solid",
@@ -340,7 +337,7 @@ export function parseTitleStyleKey(
 ): ParsedTitleStyle {
   const sourceKey = styleKey.trim().toLowerCase();
   if (!sourceKey || sourceKey.length > TITLE_STYLE_MAX_LENGTH) {
-    return fallbackStyle(sourceKey, rarity);
+    return fallbackStyle(sourceKey);
   }
 
   const expanded = LEGACY_TITLE_STYLE_KEYS[sourceKey] ?? sourceKey;
@@ -349,17 +346,17 @@ export function parseTitleStyleKey(
   const coreParts = core?.split("-") ?? [];
 
   if (coreParts.length < 2 || coreParts.length > 3) {
-    return fallbackStyle(sourceKey, rarity);
+    return fallbackStyle(sourceKey);
   }
 
   const [paletteToken, materialToken, motionToken] = coreParts;
   if (!isPalette(paletteToken) || !isMaterial(materialToken)) {
-    return fallbackStyle(sourceKey, rarity);
+    return fallbackStyle(sourceKey);
   }
 
   let motion: TitleMotionKey = "none";
   if (motionToken && motionToken !== "basic") {
-    if (!isMotion(motionToken)) return fallbackStyle(sourceKey, rarity);
+    if (!isMotion(motionToken)) return fallbackStyle(sourceKey);
     motion = motionToken;
   }
 
@@ -367,7 +364,7 @@ export function parseTitleStyleKey(
   const seen = new Set<TitleEffectKind>();
   for (const segment of effectSegments) {
     const effect = parseEffect(segment, rarity);
-    if (!effect || seen.has(effect.kind)) return fallbackStyle(sourceKey, rarity);
+    if (!effect || seen.has(effect.kind)) return fallbackStyle(sourceKey);
     seen.add(effect.kind);
     effects.push(effect);
   }
