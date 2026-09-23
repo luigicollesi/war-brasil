@@ -115,10 +115,12 @@ test("sala de guerra representa seis postos e degrada para matriz mobile", () =>
   assert.match(formationStyles, /grid-template-rows:\s*repeat\(3, minmax\(0, 1fr\)\)/);
 });
 
-test("configuração local mantém agrupamento semântico e controles no DOM", () => {
+test("configuração local usa o perfil como identidade e mantém a cor editável", () => {
   assert.match(station, /<fieldset className=\{styles\.colorEditor\}>/);
-  assert.match(station, /<legend className="wb-label">Cor da facção<\/legend>/);
-  assert.match(station, /id="faction-name"/);
+  assert.match(station, /<legend className="wb-label">Cor de comando<\/legend>/);
+  assert.match(station, /Nome de exibição/);
+  assert.match(station, /me\.displayName/);
+  assert.doesNotMatch(station, /id="faction-name"|onSaveFaction/);
   assert.match(station, /className=\{styles\.commandCredential\}/);
   assert.match(ready, /Pronto para batalha/);
 });
@@ -165,4 +167,14 @@ test("lobby mantém heartbeat do assento e saída explícita sem unload destruti
 test("partida navega publicamente pelo código da sala", () => {
   assert.match(lobby, /snapshot\.room\.code/);
   assert.doesNotMatch(lobby, /\/game\/\$\{snapshot\.room\.id\}/);
+});
+
+
+test("snapshot de lobby expõe display name e handle e cards humanos navegam ao perfil", () => {
+  assert.match(rooms, /display_name_snapshot/);
+  assert.match(rooms, /handle_snapshot/);
+  assert.match(rooms, /displayName/);
+  assert.match(formation, /\/profile\/\$\{encodeURIComponent\(player\.handle\)\}/);
+  assert.match(formation, /target="_blank"/);
+  assert.match(formation, /noopener noreferrer/);
 });
