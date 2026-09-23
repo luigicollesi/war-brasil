@@ -32,6 +32,27 @@ type GameClientProps = {
   roomId: string;
 };
 
+type ParticipationResponse = {
+  participation?: {
+    target?: string;
+  } | null;
+};
+
+async function refreshParticipationTarget(fallback: string) {
+  const response = await fetch("/api/participation", {
+    method: "POST",
+    cache: "no-store",
+  });
+  if (!response.ok) return fallback;
+
+  const body = (await response.json().catch(() => null)) as
+    | ParticipationResponse
+    | null;
+  return typeof body?.participation?.target === "string"
+    ? body.participation.target
+    : fallback;
+}
+
 function colorHex(color: PlayerColor) {
   return PLAYER_COLORS.find((item) => item.value === color)?.hex ?? "#17372d";
 }
@@ -43,9 +64,21 @@ export function GameClient({ roomId }: GameClientProps) {
   const [isRolling, setIsRolling] = useState(false);
 
   useEffect(() => {
-    if (snapshot?.room.status === "waiting") {
-      router.replace(`/lobby/${snapshot.room.code}`);
-    }
+    if (snapshot?.room.status !== "waiting") return;
+
+    let cancelled = false;
+    const fallback = `/lobby/${snapshot.room.code}`;
+    void refreshParticipationTarget(fallback)
+      .then((target) => {
+        if (!cancelled) router.replace(target);
+      })
+      .catch(() => {
+        if (!cancelled) router.replace(fallback);
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, [router, snapshot?.room.code, snapshot?.room.status]);
 
   if (isLoading && !snapshot) {
@@ -299,7 +332,9 @@ function GameReadyClient({
         undefined,
         "Não foi possível voltar ao lobby.",
       );
-      router.replace(`/lobby/${snapshot.room.code}`);
+      const fallback = `/lobby/${snapshot.room.code}`;
+      const target = await refreshParticipationTarget(fallback);
+      router.replace(target);
     } catch (requestError) {
       setFinishError(
         requestError instanceof Error
