@@ -6,6 +6,7 @@ import { CommandHomeClient } from "@/src/components/pre-game/home/command-home-c
 import { CommandHomeContent } from "@/src/components/pre-game/home/command-home-content";
 import { getAuthenticatedSessionForReadHeaders } from "@/src/lib/server/auth/auth-guard";
 import { getCommandAccessState } from "@/src/lib/server/auth/command-access";
+import { findActiveParticipationForUser } from "@/src/lib/server/game-participation-service";
 
 export const metadata: Metadata = {
   title: "Comando",
@@ -22,6 +23,11 @@ export default async function CommandHomePage() {
 
   if (!session) {
     redirect("/");
+  }
+
+  const participation = await findActiveParticipationForUser(session.user.id);
+  if (participation) {
+    redirect(participation.target);
   }
 
   const access = await getCommandAccessState(session);
