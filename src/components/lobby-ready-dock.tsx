@@ -83,7 +83,7 @@ export function LobbyReadyDock({
             key={player?.id ?? `empty-${slot}`}
             className={styles.authorizationCell}
             data-state={state}
-            title={player ? `${player.factionName}: ${player.isReady ? "pronto" : "configurando"}` : `Posto ${slot}: vazio`}
+            title={player ? `${player.displayName}: ${player.isReady ? "pronto" : "configurando"}` : `Posto ${slot}: vazio`}
           >
             <small>{String(slot).padStart(2, "0")}</small>
             <i aria-hidden="true" />
