@@ -276,6 +276,7 @@ export async function getGameSnapshotQuery(
           AND access_player.player_session=$2
           AND access_player.user_id=$3
           AND access_player.is_bot=FALSE
+          AND access_player.left_at IS NULL
          WHERE gr.id=$1`,
         [roomId, session, accountUserId],
       )
@@ -298,6 +299,7 @@ export async function getGameSnapshotQuery(
                 player_session=$2 is_me
          FROM game.players
          WHERE room_id=$1
+           AND left_at IS NULL
          ORDER BY turn_position NULLS LAST,joined_at,id`,
         [room.id, session],
       )
