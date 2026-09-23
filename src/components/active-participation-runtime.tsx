@@ -26,13 +26,9 @@ export function ActiveParticipationRuntime({
     !pathname.startsWith("/api/");
 
   useEffect(() => {
-    if (!shouldCheck) {
-      setCheckedPath(pathname);
-      return;
-    }
+    if (!shouldCheck) return;
 
     let cancelled = false;
-    setCheckedPath(null);
 
     void fetch("/api/participation", {
       method: "POST",
