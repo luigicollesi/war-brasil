@@ -42,22 +42,6 @@ async function step(name, callback) {
   }
 }
 
-) {
-  return page.evaluate(
-    async ({ url: requestUrl, init: requestInit }) => {
-      const response = await fetch(requestUrl, requestInit);
-      let body = null;
-      try {
-        body = await response.json();
-      } catch {
-        body = null;
-      }
-      return { status: response.status, body };
-    },
-    { url, init },
-  );
-}
-
 async function authenticateActor(page) {
   actorSequence += 1;
   const identity = `${process.pid}-${actorSequence}`;
