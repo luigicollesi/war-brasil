@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server";
 import { noStoreJson } from "@/src/lib/api-response";
+import { persistActiveParticipationCookie } from "@/src/lib/server/auth/active-participation-cookie";
 import { getCommandAccessState } from "@/src/lib/server/auth/command-access";
 import {
   authenticationRequiredResponse,
@@ -64,10 +65,14 @@ export async function POST(
       },
     });
     await publishLobbyChangeByCode(result.roomCode);
-    return persistPlayerSession(
+    const response = persistPlayerSession(
       noStoreJson({ ok: true, ...result }),
       playerSession,
     );
+    return persistActiveParticipationCookie(response, {
+      kind: "lobby",
+      roomCode: result.roomCode,
+    });
   } catch (error) {
     return invitationErrorResponse(error);
   }
