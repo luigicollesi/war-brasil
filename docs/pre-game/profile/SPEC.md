@@ -8,6 +8,8 @@ Segue `../quality-standard.md`, `../visual-language.md` e `../traceability.md`.
 
 Economia, wallet, catálogo jogável, offers, preços, purchases, inventário, loadout e snapshot cosmético são regidos exclusivamente por `../../economy/SPEC.md`. Este documento define como essas capacidades aparecem e se integram à experiência de Profile.
 
+As condições de desbloqueio automático de títulos por conquistas, participação no beta e marcos econômicos são especializadas por `./title-achievements/SPEC.md`. Esse documento prevalece somente sobre regras de aquisição desses títulos; apresentação e equipagem continuam sob este SPEC.
+
 ## Objetivo
 
 PROFILE V4 transforma o antigo Quartel composto por estações concorrentes em um Command Center de três superfícies primárias:
