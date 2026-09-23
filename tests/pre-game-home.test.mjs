@@ -43,6 +43,7 @@ test("landing autenticada pré-carrega /home e usa transição curta antes do re
   assert.match(home, /href="\/home"/);
   assert.match(home, /prefetch=\{true\}/);
   assert.match(home, /data-home-prefetch/);
+  assert.doesNotMatch(home, /router\.prefetch\("\/home"\)/);
   assert.match(home, /commandHomeNavigationPending/);
   assert.match(home, /onAnimationEnd=\{handleCommandHomeTransitionEnd\}/);
   assert.match(home, /router\.replace\("\/home", \{ scroll: false \}\)/);
