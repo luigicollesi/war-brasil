@@ -409,7 +409,7 @@
 }
 
 .titlePreview {
-  --profile-title-size-base: clamp(1.2rem, 3.8vw, 1.72rem);
+  --profile-title-size-legendary: clamp(1.25rem, 4.5vw, 2rem);
   max-width: 100%;
 }
 
