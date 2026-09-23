@@ -50,10 +50,10 @@ test("landing pública e Home autenticada reutilizam a mesma experiência sem du
 });
 
 test("landing pública exibe aviso ficcional antes de liberar a Genesis", () => {
-  assert.match(home, /const \[landingPreludeComplete, setLandingPreludeComplete\] = useState\(isCommandHome\)/);
+  assert.match(home, /const \[landingPreludeComplete, setLandingPreludeComplete\] =\s*useState\(isCommandHome\)/);
   assert.match(home, /data-landing-prelude=\{landingPreludeComplete \? "complete" : "active"\}/);
   assert.match(home, /aria-label="Aviso de conteúdo fictício"/);
-  assert.match(home, /Todo o conteúdo apresentado nesta experiência é meramente ilustrativo/);
+  assert.match(home, /Todo o conteúdo apresentado nesta página é meramente ilustrativo/);
   assert.match(home, /geografia, os acontecimentos e os eventos históricos retratados são fictícios/);
   assert.match(home, /onAnimationEnd=\{handleLandingPreludeAnimationEnd\}/);
   assert.match(
@@ -67,6 +67,8 @@ test("landing pública exibe aviso ficcional antes de liberar a Genesis", () => 
   assert.match(introStyles, /z-index:/);
   assert.match(introStyles, /animation: landingPreludeSequence 6400ms/);
   assert.match(introStyles, /@keyframes landingPreludeSequence/);
+  assert.match(introStyles, /animation-duration: 5400ms/);
+  assert.match(introStyles, /@keyframes landingPreludeReduced/);
   assert.match(introStyles, /@media \(prefers-reduced-motion: reduce\)/);
 });
 
