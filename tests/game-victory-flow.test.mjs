@@ -84,3 +84,13 @@ test("vitória monta modal terminal com votação e retorno coletivo", () => {
   assert.match(snapshot, /game\.rematch_votes/);
   assert.match(snapshot, /hasVoted/);
 });
+
+
+test("vitória plural avalia todos antes de finalizar uma única vez", () => {
+  assert.match(victoryService, /export async function evaluateGameVictories/);
+  assert.match(victoryService, /const winners: string\[\] = \[\]/);
+  assert.match(victoryService, /export async function finalizeGameVictories/);
+  assert.match(victoryService, /INSERT INTO game\.room_winners/);
+  assert.match(victoryService, /winner_player_id=\$2/);
+  assert.match(diceBalanceService, /player\.id=ANY\(\$3::bigint\[\]\)/);
+});
