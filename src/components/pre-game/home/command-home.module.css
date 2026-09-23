@@ -25,7 +25,7 @@
   inset: 0;
   pointer-events: auto;
   background: #070a08;
-  animation: commandHomeRouteTransition 180ms cubic-bezier(.2, .78, .2, 1) both;
+  animation: commandHomeRouteTransition 160ms cubic-bezier(.2, .78, .2, 1) both;
 }
 
 .skipToCommand {
@@ -451,7 +451,7 @@
   }
 
   to {
-    opacity: .82;
+    opacity: .58;
   }
 }
 
