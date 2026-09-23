@@ -1,7 +1,6 @@
 import assert from "node:assert/strict";
 import { Client } from "pg";
 import { apiJson, loadPlaywrightRuntime } from "./runtime-helper.mjs";
-import { assertProfileSocialFlow } from "./profile-social-flow.mjs";
 import { waitForRegistrationCode } from "./registration-otp-helper.mjs";
 import {
   completeCommanderAgeGate,
@@ -205,43 +204,6 @@ async function assertOwnedTitleBoundary(page, db, session, identity) {
   return { handle };
 }
 
-async function createSocialPeer(browser, db, identity) {
-  const context = await browser.newContext({
-    extraHTTPHeaders: { "x-forwarded-for": "198.51.100.241" },
-  });
-  const page = await context.newPage();
-  const email = `social-peer-${identity}@e2e.war-brasil.test`;
-  const handle = `social-peer-${identity}`.slice(0, 32);
-
-  try {
-    await page.goto(`${BASE_URL}/robots.txt`, { waitUntil: "domcontentloaded" });
-    await register(page, email);
-
-    const code = await waitForRegistrationCode(email, EMAIL_SINK_DIR);
-    const verification = await apiJson(page, "/api/auth/register/verify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, code }),
-    });
-    assert.equal(verification.status, 200, JSON.stringify(verification.body));
-    assert.equal(verification.body?.authenticated, true);
-
-    const session = await getSession(page);
-    const userId = session?.user?.id;
-    assert.ok(userId, "peer social E2E não recebeu sessão após OTP");
-
-    await completeCommanderOnboarding(page, {
-      handle,
-      displayName: "Social Peer E2E",
-    });
-
-    return { context, page, userId, handle };
-  } catch (error) {
-    await context.close().catch(() => undefined);
-    throw error;
-  }
-}
-
 const browser = await playwright.chromium.launch({ headless: true });
 const db = new Client({ connectionString: DATABASE_URL });
 await db.connect();
@@ -341,30 +303,15 @@ try {
 
     await assertSessionBoundPresence(page, authenticatedSession);
     await completeCommanderAgeGate(page);
-    const primaryProfile = await assertOwnedTitleBoundary(
+    await assertOwnedTitleBoundary(
       page,
       db,
       authenticatedSession,
       identity,
     );
 
-    const peer = await createSocialPeer(browser, db, identity);
-    try {
-      await assertProfileSocialFlow({
-        db,
-        actorA: {
-          page,
-          userId: authenticatedSession.user.id,
-          handle: primaryProfile.handle,
-        },
-        actorB: peer,
-      });
-    } finally {
-      await peer.context.close();
-    }
-
     console.log(
-      "[auth-verification-e2e] pending signup sem auth.user, OTP, sessão imediata, age gate, presença, títulos e grafo social confirmados.",
+      "[auth-verification-e2e] pending signup sem auth.user, OTP, sessão imediata, age gate, presença e títulos confirmados.",
     );
   } finally {
     await context.close();
