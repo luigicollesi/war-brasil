@@ -23,8 +23,9 @@ A referência de experiência é diegética: a interface deve parecer parte de u
 - ready/unready;
 - entrada/saída;
 - reconexão;
+- lease de presença enquanto a sala está em `waiting`;
 - condições de início;
-- navegação para a partida.
+- participação ativa e navegação para a partida.
 
 Componentes visuais MUST receber esse estado. MUST NOT manter store concorrente de sala que possa divergir.
 
@@ -32,14 +33,29 @@ Estado local de apresentação, como selecionar `Formação` ou `Sua estação` 
 
 ## Navegação de retorno
 
-A sala MUST possuir controle explícito `Voltar` para `/matchmaking`.
+A sala MUST possuir um único controle explícito `Voltar para Operações` para encerrar a participação no lobby e, somente após a confirmação autoritativa do servidor, navegar para `/matchmaking`.
 
 O retorno:
 
 - MUST ser determinístico;
 - MUST NOT depender de `history.back()`;
-- MUST NOT remover jogador, apagar sala, alterar ready ou realizar request de saída implicitamente;
+- MUST executar a saída autoritativa do assento em `waiting` antes da navegação;
+- MUST limpar a participação ativa somente após a saída ser confirmada;
+- MUST deletar a sala quando a saída remover o último jogador humano, reutilizando o lifecycle autoritativo existente;
+- MUST NOT existir um segundo botão concorrente de saída da sala;
 - MUST permanecer disponível também nos estados iniciais de loading/erro.
+
+## Participação e presença
+
+Enquanto um jogador humano possuir assento autoritativo na sala em `waiting`, a navegação autenticada MUST reconduzi-lo para `/lobby/[code]` até que o assento seja encerrado.
+
+A presença no lobby MUST:
+
+- atualizar `lobby_last_seen_at` sem sobrepor requests de heartbeat;
+- remover automaticamente somente assentos humanos de salas `waiting` após 20 segundos sem heartbeat confirmado;
+- MUST NOT remover automaticamente jogadores após a sala sair de `waiting`;
+- reconciliar salas afetadas via realtime;
+- deletar uma sala `waiting` quando o último humano for removido.
 
 ## Composição de viewport
 
