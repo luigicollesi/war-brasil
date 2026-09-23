@@ -285,6 +285,14 @@ export function DoctrineExperience({
                 ÍNDICE
               </a>
 
+              <Link
+                href="/home"
+                className={ux.mobileReturnButton}
+                aria-label="Voltar ao comando"
+              >
+                COMANDO
+              </Link>
+
               {nextChapter ? (
                 <Link
                   href={chapterHref(nextChapter.slug)}
