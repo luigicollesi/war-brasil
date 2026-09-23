@@ -4,6 +4,7 @@ const smokeSuite = [
   "scripts/e2e/auth-credentials-verification-e2e.mjs",
   "scripts/e2e/auth-password-reset-e2e.mjs",
   "scripts/e2e/auth-session-security-e2e.mjs",
+  "scripts/e2e/profile-social-flow.mjs",
   "scripts/e2e/auth-origin-redirect-e2e.mjs",
   "scripts/e2e/auth-rate-limit-e2e.mjs",
   "scripts/e2e/auth-seat-boundary-e2e.mjs",
@@ -21,7 +22,6 @@ const fullSuite = [
   "scripts/e2e/auth-token-expiry-e2e.mjs",
   "scripts/e2e/economy-e2e.mjs",
   "scripts/e2e/economy-purchase-e2e.mjs",
-  "scripts/e2e/profile-social-flow.mjs",
 ];
 
 const suiteName = process.argv[2] ?? "smoke";
