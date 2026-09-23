@@ -276,3 +276,20 @@ test("gradient drift loops from the same visual state without moving glyph geome
     /@keyframes wb-title-gradient-drift[\s\S]{0,500}--profile-title-angle:/,
   );
 });
+
+
+test("title rarity controls size centrally across profile surfaces", () => {
+  const rendererStyles = read("src/components/profile/profile-title-renderer.module.css");
+  const dossierStyles = read("src/components/profile/v4/profile-dossier.module.css");
+  const publicStyles = read("src/components/profile/public-commander-profile.module.css");
+
+  for (const rarity of ["common", "uncommon", "rare", "epic", "legendary"]) {
+    assert.ok(rendererStyles.includes('data-title-rarity="' + rarity + '"'));
+  }
+
+  assert.match(rendererStyles, /--profile-title-size-base/);
+  assert.match(dossierStyles, /--profile-title-size-base:/);
+  assert.match(publicStyles, /--profile-title-size-base:/);
+  assert.doesNotMatch(dossierStyles, /\.dossierTitle\s*\{[^}]*font-size:/s);
+  assert.doesNotMatch(publicStyles, /\.title\s*\{[^}]*font-size:/s);
+});
