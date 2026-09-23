@@ -64,7 +64,7 @@ test("todas as rotas humanas de Lobby e Game validam conta mais assento", () => 
   assert.match(helper, /readGameCommandRequestMetadata\(request\)/);
   assert.match(helper, /createGameCommandRoute/);
   assert.match(helper, /createGameJsonCommandRoute/);
-  assert.match(helper, /readJsonObject\(request\)/);
+  assert.match(helper, /createGameCommandEnvelope\(options, readJsonObject\)/);
   assert.match(helper, /roomErrorResponse\(error,/);
 
   for (const path of wrappedSeatRoutes) {
