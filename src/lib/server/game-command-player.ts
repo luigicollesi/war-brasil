@@ -17,7 +17,9 @@ export async function resolveCommandPlayerBySession(
     await client.query<CommandPlayer>(
       `SELECT id,turn_position
        FROM game.players
-       WHERE room_id=$1 AND player_session=$2
+       WHERE room_id=$1
+         AND player_session=$2
+         AND left_at IS NULL
        FOR UPDATE`,
       [roomId, session],
     )
