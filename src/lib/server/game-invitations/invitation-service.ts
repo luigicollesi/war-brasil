@@ -27,6 +27,7 @@ import {
 } from "./invitation-repository";
 import { insertInvitationRejectedNotification } from "../profile/notification-repository";
 import { publishUserNotificationChange } from "../realtime/user-notification-publisher";
+import { lockActiveParticipationForUser } from "../game-participation-service";
 
 const INVITATION_ID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -61,6 +62,21 @@ function isUniqueViolation(error: unknown) {
       "code" in error &&
       (error as { code?: unknown }).code === "23505",
   );
+}
+
+function activeParticipationInvitationError(error: unknown) {
+  if (
+    error instanceof RoomError &&
+    (error.debug?.reason === "active_participation" ||
+      error.debug?.reason === "multiple_active_participations")
+  ) {
+    return new GameInvitationError(
+      "GAME_INVITATION_ACTIVE_PARTICIPATION",
+      error.message,
+      409,
+    );
+  }
+  return null;
 }
 
 async function requireFriendRelationship(
@@ -124,7 +140,15 @@ export async function createFriendRoomInvitation(input: Readonly<{
     };
   }
 
-  const room = await createRoom(input.playerSession, input.identity);
+  let room;
+  try {
+    room = await createRoom(input.playerSession, input.identity);
+  } catch (error) {
+    const participationError = activeParticipationInvitationError(error);
+    if (participationError) throw participationError;
+    throw error;
+  }
+
   try {
     const invitation = await insertRoomInvitation(
       room.id,
@@ -175,6 +199,8 @@ export async function acceptGameInvitation(input: Readonly<{
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
+
+    await lockActiveParticipationForUser(client, input.inviteeUserId);
 
     const reference = await readIncomingRoomInvitationRoomReference(
       invitationId,
@@ -302,6 +328,8 @@ export async function acceptGameInvitation(input: Readonly<{
           409,
         );
       }
+      const participationError = activeParticipationInvitationError(error);
+      if (participationError) throw participationError;
       throw error;
     }
 
