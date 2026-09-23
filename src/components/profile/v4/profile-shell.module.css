@@ -6,6 +6,7 @@
   --profile-green: #0b2a22;
   --profile-green-deep: #071a15;
   --profile-red: #b53137;
+  --profile-commandbar-height: 78px;
   position: relative;
   min-height: 100dvh;
   overflow-x: clip;
@@ -338,7 +339,7 @@
 
 .surface {
   width: min(100%, 1540px);
-  min-height: calc(100dvh - 79px);
+  min-height: calc(100dvh - var(--profile-commandbar-height));
   margin: 0 auto;
   padding: clamp(22px, 3vw, 44px);
   transition: transform 260ms ease, opacity 220ms ease;
@@ -626,6 +627,7 @@
 }
 
 .page:has(.profileBackdrop) {
+  --profile-commandbar-height: 64px;
   background: transparent;
 }
 
@@ -655,4 +657,19 @@
 
 .page:has(.profileBackdrop) .surface {
   width: min(100%, 1480px);
+}
+
+
+@media (min-width: 981px) {
+  .page[data-active-surface="dossier"] {
+    height: 100dvh;
+    min-height: 100dvh;
+    overflow: hidden;
+  }
+
+  .page[data-active-surface="dossier"] .surface {
+    height: calc(100dvh - var(--profile-commandbar-height));
+    min-height: 0;
+    overflow: hidden;
+  }
 }
