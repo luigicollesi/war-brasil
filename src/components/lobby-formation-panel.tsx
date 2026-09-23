@@ -164,8 +164,20 @@ function PlayerStation({
       data-slot={slot}
       data-me={player.isMe ? "true" : "false"}
       data-ready={player.isReady ? "true" : "false"}
+      data-profile-link={player.handle ? "true" : "false"}
       style={stationStyle(color?.hex)}
     >
+      {player.handle ? (
+        <a
+          className={styles.stationProfileLink}
+          href={`/profile/${encodeURIComponent(player.handle)}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={`Abrir perfil de ${player.displayName} em nova aba`}
+          title={`Abrir perfil de @${player.handle}`}
+        />
+      ) : null}
+
       <div className={styles.stationTopline}>
         <span className={styles.stationNumber}>POSTO {String(slot).padStart(2, "0")}</span>
         <span className="wb-player-state">
@@ -176,9 +188,10 @@ function PlayerStation({
       <div className={styles.stationBody}>
         <span className={styles.insignia} aria-hidden="true" />
         <div className={styles.stationIdentity}>
-          <p className={styles.stationName}>{player.factionName}</p>
+          <p className={styles.stationName}>{player.displayName}</p>
           <p className={styles.stationMeta}>
-            {color?.label ?? "Facção"}
+            {player.handle ? `@${player.handle} · ` : ""}
+            {color?.label ?? "Comando"}
             {player.isBot ? " · unidade automatizada" : player.isMe ? " · sua estação" : ""}
           </p>
         </div>
@@ -192,7 +205,7 @@ function PlayerStation({
             disabled={actionPending}
             onClick={() => void onRemoveBot(player.id)}
             className={`wb-button wb-button--ghost ${styles.botAction}`}
-            aria-label={`Remover bot ${player.factionName}`}
+            aria-label={`Remover bot ${player.displayName}`}
           >
             {isRemoving ? "Removendo…" : "Remover"}
           </button>
