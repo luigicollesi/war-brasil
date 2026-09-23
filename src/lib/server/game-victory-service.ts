@@ -26,19 +26,70 @@ async function loadEffectiveRuleset(client: PoolClient, roomId: string) {
   return row.ruleset;
 }
 
-async function finalizeVictory(
+async function victoryConditionMet(
   client: PoolClient,
   roomId: string,
   playerId: string,
+  ruleset: GameRuleset,
+  event: ObjectiveEvent,
 ) {
+  return ruleset === "objective"
+    ? objectiveVictoryConditionMet(client, roomId, playerId, event)
+    : supremacyVictoryConditionMet(client, roomId, playerId, event);
+}
+
+export async function evaluateGameVictories(
+  client: PoolClient,
+  roomId: string,
+  playerIds: readonly string[],
+  event: ObjectiveEvent = "any",
+) {
+  const uniquePlayerIds = [...new Set(playerIds)];
+  if (uniquePlayerIds.length === 0) return [];
+
+  const ruleset = await loadEffectiveRuleset(client, roomId);
+  const winners: string[] = [];
+  for (const playerId of uniquePlayerIds) {
+    if (
+      await victoryConditionMet(
+        client,
+        roomId,
+        playerId,
+        ruleset,
+        event,
+      )
+    ) {
+      winners.push(playerId);
+    }
+  }
+  return winners;
+}
+
+export async function finalizeGameVictories(
+  client: PoolClient,
+  roomId: string,
+  playerIds: readonly string[],
+) {
+  const winners = [...new Set(playerIds)];
+  if (winners.length === 0) return false;
+
   const result = await client.query(
     `UPDATE game.rooms
      SET status='finished',phase='finished',winner_player_id=$2
      WHERE id=$1 AND status<>'finished'`,
-    [roomId, playerId],
+    [roomId, winners[0]],
   );
 
   if ((result.rowCount ?? 0) !== 1) return false;
+
+  await client.query("DELETE FROM game.room_winners WHERE room_id=$1", [roomId]);
+  await client.query(
+    `INSERT INTO game.room_winners(room_id,player_id)
+     SELECT $1::bigint, winner_id
+     FROM unnest($2::bigint[]) AS winner_id`,
+    [roomId, winners],
+  );
+
   await finishDiceBalanceMatchForRoom(client, roomId);
   return true;
 }
@@ -49,12 +100,12 @@ export async function evaluateGameVictory(
   playerId: string,
   event: ObjectiveEvent = "any",
 ) {
-  const ruleset = await loadEffectiveRuleset(client, roomId);
-  const won =
-    ruleset === "objective"
-      ? await objectiveVictoryConditionMet(client, roomId, playerId, event)
-      : await supremacyVictoryConditionMet(client, roomId, playerId, event);
-
-  if (!won) return false;
-  return finalizeVictory(client, roomId, playerId);
+  const winners = await evaluateGameVictories(
+    client,
+    roomId,
+    [playerId],
+    event,
+  );
+  if (winners.length === 0) return false;
+  return finalizeGameVictories(client, roomId, winners);
 }
