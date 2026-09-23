@@ -66,5 +66,5 @@ export function automationWorkerToken(env = process.env) {
 
 
 export function lobbyCleanupIntervalMs(env = process.env) {
-  return positiveInteger(env.LOBBY_CLEANUP_INTERVAL_MS, 15_000, 5_000, 300_000);
+  return positiveInteger(env.LOBBY_CLEANUP_INTERVAL_MS, 5_000, 5_000, 300_000);
 }
