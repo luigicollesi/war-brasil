@@ -83,12 +83,20 @@ export async function finalizeGameVictories(
   if ((result.rowCount ?? 0) !== 1) return false;
 
   await client.query("DELETE FROM game.room_winners WHERE room_id=$1", [roomId]);
-  await client.query(
+  const inserted = await client.query(
     `INSERT INTO game.room_winners(room_id,player_id)
-     SELECT $1::bigint, winner_id
-     FROM unnest($2::bigint[]) AS winner_id`,
+     SELECT $1::bigint, player.id
+     FROM game.players player
+     WHERE player.room_id=$1
+       AND player.id=ANY($2::bigint[])
+     ON CONFLICT (room_id,player_id) DO NOTHING`,
     [roomId, winners],
   );
+  if ((inserted.rowCount ?? 0) !== winners.length) {
+    throw new Error(
+      `Conjunto de vencedores inválido para a sala ${roomId}.`,
+    );
+  }
 
   await finishDiceBalanceMatchForRoom(client, roomId);
   return true;
