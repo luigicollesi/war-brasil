@@ -14,7 +14,7 @@ test("waiting-room lifecycle removes stale seats only before game start", async 
   assert.match(rooms, /leaveWaitingRoom/);
   assert.match(rooms, /cleanupStaleWaitingRoomSeats/);
   assert.match(rooms, /room\.status='waiting'/);
-  assert.match(rooms, /90/);
+  assert.match(rooms, /staleAfterSeconds = 20/);
   assert.match(rooms, /DELETE FROM game\.rooms/);
   assert.match(rooms, /NOT EXISTS|SELECT EXISTS/);
   assert.match(heartbeat, /assertAuthenticatedPlayerSeat/);
@@ -29,9 +29,13 @@ test("worker periodically invokes protected waiting-room cleanup", async () => {
   assert.match(worker, /cleanupLobbyIfDue/);
   assert.match(worker, /cleanupStaleLobbies/);
   assert.match(worker, /cleanupIntervalMs/);
+  const config = await source("worker/config.mjs");
+  assert.match(config, /LOBBY_CLEANUP_INTERVAL_MS, 5_000/);
   assert.match(client, /\/api\/internal\/lobby\/cleanup/);
   assert.match(route, /assertGameAutomationWorkerRequest/);
-  assert.match(route, /cleanupStaleWaitingRoomSeats\(90, 100\)/);
+  assert.match(route, /cleanupStaleWaitingRoomSeats\(20, 100\)/);
+  assert.match(route, /publishLobbyChangeByCode/);
+  assert.match(route, /changedRoomCodes/);
 });
 
 test("global notification runtime recovers offline invites and rejection notifications", async () => {
