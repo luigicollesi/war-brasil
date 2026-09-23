@@ -14,6 +14,8 @@ export type PlayerColor = (typeof PLAYER_COLORS)[number]["value"];
 export type LobbyPlayer = {
   id: string;
   factionName: string;
+  displayName: string;
+  handle: string | null;
   color: PlayerColor;
   isReady: boolean;
   isMe: boolean;
