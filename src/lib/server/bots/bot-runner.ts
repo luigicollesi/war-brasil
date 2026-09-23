@@ -79,6 +79,7 @@ async function loadPlayers(client: PoolClient, roomId: string) {
       `SELECT id,turn_position,is_bot,bot_next_action_at
        FROM game.players
        WHERE room_id=$1
+         AND left_at IS NULL
        ORDER BY joined_at,id`,
       [roomId],
     )
@@ -347,7 +348,7 @@ export async function advanceBotAutomation(
     await client.query(
       `UPDATE game.players
        SET bot_next_action_at=$3
-       WHERE room_id=$1 AND id=$2 AND is_bot=TRUE`,
+       WHERE room_id=$1 AND id=$2 AND is_bot=TRUE AND left_at IS NULL`,
       [roomId, actor.id, dueAt],
     );
     return { changed: true, kind: "scheduled" };
@@ -362,7 +363,7 @@ export async function advanceBotAutomation(
     await client.query(
       `UPDATE game.players
        SET bot_next_action_at=NULL
-       WHERE room_id=$1 AND id=$2 AND is_bot=TRUE`,
+       WHERE room_id=$1 AND id=$2 AND is_bot=TRUE AND left_at IS NULL`,
       [roomId, actor.id],
     );
     return { changed: true, kind: "acted" };
