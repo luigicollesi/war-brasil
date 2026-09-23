@@ -1214,9 +1214,50 @@
   .eventGraph { width: 190px; }
   .eventReadout { margin-inline: auto; width: min(100%, 310px); }
   .eventReadout strong { max-width: none; font-size: 32px; }
-  .prevNext { grid-template-columns: 1fr 1fr; }
-  .backToIndex { grid-column: 1 / -1; grid-row: 1; min-height: 42px; }
-  .navPlaceholder { display: none; }
+  .prevNext {
+    position: fixed;
+    z-index: 13;
+    right: 10px;
+    bottom: calc(
+      var(--doctrine-mobile-index-height, 68px) +
+      env(safe-area-inset-bottom) +
+      8px
+    );
+    left: 10px;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    gap: 6px;
+    max-width: none;
+    padding: 6px;
+    border: 1px solid rgba(205, 180, 107, 0.16);
+    background: rgba(5, 10, 8, 0.94);
+    box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.24);
+    backdrop-filter: blur(12px);
+  }
+
+  .prevNext a:not(.backToIndex) {
+    min-height: 44px;
+    padding: 7px 9px;
+  }
+
+  .prevNext span {
+    font-size: 7px;
+  }
+
+  .prevNext b {
+    font-size: 10px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .backToIndex {
+    display: none;
+  }
+
+  .navPlaceholder {
+    display: block;
+    min-height: 44px;
+  }
 }
 
 @media (max-width: 420px) {
@@ -1250,8 +1291,21 @@
   .cardFan { min-height: 220px; }
   .doctrineCard { width: 92px; }
   .victoryTrace { gap: 7px; font-size: 7px; }
-  .prevNext { gap: 8px; }
-  .prevNext a:not(.backToIndex) { padding: 10px; }
+  .prevNext {
+    right: 7px;
+    left: 7px;
+    gap: 4px;
+    padding: 5px;
+  }
+
+  .prevNext a:not(.backToIndex) {
+    min-height: 44px;
+    padding: 7px 6px;
+  }
+
+  .prevNext b {
+    font-size: 9px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
