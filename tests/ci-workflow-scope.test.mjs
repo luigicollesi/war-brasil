@@ -25,6 +25,13 @@ test("Cloudflare Build ignora mudanças puramente documentais sem perder execuç
   assert.match(cloudflareBuild, /workflow_dispatch:/);
 });
 
+test("workflows de validação usam GITHUB_TOKEN somente para leitura", () => {
+  for (const workflow of [generalTest, cloudflareBuild]) {
+    assert.match(workflow, /permissions:\s*\n\s*contents: read/);
+    assert.doesNotMatch(workflow, /contents: write|pull-requests: write|deployments: write/);
+  }
+});
+
 test("Cloudflare Build mantém todos os gates dos Workers e do OpenNext existentes", () => {
   assert.match(cloudflareBuild, /Run Cloudflare deployment contract tests/);
   assert.match(cloudflareBuild, /npm run cloudflare:realtime:build/);
