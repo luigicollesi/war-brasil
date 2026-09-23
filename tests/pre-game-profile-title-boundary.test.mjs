@@ -109,3 +109,74 @@ test("title font keys resolve to self-hosted Next font variables with safe fallb
   assert.match(renderer, /stencil: styles\.militaryStencil/);
   assert.match(renderer, /serif: styles\.serif/);
 });
+
+test("title style keys use a composable allow-listed visual grammar", () => {
+  const resolver = read("src/lib/profile/title-style.ts");
+  const renderer = read("src/components/profile/profile-title-renderer.tsx");
+  const styles = read("src/components/profile/profile-title-renderer.module.css");
+
+  assert.match(resolver, /TITLE_STYLE_MAX_LENGTH = 48/);
+  assert.match(resolver, /export const TITLE_PALETTES/);
+  assert.match(resolver, /export const TITLE_MATERIALS/);
+  assert.match(resolver, /export const TITLE_MOTIONS/);
+  assert.match(resolver, /export const TITLE_EFFECT_KINDS/);
+  assert.match(resolver, /parseTitleStyleKey/);
+  assert.match(resolver, /titleStyleCssVariables/);
+  assert.match(resolver, /rarityCompatible/);
+
+  for (const legacy of [
+    "standard",
+    "imperial-gold",
+    "blood-command",
+    "silver-steel",
+    "night-sky",
+  ]) {
+    assert.ok(resolver.includes('"' + legacy + '"') || resolver.includes(legacy + ":"));
+  }
+
+  for (const material of [
+    "solid",
+    "matte",
+    "metal",
+    "satin",
+    "crystal",
+    "pearl",
+    "neon",
+    "ember",
+    "frost",
+    "aurora",
+    "holo",
+    "void",
+  ]) {
+    assert.ok(styles.includes('data-material="' + material + '"'));
+  }
+
+  for (const motion of [
+    "drift",
+    "sheen",
+    "pulse",
+    "shimmer",
+    "wave",
+    "flow",
+    "flicker",
+  ]) {
+    assert.ok(styles.includes('data-motion="' + motion + '"'));
+  }
+
+  for (const effect of [
+    "outline",
+    "shadow",
+    "glow",
+    "halo",
+    "sparkle",
+    "ember",
+  ]) {
+    assert.ok(renderer.includes('getTitleStyleEffect(visual, "' + effect + '")'));
+  }
+
+  assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(styles, /@media \(forced-colors: active\)/);
+  assert.match(styles, /@property --profile-title-angle/);
+  assert.match(styles, /color-mix\(/);
+  assert.doesNotMatch(renderer, /STYLE_CLASS/);
+});

@@ -1,14 +1,11 @@
 import type { CSSProperties } from "react";
 import type { PublicCommanderTitleAppearance } from "@/src/lib/profile/profile-appearance-contract";
+import {
+  getTitleStyleEffect,
+  parseTitleStyleKey,
+  titleStyleCssVariables,
+} from "@/src/lib/profile/title-style";
 import styles from "./profile-title-renderer.module.css";
-
-const STYLE_CLASS: Readonly<Record<string, string>> = {
-  standard: styles.standard,
-  "imperial-gold": styles.imperialGold,
-  "blood-command": styles.bloodCommand,
-  "silver-steel": styles.silverSteel,
-  "night-sky": styles.nightSky,
-};
 
 const FONT_CLASS: Readonly<Record<string, string>> = {
   "command-display": styles.commandDisplay,
@@ -39,23 +36,52 @@ export function ProfileTitleRenderer({
 }) {
   if (!title) return null;
 
-  const styleClass = STYLE_CLASS[title.styleKey] ?? styles.standard;
   const fontClass = resolveTitleFontClass(title.fontKey);
-  const textureStyle = title.textureRef
-    ? ({
-        "--profile-title-texture": 'url("' + title.textureRef + '")',
-      } as CSSProperties)
-    : undefined;
+  const visual = parseTitleStyleKey(title.styleKey, title.rarity);
+  const outline = getTitleStyleEffect(visual, "outline");
+  const shadow = getTitleStyleEffect(visual, "shadow");
+  const glow = getTitleStyleEffect(visual, "glow");
+  const halo = getTitleStyleEffect(visual, "halo");
+  const sparkle = getTitleStyleEffect(visual, "sparkle");
+  const ember = getTitleStyleEffect(visual, "ember");
+
+  const visualStyle = {
+    ...titleStyleCssVariables(visual),
+    ...(title.textureRef
+      ? { "--profile-title-texture": 'url("' + title.textureRef + '")' }
+      : {}),
+  } as CSSProperties;
 
   return (
     <strong
-      className={[styles.title, styleClass, fontClass, className]
-        .filter(Boolean)
-        .join(" ")}
-      data-title-style={title.styleKey}
+      className={[styles.title, fontClass, className].filter(Boolean).join(" ")}
+      data-title-style={visual.canonicalKey}
+      data-title-style-source={title.styleKey}
+      data-title-style-valid={visual.valid ? "true" : "false"}
+      data-title-style-budget={visual.rarityCompatible ? "within" : "over"}
       data-title-font={title.fontKey}
+      data-title-rarity={title.rarity}
+      data-palette={visual.palette}
+      data-material={visual.material}
+      data-motion={visual.motion}
+      data-outline={outline ? "true" : undefined}
+      data-outline-strength={outline?.strength}
+      data-shadow={shadow ? "true" : undefined}
+      data-shadow-strength={shadow?.strength}
+      data-glow={glow ? "true" : undefined}
+      data-glow-strength={glow?.strength}
+      data-glow-motion={glow?.motion}
+      data-halo={halo ? "true" : undefined}
+      data-halo-strength={halo?.strength}
+      data-halo-motion={halo?.motion}
+      data-sparkle={sparkle ? "true" : undefined}
+      data-sparkle-strength={sparkle?.strength}
+      data-sparkle-motion={sparkle?.motion}
+      data-ember={ember ? "true" : undefined}
+      data-ember-strength={ember?.strength}
+      data-ember-motion={ember?.motion}
       data-textured={title.textureRef ? "true" : "false"}
-      style={textureStyle}
+      style={visualStyle}
     >
       {title.displayText}
     </strong>

@@ -1,15 +1,136 @@
+@property --profile-title-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 180deg;
+}
+
+@property --profile-title-fill-x {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 50%;
+}
+
+@property --profile-title-fill-y {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 50%;
+}
+
+@property --profile-title-glow-radius {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0.42em;
+}
+
+@property --profile-title-halo-radius {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0.9em;
+}
+
+@property --profile-title-sparkle-x {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 50%;
+}
+
+@property --profile-title-ember-x {
+  syntax: "<percentage>";
+  inherits: false;
+  initial-value: 50%;
+}
+
 .title {
+  --profile-title-base: #eee8da;
+  --profile-title-light: #fffdf4;
+  --profile-title-dark: #9d9789;
+  --profile-title-accent: #d7cfae;
+  --profile-title-outline: #eee8da;
+  --profile-title-shadow: #070809;
+  --profile-title-glow: #d7cfae;
+  --profile-title-halo: #d7cfae;
+  --profile-title-sparkle: #ffffff;
+  --profile-title-ember: #f1923d;
+
+  --profile-title-texture-image: none;
+  --profile-title-sparkle-image: none;
+  --profile-title-ember-image: none;
+  --profile-title-fill-image:
+    linear-gradient(
+      var(--profile-title-angle),
+      var(--profile-title-light),
+      var(--profile-title-base) 52%,
+      var(--profile-title-dark)
+    );
+
+  --profile-title-texture-size: cover;
+  --profile-title-sparkle-size: auto;
+  --profile-title-ember-size: auto;
+  --profile-title-fill-size: 100% 100%;
+
+  --profile-title-texture-position: center;
+  --profile-title-sparkle-position: var(--profile-title-sparkle-x) 50%;
+  --profile-title-ember-position: var(--profile-title-ember-x) 50%;
+  --profile-title-fill-position:
+    var(--profile-title-fill-x) var(--profile-title-fill-y);
+
+  --profile-title-outline-width: 0;
+  --profile-title-shadow-layer: 0 0 0 transparent;
+  --profile-title-glow-layer: 0 0 0 transparent;
+  --profile-title-halo-layer: 0 0 0 transparent;
+
+  --profile-title-motion-animation: none;
+  --profile-title-glow-animation: none;
+  --profile-title-halo-animation: none;
+  --profile-title-sparkle-animation: none;
+  --profile-title-ember-animation: none;
+
   display: block;
   width: fit-content;
   max-width: min(100%, 19ch);
-  color: #eee8da;
+  isolation: isolate;
+  color: transparent;
   font-weight: 800;
   line-height: 0.88;
   letter-spacing: 0.025em;
   text-wrap: balance;
   text-transform: uppercase;
-  text-shadow: 0 12px 34px rgb(0 0 0 / 48%);
+  -webkit-text-fill-color: transparent;
+  -webkit-text-stroke:
+    var(--profile-title-outline-width) var(--profile-title-outline);
+  background-image:
+    var(--profile-title-texture-image),
+    var(--profile-title-sparkle-image),
+    var(--profile-title-ember-image),
+    var(--profile-title-fill-image);
+  background-size:
+    var(--profile-title-texture-size),
+    var(--profile-title-sparkle-size),
+    var(--profile-title-ember-size),
+    var(--profile-title-fill-size);
+  background-position:
+    var(--profile-title-texture-position),
+    var(--profile-title-sparkle-position),
+    var(--profile-title-ember-position),
+    var(--profile-title-fill-position);
+  background-repeat: no-repeat, repeat, no-repeat, no-repeat;
+  background-blend-mode: soft-light, screen, screen, normal;
+  background-clip: text;
+  -webkit-background-clip: text;
+  text-shadow:
+    var(--profile-title-shadow-layer),
+    var(--profile-title-glow-layer),
+    var(--profile-title-halo-layer),
+    0 0.12em 0.38em rgb(0 0 0 / 48%);
+  animation:
+    var(--profile-title-motion-animation),
+    var(--profile-title-glow-animation),
+    var(--profile-title-halo-animation),
+    var(--profile-title-sparkle-animation),
+    var(--profile-title-ember-animation);
 }
+
+/* Typography registry ----------------------------------------------------- */
 
 .commandDisplay {
   font-family: var(--font-wb-display), sans-serif;
@@ -39,19 +160,29 @@
 }
 
 .tacticalTech {
-  font-family: var(--font-wb-title-tactical-tech), var(--font-wb-display), sans-serif;
+  font-family:
+    var(--font-wb-title-tactical-tech),
+    var(--font-wb-display),
+    sans-serif;
   font-weight: 700;
   letter-spacing: 0.05em;
 }
 
 .propaganda {
-  font-family: var(--font-wb-title-propaganda), var(--font-wb-display), sans-serif;
+  font-family:
+    var(--font-wb-title-propaganda),
+    var(--font-wb-display),
+    sans-serif;
   font-weight: 400;
   letter-spacing: 0.06em;
 }
 
 .ceremonial {
-  font-family: var(--font-wb-title-ceremonial), Georgia, "Times New Roman", serif;
+  font-family:
+    var(--font-wb-title-ceremonial),
+    Georgia,
+    "Times New Roman",
+    serif;
   font-weight: 600;
   letter-spacing: 0.045em;
 }
@@ -61,48 +192,524 @@
   letter-spacing: 0.015em;
 }
 
-.standard {
-  color: #eee8da;
+/* Material functions ----------------------------------------------------- */
+
+.title[data-material="solid"] {
+  --profile-title-fill-image:
+    linear-gradient(
+      var(--profile-title-base),
+      var(--profile-title-base)
+    );
 }
 
-.imperialGold {
-  color: transparent;
-  background: linear-gradient(180deg, #fff2b3 0%, #d0aa57 45%, #855f22 100%);
-  background-clip: text;
-  -webkit-background-clip: text;
-  filter: drop-shadow(0 8px 24px rgb(208 170 87 / 18%));
+.title[data-material="matte"] {
+  --profile-title-fill-image:
+    linear-gradient(
+      var(--profile-title-angle),
+      color-mix(in srgb, var(--profile-title-light) 34%, var(--profile-title-base)),
+      var(--profile-title-base) 48%,
+      color-mix(in srgb, var(--profile-title-dark) 58%, var(--profile-title-base))
+    );
 }
 
-.bloodCommand {
-  color: transparent;
-  background: linear-gradient(180deg, #f07878 0%, #b53137 48%, #5f1116 100%);
-  background-clip: text;
-  -webkit-background-clip: text;
+.title[data-material="metal"] {
+  --profile-title-fill-image:
+    linear-gradient(
+      var(--profile-title-angle),
+      var(--profile-title-dark) 0%,
+      var(--profile-title-base) 18%,
+      var(--profile-title-light) 38%,
+      #ffffff 48%,
+      var(--profile-title-light) 54%,
+      var(--profile-title-base) 70%,
+      var(--profile-title-dark) 100%
+    );
 }
 
-.silverSteel {
-  color: transparent;
-  background: linear-gradient(180deg, #ffffff 0%, #c9cfcd 42%, #6d7774 100%);
-  background-clip: text;
-  -webkit-background-clip: text;
+.title[data-material="satin"] {
+  --profile-title-fill-image:
+    linear-gradient(
+      var(--profile-title-angle),
+      var(--profile-title-dark),
+      var(--profile-title-base) 28%,
+      var(--profile-title-light) 52%,
+      var(--profile-title-base) 72%,
+      var(--profile-title-dark)
+    );
 }
 
-.nightSky {
-  color: transparent;
-  background:
-    radial-gradient(circle at 22% 24%, rgb(255 255 255 / 88%) 0 1px, transparent 1.5px),
-    linear-gradient(180deg, #d9e8ff 0%, #8194c8 40%, #3a426b 100%);
-  background-size: 34px 34px, auto;
-  background-clip: text;
-  -webkit-background-clip: text;
+.title[data-material="crystal"] {
+  --profile-title-fill-image:
+    linear-gradient(
+      calc(var(--profile-title-angle) - 24deg),
+      var(--profile-title-dark) 0%,
+      var(--profile-title-base) 24%,
+      #ffffff 42%,
+      var(--profile-title-light) 49%,
+      var(--profile-title-accent) 63%,
+      var(--profile-title-dark) 100%
+    );
 }
+
+.title[data-material="pearl"] {
+  --profile-title-fill-image:
+    linear-gradient(
+      var(--profile-title-angle),
+      var(--profile-title-light) 0%,
+      color-mix(in oklab, var(--profile-title-light) 72%, var(--profile-title-accent)) 36%,
+      var(--profile-title-base) 58%,
+      var(--profile-title-light) 100%
+    );
+}
+
+.title[data-material="neon"] {
+  --profile-title-fill-image:
+    linear-gradient(
+      var(--profile-title-angle),
+      var(--profile-title-base) 0%,
+      var(--profile-title-light) 43%,
+      #ffffff 52%,
+      var(--profile-title-accent) 68%,
+      var(--profile-title-dark) 100%
+    );
+}
+
+.title[data-material="ember"] {
+  --profile-title-fill-image:
+    linear-gradient(
+      var(--profile-title-angle),
+      var(--profile-title-dark) 0%,
+      var(--profile-title-base) 42%,
+      var(--profile-title-accent) 70%,
+      var(--profile-title-light) 100%
+    );
+}
+
+.title[data-material="frost"] {
+  --profile-title-fill-image:
+    linear-gradient(
+      var(--profile-title-angle),
+      #ffffff 0%,
+      var(--profile-title-light) 25%,
+      var(--profile-title-base) 55%,
+      var(--profile-title-accent) 72%,
+      var(--profile-title-dark) 100%
+    );
+}
+
+.title[data-material="aurora"] {
+  --profile-title-fill-image:
+    linear-gradient(
+      calc(var(--profile-title-angle) + 90deg),
+      var(--profile-title-dark) 0%,
+      var(--profile-title-base) 22%,
+      var(--profile-title-accent) 47%,
+      var(--profile-title-light) 68%,
+      var(--profile-title-base) 86%,
+      var(--profile-title-dark) 100%
+    );
+  --profile-title-fill-size: 180% 180%;
+}
+
+.title[data-material="holo"] {
+  --profile-title-fill-image:
+    linear-gradient(
+      calc(var(--profile-title-angle) + 72deg),
+      var(--profile-title-dark) 0%,
+      var(--profile-title-accent) 18%,
+      var(--profile-title-light) 35%,
+      #ffffff 50%,
+      var(--profile-title-base) 63%,
+      var(--profile-title-accent) 80%,
+      var(--profile-title-dark) 100%
+    );
+  --profile-title-fill-size: 220% 220%;
+}
+
+.title[data-material="void"] {
+  --profile-title-fill-image:
+    linear-gradient(
+      var(--profile-title-angle),
+      #08070a 0%,
+      var(--profile-title-dark) 32%,
+      var(--profile-title-base) 52%,
+      var(--profile-title-accent) 61%,
+      var(--profile-title-dark) 72%,
+      #08070a 100%
+    );
+}
+
+/* Texture composes with the selected material instead of replacing it. */
 
 .title[data-textured="true"] {
-  background-image:
-    var(--profile-title-texture),
-    linear-gradient(180deg, #fff7cf 0%, #d0aa57 56%, #79551e 100%);
-  background-size: cover, auto;
-  background-position: center;
-  background-clip: text;
-  -webkit-background-clip: text;
+  --profile-title-texture-image: var(--profile-title-texture);
+}
+
+/* Primary motion functions ----------------------------------------------- */
+
+.title[data-motion="drift"] {
+  --profile-title-motion-animation:
+    wb-title-angle-drift 12s ease-in-out infinite alternate;
+}
+
+.title[data-motion="sheen"] {
+  --profile-title-fill-image:
+    linear-gradient(
+      110deg,
+      var(--profile-title-dark) 0%,
+      var(--profile-title-base) 31%,
+      var(--profile-title-light) 44%,
+      #ffffff 50%,
+      var(--profile-title-light) 56%,
+      var(--profile-title-base) 69%,
+      var(--profile-title-dark) 100%
+    );
+  --profile-title-fill-size: 260% 100%;
+  --profile-title-motion-animation:
+    wb-title-sheen 7.5s ease-in-out infinite;
+}
+
+.title[data-motion="pulse"] {
+  --profile-title-motion-animation:
+    wb-title-pulse 5.5s ease-in-out infinite;
+}
+
+.title[data-motion="shimmer"] {
+  --profile-title-fill-size: 220% 180%;
+  --profile-title-motion-animation:
+    wb-title-shimmer 9s ease-in-out infinite alternate;
+}
+
+.title[data-motion="wave"] {
+  --profile-title-fill-size: 190% 190%;
+  --profile-title-motion-animation:
+    wb-title-wave 10s ease-in-out infinite alternate;
+}
+
+.title[data-motion="flow"] {
+  --profile-title-fill-size: 220% 100%;
+  --profile-title-motion-animation:
+    wb-title-flow 8s linear infinite;
+}
+
+.title[data-motion="flicker"] {
+  --profile-title-motion-animation:
+    wb-title-flicker 6.5s steps(1, end) infinite;
+}
+
+/* Outline --------------------------------------------------------------- */
+
+.title[data-outline="true"][data-outline-strength="soft"] {
+  --profile-title-outline-width: 0.35px;
+}
+
+.title[data-outline="true"][data-outline-strength="medium"] {
+  --profile-title-outline-width: 0.65px;
+}
+
+.title[data-outline="true"][data-outline-strength="strong"] {
+  --profile-title-outline-width: 1px;
+}
+
+/* Shadow ---------------------------------------------------------------- */
+
+.title[data-shadow="true"][data-shadow-strength="soft"] {
+  --profile-title-shadow-layer:
+    0 0.08em 0.1em color-mix(in srgb, var(--profile-title-shadow) 42%, transparent);
+}
+
+.title[data-shadow="true"][data-shadow-strength="medium"] {
+  --profile-title-shadow-layer:
+    0 0.1em 0.16em color-mix(in srgb, var(--profile-title-shadow) 58%, transparent);
+}
+
+.title[data-shadow="true"][data-shadow-strength="strong"] {
+  --profile-title-shadow-layer:
+    0 0.13em 0.24em color-mix(in srgb, var(--profile-title-shadow) 74%, transparent);
+}
+
+/* Glow ------------------------------------------------------------------ */
+
+.title[data-glow="true"] {
+  --profile-title-glow-layer:
+    0 0 var(--profile-title-glow-radius)
+      color-mix(in srgb, var(--profile-title-glow) 58%, transparent);
+}
+
+.title[data-glow-strength="soft"] {
+  --profile-title-glow-radius: 0.28em;
+  --profile-title-glow-layer:
+    0 0 var(--profile-title-glow-radius)
+      color-mix(in srgb, var(--profile-title-glow) 38%, transparent);
+}
+
+.title[data-glow-strength="medium"] {
+  --profile-title-glow-radius: 0.44em;
+  --profile-title-glow-layer:
+    0 0 var(--profile-title-glow-radius)
+      color-mix(in srgb, var(--profile-title-glow) 58%, transparent),
+    0 0 calc(var(--profile-title-glow-radius) + var(--profile-title-glow-radius))
+      color-mix(in srgb, var(--profile-title-glow) 24%, transparent);
+}
+
+.title[data-glow-strength="strong"] {
+  --profile-title-glow-radius: 0.62em;
+  --profile-title-glow-layer:
+    0 0 var(--profile-title-glow-radius)
+      color-mix(in srgb, var(--profile-title-glow) 76%, transparent),
+    0 0 calc(var(--profile-title-glow-radius) + var(--profile-title-glow-radius))
+      color-mix(in srgb, var(--profile-title-glow) 36%, transparent);
+}
+
+.title[data-glow-motion="breathe"][data-glow-strength="soft"] {
+  --profile-title-glow-animation:
+    wb-title-glow-breathe-soft 5.6s ease-in-out infinite;
+}
+
+.title[data-glow-motion="breathe"][data-glow-strength="medium"] {
+  --profile-title-glow-animation:
+    wb-title-glow-breathe-medium 5.2s ease-in-out infinite;
+}
+
+.title[data-glow-motion="breathe"][data-glow-strength="strong"] {
+  --profile-title-glow-animation:
+    wb-title-glow-breathe-strong 4.8s ease-in-out infinite;
+}
+
+.title[data-glow-motion="flicker"] {
+  --profile-title-glow-animation:
+    wb-title-glow-flicker 6.8s steps(1, end) infinite;
+}
+
+/* Halo ------------------------------------------------------------------ */
+
+.title[data-halo="true"] {
+  --profile-title-halo-layer:
+    0 0 var(--profile-title-halo-radius)
+      color-mix(in srgb, var(--profile-title-halo) 24%, transparent);
+}
+
+.title[data-halo-strength="soft"] {
+  --profile-title-halo-radius: 0.7em;
+}
+
+.title[data-halo-strength="medium"] {
+  --profile-title-halo-radius: 1em;
+}
+
+.title[data-halo-strength="strong"] {
+  --profile-title-halo-radius: 1.35em;
+  --profile-title-halo-layer:
+    0 0 var(--profile-title-halo-radius)
+      color-mix(in srgb, var(--profile-title-halo) 42%, transparent);
+}
+
+.title[data-halo-motion="breathe"] {
+  --profile-title-halo-animation:
+    wb-title-halo-breathe 6.4s ease-in-out infinite;
+}
+
+/* Sparkle --------------------------------------------------------------- */
+
+.title[data-sparkle="true"] {
+  --profile-title-sparkle-image:
+    radial-gradient(
+      circle at 50% 50%,
+      color-mix(in srgb, var(--profile-title-sparkle) 72%, transparent) 0 1px,
+      transparent 1.8px
+    );
+  --profile-title-sparkle-size: 34px 28px;
+}
+
+.title[data-sparkle-strength="soft"] {
+  --profile-title-sparkle-size: 44px 36px;
+}
+
+.title[data-sparkle-strength="medium"] {
+  --profile-title-sparkle-size: 32px 27px;
+}
+
+.title[data-sparkle-strength="strong"] {
+  --profile-title-sparkle-image:
+    radial-gradient(
+      circle at 50% 50%,
+      var(--profile-title-sparkle) 0 1.1px,
+      transparent 2px
+    );
+  --profile-title-sparkle-size: 25px 22px;
+}
+
+.title[data-sparkle-motion="twinkle"] {
+  --profile-title-sparkle-animation:
+    wb-title-sparkle-twinkle 5.4s ease-in-out infinite alternate;
+}
+
+.title[data-sparkle-motion="flow"] {
+  --profile-title-sparkle-animation:
+    wb-title-sparkle-flow 9s linear infinite;
+}
+
+/* Ember ----------------------------------------------------------------- */
+
+.title[data-ember="true"] {
+  --profile-title-ember-image:
+    radial-gradient(
+      ellipse at 50% 100%,
+      color-mix(in srgb, var(--profile-title-ember) 58%, transparent) 0%,
+      transparent 66%
+    );
+  --profile-title-ember-size: 54px 120%;
+}
+
+.title[data-ember-strength="soft"] {
+  --profile-title-ember-size: 70px 100%;
+}
+
+.title[data-ember-strength="medium"] {
+  --profile-title-ember-size: 54px 120%;
+}
+
+.title[data-ember-strength="strong"] {
+  --profile-title-ember-image:
+    radial-gradient(
+      ellipse at 50% 100%,
+      color-mix(in srgb, var(--profile-title-ember) 82%, transparent) 0%,
+      transparent 72%
+    );
+  --profile-title-ember-size: 42px 135%;
+}
+
+.title[data-ember-motion="flicker"] {
+  --profile-title-ember-animation:
+    wb-title-ember-flicker 5.8s steps(1, end) infinite;
+}
+
+.title[data-ember-motion="flow"] {
+  --profile-title-ember-animation:
+    wb-title-ember-flow 8.4s linear infinite;
+}
+
+/* Motion primitives ----------------------------------------------------- */
+
+@keyframes wb-title-angle-drift {
+  from { --profile-title-angle: 154deg; }
+  to { --profile-title-angle: 212deg; }
+}
+
+@keyframes wb-title-sheen {
+  0%, 18% { --profile-title-fill-x: -45%; }
+  58%, 100% { --profile-title-fill-x: 145%; }
+}
+
+@keyframes wb-title-pulse {
+  0%, 100% { opacity: 0.88; }
+  50% { opacity: 1; }
+}
+
+@keyframes wb-title-shimmer {
+  from {
+    --profile-title-fill-x: 20%;
+    --profile-title-fill-y: 36%;
+  }
+  to {
+    --profile-title-fill-x: 82%;
+    --profile-title-fill-y: 64%;
+  }
+}
+
+@keyframes wb-title-wave {
+  0% {
+    --profile-title-fill-x: 18%;
+    --profile-title-fill-y: 46%;
+  }
+  50% {
+    --profile-title-fill-x: 54%;
+    --profile-title-fill-y: 62%;
+  }
+  100% {
+    --profile-title-fill-x: 86%;
+    --profile-title-fill-y: 42%;
+  }
+}
+
+@keyframes wb-title-flow {
+  from { --profile-title-fill-x: -20%; }
+  to { --profile-title-fill-x: 120%; }
+}
+
+@keyframes wb-title-flicker {
+  0%, 7%, 11%, 54%, 58%, 100% { opacity: 1; }
+  8%, 55% { opacity: 0.82; }
+  10%, 57% { opacity: 0.93; }
+}
+
+@keyframes wb-title-glow-breathe-soft {
+  0%, 100% { --profile-title-glow-radius: 0.24em; }
+  50% { --profile-title-glow-radius: 0.36em; }
+}
+
+@keyframes wb-title-glow-breathe-medium {
+  0%, 100% { --profile-title-glow-radius: 0.36em; }
+  50% { --profile-title-glow-radius: 0.58em; }
+}
+
+@keyframes wb-title-glow-breathe-strong {
+  0%, 100% { --profile-title-glow-radius: 0.48em; }
+  50% { --profile-title-glow-radius: 0.84em; }
+}
+
+@keyframes wb-title-glow-flicker {
+  0%, 9%, 13%, 66%, 70%, 100% { --profile-title-glow-radius: 0.48em; }
+  10%, 67% { --profile-title-glow-radius: 0.76em; }
+  12%, 69% { --profile-title-glow-radius: 0.32em; }
+}
+
+@keyframes wb-title-halo-breathe {
+  0%, 100% { --profile-title-halo-radius: 0.76em; }
+  50% { --profile-title-halo-radius: 1.35em; }
+}
+
+@keyframes wb-title-sparkle-twinkle {
+  from { --profile-title-sparkle-x: 16%; }
+  to { --profile-title-sparkle-x: 84%; }
+}
+
+@keyframes wb-title-sparkle-flow {
+  from { --profile-title-sparkle-x: -20%; }
+  to { --profile-title-sparkle-x: 120%; }
+}
+
+@keyframes wb-title-ember-flicker {
+  0%, 18%, 22%, 56%, 61%, 100% { --profile-title-ember-x: 42%; }
+  19%, 57% { --profile-title-ember-x: 58%; }
+  21%, 60% { --profile-title-ember-x: 48%; }
+}
+
+@keyframes wb-title-ember-flow {
+  from { --profile-title-ember-x: -15%; }
+  to { --profile-title-ember-x: 115%; }
+}
+
+/* Accessibility and fallback ------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+  .title {
+    animation: none !important;
+    --profile-title-angle: 180deg;
+    --profile-title-fill-x: 50%;
+    --profile-title-fill-y: 50%;
+    --profile-title-sparkle-x: 50%;
+    --profile-title-ember-x: 50%;
+  }
+}
+
+@media (forced-colors: active) {
+  .title {
+    color: CanvasText;
+    -webkit-text-fill-color: CanvasText;
+    -webkit-text-stroke: 0;
+    background: none;
+    text-shadow: none;
+    animation: none;
+  }
 }
