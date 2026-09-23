@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { existsSync, readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import test from "node:test";
-import { NextRequest } from "next/server";
-import { unstable_doesProxyMatch } from "next/experimental/testing/server";
+import { NextRequest } from "next/server.js";
+import { unstable_doesProxyMatch } from "next/experimental/testing/server.js";
 
 const proxyPath = "src/proxy.ts";
 const middlewarePath = "src/middleware.ts";
