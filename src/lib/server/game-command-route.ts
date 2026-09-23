@@ -12,32 +12,35 @@ type GameRoomRouteContext = {
   params: Promise<{ roomId: string }>;
 };
 
-type GameJsonCommandContext = {
+type GameCommandContext<TBody> = {
   roomId: string;
   session: string;
-  body: Record<string, unknown>;
   metadata: GameCommandRequestMetadata | null;
+  body: TBody;
 };
 
-type GameJsonCommandRouteOptions = {
+type GameCommandRouteOptions<TBody> = {
   operation: string;
   missingSessionMessage?: string;
   execute: (
-    context: GameJsonCommandContext,
+    context: GameCommandContext<TBody>,
   ) => Response | Promise<Response>;
 };
 
-export function createGameJsonCommandRoute({
-  operation,
-  missingSessionMessage = "Entre em uma sala antes de jogar.",
-  execute,
-}: GameJsonCommandRouteOptions) {
+function createGameCommandEnvelope<TBody>(
+  {
+    operation,
+    missingSessionMessage = "Entre em uma sala antes de jogar.",
+    execute,
+  }: GameCommandRouteOptions<TBody>,
+  readBody: (request: NextRequest) => Promise<TBody>,
+) {
   return async function POST(
     request: NextRequest,
     { params }: GameRoomRouteContext,
   ) {
     let roomId: string | undefined;
-    let body: Record<string, unknown> | undefined;
+    let body: TBody | undefined;
 
     try {
       const session = getPlayerSession(request);
@@ -48,16 +51,28 @@ export function createGameJsonCommandRoute({
       ({ roomId } = await params);
       await assertAuthenticatedPlayerSeat(request, session, { roomId });
       const metadata = readGameCommandRequestMetadata(request);
-      body = await readJsonObject(request);
+      body = await readBody(request);
 
-      return await execute({ roomId, session, body, metadata });
+      return await execute({ roomId, session, metadata, body });
     } catch (error) {
       return roomErrorResponse(error, {
         operation,
         route: request.nextUrl.pathname,
         resource: { roomId },
-        input: body,
+        ...(body === undefined ? {} : { input: body }),
       });
     }
   };
+}
+
+export function createGameCommandRoute(
+  options: GameCommandRouteOptions<undefined>,
+) {
+  return createGameCommandEnvelope(options, async () => undefined);
+}
+
+export function createGameJsonCommandRoute(
+  options: GameCommandRouteOptions<Record<string, unknown>>,
+) {
+  return createGameCommandEnvelope(options, readJsonObject);
 }
