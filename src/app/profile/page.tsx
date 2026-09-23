@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { connection } from "next/server";
 import { ProfileDossier } from "@/src/components/profile/v4/profile-dossier";
 import { ProfileShell, type ProfileShellWallet } from "@/src/components/profile/v4/profile-shell";
@@ -19,6 +20,11 @@ export const metadata: Metadata = {
 export default async function ProfilePage() {
   await connection();
   const session = await getAuthenticatedSessionForReadHeaders(await headers());
+
+  if (!session) {
+    redirect("/");
+  }
+
   const [snapshot, appearance] = await Promise.all([
     getCurrentProfileCommandSnapshot(session, { includeStorefront: false }),
     session
