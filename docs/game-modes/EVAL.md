@@ -223,6 +223,33 @@ A implementação não pode introduzir regressão no modo atual de objetivos nem
 | MODE-SEC-06 | erros não expõem SQL, connection string ou secrets | API security test |
 | MODE-SEC-07 | configuração é isolada por room e não afeta outra sala | multi-room integration |
 
+## Gates BLOCKER — saída voluntária
+
+| ID | Critério | Evidência mínima |
+| --- | --- | --- |
+| MODE-LEAVE-01 | desconexão durante partida não remove automaticamente o jogador | integration/reconnect |
+| MODE-LEAVE-02 | saída explícita persiste `left_at` e libera participação ativa | DB integration |
+| MODE-LEAVE-03 | cartas da mão do jogador que saiu vão para descarte | DB integration |
+| MODE-LEAVE-04 | territórios preservam tropas e são redistribuídos priorizando menor quantidade atual | unit + integration |
+| MODE-LEAVE-05 | somente participantes ativos recebem territórios | integration |
+| MODE-LEAVE-06 | jogador que saiu não reaparece em order roll, bots, scheduler ou snapshots | regression |
+| MODE-LEAVE-07 | saída do jogador atual avança turno/rodada pela máquina vigente | integration |
+| MODE-LEAVE-08 | batalha, conquista e negociação inválidas são neutralizadas atomicamente | integration |
+| MODE-LEAVE-09 | retry com o mesmo command id não executa a saída duas vezes | idempotency integration |
+| MODE-LEAVE-10 | cookie de participação só é limpo após commit bem-sucedido | route/integration |
+
+## Gates BLOCKER — vitória simultânea
+
+| ID | Critério | Evidência mínima |
+| --- | --- | --- |
+| MODE-MULTIWIN-01 | todos os candidatos são avaliados sobre o mesmo estado pós-redistribuição | integration |
+| MODE-MULTIWIN-02 | dois objetivos concluídos simultaneamente registram dois vencedores | DB integration |
+| MODE-MULTIWIN-03 | histórico marca `is_winner=true` para cada vencedor | DB/history integration |
+| MODE-MULTIWIN-04 | snapshot expõe conjunto de vencedores sem remover compatibilidade singular | contract |
+| MODE-MULTIWIN-05 | modal terminal representa zero, um ou múltiplos vencedores | DOM |
+| MODE-MULTIWIN-06 | somente um participante restante vence por abandono | integration |
+| MODE-MULTIWIN-07 | zero participantes ativos permite término sem vencedor | integration |
+
 ## Gates BLOCKER — regressão
 
 | ID | Critério | Evidência mínima |
