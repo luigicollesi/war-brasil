@@ -462,10 +462,6 @@ export async function addBotToRoom(codeValue: unknown, playerSession: string) {
   if (!code) throw new RoomError("Código de sala inválido.", 422);
 
   return withTransaction(async (client) => {
-    if (userId) {
-      await lockActiveParticipationForUser(client, userId);
-    }
-
     const room = await findRoomForUpdate(client, code);
     if (room.status !== "waiting") {
       throw new RoomError("Esta partida já começou.", 409);
