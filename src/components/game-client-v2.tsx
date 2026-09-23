@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { BattleOverlay } from "@/src/components/battle-overlay";
 import { OrderDiceCinematic } from "@/src/components/dice-3d/order-dice-cinematic";
 import { GameDie } from "@/src/components/game-die";
+import { GameLeaveModal } from "@/src/components/game-leave-modal";
 import { GameTurnPanel } from "@/src/components/game-turn-panel";
 import { GameUtilityBar } from "@/src/components/game-utility-bar";
 import { GameVictoryModal } from "@/src/components/game-victory-modal";
@@ -146,6 +147,9 @@ function GameReadyClient({
   const interaction = useGameInteraction({ roomId, snapshot, game, refresh });
   const anomaly = useTemporalAnomaly(snapshot);
   const [finishError, setFinishError] = useState("");
+  const [leaveError, setLeaveError] = useState("");
+  const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false);
+  const [isLeavingGame, setIsLeavingGame] = useState(false);
   const [isVotingRematch, setIsVotingRematch] = useState(false);
   const [isReturningToLobby, setIsReturningToLobby] = useState(false);
   const [completedOrderPresentationId, setCompletedOrderPresentationId] =
@@ -345,6 +349,30 @@ function GameReadyClient({
     }
   }
 
+  async function leaveGame() {
+    if (isLeavingGame) return;
+
+    setLeaveError("");
+    setIsLeavingGame(true);
+
+    try {
+      await runGameCommand(
+        roomId,
+        "leave",
+        undefined,
+        "Não foi possível sair da partida.",
+      );
+      router.replace("/home");
+    } catch (requestError) {
+      setLeaveError(
+        requestError instanceof Error
+          ? requestError.message
+          : "Não foi possível sair da partida.",
+      );
+      setIsLeavingGame(false);
+    }
+  }
+
   return (
     <div className="space-y-5">
       <section className="game-top-hud rounded-3xl border border-[#17372d]/10 bg-[#faf8f2] p-5 shadow-[0_18px_50px_rgba(42,55,50,0.07)] sm:p-6">
@@ -364,6 +392,11 @@ function GameReadyClient({
           <GameUtilityBar
             anomalyTitle={anomaly.presentation?.title}
             onOpenAnomaly={anomaly.presentation ? anomaly.open : undefined}
+            onLeaveGame={() => {
+              setLeaveError("");
+              setLeaveConfirmOpen(true);
+            }}
+            leavingGame={isLeavingGame}
             disabled={initialPresentationActive}
           />
         </div>
@@ -465,14 +498,33 @@ function GameReadyClient({
         />
       ) : null}
 
-      {snapshot.room.status === "finished" ? (
+      {leaveConfirmOpen ? (
+        <GameLeaveModal
+          finished={snapshot.room.status === "finished"}
+          pending={isLeavingGame}
+          error={leaveError}
+          onCancel={() => {
+            if (isLeavingGame) return;
+            setLeaveConfirmOpen(false);
+            setLeaveError("");
+          }}
+          onConfirm={() => void leaveGame()}
+        />
+      ) : null}
+
+      {snapshot.room.status === "finished" && !leaveConfirmOpen ? (
         <GameVictoryModal
           snapshot={snapshot}
           isVoting={isVotingRematch}
           isReturningToLobby={isReturningToLobby}
+          isLeavingGame={isLeavingGame}
           error={finishError}
           onVoteRematch={() => void voteRematch()}
           onReturnToLobby={() => void returnToLobby()}
+          onLeaveGame={() => {
+            setLeaveError("");
+            setLeaveConfirmOpen(true);
+          }}
         />
       ) : null}
 
