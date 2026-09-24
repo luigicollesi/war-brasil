@@ -72,23 +72,34 @@
   }
 }
 
-@keyframes wb-title-sheen-overlay {
+@keyframes wb-title-sheen-travel {
+  from { background-position: 122% 50%; }
+  to { background-position: -22% 50%; }
+}
+
+@keyframes wb-title-sheen-visibility {
   0%,
-  15% {
+  10% {
     opacity: 0;
-    background-position: 130% 50%;
   }
-  20% {
-    opacity: 0.92;
+  18% {
+    opacity: 0.28;
   }
-  62% {
-    opacity: 0.92;
-    background-position: -30% 50%;
+  30% {
+    opacity: 0.62;
   }
-  68%,
+  50% {
+    opacity: 0.82;
+  }
+  70% {
+    opacity: 0.62;
+  }
+  82% {
+    opacity: 0.28;
+  }
+  90%,
   100% {
     opacity: 0;
-    background-position: -30% 50%;
   }
 }
 
@@ -135,18 +146,18 @@
 }
 
 @keyframes wb-title-glow-breathe-soft {
-  0%, 100% { --profile-title-glow-radius: 0.24em; }
+  0%, 100% { --profile-title-glow-radius: 0.28em; }
   50% { --profile-title-glow-radius: 0.36em; }
 }
 
 @keyframes wb-title-glow-breathe-medium {
-  0%, 100% { --profile-title-glow-radius: 0.36em; }
+  0%, 100% { --profile-title-glow-radius: 0.44em; }
   50% { --profile-title-glow-radius: 0.58em; }
 }
 
 @keyframes wb-title-glow-breathe-strong {
-  0%, 100% { --profile-title-glow-radius: 0.48em; }
-  50% { --profile-title-glow-radius: 0.84em; }
+  0%, 100% { --profile-title-glow-radius: 0.62em; }
+  50% { --profile-title-glow-radius: 0.78em; }
 }
 
 @keyframes wb-title-glow-flicker {
