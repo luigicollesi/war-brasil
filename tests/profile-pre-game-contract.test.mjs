@@ -178,7 +178,10 @@ test("PROFILE V4 consome somente a API pública da Foundation", () => {
   assert.match(shell, /useCommandSceneDirective/);
   assert.match(routeIntent, /"\/profile": "profile"/);
   assert.match(routeIntent, /startsWith\("\/profile\/"\)/);
-  assert.match(layout, /<PreGameCommandRuntime>\{children\}<\/PreGameCommandRuntime>/);
+  assert.match(
+    layout,
+    /<PreGameCommandRuntime>\s*<ActiveParticipationRuntime>\{children\}<\/ActiveParticipationRuntime>\s*<\/PreGameCommandRuntime>/,
+  );
   assert.doesNotMatch(shell, /@react-three\/fiber|command-scene-canvas|\bthree\b|Canvas|cameraPosition|\bfov\b/i);
 });
 
