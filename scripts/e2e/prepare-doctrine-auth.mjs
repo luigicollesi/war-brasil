@@ -3,6 +3,7 @@ import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import { chromium } from "@playwright/test";
 import { waitForRegistrationCode } from "./registration-otp-helper.mjs";
+import { withE2EAuthCaptcha } from "./runtime-helper.mjs";
 
 const BASE_URL = process.env.PLAYWRIGHT_TEST_BASE_URL ?? "http://127.0.0.1:3000";
 const EMAIL_SINK_DIR = process.env.AUTH_EMAIL_SINK_DIR;
@@ -27,7 +28,7 @@ async function browserJson(page, url, init = {}) {
       }
       return { status: response.status, body };
     },
-    { requestUrl: url, requestInit: init },
+    { requestUrl: url, requestInit: withE2EAuthCaptcha(url, init) },
   );
 }
 
