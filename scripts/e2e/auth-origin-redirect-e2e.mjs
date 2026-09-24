@@ -30,6 +30,22 @@ async function apiJson(page, url, init = {}) {
   );
 }
 
+async function apiJsonWithoutCaptcha(page, url, init = {}) {
+  return page.evaluate(
+    async ({ requestUrl, requestInit }) => {
+      const response = await fetch(requestUrl, requestInit);
+      let body = null;
+      try {
+        body = await response.json();
+      } catch {
+        body = null;
+      }
+      return { status: response.status, body };
+    },
+    { requestUrl: url, requestInit: init },
+  );
+}
+
 function assertRejected(response, label) {
   assert.ok(
     response.status >= 400 && response.status < 500,
@@ -66,6 +82,48 @@ try {
     await page.goto(`${BASE_URL}/robots.txt`, { waitUntil: "domcontentloaded" });
     const identity = `${process.pid}-${Date.now()}`;
     const email = `origin-${identity}@e2e.war-brasil.test`;
+
+    for (const [pathname, body] of [
+      [
+        "/api/auth/register",
+        {
+          email: `captcha-register-${identity}@e2e.war-brasil.test`,
+          password: PASSWORD,
+          termsAccepted: true,
+        },
+      ],
+      [
+        "/api/auth/sign-in/email",
+        {
+          email: `captcha-login-${identity}@e2e.war-brasil.test`,
+          password: PASSWORD,
+          rememberMe: true,
+        },
+      ],
+      [
+        "/api/auth/request-password-reset",
+        {
+          email: `captcha-reset-${identity}@e2e.war-brasil.test`,
+          redirectTo: "/?auth=reset-password",
+        },
+      ],
+    ]) {
+      const missingCaptcha = await apiJsonWithoutCaptcha(page, pathname, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      assert.equal(
+        missingCaptcha.status,
+        422,
+        `${pathname} deveria exigir Turnstile antes do fluxo de autenticação`,
+      );
+      assert.equal(
+        missingCaptcha.body?.code,
+        "captcha_verification_failed",
+        JSON.stringify(missingCaptcha.body),
+      );
+    }
 
     const forgedRegistration = await externalOriginPost("/api/auth/register", {
       email: `forged-${identity}@e2e.war-brasil.test`,
