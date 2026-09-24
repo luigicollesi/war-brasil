@@ -81,9 +81,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full font-[var(--font-wb-ui)]">
         <ProfilePresenceHeartbeat />
         <UserNotificationRuntime />
-        <ActiveParticipationRuntime>
-          <PreGameCommandRuntime>{children}</PreGameCommandRuntime>
-        </ActiveParticipationRuntime>
+        <PreGameCommandRuntime>
+          <ActiveParticipationRuntime>{children}</ActiveParticipationRuntime>
+        </PreGameCommandRuntime>
       </body>
     </html>
   );

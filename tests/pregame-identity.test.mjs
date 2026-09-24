@@ -29,7 +29,7 @@ test("identidade centraliza paleta, tipografia e runtime do pré-jogo", () => {
   assert.match(layout, /war-identity\.css/);
   assert.match(fonts, /Barlow_Condensed/);
   assert.match(layout, /displayFont/);
-  assert.match(layout, /<PreGameCommandRuntime>\{children\}<\/PreGameCommandRuntime>/);
+  assert.match(layout, /<PreGameCommandRuntime>[\s\S]*<ActiveParticipationRuntime>\{children\}<\/ActiveParticipationRuntime>[\s\S]*<\/PreGameCommandRuntime>/);
   assert.match(shell, /wb-shell/);
   assert.match(home, /<CommandHomeClient mode="landing">/);
   assert.match(homeClient, /useCommandSceneDirective\(sceneIntent\)/);

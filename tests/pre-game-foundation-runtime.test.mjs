@@ -19,7 +19,7 @@ test("RootLayout monta um único runtime persistente ao redor das páginas", () 
   assert.equal((layout.match(/<PreGameCommandRuntime>/g) ?? []).length, 1);
   assert.match(
     layout,
-    /<PreGameCommandRuntime>\{children\}<\/PreGameCommandRuntime>/,
+    /<PreGameCommandRuntime>[\s\S]*<ActiveParticipationRuntime>\{children\}<\/ActiveParticipationRuntime>[\s\S]*<\/PreGameCommandRuntime>/,
   );
   assert.doesNotMatch(layout, /CommandScene|CommandShell|Canvas/);
 });
@@ -64,4 +64,17 @@ test("renderer permanece interno e páginas recebem apenas API semântica", () =
 test("rotas fora do pré-jogo não montam CommandShell", () => {
   assert.match(runtime, /if \(!intent\) return <>\{children\}<\/>;/);
   assert.doesNotMatch(routes, /"\/game"\s*:/);
+});
+
+
+test("participation guard fica dentro da Foundation para não desmontar a cena entre rotas", () => {
+  const foundationStart = layout.indexOf("<PreGameCommandRuntime>");
+  const guardStart = layout.indexOf("<ActiveParticipationRuntime>");
+  const guardEnd = layout.indexOf("</ActiveParticipationRuntime>");
+  const foundationEnd = layout.indexOf("</PreGameCommandRuntime>");
+
+  assert.ok(foundationStart >= 0);
+  assert.ok(guardStart > foundationStart);
+  assert.ok(guardEnd > guardStart);
+  assert.ok(foundationEnd > guardEnd);
 });

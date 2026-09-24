@@ -63,7 +63,7 @@ const consumerSources = [
 
 test("as cinco experiências compartilham um único runtime no RootLayout", () => {
   assert.equal((layout.match(/<PreGameCommandRuntime>/g) ?? []).length, 1);
-  assert.match(layout, /<PreGameCommandRuntime>\{children\}<\/PreGameCommandRuntime>/);
+  assert.match(layout, /<PreGameCommandRuntime>[\s\S]*<ActiveParticipationRuntime>\{children\}<\/ActiveParticipationRuntime>[\s\S]*<\/PreGameCommandRuntime>/);
 
   assert.match(routeIntent, /"\/": "entrance"/);
   assert.match(routeIntent, /"\/home": "entrance"/);
