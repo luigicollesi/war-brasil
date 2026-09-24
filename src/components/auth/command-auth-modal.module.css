@@ -394,6 +394,33 @@
   text-underline-offset: 3px;
 }
 
+.captchaBlock {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  min-height: 78px;
+  padding: 8px 0 2px;
+}
+
+.captchaWidget {
+  width: min(300px, 100%);
+  min-height: 65px;
+}
+
+.captchaHint {
+  color: rgba(224, 214, 190, 0.38);
+  font-size: 9px;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.captchaError {
+  color: #d98b7b;
+  font-size: 10px;
+  line-height: 1.5;
+  text-align: center;
+}
+
 .formActionsRow {
   display: flex;
   justify-content: flex-end;
