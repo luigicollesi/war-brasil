@@ -131,5 +131,12 @@ test("vitória é reavaliada imediatamente nas mudanças relevantes", () => {
   assert.match(maneuver, /evaluateGameVictory\([\s\S]*"troops_changed"/);
   assert.match(battle, /evaluateGameVictory\([\s\S]*"territory_control_changed"/);
   assert.match(command, /function evaluateRoundTroopWinners/);
-  assert.match(command, /evaluateGameVictory\(client, roomId, candidate\.id, "troops_changed"\)/);
+  assert.match(
+    command,
+    /evaluateGameVictories\([\s\S]*players\.map\(\(player\) => player\.id\)[\s\S]*"troops_changed"/,
+  );
+  assert.match(
+    command,
+    /finalizeGameVictories\(client, roomId, \[firstWinner\]\)/,
+  );
 });

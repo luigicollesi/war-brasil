@@ -35,7 +35,7 @@ test("policy de objetivo continua reutilizando avaliação existente", () => {
 test("commands usam dispatcher em vez de chamar objectiveWon diretamente", () => {
   for (const path of commandFiles) {
     const source = readFileSync(path, "utf8");
-    assert.match(source, /evaluateGameVictory/);
+    assert.match(source, /evaluateGameVictor(?:y|ies)/);
     assert.doesNotMatch(source, /\bobjectiveWon\(/);
   }
 });

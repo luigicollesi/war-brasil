@@ -262,6 +262,10 @@ test("fortificação é reavaliada após manobra e bônus positivo de evento", (
   );
   assert.match(
     command,
-    /evaluateGameVictory\(client, roomId, candidate\.id, "troops_changed"\)/,
+    /evaluateGameVictories\([\s\S]*players\.map\(\(player\) => player\.id\)[\s\S]*"troops_changed"/,
+  );
+  assert.match(
+    command,
+    /finalizeGameVictories\(client, roomId, \[firstWinner\]\)/,
   );
 });

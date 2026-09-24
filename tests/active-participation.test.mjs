@@ -148,5 +148,5 @@ test("assentos abandonados são rejeitados nos boundaries de jogo", () => {
   assert.match(seatGuard, /player\.left_at IS NULL/g);
   assert.match(commandPlayer, /left_at IS NULL/);
   assert.match(snapshot, /access_player\.left_at IS NULL/);
-  assert.match(snapshot, /WHERE room_id=\$1[\s\S]*?AND left_at IS NULL/);
+  assert.match(snapshot, /AND \(left_at IS NULL OR \$3='finished'\)/);
 });
