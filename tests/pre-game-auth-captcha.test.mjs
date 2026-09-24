@@ -53,10 +53,18 @@ test("login e recuperação são protegidos no boundary HTTP sem interceptar sig
 });
 
 test("cadastro e reenvio validam captcha antes de banco e email", () => {
-  const registerCaptcha = registerRoute.indexOf("rejectInvalidAuthCaptcha");
-  const beginRegistration = registerRoute.indexOf("beginPendingRegistration");
-  const resendCaptcha = resendRoute.indexOf("rejectInvalidAuthCaptcha");
-  const resendRegistration = resendRoute.indexOf("resendPendingRegistration");
+  const registerCaptcha = registerRoute.indexOf(
+    "const rejectedCaptcha = await rejectInvalidAuthCaptcha",
+  );
+  const beginRegistration = registerRoute.indexOf(
+    "const pending = await beginPendingRegistration",
+  );
+  const resendCaptcha = resendRoute.indexOf(
+    "const rejectedCaptcha = await rejectInvalidAuthCaptcha",
+  );
+  const resendRegistration = resendRoute.indexOf(
+    "const result = await resendPendingRegistration",
+  );
 
   assert.ok(registerCaptcha >= 0 && registerCaptcha < beginRegistration);
   assert.ok(resendCaptcha >= 0 && resendCaptcha < resendRegistration);
