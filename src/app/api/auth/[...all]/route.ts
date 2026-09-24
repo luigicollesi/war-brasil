@@ -10,7 +10,9 @@ import { rejectInvalidAuthCaptcha } from "@/server/auth/turnstile";
 const handlers = toNextJsHandler(auth);
 
 function captchaActionForRequest(request: Request): AuthCaptchaAction | null {
-  const pathname = new URL(request.url).pathname;
+  const rawPathname = new URL(request.url).pathname;
+  const pathname =
+    rawPathname.length > 1 ? rawPathname.replace(/\/+$/, "") : rawPathname;
   if (pathname === "/api/auth/sign-in/email") {
     return AUTH_CAPTCHA_ACTIONS.login;
   }
