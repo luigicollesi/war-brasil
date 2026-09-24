@@ -20,7 +20,14 @@ export function ProfileV4Boundary({
     <main className={styles.page} data-profile-v4-boundary={variant}>
       <header className={styles.commandBar}>
         <Link href="/home" className={styles.homeLink} aria-label="Voltar ao comando">
-          ←
+          <svg
+            className={styles.homeIcon}
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+            focusable="false"
+          >
+            <path d="M14.5 5.5 8 12l6.5 6.5M8.5 12H19" />
+          </svg>
         </Link>
         <span className={styles.commandCopy}>
           <small>QUARTEL DO COMANDANTE</small>
