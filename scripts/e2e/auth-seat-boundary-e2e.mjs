@@ -45,7 +45,7 @@ async function createAuthenticatedActor(browser, index) {
     extraHTTPHeaders: { "x-forwarded-for": `198.51.100.${index + 10}` },
   });
   const page = await context.newPage();
-  await page.goto(`${BASE_URL}/`, { waitUntil: "domcontentloaded" });
+  await page.goto(`${BASE_URL}/robots.txt`, { waitUntil: "domcontentloaded" });
 
   const email = `seat-boundary-${process.pid}-${index}@e2e.war-brasil.test`;
   const registration = await apiJson(page, "/api/auth/register", {
@@ -145,7 +145,7 @@ try {
         },
       ]);
       const page = await seatOnly.newPage();
-      await page.goto(`${BASE_URL}/`, { waitUntil: "domcontentloaded" });
+      await page.goto(`${BASE_URL}/robots.txt`, { waitUntil: "domcontentloaded" });
       const noAccount = await apiJson(page, `/api/rooms/${roomCode}`);
       assert.equal(
         noAccount.status,

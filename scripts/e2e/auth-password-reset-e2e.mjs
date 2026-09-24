@@ -133,7 +133,7 @@ try {
   const page = await context.newPage();
 
   try {
-    await page.goto(`${BASE_URL}/`, { waitUntil: "domcontentloaded" });
+    await page.goto(`${BASE_URL}/robots.txt`, { waitUntil: "domcontentloaded" });
 
     const identity = `${process.pid}-${Date.now()}`;
     const email = `reset-${identity}@e2e.war-brasil.test`;

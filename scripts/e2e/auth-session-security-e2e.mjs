@@ -132,7 +132,7 @@ try {
   const page = await context.newPage();
 
   try {
-    await page.goto(`${BASE_URL}/`, { waitUntil: "domcontentloaded" });
+    await page.goto(`${BASE_URL}/robots.txt`, { waitUntil: "domcontentloaded" });
     const identity = `${process.pid}-${Date.now()}`;
     const email = `session-${identity}@e2e.war-brasil.test`;
     await registerAndVerify(page, email);
@@ -195,7 +195,7 @@ try {
     );
     assert.ok((expired.rowCount ?? 0) >= 1, "sessão E2E não foi localizada para expiração");
 
-    await page.goto(`${BASE_URL}/`, { waitUntil: "domcontentloaded" });
+    await page.goto(`${BASE_URL}/robots.txt`, { waitUntil: "domcontentloaded" });
     const expiredGate = await apiJson(page, "/api/auth/command-access");
     assert.equal(
       expiredGate.status,
