@@ -283,6 +283,20 @@ test("open title sweeps alternate instead of jumping back to the first frame", (
     styles,
     /data-motion="flow"[\s\S]*wb-title-flow 8s ease-in-out infinite alternate/,
   );
+
+  const effects = read("src/app/title-effects.css");
+  assert.match(
+    effects,
+    /@keyframes wb-title-flow[\s\S]*--profile-title-fill-x: 0%[\s\S]*--profile-title-fill-x: 100%/,
+  );
+  assert.doesNotMatch(
+    effects,
+    /@keyframes wb-title-flow[\s\S]{0,180}--profile-title-fill-x: -(?:\d+)%/,
+  );
+  assert.doesNotMatch(
+    effects,
+    /@keyframes wb-title-flow[\s\S]{0,180}--profile-title-fill-x: 1(?:0[1-9]|[1-9]\d)%/,
+  );
   assert.match(
     styles,
     /data-sparkle-motion="flow"[\s\S]*wb-title-sparkle-flow 9s ease-in-out infinite alternate/,
