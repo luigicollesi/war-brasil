@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { withE2EAuthCaptcha } from "./runtime-helper.mjs";
 
 export const E2E_ELIGIBLE_BIRTH_DATE = "1990-01-01";
 
@@ -14,7 +15,7 @@ async function apiJson(page, url, init = {}) {
       }
       return { status: response.status, body };
     },
-    { requestUrl: url, requestInit: init },
+    { requestUrl: url, requestInit: withE2EAuthCaptcha(url, init) },
   );
 }
 
