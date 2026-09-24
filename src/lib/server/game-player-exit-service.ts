@@ -429,6 +429,7 @@ export async function leaveGameCommand(
   value: string,
   session: string,
   metadata?: GameCommandRequestMetadata | null,
+  accountUserId?: string,
 ) {
   const roomId = normalizeRoomId(value);
 
@@ -439,13 +440,23 @@ export async function leaveGameCommand(
     "leave_game",
     null,
     async (client) => {
-      const player = await resolveCommandPlayerBySession(client, roomId, session);
+      const player = await resolveCommandPlayerBySession(
+        client,
+        roomId,
+        session,
+        accountUserId,
+        true,
+      );
       return executeLeaveGame(
         client,
         roomId,
         player.id,
         player.turn_position,
       );
+    },
+    {
+      accountUserId,
+      allowDepartedSeat: true,
     },
   );
 }

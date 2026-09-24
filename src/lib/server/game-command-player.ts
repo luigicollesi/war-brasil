@@ -12,6 +12,7 @@ type CachedCommandPlayer = {
   roomId: string;
   session: string;
   accountUserId: string | null;
+  allowDepartedSeat: boolean;
   player: CommandPlayer;
 };
 
@@ -22,6 +23,7 @@ async function loadCommandPlayer(
   roomId: string,
   session: string,
   accountUserId: string | null,
+  allowDepartedSeat: boolean,
 ) {
   const player = (
     await client.query<CommandPlayer>(
@@ -31,9 +33,9 @@ async function loadCommandPlayer(
          AND player_session=$2
          AND ($3::uuid IS NULL OR user_id=$3::uuid)
          AND is_bot=FALSE
-         AND left_at IS NULL
+         AND ($4::boolean=TRUE OR left_at IS NULL)
        FOR UPDATE`,
-      [roomId, session, accountUserId],
+      [roomId, session, accountUserId, allowDepartedSeat],
     )
   ).rows[0];
 
@@ -45,6 +47,7 @@ async function loadCommandPlayer(
     roomId,
     session,
     accountUserId,
+    allowDepartedSeat,
     player,
   });
   return player;
@@ -55,12 +58,14 @@ export async function primeCommandPlayer(
   roomId: string,
   session: string,
   accountUserId?: string | null,
+  allowDepartedSeat = false,
 ) {
   return loadCommandPlayer(
     client,
     roomId,
     session,
     accountUserId?.trim() || null,
+    allowDepartedSeat,
   );
 }
 
@@ -69,6 +74,7 @@ export async function resolveCommandPlayerBySession(
   roomId: string,
   session: string,
   accountUserId?: string | null,
+  allowDepartedSeat = false,
 ): Promise<CommandPlayer> {
   const normalizedUserId = accountUserId?.trim() || null;
   const cached = commandPlayerCache.get(client);
@@ -76,13 +82,20 @@ export async function resolveCommandPlayerBySession(
     cached &&
     cached.roomId === roomId &&
     cached.session === session &&
+    cached.allowDepartedSeat === allowDepartedSeat &&
     (normalizedUserId === null ||
       cached.accountUserId === normalizedUserId)
   ) {
     return cached.player;
   }
 
-  return loadCommandPlayer(client, roomId, session, normalizedUserId);
+  return loadCommandPlayer(
+    client,
+    roomId,
+    session,
+    normalizedUserId,
+    allowDepartedSeat,
+  );
 }
 
 export function clearCommandPlayerCache(client: PoolClient) {

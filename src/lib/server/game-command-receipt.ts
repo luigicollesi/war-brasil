@@ -14,6 +14,7 @@ import { publishGameCommandMetric } from "./observability/game-command-metrics";
 export type GameCommandReceiptRequest = GameCommandRequestMetadata & {
   session: string;
   accountUserId?: string;
+  allowDepartedSeat?: boolean;
   commandName: string;
   payload: unknown;
 };
@@ -51,6 +52,7 @@ export async function prepareGameCommandReceipt(
     roomId,
     request.session,
     request.accountUserId,
+    request.allowDepartedSeat ?? false,
   );
   const playerId = player.id;
   const fingerprint = gameCommandRequestFingerprint(

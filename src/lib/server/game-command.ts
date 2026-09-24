@@ -53,6 +53,7 @@ type GameCommandSyncEffects = {
 type GameCommandActor = {
   session: string;
   accountUserId?: string;
+  allowDepartedSeat?: boolean;
 };
 
 type GameCommandOptions<T> = {
@@ -93,17 +94,23 @@ export async function playerGameCommand<T>(
   execute: (client: PoolClient) => Promise<T>,
   options: Omit<GameCommandOptions<T>, "request" | "actor"> & {
     accountUserId?: string;
+    allowDepartedSeat?: boolean;
   } = {},
 ) {
-  const { accountUserId, ...commandOptions } = options;
+  const {
+    accountUserId,
+    allowDepartedSeat = false,
+    ...commandOptions
+  } = options;
   return gameCommand(roomId, execute, {
     ...commandOptions,
-    actor: { session, accountUserId },
+    actor: { session, accountUserId, allowDepartedSeat },
     request: metadata
       ? {
           ...metadata,
           session,
           ...(accountUserId ? { accountUserId } : {}),
+          ...(allowDepartedSeat ? { allowDepartedSeat: true } : {}),
           commandName,
           payload,
         }
@@ -131,6 +138,7 @@ export async function gameCommand<T>(
         roomId,
         options.actor.session,
         options.actor.accountUserId,
+        options.actor.allowDepartedSeat ?? false,
       );
     }
     const preparedReceipt = options.request
