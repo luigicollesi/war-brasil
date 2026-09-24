@@ -72,9 +72,24 @@
   }
 }
 
-@keyframes wb-title-sheen {
-  0%, 18% { --profile-title-fill-x: -45%; }
-  58%, 100% { --profile-title-fill-x: 145%; }
+@keyframes wb-title-sheen-overlay {
+  0%,
+  15% {
+    opacity: 0;
+    background-position: 130% 50%;
+  }
+  20% {
+    opacity: 0.92;
+  }
+  62% {
+    opacity: 0.92;
+    background-position: -30% 50%;
+  }
+  68%,
+  100% {
+    opacity: 0;
+    background-position: -30% 50%;
+  }
 }
 
 @keyframes wb-title-pulse {
