@@ -18,18 +18,20 @@ test("leak scan cobre artefatos públicos e serializados sem escanear bundle ser
   assert.match(scanner, /\.map/);
 });
 
-test("CI injeta sentinels falsos para banco, auth, OAuth e email", () => {
+test("CI injeta sentinels falsos para banco, auth, OAuth, email e Turnstile", () => {
   for (const name of [
     "DB_PASSWORD_SENTINEL",
     "BETTER_AUTH_SECRET",
     "GOOGLE_CLIENT_SECRET",
     "DISCORD_CLIENT_SECRET",
     "EMAIL_TRANSPORT_SECRET",
+    "TURNSTILE_SECRET_KEY",
   ]) {
     assert.match(workflow, new RegExp(`${name}:`), name);
   }
   assert.doesNotMatch(workflow, /APPLE_/);
   assert.match(workflow, /assert-no-auth-secret-leaks\.mjs/);
+  assert.match(scanner, /TURNSTILE_SECRET_KEY/);
 });
 
 test("scanner relata apenas label e caminho, nunca concatena valor secreto no erro", () => {
