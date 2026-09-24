@@ -15,6 +15,7 @@ const ARTIFACT_DIR = path.resolve(
   process.env.LOBBY_E2E_ARTIFACT_DIR ?? "test-results/lobby-eval",
 );
 const LOBBY_CONVERGENCE_TIMEOUT_MS = 15_000;
+const LOBBY_STEP_TIMEOUT_MS = 20_000;
 const E2E_PASSWORD = "WarBrasil-E2E-2026!";
 
 if (!DATABASE_URL) {
@@ -32,13 +33,37 @@ let actorSequence = 0;
 
 async function step(name, callback) {
   process.stdout.write(`\n[lobby-e2e] ${name} ... `);
+
+  let timeout;
   try {
-    await callback();
+    await Promise.race([
+      callback(),
+      new Promise((_, reject) => {
+        timeout = setTimeout(
+          () =>
+            reject(
+              new Error(
+                `${name} excedeu ${LOBBY_STEP_TIMEOUT_MS}ms sem concluir`,
+              ),
+            ),
+          LOBBY_STEP_TIMEOUT_MS,
+        );
+      }),
+    ]);
     console.log("ok");
   } catch (error) {
     failures.push({ name, error });
     console.log("falhou");
     console.error(error);
+
+    if (
+      error instanceof Error &&
+      error.message.includes(`excedeu ${LOBBY_STEP_TIMEOUT_MS}ms`)
+    ) {
+      throw error;
+    }
+  } finally {
+    if (timeout) clearTimeout(timeout);
   }
 }
 
@@ -372,8 +397,8 @@ async function main() {
   const browser = await playwright.chromium.launch({ headless: true });
 
   try {
-    await step("FND-02/13 host da cena persiste entre Operations, Lobby, Home, Doctrine e Profile", async () => {
-      const actor = await createActor(browser);
+    await step("FND-02/13 Foundation persiste entre rotas próprias e Profile mantém viewport isolada", async () => {
+      const actor = await createActor(browser, { disableWebgl: true });
       try {
         await assertPersistentScene(actor.page, "operations");
 
@@ -401,10 +426,22 @@ async function main() {
         await actor.page
           .locator("[data-profile-v4]")
           .waitFor({ state: "attached", timeout: 10_000 });
+        assert.equal(
+          await actor.page.locator("[data-command-scene-mode]").count(),
+          0,
+          "Profile V4 deve possuir a própria viewport fora do CommandShell",
+        );
 
+        await actor.page.evaluate(() => {
+          sessionStorage.removeItem("foundation-persistence-probe-initialized");
+        });
         await actor.page.locator('a[href="/home"]').first().click();
         await actor.page.waitForURL((url) => url.pathname === "/home", { timeout: 10_000 });
-        await assertPersistentScene(actor.page, "entrance");
+        await assertPersistentScene(
+          actor.page,
+          "entrance",
+          "foundation-remounted-after-profile",
+        );
       } finally {
         await actor.context.close();
       }

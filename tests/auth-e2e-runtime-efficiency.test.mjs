@@ -31,9 +31,17 @@ test("API-only auth E2Es establish same-origin without mounting the WebGL home",
   }
 });
 
-test("black-box case timeout remains bounded at twenty seconds by default", () => {
+test("black-box timeout stays at twenty seconds per normal case and lobby enforces it per scenario", () => {
   const runner = readFileSync("scripts/e2e/run-black-box-suite.mjs", "utf8");
+  const lobby = readFileSync("scripts/e2e/lobby-e2e.mjs", "utf8");
+
   assert.match(runner, /BLACKBOX_CASE_TIMEOUT_MS \?\? "20000"/);
+  assert.match(runner, /script === "scripts\/e2e\/lobby-e2e\.mjs"/);
+  assert.match(runner, /return timeoutMs \* 9/);
   assert.match(runner, /child\.kill\("SIGTERM"\)/);
   assert.match(runner, /child\.kill\("SIGKILL"\)/);
+
+  assert.match(lobby, /LOBBY_STEP_TIMEOUT_MS = 20_000/);
+  assert.match(lobby, /Promise\.race\(/);
+  assert.match(lobby, /excedeu \$\{LOBBY_STEP_TIMEOUT_MS\}ms sem concluir/);
 });

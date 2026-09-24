@@ -42,6 +42,13 @@ if (!Number.isInteger(timeoutMs) || timeoutMs < 1000) {
   process.exit(2);
 }
 
+function timeoutForScript(script) {
+  if (script === "scripts/e2e/lobby-e2e.mjs") {
+    return timeoutMs * 9;
+  }
+  return timeoutMs;
+}
+
 function runScript(script) {
   return new Promise((resolvePromise, rejectPromise) => {
     console.log(`\n[black-box] ${script}`);
@@ -51,12 +58,13 @@ function runScript(script) {
       stdio: "inherit",
     });
 
+    const scriptTimeoutMs = timeoutForScript(script);
     let timedOut = false;
     const timeout = setTimeout(() => {
       timedOut = true;
       child.kill("SIGTERM");
       setTimeout(() => child.kill("SIGKILL"), 1000).unref();
-    }, timeoutMs);
+    }, scriptTimeoutMs);
 
     child.on("error", (error) => {
       clearTimeout(timeout);
@@ -68,7 +76,9 @@ function runScript(script) {
 
       if (timedOut) {
         rejectPromise(
-          new Error(`${script} exceeded ${timeoutMs}ms and was terminated`),
+          new Error(
+            `${script} exceeded ${scriptTimeoutMs}ms and was terminated`,
+          ),
         );
         return;
       }
