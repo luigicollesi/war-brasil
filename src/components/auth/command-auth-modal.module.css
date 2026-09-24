@@ -527,9 +527,12 @@
 
 @media (max-width: 760px) {
   .dialog {
+    --auth-mobile-max-height:
+      calc(100dvh - max(12px, env(safe-area-inset-top)));
+
     width: 100vw;
     max-width: none;
-    max-height: 92dvh;
+    max-height: var(--auth-mobile-max-height);
     margin: auto 0 0;
     border-right: 0;
     border-bottom: 0;
@@ -540,6 +543,7 @@
   .shell {
     display: block;
     min-height: 0;
+    max-height: var(--auth-mobile-max-height);
   }
 
   .identityPanel {
@@ -547,8 +551,16 @@
   }
 
   .authPanel {
+    box-sizing: border-box;
     min-height: min(650px, 90dvh);
-    padding: 35px 22px 24px;
+    max-height: var(--auth-mobile-max-height);
+    padding:
+      35px
+      22px
+      calc(24px + env(safe-area-inset-bottom));
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    -webkit-overflow-scrolling: touch;
   }
 
   .providers {
