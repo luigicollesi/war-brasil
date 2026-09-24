@@ -32,6 +32,9 @@ export type AuthServerEnvironment = {
   };
   providerAvailability: AuthProviderAvailability;
   secret?: string;
+  turnstile: {
+    secretKey?: string;
+  };
 };
 
 function parseAllowedHosts(value: string | undefined) {
@@ -107,6 +110,9 @@ export function readAuthServerEnvironment(): AuthServerEnvironment {
       google: Boolean(googleClientId && googleClientSecret),
     },
     secret: readOptional("BETTER_AUTH_SECRET"),
+    turnstile: {
+      secretKey: readOptional("TURNSTILE_SECRET_KEY"),
+    },
   };
 
   if (
@@ -155,6 +161,9 @@ export function assertAuthRuntimeConfiguration(
   }
   if (isObviouslyUnsafeTransportSecret(environment.email.transportSecret)) {
     missing.push("EMAIL_TRANSPORT_SECRET(valid Resend API key)");
+  }
+  if (!environment.turnstile.secretKey) {
+    missing.push("TURNSTILE_SECRET_KEY");
   }
 
   if (missing.length > 0) {
