@@ -82,3 +82,15 @@ test("owned title reading remains database-driven through appearance repository 
   assert.match(service, /fontKey: row\.font_key/);
   assert.match(service, /styleKey: row\.style_key/);
 });
+
+
+test("BETA TESTER keeps the approved drift recipe unchanged", () => {
+  const migration = readFileSync(
+    "src/lib/db/migrations/managed/058-commander-title-achievement-catalog.sql",
+    "utf8",
+  );
+  assert.match(
+    migration,
+    /'BETA TESTER'[\s\S]{0,180}'cyan-holo-drift_glow-blue-medium'/,
+  );
+});
