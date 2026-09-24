@@ -187,7 +187,15 @@ export function PublicCommanderProfileView({
             className={styles.backAction}
             onClick={() => router.back()}
           >
-            ← VOLTAR
+            <svg
+              className={styles.backIcon}
+              viewBox="0 0 20 20"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path d="M11.75 4.5 6.25 10l5.5 5.5M6.75 10H16" />
+            </svg>
+            <span>VOLTAR</span>
           </button>
 
           {snapshot.relationship === "friend" ? (
