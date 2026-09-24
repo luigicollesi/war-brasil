@@ -179,7 +179,7 @@ test("title style keys use a composable allow-listed visual grammar", () => {
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(styles, /@media \(forced-colors: active\)/);
   assert.match(effects, /@property --profile-title-angle/);
-  assert.match(effects, /@keyframes wb-title-sheen-travel/);
+  assert.match(effects, /@keyframes wb-title-sheen-loop/);
   assert.match(styles, /color-mix\(/);
   assert.doesNotMatch(renderer, /STYLE_CLASS/);
 });
@@ -245,7 +245,7 @@ test("gradient aura layers do not inherit the title's solid shadow stack", () =>
 });
 
 
-test("sheen keeps the base material fully painted and resets only while invisible", () => {
+test("sheen keeps the base material painted and closes its loop like beta drift", () => {
   const renderer = read("src/components/profile/profile-title-renderer.tsx");
   const styles = read("src/components/profile/profile-title-renderer.module.css");
   const effects = read("src/app/title-effects.css");
@@ -254,7 +254,7 @@ test("sheen keeps the base material fully painted and resets only while invisibl
   assert.match(styles, /\.title::after[\s\S]*content: attr\(data-title-text\)/);
   assert.match(
     styles,
-    /\.title\[data-motion="sheen"\]::after[\s\S]*wb-title-sheen-travel 10\.8s cubic-bezier\(0\.37, 0, 0\.63, 1\) infinite[\s\S]*wb-title-sheen-visibility 10\.8s ease-in-out infinite/,
+    /\.title\[data-motion="sheen"\]::after[\s\S]*wb-title-sheen-loop 6\.8s ease-in-out infinite/,
   );
 
   const sheenStart = styles.indexOf('.title[data-motion="sheen"]::after');
@@ -266,89 +266,62 @@ test("sheen keeps the base material fully painted and resets only while invisibl
     /--profile-title-fill-image|--profile-title-fill-size|--profile-title-motion-animation/,
   );
 
-  const travelStart = effects.indexOf("@keyframes wb-title-sheen-travel");
-  const visibilityStart = effects.indexOf(
-    "@keyframes wb-title-sheen-visibility",
-    travelStart,
+  const keyframeStart = effects.indexOf("@keyframes wb-title-sheen-loop");
+  const pulseKeyframe = effects.indexOf("@keyframes wb-title-pulse", keyframeStart);
+  assert.ok(keyframeStart >= 0 && pulseKeyframe > keyframeStart);
+  const keyframe = effects.slice(keyframeStart, pulseKeyframe);
+  assert.match(
+    keyframe,
+    /0%,[\s\S]*100%[\s\S]*opacity: 0\.52[\s\S]*background-position: 50% 50%/,
   );
-  const pulseKeyframe = effects.indexOf("@keyframes wb-title-pulse", visibilityStart);
-  assert.ok(
-    travelStart >= 0 &&
-      visibilityStart > travelStart &&
-      pulseKeyframe > visibilityStart,
-  );
-
-  const travel = effects.slice(travelStart, visibilityStart);
-  const visibility = effects.slice(visibilityStart, pulseKeyframe);
-  assert.match(travel, /from \{ background-position: 122% 50%; \}/);
-  assert.match(travel, /to \{ background-position: -22% 50%; \}/);
-  assert.doesNotMatch(travel, /opacity:/);
-
-  assert.match(visibility, /0%,[\s\S]*10%[\s\S]*opacity: 0/);
-  assert.match(visibility, /50%[\s\S]*opacity: 0\.82/);
-  assert.match(visibility, /90%,[\s\S]*100%[\s\S]*opacity: 0/);
-  assert.doesNotMatch(visibility, /background-position:/);
+  assert.match(keyframe, /25%[\s\S]*background-position: 78% 50%/);
+  assert.match(keyframe, /50%[\s\S]*background-position: 56% 50%/);
+  assert.match(keyframe, /75%[\s\S]*background-position: 24% 50%/);
 });
 
-test("legendary sheen and glow use long smooth curves instead of abrupt pulses", () => {
+test("recent title motions are perceptible and use closed loops instead of endpoint resets", () => {
   const styles = read("src/components/profile/profile-title-renderer.module.css");
   const effects = read("src/app/title-effects.css");
 
   assert.match(
     styles,
-    /wb-title-sheen-travel 10\.8s cubic-bezier\(0\.37, 0, 0\.63, 1\) infinite/,
+    /data-motion="flow"[\s\S]*wb-title-flow 6\.8s ease-in-out infinite/,
   );
   assert.match(
     styles,
-    /wb-title-sheen-visibility 10\.8s ease-in-out infinite/,
+    /data-sparkle-motion="flow"[\s\S]*wb-title-sparkle-flow 6\.6s ease-in-out infinite/,
   );
   assert.match(
     styles,
-    /wb-title-glow-breathe-strong 8s cubic-bezier\(0\.45, 0, 0\.55, 1\) infinite/,
+    /data-ember-motion="flow"[\s\S]*wb-title-ember-flow 6\.8s ease-in-out infinite/,
   );
   assert.match(
-    effects,
-    /@keyframes wb-title-glow-breathe-strong[\s\S]*0%, 100% \{ --profile-title-glow-radius: 0\.62em; \}[\s\S]*50% \{ --profile-title-glow-radius: 0\.78em; \}/,
-  );
-  assert.doesNotMatch(
     styles,
-    /wb-title-glow-breathe-strong 4\.8s/,
+    /data-aura-motion="cycle"[\s\S]*wb-title-aura-cycle 7\.2s ease-in-out infinite/,
   );
+
+  for (const keyframe of [
+    "wb-title-flow",
+    "wb-title-sparkle-flow",
+    "wb-title-ember-flow",
+    "wb-title-aura-cycle",
+  ]) {
+    const start = effects.indexOf("@keyframes " + keyframe);
+    assert.ok(start >= 0);
+    const next = effects.indexOf("@keyframes ", start + 12);
+    const block = effects.slice(start, next >= 0 ? next : undefined);
+    assert.match(block, /0%,[\s\S]*100%/);
+  }
 });
 
-test("open title sweeps alternate instead of jumping back to the first frame", () => {
+test("breathe motion stays visible without the slower timings introduced by the previous pass", () => {
   const styles = read("src/components/profile/profile-title-renderer.module.css");
 
-  assert.match(
-    styles,
-    /data-motion="flow"[\s\S]*wb-title-flow 8s ease-in-out infinite alternate/,
-  );
-
-  const effects = read("src/app/title-effects.css");
-  assert.match(
-    effects,
-    /@keyframes wb-title-flow[\s\S]*--profile-title-fill-x: 0%[\s\S]*--profile-title-fill-x: 100%/,
-  );
-  assert.doesNotMatch(
-    effects,
-    /@keyframes wb-title-flow[\s\S]{0,180}--profile-title-fill-x: -(?:\d+)%/,
-  );
-  assert.doesNotMatch(
-    effects,
-    /@keyframes wb-title-flow[\s\S]{0,180}--profile-title-fill-x: 1(?:0[1-9]|[1-9]\d)%/,
-  );
-  assert.match(
-    styles,
-    /data-sparkle-motion="flow"[\s\S]*wb-title-sparkle-flow 9s ease-in-out infinite alternate/,
-  );
-  assert.match(
-    styles,
-    /data-ember-motion="flow"[\s\S]*wb-title-ember-flow 8\.4s ease-in-out infinite alternate/,
-  );
-  assert.match(
-    styles,
-    /data-aura-motion="cycle"[\s\S]*wb-title-aura-cycle 8\.5s ease-in-out infinite alternate/,
-  );
+  assert.match(styles, /wb-title-glow-breathe-soft 5\.4s ease-in-out infinite/);
+  assert.match(styles, /wb-title-glow-breathe-medium 5\.6s ease-in-out infinite/);
+  assert.match(styles, /wb-title-glow-breathe-strong 5\.8s ease-in-out infinite/);
+  assert.doesNotMatch(styles, /wb-title-glow-breathe-(?:soft|medium|strong) 7\./);
+  assert.doesNotMatch(styles, /wb-title-glow-breathe-strong 8s/);
 });
 
 test("reduced motion and forced colors also disable transient sheen overlays", () => {
