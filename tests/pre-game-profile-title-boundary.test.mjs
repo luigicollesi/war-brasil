@@ -179,7 +179,7 @@ test("title style keys use a composable allow-listed visual grammar", () => {
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(styles, /@media \(forced-colors: active\)/);
   assert.match(effects, /@property --profile-title-angle/);
-  assert.match(effects, /@keyframes wb-title-sheen-overlay/);
+  assert.match(effects, /@keyframes wb-title-sheen-travel/);
   assert.match(styles, /color-mix\(/);
   assert.doesNotMatch(renderer, /STYLE_CLASS/);
 });
@@ -254,7 +254,7 @@ test("sheen keeps the base material fully painted and resets only while invisibl
   assert.match(styles, /\.title::after[\s\S]*content: attr\(data-title-text\)/);
   assert.match(
     styles,
-    /\.title\[data-motion="sheen"\]::after[\s\S]*wb-title-sheen-overlay 7\.5s linear infinite/,
+    /\.title\[data-motion="sheen"\]::after[\s\S]*wb-title-sheen-travel 10\.8s cubic-bezier\(0\.37, 0, 0\.63, 1\) infinite[\s\S]*wb-title-sheen-visibility 10\.8s ease-in-out infinite/,
   );
 
   const sheenStart = styles.indexOf('.title[data-motion="sheen"]::after');
@@ -266,14 +266,54 @@ test("sheen keeps the base material fully painted and resets only while invisibl
     /--profile-title-fill-image|--profile-title-fill-size|--profile-title-motion-animation/,
   );
 
-  const keyframeStart = effects.indexOf("@keyframes wb-title-sheen-overlay");
-  const pulseKeyframe = effects.indexOf("@keyframes wb-title-pulse", keyframeStart);
-  assert.ok(keyframeStart >= 0 && pulseKeyframe > keyframeStart);
-  const keyframe = effects.slice(keyframeStart, pulseKeyframe);
-  assert.match(keyframe, /0%,[\s\S]*15%[\s\S]*opacity: 0/);
-  assert.match(keyframe, /68%,[\s\S]*100%[\s\S]*opacity: 0/);
-  assert.match(keyframe, /background-position: 130% 50%/);
-  assert.match(keyframe, /background-position: -30% 50%/);
+  const travelStart = effects.indexOf("@keyframes wb-title-sheen-travel");
+  const visibilityStart = effects.indexOf(
+    "@keyframes wb-title-sheen-visibility",
+    travelStart,
+  );
+  const pulseKeyframe = effects.indexOf("@keyframes wb-title-pulse", visibilityStart);
+  assert.ok(
+    travelStart >= 0 &&
+      visibilityStart > travelStart &&
+      pulseKeyframe > visibilityStart,
+  );
+
+  const travel = effects.slice(travelStart, visibilityStart);
+  const visibility = effects.slice(visibilityStart, pulseKeyframe);
+  assert.match(travel, /from \{ background-position: 122% 50%; \}/);
+  assert.match(travel, /to \{ background-position: -22% 50%; \}/);
+  assert.doesNotMatch(travel, /opacity:/);
+
+  assert.match(visibility, /0%,[\s\S]*10%[\s\S]*opacity: 0/);
+  assert.match(visibility, /50%[\s\S]*opacity: 0\.82/);
+  assert.match(visibility, /90%,[\s\S]*100%[\s\S]*opacity: 0/);
+  assert.doesNotMatch(visibility, /background-position:/);
+});
+
+test("legendary sheen and glow use long smooth curves instead of abrupt pulses", () => {
+  const styles = read("src/components/profile/profile-title-renderer.module.css");
+  const effects = read("src/app/title-effects.css");
+
+  assert.match(
+    styles,
+    /wb-title-sheen-travel 10\.8s cubic-bezier\(0\.37, 0, 0\.63, 1\) infinite/,
+  );
+  assert.match(
+    styles,
+    /wb-title-sheen-visibility 10\.8s ease-in-out infinite/,
+  );
+  assert.match(
+    styles,
+    /wb-title-glow-breathe-strong 8s cubic-bezier\(0\.45, 0, 0\.55, 1\) infinite/,
+  );
+  assert.match(
+    effects,
+    /@keyframes wb-title-glow-breathe-strong[\s\S]*0%, 100% \{ --profile-title-glow-radius: 0\.62em; \}[\s\S]*50% \{ --profile-title-glow-radius: 0\.78em; \}/,
+  );
+  assert.doesNotMatch(
+    styles,
+    /wb-title-glow-breathe-strong 4\.8s/,
+  );
 });
 
 test("open title sweeps alternate instead of jumping back to the first frame", () => {
