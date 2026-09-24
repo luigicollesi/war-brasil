@@ -3,11 +3,17 @@
 import Link from "next/link";
 import {
   type FormEvent,
+  useCallback,
   useEffect,
   useRef,
   useState,
 } from "react";
 import { authClient } from "@/client/auth-client";
+import {
+  AUTH_CAPTCHA_ACTIONS,
+  AUTH_CAPTCHA_RESPONSE_HEADER,
+} from "@/src/lib/shared/auth-captcha";
+import { TurnstileChallenge } from "./turnstile-challenge";
 import styles from "./command-auth-modal.module.css";
 
 export type CommandAuthMode =
@@ -111,8 +117,31 @@ export function CommandAuthModal({
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [resendSecondsRemaining, setResendSecondsRemaining] = useState(0);
   const [pendingAction, setPendingAction] = useState<PendingAction | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaError, setCaptchaError] = useState("");
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
   const isPending = pendingAction !== null;
   const resendTimerActive = resendSecondsRemaining > 0;
+
+  const resetCaptcha = useCallback(() => {
+    setCaptchaToken(null);
+    setCaptchaError("");
+    setCaptchaResetKey((current) => current + 1);
+  }, []);
+
+  const handleCaptchaTokenChange = useCallback((token: string | null) => {
+    setCaptchaToken(token);
+  }, []);
+
+  const handleCaptchaError = useCallback((nextMessage: string) => {
+    setCaptchaError(nextMessage);
+  }, []);
+
+  const requireCaptchaToken = () => {
+    if (captchaToken) return captchaToken;
+    setCaptchaError("Confirme a verificação de segurança para continuar.");
+    return null;
+  };
 
   const runPendingAction = async (
     action: PendingAction,
@@ -148,6 +177,7 @@ export function CommandAuthModal({
       setMode(initialMode);
       setMessage(notice);
       setFieldErrors({});
+      resetCaptcha();
 
       if (dialog && !dialog.open) {
         dialog.showModal();
@@ -162,7 +192,7 @@ export function CommandAuthModal({
         dialog.close();
       }
     };
-  }, [initialMode, notice, open]);
+  }, [initialMode, notice, open, resetCaptcha]);
 
   useEffect(() => {
     if (!resendTimerActive) {
@@ -186,6 +216,7 @@ export function CommandAuthModal({
     setMode(nextMode);
     setMessage("");
     setFieldErrors({});
+    resetCaptcha();
   };
 
   const signInWithProvider = (provider: AuthProvider) => {
@@ -214,14 +245,31 @@ export function CommandAuthModal({
     setMessage("");
     setFieldErrors({});
 
-    void runPendingAction("login", async () => {
-      const { error } = await authClient.signIn.email({
-        email: nextEmail,
-        password,
-        rememberMe: true,
-      });
+    const token = requireCaptchaToken();
+    if (!token) return;
 
-      if (error) {
+    void runPendingAction("login", async () => {
+      try {
+        const { error } = await authClient.signIn.email({
+          email: nextEmail,
+          password,
+          rememberMe: true,
+          fetchOptions: {
+            headers: {
+              [AUTH_CAPTCHA_RESPONSE_HEADER]: token,
+            },
+          },
+        });
+
+        if (error) {
+          if (error.status === 422 || error.status === 503) {
+            setCaptchaError(
+              error.status === 503
+                ? "A verificação de segurança está indisponível no momento."
+                : "A verificação de segurança expirou ou não pôde ser confirmada.",
+            );
+            return;
+          }
         if (error.status === 403) {
           setMode("verification");
           setMessage(
@@ -234,11 +282,14 @@ export function CommandAuthModal({
           return;
         }
 
-        setMessage("Confira o email e a senha informados.");
-        return;
-      }
+          setMessage("Confira o email e a senha informados.");
+          return;
+        }
 
-      await onAuthenticated();
+        await onAuthenticated();
+      } finally {
+        resetCaptcha();
+      }
     });
   };
 
@@ -259,13 +310,19 @@ export function CommandAuthModal({
       return;
     }
 
+    const token = requireCaptchaToken();
+    if (!token) return;
+
     void runPendingAction("register", async () => {
       try {
         const { response, payload } = await fetchJsonWithTimeout<RegisterResponse>(
           "/api/auth/register",
           {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+              "Content-Type": "application/json",
+              [AUTH_CAPTCHA_RESPONSE_HEADER]: token,
+            },
             body: JSON.stringify({
               email: nextEmail,
               password,
@@ -299,6 +356,8 @@ export function CommandAuthModal({
           return;
         }
         throw error;
+      } finally {
+        resetCaptcha();
       }
     });
   };
@@ -313,17 +372,31 @@ export function CommandAuthModal({
     }
 
     setMessage("");
-    void runPendingAction("resend", async () => {
-      const { response, payload } = await fetchJsonWithTimeout<RegisterResponse>(
-        "/api/auth/register/resend",
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email }),
-        },
-      );
+    const token = requireCaptchaToken();
+    if (!token) return;
 
-      if (!response.ok || !payload.ok) {
+    void runPendingAction("resend", async () => {
+      try {
+        const { response, payload } = await fetchJsonWithTimeout<RegisterResponse>(
+          "/api/auth/register/resend",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              [AUTH_CAPTCHA_RESPONSE_HEADER]: token,
+            },
+            body: JSON.stringify({ email }),
+          },
+        );
+
+        if (!response.ok || !payload.ok) {
+          if (response.status === 422 || response.status === 503) {
+            setCaptchaError(
+              payload.message ??
+                "Não foi possível confirmar a verificação de segurança.",
+            );
+            return;
+          }
         setMessage(
           payload.message ?? "Não foi possível solicitar um novo código agora.",
         );
@@ -333,10 +406,13 @@ export function CommandAuthModal({
       setResendSecondsRemaining(
         payload.retryAfterSeconds ?? RESEND_COOLDOWN_SECONDS,
       );
-      setMessage(
-        payload.message ??
-          "Se existir um cadastro pendente para esse endereço, enviaremos um novo código.",
-      );
+        setMessage(
+          payload.message ??
+            "Se existir um cadastro pendente para esse endereço, enviaremos um novo código.",
+        );
+      } finally {
+        resetCaptcha();
+      }
     });
   };
 
@@ -388,17 +464,38 @@ export function CommandAuthModal({
     setEmail(nextEmail);
     setMessage("");
 
-    void runPendingAction("forgot", async () => {
-      const { error } = await authClient.requestPasswordReset({
-        email: nextEmail,
-        redirectTo: "/?auth=reset-password",
-      });
+    const token = requireCaptchaToken();
+    if (!token) return;
 
-      setMessage(
-        error?.status === 429
-          ? "Limite de solicitações atingido. Aguarde antes de tentar novamente."
-          : "Se existir uma conta para esse endereço, enviaremos as instruções de redefinição.",
-      );
+    void runPendingAction("forgot", async () => {
+      try {
+        const { error } = await authClient.requestPasswordReset({
+          email: nextEmail,
+          redirectTo: "/?auth=reset-password",
+          fetchOptions: {
+            headers: {
+              [AUTH_CAPTCHA_RESPONSE_HEADER]: token,
+            },
+          },
+        });
+
+        if (error?.status === 422 || error?.status === 503) {
+          setCaptchaError(
+            error.status === 503
+              ? "A verificação de segurança está indisponível no momento."
+              : "A verificação de segurança expirou ou não pôde ser confirmada.",
+          );
+          return;
+        }
+
+        setMessage(
+          error?.status === 429
+            ? "Limite de solicitações atingido. Aguarde antes de tentar novamente."
+            : "Se existir uma conta para esse endereço, enviaremos as instruções de redefinição.",
+        );
+      } finally {
+        resetCaptcha();
+      }
     });
   };
 
@@ -576,6 +673,17 @@ export function CommandAuthModal({
                   disabled={isPending}
                 />
               </label>
+              <TurnstileChallenge
+                action={AUTH_CAPTCHA_ACTIONS.login}
+                resetKey={captchaResetKey}
+                onTokenChange={handleCaptchaTokenChange}
+                onError={handleCaptchaError}
+              />
+              {captchaError ? (
+                <small className={styles.captchaError} role="alert">
+                  {captchaError}
+                </small>
+              ) : null}
               <div className={styles.formActionsRow}>
                 <button
                   type="button"
@@ -586,7 +694,10 @@ export function CommandAuthModal({
                   Esqueci minha senha
                 </button>
               </div>
-              <button className={styles.primaryButton} disabled={isPending}>
+              <button
+                className={styles.primaryButton}
+                disabled={isPending || !captchaToken}
+              >
                 {isPending ? "VALIDANDO..." : "AUTORIZAR ACESSO"}
               </button>
               <button
@@ -674,7 +785,21 @@ export function CommandAuthModal({
               {fieldErrors.termsAccepted ? (
                 <small className={styles.fieldError}>{fieldErrors.termsAccepted}</small>
               ) : null}
-              <button className={styles.primaryButton} disabled={isPending}>
+              <TurnstileChallenge
+                action={AUTH_CAPTCHA_ACTIONS.register}
+                resetKey={captchaResetKey}
+                onTokenChange={handleCaptchaTokenChange}
+                onError={handleCaptchaError}
+              />
+              {captchaError ? (
+                <small className={styles.captchaError} role="alert">
+                  {captchaError}
+                </small>
+              ) : null}
+              <button
+                className={styles.primaryButton}
+                disabled={isPending || !captchaToken}
+              >
                 {isPending ? "REGISTRANDO..." : "CRIAR REGISTRO"}
               </button>
               <button
@@ -728,11 +853,24 @@ export function CommandAuthModal({
                 </button>
               </form>
 
+              <TurnstileChallenge
+                action={AUTH_CAPTCHA_ACTIONS.resendRegistration}
+                resetKey={captchaResetKey}
+                onTokenChange={handleCaptchaTokenChange}
+                onError={handleCaptchaError}
+              />
+              {captchaError ? (
+                <small className={styles.captchaError} role="alert">
+                  {captchaError}
+                </small>
+              ) : null}
               <button
                 type="button"
                 className={styles.primaryButton}
                 onClick={resendVerification}
-                disabled={isPending || resendSecondsRemaining > 0}
+                disabled={
+                  isPending || resendSecondsRemaining > 0 || !captchaToken
+                }
               >
                 {isPending
                   ? "SOLICITANDO..."
@@ -764,7 +902,21 @@ export function CommandAuthModal({
                   disabled={isPending}
                 />
               </label>
-              <button className={styles.primaryButton} disabled={isPending}>
+              <TurnstileChallenge
+                action={AUTH_CAPTCHA_ACTIONS.forgotPassword}
+                resetKey={captchaResetKey}
+                onTokenChange={handleCaptchaTokenChange}
+                onError={handleCaptchaError}
+              />
+              {captchaError ? (
+                <small className={styles.captchaError} role="alert">
+                  {captchaError}
+                </small>
+              ) : null}
+              <button
+                className={styles.primaryButton}
+                disabled={isPending || !captchaToken}
+              >
                 {isPending ? "SOLICITANDO..." : "ENVIAR REDEFINIÇÃO"}
               </button>
               <button
