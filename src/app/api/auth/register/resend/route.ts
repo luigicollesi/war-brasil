@@ -6,12 +6,22 @@ import {
   normalizeRegistrationEmail,
   resendPendingRegistration,
 } from "@/server/auth/pending-registration";
+import { AUTH_CAPTCHA_ACTIONS } from "@/src/lib/shared/auth-captcha";
+import { rejectInvalidAuthCaptcha } from "@/server/auth/turnstile";
 import { rejectUntrustedAuthMutationOrigin } from "@/server/auth/request-origin";
 
 export async function POST(request: Request) {
   const rejected = rejectUntrustedAuthMutationOrigin(request);
   if (rejected) {
     return rejected;
+  }
+
+  const rejectedCaptcha = await rejectInvalidAuthCaptcha(
+    request,
+    AUTH_CAPTCHA_ACTIONS.resendRegistration,
+  );
+  if (rejectedCaptcha) {
+    return rejectedCaptcha;
   }
 
   const body = (await request.json().catch(() => null)) as {
