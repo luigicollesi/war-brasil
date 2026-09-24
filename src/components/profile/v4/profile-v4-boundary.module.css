@@ -26,9 +26,22 @@
   height: 40px;
   display: grid;
   place-items: center;
+  overflow: hidden;
   color: var(--ivory);
   border: 1px solid rgb(208 170 87 / 35%);
   text-decoration: none;
+}
+
+.homeIcon {
+  display: block;
+  width: 22px;
+  height: 22px;
+  overflow: visible;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.9;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .commandCopy {
@@ -183,6 +196,11 @@
   .homeLink {
     width: 36px;
     height: 36px;
+  }
+
+  .homeIcon {
+    width: 21px;
+    height: 21px;
   }
 
   .commandCopy small {
