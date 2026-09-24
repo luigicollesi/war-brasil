@@ -179,7 +179,7 @@ test("title style keys use a composable allow-listed visual grammar", () => {
   assert.match(styles, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(styles, /@media \(forced-colors: active\)/);
   assert.match(effects, /@property --profile-title-angle/);
-  assert.match(effects, /@keyframes wb-title-sheen/);
+  assert.match(effects, /@keyframes wb-title-sheen-overlay/);
   assert.match(styles, /color-mix\(/);
   assert.doesNotMatch(renderer, /STYLE_CLASS/);
 });
@@ -242,6 +242,76 @@ test("gradient aura layers do not inherit the title's solid shadow stack", () =>
   const auraBlock = styles.slice(auraStart, glowStart);
   assert.match(auraBlock, /text-shadow:\s*none/);
   assert.match(auraBlock, /-webkit-text-stroke:\s*0/);
+});
+
+
+test("sheen keeps the base material fully painted and resets only while invisible", () => {
+  const renderer = read("src/components/profile/profile-title-renderer.tsx");
+  const styles = read("src/components/profile/profile-title-renderer.module.css");
+  const effects = read("src/app/title-effects.css");
+
+  assert.match(renderer, /data-title-text=\{title\.displayText\}/);
+  assert.match(styles, /\.title::after[\s\S]*content: attr\(data-title-text\)/);
+  assert.match(
+    styles,
+    /\.title\[data-motion="sheen"\]::after[\s\S]*wb-title-sheen-overlay 7\.5s linear infinite/,
+  );
+
+  const sheenStart = styles.indexOf('.title[data-motion="sheen"]::after');
+  const pulseStart = styles.indexOf('.title[data-motion="pulse"]', sheenStart);
+  assert.ok(sheenStart >= 0 && pulseStart > sheenStart);
+  const sheenBlock = styles.slice(sheenStart, pulseStart);
+  assert.doesNotMatch(
+    sheenBlock,
+    /--profile-title-fill-image|--profile-title-fill-size|--profile-title-motion-animation/,
+  );
+
+  const keyframeStart = effects.indexOf("@keyframes wb-title-sheen-overlay");
+  const pulseKeyframe = effects.indexOf("@keyframes wb-title-pulse", keyframeStart);
+  assert.ok(keyframeStart >= 0 && pulseKeyframe > keyframeStart);
+  const keyframe = effects.slice(keyframeStart, pulseKeyframe);
+  assert.match(keyframe, /0%,[\s\S]*15%[\s\S]*opacity: 0/);
+  assert.match(keyframe, /68%,[\s\S]*100%[\s\S]*opacity: 0/);
+  assert.match(keyframe, /background-position: 130% 50%/);
+  assert.match(keyframe, /background-position: -30% 50%/);
+});
+
+test("open title sweeps alternate instead of jumping back to the first frame", () => {
+  const styles = read("src/components/profile/profile-title-renderer.module.css");
+
+  assert.match(
+    styles,
+    /data-motion="flow"[\s\S]*wb-title-flow 8s ease-in-out infinite alternate/,
+  );
+  assert.match(
+    styles,
+    /data-sparkle-motion="flow"[\s\S]*wb-title-sparkle-flow 9s ease-in-out infinite alternate/,
+  );
+  assert.match(
+    styles,
+    /data-ember-motion="flow"[\s\S]*wb-title-ember-flow 8\.4s ease-in-out infinite alternate/,
+  );
+  assert.match(
+    styles,
+    /data-aura-motion="cycle"[\s\S]*wb-title-aura-cycle 8\.5s ease-in-out infinite alternate/,
+  );
+});
+
+test("reduced motion and forced colors also disable transient sheen overlays", () => {
+  const styles = read("src/components/profile/profile-title-renderer.module.css");
+
+  assert.match(
+    styles,
+    /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.title::after[\s\S]*animation: none !important/,
+  );
+  assert.match(
+    styles,
+    /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.title::after[\s\S]*opacity: 0 !important/,
+  );
+  assert.match(
+    styles,
+    /@media \(forced-colors: active\)[\s\S]*\.title::after[\s\S]*display: none/,
+  );
 });
 
 
