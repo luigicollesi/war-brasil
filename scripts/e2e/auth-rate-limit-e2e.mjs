@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { Client } from "pg";
+import { withE2EAuthCaptcha } from "./runtime-helper.mjs";
 
 const BASE_URL = process.env.LOBBY_E2E_BASE_URL ?? "http://localhost:3000";
 const DATABASE_URL = process.env.LOBBY_E2E_DATABASE_URL ?? process.env.DATABASE_URL;
@@ -14,19 +15,23 @@ let limitedAt = null;
 let retryAfter = null;
 
 for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
-  const response = await fetch(`${BASE_URL}/api/auth/sign-in/email`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      origin: BASE_URL,
-      "x-forwarded-for": TEST_IP,
-    },
-    body: JSON.stringify({
-      email: "rate-limit-probe@e2e.war-brasil.test",
-      password: "Invalid-E2E-Password!",
-      rememberMe: true,
+  const url = `${BASE_URL}/api/auth/sign-in/email`;
+  const response = await fetch(
+    url,
+    withE2EAuthCaptcha(url, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        origin: BASE_URL,
+        "x-forwarded-for": TEST_IP,
+      },
+      body: JSON.stringify({
+        email: "rate-limit-probe@e2e.war-brasil.test",
+        password: "Invalid-E2E-Password!",
+        rememberMe: true,
+      }),
     }),
-  });
+  );
 
   if (response.status === 429) {
     limitedAt = attempt;
