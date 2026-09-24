@@ -1,3 +1,6 @@
+import path from "node:path";
+import { pathToFileURL } from "node:url";
+
 const E2E_AUTH_CAPTCHA_TOKEN = "XXXX.DUMMY.TOKEN.XXXX";
 const CAPTCHA_PROTECTED_PATHS = new Set([
   "/api/auth/register",
@@ -21,9 +24,6 @@ export function withE2EAuthCaptcha(url, init = {}) {
     },
   };
 }
-
-import path from "node:path";
-import { pathToFileURL } from "node:url";
 
 export async function loadPlaywrightRuntime() {
   const runtimeDir = path.resolve(
