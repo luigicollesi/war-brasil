@@ -97,7 +97,10 @@ test("/rules resolve deep-link no servidor dentro do runtime Foundation sem depe
   assert.match(page, /buildDoctrinePresentation/);
   assert.match(page, /<DoctrineExperience/);
   assert.match(page, /canonical: "\/rules"/);
-  assert.match(layout, /<PreGameCommandRuntime>\{children\}<\/PreGameCommandRuntime>/);
+  assert.match(
+    layout,
+    /<PreGameCommandRuntime>\s*<ActiveParticipationRuntime>\{children\}<\/ActiveParticipationRuntime>\s*<\/PreGameCommandRuntime>/,
+  );
   assert.match(routes, /"\/rules": "doctrine"/);
   assert.doesNotMatch(page, /<CommandShell|DOCTRINE_SCENE_INTENT/);
   assert.doesNotMatch(page, /Canvas|@react-three|three\//i);
