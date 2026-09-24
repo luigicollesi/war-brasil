@@ -96,6 +96,31 @@
 }
 
 /*
+ * Motion overlays must never be responsible for the base glyph fill.
+ * The base title remains fully painted while transient optical effects move
+ * above it. Hidden endpoints make iteration resets visually equivalent.
+ */
+.title::after {
+  content: attr(data-title-text);
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  user-select: none;
+  color: transparent;
+  opacity: 0;
+  text-shadow: none;
+  -webkit-text-fill-color: transparent;
+  -webkit-text-stroke: 0;
+  background-repeat: no-repeat;
+  background-clip: text;
+  -webkit-background-clip: text;
+}
+
+/*
  * Rarity controls title prominence globally. Each surface provides the
  * exact Legendary size that titles used before rarity scaling; lower
  * rarities step down from it and never exceed that established maximum.
@@ -258,7 +283,7 @@
 
 .auraLayer[data-aura-motion="cycle"] {
   --profile-title-aura-animation:
-    wb-title-aura-cycle 8.5s linear infinite;
+    wb-title-aura-cycle 8.5s ease-in-out infinite alternate;
 }
 
 /* A gradient aura replaces the solid text-shadow glow/halo layer. */
@@ -499,21 +524,21 @@
     wb-title-gradient-drift 12s ease-in-out infinite;
 }
 
-.title[data-motion="sheen"] {
-  --profile-title-fill-image:
+.title[data-motion="sheen"]::after {
+  background-image:
     linear-gradient(
       110deg,
-      var(--profile-title-dark) 0%,
-      var(--profile-title-base) 31%,
-      var(--profile-title-light) 44%,
-      #ffffff 50%,
-      var(--profile-title-light) 56%,
-      var(--profile-title-base) 69%,
-      var(--profile-title-dark) 100%
+      transparent 0%,
+      transparent 36%,
+      color-mix(in srgb, var(--profile-title-light) 28%, transparent) 43%,
+      color-mix(in srgb, #ffffff 92%, transparent) 50%,
+      color-mix(in srgb, var(--profile-title-light) 42%, transparent) 57%,
+      transparent 64%,
+      transparent 100%
     );
-  --profile-title-fill-size: 260% 100%;
-  --profile-title-motion-animation:
-    wb-title-sheen 7.5s ease-in-out infinite;
+  background-size: 240% 100%;
+  background-position: 130% 50%;
+  animation: wb-title-sheen-overlay 7.5s linear infinite;
 }
 
 .title[data-motion="pulse"] {
@@ -536,7 +561,7 @@
 .title[data-motion="flow"] {
   --profile-title-fill-size: 220% 100%;
   --profile-title-motion-animation:
-    wb-title-flow 8s linear infinite;
+    wb-title-flow 8s ease-in-out infinite alternate;
 }
 
 .title[data-motion="flicker"] {
@@ -693,7 +718,7 @@
 
 .title[data-sparkle-motion="flow"] {
   --profile-title-sparkle-animation:
-    wb-title-sparkle-flow 9s linear infinite;
+    wb-title-sparkle-flow 9s ease-in-out infinite alternate;
 }
 
 /* Ember ----------------------------------------------------------------- */
@@ -733,15 +758,20 @@
 
 .title[data-ember-motion="flow"] {
   --profile-title-ember-animation:
-    wb-title-ember-flow 8.4s linear infinite;
+    wb-title-ember-flow 8.4s ease-in-out infinite alternate;
 }
 
 /* Accessibility and fallback ------------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
   .title,
+  .title::after,
   .auraLayer {
     animation: none !important;
+  }
+
+  .title::after {
+    opacity: 0 !important;
   }
 
   .title {
@@ -754,7 +784,8 @@
 }
 
 @media (forced-colors: active) {
-  .auraLayer {
+  .auraLayer,
+  .title::after {
     display: none;
   }
 
