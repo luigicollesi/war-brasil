@@ -53,6 +53,7 @@ export function ProfileTitleRenderer({
       data-title-style-budget={visual.rarityCompatible ? "within" : "over"}
       data-title-font={title.fontKey}
       data-title-rarity={title.rarity}
+      data-title-text={title.displayText}
       data-palette={visual.palette}
       data-material={visual.material}
       data-motion={visual.motion}
