@@ -71,7 +71,13 @@ test("serviço de saída mantém toda mutação dentro do comando autoritativo",
   assert.match(service, /finalizeGameWithoutWinner/);
   assert.match(service, /beginPlayerTurnPhase/);
   assert.match(route, /clearActiveParticipationCookie/);
-  assert.match(route, /allowDepartedSeat: true/);
+  assert.match(route, /accountUserId/);
+  assert.doesNotMatch(route, /allowDepartedSeat: true/);
+  assert.match(service, /allowDepartedSeat: true/);
+  assert.match(
+    service,
+    /resolveCommandPlayerBySession\([\s\S]*accountUserId,[\s\S]*true/,
+  );
 });
 
 test("saída não usa loop assíncrono nem polling para redistribuir", () => {
