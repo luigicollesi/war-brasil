@@ -1,3 +1,4 @@
+import { withE2EAuthCaptcha } from "./runtime-helper.mjs";
 import assert from "node:assert/strict";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
@@ -37,7 +38,7 @@ async function apiJson(page, url, init = {}) {
       }
       return { status: response.status, body };
     },
-    { requestUrl: url, requestInit: init },
+    { requestUrl: url, requestInit: withE2EAuthCaptcha(url, init) },
   );
 }
 
