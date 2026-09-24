@@ -124,8 +124,8 @@
 }
 
 @keyframes wb-title-flow {
-  from { --profile-title-fill-x: -20%; }
-  to { --profile-title-fill-x: 120%; }
+  from { --profile-title-fill-x: 0%; }
+  to { --profile-title-fill-x: 100%; }
 }
 
 @keyframes wb-title-flicker {
