@@ -133,8 +133,19 @@ export function ProfileShell({
 
       <header className={styles.commandBar}>
         <div className={styles.commandIdentity}>
-          <Link href="/home" className={styles.homeLink} aria-label="Retornar ao comando principal">
-            <span aria-hidden="true">←</span>
+          <Link
+            href="/home"
+            className={styles.homeLink}
+            aria-label="Retornar ao comando principal"
+          >
+            <svg
+              className={styles.homeIcon}
+              viewBox="0 0 24 24"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path d="M14.5 5.5 8 12l6.5 6.5M8.5 12H19" />
+            </svg>
           </Link>
           <span className={styles.commandCopy}>
             <small>QUARTEL DO COMANDANTE</small>
