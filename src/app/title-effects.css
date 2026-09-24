@@ -72,34 +72,23 @@
   }
 }
 
-@keyframes wb-title-sheen-travel {
-  from { background-position: 122% 50%; }
-  to { background-position: -22% 50%; }
-}
-
-@keyframes wb-title-sheen-visibility {
+@keyframes wb-title-sheen-loop {
   0%,
-  10% {
-    opacity: 0;
+  100% {
+    opacity: 0.52;
+    background-position: 50% 50%;
   }
-  18% {
-    opacity: 0.28;
-  }
-  30% {
-    opacity: 0.62;
+  25% {
+    opacity: 0.9;
+    background-position: 78% 50%;
   }
   50% {
-    opacity: 0.82;
+    opacity: 0.7;
+    background-position: 56% 50%;
   }
-  70% {
-    opacity: 0.62;
-  }
-  82% {
-    opacity: 0.28;
-  }
-  90%,
-  100% {
-    opacity: 0;
+  75% {
+    opacity: 0.86;
+    background-position: 24% 50%;
   }
 }
 
@@ -135,8 +124,11 @@
 }
 
 @keyframes wb-title-flow {
-  from { --profile-title-fill-x: 0%; }
-  to { --profile-title-fill-x: 100%; }
+  0%,
+  100% { --profile-title-fill-x: 50%; }
+  25% { --profile-title-fill-x: 78%; }
+  50% { --profile-title-fill-x: 58%; }
+  75% { --profile-title-fill-x: 24%; }
 }
 
 @keyframes wb-title-flicker {
@@ -177,8 +169,11 @@
 }
 
 @keyframes wb-title-sparkle-flow {
-  from { --profile-title-sparkle-x: -20%; }
-  to { --profile-title-sparkle-x: 120%; }
+  0%,
+  100% { --profile-title-sparkle-x: 50%; }
+  25% { --profile-title-sparkle-x: 82%; }
+  50% { --profile-title-sparkle-x: 60%; }
+  75% { --profile-title-sparkle-x: 20%; }
 }
 
 @keyframes wb-title-ember-flicker {
@@ -188,8 +183,11 @@
 }
 
 @keyframes wb-title-ember-flow {
-  from { --profile-title-ember-x: -15%; }
-  to { --profile-title-ember-x: 115%; }
+  0%,
+  100% { --profile-title-ember-x: 50%; }
+  25% { --profile-title-ember-x: 76%; }
+  50% { --profile-title-ember-x: 58%; }
+  75% { --profile-title-ember-x: 26%; }
 }
 
 
@@ -240,10 +238,17 @@
 }
 
 @keyframes wb-title-aura-cycle {
-  from {
-    background-position: 0% 50%;
+  0%,
+  100% {
+    background-position: 50% 50%;
   }
-  to {
-    background-position: 200% 50%;
+  25% {
+    background-position: 82% 50%;
+  }
+  50% {
+    background-position: 58% 50%;
+  }
+  75% {
+    background-position: 18% 50%;
   }
 }
