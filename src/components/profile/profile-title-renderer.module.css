@@ -529,16 +529,20 @@
     linear-gradient(
       110deg,
       transparent 0%,
-      transparent 36%,
-      color-mix(in srgb, var(--profile-title-light) 28%, transparent) 43%,
-      color-mix(in srgb, #ffffff 92%, transparent) 50%,
-      color-mix(in srgb, var(--profile-title-light) 42%, transparent) 57%,
-      transparent 64%,
+      transparent 30%,
+      color-mix(in srgb, var(--profile-title-light) 20%, transparent) 38%,
+      color-mix(in srgb, var(--profile-title-light) 52%, transparent) 45%,
+      color-mix(in srgb, #ffffff 82%, transparent) 50%,
+      color-mix(in srgb, var(--profile-title-light) 58%, transparent) 55%,
+      color-mix(in srgb, var(--profile-title-light) 22%, transparent) 62%,
+      transparent 70%,
       transparent 100%
     );
-  background-size: 240% 100%;
-  background-position: 130% 50%;
-  animation: wb-title-sheen-overlay 7.5s linear infinite;
+  background-size: 190% 100%;
+  background-position: 122% 50%;
+  animation:
+    wb-title-sheen-travel 10.8s cubic-bezier(0.37, 0, 0.63, 1) infinite,
+    wb-title-sheen-visibility 10.8s ease-in-out infinite;
 }
 
 .title[data-motion="pulse"] {
@@ -635,17 +639,17 @@
 
 .title[data-glow-motion="breathe"][data-glow-strength="soft"] {
   --profile-title-glow-animation:
-    wb-title-glow-breathe-soft 5.6s ease-in-out infinite;
+    wb-title-glow-breathe-soft 7.2s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 
 .title[data-glow-motion="breathe"][data-glow-strength="medium"] {
   --profile-title-glow-animation:
-    wb-title-glow-breathe-medium 5.2s ease-in-out infinite;
+    wb-title-glow-breathe-medium 7.6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 
 .title[data-glow-motion="breathe"][data-glow-strength="strong"] {
   --profile-title-glow-animation:
-    wb-title-glow-breathe-strong 4.8s ease-in-out infinite;
+    wb-title-glow-breathe-strong 8s cubic-bezier(0.45, 0, 0.55, 1) infinite;
 }
 
 .title[data-glow-motion="flicker"] {
