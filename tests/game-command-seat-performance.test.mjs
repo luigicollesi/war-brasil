@@ -39,7 +39,10 @@ test("HTTP command envelope passes authenticated account identity into the trans
   assert.match(route, /getAuthenticatedSession\(request\)/);
   assert.match(route, /accountUserId: accountSession\.user\.id/);
   assert.doesNotMatch(route, /assertAuthenticatedPlayerSeat/);
-  assert.match(command, /actor: \{ session, accountUserId \}/);
+  assert.match(
+    command,
+    /actor: \{ session, accountUserId, allowDepartedSeat \}/,
+  );
   assert.match(command, /primeCommandPlayer\([\s\S]*options\.actor\.accountUserId/);
 });
 
