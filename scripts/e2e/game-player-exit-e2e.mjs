@@ -1,3 +1,4 @@
+import { withE2EAuthCaptcha } from "./runtime-helper.mjs";
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import path from "node:path";
@@ -36,7 +37,7 @@ async function apiJson(page, url, init = {}) {
         revision: response.headers.get("x-game-revision"),
       };
     },
-    { requestUrl: url, requestInit: init },
+    { requestUrl: url, requestInit: withE2EAuthCaptcha(url, init) },
   );
 }
 
