@@ -54,7 +54,7 @@ export async function rejectInvalidAuthCaptcha(
   if (!token) {
     return captchaResponse(
       "Confirme a verificação de segurança para continuar.",
-      403,
+      422,
     );
   }
 
@@ -119,7 +119,7 @@ export async function rejectInvalidAuthCaptcha(
       });
       return captchaResponse(
         "A verificação de segurança expirou ou não pôde ser confirmada. Tente novamente.",
-        403,
+        422,
       );
     }
 
