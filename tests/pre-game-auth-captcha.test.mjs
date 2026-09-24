@@ -47,6 +47,7 @@ test("login e recuperação são protegidos no boundary HTTP sem interceptar sig
   assert.match(authRoute, /AUTH_CAPTCHA_ACTIONS\.login/);
   assert.match(authRoute, /\/api\/auth\/request-password-reset/);
   assert.match(authRoute, /AUTH_CAPTCHA_ACTIONS\.forgotPassword/);
+  assert.match(authRoute, /rawPathname\.replace\(\/\\\/\+\$\/, ""\)/);
   assert.match(authRoute, /rejectInvalidAuthCaptcha/);
   assert.doesNotMatch(verifyRoute, /rejectInvalidAuthCaptcha|TURNSTILE/);
   assert.match(verifyRoute, /auth\.api\.signInEmail/);
