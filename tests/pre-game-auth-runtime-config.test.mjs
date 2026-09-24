@@ -42,6 +42,7 @@ test("validador fail-fast cobre URL HTTPS, banco, secret forte, email e provider
     "DISCORD_CLIENT_SECRET",
     "AUTH_EMAIL_FROM",
     "EMAIL_TRANSPORT_SECRET",
+    "TURNSTILE_SECRET_KEY",
   ]) {
     assert.ok(
       environmentSource.includes(required),
