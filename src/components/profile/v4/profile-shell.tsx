@@ -183,10 +183,15 @@ export function ProfileShell({
               className={styles.coin}
               priority
             />
-            <span>
+            <span className={styles.walletCopy}>
               <small>{wallet.available ? wallet.label : "CRÉDITOS DE CAMPANHA"}</small>
               {wallet.available ? (
-                <strong>{formatBalance(wallet.balance)}</strong>
+                <strong
+                  className={styles.walletBalance}
+                  title={`${formatBalance(wallet.balance)} ${wallet.label}`}
+                >
+                  {formatBalance(wallet.balance)}
+                </strong>
               ) : (
                 <strong className={styles.walletUnavailable}>INDISPONÍVEL</strong>
               )}
