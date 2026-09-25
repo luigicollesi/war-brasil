@@ -52,6 +52,13 @@ export class CommanderAgeGateRequiredError extends Error {
   }
 }
 
+export class CommanderIdentityLockedError extends Error {
+  constructor() {
+    super("A identidade pública do comandante já foi definida.");
+    this.name = "CommanderIdentityLockedError";
+  }
+}
+
 function cleanOptionalText(value: unknown) {
   return typeof value === "string" && value.trim() ? value.trim() : null;
 }
@@ -269,19 +276,57 @@ export async function saveCommanderIdentity(
       throw new Error("PROFILE_BACKGROUND_DEFAULT_MISSING");
     }
 
-    const result = await client.query<{
-      handle: string;
-      display_name: string;
+    const existing = await client.query<{
+      handle: string | null;
+      display_name: string | null;
     }>(
-      `INSERT INTO profile.commanders(user_id, handle, display_name)
-       VALUES($1, $2, $3)
-       ON CONFLICT (user_id) DO UPDATE
-       SET handle = EXCLUDED.handle,
-           display_name = EXCLUDED.display_name,
-           updated_at = NOW()
-       RETURNING handle, display_name`,
-      [session.user.id, handle, displayName],
+      `SELECT handle, display_name
+         FROM profile.commanders
+        WHERE user_id=$1::uuid
+        FOR UPDATE`,
+      [session.user.id],
     );
+    const current = existing.rows[0] ?? null;
+
+    if (current?.handle && current.handle !== handle) {
+      throw new CommanderIdentityLockedError();
+    }
+
+    if (current?.handle && current.display_name) {
+      if (current.display_name !== displayName) {
+        throw new CommanderIdentityLockedError();
+      }
+
+      await ensureEconomyState(session.user.id, client);
+      await client.query("COMMIT");
+      return {
+        handle: current.handle,
+        displayName: current.display_name,
+      };
+    }
+
+    const result = current
+      ? await client.query<{
+          handle: string;
+          display_name: string;
+        }>(
+          `UPDATE profile.commanders
+              SET handle=COALESCE(handle,$2),
+                  display_name=COALESCE(display_name,$3),
+                  updated_at=NOW()
+            WHERE user_id=$1::uuid
+            RETURNING handle, display_name`,
+          [session.user.id, handle, displayName],
+        )
+      : await client.query<{
+          handle: string;
+          display_name: string;
+        }>(
+          `INSERT INTO profile.commanders(user_id, handle, display_name)
+           VALUES($1, $2, $3)
+           RETURNING handle, display_name`,
+          [session.user.id, handle, displayName],
+        );
 
     await ensureEconomyState(session.user.id, client);
     await client.query("COMMIT");
