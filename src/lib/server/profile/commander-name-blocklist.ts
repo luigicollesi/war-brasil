@@ -1,5 +1,29 @@
 import "server-only";
 
+export const RESERVED_COMMANDER_ROLE_WORDS = new Set([
+  "admin",
+  "administrator",
+  "administrador",
+  "adm",
+  "moderador",
+  "moderator",
+  "mod",
+  "staff",
+  "support",
+  "suporte",
+  "system",
+  "sistema",
+  "official",
+  "oficial",
+  "developer",
+  "desenvolvedor",
+  "dev",
+]);
+
+export const RESERVED_COMMANDER_BRAND_KEYS = new Set([
+  "bellumcivile",
+]);
+
 export const RESERVED_COMMANDER_NAME_KEYS = new Set([
   "admin",
   "administrator",
