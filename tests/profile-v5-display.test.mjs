@@ -85,3 +85,26 @@ test("desktop dossier reserves the viewport when a title is equipped", async () 
   assert.match(shellStyles, /data-active-surface="dossier"[\s\S]*height:\s*100dvh/);
   assert.match(shellStyles, /data-active-surface="dossier"[\s\S]*\.surface[\s\S]*overflow:\s*hidden/);
 });
+
+
+test("public profile arsenal couples responsive asset and label geometry through one layout contract", async () => {
+  const stage = await source("src/components/profile/profile-display-stage.tsx");
+  const layout = await source("src/components/profile/profile-display-stage-layout.ts");
+  const styles = await source("src/components/profile/profile-display-stage.module.css");
+
+  assert.match(stage, /PROFILE_DISPLAY_LAYOUTS/);
+  assert.match(stage, /compactShort = compact && size\.height <= 760/);
+  assert.match(stage, /worldPosition\("attack"\)/);
+  assert.match(stage, /scale=\{layout\.attack\.scale\}/);
+  assert.match(stage, /style=\{labelStyle\(item\.slot\)\}/);
+
+  assert.match(layout, /desktop:[\s\S]*attack: \{ x: 0\.14, y: 0\.57/);
+  assert.match(layout, /compact:[\s\S]*attack: \{ x: 0\.27, y: 0\.43/);
+  assert.match(layout, /neutral: \{ x: 0\.27, y: 0\.715/);
+  assert.match(layout, /compactShort/);
+
+  assert.match(styles, /top:\s*var\(--profile-label-y\)/);
+  assert.match(styles, /@media \(max-width: 720px\)[\s\S]*top:\s*var\(--profile-label-y-compact\)/);
+  assert.match(styles, /@media \(max-width: 720px\) and \(max-height: 760px\)/);
+  assert.doesNotMatch(styles, /\.label:nth-child/);
+});
