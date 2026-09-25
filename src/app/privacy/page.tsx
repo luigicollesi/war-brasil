@@ -57,7 +57,7 @@ export default function PrivacyPage() {
           content: (
             <ul>
               <li>
-                <strong>Conta e autenticação:</strong> email, identificadores de
+                <strong>Conta e autenticação:</strong> e-mail, identificadores de
                 provedores de login, informações de sessão e registros necessários à
                 segurança da conta.
               </li>
@@ -186,7 +186,7 @@ export default function PrivacyPage() {
                 públicas podem ser vistas por outros jogadores.
               </p>
               <p>
-                Email, senha, tokens de sessão, credenciais de autenticação e data de
+                E-mail, senha, tokens de sessão, credenciais de autenticação e data de
                 nascimento não fazem parte do perfil público.
               </p>
             </>
@@ -199,7 +199,7 @@ export default function PrivacyPage() {
             <>
               <p>
                 Podemos utilizar prestadores especializados para hospedagem, banco de
-                dados, armazenamento de assets, autenticação, entrega de email,
+                dados, armazenamento de assets, autenticação, entrega de e-mail,
                 monitoramento, segurança e outras funções técnicas necessárias.
               </p>
               <p>

@@ -365,7 +365,7 @@ test("email configurado entrega via Resend também em desenvolvimento", () => {
 test("email de cadastro apresenta OTP na identidade visual de comando", () => {
   assert.match(email, /IDENTIDADE DE COMANDO/);
   assert.match(email, /Seu código de confirmação/);
-  assert.match(email, /Confirme seu email/);
+  assert.match(email, /Confirme seu e-mail/);
   assert.match(email, /letter-spacing:10px/);
   assert.match(email, /10 minutos/);
 });
