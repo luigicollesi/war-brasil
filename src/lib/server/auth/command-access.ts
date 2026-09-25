@@ -4,7 +4,7 @@ import type { PoolClient } from "pg";
 import type { AuthSession } from "./auth";
 import { authPool } from "./auth-pool";
 import {
-  COMMANDER_COMMANDER_DISPLAY_NAME_MAX_LENGTH,
+  COMMANDER_DISPLAY_NAME_MAX_LENGTH,
   type CommanderIdentityWriteDto,
 } from "@/src/lib/profile/commander-name-contract";
 import { assertCommanderIdentityAllowed } from "../profile/commander-name-policy";
