@@ -107,6 +107,19 @@ test("HOME consome somente contrato público e não controla progresso por frame
   assert.equal(existsSync(legacyPolishPath), false);
 });
 
+test("HOME mantém Bellum Civile enquadrado em viewports estreitos", () => {
+  assert.match(styles, /container-type:\s*inline-size/);
+  assert.match(styles, /font-size:\s*clamp\(2rem, 12cqw, 6\.35rem\)/);
+  assert.match(styles, /white-space:\s*nowrap/);
+  assert.match(styles, /@media \(max-width: 360px\)/);
+  assert.match(styles, /font-size:\s*clamp\(1\.85rem, 11\.6cqw, 3\.2rem\)/);
+  assert.match(runtime, /CommandShell/);
+  assert.match(
+    readFileSync("src/components/pre-game/foundation/command-foundation.module.css", "utf8"),
+    /\.brandLockup[\s\S]*max-width:[\s\S]*\.brandLockup strong[\s\S]*text-overflow:\s*ellipsis/,
+  );
+});
+
 test("HOME mantém identidade, CTA e três destinos do comando", () => {
   assert.match(content, /BELLUM/);
   assert.match(content, /CIVILE/);
