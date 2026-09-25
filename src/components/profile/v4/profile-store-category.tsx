@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import type { EconomyOffer, EconomyStorefrontSnapshot } from "@/src/lib/economy/economy-contract";
+import type { CampaignCreditWallet, CosmeticCatalogItem, EconomyOffer } from "@/src/lib/economy/economy-contract";
 import type {
   ProfileAppearanceStoreItem,
   ProfileAppearanceStoreOffer,
@@ -87,11 +87,15 @@ function titleAppearance(item: Extract<ProfileAppearanceStoreItem, { kind: "comm
 
 export function ProfileStoreCategory({
   category,
-  storefront,
+  wallet,
+  gameplayOffers,
+  territorySkins,
   appearanceStorefront,
 }: {
   category: StoreCategoryId;
-  storefront: EconomyStorefrontSnapshot;
+  wallet: CampaignCreditWallet;
+  gameplayOffers: ReadonlyArray<EconomyOffer>;
+  territorySkins: ReadonlyArray<CosmeticCatalogItem>;
   appearanceStorefront: ProfileAppearanceStorefront;
 }) {
   const router = useRouter();
@@ -99,25 +103,23 @@ export function ProfileStoreCategory({
   const [message, setMessage] = useState<{ kind: "success" | "error"; text: string } | null>(null);
   const meta = CATEGORY_META[category];
 
-  const collectionOfferIds = useMemo(
-    () => new Set(storefront.collections.flatMap((collection) => collection.offerIds)),
-    [storefront.collections],
-  );
-
   const diceOffers = useMemo(
-    () => storefront.offers.filter((offer) => !collectionOfferIds.has(offer.id) && isDiceOffer(offer)),
-    [collectionOfferIds, storefront.offers],
+    () => gameplayOffers.filter(isDiceOffer),
+    [gameplayOffers],
   );
 
   const territoryEntries = useMemo(() => {
     const byCosmeticId = new Map<string, EconomyOffer>();
-    for (const offer of storefront.offers) {
-      if (collectionOfferIds.has(offer.id) || offer.items.length !== 1) continue;
+    for (const offer of gameplayOffers) {
+      if (offer.items.length !== 1) continue;
       const item = offer.items[0];
       if (item?.slot === "territory_skin") byCosmeticId.set(item.id, offer);
     }
-    return storefront.territorySkins.map((item) => ({ item, offer: byCosmeticId.get(item.id) ?? null }));
-  }, [collectionOfferIds, storefront.offers, storefront.territorySkins]);
+    return territorySkins.map((item) => ({
+      item,
+      offer: byCosmeticId.get(item.id) ?? null,
+    }));
+  }, [gameplayOffers, territorySkins]);
 
   const appearanceOffers = useMemo(
     () =>
@@ -159,7 +161,16 @@ export function ProfileStoreCategory({
       </div>
 
       <header className={styles.categoryHeader}>
-        <Link href="/profile/store" className={styles.backLink}>← INTENDÊNCIA</Link>
+        <div className={styles.categoryUtility}>
+          <Link href="/profile/store" className={styles.backLink}>← INTENDÊNCIA</Link>
+          <div className={styles.wallet} aria-label={`${wallet.balance} Créditos de Campanha`}>
+            <Image src="/coin.svg" alt="" aria-hidden="true" width={22} height={22} />
+            <span>
+              <small>CRÉDITOS</small>
+              <strong>{INTEGER_FORMAT.format(wallet.balance)}</strong>
+            </span>
+          </div>
+        </div>
         <small>{meta.kicker}</small>
         <h1>{meta.label}</h1>
         <p>{meta.description}</p>
