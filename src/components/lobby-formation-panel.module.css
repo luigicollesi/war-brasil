@@ -495,6 +495,24 @@
   white-space: nowrap;
 }
 
+.stationTitleViewport {
+  min-width: 0;
+  margin: 1px -4px 0;
+  overflow: hidden;
+  padding: 2px 4px;
+}
+
+.stationTitle {
+  --profile-title-size-legendary: .62rem;
+
+  max-width: 100%;
+  overflow: hidden;
+  line-height: 1;
+  text-overflow: ellipsis;
+  text-wrap: nowrap;
+  white-space: nowrap;
+}
+
 .stationMeta {
   margin-top: 1px;
   overflow: hidden;
@@ -659,6 +677,10 @@
     font-size: .75rem;
   }
 
+  .stationTitle {
+    --profile-title-size-legendary: .54rem;
+  }
+
   .stationMeta,
   .stationNumber,
   .stationStatus {
@@ -736,6 +758,15 @@
 
   .stationName {
     font-size: .66rem;
+  }
+
+  .stationTitleViewport {
+    margin-top: 0;
+    padding-block: 1px;
+  }
+
+  .stationTitle {
+    --profile-title-size-legendary: .48rem;
   }
 
   .stationNumber,
