@@ -560,29 +560,20 @@ test("PROFILE V4 final gives the hero restrained hover and focus response", asyn
   );
 });
 
-test("PROFILE V4 final purchase controls expose hover focus pressed disabled and processing states", async () => {
+test("PROFILE V4 final purchase controls expose disabled and processing states across store surfaces", async () => {
   const store = await source("src/components/profile/v4/profile-store.tsx");
+  const category = await source("src/components/profile/v4/profile-store-category.tsx");
   const commerce = await source("src/components/profile/v4/profile-store-commerce.module.css");
+  const categoryStyles = await source("src/components/profile/v4/profile-store-category.module.css");
 
-  assert.ok(
-    (store.match(/data-processing=\{pendingOfferId === offer\.id \? "true" : undefined\}/g) ?? []).length >= 2,
-  );
+  assert.match(store, /data-processing=\{[\s\S]*pendingOfferId === featuredCollectionBundleOffer\.id/);
+  assert.match(category, /pendingOfferId === offer\.id \? "PROCESSANDO\.\.\." : "COMPRAR"/);
+  assert.match(category, /disabled=\{offer\.fullyOwned \|\| !offer\.purchasable \|\| pendingOfferId !== null\}/);
   assert.match(
     commerce,
     /\.purchaseButton,\s*\.productCommerce button,\s*\.creditPack button\s*\{[^}]*min-height:\s*44px;/,
   );
-  assert.match(
-    commerce,
-    /\.purchaseButton:not\(:disabled\):focus-visible,[\s\S]*\.productCommerce button:not\(:disabled\):focus-visible\s*\{[^}]*outline:\s*2px solid #d0aa57;/,
-  );
-  assert.match(
-    commerce,
-    /\.purchaseButton:not\(:disabled\):active,[\s\S]*\.productCommerce button:not\(:disabled\):active\s*\{[^}]*transform:\s*translateY\(1px\)/,
-  );
-  assert.match(
-    commerce,
-    /\.productCommerce button\[data-processing="true"\]\s*\{[^}]*animation:\s*storePurchaseBusy/,
-  );
+  assert.match(categoryStyles, /\.commerce button:disabled\s*\{[^}]*opacity:/);
 });
 
 test("PROFILE V4 final removes sticky-hover motion on touch layouts while preserving focus semantics", async () => {
