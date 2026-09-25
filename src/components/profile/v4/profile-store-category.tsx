@@ -86,7 +86,7 @@ function titleAppearance(item: Extract<ProfileAppearanceStoreItem, { kind: "comm
 }
 
 export function ProfileStoreCategory({
-  category
+  category,
   gameplayOffers,
   territorySkins,
   appearanceStorefront,
