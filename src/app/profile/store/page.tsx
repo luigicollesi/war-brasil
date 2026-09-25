@@ -35,11 +35,9 @@ export default async function ProfileStorePage() {
 
   let storefront: EconomyStorefrontSnapshot | null = null;
   let appearanceStorefront: ProfileAppearanceStorefront = { offers: [] };
+
   try {
-    [storefront, appearanceStorefront] = await Promise.all([
-      getEconomyStorefront(session.user.id),
-      getProfileAppearanceStorefront(session.user.id),
-    ]);
+    storefront = await getEconomyStorefront(session.user.id);
   } catch (error) {
     if (
       error instanceof EconomyServiceError &&
@@ -48,6 +46,14 @@ export default async function ProfileStorePage() {
       redirect("/profile");
     }
     console.error("Falha ao carregar Economy na Intendência V4.", error);
+  }
+
+  if (storefront) {
+    try {
+      appearanceStorefront = await getProfileAppearanceStorefront(session.user.id);
+    } catch (error) {
+      console.error("Falha ao carregar catálogo de aparência na Intendência V4.", error);
+    }
   }
 
   return (
