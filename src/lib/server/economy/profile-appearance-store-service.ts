@@ -32,6 +32,7 @@ function storeItem(row: ProfileAppearanceStoreRow): ProfileAppearanceStoreItem {
       displayText: row.display_text,
       description: row.item_description,
       rarity: row.rarity,
+      collectionId: row.collection_id,
       fontKey: row.font_key,
       styleKey: row.style_key,
       textureRef: row.texture_ref
@@ -50,6 +51,7 @@ function storeItem(row: ProfileAppearanceStoreRow): ProfileAppearanceStoreItem {
     name: row.item_name,
     description: row.item_description,
     rarity: row.rarity,
+    collectionId: row.collection_id,
     assetRef: profileAppearanceAssetDeliveryPath(row.asset_ref),
     previewRef: row.preview_ref
       ? profileAppearanceAssetDeliveryPath(row.preview_ref)
