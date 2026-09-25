@@ -35,7 +35,7 @@
 
   .game-troop-layer text {
     fill: #000000 !important;
-    font-family: var(--font-wb-ui), Inter, Arial, sans-serif;
+    font-family: var(--font-wb-ui), Arial, sans-serif;
     font-size: 48px !important;
     font-weight: 900 !important;
     font-variant-numeric: tabular-nums;
