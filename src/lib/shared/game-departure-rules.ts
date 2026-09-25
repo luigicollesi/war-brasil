@@ -1,3 +1,5 @@
+export const DEPARTURE_REDISTRIBUTED_TROOPS = 1 as const;
+
 export type DepartureRecipient = Readonly<{
   playerId: string;
   territoryCount: number;
