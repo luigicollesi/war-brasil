@@ -125,3 +125,19 @@ test("category loading and error surfaces never fall back to the profile command
   assert.doesNotMatch(errorPage, /ProfileV4Boundary/);
   assert.doesNotMatch(loadingPage, /ProfileV4Boundary/);
 });
+
+
+test("store category route keeps JSX outside data-loading try/catch", async () => {
+  const page = await source("src/app/profile/store/category/[category]/page.tsx");
+
+  const tryStart = page.indexOf("  try {");
+  const catchStart = page.indexOf("  } catch (error)", tryStart);
+  const guardedReadBlock = page.slice(tryStart, catchStart);
+
+  assert.ok(tryStart >= 0);
+  assert.ok(catchStart > tryStart);
+  assert.match(guardedReadBlock, /Promise\.all/);
+  assert.doesNotMatch(guardedReadBlock, /<ProfileShell/);
+  assert.doesNotMatch(guardedReadBlock, /<ProfileStoreCategory/);
+  assert.match(page.slice(catchStart), /<ProfileShell/);
+});
