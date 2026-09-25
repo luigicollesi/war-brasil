@@ -9,7 +9,6 @@ export type CommanderProfileRow = {
   user_id: string;
   handle: string | null;
   display_name: string | null;
-  bio: string | null;
   last_seen_at: Date | null;
   title_id: string | null;
   title_name: string | null;
@@ -37,7 +36,6 @@ const profileProjection = `
   commander.user_id,
   commander.handle,
   commander.display_name,
-  commander.bio,
   commander.last_seen_at,
   title.id AS title_id,
   title.name AS title_name,
