@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
-import type { CampaignCreditWallet, CosmeticCatalogItem, EconomyOffer } from "@/src/lib/economy/economy-contract";
+import type { CosmeticCatalogItem, EconomyOffer } from "@/src/lib/economy/economy-contract";
 import type {
   ProfileAppearanceStoreItem,
   ProfileAppearanceStoreOffer,
@@ -86,14 +86,12 @@ function titleAppearance(item: Extract<ProfileAppearanceStoreItem, { kind: "comm
 }
 
 export function ProfileStoreCategory({
-  category,
-  wallet,
+  category
   gameplayOffers,
   territorySkins,
   appearanceStorefront,
 }: {
   category: StoreCategoryId;
-  wallet: CampaignCreditWallet;
   gameplayOffers: ReadonlyArray<EconomyOffer>;
   territorySkins: ReadonlyArray<CosmeticCatalogItem>;
   appearanceStorefront: ProfileAppearanceStorefront;
@@ -163,13 +161,6 @@ export function ProfileStoreCategory({
       <header className={styles.categoryHeader}>
         <div className={styles.categoryUtility}>
           <Link href="/profile/store" className={styles.backLink}>← INTENDÊNCIA</Link>
-          <div className={styles.wallet} aria-label={`${wallet.balance} Créditos de Campanha`}>
-            <Image src="/coin.svg" alt="" aria-hidden="true" width={22} height={22} />
-            <span>
-              <small>CRÉDITOS</small>
-              <strong>{INTEGER_FORMAT.format(wallet.balance)}</strong>
-            </span>
-          </div>
         </div>
         <small>{meta.kicker}</small>
         <h1>{meta.label}</h1>
