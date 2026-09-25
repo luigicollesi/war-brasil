@@ -1,3 +1,11 @@
+export type ProfileAppearanceCollectionUnlock = Readonly<{
+  collectionId: string;
+  collectionName: string;
+  ownedCount: number;
+  totalCount: number;
+  complete: boolean;
+}>;
+
 import type { ProfileAppearanceRarity } from "@/src/lib/profile/profile-appearance-contract";
 
 export type ProfileAppearanceStoreTitle = Readonly<{
@@ -21,6 +29,7 @@ export type ProfileAppearanceStoreBackground = Readonly<{
   description: string | null;
   rarity: ProfileAppearanceRarity;
   collectionId: string | null;
+  collectionUnlock: ProfileAppearanceCollectionUnlock | null;
   assetRef: string;
   previewRef: string | null;
   owned: boolean;
