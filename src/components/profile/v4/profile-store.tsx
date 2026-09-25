@@ -60,12 +60,6 @@ function itemArtwork(item: CosmeticCatalogItem | null) {
   return item ? cosmeticPreviewSource(item) : null;
 }
 
-function ownershipLabel(offer: EconomyOffer) {
-  if (offer.fullyOwned) return "POSSUÍDO";
-  if (offer.partiallyOwned) return `${offer.ownedCount}/${offer.totalCount} POSSUÍDOS`;
-  return offer.purchasable ? "DISPONÍVEL" : "INDISPONÍVEL";
-}
-
 function collectionProgressLabel(collection: StorefrontCollection) {
   if (collection.fullyOwned) return "COLEÇÃO COMPLETA";
   if (collection.partiallyOwned) {
@@ -519,7 +513,7 @@ export function ProfileStore({
         id="store-collections"
         className={styles.catalog}
         data-store-zone="collections"
-        data-store-layer="03"
+        data-store-layer="02"
         aria-labelledby="collections-title"
       >
         <span className={styles.repairPlate} aria-hidden="true" />
