@@ -166,6 +166,17 @@
   color: color-mix(in srgb, var(--command-color) 72%, var(--wb-gold));
 }
 
+.credentialTitle {
+  --profile-title-size-legendary: .82rem;
+
+  max-width: 100%;
+  overflow: hidden;
+  line-height: 1;
+  text-overflow: ellipsis;
+  text-wrap: nowrap;
+  white-space: nowrap;
+}
+
 .credentialIdentity strong {
   overflow: hidden;
   color: var(--wb-text);
@@ -446,6 +457,10 @@
 
   .credentialIdentity strong {
     font-size: .82rem;
+  }
+
+  .credentialTitle {
+    --profile-title-size-legendary: .68rem;
   }
 
   .stationMessage {
