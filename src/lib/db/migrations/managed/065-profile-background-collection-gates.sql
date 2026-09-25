@@ -6,8 +6,11 @@
 -- Up Migration
 
 -- Céu Noturno predates catalog.collections in the profile-background flow.
--- Register the stable collection identity now; it will only surface in the
--- gameplay collection storefront once gameplay cosmetics are assigned to it.
+-- "cosmic-night" is only the legacy internal profile-background id. It is NOT
+-- a second collection. The one canonical collection identity is
+-- collection.ceu-noturno, whose storage slug is also ceu-noturno.
+-- It will only surface in the gameplay collection storefront once gameplay
+-- cosmetics are assigned to this same collection.
 INSERT INTO catalog.collections(
   id, slug, name, description, active, sort_order
 )
@@ -29,6 +32,7 @@ SET slug=EXCLUDED.slug,
 
 UPDATE catalog.profile_backgrounds background
    SET collection_id=CASE background.id
+         -- Legacy background id; same thematic set as Céu Noturno.
          WHEN 'profile.background.cosmic-night' THEN 'collection.ceu-noturno'
          WHEN 'profile.background.viking' THEN 'collection.viking'
          WHEN 'profile.background.cat' THEN 'collection.cat'
