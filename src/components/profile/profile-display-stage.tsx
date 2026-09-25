@@ -1,11 +1,12 @@
 "use client";
 
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Suspense, useEffect, useRef, useState, type ReactNode } from "react";
+import { Suspense, useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import type { Group } from "three";
 import type { PublicProfileArsenal } from "@/src/lib/profile/profile-command-contract";
 import { DiceShowcaseModel } from "./v4/store-showcase/dice-showcase-model";
 import { TerritoryShowcaseModel } from "./v4/store-showcase/territory-showcase-model";
+import { PROFILE_DISPLAY_LAYOUTS, type ProfileDisplaySlot } from "./profile-display-stage-layout";
 import styles from "./profile-display-stage.module.css";
 
 function useReducedMotion() {
@@ -73,32 +74,23 @@ function ProfileStageScene({
 }) {
   const { camera, size, viewport } = useThree();
   const compact = size.width <= 720;
+  const compactShort = compact && size.height <= 760;
+  const layout = compactShort
+    ? PROFILE_DISPLAY_LAYOUTS.compactShort
+    : compact
+      ? PROFILE_DISPLAY_LAYOUTS.compact
+      : PROFILE_DISPLAY_LAYOUTS.desktop;
 
   const worldPosition = (
-    screenX: number,
-    screenY: number,
-  ): [number, number, number] => [
-    camera.position.x + (screenX - 0.5) * viewport.width,
-    camera.position.y + (0.5 - screenY) * viewport.height,
-    0,
-  ];
-
-  const positions = compact
-    ? {
-        attack: worldPosition(0.27, 0.39),
-        defense: worldPosition(0.73, 0.39),
-        neutral: worldPosition(0.27, 0.68),
-        territory: worldPosition(0.73, 0.68),
-      }
-    : {
-        attack: worldPosition(0.14, 0.52),
-        defense: worldPosition(0.38, 0.52),
-        neutral: worldPosition(0.62, 0.52),
-        territory: worldPosition(0.86, 0.52),
-      };
-
-  const diceScale = compact ? 1.08 : 1.42;
-  const territoryScale = compact ? 0.82 : 1.04;
+    slot: ProfileDisplaySlot,
+  ): [number, number, number] => {
+    const item = layout[slot];
+    return [
+      camera.position.x + (item.x - 0.5) * viewport.width,
+      camera.position.y + (0.5 - item.y) * viewport.height,
+      0,
+    ];
+  };
 
   return (
     <>
@@ -109,8 +101,8 @@ function ProfileStageScene({
 
       <Suspense fallback={null}>
         <RotatingObject
-          position={positions.attack}
-          scale={diceScale}
+          position={worldPosition("attack")}
+          scale={layout.attack.scale}
           reducedMotion={reducedMotion}
           baseRotation={[0.32, -0.52, -0.05]}
         >
@@ -123,8 +115,8 @@ function ProfileStageScene({
         </RotatingObject>
 
         <RotatingObject
-          position={positions.defense}
-          scale={diceScale}
+          position={worldPosition("defense")}
+          scale={layout.defense.scale}
           reducedMotion={reducedMotion}
           baseRotation={[0.32, -0.44, 0.04]}
         >
@@ -137,8 +129,8 @@ function ProfileStageScene({
         </RotatingObject>
 
         <RotatingObject
-          position={positions.neutral}
-          scale={diceScale}
+          position={worldPosition("neutral")}
+          scale={layout.neutral.scale}
           reducedMotion={reducedMotion}
           baseRotation={[0.32, -0.49, -0.02]}
         >
@@ -151,8 +143,8 @@ function ProfileStageScene({
         </RotatingObject>
 
         <RotatingObject
-          position={positions.territory}
-          scale={territoryScale}
+          position={worldPosition("territory")}
+          scale={layout.territory.scale}
           reducedMotion={reducedMotion}
           baseRotation={[-0.72, 0.18, 0.03]}
         >
@@ -194,7 +186,21 @@ export function ProfileDisplayStage({
       label: "TERRITÓRIO",
       name: arsenal.territorySkin.name,
     },
-  ] as const;
+  ] as const satisfies ReadonlyArray<{
+    slot: ProfileDisplaySlot;
+    label: string;
+    name: string;
+  }>;
+
+  const labelStyle = (slot: ProfileDisplaySlot) =>
+    ({
+      "--profile-label-x": `${PROFILE_DISPLAY_LAYOUTS.desktop[slot].labelX * 100}%`,
+      "--profile-label-y": `${PROFILE_DISPLAY_LAYOUTS.desktop[slot].labelY * 100}%`,
+      "--profile-label-x-compact": `${PROFILE_DISPLAY_LAYOUTS.compact[slot].labelX * 100}%`,
+      "--profile-label-y-compact": `${PROFILE_DISPLAY_LAYOUTS.compact[slot].labelY * 100}%`,
+      "--profile-label-x-compact-short": `${PROFILE_DISPLAY_LAYOUTS.compactShort[slot].labelX * 100}%`,
+      "--profile-label-y-compact-short": `${PROFILE_DISPLAY_LAYOUTS.compactShort[slot].labelY * 100}%`,
+    }) as CSSProperties;
 
   return (
     <section className={styles.stage} aria-label="Arsenal equipado">
@@ -215,6 +221,7 @@ export function ProfileDisplayStage({
             key={item.slot}
             className={styles.label}
             data-showcase-slot={item.slot}
+            style={labelStyle(item.slot)}
           >
             <small>{item.label}</small>
             <strong title={item.name}>{item.name}</strong>
