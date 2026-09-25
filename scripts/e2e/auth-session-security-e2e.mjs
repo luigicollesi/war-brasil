@@ -239,4 +239,3 @@ try {
   await browser.close();
 }
 
-await import("./auth-token-expiry-e2e.mjs");
