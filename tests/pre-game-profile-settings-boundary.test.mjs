@@ -15,20 +15,21 @@ test("Profile settings derives mutation actor only from authenticated session bo
 
   assert.match(
     service,
-    /allowedKeys\s*=\s*new Set\(\["displayName", "bio", "privacy"\]\)/,
+    /allowedKeys\s*=\s*new Set\(\["displayName", "privacy"\]\)/,
   );
+  assert.doesNotMatch(service, /BIO_MAX_LENGTH|cleanBio|INVALID_BIO/);
   assert.doesNotMatch(service, /allowedKeys[^;]*userId/is);
   assert.doesNotMatch(service, /allowedKeys[^;]*handle/is);
 });
 
-test("Profile settings keeps handle, portrait and title outside the editable payload", () => {
+test("Profile settings keeps biography, handle, portrait and title outside the editable payload", () => {
   const service = read("src/lib/server/profile/profile-settings-service.ts");
 
   assert.match(service, /UNSUPPORTED_PROFILE_FIELD/);
   assert.doesNotMatch(service, /allowedKeys[^;]*portrait/is);
   assert.doesNotMatch(service, /allowedKeys[^;]*title/is);
   assert.match(service, /DISPLAY_NAME_MAX_LENGTH\s*=\s*48/);
-  assert.match(service, /BIO_MAX_LENGTH\s*=\s*240/);
+  assert.doesNotMatch(service, /allowedKeys[^;]*bio/is);
 });
 
 test("partial privacy updates preserve every omitted persisted policy", () => {
@@ -68,13 +69,14 @@ test("Profile settings route rejects malformed JSON and mutation boundary owns o
   assert.match(boundary, /getAuthenticatedSession\(request\)/);
 });
 
-test("authenticated Profile snapshot projects persisted bio and privacy instead of local defaults", () => {
+test("authenticated Profile snapshot projects privacy without biography", () => {
   const snapshotService = read(
     "src/lib/server/profile/profile-command-snapshot-service.ts",
   );
   const contract = read("src/lib/profile/profile-command-contract.ts");
 
-  assert.match(snapshotService, /bio:\s*profile\.identity\.bio/);
+  assert.doesNotMatch(snapshotService, /bio:\s*profile\.identity\.bio/);
+  assert.doesNotMatch(contract, /bio:\s*string \| null/);
   assert.match(snapshotService, /privacy:[\s\S]*source:\s*"authenticated-user"/);
   assert.match(snapshotService, /data:\s*profile\.privacy/);
   assert.match(contract, /privacy:\s*ProfileCommandSection<ProfilePrivacySettings \| null>/);
