@@ -392,6 +392,187 @@ function EventsDemo({ presentation }: { presentation: DoctrinePresentation }) {
   );
 }
 
+function DepartureDemo() {
+  return (
+    <DemoFrame
+      label="Demonstração do protocolo de retirada durante uma partida"
+      caption="A retirada altera o estado autoritativo da partida em sequência: cartas da mão vão ao descarte, territórios são redistribuídos de forma balanceada e todos os objetivos restantes são reavaliados. Essa redistribuição é a exceção que pode produzir vencedores simultâneos."
+    >
+      <div className={ux.departureStage}>
+        <div className={ux.departureProtocol}>
+          <span>PROTOCOLO DE CONTINGÊNCIA</span>
+          <strong>RETIRADA EM PARTIDA ATIVA</strong>
+          <small>quatro efeitos encadeados · resolução automática</small>
+        </div>
+
+        <div className={ux.departureTopFlow}>
+          <section className={ux.departureStep}>
+            <div className={ux.departureStepCode}>01 // RETIRADA</div>
+            <div className={ux.departureCommander} aria-hidden="true">
+              <span className={ux.departureCommanderHead} />
+              <span className={ux.departureCommanderBody} />
+              <b>×</b>
+            </div>
+            <strong>COMANDANTE FORA DA OPERAÇÃO</strong>
+            <small>
+              O assento deixa de participar dos turnos e negociações pendentes
+              são canceladas.
+            </small>
+            <div className={ux.departureExitStamp}>RETIRADO</div>
+          </section>
+
+          <div className={ux.departureConnector} aria-hidden="true">
+            <span />
+            <b>→</b>
+          </div>
+
+          <section className={ux.departureStep}>
+            <div className={ux.departureStepCode}>02 // CARTAS</div>
+            <div className={ux.departureCardTransfer} aria-hidden="true">
+              <div className={ux.departureCards}>
+                <TerritoryCardArtwork
+                  territoryId={18}
+                  symbol="gold"
+                  sizes="78px"
+                  className={ux.departureCard}
+                />
+                <TerritoryCardArtwork
+                  territoryId={23}
+                  symbol="water"
+                  sizes="78px"
+                  className={ux.departureCard}
+                />
+              </div>
+              <span className={ux.departureCardArrow}>→</span>
+              <div className={ux.departureDiscard}>
+                <small>ZONA</small>
+                <strong>DESCARTE</strong>
+                <b>02</b>
+              </div>
+            </div>
+            <strong>CARTAS PERDIDAS PELO JOGADOR</strong>
+            <small>
+              A mão deixa a posse do retirado. Nenhuma carta é herdada
+              diretamente por um rival.
+            </small>
+          </section>
+        </div>
+
+        <div className={ux.departureLowerFlow}>
+          <section
+            className={[ux.departureStep, ux.departureMapStep].join(" ")}
+          >
+            <div className={ux.departureStepCode}>03 // TERRITÓRIOS</div>
+            <div className={ux.departureMap}>
+              <GuideBoardScene
+                compact
+                ariaLabel="Mapa ilustrando territórios de um jogador retirado sendo redistribuídos entre jogadores com menor controle territorial"
+                markers={[
+                  {
+                    key: "departure-source",
+                    label: "Território retirado",
+                    troops: 4,
+                    x: 50,
+                    y: 49,
+                    tone: "neutral",
+                    selected: true,
+                  },
+                  {
+                    key: "departure-a",
+                    label: "Menor controle A",
+                    troops: 3,
+                    x: 33,
+                    y: 34,
+                    tone: "ally",
+                  },
+                  {
+                    key: "departure-b",
+                    label: "Menor controle B",
+                    troops: 2,
+                    x: 68,
+                    y: 64,
+                    tone: "enemy",
+                  },
+                ]}
+                arrows={[
+                  {
+                    key: "departure-route-a",
+                    from: { x: 48, y: 47 },
+                    to: { x: 36, y: 36 },
+                    kind: "move",
+                    label: "ATRIBUIR",
+                  },
+                  {
+                    key: "departure-route-b",
+                    from: { x: 53, y: 52 },
+                    to: { x: 65, y: 62 },
+                    kind: "move",
+                    label: "ATRIBUIR",
+                  },
+                ]}
+                caption="Cada território é atribuído a quem possui menos territórios naquele momento; empates são resolvidos aleatoriamente."
+              />
+            </div>
+            <div className={ux.departureBalanceRail}>
+              <span>
+                <b>1</b>
+                EMBARALHAR
+              </span>
+              <i aria-hidden="true">→</i>
+              <span>
+                <b>2</b>
+                MENOR CONTROLE
+              </span>
+              <i aria-hidden="true">→</i>
+              <span>
+                <b>3</b>
+                DESEMPATE ALEATÓRIO
+              </span>
+            </div>
+            <small className={ux.departureTroopNote}>
+              As tropas permanecem no território; somente a propriedade é
+              alterada.
+            </small>
+          </section>
+
+          <section
+            className={[ux.departureStep, ux.departureVictoryStep].join(" ")}
+          >
+            <div className={ux.departureStepCode}>04 // REAVALIAÇÃO</div>
+            <div className={ux.departureObjectiveScan}>
+              <span>OBJETIVOS RESTANTES</span>
+              <div className={ux.departureScanLine} aria-hidden="true" />
+              <small>estado territorial alterado</small>
+            </div>
+            <div className={ux.departureWinnerPair}>
+              <div className={ux.departureWinner}>
+                <span>A</span>
+                <small>MISSÃO</small>
+                <strong>CONCLUÍDA</strong>
+              </div>
+              <b aria-hidden="true">+</b>
+              <div className={ux.departureWinner}>
+                <span>B</span>
+                <small>MISSÃO</small>
+                <strong>CONCLUÍDA</strong>
+              </div>
+            </div>
+            <div className={ux.departureVictoryBanner}>
+              <small>EXCEÇÃO DE ENCERRAMENTO</small>
+              <strong>VITÓRIA SIMULTÂNEA</strong>
+            </div>
+            <p>
+              Se a redistribuição completar mais de um objetivo ao mesmo tempo,
+              todos esses jogadores vencem. No fluxo atual, essa é a única
+              situação que admite múltiplos vencedores simultâneos.
+            </p>
+          </section>
+        </div>
+      </div>
+    </DemoFrame>
+  );
+}
+
 function VictoryDemo() {
   return (
     <DemoFrame
@@ -447,6 +628,8 @@ export function DoctrineChapterDemo({
       return <CardsDemo presentation={presentation} />;
     case "events":
       return <EventsDemo presentation={presentation} />;
+    case "departure":
+      return <DepartureDemo />;
     case "victory":
       return <VictoryDemo />;
   }
