@@ -55,18 +55,18 @@ test("PROFILE V4 store uses the canonical campaign-credit coin beside monetary v
   assert.doesNotMatch(store, />\s*◈\s*</);
 });
 
-test("PROFILE V4 store exposes ownership-aware discovery without becoming purchase authority", async () => {
+test("PROFILE V4 store keeps ownership-aware purchase state inside catalog surfaces", async () => {
   const store = await source("src/components/profile/v4/profile-store.tsx");
+  const category = await source("src/components/profile/v4/profile-store-category.tsx");
 
-  assert.match(store, /offer\.fullyOwned/);
-  assert.match(store, /offer\.partiallyOwned/);
-  assert.match(store, /offer\.ownedCount/);
-  assert.match(store, /offer\.totalCount/);
-  assert.match(store, /offer\.purchasable/);
-  assert.match(store, /POSSUÍDO/);
-  assert.match(store, /INDISPONÍVEL/);
-  assert.match(store, /INSPECIONAR/);
+  assert.match(store, /featuredCollectionBundleOffer\.fullyOwned/);
+  assert.match(store, /featuredCollectionBundleOffer\.purchasable/);
+  assert.match(category, /offer\.fullyOwned/);
+  assert.match(category, /offer\.purchasable/);
+  assert.match(category, /POSSUÍDO/);
+  assert.match(category, /INDISPONÍVEL|ANUNCIADO/);
   assert.doesNotMatch(store, /\/api\/economy\/purchases/);
+  assert.doesNotMatch(category, /fetch\(["']\/api\/economy\/purchases/);
 });
 
 test("PROFILE V4 collection discovery uses only its banner and routes detail into the showcase", async () => {
@@ -460,8 +460,8 @@ test("PROFILE V4 store V3 activates war-machine section animations only after vi
   const styles = await source("src/components/profile/v4/profile-store.module.css");
 
   assert.match(styles, /\[data-store-zone="hero"\]\[data-v3-active="true"\]\s+\.operationAxis/);
-  assert.match(styles, /\[data-store-zone="dice"\]\[data-v3-active="true"\]\s+\.supplyNetwork/);
-  assert.match(styles, /\[data-store-zone="territories"\]\[data-v3-active="true"\]\s+\.frontLine/);
+  assert.match(styles, /\[data-store-zone="categories"\]\[data-v3-active="true"\]\s+\.supplyNetwork/);
+  assert.match(styles, /\[data-store-zone="categories"\]\[data-v3-active="true"\]\s+\.frontLine/);
   assert.match(styles, /\[data-store-zone="collections"\]\[data-v3-active="true"\]\s+\.repairPlate/);
   assert.match(styles, /\[data-store-zone="treasury"\]\[data-v3-active="true"\]\s+\.lowerArmor/);
 
