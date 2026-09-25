@@ -16,6 +16,7 @@ export const DOCTRINE_CHAPTER_SLUGS = [
   "barreiras-conexoes",
   "cartas",
   "anomalias",
+  "retirada",
   "vitoria",
 ] as const;
 
@@ -47,6 +48,7 @@ export type DoctrineChapter = {
     | "barriers"
     | "cards"
     | "events"
+    | "departure"
     | "victory";
 };
 
@@ -281,8 +283,28 @@ export function buildDoctrinePresentation() {
       visual: "events",
     },
     {
-      slug: "vitoria",
+      slug: "retirada",
       number: "12",
+      eyebrow: "Contingência",
+      title: "Sair da partida reorganiza o mapa inteiro.",
+      lede: "Quando um comandante deixa uma partida em andamento, sua participação ativa termina, negociações pendentes são canceladas, as cartas da mão vão para o descarte e seus territórios são redistribuídos. Só depois desse novo mapa os objetivos dos jogadores restantes são reavaliados.",
+      principles: [
+        "Os territórios do jogador que saiu são embaralhados e redistribuídos um a um. A cada atribuição, têm prioridade os jogadores que possuem menos territórios; se houver empate, o destinatário é escolhido aleatoriamente.",
+        "A redistribuição troca o proprietário, mas preserva as tropas que já estavam em cada território. As cartas da mão deixam de pertencer ao jogador retirado e vão para o descarte — elas não são entregues diretamente a outro comandante.",
+        "Depois da redistribuição, o objetivo de todos os jogadores restantes é verificado novamente. Se a nova configuração concluir mais de um objetivo ao mesmo tempo, todos esses jogadores são registrados como vencedores.",
+        "No fluxo atual do jogo, a retirada é a única situação que pode encerrar a operação com múltiplos vencedores simultâneos.",
+      ],
+      metrics: [
+        { label: "Cartas", value: "descarte" },
+        { label: "Territórios", value: "redistribuição balanceada" },
+        { label: "Tropas", value: "preservadas" },
+        { label: "Exceção", value: "vitória simultânea" },
+      ],
+      visual: "departure",
+    },
+    {
+      slug: "vitoria",
+      number: "13",
       eyebrow: "Fim de operação",
       title: "A partida termina quando a missão deixa de ser hipótese.",
       lede: "A vitória é avaliada contra o objetivo atribuído ao jogador. Domínio visual do mapa, quantidade de tropas ou cartas não substituem a condição explícita da missão.",
