@@ -213,8 +213,8 @@
 .indexPanel h1 {
   margin: 22px 0 4px;
   color: var(--d-ink);
-  font: 800 clamp(40px, 4.6vw, 68px)/0.88 var(--font-wb-display), sans-serif;
-  letter-spacing: -0.025em;
+  font: 700 clamp(38px, 4.4vw, 64px)/0.95 var(--font-wb-brand), serif;
+  letter-spacing: 0.015em;
 }
 
 .indexPanel > p {
@@ -368,8 +368,8 @@
   max-width: 15ch;
   margin: 18px 0 14px;
   color: #f3eddf;
-  font: 800 clamp(42px, 5.4vw, 82px)/0.92 var(--font-wb-display), sans-serif;
-  letter-spacing: -0.035em;
+  font: 700 clamp(40px, 5.1vw, 76px)/0.97 var(--font-wb-brand), serif;
+  letter-spacing: 0.012em;
   text-wrap: balance;
 }
 
