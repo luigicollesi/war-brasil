@@ -47,7 +47,6 @@ export type CommanderActivity = Readonly<{
 export type CommanderIdentity = Readonly<{
   displayName: string;
   handle: string;
-  bio: string | null;
   title: string | null;
   presence: CommanderPresence;
   activity: CommanderActivity;
