@@ -6,11 +6,13 @@ import { ProfileEconomyUnavailable } from "@/src/components/profile/v4/profile-e
 import { ProfileShell } from "@/src/components/profile/v4/profile-shell";
 import { ProfileStore } from "@/src/components/profile/v4/profile-store";
 import type { EconomyStorefrontSnapshot } from "@/src/lib/economy/economy-contract";
+import type { ProfileAppearanceStorefront } from "@/src/lib/economy/profile-appearance-store-contract";
 import { getAuthenticatedSessionForReadHeaders } from "@/src/lib/server/auth/auth-guard";
 import {
   EconomyServiceError,
   getEconomyStorefront,
 } from "@/src/lib/server/economy/economy-service";
+import { getProfileAppearanceStorefront } from "@/src/lib/server/economy/profile-appearance-store-service";
 import { getOwnCommanderProfile } from "@/src/lib/server/profile/profile-service";
 
 export const metadata: Metadata = {
@@ -32,8 +34,12 @@ export default async function ProfileStorePage() {
   if (!profile) redirect("/profile");
 
   let storefront: EconomyStorefrontSnapshot | null = null;
+  let appearanceStorefront: ProfileAppearanceStorefront = { offers: [] };
   try {
-    storefront = await getEconomyStorefront(session.user.id);
+    [storefront, appearanceStorefront] = await Promise.all([
+      getEconomyStorefront(session.user.id),
+      getProfileAppearanceStorefront(session.user.id),
+    ]);
   } catch (error) {
     if (
       error instanceof EconomyServiceError &&
@@ -63,7 +69,7 @@ export default async function ProfileStorePage() {
       }
     >
       {storefront ? (
-        <ProfileStore storefront={storefront} />
+        <ProfileStore storefront={storefront} appearanceStorefront={appearanceStorefront} />
       ) : (
         <ProfileEconomyUnavailable surface="store" />
       )}
