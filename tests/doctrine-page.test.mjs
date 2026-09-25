@@ -399,8 +399,11 @@ test("Doutrina restringe dourado oliva a detalhes e não preenche superfícies d
     "src/components/doctrine/doctrine-ux-enhancements.module.css",
   );
 
-  const viewportAfter =
-    css.match(/\.demoViewport::after\s*\{[^}]*\}/)?.[0] ?? "";
+  const viewportAfter = [
+    ...css.matchAll(/\.demoViewport::after\s*\{[^}]*\}/g),
+  ]
+    .map((match) => match[0])
+    .join("\n");
   assert.match(viewportAfter, /44px 1px no-repeat/);
   assert.match(viewportAfter, /1px 44px no-repeat/);
   assert.doesNotMatch(viewportAfter, /clip-path/);
