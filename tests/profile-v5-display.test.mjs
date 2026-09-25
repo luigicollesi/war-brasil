@@ -49,14 +49,17 @@ test("public profile display uses equipped background, styled title and four-ite
   assert.match(stage, /size\.width <= 720/);
 });
 
-test("private dossier loads equipped background and exposes public display action", async () => {
+test("private dossier resolves its equipped background from browser cache before the server", async () => {
   const page = await source("src/app/profile/page.tsx");
   const shell = await source("src/components/profile/v4/profile-shell.tsx");
   const dossier = await source("src/components/profile/v4/profile-dossier.tsx");
 
   assert.match(page, /getPublicProfileAppearance/);
-  assert.match(page, /appearance\?\.background\.assetRef/);
-  assert.match(page, /backgroundAssetRef=\{equippedBackground\}/);
+  assert.match(page, /const equippedTitle = appearance\?\.title \?\? null/);
+  assert.doesNotMatch(page, /appearance\?\.background\.assetRef/);
+  assert.doesNotMatch(page, /backgroundAssetRef=/);
+  assert.match(shell, /readCachedProfileBackgroundRef\(handle\)/);
+  assert.match(shell, /\/api\/profile\/appearance\/background/);
   assert.match(shell, /profileBackdrop/);
   assert.match(dossier, /VER PERFIL/);
   assert.match(dossier, /\/profile\/\$\{encodeURIComponent\(identity\.handle\)\}/);
