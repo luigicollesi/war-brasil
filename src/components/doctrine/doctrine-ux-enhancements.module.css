@@ -1,5 +1,5 @@
 .shell {
-  --doctrine-index-width: max(250px, 21vw);
+  --doctrine-index-width: clamp(300px, 21vw, 360px);
   display: block;
 }
 
@@ -27,14 +27,23 @@
 }
 
 .indexTitleRow {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.indexTitleRow h1 {
+  min-width: 0;
+  margin: 0;
+  font-size: clamp(36px, 3vw, 48px);
+  line-height: 0.92;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
 }
 
 .backButton {
-  order: -1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -70,16 +79,43 @@
   outline-offset: 3px;
 }
 
-.mobileReturnButton {
-  display: none;
-}
-
 .chapterNav {
   min-height: 0;
+  flex: 1 1 auto;
   overflow-y: auto;
   overscroll-behavior: contain;
-  scrollbar-gutter: stable;
+  scrollbar-gutter: auto;
   scrollbar-width: thin;
+}
+
+@media (min-width: 761px) {
+  .chapterNav {
+    gap: 1px;
+    margin-top: 4px;
+    padding-right: 2px;
+  }
+
+  .chapterNav a {
+    grid-template-columns: 24px minmax(0, 1fr) 18px;
+    gap: 6px;
+    min-height: 34px;
+    padding: 5px 7px;
+  }
+
+  .chapterNav a b {
+    overflow: hidden;
+    font-size: 10px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .chapterNav a i {
+    width: 12px;
+  }
+
+  .chapterNav a[data-active="true"] i {
+    width: 18px;
+  }
 }
 
 .chapterSurface {
@@ -177,7 +213,7 @@
 
 @media (max-width: 1080px) {
   .shell {
-    --doctrine-index-width: 220px;
+    --doctrine-index-width: 260px;
   }
 
   .phaseRail {
@@ -247,19 +283,6 @@
     overflow-x: auto;
     overflow-y: hidden;
     scrollbar-gutter: auto;
-  }
-
-  .mobileReturnButton {
-    display: grid;
-    place-items: center;
-    min-height: 44px;
-    padding: 0 12px;
-    color: var(--d-gold-bright);
-    border: 1px solid rgba(205, 180, 107, 0.24);
-    background: rgba(205, 180, 107, 0.055);
-    text-decoration: none;
-    font: 700 8px/1 var(--font-geist-mono), monospace;
-    letter-spacing: 0.11em;
   }
 
   .phaseRail {
