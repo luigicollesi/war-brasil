@@ -269,7 +269,7 @@
 .chapterNav a:focus-visible,
 .prevNext a:focus-visible,
 .brand:focus-visible,
-.backToIndex:focus-visible {
+.commandLink:focus-visible {
   outline: 2px solid var(--d-gold-bright);
   outline-offset: 3px;
 }
@@ -1081,7 +1081,7 @@
   border-top: 1px solid var(--d-line);
 }
 
-.prevNext a:not(.backToIndex) {
+.prevNext a:not(.commandLink) {
   display: grid;
   gap: 5px;
   min-height: 62px;
@@ -1093,7 +1093,7 @@
   transition: border-color 150ms ease, color 150ms ease, background-color 150ms ease;
 }
 
-.prevNext a:not(.backToIndex):last-child { text-align: right; }
+.prevNext a:not(.commandLink):last-child { text-align: right; }
 
 .prevNext a:hover {
   color: var(--d-ink);
@@ -1104,15 +1104,28 @@
 .prevNext span { color: #657168; font-size: 8px; }
 .prevNext b { font: 700 14px/1 var(--font-wb-display), sans-serif; letter-spacing: 0.07em; text-transform: uppercase; }
 
-.backToIndex {
+.commandLink {
   display: grid;
   place-items: center;
+  min-width: 112px;
   padding: 0 18px;
   color: var(--d-gold);
   border: 1px solid rgba(205, 180, 107, 0.16);
+  background: rgba(205, 180, 107, 0.018);
   text-decoration: none;
   font: 700 9px/1 var(--font-geist-mono), monospace;
   letter-spacing: 0.12em;
+  transition:
+    color 150ms ease,
+    border-color 150ms ease,
+    background-color 150ms ease;
+}
+
+.commandLink:hover,
+.commandLink:focus-visible {
+  color: var(--d-ink);
+  border-color: rgba(205, 180, 107, 0.34);
+  background: rgba(205, 180, 107, 0.055);
 }
 
 .navPlaceholder { min-height: 62px; }
@@ -1234,9 +1247,16 @@
     backdrop-filter: blur(12px);
   }
 
-  .prevNext a:not(.backToIndex) {
+  .prevNext a:not(.commandLink) {
     min-height: 44px;
     padding: 7px 9px;
+  }
+
+  .commandLink {
+    min-width: 0;
+    min-height: 44px;
+    padding: 0 10px;
+    font-size: 8px;
   }
 
   .prevNext span {
@@ -1248,10 +1268,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-  }
-
-  .backToIndex {
-    display: none;
   }
 
   .navPlaceholder {
@@ -1298,7 +1314,7 @@
     padding: 5px;
   }
 
-  .prevNext a:not(.backToIndex) {
+  .prevNext a:not(.commandLink) {
     min-height: 44px;
     padding: 7px 6px;
   }
