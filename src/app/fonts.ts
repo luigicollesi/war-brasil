@@ -22,8 +22,8 @@ export const brandFont = Cinzel({
   weight: ["600", "700", "800"],
 });
 
-export const legacyStoreInterfaceFont = Inter({
-  variable: "--font-wb-store-ui",
+export const legacyInterfaceFont = Inter({
+  variable: "--font-wb-legacy-ui",
   subsets: ["latin"],
 });
 
