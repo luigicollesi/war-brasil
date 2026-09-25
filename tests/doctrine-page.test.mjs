@@ -89,7 +89,7 @@ test("read model da Doutrina deriva mecânicas das autoridades do jogo", () => {
   );
   assert.match(
     departure.principles.join(" "),
-    /tropas.*continuam lá[\s\S]*objetivo de todos os jogadores/,
+    /território é redistribuído.*fica com 1 tropa[\s\S]*objetivo de todos os jogadores/,
   );
   assert.match(
     departure.principles.join(" "),
@@ -340,13 +340,14 @@ test("regra de Retirada permanece alinhada ao fluxo autoritativo da partida", ()
     departureService,
     /SET owner_player_id=assignment\.player_id,[\s\S]*moved_in_turn=0/,
   );
-  assert.doesNotMatch(
+  assert.match(
     departureService.slice(
       departureService.indexOf("async function redistributeTerritories"),
       departureService.indexOf("async function normalizeActiveTurnPositions"),
     ),
-    /troops\s*=/,
+    /troops=\$4::smallint/,
   );
+  assert.match(departureRules, /DEPARTURE_REDISTRIBUTED_TROOPS = 1/);
   assert.match(
     departureService,
     /evaluateGameVictories\([\s\S]*candidateIds,[\s\S]*"territory_control_changed"/,
@@ -369,6 +370,7 @@ test("demonstração de Retirada usa mapa e cartas reais com composição respon
   assert.match(demos, /departureCardTransfer/);
   assert.match(demos, /departureWinnerPair/);
   assert.match(demos, /JOGADOR SAI DA PARTIDA/);
+  assert.match(demos, /Ao ser redistribuído, o território fica com 1 tropa/);
   assert.match(uxCss, /\.departureStage\s*\{/);
   assert.match(uxCss, /\.departureTopFlow\s*\{/);
   assert.match(uxCss, /\.departureLowerFlow\s*\{/);
