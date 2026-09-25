@@ -11,8 +11,9 @@ import {
   BLOCKED_COMMANDER_COMPACT_TERMS,
   BLOCKED_COMMANDER_WORDS,
   RESERVED_COMMANDER_BRAND_KEYS,
+  RESERVED_COMMANDER_DISPLAY_ROLE_WORDS,
+  RESERVED_COMMANDER_HANDLE_ROLE_WORDS,
   RESERVED_COMMANDER_NAME_KEYS,
-  RESERVED_COMMANDER_ROLE_WORDS,
 } from "./commander-name-blocklist";
 
 export type CommanderNamePolicyCode =
@@ -144,8 +145,13 @@ function assertNotReserved(
     );
   };
 
+  const reservedRoleWords =
+    field === "handle"
+      ? RESERVED_COMMANDER_HANDLE_ROLE_WORDS
+      : RESERVED_COMMANDER_DISPLAY_ROLE_WORDS;
+
   for (const candidate of variants.wordVariants) {
-    if (RESERVED_COMMANDER_ROLE_WORDS.has(candidate)) reject();
+    if (reservedRoleWords.has(candidate)) reject();
   }
 
   for (const candidate of variants.compactVariants) {
