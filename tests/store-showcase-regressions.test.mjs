@@ -34,7 +34,7 @@ test("showcase owns its chrome and derives object scale from the presentation co
     "src/lib/client/store-showcase/showcase-presentation.ts",
   );
 
-  assert.match(runtime, /pathname\.startsWith\("\/profile\/store\/showcase\/"\)/);
+  assert.match(runtime, /pathname\.startsWith\("\/profile\/"\)/);
   assert.match(controller, /viewportSize\.width <= 900/);
   assert.match(
     controller,
