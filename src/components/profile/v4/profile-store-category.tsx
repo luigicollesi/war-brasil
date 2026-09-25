@@ -188,8 +188,21 @@ export function ProfileStoreCategory({
                   </div>
                   <div className={styles.commerce}>
                     <span><Image src="/coin.svg" alt="" width={19} height={19} />{INTEGER_FORMAT.format(offer.price)}</span>
-                    <button disabled={offer.fullyOwned || !offer.purchasable || pendingOfferId !== null} onClick={() => void handlePurchase(offer)}>
-                      {offer.fullyOwned ? "POSSUÍDO" : pendingOfferId === offer.id ? "PROCESSANDO..." : "COMPRAR"}
+                    <button
+                      disabled={
+                        offer.fullyOwned ||
+                        !offer.purchasable ||
+                        pendingOfferId !== null
+                      }
+                      onClick={() => void handlePurchase(offer)}
+                    >
+                      {offer.fullyOwned
+                        ? "POSSUÍDO"
+                        : collectionLocked
+                          ? "BLOQUEADO"
+                          : pendingOfferId === offer.id
+                            ? "PROCESSANDO..."
+                            : "COMPRAR"}
                     </button>
                   </div>
                 </article>
@@ -232,8 +245,20 @@ export function ProfileStoreCategory({
                 category === "backgrounds" ? candidate.kind === "profile_background" : candidate.kind === "commander_title",
               );
               if (!item) return null;
+              const collectionUnlock =
+                item.kind === "profile_background"
+                  ? item.collectionUnlock
+                  : null;
+              const collectionLocked =
+                Boolean(collectionUnlock && !collectionUnlock.complete) &&
+                !item.owned;
+
               return (
-                <article key={offer.id} className={styles.product}>
+                <article
+                  key={offer.id}
+                  className={styles.product}
+                  data-collection-locked={collectionLocked ? "true" : undefined}
+                >
                   <div className={styles.visual} data-appearance-kind={item.kind}>
                     {item.kind === "profile_background" ? (
                       <Image src={item.previewRef ?? item.assetRef} alt={`Prévia de ${item.name}`} width={520} height={300} />
@@ -245,6 +270,18 @@ export function ProfileStoreCategory({
                     <small>{ownershipLabel(item.owned, offer.fullyOwned)}</small>
                     <strong>{item.name}</strong>
                     <span>{item.description ?? (item.kind === "profile_background" ? "Fundo de Dossiê" : "Título de comandante")}</span>
+                    {collectionUnlock ? (
+                      <div
+                        className={styles.collectionProgress}
+                        data-complete={collectionUnlock.complete ? "true" : "false"}
+                        aria-label={`${collectionUnlock.ownedCount} de ${collectionUnlock.totalCount} itens da coleção ${collectionUnlock.collectionName} possuídos`}
+                      >
+                        <small>{collectionUnlock.collectionName.toUpperCase()}</small>
+                        <b>
+                          {collectionUnlock.ownedCount}/{collectionUnlock.totalCount} ITENS
+                        </b>
+                      </div>
+                    ) : null}
                   </div>
                   <div className={styles.commerce}>
                     <span><Image src="/coin.svg" alt="" width={19} height={19} />{INTEGER_FORMAT.format(offer.price)}</span>
