@@ -20,7 +20,7 @@
 }
 
 .page[data-active-surface="store"] {
-  --font-wb-ui: var(--font-wb-store-ui);
+  --font-wb-ui: var(--font-wb-legacy-ui);
   font-family: var(--font-wb-store-ui), sans-serif;
 }
 
