@@ -713,3 +713,23 @@ test("PROFILE V4 mobile keeps dice and territory catalogs in two columns while c
     /\.productVisual\s*\{[^}]*min-height:\s*120px;[^}]*padding:\s*8px;/,
   );
 });
+
+
+test("PROFILE V4 collection banners share a fixed 9 by 5 crop", async () => {
+  const store = await source("src/components/profile/v4/profile-store.tsx");
+  const styles = await source("src/components/profile/v4/profile-store.module.css");
+
+  assert.match(store, /className=\{styles\.collectionBannerViewport\}/);
+  assert.match(
+    styles,
+    /\.collectionBannerViewport\s*\{[^}]*aspect-ratio:\s*9\s*\/\s*5;[^}]*overflow:\s*hidden;/,
+  );
+  assert.match(
+    styles,
+    /\.collectionBannerViewport\s*>\s*img\s*\{[^}]*width:\s*100%;[^}]*height:\s*100%;[^}]*object-fit:\s*cover;[^}]*object-position:\s*center center;/,
+  );
+  assert.doesNotMatch(
+    styles,
+    /\.collectionBannerButton\s*>\s*img\s*\{[^}]*object-fit:\s*contain;/,
+  );
+});
