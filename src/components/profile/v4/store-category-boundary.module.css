@@ -1,0 +1,119 @@
+.page {
+  --ivory: #eee8da;
+  --brass: #d0aa57;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: clamp(18px, 4vw, 52px);
+  color: var(--ivory);
+  background:
+    radial-gradient(circle at 12% 8%, rgb(30 82 60 / 24%), transparent 31rem),
+    radial-gradient(circle at 86% 16%, rgb(157 121 59 / 12%), transparent 28rem),
+    linear-gradient(145deg, #07130f 0%, #071a15 46%, #091611 100%);
+}
+
+.atmosphere {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.18;
+  background-image: repeating-linear-gradient(
+    0deg,
+    transparent 0,
+    transparent 3px,
+    rgb(238 232 218 / 8%) 4px
+  );
+  mask-image: linear-gradient(to bottom, transparent, #000 12%, #000 88%, transparent);
+}
+
+.state {
+  position: relative;
+  width: min(100%, 860px);
+  display: grid;
+  gap: 16px;
+  padding: clamp(30px, 5vw, 68px);
+  border: 1px solid rgb(208 170 87 / 24%);
+  background: rgb(3 17 12 / 46%);
+  box-shadow: 0 28px 90px rgb(0 0 0 / 22%);
+}
+
+.backLink {
+  width: fit-content;
+  margin-bottom: clamp(18px, 3vw, 34px);
+  color: rgb(238 232 218 / 74%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-decoration: none;
+}
+
+.code {
+  color: var(--brass);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0.17em;
+}
+
+.signal {
+  display: flex;
+  gap: 6px;
+  min-height: 14px;
+  align-items: end;
+}
+
+.signal i {
+  width: 3px;
+  height: 8px;
+  background: rgb(208 170 87 / 52%);
+  animation: categorySignal 900ms ease-in-out infinite alternate;
+}
+
+.signal i:nth-child(2) { height: 12px; animation-delay: 120ms; }
+.signal i:nth-child(3) { height: 9px; animation-delay: 240ms; }
+
+.state h1 {
+  max-width: 13ch;
+  margin: 0;
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: clamp(3rem, 7vw, 6.3rem);
+  line-height: 0.86;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+}
+
+.state p {
+  max-width: 58ch;
+  margin: 0;
+  color: rgb(238 232 218 / 62%);
+  font-size: 0.98rem;
+  line-height: 1.6;
+}
+
+.actions button {
+  min-height: 46px;
+  padding: 0 20px;
+  border: 0;
+  background: var(--brass);
+  color: #07130f;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+}
+
+@keyframes categorySignal {
+  from { opacity: 0.25; transform: scaleY(0.65); }
+  to { opacity: 0.9; transform: scaleY(1); }
+}
+
+@media (max-width: 620px) {
+  .page { padding: 12px; }
+  .state { padding: 28px 22px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .signal i { animation: none; }
+}
