@@ -76,20 +76,31 @@ function useSafeTerritorySkinTexture(skinAssetRef: string | null) {
   return loaded.texture;
 }
 
-function applyLuminositySkin(
+function applyImageSkinBlend(
   material: MeshStandardMaterial,
   skinOpacity: number,
 ) {
-  material.customProgramCacheKey = () => `store-territory-luminosity-${skinOpacity}`;
+  material.customProgramCacheKey = () => `store-territory-image-blend-${skinOpacity}`;
   material.onBeforeCompile = (shader) => {
     shader.fragmentShader = shader.fragmentShader.replace(
       "#include <map_fragment>",
       `
 #ifdef USE_MAP
   vec4 sampledDiffuseColor = texture2D( map, vMapUv );
-  float skinLuminance = dot(sampledDiffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
-  float skinGain = mix(1.0, clamp(0.34 + skinLuminance * 1.18, 0.34, 1.42), ${skinOpacity.toFixed(2)});
-  diffuseColor.rgb *= skinGain;
+
+  // Territory skins are surface artwork, not grayscale masks. Keep the
+  // ownership/material color as the dominant base while allowing the image's
+  // actual RGB detail to remain visible under the scene lighting.
+  vec3 skinTinted = mix(
+    diffuseColor.rgb * sampledDiffuseColor.rgb * 1.18,
+    sampledDiffuseColor.rgb,
+    0.42
+  );
+  diffuseColor.rgb = mix(
+    diffuseColor.rgb,
+    skinTinted,
+    ${skinOpacity.toFixed(2)}
+  );
   diffuseColor.a *= sampledDiffuseColor.a;
 #endif
       `,
@@ -137,7 +148,7 @@ export function TerritoryShowcaseModel({
       metalness: skinTexture ? 0.2 : 0.28,
       side: DoubleSide,
     });
-    if (skinTexture) applyLuminositySkin(material, visual.skinOpacity);
+    if (skinTexture) applyImageSkinBlend(material, visual.skinOpacity);
     return material;
   }, [skinTexture, visual.frontColor, visual.skinOpacity]);
   const sideMaterial = useMemo(
