@@ -2,11 +2,11 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
+import { ProfileStoreCategory } from "@/src/components/profile/v4/profile-store-category";
 import {
-  ProfileStoreCategory,
-  STORE_CATEGORY_IDS,
-  type StoreCategoryId,
-} from "@/src/components/profile/v4/profile-store-category";
+  STORE_CATEGORY_META,
+  isStoreCategoryId,
+} from "@/src/lib/economy/store-category-contract";
 import { ProfileShell } from "@/src/components/profile/v4/profile-shell";
 import { getAuthenticatedSessionForReadHeaders } from "@/src/lib/server/auth/auth-guard";
 import {
@@ -17,24 +17,15 @@ import {
 import { getProfileAppearanceStorefront } from "@/src/lib/server/economy/profile-appearance-store-service";
 import { getOwnCommanderProfile } from "@/src/lib/server/profile/profile-service";
 
-const LABELS: Readonly<Record<StoreCategoryId, string>> = {
-  dice: "Dados",
-  territories: "Territórios",
-  backgrounds: "Fundos",
-  titles: "Títulos",
-};
-
-function isStoreCategoryId(value: string): value is StoreCategoryId {
-  return (STORE_CATEGORY_IDS as readonly string[]).includes(value);
-}
-
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ category: string }>;
 }): Promise<Metadata> {
   const { category } = await params;
-  const label = isStoreCategoryId(category) ? LABELS[category] : "Catálogo";
+  const label = isStoreCategoryId(category)
+    ? STORE_CATEGORY_META[category].label
+    : "Catálogo";
   return {
     title: `${label} · Intendência`,
     robots: { index: false, follow: false },
