@@ -43,7 +43,7 @@ function prefersReducedMotion() {
 
 function DoctrineMetrics({ chapter }: { chapter: DoctrineChapter }) {
   return (
-    <dl className={styles.metrics} aria-label={`Dados-chave de ${chapter.title}`}>
+    <dl className={styles.metrics} aria-label={`Resumo de ${chapter.title}`}>
       {chapter.metrics.map((metric) => (
         <div key={`${chapter.slug}-${metric.label}`} className={styles.metric}>
           <dt>{metric.label}</dt>
@@ -186,8 +186,8 @@ export function DoctrineExperience({
           </div>
 
           <p>
-            Protocolos operacionais para compreender a máquina antes de entrar em
-            combate.
+            Regras do jogo explicadas passo a passo, da preparação até a
+            vitória.
           </p>
 
           <nav
@@ -217,8 +217,8 @@ export function DoctrineExperience({
           </nav>
 
           <div className={styles.indexFooter}>
-            <span>LEITURA AUTORIZADA</span>
-            <small>Sem dados privados da partida</small>
+            <span>GUIA DE REGRAS</span>
+            <small>Seu objetivo continua secreto</small>
           </div>
         </aside>
 
@@ -241,7 +241,7 @@ export function DoctrineExperience({
               <article className={styles.briefing} aria-labelledby="briefing-title">
                 <div className={styles.sectionLabel}>
                   <span>01</span>
-                  <b id="briefing-title">REGRA OPERACIONAL</b>
+                  <b id="briefing-title">COMO JOGAR</b>
                 </div>
                 <ul>
                   {activeChapter.principles.map((principle) => (
@@ -257,7 +257,7 @@ export function DoctrineExperience({
               >
                 <div className={styles.sectionLabel}>
                   <span>02</span>
-                  <b id="demonstration-title">DEMONSTRAÇÃO DA MÁQUINA</b>
+                  <b id="demonstration-title">EXEMPLO DA REGRA</b>
                 </div>
                 <DoctrineChapterDemo
                   chapter={activeChapter}
