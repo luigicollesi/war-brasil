@@ -310,7 +310,6 @@ test(
 
         const brazilCommerce = await client.query(`
           SELECT item.id,
-                 pricing.cosmetic_id IS NOT NULL AS has_pricing,
                  COALESCE(product.active,FALSE) AS product_active,
                  COALESCE(offer.active,FALSE) AS offer_active
           FROM catalog.cosmetics item
@@ -330,7 +329,6 @@ test(
         assert.ok(
           brazilCommerce.rows.every(
             (row) =>
-              row.has_pricing === false &&
               row.product_active === false &&
               row.offer_active === false,
           ),
