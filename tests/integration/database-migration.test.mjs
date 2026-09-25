@@ -377,13 +377,13 @@ async function assertAuthProfileSchema(client) {
     commanderColumns.rows.map((row) => row.column_name),
   );
   for (const name of [
-    "bio",
     "last_seen_at",
     "equipped_title_id",
     "equipped_background_id",
   ]) {
     assert.equal(commanderColumnNames.has(name), true, name);
   }
+  assert.equal(commanderColumnNames.has("bio"), false, "bio removida");
   assert.equal(commanderColumnNames.has("portrait_source"), false, "portrait_source removido");
   assert.equal(commanderColumnNames.has("portrait_ref"), false, "portrait_ref removido");
 
@@ -396,12 +396,16 @@ async function assertAuthProfileSchema(client) {
     profileConstraints.rows.map((row) => row.conname),
   );
   for (const name of [
-    "commanders_bio_not_blank_check",
     "commanders_equipped_title_owned_fkey",
     "commanders_equipped_background_owned_fkey",
   ]) {
     assert.equal(profileConstraintNames.has(name), true, name);
   }
+  assert.equal(
+    profileConstraintNames.has("commanders_bio_not_blank_check"),
+    false,
+    "commanders_bio_not_blank_check removida",
+  );
   assert.equal(profileConstraintNames.has("commanders_portrait_source_check"), false);
   assert.equal(profileConstraintNames.has("commanders_portrait_pair_check"), false);
 
