@@ -3,9 +3,14 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { authClient } from "@/client/auth-client";
 import { useCommandSceneDirective } from "@/src/components/pre-game/foundation";
+import {
+  readCachedProfileBackgroundRef,
+  rememberProfileBackgroundRef,
+  resolveProfileBackgroundDisplayUrl,
+} from "@/src/lib/client/profile/profile-background-cache";
 import styles from "./profile-shell.module.css";
 
 export type ProfileSurface = "dossier" | "arsenal" | "store";
@@ -80,7 +85,63 @@ export function ProfileShell({
 }) {
   const router = useRouter();
   const [logoutState, setLogoutState] = useState<"idle" | "closing" | "error">("idle");
+  const [resolvedBackgroundUrl, setResolvedBackgroundUrl] = useState<string | null>(null);
   useCommandSceneDirective(SCENE_DIRECTIVES[activeSurface]);
+
+  useEffect(() => {
+    let disposed = false;
+    let objectUrl: string | null = null;
+
+    async function resolveBackground() {
+      let assetRef = backgroundAssetRef;
+
+      if (assetRef && handle) {
+        rememberProfileBackgroundRef(handle, assetRef);
+      }
+
+      if (!assetRef && handle) {
+        assetRef = readCachedProfileBackgroundRef(handle);
+      }
+
+      if (!assetRef && handle) {
+        try {
+          const response = await fetch("/api/profile/appearance/background", {
+            cache: "no-store",
+          });
+          const body = (await response.json().catch(() => null)) as
+            | { assetRef?: string }
+            | null;
+          if (response.ok && body?.assetRef) {
+            assetRef = body.assetRef;
+            rememberProfileBackgroundRef(handle, assetRef);
+          }
+        } catch {
+          // The shell keeps its dark fallback if appearance lookup is unavailable.
+        }
+      }
+
+      if (!assetRef) {
+        if (!disposed) setResolvedBackgroundUrl(null);
+        return;
+      }
+
+      const displayUrl = await resolveProfileBackgroundDisplayUrl(assetRef);
+      if (disposed) {
+        if (displayUrl.startsWith("blob:")) URL.revokeObjectURL(displayUrl);
+        return;
+      }
+
+      if (displayUrl.startsWith("blob:")) objectUrl = displayUrl;
+      setResolvedBackgroundUrl(displayUrl);
+    }
+
+    void resolveBackground();
+
+    return () => {
+      disposed = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [backgroundAssetRef, handle]);
 
   async function handleLogout() {
     if (logoutState === "closing") return;
@@ -118,11 +179,11 @@ export function ProfileShell({
       data-fixed-header={fixedHeader ? "true" : "false"}
       data-session-state={logoutState}
     >
-      {backgroundAssetRef ? (
+      {resolvedBackgroundUrl ? (
         <>
           <div
             className={styles.profileBackdrop}
-            style={{ backgroundImage: `url("${backgroundAssetRef}")` }}
+            style={{ backgroundImage: `url("${resolvedBackgroundUrl}")` }}
             aria-hidden="true"
           />
           <div className={styles.profileBackdropScrim} aria-hidden="true" />
