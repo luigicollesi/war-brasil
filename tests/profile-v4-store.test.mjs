@@ -715,14 +715,14 @@ test("PROFILE V4 mobile keeps dice and territory catalogs in two columns while c
 });
 
 
-test("PROFILE V4 collection banners share a fixed 9 by 5 crop", async () => {
+test("PROFILE V4 collection banners share a fixed 9 by 4 crop", async () => {
   const store = await source("src/components/profile/v4/profile-store.tsx");
   const styles = await source("src/components/profile/v4/profile-store.module.css");
 
   assert.match(store, /className=\{styles\.collectionBannerViewport\}/);
   assert.match(
     styles,
-    /\.collectionBannerViewport\s*\{[^}]*aspect-ratio:\s*9\s*\/\s*5;[^}]*overflow:\s*hidden;/,
+    /\.collectionBannerViewport\s*\{[^}]*aspect-ratio:\s*9\s*\/\s*4;[^}]*overflow:\s*hidden;/,
   );
   assert.match(
     styles,
