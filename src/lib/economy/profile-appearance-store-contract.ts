@@ -1,3 +1,5 @@
+import type { ProfileAppearanceRarity } from "@/src/lib/profile/profile-appearance-contract";
+
 export type ProfileAppearanceCollectionUnlock = Readonly<{
   collectionId: string;
   collectionName: string;
@@ -5,8 +7,6 @@ export type ProfileAppearanceCollectionUnlock = Readonly<{
   totalCount: number;
   complete: boolean;
 }>;
-
-import type { ProfileAppearanceRarity } from "@/src/lib/profile/profile-appearance-contract";
 
 export type ProfileAppearanceStoreTitle = Readonly<{
   kind: "commander_title";
