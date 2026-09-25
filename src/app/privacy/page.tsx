@@ -66,7 +66,7 @@ export default function PrivacyPage() {
                 de quando a verificação de idade foi concluída.
               </li>
               <li>
-                <strong>Perfil:</strong> nome de exibição, identificador @, bio,
+                <strong>Perfil:</strong> nome de exibição, identificador @,
                 títulos, backgrounds, cosméticos equipados, presença e preferências
                 relacionadas ao perfil.
               </li>
@@ -181,7 +181,7 @@ export default function PrivacyPage() {
           content: (
             <>
               <p>
-                Nome de exibição, identificador @, bio, presença, títulos, backgrounds,
+                Nome de exibição, identificador @, presença, títulos, backgrounds,
                 cosméticos equipados e outras informações de jogo configuradas como
                 públicas podem ser vistas por outros jogadores.
               </p>
