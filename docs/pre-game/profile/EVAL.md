@@ -38,10 +38,10 @@ Economia, wallet, offers, preço, purchase, inventário, loadout jogável, catá
 
 | ID | Critério | Evidência mínima |
 | --- | --- | --- |
-| PRO4-DOS-01 | primeira leitura apresenta nome, handle, título, bio, presença e atividade sem depender de avatar | DOM/visual |
+| PRO4-DOS-01 | primeira leitura apresenta nome, handle, título, presença e atividade sem depender de avatar | DOM/visual |
 | PRO4-DOS-02 | não existe moldura/slot vazio que sugira foto de perfil ausente | 1440x900 + 390x844 visual |
 | PRO4-DOS-03 | `Ajuste Dossiê` está integrado à composição e não aparece como painel desconectado após todo o conteúdo | interaction/visual |
-| PRO4-DOS-04 | editar display name/bio/privacidade continua persistente e autorizado server-side | integration |
+| PRO4-DOS-04 | editar display name/privacidade continua persistente e autorizado server-side | integration |
 | PRO4-DOS-05 | Rede de Comando permanece acessível e funcional | E2E |
 | PRO4-DOS-06 | histórico recente permanece acessível e possui continuidade explícita | E2E |
 | PRO4-DOS-07 | social/histórico não competem visualmente com identidade como cinco estações equivalentes | visual review |
@@ -240,7 +240,7 @@ As invariantes financeiras são avaliadas em `../../economy/EVAL.md`. Aqui valid
 - `PRO4-S1`: visitante tenta `/profile`.
 - `PRO4-S2`: usuário autenticado abre Dossiê e o shell mostra saldo real com `/coin.svg`.
 - `PRO4-S3`: navegar Dossiê→Arsenal→Intendência→back/forward.
-- `PRO4-S4`: editar display name/bio e recarregar.
+- `PRO4-S4`: editar display name e recarregar.
 - `PRO4-S5`: abrir e fechar edição sem perder dados.
 - `PRO4-S6`: economia indisponível enquanto Dossiê/social/histórico permanecem utilizáveis.
 - `PRO4-S7`: OAuth possui imagem, mas nenhuma imagem/URL aparece no Profile.
