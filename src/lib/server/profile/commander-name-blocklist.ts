@@ -1,13 +1,11 @@
 import "server-only";
 
-export const RESERVED_COMMANDER_ROLE_WORDS = new Set([
+export const RESERVED_COMMANDER_DISPLAY_ROLE_WORDS = new Set([
   "admin",
   "administrator",
   "administrador",
-  "adm",
   "moderador",
   "moderator",
-  "mod",
   "staff",
   "support",
   "suporte",
@@ -15,6 +13,12 @@ export const RESERVED_COMMANDER_ROLE_WORDS = new Set([
   "sistema",
   "official",
   "oficial",
+]);
+
+export const RESERVED_COMMANDER_HANDLE_ROLE_WORDS = new Set([
+  ...RESERVED_COMMANDER_DISPLAY_ROLE_WORDS,
+  "adm",
+  "mod",
   "developer",
   "desenvolvedor",
   "dev",
