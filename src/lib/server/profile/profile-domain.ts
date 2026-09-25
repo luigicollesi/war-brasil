@@ -33,7 +33,6 @@ export type CommanderActivityDto = Readonly<{
 export type CommanderIdentityDto = Readonly<{
   handle: string;
   displayName: string;
-  bio: string | null;
   title: CommanderTitleDto | null;
   presence: CommanderPresenceDto;
   activity: CommanderActivityDto;
