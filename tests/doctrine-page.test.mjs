@@ -85,7 +85,7 @@ test("read model da Doutrina deriva mecânicas das autoridades do jogo", () => {
   assert.match(departure.lede, /cartas vão para o descarte/);
   assert.match(
     departure.principles.join(" "),
-    /menos territórios.*empate.*aleatoriamente/,
+    /menos territórios.*empate.*aleatória/,
   );
   assert.match(
     departure.principles.join(" "),
@@ -202,7 +202,7 @@ test("demonstrações reutilizam assets reais e explicam negociação sem confun
   assert.match(demos, /TerritoryCardArtwork/);
   assert.match(demos, /presentation\.playerTrade\.offerLimitPerTurn/);
   assert.match(demos, /presentation\.playerTrade\.signalLimitPerTurn/);
-  assert.match(demos, /NEGOCIAÇÃO ≠ RESGATE/);
+  assert.match(demos, /TROCA NÃO É RESGATE/);
   assert.match(demos, /presentation\.objectiveFormats/);
   assert.match(demos, /chapter\.metrics/);
   assert.match(demos, /presentation\.conquest/);
@@ -392,10 +392,8 @@ test("Doutrina restringe dourado oliva a detalhes e não preenche superfícies d
     "src/components/doctrine/doctrine-ux-enhancements.module.css",
   );
 
-  const viewportAfter = css.slice(
-    css.indexOf(".demoViewport::after"),
-    css.indexOf(".demoFrame figcaption"),
-  );
+  const viewportAfter =
+    css.match(/\.demoViewport::after\s*\{[^}]*\}/)?.[0] ?? "";
   assert.match(viewportAfter, /44px 1px no-repeat/);
   assert.match(viewportAfter, /1px 44px no-repeat/);
   assert.doesNotMatch(viewportAfter, /clip-path/);
@@ -404,10 +402,8 @@ test("Doutrina restringe dourado oliva a detalhes e não preenche superfícies d
     /background:\s*rgba\(205,\s*180,\s*107,\s*0\.35\)/,
   );
 
-  const departureFrame = uxCss.slice(
-    uxCss.indexOf(".departureStage::before"),
-    uxCss.indexOf(".departureProtocol"),
-  );
+  const departureFrame =
+    uxCss.match(/\.departureStage::before\s*\{[^}]*\}/)?.[0] ?? "";
   assert.match(departureFrame, /36px 1px no-repeat/);
   assert.match(departureFrame, /1px 36px no-repeat/);
   assert.doesNotMatch(departureFrame, /clip-path/);
