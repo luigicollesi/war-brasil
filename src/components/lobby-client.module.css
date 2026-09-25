@@ -20,11 +20,11 @@
 .title {
   max-width: 760px;
   margin-top: 8px;
-  font-family: var(--font-wb-display), sans-serif;
-  font-size: clamp(2.7rem, 6vw, 5.4rem);
-  font-weight: 760;
-  line-height: 0.86;
-  letter-spacing: -0.025em;
+  font-family: var(--font-wb-brand), serif;
+  font-size: clamp(2.55rem, 5.65vw, 5.05rem);
+  font-weight: 700;
+  line-height: 0.94;
+  letter-spacing: 0.015em;
   text-transform: uppercase;
 }
 
