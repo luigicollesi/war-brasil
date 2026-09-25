@@ -416,11 +416,11 @@ function EventsDemo({ presentation }: { presentation: DoctrinePresentation }) {
   );
 }
 
-function DepartureDemo() {
+function DepartureDemo({ presentation }: { presentation: DoctrinePresentation }) {
   return (
     <DemoFrame
       label="O que acontece quando um jogador sai da partida"
-      caption="Quando um jogador sai, suas cartas vão para o descarte, seus territórios são redistribuídos e os objetivos dos jogadores que continuam são verificados outra vez. Isso pode fazer mais de um jogador vencer ao mesmo tempo."
+      caption={`Quando um jogador sai, suas cartas vão para o descarte. Os territórios são embaralhados e distribuídos tentando equilibrar a quantidade de territórios entre quem continua; cada território recebido fica com ${presentation.departure.redistributedTroops} tropa. Depois, os objetivos são verificados outra vez.`}
     >
       <div className={ux.departureStage}>
         <div className={ux.departureProtocol}>
@@ -504,7 +504,7 @@ function DepartureDemo() {
                   {
                     key: "departure-a",
                     label: "Jogador A",
-                    troops: 1,
+                    troops: presentation.departure.redistributedTroops,
                     x: 27,
                     y: 32,
                     tone: "ally",
@@ -512,7 +512,7 @@ function DepartureDemo() {
                   {
                     key: "departure-b",
                     label: "Jogador B",
-                    troops: 1,
+                    troops: presentation.departure.redistributedTroops,
                     x: 73,
                     y: 67,
                     tone: "enemy",
@@ -533,7 +533,7 @@ function DepartureDemo() {
                     kind: "move",
                   },
                 ]}
-                caption="Cada território vai para um dos jogadores que têm menos territórios naquele momento. Em caso de empate, a escolha é aleatória."
+                caption="Os territórios são embaralhados e entregues um por um. A cada entrega, o jogo prioriza quem tem menos territórios; em caso de empate, a escolha é aleatória."
               />
             </div>
             <div className={ux.departureBalanceRail}>
@@ -551,9 +551,15 @@ function DepartureDemo() {
                 <b>3</b>
                 DESEMPATE ALEATÓRIO
               </span>
+              <i aria-hidden="true">→</i>
+              <span>
+                <b>4</b>
+                {presentation.departure.redistributedTroops} TROPA
+              </span>
             </div>
             <small className={ux.departureTroopNote}>
-              Ao ser redistribuído, o território fica com 1 tropa.
+              Não importa quantas tropas havia antes: cada território
+              redistribuído fica com {presentation.departure.redistributedTroops}.
             </small>
           </section>
 
@@ -651,7 +657,7 @@ export function DoctrineChapterDemo({
     case "events":
       return <EventsDemo presentation={presentation} />;
     case "departure":
-      return <DepartureDemo />;
+      return <DepartureDemo presentation={presentation} />;
     case "victory":
       return <VictoryDemo />;
   }
