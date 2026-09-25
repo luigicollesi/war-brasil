@@ -56,3 +56,64 @@ test("title collection membership does not activate title commerce", () => {
   assert.match(backgroundCommerce, /status='retired'/);
   assert.match(backgroundCommerce, /active=FALSE/);
 });
+
+
+test("appearance storefront projects collection membership for backgrounds and titles", () => {
+  const contract = readFileSync(
+    "src/lib/economy/profile-appearance-store-contract.ts",
+    "utf8",
+  );
+  const repository = readFileSync(
+    "src/lib/server/economy/profile-appearance-store-repository.ts",
+    "utf8",
+  );
+  const service = readFileSync(
+    "src/lib/server/economy/profile-appearance-store-service.ts",
+    "utf8",
+  );
+
+  assert.match(contract, /collectionId: string \| null/);
+  assert.match(repository, /title\.collection_id/);
+  assert.match(repository, /background\.collection_id/);
+  assert.match(service, /collectionId: row\.collection_id/);
+});
+
+test("mixed collection bundles can grant gameplay cosmetics, backgrounds and titles atomically", () => {
+  const entitlementMigration = readFileSync(
+    "src/lib/db/migrations/managed/051-economy-entitlements.sql",
+    "utf8",
+  );
+  const service = readFileSync(
+    "src/lib/server/economy/economy-service.ts",
+    "utf8",
+  );
+  const repository = readFileSync(
+    "src/lib/server/economy/entitlement-repository.ts",
+    "utf8",
+  );
+
+  assert.match(
+    entitlementMigration,
+    /entitlement_kind IN \('game_cosmetic','commander_title','profile_background'\)/,
+  );
+  assert.match(service, /lockProductEntitlementStats/);
+  assert.match(service, /listLockedProductEntitlementsForPurchase/);
+  assert.match(service, /grantEntitlementOwnership/);
+  assert.match(repository, /entitlement_kind === "game_cosmetic"/);
+  assert.match(repository, /entitlement_kind === "commander_title"/);
+  assert.match(repository, /profile\.commander_backgrounds/);
+});
+
+test("collection promotions apply to explicit collection products independently of item membership metadata", () => {
+  const quoteRepository = readFileSync(
+    "src/lib/server/economy/storefront-quote-repository.ts",
+    "utf8",
+  );
+
+  assert.match(quoteRepository, /product\.collection_id/);
+  assert.match(quoteRepository, /lockStorefrontCollectionPromotion/);
+  assert.match(
+    quoteRepository,
+    /WHERE collection\.id=\$1[\s\S]*collection\.active=TRUE/,
+  );
+});
