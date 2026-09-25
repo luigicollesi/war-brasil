@@ -71,7 +71,7 @@ test("PROFILE V4 suppresses global command chrome across profile routes and keep
   assert.match(runtime, /pathname\.startsWith\("\/profile\/"\)/);
   assert.match(runtime, /chrome=\{!profileOwnsChrome\}/);
   assert.match(categoryPage, /<ProfileShell/);
-  assert.match(showcasePage, /<ProfileShell/);
+  assert.doesNotMatch(showcasePage, /<ProfileShell/);
   assert.doesNotMatch(publicPage, /ProfileShell/);
   assert.doesNotMatch(shell, /className=\{styles\.mobileNav\}/);
   assert.match(
