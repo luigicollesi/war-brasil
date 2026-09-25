@@ -283,26 +283,6 @@ export function ProfileStore({
 
   return (
     <div ref={storeRef} className={styles.store} data-profile-v4-surface="store">
-      <div className={styles.storeFixedAtmosphere} aria-hidden="true">
-        <span className={styles.fixedCommandStripe} />
-        <span className={styles.fixedArmorPlate} />
-        <span className={styles.fixedLightSweep} />
-      </div>
-
-      <div className={styles.storeAtmosphere} aria-hidden="true">
-        <span className={styles.atmosphereBase} />
-        <span className={styles.atmosphereOptical} />
-        <span className={styles.atmospherePlatePrimary} />
-        <span className={styles.atmospherePlateSecondary} />
-        <span className={styles.atmosphereGhostType}>14</span>
-        <span className={styles.atmosphereLight} />
-        <span className={styles.atmosphereLeftMass} />
-        <span className={styles.atmosphereLowerMass} />
-        <span className={styles.signalClusterLeft}>WB/14 // SUPPLY</span>
-        <span className={styles.signalClusterRight}>LOGISTICS // INT</span>
-        <span className={styles.atmosphereVignette} />
-      </div>
-
       <nav className={styles.storeNav} aria-label="Navegação da Intendência">
         <a
           href="#store-highlights"
