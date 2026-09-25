@@ -72,7 +72,7 @@ Gates principais: `PRO4-ARCH-01..07`, `PRO4-SHELL-01..09`, `PRO4-IMG-*` aplicáv
 
 Cobrir:
 
-- nome, handle, título, bio, presença e atividade;
+- nome, handle, título, presença e atividade;
 - identidade sem avatar;
 - `Ajustar Dossiê` integrado à composição;
 - social e histórico como módulos secundários;
