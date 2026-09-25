@@ -259,6 +259,53 @@ export async function listStorefrontOfferItems(
   return result.rows;
 }
 
+
+export async function listStorefrontCategoryOfferItems(
+  userId: string,
+  slots: ReadonlyArray<"dice_attack" | "dice_defense" | "dice_neutral" | "territory_skin">,
+  db: EconomyQueryable = pool,
+): Promise<StorefrontOfferItemRow[]> {
+  const result = await db.query<StorefrontOfferItemRow>(
+    `SELECT offer.id AS offer_id,
+            membership.position,
+            item.id,
+            item.slug,
+            item.name,
+            item.description,
+            item.slot,
+            item.rarity,
+            item.asset_ref,
+            item.body_color,
+            item.body_highlight_color,
+            item.preview_ref,
+            item.effect_key,
+            item.status,
+            item.is_default,
+            (owned.cosmetic_id IS NOT NULL) AS owned,
+            (loadout.cosmetic_id=item.id) AS equipped
+       FROM catalog.offers offer
+       JOIN catalog.products product ON product.id=offer.product_id
+       JOIN catalog.product_items membership ON membership.product_id=product.id
+       JOIN catalog.cosmetics item ON item.id=membership.cosmetic_id
+       LEFT JOIN inventory.cosmetics owned
+         ON owned.user_id=$1::uuid
+        AND owned.cosmetic_id=item.id
+       LEFT JOIN profile.cosmetic_loadout loadout
+         ON loadout.user_id=$1::uuid
+        AND loadout.slot=item.slot
+      WHERE offer.status='available'
+        AND offer.active=TRUE
+        AND product.active=TRUE
+        AND product.collection_id IS NULL
+        AND item.slot = ANY($2::varchar[])
+        AND (offer.starts_at IS NULL OR offer.starts_at <= CURRENT_TIMESTAMP)
+        AND (offer.ends_at IS NULL OR offer.ends_at > CURRENT_TIMESTAMP)
+      ORDER BY offer.priority, offer.sort_order, offer.id, membership.position`,
+    [userId, slots],
+  );
+  return result.rows;
+}
+
 export async function listStorefrontCampaigns(
   db: EconomyQueryable = pool,
 ): Promise<StorefrontCampaignRow[]> {
