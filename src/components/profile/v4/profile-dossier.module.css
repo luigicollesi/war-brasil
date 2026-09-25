@@ -150,11 +150,11 @@
 .identityMain h1 {
   margin: 0;
   color: var(--ivory);
-  font-family: var(--font-wb-display), sans-serif;
-  font-size: clamp(2.25rem, 5vw, 5.5rem);
-  font-weight: 760;
-  line-height: 0.92;
-  letter-spacing: -0.035em;
+  font-family: var(--font-wb-brand), serif;
+  font-size: clamp(2.15rem, 4.8vw, 5.15rem);
+  font-weight: 700;
+  line-height: 0.96;
+  letter-spacing: 0.015em;
   text-transform: uppercase;
 }
 
@@ -311,7 +311,7 @@
 .guestState h1 {
   margin: 0;
   color: var(--ivory);
-  font-family: var(--font-wb-display), sans-serif;
+  font-family: var(--font-wb-brand), serif;
   font-size: clamp(1.6rem, 4vw, 3rem);
   text-transform: uppercase;
 }
