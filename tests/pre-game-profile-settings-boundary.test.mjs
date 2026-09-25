@@ -64,8 +64,8 @@ test("Profile settings route rejects malformed JSON and mutation boundary owns o
   const route = read("src/app/api/profile/settings/route.ts");
   const boundary = read("src/lib/server/profile/social-http.ts");
 
-  assert.match(route, /request\.json\(\)/);
-  assert.match(route, /INVALID_JSON/);
+  assert.match(route, /readBoundedJsonBody\(request\)/);
+  assert.match(route, /BoundedJsonBodyError/);
   assert.match(boundary, /rejectUntrustedMutationOrigin\(request\)/);
   assert.match(boundary, /getAuthenticatedSession\(request\)/);
 });
