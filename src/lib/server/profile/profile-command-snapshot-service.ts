@@ -240,7 +240,6 @@ export async function getCurrentProfileCommandSnapshot(
       data: {
         displayName: profile.identity.displayName,
         handle: profile.identity.handle,
-        bio: profile.identity.bio,
         title: profile.identity.title?.name ?? null,
         presence: {
           state: livePresence.state,
