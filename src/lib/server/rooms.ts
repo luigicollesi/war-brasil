@@ -5,6 +5,8 @@ import type { PoolClient } from "pg";
 import { pool } from "@/src/lib/db/pool";
 import { isGameRuleset, type GameRuleset } from "@/src/lib/game-mode";
 import { isPlayerColor, type LobbySnapshot, type PlayerColor } from "@/src/lib/lobby";
+import type { ProfileAppearanceRarity } from "@/src/lib/profile/profile-appearance-contract";
+import { profileAppearanceAssetDeliveryPath } from "@/src/lib/server/profile/profile-appearance-asset-storage";
 import {
   assertActiveParticipationAvailable,
   lockActiveParticipationForUser,
@@ -52,6 +54,12 @@ type PlayerRow = {
   is_ready: boolean;
   is_bot: boolean;
   is_me?: boolean;
+  title_id: string | null;
+  title_display_text: string | null;
+  title_rarity: ProfileAppearanceRarity | null;
+  title_font_key: string | null;
+  title_style_key: string | null;
+  title_texture_ref: string | null;
 };
 
 type PlayerIdentityRow = {
@@ -89,6 +97,25 @@ function toSnapshot(room: RoomRow, players: PlayerRow[]): LobbySnapshot {
         ? player.faction_name
         : player.display_name_snapshot ?? player.faction_name;
 
+    const equippedTitle =
+      !player.is_bot &&
+      player.title_id &&
+      player.title_display_text &&
+      player.title_rarity &&
+      player.title_font_key &&
+      player.title_style_key
+        ? {
+            id: player.title_id,
+            displayText: player.title_display_text,
+            rarity: player.title_rarity,
+            fontKey: player.title_font_key,
+            styleKey: player.title_style_key,
+            textureRef: player.title_texture_ref
+              ? profileAppearanceAssetDeliveryPath(player.title_texture_ref)
+              : null,
+          }
+        : null;
+
     return {
       id: player.id,
       factionName: player.faction_name,
@@ -98,6 +125,7 @@ function toSnapshot(room: RoomRow, players: PlayerRow[]): LobbySnapshot {
       isReady: player.is_ready,
       isMe: Boolean(player.is_me),
       isBot: player.is_bot,
+      equippedTitle,
     };
   });
   const me = mappedPlayers.find((player) => player.isMe);
@@ -586,12 +614,28 @@ export async function getLobbySnapshot(codeValue: unknown, playerSession: string
   if (!room) throw new RoomError("Sala não encontrada.", 404);
 
   const playerResult = await pool.query<PlayerRow>(
-    `SELECT id, faction_name, display_name_snapshot, handle_snapshot,
-            color, is_ready, is_bot,
-            player_session = $2 AS is_me
-     FROM game.players
-     WHERE room_id = $1
-     ORDER BY joined_at ASC, id ASC`,
+    `SELECT player.id,
+            player.faction_name,
+            player.display_name_snapshot,
+            player.handle_snapshot,
+            player.color,
+            player.is_ready,
+            player.is_bot,
+            player.player_session = $2 AS is_me,
+            title.id AS title_id,
+            title.display_text AS title_display_text,
+            title.rarity AS title_rarity,
+            title.font_key AS title_font_key,
+            title.style_key AS title_style_key,
+            title.texture_ref AS title_texture_ref
+       FROM game.players player
+       LEFT JOIN profile.commanders commander
+         ON commander.user_id = player.user_id
+       LEFT JOIN catalog.commander_titles title
+         ON title.id = commander.equipped_title_id
+        AND title.is_active = TRUE
+      WHERE player.room_id = $1
+      ORDER BY player.joined_at ASC, player.id ASC`,
     [room.id, playerSession],
   );
 
