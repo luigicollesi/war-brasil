@@ -43,7 +43,7 @@ export async function listActiveProfileAppearanceStoreRows(
                 COUNT(item.id)::int AS total_count,
                 COUNT(owned.cosmetic_id)::int AS owned_count
            FROM catalog.collections collection
-           JOIN catalog.cosmetics item
+           LEFT JOIN catalog.cosmetics item
              ON item.collection_id=collection.id
             AND item.is_default=FALSE
             AND item.status IN ('announced','available')
