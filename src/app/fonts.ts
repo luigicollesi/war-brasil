@@ -1,4 +1,5 @@
 import {
+  Barlow,
   Barlow_Condensed,
   Bebas_Neue,
   Black_Ops_One,
@@ -9,8 +10,20 @@ import {
   Oxanium,
 } from "next/font/google";
 
-export const interfaceFont = Inter({
+export const interfaceFont = Barlow({
   variable: "--font-wb-ui",
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+});
+
+export const brandFont = Cinzel({
+  variable: "--font-wb-brand",
+  subsets: ["latin"],
+  weight: ["600", "700", "800"],
+});
+
+export const legacyStoreInterfaceFont = Inter({
+  variable: "--font-wb-store-ui",
   subsets: ["latin"],
 });
 
