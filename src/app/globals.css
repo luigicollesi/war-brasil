@@ -85,6 +85,7 @@ input {
   position: fixed;
   inset: 0;
   overflow: hidden;
+  font-family: var(--font-wb-ui), sans-serif;
   background:
     radial-gradient(circle at 50% 42%, rgba(63, 117, 91, 0.20), transparent 38%),
     radial-gradient(circle at 12% 12%, rgba(217, 182, 80, 0.08), transparent 24%),
@@ -136,8 +137,10 @@ input {
 
 .game-runtime > div > section:first-of-type h1 {
   color: #fffdf5;
+  font-family: var(--font-wb-brand), serif;
   font-size: 1.05rem;
-  letter-spacing: 0.01em;
+  font-weight: 700;
+  letter-spacing: 0.02em;
 }
 
 .game-runtime > div > section:first-of-type p {
