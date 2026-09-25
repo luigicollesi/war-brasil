@@ -402,12 +402,13 @@ async function main() {
       reducedMotion: "reduce",
     });
     try {
-      await step("FND-02 Foundation persiste entre Operações e Lobby", async () => {
+      await step("FND-02A Foundation persiste de Operações para Lobby", async () => {
         await assertPersistentScene(foundationActor.page, "operations");
-
         await createRoomThroughUi(foundationActor);
         await assertPersistentScene(foundationActor.page, "lobby");
+      });
 
+      await step("FND-02B Foundation persiste de Lobby para Operações", async () => {
         await foundationActor.page
           .getByRole("link", { name: /Operações/ })
           .first()
