@@ -12,6 +12,11 @@ import type {
 } from "@/src/lib/economy/profile-appearance-store-contract";
 import { cosmeticPreviewSource } from "@/src/lib/economy/cosmetic-preview";
 import {
+  STORE_CATEGORY_IDS,
+  STORE_STORE_CATEGORY_META,
+  type StoreCategoryId,
+} from "@/src/lib/economy/store-category-contract";
+import {
   ShowcasePurchaseError,
   purchaseShowcaseOffer,
 } from "@/src/lib/client/store-showcase/purchase-showcase-offer";
@@ -19,33 +24,7 @@ import { ProfileTitleRenderer } from "@/src/components/profile/profile-title-ren
 import { TerritorySkinPreview } from "@/src/components/economy/territory-skin-preview";
 import styles from "./profile-store-category.module.css";
 
-export const STORE_CATEGORY_IDS = ["dice", "territories", "backgrounds", "titles"] as const;
-export type StoreCategoryId = (typeof STORE_CATEGORY_IDS)[number];
-
 const INTEGER_FORMAT = new Intl.NumberFormat("pt-BR");
-
-const CATEGORY_META: Readonly<Record<StoreCategoryId, { label: string; kicker: string; description: string }>> = {
-  dice: {
-    label: "Dados",
-    kicker: "CATÁLOGO // EQUIPAMENTO DE COMBATE",
-    description: "Personalize os dados usados durante seus confrontos.",
-  },
-  territories: {
-    label: "Territórios",
-    kicker: "CATÁLOGO // CAMPO DE BATALHA",
-    description: "Aplique acabamentos visuais aos territórios sem alterar a leitura de jogo.",
-  },
-  backgrounds: {
-    label: "Fundos",
-    kicker: "CATÁLOGO // DOSSIÊ DO COMANDANTE",
-    description: "Personalize a atmosfera visual do seu perfil e Dossiê.",
-  },
-  titles: {
-    label: "Títulos",
-    kicker: "CATÁLOGO // IDENTIDADE DO COMANDANTE",
-    description: "Equipe títulos e estilos que acompanham sua identidade de comandante.",
-  },
-};
 
 function ownershipLabel(owned: boolean, fullyOwned: boolean) {
   return owned || fullyOwned ? "POSSUÍDO" : "DISPONÍVEL";
@@ -99,7 +78,7 @@ export function ProfileStoreCategory({
   const router = useRouter();
   const [pendingOfferId, setPendingOfferId] = useState<string | null>(null);
   const [message, setMessage] = useState<{ kind: "success" | "error"; text: string } | null>(null);
-  const meta = CATEGORY_META[category];
+  const meta = STORE_CATEGORY_META[category];
 
   const diceOffers = useMemo(
     () => gameplayOffers.filter(isDiceOffer),
@@ -175,7 +154,7 @@ export function ProfileStoreCategory({
             data-active={category === id ? "true" : undefined}
             aria-current={category === id ? "page" : undefined}
           >
-            {CATEGORY_META[id].label.toUpperCase()}
+            {STORE_CATEGORY_META[id].label.toUpperCase()}
           </Link>
         ))}
       </nav>
