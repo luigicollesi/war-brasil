@@ -8,6 +8,7 @@ import { resolveCommandPlayerBySession } from "@/src/lib/game-command-player";
 import type { GameCommandRequestMetadata } from "@/src/lib/game-command-request";
 import {
   balancedTerritoryAssignments,
+  DEPARTURE_REDISTRIBUTED_TROOPS,
   type DepartureRecipient,
 } from "@/src/lib/shared/game-departure-rules";
 import { advanceGameRound } from "@/src/lib/server/game-round-service";
@@ -140,12 +141,13 @@ async function redistributeTerritories(
   await client.query(
     `UPDATE game.territories territory
         SET owner_player_id=assignment.player_id,
+            troops=$4::smallint,
             moved_in_turn=0
        FROM unnest($2::smallint[], $3::bigint[])
             AS assignment(territory_id,player_id)
       WHERE territory.room_id=$1
         AND territory.territory_id=assignment.territory_id`,
-    [roomId, ids, owners],
+    [roomId, ids, owners, DEPARTURE_REDISTRIBUTED_TROOPS],
   );
 
   return assignments;
