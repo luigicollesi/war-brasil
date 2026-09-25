@@ -409,10 +409,24 @@ async function main() {
       });
 
       await step("FND-02B Foundation persiste de Lobby para Operações", async () => {
+        const leaveResponse = foundationActor.page.waitForResponse(
+          (response) => {
+            const url = new URL(response.url());
+            return (
+              response.request().method() === "DELETE" &&
+              /\/api\/rooms\/[^/]+\/me$/.test(url.pathname)
+            );
+          },
+          { timeout: LOBBY_CONVERGENCE_TIMEOUT_MS },
+        );
+
         await foundationActor.page
-          .getByRole("link", { name: /Operações/ })
-          .first()
+          .getByRole("button", { name: "Voltar para Operações", exact: true })
           .click();
+
+        const response = await leaveResponse;
+        assert.equal(response.status(), 200);
+
         await foundationActor.page.waitForURL(/\/matchmaking$/, {
           timeout: 10_000,
         });
