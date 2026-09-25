@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
-import { balancedTerritoryAssignments } from "../.test-build/shared/game-departure-rules.js";
+import {
+  balancedTerritoryAssignments,
+  DEPARTURE_REDISTRIBUTED_TROOPS,
+} from "../.test-build/shared/game-departure-rules.js";
 
 test("redistribuição prioriza sempre quem possui menos territórios", () => {
   const assignments = balancedTerritoryAssignments(
@@ -50,6 +53,24 @@ test("empates podem ser resolvidos aleatoriamente sem perder igualdade", () => {
   assert.ok(Math.abs(received.get("a") - received.get("b")) <= 1);
 });
 
+
+
+test("territórios redistribuídos voltam ao mínimo de uma tropa", () => {
+  assert.equal(DEPARTURE_REDISTRIBUTED_TROOPS, 1);
+
+  const service = readFileSync(
+    "src/lib/server/game-player-exit-service.ts",
+    "utf8",
+  );
+
+  assert.match(service, /troops=\$4::smallint/);
+  assert.match(service, /DEPARTURE_REDISTRIBUTED_TROOPS/);
+  assert.match(
+    service,
+    /\[roomId, ids, owners, DEPARTURE_REDISTRIBUTED_TROOPS\]/,
+  );
+});
+
 test("serviço de saída mantém toda mutação dentro do comando autoritativo", () => {
   const service = readFileSync(
     "src/lib/server/game-player-exit-service.ts",
@@ -65,6 +86,8 @@ test("serviço de saída mantém toda mutação dentro do comando autoritativo",
   assert.match(service, /left_at=NOW\(\)/);
   assert.match(service, /zone='discard',owner_player_id=NULL,deck_order=NULL/);
   assert.match(service, /balancedTerritoryAssignments/);
+  assert.match(service, /shuffled\(territoryIds\)/);
+  assert.match(service, /randomInt\(exclusiveMax\)/);
   assert.match(service, /unnest\(\$2::smallint\[\], \$3::bigint\[\]\)/);
   assert.match(service, /evaluateGameVictories/);
   assert.match(service, /finalizeGameVictories/);
