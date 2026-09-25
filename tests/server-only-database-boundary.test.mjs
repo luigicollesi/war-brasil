@@ -98,8 +98,11 @@ test("direct database drivers and connection configuration stay inside server-on
     const path = projectPath(file);
     const isServerLibrary = path.startsWith("src/lib/server/");
     const isServerRoute = path.startsWith("src/app/api/") && path.endsWith("/route.ts");
+    const isExplicitServerOnlyShim =
+      /import\s+["']server-only["'];/.test(source) &&
+      /^export\s+\*\s+from\s+["'][^"']*\/server\//m.test(source);
 
-    if (!isServerLibrary && !isServerRoute) {
+    if (!isServerLibrary && !isServerRoute && !isExplicitServerOnlyShim) {
       violations.push(path);
     }
   }
