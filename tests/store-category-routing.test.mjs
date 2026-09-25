@@ -159,3 +159,22 @@ test("server route never imports runtime category values from a client component
     /STORE_CATEGORY_IDS[\s\S]*from "@\/src\/components\/profile\/v4\/profile-store-category"/,
   );
 });
+
+
+test("background category shows collection progress and locks purchase until complete", async () => {
+  const component = await source(
+    "src/components/profile/v4/profile-store-category.tsx",
+  );
+  const styles = await source(
+    "src/components/profile/v4/profile-store-category.module.css",
+  );
+
+  assert.match(component, /item\.collectionUnlock/);
+  assert.match(component, /collectionUnlock\.ownedCount/);
+  assert.match(component, /collectionUnlock\.totalCount/);
+  assert.match(component, /collectionUnlock\.complete/);
+  assert.match(component, /"BLOQUEADO"/);
+  assert.match(component, /!offer\.purchasable/);
+  assert.match(styles, /\.collectionProgress/);
+  assert.match(styles, /data-collection-locked/);
+});
