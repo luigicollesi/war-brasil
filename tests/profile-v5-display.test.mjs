@@ -98,13 +98,35 @@ test("public profile arsenal couples responsive asset and label geometry through
   assert.match(stage, /scale=\{layout\.attack\.scale\}/);
   assert.match(stage, /style=\{labelStyle\(item\.slot\)\}/);
 
-  assert.match(layout, /desktop:[\s\S]*attack: \{ x: 0\.14, y: 0\.57/);
-  assert.match(layout, /compact:[\s\S]*attack: \{ x: 0\.27, y: 0\.43/);
-  assert.match(layout, /neutral: \{ x: 0\.27, y: 0\.715/);
+  assert.match(layout, /desktop:[\s\S]*attack: \{ x: 0\.14, y: 0\.615[\s\S]*labelY: 0\.715/);
+  assert.match(layout, /compact:[\s\S]*attack: \{ x: 0\.27, y: 0\.445[\s\S]*labelY: 0\.505/);
+  assert.match(layout, /neutral: \{ x: 0\.27, y: 0\.705[\s\S]*labelY: 0\.765/);
   assert.match(layout, /compactShort/);
 
   assert.match(styles, /top:\s*var\(--profile-label-y\)/);
   assert.match(styles, /@media \(max-width: 720px\)[\s\S]*top:\s*var\(--profile-label-y-compact\)/);
   assert.match(styles, /@media \(max-width: 720px\) and \(max-height: 760px\)/);
   assert.doesNotMatch(styles, /\.label:nth-child/);
+});
+
+
+test("public profile mobile labels stay close to their assets without collapsing the two rows", async () => {
+  const layout = await source("src/components/profile/profile-display-stage-layout.ts");
+
+  assert.match(
+    layout,
+    /compact:[\s\S]*attack: \{ x: 0\.27, y: 0\.445, labelX: 0\.27, labelY: 0\.505/,
+  );
+  assert.match(
+    layout,
+    /neutral: \{ x: 0\.27, y: 0\.705, labelX: 0\.27, labelY: 0\.765/,
+  );
+  assert.match(
+    layout,
+    /compactShort:[\s\S]*attack: \{ x: 0\.27, y: 0\.43, labelX: 0\.27, labelY: 0\.49/,
+  );
+  assert.match(
+    layout,
+    /neutral: \{ x: 0\.27, y: 0\.68, labelX: 0\.27, labelY: 0\.74/,
+  );
 });
