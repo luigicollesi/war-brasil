@@ -204,6 +204,8 @@ test("PROFILE V4 shares the equipped background across DossiÃª, Arsenal, IntendÃ
 
   assert.match(cache, /localStorage\.getItem/);
   assert.match(cache, /localStorage\.setItem/);
+  assert.match(cache, /PROFILE_BACKGROUND_UPDATED_EVENT/);
+  assert.match(cache, /window\.dispatchEvent/);
   assert.match(cache, /caches\.open|window\.caches\.open/);
   assert.match(cache, /cache\.match\(assetRef\)/);
   assert.match(cache, /cache\.put\(assetRef, response\.clone\(\)\)/);
@@ -229,4 +231,22 @@ test("PROFILE V4 asks the server for the equipped background only after the brow
     shell.slice(cachedLookup - 80, endpointLookup + 180),
     /readCachedProfileBackgroundRef\(handle\)[\s\S]*if \(!assetRef && backgroundAssetRef\)[\s\S]*if \(!assetRef && handle\)[\s\S]*fetch/,
   );
+});
+
+test("PROFILE V4 applies a newly equipped background in the same tab without reload", async () => {
+  const shell = await source("src/components/profile/v4/profile-shell.tsx");
+  const cache = await source("src/lib/client/profile/profile-background-cache.ts");
+
+  assert.match(shell, /PROFILE_BACKGROUND_UPDATED_EVENT/);
+  assert.match(shell, /setLiveBackgroundAssetRef\(detail\.assetRef\)/);
+  assert.match(shell, /let assetRef = liveBackgroundAssetRef/);
+  assert.match(
+    shell,
+    /\[backgroundAssetRef, handle, liveBackgroundAssetRef\]/,
+  );
+
+  assert.match(cache, /export async function applyProfileBackgroundRef/);
+  assert.match(cache, /rememberProfileBackgroundRef\(handle, assetRef\)/);
+  assert.match(cache, /await warmProfileBackgroundAsset\(assetRef\)/);
+  assert.match(cache, /new CustomEvent<ProfileBackgroundUpdatedDetail>/);
 });
