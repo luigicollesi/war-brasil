@@ -39,7 +39,6 @@ function identityFromRow(row: CommanderProfileRow): CommanderIdentityDto | null 
   return {
     handle,
     displayName,
-    bio: row.bio?.trim() || null,
     title: titleFromRow(row),
     presence: {
       state: "unavailable",
