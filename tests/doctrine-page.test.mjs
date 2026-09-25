@@ -370,3 +370,50 @@ test("demonstração de Retirada usa mapa e cartas reais com composição respon
     /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.departureScanLine::after/,
   );
 });
+
+
+test("Doutrina restringe dourado oliva a detalhes e não preenche superfícies de destaque", () => {
+  const css = source(
+    "src/components/doctrine/doctrine-experience.module.css",
+  );
+  const uxCss = source(
+    "src/components/doctrine/doctrine-ux-enhancements.module.css",
+  );
+
+  const viewportAfter = css.slice(
+    css.indexOf(".demoViewport::after"),
+    css.indexOf(".demoFrame figcaption"),
+  );
+  assert.match(viewportAfter, /44px 1px no-repeat/);
+  assert.match(viewportAfter, /1px 44px no-repeat/);
+  assert.doesNotMatch(viewportAfter, /clip-path/);
+  assert.doesNotMatch(
+    viewportAfter,
+    /background:\s*rgba\(205,\s*180,\s*107,\s*0\.35\)/,
+  );
+
+  const departureFrame = uxCss.slice(
+    uxCss.indexOf(".departureStage::before"),
+    uxCss.indexOf(".departureProtocol"),
+  );
+  assert.match(departureFrame, /36px 1px no-repeat/);
+  assert.match(departureFrame, /1px 36px no-repeat/);
+  assert.doesNotMatch(departureFrame, /clip-path/);
+  assert.doesNotMatch(
+    departureFrame,
+    /background:\s*rgba\(205,\s*180,\s*107/,
+  );
+
+  assert.match(
+    css,
+    /\.phaseStep[\s\S]*rgba\(72, 110, 85, 0\.07\)/,
+  );
+  assert.match(
+    css,
+    /\.reinforcementReadout[\s\S]*background:\s*rgba\(9, 16, 13, 0\.92\)/,
+  );
+  assert.match(
+    uxCss,
+    /\.departureVictoryStep[\s\S]*rgba\(72, 110, 85, 0\.1\)/,
+  );
+});
