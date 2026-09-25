@@ -53,3 +53,34 @@ test("profile appearance storefront exposes owned state and authoritative offer 
   assert.match(service, /product_entitlement_count/);
   assert.match(service, /profileAppearanceAssetDeliveryPath/);
 });
+
+
+test("background purchases enforce collection completion before any economic mutation", async () => {
+  const repository = await source("src/lib/server/economy/entitlement-repository.ts");
+  const service = await source("src/lib/server/economy/economy-service.ts");
+
+  assert.match(repository, /listBackgroundCollectionRequirementsForPurchase/);
+  assert.match(repository, /background\.collection_id IS NOT NULL/);
+  assert.match(repository, /item\.status IN \('announced','available'\)/);
+  assert.match(repository, /COUNT\(owned\.cosmetic_id\)::int AS owned_count/);
+
+  const eligibilityIndex = service.indexOf(
+    "listBackgroundCollectionRequirementsForPurchase",
+    service.indexOf("export async function purchaseOffer"),
+  );
+  const receiptIndex = service.indexOf(
+    "createPurchaseReceipt(",
+    service.indexOf("export async function purchaseOffer"),
+  );
+  const debitIndex = service.indexOf(
+    "debitCampaignCreditWallet(",
+    service.indexOf("export async function purchaseOffer"),
+  );
+
+  assert.ok(eligibilityIndex >= 0);
+  assert.ok(receiptIndex > eligibilityIndex);
+  assert.ok(debitIndex > eligibilityIndex);
+  assert.match(service, /ECONOMY_COLLECTION_INCOMPLETE/);
+  assert.match(service, /requirement\.owned_count !== requirement\.total_count/);
+  assert.match(service, /requirement\.total_count <= 0/);
+});
