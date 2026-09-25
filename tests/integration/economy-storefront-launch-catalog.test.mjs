@@ -129,7 +129,220 @@ test(
                  MIN(fixed_price)::bigint AS min_price,
                  MAX(fixed_price)::bigint AS max_price
           FROM catalog.cosmetic_pricing
-          WHERE cosmetic_id ~ '^dice\\.(attack|defense|neutral)\\.(simple-silver|exercito|lancas|gato|viking|futebol)$'
+          WHERE cosmetic_id ~ '^dice\\.(attack|defense|neutral)\\.(exercito|lancas|gato|viking|futebol|cachorro)
+          GROUP BY theme
+          ORDER BY theme
+        `);
+        const prices = Object.fromEntries(
+          pricing.rows.map((row) => [row.theme, Number(row.min_price)]),
+        );
+        assert.deepEqual(prices, {
+          cachorro: 500,
+          exercito: 150,
+          futebol: 500,
+          gato: 500,
+          lancas: 150,
+          viking: 500,
+        });
+        assert.ok(pricing.rows.every((row) => row.min_price === row.max_price));
+
+        const bundles = await client.query(`
+          SELECT id, collection_id, bundle_discount_bps, active
+          FROM catalog.products
+          WHERE id IN (
+            'product.simple-silver', 'product.exercito', 'product.lancas',
+            'product.gato', 'product.viking', 'product.futebol', 'product.cachorro'
+          )
+          ORDER BY id
+        `);
+        const byId = Object.fromEntries(bundles.rows.map((row) => [row.id, row]));
+        assert.equal(byId["product.simple-silver"].collection_id, null);
+        assert.equal(byId["product.simple-silver"].bundle_discount_bps, 1111);
+        assert.equal(byId["product.simple-silver"].active, false);
+        for (const id of ["product.exercito", "product.lancas"]) {
+          assert.equal(byId[id].collection_id, null);
+          assert.equal(byId[id].bundle_discount_bps, 1111);
+          assert.equal(byId[id].active, true);
+        }
+        for (const [id, collectionId] of [
+          ["product.gato", "collection.cat"],
+          ["product.viking", "collection.viking"],
+          ["product.futebol", "collection.football"],
+        ]) {
+          assert.equal(byId[id].collection_id, collectionId);
+          assert.equal(byId[id].bundle_discount_bps, 2000);
+          assert.equal(byId[id].active, true);
+        }
+        assert.equal(byId["product.cachorro"].collection_id, "collection.dog");
+        assert.equal(byId["product.cachorro"].bundle_discount_bps, 2000);
+        assert.equal(byId["product.cachorro"].active, true);
+
+        const offers = await client.query(`
+          SELECT id, price, status, active, starts_at, ends_at
+          FROM catalog.offers
+          WHERE id IN (
+            'offer.simple-silver', 'offer.exercito', 'offer.lancas',
+            'offer.gato', 'offer.viking', 'offer.futebol', 'offer.cachorro'
+          )
+          ORDER BY id
+        `);
+        const offerById = Object.fromEntries(offers.rows.map((row) => [row.id, row]));
+        assert.equal(Number(offerById["offer.simple-silver"].price), 400);
+        assert.equal(offerById["offer.simple-silver"].status, "retired");
+        assert.equal(offerById["offer.simple-silver"].active, false);
+        assert.equal(offerById["offer.simple-silver"].starts_at, null);
+        assert.equal(offerById["offer.simple-silver"].ends_at, null);
+        for (const id of ["offer.exercito", "offer.lancas"]) {
+          assert.equal(Number(offerById[id].price), 400);
+          assert.equal(offerById[id].status, "available");
+          assert.equal(offerById[id].active, true);
+          assert.equal(offerById[id].starts_at, null);
+          assert.equal(offerById[id].ends_at, null);
+        }
+        for (const id of ["offer.gato", "offer.viking", "offer.futebol"]) {
+          assert.equal(Number(offerById[id].price), 1200);
+          assert.equal(offerById[id].status, "available");
+          assert.equal(offerById[id].active, true);
+        }
+        assert.equal(Number(offerById["offer.cachorro"].price), 1200);
+        assert.equal(offerById["offer.cachorro"].status, "available");
+        assert.equal(offerById["offer.cachorro"].active, true);
+
+        const collections = await client.query(`
+          SELECT id, active
+          FROM catalog.collections
+          WHERE id IN (
+            'collection.military-classic', 'collection.medieval-spears',
+            'collection.cat', 'collection.viking', 'collection.football', 'collection.dog',
+            'collection.ceu-noturno'
+          )
+          ORDER BY id
+        `);
+        const collectionById = Object.fromEntries(
+          collections.rows.map((row) => [row.id, row.active]),
+        );
+        assert.deepEqual(collectionById, {
+          "collection.cat": true,
+          "collection.ceu-noturno": true,
+          "collection.dog": true,
+          "collection.football": true,
+          "collection.medieval-spears": false,
+          "collection.military-classic": false,
+          "collection.viking": true,
+        });
+
+        const assets = await client.query(`
+          SELECT collection_id, role, object_key
+          FROM catalog.collection_assets
+          WHERE active
+            AND collection_id IN (
+              'collection.cat', 'collection.viking', 'collection.football',
+              'collection.dog', 'collection.ceu-noturno'
+            )
+          ORDER BY collection_id, role
+        `);
+        assert.equal(assets.rowCount, 15);
+        for (const collection of ["cat", "viking", "football", "dog", "ceu-noturno"]) {
+          for (const role of ["banner", "background", "logo"]) {
+            assert.ok(
+              assets.rows.some(
+                (row) =>
+                  row.collection_id === `collection.${collection}` &&
+                  row.role === role &&
+                  row.object_key === `store/collections/${collection}/${role}.webp`,
+              ),
+            );
+          }
+        }
+
+        const territoryPricing = await client.query(`
+          SELECT item.id, item.collection_id, pricing.fixed_price::bigint AS fixed_price
+          FROM catalog.cosmetics item
+          JOIN catalog.cosmetic_pricing pricing ON pricing.cosmetic_id=item.id
+          WHERE item.slot='territory_skin'
+            AND item.is_default=FALSE
+          ORDER BY item.id
+        `);
+        const territoryById = Object.fromEntries(
+          territoryPricing.rows.map((row) => [row.id, row]),
+        );
+        assert.equal(
+          territoryById["territory.effect.ceu-estrelado"].collection_id,
+          "collection.ceu-noturno",
+        );
+        assert.equal(
+          Number(territoryById["territory.effect.ceu-estrelado"].fixed_price),
+          500,
+        );
+        for (const id of [
+          "territory.effect.azulejo-brasil",
+          "territory.effect.azulejo-ornamental",
+          "territory.effect.solar-ornamental",
+        ]) {
+          assert.equal(territoryById[id].collection_id, null);
+          assert.equal(Number(territoryById[id].fixed_price), 300);
+        }
+
+        const missingOfferCoverage = await client.query(`
+          SELECT item.id
+          FROM catalog.cosmetics item
+          LEFT JOIN catalog.product_items membership
+            ON membership.cosmetic_id=item.id
+           AND membership.product_id='product.single.' || item.id
+          LEFT JOIN catalog.products product
+            ON product.id=membership.product_id
+          LEFT JOIN catalog.offers offer
+            ON offer.product_id=product.id
+           AND offer.id='offer.single.' || item.id
+           AND offer.status='available'
+           AND offer.active=TRUE
+          WHERE item.is_default=FALSE
+            AND item.status IN ('announced','available')
+            AND item.id NOT IN (
+              'dice.attack.brazil',
+              'dice.defense.brazil',
+              'dice.neutral.brazil'
+            )
+            AND (product.id IS NULL OR product.active=FALSE OR offer.id IS NULL)
+          ORDER BY item.id
+        `);
+        assert.deepEqual(missingOfferCoverage.rows, []);
+
+        const brazilCommerce = await client.query(`
+          SELECT item.id,
+                 pricing.cosmetic_id IS NOT NULL AS has_pricing,
+                 COALESCE(product.active,FALSE) AS product_active,
+                 COALESCE(offer.active,FALSE) AS offer_active
+          FROM catalog.cosmetics item
+          LEFT JOIN catalog.cosmetic_pricing pricing ON pricing.cosmetic_id=item.id
+          LEFT JOIN catalog.products product
+            ON product.id='product.single.' || item.id
+          LEFT JOIN catalog.offers offer
+            ON offer.id='offer.single.' || item.id
+          WHERE item.id IN (
+            'dice.attack.brazil',
+            'dice.defense.brazil',
+            'dice.neutral.brazil'
+          )
+          ORDER BY item.id
+        `);
+        assert.equal(brazilCommerce.rowCount, 3);
+        assert.ok(
+          brazilCommerce.rows.every(
+            (row) =>
+              row.has_pricing === false &&
+              row.product_active === false &&
+              row.offer_active === false,
+          ),
+        );
+
+      } finally {
+        await client.end();
+      }
+    });
+  },
+);
+
           GROUP BY theme
           ORDER BY theme
         `);
