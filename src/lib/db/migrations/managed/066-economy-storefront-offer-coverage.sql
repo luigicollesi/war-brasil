@@ -138,7 +138,6 @@ SELECT 'product.single.' || item.id,
    )
 ON CONFLICT (id) DO UPDATE
 SET collection_id=EXCLUDED.collection_id,
-    slug=EXCLUDED.slug,
     name=EXCLUDED.name,
     description=EXCLUDED.description,
     product_type='single',
@@ -280,14 +279,8 @@ ON CONFLICT (offer_id, cosmetic_id) DO UPDATE
 SET position=EXCLUDED.position;
 
 -- Brazil stays intentionally non-commercial even though its cosmetics are
--- available and non-default.
-DELETE FROM catalog.cosmetic_pricing
- WHERE cosmetic_id IN (
-   'dice.attack.brazil',
-   'dice.defense.brazil',
-   'dice.neutral.brazil'
- );
-
+-- available and non-default. Preserve any historical rows, but never expose an
+-- active product or offer for them.
 UPDATE catalog.products
    SET active=FALSE,
        updated_at=NOW()
