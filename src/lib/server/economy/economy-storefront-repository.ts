@@ -119,6 +119,7 @@ export async function listStorefrontCollections(
         AND loadout.slot=item.slot
       WHERE collection.active=TRUE
         AND item.is_default=FALSE
+        AND item.slot IN ('dice_attack','dice_defense','dice_neutral','territory_skin')
         AND item.status IN ('announced','available')
       ORDER BY collection.featured DESC,
                collection.sort_order,
