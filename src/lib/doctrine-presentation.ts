@@ -68,11 +68,11 @@ export function buildDoctrinePresentation() {
     },
     {
       title: "FORTIFICAÇÃO",
-      description: "Sustentar a quantidade exigida de territórios com força mínima.",
+      description: "Manter a quantidade pedida de territórios com o número mínimo de tropas.",
     },
     {
       title: "ELIMINAÇÃO",
-      description: "Neutralizar o alvo atribuído quando esse formato estiver ativo.",
+      description: "Eliminar o jogador indicado quando esse tipo de objetivo estiver valendo.",
     },
   ] as const;
 
@@ -92,7 +92,7 @@ export function buildDoctrinePresentation() {
         { label: "Territórios", value: String(guide.territoryCount) },
         { label: "Regiões", value: String(guide.regionCount) },
         {
-          label: "Guarnição inicial",
+          label: "Tropas iniciais",
           value: `${guide.setup.initialTroopsPerTerritory} por território`,
         },
       ],
@@ -105,7 +105,7 @@ export function buildDoctrinePresentation() {
       title: "Você vence pelo seu objetivo, não por pontuação.",
       lede: "Cada jogador recebe um objetivo secreto. Esse objetivo diz o que ele precisa fazer para vencer.",
       principles: [
-        "Objetivos podem exigir controle territorial, domínio regional, fortificação ou eliminação.",
+        "Um objetivo pode pedir territórios, regiões completas, uma quantidade mínima de tropas ou a eliminação de um jogador.",
         "Se um objetivo pedir mais de uma coisa, todas elas precisam ser cumpridas.",
         "Seu objetivo deve guiar suas jogadas, mas os outros jogadores não precisam saber qual é.",
       ],
@@ -140,7 +140,7 @@ export function buildDoctrinePresentation() {
       number: "04",
       eyebrow: "Negociação",
       title: "Antes dos reforços, você pode trocar cartas com outro jogador.",
-      lede: `O jogador humano da vez pode negociar com outro humano ativo antes dos reforços. Há até ${guide.playerTrade.offerLimitPerTurn} ofertas por turno; os demais humanos podem emitir até ${guide.playerTrade.signalLimitPerTurn} sinalizações de carta.`,
+      lede: `Antes dos Reforços, o jogador humano da vez pode trocar cartas com outro jogador humano que ainda esteja na partida. Ele pode fazer até ${guide.playerTrade.offerLimitPerTurn} ofertas por turno. Os outros jogadores podem marcar até ${guide.playerTrade.signalLimitPerTurn} cartas que aceitam trocar.`,
       principles: [
         "Você pode pedir uma carta de um território, de um símbolo ou um coringa. Bots não participam das Trocas.",
         "O outro jogador pode aceitar, recusar ou fazer uma contraoferta. A troca precisa terminar ou ser cancelada antes dos Reforços.",
@@ -148,7 +148,7 @@ export function buildDoctrinePresentation() {
       ],
       metrics: [
         { label: "Ofertas do turno", value: String(guide.playerTrade.offerLimitPerTurn) },
-        { label: "Sinalizações", value: String(guide.playerTrade.signalLimitPerTurn) },
+        { label: "Cartas marcadas", value: String(guide.playerTrade.signalLimitPerTurn) },
         { label: "Participantes", value: "humanos ativos" },
       ],
       visual: "trade",
@@ -160,7 +160,7 @@ export function buildDoctrinePresentation() {
       title: "No começo dos Reforços, você recebe tropas para colocar no mapa.",
       lede: `O reforço base é metade dos territórios controlados, arredondada para baixo, respeitando o mínimo de ${guide.reinforcement.minimum} tropas. Regiões completas e resgates de cartas aumentam esse total.`,
       principles: [
-        `Com ${guide.reinforcement.territoryExample} territórios, o exemplo vigente gera ${guide.reinforcement.baseExample} tropas de reforço base.`,
+        `Com ${guide.reinforcement.territoryExample} territórios, você recebe ${guide.reinforcement.baseExample} tropas de Reforço base.`,
         "Se você controlar uma região inteira, recebe também o bônus daquela região.",
         "Se você for obrigado a resgatar cartas, faça o resgate antes de terminar de colocar seus reforços.",
       ],
@@ -285,7 +285,7 @@ export function buildDoctrinePresentation() {
     {
       slug: "retirada",
       number: "12",
-      eyebrow: "Contingência",
+      eyebrow: "Saída da partida",
       title: "Se alguém sair da partida, o mapa é reorganizado.",
       lede: "Quando um jogador sai no meio da partida, as trocas pendentes são canceladas, suas cartas vão para o descarte e seus territórios são divididos entre os jogadores que continuam. Depois disso, os objetivos são verificados novamente.",
       principles: [
@@ -305,7 +305,7 @@ export function buildDoctrinePresentation() {
     {
       slug: "vitoria",
       number: "13",
-      eyebrow: "Fim de operação",
+      eyebrow: "Vitória",
       title: "Você vence quando completa seu objetivo.",
       lede: "Para vencer, você precisa cumprir exatamente o seu objetivo. Ter muitos territórios, tropas ou cartas só vale se isso fizer parte dele.",
       principles: [
@@ -315,7 +315,7 @@ export function buildDoctrinePresentation() {
       ],
       metrics: [
         { label: "Critério", value: "objetivo" },
-        { label: "Condição", value: "objetivo cumprido" },
+        { label: "Para vencer", value: "cumpra o objetivo" },
         { label: "Resultado", value: "vitória" },
       ],
       visual: "victory",
