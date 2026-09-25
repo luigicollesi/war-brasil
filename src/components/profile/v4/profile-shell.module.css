@@ -19,11 +19,6 @@
   isolation: isolate;
 }
 
-.page[data-active-surface="store"] {
-  --font-wb-ui: var(--font-wb-legacy-ui);
-  font-family: var(--font-wb-legacy-ui), sans-serif;
-}
-
 .ambient {
   position: fixed;
   inset: 0;
@@ -76,6 +71,7 @@
 
 .commandBar {
   position: sticky;
+  font-family: var(--font-wb-ui), sans-serif;
   top: 0;
   z-index: 30;
   min-height: 78px;
@@ -153,6 +149,7 @@
 
 .commandCopy strong {
   overflow: hidden;
+  font-family: var(--font-wb-display), sans-serif;
   color: var(--profile-ivory);
   font-size: 0.94rem;
   letter-spacing: 0.025em;
@@ -201,6 +198,7 @@
 }
 
 .navItem strong {
+  font-family: var(--font-wb-display), sans-serif;
   font-size: 0.9rem;
   letter-spacing: 0.055em;
   text-transform: uppercase;
