@@ -78,8 +78,7 @@ function ObjectivesDemo({ presentation }: { presentation: DoctrinePresentation }
               </span>
             </div>
           ))}
-          </div>
-        </aside>
+        </div>
       </div>
     </DemoFrame>
   );
