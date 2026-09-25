@@ -19,6 +19,9 @@ export type ProfileAppearanceStoreRow = {
   item_description: string | null;
   rarity: ProfileAppearanceRarity;
   collection_id: string | null;
+  collection_name: string | null;
+  collection_owned_count: number | null;
+  collection_total_count: number | null;
   display_text: string | null;
   font_key: string | null;
   style_key: string | null;
@@ -34,7 +37,22 @@ export async function listActiveProfileAppearanceStoreRows(
   db: EconomyQueryable = pool,
 ): Promise<ProfileAppearanceStoreRow[]> {
   const result = await db.query<ProfileAppearanceStoreRow>(
-    `SELECT *
+    `WITH collection_progress AS (
+         SELECT collection.id AS collection_id,
+                collection.name AS collection_name,
+                COUNT(item.id)::int AS total_count,
+                COUNT(owned.cosmetic_id)::int AS owned_count
+           FROM catalog.collections collection
+           JOIN catalog.cosmetics item
+             ON item.collection_id=collection.id
+            AND item.is_default=FALSE
+            AND item.status IN ('announced','available')
+           LEFT JOIN inventory.cosmetics owned
+             ON owned.user_id=$1::uuid
+            AND owned.cosmetic_id=item.id
+          GROUP BY collection.id,collection.name
+       )
+       SELECT *
        FROM (
          SELECT offer.id AS offer_id,
                 product.id AS product_id,
@@ -54,6 +72,9 @@ export async function listActiveProfileAppearanceStoreRows(
                 title.description AS item_description,
                 title.rarity,
                 title.collection_id,
+                NULL::text AS collection_name,
+                NULL::int AS collection_owned_count,
+                NULL::int AS collection_total_count,
                 title.display_text,
                 title.font_key,
                 title.style_key,
@@ -103,6 +124,9 @@ export async function listActiveProfileAppearanceStoreRows(
                 background.description AS item_description,
                 background.rarity,
                 background.collection_id,
+                progress.collection_name,
+                progress.owned_count AS collection_owned_count,
+                progress.total_count AS collection_total_count,
                 NULL::text AS display_text,
                 NULL::text AS font_key,
                 NULL::text AS style_key,
@@ -122,6 +146,8 @@ export async function listActiveProfileAppearanceStoreRows(
              ON background.id=membership.background_id
            JOIN catalog.profile_background_pricing pricing
              ON pricing.background_id=background.id
+           LEFT JOIN collection_progress progress
+             ON progress.collection_id=background.collection_id
            LEFT JOIN profile.commander_backgrounds owned
              ON owned.user_id=$1::uuid
             AND owned.background_id=background.id
