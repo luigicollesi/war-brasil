@@ -273,7 +273,8 @@ test("onboarding grava somente para a conta da sessão, exige idade e trata hand
   assert.match(commandAccess, /\[session\.user\.id, handle, displayName\]/);
   assert.match(commandAccess, /CommanderAgeGateRequiredError/);
   assert.match(commandAccess, /error\.code === "23505"/);
-  assert.match(commandAccessRoute, /validateCommanderIdentity\(input\)/);
+  assert.match(commandAccessRoute, /parseCommanderIdentityWriteDto\(body\)/);
+  assert.match(commandAccess, /assertCommanderIdentityAllowed\(input\)/);
   assert.match(commandAccessRoute, /age_gate_required/);
   assert.match(commandAccessRoute, /status: 409/);
   assert.doesNotMatch(commandAccessRoute, /body\?\.userId|body\?\.user_id/);
@@ -412,4 +413,36 @@ test("promoção de credencial separa accountId text de userId uuid", () => {
     pendingRegistration,
     /VALUES\(\$1, \$2, 'credential', \$2, \$3, NOW\(\), NOW\(\)\)/,
   );
+});
+
+
+test("commander identity uses shared client DTO and server-only moderation policy", () => {
+  const contract = readFileSync(
+    "src/lib/profile/commander-name-contract.ts",
+    "utf8",
+  );
+  const policy = readFileSync(
+    "src/lib/server/profile/commander-name-policy.ts",
+    "utf8",
+  );
+  const blocklist = readFileSync(
+    "src/lib/server/profile/commander-name-blocklist.ts",
+    "utf8",
+  );
+
+  assert.match(onboarding, /validateCommanderIdentityDraft/);
+  assert.match(onboarding, /JSON\.stringify\(validation\.value\)/);
+  assert.match(commandAccessRoute, /parseCommanderIdentityWriteDto/);
+  assert.match(commandAccess, /assertCommanderIdentityAllowed/);
+
+  assert.match(contract, /normalize\("NFKC"\)/);
+  assert.match(contract, /CONTROL_OR_FORMAT_CHARACTER/);
+  assert.match(contract, /REPEATED_HANDLE_SEPARATOR/);
+  assert.match(policy, /^import "server-only";/m);
+  assert.match(blocklist, /^import "server-only";/m);
+  assert.match(policy, /applyLeetspeak/);
+  assert.match(policy, /collapseEvasionRepeats/);
+  assert.match(policy, /hasSuspiciousScriptMix/);
+  assert.match(policy, /RESERVED_COMMANDER_NAME_KEYS/);
+  assert.match(policy, /BLOCKED_COMMANDER_WORDS/);
 });
