@@ -192,7 +192,7 @@ test("demonstrações reutilizam assets reais e explicam negociação sem confun
   assert.doesNotMatch(demos, /Canvas|@react-three|three\//i);
 });
 
-test("Doutrina mobile fixa navegador e ações no rodapé sem cobrir conteúdo", () => {
+test("Doutrina usa um único comando central e fixa navegador e ações no mobile", () => {
   const experience = source(
     "src/components/doctrine/doctrine-experience.tsx",
   );
@@ -203,8 +203,11 @@ test("Doutrina mobile fixa navegador e ações no rodapé sem cobrir conteúdo",
     "src/components/doctrine/doctrine-ux-enhancements.module.css",
   );
 
-  assert.match(experience, /className=\{ux\.mobileReturnButton\}/);
+  assert.match(experience, /className=\{styles\.commandLink\}/);
+  assert.match(experience, /aria-label="Ir ao comando"/);
   assert.match(experience, />\s*COMANDO\s*</);
+  assert.doesNotMatch(experience, /mobileReturnButton/);
+  assert.match(experience, /<b>\{nextChapter\.title\}<\/b>/);
   assert.match(
     uxCss,
     /@media \(max-width: 760px\)[\s\S]*\.indexPanel\s*\{[\s\S]*bottom: 0/,
@@ -213,11 +216,11 @@ test("Doutrina mobile fixa navegador e ações no rodapé sem cobrir conteúdo",
     uxCss,
     /@media \(max-width: 760px\)[\s\S]*\.content\s*\{[\s\S]*padding-bottom:/,
   );
-  assert.match(uxCss, /\.mobileReturnButton/);
   assert.match(
     css,
     /@media \(max-width: 760px\)[\s\S]*\.prevNext\s*\{[\s\S]*position: fixed/,
   );
+  assert.match(css, /\.commandLink\s*\{/);
   assert.match(css, /env\(safe-area-inset-bottom\)/);
   assert.match(css, /min-height: 44px/);
 });
@@ -266,18 +269,18 @@ test("índice desktop limita tipografia e compacta registros sem alterar o índi
 
   assert.match(
     uxCss,
-    /--doctrine-index-width:s*clamp(300px,s*21vw,s*360px)/,
+    /--doctrine-index-width:\s*clamp\(300px,\s*21vw,\s*360px\)/,
   );
   assert.match(
     uxCss,
-    /.indexTitleRow h1s*{[sS]*font-size:s*clamp(36px,s*3vw,s*48px)/,
+    /\.indexTitleRow h1\s*\{[\s\S]*font-size:\s*clamp\(36px,\s*3vw,\s*48px\)/,
   );
   assert.match(
     uxCss,
-    /@media (min-width: 761px)[sS]*.chapterNav as*{[sS]*min-height:s*34px/,
+    /@media \(min-width: 761px\)[\s\S]*\.chapterNav a\s*\{[\s\S]*min-height:\s*34px/,
   );
   assert.match(
     uxCss,
-    /@media (max-width: 760px)[sS]*.chapterNavs*{[sS]*overflow-x:s*auto/,
+    /@media \(max-width: 760px\)[\s\S]*\.chapterNav\s*\{[\s\S]*overflow-x:\s*auto/,
   );
 });
