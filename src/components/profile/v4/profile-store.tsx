@@ -10,6 +10,9 @@ import type {
   EconomyStorefrontSnapshot,
   StorefrontCollection,
 } from "@/src/lib/economy/economy-contract";
+import type { ProfileAppearanceStorefront } from "@/src/lib/economy/profile-appearance-store-contract";
+import { TerritorySkinPreview } from "@/src/components/economy/territory-skin-preview";
+import { ProfileTitleRenderer } from "@/src/components/profile/profile-title-renderer";
 import { cosmeticPreviewSource } from "@/src/lib/economy/cosmetic-preview";
 import {
   ShowcasePurchaseError,
@@ -33,9 +36,9 @@ type ShowcaseKind = "offer" | "collection";
 
 const STORE_NAV_SECTIONS = [
   { zone: "hero", id: "store-highlights" },
-  { zone: "dice", id: "store-dice" },
-  { zone: "territories", id: "store-territories" },
   { zone: "collections", id: "store-collections" },
+  { zone: "categories", id: "store-categories" },
+  { zone: "treasury", id: "store-credits" },
 ] as const;
 
 type StoreNavSection = (typeof STORE_NAV_SECTIONS)[number]["zone"];
@@ -122,7 +125,13 @@ function CampaignCreditAmount({ amount }: { amount: number }) {
   );
 }
 
-export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnapshot }) {
+export function ProfileStore({
+  storefront,
+  appearanceStorefront,
+}: {
+  storefront: EconomyStorefrontSnapshot;
+  appearanceStorefront: ProfileAppearanceStorefront;
+}) {
   const router = useRouter();
   const storeRef = useRef<HTMLDivElement>(null);
   const [pendingOfferId, setPendingOfferId] = useState<string | null>(null);
@@ -232,15 +241,17 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
       ),
     [collectionOfferIds, storefront.offers],
   );
-  const territoryOfferByCosmeticId = useMemo(() => {
-    const offers = new Map<string, EconomyOffer>();
-    for (const offer of storefront.offers) {
-      if (collectionOfferIds.has(offer.id) || offer.items.length !== 1) continue;
-      const [item] = offer.items;
-      if (item.slot === "territory_skin") offers.set(item.id, offer);
-    }
-    return offers;
-  }, [collectionOfferIds, storefront.offers]);
+
+  const quickDice = diceOffers[0] ?? null;
+  const quickTerritory = storefront.territorySkins[0] ?? null;
+  const quickBackground =
+    appearanceStorefront.offers
+      .flatMap((offer) => offer.items)
+      .find((item) => item.kind === "profile_background") ?? null;
+  const quickTitle =
+    appearanceStorefront.offers
+      .flatMap((offer) => offer.items)
+      .find((item) => item.kind === "commander_title") ?? null;
 
   async function handlePurchase(offer: EconomyOffer) {
     if (offer.fullyOwned || !offer.purchasable || pendingOfferId !== null) return;
@@ -307,29 +318,27 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
           DESTAQUES
         </a>
         <a
-          href="#store-dice"
-          data-active={activeSection === "dice" ? "true" : "false"}
-          aria-current={activeSection === "dice" ? "location" : undefined}
-        >
-          DADOS
-        </a>
-        <a
-          href="#store-territories"
-          data-active={activeSection === "territories" ? "true" : "false"}
-          aria-current={activeSection === "territories" ? "location" : undefined}
-        >
-          TERRITÓRIOS
-        </a>
-        <a
           href="#store-collections"
           data-active={activeSection === "collections" ? "true" : "false"}
           aria-current={activeSection === "collections" ? "location" : undefined}
         >
           COLEÇÕES
         </a>
-      </nav>
-
-      {purchaseMessage ? (
+        <a
+          href="#store-categories"
+          data-active={activeSection === "categories" ? "true" : "false"}
+          aria-current={activeSection === "categories" ? "location" : undefined}
+        >
+          CATEGORIAS
+        </a>
+        <a
+          href="#store-credits"
+          data-active={activeSection === "treasury" ? "true" : "false"}
+          aria-current={activeSection === "treasury" ? "location" : undefined}
+        >
+          CRÉDITOS
+        </a>
+      </nav>      {purchaseMessage ? (
         <div
           className={commerceStyles.purchaseFeedback}
           data-kind={purchaseMessage.kind}
@@ -490,174 +499,20 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
         )}
       </section>
 
-      <section
-        id="store-dice"
-        className={styles.catalog}
-        data-store-zone="dice"
-        data-store-layer="01"
-        aria-labelledby="catalog-title"
-      >
-        <span className={styles.supplyNetwork} aria-hidden="true" />
-        <header className={styles.sectionHeading}>
+      <section className={styles.quickGuide} aria-labelledby="store-quick-guide-title">
+        <header className={styles.quickGuideHeading}>
           <span>
-            <small>DADOS // CATÁLOGO PERMANENTE</small>
-            <h2 id="catalog-title">Dados</h2>
+            <small>GUIA RÁPIDO // CATÁLOGOS</small>
+            <h2 id="store-quick-guide-title">Encontre seu setor</h2>
           </span>
-          <strong>{diceOffers.length.toString().padStart(2, "0")}</strong>
+          <em>04 FLUXOS</em>
         </header>
-
-        {diceOffers.length > 0 ? (
-          <div className={styles.catalogGrid}>
-            {diceOffers.map((offer) => {
-              const art = itemArtwork(previewItem(offer));
-              const href = showcaseHref("offer", offer.id);
-              return (
-                <article key={offer.id} className={styles.productCard}>
-                  <Link className={styles.productSelect} href={href}>
-                    <span className={styles.productVisual}>
-                      <ProfileCosmeticImage
-                        src={art}
-                        alt={`Prévia de ${offer.name}`}
-                        width={300}
-                        height={300}
-                        fallbackClassName={styles.productFallback}
-                        fallbackLabel="WB"
-                      />
-                    </span>
-                    <span className={styles.productCopy}>
-                      <small>{offer.status === "retired" ? "ARQUIVADO" : ownershipLabel(offer)}</small>
-                      <strong>{offer.name}</strong>
-                      <em>{offer.items.length > 1 ? `${offer.items.length} ITENS` : ownershipLabel(offer)}</em>
-                    </span>
-                  </Link>
-                  <div className={commerceStyles.productCommerce}>
-                    <CampaignCreditAmount amount={offer.price} />
-                    <button
-                      type="button"
-                      aria-label={`Comprar ${offer.name}`}
-                      disabled={
-                        offer.fullyOwned ||
-                        !offer.purchasable ||
-                        pendingOfferId !== null
-                      }
-                      data-processing={pendingOfferId === offer.id ? "true" : undefined}
-                      onClick={() => void handlePurchase(offer)}
-                    >
-                      {offer.fullyOwned
-                        ? "POSSUÍDO"
-                        : pendingOfferId === offer.id
-                          ? "PROCESSANDO..."
-                          : offer.purchasable
-                            ? "COMPRAR"
-                            : "INDISPONÍVEL"}
-                    </button>
-                  </div>
-                </article>
-              );
-            })}
-          </div>
-        ) : (
-          <div className={styles.emptyCatalog}>
-            <strong>Nenhuma remessa de dados disponível</strong>
-            <span>A Intendência continua acessível enquanto o catálogo é restabelecido.</span>
-          </div>
-        )}
-      </section>
-
-      <section
-        id="store-territories"
-        className={styles.catalog}
-        data-store-zone="territories"
-        data-store-layer="02"
-        aria-labelledby="territories-title"
-      >
-        <span className={styles.frontLine} aria-hidden="true" />
-        <header className={styles.sectionHeading}>
-          <span>
-            <small>TERRITÓRIOS // CATÁLOGO PERMANENTE</small>
-            <h2 id="territories-title">Territórios</h2>
-          </span>
-          <strong>{storefront.territorySkins.length.toString().padStart(2, "0")}</strong>
-        </header>
-
-        {storefront.territorySkins.length > 0 ? (
-          <div className={styles.catalogGrid}>
-            {storefront.territorySkins.map((skin) => {
-              const offer = territoryOfferByCosmeticId.get(skin.id) ?? null;
-              const content = (
-                <>
-                  <span className={styles.productVisual}>
-                    <ProfileCosmeticImage
-                      src={itemArtwork(skin)}
-                      alt={`Prévia de ${skin.name}`}
-                      width={420}
-                      height={300}
-                      fallbackClassName={styles.productFallback}
-                      fallbackLabel="SKIN"
-                    />
-                  </span>
-                  <span className={styles.productCopy}>
-                    <small>{offer ? ownershipLabel(offer) : skin.status === "available" ? "CATÁLOGO" : "ANUNCIADO"}</small>
-                    <strong>{skin.name}</strong>
-                    <em>
-                      {skin.owned
-                        ? skin.equipped
-                          ? "EQUIPADO"
-                          : "POSSUÍDO"
-                        : offer
-                          ? "EXPOSITOR DISPONÍVEL"
-                          : "EM BREVE"}
-                    </em>
-                  </span>
-                </>
-              );
-
-              return (
-                <article key={skin.id} className={styles.productCard}>
-                  {offer ? (
-                    <Link
-                      className={styles.productSelect}
-                      href={showcaseHref("offer", offer.id, skin.id)}
-                    >
-                      {content}
-                    </Link>
-                  ) : (
-                    <div className={styles.productSelect}>{content}</div>
-                  )}
-                  {offer ? (
-                    <div className={commerceStyles.productCommerce}>
-                      <CampaignCreditAmount amount={offer.price} />
-                      <button
-                        type="button"
-                        aria-label={`Comprar ${skin.name}`}
-                        disabled={
-                          offer.fullyOwned ||
-                          !offer.purchasable ||
-                          pendingOfferId !== null
-                        }
-                        data-processing={pendingOfferId === offer.id ? "true" : undefined}
-                      onClick={() => void handlePurchase(offer)}
-                      >
-                        {offer.fullyOwned
-                          ? "POSSUÍDO"
-                          : pendingOfferId === offer.id
-                            ? "PROCESSANDO..."
-                            : offer.purchasable
-                              ? "COMPRAR"
-                              : "INDISPONÍVEL"}
-                      </button>
-                    </div>
-                  ) : null}
-                </article>
-              );
-            })}
-          </div>
-        ) : (
-          <div className={styles.emptyCatalog}>
-            <strong>Nenhum acabamento territorial anunciado</strong>
-            <span>Novas camadas visuais aparecerão aqui quando entrarem no catálogo.</span>
-          </div>
-        )}
+        <div className={styles.quickGuideGrid}>
+          <Link href="/profile/store/category/dice"><span>◇</span><strong>DADOS</strong><small>Combate</small></Link>
+          <Link href="/profile/store/category/territories"><span>⬡</span><strong>TERRITÓRIOS</strong><small>Campo de batalha</small></Link>
+          <Link href="/profile/store/category/backgrounds"><span>▱</span><strong>FUNDOS</strong><small>Dossiê</small></Link>
+          <Link href="/profile/store/category/titles"><span>≡</span><strong>TÍTULOS</strong><small>Identidade</small></Link>
+        </div>
       </section>
 
       <section
@@ -721,7 +576,108 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
       </section>
 
       <section
-        id="reforcar-tesouraria"
+        id="store-categories"
+        className={styles.catalog}
+        data-store-zone="categories"
+        data-store-layer="03"
+        aria-labelledby="categories-title"
+      >
+        <span className={styles.supplyNetwork} aria-hidden="true" />
+        <span className={styles.frontLine} aria-hidden="true" />
+        <header className={styles.sectionHeading}>
+          <span>
+            <small>CATEGORIAS // CATÁLOGO DA INTENDÊNCIA</small>
+            <h2 id="categories-title">Categorias</h2>
+          </span>
+          <strong>04</strong>
+        </header>
+
+        <div className={styles.categoryGrid}>
+          <Link href="/profile/store/category/dice" className={styles.categoryCard}>
+            <span className={styles.categoryVisual} data-category="dice">
+              <ProfileCosmeticImage
+                src={quickDice ? itemArtwork(previewItem(quickDice)) : null}
+                alt="Prévia da categoria Dados"
+                width={520}
+                height={320}
+                fallbackLabel="DADOS"
+              />
+            </span>
+            <span className={styles.categoryCopy}>
+              <small>EQUIPAMENTO DE COMBATE</small>
+              <strong>DADOS</strong>
+              <em>Personalize seus confrontos</em>
+              <b>ABRIR CATÁLOGO →</b>
+            </span>
+          </Link>
+
+          <Link href="/profile/store/category/territories" className={styles.categoryCard}>
+            <span className={styles.categoryVisual} data-category="territories">
+              <TerritorySkinPreview
+                assetRef={quickTerritory ? itemArtwork(quickTerritory) : null}
+                ariaLabel="Prévia da categoria Territórios"
+              />
+            </span>
+            <span className={styles.categoryCopy}>
+              <small>CAMPO DE BATALHA</small>
+              <strong>TERRITÓRIOS</strong>
+              <em>Personalize o mapa sem alterar a leitura</em>
+              <b>ABRIR CATÁLOGO →</b>
+            </span>
+          </Link>
+
+          <Link href="/profile/store/category/backgrounds" className={styles.categoryCard}>
+            <span className={styles.categoryVisual} data-category="backgrounds">
+              {quickBackground?.kind === "profile_background" ? (
+                <ProfileCosmeticImage
+                  src={quickBackground.previewRef ?? quickBackground.assetRef}
+                  alt="Prévia da categoria Fundos"
+                  width={520}
+                  height={320}
+                  fallbackLabel="FUNDO"
+                />
+              ) : (
+                <span className={styles.categoryFallback}>DOSSIÊ</span>
+              )}
+            </span>
+            <span className={styles.categoryCopy}>
+              <small>DOSSIÊ DO COMANDANTE</small>
+              <strong>FUNDOS</strong>
+              <em>Defina a atmosfera visual do seu perfil</em>
+              <b>ABRIR CATÁLOGO →</b>
+            </span>
+          </Link>
+
+          <Link href="/profile/store/category/titles" className={styles.categoryCard}>
+            <span className={styles.categoryVisual} data-category="titles">
+              {quickTitle?.kind === "commander_title" ? (
+                <ProfileTitleRenderer
+                  title={{
+                    id: quickTitle.id,
+                    displayText: quickTitle.displayText,
+                    rarity: quickTitle.rarity,
+                    fontKey: quickTitle.fontKey,
+                    styleKey: quickTitle.styleKey,
+                    textureRef: quickTitle.textureRef,
+                  }}
+                  className={styles.categoryTitlePreview}
+                />
+              ) : (
+                <span className={styles.categoryFallback}>TÍTULO</span>
+              )}
+            </span>
+            <span className={styles.categoryCopy}>
+              <small>IDENTIDADE DO COMANDANTE</small>
+              <strong>TÍTULOS</strong>
+              <em>Destaque sua presença no campo de comando</em>
+              <b>ABRIR CATÁLOGO →</b>
+            </span>
+          </Link>
+        </div>
+      </section>
+
+      <section
+        id="store-credits"
         className={styles.treasury}
         data-store-zone="treasury"
         data-store-layer="04"
@@ -733,8 +689,8 @@ export function ProfileStore({ storefront }: { storefront: EconomyStorefrontSnap
         </span>
         <div className={commerceStyles.treasuryIntro}>
           <small>TESOURARIA // CRÉDITOS DE CAMPANHA</small>
-          <h2 id="treasury-title">Reforçar Tesouraria</h2>
-          <p>Pacotes previstos para reforço de saldo. A aquisição em moeda real permanece indisponível nesta versão.</p>
+          <h2 id="treasury-title">Créditos</h2>
+          <p>Adquira Créditos de Campanha para desbloquear itens da Intendência. A aquisição em moeda real permanece indisponível nesta versão.</p>
         </div>
         <div className={commerceStyles.creditPacks}>
           {storefront.creditPacks.map((pack) => (
