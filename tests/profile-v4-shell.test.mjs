@@ -226,7 +226,7 @@ test("PROFILE V4 asks the server for the equipped background only after the brow
   assert.ok(cachedLookup >= 0);
   assert.ok(endpointLookup > cachedLookup);
   assert.match(
-    shell.slice(cachedLookup, endpointLookup + 180),
-    /if \(!assetRef && handle\)[\s\S]*readCachedProfileBackgroundRef[\s\S]*if \(!assetRef && handle\)[\s\S]*fetch/,
+    shell.slice(cachedLookup - 80, endpointLookup + 180),
+    /readCachedProfileBackgroundRef\(handle\)[\s\S]*if \(!assetRef && backgroundAssetRef\)[\s\S]*if \(!assetRef && handle\)[\s\S]*fetch/,
   );
 });
