@@ -67,7 +67,6 @@ export function ProfileSettingsPanel({
   const [selectedBackgroundId, setSelectedBackgroundId] = useState("");
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [displayName, setDisplayName] = useState(identity.displayName);
-  const [bio, setBio] = useState(identity.bio ?? "");
   const [presenceVisibility, setPresenceVisibility] = useState<ProfileVisibility>(
     privacy.presenceVisibility,
   );
@@ -152,7 +151,6 @@ export function ProfileSettingsPanel({
 
   function openPanel() {
     setDisplayName(identity.displayName);
-    setBio(identity.bio ?? "");
     setPresenceVisibility(privacy.presenceVisibility);
     setActivityVisibility(privacy.activityVisibility);
     setHistoryVisibility(privacy.historyVisibility);
@@ -237,17 +235,12 @@ export function ProfileSettingsPanel({
 
     const payload: {
       displayName?: string;
-      bio?: string | null;
       privacy?: EditablePrivacyUpdate;
     } = {};
 
     const normalizedDisplayName = displayName.trim();
-    const normalizedBio = bio.trim() || null;
     if (normalizedDisplayName !== identity.displayName) {
       payload.displayName = normalizedDisplayName;
-    }
-    if (normalizedBio !== identity.bio) {
-      payload.bio = normalizedBio;
     }
 
     const privacyUpdate: EditablePrivacyUpdate = {};
@@ -461,15 +454,6 @@ export function ProfileSettingsPanel({
                   <label className={styles.field}>
                     <span>Handle permanente</span>
                     <input value={`@${identity.handle}`} disabled readOnly />
-                  </label>
-                  <label className={styles.field}>
-                    <span>Biografia</span>
-                    <textarea
-                      value={bio}
-                      maxLength={240}
-                      placeholder="Registre uma breve descrição pública do comandante."
-                      onChange={(event) => setBio(event.target.value)}
-                    />
                   </label>
                 </section>
 
