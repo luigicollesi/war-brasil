@@ -59,3 +59,15 @@ test("mixed showcases pass the selected territory cosmetic into the same shared 
   );
   assert.match(showcase, /effectKey=\{selectedItem\.effectKey\}/);
 });
+
+
+test("territory 3d skin preserves image RGB instead of collapsing artwork to luminance", () => {
+  const model = read(MODEL_PATH);
+
+  assert.match(model, /applyImageSkinBlend/);
+  assert.match(model, /sampledDiffuseColor\.rgb/);
+  assert.match(model, /vec3 skinTinted = mix/);
+  assert.match(model, /diffuseColor\.rgb = mix/);
+  assert.doesNotMatch(model, /skinLuminance/);
+  assert.doesNotMatch(model, /dot\(sampledDiffuseColor\.rgb/);
+});
