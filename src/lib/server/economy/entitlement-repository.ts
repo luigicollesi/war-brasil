@@ -4,6 +4,14 @@ import type { CosmeticSlot } from "@/src/lib/economy/economy-contract";
 import type { EntitlementKind } from "@/src/lib/economy/entitlement-contract";
 import type { EconomyQueryable } from "./economy-repository";
 
+export type BackgroundCollectionRequirementRow = {
+  background_id: string;
+  collection_id: string;
+  collection_name: string;
+  owned_count: number;
+  total_count: number;
+};
+
 export type ProductEntitlementQuoteRow = {
   entitlement_kind: EntitlementKind;
   entitlement_id: string;
@@ -179,6 +187,40 @@ export async function listLockedProductEntitlementsForPurchase(
             AND membership.entitlement_kind='profile_background'
        ) entitlement
       ORDER BY entitlement.position,entitlement.entitlement_kind,entitlement.entitlement_id`,
+    [userId, productId],
+  );
+
+  return result.rows;
+}
+
+export async function listBackgroundCollectionRequirementsForPurchase(
+  userId: string,
+  productId: string,
+  db: EconomyQueryable,
+): Promise<BackgroundCollectionRequirementRow[]> {
+  const result = await db.query<BackgroundCollectionRequirementRow>(
+    `SELECT background.id AS background_id,
+            collection.id AS collection_id,
+            collection.name AS collection_name,
+            COUNT(item.id)::int AS total_count,
+            COUNT(owned.cosmetic_id)::int AS owned_count
+       FROM catalog.product_entitlements membership
+       JOIN catalog.profile_backgrounds background
+         ON background.id=membership.background_id
+        AND background.collection_id IS NOT NULL
+       JOIN catalog.collections collection
+         ON collection.id=background.collection_id
+       LEFT JOIN catalog.cosmetics item
+         ON item.collection_id=collection.id
+        AND item.is_default=FALSE
+        AND item.status IN ('announced','available')
+       LEFT JOIN inventory.cosmetics owned
+         ON owned.user_id=$1::uuid
+        AND owned.cosmetic_id=item.id
+      WHERE membership.product_id=$2
+        AND membership.entitlement_kind='profile_background'
+      GROUP BY background.id,collection.id,collection.name
+      ORDER BY background.id`,
     [userId, productId],
   );
 
