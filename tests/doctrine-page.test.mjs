@@ -257,3 +257,27 @@ test("layout da Doutrina fixa índice no viewport, recompõe mobile e respeita r
   assert.match(integrationCss, /@media \(max-width: 760px\)/);
   assert.match(integrationCss, /@media \(prefers-reduced-motion: reduce\)/);
 });
+
+
+test("índice desktop limita tipografia e compacta registros sem alterar o índice mobile", () => {
+  const uxCss = source(
+    "src/components/doctrine/doctrine-ux-enhancements.module.css",
+  );
+
+  assert.match(
+    uxCss,
+    /--doctrine-index-width:s*clamp(300px,s*21vw,s*360px)/,
+  );
+  assert.match(
+    uxCss,
+    /.indexTitleRow h1s*{[sS]*font-size:s*clamp(36px,s*3vw,s*48px)/,
+  );
+  assert.match(
+    uxCss,
+    /@media (min-width: 761px)[sS]*.chapterNav as*{[sS]*min-height:s*34px/,
+  );
+  assert.match(
+    uxCss,
+    /@media (max-width: 760px)[sS]*.chapterNavs*{[sS]*overflow-x:s*auto/,
+  );
+});
