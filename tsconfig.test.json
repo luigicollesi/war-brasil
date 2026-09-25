@@ -12,6 +12,7 @@
     "src/lib/game-config.ts",
     "src/lib/lobby.ts",
     "src/lib/economy/**/*.ts",
+    "src/lib/profile/commander-name-contract.ts",
     "src/lib/profile/profile-command-contract.ts",
     "src/lib/profile/profile-local-fixture.ts",
     "src/lib/profile/profile-command-data.ts",
