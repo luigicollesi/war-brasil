@@ -398,7 +398,10 @@ async function main() {
 
   try {
     await step("FND-02/13 Foundation persiste entre rotas próprias e Profile mantém viewport isolada", async () => {
-      const actor = await createActor(browser, { disableWebgl: true });
+      const actor = await createActor(browser, {
+        disableWebgl: true,
+        reducedMotion: "reduce",
+      });
       try {
         await assertPersistentScene(actor.page, "operations");
 
