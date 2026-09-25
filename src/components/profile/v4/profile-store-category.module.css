@@ -249,6 +249,47 @@
   line-height: 1.35;
 }
 
+
+.collectionProgress {
+  display: flex;
+  min-height: 30px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 6px;
+  padding-top: 8px;
+  border-top: 1px solid rgb(208 170 87 / 12%);
+  color: rgb(238 232 218 / 58%);
+}
+
+.collectionProgress small {
+  overflow: hidden;
+  color: rgb(208 170 87 / 72%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.53rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.collectionProgress b {
+  flex: 0 0 auto;
+  color: rgb(238 232 218 / 72%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 0.58rem;
+  font-weight: 900;
+  letter-spacing: 0.06em;
+}
+
+.collectionProgress[data-complete="true"] b {
+  color: var(--brass);
+}
+
+.product[data-collection-locked="true"] .visual {
+  filter: saturate(0.82) brightness(0.88);
+}
+
 .commerce {
   display: flex;
   align-items: center;
