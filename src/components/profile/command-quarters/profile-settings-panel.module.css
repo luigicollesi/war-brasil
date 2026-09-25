@@ -156,7 +156,6 @@
 }
 
 .field input,
-.field textarea,
 .field select {
   width: 100%;
   border: 1px solid rgb(238 232 218 / 12%);
@@ -168,13 +167,8 @@
   outline: none;
 }
 
-.field textarea {
-  min-height: 82px;
-  resize: vertical;
-}
 
 .field input:focus,
-.field textarea:focus,
 .field select:focus {
   border-color: rgb(208 170 87 / 58%);
   box-shadow: 0 0 0 1px rgb(208 170 87 / 12%);
