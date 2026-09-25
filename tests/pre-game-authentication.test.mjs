@@ -446,3 +446,18 @@ test("commander identity uses shared client DTO and server-only moderation polic
   assert.match(policy, /RESERVED_COMMANDER_NAME_KEYS/);
   assert.match(policy, /BLOCKED_COMMANDER_WORDS/);
 });
+
+
+test("identity mutation bounds JSON and validates first-party browser origin", () => {
+  const boundedJson = readFileSync(
+    "src/lib/server/http/read-bounded-json.ts",
+    "utf8",
+  );
+
+  assert.match(commandAccessRoute, /rejectUntrustedMutationOrigin\(request\)/);
+  assert.match(commandAccessRoute, /readBoundedJsonBody\(request\)/);
+  assert.match(commandAccessRoute, /BoundedJsonBodyError/);
+  assert.match(boundedJson, /maxBytes = 4_096/);
+  assert.match(boundedJson, /totalBytes > maxBytes/);
+  assert.match(boundedJson, /BODY_TOO_LARGE/);
+});
