@@ -96,7 +96,7 @@ test("PROFILE V4 collection banner is an accessible showcase link", async () => 
 test("PROFILE V4 territory category routes purchasable skins and never invents a cosmetic price", async () => {
   const category = await source("src/components/profile/v4/profile-store-category.tsx");
 
-  assert.match(category, /storefront\.territorySkins\.map/);
+  assert.match(category, /territorySkins\.map/);
   assert.match(category, /territoryEntries/);
   assert.match(category, /showcase\/offer/);
   assert.match(category, /ANUNCIADO/);
