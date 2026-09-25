@@ -156,7 +156,7 @@
 .categoryNav {
   position: sticky;
   z-index: 20;
-  top: 0;
+  top: 78px;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 1px;
@@ -342,7 +342,7 @@
 }
 
 @media (max-width: 980px) {
-  .categoryNav { top: 0; }
+  .categoryNav { top: 8px; }
 }
 
 @media (max-width: 720px) {
