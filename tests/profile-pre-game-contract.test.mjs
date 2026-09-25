@@ -39,7 +39,8 @@ test("rota PROFILE resolve snapshot autenticado em request-time e renderiza Doss
     (page.match(/getAuthenticatedSessionForReadHeaders/g) ?? []).length,
     2,
   );
-  assert.match(page, /backgroundAssetRef=\{equippedBackground\}/);
+  assert.doesNotMatch(page, /backgroundAssetRef=/);
+  assert.doesNotMatch(page, /appearance\?\.background\.assetRef/);
   assert.match(
     page,
     /<ProfileDossier snapshot=\{snapshot\} appearanceTitle=\{equippedTitle\} \/>/,
