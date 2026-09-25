@@ -168,7 +168,7 @@ export function DoctrineExperience({
           <div className={styles.indexHeader}>
             <span>WB / DTR</span>
             <small>
-              {String(presentation.chapters.length).padStart(2, "0")} REGISTROS
+              {String(presentation.chapters.length).padStart(2, "0")} REGRAS
             </small>
           </div>
 
@@ -193,7 +193,7 @@ export function DoctrineExperience({
           <nav
             ref={chapterNavRef}
             className={`${styles.chapterNav} ${ux.chapterNav}`}
-            aria-label="Capítulos da Doutrina"
+            aria-label="Regras do jogo"
           >
             {presentation.chapters.map((chapter) => {
               const active = chapter.slug === activeChapter.slug;
