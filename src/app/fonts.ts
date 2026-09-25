@@ -6,7 +6,6 @@ import {
   Cinzel,
   Cormorant_SC,
   Geist_Mono,
-  Inter,
   Oxanium,
 } from "next/font/google";
 
@@ -20,11 +19,6 @@ export const brandFont = Cinzel({
   variable: "--font-wb-brand",
   subsets: ["latin"],
   weight: ["600", "700", "800"],
-});
-
-export const legacyInterfaceFont = Inter({
-  variable: "--font-wb-legacy-ui",
-  subsets: ["latin"],
 });
 
 export const displayFont = Barlow_Condensed({
