@@ -198,3 +198,25 @@ test("collection storefront remains gameplay-only even when backgrounds share co
     /catalog\.profile_backgrounds/,
   );
 });
+
+
+test("empty thematic collections remain visible as zero-progress locked backgrounds", () => {
+  const repository = readFileSync(
+    "src/lib/server/economy/profile-appearance-store-repository.ts",
+    "utf8",
+  );
+  const service = readFileSync(
+    "src/lib/server/economy/profile-appearance-store-service.ts",
+    "utf8",
+  );
+
+  assert.match(
+    repository,
+    /LEFT JOIN catalog\.cosmetics item[\s\S]*item\.collection_id=collection\.id/,
+  );
+  assert.match(service, /row\.collection_total_count > 0/);
+  assert.match(
+    service,
+    /row\.collection_owned_count === row\.collection_total_count/,
+  );
+});
