@@ -11,7 +11,6 @@ export const LOCAL_PROFILE_COMMAND_SNAPSHOT: ProfileCommandSnapshot = {
     data: {
       displayName: "Luigi",
       handle: "luigi",
-      bio: "Comandante em preparação para a próxima campanha.",
       title: "Estrategista do Sul",
       presence: { state: "online", lastSeenAt: null },
       activity: { state: "idle", matchMode: null },
