@@ -10,7 +10,9 @@ import {
 import {
   BLOCKED_COMMANDER_COMPACT_TERMS,
   BLOCKED_COMMANDER_WORDS,
+  RESERVED_COMMANDER_BRAND_KEYS,
   RESERVED_COMMANDER_NAME_KEYS,
+  RESERVED_COMMANDER_ROLE_WORDS,
 } from "./commander-name-blocklist";
 
 export type CommanderNamePolicyCode =
@@ -128,15 +130,24 @@ function assertNotReserved(
   field: CommanderIdentityField,
   variants: ReturnType<typeof moderationVariants>,
 ) {
+  const reject = () => {
+    throw new CommanderNamePolicyError(
+      "RESERVED_NAME",
+      field,
+      field === "handle"
+        ? "Este identificador de comando não pode ser utilizado."
+        : "Este nome de comando não pode ser utilizado.",
+    );
+  };
+
+  for (const candidate of variants.wordVariants) {
+    if (RESERVED_COMMANDER_ROLE_WORDS.has(candidate)) reject();
+  }
+
   for (const candidate of variants.compactVariants) {
-    if (RESERVED_COMMANDER_NAME_KEYS.has(candidate)) {
-      throw new CommanderNamePolicyError(
-        "RESERVED_NAME",
-        field,
-        field === "handle"
-          ? "Este identificador de comando não pode ser utilizado."
-          : "Este nome de comando não pode ser utilizado.",
-      );
+    if (RESERVED_COMMANDER_NAME_KEYS.has(candidate)) reject();
+    for (const brandKey of RESERVED_COMMANDER_BRAND_KEYS) {
+      if (candidate.includes(brandKey)) reject();
     }
   }
 }
