@@ -121,10 +121,14 @@ export function ProfileStoreCategory({
 
   const appearanceOffers = useMemo(
     () =>
-      appearanceStorefront.offers.filter((offer) =>
-        offer.items.some((item) =>
-          category === "backgrounds" ? item.kind === "profile_background" : item.kind === "commander_title",
-        ),
+      appearanceStorefront.offers.filter(
+        (offer) =>
+          offer.items.length > 0 &&
+          offer.items.every((item) =>
+            category === "backgrounds"
+              ? item.kind === "profile_background"
+              : item.kind === "commander_title",
+          ),
       ),
     [appearanceStorefront.offers, category],
   );
