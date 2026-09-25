@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { PublicCommanderProfileSnapshot } from "@/src/lib/profile/profile-command-contract";
 import { ProfileDisplayStage } from "./profile-display-stage";
 import { ProfileTitleRenderer } from "./profile-title-renderer";
@@ -23,8 +23,32 @@ export function PublicCommanderProfileView({
     message: string;
   } | null>(null);
   const [invitePending, setInvitePending] = useState(false);
+  const identityRef = useRef<HTMLElement>(null);
+  const [arsenalTop, setArsenalTop] = useState<number | null>(null);
 
   const identity = snapshot.identity;
+
+  useLayoutEffect(() => {
+    const node = identityRef.current;
+    if (!node) return undefined;
+
+    const syncArsenalTop = () => {
+      const compact = window.matchMedia("(max-width: 720px)").matches;
+      const gap = compact ? 10 : 14;
+      const nextTop = Math.ceil(node.getBoundingClientRect().bottom + gap);
+      setArsenalTop((current) => (current === nextTop ? current : nextTop));
+    };
+
+    const observer = new ResizeObserver(syncArsenalTop);
+    observer.observe(node);
+    window.addEventListener("resize", syncArsenalTop);
+    syncArsenalTop();
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", syncArsenalTop);
+    };
+  }, []);
 
   useEffect(() => {
     if (snapshot.relationship !== "friend") return;
@@ -161,7 +185,11 @@ export function PublicCommanderProfileView({
       <div className={styles.scrim} aria-hidden="true" />
 
       <header className={styles.header}>
-        <section className={styles.identity} aria-labelledby="public-profile-name">
+        <section
+          ref={identityRef}
+          className={styles.identity}
+          aria-labelledby="public-profile-name"
+        >
           <small className={styles.classification}>SIGILO // ARQUIVO PÚBLICO</small>
           <span className={styles.identityTopline}>
             <strong id="public-profile-name">{identity.displayName}</strong>
@@ -253,7 +281,10 @@ export function PublicCommanderProfileView({
         </p>
       ) : null}
 
-      <ProfileDisplayStage arsenal={snapshot.appearance.arsenal} />
+      <ProfileDisplayStage
+        arsenal={snapshot.appearance.arsenal}
+        topInsetPx={arsenalTop}
+      />
     </main>
   );
 }
