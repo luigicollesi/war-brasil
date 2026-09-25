@@ -215,31 +215,15 @@ test("PROFILE V4 store V1 uses spacing and image lift instead of card outlines f
 });
 
 
-test("PROFILE V4 store V2 builds a static tactical optical atmosphere from layered HTML and CSS", async () => {
+test("PROFILE V4 store delegates its page background to the shared ProfileShell", async () => {
   const store = await source("src/components/profile/v4/profile-store.tsx");
-  const styles = await source("src/components/profile/v4/profile-store.module.css");
+  const category = await source("src/components/profile/v4/profile-store-category.tsx");
+  const categoryStyles = await source("src/components/profile/v4/profile-store-category.module.css");
 
-  for (const layer of [
-    "storeAtmosphere",
-    "atmosphereBase",
-    "atmosphereOptical",
-    "atmospherePlatePrimary",
-    "atmospherePlateSecondary",
-    "atmosphereGhostType",
-    "atmosphereLight",
-    "atmosphereVignette",
-  ]) {
-    assert.match(store, new RegExp(`styles\\.${layer}`));
-  }
-
-  assert.match(store, /className=\{styles\.storeAtmosphere\}[\s\S]*aria-hidden="true"/);
-  assert.match(styles, /\.store\s*\{[\s\S]*position:\s*relative;[\s\S]*isolation:\s*isolate;/);
-  assert.match(styles, /\.storeAtmosphere\s*\{[\s\S]*position:\s*absolute;[\s\S]*pointer-events:\s*none;/);
-  assert.match(styles, /\.atmosphereOptical\s*\{[\s\S]*repeating-(?:linear|radial)-gradient/);
-  assert.match(styles, /\.atmospherePlatePrimary\s*\{[\s\S]*clip-path:\s*polygon\(/);
-  assert.match(styles, /\.atmospherePlateSecondary\s*\{[\s\S]*clip-path:\s*polygon\(/);
-  assert.match(styles, /\.atmosphereLight\s*\{[\s\S]*radial-gradient/);
-  assert.match(styles, /\.atmosphereVignette\s*\{[\s\S]*radial-gradient/);
+  assert.doesNotMatch(store, /styles\.storeAtmosphere/);
+  assert.doesNotMatch(store, /styles\.storeFixedAtmosphere/);
+  assert.doesNotMatch(category, /styles\.atmosphere/);
+  assert.doesNotMatch(categoryStyles, /\.categoryPage::before/);
   assert.doesNotMatch(store, /@react-three|three\/|<Canvas\b/);
 });
 
@@ -265,54 +249,24 @@ test("PROFILE V4 store V2 gives hero and catalog sections static 2.5D depth cues
 });
 
 
-test("PROFILE V4 V2 atmosphere stays behind the sticky store navigation without flattening sibling z-indexes", async () => {
+test("PROFILE V4 store keeps sticky navigation above the shared profile background", async () => {
   const styles = await source("src/components/profile/v4/profile-store.module.css");
 
-  assert.match(
-    styles,
-    /\.storeAtmosphere\s*\{[^}]*z-index:\s*-2;/,
-  );
-  assert.doesNotMatch(
-    styles,
-    /\.store\s*>\s*:not\(\.storeAtmosphere\)\s*\{[^}]*z-index:/,
-  );
   assert.match(styles, /\.storeNav\s*\{[\s\S]*?z-index:\s*29;/);
 });
 
-
-test("PROFILE V4 store V2.1 distributes military visual language across fixed and scrolling layers", async () => {
+test("PROFILE V4 store keeps section decoration without owning a viewport background", async () => {
   const store = await source("src/components/profile/v4/profile-store.tsx");
-  const styles = await source("src/components/profile/v4/profile-store.module.css");
 
-  for (const layer of [
-    "storeFixedAtmosphere",
-    "fixedCommandStripe",
-    "fixedArmorPlate",
-    "fixedLightSweep",
-    "atmosphereLeftMass",
-    "atmosphereLowerMass",
-    "signalClusterLeft",
-    "signalClusterRight",
-    "operationAxis",
-    "supplyNetwork",
-    "frontLine",
-    "repairPlate",
-    "lowerArmor",
-  ]) {
-    assert.match(store, new RegExp(`styles\\.${layer}`));
-  }
-
-  assert.match(
-    styles,
-    /\.storeFixedAtmosphere\s*\{[^}]*position:\s*fixed;[^}]*pointer-events:\s*none;/,
-  );
-  assert.match(styles, /\.fixedCommandStripe\s*\{[\s\S]*clip-path:\s*polygon\(/);
-  assert.match(styles, /\.fixedArmorPlate\s*\{[\s\S]*clip-path:\s*polygon\(/);
-  assert.match(styles, /\.operationAxis\s*\{[\s\S]*(?:linear|repeating-linear)-gradient/);
-  assert.match(styles, /\.supplyNetwork\s*\{[\s\S]*radial-gradient/);
-  assert.match(styles, /\.frontLine\s*\{[\s\S]*repeating-linear-gradient/);
-  assert.match(styles, /\.repairPlate\s*\{[\s\S]*clip-path:\s*polygon\(/);
-  assert.match(styles, /\.lowerArmor\s*\{[\s\S]*clip-path:\s*polygon\(/);
+  assert.match(store, /styles\.operationAxis/);
+  assert.match(store, /styles\.supplyNetwork/);
+  assert.match(store, /styles\.frontLine/);
+  assert.match(store, /styles\.repairPlate/);
+  assert.match(store, /styles\.lowerArmor/);
+  assert.doesNotMatch(store, /styles\.storeFixedAtmosphere/);
+  assert.doesNotMatch(store, /styles\.fixedCommandStripe/);
+  assert.doesNotMatch(store, /styles\.fixedArmorPlate/);
+  assert.doesNotMatch(store, /styles\.fixedLightSweep/);
 });
 
 test("PROFILE V4 store V2.1 moves only selected fixed atmosphere layers and respects reduced motion", async () => {
