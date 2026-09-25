@@ -98,3 +98,21 @@ test("settings panel sends only changed fields and refreshes the server snapshot
   assert.match(dossier, /privacy && !snapshot\.isEvaluationFixture/);
   assert.match(dossier, /<ProfileSettingsPanel identity=\{identity\} privacy=\{privacy\} \/>/);
 });
+
+
+test("Profile dossier and settings expose no biography surface", () => {
+  const panel = read(
+    "src/components/profile/command-quarters/profile-settings-panel.tsx",
+  );
+  const dossier = read("src/components/profile/v4/profile-dossier.tsx");
+  const contract = read("src/lib/profile/profile-command-contract.ts");
+  const migration = read(
+    "src/lib/db/migrations/managed/068-remove-profile-biography.sql",
+  );
+
+  assert.doesNotMatch(panel, /Biografia|<textarea|\bbio\b/i);
+  assert.doesNotMatch(dossier, /biografia|\bbio\b/i);
+  assert.doesNotMatch(contract, /\bbio\s*:/i);
+  assert.match(migration, /DROP COLUMN IF EXISTS bio/);
+  assert.match(migration, /DROP CONSTRAINT IF EXISTS commanders_bio_not_blank_check/);
+});
