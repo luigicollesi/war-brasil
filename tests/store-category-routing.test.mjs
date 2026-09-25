@@ -153,6 +153,11 @@ test("server route never imports runtime category values from a client component
   assert.match(component, /^"use client";/);
   assert.match(contract, /export const STORE_CATEGORY_IDS/);
   assert.match(contract, /export function isStoreCategoryId/);
+  assert.match(contract, /case "dice":/);
+  assert.match(contract, /case "territories":/);
+  assert.match(contract, /case "backgrounds":/);
+  assert.match(contract, /case "titles":/);
+  assert.doesNotMatch(contract, /STORE_CATEGORY_IDS[\s\S]*\.includes\(/);
   assert.match(page, /from "@\/src\/lib\/economy\/store-category-contract"/);
   assert.doesNotMatch(
     page,
