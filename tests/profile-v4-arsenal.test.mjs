@@ -78,3 +78,21 @@ test("PROFILE V4 arsenal uses borderless store-like cards with hover and focus i
     /@media\s*\(hover:\s*none\)[\s\S]*\.bay:hover,[\s\S]*\.inventoryCard:hover\s*\{[^}]*transform:\s*none;/,
   );
 });
+
+
+test("PROFILE V4 arsenal keeps inspector height independent from inventory size", async () => {
+  const styles = await source("src/components/profile/v4/profile-arsenal.module.css");
+
+  assert.match(
+    styles,
+    /\.inventoryLayout\s*\{[^}]*align-items:\s*start;/,
+  );
+  assert.match(
+    styles,
+    /\.inspector\s*\{[^}]*align-self:\s*start;[^}]*height:\s*420px;[^}]*overflow:\s*hidden;/,
+  );
+  assert.match(
+    styles,
+    /@media \(max-width: 820px\)[\s\S]*\.inspector\s*\{[^}]*height:\s*380px;/,
+  );
+});
