@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -490,12 +489,6 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
               {promotionLabel(showcase.promotionDiscountBps)}
             </span>
           ) : null}
-        </div>
-
-        <div className={styles.wallet} aria-label={`${showcase.wallet.balance} Créditos de Campanha`}>
-          <Image src="/coin.svg" width={22} height={22} alt="" aria-hidden="true" />
-          <strong>{INTEGER_FORMAT.format(showcase.wallet.balance)}</strong>
-          <span>CR</span>
         </div>
       </header>
 
