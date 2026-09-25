@@ -397,58 +397,76 @@ async function main() {
   const browser = await playwright.chromium.launch({ headless: true });
 
   try {
-    await step("FND-02/13 Foundation persiste entre rotas próprias e Profile mantém viewport isolada", async () => {
-      const actor = await createActor(browser, {
-        disableWebgl: true,
-        reducedMotion: "reduce",
+    const foundationActor = await createActor(browser, {
+      disableWebgl: true,
+      reducedMotion: "reduce",
+    });
+    try {
+      await step("FND-02 Foundation persiste entre Operações e Lobby", async () => {
+        await assertPersistentScene(foundationActor.page, "operations");
+
+        await createRoomThroughUi(foundationActor);
+        await assertPersistentScene(foundationActor.page, "lobby");
+
+        await foundationActor.page
+          .getByRole("link", { name: /Operações/ })
+          .first()
+          .click();
+        await foundationActor.page.waitForURL(/\/matchmaking$/, {
+          timeout: 10_000,
+        });
+        await assertPersistentScene(foundationActor.page, "operations");
       });
-      try {
-        await assertPersistentScene(actor.page, "operations");
 
-        await createRoomThroughUi(actor);
-        await assertPersistentScene(actor.page, "lobby");
+      await step("FND-13 Foundation persiste em Home/Doutrina e Profile mantém viewport isolada", async () => {
+        await foundationActor.page.locator('a[href="/home"]').first().click();
+        await foundationActor.page.waitForURL(
+          (url) => url.pathname === "/home",
+          { timeout: 10_000 },
+        );
+        await assertPersistentScene(foundationActor.page, "entrance");
 
-        await actor.page.getByRole("link", { name: /Operações/ }).first().click();
-        await actor.page.waitForURL(/\/matchmaking$/, { timeout: 10_000 });
-        await assertPersistentScene(actor.page, "operations");
+        await foundationActor.page.getByRole("link", { name: /DOUTRINA/ }).click();
+        await foundationActor.page.waitForURL(/\/rules(?:\?|$)/, {
+          timeout: 10_000,
+        });
+        await assertPersistentScene(foundationActor.page, "doctrine");
 
-        await actor.page.locator('a[href="/home"]').first().click();
-        await actor.page.waitForURL((url) => url.pathname === "/home", { timeout: 10_000 });
-        await assertPersistentScene(actor.page, "entrance");
+        await foundationActor.page.goBack();
+        await foundationActor.page.waitForURL(
+          (url) => url.pathname === "/home",
+          { timeout: 10_000 },
+        );
+        await assertPersistentScene(foundationActor.page, "entrance");
 
-        await actor.page.getByRole("link", { name: /DOUTRINA/ }).click();
-        await actor.page.waitForURL(/\/rules(?:\?|$)/, { timeout: 10_000 });
-        await assertPersistentScene(actor.page, "doctrine");
-
-        await actor.page.goBack();
-        await actor.page.waitForURL((url) => url.pathname === "/home", { timeout: 10_000 });
-        await assertPersistentScene(actor.page, "entrance");
-
-        await actor.page.getByRole("link", { name: /COMANDO/ }).click();
-        await actor.page.waitForURL(/\/profile$/, { timeout: 10_000 });
-        await actor.page
+        await foundationActor.page.getByRole("link", { name: /COMANDO/ }).click();
+        await foundationActor.page.waitForURL(/\/profile$/, { timeout: 10_000 });
+        await foundationActor.page
           .locator("[data-profile-v4]")
           .waitFor({ state: "attached", timeout: 10_000 });
         assert.equal(
-          await actor.page.locator("[data-command-scene-mode]").count(),
+          await foundationActor.page.locator("[data-command-scene-mode]").count(),
           0,
           "Profile V4 deve possuir a própria viewport fora do CommandShell",
         );
 
-        await actor.page.evaluate(() => {
+        await foundationActor.page.evaluate(() => {
           sessionStorage.removeItem("foundation-persistence-probe-initialized");
         });
-        await actor.page.locator('a[href="/home"]').first().click();
-        await actor.page.waitForURL((url) => url.pathname === "/home", { timeout: 10_000 });
+        await foundationActor.page.locator('a[href="/home"]').first().click();
+        await foundationActor.page.waitForURL(
+          (url) => url.pathname === "/home",
+          { timeout: 10_000 },
+        );
         await assertPersistentScene(
-          actor.page,
+          foundationActor.page,
           "entrance",
           "foundation-remounted-after-profile",
         );
-      } finally {
-        await actor.context.close();
-      }
-    });
+      });
+    } finally {
+      await foundationActor.context.close();
+    }
 
     await step("LOB-01/02/03/05/06/09 sincronização, regras, reconnect e copy", async () => {
       const host = await createActor(browser);
