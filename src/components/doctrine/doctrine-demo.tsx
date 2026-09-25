@@ -163,25 +163,29 @@ function AttackDemo({ presentation }: { presentation: DoctrinePresentation }) {
       <div className={`${styles.attackStage} ${ux.machineSceneSplit} ${ux.attackScene}`}>
         <div className={ux.sceneBoard}>
           <GuideBoardScene
-          compact
-          ariaLabel="Território aliado com quatro tropas atacando território inimigo conectado"
-          markers={[
-            { key: "attack-origin", label: "Origem", troops: 4, x: 42, y: 48, tone: "ally", selected: true },
-            { key: "attack-target", label: "Alvo inimigo", troops: 2, x: 61, y: 53, tone: "enemy" },
-          ]}
-          arrows={[
-            {
-              key: "attack-route",
-              from: { x: 40, y: 49 },
-              to: { x: 61, y: 52 },
-              kind: "attack",
-              label: "ATAQUE",
-            },
-          ]}
-          caption="A rota precisa existir na topologia vigente da partida."
-        />
+            compact
+            ariaLabel="Território aliado com quatro tropas atacando território inimigo conectado"
+            markers={[
+              { key: "attack-origin", label: "Origem", troops: 4, x: 35, y: 49, tone: "ally", selected: true },
+              { key: "attack-target", label: "Alvo inimigo", troops: 2, x: 66, y: 53, tone: "enemy" },
+            ]}
+            arrows={[
+              {
+                key: "attack-route",
+                from: { x: 40, y: 49 },
+                to: { x: 61, y: 52 },
+                kind: "attack",
+                label: "ATAQUE",
+              },
+            ]}
+            caption="A rota precisa existir na topologia vigente da partida."
+          />
         </div>
-        <div className={`${styles.diceMatrix} ${ux.sceneAside} ${ux.combatAside}`}>
+
+        <aside
+          className={`${styles.diceMatrix} ${ux.sceneAside} ${ux.combatAside}`}
+          aria-label="Comparação dos dados de ataque e defesa"
+        >
           <div>
             <span>ATAQUE</span>
             <div>
@@ -198,7 +202,9 @@ function AttackDemo({ presentation }: { presentation: DoctrinePresentation }) {
               ))}
             </div>
           </div>
+
           <strong className={styles.versus}>×</strong>
+
           <div>
             <span>DEFESA</span>
             <div>
@@ -215,7 +221,7 @@ function AttackDemo({ presentation }: { presentation: DoctrinePresentation }) {
               ))}
             </div>
           </div>
-        </div>
+        </aside>
       </div>
     </DemoFrame>
   );
@@ -236,20 +242,20 @@ function ConquestDemo({ presentation }: { presentation: DoctrinePresentation }) 
             compact
             ariaLabel="Tropas se deslocando da origem para um território recém-conquistado"
             markers={[
-              { key: "conquest-origin", label: "Origem", troops: originTroops, x: 35, y: 49, tone: "ally" },
-              { key: "conquest-target", label: "Conquistado", troops: targetTroops, x: 66, y: 53, tone: "ally", selected: true },
+              { key: "conquest-origin", label: "Origem", troops: originTroops, x: 34, y: 50, tone: "ally" },
+              { key: "conquest-target", label: "Conquistado", troops: targetTroops, x: 67, y: 52, tone: "ally", selected: true },
             ]}
-          arrows={[
-            {
-              key: "occupation",
-              from: { x: 44, y: 48 },
-              to: { x: 59, y: 52 },
-              kind: "move",
-              label: "OCUPAR",
-            },
-          ]}
-          caption="A nova fronteira passa a integrar sua linha imediatamente."
-        />
+            arrows={[
+              {
+                key: "occupation",
+                from: { x: 40, y: 50 },
+                to: { x: 61, y: 52 },
+                kind: "move",
+                label: "OCUPAR",
+              },
+            ]}
+            caption="A nova fronteira passa a integrar sua linha imediatamente."
+          />
         </div>
       </div>
     </DemoFrame>
@@ -272,20 +278,20 @@ function ManeuverDemo({ presentation }: { presentation: DoctrinePresentation }) 
             compact
             ariaLabel="Movimentação de tropas entre dois territórios aliados conectados"
             markers={[
-              { key: "move-origin", label: "Reserva", troops: originTroops, x: 34, y: 58, tone: "ally", selected: true },
-              { key: "move-target", label: "Fronteira", troops: 3, x: 67, y: 45, tone: "ally", moved: true },
+              { key: "move-origin", label: "Reserva", troops: originTroops, x: 33, y: 59, tone: "ally", selected: true },
+              { key: "move-target", label: "Fronteira", troops: 3, x: 68, y: 43, tone: "ally", moved: true },
             ]}
-          arrows={[
-            {
-              key: "maneuver",
-              from: { x: 40, y: 56 },
-              to: { x: 61, y: 47 },
-              kind: "move",
-              label: "MANOBRA",
-            },
-          ]}
-          caption="A manobra redistribui força: não produz novas tropas."
-        />
+            arrows={[
+              {
+                key: "maneuver",
+                from: { x: 40, y: 56 },
+                to: { x: 62, y: 46 },
+                kind: "move",
+                label: "MANOBRA",
+              },
+            ]}
+            caption="A manobra redistribui força: não produz novas tropas."
+          />
         </div>
       </div>
     </DemoFrame>
@@ -301,38 +307,43 @@ function BarrierDemo({ presentation }: { presentation: DoctrinePresentation }) {
       <div className={`${styles.barrierStage} ${ux.machineSceneSplit} ${ux.barrierScene}`}>
         <div className={ux.sceneBoard}>
           <GuideBoardScene
-          compact
-          ariaLabel="Dois territórios separados por uma conexão com barreira"
-          markers={[
-            { key: "barrier-origin", label: "Origem", troops: 7, x: 35, y: 51, tone: "ally", selected: true },
-            { key: "barrier-target", label: "Além da barreira", troops: 2, x: 67, y: 50, tone: "enemy" },
-          ]}
-          arrows={[
-            {
-              key: "barrier-route",
-              from: { x: 40, y: 51 },
-              to: { x: 62, y: 50 },
-              kind: "route",
-              label: "BARREIRA",
-            },
-          ]}
-          caption="A conexão permanece conhecida; o perfil da travessia é que muda."
-        />
+            compact
+            ariaLabel="Dois territórios separados por uma conexão com barreira"
+            markers={[
+              { key: "barrier-origin", label: "Origem", troops: 7, x: 34, y: 51, tone: "ally", selected: true },
+              { key: "barrier-target", label: "Além da barreira", troops: 2, x: 68, y: 50, tone: "enemy" },
+            ]}
+            arrows={[
+              {
+                key: "barrier-route",
+                from: { x: 40, y: 51 },
+                to: { x: 62, y: 50 },
+                kind: "route",
+                label: "BARREIRA",
+              },
+            ]}
+            caption="A conexão permanece conhecida; o perfil da travessia é que muda."
+          />
         </div>
-        <aside className={`${ux.sceneAside} ${ux.barrierAside}`} aria-label="Custo de dados da travessia">
+
+        <aside
+          className={`${ux.sceneAside} ${ux.barrierAside}`}
+          aria-label="Custo de dados da travessia"
+        >
           <span className={ux.asideLabel}>TRAVESSIA</span>
-          <div className={styles.barrierBands}>
-          {presentation.barrier.attackDiceBands.map((band) => (
-            <div key={`${band.minimumTroops}-${band.maximumTroops ?? "max"}`}>
-              <span>
-                {band.maximumTroops === null
-                  ? `${band.minimumTroops}+ tropas`
-                  : `${band.minimumTroops}–${band.maximumTroops} tropas`}
-              </span>
-              <strong>{band.diceCount}D</strong>
-            </div>
-          ))}
-        </div>
+          <div className={`${styles.barrierBands} ${ux.barrierBandsRefined}`}>
+            {presentation.barrier.attackDiceBands.map((band) => (
+              <div key={`${band.minimumTroops}-${band.maximumTroops ?? "max"}`}>
+                <span>
+                  {band.maximumTroops === null
+                    ? `${band.minimumTroops}+ tropas`
+                    : `${band.minimumTroops}–${band.maximumTroops} tropas`}
+                </span>
+                <strong>{band.diceCount}D</strong>
+              </div>
+            ))}
+          </div>
+        </aside>
       </div>
     </DemoFrame>
   );
