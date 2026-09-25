@@ -294,6 +294,6 @@ test("listagem V4 delega inspeção ao Expositor sem reintroduzir prévia inline
   assert.match(storeUi, /\/profile\/store\/showcase\//);
   assert.doesNotMatch(storeUi, /previewOpen|selectedPreviewItem|data-preview-detail/);
   assert.match(showcasePage, /resolveStoreShowcaseView/);
-  assert.match(showcasePage, /<ProfileShell/);
+  assert.doesNotMatch(showcasePage, /<ProfileShell/);
   assert.match(showcasePage, /<StoreShowcase showcase=\{showcase\} \/>/);
 });
