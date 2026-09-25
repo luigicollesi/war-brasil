@@ -225,18 +225,36 @@
   filter: drop-shadow(0 0 10px rgb(208 170 87 / 18%));
 }
 
-.walletReadout > span {
+.walletCopy {
   min-width: 0;
   display: grid;
   justify-items: end;
-  gap: 1px;
+  align-content: center;
+  gap: 2px;
+  text-align: right;
 }
 
-.walletReadout strong {
-  font-variant-numeric: tabular-nums;
+.walletCopy small {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.walletBalance {
+  min-width: 6ch;
+  max-width: 12ch;
+  overflow: hidden;
   color: var(--profile-ivory);
-  font-size: 1rem;
-  letter-spacing: 0.04em;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: clamp(0.88rem, 1vw, 1.02rem);
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.015em;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .walletUnavailable {
@@ -433,7 +451,17 @@
   }
 
   .walletReadout {
-    gap: 6px;
+    gap: 7px;
+  }
+
+  .walletCopy {
+    min-width: 5.5ch;
+  }
+
+  .walletBalance {
+    min-width: 5.5ch;
+    max-width: 10ch;
+    font-size: clamp(0.8rem, 1.7vw, 0.94rem);
   }
 
   .coin {
@@ -522,13 +550,20 @@
     display: none;
   }
 
-  .walletReadout strong {
-    font-size: 0.76rem;
+  .walletBalance {
+    min-width: 4.5ch;
+    max-width: 8.5ch;
+    font-size: clamp(0.66rem, 2.9vw, 0.78rem);
+    letter-spacing: 0;
   }
 
   .walletUnavailable {
+    max-width: 9ch;
+    overflow: hidden;
     font-size: 0.52rem !important;
     letter-spacing: 0.04em !important;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .addCredits {
@@ -698,5 +733,36 @@
     height: calc(100dvh - var(--profile-commandbar-height));
     min-height: 0;
     overflow: hidden;
+  }
+}
+
+
+@media (max-width: 430px) {
+  .walletCluster {
+    grid-template-columns: minmax(3.4rem, auto) 32px 34px;
+    gap: 4px;
+    padding-inline: 6px;
+  }
+
+  .walletReadout {
+    min-width: 0;
+  }
+
+  .walletBalance {
+    min-width: 4ch;
+    max-width: 7ch;
+    font-size: clamp(0.62rem, 3vw, 0.72rem);
+  }
+
+  .addCredits {
+    width: 32px;
+    height: 32px;
+  }
+
+  .logoutButton {
+    min-width: 34px;
+    width: 34px;
+    min-height: 32px;
+    height: 32px;
   }
 }
