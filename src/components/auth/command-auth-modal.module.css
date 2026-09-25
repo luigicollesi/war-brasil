@@ -227,9 +227,11 @@
 
 .header h2 {
   margin: 9px 0 0;
-  font-size: clamp(27px, 3vw, 38px);
-  line-height: 1.02;
-  letter-spacing: -0.025em;
+  font-family: var(--font-wb-brand), serif;
+  font-size: clamp(26px, 2.9vw, 36px);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: 0.012em;
 }
 
 .header p {
