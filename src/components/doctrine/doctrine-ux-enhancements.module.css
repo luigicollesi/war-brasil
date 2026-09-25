@@ -28,19 +28,29 @@
 
 .indexTitleRow {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  align-items: end;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
   gap: 12px;
-  margin-top: 18px;
+  margin-top: 16px;
 }
 
 .indexTitleRow h1 {
   min-width: 0;
+  max-width: 100%;
   margin: 0;
-  font-size: clamp(36px, 3vw, 48px);
+  font-size: clamp(40px, 3vw, 50px);
   line-height: 0.92;
   letter-spacing: 0.01em;
   white-space: nowrap;
+}
+
+.indexTitleRow .backButton {
+  grid-row: 1;
+  justify-self: end;
+}
+
+.indexTitleRow h1 {
+  grid-row: 2;
 }
 
 .backButton {
