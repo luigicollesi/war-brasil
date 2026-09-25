@@ -78,7 +78,8 @@ function ObjectivesDemo({ presentation }: { presentation: DoctrinePresentation }
               </span>
             </div>
           ))}
-        </div>
+          </div>
+        </aside>
       </div>
     </DemoFrame>
   );
@@ -90,9 +91,12 @@ function TurnDemo({ chapter }: { chapter: DoctrineChapter }) {
       label="Fluxo de um turno"
       caption="Trocas antecedem a mobilização quando a fase está disponível; depois vêm reforços, conflito e reposicionamento."
     >
-      <div className={`${styles.phaseRail} ${ux.phaseRail}`}>
+      <div className={`${styles.phaseRail} ${ux.phaseRail} ${ux.machineSceneRail}`}>
         {chapter.metrics.map((phase, index) => (
-          <div key={phase.label} className={styles.phaseStep}>
+          <div
+            key={phase.label}
+            className={`${styles.phaseStep} ${ux.phaseCard}`}
+          >
             <span>{String(index + 1).padStart(2, "0")}</span>
             <strong>{phase.value.toUpperCase()}</strong>
             <small>{phase.detail}</small>
@@ -156,8 +160,9 @@ function AttackDemo({ presentation }: { presentation: DoctrinePresentation }) {
       label="Demonstração de ataque e comparação de dados"
       caption="Os dados são ordenados do maior para o menor. Cada par resolve uma comparação; empate favorece a defesa."
     >
-      <div className={styles.attackStage}>
-        <GuideBoardScene
+      <div className={`${styles.attackStage} ${ux.machineSceneSplit} ${ux.attackScene}`}>
+        <div className={ux.sceneBoard}>
+          <GuideBoardScene
           compact
           ariaLabel="Território aliado com quatro tropas atacando território inimigo conectado"
           markers={[
@@ -167,15 +172,16 @@ function AttackDemo({ presentation }: { presentation: DoctrinePresentation }) {
           arrows={[
             {
               key: "attack-route",
-              from: { x: 44, y: 48 },
-              to: { x: 59, y: 52 },
+              from: { x: 40, y: 49 },
+              to: { x: 61, y: 52 },
               kind: "attack",
               label: "ATAQUE",
             },
           ]}
           caption="A rota precisa existir na topologia vigente da partida."
         />
-        <div className={styles.diceMatrix}>
+        </div>
+        <div className={`${styles.diceMatrix} ${ux.sceneAside} ${ux.combatAside}`}>
           <div>
             <span>ATAQUE</span>
             <div>
@@ -224,14 +230,15 @@ function ConquestDemo({ presentation }: { presentation: DoctrinePresentation }) 
       label="Demonstração de transferência de tropas após conquista"
       caption={`A conquista só se completa quando o novo território recebe ao menos ${presentation.conquest.minimumMove} tropa e a origem preserva ${presentation.conquest.minimumTroopsLeftAtOrigin}.`}
     >
-      <div className={styles.boardShell}>
-        <GuideBoardScene
-          compact
-          ariaLabel="Tropas se deslocando da origem para um território recém-conquistado"
-          markers={[
-            { key: "conquest-origin", label: "Origem", troops: originTroops, x: 42, y: 48, tone: "ally" },
-            { key: "conquest-target", label: "Conquistado", troops: targetTroops, x: 61, y: 53, tone: "ally", selected: true },
-          ]}
+      <div className={`${styles.boardShell} ${ux.machineSceneCentered} ${ux.conquestScene}`}>
+        <div className={ux.sceneBoard}>
+          <GuideBoardScene
+            compact
+            ariaLabel="Tropas se deslocando da origem para um território recém-conquistado"
+            markers={[
+              { key: "conquest-origin", label: "Origem", troops: originTroops, x: 35, y: 49, tone: "ally" },
+              { key: "conquest-target", label: "Conquistado", troops: targetTroops, x: 66, y: 53, tone: "ally", selected: true },
+            ]}
           arrows={[
             {
               key: "occupation",
@@ -243,6 +250,7 @@ function ConquestDemo({ presentation }: { presentation: DoctrinePresentation }) 
           ]}
           caption="A nova fronteira passa a integrar sua linha imediatamente."
         />
+        </div>
       </div>
     </DemoFrame>
   );
@@ -258,25 +266,27 @@ function ManeuverDemo({ presentation }: { presentation: DoctrinePresentation }) 
       label="Demonstração de manobra entre territórios aliados"
       caption={`A seta representa uma rota válida entre territórios próprios. Neste exemplo, ${presentation.maneuver.movableBeforeReceiving} tropas estão móveis antes de receber reforço de manobra; tropas recebidas não podem iniciar outro deslocamento no mesmo turno.`}
     >
-      <div className={styles.boardShell}>
-        <GuideBoardScene
-          compact
-          ariaLabel="Movimentação de tropas entre dois territórios aliados conectados"
-          markers={[
-            { key: "move-origin", label: "Reserva", troops: originTroops, x: 43, y: 56, tone: "ally", selected: true },
-            { key: "move-target", label: "Fronteira", troops: 3, x: 62, y: 48, tone: "ally", moved: true },
-          ]}
+      <div className={`${styles.boardShell} ${ux.machineSceneOverlay} ${ux.maneuverScene}`}>
+        <div className={ux.sceneBoard}>
+          <GuideBoardScene
+            compact
+            ariaLabel="Movimentação de tropas entre dois territórios aliados conectados"
+            markers={[
+              { key: "move-origin", label: "Reserva", troops: originTroops, x: 34, y: 58, tone: "ally", selected: true },
+              { key: "move-target", label: "Fronteira", troops: 3, x: 67, y: 45, tone: "ally", moved: true },
+            ]}
           arrows={[
             {
               key: "maneuver",
-              from: { x: 45, y: 55 },
-              to: { x: 60, y: 49 },
+              from: { x: 40, y: 56 },
+              to: { x: 61, y: 47 },
               kind: "move",
               label: "MANOBRA",
             },
           ]}
           caption="A manobra redistribui força: não produz novas tropas."
         />
+        </div>
       </div>
     </DemoFrame>
   );
@@ -288,26 +298,30 @@ function BarrierDemo({ presentation }: { presentation: DoctrinePresentation }) {
       label="Demonstração do efeito de uma barreira em uma conexão"
       caption={`Uma barreira torna o ataque mais caro e a manobra perde ${presentation.barrier.maneuverLoss} tropa na travessia; ${presentation.barrier.blockedBarrierCount} ou mais barreiras bloqueiam a rota de manobra.`}
     >
-      <div className={styles.barrierStage}>
-        <GuideBoardScene
+      <div className={`${styles.barrierStage} ${ux.machineSceneSplit} ${ux.barrierScene}`}>
+        <div className={ux.sceneBoard}>
+          <GuideBoardScene
           compact
           ariaLabel="Dois territórios separados por uma conexão com barreira"
           markers={[
-            { key: "barrier-origin", label: "Origem", troops: 7, x: 41, y: 50, tone: "ally", selected: true },
-            { key: "barrier-target", label: "Além da barreira", troops: 2, x: 63, y: 51, tone: "enemy" },
+            { key: "barrier-origin", label: "Origem", troops: 7, x: 35, y: 51, tone: "ally", selected: true },
+            { key: "barrier-target", label: "Além da barreira", troops: 2, x: 67, y: 50, tone: "enemy" },
           ]}
           arrows={[
             {
               key: "barrier-route",
-              from: { x: 44, y: 50 },
-              to: { x: 60, y: 51 },
+              from: { x: 40, y: 51 },
+              to: { x: 62, y: 50 },
               kind: "route",
               label: "BARREIRA",
             },
           ]}
           caption="A conexão permanece conhecida; o perfil da travessia é que muda."
         />
-        <div className={styles.barrierBands}>
+        </div>
+        <aside className={`${ux.sceneAside} ${ux.barrierAside}`} aria-label="Custo de dados da travessia">
+          <span className={ux.asideLabel}>TRAVESSIA</span>
+          <div className={styles.barrierBands}>
           {presentation.barrier.attackDiceBands.map((band) => (
             <div key={`${band.minimumTroops}-${band.maximumTroops ?? "max"}`}>
               <span>
@@ -473,7 +487,7 @@ function DepartureDemo() {
                     label: "Território retirado",
                     troops: 4,
                     x: 50,
-                    y: 49,
+                    y: 52,
                     tone: "neutral",
                     selected: true,
                   },
@@ -481,33 +495,32 @@ function DepartureDemo() {
                     key: "departure-a",
                     label: "Menor controle A",
                     troops: 3,
-                    x: 33,
-                    y: 34,
+                    x: 27,
+                    y: 32,
                     tone: "ally",
                   },
                   {
                     key: "departure-b",
                     label: "Menor controle B",
                     troops: 2,
-                    x: 68,
-                    y: 64,
+                    x: 73,
+                    y: 67,
                     tone: "enemy",
                   },
                 ]}
                 arrows={[
                   {
                     key: "departure-route-a",
-                    from: { x: 48, y: 47 },
-                    to: { x: 36, y: 36 },
+                    from: { x: 47, y: 49 },
+                    to: { x: 32, y: 35 },
                     kind: "move",
                     label: "ATRIBUIR",
                   },
                   {
                     key: "departure-route-b",
-                    from: { x: 53, y: 52 },
-                    to: { x: 65, y: 62 },
+                    from: { x: 53, y: 55 },
+                    to: { x: 68, y: 64 },
                     kind: "move",
-                    label: "ATRIBUIR",
                   },
                 ]}
                 caption="Cada território é atribuído a quem possui menos territórios naquele momento; empates são resolvidos aleatoriamente."
