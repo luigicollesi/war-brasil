@@ -136,7 +136,7 @@ export default function TermsPage() {
               <li>Não tente acessar contas, salas, sistemas ou dados sem autorização.</li>
               <li>Não explore bugs, falhas, automações ou manipulações para obter vantagem indevida.</li>
               <li>Não tente interferir na disponibilidade, segurança ou funcionamento do serviço.</li>
-              <li>Não utilize nomes, bios, mensagens ou outros conteúdos que violem a lei ou direitos de terceiros.</li>
+              <li>Não utilize nomes, mensagens ou outros conteúdos que violem a lei ou direitos de terceiros.</li>
               <li>Não utilize a conta para fraude, venda não autorizada, engenharia social ou personificação enganosa.</li>
             </ul>
           ),
@@ -147,7 +147,7 @@ export default function TermsPage() {
           content: (
             <>
               <p>
-                O Bellum Civile pode permitir nome público, bio, convites, amizades e
+                O Bellum Civile pode permitir nome público, convites, amizades e
                 outras interações entre jogadores. Você continua responsável pelo
                 conteúdo que decidir fornecer nesses espaços.
               </p>
