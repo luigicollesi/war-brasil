@@ -15,7 +15,7 @@ test("Doutrina cobre o núcleo obrigatório e as mecânicas adicionais ativas", 
   const slugs = doctrine.chapters.map((chapter) => chapter.slug);
 
   assert.deepEqual(slugs, [...DOCTRINE_CHAPTER_SLUGS]);
-  assert.equal(slugs.length, 12);
+  assert.equal(slugs.length, 13);
   for (const required of [
     "preparacao",
     "trocas",
@@ -27,6 +27,7 @@ test("Doutrina cobre o núcleo obrigatório e as mecânicas adicionais ativas", 
     "objetivos",
     "barreiras-conexoes",
     "anomalias",
+    "retirada",
   ]) {
     assert.ok(slugs.includes(required), `${required} precisa existir na Doutrina`);
   }
@@ -41,12 +42,18 @@ test("read model da Doutrina deriva mecânicas das autoridades do jogo", () => {
     (chapter) => chapter.slug === "barreiras-conexoes",
   );
   const events = doctrine.chapters.find((chapter) => chapter.slug === "anomalias");
+  const departure = doctrine.chapters.find(
+    (chapter) => chapter.slug === "retirada",
+  );
+  const victory = doctrine.chapters.find((chapter) => chapter.slug === "vitoria");
 
   assert.ok(turn);
   assert.ok(trade);
   assert.ok(attack);
   assert.ok(barriers);
   assert.ok(events);
+  assert.ok(departure);
+  assert.ok(victory);
   assert.deepEqual(
     turn.metrics.map((phase) => phase.value),
     ["Trocas", "Reforços", "Ataque", "Manobra"],
@@ -72,6 +79,22 @@ test("read model da Doutrina deriva mecânicas das autoridades do jogo", () => {
   assert.match(trade.lede, /antes dos reforços/);
   assert.match(trade.principles.join(" "), /Negociação não concede tropas/);
   assert.match(events.lede, /38 estados de evento/);
+  assert.equal(departure.visual, "departure");
+  assert.equal(departure.number, "12");
+  assert.equal(victory.number, "13");
+  assert.match(departure.lede, /cartas da mão vão para o descarte/);
+  assert.match(
+    departure.principles.join(" "),
+    /menos territórios.*empate.*aleatoriamente/,
+  );
+  assert.match(
+    departure.principles.join(" "),
+    /preserva as tropas.*todos os jogadores restantes/,
+  );
+  assert.match(
+    departure.principles.join(" "),
+    /única situação.*múltiplos vencedores simultâneos/,
+  );
 
   const presentationSource = source("src/lib/doctrine-presentation.ts");
   assert.match(presentationSource, /buildGameGuidePresentation/);
@@ -282,5 +305,68 @@ test("índice desktop limita tipografia e compacta registros sem alterar o índi
   assert.match(
     uxCss,
     /@media \(max-width: 760px\)[\s\S]*\.chapterNav\s*\{[\s\S]*overflow-x:\s*auto/,
+  );
+});
+
+
+test("regra de Retirada permanece alinhada ao fluxo autoritativo da partida", () => {
+  const departureRules = source("src/lib/shared/game-departure-rules.ts");
+  const departureService = source(
+    "src/lib/server/game-player-exit-service.ts",
+  );
+  const victoryService = source("src/lib/server/game-victory-service.ts");
+
+  assert.match(departureRules, /balancedTerritoryAssignments/);
+  assert.match(departureRules, /Math\.min\(\.\.\.counts\.values\(\)\)/);
+  assert.match(departureRules, /chooseIndex\(candidates\.length\)/);
+
+  assert.match(
+    departureService,
+    /SET zone='discard',owner_player_id=NULL,deck_order=NULL/,
+  );
+  assert.match(
+    departureService,
+    /SET owner_player_id=assignment\.player_id,[\s\S]*moved_in_turn=0/,
+  );
+  assert.doesNotMatch(
+    departureService.slice(
+      departureService.indexOf("async function redistributeTerritories"),
+      departureService.indexOf("async function normalizeActiveTurnPositions"),
+    ),
+    /troops\s*=/,
+  );
+  assert.match(
+    departureService,
+    /evaluateGameVictories\([\s\S]*candidateIds,[\s\S]*"territory_control_changed"/,
+  );
+  assert.match(
+    departureService,
+    /finalizeGameVictories\(client, roomId, objectiveWinners\)/,
+  );
+  assert.match(victoryService, /game\.room_winners/);
+});
+
+test("demonstração de Retirada usa mapa e cartas reais com composição responsiva", () => {
+  const demos = source("src/components/doctrine/doctrine-demo.tsx");
+  const uxCss = source(
+    "src/components/doctrine/doctrine-ux-enhancements.module.css",
+  );
+
+  assert.match(demos, /TerritoryCardArtwork/);
+  assert.match(demos, /GuideBoardScene/);
+  assert.match(demos, /departureCardTransfer/);
+  assert.match(demos, /departureWinnerPair/);
+  assert.match(demos, /RETIRADA EM PARTIDA ATIVA/);
+  assert.match(uxCss, /\.departureStage\s*\{/);
+  assert.match(uxCss, /\.departureTopFlow\s*\{/);
+  assert.match(uxCss, /\.departureLowerFlow\s*\{/);
+  assert.match(uxCss, /\.departureVictoryBanner\s*\{/);
+  assert.match(
+    uxCss,
+    /@media \(max-width: 760px\)[\s\S]*\.departureTopFlow,[\s\S]*\.departureLowerFlow/,
+  );
+  assert.match(
+    uxCss,
+    /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.departureScanLine::after/,
   );
 });
