@@ -237,8 +237,8 @@
 }
 
 .commerce button {
-  min-height: 34px;
-  padding: 0 12px;
+  min-height: 44px;
+  padding: 0 14px;
   color: #101913;
   border: 1px solid var(--brass);
   background: var(--brass);
@@ -247,6 +247,19 @@
   font-weight: 900;
   letter-spacing: 0.08em;
   cursor: pointer;
+}
+
+.commerce button:not(:disabled):hover {
+  filter: brightness(1.05);
+}
+
+.commerce button:not(:disabled):focus-visible {
+  outline: 2px solid var(--brass);
+  outline-offset: 2px;
+}
+
+.commerce button:not(:disabled):active {
+  transform: translateY(1px);
 }
 
 .commerce button:disabled {
