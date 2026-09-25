@@ -1,6 +1,7 @@
 import {
   CommanderAgeGateRequiredError,
   CommanderHandleConflictError,
+  CommanderIdentityLockedError,
   getCommandAccessState,
   saveCommanderIdentity,
 } from "@/server/auth/command-access";
@@ -102,6 +103,18 @@ export async function PUT(request: Request) {
           },
         },
         { status: 400 },
+      );
+    }
+
+    if (error instanceof CommanderIdentityLockedError) {
+      return Response.json(
+        {
+          ok: false,
+          code: "commander_identity_locked",
+          message:
+            "A identidade pública já foi definida. O @ é permanente e o nome pode ser alterado em Ajustar Dossiê.",
+        },
+        { status: 409 },
       );
     }
 
