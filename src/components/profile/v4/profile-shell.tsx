@@ -93,14 +93,15 @@ export function ProfileShell({
     let objectUrl: string | null = null;
 
     async function resolveBackground() {
-      let assetRef = backgroundAssetRef;
+      let assetRef = handle
+        ? readCachedProfileBackgroundRef(handle)
+        : null;
 
-      if (assetRef && handle) {
-        rememberProfileBackgroundRef(handle, assetRef);
-      }
-
-      if (!assetRef && handle) {
-        assetRef = readCachedProfileBackgroundRef(handle);
+      if (!assetRef && backgroundAssetRef) {
+        assetRef = backgroundAssetRef;
+        if (handle) {
+          rememberProfileBackgroundRef(handle, assetRef);
+        }
       }
 
       if (!assetRef && handle) {
