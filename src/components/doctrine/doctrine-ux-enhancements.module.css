@@ -699,6 +699,33 @@
   font-size: 7px;
 }
 
+.departureMap :global(.wb-guide-board-scene-marker) {
+  min-width: 72px;
+  grid-template-columns: 17px auto;
+  gap: 0 5px;
+  padding: 5px 7px;
+}
+
+.departureMap :global(.wb-guide-board-scene-troop) {
+  width: 16px;
+  height: 21px;
+}
+
+.departureMap :global(.wb-guide-board-scene-marker b) {
+  font-size: 0.96rem;
+}
+
+.departureMap :global(.wb-guide-board-scene-marker small) {
+  max-width: 76px;
+  font-size: 0.52rem;
+}
+
+.departureMap :global(.wb-guide-board-scene-arrow-label) {
+  padding: 4px 6px;
+  font-size: 0.52rem;
+}
+
+
 .departureBalanceRail {
   position: relative;
   z-index: 2;
