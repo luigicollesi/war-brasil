@@ -187,3 +187,46 @@ test("PROFILE V4 category surfaces can pin the private header to the viewport", 
     /\.page\[data-fixed-header="true"\] \.surface\s*\{[\s\S]*padding-top:\s*calc\(var\(--profile-commandbar-height\)/,
   );
 });
+
+
+test("PROFILE V4 shares the equipped background across Dossiê, Arsenal, Intendência and categories", async () => {
+  const shell = await source("src/components/profile/v4/profile-shell.tsx");
+  const cache = await source("src/lib/client/profile/profile-background-cache.ts");
+  const endpoint = await source("src/app/api/profile/appearance/background/route.ts");
+  const styles = await source("src/components/profile/v4/profile-shell.module.css");
+
+  assert.match(shell, /readCachedProfileBackgroundRef/);
+  assert.match(shell, /resolveProfileBackgroundDisplayUrl/);
+  assert.match(shell, /\/api\/profile\/appearance\/background/);
+  assert.match(shell, /resolvedBackgroundUrl/);
+  assert.match(shell, /className=\{styles\.profileBackdrop\}/);
+  assert.match(shell, /className=\{styles\.profileBackdropScrim\}/);
+
+  assert.match(cache, /localStorage\.getItem/);
+  assert.match(cache, /localStorage\.setItem/);
+  assert.match(cache, /caches\.open|window\.caches\.open/);
+  assert.match(cache, /cache\.match\(assetRef\)/);
+  assert.match(cache, /cache\.put\(assetRef, response\.clone\(\)\)/);
+  assert.match(cache, /fetch\(assetRef, \{ cache: "force-cache" \}\)/);
+
+  assert.match(endpoint, /getPublicProfileAppearance\(session\.user\.id\)/);
+  assert.match(endpoint, /appearance\.background\.assetRef/);
+  assert.match(endpoint, /private, no-store/);
+
+  assert.match(styles, /\.profileBackdrop\s*\{[\s\S]*position:\s*fixed;[\s\S]*inset:\s*0;/);
+  assert.match(styles, /\.profileBackdropScrim\s*\{[\s\S]*position:\s*fixed;/);
+});
+
+test("PROFILE V4 asks the server for the equipped background only after the browser reference cache misses", async () => {
+  const shell = await source("src/components/profile/v4/profile-shell.tsx");
+
+  const cachedLookup = shell.indexOf("readCachedProfileBackgroundRef(handle)");
+  const endpointLookup = shell.indexOf('fetch("/api/profile/appearance/background"');
+
+  assert.ok(cachedLookup >= 0);
+  assert.ok(endpointLookup > cachedLookup);
+  assert.match(
+    shell.slice(cachedLookup, endpointLookup + 180),
+    /if \(!assetRef && handle\)[\s\S]*readCachedProfileBackgroundRef[\s\S]*if \(!assetRef && handle\)[\s\S]*fetch/,
+  );
+});
