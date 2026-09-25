@@ -255,6 +255,67 @@ test(
           }
         }
 
+        const cosmicNightDice = await client.query(`
+          SELECT item.id,
+                 item.asset_ref,
+                 item.collection_id,
+                 pricing.fixed_price::bigint AS fixed_price,
+                 offer.id AS offer_id,
+                 offer.status AS offer_status,
+                 offer.active AS offer_active
+          FROM catalog.cosmetics item
+          JOIN catalog.cosmetic_pricing pricing ON pricing.cosmetic_id=item.id
+          JOIN catalog.products product
+            ON product.id='product.single.' || item.id
+           AND product.active=TRUE
+          JOIN catalog.offers offer
+            ON offer.id='offer.single.' || item.id
+           AND offer.product_id=product.id
+          WHERE item.id IN (
+            'dice.attack.ceu-noturno',
+            'dice.defense.ceu-noturno',
+            'dice.neutral.ceu-noturno'
+          )
+          ORDER BY item.id
+        `);
+        assert.equal(cosmicNightDice.rowCount, 3);
+        assert.deepEqual(
+          new Set(cosmicNightDice.rows.map((row) => row.asset_ref)),
+          new Set([
+            "cosmetics/dice/ceu-noturno/attack.webp",
+            "cosmetics/dice/ceu-noturno/defense.webp",
+            "cosmetics/dice/ceu-noturno/neutral.webp",
+          ]),
+        );
+        assert.ok(
+          cosmicNightDice.rows.every(
+            (row) =>
+              row.collection_id === "collection.ceu-noturno" &&
+              Number(row.fixed_price) === 500 &&
+              row.offer_status === "available" &&
+              row.offer_active === true,
+          ),
+        );
+
+        const cosmicNightBundle = await client.query(`
+          SELECT offer.price::bigint AS price,
+                 offer.status,
+                 offer.active,
+                 product.bundle_discount_bps,
+                 COUNT(membership.cosmetic_id)::int AS item_count
+          FROM catalog.offers offer
+          JOIN catalog.products product ON product.id=offer.product_id
+          JOIN catalog.product_items membership ON membership.product_id=product.id
+          WHERE offer.id='offer.ceu-noturno'
+          GROUP BY offer.price,offer.status,offer.active,product.bundle_discount_bps
+        `);
+        assert.equal(cosmicNightBundle.rowCount, 1);
+        assert.equal(Number(cosmicNightBundle.rows[0].price), 1600);
+        assert.equal(cosmicNightBundle.rows[0].status, "available");
+        assert.equal(cosmicNightBundle.rows[0].active, true);
+        assert.equal(cosmicNightBundle.rows[0].bundle_discount_bps, 2000);
+        assert.equal(cosmicNightBundle.rows[0].item_count, 4);
+
         const territoryPricing = await client.query(`
           SELECT item.id, item.collection_id, pricing.fixed_price::bigint AS fixed_price
           FROM catalog.cosmetics item
