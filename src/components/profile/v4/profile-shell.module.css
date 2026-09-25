@@ -19,6 +19,11 @@
   isolation: isolate;
 }
 
+.page[data-active-surface="store"] {
+  --font-wb-ui: var(--font-wb-store-ui);
+  font-family: var(--font-wb-store-ui), sans-serif;
+}
+
 .ambient {
   position: fixed;
   inset: 0;
