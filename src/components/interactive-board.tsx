@@ -209,7 +209,7 @@ function MobileTroopCanvas({
         context.stroke();
 
         context.fillStyle = "#17201c";
-        context.font = `900 ${fontSize}px Inter, Arial, sans-serif`;
+        context.font = `900 ${fontSize}px ${getComputedStyle(drawingCanvas).fontFamily}`;
         context.textAlign = "center";
         context.textBaseline = "middle";
         context.fillText(String(territory.troops), point.x, point.y + 0.5);
