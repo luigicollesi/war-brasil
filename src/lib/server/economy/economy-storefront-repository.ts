@@ -196,6 +196,11 @@ export async function listStorefrontOffers(
       WHERE offer.status='available'
         AND offer.active=TRUE
         AND product.active=TRUE
+        AND EXISTS (
+          SELECT 1
+            FROM catalog.product_items gameplay_membership
+           WHERE gameplay_membership.product_id=product.id
+        )
         AND (product.collection_id IS NULL OR collection.active=TRUE)
         AND (offer.starts_at IS NULL OR offer.starts_at <= CURRENT_TIMESTAMP)
         AND (offer.ends_at IS NULL OR offer.ends_at > CURRENT_TIMESTAMP)
@@ -240,6 +245,11 @@ export async function listStorefrontOfferItems(
       WHERE offer.status='available'
         AND offer.active=TRUE
         AND product.active=TRUE
+        AND EXISTS (
+          SELECT 1
+            FROM catalog.product_items gameplay_membership
+           WHERE gameplay_membership.product_id=product.id
+        )
         AND (product.collection_id IS NULL OR collection.active=TRUE)
         AND (offer.starts_at IS NULL OR offer.starts_at <= CURRENT_TIMESTAMP)
         AND (offer.ends_at IS NULL OR offer.ends_at > CURRENT_TIMESTAMP)
