@@ -152,7 +152,7 @@
   margin-inline: auto;
   padding: 12px 14px;
   border-left: 2px solid var(--d-gold-bright);
-  background: linear-gradient(90deg, rgba(205, 180, 107, 0.1), transparent 84%);
+  background: linear-gradient(90deg, rgba(72, 110, 85, 0.09), transparent 84%);
 }
 
 .tradeDoctrineNote span {
@@ -176,8 +176,8 @@
   min-height: 620px;
   padding: 20px;
   background:
-    radial-gradient(circle at 50% 56%, rgba(205, 180, 107, 0.07), transparent 34rem),
-    linear-gradient(180deg, rgba(5, 12, 9, 0.7), rgba(5, 10, 8, 0.96));
+    radial-gradient(circle at 50% 56%, rgba(72, 110, 85, 0.09), transparent 34rem),
+    linear-gradient(180deg, rgba(5, 12, 9, 0.78), rgba(5, 10, 8, 0.98));
 }
 
 .departureStage::before {
@@ -185,30 +185,17 @@
   position: absolute;
   inset: 12px;
   pointer-events: none;
-  border: 1px solid rgba(205, 180, 107, 0.06);
-  clip-path: polygon(
-    0 0,
-    36px 0,
-    36px 1px,
-    calc(100% - 36px) 1px,
-    calc(100% - 36px) 0,
-    100% 0,
-    100% 36px,
-    calc(100% - 1px) 36px,
-    calc(100% - 1px) calc(100% - 36px),
-    100% calc(100% - 36px),
-    100% 100%,
-    calc(100% - 36px) 100%,
-    calc(100% - 36px) calc(100% - 1px),
-    36px calc(100% - 1px),
-    36px 100%,
-    0 100%,
-    0 calc(100% - 36px),
-    1px calc(100% - 36px),
-    1px 36px,
-    0 36px
-  );
-  background: rgba(205, 180, 107, 0.14);
+  border: 0;
+  background:
+    linear-gradient(var(--d-gold), var(--d-gold)) left top / 36px 1px no-repeat,
+    linear-gradient(var(--d-gold), var(--d-gold)) left top / 1px 36px no-repeat,
+    linear-gradient(var(--d-gold), var(--d-gold)) right top / 36px 1px no-repeat,
+    linear-gradient(var(--d-gold), var(--d-gold)) right top / 1px 36px no-repeat,
+    linear-gradient(var(--d-gold), var(--d-gold)) left bottom / 36px 1px no-repeat,
+    linear-gradient(var(--d-gold), var(--d-gold)) left bottom / 1px 36px no-repeat,
+    linear-gradient(var(--d-gold), var(--d-gold)) right bottom / 36px 1px no-repeat,
+    linear-gradient(var(--d-gold), var(--d-gold)) right bottom / 1px 36px no-repeat;
+  opacity: 0.2;
 }
 
 .departureProtocol {
@@ -221,8 +208,8 @@
   padding: 9px 12px;
   border: 1px solid rgba(205, 180, 107, 0.16);
   background:
-    linear-gradient(90deg, rgba(205, 180, 107, 0.09), transparent 34%),
-    rgba(7, 14, 11, 0.92);
+    linear-gradient(90deg, rgba(72, 110, 85, 0.08), transparent 34%),
+    rgba(7, 14, 11, 0.94);
 }
 
 .departureProtocol span,
@@ -284,8 +271,8 @@
   overflow: hidden;
   border: 1px solid rgba(205, 180, 107, 0.14);
   background:
-    linear-gradient(145deg, rgba(205, 180, 107, 0.045), transparent 44%),
-    rgba(8, 15, 12, 0.94);
+    linear-gradient(145deg, rgba(72, 110, 85, 0.055), transparent 44%),
+    rgba(8, 15, 12, 0.96);
 }
 
 .departureStep::after {
@@ -569,8 +556,8 @@
 .departureVictoryStep {
   align-content: start;
   background:
-    radial-gradient(circle at 50% 54%, rgba(205, 180, 107, 0.1), transparent 56%),
-    rgba(8, 15, 12, 0.96);
+    radial-gradient(circle at 50% 54%, rgba(72, 110, 85, 0.1), transparent 56%),
+    rgba(8, 15, 12, 0.97);
 }
 
 .departureObjectiveScan {
@@ -666,8 +653,8 @@
   padding: 11px 10px;
   border: 1px solid rgba(205, 180, 107, 0.34);
   background:
-    linear-gradient(90deg, rgba(205, 180, 107, 0.1), transparent 24% 76%, rgba(205, 180, 107, 0.1)),
-    rgba(13, 18, 13, 0.9);
+    linear-gradient(90deg, rgba(72, 110, 85, 0.065), transparent 24% 76%, rgba(72, 110, 85, 0.065)),
+    rgba(8, 15, 12, 0.96);
   text-align: center;
   box-shadow: 0 0 28px rgba(205, 180, 107, 0.055);
 }
