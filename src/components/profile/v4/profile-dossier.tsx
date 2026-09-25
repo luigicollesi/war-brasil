@@ -84,9 +84,6 @@ export function ProfileDossier({
           ) : identity.title ? (
             <strong className={styles.fallbackTitle}>{identity.title}</strong>
           ) : null}
-          <p className={styles.bio}>
-            {identity.bio ?? "Nenhum registro biográfico foi adicionado a este Dossiê."}
-          </p>
         </div>
 
         <aside className={styles.identityStatus} aria-label="Estado operacional">
