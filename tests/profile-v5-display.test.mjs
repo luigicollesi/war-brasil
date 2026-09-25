@@ -31,7 +31,10 @@ test("public profile display uses equipped background, styled title and four-ite
 
   assert.match(display, /snapshot\.appearance\.background\.assetRef/);
   assert.match(display, /ProfileTitleRenderer/);
-  assert.match(display, /ProfileDisplayStage arsenal=\{snapshot\.appearance\.arsenal\}/);
+  assert.match(
+    display,
+    /<ProfileDisplayStage[\s\S]*arsenal=\{snapshot\.appearance\.arsenal\}[\s\S]*topInsetPx=\{arsenalTop\}/,
+  );
   assert.match(display, /CHAMAR PARA JOGAR/);
   assert.match(display, /SOLICITAR AMIZADE/);
   assert.match(display, /ACEITAR AMIZADE/);
