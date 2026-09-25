@@ -80,9 +80,9 @@ export function buildDoctrinePresentation() {
     {
       slug: "preparacao",
       number: "01",
-      eyebrow: "Mobilização",
+      eyebrow: "Preparação",
       title: "A partida começa dividindo o mapa.",
-      lede: `A partida começa distribuindo os ${guide.territoryCount} territórios entre os jogadores. Cada território entra em campo com ${guide.setup.initialTroopsPerTerritory} tropa.`,
+      lede: `A partida começa distribuindo os ${guide.territoryCount} territórios entre os jogadores. Cada território começa com ${guide.setup.initialTroopsPerTerritory} tropa.`,
       principles: [
         "Desde o começo, cada território já pertence a um jogador e já faz parte das suas fronteiras.",
         "A ordem dos jogadores é definida antes do primeiro turno e continua a mesma durante a partida.",
@@ -101,7 +101,7 @@ export function buildDoctrinePresentation() {
     {
       slug: "objetivos",
       number: "02",
-      eyebrow: "Missão",
+      eyebrow: "Objetivos",
       title: "Você vence pelo seu objetivo, não por pontuação.",
       lede: "Cada jogador recebe um objetivo secreto. Esse objetivo diz o que ele precisa fazer para vencer.",
       principles: [
@@ -119,7 +119,7 @@ export function buildDoctrinePresentation() {
     {
       slug: "turno",
       number: "03",
-      eyebrow: "Ciclo",
+      eyebrow: "Turno",
       title: "Seu turno acontece em quatro fases.",
       lede: "Se você for um jogador humano e tiver cartas, seu turno pode começar com Trocas. Depois vêm Reforços, Ataque e Manobra.",
       principles: [
@@ -138,7 +138,7 @@ export function buildDoctrinePresentation() {
     {
       slug: "trocas",
       number: "04",
-      eyebrow: "Negociação",
+      eyebrow: "Trocas",
       title: "Antes dos reforços, você pode trocar cartas com outro jogador.",
       lede: `Antes dos Reforços, o jogador humano da vez pode trocar cartas com outro jogador humano que ainda esteja na partida. Ele pode fazer até ${guide.playerTrade.offerLimitPerTurn} ofertas por turno. Os outros jogadores podem marcar até ${guide.playerTrade.signalLimitPerTurn} cartas que aceitam trocar.`,
       principles: [
@@ -149,14 +149,14 @@ export function buildDoctrinePresentation() {
       metrics: [
         { label: "Ofertas do turno", value: String(guide.playerTrade.offerLimitPerTurn) },
         { label: "Cartas marcadas", value: String(guide.playerTrade.signalLimitPerTurn) },
-        { label: "Participantes", value: "humanos ativos" },
+        { label: "Participantes", value: "jogadores humanos" },
       ],
       visual: "trade",
     },
     {
       slug: "reforcos",
       number: "05",
-      eyebrow: "Logística",
+      eyebrow: "Reforços",
       title: "No começo dos Reforços, você recebe tropas para colocar no mapa.",
       lede: `O reforço base é metade dos territórios controlados, arredondada para baixo, respeitando o mínimo de ${guide.reinforcement.minimum} tropas. Regiões completas e resgates de cartas aumentam esse total.`,
       principles: [
@@ -180,7 +180,7 @@ export function buildDoctrinePresentation() {
     {
       slug: "ataque",
       number: "06",
-      eyebrow: "Conflito",
+      eyebrow: "Ataque",
       title: "Para atacar, os dois territórios precisam estar ligados e a origem precisa ter tropas suficientes.",
       lede: `Um ataque normal parte de um território próprio com pelo menos ${guide.attack.normalMinimumTroops} tropas para um território inimigo conectado. A quantidade de dados depende da força na origem.`,
       principles: [
@@ -197,7 +197,7 @@ export function buildDoctrinePresentation() {
     {
       slug: "conquista",
       number: "07",
-      eyebrow: "Ocupação",
+      eyebrow: "Conquista",
       title: "Depois de vencer a defesa, você precisa ocupar o território.",
       lede: `Quando a defesa chega a zero, o atacante precisa transferir tropas para o território conquistado e manter pelo menos ${guide.conquest.minimumTroopsLeftAtOrigin} tropa na origem.`,
       principles: [
@@ -217,7 +217,7 @@ export function buildDoctrinePresentation() {
       number: "08",
       eyebrow: "Manobra",
       title: "Na Manobra, você move tropas entre seus próprios territórios.",
-      lede: `Na manobra, só tropas elegíveis podem sair da origem. O território precisa preservar ${guide.maneuver.minimumTroopsLeftAtOrigin} tropa e tropas recebidas durante a fase não podem ser movidas novamente.`,
+      lede: `Na Manobra, você pode mover tropas que já estavam disponíveis no território. A origem precisa ficar com pelo menos ${guide.maneuver.minimumTroopsLeftAtOrigin} tropa, e tropas recebidas nessa mesma fase não podem ser movidas outra vez.`,
       principles: [
         "O território de origem e o destino precisam ser seus e precisam estar ligados por uma rota permitida.",
         "Tropas que acabaram de chegar por Manobra não podem ser movidas outra vez no mesmo turno.",
@@ -233,7 +233,7 @@ export function buildDoctrinePresentation() {
     {
       slug: "barreiras-conexoes",
       number: "09",
-      eyebrow: "Terreno",
+      eyebrow: "Barreiras",
       title: "Algumas ligações do mapa têm barreiras.",
       lede: `Barreiras deixam a travessia mais difícil. Para atacar através de uma barreira, a origem precisa ter pelo menos ${guide.attack.barrierMinimumTroops} tropas. Cada comparação perdida pelo atacante remove ${guide.attack.barrierLossPerComparison} tropas.`,
       principles: [
@@ -250,7 +250,7 @@ export function buildDoctrinePresentation() {
     {
       slug: "cartas",
       number: "10",
-      eyebrow: "Reserva",
+      eyebrow: "Cartas",
       title: "Você pode resgatar combinações de cartas para receber tropas.",
       lede: `Se você conquistar pelo menos um território no seu turno, recebe ${guide.cards.cardsPerConqueringTurn} carta no fim dele. Combinações válidas de cartas podem ser resgatadas por tropas.`,
       principles: [
