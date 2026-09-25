@@ -66,7 +66,6 @@ function createEvaluationSnapshot(state: Exclude<ProfileCommandEvaluationState, 
       data: {
         displayName: "Comandante de avaliação",
         handle: "eval-command",
-        bio: "Biografia sintética usada somente no harness de avaliação.",
         title: "Título sintético de avaliação",
         presence: { state: "online", lastSeenAt: null },
         activity: { state: "idle", matchMode: null },
