@@ -90,9 +90,8 @@ export function PreGameCommandRuntime({ children }: { children: ReactNode }) {
   const standalonePublicProfile = isStandalonePublicProfileRoute(pathname);
   const profileOwnsSurface = profileOwnsBackground || standalonePublicProfile;
   const profileOwnsChrome =
-    profileOwnsBackground ||
-    standalonePublicProfile ||
-    pathname.startsWith("/profile/store/showcase/");
+    pathname === "/profile" ||
+    pathname.startsWith("/profile/");
   const routeIntent = useMemo(
     () => resolvePreGameSceneIntent(pathname),
     [pathname],
