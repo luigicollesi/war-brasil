@@ -129,6 +129,66 @@ export async function listActiveStorefrontQuoteItems(
   return result.rows;
 }
 
+
+export async function listActiveStorefrontCategoryQuoteItems(
+  userId: string,
+  slots: ReadonlyArray<CosmeticSlot>,
+  db: EconomyQueryable = pool,
+): Promise<StorefrontQuoteItemRow[]> {
+  const result = await db.query<StorefrontQuoteItemRow>(
+    `SELECT offer.id AS offer_id,
+            product.id AS product_id,
+            item.id AS cosmetic_id,
+            item.slot,
+            item.status,
+            item.is_default,
+            (owned.cosmetic_id IS NOT NULL) AS owned,
+            pricing.pricing_model,
+            pricing.fixed_price::text AS fixed_price,
+            stats.acquisition_count::text AS acquisition_count,
+            current_tier.acquisitions_from::text AS tier_from,
+            current_tier.acquisitions_until::text AS tier_until,
+            current_tier.price::text AS tier_price,
+            membership.position
+       FROM catalog.offers offer
+       JOIN catalog.products product ON product.id=offer.product_id
+       JOIN catalog.product_items membership ON membership.product_id=product.id
+       JOIN catalog.cosmetics item ON item.id=membership.cosmetic_id
+       JOIN catalog.cosmetic_pricing pricing ON pricing.cosmetic_id=item.id
+       JOIN catalog.cosmetic_stats stats ON stats.cosmetic_id=item.id
+       LEFT JOIN inventory.cosmetics owned
+         ON owned.user_id=$1::uuid
+        AND owned.cosmetic_id=item.id
+       LEFT JOIN LATERAL (
+         SELECT tier.acquisitions_from,
+                tier.acquisitions_until,
+                tier.price
+           FROM catalog.price_tiers tier
+          WHERE tier.cosmetic_id=item.id
+            AND pricing.pricing_model='progressive'
+            AND stats.acquisition_count >= tier.acquisitions_from
+            AND (
+              tier.acquisitions_until IS NULL
+              OR stats.acquisition_count <= tier.acquisitions_until
+            )
+          ORDER BY tier.acquisitions_from DESC
+          LIMIT 1
+       ) current_tier ON TRUE
+      WHERE offer.status='available'
+        AND offer.active=TRUE
+        AND product.active=TRUE
+        AND product.collection_id IS NULL
+        AND item.slot = ANY($2::varchar[])
+        AND item.status='available'
+        AND item.is_default=FALSE
+        AND (offer.starts_at IS NULL OR offer.starts_at <= CURRENT_TIMESTAMP)
+        AND (offer.ends_at IS NULL OR offer.ends_at > CURRENT_TIMESTAMP)
+      ORDER BY offer.priority, offer.sort_order, offer.id, membership.position`,
+    [userId, slots],
+  );
+  return result.rows;
+}
+
 export async function lockOfferProductForPurchase(
   offerId: string,
   db: EconomyQueryable,
