@@ -15,7 +15,14 @@
 
 .game-modal-surface {
   z-index: var(--z-game-modal);
+  font-family: var(--font-wb-ui), sans-serif;
   animation: game-modal-enter 190ms cubic-bezier(.2,.8,.25,1) both;
+}
+
+.game-modal-surface h3 {
+  font-family: var(--font-wb-brand), serif;
+  font-weight: 700;
+  letter-spacing: 0.015em;
 }
 
 @keyframes game-modal-enter {
@@ -58,7 +65,7 @@
   color: #fffdf6 !important;
   font-size: clamp(1.05rem, 4vw, 1.25rem);
   line-height: 1.2;
-  letter-spacing: -0.025em;
+  letter-spacing: 0.012em;
 }
 
 .battle-context {
@@ -307,8 +314,8 @@
 .temporal-anomaly-modal h3 {
   max-width: calc(100% - 92px);
   color: #fffdf5 !important;
-  font-size: clamp(1.45rem, 3vw, 2rem);
-  letter-spacing: -.035em;
+  font-size: clamp(1.4rem, 2.9vw, 1.95rem);
+  letter-spacing: .012em;
 }
 
 .temporal-anomaly-round {
