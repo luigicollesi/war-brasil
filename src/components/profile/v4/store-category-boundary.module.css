@@ -76,7 +76,8 @@
 .state h1 {
   max-width: 13ch;
   margin: 0;
-  font-family: var(--font-wb-display), sans-serif;
+  font-family: var(--font-wb-brand), serif;
+  font-weight: 700;
   font-size: clamp(3rem, 7vw, 6.3rem);
   line-height: 0.86;
   letter-spacing: -0.03em;
