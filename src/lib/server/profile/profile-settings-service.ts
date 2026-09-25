@@ -7,7 +7,6 @@ import type {
 } from "./profile-domain";
 
 const DISPLAY_NAME_MAX_LENGTH = 48;
-const BIO_MAX_LENGTH = 240;
 const VISIBILITIES = new Set<ProfileVisibility>([
   "public",
   "friends",
@@ -33,7 +32,6 @@ export class ProfileSettingsError extends Error {
 
 export type ProfileSettingsUpdate = Readonly<{
   displayName?: string;
-  bio?: string | null;
   privacy?: Readonly<{
     presenceVisibility?: ProfileVisibility;
     activityVisibility?: ProfileVisibility;
@@ -61,22 +59,6 @@ function cleanDisplayName(value: unknown) {
     throw new ProfileSettingsError(
       "INVALID_DISPLAY_NAME",
       `Nome público deve possuir entre 1 e ${DISPLAY_NAME_MAX_LENGTH} caracteres.`,
-    );
-  }
-  return normalized;
-}
-
-function cleanBio(value: unknown) {
-  if (value === null) return null;
-  if (typeof value !== "string") {
-    throw new ProfileSettingsError("INVALID_BIO", "Biografia inválida.");
-  }
-  const normalized = value.trim();
-  if (!normalized) return null;
-  if (normalized.length > BIO_MAX_LENGTH) {
-    throw new ProfileSettingsError(
-      "INVALID_BIO",
-      `Biografia deve possuir no máximo ${BIO_MAX_LENGTH} caracteres.`,
     );
   }
   return normalized;
@@ -114,7 +96,7 @@ export function parseProfileSettingsUpdate(payload: unknown): ProfileSettingsUpd
   }
 
   const input = payload as Record<string, unknown>;
-  const allowedKeys = new Set(["displayName", "bio", "privacy"]);
+  const allowedKeys = new Set(["displayName", "privacy"]);
   for (const key of Object.keys(input)) {
     if (!allowedKeys.has(key)) {
       throw new ProfileSettingsError(
@@ -126,17 +108,12 @@ export function parseProfileSettingsUpdate(payload: unknown): ProfileSettingsUpd
 
   const update: {
     displayName?: string;
-    bio?: string | null;
     privacy?: MutableProfilePrivacyUpdate;
   } = {};
 
   if (Object.prototype.hasOwnProperty.call(input, "displayName")) {
     update.displayName = cleanDisplayName(input.displayName);
   }
-  if (Object.prototype.hasOwnProperty.call(input, "bio")) {
-    update.bio = cleanBio(input.bio);
-  }
-
   if (Object.prototype.hasOwnProperty.call(input, "privacy")) {
     if (
       !input.privacy ||
@@ -223,19 +200,13 @@ export async function updateOwnProfileSettings(
       );
     }
 
-    if (update.displayName !== undefined || update.bio !== undefined) {
+    if (update.displayName !== undefined) {
       await client.query(
         `UPDATE profile.commanders
-            SET display_name=COALESCE($2::varchar(48),display_name),
-                bio=CASE WHEN $3::boolean THEN $4::varchar(240) ELSE bio END,
+            SET display_name=$2::varchar(48),
                 updated_at=NOW()
           WHERE user_id=$1::uuid`,
-        [
-          userId,
-          update.displayName ?? null,
-          update.bio !== undefined,
-          update.bio ?? null,
-        ],
+        [userId, update.displayName],
       );
     }
 
