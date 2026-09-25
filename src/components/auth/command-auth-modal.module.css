@@ -413,13 +413,6 @@
   min-height: 65px;
 }
 
-.captchaHint {
-  color: rgba(224, 214, 190, 0.38);
-  font-size: 9px;
-  line-height: 1.4;
-  text-align: center;
-}
-
 .captchaError {
   color: #d98b7b;
   font-size: 10px;
