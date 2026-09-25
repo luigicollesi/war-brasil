@@ -86,3 +86,37 @@ test("gameplay category reads are filtered in SQL before projection", async () =
   assert.match(quoteRepository, /product\.collection_id IS NULL/);
   assert.match(quoteRepository, /item\.slot = ANY\(\$2::varchar\[\]\)/);
 });
+
+
+test("category projection only evaluates offers returned by the scoped item query", async () => {
+  const service = await source("src/lib/server/economy/economy-service.ts");
+
+  assert.match(service, /const categoryOfferIds = new Set\(offerItemRows\.map\(\(row\) => row\.offer_id\)\)/);
+  assert.match(
+    service,
+    /product\.collection_id === null && categoryOfferIds\.has\(product\.offer_id\)/,
+  );
+  assert.match(
+    service,
+    /offerRows\.filter\(\(offer\) => categoryOfferIds\.has\(offer\.id\)\)/,
+  );
+  assert.doesNotMatch(
+    service,
+    /standaloneProductRows\.map\(\(product\) => product\.offer_id\)/,
+  );
+});
+
+test("category loading and error surfaces never fall back to the profile command header", async () => {
+  const errorPage = await source("src/app/profile/store/category/[category]/error.tsx");
+  const loadingPage = await source("src/app/profile/store/category/[category]/loading.tsx");
+  const boundary = await source("src/components/profile/v4/store-category-boundary.tsx");
+
+  assert.match(errorPage, /StoreCategoryBoundary/);
+  assert.match(loadingPage, /StoreCategoryBoundary/);
+  assert.match(boundary, /href="\/profile\/store"/);
+  assert.doesNotMatch(boundary, /Bellum Civile/i);
+  assert.doesNotMatch(boundary, /QUARTEL DO COMANDANTE/);
+  assert.doesNotMatch(boundary, /ProfileV4Boundary/);
+  assert.doesNotMatch(errorPage, /ProfileV4Boundary/);
+  assert.doesNotMatch(loadingPage, /ProfileV4Boundary/);
+});
