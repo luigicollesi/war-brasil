@@ -78,11 +78,11 @@
   margin-top: 2px;
   overflow: hidden;
   color: var(--wb-text);
-  font-family: var(--font-wb-display), sans-serif;
-  font-size: clamp(1.4rem, 2.35vw, 2.35rem);
-  font-weight: 760;
-  line-height: .9;
-  letter-spacing: -.015em;
+  font-family: var(--font-wb-brand), serif;
+  font-size: clamp(1.32rem, 2.2vw, 2.2rem);
+  font-weight: 700;
+  line-height: .96;
+  letter-spacing: .02em;
   text-overflow: ellipsis;
   text-transform: uppercase;
   white-space: nowrap;
