@@ -504,16 +504,16 @@ function DepartureDemo() {
                   },
                   {
                     key: "departure-a",
-                    label: "Menos territórios A",
-                    troops: 3,
+                    label: "Jogador A",
+                    troops: 1,
                     x: 27,
                     y: 32,
                     tone: "ally",
                   },
                   {
                     key: "departure-b",
-                    label: "Menos territórios B",
-                    troops: 2,
+                    label: "Jogador B",
+                    troops: 1,
                     x: 73,
                     y: 67,
                     tone: "enemy",
@@ -554,7 +554,7 @@ function DepartureDemo() {
               </span>
             </div>
             <small className={ux.departureTroopNote}>
-              As tropas ficam onde estão; apenas o dono do território muda.
+              Ao ser redistribuído, o território fica com 1 tropa.
             </small>
           </section>
 
