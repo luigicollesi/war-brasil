@@ -18,6 +18,7 @@ export type ProfileAppearanceStoreRow = {
   item_name: string;
   item_description: string | null;
   rarity: ProfileAppearanceRarity;
+  collection_id: string | null;
   display_text: string | null;
   font_key: string | null;
   style_key: string | null;
@@ -52,6 +53,7 @@ export async function listActiveProfileAppearanceStoreRows(
                 title.name AS item_name,
                 title.description AS item_description,
                 title.rarity,
+                title.collection_id,
                 title.display_text,
                 title.font_key,
                 title.style_key,
@@ -100,6 +102,7 @@ export async function listActiveProfileAppearanceStoreRows(
                 background.name AS item_name,
                 background.description AS item_description,
                 background.rarity,
+                background.collection_id,
                 NULL::text AS display_text,
                 NULL::text AS font_key,
                 NULL::text AS style_key,
