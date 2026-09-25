@@ -3,8 +3,9 @@ import {
   CommanderHandleConflictError,
   getCommandAccessState,
   saveCommanderIdentity,
-  validateCommanderIdentity,
 } from "@/server/auth/command-access";
+import { parseCommanderIdentityWriteDto } from "@/src/lib/profile/commander-name-contract";
+import { CommanderNamePolicyError } from "@/src/lib/server/profile/commander-name-policy";
 import {
   authenticationRequiredResponse,
   getAuthenticatedSession,
@@ -45,24 +46,15 @@ export async function PUT(request: Request) {
     return authenticationRequiredResponse();
   }
 
-  const body = (await request.json().catch(() => null)) as {
-    handle?: unknown;
-    displayName?: unknown;
-  } | null;
+  const body = await request.json().catch(() => null);
+  const parsed = parseCommanderIdentityWriteDto(body);
 
-  const input = {
-    handle: typeof body?.handle === "string" ? body.handle : "",
-    displayName:
-      typeof body?.displayName === "string" ? body.displayName : "",
-  };
-  const errors = validateCommanderIdentity(input);
-
-  if (Object.keys(errors).length > 0) {
-    return Response.json({ ok: false, errors }, { status: 400 });
+  if (!parsed.ok) {
+    return Response.json({ ok: false, errors: parsed.errors }, { status: 400 });
   }
 
   try {
-    const profile = await saveCommanderIdentity(session, input);
+    const profile = await saveCommanderIdentity(session, parsed.value);
     return Response.json({
       ok: true,
       authenticated: true,
@@ -78,6 +70,18 @@ export async function PUT(request: Request) {
           message: "Informe sua data de nascimento antes de definir o comandante.",
         },
         { status: 403 },
+      );
+    }
+
+    if (error instanceof CommanderNamePolicyError) {
+      return Response.json(
+        {
+          ok: false,
+          errors: {
+            [error.field]: error.publicMessage,
+          },
+        },
+        { status: 400 },
       );
     }
 
