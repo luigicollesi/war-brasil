@@ -23,8 +23,10 @@
 
 .victory-modal h3 {
   color: #fffdf5 !important;
-  font-size: clamp(1.7rem, 4vw, 2.35rem);
-  letter-spacing: -0.04em;
+  font-family: var(--font-wb-brand), serif;
+  font-size: clamp(1.65rem, 3.8vw, 2.25rem);
+  font-weight: 700;
+  letter-spacing: 0.015em;
 }
 
 .victory-emblem {
