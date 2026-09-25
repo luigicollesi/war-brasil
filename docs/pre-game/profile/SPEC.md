@@ -48,7 +48,6 @@ A identidade visual MUST ser construída com:
 
 - `displayName`;
 - `handle`;
-- bio opcional;
 - título cosmético textual;
 - presença;
 - atividade;
@@ -138,7 +137,6 @@ A primeira leitura SHOULD responder:
 - quem é o comandante;
 - qual título utiliza;
 - qual sua presença/atividade;
-- qual sua bio;
 - quais ações pessoais estão disponíveis;
 - quais são seus contextos sociais e históricos recentes.
 
@@ -149,7 +147,6 @@ Dossiê MUST comportar:
 - display name;
 - `@handle`;
 - título cosmético textual;
-- bio;
 - presença;
 - atividade;
 - ação clara `Editar Dossiê` ou equivalente.
