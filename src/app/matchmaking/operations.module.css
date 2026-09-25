@@ -68,11 +68,11 @@
 .title {
   margin-top: 6px;
   color: var(--wb-text);
-  font-family: var(--font-wb-display), sans-serif;
-  font-size: clamp(2.15rem, 4.4vw, 4.65rem);
-  font-weight: 760;
-  line-height: .9;
-  letter-spacing: -.028em;
+  font-family: var(--font-wb-brand), serif;
+  font-size: clamp(2.05rem, 4.15vw, 4.35rem);
+  font-weight: 700;
+  line-height: .96;
+  letter-spacing: .015em;
   text-transform: uppercase;
 }
 
