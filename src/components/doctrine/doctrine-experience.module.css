@@ -190,8 +190,8 @@
   padding: clamp(28px, 4vh, 48px) 22px 22px clamp(18px, 3vw, 42px);
   border-right: 1px solid var(--d-line);
   background:
-    linear-gradient(180deg, rgba(13, 23, 19, 0.94), rgba(7, 12, 10, 0.94)),
-    radial-gradient(circle at 20% 20%, rgba(205, 180, 107, 0.08), transparent 18rem);
+    linear-gradient(180deg, rgba(13, 23, 19, 0.96), rgba(7, 12, 10, 0.97)),
+    radial-gradient(circle at 20% 20%, rgba(72, 110, 85, 0.08), transparent 18rem);
 }
 
 .indexPanel::after {
@@ -199,7 +199,7 @@
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(135deg, transparent 0 62%, rgba(205, 180, 107, 0.02) 62% 63%, transparent 63%);
+  background: linear-gradient(135deg, transparent 0 62%, rgba(120, 169, 128, 0.018) 62% 63%, transparent 63%);
 }
 
 .indexHeader {
@@ -446,7 +446,7 @@
   gap: 1px;
   margin: 28px 0 0;
   border: 1px solid rgba(205, 180, 107, 0.15);
-  background: rgba(205, 180, 107, 0.11);
+  background: rgba(255, 255, 255, 0.055);
 }
 
 .metric {
@@ -515,9 +515,17 @@
 
 .demoViewport::after {
   inset: 16px;
-  border: 1px solid rgba(205, 180, 107, 0.08);
-  clip-path: polygon(0 0, 44px 0, 44px 1px, calc(100% - 44px) 1px, calc(100% - 44px) 0, 100% 0, 100% 44px, calc(100% - 1px) 44px, calc(100% - 1px) calc(100% - 44px), 100% calc(100% - 44px), 100% 100%, calc(100% - 44px) 100%, calc(100% - 44px) calc(100% - 1px), 44px calc(100% - 1px), 44px 100%, 0 100%, 0 calc(100% - 44px), 1px calc(100% - 44px), 1px 44px, 0 44px);
-  background: rgba(205, 180, 107, 0.35);
+  border: 0;
+  background:
+    linear-gradient(var(--d-gold), var(--d-gold)) left top / 44px 1px no-repeat,
+    linear-gradient(var(--d-gold), var(--d-gold)) left top / 1px 44px no-repeat,
+    linear-gradient(var(--d-gold), var(--d-gold)) right top / 44px 1px no-repeat,
+    linear-gradient(var(--d-gold), var(--d-gold)) right top / 1px 44px no-repeat,
+    linear-gradient(var(--d-gold), var(--d-gold)) left bottom / 44px 1px no-repeat,
+    linear-gradient(var(--d-gold), var(--d-gold)) left bottom / 1px 44px no-repeat,
+    linear-gradient(var(--d-gold), var(--d-gold)) right bottom / 44px 1px no-repeat,
+    linear-gradient(var(--d-gold), var(--d-gold)) right bottom / 1px 44px no-repeat;
+  opacity: 0.22;
 }
 
 .demoFrame figcaption {
@@ -667,7 +675,7 @@
   align-items: center;
   padding: 14px;
   border-left: 1px solid rgba(205, 180, 107, 0.18);
-  background: linear-gradient(90deg, rgba(205, 180, 107, 0.055), transparent);
+  background: linear-gradient(90deg, rgba(72, 110, 85, 0.075), transparent);
 }
 
 .objectiveList > div > b {
@@ -707,7 +715,7 @@
   min-height: 300px;
   padding: 24px;
   border: 1px solid rgba(205, 180, 107, 0.14);
-  background: linear-gradient(180deg, rgba(205, 180, 107, 0.055), rgba(9, 16, 13, 0.88));
+  background: linear-gradient(180deg, rgba(72, 110, 85, 0.07), rgba(9, 16, 13, 0.92));
 }
 
 .phaseStep span {
@@ -759,7 +767,7 @@
   padding: 20px;
   text-align: center;
   border: 1px solid rgba(205, 180, 107, 0.22);
-  background: rgba(205, 180, 107, 0.045);
+  background: rgba(9, 16, 13, 0.92);
 }
 
 .reinforcementReadout span,
