@@ -64,3 +64,9 @@ test("commander display name keeps legitimate accented and non-Latin names", () 
     assert.equal(validateCommanderDisplayNameDraft(name).ok, true, name);
   }
 });
+
+
+test("commander display name rejects punctuation-only identity", () => {
+  assert.equal(validateCommanderDisplayNameDraft("__").ok, false);
+  assert.equal(validateCommanderDisplayNameDraft("--").ok, false);
+});
