@@ -66,6 +66,7 @@ export function ProfileShell({
   wallet,
   backgroundAssetRef = null,
   evaluationFixture = false,
+  fixedHeader = false,
   children,
 }: {
   activeSurface: ProfileSurface;
@@ -74,6 +75,7 @@ export function ProfileShell({
   wallet: ProfileShellWallet;
   backgroundAssetRef?: string | null;
   evaluationFixture?: boolean;
+  fixedHeader?: boolean;
   children: ReactNode;
 }) {
   const router = useRouter();
@@ -113,6 +115,7 @@ export function ProfileShell({
       data-profile-v4
       data-active-surface={activeSurface}
       data-evaluation-fixture={evaluationFixture || undefined}
+      data-fixed-header={fixedHeader ? "true" : "false"}
       data-session-state={logoutState}
     >
       {backgroundAssetRef ? (
