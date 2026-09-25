@@ -136,6 +136,176 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
+.machineSceneRail {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  padding: 32px;
+}
+
+.phaseCard {
+  align-content: start;
+  min-height: 250px;
+  padding: 24px 20px;
+}
+
+.phaseCard strong {
+  max-width: 100%;
+  margin: 52px 0 12px;
+  font-size: clamp(22px, 1.9vw, 30px);
+  line-height: 0.96;
+  overflow-wrap: anywhere;
+}
+
+.phaseCard small {
+  max-width: 24ch;
+  font-size: 9px;
+  line-height: 1.55;
+}
+
+.phaseCard i {
+  right: -17px;
+  width: 30px;
+  height: 30px;
+}
+
+.machineSceneSplit {
+  display: grid;
+  grid-template-columns: minmax(0, 1.22fr) minmax(220px, 0.78fr);
+  align-items: center;
+  gap: 32px;
+  padding: 32px;
+}
+
+.machineSceneCentered,
+.machineSceneOverlay {
+  display: grid;
+  place-items: center;
+  min-height: 430px;
+  padding: 30px;
+}
+
+.sceneBoard {
+  display: grid;
+  min-width: 0;
+  width: 100%;
+  place-items: center;
+}
+
+.sceneBoard :global(.wb-guide-board-scene) {
+  width: min(100%, 560px);
+}
+
+.sceneBoard :global(.wb-guide-board-scene-frame) {
+  width: min(100%, 500px);
+}
+
+.sceneBoard :global(.wb-guide-board-scene figcaption) {
+  width: min(100%, 500px);
+  margin-top: 14px;
+  padding-inline: 12px;
+}
+
+.sceneAside {
+  display: grid;
+  width: min(100%, 320px);
+  margin-inline: auto;
+  padding: 20px;
+  border: 1px solid rgba(120, 169, 128, 0.14);
+  background: rgba(7, 14, 11, 0.9);
+}
+
+.combatAside {
+  gap: 20px;
+  align-content: center;
+}
+
+.combatAside > div {
+  gap: 10px;
+}
+
+.combatAside > div > span,
+.asideLabel {
+  color: #87948b;
+  font: 800 8px/1 var(--font-geist-mono), monospace;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
+.combatAside > div > div {
+  gap: 8px;
+}
+
+.combatAside :global(.game-die) {
+  width: 54px;
+  border-radius: 11px;
+}
+
+.attackScene .sceneBoard {
+  max-width: 600px;
+}
+
+.conquestScene .sceneBoard,
+.maneuverScene .sceneBoard {
+  max-width: 620px;
+}
+
+.conquestScene :global(.wb-guide-board-scene-marker),
+.maneuverScene :global(.wb-guide-board-scene-marker),
+.attackScene :global(.wb-guide-board-scene-marker),
+.barrierScene :global(.wb-guide-board-scene-marker) {
+  min-width: 76px;
+  padding: 6px 8px;
+}
+
+.conquestScene :global(.wb-guide-board-scene-marker small),
+.maneuverScene :global(.wb-guide-board-scene-marker small),
+.attackScene :global(.wb-guide-board-scene-marker small),
+.barrierScene :global(.wb-guide-board-scene-marker small) {
+  max-width: 82px;
+}
+
+.maneuverScene :global(.wb-guide-board-scene-marker em) {
+  top: calc(100% + 8px);
+  padding: 3px 6px;
+  font-size: 0.5rem;
+}
+
+.barrierScene {
+  grid-template-columns: minmax(0, 1.28fr) minmax(220px, 0.72fr);
+}
+
+.barrierAside {
+  max-width: 300px;
+  padding: 0;
+  overflow: hidden;
+}
+
+.asideLabel {
+  display: block;
+  padding: 13px 14px 11px;
+  border-bottom: 1px solid rgba(120, 169, 128, 0.12);
+}
+
+.barrierBandsRefined {
+  border: 0;
+  background: transparent;
+}
+
+.barrierBandsRefined > div {
+  min-height: 64px;
+  padding: 14px;
+  border-bottom: 1px solid rgba(120, 169, 128, 0.1);
+  background: rgba(7, 13, 10, 0.94);
+}
+
+.barrierBandsRefined > div:last-child {
+  border-bottom: 0;
+}
+
+.barrierBandsRefined strong {
+  font-size: 18px;
+}
+
 .playerTradeStage {
   position: relative;
   z-index: 1;
@@ -753,6 +923,53 @@
   }
 }
 
+@media (max-width: 1312px) {
+  .machineSceneRail {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .phaseCard {
+    min-height: 210px;
+  }
+
+  .phaseCard strong {
+    margin-top: 30px;
+    font-size: clamp(24px, 3vw, 34px);
+  }
+
+  .phaseCard i {
+    display: none;
+  }
+}
+
+@media (max-width: 1180px) {
+  .machineSceneSplit,
+  .barrierScene {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .sceneAside,
+  .barrierAside {
+    width: min(100%, 520px);
+    max-width: 520px;
+  }
+
+  .combatAside {
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+  }
+
+  .combatAside > div > div {
+    justify-content: center;
+  }
+
+  .combatAside > div > span {
+    text-align: center;
+  }
+}
+
 @media (max-width: 1080px) {
   .shell {
     --doctrine-index-width: 260px;
@@ -827,8 +1044,49 @@
     scrollbar-gutter: auto;
   }
 
-  .phaseRail {
+  .phaseRail,
+  .machineSceneRail {
     grid-template-columns: 1fr;
+  }
+
+  .machineSceneRail,
+  .machineSceneSplit,
+  .machineSceneCentered,
+  .machineSceneOverlay {
+    padding: 16px;
+  }
+
+  .phaseCard {
+    min-height: 150px;
+    padding: 18px 16px;
+  }
+
+  .phaseCard strong {
+    margin: 20px 0 9px;
+    font-size: clamp(24px, 8vw, 34px);
+  }
+
+  .sceneBoard :global(.wb-guide-board-scene),
+  .sceneBoard :global(.wb-guide-board-scene-frame),
+  .sceneBoard :global(.wb-guide-board-scene figcaption) {
+    width: min(100%, 430px);
+  }
+
+  .combatAside {
+    grid-template-columns: 1fr;
+    width: min(100%, 430px);
+  }
+
+  .combatAside > div > div {
+    justify-content: flex-start;
+  }
+
+  .combatAside > div > span {
+    text-align: left;
+  }
+
+  .barrierAside {
+    width: min(100%, 430px);
   }
 
   .playerTradeStage {
@@ -878,6 +1136,32 @@
 
   .departureMap {
     min-height: 300px;
+  }
+
+  .departureMap :global(.wb-guide-board-scene-marker) {
+    min-width: 66px;
+    grid-template-columns: 16px auto;
+    gap: 0 4px;
+    padding: 5px 6px;
+  }
+
+  .departureMap :global(.wb-guide-board-scene-troop) {
+    width: 15px;
+    height: 20px;
+  }
+
+  .departureMap :global(.wb-guide-board-scene-marker b) {
+    font-size: 0.9rem;
+  }
+
+  .departureMap :global(.wb-guide-board-scene-marker small) {
+    max-width: 70px;
+    font-size: 0.5rem;
+  }
+
+  .departureMap :global(.wb-guide-board-scene-arrow-label) {
+    padding: 3px 5px;
+    font-size: 0.5rem;
   }
 
   .departureBalanceRail {
