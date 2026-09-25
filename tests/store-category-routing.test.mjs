@@ -64,14 +64,19 @@ test("all category purchases reuse the authoritative economy purchase client", a
 });
 
 
-test("store category route is standalone and does not render the commander profile shell", async () => {
+test("store category route uses the private profile shell and keeps scoped reads parallel", async () => {
   const page = await source("src/app/profile/store/category/[category]/page.tsx");
   const styles = await source("src/components/profile/v4/profile-store-category.module.css");
 
-  assert.doesNotMatch(page, /ProfileShell/);
-  assert.doesNotMatch(page, /getOwnCommanderProfile/);
-  assert.match(styles, /\.categoryPage\s*\{[\s\S]*min-height:\s*100dvh/);
-  assert.match(styles, /\.categoryNav\s*\{[\s\S]*top:\s*0/);
+  assert.match(page, /ProfileShell/);
+  assert.match(page, /getOwnCommanderProfile/);
+  assert.match(page, /Promise\.all/);
+  assert.match(page, /activeSurface="store"/);
+  assert.match(styles, /\.categoryNav\s*\{[\s\S]*top:\s*78px/);
+  assert.match(
+    styles,
+    /@media \(max-width: 980px\)[\s\S]*\.categoryNav\s*\{\s*top:\s*8px/,
+  );
 });
 
 test("gameplay category reads are filtered in SQL before projection", async () => {
