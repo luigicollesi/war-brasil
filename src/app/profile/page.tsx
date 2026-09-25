@@ -32,7 +32,6 @@ export default async function ProfilePage() {
       : Promise.resolve(null),
   ]);
   const identity = snapshot.identity.data;
-  const equippedBackground = appearance?.background.assetRef ?? null;
   const equippedTitle = appearance?.title ?? null;
   const walletData = snapshot.wallet.data?.campaignCredit ?? null;
   const wallet: ProfileShellWallet =
@@ -53,7 +52,6 @@ export default async function ProfilePage() {
       displayName={identity?.displayName ?? "Comandante"}
       handle={identity?.handle ?? null}
       wallet={wallet}
-      backgroundAssetRef={equippedBackground}
       evaluationFixture={snapshot.isEvaluationFixture}
     >
       <ProfileDossier snapshot={snapshot} appearanceTitle={equippedTitle} />
