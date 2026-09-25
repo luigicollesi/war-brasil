@@ -398,6 +398,8 @@ async function assertAuthProfileSchema(client) {
   for (const name of [
     "commanders_equipped_title_owned_fkey",
     "commanders_equipped_background_owned_fkey",
+    "commanders_handle_shape_check",
+    "commanders_display_name_shape_check",
   ]) {
     assert.equal(profileConstraintNames.has(name), true, name);
   }
@@ -435,6 +437,21 @@ async function assertAuthProfileSchema(client) {
   await client.query(
     `INSERT INTO profile.privacy_settings(user_id) VALUES($1)`,
     [userId],
+  );
+
+  await assert.rejects(
+    client.query(
+      `UPDATE profile.commanders SET handle='_invalid' WHERE user_id=$1`,
+      [userId],
+    ),
+    (error) => error?.code === "23514",
+  );
+  await assert.rejects(
+    client.query(
+      `UPDATE profile.commanders SET display_name=' Invalid ' WHERE user_id=$1`,
+      [userId],
+    ),
+    (error) => error?.code === "23514",
   );
 
   const privacy = await client.query(
