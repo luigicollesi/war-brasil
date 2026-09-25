@@ -42,5 +42,13 @@ export const STORE_CATEGORY_META: Readonly<
 };
 
 export function isStoreCategoryId(value: string): value is StoreCategoryId {
-  return (STORE_CATEGORY_IDS as readonly string[]).includes(value);
+  switch (value) {
+    case "dice":
+    case "territories":
+    case "backgrounds":
+    case "titles":
+      return true;
+    default:
+      return false;
+  }
 }
