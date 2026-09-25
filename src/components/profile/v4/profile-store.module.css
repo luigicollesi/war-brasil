@@ -866,7 +866,7 @@
 .collectionBannerViewport {
   position: relative;
   width: 100%;
-  aspect-ratio: 9 / 5;
+  aspect-ratio: 9 / 4;
   display: block;
   overflow: hidden;
 }
