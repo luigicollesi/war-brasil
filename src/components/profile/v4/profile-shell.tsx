@@ -7,9 +7,11 @@ import { useEffect, useState, type ReactNode } from "react";
 import { authClient } from "@/client/auth-client";
 import { useCommandSceneDirective } from "@/src/components/pre-game/foundation";
 import {
+  PROFILE_BACKGROUND_UPDATED_EVENT,
   readCachedProfileBackgroundRef,
   rememberProfileBackgroundRef,
   resolveProfileBackgroundDisplayUrl,
+  type ProfileBackgroundUpdatedDetail,
 } from "@/src/lib/client/profile/profile-background-cache";
 import styles from "./profile-shell.module.css";
 
@@ -86,16 +88,36 @@ export function ProfileShell({
   const router = useRouter();
   const [logoutState, setLogoutState] = useState<"idle" | "closing" | "error">("idle");
   const [resolvedBackgroundUrl, setResolvedBackgroundUrl] = useState<string | null>(null);
+  const [liveBackgroundAssetRef, setLiveBackgroundAssetRef] = useState<string | null>(
+    null,
+  );
   useCommandSceneDirective(SCENE_DIRECTIVES[activeSurface]);
+
+  useEffect(() => {
+    if (!handle) return undefined;
+
+    const normalizedHandle = handle.trim().toLowerCase();
+    const onBackgroundUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<ProfileBackgroundUpdatedDetail>).detail;
+      if (!detail || detail.handle !== normalizedHandle || !detail.assetRef) return;
+      setLiveBackgroundAssetRef(detail.assetRef);
+    };
+
+    window.addEventListener(PROFILE_BACKGROUND_UPDATED_EVENT, onBackgroundUpdated);
+    return () =>
+      window.removeEventListener(PROFILE_BACKGROUND_UPDATED_EVENT, onBackgroundUpdated);
+  }, [handle]);
 
   useEffect(() => {
     let disposed = false;
     let objectUrl: string | null = null;
 
     async function resolveBackground() {
-      let assetRef = handle
-        ? readCachedProfileBackgroundRef(handle)
-        : null;
+      let assetRef = liveBackgroundAssetRef;
+
+      if (!assetRef && handle) {
+        assetRef = readCachedProfileBackgroundRef(handle);
+      }
 
       if (!assetRef && backgroundAssetRef) {
         assetRef = backgroundAssetRef;
@@ -142,7 +164,7 @@ export function ProfileShell({
       disposed = true;
       if (objectUrl) URL.revokeObjectURL(objectUrl);
     };
-  }, [backgroundAssetRef, handle]);
+  }, [backgroundAssetRef, handle, liveBackgroundAssetRef]);
 
   async function handleLogout() {
     if (logoutState === "closing") return;
