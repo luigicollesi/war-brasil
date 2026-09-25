@@ -73,7 +73,7 @@ test("storefront V2 expõe skins anunciadas/disponíveis sem convertê-las em of
   assert.match(repository, /item\.status IN \('announced','available'\)/);
   assert.match(service, /listStorefrontTerritorySkins/);
   assert.match(service, /territorySkins:/);
-  assert.match(categoryStorefront, /storefront\.territorySkins/);
+  assert.match(categoryStorefront, /territorySkins\.map/);
   assert.match(categoryStorefront, /offer \? \(/);
   assert.match(categoryStorefront, /ANUNCIADO/);
 });
