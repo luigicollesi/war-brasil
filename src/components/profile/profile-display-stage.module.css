@@ -1,18 +1,25 @@
 .stage {
-  position: relative;
+  --profile-display-top-default: clamp(230px, 29vh, 330px);
+  position: absolute;
   z-index: 2;
+  top: var(--profile-display-top, var(--profile-display-top-default));
+  right: 0;
+  bottom: 0;
+  left: 0;
   min-height: 0;
-  height: 100%;
   overflow: hidden;
+  isolation: isolate;
 }
 
 .canvas {
   position: absolute;
+  z-index: 2;
   inset: 0;
 }
 
 .labels {
   position: absolute;
+  z-index: 1;
   inset: 0;
   pointer-events: none;
 }
@@ -69,7 +76,7 @@
 
 @media (max-width: 720px) {
   .stage {
-    min-height: 100dvh;
+    --profile-display-top-default: clamp(240px, 25vh, 340px);
   }
 
   .label {
