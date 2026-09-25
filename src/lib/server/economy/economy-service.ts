@@ -78,6 +78,7 @@ import {
   incrementEntitlementAcquisitionCount,
   insertLegacyCosmeticPurchaseItem,
   insertPurchaseEntitlement,
+  listBackgroundCollectionRequirementsForPurchase,
   listLockedProductEntitlementsForPurchase,
   listPurchasedEntitlements,
   lockProductEntitlementStats,
@@ -976,6 +977,46 @@ export async function purchaseOffer(
         "Todos os itens desta oferta já pertencem ao comandante.",
         409,
       );
+    }
+
+    const missingBackgroundIds = new Set(
+      missingRows
+        .filter((item) => item.entitlement_kind === "profile_background")
+        .map((item) => item.background_id)
+        .filter((backgroundId): backgroundId is string => Boolean(backgroundId)),
+    );
+    if (missingBackgroundIds.size > 0) {
+      const requirements = await listBackgroundCollectionRequirementsForPurchase(
+        userId,
+        offer.product_id,
+        client,
+      );
+
+      for (const requirement of requirements) {
+        if (!missingBackgroundIds.has(requirement.background_id)) continue;
+
+        if (requirement.total_count <= 0) {
+          throw new EconomyServiceError(
+            "ECONOMY_CATALOG_INVALID",
+            "A coleção exigida pelo fundo não possui itens válidos.",
+            503,
+          );
+        }
+
+        if (requirement.owned_count !== requirement.total_count) {
+          throw new EconomyServiceError(
+            "ECONOMY_COLLECTION_INCOMPLETE",
+            `Complete a coleção ${requirement.collection_name} antes de adquirir este fundo (${requirement.owned_count}/${requirement.total_count}).`,
+            409,
+            {
+              collectionId: requirement.collection_id,
+              collectionName: requirement.collection_name,
+              ownedCount: requirement.owned_count,
+              totalCount: requirement.total_count,
+            },
+          );
+        }
+      }
     }
 
     const price = quote.finalPrice;
