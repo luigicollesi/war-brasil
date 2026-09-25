@@ -72,6 +72,7 @@ test("read model da Doutrina deriva mecânicas das autoridades do jogo", () => {
   assert.equal(doctrine.conquest.minimumMove, 1);
   assert.equal(doctrine.maneuver.minimumTroopsLeftAtOrigin, 1);
   assert.equal(doctrine.anomalies.eventCount, 38);
+  assert.equal(doctrine.departure.redistributedTroops, 1);
   assert.deepEqual(
     doctrine.objectiveFormats.map((format) => format.title),
     ["DOMÍNIO", "FORTIFICAÇÃO", "ELIMINAÇÃO"],
@@ -102,6 +103,7 @@ test("read model da Doutrina deriva mecânicas das autoridades do jogo", () => {
   assert.match(presentationSource, /guide\.playerTrade\.signalLimitPerTurn/);
   assert.match(presentationSource, /EVENT_COUNT/);
   assert.match(presentationSource, /JURASSIC_TUNNEL_SOURCE_ID/);
+  assert.match(presentationSource, /DEPARTURE_REDISTRIBUTED_TROOPS/);
   assert.doesNotMatch(
     presentationSource,
     /const\s+(?:MIN_TERRITORY_TROOPS|MANDATORY_TRADE_HAND_SIZE|OWNED_TERRITORY_CARD_BONUS|PLAYER_TRADE_OFFER_LIMIT|PLAYER_TRADE_SIGNAL_LIMIT)\s*=/,
@@ -120,6 +122,7 @@ test("/rules resolve deep-link no servidor dentro do runtime Foundation sem depe
   assert.match(page, /buildDoctrinePresentation/);
   assert.match(page, /<DoctrineExperience/);
   assert.match(page, /canonical: "\/rules"/);
+  assert.match(page, /saída da partida/);
   assert.match(
     layout,
     /<PreGameCommandRuntime>\s*<ActiveParticipationRuntime>\{children\}<\/ActiveParticipationRuntime>\s*<\/PreGameCommandRuntime>/,
@@ -370,7 +373,9 @@ test("demonstração de Retirada usa mapa e cartas reais com composição respon
   assert.match(demos, /departureCardTransfer/);
   assert.match(demos, /departureWinnerPair/);
   assert.match(demos, /JOGADOR SAI DA PARTIDA/);
-  assert.match(demos, /Ao ser redistribuído, o território fica com 1 tropa/);
+  assert.match(demos, /presentation\.departure\.redistributedTroops/);
+  assert.match(demos, /DESEMPATE ALEATÓRIO/);
+  assert.match(demos, /TROPA/);
   assert.match(uxCss, /\.departureStage\s*\{/);
   assert.match(uxCss, /\.departureTopFlow\s*\{/);
   assert.match(uxCss, /\.departureLowerFlow\s*\{/);
