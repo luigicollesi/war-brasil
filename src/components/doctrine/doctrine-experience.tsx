@@ -275,20 +275,17 @@ export function DoctrineExperience({
                   scroll={false}
                 >
                   <span>← ANTERIOR</span>
-                  <b>{previousChapter.eyebrow}</b>
+                  <b>{previousChapter.title}</b>
                 </Link>
               ) : (
                 <span className={styles.navPlaceholder} aria-hidden="true" />
               )}
 
-              <a className={styles.backToIndex} href="#doctrine-index-title">
-                ÍNDICE
-              </a>
-
               <Link
                 href="/home"
-                className={ux.mobileReturnButton}
-                aria-label="Voltar ao comando"
+                className={styles.commandLink}
+                aria-label="Ir ao comando"
+                prefetch={false}
               >
                 COMANDO
               </Link>
@@ -301,7 +298,7 @@ export function DoctrineExperience({
                   scroll={false}
                 >
                   <span>PRÓXIMO →</span>
-                  <b>{nextChapter.eyebrow}</b>
+                  <b>{nextChapter.title}</b>
                 </Link>
               ) : (
                 <Link href="/home" className={styles.returnCommand}>
