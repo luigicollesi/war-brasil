@@ -3,10 +3,7 @@
 import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { ProfileTitleRenderer } from "@/src/components/profile/profile-title-renderer";
-import {
-  rememberProfileBackgroundRef,
-  warmProfileBackgroundAsset,
-} from "@/src/lib/client/profile/profile-background-cache";
+import { applyProfileBackgroundRef } from "@/src/lib/client/profile/profile-background-cache";
 import type {
   CommanderIdentity,
   FriendRequestPolicy,
@@ -212,8 +209,10 @@ export function ProfileSettingsPanel({
       });
 
       if (backgroundChanged && selectedBackground) {
-        rememberProfileBackgroundRef(identity.handle, selectedBackground.assetRef);
-        void warmProfileBackgroundAsset(selectedBackground.assetRef);
+        await applyProfileBackgroundRef(
+          identity.handle,
+          selectedBackground.assetRef,
+        );
       }
 
       setAppearanceView("root");
