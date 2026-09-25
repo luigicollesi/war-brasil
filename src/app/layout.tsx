@@ -5,9 +5,11 @@ import { ProfilePresenceHeartbeat } from "@/src/components/profile/profile-prese
 import { UserNotificationRuntime } from "@/src/components/notifications/user-notification-runtime";
 import { getSiteUrl } from "@/src/lib/site-url";
 import {
+  brandFont,
   displayFont,
   geistMono,
   interfaceFont,
+  legacyInterfaceFont,
   profileTitleFontVariables,
 } from "./fonts";
 import "./globals.css";
@@ -70,7 +72,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="pt-BR"
       data-scroll-behavior="smooth"
-      className={`${interfaceFont.variable} ${displayFont.variable} ${geistMono.variable} ${profileTitleFontVariables} h-full antialiased`}
+      className={`${interfaceFont.variable} ${displayFont.variable} ${brandFont.variable} ${legacyInterfaceFont.variable} ${geistMono.variable} ${profileTitleFontVariables} h-full antialiased`}
     >
       {assetOrigin ? (
         <head>
