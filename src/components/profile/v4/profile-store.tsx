@@ -518,14 +518,16 @@ export function ProfileStore({
                   href={showcaseHref("collection", collection.id)}
                   aria-label={`Inspecionar coleção ${collection.name}`}
                 >
-                  <ProfileCosmeticImage
-                    src={collection.assets.banner}
-                    alt={`Banner da coleção ${collection.name}`}
-                    width={900}
-                    height={500}
-                    fallbackClassName={styles.productFallback}
-                    fallbackLabel="COLEÇÃO"
-                  />
+                  <span className={styles.collectionBannerViewport}>
+                    <ProfileCosmeticImage
+                      src={collection.assets.banner}
+                      alt={`Banner da coleção ${collection.name}`}
+                      width={900}
+                      height={500}
+                      fallbackClassName={styles.productFallback}
+                      fallbackLabel="COLEÇÃO"
+                    />
+                  </span>
                   <span className={styles.collectionBannerMeta}>
                     <span>
                       <small>{collection.featured ? "DESTAQUE ESPECIAL" : "COLEÇÃO"}</small>
