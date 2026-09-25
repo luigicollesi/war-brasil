@@ -1,6 +1,8 @@
 .dialog {
+  --auth-dialog-max-height: min(760px, calc(100dvh - 32px));
+
   width: min(980px, calc(100vw - 32px));
-  max-height: min(760px, calc(100dvh - 32px));
+  max-height: var(--auth-dialog-max-height);
   margin: auto;
   padding: 0;
   border: 1px solid rgba(196, 160, 83, 0.62);
@@ -23,12 +25,14 @@
 .shell {
   display: grid;
   grid-template-columns: minmax(260px, 0.82fr) minmax(420px, 1.3fr);
-  min-height: 600px;
+  min-height: min(600px, var(--auth-dialog-max-height));
+  max-height: var(--auth-dialog-max-height);
 }
 
 .identityPanel {
   position: relative;
   display: flex;
+  min-height: 0;
   flex-direction: column;
   justify-content: space-between;
   gap: 28px;
@@ -184,6 +188,8 @@
   position: relative;
   display: flex;
   min-width: 0;
+  min-height: 0;
+  max-height: var(--auth-dialog-max-height);
   flex-direction: column;
   padding: 42px 48px 28px;
   overflow-y: auto;
@@ -529,6 +535,7 @@
   .dialog {
     --auth-mobile-max-height:
       calc(100dvh - max(12px, env(safe-area-inset-top)));
+    --auth-dialog-max-height: var(--auth-mobile-max-height);
 
     width: 100vw;
     max-width: none;
