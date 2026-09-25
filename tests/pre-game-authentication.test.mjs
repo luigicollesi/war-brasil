@@ -268,13 +268,17 @@ test("completude do Comando exige idade verificada e identidade pública", () =>
   assert.match(commandAccessRoute, /authenticationRequiredResponse/);
 });
 
-test("onboarding grava somente para a conta da sessão, exige idade e trata handle concorrente", () => {
+test("onboarding grava somente para a conta da sessão, exige idade e mantém handle permanente", () => {
   assert.match(commandAccess, /INSERT INTO profile\.commanders\(user_id, handle, display_name\)/);
   assert.match(commandAccess, /\[session\.user\.id, handle, displayName\]/);
   assert.match(commandAccess, /CommanderAgeGateRequiredError/);
+  assert.match(commandAccess, /CommanderIdentityLockedError/);
+  assert.match(commandAccess, /SELECT handle, display_name[\s\S]*FOR UPDATE/);
+  assert.match(commandAccess, /current\.handle !== handle/);
   assert.match(commandAccess, /error\.code === "23505"/);
   assert.match(commandAccessRoute, /parseCommanderIdentityWriteDto\(body\)/);
   assert.match(commandAccess, /assertCommanderIdentityAllowed\(input\)/);
+  assert.match(commandAccessRoute, /commander_identity_locked/);
   assert.match(commandAccessRoute, /age_gate_required/);
   assert.match(commandAccessRoute, /status: 409/);
   assert.doesNotMatch(commandAccessRoute, /body\?\.userId|body\?\.user_id/);
