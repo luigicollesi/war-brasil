@@ -80,11 +80,11 @@
   max-width: 12ch;
   margin: 0;
   color: #f4eee2;
-  font-family: var(--font-wb-display), sans-serif;
-  font-size: clamp(3.4rem, 8.2vw, 7.8rem);
-  font-weight: 780;
-  line-height: 0.87;
-  letter-spacing: -0.045em;
+  font-family: var(--font-wb-brand), serif;
+  font-size: clamp(3.15rem, 7.7vw, 7.25rem);
+  font-weight: 700;
+  line-height: 0.94;
+  letter-spacing: 0.012em;
   text-transform: uppercase;
   text-wrap: balance;
 }
