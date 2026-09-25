@@ -11,13 +11,15 @@ async function source(path) {
 test("store category route accepts the four supported catalog flows and rejects unknown categories", async () => {
   const page = await source("src/app/profile/store/category/[category]/page.tsx");
   const component = await source("src/components/profile/v4/profile-store-category.tsx");
+  const contract = await source("src/lib/economy/store-category-contract.ts");
 
   for (const category of ["dice", "territories", "backgrounds", "titles"]) {
-    assert.match(component, new RegExp(`["']${category}["']`));
+    assert.match(contract, new RegExp(`["']${category}["']`));
     assert.match(component, /\/profile\/store\/category\/\$\{id\}/);
   }
 
-  assert.match(page, /STORE_CATEGORY_IDS/);
+  assert.match(page, /isStoreCategoryId/);
+  assert.match(page, /STORE_CATEGORY_META/);
   assert.match(page, /notFound\(\)/);
   assert.match(page, /params:\s*Promise<\{\s*category:\s*string\s*\}>/);
 });
@@ -140,4 +142,20 @@ test("store category route keeps JSX outside data-loading try/catch", async () =
   assert.doesNotMatch(guardedReadBlock, /<ProfileShell/);
   assert.doesNotMatch(guardedReadBlock, /<ProfileStoreCategory/);
   assert.match(page.slice(catchStart), /<ProfileShell/);
+});
+
+
+test("server route never imports runtime category values from a client component", async () => {
+  const page = await source("src/app/profile/store/category/[category]/page.tsx");
+  const component = await source("src/components/profile/v4/profile-store-category.tsx");
+  const contract = await source("src/lib/economy/store-category-contract.ts");
+
+  assert.match(component, /^"use client";/);
+  assert.match(contract, /export const STORE_CATEGORY_IDS/);
+  assert.match(contract, /export function isStoreCategoryId/);
+  assert.match(page, /from "@\/src\/lib\/economy\/store-category-contract"/);
+  assert.doesNotMatch(
+    page,
+    /STORE_CATEGORY_IDS[\s\S]*from "@\/src\/components\/profile\/v4\/profile-store-category"/,
+  );
 });
