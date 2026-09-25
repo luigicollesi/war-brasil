@@ -171,7 +171,7 @@ test("mobile 390x844 mantém navegador e ações fixos no rodapé sem overflow h
   expect(actionsBox).not.toBeNull();
   expect(actionsBox.y + actionsBox.height).toBeLessThanOrEqual(before.y + 1);
 
-  await expect(page.getByRole("link", { name: "Voltar ao comando" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Ir ao comando" })).toBeVisible();
 
   await chapterLink(page, "ataque").tap();
   await expect(page.locator('[data-doctrine-chapter="ataque"]')).toBeVisible();
