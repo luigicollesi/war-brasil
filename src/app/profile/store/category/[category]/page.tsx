@@ -62,15 +62,20 @@ export default async function StoreCategoryRoute({
   let appearanceStorefront: ProfileAppearanceStorefront = { offers: [] };
 
   try {
-    [storefront, appearanceStorefront] = await Promise.all([
-      getEconomyStorefront(session.user.id),
-      getProfileAppearanceStorefront(session.user.id),
-    ]);
+    storefront = await getEconomyStorefront(session.user.id);
   } catch (error) {
     if (error instanceof EconomyServiceError && error.code === "ECONOMY_COMMANDER_MISSING") {
       redirect("/profile");
     }
     console.error("Falha ao carregar categoria da Intendência.", error);
+  }
+
+  if (storefront && (category === "backgrounds" || category === "titles")) {
+    try {
+      appearanceStorefront = await getProfileAppearanceStorefront(session.user.id);
+    } catch (error) {
+      console.error("Falha ao carregar catálogo de aparência da categoria.", error);
+    }
   }
 
   return (
