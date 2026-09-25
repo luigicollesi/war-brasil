@@ -3,14 +3,14 @@ import "server-only";
 import type { PoolClient } from "pg";
 import type { AuthSession } from "./auth";
 import { authPool } from "./auth-pool";
+import {
+  COMMANDER_COMMANDER_DISPLAY_NAME_MAX_LENGTH,
+  type CommanderIdentityWriteDto,
+} from "@/src/lib/profile/commander-name-contract";
+import { assertCommanderIdentityAllowed } from "../profile/commander-name-policy";
 import { ensureEconomyState } from "../economy/economy-service";
 import { ensureProfileAppearanceState } from "../profile/profile-appearance-service";
 
-const HANDLE_MIN_LENGTH = 3;
-const HANDLE_MAX_LENGTH = 32;
-const DISPLAY_NAME_MIN_LENGTH = 2;
-const DISPLAY_NAME_MAX_LENGTH = 48;
-const HANDLE_PATTERN = /^[A-Za-z0-9._-]+$/;
 export const COMMAND_MINIMUM_AGE = 10;
 const MAX_REASONABLE_AGE = 120;
 
@@ -27,15 +27,6 @@ export type CommandAccessState = {
   };
   suggestedDisplayName: string | null;
 };
-
-export type CommanderIdentityInput = {
-  handle: string;
-  displayName: string;
-};
-
-export type CommanderIdentityErrors = Partial<
-  Record<keyof CommanderIdentityInput, string>
->;
 
 export type CommanderBirthDateResult =
   | Readonly<{
@@ -71,7 +62,7 @@ function publicDisplayNameSuggestion(session: AuthSession) {
     return null;
   }
 
-  return candidate.slice(0, DISPLAY_NAME_MAX_LENGTH);
+  return candidate.slice(0, COMMANDER_DISPLAY_NAME_MAX_LENGTH);
 }
 
 async function ageEligibilityTableAvailable(db: CommandAccessQueryable) {
@@ -154,32 +145,6 @@ export function validateCommanderBirthDate(value: string) {
   }
 
   return null;
-}
-
-export function validateCommanderIdentity(
-  input: CommanderIdentityInput,
-): CommanderIdentityErrors {
-  const handle = input.handle.trim();
-  const displayName = input.displayName.trim();
-  const errors: CommanderIdentityErrors = {};
-
-  if (
-    handle.length < HANDLE_MIN_LENGTH ||
-    handle.length > HANDLE_MAX_LENGTH ||
-    !HANDLE_PATTERN.test(handle)
-  ) {
-    errors.handle =
-      "Use 3–32 caracteres: letras, números, ponto, hífen ou sublinhado.";
-  }
-
-  if (
-    displayName.length < DISPLAY_NAME_MIN_LENGTH ||
-    displayName.length > DISPLAY_NAME_MAX_LENGTH
-  ) {
-    errors.displayName = "Use entre 2 e 48 caracteres.";
-  }
-
-  return errors;
 }
 
 export async function getCommandAccessState(
@@ -282,10 +247,11 @@ export async function saveCommanderBirthDate(
 
 export async function saveCommanderIdentity(
   session: AuthSession,
-  input: CommanderIdentityInput,
+  input: CommanderIdentityWriteDto,
 ) {
-  const handle = input.handle.trim();
-  const displayName = input.displayName.trim();
+  const identity = assertCommanderIdentityAllowed(input);
+  const handle = identity.handle;
+  const displayName = identity.displayName;
   const client = await authPool.connect();
 
   try {
