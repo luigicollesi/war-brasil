@@ -81,9 +81,9 @@
   }
 
   .label::before {
-    top: -42px;
-    width: 108px;
-    height: 22px;
+    top: -32px;
+    width: 112px;
+    height: 20px;
   }
 
   .label small {
