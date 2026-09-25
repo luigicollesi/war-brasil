@@ -1,5 +1,7 @@
 import { territoryMaterial } from "@/src/lib/client/map/territory-material";
 import {
+  isTerritorySkinAssetKey,
+  territorySkinAssetDeliveryPath,
   territorySkinRuntimeEffectKey,
   territorySkinSnapshot,
 } from "@/src/lib/economy/territory-skin-contract";
@@ -26,6 +28,10 @@ export type TerritoryShowcaseSkin = Readonly<{
 function deliveredTerritorySkinAsset(assetRef: string | null) {
   const normalized = assetRef?.trim();
   if (!normalized) return null;
+
+  // WebGL texture uploads are subject to canvas/WebGL CORS rules. Keep the
+  // texture fetch same-origin even when the server projected a public CDN URL.
+  // The authenticated asset route proxies the same canonical object key.
   if (normalized.startsWith("/api/assets/territory-skins?key=")) {
     return normalized;
   }
@@ -33,11 +39,10 @@ function deliveredTerritorySkinAsset(assetRef: string | null) {
   try {
     const url = new URL(normalized);
     const objectKey = decodeURIComponent(url.pathname.replace(/^\/+/, ""));
-    return url.protocol === "https:" &&
-      objectKey.startsWith("cosmetics/territory-skins/") &&
-      objectKey.endsWith(".webp")
-      ? normalized
-      : null;
+    if (url.protocol !== "https:" || !isTerritorySkinAssetKey(objectKey)) {
+      return null;
+    }
+    return territorySkinAssetDeliveryPath(objectKey);
   } catch {
     return null;
   }
