@@ -29,7 +29,7 @@ function collectionUnlock(
   if (
     !row.collection_name ||
     row.collection_total_count === null ||
-    row.collection_total_count <= 0 ||
+    row.collection_total_count < 0 ||
     row.collection_owned_count === null ||
     row.collection_owned_count < 0 ||
     row.collection_owned_count > row.collection_total_count
@@ -42,7 +42,9 @@ function collectionUnlock(
     collectionName: row.collection_name,
     ownedCount: row.collection_owned_count,
     totalCount: row.collection_total_count,
-    complete: row.collection_owned_count === row.collection_total_count,
+    complete:
+      row.collection_total_count > 0 &&
+      row.collection_owned_count === row.collection_total_count,
   };
 }
 
