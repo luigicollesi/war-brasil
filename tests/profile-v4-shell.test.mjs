@@ -152,3 +152,17 @@ test("PROFILE V4 logout animates profile chrome out and respects reduced motion"
     /@media \(prefers-reduced-motion: reduce\)[\s\S]*\.commandBar,[\s\S]*\.surface,[\s\S]*\.ambient[\s\S]*\{[^}]*transition:\s*none;/,
   );
 });
+
+
+test("PROFILE V4 wallet balance stays aligned and responsive across header sizes", async () => {
+  const shell = await source("src/components/profile/v4/profile-shell.tsx");
+  const styles = await source("src/components/profile/v4/profile-shell.module.css");
+
+  assert.match(shell, /className=\{styles\.walletCopy\}/);
+  assert.match(shell, /className=\{styles\.walletBalance\}/);
+  assert.match(styles, /\.walletBalance\s*\{[^}]*font-variant-numeric:\s*tabular-nums;/);
+  assert.match(styles, /\.walletBalance\s*\{[^}]*text-align:\s*right;/);
+  assert.match(styles, /\.walletBalance\s*\{[^}]*min-width:\s*6ch;/);
+  assert.match(styles, /font-size:\s*clamp\(/);
+  assert.match(styles, /@media \(max-width: 430px\)[\s\S]*\.walletBalance/);
+});
