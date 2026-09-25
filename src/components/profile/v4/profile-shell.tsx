@@ -193,7 +193,7 @@ export function ProfileShell({
             </span>
           </div>
           <Link
-            href="/profile/store#reforcar-tesouraria"
+            href="/profile/store#store-credits"
             className={styles.addCredits}
             aria-label="Ver opções para reforçar Tesouraria"
             title={wallet.available ? "Reforçar Tesouraria" : wallet.reason}
