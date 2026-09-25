@@ -53,6 +53,7 @@ import {
   type WalletRow,
 } from "./economy-repository";
 import {
+  listStorefrontCategoryOfferItems,
   listStorefrontCollections,
   listStorefrontOfferItems,
   listStorefrontTerritorySkins,
@@ -63,6 +64,7 @@ import {
   type StorefrontOfferRow,
 } from "./economy-storefront-repository";
 import {
+  listActiveStorefrontCategoryQuoteItems,
   listActiveStorefrontQuoteItems,
   lockOfferProductForPurchase,
   lockStorefrontCollectionPromotion,
@@ -658,10 +660,15 @@ export async function getEconomyStoreCategory(
 ): Promise<EconomyStoreCategorySnapshot> {
   await ensureEconomyStateForRead(userId);
 
+  const slots: ReadonlyArray<CosmeticSlot> =
+    category === "dice"
+      ? ["dice_attack", "dice_defense", "dice_neutral"]
+      : ["territory_skin"];
+
   const userRowsPromise = Promise.all([
     findCampaignCreditWallet(userId),
-    listStorefrontOfferItems(userId),
-    listActiveStorefrontQuoteItems(userId),
+    listStorefrontCategoryOfferItems(userId, slots),
+    listActiveStorefrontCategoryQuoteItems(userId, slots),
     category === "territories" ? listStorefrontTerritorySkins(userId) : Promise.resolve([]),
   ]);
   const catalogPromise = getStorefrontCatalogSnapshot();
