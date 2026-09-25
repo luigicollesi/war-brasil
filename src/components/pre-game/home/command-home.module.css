@@ -58,6 +58,7 @@
   top: clamp(118px, 15vh, 168px);
   left: 50%;
   width: min(760px, calc(100% - 48px));
+  container-type: inline-size;
   transform: translateX(-50%);
   text-align: center;
   pointer-events: none;
@@ -77,16 +78,19 @@
 
 .title {
   display: flex;
+  min-width: 0;
+  max-width: 100%;
   align-items: baseline;
   justify-content: center;
   gap: .14em;
   margin: 0;
   font-family: var(--font-wb-brand), serif;
-  font-size: clamp(2.8rem, 6vw, 6.35rem);
+  font-size: clamp(2rem, 12cqw, 6.35rem);
   line-height: .88;
   letter-spacing: .035em;
   text-transform: uppercase;
   text-shadow: 0 12px 40px rgb(0 0 0 / 40%);
+  white-space: nowrap;
 }
 
 .title span {
@@ -484,7 +488,7 @@
   }
 
   .title {
-    font-size: clamp(2.6rem, 12.5vw, 4.8rem);
+    font-size: clamp(2rem, 12cqw, 4.8rem);
   }
 
   .subtitle {
@@ -623,5 +627,18 @@
   .commandHomeRouteTransition {
     animation: none !important;
     transition: none !important;
+  }
+}
+
+
+@media (max-width: 360px) {
+  .identity {
+    width: calc(100% - 20px);
+  }
+
+  .title {
+    gap: .1em;
+    font-size: clamp(1.85rem, 11.6cqw, 3.2rem);
+    letter-spacing: .025em;
   }
 }
