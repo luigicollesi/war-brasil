@@ -646,6 +646,89 @@ export async function getEconomyWallet(
   return walletFromRow(await findCampaignCreditWallet(userId));
 }
 
+export type EconomyStoreCategorySnapshot = Readonly<{
+  wallet: CampaignCreditWallet;
+  offers: ReadonlyArray<EconomyOffer>;
+  territorySkins: ReadonlyArray<CosmeticCatalogItem>;
+}>;
+
+export async function getEconomyStoreCategory(
+  userId: string,
+  category: "dice" | "territories",
+): Promise<EconomyStoreCategorySnapshot> {
+  await ensureEconomyStateForRead(userId);
+
+  const userRowsPromise = Promise.all([
+    findCampaignCreditWallet(userId),
+    listStorefrontOfferItems(userId),
+    listActiveStorefrontQuoteItems(userId),
+    category === "territories" ? listStorefrontTerritorySkins(userId) : Promise.resolve([]),
+  ]);
+  const catalogPromise = getStorefrontCatalogSnapshot();
+
+  const [[walletRow, offerItemRows, quoteRows, territorySkinRows], catalog] =
+    await Promise.all([userRowsPromise, catalogPromise]);
+
+  const standaloneProductRows = catalog.productRows.filter(
+    (product) => product.collection_id === null,
+  );
+  const standaloneOfferIds = new Set(
+    standaloneProductRows.map((product) => product.offer_id),
+  );
+
+  const projectOffers = (offerRows: StorefrontOfferRow[]) =>
+    offersFromRows(
+      offerRows.filter((offer) => standaloneOfferIds.has(offer.id)),
+      offerItemRows.filter((row) => standaloneOfferIds.has(row.offer_id)),
+      standaloneProductRows,
+      quoteRows.filter((row) => standaloneOfferIds.has(row.offer_id)),
+    );
+
+  let offers: EconomyOffer[];
+  try {
+    offers = projectOffers(catalog.offerRows);
+  } catch (error) {
+    if (
+      !(error instanceof EconomyServiceError) ||
+      error.code !== "ECONOMY_CATALOG_INVALID"
+    ) {
+      throw error;
+    }
+
+    const refreshed = await getStorefrontCatalogSnapshot({ bypassCache: true });
+    const refreshedProducts = refreshed.productRows.filter(
+      (product) => product.collection_id === null,
+    );
+    const refreshedOfferIds = new Set(
+      refreshedProducts.map((product) => product.offer_id),
+    );
+    offers = offersFromRows(
+      refreshed.offerRows.filter((offer) => refreshedOfferIds.has(offer.id)),
+      offerItemRows.filter((row) => refreshedOfferIds.has(row.offer_id)),
+      refreshedProducts,
+      quoteRows.filter((row) => refreshedOfferIds.has(row.offer_id)),
+    );
+  }
+
+  const categoryOffers = offers.filter((offer) =>
+    offer.items.length > 0 &&
+    offer.items.every((item) =>
+      category === "dice"
+        ? item.slot === "dice_attack" ||
+          item.slot === "dice_defense" ||
+          item.slot === "dice_neutral"
+        : item.slot === "territory_skin",
+    ),
+  );
+
+  return {
+    wallet: walletFromRow(walletRow),
+    offers: categoryOffers,
+    territorySkins:
+      category === "territories" ? territorySkinRows.map(cosmeticFromRow) : [],
+  };
+}
+
 export async function getEconomyStorefront(
   userId: string,
 ): Promise<EconomyStorefrontSnapshot> {
