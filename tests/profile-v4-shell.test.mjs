@@ -166,3 +166,24 @@ test("PROFILE V4 wallet balance stays aligned and responsive across header sizes
   assert.match(styles, /font-size:\s*clamp\(/);
   assert.match(styles, /@media \(max-width: 430px\)[\s\S]*\.walletBalance/);
 });
+
+
+test("PROFILE V4 category surfaces can pin the private header to the viewport", async () => {
+  const shell = await source("src/components/profile/v4/profile-shell.tsx");
+  const styles = await source("src/components/profile/v4/profile-shell.module.css");
+  const categoryPage = await source(
+    "src/app/profile/store/category/[category]/page.tsx",
+  );
+
+  assert.match(shell, /fixedHeader = false/);
+  assert.match(shell, /data-fixed-header=\{fixedHeader \? "true" : "false"\}/);
+  assert.match(categoryPage, /<ProfileShell[\s\S]*fixedHeader/);
+  assert.match(
+    styles,
+    /@media \(min-width: 981px\)[\s\S]*\.page\[data-fixed-header="true"\] \.commandBar\s*\{[\s\S]*position:\s*fixed;[\s\S]*top:\s*0;[\s\S]*left:\s*0;[\s\S]*right:\s*0;/,
+  );
+  assert.match(
+    styles,
+    /\.page\[data-fixed-header="true"\] \.surface\s*\{[\s\S]*padding-top:\s*calc\(var\(--profile-commandbar-height\)/,
+  );
+});
