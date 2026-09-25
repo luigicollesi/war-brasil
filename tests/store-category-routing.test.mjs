@@ -22,13 +22,15 @@ test("store category route accepts the four supported catalog flows and rejects 
   assert.match(page, /params:\s*Promise<\{\s*category:\s*string\s*\}>/);
 });
 
-test("store category route uses server storefront services and isolates appearance loading", async () => {
+test("store category route uses category-scoped server reads and isolates appearance loading", async () => {
   const page = await source("src/app/profile/store/category/[category]/page.tsx");
 
-  assert.match(page, /getEconomyStorefront/);
+  assert.match(page, /getEconomyStoreCategory/);
+  assert.match(page, /getEconomyWallet/);
   assert.match(page, /getProfileAppearanceStorefront/);
-  assert.match(page, /category === "backgrounds" \|\| category === "titles"/);
-  assert.doesNotMatch(page, /Promise\.all/);
+  assert.match(page, /category === "dice" \|\| category === "territories"/);
+  assert.match(page, /Promise\.all/);
+  assert.doesNotMatch(page, /getEconomyStorefront/);
   assert.doesNotMatch(page, /fetch\(/);
 });
 
@@ -59,4 +61,28 @@ test("all category purchases reuse the authoritative economy purchase client", a
   assert.match(component, /ECONOMY_PRICE_CHANGED/);
   assert.match(component, /ECONOMY_INSUFFICIENT_BALANCE/);
   assert.doesNotMatch(component, /wallet\.balance\s*-/);
+});
+
+
+test("store category route is standalone and does not render the commander profile shell", async () => {
+  const page = await source("src/app/profile/store/category/[category]/page.tsx");
+  const styles = await source("src/components/profile/v4/profile-store-category.module.css");
+
+  assert.doesNotMatch(page, /ProfileShell/);
+  assert.doesNotMatch(page, /getOwnCommanderProfile/);
+  assert.match(styles, /\.categoryPage\s*\{[\s\S]*min-height:\s*100dvh/);
+  assert.match(styles, /\.categoryNav\s*\{[\s\S]*top:\s*0/);
+});
+
+test("gameplay category reads are filtered in SQL before projection", async () => {
+  const service = await source("src/lib/server/economy/economy-service.ts");
+  const repository = await source("src/lib/server/economy/economy-storefront-repository.ts");
+  const quoteRepository = await source("src/lib/server/economy/storefront-quote-repository.ts");
+
+  assert.match(service, /listStorefrontCategoryOfferItems\(userId, slots\)/);
+  assert.match(service, /listActiveStorefrontCategoryQuoteItems\(userId, slots\)/);
+  assert.match(repository, /product\.collection_id IS NULL/);
+  assert.match(repository, /item\.slot = ANY\(\$2::varchar\[\]\)/);
+  assert.match(quoteRepository, /product\.collection_id IS NULL/);
+  assert.match(quoteRepository, /item\.slot = ANY\(\$2::varchar\[\]\)/);
 });
