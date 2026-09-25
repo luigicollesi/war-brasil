@@ -220,3 +220,19 @@ test("empty thematic collections remain visible as zero-progress locked backgrou
     /row\.collection_owned_count === row\.collection_total_count/,
   );
 });
+
+
+test("cosmic-night is only the legacy background id for the canonical ceu-noturno collection", () => {
+  assert.match(
+    backgroundCollectionGates,
+    /profile\.background\.cosmic-night['\"] THEN ['\"]collection\.ceu-noturno/,
+  );
+  assert.match(
+    backgroundCollectionGates,
+    /one canonical collection identity is[\s\S]*collection\.ceu-noturno/i,
+  );
+  assert.doesNotMatch(
+    backgroundCollectionGates,
+    /['\"]collection\.cosmic-night['\"]/,
+  );
+});
