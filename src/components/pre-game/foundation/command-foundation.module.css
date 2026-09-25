@@ -187,9 +187,15 @@
 
 .brandLockup {
   display: flex;
+  min-width: 0;
+  max-width: min(58vw, 360px);
   align-items: center;
   gap: 13px;
   text-transform: uppercase;
+}
+
+.brandLockup > span:last-child {
+  min-width: 0;
 }
 
 .brandSeal {
@@ -220,11 +226,15 @@
 }
 
 .brandLockup strong {
+  max-width: 100%;
   margin-top: 3px;
+  overflow: hidden;
   font-family: var(--font-wb-brand), serif;
   font-size: 0.9rem;
   font-weight: 700;
   letter-spacing: 0.1em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .modeRail {
@@ -457,8 +467,18 @@
     height: 38px;
   }
 
+  .brandLockup {
+    max-width: min(62vw, 270px);
+    gap: 10px;
+  }
+
   .brandLockup small {
     display: none;
+  }
+
+  .brandLockup strong {
+    font-size: clamp(.68rem, 2.8vw, .9rem);
+    letter-spacing: .075em;
   }
 
   .modeRail span {
@@ -475,5 +495,42 @@
   .sceneFallback,
   .fallbackGlobe {
     transition: none;
+  }
+}
+
+
+@media (max-width: 420px) {
+  .shellChrome {
+    right: 12px;
+    left: 12px;
+    gap: 10px;
+  }
+
+  .brandLockup {
+    max-width: calc(100vw - 142px);
+    gap: 8px;
+  }
+
+  .brandSeal {
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
+  }
+
+  .brandLockup strong {
+    font-size: clamp(.62rem, 3vw, .78rem);
+    letter-spacing: .055em;
+  }
+
+  .modeRail {
+    max-width: 94px;
+  }
+
+  .modeRail strong {
+    max-width: 100%;
+    overflow: hidden;
+    font-size: .62rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
