@@ -97,7 +97,7 @@ export default function TermsPage() {
               </p>
               <p>
                 Nome de exibição e identificador @ fazem parte da identidade pública
-                do comandante. Email, credenciais e data de nascimento não são
+                do comandante. E-mail, credenciais e data de nascimento não são
                 exibidos no perfil público.
               </p>
               <p>

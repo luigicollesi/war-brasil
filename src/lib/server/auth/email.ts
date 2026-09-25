@@ -156,7 +156,7 @@ export function buildRegistrationCodeEmail(code: string) {
   const text = [
     "WAR BRASIL // IDENTIDADE DE COMANDO",
     "",
-    "Confirme seu email",
+    "Confirme seu e-mail",
     "",
     `Código de confirmação: ${code}`,
     "",
@@ -185,7 +185,7 @@ export function buildRegistrationCodeEmail(code: string) {
             </tr>
             <tr>
               <td style="padding:38px 30px 34px;text-align:center;">
-                <h1 style="margin:0;font-size:30px;line-height:1.1;color:#f3ead6;">Confirme seu email</h1>
+                <h1 style="margin:0;font-size:30px;line-height:1.1;color:#f3ead6;">Confirme seu e-mail</h1>
                 <p style="margin:18px 0 0;font-size:15px;line-height:1.7;color:#c9c2b2;">Digite este código no WAR Brasil para concluir a criação da sua conta.</p>
                 <div style="margin:30px auto 0;display:inline-block;padding:18px 26px;border:1px solid #e0bd6c;border-radius:7px;background:#0b120e;color:#e0bd6c;font-size:34px;font-weight:900;letter-spacing:10px;">${safeCode}</div>
                 <p style="margin:28px 0 0;font-size:12px;line-height:1.7;color:#8d877b;">O código é válido por 10 minutos. Se você não iniciou este cadastro, ignore esta mensagem.</p>

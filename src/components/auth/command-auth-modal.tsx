@@ -273,7 +273,7 @@ export function CommandAuthModal({
         if (error.status === 403) {
           setMode("verification");
           setMessage(
-            "Confirme seu email antes de entrar. Você pode solicitar um novo código abaixo.",
+            "Confirme seu e-mail antes de entrar. Você pode solicitar um novo código abaixo.",
           );
           return;
         }
@@ -282,7 +282,7 @@ export function CommandAuthModal({
           return;
         }
 
-          setMessage("Confira o email e a senha informados.");
+          setMessage("Confira o e-mail e a senha informados.");
           return;
         }
 
@@ -344,7 +344,7 @@ export function CommandAuthModal({
         );
         setMode("verification");
         setMessage(
-          payload.message ?? "Confira seu email para obter o código de confirmação.",
+          payload.message ?? "Confira seu e-mail para obter o código de confirmação.",
         );
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") {
@@ -426,12 +426,12 @@ export function CommandAuthModal({
 
     if (!email) {
       setMode("register");
-      setMessage("Informe novamente seu email para iniciar o cadastro.");
+      setMessage("Informe novamente seu e-mail para iniciar o cadastro.");
       return;
     }
 
     if (!/^\d{6}$/.test(code)) {
-      setFieldErrors({ code: "Digite os 6 dígitos enviados para seu email." });
+      setFieldErrors({ code: "Digite os 6 dígitos enviados para seu e-mail." });
       return;
     }
 
@@ -601,7 +601,7 @@ export function CommandAuthModal({
               {mode === "register"
                 ? "Registrar identidade"
                 : mode === "verification"
-                  ? "Confirme seu email"
+                  ? "Confirme seu e-mail"
                   : mode === "forgot"
                     ? "Recuperar acesso"
                     : mode === "reset"
@@ -610,7 +610,7 @@ export function CommandAuthModal({
             </h2>
             <p>
               {mode === "verification"
-                ? "Digite o código de 6 dígitos enviado para seu email. A conta só será criada depois da confirmação."
+                ? "Digite o código de 6 dígitos enviado para seu e-mail. A conta só será criada depois da confirmação."
                 : mode === "reset"
                   ? "Escolha uma nova credencial para sua conta War-Brasil."
                   : "Use uma das credenciais autorizadas abaixo."}
@@ -643,7 +643,7 @@ export function CommandAuthModal({
               </div>
 
               <div className={styles.divider}>
-                <span>OU CREDENCIAL DE EMAIL</span>
+                <span>OU CREDENCIAL DE E-MAIL</span>
               </div>
             </>
           ) : null}
@@ -651,7 +651,7 @@ export function CommandAuthModal({
           {mode === "login" ? (
             <form className={styles.form} onSubmit={submitLogin}>
               <label>
-                <span>Email</span>
+                <span>E-mail</span>
                 <input
                   name="email"
                   type="email"
@@ -714,7 +714,7 @@ export function CommandAuthModal({
           {mode === "register" ? (
             <form className={styles.form} onSubmit={submitRegister}>
               <label>
-                <span>Email</span>
+                <span>E-mail</span>
                 <input
                   name="email"
                   type="email"
@@ -821,7 +821,7 @@ export function CommandAuthModal({
               <p>
                 {email
                   ? `Enviamos um código para ${maskEmailAddress(email)}.`
-                  : "Informe novamente seu email para receber um código de confirmação."}
+                  : "Informe novamente seu e-mail para receber um código de confirmação."}
               </p>
               <p className={styles.muted}>O código é válido por 10 minutos.</p>
 
@@ -844,12 +844,12 @@ export function CommandAuthModal({
                   {fieldErrors.code ? (
                     <small className={styles.fieldError}>{fieldErrors.code}</small>
                   ) : (
-                    <small>Digite os 6 dígitos recebidos por email.</small>
+                    <small>Digite os 6 dígitos recebidos por e-mail.</small>
                   )}
                 </label>
 
                 <button className={styles.primaryButton} disabled={isPending}>
-                  {isPending ? "CONFIRMANDO..." : "CONFIRMAR EMAIL"}
+                  {isPending ? "CONFIRMANDO..." : "CONFIRMAR E-MAIL"}
                 </button>
               </form>
 
@@ -892,7 +892,7 @@ export function CommandAuthModal({
           {mode === "forgot" ? (
             <form className={styles.form} onSubmit={submitForgotPassword}>
               <label>
-                <span>Email</span>
+                <span>E-mail</span>
                 <input
                   name="email"
                   type="email"

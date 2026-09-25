@@ -383,7 +383,7 @@ export function CommandHomeClient({
       if (emailVerified === "success") {
         setAuthModalMode("login");
         setAuthModalNotice(
-          "Email confirmado. Entre com sua credencial para acessar o Comando.",
+          "E-mail confirmado. Entre com sua credencial para acessar o Comando.",
         );
         setAuthModalOpen(true);
         window.history.replaceState({}, "", "/?continue=command");
