@@ -71,3 +71,17 @@ test("territory 3d skin preserves image RGB instead of collapsing artwork to lum
   assert.doesNotMatch(model, /skinLuminance/);
   assert.doesNotMatch(model, /dot\(sampledDiffuseColor\.rgb/);
 });
+
+
+test("territory WebGL texture normalizes public CDN delivery to same-origin proxy", () => {
+  const adapter = read(ADAPTER_PATH);
+
+  assert.match(adapter, /isTerritorySkinAssetKey/);
+  assert.match(adapter, /territorySkinAssetDeliveryPath/);
+  assert.match(adapter, /new URL\(normalized\)/);
+  assert.match(adapter, /return territorySkinAssetDeliveryPath\(objectKey\)/);
+  assert.doesNotMatch(
+    adapter,
+    /objectKey\.endsWith\("\.webp"\)[\s\S]*\? normalized/,
+  );
+});
