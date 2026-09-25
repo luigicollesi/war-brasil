@@ -10,6 +10,10 @@ const backgroundCommerce = readFileSync(
   "src/lib/db/migrations/managed/063-profile-background-commerce.sql",
   "utf8",
 );
+const backgroundCollectionGates = readFileSync(
+  "src/lib/db/migrations/managed/065-profile-background-collection-gates.sql",
+  "utf8",
+);
 
 test("profile backgrounds and commander titles can belong to collections", () => {
   assert.match(migration, /ALTER TABLE catalog\.profile_backgrounds[\s\S]*ADD COLUMN IF NOT EXISTS collection_id TEXT/);
@@ -115,5 +119,82 @@ test("collection promotions apply to explicit collection products independently 
   assert.match(
     quoteRepository,
     /WHERE collection\.id=\$1[\s\S]*collection\.active=TRUE/,
+  );
+});
+
+
+test("all source-managed non-default backgrounds are assigned to their thematic collections", () => {
+  for (const pair of [
+    ["profile.background.cosmic-night", "collection.ceu-noturno"],
+    ["profile.background.viking", "collection.viking"],
+    ["profile.background.cat", "collection.cat"],
+    ["profile.background.dog", "collection.dog"],
+    ["profile.background.football", "collection.football"],
+  ]) {
+    assert.match(
+      backgroundCollectionGates,
+      new RegExp(
+        pair[0].replaceAll(".", "\\.") +
+          "['\"] THEN ['\"]" +
+          pair[1].replaceAll(".", "\\."),
+      ),
+    );
+  }
+
+  assert.match(backgroundCollectionGates, /collection\.ceu-noturno/);
+  assert.match(
+    backgroundCollectionGates,
+    /WHERE id='profile\.background\.default'/,
+  );
+  assert.match(
+    backgroundCollectionGates,
+    /SET collection_id=NULL/,
+  );
+});
+
+test("background collection completion is projected by the appearance storefront", () => {
+  const contract = readFileSync(
+    "src/lib/economy/profile-appearance-store-contract.ts",
+    "utf8",
+  );
+  const repository = readFileSync(
+    "src/lib/server/economy/profile-appearance-store-repository.ts",
+    "utf8",
+  );
+  const service = readFileSync(
+    "src/lib/server/economy/profile-appearance-store-service.ts",
+    "utf8",
+  );
+
+  assert.match(contract, /ProfileAppearanceCollectionUnlock/);
+  assert.match(contract, /ownedCount: number/);
+  assert.match(contract, /totalCount: number/);
+  assert.match(contract, /complete: boolean/);
+  assert.match(repository, /WITH collection_progress AS/);
+  assert.match(repository, /item\.status IN \('announced','available'\)/);
+  assert.match(repository, /COUNT\(owned\.cosmetic_id\)::int AS owned_count/);
+  assert.match(service, /collectionUnlock: collectionUnlock\(row\)/);
+  assert.match(service, /row\.collection_total_count > 0/);
+  assert.match(service, /collectionEligible/);
+  assert.match(service, /quote\.finalPrice > 0 && collectionEligible/);
+});
+
+test("collection storefront remains gameplay-only even when backgrounds share collection ids", () => {
+  const repository = readFileSync(
+    "src/lib/server/economy/economy-storefront-repository.ts",
+    "utf8",
+  );
+
+  assert.match(repository, /JOIN catalog\.cosmetics item ON item\.collection_id=collection\.id/);
+  assert.match(
+    repository,
+    /item\.slot IN \('dice_attack','dice_defense','dice_neutral','territory_skin'\)/,
+  );
+  assert.doesNotMatch(
+    repository.slice(
+      repository.indexOf("export async function listStorefrontCollections"),
+      repository.indexOf("export async function listStorefrontTerritorySkins"),
+    ),
+    /catalog\.profile_backgrounds/,
   );
 });
