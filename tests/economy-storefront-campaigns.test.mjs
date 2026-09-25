@@ -13,6 +13,7 @@ const catalogCache = readFileSync(
   "utf8",
 );
 const store = readFileSync("src/components/profile/v4/profile-store.tsx", "utf8");
+const storeCategory = readFileSync("src/components/profile/v4/profile-store-category.tsx", "utf8");
 const showcaseProjection = readFileSync("src/lib/economy/store-showcase.ts", "utf8");
 
 test("STORE-15/17: offer contract and showcase expose authoritative timed availability metadata", () => {
@@ -55,8 +56,9 @@ test("STORE-16: campaign read model never becomes owned inventory", () => {
 });
 
 test("STORE-20/23: territory skins reuse active single offers and route them to showcase", () => {
-  assert.match(store, /territoryOfferByCosmeticId/);
-  assert.match(store, /item\.slot === "territory_skin"/);
-  assert.match(store, /showcaseHref\("offer",\s*offer\.id,\s*skin\.id\)/);
-  assert.match(store, /EM BREVE/);
+  assert.match(storeCategory, /const territoryEntries/);
+  assert.match(storeCategory, /item\?\.slot === "territory_skin"/);
+  assert.match(storeCategory, /showcase\/offer/);
+  assert.match(storeCategory, /encodeURIComponent\(item\.id\)/);
+  assert.match(storeCategory, /ANUNCIADO/);
 });
