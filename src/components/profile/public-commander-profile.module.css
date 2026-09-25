@@ -78,12 +78,12 @@
 
 .identityTopline > strong {
   color: var(--profile-ivory);
-  font-family: var(--font-wb-display), sans-serif;
+  font-family: var(--font-wb-brand), serif;
   max-width: 16ch;
-  font-size: clamp(2.2rem, 3.2vw, 4.15rem);
-  font-weight: 760;
-  line-height: 0.92;
-  letter-spacing: -0.025em;
+  font-size: clamp(2.1rem, 3.05vw, 3.95rem);
+  font-weight: 700;
+  line-height: 0.96;
+  letter-spacing: 0.015em;
   text-wrap: balance;
   text-shadow:
     0 10px 30px rgb(0 0 0 / 62%),
