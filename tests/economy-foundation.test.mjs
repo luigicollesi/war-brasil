@@ -29,6 +29,7 @@ const storefrontRoute = source("src/app/api/economy/storefront/route.ts");
 const loadoutRoute = source("src/app/api/economy/loadout/route.ts");
 const storePage = source("src/app/profile/store/page.tsx");
 const storeUi = source("src/components/profile/v4/profile-store.tsx");
+const storeCategoryUi = source("src/components/profile/v4/profile-store-category.tsx");
 const arsenalUi = source("src/components/profile/v4/profile-arsenal.tsx");
 const profileShell = source("src/components/profile/v4/profile-shell.tsx");
 const showcasePage = source("src/app/profile/store/showcase/[kind]/[id]/page.tsx");
@@ -280,7 +281,7 @@ test("store autenticada usa ProfileShell e comércio autoritativo da Economy V2"
   assert.match(storeUi, /storefront\.offers/);
   assert.match(storeUi, /offer\.price/);
   assert.match(storeUi, /src="\/coin\.svg"/);
-  assert.match(storeUi, /"COMPRAR"/);
+  assert.match(storeCategoryUi, /"COMPRAR"/);
   assert.match(storeUi, /storefront\.creditPacks\.map/);
   assert.match(storeUi, /EM BREVE/);
   assert.doesNotMatch(storeUi, /offer\.(exercito|lancas|viking|gato|cachorro|futebol)/);
