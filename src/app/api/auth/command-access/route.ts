@@ -10,6 +10,11 @@ import {
   authenticationRequiredResponse,
   getAuthenticatedSession,
 } from "@/server/auth/auth-guard";
+import { rejectUntrustedMutationOrigin } from "@/server/auth/request-origin";
+import {
+  BoundedJsonBodyError,
+  readBoundedJsonBody,
+} from "@/src/lib/server/http/read-bounded-json";
 
 function authUnavailableResponse() {
   return Response.json(
@@ -35,6 +40,9 @@ export async function GET(request: Request) {
 }
 
 export async function PUT(request: Request) {
+  const originRejection = rejectUntrustedMutationOrigin(request);
+  if (originRejection) return originRejection;
+
   let session;
   try {
     session = await getAuthenticatedSession(request);
@@ -46,7 +54,19 @@ export async function PUT(request: Request) {
     return authenticationRequiredResponse();
   }
 
-  const body = await request.json().catch(() => null);
+  let body: unknown;
+  try {
+    body = await readBoundedJsonBody(request);
+  } catch (error) {
+    if (error instanceof BoundedJsonBodyError) {
+      return Response.json(
+        { ok: false, code: error.code, message: error.message },
+        { status: error.status },
+      );
+    }
+    throw error;
+  }
+
   const parsed = parseCommanderIdentityWriteDto(body);
 
   if (!parsed.ok) {
