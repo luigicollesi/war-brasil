@@ -106,7 +106,8 @@
 .categoryHeader h1 {
   margin: 0;
   color: var(--ivory);
-  font-family: var(--font-wb-display), sans-serif;
+  font-family: var(--font-wb-brand), serif;
+  font-weight: 700;
   font-size: clamp(3.2rem, 7vw, 7.8rem);
   line-height: 0.82;
   letter-spacing: -0.05em;
@@ -136,6 +137,7 @@
 }
 
 .categoryNav a {
+  font-family: var(--font-wb-display), sans-serif;
   min-height: 40px;
   display: grid;
   place-items: center;
