@@ -59,7 +59,7 @@ export function LobbyStationPanel({
         </div>
         <div className={styles.credentialIdentity}>
           <span className={styles.credentialLabel}>ASSINATURA TÁTICA</span>
-          <strong>{me.displayName}</strong>
+          <strong className={styles.credentialName}>{me.displayName}</strong>
           {me.equippedTitle ? (
             <ProfileTitleRenderer
               title={me.equippedTitle}
