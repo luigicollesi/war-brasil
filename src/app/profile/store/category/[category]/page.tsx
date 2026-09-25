@@ -74,7 +74,6 @@ export default async function StoreCategoryRoute({
         >
           <ProfileStoreCategory
             category={category}
-            wallet={gameplay.wallet}
             gameplayOffers={gameplay.offers}
             territorySkins={gameplay.territorySkins}
             appearanceStorefront={{ offers: [] }}
@@ -103,7 +102,6 @@ export default async function StoreCategoryRoute({
       >
         <ProfileStoreCategory
           category={category}
-          wallet={wallet}
           gameplayOffers={[]}
           territorySkins={[]}
           appearanceStorefront={appearanceStorefront}
