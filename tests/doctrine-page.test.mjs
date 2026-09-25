@@ -76,24 +76,24 @@ test("read model da Doutrina deriva mecânicas das autoridades do jogo", () => {
     doctrine.objectiveFormats.map((format) => format.title),
     ["DOMÍNIO", "FORTIFICAÇÃO", "ELIMINAÇÃO"],
   );
-  assert.match(trade.lede, /antes dos reforços/);
-  assert.match(trade.principles.join(" "), /Negociação não concede tropas/);
-  assert.match(events.lede, /38 estados de evento/);
+  assert.match(trade.lede, /Antes dos Reforços/);
+  assert.match(trade.principles.join(" "), /Trocar cartas não dá tropas/);
+  assert.match(events.lede, /38 anomalias possíveis/);
   assert.equal(departure.visual, "departure");
   assert.equal(departure.number, "12");
   assert.equal(victory.number, "13");
-  assert.match(departure.lede, /cartas da mão vão para o descarte/);
+  assert.match(departure.lede, /cartas vão para o descarte/);
   assert.match(
     departure.principles.join(" "),
     /menos territórios.*empate.*aleatoriamente/,
   );
   assert.match(
     departure.principles.join(" "),
-    /preserva as tropas.*todos os jogadores restantes/,
+    /tropas.*continuam lá[\s\S]*objetivo de todos os jogadores/,
   );
   assert.match(
     departure.principles.join(" "),
-    /única situação.*múltiplos vencedores simultâneos/,
+    /única situação.*mais de um jogador.*vencer/,
   );
 
   const presentationSource = source("src/lib/doctrine-presentation.ts");
@@ -158,7 +158,7 @@ test("índice usa links reais, preserva foco/scroll e anima somente a superfíci
   assert.match(experience, /prefersReducedMotion/);
   assert.match(experience, /data-chapter=\{chapter\.slug\}/);
   assert.match(experience, /aria-current=\{active \? "location"/);
-  assert.match(experience, /aria-label="Capítulos da Doutrina"/);
+  assert.match(experience, /aria-label="Regras do jogo"/);
   assert.match(experience, /aria-live="polite"/);
   assert.match(experience, /aria-atomic="true"/);
   assert.match(experience, /Capítulo \{activeChapter\.number\}/);
@@ -368,7 +368,7 @@ test("demonstração de Retirada usa mapa e cartas reais com composição respon
   assert.match(demos, /GuideBoardScene/);
   assert.match(demos, /departureCardTransfer/);
   assert.match(demos, /departureWinnerPair/);
-  assert.match(demos, /RETIRADA EM PARTIDA ATIVA/);
+  assert.match(demos, /JOGADOR SAI DA PARTIDA/);
   assert.match(uxCss, /\.departureStage\s*\{/);
   assert.match(uxCss, /\.departureTopFlow\s*\{/);
   assert.match(uxCss, /\.departureLowerFlow\s*\{/);
@@ -443,7 +443,7 @@ test("demonstrações táticas usam layouts adequados ao tipo de informação", 
   assert.match(demos, /machineSceneOverlay/);
   assert.match(demos, /sceneBoard/);
   assert.match(demos, /sceneAside/);
-  assert.match(demos, /TRAVESSIA/);
+  assert.match(demos, /ATAQUE PELA BARREIRA/);
 
   assert.match(
     uxCss,
@@ -500,4 +500,36 @@ test("redistribuição da Retirada reduz densidade de labels sobre o mapa", () =
     uxCss,
     /\.departureMap :global\(\.wb-guide-board-scene-marker\)[\s\S]*min-width:\s*72px/,
   );
+});
+
+
+test("textos visíveis da Doutrina explicam regras sem vocabulário de implementação", () => {
+  const presentation = source("src/lib/doctrine-presentation.ts");
+  const demos = source("src/components/doctrine/doctrine-demo.tsx");
+  const experience = source("src/components/doctrine/doctrine-experience.tsx");
+  const visibleCopy = [presentation, demos, experience].join("\n");
+
+  for (const forbidden of [
+    "estado autoritativo",
+    "origem autoritativa",
+    "engine",
+    "topologia vigente",
+    "grafo ponderado",
+    "build atual",
+    "demonstração da máquina",
+    "regra operacional",
+    "protocolos operacionais",
+  ]) {
+    assert.doesNotMatch(
+      visibleCopy,
+      new RegExp(forbidden, "i"),
+      `texto técnico exposto: ${forbidden}`,
+    );
+  }
+
+  assert.match(experience, /COMO JOGAR/);
+  assert.match(experience, /EXEMPLO DA REGRA/);
+  assert.match(presentation, /Seu turno acontece em quatro fases/);
+  assert.match(presentation, /Você vence quando completa seu objetivo/);
+  assert.match(presentation, /Essa é a única situação em que mais de um jogador pode vencer ao mesmo tempo/);
 });
