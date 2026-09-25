@@ -188,21 +188,8 @@ export function ProfileStoreCategory({
                   </div>
                   <div className={styles.commerce}>
                     <span><Image src="/coin.svg" alt="" width={19} height={19} />{INTEGER_FORMAT.format(offer.price)}</span>
-                    <button
-                      disabled={
-                        offer.fullyOwned ||
-                        !offer.purchasable ||
-                        pendingOfferId !== null
-                      }
-                      onClick={() => void handlePurchase(offer)}
-                    >
-                      {offer.fullyOwned
-                        ? "POSSUÍDO"
-                        : collectionLocked
-                          ? "BLOQUEADO"
-                          : pendingOfferId === offer.id
-                            ? "PROCESSANDO..."
-                            : "COMPRAR"}
+                    <button disabled={offer.fullyOwned || !offer.purchasable || pendingOfferId !== null} onClick={() => void handlePurchase(offer)}>
+                      {offer.fullyOwned ? "POSSUÍDO" : pendingOfferId === offer.id ? "PROCESSANDO..." : "COMPRAR"}
                     </button>
                   </div>
                 </article>
@@ -285,8 +272,21 @@ export function ProfileStoreCategory({
                   </div>
                   <div className={styles.commerce}>
                     <span><Image src="/coin.svg" alt="" width={19} height={19} />{INTEGER_FORMAT.format(offer.price)}</span>
-                    <button disabled={offer.fullyOwned || !offer.purchasable || pendingOfferId !== null} onClick={() => void handlePurchase(offer)}>
-                      {offer.fullyOwned ? "POSSUÍDO" : pendingOfferId === offer.id ? "PROCESSANDO..." : "COMPRAR"}
+                    <button
+                      disabled={
+                        offer.fullyOwned ||
+                        !offer.purchasable ||
+                        pendingOfferId !== null
+                      }
+                      onClick={() => void handlePurchase(offer)}
+                    >
+                      {offer.fullyOwned
+                        ? "POSSUÍDO"
+                        : collectionLocked
+                          ? "BLOQUEADO"
+                          : pendingOfferId === offer.id
+                            ? "PROCESSANDO..."
+                            : "COMPRAR"}
                     </button>
                   </div>
                 </article>
