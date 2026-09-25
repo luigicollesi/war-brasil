@@ -110,6 +110,7 @@ export default async function StoreCategoryRoute({
   return (
     <ProfileShell
       activeSurface="store"
+      fixedHeader
       displayName={profile.identity.displayName}
       handle={profile.identity.handle}
       wallet={{
