@@ -13,7 +13,7 @@ import type {
 import { cosmeticPreviewSource } from "@/src/lib/economy/cosmetic-preview";
 import {
   STORE_CATEGORY_IDS,
-  STORE_STORE_CATEGORY_META,
+  STORE_CATEGORY_META,
   type StoreCategoryId,
 } from "@/src/lib/economy/store-category-contract";
 import {
