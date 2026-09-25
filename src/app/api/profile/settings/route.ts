@@ -2,6 +2,10 @@ import {
   requireProfileMutationActor,
 } from "@/src/lib/server/profile/social-http";
 import {
+  BoundedJsonBodyError,
+  readBoundedJsonBody,
+} from "@/src/lib/server/http/read-bounded-json";
+import {
   parseProfileSettingsUpdate,
   ProfileSettingsError,
   updateOwnProfileSettings,
@@ -31,12 +35,15 @@ export async function PATCH(request: Request) {
 
   let payload: unknown;
   try {
-    payload = await request.json();
-  } catch {
-    return Response.json(
-      { error: "INVALID_JSON", message: "Corpo JSON inválido." },
-      { status: 400 },
-    );
+    payload = await readBoundedJsonBody(request);
+  } catch (error) {
+    if (error instanceof BoundedJsonBodyError) {
+      return Response.json(
+        { error: error.code, message: error.message },
+        { status: error.status },
+      );
+    }
+    throw error;
   }
 
   try {
