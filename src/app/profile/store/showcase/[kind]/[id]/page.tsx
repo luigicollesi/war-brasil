@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { connection } from "next/server";
-import { ProfileShell } from "@/src/components/profile/v4/profile-shell";
 import { StoreShowcase } from "@/src/components/profile/v4/store-showcase/store-showcase";
 import {
   resolveStoreShowcaseView,
@@ -42,14 +41,12 @@ export default async function StoreShowcasePage({
   const { kind, id } = await params;
   if (!isShowcaseKind(kind)) notFound();
 
-  let profile;
+  const profile = await getOwnCommanderProfile(session.user.id);
+  if (!profile) redirect("/profile");
+
   let storefront;
   try {
-    [profile, storefront] = await Promise.all([
-      getOwnCommanderProfile(session.user.id),
-      getEconomyStorefront(session.user.id),
-    ]);
-    if (!profile) redirect("/profile");
+    storefront = await getEconomyStorefront(session.user.id);
   } catch (error) {
     if (
       error instanceof EconomyServiceError &&
@@ -65,18 +62,5 @@ export default async function StoreShowcasePage({
   const showcase = resolveStoreShowcaseView(storefront, kind, id, requestedItem ?? null);
   if (!showcase) notFound();
 
-  return (
-    <ProfileShell
-      activeSurface="store"
-      displayName={profile.identity.displayName}
-      handle={profile.identity.handle}
-      wallet={{
-        available: true,
-        balance: storefront.wallet.balance,
-        label: storefront.wallet.label,
-      }}
-    >
-      <StoreShowcase showcase={showcase} />
-    </ProfileShell>
-  );
+  return <StoreShowcase showcase={showcase} />;
 }
