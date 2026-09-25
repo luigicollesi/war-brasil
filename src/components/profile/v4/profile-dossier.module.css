@@ -107,15 +107,6 @@
   font-size: clamp(2rem, 4vw, 4.35rem);
 }
 
-.identityMain[data-has-title="true"] .bio {
-  display: -webkit-box;
-  overflow: hidden;
-  margin-top: 2px;
-  line-height: 1.42;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
 .eyebrowRow {
   display: flex;
   align-items: center;
@@ -171,14 +162,6 @@
 .identityMeta strong {
   color: var(--brass);
   font-weight: 700;
-}
-
-.bio {
-  max-width: 70ch;
-  margin: 8px 0 0;
-  color: rgb(238 232 218 / 69%);
-  font-size: 0.89rem;
-  line-height: 1.65;
 }
 
 .identityStatus {
