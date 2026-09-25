@@ -51,8 +51,11 @@
 }
 
 .hero h1 {
-  font-size: clamp(1.8rem, 4vw, 3.8rem);
-  line-height: 0.95;
+  font-family: var(--font-wb-brand), serif;
+  font-size: clamp(1.8rem, 4vw, 3.65rem);
+  font-weight: 700;
+  line-height: 0.98;
+  letter-spacing: 0.025em;
 }
 
 .hero p {
