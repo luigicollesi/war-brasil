@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { ProfileTitleRenderer } from "@/src/components/profile/profile-title-renderer";
 import { applyProfileBackgroundRef } from "@/src/lib/client/profile/profile-background-cache";
+import { validateCommanderDisplayNameDraft } from "@/src/lib/profile/commander-name-contract";
 import type {
   CommanderIdentity,
   FriendRequestPolicy,
@@ -238,7 +239,17 @@ export function ProfileSettingsPanel({
       privacy?: EditablePrivacyUpdate;
     } = {};
 
-    const normalizedDisplayName = displayName.trim();
+    const displayNameValidation =
+      validateCommanderDisplayNameDraft(displayName);
+    if (!displayNameValidation.ok) {
+      setFeedback({
+        kind: "error",
+        message: displayNameValidation.error,
+      });
+      return;
+    }
+
+    const normalizedDisplayName = displayNameValidation.value;
     if (normalizedDisplayName !== identity.displayName) {
       payload.displayName = normalizedDisplayName;
     }
