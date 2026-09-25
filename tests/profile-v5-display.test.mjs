@@ -76,8 +76,8 @@ test("Ajustar Dossiê selects owned titles and profile backgrounds through appea
   assert.match(settings, /appearanceView === "backgrounds"/);
   assert.match(settings, /ProfileTitleRenderer/);
   assert.match(settings, /background\.previewRef \?\? background\.assetRef/);
-  assert.match(settings, /rememberProfileBackgroundRef/);
-  assert.match(settings, /warmProfileBackgroundAsset/);
+  assert.match(settings, /applyProfileBackgroundRef/);
+  assert.match(settings, /await applyProfileBackgroundRef/);
   assert.doesNotMatch(settings, /\/api\/profile\/titles/);
 });
 
