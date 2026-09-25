@@ -13,48 +13,6 @@
   color: var(--ivory);
 }
 
-.categoryPage::before {
-  content: "";
-  position: fixed;
-  z-index: -2;
-  inset: 0;
-  pointer-events: none;
-  background:
-    radial-gradient(circle at 12% 8%, rgb(30 82 60 / 24%), transparent 31rem),
-    radial-gradient(circle at 86% 16%, rgb(157 121 59 / 12%), transparent 28rem),
-    linear-gradient(145deg, #07130f 0%, #071a15 46%, #091611 100%);
-}
-
-.atmosphere {
-  position: fixed;
-  z-index: -1;
-  inset: 0;
-  overflow: clip;
-  pointer-events: none;
-}
-
-.atmosphere span:first-child {
-  position: absolute;
-  inset: -12%;
-  opacity: 0.32;
-  background:
-    radial-gradient(ellipse 38% 26% at 12% 24%, rgb(16 39 27 / 35%), transparent 72%),
-    linear-gradient(116deg, transparent 35%, rgb(208 170 87 / 5%) 49%, transparent 62%);
-}
-
-.atmosphere span:last-child {
-  position: absolute;
-  top: 8%;
-  right: -10%;
-  width: min(58vw, 720px);
-  height: 72vh;
-  opacity: 0.2;
-  background:
-    repeating-linear-gradient(18deg, transparent 0 34px, rgb(238 232 218 / 3%) 34px 35px, transparent 35px 70px),
-    linear-gradient(146deg, rgb(16 39 27 / 48%), transparent);
-  clip-path: polygon(20% 0, 100% 5%, 90% 88%, 58% 100%, 0 73%, 8% 18%);
-}
-
 .categoryHeader {
   min-height: 260px;
   display: grid;
