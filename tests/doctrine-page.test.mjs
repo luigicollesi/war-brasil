@@ -429,3 +429,75 @@ test("Doutrina restringe dourado oliva a detalhes e não preenche superfícies d
     /\.departureVictoryStep[\s\S]*rgba\(72, 110, 85, 0\.1\)/,
   );
 });
+
+
+test("demonstrações táticas usam layouts adequados ao tipo de informação", () => {
+  const demos = source("src/components/doctrine/doctrine-demo.tsx");
+  const uxCss = source(
+    "src/components/doctrine/doctrine-ux-enhancements.module.css",
+  );
+
+  assert.match(demos, /machineSceneRail/);
+  assert.match(demos, /machineSceneSplit/);
+  assert.match(demos, /machineSceneCentered/);
+  assert.match(demos, /machineSceneOverlay/);
+  assert.match(demos, /sceneBoard/);
+  assert.match(demos, /sceneAside/);
+  assert.match(demos, /TRAVESSIA/);
+
+  assert.match(
+    uxCss,
+    /\.machineSceneRail\s*\{[\s\S]*repeat\(4, minmax\(0, 1fr\)\)/,
+  );
+  assert.match(
+    uxCss,
+    /@media \(max-width: 1312px\)[\s\S]*\.machineSceneRail[\s\S]*repeat\(2, minmax\(0, 1fr\)\)/,
+  );
+  assert.match(
+    uxCss,
+    /@media \(max-width: 1180px\)[\s\S]*\.machineSceneSplit,[\s\S]*grid-template-columns:\s*1fr/,
+  );
+  assert.match(
+    uxCss,
+    /@media \(max-width: 760px\)[\s\S]*\.machineSceneRail[\s\S]*grid-template-columns:\s*1fr/,
+  );
+});
+
+test("mapas de ataque, conquista, manobra e barreira mantêm overlays separados", () => {
+  const demos = source("src/components/doctrine/doctrine-demo.tsx");
+  const uxCss = source(
+    "src/components/doctrine/doctrine-ux-enhancements.module.css",
+  );
+
+  assert.match(demos, /attack-origin[\s\S]*x: 35/);
+  assert.match(demos, /conquest-origin[\s\S]*x: 34/);
+  assert.match(demos, /move-origin[\s\S]*x: 33/);
+  assert.match(demos, /barrier-origin[\s\S]*x: 34/);
+  assert.match(
+    uxCss,
+    /\.maneuverScene[\s\S]*\.wb-guide-board-scene-marker em/,
+  );
+  assert.match(
+    uxCss,
+    /\.barrierBandsRefined\s*\{[\s\S]*background:\s*transparent/,
+  );
+});
+
+test("redistribuição da Retirada reduz densidade de labels sobre o mapa", () => {
+  const demos = source("src/components/doctrine/doctrine-demo.tsx");
+  const uxCss = source(
+    "src/components/doctrine/doctrine-ux-enhancements.module.css",
+  );
+
+  const departureStart = demos.indexOf("function DepartureDemo");
+  const departureEnd = demos.indexOf("function VictoryDemo", departureStart);
+  const departure = demos.slice(departureStart, departureEnd);
+
+  assert.equal((departure.match(/label: "ATRIBUIR"/g) ?? []).length, 1);
+  assert.match(departure, /departure-a[\s\S]*x: 27[\s\S]*y: 32/);
+  assert.match(departure, /departure-b[\s\S]*x: 73[\s\S]*y: 67/);
+  assert.match(
+    uxCss,
+    /\.departureMap :global\(\.wb-guide-board-scene-marker\)[\s\S]*min-width:\s*72px/,
+  );
+});
