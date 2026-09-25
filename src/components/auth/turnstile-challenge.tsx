@@ -172,9 +172,6 @@ export function TurnstileChallenge({
   return (
     <div className={styles.captchaBlock}>
       <div ref={containerRef} className={styles.captchaWidget} />
-      <span className={styles.captchaHint}>
-        Verificação anti-automação protegida por Cloudflare Turnstile.
-      </span>
     </div>
   );
 }
