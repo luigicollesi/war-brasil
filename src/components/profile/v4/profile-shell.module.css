@@ -59,6 +59,21 @@
     0 0 0 10rem rgb(208 170 87 / 1.5%);
 }
 
+
+@media (min-width: 981px) {
+  .page[data-fixed-header="true"] .commandBar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+  }
+
+  .page[data-fixed-header="true"] .surface {
+    padding-top: calc(var(--profile-commandbar-height) + clamp(22px, 3vw, 44px));
+  }
+}
+
 .commandBar {
   position: sticky;
   top: 0;
