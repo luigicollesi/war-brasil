@@ -53,26 +53,26 @@ test("PROFILE V4 dossier monogram is an interface insignia, not a portrait slot"
   assert.match(styles, /@media \(max-width: 520px\)[\s\S]*\.identitySignal\s*{[\s\S]*display:\s*none/);
 });
 
-test("PROFILE V4 and store showcase own their page chrome while compact profile navigation stays viewport-bottom", async () => {
+test("PROFILE V4 suppresses global command chrome across profile routes and keeps the private header responsive", async () => {
   const runtime = await source(
     "src/components/pre-game/foundation/pre-game-command-runtime.tsx",
   );
   const shell = await source("src/components/profile/v4/profile-shell.tsx");
   const styles = await source("src/components/profile/v4/profile-shell.module.css");
-
-  assert.match(runtime, /const PROFILE_SHELL_ROUTES = new Set\(\[/);
-  assert.match(runtime, /"\/profile"/);
-  assert.match(runtime, /"\/profile\/arsenal"/);
-  assert.match(runtime, /"\/profile\/store"/);
-  assert.match(runtime, /const profileOwnsBackground =\s*PROFILE_SHELL_ROUTES\.has\(pathname\)/);
-  assert.match(runtime, /const standalonePublicProfile = isStandalonePublicProfileRoute\(pathname\)/);
-  assert.match(runtime, /const profileOwnsSurface = profileOwnsBackground \|\| standalonePublicProfile/);
-  assert.match(runtime, /standalonePublicProfile \|\|[\s\S]*pathname\.startsWith\("\/profile\/store\/showcase\/"\)/);
-  assert.match(
-    runtime,
-    /profileOwnsSurface\s*\?\s*\([\s\S]*<>\{children\}<\/>[\s\S]*\)\s*:\s*\(/,
+  const categoryPage = await source(
+    "src/app/profile/store/category/[category]/page.tsx",
   );
+  const showcasePage = await source(
+    "src/app/profile/store/showcase/[kind]/[id]/page.tsx",
+  );
+  const publicPage = await source("src/app/profile/[handle]/page.tsx");
+
+  assert.match(runtime, /pathname === "\/profile"/);
+  assert.match(runtime, /pathname\.startsWith\("\/profile\/"\)/);
   assert.match(runtime, /chrome=\{!profileOwnsChrome\}/);
+  assert.match(categoryPage, /<ProfileShell/);
+  assert.match(showcasePage, /<ProfileShell/);
+  assert.doesNotMatch(publicPage, /ProfileShell/);
   assert.doesNotMatch(shell, /className=\{styles\.mobileNav\}/);
   assert.match(
     styles,
