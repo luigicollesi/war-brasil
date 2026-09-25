@@ -161,8 +161,10 @@ function ProfileStageScene({
 
 export function ProfileDisplayStage({
   arsenal,
+  topInsetPx,
 }: {
   arsenal: PublicProfileArsenal;
+  topInsetPx?: number | null;
 }) {
   const reducedMotion = useReducedMotion();
   const items = [
@@ -202,8 +204,19 @@ export function ProfileDisplayStage({
       "--profile-label-y-compact-short": `${PROFILE_DISPLAY_LAYOUTS.compactShort[slot].labelY * 100}%`,
     }) as CSSProperties;
 
+  const stageStyle =
+    topInsetPx === null || topInsetPx === undefined
+      ? undefined
+      : ({
+          "--profile-display-top": `${topInsetPx}px`,
+        } as CSSProperties);
+
   return (
-    <section className={styles.stage} aria-label="Arsenal equipado">
+    <section
+      className={styles.stage}
+      aria-label="Arsenal equipado"
+      style={stageStyle}
+    >
       <div className={styles.canvas} aria-hidden="true">
         <Canvas
           dpr={[1, 1.5]}
