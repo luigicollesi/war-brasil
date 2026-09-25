@@ -19,6 +19,10 @@ const storefront = readFileSync(
   "src/components/profile/v4/profile-store.tsx",
   "utf8",
 );
+const categoryStorefront = readFileSync(
+  "src/components/profile/v4/profile-store-category.tsx",
+  "utf8",
+);
 const showcaseProjection = readFileSync(
   "src/lib/economy/store-showcase.ts",
   "utf8",
@@ -69,9 +73,9 @@ test("storefront V2 expõe skins anunciadas/disponíveis sem convertê-las em of
   assert.match(repository, /item\.status IN \('announced','available'\)/);
   assert.match(service, /listStorefrontTerritorySkins/);
   assert.match(service, /territorySkins:/);
-  assert.match(storefront, /storefront\.territorySkins/);
-  assert.match(storefront, /offer \? \(/);
-  assert.match(storefront, /EM BREVE/);
+  assert.match(categoryStorefront, /storefront\.territorySkins/);
+  assert.match(categoryStorefront, /offer \? \(/);
+  assert.match(categoryStorefront, /ANUNCIADO/);
 });
 
 test("storefront V2 deriva catálogo comercial no servidor sem regra React hardcoded", () => {
@@ -93,11 +97,11 @@ test("storefront V2 deriva catálogo comercial no servidor sem regra React hardc
 });
 
 test("Intendência V4 routes inspection to showcase and keeps retained direct purchase authoritative", () => {
-  assert.match(storefront, /showcaseHref\("offer"/);
+  assert.match(categoryStorefront, /showcase\/offer/);
   assert.match(storefront, /INSPECIONAR/);
-  assert.match(storefront, /purchaseShowcaseOffer/);
-  assert.match(storefront, /expectedPrice:\s*offer\.price/);
-  assert.doesNotMatch(storefront, /fetch\([^)]*\/api\/economy\/purchases/);
+  assert.match(categoryStorefront, /purchaseShowcaseOffer/);
+  assert.match(categoryStorefront, /expectedPrice:\s*offer\.price/);
+  assert.doesNotMatch(categoryStorefront, /fetch\([^)]*\/api\/economy\/purchases/);
 
   assert.match(showcaseProjection, /price:\s*offer\.price/);
   assert.match(showcaseProjection, /basePrice:\s*offer\.basePrice/);
