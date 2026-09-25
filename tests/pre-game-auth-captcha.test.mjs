@@ -103,6 +103,14 @@ test("OTP e redefinição final não recebem desafio adicional", () => {
   assert.doesNotMatch(resetBlock, /TurnstileChallenge/);
 });
 
+test("widget não exibe texto auxiliar redundante abaixo do desafio", () => {
+  assert.doesNotMatch(
+    widget,
+    /Verificação anti-automação protegida por Cloudflare Turnstile/,
+  );
+  assert.doesNotMatch(widget, /captchaHint/);
+});
+
 test("widget usa somente site key pública; secret permanece server-only", () => {
   assert.match(widget, /NEXT_PUBLIC_TURNSTILE_SITE_KEY/);
   assert.match(widget, /challenges\.cloudflare\.com\/turnstile\/v0\/api\.js/);
