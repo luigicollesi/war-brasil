@@ -30,26 +30,26 @@ function DemoFrame({
 function SetupDemo() {
   return (
     <DemoFrame
-      label="Demonstração de preparação da partida no mapa do Brasil"
-      caption="O mapa começa repartido entre facções. Cada placa já nasce ocupada e a topologia inicial passa a orientar risco, expansão e defesa."
+      label="Exemplo de como a partida começa no mapa do Brasil"
+      caption="No começo, o mapa é dividido entre os jogadores. Cada território já começa ocupado e com tropas."
     >
       <div className={styles.boardShell}>
         <GuideBoardScene
           compact
-          ariaLabel="Mapa de preparação com quatro territórios ilustrativos pertencendo a facções diferentes"
+          ariaLabel="Mapa de preparação com territórios pertencendo a jogadores diferentes"
           markers={[
             { key: "setup-a", label: "Setor Norte", troops: 1, x: 34, y: 31, tone: "ally" },
             { key: "setup-b", label: "Setor Leste", troops: 1, x: 65, y: 43, tone: "enemy" },
             { key: "setup-c", label: "Setor Centro", troops: 1, x: 49, y: 56, tone: "accent" },
             { key: "setup-d", label: "Setor Sul", troops: 1, x: 48, y: 77, tone: "neutral" },
           ]}
-          caption="Distribuição ilustrativa — a regra é determinada pelo estado inicial da partida."
+          caption="Exemplo de distribuição inicial dos territórios."
         />
       </div>
       <div className={styles.statusRail} aria-hidden="true">
-        <span data-tone="ally">FACÇÃO A</span>
-        <span data-tone="enemy">FACÇÃO B</span>
-        <span data-tone="accent">FACÇÃO C</span>
+        <span data-tone="ally">JOGADOR A</span>
+        <span data-tone="enemy">JOGADOR B</span>
+        <span data-tone="accent">JOGADOR C</span>
       </div>
     </DemoFrame>
   );
@@ -58,11 +58,11 @@ function SetupDemo() {
 function ObjectivesDemo({ presentation }: { presentation: DoctrinePresentation }) {
   return (
     <DemoFrame
-      label="Demonstração dos formatos de objetivo"
-      caption="A interface ensina categorias e condições sem ler o objetivo privado de nenhum jogador conectado."
+      label="Exemplo dos tipos de objetivo"
+      caption="Estes são os tipos de objetivo que podem aparecer. O objetivo de cada jogador continua secreto."
     >
       <div className={styles.objectiveCore}>
-        <div className={styles.classifiedStamp}>ACESSO RESTRITO</div>
+        <div className={styles.classifiedStamp}>OBJETIVO SECRETO</div>
         <div className={styles.objectiveGlyph} aria-hidden="true">
           <span />
           <span />
@@ -88,8 +88,8 @@ function ObjectivesDemo({ presentation }: { presentation: DoctrinePresentation }
 function TurnDemo({ chapter }: { chapter: DoctrineChapter }) {
   return (
     <DemoFrame
-      label="Fluxo de um turno"
-      caption="Trocas antecedem a mobilização quando a fase está disponível; depois vêm reforços, conflito e reposicionamento."
+      label="Ordem das fases do turno"
+      caption="Quando houver Trocas, elas vêm primeiro. Depois o turno segue com Reforços, Ataque e Manobra."
     >
       <div className={`${styles.phaseRail} ${ux.phaseRail} ${ux.machineSceneRail}`}>
         {chapter.metrics.map((phase, index) => (
@@ -111,8 +111,8 @@ function TurnDemo({ chapter }: { chapter: DoctrineChapter }) {
 function TradeDemo({ presentation }: { presentation: DoctrinePresentation }) {
   return (
     <DemoFrame
-      label="Demonstração da fase de Trocas entre jogadores"
-      caption={`Negociação não gera tropas. O jogador da vez pode fazer até ${presentation.playerTrade.offerLimitPerTurn} ofertas; os demais humanos ativos podem sinalizar até ${presentation.playerTrade.signalLimitPerTurn} cartas por turno.`}
+      label="Exemplo de Trocas entre jogadores"
+      caption={`Trocar cartas não dá tropas. No seu turno, você pode fazer até ${presentation.playerTrade.offerLimitPerTurn} ofertas. Os outros jogadores humanos podem marcar até ${presentation.playerTrade.signalLimitPerTurn} cartas por turno para mostrar o que aceitam trocar.`}
     >
       <div className={ux.playerTradeStage}>
         <GuideTradeScene
@@ -120,8 +120,8 @@ function TradeDemo({ presentation }: { presentation: DoctrinePresentation }) {
           signalLimit={presentation.playerTrade.signalLimitPerTurn}
         />
         <div className={ux.tradeDoctrineNote}>
-          <span>NEGOCIAÇÃO ≠ RESGATE</span>
-          <strong>Cartas mudam de dono. Tropas só vêm do resgate de uma combinação válida.</strong>
+          <span>TROCA NÃO É RESGATE</span>
+          <strong>Na Troca, cartas mudam de dono. No Resgate, uma combinação válida de cartas dá tropas.</strong>
         </div>
       </div>
     </DemoFrame>
@@ -131,8 +131,8 @@ function TradeDemo({ presentation }: { presentation: DoctrinePresentation }) {
 function ReinforcementDemo({ presentation }: { presentation: DoctrinePresentation }) {
   return (
     <DemoFrame
-      label="Demonstração de alocação de reforços"
-      caption={`No exemplo derivado da regra, ${presentation.reinforcement.territoryExample} territórios produzem ${presentation.reinforcement.baseExample} tropas de reforço base antes de bônus adicionais.`}
+      label="Exemplo de distribuição de Reforços"
+      caption={`Com ${presentation.reinforcement.territoryExample} territórios, você recebe ${presentation.reinforcement.baseExample} tropas de Reforço antes dos bônus de região e de cartas.`}
     >
       <div className={styles.reinforcementStage}>
         <GuideBoardScene
@@ -142,10 +142,10 @@ function ReinforcementDemo({ presentation }: { presentation: DoctrinePresentatio
             { key: "reinforce-a", label: "Goiás", troops: 4, x: 47, y: 55, tone: "ally", selected: true },
             { key: "reinforce-b", label: "Bahia", troops: 5, x: 62, y: 49, tone: "ally", selected: true },
           ]}
-          caption="Distribua o saldo entre territórios próprios antes de avançar para o conflito."
+          caption="Coloque todas as tropas de Reforço nos seus territórios antes de seguir para o Ataque."
         />
         <div className={styles.reinforcementReadout}>
-          <span>SALDO</span>
+          <span>REFORÇOS</span>
           <b>+{presentation.reinforcement.baseExample}</b>
           <small>TROPAS BASE</small>
         </div>
@@ -157,8 +157,8 @@ function ReinforcementDemo({ presentation }: { presentation: DoctrinePresentatio
 function AttackDemo({ presentation }: { presentation: DoctrinePresentation }) {
   return (
     <DemoFrame
-      label="Demonstração de ataque e comparação de dados"
-      caption="Os dados são ordenados do maior para o menor. Cada par resolve uma comparação; empate favorece a defesa."
+      label="Exemplo de Ataque e comparação dos dados"
+      caption="Compare os dados do maior para o menor. Em cada par, o maior vence; se empatar, a Defesa vence."
     >
       <div className={`${styles.attackStage} ${ux.machineSceneSplit} ${ux.attackScene}`}>
         <div className={ux.sceneBoard}>
@@ -178,13 +178,13 @@ function AttackDemo({ presentation }: { presentation: DoctrinePresentation }) {
                 label: "ATAQUE",
               },
             ]}
-            caption="A rota precisa existir na topologia vigente da partida."
+            caption="Os dois territórios precisam ter uma ligação válida no mapa."
           />
         </div>
 
         <aside
           className={`${styles.diceMatrix} ${ux.sceneAside} ${ux.combatAside}`}
-          aria-label="Comparação dos dados de ataque e defesa"
+          aria-label="Dados do Ataque e da Defesa"
         >
           <div>
             <span>ATAQUE</span>
@@ -233,7 +233,7 @@ function ConquestDemo({ presentation }: { presentation: DoctrinePresentation }) 
 
   return (
     <DemoFrame
-      label="Demonstração de transferência de tropas após conquista"
+      label="Exemplo de ocupação depois de uma conquista"
       caption={`A conquista só se completa quando o novo território recebe ao menos ${presentation.conquest.minimumMove} tropa e a origem preserva ${presentation.conquest.minimumTroopsLeftAtOrigin}.`}
     >
       <div className={`${styles.boardShell} ${ux.machineSceneCentered} ${ux.conquestScene}`}>
@@ -254,7 +254,7 @@ function ConquestDemo({ presentation }: { presentation: DoctrinePresentation }) 
                 label: "OCUPAR",
               },
             ]}
-            caption="A nova fronteira passa a integrar sua linha imediatamente."
+            caption="Depois de ocupar o território, ele já passa a ser seu."
           />
         </div>
       </div>
@@ -269,8 +269,8 @@ function ManeuverDemo({ presentation }: { presentation: DoctrinePresentation }) 
 
   return (
     <DemoFrame
-      label="Demonstração de manobra entre territórios aliados"
-      caption={`A seta representa uma rota válida entre territórios próprios. Neste exemplo, ${presentation.maneuver.movableBeforeReceiving} tropas estão móveis antes de receber reforço de manobra; tropas recebidas não podem iniciar outro deslocamento no mesmo turno.`}
+      label="Exemplo de Manobra entre seus territórios"
+      caption={`A seta mostra por onde as tropas podem passar entre seus territórios. Neste exemplo, ${presentation.maneuver.movableBeforeReceiving} tropas estão móveis antes de receber reforço de manobra; tropas recebidas não podem iniciar outro deslocamento no mesmo turno.`}
     >
       <div className={`${styles.boardShell} ${ux.machineSceneOverlay} ${ux.maneuverScene}`}>
         <div className={ux.sceneBoard}>
@@ -290,7 +290,7 @@ function ManeuverDemo({ presentation }: { presentation: DoctrinePresentation }) 
                 label: "MANOBRA",
               },
             ]}
-            caption="A manobra redistribui força: não produz novas tropas."
+            caption="A Manobra apenas move tropas que você já tem."
           />
         </div>
       </div>
@@ -301,7 +301,7 @@ function ManeuverDemo({ presentation }: { presentation: DoctrinePresentation }) 
 function BarrierDemo({ presentation }: { presentation: DoctrinePresentation }) {
   return (
     <DemoFrame
-      label="Demonstração do efeito de uma barreira em uma conexão"
+      label="Exemplo de uma barreira entre dois territórios"
       caption={`Uma barreira torna o ataque mais caro e a manobra perde ${presentation.barrier.maneuverLoss} tropa na travessia; ${presentation.barrier.blockedBarrierCount} ou mais barreiras bloqueiam a rota de manobra.`}
     >
       <div className={`${styles.barrierStage} ${ux.machineSceneSplit} ${ux.barrierScene}`}>
@@ -322,15 +322,15 @@ function BarrierDemo({ presentation }: { presentation: DoctrinePresentation }) {
                 label: "BARREIRA",
               },
             ]}
-            caption="A conexão permanece conhecida; o perfil da travessia é que muda."
+            caption="A ligação continua existindo, mas atravessá-la fica mais difícil."
           />
         </div>
 
         <aside
           className={`${ux.sceneAside} ${ux.barrierAside}`}
-          aria-label="Custo de dados da travessia"
+          aria-label="Dados permitidos ao atravessar a barreira"
         >
-          <span className={ux.asideLabel}>TRAVESSIA</span>
+          <span className={ux.asideLabel}>ATAQUE PELA BARREIRA</span>
           <div className={`${styles.barrierBands} ${ux.barrierBandsRefined}`}>
             {presentation.barrier.attackDiceBands.map((band) => (
               <div key={`${band.minimumTroops}-${band.maximumTroops ?? "max"}`}>
@@ -352,8 +352,8 @@ function BarrierDemo({ presentation }: { presentation: DoctrinePresentation }) {
 function CardsDemo({ presentation }: { presentation: DoctrinePresentation }) {
   return (
     <DemoFrame
-      label="Demonstração de cartas de território e resgate"
-      caption={`Resgates seguem progressão pessoal. Com ${presentation.cards.mandatoryTradeHandSize} ou mais cartas, um resgate válido é obrigatório antes de reforçar; isso não é a negociação entre jogadores.`}
+      label="Exemplo de cartas e Resgate"
+      caption={`Cada jogador tem sua própria sequência de valores de Resgate. Com ${presentation.cards.mandatoryTradeHandSize} ou mais cartas, você precisa fazer um Resgate válido antes de distribuir os Reforços.`}
     >
       <div className={styles.cardsStage}>
         <div className={styles.cardFan} aria-hidden="true">
@@ -377,7 +377,7 @@ function CardsDemo({ presentation }: { presentation: DoctrinePresentation }) {
           />
         </div>
         <div className={styles.tradeProgression}>
-          <span>RESGATE PESSOAL</span>
+          <span>VALOR DO RESGATE</span>
           {presentation.cards.tradeValues.slice(0, 4).map((value, index) => (
             <div key={`trade-${index}`}>
               <b>{String(index + 1).padStart(2, "0")}</b>
@@ -394,8 +394,8 @@ function CardsDemo({ presentation }: { presentation: DoctrinePresentation }) {
 function EventsDemo({ presentation }: { presentation: DoctrinePresentation }) {
   return (
     <DemoFrame
-      label="Demonstração conceitual do sistema de anomalias"
-      caption={`O catálogo vigente contém ${presentation.anomalies.eventCount} estados de evento. A interface materializa o efeito resolvido pela engine e preserva ao menos ${presentation.anomalies.minimumTroopsAfterRemoval} tropa em território ocupado quando a anomalia remove forças.`}
+      label="Exemplo de uma Anomalia"
+      caption={`Existem ${presentation.anomalies.eventCount} Anomalias possíveis. Cada uma mostra o que muda. Se uma Anomalia remover tropas de um território ocupado, pelo menos ${presentation.anomalies.minimumTroopsAfterRemoval} tropa continua nele.`}
     >
       <div className={styles.eventStage}>
         <div className={styles.eventGraph} aria-hidden="true">
@@ -408,9 +408,9 @@ function EventsDemo({ presentation }: { presentation: DoctrinePresentation }) {
           <i />
         </div>
         <div className={styles.eventReadout}>
-          <span>ANOMALIA ATIVA</span>
-          <strong>TOPOLOGIA ALTERADA</strong>
-          <small>efeito temporário · origem autoritativa</small>
+          <span>ANOMALIA</span>
+          <strong>MAPA ALTERADO</strong>
+          <small>efeito temporário</small>
         </div>
       </div>
     </DemoFrame>
@@ -420,14 +420,14 @@ function EventsDemo({ presentation }: { presentation: DoctrinePresentation }) {
 function DepartureDemo() {
   return (
     <DemoFrame
-      label="Demonstração do protocolo de retirada durante uma partida"
-      caption="A retirada altera o estado autoritativo da partida em sequência: cartas da mão vão ao descarte, territórios são redistribuídos de forma balanceada e todos os objetivos restantes são reavaliados. Essa redistribuição é a exceção que pode produzir vencedores simultâneos."
+      label="O que acontece quando um jogador sai da partida"
+      caption="Quando um jogador sai, suas cartas vão para o descarte, seus territórios são redistribuídos e os objetivos dos jogadores que continuam são verificados outra vez. Isso pode fazer mais de um jogador vencer ao mesmo tempo."
     >
       <div className={ux.departureStage}>
         <div className={ux.departureProtocol}>
-          <span>PROTOCOLO DE CONTINGÊNCIA</span>
-          <strong>RETIRADA EM PARTIDA ATIVA</strong>
-          <small>quatro efeitos encadeados · resolução automática</small>
+          <span>SAÍDA DURANTE A PARTIDA</span>
+          <strong>JOGADOR SAI DA PARTIDA</strong>
+          <small>quatro passos acontecem em seguida</small>
         </div>
 
         <div className={ux.departureTopFlow}>
@@ -438,12 +438,12 @@ function DepartureDemo() {
               <span className={ux.departureCommanderBody} />
               <b>×</b>
             </div>
-            <strong>COMANDANTE FORA DA OPERAÇÃO</strong>
+            <strong>JOGADOR FORA DA PARTIDA</strong>
             <small>
-              O assento deixa de participar dos turnos e negociações pendentes
+              O jogador não participa mais dos turnos e as Trocas pendentes
               são canceladas.
             </small>
-            <div className={ux.departureExitStamp}>RETIRADO</div>
+            <div className={ux.departureExitStamp}>SAIU</div>
           </section>
 
           <div className={ux.departureConnector} aria-hidden="true">
@@ -475,10 +475,10 @@ function DepartureDemo() {
                 <b>02</b>
               </div>
             </div>
-            <strong>CARTAS PERDIDAS PELO JOGADOR</strong>
+            <strong>CARTAS VÃO PARA O DESCARTE</strong>
             <small>
-              A mão deixa a posse do retirado. Nenhuma carta é herdada
-              diretamente por um rival.
+              As cartas deixam a mão de quem saiu e não vão diretamente
+              para nenhum outro jogador.
             </small>
           </section>
         </div>
@@ -491,11 +491,11 @@ function DepartureDemo() {
             <div className={ux.departureMap}>
               <GuideBoardScene
                 compact
-                ariaLabel="Mapa ilustrando territórios de um jogador retirado sendo redistribuídos entre jogadores com menor controle territorial"
+                ariaLabel="Mapa mostrando os territórios de quem saiu sendo entregues aos jogadores com menos territórios"
                 markers={[
                   {
                     key: "departure-source",
-                    label: "Território retirado",
+                    label: "Território de quem saiu",
                     troops: 4,
                     x: 50,
                     y: 52,
@@ -504,7 +504,7 @@ function DepartureDemo() {
                   },
                   {
                     key: "departure-a",
-                    label: "Menor controle A",
+                    label: "Menos territórios A",
                     troops: 3,
                     x: 27,
                     y: 32,
@@ -512,7 +512,7 @@ function DepartureDemo() {
                   },
                   {
                     key: "departure-b",
-                    label: "Menor controle B",
+                    label: "Menos territórios B",
                     troops: 2,
                     x: 73,
                     y: 67,
@@ -534,7 +534,7 @@ function DepartureDemo() {
                     kind: "move",
                   },
                 ]}
-                caption="Cada território é atribuído a quem possui menos territórios naquele momento; empates são resolvidos aleatoriamente."
+                caption="Cada território vai para um dos jogadores que têm menos territórios naquele momento. Em caso de empate, a escolha é aleatória."
               />
             </div>
             <div className={ux.departureBalanceRail}>
@@ -545,7 +545,7 @@ function DepartureDemo() {
               <i aria-hidden="true">→</i>
               <span>
                 <b>2</b>
-                MENOR CONTROLE
+                MENOS TERRITÓRIOS
               </span>
               <i aria-hidden="true">→</i>
               <span>
@@ -554,19 +554,18 @@ function DepartureDemo() {
               </span>
             </div>
             <small className={ux.departureTroopNote}>
-              As tropas permanecem no território; somente a propriedade é
-              alterada.
+              As tropas ficam onde estão; apenas o dono do território muda.
             </small>
           </section>
 
           <section
             className={[ux.departureStep, ux.departureVictoryStep].join(" ")}
           >
-            <div className={ux.departureStepCode}>04 // REAVALIAÇÃO</div>
+            <div className={ux.departureStepCode}>04 // OBJETIVOS</div>
             <div className={ux.departureObjectiveScan}>
               <span>OBJETIVOS RESTANTES</span>
               <div className={ux.departureScanLine} aria-hidden="true" />
-              <small>estado territorial alterado</small>
+              <small>depois da redistribuição</small>
             </div>
             <div className={ux.departureWinnerPair}>
               <div className={ux.departureWinner}>
@@ -582,13 +581,13 @@ function DepartureDemo() {
               </div>
             </div>
             <div className={ux.departureVictoryBanner}>
-              <small>EXCEÇÃO DE ENCERRAMENTO</small>
+              <small>CASO ESPECIAL</small>
               <strong>VITÓRIA SIMULTÂNEA</strong>
             </div>
             <p>
               Se a redistribuição completar mais de um objetivo ao mesmo tempo,
-              todos esses jogadores vencem. No fluxo atual, essa é a única
-              situação que admite múltiplos vencedores simultâneos.
+              todos esses jogadores vencem. Essa é a única situação em que
+              mais de um jogador pode vencer ao mesmo tempo.
             </p>
           </section>
         </div>
@@ -600,8 +599,8 @@ function DepartureDemo() {
 function VictoryDemo() {
   return (
     <DemoFrame
-      label="Demonstração da validação de vitória"
-      caption="O estado autoritativo confirma a missão. Aparência de domínio não substitui a condição programada do objetivo."
+      label="Exemplo de como a Vitória acontece"
+      caption="Você vence quando cumpre o seu objetivo. Ter mais territórios, tropas ou cartas só vence a partida se isso fizer parte do seu objetivo."
     >
       <div className={styles.victoryStage}>
         <div className={styles.victorySeal} aria-hidden="true">
@@ -613,7 +612,7 @@ function VictoryDemo() {
         <div className={styles.victoryTrace}>
           <span>OBJETIVO</span>
           <i aria-hidden="true" />
-          <span>ESTADO</span>
+          <span>CUMPRIU</span>
           <i aria-hidden="true" />
           <b>VITÓRIA</b>
         </div>
