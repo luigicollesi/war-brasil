@@ -9,7 +9,7 @@ import {
   displayFont,
   geistMono,
   interfaceFont,
-  legacyStoreInterfaceFont,
+  legacyInterfaceFont,
   profileTitleFontVariables,
 } from "./fonts";
 import "./globals.css";
@@ -72,7 +72,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="pt-BR"
       data-scroll-behavior="smooth"
-      className={`${interfaceFont.variable} ${displayFont.variable} ${brandFont.variable} ${legacyStoreInterfaceFont.variable} ${geistMono.variable} ${profileTitleFontVariables} h-full antialiased`}
+      className={`${interfaceFont.variable} ${displayFont.variable} ${brandFont.variable} ${legacyInterfaceFont.variable} ${geistMono.variable} ${profileTitleFontVariables} h-full antialiased`}
     >
       {assetOrigin ? (
         <head>
