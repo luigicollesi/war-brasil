@@ -1,5 +1,7 @@
 const PROFILE_BACKGROUND_CACHE_NAME = "bellum-civile-profile-background-v1";
 const PROFILE_BACKGROUND_STORAGE_PREFIX = "bellum-civile:profile-background:v1:";
+export const PROFILE_BACKGROUND_UPDATED_EVENT =
+  "bellum-civile:profile-background-updated";
 
 function storageKey(handle: string) {
   return `${PROFILE_BACKGROUND_STORAGE_PREFIX}${handle.trim().toLowerCase()}`;
@@ -46,6 +48,34 @@ export async function warmProfileBackgroundAsset(assetRef: string) {
   } catch {
     // CSS can still load the canonical URL and use the normal HTTP cache.
   }
+}
+
+
+export type ProfileBackgroundUpdatedDetail = Readonly<{
+  handle: string;
+  assetRef: string;
+}>;
+
+export async function applyProfileBackgroundRef(
+  handle: string,
+  assetRef: string,
+) {
+  if (!canUseBrowserStorage() || !handle || !assetRef) return;
+
+  rememberProfileBackgroundRef(handle, assetRef);
+  await warmProfileBackgroundAsset(assetRef);
+
+  window.dispatchEvent(
+    new CustomEvent<ProfileBackgroundUpdatedDetail>(
+      PROFILE_BACKGROUND_UPDATED_EVENT,
+      {
+        detail: {
+          handle: handle.trim().toLowerCase(),
+          assetRef,
+        },
+      },
+    ),
+  );
 }
 
 export async function resolveProfileBackgroundDisplayUrl(assetRef: string) {
