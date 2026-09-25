@@ -1,12 +1,16 @@
 import "server-only";
 
+import { validateCommanderDisplayNameDraft } from "@/src/lib/profile/commander-name-contract";
 import { pool } from "../db/pool";
+import {
+  assertCommanderDisplayNameAllowed,
+  CommanderNamePolicyError,
+} from "./commander-name-policy";
 import type {
   FriendRequestPolicy,
   ProfileVisibility,
 } from "./profile-domain";
 
-const DISPLAY_NAME_MAX_LENGTH = 48;
 const VISIBILITIES = new Set<ProfileVisibility>([
   "public",
   "friends",
@@ -48,20 +52,14 @@ type MutableProfilePrivacyUpdate = {
 };
 
 function cleanDisplayName(value: unknown) {
-  if (typeof value !== "string") {
+  const result = validateCommanderDisplayNameDraft(value);
+  if (!result.ok) {
     throw new ProfileSettingsError(
       "INVALID_DISPLAY_NAME",
-      "Nome público inválido.",
+      result.error,
     );
   }
-  const normalized = value.trim();
-  if (!normalized || normalized.length > DISPLAY_NAME_MAX_LENGTH) {
-    throw new ProfileSettingsError(
-      "INVALID_DISPLAY_NAME",
-      `Nome público deve possuir entre 1 e ${DISPLAY_NAME_MAX_LENGTH} caracteres.`,
-    );
-  }
-  return normalized;
+  return result.value;
 }
 
 function cleanVisibility(value: unknown, field: string): ProfileVisibility {
@@ -181,6 +179,21 @@ export async function updateOwnProfileSettings(
   userId: string,
   update: ProfileSettingsUpdate,
 ) {
+  let safeDisplayName = update.displayName;
+  if (safeDisplayName !== undefined) {
+    try {
+      safeDisplayName = assertCommanderDisplayNameAllowed(safeDisplayName);
+    } catch (error) {
+      if (error instanceof CommanderNamePolicyError) {
+        throw new ProfileSettingsError(
+          "INVALID_DISPLAY_NAME",
+          error.publicMessage,
+        );
+      }
+      throw error;
+    }
+  }
+
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
@@ -200,13 +213,13 @@ export async function updateOwnProfileSettings(
       );
     }
 
-    if (update.displayName !== undefined) {
+    if (safeDisplayName !== undefined) {
       await client.query(
         `UPDATE profile.commanders
             SET display_name=$2::varchar(48),
                 updated_at=NOW()
           WHERE user_id=$1::uuid`,
-        [userId, update.displayName],
+        [userId, safeDisplayName],
       );
     }
 
