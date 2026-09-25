@@ -145,7 +145,7 @@ test("PROFILE V4 category product cards preserve showcase and direct purchase fl
 });
 
 
-test("PROFILE V4 collection banners keep the full artwork and use wider cards", async () => {
+test("PROFILE V4 collection banners use wider cards with standardized cropped artwork", async () => {
   const styles = await source("src/components/profile/v4/profile-store.module.css");
 
   assert.match(
@@ -158,7 +158,11 @@ test("PROFILE V4 collection banners keep the full artwork and use wider cards", 
   );
   assert.match(
     styles,
-    /\.collectionBannerButton\s*>\s*img\s*\{[\s\S]*height:\s*auto;[\s\S]*object-fit:\s*contain;/,
+    /\.collectionBannerViewport\s*\{[^}]*aspect-ratio:\s*9\s*\/\s*4;[^}]*overflow:\s*hidden;/,
+  );
+  assert.match(
+    styles,
+    /\.collectionBannerViewport\s*>\s*img\s*\{[^}]*height:\s*100%;[^}]*object-fit:\s*cover;[^}]*object-position:\s*center center;/,
   );
 });
 
