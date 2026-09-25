@@ -8,6 +8,7 @@ const HANDLE_EDGE = /^[A-Za-z0-9].*[A-Za-z0-9]$/;
 const REPEATED_HANDLE_SEPARATOR = /[._-]{2}/;
 const CONTROL_OR_FORMAT_CHARACTER = /[\p{Cc}\p{Cf}]/u;
 const DISPLAY_NAME_CHARACTERS = /^[\p{L}\p{M}\p{N} ._'’\-]+$/u;
+const DISPLAY_NAME_CONTENT = /[\p{L}\p{N}]/u;
 
 export type CommanderIdentityWriteDto = Readonly<{
   handle: string;
@@ -119,6 +120,14 @@ export function validateCommanderDisplayNameDraft(
       value: null,
       error:
         "Use apenas letras, números, espaços e os símbolos ponto, apóstrofo, hífen ou sublinhado.",
+    };
+  }
+
+  if (!DISPLAY_NAME_CONTENT.test(displayName)) {
+    return {
+      ok: false,
+      value: null,
+      error: "O nome deve conter pelo menos uma letra ou número.",
     };
   }
 
