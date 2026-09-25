@@ -23,6 +23,7 @@ const CHAPTERS = [
   "barreiras-conexoes",
   "cartas",
   "anomalias",
+  "retirada",
   "vitoria",
 ];
 
@@ -33,6 +34,7 @@ const VISUAL_CHAPTERS = [
   "ataque",
   "cartas",
   "barreiras-conexoes",
+  "retirada",
 ];
 
 function chapterUrl(slug) {
