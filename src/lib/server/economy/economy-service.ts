@@ -676,19 +676,18 @@ export async function getEconomyStoreCategory(
   const [[walletRow, offerItemRows, quoteRows, territorySkinRows], catalog] =
     await Promise.all([userRowsPromise, catalogPromise]);
 
-  const standaloneProductRows = catalog.productRows.filter(
-    (product) => product.collection_id === null,
-  );
-  const standaloneOfferIds = new Set(
-    standaloneProductRows.map((product) => product.offer_id),
+  const categoryOfferIds = new Set(offerItemRows.map((row) => row.offer_id));
+  const categoryProductRows = catalog.productRows.filter(
+    (product) =>
+      product.collection_id === null && categoryOfferIds.has(product.offer_id),
   );
 
   const projectOffers = (offerRows: StorefrontOfferRow[]) =>
     offersFromRows(
-      offerRows.filter((offer) => standaloneOfferIds.has(offer.id)),
-      offerItemRows.filter((row) => standaloneOfferIds.has(row.offer_id)),
-      standaloneProductRows,
-      quoteRows.filter((row) => standaloneOfferIds.has(row.offer_id)),
+      offerRows.filter((offer) => categoryOfferIds.has(offer.id)),
+      offerItemRows,
+      categoryProductRows,
+      quoteRows.filter((row) => categoryOfferIds.has(row.offer_id)),
     );
 
   let offers: EconomyOffer[];
@@ -704,16 +703,14 @@ export async function getEconomyStoreCategory(
 
     const refreshed = await getStorefrontCatalogSnapshot({ bypassCache: true });
     const refreshedProducts = refreshed.productRows.filter(
-      (product) => product.collection_id === null,
-    );
-    const refreshedOfferIds = new Set(
-      refreshedProducts.map((product) => product.offer_id),
+      (product) =>
+        product.collection_id === null && categoryOfferIds.has(product.offer_id),
     );
     offers = offersFromRows(
-      refreshed.offerRows.filter((offer) => refreshedOfferIds.has(offer.id)),
-      offerItemRows.filter((row) => refreshedOfferIds.has(row.offer_id)),
+      refreshed.offerRows.filter((offer) => categoryOfferIds.has(offer.id)),
+      offerItemRows,
       refreshedProducts,
-      quoteRows.filter((row) => refreshedOfferIds.has(row.offer_id)),
+      quoteRows.filter((row) => categoryOfferIds.has(row.offer_id)),
     );
   }
 
