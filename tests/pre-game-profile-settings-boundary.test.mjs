@@ -28,7 +28,8 @@ test("Profile settings keeps biography, handle, portrait and title outside the e
   assert.match(service, /UNSUPPORTED_PROFILE_FIELD/);
   assert.doesNotMatch(service, /allowedKeys[^;]*portrait/is);
   assert.doesNotMatch(service, /allowedKeys[^;]*title/is);
-  assert.match(service, /DISPLAY_NAME_MAX_LENGTH\s*=\s*48/);
+  assert.match(service, /validateCommanderDisplayNameDraft/);
+  assert.match(service, /assertCommanderDisplayNameAllowed/);
   assert.doesNotMatch(service, /allowedKeys[^;]*bio/is);
 });
 
@@ -115,4 +116,18 @@ test("Profile dossier and settings expose no biography surface", () => {
   assert.doesNotMatch(contract, /\bbio\s*:/i);
   assert.match(migration, /DROP COLUMN IF EXISTS bio/);
   assert.match(migration, /DROP CONSTRAINT IF EXISTS commanders_bio_not_blank_check/);
+});
+
+
+test("settings panel validates display name before issuing PATCH and server repeats policy", () => {
+  const panel = read(
+    "src/components/profile/command-quarters/profile-settings-panel.tsx",
+  );
+  const service = read("src/lib/server/profile/profile-settings-service.ts");
+
+  assert.match(panel, /validateCommanderDisplayNameDraft\(displayName\)/);
+  assert.match(panel, /if \(!displayNameValidation\.ok\)/);
+  assert.match(service, /validateCommanderDisplayNameDraft\(value\)/);
+  assert.match(service, /assertCommanderDisplayNameAllowed\(safeDisplayName\)/);
+  assert.match(service, /INVALID_DISPLAY_NAME/);
 });
