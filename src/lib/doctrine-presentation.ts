@@ -3,6 +3,7 @@ import { EVENT_COUNT } from "./shared/events/event-catalog";
 import {
   JURASSIC_TUNNEL_SOURCE_ID,
 } from "./shared/game-round-rules";
+import { DEPARTURE_REDISTRIBUTED_TROOPS } from "./shared/game-departure-rules";
 
 export const DOCTRINE_CHAPTER_SLUGS = [
   "preparacao",
@@ -287,17 +288,20 @@ export function buildDoctrinePresentation() {
       number: "12",
       eyebrow: "Saída da partida",
       title: "Se alguém sair da partida, o mapa é reorganizado.",
-      lede: "Quando um jogador sai no meio da partida, as trocas pendentes são canceladas, suas cartas vão para o descarte e seus territórios são divididos entre os jogadores que continuam. Depois disso, os objetivos são verificados novamente.",
+      lede: `Quando um jogador sai no meio da partida, as Trocas pendentes são canceladas e suas cartas vão para o descarte. Os territórios são embaralhados e redistribuídos tentando deixar a quantidade de territórios dos jogadores o mais equilibrada possível. Cada território redistribuído fica com ${DEPARTURE_REDISTRIBUTED_TROOPS} tropa. Depois disso, os objetivos são verificados novamente.`,
       principles: [
-        "Os territórios de quem saiu são embaralhados e entregues um por um. Primeiro recebem os jogadores que têm menos territórios. Se houver empate, a escolha é aleatória.",
-        "Quando um território é redistribuído, ele fica com 1 tropa, não importa quantas tropas tinha antes. As cartas de quem saiu vão para o descarte e não passam diretamente para outro jogador.",
+        "Os territórios de quem saiu são embaralhados e entregues um por um. A cada entrega, recebem primeiro os jogadores que têm menos territórios naquele momento. Se houver empate, a escolha entre eles é aleatória.",
+        `Quando um território é redistribuído, ele fica com ${DEPARTURE_REDISTRIBUTED_TROOPS} tropa, não importa quantas tropas tinha antes. As cartas de quem saiu vão para o descarte e não passam diretamente para outro jogador.`,
         "Depois da redistribuição, o objetivo de todos os jogadores que continuam é verificado novamente. Se mais de um objetivo for concluído ao mesmo tempo, todos esses jogadores vencem.",
         "Essa é a única situação em que mais de um jogador pode vencer ao mesmo tempo.",
       ],
       metrics: [
         { label: "Cartas", value: "descarte" },
-        { label: "Territórios", value: "vão para quem tem menos" },
-        { label: "Tropas", value: "1 por território" },
+        { label: "Territórios", value: "distribuição equilibrada" },
+        {
+          label: "Tropas",
+          value: `${DEPARTURE_REDISTRIBUTED_TROOPS} por território`,
+        },
         { label: "Caso especial", value: "mais de um vencedor" },
       ],
       visual: "departure",
@@ -358,6 +362,9 @@ export function buildDoctrinePresentation() {
     anomalies: {
       eventCount: EVENT_COUNT,
       minimumTroopsAfterRemoval: guide.anomalies.minimumTroopsAfterRemoval,
+    },
+    departure: {
+      redistributedTroops: DEPARTURE_REDISTRIBUTED_TROOPS,
     },
   };
 }
