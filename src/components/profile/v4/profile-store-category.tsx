@@ -132,11 +132,6 @@ export function ProfileStoreCategory({
 
   return (
     <div className={styles.categoryPage}>
-      <div className={styles.atmosphere} aria-hidden="true">
-        <span />
-        <span />
-      </div>
-
       <header className={styles.categoryHeader}>
         <div className={styles.categoryUtility}>
           <Link href="/profile/store" className={styles.backLink}>← INTENDÊNCIA</Link>
