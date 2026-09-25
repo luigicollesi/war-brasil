@@ -14,7 +14,7 @@ test("store category route accepts the four supported catalog flows and rejects 
 
   for (const category of ["dice", "territories", "backgrounds", "titles"]) {
     assert.match(component, new RegExp(`["']${category}["']`));
-    assert.match(component, new RegExp(`/profile/store/category/\\\\\$\\\\\{id\\\\\}`));
+    assert.match(component, /\/profile\/store\/category\/\$\{id\}/);
   }
 
   assert.match(page, /STORE_CATEGORY_IDS/);
