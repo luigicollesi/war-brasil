@@ -53,41 +53,43 @@ export default async function StoreCategoryRoute({
   const session = await getAuthenticatedSessionForReadHeaders(await headers());
   if (!session) redirect("/");
 
+  let profile;
+  let gameplay: Awaited<ReturnType<typeof getEconomyStoreCategory>> | null = null;
+  let wallet: Awaited<ReturnType<typeof getEconomyWallet>> | null = null;
+  let appearanceStorefront: Awaited<ReturnType<typeof getProfileAppearanceStorefront>> = {
+    offers: [],
+  };
+
   try {
     if (category === "dice" || category === "territories") {
-      const [profile, gameplay] = await Promise.all([
+      [profile, gameplay] = await Promise.all([
         getOwnCommanderProfile(session.user.id),
         getEconomyStoreCategory(session.user.id, category),
       ]);
-      if (!profile) redirect("/profile");
-
-      return (
-        <ProfileShell
-          activeSurface="store"
-          displayName={profile.identity.displayName}
-          handle={profile.identity.handle}
-          wallet={{
-            available: true,
-            balance: gameplay.wallet.balance,
-            label: gameplay.wallet.label,
-          }}
-        >
-          <ProfileStoreCategory
-            category={category}
-            gameplayOffers={gameplay.offers}
-            territorySkins={gameplay.territorySkins}
-            appearanceStorefront={{ offers: [] }}
-          />
-        </ProfileShell>
-      );
+    } else {
+      [profile, wallet, appearanceStorefront] = await Promise.all([
+        getOwnCommanderProfile(session.user.id),
+        getEconomyWallet(session.user.id),
+        getProfileAppearanceStorefront(session.user.id),
+      ]);
     }
+  } catch (error) {
+    if (
+      error instanceof EconomyServiceError &&
+      error.code === "ECONOMY_COMMANDER_MISSING"
+    ) {
+      redirect("/profile");
+    }
+    console.error("Falha ao carregar categoria da Intendência.", error);
+    throw error;
+  }
 
-    const [profile, wallet, appearanceStorefront] = await Promise.all([
-      getOwnCommanderProfile(session.user.id),
-      getEconomyWallet(session.user.id),
-      getProfileAppearanceStorefront(session.user.id),
-    ]);
-    if (!profile) redirect("/profile");
+  if (!profile) redirect("/profile");
+
+  if (category === "dice" || category === "territories") {
+    if (!gameplay) {
+      throw new Error("STORE_CATEGORY_GAMEPLAY_UNAVAILABLE");
+    }
 
     return (
       <ProfileShell
@@ -96,24 +98,41 @@ export default async function StoreCategoryRoute({
         handle={profile.identity.handle}
         wallet={{
           available: true,
-          balance: wallet.balance,
-          label: wallet.label,
+          balance: gameplay.wallet.balance,
+          label: gameplay.wallet.label,
         }}
       >
         <ProfileStoreCategory
           category={category}
-          gameplayOffers={[]}
-          territorySkins={[]}
-          appearanceStorefront={appearanceStorefront}
+          gameplayOffers={gameplay.offers}
+          territorySkins={gameplay.territorySkins}
+          appearanceStorefront={{ offers: [] }}
         />
       </ProfileShell>
     );
-  } catch (error) {
-    if (error instanceof EconomyServiceError && error.code === "ECONOMY_COMMANDER_MISSING") {
-      redirect("/profile");
-    }
-    console.error("Falha ao carregar categoria da Intendência.", error);
-    throw error;
   }
 
+  if (!wallet) {
+    throw new Error("STORE_CATEGORY_WALLET_UNAVAILABLE");
+  }
+
+  return (
+    <ProfileShell
+      activeSurface="store"
+      displayName={profile.identity.displayName}
+      handle={profile.identity.handle}
+      wallet={{
+        available: true,
+        balance: wallet.balance,
+        label: wallet.label,
+      }}
+    >
+      <ProfileStoreCategory
+        category={category}
+        gameplayOffers={[]}
+        territorySkins={[]}
+        appearanceStorefront={appearanceStorefront}
+      />
+    </ProfileShell>
+  );
 }
