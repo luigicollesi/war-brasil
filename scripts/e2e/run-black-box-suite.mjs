@@ -5,6 +5,7 @@ const smokeSuite = [
   "scripts/e2e/auth-password-reset-e2e.mjs",
   "scripts/e2e/auth-session-security-e2e.mjs",
   "scripts/e2e/auth-token-expiry-e2e.mjs",
+  "scripts/e2e/auth-password-reset-token-expiry-e2e.mjs",
   "scripts/e2e/profile-social-flow.mjs",
   "scripts/e2e/auth-origin-redirect-e2e.mjs",
   "scripts/e2e/auth-rate-limit-e2e.mjs",
