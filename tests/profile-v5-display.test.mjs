@@ -98,9 +98,9 @@ test("public profile arsenal couples responsive asset and label geometry through
   assert.match(stage, /scale=\{layout\.attack\.scale\}/);
   assert.match(stage, /style=\{labelStyle\(item\.slot\)\}/);
 
-  assert.match(layout, /desktop:[\s\S]*attack: \{ x: 0\.14, y: 0\.615[\s\S]*labelY: 0\.715/);
-  assert.match(layout, /compact:[\s\S]*attack: \{ x: 0\.27, y: 0\.445[\s\S]*labelY: 0\.505/);
-  assert.match(layout, /neutral: \{ x: 0\.27, y: 0\.705[\s\S]*labelY: 0\.765/);
+  assert.match(layout, /desktop:[\s\S]*attack: \{ x: 0\.14, y: 0\.43[\s\S]*labelY: 0\.56/);
+  assert.match(layout, /compact:[\s\S]*attack: \{ x: 0\.27, y: 0\.25[\s\S]*labelY: 0\.29/);
+  assert.match(layout, /neutral: \{ x: 0\.27, y: 0\.68[\s\S]*labelY: 0\.72/);
   assert.match(layout, /compactShort/);
 
   assert.match(styles, /top:\s*var\(--profile-label-y\)/);
@@ -115,18 +115,43 @@ test("public profile mobile labels stay close to their assets without collapsing
 
   assert.match(
     layout,
-    /compact:[\s\S]*attack: \{ x: 0\.27, y: 0\.445, labelX: 0\.27, labelY: 0\.505/,
+    /compact:[\s\S]*attack: \{ x: 0\.27, y: 0\.25, labelX: 0\.27, labelY: 0\.29/,
   );
   assert.match(
     layout,
-    /neutral: \{ x: 0\.27, y: 0\.705, labelX: 0\.27, labelY: 0\.765/,
+    /neutral: \{ x: 0\.27, y: 0\.68, labelX: 0\.27, labelY: 0\.72/,
   );
   assert.match(
     layout,
-    /compactShort:[\s\S]*attack: \{ x: 0\.27, y: 0\.43, labelX: 0\.27, labelY: 0\.49/,
+    /compactShort:[\s\S]*attack: \{ x: 0\.27, y: 0\.23, labelX: 0\.27, labelY: 0\.27/,
   );
   assert.match(
     layout,
-    /neutral: \{ x: 0\.27, y: 0\.68, labelX: 0\.27, labelY: 0\.74/,
+    /neutral: \{ x: 0\.27, y: 0\.66, labelX: 0\.27, labelY: 0\.7/,
   );
+});
+
+
+test("public profile centers arsenal in the measured space below the player title", async () => {
+  const display = await source(
+    "src/components/profile/public-commander-profile.tsx",
+  );
+  const stage = await source("src/components/profile/profile-display-stage.tsx");
+  const styles = await source("src/components/profile/profile-display-stage.module.css");
+
+  assert.match(display, /identityRef = useRef<HTMLElement>/);
+  assert.match(display, /new ResizeObserver\(syncArsenalTop\)/);
+  assert.match(display, /getBoundingClientRect\(\)\.bottom/);
+  assert.match(display, /topInsetPx=\{arsenalTop\}/);
+  assert.match(stage, /"--profile-display-top":/);
+  assert.match(styles, /top:\s*var\(--profile-display-top,/);
+  assert.match(styles, /bottom:\s*0;/);
+});
+
+test("public profile renders 3d arsenal above its labels", async () => {
+  const styles = await source("src/components/profile/profile-display-stage.module.css");
+
+  assert.match(styles, /\.canvas\s*\{[^}]*z-index:\s*2;/);
+  assert.match(styles, /\.labels\s*\{[^}]*z-index:\s*1;/);
+  assert.match(styles, /isolation:\s*isolate;/);
 });
