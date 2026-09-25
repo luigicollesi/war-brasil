@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { type FormEvent, useEffect, useRef, useState, useTransition } from "react";
+import { validateCommanderIdentityDraft } from "@/src/lib/profile/commander-name-contract";
 import styles from "./command-onboarding-modal.module.css";
 
 type OnboardingStage = "birth-date" | "identity" | "blocked";
@@ -122,14 +123,20 @@ export function CommandOnboardingModal({
     setErrors({});
     setMessage("");
 
+    const validation = validateCommanderIdentityDraft({
+      displayName: formText(formData, "displayName"),
+      handle: formText(formData, "handle"),
+    });
+    if (!validation.ok) {
+      setErrors(validation.errors);
+      return;
+    }
+
     startTransition(async () => {
       const response = await fetch("/api/auth/command-access", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          displayName: formText(formData, "displayName"),
-          handle: formText(formData, "handle"),
-        }),
+        body: JSON.stringify(validation.value),
       });
       const payload = (await response.json().catch(() => ({}))) as CommanderSaveResponse;
 
