@@ -7,6 +7,7 @@ export type ProfileAppearanceStoreTitle = Readonly<{
   displayText: string;
   description: string | null;
   rarity: ProfileAppearanceRarity;
+  collectionId: string | null;
   fontKey: string;
   styleKey: string;
   textureRef: string | null;
@@ -19,6 +20,7 @@ export type ProfileAppearanceStoreBackground = Readonly<{
   name: string;
   description: string | null;
   rarity: ProfileAppearanceRarity;
+  collectionId: string | null;
   assetRef: string;
   previewRef: string | null;
   owned: boolean;
