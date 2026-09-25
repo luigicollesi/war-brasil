@@ -167,6 +167,551 @@
   letter-spacing: 0.025em;
 }
 
+
+.departureStage {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 14px;
+  min-height: 620px;
+  padding: 20px;
+  background:
+    radial-gradient(circle at 50% 56%, rgba(205, 180, 107, 0.07), transparent 34rem),
+    linear-gradient(180deg, rgba(5, 12, 9, 0.7), rgba(5, 10, 8, 0.96));
+}
+
+.departureStage::before {
+  content: "";
+  position: absolute;
+  inset: 12px;
+  pointer-events: none;
+  border: 1px solid rgba(205, 180, 107, 0.06);
+  clip-path: polygon(
+    0 0,
+    36px 0,
+    36px 1px,
+    calc(100% - 36px) 1px,
+    calc(100% - 36px) 0,
+    100% 0,
+    100% 36px,
+    calc(100% - 1px) 36px,
+    calc(100% - 1px) calc(100% - 36px),
+    100% calc(100% - 36px),
+    100% 100%,
+    calc(100% - 36px) 100%,
+    calc(100% - 36px) calc(100% - 1px),
+    36px calc(100% - 1px),
+    36px 100%,
+    0 100%,
+    0 calc(100% - 36px),
+    1px calc(100% - 36px),
+    1px 36px,
+    0 36px
+  );
+  background: rgba(205, 180, 107, 0.14);
+}
+
+.departureProtocol {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid rgba(205, 180, 107, 0.16);
+  background:
+    linear-gradient(90deg, rgba(205, 180, 107, 0.09), transparent 34%),
+    rgba(7, 14, 11, 0.92);
+}
+
+.departureProtocol span,
+.departureProtocol small,
+.departureStepCode,
+.departureDiscard small,
+.departureObjectiveScan span,
+.departureObjectiveScan small,
+.departureVictoryBanner small,
+.departureWinner small,
+.departureBalanceRail,
+.departureExitStamp {
+  font-family: var(--font-geist-mono), monospace;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.departureProtocol span {
+  color: var(--d-gold-bright);
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.departureProtocol strong {
+  min-width: 0;
+  color: var(--d-ink);
+  font: 700 13px/1.1 var(--font-wb-display), sans-serif;
+  letter-spacing: 0.08em;
+  text-align: center;
+}
+
+.departureProtocol small {
+  color: #6f7a72;
+  font-size: 7px;
+  text-align: right;
+}
+
+.departureTopFlow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 42px minmax(0, 1fr);
+  gap: 8px;
+  align-items: stretch;
+}
+
+.departureLowerFlow {
+  display: grid;
+  grid-template-columns: minmax(0, 1.18fr) minmax(245px, 0.82fr);
+  gap: 12px;
+  align-items: stretch;
+}
+
+.departureStep {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 9px;
+  padding: 16px;
+  overflow: hidden;
+  border: 1px solid rgba(205, 180, 107, 0.14);
+  background:
+    linear-gradient(145deg, rgba(205, 180, 107, 0.045), transparent 44%),
+    rgba(8, 15, 12, 0.94);
+}
+
+.departureStep::after {
+  content: "";
+  position: absolute;
+  right: -46px;
+  bottom: -46px;
+  width: 112px;
+  height: 112px;
+  border: 1px solid rgba(205, 180, 107, 0.055);
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 18px rgba(205, 180, 107, 0.018),
+    0 0 0 36px rgba(205, 180, 107, 0.012);
+  pointer-events: none;
+}
+
+.departureStepCode {
+  position: relative;
+  z-index: 2;
+  color: var(--d-gold);
+  font-size: 7px;
+  font-weight: 800;
+}
+
+.departureStep > strong {
+  position: relative;
+  z-index: 2;
+  color: #e9e2d3;
+  font: 700 12px/1.25 var(--font-wb-display), sans-serif;
+  letter-spacing: 0.055em;
+}
+
+.departureStep > small {
+  position: relative;
+  z-index: 2;
+  color: #8d998f;
+  font-size: 10px;
+  line-height: 1.48;
+}
+
+.departureCommander {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 92px;
+  height: 92px;
+  margin: 1px auto 3px;
+  border: 1px solid rgba(205, 180, 107, 0.2);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(205, 180, 107, 0.09), transparent 64%),
+    rgba(4, 10, 7, 0.72);
+}
+
+.departureCommander::before,
+.departureCommander::after {
+  content: "";
+  position: absolute;
+  background: rgba(205, 180, 107, 0.18);
+}
+
+.departureCommander::before {
+  width: 118%;
+  height: 1px;
+}
+
+.departureCommander::after {
+  width: 1px;
+  height: 118%;
+}
+
+.departureCommanderHead {
+  position: absolute;
+  top: 22px;
+  width: 22px;
+  height: 22px;
+  border: 1px solid #9ba59e;
+  border-radius: 50%;
+  background: #101914;
+}
+
+.departureCommanderBody {
+  position: absolute;
+  top: 49px;
+  width: 45px;
+  height: 25px;
+  border: 1px solid #9ba59e;
+  border-radius: 24px 24px 7px 7px;
+  background: #101914;
+}
+
+.departureCommander b {
+  position: absolute;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 54px;
+  color: #d56d63;
+  border: 1px solid rgba(213, 109, 99, 0.38);
+  border-radius: 50%;
+  background: rgba(51, 14, 12, 0.34);
+  font: 300 40px/1 var(--font-geist-mono), monospace;
+  transform: rotate(-8deg);
+}
+
+.departureExitStamp {
+  justify-self: center;
+  margin-top: -4px;
+  padding: 5px 9px;
+  color: #d8867d;
+  border: 1px solid rgba(213, 109, 99, 0.34);
+  background: rgba(94, 25, 20, 0.12);
+  font-size: 7px;
+  font-weight: 900;
+  transform: rotate(-2deg);
+}
+
+.departureConnector {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 5px;
+  color: var(--d-gold);
+}
+
+.departureConnector span {
+  height: 1px;
+  background: linear-gradient(90deg, transparent, currentColor);
+}
+
+.departureConnector b {
+  font: 500 20px/1 var(--font-geist-mono), monospace;
+}
+
+.departureCardTransfer {
+  display: grid;
+  grid-template-columns: minmax(90px, 1fr) auto minmax(82px, 0.7fr);
+  align-items: center;
+  gap: 8px;
+  min-height: 108px;
+}
+
+.departureCards {
+  position: relative;
+  min-height: 96px;
+}
+
+.departureCard {
+  position: absolute !important;
+  top: 50%;
+  left: 50%;
+  width: 68px !important;
+  transform-origin: 50% 90%;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.3);
+}
+
+.departureCard:first-child {
+  transform: translate(-68%, -50%) rotate(-9deg);
+}
+
+.departureCard:last-child {
+  transform: translate(-30%, -50%) rotate(8deg);
+}
+
+.departureCardArrow {
+  color: var(--d-gold);
+  font: 500 18px/1 var(--font-geist-mono), monospace;
+}
+
+.departureDiscard {
+  position: relative;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 4px;
+  min-height: 82px;
+  border: 1px solid rgba(205, 180, 107, 0.22);
+  background:
+    repeating-linear-gradient(
+      135deg,
+      rgba(205, 180, 107, 0.025) 0 6px,
+      transparent 6px 12px
+    ),
+    rgba(5, 11, 8, 0.88);
+}
+
+.departureDiscard::before,
+.departureDiscard::after {
+  content: "";
+  position: absolute;
+  inset: 5px -5px -5px 5px;
+  z-index: -1;
+  border: 1px solid rgba(205, 180, 107, 0.08);
+}
+
+.departureDiscard::after {
+  inset: 10px -9px -9px 10px;
+}
+
+.departureDiscard small {
+  color: #6f7a72;
+  font-size: 6px;
+}
+
+.departureDiscard strong {
+  color: var(--d-gold-bright);
+  font: 800 10px/1 var(--font-wb-display), sans-serif;
+  letter-spacing: 0.08em;
+}
+
+.departureDiscard b {
+  color: #d7cfbd;
+  font: 700 20px/1 var(--font-geist-mono), monospace;
+}
+
+.departureMapStep {
+  gap: 10px;
+}
+
+.departureMap {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  min-height: 270px;
+  overflow: hidden;
+  border: 1px solid rgba(205, 180, 107, 0.08);
+  background: rgba(4, 10, 7, 0.72);
+}
+
+.departureMap :global(.wb-guide-board-scene) {
+  width: min(100%, 390px);
+  margin: 0;
+}
+
+.departureMap :global(.wb-guide-board-scene-frame) {
+  background: rgba(5, 12, 9, 0.76);
+  box-shadow: none;
+}
+
+.departureMap :global(.wb-guide-board-scene figcaption) {
+  font-size: 7px;
+}
+
+.departureBalanceRail {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr auto 1fr;
+  align-items: center;
+  gap: 6px;
+  color: #758178;
+  font-size: 6px;
+  text-align: center;
+}
+
+.departureBalanceRail span {
+  display: grid;
+  gap: 3px;
+}
+
+.departureBalanceRail b {
+  color: var(--d-gold-bright);
+  font-size: 9px;
+}
+
+.departureBalanceRail i {
+  color: var(--d-gold);
+  font-style: normal;
+}
+
+.departureTroopNote {
+  padding: 7px 9px;
+  border-left: 2px solid rgba(120, 169, 128, 0.54);
+  background: linear-gradient(90deg, rgba(120, 169, 128, 0.07), transparent);
+  color: #9eaaa1 !important;
+}
+
+.departureVictoryStep {
+  align-content: start;
+  background:
+    radial-gradient(circle at 50% 54%, rgba(205, 180, 107, 0.1), transparent 56%),
+    rgba(8, 15, 12, 0.96);
+}
+
+.departureObjectiveScan {
+  display: grid;
+  gap: 5px;
+  padding: 9px 10px;
+  border: 1px solid rgba(205, 180, 107, 0.11);
+  background: rgba(5, 11, 8, 0.7);
+}
+
+.departureObjectiveScan span {
+  color: #879289;
+  font-size: 6px;
+  font-weight: 800;
+}
+
+.departureObjectiveScan small {
+  color: #5f6a62;
+  font-size: 6px;
+}
+
+.departureScanLine {
+  position: relative;
+  height: 2px;
+  overflow: hidden;
+  background: rgba(205, 180, 107, 0.1);
+}
+
+.departureScanLine::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 30%;
+  background: linear-gradient(90deg, transparent, var(--d-gold-bright), transparent);
+  animation: doctrine-departure-scan 2.8s ease-in-out infinite;
+}
+
+.departureWinnerPair {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.departureWinnerPair > b {
+  color: var(--d-gold);
+  font: 400 18px/1 var(--font-geist-mono), monospace;
+}
+
+.departureWinner {
+  display: grid;
+  place-items: center;
+  gap: 3px;
+  min-width: 0;
+  padding: 12px 7px 10px;
+  border: 1px solid rgba(120, 169, 128, 0.28);
+  background:
+    radial-gradient(circle at 50% 0, rgba(120, 169, 128, 0.12), transparent 68%),
+    rgba(7, 15, 11, 0.84);
+}
+
+.departureWinner > span {
+  display: grid;
+  place-items: center;
+  width: 31px;
+  height: 31px;
+  color: #d8e1da;
+  border: 1px solid rgba(120, 169, 128, 0.42);
+  border-radius: 50%;
+  font: 800 13px/1 var(--font-geist-mono), monospace;
+}
+
+.departureWinner small {
+  margin-top: 4px;
+  color: #718078;
+  font-size: 6px;
+}
+
+.departureWinner strong {
+  max-width: 100%;
+  color: #a8c8af;
+  font: 800 9px/1.1 var(--font-wb-display), sans-serif;
+  letter-spacing: 0.05em;
+  text-align: center;
+}
+
+.departureVictoryBanner {
+  display: grid;
+  gap: 4px;
+  margin-top: 3px;
+  padding: 11px 10px;
+  border: 1px solid rgba(205, 180, 107, 0.34);
+  background:
+    linear-gradient(90deg, rgba(205, 180, 107, 0.1), transparent 24% 76%, rgba(205, 180, 107, 0.1)),
+    rgba(13, 18, 13, 0.9);
+  text-align: center;
+  box-shadow: 0 0 28px rgba(205, 180, 107, 0.055);
+}
+
+.departureVictoryBanner small {
+  color: #7d877f;
+  font-size: 6px;
+}
+
+.departureVictoryBanner strong {
+  color: var(--d-gold-bright);
+  font: 800 15px/1 var(--font-wb-display), sans-serif;
+  letter-spacing: 0.09em;
+}
+
+.departureVictoryStep p {
+  position: relative;
+  z-index: 2;
+  margin: 0;
+  color: #929e95;
+  font-size: 9px;
+  line-height: 1.48;
+}
+
+@keyframes doctrine-departure-scan {
+  0% {
+    left: -34%;
+    opacity: 0;
+  }
+
+  18% {
+    opacity: 0.85;
+  }
+
+  82% {
+    opacity: 0.85;
+  }
+
+  100% {
+    left: 104%;
+    opacity: 0;
+  }
+}
+
 :global(html[data-doctrine-direction="forward"]::view-transition-old(doctrine-chapter)) {
   animation: doctrine-exit-forward 180ms cubic-bezier(0.4, 0, 1, 1) both;
 }
@@ -293,6 +838,66 @@
     min-height: 360px;
     padding: 18px;
   }
+
+  .departureStage {
+    min-height: 0;
+    padding: 12px;
+  }
+
+  .departureProtocol {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+
+  .departureProtocol strong,
+  .departureProtocol small {
+    text-align: left;
+  }
+
+  .departureTopFlow,
+  .departureLowerFlow {
+    grid-template-columns: 1fr;
+  }
+
+  .departureConnector {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    min-height: 28px;
+  }
+
+  .departureConnector span {
+    width: 1px;
+    height: 18px;
+    background: linear-gradient(180deg, transparent, currentColor);
+  }
+
+  .departureConnector b {
+    transform: rotate(90deg);
+  }
+
+  .departureCardTransfer {
+    grid-template-columns: minmax(104px, 1fr) auto minmax(92px, 0.7fr);
+  }
+
+  .departureMap {
+    min-height: 300px;
+  }
+
+  .departureBalanceRail {
+    grid-template-columns: 1fr;
+    gap: 4px;
+    text-align: left;
+  }
+
+  .departureBalanceRail span {
+    grid-template-columns: 18px 1fr;
+    align-items: center;
+    text-align: left;
+  }
+
+  .departureBalanceRail i {
+    display: none;
+  }
 }
 
 @media (max-width: 420px) {
@@ -304,10 +909,49 @@
     min-height: 330px;
     padding: 14px;
   }
+
+  .departureStage {
+    padding: 9px;
+  }
+
+  .departureStep {
+    padding: 13px;
+  }
+
+  .departureCardTransfer {
+    grid-template-columns: minmax(86px, 1fr) auto minmax(78px, 0.72fr);
+    gap: 5px;
+  }
+
+  .departureCard {
+    width: 60px !important;
+  }
+
+  .departureDiscard {
+    min-height: 74px;
+  }
+
+  .departureMap {
+    min-height: 270px;
+  }
+
+  .departureWinnerPair {
+    gap: 5px;
+  }
+
+  .departureVictoryBanner strong {
+    font-size: 13px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .chapterSurface {
     view-transition-name: none;
+  }
+
+  .departureScanLine::after {
+    animation: none;
+    left: 35%;
+    opacity: 0.65;
   }
 }
