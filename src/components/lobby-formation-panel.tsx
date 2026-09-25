@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { ProfileTitleRenderer } from "@/src/components/profile/profile-title-renderer";
 import type { CSSProperties } from "react";
 import { PLAYER_COLORS, type LobbyPlayer } from "@/src/lib/lobby";
 import styles from "./lobby-formation-panel.module.css";
@@ -189,6 +190,14 @@ function PlayerStation({
         <span className={styles.insignia} aria-hidden="true" />
         <div className={styles.stationIdentity}>
           <p className={styles.stationName}>{player.displayName}</p>
+          {player.equippedTitle ? (
+            <div className={styles.stationTitleViewport}>
+              <ProfileTitleRenderer
+                title={player.equippedTitle}
+                className={styles.stationTitle}
+              />
+            </div>
+          ) : null}
           <p className={styles.stationMeta}>
             {player.handle ? `@${player.handle} · ` : ""}
             {color?.label ?? "Comando"}

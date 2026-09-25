@@ -1,4 +1,5 @@
 import type { GameRuleset } from "./game-mode";
+import type { PublicCommanderTitleAppearance } from "../profile/profile-appearance-contract";
 
 export const PLAYER_COLORS = [
   { value: "forest", label: "Verde", hex: "#3f8b68" },
@@ -20,6 +21,7 @@ export type LobbyPlayer = {
   isReady: boolean;
   isMe: boolean;
   isBot: boolean;
+  equippedTitle: PublicCommanderTitleAppearance | null;
 };
 
 export type LobbySnapshot = {

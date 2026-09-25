@@ -166,7 +166,18 @@
   color: color-mix(in srgb, var(--command-color) 72%, var(--wb-gold));
 }
 
-.credentialIdentity strong {
+.credentialTitle {
+  --profile-title-size-legendary: .82rem;
+
+  max-width: 100%;
+  overflow: hidden;
+  line-height: 1;
+  text-overflow: ellipsis;
+  text-wrap: nowrap;
+  white-space: nowrap;
+}
+
+.credentialName {
   overflow: hidden;
   color: var(--wb-text);
   font-family: var(--font-wb-display), sans-serif;
@@ -444,8 +455,12 @@
     font-size: .76rem;
   }
 
-  .credentialIdentity strong {
+  .credentialName {
     font-size: .82rem;
+  }
+
+  .credentialTitle {
+    --profile-title-size-legendary: .68rem;
   }
 
   .stationMessage {

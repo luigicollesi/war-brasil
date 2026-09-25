@@ -1,4 +1,5 @@
 import type { CSSProperties } from "react";
+import { ProfileTitleRenderer } from "@/src/components/profile/profile-title-renderer";
 import { PLAYER_COLORS, type LobbyPlayer } from "@/src/lib/lobby";
 import styles from "./lobby-station-panel.module.css";
 
@@ -58,7 +59,13 @@ export function LobbyStationPanel({
         </div>
         <div className={styles.credentialIdentity}>
           <span className={styles.credentialLabel}>ASSINATURA TÁTICA</span>
-          <strong>{me.displayName}</strong>
+          <strong className={styles.credentialName}>{me.displayName}</strong>
+          {me.equippedTitle ? (
+            <ProfileTitleRenderer
+              title={me.equippedTitle}
+              className={styles.credentialTitle}
+            />
+          ) : null}
           <span>
             {me.handle ? `@${me.handle} · ` : ""}
             {currentColor?.label ?? "Cor de comando"} · POSTO LOCAL

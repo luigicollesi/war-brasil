@@ -14,6 +14,8 @@ const stationStyles = readFileSync("src/components/lobby-station-panel.module.cs
 const ready = readFileSync("src/components/lobby-ready-dock.tsx", "utf8");
 const readyStyles = readFileSync("src/components/lobby-ready-dock.module.css", "utf8");
 const backButton = readFileSync("src/components/pre-game-back-button.tsx", "utf8");
+const lobbyContract = readFileSync("src/lib/shared/lobby.ts", "utf8");
+const rooms = readFileSync("src/lib/server/rooms.ts", "utf8");
 
 const lobbyLayoutStyles = [workspaceStyles, formationStyles, stationStyles, readyStyles].join("\n");
 
@@ -115,4 +117,29 @@ test("cards humanos da formação abrem o perfil público em nova aba", () => {
   assert.match(formation, /rel="noopener noreferrer"/);
   assert.match(formation, /player\.displayName/);
   assert.match(formationStyles, /\.stationProfileLink/);
+});
+
+
+test("Lobby carrega título equipado no snapshot sem fetch por jogador", () => {
+  assert.match(lobbyContract, /equippedTitle: PublicCommanderTitleAppearance \| null/);
+  assert.match(rooms, /LEFT JOIN profile\.commanders commander/);
+  assert.match(rooms, /LEFT JOIN catalog\.commander_titles title/);
+  assert.match(rooms, /title\.id AS title_id/);
+  assert.match(rooms, /title\.style_key AS title_style_key/);
+  assert.match(rooms, /title\.is_active = TRUE/);
+  assert.match(rooms, /equippedTitle/);
+  assert.match(rooms, /profileAppearanceAssetDeliveryPath\(player\.title_texture_ref\)/);
+  assert.doesNotMatch(formation, /fetch\(/);
+  assert.doesNotMatch(station, /fetch\(/);
+});
+
+test("Formação e credencial reutilizam o renderer canônico de títulos", () => {
+  assert.match(formation, /ProfileTitleRenderer/);
+  assert.match(formation, /title=\{player\.equippedTitle\}/);
+  assert.match(formationStyles, /--profile-title-size-legendary:\s*\.62rem/);
+  assert.match(formationStyles, /\.stationTitleViewport/);
+  assert.match(station, /ProfileTitleRenderer/);
+  assert.match(station, /title=\{me\.equippedTitle\}/);
+  assert.match(stationStyles, /--profile-title-size-legendary:\s*\.82rem/);
+  assert.match(station, /className=\{styles\.credentialName\}/);
 });
