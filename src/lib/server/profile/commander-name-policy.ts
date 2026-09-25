@@ -117,13 +117,17 @@ function moderationVariants(value: string) {
 }
 
 function hasSuspiciousScriptMix(value: string) {
-  const scriptCount = [
-    LATIN_SCRIPT.test(value),
-    CYRILLIC_SCRIPT.test(value),
-    GREEK_SCRIPT.test(value),
-  ].filter(Boolean).length;
+  const tokens = value.split(/[ ._'’\-]+/u).filter(Boolean);
 
-  return scriptCount > 1;
+  return tokens.some((token) => {
+    const scriptCount = [
+      LATIN_SCRIPT.test(token),
+      CYRILLIC_SCRIPT.test(token),
+      GREEK_SCRIPT.test(token),
+    ].filter(Boolean).length;
+
+    return scriptCount > 1;
+  });
 }
 
 function assertNotReserved(
