@@ -296,7 +296,19 @@ test("índice desktop limita tipografia e compacta registros sem alterar o índi
   );
   assert.match(
     uxCss,
-    /\.indexTitleRow h1\s*\{[\s\S]*font-size:\s*clamp\(36px,\s*3vw,\s*48px\)/,
+    /\.indexTitleRow\s*\{[\s\S]*grid-template-columns:\s*minmax\(0,\s*1fr\)/,
+  );
+  assert.match(
+    uxCss,
+    /\.indexTitleRow \.backButton\s*\{[\s\S]*grid-row:\s*1/,
+  );
+  assert.match(
+    uxCss,
+    /\.indexTitleRow h1\s*\{[\s\S]*grid-row:\s*2/,
+  );
+  assert.match(
+    uxCss,
+    /\.indexTitleRow h1\s*\{[\s\S]*font-size:\s*clamp\(40px,\s*3vw,\s*50px\)/,
   );
   assert.match(
     uxCss,
