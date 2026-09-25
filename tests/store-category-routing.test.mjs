@@ -22,12 +22,13 @@ test("store category route accepts the four supported catalog flows and rejects 
   assert.match(page, /params:\s*Promise<\{\s*category:\s*string\s*\}>/);
 });
 
-test("store category route uses server storefront services instead of client catalog fetching", async () => {
+test("store category route uses server storefront services and isolates appearance loading", async () => {
   const page = await source("src/app/profile/store/category/[category]/page.tsx");
 
   assert.match(page, /getEconomyStorefront/);
   assert.match(page, /getProfileAppearanceStorefront/);
-  assert.match(page, /Promise\.all/);
+  assert.match(page, /category === "backgrounds" \|\| category === "titles"/);
+  assert.doesNotMatch(page, /Promise\.all/);
   assert.doesNotMatch(page, /fetch\(/);
 });
 
