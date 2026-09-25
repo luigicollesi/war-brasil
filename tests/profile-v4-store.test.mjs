@@ -32,14 +32,17 @@ test("PROFILE V4 store consumes server-derived collections, territory skins, off
   assert.doesNotMatch(store, /userId/);
 });
 
-test("PROFILE V4 store exposes Destaques, Dados, Territórios e Coleções as primary discovery surfaces", async () => {
+test("PROFILE V4 store exposes Destaques, Coleções, Categorias e Créditos as primary discovery surfaces", async () => {
   const store = await source("src/components/profile/v4/profile-store.tsx");
 
-  for (const label of ["DESTAQUES", "DADOS", "TERRITÓRIOS", "COLEÇÕES"]) {
+  for (const label of ["DESTAQUES", "COLEÇÕES", "CATEGORIAS", "CRÉDITOS"]) {
     assert.match(store, new RegExp(label));
   }
-  for (const anchor of ["store-highlights", "store-dice", "store-territories", "store-collections"]) {
+  for (const anchor of ["store-highlights", "store-collections", "store-categories", "store-credits"]) {
     assert.match(store, new RegExp(`id=\\"${anchor}\\"|href=\\"#${anchor}\\"`));
+  }
+  for (const category of ["dice", "territories", "backgrounds", "titles"]) {
+    assert.match(store, new RegExp(`/profile/store/category/${category}`));
   }
 });
 
@@ -90,20 +93,20 @@ test("PROFILE V4 collection banner is an accessible showcase link", async () => 
   assert.doesNotMatch(store, /collectionModalOpen/);
 });
 
-test("PROFILE V4 territory surface routes purchasable skins and never invents a price", async () => {
-  const store = await source("src/components/profile/v4/profile-store.tsx");
+test("PROFILE V4 territory category routes purchasable skins and never invents a cosmetic price", async () => {
+  const category = await source("src/components/profile/v4/profile-store-category.tsx");
 
-  assert.match(store, /storefront\.territorySkins\.map/);
-  assert.match(store, /skin\.status/);
-  assert.match(store, /showcaseHref\("offer",\s*offer\.id,\s*skin\.id\)/);
-  assert.match(store, /EM BREVE|ANUNCIADO/);
-  assert.doesNotMatch(store, /skin\.price/);
+  assert.match(category, /storefront\.territorySkins\.map/);
+  assert.match(category, /territoryEntries/);
+  assert.match(category, /showcase\/offer/);
+  assert.match(category, /ANUNCIADO/);
+  assert.doesNotMatch(category, /item\.price/);
 });
 
 test("PROFILE V4 treasury renders DB credit packs but keeps BRL checkout disabled", async () => {
   const store = await source("src/components/profile/v4/profile-store.tsx");
 
-  assert.match(store, /id="reforcar-tesouraria"/);
+  assert.match(store, /id="store-credits"/);
   assert.match(store, /storefront\.creditPacks\.map/);
   assert.match(store, /EM BREVE/);
   assert.match(store, /disabled/);
@@ -130,15 +133,15 @@ test("PROFILE V4 store delegates inspection state to the dedicated showcase rout
 });
 
 
-test("PROFILE V4 product cards open the showcase while purchasable offers can be bought directly", async () => {
-  const store = await source("src/components/profile/v4/profile-store.tsx");
+test("PROFILE V4 category product cards preserve showcase and direct purchase flows", async () => {
+  const category = await source("src/components/profile/v4/profile-store-category.tsx");
 
-  assert.match(store, /purchaseShowcaseOffer/);
-  assert.match(store, /handlePurchase\(offer\)/);
-  assert.match(store, /showcaseHref\("offer", offer\.id/);
-  assert.match(store, /pendingOfferId/);
-  assert.match(store, /PROCESSANDO\.\.\./);
-  assert.match(store, /COMPRAR/);
+  assert.match(category, /purchaseShowcaseOffer/);
+  assert.match(category, /handlePurchase\(offer\)/);
+  assert.match(category, /showcase\/offer/);
+  assert.match(category, /pendingOfferId/);
+  assert.match(category, /PROCESSANDO\.\.\./);
+  assert.match(category, /COMPRAR/);
 });
 
 
@@ -244,15 +247,14 @@ test("PROFILE V4 store V2 gives hero and catalog sections static 2.5D depth cues
   const store = await source("src/components/profile/v4/profile-store.tsx");
   const styles = await source("src/components/profile/v4/profile-store.module.css");
 
-  assert.match(store, /data-store-zone="dice"/);
-  assert.match(store, /data-store-zone="territories"/);
   assert.match(store, /data-store-zone="collections"/);
-  assert.match(store, /data-store-layer="01"/);
+  assert.match(store, /data-store-zone="categories"/);
+  assert.match(store, /data-store-zone="treasury"/);
   assert.match(store, /data-store-layer="02"/);
   assert.match(store, /data-store-layer="03"/);
+  assert.match(store, /data-store-layer="04"/);
   assert.match(styles, /\.catalog::before\s*\{[\s\S]*content:\s*attr\(data-store-layer\)/);
-  assert.match(styles, /\[data-store-zone="dice"\]::after\s*\{[\s\S]*radial-gradient/);
-  assert.match(styles, /\[data-store-zone="territories"\]::after\s*\{[\s\S]*radial-gradient/);
+  assert.match(styles, /\[data-store-zone="categories"\]::after\s*\{[\s\S]*(?:linear|radial)-gradient/);
   assert.match(styles, /\[data-store-zone="collections"\]::after\s*\{[\s\S]*(?:linear|radial)-gradient/);
   assert.match(styles, /\.heroVisual::before[\s\S]*clip-path:\s*polygon\(/);
   assert.doesNotMatch(
@@ -431,9 +433,9 @@ test("PROFILE V4 store V3 exposes the active catalog section through the sticky 
 
   assert.match(store, /const \[activeSection, setActiveSection\]/);
   assert.match(store, /data-active=\{activeSection === "hero" \? "true" : "false"\}/);
-  assert.match(store, /data-active=\{activeSection === "dice" \? "true" : "false"\}/);
-  assert.match(store, /data-active=\{activeSection === "territories" \? "true" : "false"\}/);
   assert.match(store, /data-active=\{activeSection === "collections" \? "true" : "false"\}/);
+  assert.match(store, /data-active=\{activeSection === "categories" \? "true" : "false"\}/);
+  assert.match(store, /data-active=\{activeSection === "treasury" \? "true" : "false"\}/);
   assert.match(styles, /\.storeNav a\[data-active="true"\]/);
 });
 
