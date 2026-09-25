@@ -14,6 +14,14 @@ const entitlementRepository = readFileSync(
   "src/lib/server/economy/entitlement-repository.ts",
   "utf8",
 );
+const gameplayStorefrontRepository = readFileSync(
+  "src/lib/server/economy/economy-storefront-repository.ts",
+  "utf8",
+);
+const gameplayQuoteRepository = readFileSync(
+  "src/lib/server/economy/storefront-quote-repository.ts",
+  "utf8",
+);
 
 test("profile background commerce prices every active non-default background at 300 credits", () => {
   assert.match(migration, /INSERT INTO catalog\.profile_background_pricing/);
@@ -73,5 +81,25 @@ test("appearance storefront reads only active offers and entitlement purchase pa
   assert.match(
     entitlementRepository,
     /INSERT INTO profile\.commander_backgrounds\([\s\S]*'purchase'/,
+  );
+});
+
+
+test("appearance-only offers stay out of the gameplay storefront projection", () => {
+  assert.match(
+    gameplayStorefrontRepository,
+    /FROM catalog\.product_items gameplay_membership[\s\S]*gameplay_membership\.product_id=product\.id/,
+  );
+  assert.match(
+    gameplayQuoteRepository,
+    /FROM catalog\.product_items gameplay_membership[\s\S]*gameplay_membership\.product_id=product\.id/,
+  );
+  assert.doesNotMatch(
+    appearanceRepository,
+    /JOIN catalog\.product_items/,
+  );
+  assert.match(
+    appearanceRepository,
+    /JOIN catalog\.product_entitlements membership/,
   );
 });
