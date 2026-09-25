@@ -1,6 +1,7 @@
 import "server-only";
 
 import type {
+  ProfileAppearanceCollectionUnlock,
   ProfileAppearanceStoreItem,
   ProfileAppearanceStoreOffer,
   ProfileAppearanceStorefront,
@@ -18,6 +19,31 @@ function positiveSafePrice(value: string) {
     throw new Error("PROFILE_APPEARANCE_PRICE_INVALID");
   }
   return price;
+}
+
+function collectionUnlock(
+  row: ProfileAppearanceStoreRow,
+): ProfileAppearanceCollectionUnlock | null {
+  if (!row.collection_id) return null;
+
+  if (
+    !row.collection_name ||
+    row.collection_total_count === null ||
+    row.collection_total_count <= 0 ||
+    row.collection_owned_count === null ||
+    row.collection_owned_count < 0 ||
+    row.collection_owned_count > row.collection_total_count
+  ) {
+    throw new Error("PROFILE_BACKGROUND_COLLECTION_INVALID");
+  }
+
+  return {
+    collectionId: row.collection_id,
+    collectionName: row.collection_name,
+    ownedCount: row.collection_owned_count,
+    totalCount: row.collection_total_count,
+    complete: row.collection_owned_count === row.collection_total_count,
+  };
 }
 
 function storeItem(row: ProfileAppearanceStoreRow): ProfileAppearanceStoreItem {
@@ -52,6 +78,7 @@ function storeItem(row: ProfileAppearanceStoreRow): ProfileAppearanceStoreItem {
     description: row.item_description,
     rarity: row.rarity,
     collectionId: row.collection_id,
+    collectionUnlock: collectionUnlock(row),
     assetRef: profileAppearanceAssetDeliveryPath(row.asset_ref),
     previewRef: row.preview_ref
       ? profileAppearanceAssetDeliveryPath(row.preview_ref)
@@ -96,6 +123,15 @@ export async function getProfileAppearanceStorefront(
     );
 
     const ownedCount = offerRows.filter((row) => row.owned).length;
+    const items = offerRows.map(storeItem);
+    const collectionEligible = items.every(
+      (item) =>
+        item.kind !== "profile_background" ||
+        item.owned ||
+        item.collectionUnlock === null ||
+        item.collectionUnlock.complete,
+    );
+
     offers.push({
       id: first.offer_id,
       productId: first.product_id,
@@ -108,8 +144,9 @@ export async function getProfileAppearanceStorefront(
       totalCount: offerRows.length,
       fullyOwned: quote.fullyOwned,
       partiallyOwned: ownedCount > 0 && !quote.fullyOwned,
-      purchasable: !quote.fullyOwned && quote.finalPrice > 0,
-      items: offerRows.map(storeItem),
+      purchasable:
+        !quote.fullyOwned && quote.finalPrice > 0 && collectionEligible,
+      items,
     });
   }
 
