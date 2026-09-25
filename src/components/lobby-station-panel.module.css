@@ -177,7 +177,7 @@
   white-space: nowrap;
 }
 
-.credentialIdentity strong {
+.credentialName {
   overflow: hidden;
   color: var(--wb-text);
   font-family: var(--font-wb-display), sans-serif;
@@ -455,7 +455,7 @@
     font-size: .76rem;
   }
 
-  .credentialIdentity strong {
+  .credentialName {
     font-size: .82rem;
   }
 
