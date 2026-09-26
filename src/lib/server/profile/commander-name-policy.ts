@@ -109,7 +109,7 @@ function stripEdgeDigits(value: string) {
 function moderationVariants(value: string) {
   const folded = foldDiacritics(value.normalize("NFKC").toLocaleLowerCase("pt-BR"));
   const leetVariants = new Set([
-    applyLeetspeak(folded, LEET_CHARACTERS_PRIMARY$),
+    applyLeetspeak(folded, LEET_CHARACTERS_PRIMARY),
     applyLeetspeak(folded, LEET_CHARACTERS_ALTERNATE),
   ]);
   const baseVariants = new Set([folded, ...leetVariants]);
@@ -177,4 +177,94 @@ function assertNotReserved(
 
   for (const candidate of variants.compactVariants) {
     if (RESERVED_COMMANDER_NAME_KEYS.has(candidate)) reject();
-    for (const brandKey of RESERVED_COMMANDER_BRAND_KEYS"’°¢–b†6æF–FFRæ–æ6ÇVFW2†'&æD¶W’’’&V¦V7B‚“°¢Ğ¢Ğ§Ğ ¦gVæ7F–öâ76W'Dæ÷D&Æö6¶VB€¢f–VÆC¢6öÖÖæFW$–FVçF—G”f–VÆBÀ¢f&–çG3¢&WGW&åG—SÇG—VöbÖöFW&F–öåf&–çG3âÀ¢’°¢6öç7B&V¦V7BÒ‚’Óâ°¢F‡&÷ræWr6öÖÖæFW$æÖUöÆ–7”W'&÷"€¢$äÔUôäõEôÄÄõtTB"À¢f–VÆBÀ¢V&Æ–5öÆ–7”ÖW76vR†f–VÆB’À¢“°¢Ó° ¢f÷"†6öç7B6æF–FFRöbf&–çG2çv÷&Ef&–çG2’°¢–b„$Äô4´TEô4ôÔÔäDU%õtõ$E2æ†2†6æF–FFR’’&V¦V7B‚“°¢Ğ ¢f÷"†6öç7B6æF–FFRöbf&–çG2æ6ö×7Ef&–çG2’°¢–b„$Äô4´TEô4ôÔÔäDU%õtõ$E2æ†2†6æF–FFR’’&V¦V7B‚“° ¢f÷"†6öç7B6WfW&UFW&Òöb$Äô4´TEô4ôÔÔäDU%ô4ôÕ5EõDU$Õ2’°¢–b†6æF–FFRæ–æ6ÇVFW2‡6WfW&UFW&Ò’’&V¦V7B‚“°¢Ğ¢Ğ§Ğ ¦W‡÷'BgVæ7F–öâ76W'D6öÖÖæFW$†æFÆTÆÆ÷vVB‡fÇVS¢Væ¶æ÷vâ’°¢6öç7B7G'V7GW&ÂÒfÆ–FFT6öÖÖæFW$†æFÆTG&gB‡fÇVR“°¢–b‚7G'V7GW&Âæö²’°¢F‡&÷ræWr6öÖÖæFW$æÖUöÆ–7”W'&÷"€¢$”ådÄ”EôäÔUõ4„R"À¢&†æFÆR"À¢7G'V7GW&ÂæW'&÷"À¢“°¢Ğ ¢6öç7Bf&–çG2ÒÖöFW&F–öåf&–çG2‡7G'V7GW&ÂçfÇVR“°¢76W'Dæ÷E&W6W'fVB‚&†æFÆR"Âf&–çG2“°¢76W'Dæ÷D&Æö6¶VB‚&†æFÆR"Âf&–çG2“°¢&WGW&â7G'V7GW&ÂçfÇVS°§Ğ ¦W‡÷'BgVæ7F–öâ76W'D6öÖÖæFW$F—7Æ”æÖTÆÆ÷vVB‡fÇVS¢Væ¶æ÷vâ’°¢6öç7B7G'V7GW&ÂÒfÆ–FFT6öÖÖæFW$F—7Æ”æÖTG&gB‡fÇVR“°¢–b‚7G'V7GW&Âæö²’°¢F‡&÷ræWr6öÖÖæFW$æÖUöÆ–7”W'&÷"€¢$”ådÄ”EôäÔUõ4„R"À¢&F—7Æ”æÖR"À¢7G'V7GW&ÂæW'&÷"À¢“°¢Ğ ¢–b††57W7–6–÷W567&—DÖ—‚‡7G'V7GW&ÂçfÇVR’’°¢F‡&÷ræWr6öÖÖæFW$æÖUöÆ–7”W'&÷"€¢%5U5”4”õU5õTä”4ôDR"À¢&F—7Æ”æÖR"À¢V&Æ–5öÆ–7”ÖW76vR‚&F—7Æ”æÖR"’À¢“°¢Ğ ¢6öç7Bf&–çG2ÒÖöFW&F–öåf&–çG2‡7G'V7GW&ÂçfÇVR“°¢76W'Dæ÷E&W6W'fVB‚&F—7Æ”æÖR"Âf&–çG2“°¢76W'Dæ÷D&Æö6¶VB‚&F—7Æ”æÖR"Âf&–çG2“°¢&WGW&â7G'V7GW&ÂçfÇVS°§Ğ ¦W‡÷'BgVæ7F–öâ76W'D6öÖÖæFW$–FVçF—G”ÆÆ÷vVB€¢–çWC¢&VFöæÇ“Ç²†æFÆS¢Væ¶æ÷vã²F—7Æ”æÖS¢Væ¶æ÷vâÓâÀ¢“¢ÖöFW&FVD6öÖÖæFW$–FVçF—G’°¢6öç7B7G'V7GW&ÂÒfÆ–FFT6öÖÖæFW$–FVçF—G”G&gB†–çWB“°¢–b‚7G'V7GW&Âæö²’°¢6öç7Bf–VÆC¢6öÖÖæFW$–FVçF—G”f–VÆBÒ7G'V7GW&ÂæW'&÷'2æ†æFÆP¢ò&†æFÆR ¢¢&F—7Æ”æÖR#°¢F‡&÷ræWr6öÖÖæFW$æÖUöÆ–7”W'&÷"€¢$”ådÄ”EôäÔUõ4„R"À¢f–VÆBÀ¢7G'V7GW&ÂæW'&÷'5¶f–VÆEÒóò$–FVçF–FFRFR6öÖæFò–çl:Æ–Fâ"À¢“°¢Ğ ¢&WGW&â°¢†æFÆS¢76W'D6öÖÖæFW$†æFÆTÆÆ÷vVB‡7G'V7GW&ÂçfÇVRæ†æFÆR’À¢F—7Æ”æÖS¢76W'D6öÖÖæFW$F—7Æ”æÖTÆÆ÷vVB‡7G'V7GW&ÂçfÇVRæF—7Æ”æÖR’À¢Ò2ÖöFW&FVD6öÖÖæFW$–FVçF—G“°§Ğ
+    for (const brandKey of RESERVED_COMMANDER_BRAND_KEYS) {
+      if (candidate.includes(brandKey)) reject();
+    }
+  }
+}
+
+function assertNotBlocked(
+  field: CommanderIdentityField,
+  variants: ReturnType<typeof moderationVariants>,
+) {
+  const reject = () => {
+    throw new CommanderNamePolicyError(
+      "NAME_NOT_ALLOWED",
+      field,
+      publicPolicyMessage(field),
+    );
+  };
+
+  for (const candidate of variants.wordVariants) {
+    if (BLOCKED_COMMANDER_WORDS.has(candidate)) reject();
+  }
+
+  for (const candidate of variants.compactVariants) {
+    if (BLOCKED_COMMANDER_WORDS.has(candidate)) reject();
+
+    for (const severeTerm of BLOCKED_COMMANDER_COMPACT_TERMS) {
+      if (candidate.includes(severeTerm)) reject();
+    }
+  }
+}
+
+export function assertCommanderHandleAllowed(value: unknown) {
+  const structural = validateCommanderHandleDraft(value);
+  if (!structural.ok) {
+    throw new CommanderNamePolicyError(
+      "INVALID_NAME_SHAPE",
+      "handle",
+      structural.error,
+    );
+  }
+
+  const variants = moderationVariants(structural.value);
+  assertNotReserved("handle", variants);
+  assertNotBlocked("handle", variants);
+  return structural.value;
+}
+
+export function assertCommanderDisplayNameAllowed(value: unknown) {
+  const structural = validateCommanderDisplayNameDraft(value);
+  if (!structural.ok) {
+    throw new CommanderNamePolicyError(
+      "INVALID_NAME_SHAPE",
+      "displayName",
+      structural.error,
+    );
+  }
+
+  if (hasSuspiciousScriptMix(structural.value)) {
+    throw new CommanderNamePolicyError(
+      "SUSPICIOUS_UNICODE",
+      "displayName",
+      publicPolicyMessage("displayName"),
+    );
+  }
+
+  const variants = moderationVariants(structural.value);
+  assertNotReserved("displayName", variants);
+  assertNotBlocked("displayName", variants);
+  return structural.value;
+}
+
+export function assertCommanderIdentityAllowed(
+  input: Readonly<{ handle: unknown; displayName: unknown }>,
+): ModeratedCommanderIdentity {
+  const structural = validateCommanderIdentityDraft(input);
+  if (!structural.ok) {
+    const field: CommanderIdentityField = structural.errors.handle
+      ? "handle"
+      : "displayName";
+    throw new CommanderNamePolicyError(
+      "INVALID_NAME_SHAPE",
+      field,
+      structural.errors[field] ?? "Identidade de comando invÃ¡lida.",
+    );
+  }
+
+  return {
+    handle: assertCommanderHandleAllowed(structural.value.handle),
+    displayName: assertCommanderDisplayNameAllowed(structural.value.displayName),
+  } as ModeratedCommanderIdentity;
+}
