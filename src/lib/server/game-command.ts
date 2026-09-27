@@ -40,6 +40,12 @@ type GameConditionalCommandResult<T> = {
   changed: boolean;
 };
 
+type GameConditionalCommandExecution<T> = {
+  value: T;
+  changed: boolean;
+  privatePatches?: GamePrivatePatchDelivery[];
+};
+
 type GamePrivatePatchDelivery = {
   playerId: string;
   patch: GamePrivatePatch;
@@ -277,7 +283,7 @@ export async function gameConditionalCommand<T>(
   expectedRevision: GameRevision,
   execute: (
     client: PoolClient,
-  ) => Promise<{ value: T; changed: boolean }>,
+  ) => Promise<GameConditionalCommandExecution<T>>,
 ): Promise<GameConditionalCommandResult<T>> {
   const client = await pool.connect();
   const finishMetric = startGameOperationMetric("game.conditional_command");
@@ -335,9 +341,18 @@ export async function gameConditionalCommand<T>(
     });
 
     if (result.changed) {
-      await runPostResponseTask("game.conditional.realtime", () =>
-        publishCommittedGameInvalidation(roomId, revision),
-      );
+      await runPostResponseTask("game.conditional.realtime", async () => {
+        await publishCommittedGameInvalidation(roomId, revision);
+        for (const delivery of result.privatePatches ?? []) {
+          await publishCommittedPlayerGamePatch({
+            roomId,
+            playerId: delivery.playerId,
+            baseRevision: currentRevision,
+            revision,
+            patch: delivery.patch,
+          });
+        }
+      });
     }
 
     return {
