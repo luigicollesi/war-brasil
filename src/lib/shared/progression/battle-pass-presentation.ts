@@ -65,6 +65,7 @@ export type BattlePassSnapshot = Readonly<{
     access: boolean;
     price: 3000;
     offerId: string | null;
+    retroactiveClaimableCount: number;
   }>;
   walletBalance: number;
   claimableCount: number;
