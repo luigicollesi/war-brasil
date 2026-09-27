@@ -18,6 +18,7 @@ export type ProductEntitlementQuoteRow = {
   cosmetic_id: string | null;
   title_id: string | null;
   background_id: string | null;
+  battle_pass_season_id: string | null;
   slot: CosmeticSlot | null;
   available: boolean;
   is_default: boolean;
@@ -71,10 +72,23 @@ export async function lockProductEntitlementStats(
     [productId],
   );
 
+  const battlePasses = await db.query<{ id: string }>(
+    `SELECT stats.season_id AS id
+       FROM catalog.product_entitlements membership
+       JOIN catalog.battle_pass_stats stats
+         ON stats.season_id=membership.battle_pass_season_id
+      WHERE membership.product_id=$1
+        AND membership.entitlement_kind='battle_pass_access'
+      ORDER BY stats.season_id
+      FOR UPDATE OF stats`,
+    [productId],
+  );
+
   return [
     ...cosmetic.rows.map((row) => `game_cosmetic:${row.id}`),
     ...titles.rows.map((row) => `commander_title:${row.id}`),
     ...backgrounds.rows.map((row) => `profile_background:${row.id}`),
+    ...battlePasses.rows.map((row) => `battle_pass_access:${row.id}`),
   ];
 }
 
@@ -91,6 +105,7 @@ export async function listLockedProductEntitlementsForPurchase(
                 item.id AS cosmetic_id,
                 NULL::text AS title_id,
                 NULL::text AS background_id,
+                NULL::text AS battle_pass_season_id,
                 item.slot,
                 (item.status='available') AS available,
                 item.is_default,
@@ -134,6 +149,7 @@ export async function listLockedProductEntitlementsForPurchase(
                 NULL::text AS cosmetic_id,
                 title.id AS title_id,
                 NULL::text AS background_id,
+                NULL::text AS battle_pass_season_id,
                 NULL::varchar AS slot,
                 title.is_active AS available,
                 FALSE AS is_default,
@@ -162,6 +178,7 @@ export async function listLockedProductEntitlementsForPurchase(
                 NULL::text AS cosmetic_id,
                 NULL::text AS title_id,
                 background.id AS background_id,
+                NULL::text AS battle_pass_season_id,
                 NULL::varchar AS slot,
                 background.is_active AS available,
                 background.is_default,
@@ -185,6 +202,42 @@ export async function listLockedProductEntitlementsForPurchase(
             AND owned.background_id=background.id
           WHERE membership.product_id=$2
             AND membership.entitlement_kind='profile_background'
+
+         UNION ALL
+
+         SELECT membership.entitlement_kind,
+                season.id AS entitlement_id,
+                NULL::text AS cosmetic_id,
+                NULL::text AS title_id,
+                NULL::text AS background_id,
+                season.id AS battle_pass_season_id,
+                NULL::varchar AS slot,
+                (
+                  season.status='active'
+                  AND season.starts_at <= CURRENT_TIMESTAMP
+                  AND season.ends_at > CURRENT_TIMESTAMP
+                ) AS available,
+                FALSE AS is_default,
+                (owned.season_id IS NOT NULL) AS owned,
+                'fixed'::varchar AS pricing_model,
+                pricing.fixed_price::text AS fixed_price,
+                stats.acquisition_count::text AS acquisition_count,
+                NULL::text AS tier_from,
+                NULL::text AS tier_until,
+                NULL::text AS tier_price,
+                membership.position
+           FROM catalog.product_entitlements membership
+           JOIN catalog.battle_pass_seasons season
+             ON season.id=membership.battle_pass_season_id
+           JOIN catalog.battle_pass_pricing pricing
+             ON pricing.season_id=season.id
+           JOIN catalog.battle_pass_stats stats
+             ON stats.season_id=season.id
+           LEFT JOIN progression.battle_pass_access owned
+             ON owned.user_id=$1::uuid
+            AND owned.season_id=season.id
+          WHERE membership.product_id=$2
+            AND membership.entitlement_kind='battle_pass_access'
        ) entitlement
       ORDER BY entitlement.position,entitlement.entitlement_kind,entitlement.entitlement_id`,
     [userId, productId],
@@ -236,9 +289,9 @@ export async function insertPurchaseEntitlement(
   await db.query(
     `INSERT INTO economy.purchase_entitlements(
        purchase_id,position,entitlement_kind,
-       cosmetic_id,title_id,background_id,unit_price
+       cosmetic_id,title_id,background_id,battle_pass_season_id,unit_price
      )
-     VALUES($1::uuid,$2,$3,$4,$5,$6,$7::bigint)
+     VALUES($1::uuid,$2,$3,$4,$5,$6,$7,$8::bigint)
      ON CONFLICT (purchase_id,position) DO NOTHING`,
     [
       purchaseId,
@@ -247,6 +300,7 @@ export async function insertPurchaseEntitlement(
       row.cosmetic_id,
       row.title_id,
       row.background_id,
+      row.battle_pass_season_id,
       unitPrice,
     ],
   );
@@ -255,6 +309,7 @@ export async function insertPurchaseEntitlement(
 export async function grantEntitlementOwnership(
   userId: string,
   row: ProductEntitlementQuoteRow,
+  purchaseId: string,
   db: EconomyQueryable,
 ) {
   if (row.entitlement_kind === "game_cosmetic") {
@@ -283,14 +338,27 @@ export async function grantEntitlementOwnership(
     return (result.rowCount ?? 0) === 1;
   }
 
-  if (!row.background_id) return false;
+  if (row.entitlement_kind === "profile_background") {
+    if (!row.background_id) return false;
+    const result = await db.query(
+      `INSERT INTO profile.commander_backgrounds(
+         user_id,background_id,acquisition_source
+       )
+       VALUES($1::uuid,$2,'purchase')
+       ON CONFLICT (user_id,background_id) DO NOTHING`,
+      [userId, row.background_id],
+    );
+    return (result.rowCount ?? 0) === 1;
+  }
+
+  if (!row.battle_pass_season_id) return false;
   const result = await db.query(
-    `INSERT INTO profile.commander_backgrounds(
-       user_id,background_id,acquisition_source
+    `INSERT INTO progression.battle_pass_access(
+       season_id,user_id,purchase_id,access_source
      )
-     VALUES($1::uuid,$2,'purchase')
-     ON CONFLICT (user_id,background_id) DO NOTHING`,
-    [userId, row.background_id],
+     VALUES($1,$2::uuid,$3::uuid,'purchase')
+     ON CONFLICT (season_id,user_id) DO NOTHING`,
+    [row.battle_pass_season_id, userId, purchaseId],
   );
   return (result.rowCount ?? 0) === 1;
 }
@@ -348,6 +416,17 @@ export async function incrementEntitlementAcquisitionCount(
     return (result.rowCount ?? 0) === 1;
   }
 
+  if (row.entitlement_kind === "battle_pass_access" && row.battle_pass_season_id) {
+    const result = await db.query(
+      `UPDATE catalog.battle_pass_stats
+          SET acquisition_count=acquisition_count+1,
+              updated_at=NOW()
+        WHERE season_id=$1`,
+      [row.battle_pass_season_id],
+    );
+    return (result.rowCount ?? 0) === 1;
+  }
+
   return false;
 }
 
@@ -365,7 +444,8 @@ export async function listPurchasedEntitlements(
             COALESCE(
               purchased.cosmetic_id,
               purchased.title_id,
-              purchased.background_id
+              purchased.background_id,
+              purchased.battle_pass_season_id
             ) AS entitlement_id,
             COALESCE(purchased.unit_price,0)::text AS unit_price
        FROM economy.purchase_entitlements purchased
