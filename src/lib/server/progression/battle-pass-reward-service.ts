@@ -59,6 +59,7 @@ export type BattlePassClaimGroupResult = Readonly<{
   rewards: ReadonlyArray<BattlePassClaimResult>;
   claimedCount: number;
   alreadyClaimedCount: number;
+  creditAmount: number;
   gameCosmeticCount: number;
   titleCount: number;
   backgroundCount: number;
@@ -510,6 +511,10 @@ export async function claimBattlePassRewardGroup(
       claimedCount: results.filter((reward) => !reward.alreadyClaimed).length,
       alreadyClaimedCount: results.filter((reward) => reward.alreadyClaimed)
         .length,
+      creditAmount: results.reduce(
+        (total, reward) => total + (reward.amount ?? 0),
+        0,
+      ),
       gameCosmeticCount: results.filter(
         (reward) =>
           !reward.alreadyClaimed && reward.kind === "game_cosmetic",
