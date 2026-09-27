@@ -94,31 +94,32 @@ export type BattlePassV1SeasonalRewardSpec = Readonly<{
     | "dice_neutral"
     | "territory_skin"
     | null;
+  presentationGroupKey: string | null;
 }>;
 
 export const BATTLE_PASS_V1_FREE_COSMETIC_REWARDS = Object.freeze([
-  { level: 15, kind: "game_cosmetic", slot: "dice_attack" },
-  { level: 35, kind: "game_cosmetic", slot: "dice_defense" },
-  { level: 55, kind: "game_cosmetic", slot: "dice_neutral" },
-  { level: 75, kind: "game_cosmetic", slot: "territory_skin" },
-  { level: 90, kind: "profile_background", slot: null },
-  { level: 100, kind: "commander_title", slot: null },
+  { level: 15, kind: "game_cosmetic", slot: "dice_attack", presentationGroupKey: null },
+  { level: 35, kind: "game_cosmetic", slot: "dice_defense", presentationGroupKey: null },
+  { level: 55, kind: "game_cosmetic", slot: "dice_neutral", presentationGroupKey: null },
+  { level: 75, kind: "game_cosmetic", slot: "territory_skin", presentationGroupKey: null },
+  { level: 90, kind: "profile_background", slot: null, presentationGroupKey: null },
+  { level: 100, kind: "commander_title", slot: null, presentationGroupKey: null },
 ] satisfies ReadonlyArray<BattlePassV1SeasonalRewardSpec>);
 
 export const BATTLE_PASS_V1_PREMIUM_INITIAL_COSMETIC_REWARDS = Object.freeze([
-  { level: 1, kind: "game_cosmetic", slot: "dice_attack" },
-  { level: 1, kind: "game_cosmetic", slot: "dice_defense" },
-  { level: 1, kind: "game_cosmetic", slot: "dice_neutral" },
-  { level: 1, kind: "game_cosmetic", slot: "territory_skin" },
+  { level: 1, kind: "game_cosmetic", slot: "dice_attack", presentationGroupKey: "premium-initial-set" },
+  { level: 1, kind: "game_cosmetic", slot: "dice_defense", presentationGroupKey: "premium-initial-set" },
+  { level: 1, kind: "game_cosmetic", slot: "dice_neutral", presentationGroupKey: "premium-initial-set" },
+  { level: 1, kind: "game_cosmetic", slot: "territory_skin", presentationGroupKey: "premium-initial-set" },
 ] satisfies ReadonlyArray<BattlePassV1SeasonalRewardSpec>);
 
 export const BATTLE_PASS_V1_PREMIUM_FINAL_COSMETIC_REWARDS = Object.freeze([
-  { level: 60, kind: "game_cosmetic", slot: "dice_attack" },
-  { level: 70, kind: "game_cosmetic", slot: "dice_defense" },
-  { level: 80, kind: "game_cosmetic", slot: "dice_neutral" },
-  { level: 90, kind: "game_cosmetic", slot: "territory_skin" },
-  { level: 95, kind: "profile_background", slot: null },
-  { level: 100, kind: "commander_title", slot: null },
+  { level: 60, kind: "game_cosmetic", slot: "dice_attack", presentationGroupKey: null },
+  { level: 70, kind: "game_cosmetic", slot: "dice_defense", presentationGroupKey: null },
+  { level: 80, kind: "game_cosmetic", slot: "dice_neutral", presentationGroupKey: null },
+  { level: 90, kind: "game_cosmetic", slot: "territory_skin", presentationGroupKey: null },
+  { level: 95, kind: "profile_background", slot: null, presentationGroupKey: null },
+  { level: 100, kind: "commander_title", slot: null, presentationGroupKey: null },
 ] satisfies ReadonlyArray<BattlePassV1SeasonalRewardSpec>);
 
 export const BATTLE_PASS_V1_FREE_COSMETIC_LEVELS = Object.freeze([
