@@ -1,6 +1,6 @@
 # War Brasil — Passe de Campanha SPEC
 
-Status: **implementação em finalização / P5 hardening e conteúdo real da Temporada 1 pendentes**  
+Status: **implementação em finalização / XP acumulativo V2, P5 hardening e conteúdo real da Temporada 1 pendentes**  
 Branch de integração: **dev**  
 Escopo: progressão sazonal por XP, Passe Livre, Passe Elite, compra com Créditos de Campanha, recompensas, claims, integração com partidas e experiência de frontend.
 
@@ -12,6 +12,8 @@ Ele define:
 
 - progressão sazonal por XP;
 - integração autoritativa com partidas;
+- XP acumulativo por ações autoritativas durante a partida;
+- liquidação de XP ao encerrar a partida ou ao sair voluntariamente;
 - temporada e lifecycle;
 - 100 níveis;
 - Trilha Livre;
@@ -47,23 +49,31 @@ A V1 MUST obedecer às seguintes decisões:
 5. comprar Elite não reinicia nem cria progressão separada;
 6. o mesmo XP avança Livre e Elite;
 7. a Trilha Elite pode ser adquirida depois de o jogador já ter avançado níveis;
-8. ao adquirir Elite tardiamente, recompensas Elite de níveis já alcançados tornam-se coletáveis retroativamente;
-9. a Trilha Livre concede exatamente 1.000 Créditos de Campanha ao completar toda a distribuição monetária;
-10. a Trilha Elite concede 2.500 Créditos de Campanha adicionais;
-11. um jogador Elite que conclui e coleta ambas as trilhas recebe 3.500 Créditos no total da temporada;
-12. uma recompensa monetária individual MUST ser de pelo menos 5 Créditos;
-13. níveis sem recompensa são válidos;
-14. um nível MAY possuir mais de uma recompensa;
-15. uma recompensa MUST possuir estado de coleta individual;
-16. recompensas desbloqueadas não são automaticamente equivalentes a recompensas coletadas;
-17. a interface MUST oferecer coleta individual;
-18. a interface MUST oferecer COLETAR TODAS quando existir mais de uma recompensa coletável;
-19. a Trilha Livre termina com um título exclusivo no nível 100;
-20. a Trilha Elite termina com outro título exclusivo no nível 100;
-21. o nível 100 não concede moedas na distribuição V1;
-22. o Passe deve ser acessível diretamente pela /home;
-23. a experiência completa vive em uma superfície dedicada de Campanha;
-24. o navegador nunca declara XP, nível, ownership ou claim como autoritativo.
+15. ao adquirir Elite tardiamente, recompensas Elite de níveis já alcançados tornam-se coletáveis retroativamente;
+16. a Trilha Livre concede exatamente 1.000 Créditos de Campanha ao completar toda a distribuição monetária;
+17. a Trilha Elite concede 2.500 Créditos de Campanha adicionais;
+18. um jogador Elite que conclui e coleta ambas as trilhas recebe 3.500 Créditos no total da temporada;
+19. uma recompensa monetária individual MUST ser de pelo menos 5 Créditos;
+20. níveis sem recompensa são válidos;
+21. um nível MAY possuir mais de uma recompensa;
+22. uma recompensa MUST possuir estado de coleta individual;
+23. recompensas desbloqueadas não são automaticamente equivalentes a recompensas coletadas;
+24. a interface MUST oferecer coleta individual;
+25. a interface MUST oferecer COLETAR TODAS quando existir mais de uma recompensa coletável;
+26. a Trilha Livre termina com um título exclusivo no nível 100;
+27. a Trilha Elite termina com outro título exclusivo no nível 100;
+28. o nível 100 não concede moedas na distribuição V1;
+29. o Passe deve ser acessível diretamente pela /home;
+30. a experiência completa vive em uma superfície dedicada de Campanha;
+31. o navegador nunca declara XP, nível, ownership ou claim como autoritativo;
+32. XP de partida é acumulado progressivamente por ações elegíveis, mas só entra no progresso sazonal na liquidação;
+33. conclusão normal da partida concede bônus mesmo para participante derrotado/eliminado;
+34. saída voluntária liquida somente o XP acumulado até a saída, sem bônus de conclusão ou vitória;
+35. movimentação/manobra de tropas não concede XP;
+36. trocas entre jogadores não concedem XP;
+37. o Passe V1 exige exatamente 40.000 XP acumulados para alcançar o nível 100;
+38. toda apresentação de XP em partida usa delta confirmado pelo servidor, nunca cálculo local;
+39. feedback visual de XP é não bloqueante, usa camada absoluta z-index 99 e respeita reduced motion.
 
 ## 3. Nomenclatura
 
@@ -220,81 +230,326 @@ Nesse caso, o XP deve continuar pertencendo à temporada congelada no início da
 
 Mudanças de balanceamento de XP durante uma partida MUST NOT mudar retroativamente a recompensa daquela execução.
 
-## 7. Perfis de XP
+## 7. Perfil de XP acumulativo V1
 
-Valores de XP por partida e curva de XP por nível são balanceamento de conteúdo e MUST NOT ficar espalhados como constantes no frontend ou nos command services.
+Valores de XP são conteúdo versionado e MUST NOT ficar espalhados como constantes no frontend ou nos command services.
 
-A implementação SHOULD possuir:
+A V1 substitui o modelo de XP baseado somente em conclusão/vitória por um modelo acumulativo por contribuição durante a partida.
+
+O perfil SHOULD ser estendido para possuir estrutura semanticamente equivalente a:
 
 ~~~text
 catalog.battle_pass_xp_profiles
 - id
+- troop_placed_xp
+- troop_placed_cap_xp
+- card_trade_xp
+- card_trade_cap_xp
+- troop_lost_dice_xp
+- troop_lost_dice_cap_xp
+- enemy_troop_defeated_xp
+- enemy_troop_defeated_cap_xp
+- territory_first_conquest_xp
+- territory_second_conquest_xp
 - completion_xp
 - victory_bonus_xp
 - solo_human_bot_multiplier_bps
 - created_at
 ~~~
 
-O perfil efetivo deve ser congelado por match.
+O perfil efetivo MUST ser congelado em battle_pass_xp_profile_snapshot no início do match.
 
-### 7.1 Valores ainda não fechados
+Perfis já usados por partidas/histórico permanecem append-only. Alterações futuras criam novo profile/versionamento.
 
-Este SPEC não transforma sugestões preliminares de XP em regra definitiva.
+### 7.1 Valores fechados da V1
 
-Antes do seed da primeira temporada ainda devem ser definidos:
+| Fonte | Valor V1 | Limite por partida |
+| --- | ---: | ---: |
+| Tropa colocada no tabuleiro | +1 XP por tropa | 60 XP |
+| Troca válida de 3 cartas por reforços | +20 XP por conjunto | 80 XP |
+| Tropa própria perdida em comparação de dados | +1 XP por tropa | 50 XP |
+| Tropa inimiga derrotada em comparação de dados | +2 XP por tropa | 100 XP |
+| 1ª conquista de um território pelo jogador naquele match | +25 XP | por território |
+| 2ª conquista do mesmo território pelo mesmo jogador | +10 XP | por território |
+| 3ª+ conquista do mesmo território pelo mesmo jogador | 0 XP | — |
+| Partida concluída normalmente | +150 XP | uma vez |
+| Vitória | +200 XP adicionais | uma vez |
 
-- XP base por partida concluída;
-- bônus de vitória;
-- eventual multiplicador para partida com um único humano e bots;
-- required_total_xp de cada nível.
+Regras fechadas:
 
-A arquitetura MUST permitir alterar esses valores criando uma nova configuração/versionamento sem mudar código de gameplay.
+- vitória nos dados vale mais que derrota nos dados;
+- dominar território possui peso maior que microações;
+- posicionar tropas possui peso baixo;
+- movimentar tropas/manobra concede 0 XP;
+- deslocamento após conquista concede 0 XP;
+- iniciar ataque, por si só, concede 0 XP;
+- troca entre jogadores concede 0 XP;
+- somente troca do conjunto de cartas do próprio jogo por reforços concede XP;
+- caps são aplicados por participante e por match;
+- nenhum popup ou grant é produzido quando o delta autoritativo real é 0.
 
-## 8. Elegibilidade de XP por partida
+### 7.2 Partida com um humano e bots
 
-XP é concedido exclusivamente pelo servidor.
+Bots continuam recebendo 0 XP.
 
-MUST receber XP somente participante que:
+Quando existir exatamente um humano elegível e os demais participantes forem bots:
 
-- tenha user_id;
-- não seja bot;
-- pertença ao match congelado;
-- seja elegível pelas regras de conclusão.
+~~~text
+solo_human_bot_multiplier_bps = 4000
+~~~
+
+equivalente a 40%.
+
+O multiplicador MUST fazer parte do snapshot do match.
+
+Caps são aplicados antes do multiplicador.
+
+Para evitar divergência de arredondamento entre eventos e liquidação, o servidor SHOULD manter total bruto elegível e total escalado materializado. O delta visual/autoritativo de cada ação é a diferença entre o novo total escalado e o total escalado anterior.
+
+Conceitualmente:
+
+~~~text
+scaled_total = floor(raw_eligible_total * multiplier_bps / 10000)
+event_delta  = scaled_total_after - scaled_total_before
+~~~
+
+Assim a soma dos deltas apresentados ao jogador coincide exatamente com o valor liquidado.
+
+Microações que produzirem delta inteiro 0 após multiplicador MAY ser coalescidas até existir pelo menos 1 XP real para apresentar.
+
+### 7.3 Caps e antifarm
+
+Os caps existem apenas para fontes repetíveis de baixa/média qualidade.
+
+A V1 MUST usar:
+
+~~~text
+troop_placed_cap_xp         = 60
+card_trade_cap_xp           = 80
+troop_lost_dice_cap_xp      = 50
+enemy_troop_defeated_cap_xp = 100
+~~~
+
+Conquista territorial não usa um cap global; usa diminishing returns por território:
+
+~~~text
+1ª conquista pelo jogador -> 25 XP
+2ª conquista              -> 10 XP
+3ª+                        -> 0 XP
+~~~
+
+A contagem é por:
+
+~~~text
+match_id
+user_id
+territory_id
+~~~
+
+Isso impede ping-pong de território como estratégia ótima de farming.
+
+## 8. Elegibilidade e liquidação de XP
+
+XP é acumulado exclusivamente pelo servidor.
+
+Participante elegível para acumular XP de ações MUST:
+
+- possuir user_id;
+- não ser bot;
+- pertencer ao match congelado;
+- possuir battle_pass_season_id congelada no match.
 
 Bots recebem 0 XP.
 
 Participantes sem conta recebem 0 XP.
 
-### 8.1 Saída antecipada
+### 8.1 Conclusão normal
 
-Para distinguir conclusão de abandono, game.match_participants SHOULD preservar um snapshot equivalente a:
-
-~~~text
-left_at_snapshot
-~~~
-
-ou outro campo histórico semanticamente equivalente.
-
-A política V1 SHOULD considerar saída voluntária antes do encerramento como não elegível ao XP de conclusão.
-
-Essa regra deve ser aplicada no servidor e coberta por testes.
-
-## 9. Ponto autoritativo de concessão de XP
-
-O fluxo existente de encerramento de match é o ponto de integração.
-
-Conceitualmente:
+Participante que permanece elegível até a conclusão normal recebe:
 
 ~~~text
-finalizeGameVictories / finalizeGameWithoutWinner
-  -> finishDiceBalanceMatchForRoom
-      -> snapshotMatchParticipants
-      -> awardBattlePassMatchXp
-      -> finalizar game.matches
-      -> limpar current_match_id
+XP acumulado de ações
++ 150 XP de conclusão
++ 200 XP adicionais se vencedor
 ~~~
 
-awardBattlePassMatchXp MUST executar dentro da mesma fronteira transacional autoritativa do encerramento.
+O bônus de conclusão é concedido mesmo que o participante tenha sido derrotado/eliminado normalmente antes do vencedor final.
+
+Eliminação normal não é abandono.
+
+O acumulador do eliminado congela quando ele deixa de poder realizar ações, mas a liquidação final ocorre quando o match termina e inclui o bônus de conclusão.
+
+Múltiplos vencedores recebem individualmente o bônus de vitória.
+
+### 8.2 Saída voluntária
+
+game.match_participants MUST preservar left_at_snapshot ou campo histórico equivalente.
+
+Ao sair voluntariamente antes da conclusão:
+
+~~~text
+XP acumulado de ações até a saída
++ 0 conclusão
++ 0 vitória
+~~~
+
+A saída dispara liquidação imediata e idempotente do participante.
+
+Depois de settled_at, aquele usuário não pode continuar acumulando XP no mesmo match.
+
+A UI apresenta a liquidação como XP DA PARTIDA SALVO, sem sinal de + sobre o total já visto durante a partida.
+
+### 8.3 Settlement único
+
+Cada participante possui no máximo uma liquidação sazonal por match.
+
+Motivos V1:
+
+~~~text
+match_completed
+player_left
+~~~
+
+A liquidação MUST ser idempotente e reutilizar a chave autoritativa do match.
+
+## 9. Acúmulo autoritativo durante a partida
+
+A V1 passa a possuir dois níveis de persistência:
+
+1. ações de XP da partida, auditáveis/idempotentes;
+2. grant sazonal final no settlement.
+
+Estrutura recomendada:
+
+~~~text
+progression.battle_pass_match_xp_actions
+- id
+- match_id
+- season_id
+- user_id
+- source_key
+- action_kind
+- units
+- raw_xp
+- awarded_xp
+- metadata
+- created_at
+
+UNIQUE(match_id, user_id, source_key)
+~~~
+
+e read model/acumulador:
+
+~~~text
+progression.battle_pass_match_progress
+- match_id
+- season_id
+- user_id
+- raw_action_xp
+- scaled_action_xp
+- troops_placed
+- card_sets_redeemed
+- troops_lost_dice
+- enemy_troops_defeated_dice
+- settled_at nullable
+- settled_reason nullable
+- updated_at
+
+PRIMARY KEY(match_id, user_id)
+~~~
+
+Para diminishing returns de conquista, SHOULD existir estrutura equivalente a:
+
+~~~text
+progression.battle_pass_match_territory_conquests
+- match_id
+- user_id
+- territory_id
+- conquest_count
+
+PRIMARY KEY(match_id, user_id, territory_id)
+~~~
+
+### 9.1 Atomicidade com comandos do jogo
+
+O XP pendente MUST ser atualizado dentro da mesma transação que confirma a ação de gameplay.
+
+Exemplos:
+
+~~~text
+reforço confirmado
+  -> altera tropas
+  -> registra XP pendente
+  -> COMMIT
+
+resultado de combate confirmado
+  -> aplica perdas
+  -> registra XP dos participantes afetados
+  -> COMMIT
+
+conquista autoritativa confirmada
+  -> muda ownership
+  -> registra conquista/XP
+  -> COMMIT
+~~~
+
+Se o comando de gameplay fizer ROLLBACK, o XP pendente correspondente também desaparece.
+
+Retry do mesmo comando MUST NOT duplicar battle_pass_match_xp_actions.
+
+O source_key deve reutilizar identidade autoritativa/idempotente do comando ou evento do servidor; o browser não escolhe uma chave capaz de gerar XP arbitrário.
+
+### 9.2 Pontos de captura V1
+
+- reforço: quando executeReinforcement confirma tropas posicionadas;
+- troca de cartas: quando executeTradeCards conclui a troca válida;
+- combate: quando a comparação autoritativa aplica perdas de tropas;
+- conquista: no instante em que ownership do território muda, não no deslocamento posterior;
+- conclusão/vitória: no settlement de término do match;
+- saída voluntária: no fluxo autoritativo de saída do jogador.
+
+Manobra/movimentação e troca entre jogadores não possuem hook de XP.
+
+### 9.3 Combate agrega o resultado
+
+Uma resolução pode simultaneamente derrotar tropas inimigas e perder tropas próprias.
+
+O backend mantém as fontes separadas, mas a apresentação daquele comando agrega o delta.
+
+Exemplo:
+
+~~~text
+2 tropas inimigas derrotadas -> 4 XP
+1 tropa própria perdida      -> 1 XP
+TOTAL DO EVENTO              -> 5 XP
+~~~
+
+A UI apresenta um único evento CONFRONTO +5 XP.
+
+### 9.4 Settlement
+
+No término do match:
+
+~~~text
+raw_action_xp
++ completion_xp
++ victory_bonus_xp quando aplicável
+-> caps/regras já materializados
+-> multiplier do match
+-> progression.battle_pass_xp_entries
+-> progression.battle_pass_progress
+-> settled_at
+~~~
+
+Na saída voluntária:
+
+~~~text
+scaled_action_xp atual
+-> progression.battle_pass_xp_entries
+-> progression.battle_pass_progress
+-> settled_at = agora
+-> settled_reason = player_left
+~~~
 
 O cliente MUST NOT possuir endpoint capaz de pedir uma quantidade arbitrária de XP.
 
@@ -371,7 +626,7 @@ O ledger é o histórico auditável.
 
 battle_pass_progress é o read model materializado.
 
-## 12. Níveis
+## 12. Níveis e curva V1 de 40.000 XP
 
 A implementação SHOULD possuir:
 
@@ -387,13 +642,87 @@ PRIMARY KEY(season_id, level)
 Regras:
 
 - level entre 1 e 100 na V1;
+- nível 1 inicia em 0 XP;
 - required_total_xp inteiro não negativo;
-- required_total_xp estritamente crescente a partir do nível 2;
-- nível 1 MAY iniciar em 0 XP;
-- o nível 100 é o máximo;
-- XP acima do requisito do nível 100 não cria nível 101.
+- required_total_xp estritamente crescente;
+- nível 100 exige exatamente 40.000 XP acumulados;
+- XP acima de 40.000 permanece capped no nível 100 para fins de level_reached;
+- não existe nível 101.
 
-A curva não deve ser calculada por fórmula fixa no cliente.
+### 12.1 Regra de geração da fixture
+
+A fórmula abaixo é regra de geração do conteúdo V1, não regra de runtime do cliente.
+
+Para a passagem do nível L para L+1, com L entre 1 e 99:
+
+~~~text
+step_xp(L) =
+  round5(
+    225
+    + 3 * (L - 1)
+    + 0.01 * (L - 1)^2
+  )
+
+round5(x) = 5 * round(x / 5)
+~~~
+
+A soma das 99 passagens MUST ser exatamente:
+
+~~~text
+40.000 XP
+~~~
+
+Checkpoints obrigatórios:
+
+| Passagem | XP da passagem |
+| --- | ---: |
+| 1 -> 2 | 225 |
+| 2 -> 3 | 230 |
+| 5 -> 6 | 235 |
+| 10 -> 11 | 255 |
+| 20 -> 21 | 285 |
+| 25 -> 26 | 305 |
+| 50 -> 51 | 395 |
+| 75 -> 76 | 500 |
+| 90 -> 91 | 570 |
+| 99 -> 100 | 615 |
+
+XP acumulado obrigatório:
+
+| Nível alcançado | required_total_xp |
+| --- | ---: |
+| 1 | 0 |
+| 2 | 225 |
+| 5 | 920 |
+| 10 | 2.135 |
+| 20 | 4.805 |
+| 25 | 6.265 |
+| 50 | 14.925 |
+| 75 | 26.070 |
+| 90 | 34.075 |
+| 100 | 40.000 |
+
+O seed/fixture MUST materializar os 100 thresholds em catalog.battle_pass_levels.
+
+Servidor e frontend leem required_total_xp do catálogo; nenhum deles recalcula essa fórmula durante gameplay.
+
+### 12.2 Meta de duração
+
+A curva foi calibrada para uma ordem de grandeza aproximada de:
+
+~~~text
+450 XP médios/partida -> ~89 partidas equivalentes
+500 XP                -> 80
+550 XP                -> ~73
+600 XP                -> ~67
+650 XP                -> ~62
+700 XP                -> ~57
+800 XP                -> 50
+~~~
+
+A meta inicial de telemetria é um jogador humano normal ficar aproximadamente em 500–600 XP por partida completa, resultando em cerca de 65–80 partidas equivalentes para completar o Passe.
+
+Esses valores são alvo de balanceamento da V1 e MAY ser alterados em temporadas futuras por novo catálogo/profile, nunca por mudança retroativa em match já iniciado.
 
 ## 13. Catálogo de recompensas
 
@@ -1241,29 +1570,316 @@ Após compra confirmada:
 
 Não tocar automaticamente dezenas de animações.
 
-## 31. Integração pós-partida
+## 31. Integração pós-partida e feedback durante o match
 
-A tela final da partida SHOULD mostrar progressão de Campanha sem obrigar navegação.
+A tela final da partida SHOULD mostrar a liquidação autoritativa sem obrigar navegação.
 
-Exemplo:
+Exemplo de conclusão:
 
 ~~~text
 PROGRESSO DE CAMPANHA
 
-PARTIDA CONCLUÍDA  +X XP
-VITÓRIA            +Y XP
-------------------------
-TOTAL              +Z XP
+PARTIDA CONCLUÍDA  +150 XP
+-------------------------
+TOTAL DA PARTIDA    485 XP
 
 NÍVEL 17 -> 18
+~~~
 
-NOVA RECOMPENSA DISPONÍVEL
-VER CAMPANHA
+Exemplo de vitória:
+
+~~~text
+PROGRESSO DE CAMPANHA
+
+VITÓRIA
+CONCLUSÃO          +150 XP
+VITÓRIA            +200 XP
+-------------------------
+TOTAL DA PARTIDA    735 XP
 ~~~
 
 A tela apenas apresenta resultado já persistido.
 
 Não concede XP.
+
+### 31.1 Objetivo do feedback imediato
+
+Toda ação autoritativa que efetivamente acrescentar XP ao acumulador do jogador SHOULD produzir feedback visual curto.
+
+O feedback:
+
+- confirma ganho real;
+- não é autoridade;
+- nunca calcula XP localmente;
+- nunca bloqueia interação;
+- não captura pointer;
+- não altera layout;
+- não substitui o settlement final.
+
+### 31.2 Camada e stacking
+
+A hierarquia de jogo V1 passa a reservar:
+
+~~~text
+5     mapa
+20    overlays do mapa
+30    tooltip
+40    HUD
+80    backdrop de modal
+81    modal
+90    toast
+99    feedback de XP
+120   cinematic de dados 3D
+~~~
+
+Adicionar token equivalente a:
+
+~~~css
+--z-game-xp-feedback: 99;
+~~~
+
+O root SHOULD ser absoluto sobre a game viewport:
+
+~~~text
+position: absolute
+inset: 0
+z-index: 99
+pointer-events: none
+overflow: hidden
+~~~
+
+A cinematic 3D continua acima em 120.
+
+### 31.3 Posição
+
+O feedback principal aparece no centro superior da viewport, abaixo do HUD.
+
+Desktop:
+
+~~~text
+top aproximado: clamp(82px, 12dvh, 128px)
+left: 50%
+~~~
+
+Mobile deve respeitar HUD, safe area e player rail sem causar overflow.
+
+### 31.4 Intensidades
+
+A V1 usa quatro intensidades visuais, não uma animação diferente por action_kind.
+
+#### micro — 650 ms
+
+Para:
+
+- reforços posicionados;
+- microresultado de combate/perda quando não agregado a feedback maior.
+
+Exemplo:
+
+~~~text
+REFORÇOS POSICIONADOS
++8 XP
+~~~
+
+#### standard — 850 ms
+
+Para:
+
+- troca de cartas;
+- confronto de dados agregado.
+
+Exemplo:
+
+~~~text
+CONFRONTO
++5 XP
+2 tropas derrotadas · 1 perdida
+~~~
+
+#### major — 1.000–1.100 ms
+
+Para:
+
+- primeira conquista;
+- reconquista válida.
+
+Exemplos:
+
+~~~text
+TERRITÓRIO DOMINADO
++25 XP
+~~~
+
+~~~text
+RECONQUISTA
++10 XP
+~~~
+
+#### terminal — 1.300–1.500 ms
+
+Para:
+
+- conclusão;
+- vitória;
+- settlement na saída.
+
+Saída voluntária usa linguagem sem + sobre o total já apresentado:
+
+~~~text
+PROGRESSO DE CAMPANHA
+
+XP DA PARTIDA SALVO
+287 XP
+~~~
+
+### 31.5 Princípios de animação
+
+Aplicar skills/frontend-quality/SKILL.md.
+
+Animações MUST preferir:
+
+- opacity;
+- transform;
+- pseudo-elementos estáticos com opacity/transform.
+
+Evitar animação contínua de propriedades que provoquem layout/reflow.
+
+Direção visual:
+
+~~~text
+entrada:
+opacity 0
+translateY(6px)
+scale(.97)
+
+ênfase:
+opacity 1
+translateY(0)
+scale(1)
+
+saída:
+opacity 0
+translateY(-8px)
+~~~
+
+Major MAY usar halo radial sutil animado somente por transform/opacity.
+
+Sem partículas pesadas, canvas extra ou dependência nova na V1.
+
+### 31.6 Queue e coalescing
+
+Existe no máximo uma apresentação de XP ativa.
+
+Eventos entram em fila cronológica:
+
+~~~text
+queued
+-> entering
+-> visible
+-> leaving
+-> complete
+~~~
+
+Não sobrepor vários popups.
+
+Eventos de uma mesma resolução/comando SHOULD ser agregados.
+
+Exemplos:
+
+- posicionar 8 tropas -> um popup +8 XP;
+- resultado de dados com 2 derrotadas e 1 perdida -> um popup +5 XP;
+- vitória -> uma composição terminal contendo conclusão + vitória.
+
+Se cinematic de dados estiver ativa, o evento permanece queued e começa somente depois da cinematic.
+
+Eventos cujo delta autoritativo final seja 0 não produzem popup.
+
+### 31.7 Contrato autoritativo de apresentação
+
+Contrato conceitual:
+
+~~~text
+GameXpPresentationEvent
+- id
+- matchId
+- sourceKey
+- kind
+- xp
+- label
+- detail nullable
+- intensity
+- occurredAt
+~~~
+
+kind V1:
+
+~~~text
+troops_placed
+card_trade
+combat
+territory_conquered
+territory_reconquered
+match_completed
+match_won
+match_settled
+~~~
+
+O evento MUST ser derivado no servidor a partir do mesmo commit que persistiu battle_pass_match_xp_actions ou settlement.
+
+O browser não envia xp, kind ou label como prova de progressão.
+
+A entrega MAY ocorrer pela response do comando e/ou canal realtime privado, mas MUST ser específica ao participante; XP individual não deve ser broadcast público para todos os jogadores.
+
+Retry/reconnect MUST usar id/sourceKey para deduplicar apresentação local.
+
+### 31.8 Componentização frontend
+
+Estrutura alvo:
+
+~~~text
+src/lib/shared/progression/
+  battle-pass-game-xp-event.ts
+
+src/hooks/
+  use-game-xp-feedback.ts
+
+src/components/progression/battle-pass/
+  game-xp-feedback.tsx
+  game-xp-feedback.module.css
+~~~
+
+GameXpFeedback é montado uma única vez no runtime da partida.
+
+Nenhum command component cria seu próprio toast de XP.
+
+### 31.9 Acessibilidade e reduced motion
+
+O visual animado SHOULD ser aria-hidden.
+
+Um único live region separado anuncia o evento:
+
+~~~html
+role="status"
+aria-live="polite"
+aria-atomic="true"
+~~~
+
+Exemplo de anúncio:
+
+~~~text
+Território dominado. Mais 25 experiência de campanha.
+~~~
+
+Com prefers-reduced-motion: reduce:
+
+- remover translate;
+- remover scale;
+- remover halo em expansão;
+- preservar conteúdo textual;
+- usar apresentação estática curta, aproximadamente 800 ms;
+- não remover a confirmação de XP.
+
+O feedback não recebe foco e não interfere no teclado.
 
 ## 32. Contrato de leitura
 
@@ -1353,6 +1969,7 @@ src/lib/shared/progression/
   battle-pass-contract.ts
   battle-pass-reward-state.ts
   battle-pass-xp.ts
+  battle-pass-game-xp-event.ts
 
 src/lib/server/progression/
   battle-pass-service.ts
@@ -1360,7 +1977,12 @@ src/lib/server/progression/
   battle-pass-match-xp-service.ts
   battle-pass-reward-service.ts
 
+src/hooks/
+  use-game-xp-feedback.ts
+
 src/components/progression/battle-pass/
+  game-xp-feedback.tsx
+  game-xp-feedback.module.css
   battle-pass-page.tsx
   battle-pass-hero.tsx
   battle-pass-progress.tsx
@@ -1552,6 +2174,10 @@ Antes de ativar uma temporada, testes/validação SHOULD garantir:
 
 - exatamente 100 níveis;
 - thresholds de XP válidos;
+- nível 100 com required_total_xp exatamente 40.000;
+- primeiro step exatamente 225 e último step exatamente 615;
+- XP profile com todos os valores/caps V1;
+
 - total free credit = 1000;
 - total premium credit = 2500;
 - nenhum credit reward entre 1 e 4;
@@ -1630,18 +2256,36 @@ Não expor SQL, IDs internos desnecessários ou detalhes de locks.
 MUST cobrir:
 
 - threshold de nível;
+- curva V1 soma exatamente 40.000 XP;
+- 1 -> 2 exige 225 XP;
+- 99 -> 100 exige 615 XP;
 - XP suficiente/insuficiente;
 - cap no nível 100;
 - match sem temporada;
 - match cruzando fim de temporada;
+- tropa posicionada e cap de 60 XP;
+- troca de cartas e cap de 80 XP;
+- tropas perdidas nos dados e cap de 50 XP;
+- tropas derrotadas nos dados e cap de 100 XP;
+- combate agrega vitória/derrota em um único delta;
+- primeira conquista +25;
+- segunda conquista do mesmo território +10;
+- terceira+ conquista do mesmo território +0;
+- movimentação/manobra +0;
+- troca entre jogadores +0;
+- conclusão +150;
+- vitória +200 adicionais;
 - vitória com um vencedor;
 - múltiplos vencedores;
+- derrotado/eliminado recebe conclusão;
 - bot;
 - participante sem user;
-- abandono;
-- retry do XP;
+- saída voluntária liquida ações sem conclusão/vitória;
+- settlement idempotente;
+- retry de action XP;
 - dois matches diferentes;
 - rematch;
+- multiplicador solo+bots 40% sem divergência de arredondamento;
 - total de créditos por trilha;
 - mínimo 5;
 - nível vazio;
@@ -1659,9 +2303,17 @@ MUST cobrir:
 
 - migrations;
 - constraints;
-- XP ledger idempotente;
-- atualização de progress;
-- concorrência de XP;
+- XP action ledger idempotente;
+- acumulador por match;
+- atualização de progress somente no settlement;
+- concorrência de action XP;
+- concorrência de settlement;
+- settlement em saída voluntária;
+- rollback de gameplay também faz rollback do XP pendente;
+- caps por fonte;
+- diminishing returns de território;
+- XP final coincide com soma dos deltas autoritativos apresentados;
+
 - compra Elite com wallet/ledger/receipt;
 - purchase duplicada;
 - claim credit;
@@ -1688,6 +2340,26 @@ MUST cobrir os fluxos críticos:
 - teclado;
 - desktop;
 - mobile.
+
+### partida
+
+- feedback z-index 99;
+- queue de eventos;
+- agregação por comando;
+- cinematic suspende apresentação sem perder evento;
+- deduplicação por id/sourceKey;
+- reforço;
+- troca de cartas;
+- confronto;
+- conquista;
+- reconquista;
+- conclusão;
+- vitória;
+- saída com XP DA PARTIDA SALVO;
+- aria-live único;
+- reduced motion;
+- nenhuma animação para delta 0;
+- nenhuma interação bloqueada.
 
 ### /campaign
 
@@ -1720,7 +2392,13 @@ SHOULD existir validação visual para:
 - rewards pendentes;
 - nível atual;
 - nível 100;
-- modal/painel de ativação.
+- modal/painel de ativação;
+- feedback XP micro;
+- feedback XP standard;
+- feedback XP major;
+- feedback XP terminal;
+- feedback durante viewport mobile;
+- feedback com reduced motion.
 
 ## 55. Rollout
 
@@ -1740,13 +2418,24 @@ Implementação recomendada em fases.
 - constraints;
 - seeds/fixture da temporada.
 
-### P1 — XP de partida
+### P1 — XP acumulativo de partida
 
-- snapshot season/profile no match;
+- estender XP profile com valores/caps V1;
+- snapshot completo season/profile no match;
+- action ledger por comando/evento;
+- battle_pass_match_progress;
+- contador de conquistas por território;
+- hooks em reforço, troca de cartas, combate e conquista;
 - left_at snapshot;
-- awardBattlePassMatchXp;
-- idempotência;
-- resposta pós-partida.
+- settlement por conclusão;
+- settlement por saída voluntária;
+- conclusão +150;
+- vitória +200;
+- multiplicador solo+bots;
+- idempotência de actions;
+- idempotência de settlement;
+- resposta pós-partida;
+- eventos privados de apresentação de XP.
 
 ### P2 — Claims
 
@@ -1802,6 +2491,10 @@ Não logar secrets, session tokens ou dados de pagamento.
 
 Eventos relevantes:
 
+- battle_pass_xp_action_recorded;
+- battle_pass_xp_action_duplicate_ignored;
+- battle_pass_xp_settled;
+- battle_pass_xp_settlement_duplicate_ignored;
 - battle_pass_xp_granted;
 - battle_pass_xp_duplicate_ignored;
 - battle_pass_premium_unlocked;
@@ -1825,9 +2518,10 @@ Não fazem parte deste SPEC:
 - nível 101+;
 - trilhas adicionais;
 - auto-claim obrigatório;
-- XP por ataque individual;
-- XP por território individual;
-- XP por tropas eliminadas;
+- XP por simplesmente iniciar um ataque;
+- XP por movimentação/manobra de tropas;
+- XP por troca entre jogadores;
+- XP por terceira ou posterior reconquista do mesmo território pelo mesmo jogador no match;
 - XP baseado em evento declarado pelo browser.
 
 Essas features futuras não devem ser antecipadas com complexidade desnecessária.
@@ -1839,41 +2533,71 @@ A feature está concluída quando:
 1. /home apresenta Campanha como quarto destino;
 2. /campaign apresenta temporada ativa com identidade Bellum Civile;
 3. existem exatamente 100 níveis;
-4. XP é concedido por match somente no servidor;
-5. match congela temporada/perfil de XP;
-6. XP ledger impede duplicação;
-7. progress apresenta nível correto;
-8. Livre funciona sem compra;
-9. Elite custa exatamente 3.000 Créditos;
-10. compra Elite usa Economy V2 e é idempotente;
-11. compra tardia libera rewards anteriores sem alterar XP;
-12. Livre contém exatamente 1.000 Créditos;
-13. Elite adiciona exatamente 2.500 Créditos;
-14. nenhuma reward monetária é menor que 5;
-15. níveis vazios funcionam;
-16. coleção Livre entrega 3 dados, território, background e título;
-17. Elite inicial entrega 3 dados + território;
-18. Elite final entrega 3 dados, território, background e título;
-19. Livre e Elite entregam títulos distintos no nível 100;
-20. nível 100 não entrega moeda;
-21. reward state diferencia locked, premium_locked, claimable e claimed;
-22. claim individual é transacional e idempotente;
-23. claim-all funciona sem duplicar grants;
-24. Créditos recebidos entram em economy.ledger_entries;
-25. cosméticos reutilizam ownership existente;
-26. animações só iniciam após confirmação do servidor;
-27. claim-all não reproduz dezenas de overlays;
-28. reduced motion funciona;
-29. /home e /campaign não possuem overflow horizontal acidental;
-30. navegação por teclado e foco são preservados;
-31. assets não causam carregamento inicial desnecessário dos 100 níveis;
-32. testes de domínio, banco, frontend e concorrência críticos estão verdes.
+4. XP é calculado e acumulado por ações somente no servidor;
+5. match congela temporada/perfil completo de XP;
+6. action ledger impede duplicação de ações de XP;
+7. settlement final impede duplicação do grant sazonal;
+15. progresso sazonal só é alterado no settlement;
+16. saída voluntária preserva XP de ações e remove bônus de conclusão/vitória;
+17. derrotado/eliminado normalmente recebe bônus de conclusão;
+18. movimentação e troca entre jogadores concedem 0 XP;
+19. caps e diminishing returns antifarm estão ativos;
+20. nível 100 exige exatamente 40.000 XP;
+21. progress apresenta nível correto;
+15. Livre funciona sem compra;
+16. Elite custa exatamente 3.000 Créditos;
+17. compra Elite usa Economy V2 e é idempotente;
+18. compra tardia libera rewards anteriores sem alterar XP;
+19. Livre contém exatamente 1.000 Créditos;
+20. Elite adiciona exatamente 2.500 Créditos;
+21. nenhuma reward monetária é menor que 5;
+22. níveis vazios funcionam;
+23. coleção Livre entrega 3 dados, território, background e título;
+24. Elite inicial entrega 3 dados + território;
+25. Elite final entrega 3 dados, território, background e título;
+26. Livre e Elite entregam títulos distintos no nível 100;
+27. nível 100 não entrega moeda;
+28. reward state diferencia locked, premium_locked, claimable e claimed;
+29. claim individual é transacional e idempotente;
+30. claim-all funciona sem duplicar grants;
+31. Créditos recebidos entram em economy.ledger_entries;
+32. cosméticos reutilizam ownership existente;
+33. animações só iniciam após confirmação do servidor;
+34. claim-all não reproduz dezenas de overlays;
+35. reduced motion funciona;
+36. /home e /campaign não possuem overflow horizontal acidental;
+37. navegação por teclado e foco são preservados;
+38. assets não causam carregamento inicial desnecessário dos 100 níveis;
+39. feedback de XP em partida usa somente delta confirmado pelo servidor;
+40. feedback de XP usa queue, não sobrepõe eventos e não bloqueia interação;
+41. cinematic de dados posterga feedback correspondente até poder ser visto;
+42. reduced motion preserva a informação sem movimento desnecessário;
+43. testes de domínio, banco, frontend e concorrência críticos estão verdes.
 
 ## 59. Resumo canônico V1
 
 ~~~text
 PASSE DE CAMPANHA
 100 níveis
+40.000 XP para alcançar o nível 100
+
+XP DE PARTIDA
+  tropa colocada                 +1 (cap 60)
+  troca de cartas               +20 (cap 80)
+  tropa perdida nos dados        +1 (cap 50)
+  tropa inimiga derrotada        +2 (cap 100)
+  1ª conquista do território    +25
+  2ª conquista                  +10
+  3ª+                             0
+  conclusão                    +150
+  vitória                      +200 adicional
+  manobra/movimentação            0
+  troca entre jogadores           0
+
+CURVA
+  nível 1 -> 2                 225 XP
+  nível 99 -> 100              615 XP
+  acumulado nível 100       40.000 XP
 
 TRILHA LIVRE
 Preço: 0
