@@ -11,6 +11,7 @@ import { evaluateGameVictory } from "@/src/lib/server/game-victory-service";
 import {
   recordBattlePassCombat,
   recordBattlePassTerritoryConquest,
+  type BattlePassActionXpResult,
 } from "@/src/lib/server/progression/battle-pass-match-action-xp-service";
 import { RoomError } from "@/src/lib/rooms";
 
@@ -154,6 +155,7 @@ async function applyBattleOutcome(
   client: PoolClient,
   room: BattleRoomState,
   battle: Battle,
+  xpResults?: BattlePassActionXpResult[],
 ) {
   const rows = (
     await client.query<LockedTerritory>(
@@ -218,7 +220,7 @@ async function applyBattleOutcome(
       [room.id, defender.territory_id, defenderTroops],
     );
 
-    await recordBattlePassCombat(client, {
+    const combatXp = await recordBattlePassCombat(client, {
       roomId: room.id,
       sourceKey: battle.id ? `battle:${battle.id}` : null,
       attackerPlayerId: battle.attackerPlayerId,
@@ -226,6 +228,7 @@ async function applyBattleOutcome(
       attackerLosses: battle.attackerLosses,
       defenderLosses: battle.defenderLosses,
     });
+    xpResults?.push(...combatXp);
     return;
   }
 
@@ -253,7 +256,7 @@ async function applyBattleOutcome(
   room.pending_to_territory_id = battle.defenderTerritoryId;
 
   const battleXpSourceKey = battle.id ? `battle:${battle.id}` : null;
-  await recordBattlePassCombat(client, {
+  const combatXp = await recordBattlePassCombat(client, {
     roomId: room.id,
     sourceKey: battleXpSourceKey,
     attackerPlayerId: battle.attackerPlayerId,
@@ -261,12 +264,14 @@ async function applyBattleOutcome(
     attackerLosses: battle.attackerLosses,
     defenderLosses: battle.defenderLosses,
   });
-  await recordBattlePassTerritoryConquest(client, {
+  xpResults?.push(...combatXp);
+  const conquestXp = await recordBattlePassTerritoryConquest(client, {
     roomId: room.id,
     playerId: battle.attackerPlayerId,
     territoryId: battle.defenderTerritoryId,
     sourceKey: battleXpSourceKey,
   });
+  if (conquestXp) xpResults?.push(conquestXp);
 
   const defenderStillHasTerritory = await client.query(
     `SELECT 1
@@ -313,6 +318,7 @@ export async function advanceBattlePresentation(
   client: PoolClient,
   room: BattleRoomState,
   nowMs = Date.now(),
+  xpResults?: BattlePassActionXpResult[],
 ) {
   const battle = room.last_battle;
   if (!isBattle(battle)) return false;
@@ -340,7 +346,7 @@ export async function advanceBattlePresentation(
   }
 
   if (transition === "resolve_battle") {
-    await applyBattleOutcome(client, room, battle);
+    await applyBattleOutcome(client, room, battle, xpResults);
     battle.stage = "show_battle_result";
     battle.stageStartedAt = new Date(nowMs).toISOString();
     await saveBattle(client, room, battle);
