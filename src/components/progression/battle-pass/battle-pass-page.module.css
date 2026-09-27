@@ -169,6 +169,63 @@
   line-height: 1.55;
 }
 
+.premiumRetroactive {
+  color: var(--campaign-brass) !important;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: .55rem !important;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+
+.premiumConfirmation {
+  display: grid;
+  gap: 14px;
+  padding: 14px;
+  border: 1px solid rgb(208 170 87 / 24%);
+  background: rgb(3 13 10 / 72%);
+}
+
+.premiumConfirmation dl {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+}
+
+.premiumConfirmation dl > div {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.premiumConfirmation dt {
+  color: rgb(238 232 218 / 42%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: .5rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+
+.premiumConfirmation dd {
+  margin: 0;
+  color: var(--campaign-ivory);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: .62rem;
+  font-weight: 900;
+  text-align: right;
+}
+
+.premiumConfirmationActions {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr;
+  gap: 8px;
+}
+
+.premiumConfirmationActions button {
+  width: 100%;
+}
+
 .premiumPanel button,
 .claimAll,
 .reward button {
