@@ -77,3 +77,19 @@ test("tablet não oculta níveis da janela lógica de oito níveis", () => {
   assert.match(tablet, /grid-template-columns: repeat\(4, minmax\(150px, 1fr\)\)/);
   assert.doesNotMatch(tablet, /nth-child\(n \+ 5\)[\s\S]*display:\s*none/);
 });
+
+
+test("dialog de recompensa prende e restaura foco com Escape", () => {
+  const page = read(
+    "src/components/progression/battle-pass/battle-pass-page.tsx",
+  );
+
+  assert.match(page, /rewardDialogRef/);
+  assert.match(page, /rewardDialogCloseRef/);
+  assert.match(page, /rewardDialogReturnFocusRef/);
+  assert.match(page, /event\.key === "Escape"/);
+  assert.match(page, /event\.key !== "Tab"/);
+  assert.match(page, /rewardDialogCloseRef\.current\?\.focus\(\)/);
+  assert.match(page, /rewardDialogReturnFocusRef\.current\?\.focus\(\)/);
+  assert.match(page, /aria-modal="true"/);
+});
