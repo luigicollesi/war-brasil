@@ -64,3 +64,16 @@ test("nível 100 recebe apresentação de conclusão após claim confirmado", ()
   assert.match(page, /TRILHA DE ELITE/);
   assert.match(page, /TRILHA LIVRE/);
 });
+
+
+test("tablet não oculta níveis da janela lógica de oito níveis", () => {
+  const css = read(
+    "src/components/progression/battle-pass/battle-pass-page.module.css",
+  );
+
+  const tablet = css.match(
+    /@media \(max-width: 1120px\) \{([\s\S]*?)\n\}/,
+  )?.[1] ?? "";
+  assert.match(tablet, /grid-template-columns: repeat\(4, minmax\(150px, 1fr\)\)/);
+  assert.doesNotMatch(tablet, /nth-child\(n \+ 5\)[\s\S]*display:\s*none/);
+});
