@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { ApplicableGameCommandResult } from "@/src/lib/game-command-patch";
 import { registerGameCommandPatchHandler } from "@/src/lib/game-command-patch-bus";
 import type { GameSnapshot } from "@/src/lib/game-contract";
+import { isGamePrivatePatch } from "@/src/lib/game-private-patch";
 import type { GameRealtimeEvent } from "@/src/lib/game-realtime-contract";
 import { gameAutomationDriver } from "@/src/lib/client/game-automation-driver";
 import { registerGameCommandSyncContext } from "@/src/lib/client/game-command-sync-context";
@@ -173,6 +174,20 @@ export function useGameSync(roomId: string) {
               data,
               "Não foi possível avançar automaticamente a partida.",
             ),
+          );
+        }
+
+        const privatePatch =
+          typeof data === "object" &&
+          data !== null &&
+          "privatePatch" in data &&
+          isGamePrivatePatch(data.privatePatch)
+            ? data.privatePatch
+            : null;
+        if (privatePatch?.battlePassXpEvents?.length) {
+          dispatchBattlePassXpEvents(
+            roomId,
+            privatePatch.battlePassXpEvents,
           );
         }
 
