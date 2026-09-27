@@ -443,6 +443,7 @@ export async function getBattlePassHomeSummary(
 
   return {
     active: true,
+    seasonStatus: season.status,
     seasonName: season.name,
     levelReached: progress.levelReached,
     xpTotal: progress.xpTotal,
