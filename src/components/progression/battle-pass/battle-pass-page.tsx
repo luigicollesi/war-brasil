@@ -38,6 +38,9 @@ type ClaimReveal =
       gameCosmeticCount: number;
       titleCount: number;
       backgroundCount: number;
+      level100Titles: ReadonlyArray<
+        Readonly<{ name: string; track: "free" | "premium" }>
+      >;
     }>;
 
 function progressPercent(snapshot: BattlePassSnapshot) {
@@ -234,6 +237,11 @@ export function BattlePassPage({
         gameCosmeticCount?: number;
         titleCount?: number;
         backgroundCount?: number;
+        rewards?: ReadonlyArray<{
+          rewardId?: string;
+          kind?: string;
+          alreadyClaimed?: boolean;
+        }>;
       };
       const claimedCount = result.claimedCount ?? 0;
       const alreadyClaimedCount = result.alreadyClaimedCount ?? 0;
@@ -241,6 +249,34 @@ export function BattlePassPage({
       const gameCosmeticCount = result.gameCosmeticCount ?? 0;
       const titleCount = result.titleCount ?? 0;
       const backgroundCount = result.backgroundCount ?? 0;
+      const claimedRewardIds = new Set(
+        (result.rewards ?? [])
+          .filter((reward) => reward.alreadyClaimed !== true)
+          .map((reward) => reward.rewardId)
+          .filter((rewardId): rewardId is string => Boolean(rewardId)),
+      );
+      const level100Titles = snapshot.levels
+        .find((level) => level.level === 100)
+        ? [
+            ...(
+              snapshot.levels.find((level) => level.level === 100)?.freeRewards ??
+              []
+            ),
+            ...(
+              snapshot.levels.find((level) => level.level === 100)
+                ?.premiumRewards ?? []
+            ),
+          ]
+            .filter(
+              (reward) =>
+                reward.kind === "commander_title" &&
+                claimedRewardIds.has(reward.id),
+            )
+            .map((reward) => ({
+              name: reward.name,
+              track: reward.track,
+            }))
+        : [];
       setFeedback({
         title: "RECOMPENSAS RECEBIDAS",
         detail: `${INTEGER.format(claimedCount)} recompensas · +${INTEGER.format(creditAmount)} CR`,
@@ -253,6 +289,7 @@ export function BattlePassPage({
         gameCosmeticCount,
         titleCount,
         backgroundCount,
+        level100Titles,
       });
       router.refresh();
     } catch {
@@ -626,7 +663,16 @@ export function BattlePassPage({
           aria-label="Recompensa recebida"
         >
           <section className={styles.rewardRevealCard}>
-            <small>RECOMPENSA RECEBIDA</small>
+            <small>
+              {claimReveal.kind === "reward" &&
+              claimReveal.reward.level === 100 &&
+              claimReveal.reward.kind === "commander_title"
+                ? "CAMPANHA CONCLUÍDA"
+                : claimReveal.kind === "batch" &&
+                    claimReveal.level100Titles.length > 0
+                  ? "CAMPANHA CONCLUÍDA"
+                  : "RECOMPENSA RECEBIDA"}
+            </small>
             {claimReveal.kind === "reward" ? (
               <>
                 <div className={styles.rewardRevealVisual}>
@@ -665,6 +711,14 @@ export function BattlePassPage({
                     já estavam coletadas.
                   </span>
                 ) : null}
+                {claimReveal.level100Titles.map((title) => (
+                  <span key={`${title.track}:${title.name}`}>
+                    {title.track === "premium"
+                      ? "TRILHA DE ELITE"
+                      : "TRILHA LIVRE"}{" "}
+                    · {title.name}
+                  </span>
+                ))}
               </>
             )}
             <button type="button" onClick={() => setClaimReveal(null)}>
