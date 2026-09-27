@@ -26,7 +26,9 @@ import {
   deriveInitialTerritoryBoardPresentation,
   nextInitialTerritoryPresentationWakeAt,
 } from "@/src/lib/client/map/board-presentation";
+import { dispatchBattlePassXpEvents } from "@/src/lib/client/game-realtime-ephemeral-bus";
 import { runGameCommand } from "@/src/lib/game-command-client";
+import { isBattlePassGameXpEvent } from "@/src/lib/shared/progression/battle-pass-game-xp-event";
 import type { GameSnapshot } from "@/src/lib/game-contract";
 import { buildGameViewModel } from "@/src/lib/game-view-model";
 import { PLAYER_COLORS, type PlayerColor } from "@/src/lib/lobby";
@@ -40,6 +42,17 @@ type ParticipationResponse = {
     target?: string;
   } | null;
 };
+
+type LeaveGameResponse = {
+  battlePassXpEvent?: unknown;
+};
+
+function leaveXpFeedbackDelay() {
+  if (typeof window === "undefined") return 0;
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches
+    ? 500
+    : 1_100;
+}
 
 async function refreshParticipationTarget(fallback: string) {
   const response = await fetch("/api/participation", {
@@ -364,12 +377,18 @@ function GameReadyClient({
     setIsLeavingGame(true);
 
     try {
-      await runGameCommand(
+      const result = await runGameCommand<LeaveGameResponse>(
         roomId,
         "leave",
         undefined,
         "Não foi possível sair da partida.",
       );
+      if (isBattlePassGameXpEvent(result.data.battlePassXpEvent)) {
+        dispatchBattlePassXpEvents(roomId, [result.data.battlePassXpEvent]);
+        await new Promise<void>((resolve) => {
+          window.setTimeout(resolve, leaveXpFeedbackDelay());
+        });
+      }
       router.replace("/home");
     } catch (requestError) {
       setLeaveError(
