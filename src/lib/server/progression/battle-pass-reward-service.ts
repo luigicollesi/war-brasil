@@ -45,7 +45,11 @@ export type BattlePassClaimAllResult = Readonly<{
   seasonId: string;
   rewards: ReadonlyArray<BattlePassClaimResult>;
   claimedCount: number;
+  alreadyClaimedCount: number;
   creditAmount: number;
+  gameCosmeticCount: number;
+  titleCount: number;
+  backgroundCount: number;
 }>;
 
 export class BattlePassServiceError extends Error {
@@ -475,6 +479,17 @@ export async function claimAllBattlePassRewards(
 
     const levelReached = await ensureAndLockProgress(client, userId, seasonId);
     const premiumAccess = await hasPremiumAccess(client, userId, seasonId);
+    const alreadyClaimed = await client.query<{ count: number }>(
+      `SELECT COUNT(*)::int AS count
+         FROM catalog.battle_pass_rewards reward
+         JOIN progression.battle_pass_reward_claims claimed
+           ON claimed.user_id=$2::uuid
+          AND claimed.reward_id=reward.id
+        WHERE reward.season_id=$1
+          AND reward.level <= $3
+          AND (reward.track='free' OR $4::boolean)`,
+      [seasonId, userId, levelReached, premiumAccess],
+    );
     const rewards = await client.query<{ id: string }>(
       `SELECT reward.id
          FROM catalog.battle_pass_rewards reward
@@ -504,10 +519,23 @@ export async function claimAllBattlePassRewards(
       seasonId,
       rewards: results,
       claimedCount: results.filter((reward) => !reward.alreadyClaimed).length,
+      alreadyClaimedCount: Number(alreadyClaimed.rows[0]?.count ?? 0),
       creditAmount: results.reduce(
         (total, reward) => total + (reward.amount ?? 0),
         0,
       ),
+      gameCosmeticCount: results.filter(
+        (reward) =>
+          !reward.alreadyClaimed && reward.kind === "game_cosmetic",
+      ).length,
+      titleCount: results.filter(
+        (reward) =>
+          !reward.alreadyClaimed && reward.kind === "commander_title",
+      ).length,
+      backgroundCount: results.filter(
+        (reward) =>
+          !reward.alreadyClaimed && reward.kind === "profile_background",
+      ).length,
     };
   } catch (error) {
     await client.query("ROLLBACK").catch(() => undefined);
