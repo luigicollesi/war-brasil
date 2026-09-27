@@ -13,6 +13,7 @@ type RewardRow = {
   season_id: string;
   level: number;
   track: "free" | "premium";
+  presentation_group_key: string | null;
   reward_kind:
     | "campaign_credit"
     | "game_cosmetic"
@@ -47,6 +48,17 @@ export type BattlePassClaimAllResult = Readonly<{
   claimedCount: number;
   alreadyClaimedCount: number;
   creditAmount: number;
+  gameCosmeticCount: number;
+  titleCount: number;
+  backgroundCount: number;
+}>;
+
+export type BattlePassClaimGroupResult = Readonly<{
+  seasonId: string;
+  groupKey: string;
+  rewards: ReadonlyArray<BattlePassClaimResult>;
+  claimedCount: number;
+  alreadyClaimedCount: number;
   gameCosmeticCount: number;
   titleCount: number;
   backgroundCount: number;
@@ -111,7 +123,8 @@ async function loadReward(
   rewardId: string,
 ): Promise<RewardRow | null> {
   const result = await client.query<RewardRow>(
-    `SELECT reward.id,reward.season_id,reward.level,reward.track,reward.reward_kind,
+    `SELECT reward.id,reward.season_id,reward.level,reward.track,
+            reward.presentation_group_key,reward.reward_kind,
             reward.credit_amount::text,reward.cosmetic_id,reward.title_id,reward.background_id,
             season.starts_at,season.claim_ends_at
        FROM catalog.battle_pass_rewards reward
@@ -431,6 +444,85 @@ export async function claimBattlePassReward(
     const result = await claimRewardInTransaction(client, userId, rewardId);
     await client.query("COMMIT");
     return result;
+  } catch (error) {
+    await client.query("ROLLBACK").catch(() => undefined);
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+export async function claimBattlePassRewardGroup(
+  userId: string,
+  rewardId: string,
+): Promise<BattlePassClaimGroupResult> {
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    const { reward: anchor } = await loadClaimContext(client, userId, rewardId);
+    if (!anchor.presentation_group_key) {
+      throw new BattlePassServiceError(
+        "BATTLE_PASS_REWARD_GROUP_NOT_FOUND",
+        "Esta recompensa não pertence a um conjunto coletável.",
+        409,
+      );
+    }
+
+    const group = await client.query<{ id: string }>(
+      `SELECT id
+         FROM catalog.battle_pass_rewards
+        WHERE season_id=$1
+          AND track=$2
+          AND level=$3
+          AND presentation_group_key=$4
+        ORDER BY position,id
+        FOR SHARE`,
+      [
+        anchor.season_id,
+        anchor.track,
+        anchor.level,
+        anchor.presentation_group_key,
+      ],
+    );
+
+    if (group.rows.length < 2) {
+      throw new BattlePassServiceError(
+        "BATTLE_PASS_REWARD_GROUP_INVALID",
+        "O conjunto de recompensas está configurado de forma inválida.",
+        503,
+      );
+    }
+
+    const results: BattlePassClaimResult[] = [];
+    for (const member of group.rows) {
+      results.push(
+        await claimRewardInTransaction(client, userId, member.id),
+      );
+    }
+
+    await client.query("COMMIT");
+
+    return {
+      seasonId: anchor.season_id,
+      groupKey: anchor.presentation_group_key,
+      rewards: results,
+      claimedCount: results.filter((reward) => !reward.alreadyClaimed).length,
+      alreadyClaimedCount: results.filter((reward) => reward.alreadyClaimed)
+        .length,
+      gameCosmeticCount: results.filter(
+        (reward) =>
+          !reward.alreadyClaimed && reward.kind === "game_cosmetic",
+      ).length,
+      titleCount: results.filter(
+        (reward) =>
+          !reward.alreadyClaimed && reward.kind === "commander_title",
+      ).length,
+      backgroundCount: results.filter(
+        (reward) =>
+          !reward.alreadyClaimed && reward.kind === "profile_background",
+      ).length,
+    };
   } catch (error) {
     await client.query("ROLLBACK").catch(() => undefined);
     throw error;
