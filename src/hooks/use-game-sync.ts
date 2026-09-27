@@ -287,15 +287,16 @@ export function useGameSync(roomId: string) {
     applyCommandResultRef.current = (result) => {
       if (!isActive) return false;
 
-      const nextSnapshot = syncController.applyCommandResult(result);
-      if (!nextSnapshot) return false;
-
       if (result.privatePatch?.battlePassXpEvents?.length) {
         dispatchBattlePassXpEvents(
           roomId,
           result.privatePatch.battlePassXpEvents,
         );
       }
+
+      const nextSnapshot = syncController.applyCommandResult(result);
+      if (!nextSnapshot) return false;
+
       setSnapshot(nextSnapshot);
       setError("");
       return true;
@@ -374,15 +375,16 @@ export function useGameSync(roomId: string) {
       }
 
       if (event.type === "game.private.patch" && realtimeMode === "hybrid") {
+        if (event.payload.patch.battlePassXpEvents?.length) {
+          dispatchBattlePassXpEvents(
+            roomId,
+            event.payload.patch.battlePassXpEvents,
+          );
+        }
+
         const result = syncController.applyRealtimePrivatePatch(event);
         if (result.applied && result.snapshot) {
           gameSyncMetricsStore.recordRealtimePatchResult(result);
-          if (event.payload.patch.battlePassXpEvents?.length) {
-            dispatchBattlePassXpEvents(
-              roomId,
-              event.payload.patch.battlePassXpEvents,
-            );
-          }
           if (isActive) {
             setSnapshot(result.snapshot);
             setError("");
