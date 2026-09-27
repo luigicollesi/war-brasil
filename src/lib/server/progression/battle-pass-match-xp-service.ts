@@ -11,6 +11,7 @@ import type {
   BattlePassLevelThreshold,
   BattlePassXpProfile,
 } from "@/src/lib/shared/progression/battle-pass-contract";
+import type { BattlePassGameXpEvent } from "@/src/lib/shared/progression/battle-pass-game-xp-event";
 
 type ActiveSeasonRow = {
   season_id: string;
@@ -76,6 +77,51 @@ export type BattlePassXpAward = Readonly<{
   victoryBonusXp?: number;
   settledReason?: "match_completed" | "player_left";
 }>;
+
+export function battlePassSettlementPresentationEvent(
+  award: BattlePassXpAward | null,
+): BattlePassGameXpEvent | null {
+  if (!award || award.duplicate || award.xpGranted <= 0) return null;
+
+  const actionXp = award.actionXp ?? 0;
+  const completionXp = award.completionXp ?? 0;
+  const victoryBonusXp = award.victoryBonusXp ?? 0;
+  const occurredAt = new Date().toISOString();
+
+  if (award.settledReason === "player_left") {
+    return {
+      id: `${award.matchId}:${award.userId}:settlement`,
+      matchId: award.matchId,
+      sourceKey: `settlement:${award.matchId}`,
+      kind: "match_settled",
+      xp: award.xpGranted,
+      label: "XP DA PARTIDA SALVO",
+      detail: null,
+      intensity: "terminal",
+      occurredAt,
+    };
+  }
+
+  const terminalXp = completionXp + victoryBonusXp;
+  if (terminalXp <= 0) return null;
+  const detailParts = [
+    completionXp > 0 ? `Conclusão +${completionXp} XP` : null,
+    victoryBonusXp > 0 ? `Vitória +${victoryBonusXp} XP` : null,
+    `Total da partida ${award.xpGranted} XP`,
+  ].filter((value): value is string => Boolean(value));
+
+  return {
+    id: `${award.matchId}:${award.userId}:settlement`,
+    matchId: award.matchId,
+    sourceKey: `settlement:${award.matchId}`,
+    kind: victoryBonusXp > 0 ? "match_won" : "match_completed",
+    xp: terminalXp,
+    label: victoryBonusXp > 0 ? "VITÓRIA" : "PARTIDA CONCLUÍDA",
+    detail: detailParts.join(" · "),
+    intensity: "terminal",
+    occurredAt,
+  };
+}
 
 export async function resolveBattlePassMatchSnapshot(
   client: PoolClient,
@@ -314,6 +360,7 @@ async function settleAccumulatedParticipant(
       multiplierBps: progress.multiplier_bps,
       actionModelVersion: input.profile.actionModelVersion,
       settledReason: input.reason,
+      isWinner: input.completed && input.isWinner,
     },
   });
 
