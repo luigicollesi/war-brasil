@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ShowcasePurchaseError,
   purchaseShowcaseOffer,
@@ -289,6 +289,28 @@ export function BattlePassPage({
   const [feedback, setFeedback] = useState<ClaimFeedback | null>(null);
   const [claimReveal, setClaimReveal] = useState<ClaimReveal | null>(null);
   const [railStart, setRailStart] = useState(() => initialRailStart(snapshot));
+  const rewardDialogRef = useRef<HTMLDivElement>(null);
+  const rewardDialogCloseRef = useRef<HTMLButtonElement>(null);
+  const rewardDialogReturnFocusRef = useRef<HTMLElement | null>(null);
+
+  const openClaimReveal = useCallback((reveal: ClaimReveal) => {
+    if (
+      typeof document !== "undefined" &&
+      document.activeElement instanceof HTMLElement
+    ) {
+      rewardDialogReturnFocusRef.current = document.activeElement;
+    }
+    setClaimReveal(reveal);
+  }, []);
+
+  const closeClaimReveal = useCallback(() => {
+    setClaimReveal(null);
+    if (typeof window === "undefined") return;
+    window.requestAnimationFrame(() => {
+      rewardDialogReturnFocusRef.current?.focus();
+      rewardDialogReturnFocusRef.current = null;
+    });
+  }, []);
 
   const currentIndex = useMemo(() => {
     if (!snapshot) return 0;
@@ -299,6 +321,55 @@ export function BattlePassPage({
       ),
     );
   }, [snapshot]);
+
+  useEffect(() => {
+    if (!claimReveal) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      rewardDialogCloseRef.current?.focus();
+    });
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeClaimReveal();
+        return;
+      }
+
+      if (event.key !== "Tab") return;
+      const dialog = rewardDialogRef.current;
+      if (!dialog) return;
+
+      const focusable = Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((element) => !element.hasAttribute("aria-hidden"));
+
+      if (focusable.length === 0) {
+        event.preventDefault();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable.at(-1);
+      if (!first || !last) return;
+
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [claimReveal, closeClaimReveal]);
 
   async function claimReward(reward: BattlePassRewardPresentation) {
     if (pendingRewardId || claimAllPending) return;
@@ -315,7 +386,7 @@ export function BattlePassPage({
         title: "RECOMPENSA OBTIDA",
         detail: reward.name,
       });
-      setClaimReveal({ kind: "reward", reward });
+      openClaimReveal({ kind: "reward", reward });
       router.refresh();
     } catch {
       setFeedback({
@@ -351,7 +422,7 @@ export function BattlePassPage({
         title: "CONJUNTO OBTIDO",
         detail: `${INTEGER.format(result.claimedCount ?? 0)} itens recebidos`,
       });
-      setClaimReveal({
+      openClaimReveal({
         kind: "group",
         rewards,
         claimedCount: result.claimedCount ?? 0,
@@ -430,7 +501,7 @@ export function BattlePassPage({
         title: "RECOMPENSAS RECEBIDAS",
         detail: `${INTEGER.format(claimedCount)} recompensas · +${INTEGER.format(creditAmount)} CR`,
       });
-      setClaimReveal({
+      openClaimReveal({
         kind: "batch",
         claimedCount,
         alreadyClaimedCount,
@@ -832,6 +903,7 @@ export function BattlePassPage({
 
       {claimReveal ? (
         <div
+          ref={rewardDialogRef}
           className={styles.rewardRevealBackdrop}
           role="dialog"
           aria-modal="true"
@@ -913,7 +985,11 @@ export function BattlePassPage({
                 ))}
               </>
             )}
-            <button type="button" onClick={() => setClaimReveal(null)}>
+            <button
+              ref={rewardDialogCloseRef}
+              type="button"
+              onClick={closeClaimReveal}
+            >
               CONTINUAR
             </button>
           </section>
