@@ -2537,13 +2537,13 @@ A feature está concluída quando:
 5. match congela temporada/perfil completo de XP;
 6. action ledger impede duplicação de ações de XP;
 7. settlement final impede duplicação do grant sazonal;
-15. progresso sazonal só é alterado no settlement;
-16. saída voluntária preserva XP de ações e remove bônus de conclusão/vitória;
-17. derrotado/eliminado normalmente recebe bônus de conclusão;
-18. movimentação e troca entre jogadores concedem 0 XP;
-19. caps e diminishing returns antifarm estão ativos;
-20. nível 100 exige exatamente 40.000 XP;
-21. progress apresenta nível correto;
+8. progresso sazonal só é alterado no settlement;
+9. saída voluntária preserva XP de ações e remove bônus de conclusão/vitória;
+10. derrotado/eliminado normalmente recebe bônus de conclusão;
+11. movimentação/manobra e troca entre jogadores concedem 0 XP;
+12. caps e diminishing returns antifarm estão ativos;
+13. nível 100 exige exatamente 40.000 XP;
+14. progress apresenta nível correto;
 15. Livre funciona sem compra;
 16. Elite custa exatamente 3.000 Créditos;
 17. compra Elite usa Economy V2 e é idempotente;
@@ -2562,16 +2562,16 @@ A feature está concluída quando:
 30. claim-all funciona sem duplicar grants;
 31. Créditos recebidos entram em economy.ledger_entries;
 32. cosméticos reutilizam ownership existente;
-33. animações só iniciam após confirmação do servidor;
+33. feedback de XP e animações de claim só iniciam após confirmação autoritativa correspondente;
 34. claim-all não reproduz dezenas de overlays;
-35. reduced motion funciona;
-36. /home e /campaign não possuem overflow horizontal acidental;
-37. navegação por teclado e foco são preservados;
-38. assets não causam carregamento inicial desnecessário dos 100 níveis;
-39. feedback de XP em partida usa somente delta confirmado pelo servidor;
-40. feedback de XP usa queue, não sobrepõe eventos e não bloqueia interação;
-41. cinematic de dados posterga feedback correspondente até poder ser visto;
-42. reduced motion preserva a informação sem movimento desnecessário;
+35. feedback de XP em partida usa somente delta confirmado pelo servidor;
+36. feedback de XP usa queue, não sobrepõe eventos e não bloqueia interação;
+37. cinematic de dados posterga feedback correspondente até poder ser visto;
+38. reduced motion preserva a informação sem movimento desnecessário;
+39. /home e /campaign não possuem overflow horizontal acidental;
+40. navegação por teclado e foco são preservados;
+41. assets não causam carregamento inicial desnecessário dos 100 níveis;
+42. action XP, settlement, claims e compra Elite possuem cobertura de concorrência/integridade;
 43. testes de domínio, banco, frontend e concorrência críticos estão verdes.
 
 ## 59. Resumo canônico V1
