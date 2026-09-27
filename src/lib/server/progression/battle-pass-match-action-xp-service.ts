@@ -505,23 +505,21 @@ export async function recordBattlePassCombat(
 ) {
   if (!input.sourceKey) return [];
   const sourceKey = `${input.sourceKey}:combat`;
-  const results = await Promise.all([
-    recordCombatForPlayer(client, {
-      roomId: input.roomId,
-      playerId: input.attackerPlayerId,
-      sourceKey,
-      troopsLost: input.attackerLosses,
-      enemyTroopsDefeated: input.defenderLosses,
-    }),
-    recordCombatForPlayer(client, {
-      roomId: input.roomId,
-      playerId: input.defenderPlayerId,
-      sourceKey,
-      troopsLost: input.defenderLosses,
-      enemyTroopsDefeated: input.attackerLosses,
-    }),
-  ]);
-  return results.filter(
+  const attacker = await recordCombatForPlayer(client, {
+    roomId: input.roomId,
+    playerId: input.attackerPlayerId,
+    sourceKey,
+    troopsLost: input.attackerLosses,
+    enemyTroopsDefeated: input.defenderLosses,
+  });
+  const defender = await recordCombatForPlayer(client, {
+    roomId: input.roomId,
+    playerId: input.defenderPlayerId,
+    sourceKey,
+    troopsLost: input.defenderLosses,
+    enemyTroopsDefeated: input.attackerLosses,
+  });
+  return [attacker, defender].filter(
     (result): result is BattlePassActionXpResult => result !== null,
   );
 }
