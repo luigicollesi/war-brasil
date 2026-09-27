@@ -84,3 +84,22 @@ export type BattlePassHomeSummary =
       nextLevelXp: number | null;
       claimableCount: number;
     }>;
+
+
+export type BattlePassMatchResult = Readonly<{
+  seasonId: string;
+  seasonName: string;
+  matchId: string;
+  xpGranted: number;
+  totalXpAfter: number;
+  levelBefore: number;
+  levelAfter: number;
+  levelsGained: number;
+  isWinner: boolean;
+  breakdown: Readonly<{
+    completionXp: number;
+    victoryBonusXp: number;
+    multiplierBps: number;
+    humanParticipantCount: number;
+  }>;
+}>;
