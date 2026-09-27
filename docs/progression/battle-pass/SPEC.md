@@ -49,31 +49,31 @@ A V1 MUST obedecer às seguintes decisões:
 5. comprar Elite não reinicia nem cria progressão separada;
 6. o mesmo XP avança Livre e Elite;
 7. a Trilha Elite pode ser adquirida depois de o jogador já ter avançado níveis;
-15. ao adquirir Elite tardiamente, recompensas Elite de níveis já alcançados tornam-se coletáveis retroativamente;
-16. a Trilha Livre concede exatamente 1.000 Créditos de Campanha ao completar toda a distribuição monetária;
-17. a Trilha Elite concede 2.500 Créditos de Campanha adicionais;
-18. um jogador Elite que conclui e coleta ambas as trilhas recebe 3.500 Créditos no total da temporada;
-19. uma recompensa monetária individual MUST ser de pelo menos 5 Créditos;
-20. níveis sem recompensa são válidos;
-21. um nível MAY possuir mais de uma recompensa;
-22. uma recompensa MUST possuir estado de coleta individual;
-23. recompensas desbloqueadas não são automaticamente equivalentes a recompensas coletadas;
-24. a interface MUST oferecer coleta individual;
-25. a interface MUST oferecer COLETAR TODAS quando existir mais de uma recompensa coletável;
-26. a Trilha Livre termina com um título exclusivo no nível 100;
-27. a Trilha Elite termina com outro título exclusivo no nível 100;
-28. o nível 100 não concede moedas na distribuição V1;
-29. o Passe deve ser acessível diretamente pela /home;
-30. a experiência completa vive em uma superfície dedicada de Campanha;
-31. o navegador nunca declara XP, nível, ownership ou claim como autoritativo;
-32. XP de partida é acumulado progressivamente por ações elegíveis, mas só entra no progresso sazonal na liquidação;
-33. conclusão normal da partida concede bônus mesmo para participante derrotado/eliminado;
-34. saída voluntária liquida somente o XP acumulado até a saída, sem bônus de conclusão ou vitória;
-35. movimentação/manobra de tropas não concede XP;
-36. trocas entre jogadores não concedem XP;
-37. o Passe V1 exige exatamente 40.000 XP acumulados para alcançar o nível 100;
-38. toda apresentação de XP em partida usa delta confirmado pelo servidor, nunca cálculo local;
-39. feedback visual de XP é não bloqueante, usa camada absoluta z-index 99 e respeita reduced motion.
+8. ao adquirir Elite tardiamente, recompensas Elite de níveis já alcançados tornam-se coletáveis retroativamente;
+9. a Trilha Livre concede exatamente 1.000 Créditos de Campanha ao completar toda a distribuição monetária;
+10. a Trilha Elite concede 2.500 Créditos de Campanha adicionais;
+11. um jogador Elite que conclui e coleta ambas as trilhas recebe 3.500 Créditos no total da temporada;
+12. uma recompensa monetária individual MUST ser de pelo menos 5 Créditos;
+13. níveis sem recompensa são válidos;
+14. um nível MAY possuir mais de uma recompensa;
+15. uma recompensa MUST possuir estado de coleta individual;
+16. recompensas desbloqueadas não são automaticamente equivalentes a recompensas coletadas;
+17. a interface MUST oferecer coleta individual;
+18. a interface MUST oferecer COLETAR TODAS quando existir mais de uma recompensa coletável;
+19. a Trilha Livre termina com um título exclusivo no nível 100;
+20. a Trilha Elite termina com outro título exclusivo no nível 100;
+21. o nível 100 não concede moedas na distribuição V1;
+22. o Passe deve ser acessível diretamente pela /home;
+23. a experiência completa vive em uma superfície dedicada de Campanha;
+24. o navegador nunca declara XP, nível, ownership ou claim como autoritativo;
+25. XP de partida é acumulado progressivamente por ações elegíveis, mas só entra no progresso sazonal na liquidação;
+26. conclusão normal da partida concede bônus mesmo para participante derrotado/eliminado;
+27. saída voluntária liquida somente o XP acumulado até a saída, sem bônus de conclusão ou vitória;
+28. movimentação/manobra de tropas não concede XP;
+29. trocas entre jogadores não concedem XP;
+30. o Passe V1 exige exatamente 40.000 XP acumulados para alcançar o nível 100;
+31. toda apresentação de XP em partida usa delta confirmado pelo servidor, nunca cálculo local;
+32. feedback visual de XP é não bloqueante, usa camada absoluta z-index 99 e respeita reduced motion.
 
 ## 3. Nomenclatura
 
@@ -437,6 +437,28 @@ progression.battle_pass_match_xp_actions
 
 UNIQUE(match_id, user_id, source_key)
 ~~~
+
+action_kind representa o evento autoritativo agregado por comando, não necessariamente cada componente interno.
+
+Valores V1 esperados:
+
+~~~text
+troops_placed
+card_trade
+combat
+territory_conquest
+~~~
+
+Para combat, metadata preserva separadamente pelo menos:
+
+~~~text
+troops_lost
+enemy_troops_defeated
+troop_lost_raw_xp
+enemy_defeated_raw_xp
+~~~
+
+Assim um único source_key de combate continua idempotente mesmo quando o mesmo jogador simultaneamente perde e derrota tropas.
 
 e read model/acumulador:
 
@@ -1579,9 +1601,10 @@ Exemplo de conclusão:
 ~~~text
 PROGRESSO DE CAMPANHA
 
-PARTIDA CONCLUÍDA  +150 XP
--------------------------
-TOTAL DA PARTIDA    485 XP
+AÇÕES DA PARTIDA     335 XP
+CONCLUSÃO           +150 XP
+--------------------------
+TOTAL DA PARTIDA     485 XP
 
 NÍVEL 17 -> 18
 ~~~
@@ -1592,10 +1615,11 @@ Exemplo de vitória:
 PROGRESSO DE CAMPANHA
 
 VITÓRIA
-CONCLUSÃO          +150 XP
-VITÓRIA            +200 XP
--------------------------
-TOTAL DA PARTIDA    735 XP
+AÇÕES DA PARTIDA     385 XP
+CONCLUSÃO           +150 XP
+VITÓRIA             +200 XP
+--------------------------
+TOTAL DA PARTIDA     735 XP
 ~~~
 
 A tela apenas apresenta resultado já persistido.
@@ -2593,6 +2617,9 @@ XP DE PARTIDA
   vitória                      +200 adicional
   manobra/movimentação            0
   troca entre jogadores           0
+
+PARTIDA 1 HUMANO + BOTS
+  multiplicador                  40%
 
 CURVA
   nível 1 -> 2                 225 XP
