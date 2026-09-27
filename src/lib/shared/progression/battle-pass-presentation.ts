@@ -14,6 +14,7 @@ export type BattlePassRewardPresentation = Readonly<{
   level: number;
   track: BattlePassTrack;
   position: number;
+  presentationGroupKey: string | null;
   kind: BattlePassRewardKind;
   state: BattlePassResolvedRewardState;
   creditAmount: number | null;
