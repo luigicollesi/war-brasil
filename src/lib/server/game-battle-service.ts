@@ -8,6 +8,10 @@ import {
   type BattleStage,
 } from "@/src/lib/game-transitions";
 import { evaluateGameVictory } from "@/src/lib/server/game-victory-service";
+import {
+  recordBattlePassCombat,
+  recordBattlePassTerritoryConquest,
+} from "@/src/lib/server/progression/battle-pass-match-action-xp-service";
 import { RoomError } from "@/src/lib/rooms";
 
 type BattleResult = {
@@ -19,6 +23,7 @@ type BattleResult = {
 };
 
 export type Battle = BattleResult & {
+  id?: string;
   attackerTerritoryId: number;
   defenderTerritoryId: number;
   attackerPlayerId: string;
@@ -55,6 +60,7 @@ export function isBattle(value: unknown): value is Battle {
 
   const battle = value as Partial<Battle>;
   return (
+    (battle.id === undefined || typeof battle.id === "string") &&
     typeof battle.attackerTerritoryId === "number" &&
     typeof battle.defenderTerritoryId === "number" &&
     typeof battle.attackerPlayerId === "string" &&
@@ -211,6 +217,15 @@ async function applyBattleOutcome(
        WHERE room_id=$1 AND territory_id=$2`,
       [room.id, defender.territory_id, defenderTroops],
     );
+
+    await recordBattlePassCombat(client, {
+      roomId: room.id,
+      sourceKey: battle.id ? `battle:${battle.id}` : null,
+      attackerPlayerId: battle.attackerPlayerId,
+      defenderPlayerId: battle.defenderPlayerId,
+      attackerLosses: battle.attackerLosses,
+      defenderLosses: battle.defenderLosses,
+    });
     return;
   }
 
@@ -236,6 +251,22 @@ async function applyBattleOutcome(
 
   room.pending_from_territory_id = battle.attackerTerritoryId;
   room.pending_to_territory_id = battle.defenderTerritoryId;
+
+  const battleXpSourceKey = battle.id ? `battle:${battle.id}` : null;
+  await recordBattlePassCombat(client, {
+    roomId: room.id,
+    sourceKey: battleXpSourceKey,
+    attackerPlayerId: battle.attackerPlayerId,
+    defenderPlayerId: battle.defenderPlayerId,
+    attackerLosses: battle.attackerLosses,
+    defenderLosses: battle.defenderLosses,
+  });
+  await recordBattlePassTerritoryConquest(client, {
+    roomId: room.id,
+    playerId: battle.attackerPlayerId,
+    territoryId: battle.defenderTerritoryId,
+    sourceKey: battleXpSourceKey,
+  });
 
   const defenderStillHasTerritory = await client.query(
     `SELECT 1
