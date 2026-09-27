@@ -141,6 +141,7 @@ function sameBattle(left: GameBattle | null, right: GameBattle | null) {
   if (!left || !right) return false;
 
   return (
+    left.id === right.id &&
     left.attackerLosses === right.attackerLosses &&
     left.defenderLosses === right.defenderLosses &&
     left.conquered === right.conquered &&
