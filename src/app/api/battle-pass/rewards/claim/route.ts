@@ -5,6 +5,11 @@ import {
 } from "@/src/lib/server/auth/auth-guard";
 import { rejectUntrustedMutationOrigin } from "@/src/lib/server/auth/request-origin";
 import {
+  battlePassErrorCode,
+  logBattlePassClaimOutcomes,
+  logBattlePassEvent,
+} from "@/src/lib/server/observability/battle-pass-events";
+import {
   BoundedJsonBodyError,
   readBoundedJsonBody,
 } from "@/src/lib/server/http/read-bounded-json";
@@ -57,11 +62,16 @@ export async function POST(request: Request) {
       session.user.id,
       input.rewardId,
     );
+    logBattlePassClaimOutcomes(session.user.id, [claim]);
     return NextResponse.json(
       { ok: true, claim },
       { headers: { "Cache-Control": "private, no-store" } },
     );
   } catch (error) {
+    logBattlePassEvent("battle_pass_claim_failed", {
+      userId: session.user.id,
+      errorCode: battlePassErrorCode(error),
+    });
     return errorResponse(error);
   }
 }
