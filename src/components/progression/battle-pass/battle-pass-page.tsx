@@ -33,7 +33,11 @@ type ClaimReveal =
   | Readonly<{
       kind: "batch";
       claimedCount: number;
+      alreadyClaimedCount: number;
       creditAmount: number;
+      gameCosmeticCount: number;
+      titleCount: number;
+      backgroundCount: number;
     }>;
 
 function progressPercent(snapshot: BattlePassSnapshot) {
@@ -225,10 +229,18 @@ export function BattlePassPage({
       if (!response.ok) throw new Error("claim_all_failed");
       const result = (await response.json()) as {
         claimedCount?: number;
+        alreadyClaimedCount?: number;
         creditAmount?: number;
+        gameCosmeticCount?: number;
+        titleCount?: number;
+        backgroundCount?: number;
       };
       const claimedCount = result.claimedCount ?? 0;
+      const alreadyClaimedCount = result.alreadyClaimedCount ?? 0;
       const creditAmount = result.creditAmount ?? 0;
+      const gameCosmeticCount = result.gameCosmeticCount ?? 0;
+      const titleCount = result.titleCount ?? 0;
+      const backgroundCount = result.backgroundCount ?? 0;
       setFeedback({
         title: "RECOMPENSAS RECEBIDAS",
         detail: `${INTEGER.format(claimedCount)} recompensas · +${INTEGER.format(creditAmount)} CR`,
@@ -236,7 +248,11 @@ export function BattlePassPage({
       setClaimReveal({
         kind: "batch",
         claimedCount,
+        alreadyClaimedCount,
         creditAmount,
+        gameCosmeticCount,
+        titleCount,
+        backgroundCount,
       });
       router.refresh();
     } catch {
@@ -638,8 +654,17 @@ export function BattlePassPage({
                 </div>
                 <strong>Recompensas coletadas</strong>
                 <span>
-                  +{INTEGER.format(claimReveal.creditAmount)} CR nesta coleta
+                  +{INTEGER.format(claimReveal.creditAmount)} CR ·{" "}
+                  {INTEGER.format(claimReveal.gameCosmeticCount)} cosméticos ·{" "}
+                  {INTEGER.format(claimReveal.backgroundCount)} backgrounds ·{" "}
+                  {INTEGER.format(claimReveal.titleCount)} títulos
                 </span>
+                {claimReveal.alreadyClaimedCount > 0 ? (
+                  <span>
+                    {INTEGER.format(claimReveal.alreadyClaimedCount)} recompensas
+                    já estavam coletadas.
+                  </span>
+                ) : null}
               </>
             )}
             <button type="button" onClick={() => setClaimReveal(null)}>
