@@ -50,3 +50,17 @@ test("/campaign usa snapshot autoritativo, claims e reduced motion", () => {
   assert.match(server, /deriveBattlePassRewardState/);
   assert.doesNotMatch(page, /creditAmount:\s*\d+/);
 });
+
+
+test("nível 100 recebe apresentação de conclusão após claim confirmado", () => {
+  const page = read(
+    "src/components/progression/battle-pass/battle-pass-page.tsx",
+  );
+
+  assert.match(page, /CAMPANHA CONCLUÍDA/);
+  assert.match(page, /claimReveal\.reward\.level === 100/);
+  assert.match(page, /claimReveal\.reward\.kind === "commander_title"/);
+  assert.match(page, /level100Titles/);
+  assert.match(page, /TRILHA DE ELITE/);
+  assert.match(page, /TRILHA LIVRE/);
+});
