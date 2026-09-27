@@ -32,7 +32,7 @@ export async function POST(
     if (!/^\d+$/.test(roomId)) {
       throw new RoomError("Partida não encontrada.", 404);
     }
-    await assertAuthenticatedPlayerSeat(request, session, { roomId });
+    const seat = await assertAuthenticatedPlayerSeat(request, session, { roomId });
 
     body = await readJsonObject(request);
     const expectedRevision = parseGameRevision(
@@ -65,8 +65,16 @@ export async function POST(
       expectedRevision,
     );
 
+    const privatePatch = result.privatePatches?.find(
+      (delivery) => delivery.playerId === seat.playerId,
+    )?.patch;
+
     return noStoreJson(
-      { changed: result.changed, revision: result.revision },
+      {
+        changed: result.changed,
+        revision: result.revision,
+        ...(privatePatch ? { privatePatch } : {}),
+      },
       {
         headers: {
           [GAME_REVISION_HEADER]: String(result.revision),
