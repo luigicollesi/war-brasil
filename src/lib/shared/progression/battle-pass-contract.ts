@@ -20,10 +20,25 @@ export type BattlePassRewardState =
   | "claimed";
 
 export type BattlePassXpProfile = Readonly<{
+  actionModelVersion: number;
+  troopPlacedXp: number;
+  troopPlacedCapXp: number;
+  cardTradeXp: number;
+  cardTradeCapXp: number;
+  troopLostDiceXp: number;
+  troopLostDiceCapXp: number;
+  enemyTroopDefeatedXp: number;
+  enemyTroopDefeatedCapXp: number;
+  territoryFirstConquestXp: number;
+  territorySecondConquestXp: number;
   completionXp: number;
   victoryBonusXp: number;
   soloHumanBotMultiplierBps: number;
 }>;
+
+export const BATTLE_PASS_V1_TOTAL_XP = 40_000 as const;
+export const BATTLE_PASS_V1_FIRST_LEVEL_STEP_XP = 225 as const;
+export const BATTLE_PASS_V1_FINAL_LEVEL_STEP_XP = 615 as const;
 
 export type BattlePassLevelThreshold = Readonly<{
   level: number;
