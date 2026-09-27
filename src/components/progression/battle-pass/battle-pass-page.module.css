@@ -245,6 +245,39 @@
   font-size: .72rem;
 }
 
+.railControls {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.railControls button {
+  min-height: 36px;
+  padding-inline: 12px;
+  border: 1px solid rgb(208 170 87 / 24%);
+  background: rgb(208 170 87 / 5%);
+  color: rgb(238 232 218 / 62%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: .5rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  cursor: pointer;
+}
+
+.railControls button:hover,
+.railControls button:focus-visible {
+  border-color: var(--campaign-brass);
+  color: var(--campaign-brass);
+  outline: 2px solid var(--campaign-brass);
+  outline-offset: 2px;
+}
+
+.railControls button:disabled {
+  cursor: not-allowed;
+  opacity: .28;
+}
+
 .trackLabels {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -470,6 +503,129 @@
   letter-spacing: .08em;
 }
 
+.rewardRevealBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background:
+    radial-gradient(circle at 50% 42%, rgb(208 170 87 / 12%), transparent 28%),
+    rgb(1 7 5 / 82%);
+  backdrop-filter: blur(7px);
+  animation: rewardRevealBackdropIn 240ms ease-out both;
+}
+
+.rewardRevealCard {
+  position: relative;
+  width: min(430px, 100%);
+  overflow: hidden;
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: clamp(28px, 6vw, 48px);
+  border: 1px solid rgb(208 170 87 / 42%);
+  background:
+    linear-gradient(145deg, rgb(208 170 87 / 12%), transparent 46%),
+    #07120d;
+  box-shadow:
+    0 30px 90px rgb(0 0 0 / 52%),
+    inset 0 0 0 1px rgb(238 232 218 / 3%);
+  text-align: center;
+  animation: rewardClaimEnter 520ms cubic-bezier(.2, .78, .2, 1) both;
+}
+
+.rewardRevealCard::before {
+  content: "";
+  position: absolute;
+  inset: -40% auto -40% -30%;
+  width: 32%;
+  transform: rotate(18deg);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(238 232 218 / 14%),
+    transparent
+  );
+  animation: rewardClaimSweep 900ms 180ms ease-out both;
+  pointer-events: none;
+}
+
+.rewardRevealCard > small {
+  color: rgb(208 170 87 / 72%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: .58rem;
+  font-weight: 900;
+  letter-spacing: .16em;
+}
+
+.rewardRevealCard > strong {
+  max-width: 24ch;
+  color: var(--campaign-ivory);
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: clamp(1.35rem, 4vw, 2.1rem);
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+
+.rewardRevealCard > span {
+  color: rgb(238 232 218 / 56%);
+  font-size: .7rem;
+}
+
+.rewardRevealCard > button {
+  min-width: 160px;
+  min-height: 44px;
+  margin-top: 8px;
+  border: 1px solid rgb(208 170 87 / 50%);
+  background: rgb(208 170 87 / 10%);
+  color: var(--campaign-ivory);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: .58rem;
+  font-weight: 900;
+  letter-spacing: .09em;
+  cursor: pointer;
+}
+
+.rewardRevealCard > button:hover,
+.rewardRevealCard > button:focus-visible {
+  background: var(--campaign-brass);
+  color: #101913;
+  outline: 2px solid var(--campaign-brass);
+  outline-offset: 3px;
+}
+
+.rewardRevealVisual {
+  width: min(220px, 72vw);
+  min-height: 150px;
+  display: grid;
+  place-items: center;
+  margin-block: 4px;
+}
+
+.rewardRevealVisual .rewardImage {
+  max-height: 160px;
+}
+
+.rewardRevealVisual .creditVisual strong {
+  font-size: 2.8rem;
+}
+
+.rewardRevealBatch {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 130px;
+  color: var(--campaign-brass);
+}
+
+.rewardRevealBatch > strong {
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: 4rem;
+  line-height: 1;
+}
+
 .empty {
   min-height: calc(100dvh - 150px);
   display: grid;
@@ -480,6 +636,28 @@
 
 .empty h1 {
   font-size: clamp(2.6rem, 8vw, 7rem);
+}
+
+@keyframes rewardRevealBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes rewardClaimEnter {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes rewardClaimSweep {
+  from { transform: translateX(0) rotate(18deg); opacity: 0; }
+  24% { opacity: 1; }
+  to { transform: translateX(520%) rotate(18deg); opacity: 0; }
 }
 
 @keyframes rewardReveal {
@@ -523,7 +701,17 @@
     flex-direction: column;
   }
 
-  .trackLabels {
+  .railControls {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+
+  .railControls button {
+    min-width: 0;
+    padding-inline: 6px;
+  }
+
+    .trackLabels {
     display: none;
   }
 
@@ -579,7 +767,10 @@
 
 @media (prefers-reduced-motion: reduce) {
   .progressTrack > span,
-  .feedback {
+  .feedback,
+  .rewardRevealBackdrop,
+  .rewardRevealCard,
+  .rewardRevealCard::before {
     animation: none !important;
     transition: none !important;
   }
