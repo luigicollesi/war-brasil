@@ -93,3 +93,20 @@ test("dialog de recompensa prende e restaura foco com Escape", () => {
   assert.match(page, /rewardDialogReturnFocusRef\.current\?\.focus\(\)/);
   assert.match(page, /aria-modal="true"/);
 });
+
+
+test("Home diferencia campanha encerrada sem esconder rewards pendentes", () => {
+  const home = read("src/components/pre-game/home/command-home-client.tsx");
+  const presentation = read(
+    "src/lib/shared/progression/battle-pass-presentation.ts",
+  );
+  const snapshot = read(
+    "src/lib/server/progression/battle-pass-snapshot-service.ts",
+  );
+
+  assert.match(presentation, /seasonStatus: "active" \| "ended"/);
+  assert.match(snapshot, /seasonStatus: season\.status/);
+  assert.match(home, /initialCampaign\.seasonStatus === "ended"/);
+  assert.match(home, /CAMPANHA ENCERRADA/);
+  assert.match(home, /PARA COLETAR/);
+});
