@@ -21,6 +21,13 @@ export type BattlePassEventFields = Readonly<{
   errorCode?: string | null;
 }>;
 
+type ClaimOutcome = Readonly<{
+  rewardId: string;
+  seasonId: string;
+  amount: number | null;
+  alreadyClaimed: boolean;
+}>;
+
 export function logBattlePassEvent(
   event: BattlePassEventName,
   fields: BattlePassEventFields,
@@ -32,4 +39,38 @@ export function logBattlePassEvent(
       ...fields,
     }),
   );
+}
+
+export function logBattlePassClaimOutcomes(
+  userId: string,
+  claims: ReadonlyArray<ClaimOutcome>,
+  groupKey: string | null = null,
+) {
+  for (const claim of claims) {
+    logBattlePassEvent(
+      claim.alreadyClaimed
+        ? "battle_pass_claim_duplicate"
+        : "battle_pass_reward_claimed",
+      {
+        seasonId: claim.seasonId,
+        userId,
+        rewardId: claim.rewardId,
+        groupKey,
+        amount: claim.amount,
+        duplicate: claim.alreadyClaimed,
+      },
+    );
+  }
+}
+
+export function battlePassErrorCode(error: unknown) {
+  if (
+    error &&
+    typeof error === "object" &&
+    "code" in error &&
+    typeof (error as { code?: unknown }).code === "string"
+  ) {
+    return (error as { code: string }).code;
+  }
+  return "BATTLE_PASS_UNEXPECTED_ERROR";
 }
