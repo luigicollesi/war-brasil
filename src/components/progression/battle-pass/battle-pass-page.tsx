@@ -116,6 +116,24 @@ function initialRailStart(snapshot: BattlePassSnapshot | null) {
   return Math.max(0, Math.min(maxStart, Math.max(0, currentIndex - 2)));
 }
 
+function rewardGroupLabel(key: string | null) {
+  if (key === "premium-initial-set") return "CONJUNTO ELITE INICIAL";
+  return key ? "CONJUNTO" : null;
+}
+
+function isRewardGroupLeader(
+  rewards: ReadonlyArray<BattlePassRewardPresentation>,
+  reward: BattlePassRewardPresentation,
+) {
+  if (!reward.presentationGroupKey) return false;
+  return (
+    rewards.find(
+      (candidate) =>
+        candidate.presentationGroupKey === reward.presentationGroupKey,
+    )?.id === reward.id
+  );
+}
+
 function RewardVisual({ reward }: { reward: BattlePassRewardPresentation }) {
   if (reward.kind === "campaign_credit") {
     return (
@@ -170,11 +188,15 @@ function RewardVisual({ reward }: { reward: BattlePassRewardPresentation }) {
 function RewardCard({
   reward,
   pending,
+  groupLeader,
   onClaim,
+  onClaimGroup,
 }: {
   reward: BattlePassRewardPresentation;
   pending: boolean;
+  groupLeader: boolean;
   onClaim: (reward: BattlePassRewardPresentation) => void;
+  onClaimGroup: (reward: BattlePassRewardPresentation) => void;
 }) {
   const interactive = reward.state === "claimable";
 
@@ -193,9 +215,25 @@ function RewardCard({
       </div>
       <div className={styles.rewardCopy}>
         <strong>{reward.name}</strong>
-        {reward.rarity ? <small>{reward.rarity.toUpperCase()}</small> : null}
+        {reward.presentationGroupKey ? (
+          <small>{rewardGroupLabel(reward.presentationGroupKey)}</small>
+        ) : reward.rarity ? (
+          <small>{reward.rarity.toUpperCase()}</small>
+        ) : null}
       </div>
-      {interactive ? (
+      {interactive && reward.presentationGroupKey ? (
+        groupLeader ? (
+          <button
+            type="button"
+            disabled={pending}
+            onClick={() => onClaimGroup(reward)}
+          >
+            {pending ? "PROCESSANDO..." : "COLETAR CONJUNTO"}
+          </button>
+        ) : (
+          <span className={styles.rewardLock}>PARTE DO CONJUNTO</span>
+        )
+      ) : interactive ? (
         <button
           type="button"
           disabled={pending}
@@ -362,6 +400,67 @@ export function BattlePassPage({
       setFeedback({
         title: "CONJUNTO INDISPONÍVEL",
         detail: "Não foi possível confirmar a coleta do conjunto agora.",
+      });
+    } finally {
+      setPendingRewardId(null);
+    }
+  }
+
+  async function claimRewardGroup(
+    reward: BattlePassRewardPresentation,
+  ) {
+    if (
+      !reward.presentationGroupKey ||
+      pendingRewardId ||
+      claimAllPending
+    ) {
+      return;
+    }
+
+    setPendingRewardId(reward.id);
+    setFeedback(null);
+    try {
+      const response = await fetch("/api/battle-pass/rewards/claim-group", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rewardId: reward.id }),
+      });
+      if (!response.ok) throw new Error("claim_group_failed");
+
+      const result = (await response.json()) as {
+        claimedCount?: number;
+        alreadyClaimedCount?: number;
+        creditAmount?: number;
+        gameCosmeticCount?: number;
+        titleCount?: number;
+        backgroundCount?: number;
+      };
+      const claimedCount = result.claimedCount ?? 0;
+      const alreadyClaimedCount = result.alreadyClaimedCount ?? 0;
+      const creditAmount = result.creditAmount ?? 0;
+      const gameCosmeticCount = result.gameCosmeticCount ?? 0;
+      const titleCount = result.titleCount ?? 0;
+      const backgroundCount = result.backgroundCount ?? 0;
+
+      setFeedback({
+        title: "CONJUNTO RECEBIDO",
+        detail: `${INTEGER.format(claimedCount)} recompensas confirmadas.`,
+      });
+      setClaimReveal({
+        kind: "batch",
+        claimedCount,
+        alreadyClaimedCount,
+        creditAmount,
+        gameCosmeticCount,
+        titleCount,
+        backgroundCount,
+        level100Titles: [],
+      });
+      router.refresh();
+    } catch {
+      setFeedback({
+        title: "CONJUNTO INDISPONÍVEL",
+        detail: "O conjunto não pôde ser coletado agora.",
       });
     } finally {
       setPendingRewardId(null);
@@ -797,7 +896,12 @@ export function BattlePassPage({
                       key={reward.id}
                       reward={reward}
                       pending={pendingRewardId === reward.id}
+                      groupLeader={isRewardGroupLeader(
+                        level.premiumRewards,
+                        reward,
+                      )}
                       onClaim={(item) => void claimReward(item)}
+                      onClaimGroup={(item) => void claimRewardGroup(item)}
                     />
                   ))
                 ) : (
