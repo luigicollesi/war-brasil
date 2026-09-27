@@ -14,6 +14,10 @@ const rewardIdentity = readFileSync(
   "src/lib/db/migrations/managed/076-battle-pass-reward-identity.sql",
   "utf8",
 );
+const xpV1Integrity = readFileSync(
+  "src/lib/db/migrations/managed/078-battle-pass-xp-v1-integrity.sql",
+  "utf8",
+);
 
 test("XP profiles são append-only e catálogo ativo/histórico é congelado", () => {
   assert.match(immutability, /battle_pass_xp_profiles_append_only/);
@@ -56,4 +60,24 @@ test("ativação exige rewards sazonais distintos por categoria", () => {
   assert.match(rewardIdentity, /3 distinct seasonal territory skins/);
   assert.match(rewardIdentity, /distinct free and Elite level-100 titles/);
   assert.match(rewardIdentity, /battle_pass_seasons_reward_identity_guard/);
+});
+
+
+test("ativação exige curva exata de 40k e perfil acumulativo V1", () => {
+  assert.match(xpV1Integrity, /final_required_xp <> 40000/);
+  assert.match(xpV1Integrity, /action_model_version=2/);
+  assert.match(xpV1Integrity, /troop_placed_xp=1/);
+  assert.match(xpV1Integrity, /troop_placed_cap_xp=60/);
+  assert.match(xpV1Integrity, /card_trade_xp=20/);
+  assert.match(xpV1Integrity, /card_trade_cap_xp=80/);
+  assert.match(xpV1Integrity, /troop_lost_dice_xp=1/);
+  assert.match(xpV1Integrity, /troop_lost_dice_cap_xp=50/);
+  assert.match(xpV1Integrity, /enemy_troop_defeated_xp=2/);
+  assert.match(xpV1Integrity, /enemy_troop_defeated_cap_xp=100/);
+  assert.match(xpV1Integrity, /territory_first_conquest_xp=25/);
+  assert.match(xpV1Integrity, /territory_second_conquest_xp=10/);
+  assert.match(xpV1Integrity, /completion_xp=150/);
+  assert.match(xpV1Integrity, /victory_bonus_xp=200/);
+  assert.match(xpV1Integrity, /solo_human_bot_multiplier_bps=4000/);
+  assert.match(xpV1Integrity, /battle_pass_seasons_xp_v1_guard/);
 });
