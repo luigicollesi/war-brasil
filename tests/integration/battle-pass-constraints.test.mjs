@@ -84,6 +84,9 @@ if (!databaseUrl) {
              to_regprocedure(
                'catalog.validate_battle_pass_reward_identity()'
              ) IS NOT NULL AS reward_identity_function,
+             to_regprocedure(
+               'catalog.validate_battle_pass_xp_v1_activation()'
+             ) IS NOT NULL AS xp_v1_function,
              to_regclass(
                'progression.battle_pass_match_progress'
              ) IS NOT NULL AS accumulated_progress_table,
@@ -122,18 +125,30 @@ if (!databaseUrl) {
                   AND relation.relname='battle_pass_seasons'
                   AND trigger.tgname='battle_pass_seasons_reward_identity_guard'
                   AND NOT trigger.tgisinternal
-             ) AS reward_identity_trigger`,
+             ) AS reward_identity_trigger,
+             EXISTS(
+               SELECT 1
+                 FROM pg_trigger trigger
+                 JOIN pg_class relation ON relation.oid=trigger.tgrelid
+                 JOIN pg_namespace namespace ON namespace.oid=relation.relnamespace
+                WHERE namespace.nspname='catalog'
+                  AND relation.relname='battle_pass_seasons'
+                  AND trigger.tgname='battle_pass_seasons_xp_v1_guard'
+                  AND NOT trigger.tgisinternal
+             ) AS xp_v1_trigger`,
         );
         assert.deepEqual(cleanInstallGuards.rows[0], {
           lifecycle_function: true,
           elite_price_function: true,
           reward_identity_function: true,
+          xp_v1_function: true,
           accumulated_progress_table: true,
           accumulated_action_table: true,
           conquest_counter_table: true,
           lifecycle_trigger: true,
           elite_price_trigger: true,
           reward_identity_trigger: true,
+          xp_v1_trigger: true,
         });
 
         await client.query(
