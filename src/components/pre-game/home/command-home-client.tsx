@@ -637,7 +637,9 @@ export function CommandHomeClient({
                     <strong>{destination.label}</strong>
                     <span>
                       {destination.id === "campaign" && initialCampaign?.active
-                        ? `NÍVEL ${initialCampaign.levelReached} · ${initialCampaign.claimableCount} PARA COLETAR`
+                        ? initialCampaign.seasonStatus === "ended"
+                          ? `CAMPANHA ENCERRADA · ${initialCampaign.claimableCount} PARA COLETAR`
+                          : `NÍVEL ${initialCampaign.levelReached} · ${initialCampaign.claimableCount} PARA COLETAR`
                         : destination.id === "campaign" && initialCampaign?.active === false
                           ? "Nenhuma Campanha ativa"
                           : destination.detail}
