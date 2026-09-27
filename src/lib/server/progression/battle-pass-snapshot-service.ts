@@ -114,6 +114,7 @@ function appearanceAssetRef(value: string | null) {
 }
 
 async function loadVisibleSeason() {
+  await pool.query("SELECT catalog.reconcile_battle_pass_season_lifecycle()");
   const result = await pool.query<SeasonRow>(
     `SELECT id,slug,name,description,status,starts_at,ends_at,claim_ends_at,
             hero_asset_ref,logo_asset_ref
