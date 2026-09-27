@@ -70,3 +70,23 @@ test("claim-all deriva rewards elegíveis no servidor e não recebe valores do c
     /creditAmount|cosmeticId|titleId|backgroundId|credit_amount|cosmetic_id|title_id|background_id/,
   );
 });
+
+
+test("claim-all retorna resumo determinístico por categoria e histórico já coletado", () => {
+  const service = read(
+    "src/lib/server/progression/battle-pass-reward-service.ts",
+  );
+  const page = read(
+    "src/components/progression/battle-pass/battle-pass-page.tsx",
+  );
+
+  assert.match(service, /alreadyClaimedCount/);
+  assert.match(service, /gameCosmeticCount/);
+  assert.match(service, /titleCount/);
+  assert.match(service, /backgroundCount/);
+  assert.match(service, /JOIN progression\.battle_pass_reward_claims claimed/);
+  assert.match(page, /claimReveal\.gameCosmeticCount/);
+  assert.match(page, /claimReveal\.backgroundCount/);
+  assert.match(page, /claimReveal\.titleCount/);
+  assert.match(page, /já estavam coletadas/);
+});
