@@ -1249,4 +1249,3 @@ COMMENT ON FUNCTION catalog.validate_battle_pass_elite_economy_activation() IS
 
 -- Down Migration
 -- Battle Pass commerce constraints are forward-only once a season can be sold.
-
