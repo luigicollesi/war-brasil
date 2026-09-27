@@ -19,7 +19,10 @@ import {
   finalizeGameWithoutWinner,
 } from "@/src/lib/server/game-victory-service";
 import { RoomError } from "@/src/lib/server/room-error";
-import { settleBattlePassPlayerExit } from "@/src/lib/server/progression/battle-pass-match-xp-service";
+import {
+  battlePassSettlementPresentationEvent,
+  settleBattlePassPlayerExit,
+} from "@/src/lib/server/progression/battle-pass-match-xp-service";
 
 type DepartureRoom = {
   id: string;
@@ -393,7 +396,13 @@ export async function executeLeaveGame(
   const recipients = await loadRecipients(client, room, playerId);
   const territoryIds = await departingTerritoryIds(client, room.id, playerId);
 
-  await settleBattlePassPlayerExit(client, room.id, playerId);
+  const battlePassSettlement = await settleBattlePassPlayerExit(
+    client,
+    room.id,
+    playerId,
+  );
+  const battlePassXpEvent =
+    battlePassSettlementPresentationEvent(battlePassSettlement);
   await cancelDepartureTradeState(client, room.id, playerId);
   await clearInvalidInteractionState(client, room, playerId);
   await markDeparted(client, room.id, playerId);
@@ -410,7 +419,12 @@ export async function executeLeaveGame(
     recipients,
   );
   if (finished) {
-    return { left: true, code: room.code, finished: true };
+    return {
+      left: true,
+      code: room.code,
+      finished: true,
+      battlePassXpEvent,
+    };
   }
 
   if (room.status === "playing") {
@@ -426,7 +440,12 @@ export async function executeLeaveGame(
     }
   }
 
-  return { left: true, code: room.code, finished: false };
+  return {
+    left: true,
+    code: room.code,
+    finished: false,
+    battlePassXpEvent,
+  };
 }
 
 export async function leaveGameCommand(
