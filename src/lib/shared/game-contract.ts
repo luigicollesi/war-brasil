@@ -29,6 +29,7 @@ export type BattleStage =
   | "show_battle_result";
 
 export type GameBattle = {
+  id?: string;
   attacker: number[];
   defender: number[];
   attackerLosses: number;
