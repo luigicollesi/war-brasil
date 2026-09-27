@@ -6,6 +6,7 @@
   --z-game-modal-backdrop: 80;
   --z-game-modal: 81;
   --z-game-toast: 90;
+  --z-game-xp-feedback: 99;
 }
 
 /* Todo modal de jogo vive acima de HUD, painel inferior e indicador de conexão. */
