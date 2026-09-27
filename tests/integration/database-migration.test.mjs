@@ -31,8 +31,10 @@ const physicalTables = new Map([
     "catalog",
     [
       "battle_pass_levels",
+      "battle_pass_pricing",
       "battle_pass_rewards",
       "battle_pass_seasons",
+      "battle_pass_stats",
       "battle_pass_xp_profiles",
       "bot_names",
       "campaign_assets",
