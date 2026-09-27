@@ -626,7 +626,9 @@ export function BattlePassPage({
 
       <section className={styles.hero} aria-labelledby="campaign-title">
         <div className={styles.heroCopy}>
-          <small>CAMPANHA // {snapshot.season.status.toUpperCase()}</small>
+          <small>
+            CAMPANHA // {snapshot.season.status === "active" ? "ATIVA" : "ENCERRADA"}
+          </small>
           <h1 id="campaign-title">{snapshot.season.name}</h1>
           {snapshot.season.description ? (
             <p>{snapshot.season.description}</p>
@@ -657,7 +659,9 @@ export function BattlePassPage({
               </span>
             )}
             <span>
-              ATÉ {DATE.format(new Date(snapshot.season.endsAt))}
+              {snapshot.season.status === "active"
+                ? `ATÉ ${DATE.format(new Date(snapshot.season.endsAt))}`
+                : `COLETA ATÉ ${DATE.format(new Date(snapshot.season.claimEndsAt))}`}
             </span>
           </div>
         </div>
@@ -669,6 +673,11 @@ export function BattlePassPage({
           </strong>
           {snapshot.premium.access ? (
             <span>Recompensas Elite liberadas pelo seu nível.</span>
+          ) : snapshot.season.status === "ended" ? (
+            <span>
+              A ativação da Trilha de Elite foi encerrada. Recompensas da Trilha
+              Livre já desbloqueadas continuam disponíveis até o fim da coleta.
+            </span>
           ) : (
             <>
               <span>
