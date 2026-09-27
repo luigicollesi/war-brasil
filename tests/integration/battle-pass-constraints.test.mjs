@@ -51,6 +51,42 @@ if (!databaseUrl) {
       try {
         await client.query(readFileSync("src/lib/db/schema.sql", "utf8"));
 
+        const cleanInstallGuards = await client.query(
+          `SELECT
+             to_regprocedure(
+               'catalog.reconcile_battle_pass_season_lifecycle()'
+             ) IS NOT NULL AS lifecycle_function,
+             to_regprocedure(
+               'catalog.validate_battle_pass_elite_economy_activation()'
+             ) IS NOT NULL AS elite_price_function,
+             EXISTS(
+               SELECT 1
+                 FROM pg_trigger trigger
+                 JOIN pg_class relation ON relation.oid=trigger.tgrelid
+                 JOIN pg_namespace namespace ON namespace.oid=relation.relnamespace
+                WHERE namespace.nspname='catalog'
+                  AND relation.relname='battle_pass_seasons'
+                  AND trigger.tgname='battle_pass_seasons_00_expired_rollover'
+                  AND NOT trigger.tgisinternal
+             ) AS lifecycle_trigger,
+             EXISTS(
+               SELECT 1
+                 FROM pg_trigger trigger
+                 JOIN pg_class relation ON relation.oid=trigger.tgrelid
+                 JOIN pg_namespace namespace ON namespace.oid=relation.relnamespace
+                WHERE namespace.nspname='catalog'
+                  AND relation.relname='battle_pass_seasons'
+                  AND trigger.tgname='battle_pass_seasons_elite_economy_guard'
+                  AND NOT trigger.tgisinternal
+             ) AS elite_price_trigger`,
+        );
+        assert.deepEqual(cleanInstallGuards.rows[0], {
+          lifecycle_function: true,
+          elite_price_function: true,
+          lifecycle_trigger: true,
+          elite_price_trigger: true,
+        });
+
         await client.query(
           `INSERT INTO catalog.battle_pass_xp_profiles(
              id,completion_xp,victory_bonus_xp,solo_human_bot_multiplier_bps
