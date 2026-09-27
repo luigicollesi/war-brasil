@@ -142,3 +142,62 @@ test("estado de reward diferencia nível, Elite e claim persistido", () => {
     "claimed",
   );
 });
+
+
+test("matriz cosmética V1 forma um conjunto Free e dois conjuntos Elite completos", () => {
+  assert.deepEqual(
+    contract.BATTLE_PASS_V1_FREE_COSMETIC_REWARDS.map((reward) => [
+      reward.level,
+      reward.kind,
+      reward.slot,
+    ]),
+    [
+      [15, "game_cosmetic", "dice_attack"],
+      [35, "game_cosmetic", "dice_defense"],
+      [55, "game_cosmetic", "dice_neutral"],
+      [75, "game_cosmetic", "territory_skin"],
+      [90, "profile_background", null],
+      [100, "commander_title", null],
+    ],
+  );
+
+  assert.deepEqual(
+    contract.BATTLE_PASS_V1_PREMIUM_INITIAL_COSMETIC_REWARDS.map(
+      (reward) => reward.slot,
+    ),
+    ["dice_attack", "dice_defense", "dice_neutral", "territory_skin"],
+  );
+
+  assert.deepEqual(
+    contract.BATTLE_PASS_V1_PREMIUM_FINAL_COSMETIC_REWARDS.map(
+      (reward) => [reward.level, reward.slot, reward.kind],
+    ),
+    [
+      [60, "dice_attack", "game_cosmetic"],
+      [70, "dice_defense", "game_cosmetic"],
+      [80, "dice_neutral", "game_cosmetic"],
+      [90, "territory_skin", "game_cosmetic"],
+      [95, null, "profile_background"],
+      [100, null, "commander_title"],
+    ],
+  );
+});
+
+test("união de créditos e cosméticos preserva exatamente os 19 níveis vazios", () => {
+  const occupied = new Set([
+    ...contract.BATTLE_PASS_V1_FREE_CREDIT_REWARDS.map((reward) => reward.level),
+    ...contract.BATTLE_PASS_V1_PREMIUM_CREDIT_REWARDS.map((reward) => reward.level),
+    ...contract.BATTLE_PASS_V1_FREE_COSMETIC_REWARDS.map((reward) => reward.level),
+    ...contract.BATTLE_PASS_V1_PREMIUM_INITIAL_COSMETIC_REWARDS.map(
+      (reward) => reward.level,
+    ),
+    ...contract.BATTLE_PASS_V1_PREMIUM_FINAL_COSMETIC_REWARDS.map(
+      (reward) => reward.level,
+    ),
+  ]);
+  const empty = Array.from({ length: 100 }, (_, index) => index + 1).filter(
+    (level) => !occupied.has(level),
+  );
+
+  assert.deepEqual(empty, contract.BATTLE_PASS_V1_EMPTY_LEVELS);
+});
