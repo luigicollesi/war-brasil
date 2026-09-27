@@ -1073,6 +1073,7 @@ export async function purchaseOffer(
       const granted = await grantEntitlementOwnership(
         userId,
         entitlement,
+        purchaseId,
         client,
       );
       if (!granted) {
