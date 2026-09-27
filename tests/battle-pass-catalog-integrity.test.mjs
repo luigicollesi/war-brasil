@@ -10,6 +10,10 @@ const immutability = readFileSync(
   "src/lib/db/migrations/managed/073-battle-pass-catalog-immutability.sql",
   "utf8",
 );
+const rewardIdentity = readFileSync(
+  "src/lib/db/migrations/managed/076-battle-pass-reward-identity.sql",
+  "utf8",
+);
 
 test("XP profiles são append-only e catálogo ativo/histórico é congelado", () => {
   assert.match(immutability, /battle_pass_xp_profiles_append_only/);
@@ -40,4 +44,16 @@ test("072 mantém o validador V1 completo como última autoridade de ativação"
   assert.match(hardening, /premium-initial-set/);
   assert.match(hardening, /pricing\.fixed_price=3000/);
   assert.match(hardening, /requires exactly one Elite offer covering the season/);
+});
+
+
+test("ativação exige rewards sazonais distintos por categoria", () => {
+  assert.match(rewardIdentity, /distinct_dice_count <> 9/);
+  assert.match(rewardIdentity, /distinct_territory_count <> 3/);
+  assert.match(rewardIdentity, /distinct_background_count <> 2/);
+  assert.match(rewardIdentity, /distinct_title_count <> 2/);
+  assert.match(rewardIdentity, /9 distinct seasonal dice rewards/);
+  assert.match(rewardIdentity, /3 distinct seasonal territory skins/);
+  assert.match(rewardIdentity, /distinct free and Elite level-100 titles/);
+  assert.match(rewardIdentity, /battle_pass_seasons_reward_identity_guard/);
 });
