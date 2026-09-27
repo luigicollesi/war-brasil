@@ -37,8 +37,14 @@ test("/campaign usa snapshot autoritativo, claims e reduced motion", () => {
   assert.match(page, /TRILHA DE ELITE/);
   assert.match(page, /TRILHA LIVRE/);
   assert.match(page, /COLETAR TODAS/);
+  assert.match(page, /NÍVEL ATUAL/);
+  assert.match(page, /PRÓXIMOS →/);
+  assert.match(page, /rewardRevealBackdrop/);
   assert.match(page, /\/api\/battle-pass\/rewards\/claim/);
   assert.match(css, /overflow-x: clip/);
+  assert.match(css, /\.railControls/);
+  assert.match(css, /@keyframes rewardClaimEnter/);
+  assert.match(css, /\.rewardRevealBackdrop/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
   assert.match(server, /progression\.battle_pass_reward_claims/);
   assert.match(server, /deriveBattlePassRewardState/);
