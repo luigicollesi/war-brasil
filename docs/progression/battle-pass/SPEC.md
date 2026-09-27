@@ -1,6 +1,6 @@
 # War Brasil — Passe de Campanha SPEC
 
-Status: **implementação em finalização / XP acumulativo V2, P5 hardening e conteúdo real da Temporada 1 pendentes**  
+Status: **implementação em finalização / replanejamento de XP acumulativo, P5 hardening e conteúdo real da Temporada 1 pendentes**  
 Branch de integração: **dev**  
 Escopo: progressão sazonal por XP, Passe Livre, Passe Elite, compra com Créditos de Campanha, recompensas, claims, integração com partidas e experiência de frontend.
 
