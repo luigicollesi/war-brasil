@@ -1,0 +1,246 @@
+.root {
+  position: absolute;
+  inset: 0;
+  z-index: var(--z-game-xp-feedback, 99);
+  overflow: hidden;
+  pointer-events: none;
+  contain: layout paint;
+}
+
+.positioner {
+  position: absolute;
+  top: clamp(82px, 12dvh, 128px);
+  left: 50%;
+  width: min(92vw, 440px);
+  transform: translateX(-50%);
+}
+
+.notice {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  min-width: 0;
+  gap: 3px;
+  padding: 10px 18px 12px;
+  color: #eee8da;
+  text-align: center;
+  text-shadow: 0 2px 12px rgb(0 0 0 / 58%);
+  animation: xp-feedback-standard 850ms cubic-bezier(.2,.78,.24,1) both;
+}
+
+.notice::before,
+.notice::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+}
+
+.notice::before {
+  top: 4px;
+  left: 50%;
+  width: min(240px, 74%);
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(208 170 87 / 68%),
+    transparent
+  );
+  transform: translateX(-50%);
+}
+
+.notice[data-intensity="micro"] {
+  animation-name: xp-feedback-micro;
+  animation-duration: 650ms;
+}
+
+.notice[data-intensity="major"] {
+  animation-name: xp-feedback-major;
+  animation-duration: 1100ms;
+}
+
+.notice[data-intensity="major"]::after,
+.notice[data-intensity="terminal"]::after {
+  z-index: -1;
+  inset: -34px -46px;
+  background: radial-gradient(
+    ellipse at center,
+    rgb(208 170 87 / 15%),
+    transparent 68%
+  );
+  animation: xp-feedback-halo 1100ms ease-out both;
+}
+
+.notice[data-intensity="terminal"] {
+  padding-block: 15px 17px;
+  animation-name: xp-feedback-terminal;
+  animation-duration: 1500ms;
+}
+
+.eyebrow {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  color: rgb(238 232 218 / 76%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: clamp(.56rem, 1.4vw, .68rem);
+  font-weight: 850;
+  letter-spacing: .15em;
+  line-height: 1.2;
+  text-transform: uppercase;
+}
+
+.amount {
+  color: #d0aa57;
+  font-family: var(--font-wb-display), var(--font-wb-brand), serif;
+  font-size: clamp(1.75rem, 5vw, 2.55rem);
+  font-weight: 800;
+  letter-spacing: .015em;
+  line-height: 1;
+}
+
+.detail {
+  max-width: 38ch;
+  color: rgb(238 232 218 / 62%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: clamp(.52rem, 1.3vw, .62rem);
+  line-height: 1.35;
+}
+
+.liveRegion {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@keyframes xp-feedback-micro {
+  0% {
+    opacity: 0;
+    transform: translateY(6px) scale(.97);
+  }
+  28%,
+  70% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-8px) scale(1);
+  }
+}
+
+@keyframes xp-feedback-standard {
+  0% {
+    opacity: 0;
+    transform: translateY(7px) scale(.97);
+  }
+  22% {
+    opacity: 1;
+    transform: translateY(0) scale(1.015);
+  }
+  35%,
+  72% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-9px) scale(1);
+  }
+}
+
+@keyframes xp-feedback-major {
+  0% {
+    opacity: 0;
+    transform: translateY(8px) scale(.94);
+  }
+  24% {
+    opacity: 1;
+    transform: translateY(0) scale(1.02);
+  }
+  38%,
+  72% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-10px) scale(1);
+  }
+}
+
+@keyframes xp-feedback-terminal {
+  0% {
+    opacity: 0;
+    transform: translateY(9px) scale(.94);
+  }
+  20% {
+    opacity: 1;
+    transform: translateY(0) scale(1.025);
+  }
+  34%,
+  78% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-10px) scale(1);
+  }
+}
+
+@keyframes xp-feedback-halo {
+  0% {
+    opacity: 0;
+    transform: scale(.7);
+  }
+  32% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.08);
+  }
+}
+
+@media (max-width: 767px) {
+  .positioner {
+    top: calc(env(safe-area-inset-top, 0px) + 108px);
+    width: min(94vw, 390px);
+  }
+
+  .notice {
+    padding-inline: 12px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .notice,
+  .notice[data-intensity="micro"],
+  .notice[data-intensity="major"],
+  .notice[data-intensity="terminal"] {
+    animation: xp-feedback-reduced 800ms linear both;
+  }
+
+  .notice[data-intensity="major"]::after,
+  .notice[data-intensity="terminal"]::after {
+    animation: none;
+    opacity: .12;
+    transform: none;
+  }
+}
+
+@keyframes xp-feedback-reduced {
+  0%,
+  100% {
+    opacity: 0;
+    transform: none;
+  }
+  10%,
+  88% {
+    opacity: 1;
+    transform: none;
+  }
+}
