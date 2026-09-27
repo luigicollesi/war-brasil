@@ -2,6 +2,7 @@ export const ENTITLEMENT_KINDS = [
   "game_cosmetic",
   "commander_title",
   "profile_background",
+  "battle_pass_access",
 ] as const;
 
 export type EntitlementKind = (typeof ENTITLEMENT_KINDS)[number];
