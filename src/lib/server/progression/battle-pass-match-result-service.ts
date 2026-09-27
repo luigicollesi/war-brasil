@@ -6,6 +6,7 @@ import type {
   BattlePassLevelThreshold,
 } from "@/src/lib/shared/progression/battle-pass-contract";
 import type { BattlePassMatchResult } from "@/src/lib/shared/progression/battle-pass-presentation";
+import { battlePassSettlementPresentationEvent } from "./battle-pass-match-xp-service";
 
 type MatchResultRow = {
   entry_id: string;
@@ -115,6 +116,22 @@ export async function getBattlePassMatchResult(
   const levelBefore = resolveBattlePassLevel(thresholds, totalXpBefore);
   const levelAfter = resolveBattlePassLevel(thresholds, totalXpAfter);
   const metadata = metadataObject(row.metadata);
+  const actionXp = safeInteger(metadata.actionXp);
+  const completionXp = safeInteger(metadata.completionXp);
+  const victoryBonusXp = safeInteger(metadata.victoryBonusXp);
+  const isWinner = metadata.isWinner === true || victoryBonusXp > 0;
+  const terminalEvent = battlePassSettlementPresentationEvent({
+    userId,
+    seasonId: row.season_id,
+    matchId: row.match_id,
+    xpGranted,
+    levelReached: levelAfter,
+    duplicate: false,
+    actionXp,
+    completionXp,
+    victoryBonusXp,
+    settledReason: "match_completed",
+  });
 
   return {
     seasonId: row.season_id,
@@ -125,10 +142,12 @@ export async function getBattlePassMatchResult(
     levelBefore,
     levelAfter,
     levelsGained: Math.max(0, levelAfter - levelBefore),
-    isWinner: metadata.isWinner === true,
+    isWinner,
+    presentationEvents: terminalEvent ? [terminalEvent] : [],
     breakdown: {
-      completionXp: safeInteger(metadata.completionXp),
-      victoryBonusXp: safeInteger(metadata.victoryBonusXp),
+      actionXp,
+      completionXp,
+      victoryBonusXp,
       multiplierBps: Math.min(
         10_000,
         safeInteger(metadata.multiplierBps, 10_000),
