@@ -50,6 +50,7 @@ export type BattlePassXpAward = Readonly<{
 export async function resolveBattlePassMatchSnapshot(
   client: PoolClient,
 ): Promise<BattlePassMatchSnapshot | null> {
+  await client.query("SELECT catalog.reconcile_battle_pass_season_lifecycle()");
   const row = (
     await client.query<ActiveSeasonRow>(
       `SELECT season.id AS season_id,
