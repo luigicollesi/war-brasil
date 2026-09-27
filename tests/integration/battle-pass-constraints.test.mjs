@@ -61,14 +61,18 @@ if (!databaseUrl) {
 } else {
   test("PostgreSQL protege catálogo, preço Elite e snapshot sazonal", async () => {
     await withTemporaryDatabase(async (connectionString) => {
+      const bootstrap = new Client({ connectionString });
+      await bootstrap.connect();
+      try {
+        await bootstrap.query(readFileSync("src/lib/db/schema.sql", "utf8"));
+      } finally {
+        await bootstrap.end();
+      }
+      prepareDatabase(connectionString);
+
       const client = new Client({ connectionString });
       await client.connect();
       try {
-        await client.query(readFileSync("src/lib/db/schema.sql", "utf8"));
-        await client.end();
-        prepareDatabase(connectionString);
-        await client.connect();
-
         const cleanInstallGuards = await client.query(
           `SELECT
              to_regprocedure(
