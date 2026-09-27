@@ -4,10 +4,10 @@ import type {
 } from "./battle-pass-contract";
 
 function nonNegativeInteger(value: unknown, label: string) {
-  if (!Number.isSafeInteger(value) || Number(value) < 0) {
-    throw new Error(\`Invalid battle-pass \${label}.\`);
+  if (typeof value !== "number" || !Number.isSafeInteger(value) || value < 0) {
+    throw new Error(`Invalid battle-pass ${label}.`);
   }
-  return Number(value);
+  return value;
 }
 
 export function parseBattlePassXpProfile(value: unknown): BattlePassXpProfile {
