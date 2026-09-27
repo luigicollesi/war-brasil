@@ -88,7 +88,6 @@ export function GameVictoryModal({
   useEffect(() => {
     const controller = new AbortController();
     let active = true;
-    setBattlePassResult(undefined);
 
     void fetch(`/api/games/${snapshot.room.id}/battle-pass-result`, {
       cache: "no-store",
