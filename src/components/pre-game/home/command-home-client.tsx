@@ -9,6 +9,7 @@ import { CommandOnboardingModal } from "@/components/auth/command-onboarding-mod
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { AnimationEvent as ReactAnimationEvent, ReactNode } from "react";
+import type { BattlePassHomeSummary } from "@/src/lib/shared/progression/battle-pass-presentation";
 import {
   useCallback,
   useEffect,
@@ -63,6 +64,7 @@ type CommandHomeClientProps = {
   children: ReactNode;
   mode?: "landing" | "command";
   initialAccess?: CommandAccessResponse | null;
+  initialCampaign?: BattlePassHomeSummary | null;
 };
 
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
@@ -89,6 +91,13 @@ const DESTINATIONS: Destination[] = [
     label: "COMANDO",
     detail: "Acessar identidade e registro de comando",
   },
+  {
+    id: "campaign",
+    href: "/campaign",
+    index: "04",
+    label: "CAMPANHA",
+    detail: "Acompanhar o Passe de Campanha",
+  },
 ];
 
 function subscribeReducedMotion(onStoreChange: () => void) {
@@ -109,6 +118,7 @@ export function CommandHomeClient({
   children,
   mode = "landing",
   initialAccess = null,
+  initialCampaign = null,
 }: CommandHomeClientProps) {
   const router = useRouter();
   const isCommandHome = mode === "command";
@@ -625,7 +635,39 @@ export function CommandHomeClient({
                   </span>
                   <span className={styles.destinationCopy}>
                     <strong>{destination.label}</strong>
-                    <span>{destination.detail}</span>
+                    <span>
+                      {destination.id === "campaign" && initialCampaign?.active
+                        ? `NÍVEL ${initialCampaign.levelReached} · ${initialCampaign.claimableCount} PARA COLETAR`
+                        : destination.id === "campaign" && initialCampaign?.active === false
+                          ? "Nenhuma Campanha ativa"
+                          : destination.detail}
+                    </span>
+                    {destination.id === "campaign" && initialCampaign?.active ? (
+                      <span
+                        className={styles.campaignMiniProgress}
+                        aria-label={`Nível ${initialCampaign.levelReached} da Campanha`}
+                      >
+                        <i
+                          style={{
+                            width: `${Math.max(
+                              0,
+                              Math.min(
+                                100,
+                                initialCampaign.nextLevelXp === null
+                                  ? 100
+                                  : ((initialCampaign.xpTotal - initialCampaign.currentLevelXp) /
+                                      Math.max(
+                                        1,
+                                        initialCampaign.nextLevelXp -
+                                          initialCampaign.currentLevelXp,
+                                      )) *
+                                    100,
+                              ),
+                            )}%`,
+                          }}
+                        />
+                      </span>
+                    ) : null}
                   </span>
                   <span className={styles.destinationArrow} aria-hidden="true">
                     ↗

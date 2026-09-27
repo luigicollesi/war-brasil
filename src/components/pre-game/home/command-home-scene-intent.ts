@@ -1,7 +1,11 @@
 import type { CommandSceneDirective } from "../foundation";
 
 export type HomeCeremonyPhase = "primed" | "playing" | "stable";
-export type HomeDestinationId = "operations" | "doctrine" | "profile";
+export type HomeDestinationId =
+  | "operations"
+  | "doctrine"
+  | "profile"
+  | "campaign";
 
 type HomeSceneIntentInput = Readonly<{
   ceremonyPhase: HomeCeremonyPhase;
@@ -25,6 +29,13 @@ const DESTINATION_INTENTS: Readonly<
     conflictLevel: 0,
     territoryExplode: 0.12,
     orbitalAlignment: 0,
+    entranceState: "settled",
+  },
+  campaign: {
+    focus: "table",
+    conflictLevel: 0,
+    territoryExplode: 0.06,
+    orbitalAlignment: 1,
     entranceState: "settled",
   },
   profile: {

@@ -297,7 +297,7 @@
 .destinationRail {
   position: relative;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   width: 100%;
   border-block: 1px solid rgb(208 170 87 / 18%);
   background: linear-gradient(180deg, rgb(7 10 8 / 56%), rgb(7 10 8 / 78%));
@@ -378,6 +378,22 @@
   color: rgb(238 232 218 / 54%);
   font-size: .56rem;
   line-height: 1.35;
+}
+
+.campaignMiniProgress {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 3px;
+  overflow: hidden;
+  margin-top: 4px;
+  background: rgb(238 232 218 / 8%);
+}
+
+.campaignMiniProgress i {
+  display: block;
+  height: 100%;
+  background: var(--command-brass-bright, #d0aa57);
 }
 
 .destinationArrow {
@@ -539,7 +555,7 @@
   }
 
   .destinationRail {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     border-block: 0;
     border-top: 1px solid rgb(208 170 87 / 20%);
     backdrop-filter: blur(4px);
@@ -557,6 +573,10 @@
 
   .destination + .destination {
     border-left: 0;
+  }
+
+  .destination:nth-child(even) {
+    border-left: 1px solid rgb(208 170 87 / 13%);
   }
 
   .destinationCopy strong {
@@ -586,6 +606,14 @@
 }
 
 @media (max-width: 520px) {
+  .destinationRail {
+    grid-template-columns: 1fr;
+  }
+
+  .destination:nth-child(even) {
+    border-left: 0;
+  }
+
   .identityTelemetry span:nth-child(2) {
     display: none;
   }
@@ -623,6 +651,7 @@
   .enterButton,
   .destination,
   .destinationArrow,
+  .campaignMiniProgress i,
   .openCommand,
   .commandHomeRouteTransition {
     animation: none !important;

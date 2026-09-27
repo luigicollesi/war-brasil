@@ -7,6 +7,7 @@ import { CommandHomeContent } from "@/src/components/pre-game/home/command-home-
 import { getAuthenticatedSessionForReadHeaders } from "@/src/lib/server/auth/auth-guard";
 import { getCommandAccessState } from "@/src/lib/server/auth/command-access";
 import { findActiveParticipationForUser } from "@/src/lib/server/game-participation-service";
+import { getBattlePassHomeSummary } from "@/src/lib/server/progression/battle-pass-snapshot-service";
 
 export const metadata: Metadata = {
   title: "Comando",
@@ -30,10 +31,17 @@ export default async function CommandHomePage() {
     redirect(participation.target);
   }
 
-  const access = await getCommandAccessState(session);
+  const [access, campaign] = await Promise.all([
+    getCommandAccessState(session),
+    getBattlePassHomeSummary(session.user.id).catch(() => ({ active: false as const })),
+  ]);
 
   return (
-    <CommandHomeClient mode="command" initialAccess={access}>
+    <CommandHomeClient
+      mode="command"
+      initialAccess={access}
+      initialCampaign={campaign}
+    >
       <CommandHomeContent />
     </CommandHomeClient>
   );
