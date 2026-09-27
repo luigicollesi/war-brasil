@@ -4,12 +4,15 @@ import type {
   GameTradeResolutionEvent,
   GameTradeSignalEvent,
 } from "../shared/game-realtime-contract";
+import type { BattlePassGameXpEvent } from "../shared/progression/battle-pass-game-xp-event";
 
 type TradeSignalListener = (event: GameTradeSignalEvent) => void;
 type TradeResolutionListener = (event: GameTradeResolutionEvent) => void;
+type BattlePassXpListener = (event: BattlePassGameXpEvent) => void;
 
 const tradeSignalListeners = new Map<string, Set<TradeSignalListener>>();
 const tradeResolutionListeners = new Map<string, Set<TradeResolutionListener>>();
+const battlePassXpListeners = new Map<string, Set<BattlePassXpListener>>();
 
 export function dispatchTradeSignal(
   roomId: string,
@@ -55,5 +58,32 @@ export function subscribeTradeResolution(
   return () => {
     listeners.delete(listener);
     if (listeners.size === 0) tradeResolutionListeners.delete(roomId);
+  };
+}
+
+
+export function dispatchBattlePassXpEvents(
+  roomId: string,
+  events: readonly BattlePassGameXpEvent[],
+) {
+  const listeners = battlePassXpListeners.get(roomId);
+  if (!listeners?.size) return;
+  for (const event of events) {
+    for (const listener of listeners) listener(event);
+  }
+}
+
+export function subscribeBattlePassXpEvents(
+  roomId: string,
+  listener: BattlePassXpListener,
+) {
+  const listeners =
+    battlePassXpListeners.get(roomId) ?? new Set<BattlePassXpListener>();
+  listeners.add(listener);
+  battlePassXpListeners.set(roomId, listeners);
+
+  return () => {
+    listeners.delete(listener);
+    if (listeners.size === 0) battlePassXpListeners.delete(roomId);
   };
 }
