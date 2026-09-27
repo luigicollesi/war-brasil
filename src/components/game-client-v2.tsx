@@ -6,6 +6,7 @@ import { BattleOverlay } from "@/src/components/battle-overlay";
 import { OrderDiceCinematic } from "@/src/components/dice-3d/order-dice-cinematic";
 import { GameDie } from "@/src/components/game-die";
 import { GameLeaveModal } from "@/src/components/game-leave-modal";
+import { GameXpFeedback } from "@/src/components/progression/battle-pass/game-xp-feedback";
 import { GameTurnPanel } from "@/src/components/game-turn-panel";
 import { GameUtilityBar } from "@/src/components/game-utility-bar";
 import { GameVictoryModal } from "@/src/components/game-victory-modal";
@@ -18,6 +19,7 @@ import {
 import { TemporalAnomalyModal } from "@/src/components/temporal-anomaly-modal";
 import { useGameInteraction } from "@/src/hooks/use-game-interaction";
 import { useGameSync } from "@/src/hooks/use-game-sync";
+import { useGameXpFeedback } from "@/src/hooks/use-game-xp-feedback";
 import { useTemporalAnomaly } from "@/src/hooks/use-temporal-anomaly";
 import {
   NORMAL_BOARD_PRESENTATION,
@@ -271,6 +273,12 @@ function GameReadyClient({
   const orderCinematicActive = Boolean(
     orderPresentationId && orderPresentationId !== completedOrderPresentationId,
   );
+  const battleDiceCinematicPending =
+    snapshot.room.battle?.stage === "show_attacker_result" ||
+    snapshot.room.battle?.stage === "show_defender_result";
+  const xpFeedback = useGameXpFeedback(roomId, {
+    suspended: orderCinematicActive || battleDiceCinematicPending,
+  });
   const battleArrow = snapshot.room.battle
     ? {
         fromTerritoryId: snapshot.room.battle.attackerTerritoryId,
@@ -375,6 +383,10 @@ function GameReadyClient({
 
   return (
     <div className="space-y-5">
+      <GameXpFeedback
+        event={xpFeedback.activeEvent}
+        announcement={xpFeedback.announcement}
+      />
       <section className="game-top-hud rounded-3xl border border-[#17372d]/10 bg-[#faf8f2] p-5 shadow-[0_18px_50px_rgba(42,55,50,0.07)] sm:p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
