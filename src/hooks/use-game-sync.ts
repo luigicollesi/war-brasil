@@ -8,6 +8,7 @@ import type { GameRealtimeEvent } from "@/src/lib/game-realtime-contract";
 import { gameAutomationDriver } from "@/src/lib/client/game-automation-driver";
 import { registerGameCommandSyncContext } from "@/src/lib/client/game-command-sync-context";
 import {
+  dispatchBattlePassXpEvents,
   dispatchTradeResolution,
   dispatchTradeSignal,
 } from "@/src/lib/client/game-realtime-ephemeral-bus";
@@ -274,6 +275,12 @@ export function useGameSync(roomId: string) {
       const nextSnapshot = syncController.applyCommandResult(result);
       if (!nextSnapshot) return false;
 
+      if (result.privatePatch?.battlePassXpEvents?.length) {
+        dispatchBattlePassXpEvents(
+          roomId,
+          result.privatePatch.battlePassXpEvents,
+        );
+      }
       setSnapshot(nextSnapshot);
       setError("");
       return true;
@@ -355,6 +362,12 @@ export function useGameSync(roomId: string) {
         const result = syncController.applyRealtimePrivatePatch(event);
         if (result.applied && result.snapshot) {
           gameSyncMetricsStore.recordRealtimePatchResult(result);
+          if (event.payload.patch.battlePassXpEvents?.length) {
+            dispatchBattlePassXpEvents(
+              roomId,
+              event.payload.patch.battlePassXpEvents,
+            );
+          }
           if (isActive) {
             setSnapshot(result.snapshot);
             setError("");
