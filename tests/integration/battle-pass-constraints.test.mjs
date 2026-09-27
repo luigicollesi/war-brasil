@@ -84,6 +84,15 @@ if (!databaseUrl) {
              to_regprocedure(
                'catalog.validate_battle_pass_reward_identity()'
              ) IS NOT NULL AS reward_identity_function,
+             to_regclass(
+               'progression.battle_pass_match_progress'
+             ) IS NOT NULL AS accumulated_progress_table,
+             to_regclass(
+               'progression.battle_pass_match_xp_actions'
+             ) IS NOT NULL AS accumulated_action_table,
+             to_regclass(
+               'progression.battle_pass_match_territory_conquests'
+             ) IS NOT NULL AS conquest_counter_table,
              EXISTS(
                SELECT 1
                  FROM pg_trigger trigger
@@ -119,6 +128,9 @@ if (!databaseUrl) {
           lifecycle_function: true,
           elite_price_function: true,
           reward_identity_function: true,
+          accumulated_progress_table: true,
+          accumulated_action_table: true,
+          conquest_counter_table: true,
           lifecycle_trigger: true,
           elite_price_trigger: true,
           reward_identity_trigger: true,
@@ -130,6 +142,31 @@ if (!databaseUrl) {
            )
            VALUES('bp-test-v1',100,50,4000)`,
         );
+
+        const accumulatedProfile = (
+          await client.query(
+            `SELECT action_model_version,troop_placed_xp,troop_placed_cap_xp,
+                    card_trade_xp,card_trade_cap_xp,
+                    troop_lost_dice_xp,troop_lost_dice_cap_xp,
+                    enemy_troop_defeated_xp,enemy_troop_defeated_cap_xp,
+                    territory_first_conquest_xp,territory_second_conquest_xp
+               FROM catalog.battle_pass_xp_profiles
+              WHERE id='bp-test-v1'`,
+          )
+        ).rows[0];
+        assert.deepEqual(accumulatedProfile, {
+          action_model_version: 2,
+          troop_placed_xp: 1,
+          troop_placed_cap_xp: 60,
+          card_trade_xp: 20,
+          card_trade_cap_xp: 80,
+          troop_lost_dice_xp: 1,
+          troop_lost_dice_cap_xp: 50,
+          enemy_troop_defeated_xp: 2,
+          enemy_troop_defeated_cap_xp: 100,
+          territory_first_conquest_xp: 25,
+          territory_second_conquest_xp: 10,
+        });
 
         await expectPgError(
           client,
