@@ -55,6 +55,15 @@ if (!databaseUrl) {
 } else {
   test("XP ledger e claims preservam unicidade sob duas conexões", async () => {
     await withTemporaryDatabase(async (connectionString) => {
+      const bootstrap = new Client({ connectionString });
+      await bootstrap.connect();
+      try {
+        await bootstrap.query(readFileSync("src/lib/db/schema.sql", "utf8"));
+      } finally {
+        await bootstrap.end();
+      }
+      prepareDatabase(connectionString);
+
       const setup = new Client({ connectionString });
       const clientA = new Client({ connectionString });
       const clientB = new Client({ connectionString });
@@ -63,12 +72,6 @@ if (!databaseUrl) {
       await clientB.connect();
 
       try {
-        await setup.query(readFileSync("src/lib/db/schema.sql", "utf8"));
-        await Promise.all([setup.end(), clientA.end(), clientB.end()]);
-        prepareDatabase(connectionString);
-        await setup.connect();
-        await clientA.connect();
-        await clientB.connect();
         const userId = await createUser(setup);
 
         await setup.query(
