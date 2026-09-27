@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import test from "node:test";
 import { Client } from "pg";
 
@@ -25,6 +26,20 @@ async function withTemporaryDatabase(callback) {
   }
 }
 
+function prepareDatabase(connectionString) {
+  const result = spawnSync(process.execPath, ["scripts/prepare-dev-db.mjs"], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+    env: { ...process.env, DATABASE_URL: connectionString },
+  });
+  assert.equal(
+    result.status,
+    0,
+    `prepare-dev-db falhou:\n${result.stdout}\n${result.stderr}`,
+  );
+}
+
+
 async function createUser(client) {
   const result = await client.query(
     `INSERT INTO auth."user"(name,email,"emailVerified")
@@ -49,6 +64,11 @@ if (!databaseUrl) {
 
       try {
         await setup.query(readFileSync("src/lib/db/schema.sql", "utf8"));
+        await Promise.all([setup.end(), clientA.end(), clientB.end()]);
+        prepareDatabase(connectionString);
+        await setup.connect();
+        await clientA.connect();
+        await clientB.connect();
         const userId = await createUser(setup);
 
         await setup.query(
