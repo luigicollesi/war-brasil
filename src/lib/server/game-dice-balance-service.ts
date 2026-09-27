@@ -6,6 +6,7 @@ import {
   awardBattlePassMatchXp,
   resolveBattlePassMatchSnapshot,
 } from "@/src/lib/server/progression/battle-pass-match-xp-service";
+import { initializeBattlePassMatchProgress } from "@/src/lib/server/progression/battle-pass-match-action-xp-service";
 import {
   DiceBalanceConfigurationError,
   type DiceBalanceAlgorithm,
@@ -265,6 +266,13 @@ export async function initializeDiceBalanceForGame(
      FROM game.players
      WHERE room_id = $2`,
     [match.id, roomId],
+  );
+
+  await initializeBattlePassMatchProgress(
+    client,
+    roomId,
+    match.id,
+    battlePass,
   );
 
   await client.query(
