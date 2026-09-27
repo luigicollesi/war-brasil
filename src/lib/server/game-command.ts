@@ -38,6 +38,7 @@ type GameConditionalCommandResult<T> = {
   value: T | null;
   revision: GameRevision;
   changed: boolean;
+  privatePatches?: GamePrivatePatchDelivery[];
 };
 
 type GameConditionalCommandExecution<T> = {
@@ -359,6 +360,9 @@ export async function gameConditionalCommand<T>(
       value: result.value,
       revision,
       changed: result.changed,
+      ...(result.privatePatches?.length
+        ? { privatePatches: result.privatePatches }
+        : {}),
     };
   } catch (error) {
     await rollbackIfNeeded(client, transactionOpen);
