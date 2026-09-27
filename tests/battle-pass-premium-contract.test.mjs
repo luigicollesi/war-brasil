@@ -14,7 +14,8 @@ test("Campanha ativa compra Elite exclusivamente pelo pipeline de purchase da Ec
 
   assert.match(page, /purchaseShowcaseOffer/);
   assert.match(page, /expectedPrice: snapshot\.premium\.price/);
-  assert.match(page, /ATIVAR ELITE · 3\.000 CR/);
+  assert.match(page, /REVISAR ATIVAÇÃO · 3\.000 CR/);
+  assert.match(page, /CONFIRMAR · 3\.000 CR/);
   assert.match(snapshot, /entitlement_kind='battle_pass_access'/);
   assert.match(snapshot, /catalog\.battle_pass_pricing/);
   assert.doesNotMatch(page, /UPDATE\s+economy\.wallets|economy\.ledger_entries/);
