@@ -21,6 +21,7 @@ import {
   isOrderRollPresentationDue,
 } from "@/src/lib/game-transitions";
 import { RoomError } from "@/src/lib/rooms";
+import type { BattlePassActionXpResult } from "@/src/lib/server/progression/battle-pass-match-action-xp-service";
 import { beginPlayerTurnPhase } from "./game-turn-service";
 
 type PresentationRoom = BattleRoomState & {
@@ -193,6 +194,7 @@ export async function advanceGamePresentation(
   client: PoolClient,
   roomId: string,
   nowMs = Date.now(),
+  xpResults?: BattlePassActionXpResult[],
 ) {
   const room = await loadRoom(client, roomId);
 
@@ -203,7 +205,7 @@ export async function advanceGamePresentation(
     return advanceOrderRollPresentation(client, room, nowMs);
   }
   if (room.status === "playing") {
-    return advanceBattlePresentation(client, room, nowMs);
+    return advanceBattlePresentation(client, room, nowMs, xpResults);
   }
   return false;
 }
@@ -218,9 +220,33 @@ export async function advanceGamePresentationCommand(
   return gameConditionalCommand(
     roomId,
     expectedRevision,
-    async (client) => ({
-      value: null,
-      changed: await advanceGamePresentation(client, roomId, nowMs),
-    }),
+    async (client) => {
+      const xpResults: BattlePassActionXpResult[] = [];
+      const changed = await advanceGamePresentation(
+        client,
+        roomId,
+        nowMs,
+        xpResults,
+      );
+      const grouped = new Map<
+        string,
+        NonNullable<BattlePassActionXpResult["event"]>[]
+      >();
+      for (const result of xpResults) {
+        if (!result.event) continue;
+        const events = grouped.get(result.playerId) ?? [];
+        events.push(result.event);
+        grouped.set(result.playerId, events);
+      }
+
+      return {
+        value: null,
+        changed,
+        privatePatches: [...grouped.entries()].map(([playerId, events]) => ({
+          playerId,
+          patch: { battlePassXpEvents: events },
+        })),
+      };
+    },
   );
 }
