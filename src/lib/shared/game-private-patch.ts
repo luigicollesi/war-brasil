@@ -1,3 +1,7 @@
+import {
+  isBattlePassGameXpEvent,
+  type BattlePassGameXpEvent,
+} from "./progression/battle-pass-game-xp-event";
 import type {
   GameCard,
   GameSnapshot,
@@ -8,9 +12,14 @@ import { isTradeCardDescriptor } from "./game-trade-rules";
 export type GamePrivatePatch = {
   myCards?: GameCard[];
   trade?: GameTradePrivateState;
+  battlePassXpEvents?: BattlePassGameXpEvent[];
 };
 
-const PRIVATE_PATCH_KEYS = new Set(["myCards", "trade"]);
+const PRIVATE_PATCH_KEYS = new Set([
+  "myCards",
+  "trade",
+  "battlePassXpEvents",
+]);
 const PRIVATE_TRADE_KEYS = new Set([
   "signalsUsed",
   "signalLimit",
@@ -71,7 +80,8 @@ export function isGamePrivatePatch(value: unknown): value is GamePrivatePatch {
   if (!isRecord(value) || !hasOnlyKeys(value, PRIVATE_PATCH_KEYS)) return false;
   const hasCards = value.myCards !== undefined;
   const hasTrade = value.trade !== undefined;
-  if (!hasCards && !hasTrade) return false;
+  const hasBattlePassXpEvents = value.battlePassXpEvents !== undefined;
+  if (!hasCards && !hasTrade && !hasBattlePassXpEvents) return false;
 
   if (hasCards) {
     if (!Array.isArray(value.myCards) || value.myCards.length > 128) return false;
@@ -82,7 +92,24 @@ export function isGamePrivatePatch(value: unknown): value is GamePrivatePatch {
     }
   }
 
-  return !hasTrade || validPrivateTrade(value.trade);
+  if (hasTrade && !validPrivateTrade(value.trade)) return false;
+
+  if (hasBattlePassXpEvents) {
+    if (
+      !Array.isArray(value.battlePassXpEvents) ||
+      value.battlePassXpEvents.length < 1 ||
+      value.battlePassXpEvents.length > 8
+    ) {
+      return false;
+    }
+    const ids = new Set<string>();
+    for (const event of value.battlePassXpEvents) {
+      if (!isBattlePassGameXpEvent(event) || ids.has(event.id)) return false;
+      ids.add(event.id);
+    }
+  }
+
+  return true;
 }
 
 export function applyGamePrivatePatch(
