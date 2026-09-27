@@ -5,7 +5,7 @@ import test from "node:test";
 const ROOT = new URL("../", import.meta.url);
 const source = (path) => readFile(new URL(path, ROOT), "utf8");
 
-test("economy models product and purchase entitlements across three ownership domains", async () => {
+test("economy models product and purchase entitlements across ownership domains", async () => {
   const migration = await source("src/lib/db/migrations/managed/051-economy-entitlements.sql");
 
   assert.match(migration, /CREATE TABLE IF NOT EXISTS catalog\.product_entitlements/);
@@ -83,4 +83,30 @@ test("background purchases enforce collection completion before any economic mut
   assert.match(service, /ECONOMY_COLLECTION_INCOMPLETE/);
   assert.match(service, /requirement\.owned_count !== requirement\.total_count/);
   assert.match(service, /requirement\.total_count <= 0/);
+});
+
+
+test("battle pass Elite access extends Economy V2 entitlement authority without a parallel debit flow", async () => {
+  const migration = await source(
+    "src/lib/db/migrations/managed/071-battle-pass-economy-entitlement.sql",
+  );
+  const contract = await source("src/lib/economy/entitlement-contract.ts");
+  const repository = await source(
+    "src/lib/server/economy/entitlement-repository.ts",
+  );
+  const service = await source("src/lib/server/economy/economy-service.ts");
+
+  assert.match(migration, /battle_pass_access/);
+  assert.match(
+    migration,
+    /fixed_price BIGINT NOT NULL CHECK \(fixed_price = 3000\)/,
+  );
+  assert.match(contract, /"battle_pass_access"/);
+  assert.match(repository, /progression\.battle_pass_access/);
+  assert.match(repository, /catalog\.battle_pass_pricing/);
+  assert.match(repository, /catalog\.battle_pass_stats/);
+  assert.match(
+    service,
+    /grantEntitlementOwnership\([\s\S]*purchaseId[\s\S]*client/,
+  );
 });
