@@ -79,6 +79,7 @@ export type BattlePassHomeSummary =
     }>
   | Readonly<{
       active: true;
+      seasonStatus: "active" | "ended";
       seasonName: string;
       levelReached: number;
       xpTotal: number;
