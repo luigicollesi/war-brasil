@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { GameModal } from "@/src/components/game-modal";
+import { dispatchBattlePassXpEvents } from "@/src/lib/client/game-realtime-ephemeral-bus";
 import type { GameSnapshot } from "@/src/lib/game-contract";
 import type { BattlePassMatchResult } from "@/src/lib/shared/progression/battle-pass-presentation";
 
@@ -98,7 +99,16 @@ export function GameVictoryModal({
         const body = (await response.json()) as {
           result?: BattlePassMatchResult | null;
         };
-        if (active) setBattlePassResult(body.result ?? null);
+        if (active) {
+          const result = body.result ?? null;
+          if (result?.presentationEvents.length) {
+            dispatchBattlePassXpEvents(
+              snapshot.room.id,
+              result.presentationEvents,
+            );
+          }
+          setBattlePassResult(result);
+        }
       })
       .catch((requestError) => {
         if (
@@ -155,8 +165,13 @@ export function GameVictoryModal({
             )}
           </div>
           <div className="victory-battle-pass-breakdown">
+            {battlePassResult.breakdown.actionXp > 0 ? (
+              <span>
+                Ações {battlePassResult.breakdown.actionXp} XP
+              </span>
+            ) : null}
             <span>
-              Base +{battlePassResult.breakdown.completionXp}
+              Conclusão +{battlePassResult.breakdown.completionXp}
             </span>
             {battlePassResult.breakdown.victoryBonusXp > 0 ? (
               <span>
