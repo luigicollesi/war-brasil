@@ -10,12 +10,30 @@ function nonNegativeInteger(value: unknown, label: string) {
   return value;
 }
 
+function actionValue(
+  row: Record<string, unknown>,
+  key: string,
+  label: string,
+  legacy = 0,
+) {
+  if (row.actionModelVersion === undefined) return legacy;
+  return nonNegativeInteger(row[key], label);
+}
+
 export function parseBattlePassXpProfile(value: unknown): BattlePassXpProfile {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     throw new Error("Invalid battle-pass XP profile.");
   }
 
   const row = value as Record<string, unknown>;
+  const actionModelVersion =
+    row.actionModelVersion === undefined
+      ? 1
+      : nonNegativeInteger(row.actionModelVersion, "action model version");
+  if (actionModelVersion < 1) {
+    throw new Error("Invalid battle-pass action model version.");
+  }
+
   const completionXp = nonNegativeInteger(row.completionXp, "completion XP");
   const victoryBonusXp = nonNegativeInteger(
     row.victoryBonusXp,
@@ -34,10 +52,54 @@ export function parseBattlePassXpProfile(value: unknown): BattlePassXpProfile {
   }
 
   return {
+    actionModelVersion,
+    troopPlacedXp: actionValue(row, "troopPlacedXp", "troop placed XP"),
+    troopPlacedCapXp: actionValue(
+      row,
+      "troopPlacedCapXp",
+      "troop placed XP cap",
+    ),
+    cardTradeXp: actionValue(row, "cardTradeXp", "card trade XP"),
+    cardTradeCapXp: actionValue(row, "cardTradeCapXp", "card trade XP cap"),
+    troopLostDiceXp: actionValue(row, "troopLostDiceXp", "troop lost dice XP"),
+    troopLostDiceCapXp: actionValue(
+      row,
+      "troopLostDiceCapXp",
+      "troop lost dice XP cap",
+    ),
+    enemyTroopDefeatedXp: actionValue(
+      row,
+      "enemyTroopDefeatedXp",
+      "enemy troop defeated XP",
+    ),
+    enemyTroopDefeatedCapXp: actionValue(
+      row,
+      "enemyTroopDefeatedCapXp",
+      "enemy troop defeated XP cap",
+    ),
+    territoryFirstConquestXp: actionValue(
+      row,
+      "territoryFirstConquestXp",
+      "first conquest XP",
+    ),
+    territorySecondConquestXp: actionValue(
+      row,
+      "territorySecondConquestXp",
+      "second conquest XP",
+    ),
     completionXp,
     victoryBonusXp,
     soloHumanBotMultiplierBps,
   };
+}
+
+export function scaleBattlePassXp(rawXp: number, multiplierBps: number) {
+  const raw = nonNegativeInteger(rawXp, "raw XP");
+  const multiplier = nonNegativeInteger(multiplierBps, "multiplier");
+  if (multiplier > 10_000) {
+    throw new Error("Invalid battle-pass multiplier.");
+  }
+  return Math.floor((raw * multiplier) / 10_000);
 }
 
 export function calculateBattlePassMatchXp(input: Readonly<{
@@ -74,16 +136,13 @@ export function calculateBattlePassMatchXp(input: Readonly<{
         )
       : 10_000;
 
-  if (multiplierBps > 10_000) {
-    throw new Error("Invalid battle-pass multiplier.");
-  }
-
   return {
     completionXp,
     victoryBonusXp,
     multiplierBps,
-    totalXp: Math.floor(
-      ((completionXp + victoryBonusXp) * multiplierBps) / 10_000,
+    totalXp: scaleBattlePassXp(
+      completionXp + victoryBonusXp,
+      multiplierBps,
     ),
   };
 }
