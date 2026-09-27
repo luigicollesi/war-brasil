@@ -267,8 +267,7 @@ async function grantCreditReward(
      )
      VALUES(
        $1::uuid,'campaign-credit',$2::bigint,'battle_pass_reward',$3,$4
-     )
-     ON CONFLICT (idempotency_key) DO NOTHING`,
+     )`,
     [
       userId,
       amount,
