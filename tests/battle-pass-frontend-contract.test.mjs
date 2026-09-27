@@ -110,3 +110,15 @@ test("Home diferencia campanha encerrada sem esconder rewards pendentes", () => 
   assert.match(home, /CAMPANHA ENCERRADA/);
   assert.match(home, /PARA COLETAR/);
 });
+
+
+test("season encerrada vira período de coleta sem CTA Elite", () => {
+  const page = read(
+    "src/components/progression/battle-pass/battle-pass-page.tsx",
+  );
+
+  assert.match(page, /snapshot\.season\.status === "active" \? "ATIVA" : "ENCERRADA"/);
+  assert.match(page, /COLETA ATÉ/);
+  assert.match(page, /A ativação da Trilha de Elite foi encerrada/);
+  assert.match(page, /snapshot\.season\.status === "ended"/);
+});
