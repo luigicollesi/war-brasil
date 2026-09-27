@@ -83,7 +83,6 @@ export function battlePassSettlementPresentationEvent(
 ): BattlePassGameXpEvent | null {
   if (!award || award.duplicate || award.xpGranted <= 0) return null;
 
-  const actionXp = award.actionXp ?? 0;
   const completionXp = award.completionXp ?? 0;
   const victoryBonusXp = award.victoryBonusXp ?? 0;
   const occurredAt = new Date().toISOString();
