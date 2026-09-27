@@ -52,7 +52,7 @@ export async function resolveBattlePassMatchSnapshot(
 ): Promise<BattlePassMatchSnapshot | null> {
   const row = (
     await client.query<ActiveSeasonRow>(
-      \`SELECT season.id AS season_id,
+      `SELECT season.id AS season_id,
               profile.id AS profile_id,
               profile.completion_xp,
               profile.victory_bonus_xp,
@@ -64,7 +64,7 @@ export async function resolveBattlePassMatchSnapshot(
           AND season.starts_at <= NOW()
           AND season.ends_at > NOW()
         ORDER BY season.starts_at DESC,season.id
-        LIMIT 1\`,
+        LIMIT 1`,
     )
   ).rows[0];
 
@@ -89,10 +89,10 @@ async function loadThresholds(
     level: number;
     required_total_xp: string;
   }>(
-    \`SELECT level,required_total_xp::text
+    `SELECT level,required_total_xp::text
        FROM catalog.battle_pass_levels
       WHERE season_id=$1
-      ORDER BY level\`,
+      ORDER BY level`,
     [seasonId],
   );
 
@@ -108,10 +108,10 @@ export async function awardBattlePassMatchXp(
 ): Promise<BattlePassXpAward[]> {
   const match = (
     await client.query<MatchProgressionRow>(
-      \`SELECT battle_pass_season_id,battle_pass_xp_profile_id,
+      `SELECT battle_pass_season_id,battle_pass_xp_profile_id,
               battle_pass_xp_profile_snapshot
          FROM game.matches
-        WHERE id=$1\`,
+        WHERE id=$1`,
       [matchId],
     )
   ).rows[0];
@@ -129,10 +129,10 @@ export async function awardBattlePassMatchXp(
   );
   const participants = (
     await client.query<ParticipantRow>(
-      \`SELECT user_id::text,is_bot,is_winner,left_at_snapshot::text
+      `SELECT user_id::text,is_bot,is_winner,left_at_snapshot::text
          FROM game.match_participants
         WHERE match_id=$1
-        ORDER BY player_id_snapshot\`,
+        ORDER BY player_id_snapshot`,
       [matchId],
     )
   ).rows;
@@ -163,12 +163,12 @@ export async function awardBattlePassMatchXp(
     if (breakdown.totalXp <= 0) continue;
 
     const inserted = await client.query<{ id: string }>(
-      \`INSERT INTO progression.battle_pass_xp_entries(
+      `INSERT INTO progression.battle_pass_xp_entries(
          season_id,user_id,source_type,source_key,amount,metadata
        )
        VALUES($1,$2::uuid,'match',$3,$4,$5::jsonb)
        ON CONFLICT (season_id,user_id,source_type,source_key) DO NOTHING
-       RETURNING id::text\`,
+       RETURNING id::text`,
       [
         match.battle_pass_season_id,
         participant.user_id,
@@ -190,9 +190,9 @@ export async function awardBattlePassMatchXp(
         xp_total: string;
         level_reached: number;
       }>(
-        \`SELECT xp_total::text,level_reached
+        `SELECT xp_total::text,level_reached
            FROM progression.battle_pass_progress
-          WHERE season_id=$1 AND user_id=$2::uuid\`,
+          WHERE season_id=$1 AND user_id=$2::uuid`,
         [match.battle_pass_season_id, participant.user_id],
       );
       awards.push({
@@ -208,14 +208,14 @@ export async function awardBattlePassMatchXp(
 
     const progress = (
       await client.query<{ xp_total: string }>(
-        \`INSERT INTO progression.battle_pass_progress(
+        `INSERT INTO progression.battle_pass_progress(
            season_id,user_id,xp_total,level_reached
          )
          VALUES($1,$2::uuid,$3,1)
          ON CONFLICT (season_id,user_id) DO UPDATE
          SET xp_total=progression.battle_pass_progress.xp_total + EXCLUDED.xp_total,
              updated_at=NOW()
-         RETURNING xp_total::text\`,
+         RETURNING xp_total::text`,
         [
           match.battle_pass_season_id,
           participant.user_id,
@@ -228,9 +228,9 @@ export async function awardBattlePassMatchXp(
     const levelReached = resolveBattlePassLevel(thresholds, totalXp);
 
     await client.query(
-      \`UPDATE progression.battle_pass_progress
+      `UPDATE progression.battle_pass_progress
           SET level_reached=$3,updated_at=NOW()
-        WHERE season_id=$1 AND user_id=$2::uuid\`,
+        WHERE season_id=$1 AND user_id=$2::uuid`,
       [match.battle_pass_season_id, participant.user_id, levelReached],
     );
 
