@@ -32,6 +32,7 @@ import {
   territorySkinAssetDeliveryPath,
 } from "../assets/asset-storage-service";
 import { pool } from "../db/pool";
+import { logBattlePassEvent } from "../observability/battle-pass-events";
 import {
   createPurchaseReceipt,
   debitCampaignCreditWallet,
@@ -1149,6 +1150,16 @@ export async function purchaseOffer(
     } satisfies PurchaseOfferResult;
 
     await client.query("COMMIT");
+    for (const entitlement of result.acquiredEntitlements) {
+      if (entitlement.kind !== "battle_pass_access") continue;
+      logBattlePassEvent("battle_pass_premium_unlocked", {
+        seasonId: entitlement.id,
+        userId,
+        purchaseId,
+        amount: price,
+        duplicate: false,
+      });
+    }
     return result;
   } catch (error) {
     await client.query("ROLLBACK");
