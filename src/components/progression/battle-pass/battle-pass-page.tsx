@@ -4,6 +4,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import {
+  ShowcasePurchaseError,
+  purchaseShowcaseOffer,
+} from "@/src/lib/client/store-showcase/purchase-showcase-offer";
 import { TerritorySkinPreview } from "@/src/components/economy/territory-skin-preview";
 import { ProfileTitleRenderer } from "@/src/components/profile/profile-title-renderer";
 import { ProfileCosmeticImage } from "@/src/components/profile/v4/profile-cosmetic-image";
@@ -146,6 +150,7 @@ export function BattlePassPage({
   const router = useRouter();
   const [pendingRewardId, setPendingRewardId] = useState<string | null>(null);
   const [claimAllPending, setClaimAllPending] = useState(false);
+  const [premiumPending, setPremiumPending] = useState(false);
   const [feedback, setFeedback] = useState<ClaimFeedback | null>(null);
 
   const currentIndex = useMemo(() => {
@@ -211,6 +216,46 @@ export function BattlePassPage({
       });
     } finally {
       setClaimAllPending(false);
+    }
+  }
+
+  async function activatePremium() {
+    if (
+      !snapshot ||
+      snapshot.premium.access ||
+      !snapshot.premium.offerId ||
+      premiumPending
+    ) {
+      return;
+    }
+
+    setPremiumPending(true);
+    setFeedback(null);
+    try {
+      await purchaseShowcaseOffer({
+        offerId: snapshot.premium.offerId,
+        expectedPrice: snapshot.premium.price,
+      });
+      setFeedback({
+        title: "TRILHA DE ELITE ATIVADA",
+        detail: "As recompensas Elite dos níveis já alcançados estão disponíveis.",
+      });
+      router.refresh();
+    } catch (error) {
+      const detail =
+        error instanceof ShowcasePurchaseError
+          ? error.code === "ECONOMY_INSUFFICIENT_BALANCE"
+            ? "Créditos insuficientes para ativar a Trilha de Elite."
+            : error.code === "ECONOMY_OFFER_ALREADY_OWNED"
+              ? "A Trilha de Elite já pertence a este comandante."
+              : error.message
+          : "A Trilha de Elite não pôde ser ativada agora.";
+      setFeedback({
+        title: "ATIVAÇÃO NÃO CONCLUÍDA",
+        detail,
+      });
+    } finally {
+      setPremiumPending(false);
     }
   }
 
@@ -307,8 +352,22 @@ export function BattlePassPage({
               <span>
                 Ative a trilha paga sem perder o progresso já conquistado.
               </span>
-              <button type="button" disabled>
-                ATIVAR ELITE · EM IMPLEMENTAÇÃO
+              <button
+                type="button"
+                disabled={
+                  premiumPending ||
+                  snapshot.premium.offerId === null ||
+                  snapshot.walletBalance < snapshot.premium.price
+                }
+                onClick={() => void activatePremium()}
+              >
+                {premiumPending
+                  ? "ATIVANDO..."
+                  : snapshot.premium.offerId === null
+                    ? "ELITE INDISPONÍVEL"
+                    : snapshot.walletBalance < snapshot.premium.price
+                      ? "CRÉDITOS INSUFICIENTES"
+                      : "ATIVAR ELITE · 3.000 CR"}
               </button>
             </>
           )}
