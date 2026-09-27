@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ShowcasePurchaseError,
   purchaseShowcaseOffer,
@@ -58,6 +58,18 @@ function stateLabel(reward: BattlePassRewardPresentation) {
   if (reward.state === "claimable") return "DISPONÍVEL";
   if (reward.state === "premium_locked") return "ELITE";
   return "BLOQUEADO";
+}
+
+function initialRailStart(snapshot: BattlePassSnapshot | null) {
+  if (!snapshot) return 0;
+  const currentIndex = Math.max(
+    0,
+    snapshot.levels.findIndex(
+      (level) => level.level === snapshot.progress.levelReached,
+    ),
+  );
+  const maxStart = Math.max(0, snapshot.levels.length - 8);
+  return Math.max(0, Math.min(maxStart, Math.max(0, currentIndex - 2)));
 }
 
 function RewardVisual({ reward }: { reward: BattlePassRewardPresentation }) {
@@ -172,7 +184,7 @@ export function BattlePassPage({
   const [premiumConfirmationOpen, setPremiumConfirmationOpen] = useState(false);
   const [feedback, setFeedback] = useState<ClaimFeedback | null>(null);
   const [claimReveal, setClaimReveal] = useState<ClaimReveal | null>(null);
-  const [railStart, setRailStart] = useState(0);
+  const [railStart, setRailStart] = useState(() => initialRailStart(snapshot));
 
   const currentIndex = useMemo(() => {
     if (!snapshot) return 0;
@@ -183,14 +195,6 @@ export function BattlePassPage({
       ),
     );
   }, [snapshot]);
-
-  useEffect(() => {
-    if (!snapshot) return;
-    const maxStart = Math.max(0, snapshot.levels.length - 8);
-    setRailStart(
-      Math.max(0, Math.min(maxStart, Math.max(0, currentIndex - 2))),
-    );
-  }, [currentIndex, snapshot]);
 
   async function claimReward(reward: BattlePassRewardPresentation) {
     if (pendingRewardId || claimAllPending) return;
