@@ -1,6 +1,5 @@
 import "server-only";
 
-import { randomUUID } from "node:crypto";
 import type { PoolClient } from "pg";
 import {
   advanceBattlePresentation,
@@ -211,7 +210,7 @@ export async function executeAttack(
   }
 
   const battle: Battle = {
-    id: randomUUID(),
+    id: globalThis.crypto.randomUUID(),
     attackerTerritoryId: input.fromTerritoryId,
     defenderTerritoryId: input.toTerritoryId,
     attackerPlayerId: player.id,
