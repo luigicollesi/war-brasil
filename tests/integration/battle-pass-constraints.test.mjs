@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import test from "node:test";
 import { Client } from "pg";
 
@@ -24,6 +25,20 @@ async function withTemporaryDatabase(callback) {
     await admin.end();
   }
 }
+
+function prepareDatabase(connectionString) {
+  const result = spawnSync(process.execPath, ["scripts/prepare-dev-db.mjs"], {
+    cwd: process.cwd(),
+    encoding: "utf8",
+    env: { ...process.env, DATABASE_URL: connectionString },
+  });
+  assert.equal(
+    result.status,
+    0,
+    `prepare-dev-db falhou:\n${result.stdout}\n${result.stderr}`,
+  );
+}
+
 
 async function expectPgError(client, sql, params, expected) {
   await assert.rejects(
@@ -50,6 +65,9 @@ if (!databaseUrl) {
       await client.connect();
       try {
         await client.query(readFileSync("src/lib/db/schema.sql", "utf8"));
+        await client.end();
+        prepareDatabase(connectionString);
+        await client.connect();
 
         const cleanInstallGuards = await client.query(
           `SELECT
