@@ -32,7 +32,11 @@ test("claim de conjunto deriva composição no servidor a partir de um único re
   assert.match(service, /await claimRewardInTransaction\(client, userId, member\.id\)/);
   assert.match(route, /parseBattlePassClaimInput\(payload\)/);
   assert.match(route, /claimBattlePassRewardGroup/);
-  assert.doesNotMatch(route, /groupKey|rewardIds|cosmeticIds/);
+  assert.doesNotMatch(
+    route,
+    /input\.groupKey|payload\.groupKey|input\.rewardIds|payload\.rewardIds|input\.cosmeticIds|payload\.cosmeticIds/,
+  );
+  assert.match(route, /result\.groupKey/);
 });
 
 test("conjunto Elite inicial aparece como um único card e reveal composto", () => {
