@@ -39,6 +39,7 @@ type RewardRow = {
   level: number;
   track: "free" | "premium";
   position: number;
+  presentation_group_key: string | null;
   reward_kind:
     | "campaign_credit"
     | "game_cosmetic"
@@ -199,7 +200,8 @@ async function loadLevels(seasonId: string) {
 async function loadRewards(userId: string, seasonId: string) {
   const result = await pool.query<RewardRow>(
     `SELECT
-       reward.id,reward.level,reward.track,reward.position,reward.reward_kind,
+       reward.id,reward.level,reward.track,reward.position,
+       reward.presentation_group_key,reward.reward_kind,
        reward.credit_amount::text,reward.cosmetic_id,reward.title_id,reward.background_id,
        cosmetic.name AS cosmetic_name,
        cosmetic.description AS cosmetic_description,
@@ -289,6 +291,7 @@ function rewardPresentation(
     level: row.level,
     track: row.track,
     position: row.position,
+    presentationGroupKey: row.presentation_group_key,
     kind: row.reward_kind,
     state,
     creditAmount:
