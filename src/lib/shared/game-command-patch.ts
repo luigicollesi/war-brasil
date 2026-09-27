@@ -101,6 +101,7 @@ const TERMS_KEYS = new Set(["offered", "requested"]);
 const COUNTER_KEYS = new Set(["proposerPlayerId", "terms"]);
 const PENDING_CONQUEST_KEYS = new Set(["fromTerritoryId", "toTerritoryId"]);
 const BATTLE_KEYS = new Set([
+  "id",
   "attacker",
   "defender",
   "attackerLosses",
@@ -208,6 +209,8 @@ function validDice(value: unknown) {
 function validBattle(value: unknown): value is GameBattle {
   if (!isRecord(value) || !hasOnlyKeys(value, BATTLE_KEYS)) return false;
   if (
+    (value.id !== undefined &&
+      (typeof value.id !== "string" || value.id.length < 1 || value.id.length > 128)) ||
     !validDice(value.attacker) ||
     !validDice(value.defender) ||
     !validNonNegativeInteger(value.attackerLosses) ||
