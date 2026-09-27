@@ -167,7 +167,12 @@ async function loadPremiumOffer(seasonId: string) {
         AND entitlement.battle_pass_season_id=$1
        JOIN catalog.battle_pass_pricing pricing
          ON pricing.season_id=entitlement.battle_pass_season_id
-      WHERE offer.status='available'
+       JOIN catalog.battle_pass_seasons season
+         ON season.id=entitlement.battle_pass_season_id
+      WHERE season.status='active'
+        AND season.starts_at <= CURRENT_TIMESTAMP
+        AND season.ends_at > CURRENT_TIMESTAMP
+        AND offer.status='available'
         AND offer.active=TRUE
         AND product.active=TRUE
         AND pricing.fixed_price=$2
