@@ -397,6 +397,9 @@ export async function getBattlePassSnapshot(
       access: premiumAccess,
       price: BATTLE_PASS_PREMIUM_PRICE,
       offerId: premiumOfferId,
+      retroactiveClaimableCount: rewards.filter(
+        (reward) => reward.state === "premium_locked",
+      ).length,
     },
     walletBalance: safeInteger(wallet?.balance ?? 0),
     claimableCount: rewards.filter((reward) => reward.state === "claimable")
