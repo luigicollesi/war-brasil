@@ -90,3 +90,21 @@ test("claim-all retorna resumo determinístico por categoria e histórico já co
   assert.match(page, /claimReveal\.titleCount/);
   assert.match(page, /já estavam coletadas/);
 });
+
+
+test("claim exige season ativa ou encerrada além da janela temporal", () => {
+  const service = read(
+    "src/lib/server/progression/battle-pass-reward-service.ts",
+  );
+
+  assert.match(service, /season\.status AS season_status/);
+  assert.match(
+    service,
+    /reward\.season_status !== "active"[\s\S]*reward\.season_status !== "ended"/,
+  );
+  assert.match(
+    service,
+    /seasonRow\.status !== "active"[\s\S]*seasonRow\.status !== "ended"/,
+  );
+  assert.match(service, /BATTLE_PASS_NOT_ACTIVE/);
+});
