@@ -16,6 +16,10 @@ import {
   tradeValue,
 } from "@/src/lib/game-rules";
 import { evaluateGameVictory } from "@/src/lib/server/game-victory-service";
+import {
+  recordBattlePassCardTrade,
+  recordBattlePassTroopsPlaced,
+} from "@/src/lib/server/progression/battle-pass-match-action-xp-service";
 import { RoomError } from "@/src/lib/rooms";
 import {
   readPlayerHandPrivatePatch,
@@ -108,6 +112,7 @@ export async function executeReinforcement(
   roomId: string,
   player: CommandPlayer,
   input: ReinforcementInput,
+  xpSourceKey?: string | null,
 ): Promise<GameCommandPatch> {
   const room = await loadRoom(client, roomId);
   assertReinforcementTurn(room, player);
@@ -157,6 +162,13 @@ export async function executeReinforcement(
     [room.id, remaining],
   );
 
+  await recordBattlePassTroopsPlaced(client, {
+    roomId: room.id,
+    playerId: player.id,
+    sourceKey: xpSourceKey ? `reinforce:${xpSourceKey}` : null,
+    troops: input.troops,
+  });
+
   const won = await evaluateGameVictory(
     client,
     room.id,
@@ -191,6 +203,7 @@ export async function executeTradeCards(
   roomId: string,
   player: CommandPlayer,
   ids: string[],
+  xpSourceKey?: string | null,
 ) {
   const room = await loadRoom(client, roomId);
 
@@ -277,6 +290,12 @@ export async function executeTradeCards(
     [room.id, tradeValue(tradeProgress.trade_count_before)],
   );
 
+  await recordBattlePassCardTrade(client, {
+    roomId: room.id,
+    playerId: player.id,
+    sourceKey: xpSourceKey ? `cards.trade:${xpSourceKey}` : null,
+  });
+
   if (changedTroops) {
     await evaluateGameVictory(client, room.id, player.id, "troops_changed");
   }
@@ -306,7 +325,13 @@ export async function reinforceCommand(
     normalizedInput,
     async (client) => {
       const player = await resolveCommandPlayerBySession(client, roomId, session);
-      return executeReinforcement(client, roomId, player, normalizedInput);
+      return executeReinforcement(
+        client,
+        roomId,
+        player,
+        normalizedInput,
+        metadata?.commandId,
+      );
     },
     { accountUserId },
   );
@@ -353,7 +378,13 @@ export async function tradeCardsCommand(
       ).rows
         .map((row) => row.territory_id)
         .filter((id): id is number => id !== null);
-      return executeTradeCards(client, roomId, player, ids);
+      return executeTradeCards(
+        client,
+        roomId,
+        player,
+        ids,
+        metadata?.commandId,
+      );
     },
     {
       accountUserId,
