@@ -3,6 +3,10 @@ import "server-only";
 import type { PoolClient } from "pg";
 import type { GameRuleset } from "@/src/lib/game-mode";
 import {
+  awardBattlePassMatchXp,
+  resolveBattlePassMatchSnapshot,
+} from "@/src/lib/server/progression/battle-pass-match-xp-service";
+import {
   DiceBalanceConfigurationError,
   type DiceBalanceAlgorithm,
   type DiceBalanceProfile,
@@ -214,6 +218,7 @@ export async function initializeDiceBalanceForGame(
     client,
     room.balanced_dice_enabled,
   );
+  const battlePass = await resolveBattlePassMatchSnapshot(client);
   const sequence =
     (
       await client.query<{ next_sequence: number }>(
@@ -229,9 +234,11 @@ export async function initializeDiceBalanceForGame(
       `INSERT INTO game.matches (
          room_id,sequence,requested_profile_id,resolved_profile_id,
          profile_source,dice_balance_profile_snapshot,match_mode_snapshot,
-         ruleset_snapshot,balanced_dice_enabled_snapshot
+         ruleset_snapshot,balanced_dice_enabled_snapshot,
+         battle_pass_season_id,battle_pass_xp_profile_id,
+         battle_pass_xp_profile_snapshot
        )
-       VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9)
+       VALUES ($1,$2,$3,$4,$5,$6::jsonb,$7,$8,$9,$10,$11,$12::jsonb)
        RETURNING id`,
       [
         roomId,
@@ -243,6 +250,9 @@ export async function initializeDiceBalanceForGame(
         room.match_mode,
         room.ruleset,
         room.balanced_dice_enabled,
+        battlePass?.seasonId ?? null,
+        battlePass?.profileId ?? null,
+        battlePass ? JSON.stringify(battlePass.profile) : null,
       ],
     )
   ).rows[0];
@@ -281,7 +291,7 @@ async function snapshotMatchParticipants(
   await client.query(
     `INSERT INTO game.match_participants (
        match_id,player_id_snapshot,user_id,display_name_snapshot,handle_snapshot,
-       faction_name_snapshot,color_snapshot,is_bot,is_winner
+       faction_name_snapshot,color_snapshot,is_bot,is_winner,left_at_snapshot
      )
      SELECT
        $1,
@@ -295,7 +305,8 @@ async function snapshotMatchParticipants(
        CASE
          WHEN $3::bigint[] IS NULL THEN NULL
          ELSE player.id=ANY($3::bigint[])
-       END
+       END,
+       player.left_at
      FROM game.players player
      WHERE player.room_id=$2
      ON CONFLICT (match_id,player_id_snapshot) DO NOTHING`,
@@ -332,6 +343,7 @@ export async function finishDiceBalanceMatchForRoom(
     room.current_match_id,
     winnerPlayerIds,
   );
+  await awardBattlePassMatchXp(client, room.current_match_id);
 
   await client.query(
     `UPDATE game.matches

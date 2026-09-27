@@ -30,6 +30,10 @@ const physicalTables = new Map([
   [
     "catalog",
     [
+      "battle_pass_levels",
+      "battle_pass_rewards",
+      "battle_pass_seasons",
+      "battle_pass_xp_profiles",
       "bot_names",
       "campaign_assets",
       "campaign_offers",
@@ -100,6 +104,15 @@ const physicalTables = new Map([
     ],
   ],
   ["inventory", ["cosmetics"]],
+  [
+    "progression",
+    [
+      "battle_pass_access",
+      "battle_pass_progress",
+      "battle_pass_reward_claims",
+      "battle_pass_xp_entries",
+    ],
+  ],
   ["social", ["blocks", "friend_requests", "friendships"]],
   ["ops", ["command_receipts", "pgmigrations"]],
 ]);
@@ -579,7 +592,7 @@ async function assertOrganizedDatabase(connectionString) {
       JOIN pg_namespace n ON n.oid = c.relnamespace
       WHERE n.nspname IN (
         'game', 'catalog', 'auth', 'profile', 'economy', 'inventory',
-        'social', 'ops', 'public'
+        'social', 'ops', 'progression', 'public'
       )
         AND c.relkind IN ('r', 'p', 'v')
       ORDER BY n.nspname, c.relname
