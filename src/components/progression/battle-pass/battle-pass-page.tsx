@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ShowcasePurchaseError,
   purchaseShowcaseOffer,
@@ -24,6 +24,17 @@ type ClaimFeedback = Readonly<{
   title: string;
   detail: string;
 }>;
+
+type ClaimReveal =
+  | Readonly<{
+      kind: "reward";
+      reward: BattlePassRewardPresentation;
+    }>
+  | Readonly<{
+      kind: "batch";
+      claimedCount: number;
+      creditAmount: number;
+    }>;
 
 function progressPercent(snapshot: BattlePassSnapshot) {
   const { xpTotal, currentLevelXp, nextLevelXp } = snapshot.progress;
@@ -152,6 +163,8 @@ export function BattlePassPage({
   const [claimAllPending, setClaimAllPending] = useState(false);
   const [premiumPending, setPremiumPending] = useState(false);
   const [feedback, setFeedback] = useState<ClaimFeedback | null>(null);
+  const [claimReveal, setClaimReveal] = useState<ClaimReveal | null>(null);
+  const [railStart, setRailStart] = useState(0);
 
   const currentIndex = useMemo(() => {
     if (!snapshot) return 0;
@@ -162,6 +175,14 @@ export function BattlePassPage({
       ),
     );
   }, [snapshot]);
+
+  useEffect(() => {
+    if (!snapshot) return;
+    const maxStart = Math.max(0, snapshot.levels.length - 8);
+    setRailStart(
+      Math.max(0, Math.min(maxStart, Math.max(0, currentIndex - 2))),
+    );
+  }, [currentIndex, snapshot]);
 
   async function claimReward(reward: BattlePassRewardPresentation) {
     if (pendingRewardId || claimAllPending) return;
@@ -178,6 +199,7 @@ export function BattlePassPage({
         title: "RECOMPENSA OBTIDA",
         detail: reward.name,
       });
+      setClaimReveal({ kind: "reward", reward });
       router.refresh();
     } catch {
       setFeedback({
@@ -204,9 +226,16 @@ export function BattlePassPage({
         claimedCount?: number;
         creditAmount?: number;
       };
+      const claimedCount = result.claimedCount ?? 0;
+      const creditAmount = result.creditAmount ?? 0;
       setFeedback({
         title: "RECOMPENSAS RECEBIDAS",
-        detail: `${INTEGER.format(result.claimedCount ?? 0)} recompensas · +${INTEGER.format(result.creditAmount ?? 0)} CR`,
+        detail: `${INTEGER.format(claimedCount)} recompensas · +${INTEGER.format(creditAmount)} CR`,
+      });
+      setClaimReveal({
+        kind: "batch",
+        claimedCount,
+        creditAmount,
       });
       router.refresh();
     } catch {
@@ -290,10 +319,25 @@ export function BattlePassPage({
   }
 
   const percent = progressPercent(snapshot);
+  const maxRailStart = Math.max(0, snapshot.levels.length - 8);
   const visibleLevels = snapshot.levels.slice(
-    Math.max(0, currentIndex - 2),
-    Math.min(snapshot.levels.length, currentIndex + 6),
+    railStart,
+    Math.min(snapshot.levels.length, railStart + 8),
   );
+
+  function showCurrentLevel() {
+    setRailStart(
+      Math.max(0, Math.min(maxRailStart, Math.max(0, currentIndex - 2))),
+    );
+  }
+
+  function showPreviousLevels() {
+    setRailStart((current) => Math.max(0, current - 4));
+  }
+
+  function showNextLevels() {
+    setRailStart((current) => Math.min(maxRailStart, current + 4));
+  }
 
   return (
     <main className={styles.surface}>
@@ -406,6 +450,26 @@ export function BattlePassPage({
           </div>
         ) : null}
 
+        <div className={styles.railControls}>
+          <button
+            type="button"
+            onClick={showPreviousLevels}
+            disabled={railStart === 0}
+          >
+            ← ANTERIORES
+          </button>
+          <button type="button" onClick={showCurrentLevel}>
+            NÍVEL ATUAL
+          </button>
+          <button
+            type="button"
+            onClick={showNextLevels}
+            disabled={railStart >= maxRailStart}
+          >
+            PRÓXIMOS →
+          </button>
+        </div>
+
         <div className={styles.trackLabels} aria-hidden="true">
           <span>TRILHA DE ELITE</span>
           <span>TRILHA LIVRE</span>
@@ -473,6 +537,53 @@ export function BattlePassPage({
           <span>O NÍVEL ATUAL É PRIORIZADO AO ABRIR A CAMPANHA</span>
         </div>
       </section>
+
+      {claimReveal ? (
+        <div
+          className={styles.rewardRevealBackdrop}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Recompensa recebida"
+        >
+          <section className={styles.rewardRevealCard}>
+            <small>RECOMPENSA RECEBIDA</small>
+            {claimReveal.kind === "reward" ? (
+              <>
+                <div className={styles.rewardRevealVisual}>
+                  <RewardVisual reward={claimReveal.reward} />
+                </div>
+                <strong>{claimReveal.reward.name}</strong>
+                <span>
+                  Nível {claimReveal.reward.level} ·{" "}
+                  {claimReveal.reward.track === "premium"
+                    ? "Trilha de Elite"
+                    : "Trilha Livre"}
+                </span>
+              </>
+            ) : (
+              <>
+                <div className={styles.rewardRevealBatch}>
+                  <Image
+                    src="/coin.svg"
+                    alt=""
+                    width={64}
+                    height={64}
+                    aria-hidden="true"
+                  />
+                  <strong>{INTEGER.format(claimReveal.claimedCount)}</strong>
+                </div>
+                <strong>Recompensas coletadas</strong>
+                <span>
+                  +{INTEGER.format(claimReveal.creditAmount)} CR nesta coleta
+                </span>
+              </>
+            )}
+            <button type="button" onClick={() => setClaimReveal(null)}>
+              CONTINUAR
+            </button>
+          </section>
+        </div>
+      ) : null}
     </main>
   );
 }
