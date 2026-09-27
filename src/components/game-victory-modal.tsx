@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { GameModal } from "@/src/components/game-modal";
 import type { GameSnapshot } from "@/src/lib/game-contract";
+import type { BattlePassMatchResult } from "@/src/lib/shared/progression/battle-pass-presentation";
 
 type GameVictoryModalProps = {
   snapshot: GameSnapshot;
@@ -79,6 +81,40 @@ export function GameVictoryModal({
   const summary = winnerSummary(snapshot);
   const rematch = snapshot.room.rematch;
   const busy = isVoting || isReturningToLobby || isLeavingGame;
+  const [battlePassResult, setBattlePassResult] = useState<
+    BattlePassMatchResult | null | undefined
+  >(undefined);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    let active = true;
+    setBattlePassResult(undefined);
+
+    void fetch(`/api/games/${snapshot.room.id}/battle-pass-result`, {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error("battle_pass_result_unavailable");
+        const body = (await response.json()) as {
+          result?: BattlePassMatchResult | null;
+        };
+        if (active) setBattlePassResult(body.result ?? null);
+      })
+      .catch((requestError) => {
+        if (
+          active &&
+          !(requestError instanceof DOMException && requestError.name === "AbortError")
+        ) {
+          setBattlePassResult(null);
+        }
+      });
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [snapshot.room.id]);
 
   return (
     <GameModal
@@ -92,6 +128,53 @@ export function GameVictoryModal({
       </div>
 
       <p className="victory-message">{summary.message}</p>
+
+      {battlePassResult === undefined ? (
+        <div
+          className="victory-battle-pass-status"
+          data-loading="true"
+          aria-live="polite"
+        >
+          <span>Passe de Campanha</span>
+          <strong>Confirmando progresso…</strong>
+        </div>
+      ) : battlePassResult ? (
+        <div className="victory-battle-pass-status" aria-live="polite">
+          <div className="victory-battle-pass-heading">
+            <span>{battlePassResult.seasonName}</span>
+            <strong>+{battlePassResult.xpGranted} XP</strong>
+          </div>
+          <div className="victory-battle-pass-level">
+            {battlePassResult.levelsGained > 0 ? (
+              <>
+                <span>NÍVEL {battlePassResult.levelBefore}</span>
+                <b aria-hidden="true">→</b>
+                <strong>NÍVEL {battlePassResult.levelAfter}</strong>
+              </>
+            ) : (
+              <strong>NÍVEL {battlePassResult.levelAfter}</strong>
+            )}
+          </div>
+          <div className="victory-battle-pass-breakdown">
+            <span>
+              Base +{battlePassResult.breakdown.completionXp}
+            </span>
+            {battlePassResult.breakdown.victoryBonusXp > 0 ? (
+              <span>
+                Vitória +{battlePassResult.breakdown.victoryBonusXp}
+              </span>
+            ) : null}
+            {battlePassResult.breakdown.multiplierBps < 10_000 ? (
+              <span>
+                Ajuste ×
+                {(battlePassResult.breakdown.multiplierBps / 10_000)
+                  .toFixed(2)
+                  .replace(".", ",")}
+              </span>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
 
       {rematch ? (
         <div className="victory-rematch-status" aria-live="polite">
