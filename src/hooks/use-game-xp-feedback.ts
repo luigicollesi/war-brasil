@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { subscribeBattlePassXpEvents } from "@/src/lib/client/game-realtime-ephemeral-bus";
 import type { BattlePassGameXpEvent } from "@/src/lib/shared/progression/battle-pass-game-xp-event";
 
@@ -39,7 +39,7 @@ export function useGameXpFeedback(
   const timeoutRef = useRef<number | null>(null);
   const presentNextRef = useRef<() => void>(() => {});
 
-  presentNextRef.current = () => {
+  const presentNext = useCallback(() => {
     if (
       activeRef.current ||
       suspendedRef.current ||
@@ -64,7 +64,11 @@ export function useGameXpFeedback(
       setActiveEvent(null);
       window.requestAnimationFrame(() => presentNextRef.current());
     }, duration);
-  };
+  }, []);
+
+  useEffect(() => {
+    presentNextRef.current = presentNext;
+  }, [presentNext]);
 
   useEffect(() => {
     suspendedRef.current = options.suspended;
