@@ -156,6 +156,30 @@ async function loadPremiumAccess(userId: string, seasonId: string) {
   return result.rows[0]?.access === true;
 }
 
+async function loadPremiumOffer(seasonId: string) {
+  const result = await pool.query<{ offer_id: string }>(
+    `SELECT offer.id AS offer_id
+       FROM catalog.offers offer
+       JOIN catalog.products product ON product.id=offer.product_id
+       JOIN catalog.product_entitlements entitlement
+         ON entitlement.product_id=product.id
+        AND entitlement.entitlement_kind='battle_pass_access'
+        AND entitlement.battle_pass_season_id=$1
+       JOIN catalog.battle_pass_pricing pricing
+         ON pricing.season_id=entitlement.battle_pass_season_id
+      WHERE offer.status='available'
+        AND offer.active=TRUE
+        AND product.active=TRUE
+        AND pricing.fixed_price=$2
+        AND (offer.starts_at IS NULL OR offer.starts_at <= CURRENT_TIMESTAMP)
+        AND (offer.ends_at IS NULL OR offer.ends_at > CURRENT_TIMESTAMP)
+      ORDER BY offer.priority,offer.sort_order,offer.id
+      LIMIT 1`,
+    [seasonId, BATTLE_PASS_PREMIUM_PRICE],
+  );
+  return result.rows[0]?.offer_id ?? null;
+}
+
 async function loadLevels(seasonId: string) {
   const result = await pool.query<LevelRow>(
     `SELECT level,required_total_xp::text
@@ -308,10 +332,11 @@ export async function getBattlePassSnapshot(
   const season = await loadVisibleSeason();
   if (!season) return null;
 
-  const [progress, premiumAccess, levelRows, rewardRows, wallet] =
+  const [progress, premiumAccess, premiumOfferId, levelRows, rewardRows, wallet] =
     await Promise.all([
       loadProgress(userId, season.id),
       loadPremiumAccess(userId, season.id),
+      loadPremiumOffer(season.id),
       loadLevels(season.id),
       loadRewards(userId, season.id),
       findCampaignCreditWallet(userId),
@@ -366,6 +391,7 @@ export async function getBattlePassSnapshot(
     premium: {
       access: premiumAccess,
       price: BATTLE_PASS_PREMIUM_PRICE,
+      offerId: premiumOfferId,
     },
     walletBalance: safeInteger(wallet?.balance ?? 0),
     claimableCount: rewards.filter((reward) => reward.state === "claimable")
