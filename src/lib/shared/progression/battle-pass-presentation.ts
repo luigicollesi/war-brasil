@@ -2,6 +2,7 @@ import type {
   BattlePassRewardKind,
   BattlePassTrack,
 } from "./battle-pass-contract";
+import type { BattlePassGameXpEvent } from "./battle-pass-game-xp-event";
 
 export type BattlePassResolvedRewardState =
   | "locked"
@@ -99,7 +100,9 @@ export type BattlePassMatchResult = Readonly<{
   levelAfter: number;
   levelsGained: number;
   isWinner: boolean;
+  presentationEvents: ReadonlyArray<BattlePassGameXpEvent>;
   breakdown: Readonly<{
+    actionXp: number;
     completionXp: number;
     victoryBonusXp: number;
     multiplierBps: number;
