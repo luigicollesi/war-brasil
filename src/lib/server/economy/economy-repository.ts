@@ -588,6 +588,52 @@ export async function insertPurchaseLedgerEntry(
   );
 }
 
+export async function creditCampaignCreditReward(
+  userId: string,
+  amount: number,
+  domainReference: string,
+  idempotencyKey: string,
+  db: EconomyQueryable,
+): Promise<string | null> {
+  if (!Number.isSafeInteger(amount) || amount <= 0) {
+    throw new Error("ECONOMY_CREDIT_REWARD_AMOUNT_INVALID");
+  }
+
+  const result = await db.query<{ balance: string }>(
+    `UPDATE economy.wallets
+        SET balance=balance+$2::bigint,
+            updated_at=NOW()
+      WHERE user_id=$1::uuid
+        AND currency_code='campaign-credit'
+      RETURNING balance::text AS balance`,
+    [userId, amount],
+  );
+  const balance = result.rows[0]?.balance ?? null;
+  if (balance === null) return null;
+
+  await db.query(
+    `INSERT INTO economy.ledger_entries(
+       user_id,
+       currency_code,
+       delta,
+       reason,
+       domain_reference,
+       idempotency_key
+     )
+     VALUES(
+       $1::uuid,
+       'campaign-credit',
+       $2::bigint,
+       'battle_pass_reward',
+       $3,
+       $4
+     )`,
+    [userId, amount, domainReference, idempotencyKey],
+  );
+
+  return balance;
+}
+
 export async function grantPurchasedCosmetics(
   userId: string,
   purchaseId: string,

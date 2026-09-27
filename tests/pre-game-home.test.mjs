@@ -58,7 +58,10 @@ test("landing pública e Home autenticada reutilizam a mesma experiência sem du
   assert.match(commandPage, /getAuthenticatedSessionForReadHeaders/);
   assert.match(commandPage, /if \(!session\)[\s\S]*redirect\("\/"\)/);
   assert.match(commandPage, /getCommandAccessState\(session\)/);
-  assert.match(commandPage, /<CommandHomeClient mode="command" initialAccess=\{access\}>/);
+  assert.match(
+    commandPage,
+    /<CommandHomeClient[\s\S]*mode="command"[\s\S]*initialAccess=\{access\}[\s\S]*initialCampaign=\{campaign\}/,
+  );
   assert.match(home, /router\.replace\("\/home", \{ scroll: false \}\)/);
   assert.match(home, /mode === "landing"/);
   assert.match(home, /isCommandHome \? "stable" : "primed"/);
@@ -120,7 +123,7 @@ test("HOME mantém Bellum Civile enquadrado em viewports estreitos", () => {
   );
 });
 
-test("HOME mantém identidade, CTA e três destinos do comando", () => {
+test("HOME mantém identidade, CTA e quatro destinos do comando", () => {
   assert.match(content, /BELLUM/);
   assert.match(content, /CIVILE/);
   assert.match(content, /BRASIL/);
@@ -128,6 +131,8 @@ test("HOME mantém identidade, CTA e três destinos do comando", () => {
   assert.match(home, /href: "\/matchmaking"/);
   assert.match(home, /href: "\/rules"/);
   assert.match(home, /href: "\/profile"/);
+  assert.match(home, /href: "\/campaign"/);
+  assert.match(home, /label: "CAMPANHA"/);
   assert.match(home, /aria-label="Destinos do comando"/);
 });
 
@@ -354,7 +359,7 @@ test("ritual é pulável, reduced-motion/fallback assentam sem Genesis", () => {
 test("mobile preserva composição própria, safe-area e alvos touch", () => {
   assert.match(styles, /overflow: hidden/);
   assert.match(styles, /@media \(max-width: 900px\)/);
-  assert.match(styles, /\.destinationRail \{[\s\S]*grid-template-columns: 1fr;/);
+  assert.match(styles, /@media \(max-width: 520px\)[\s\S]*\.destinationRail \{[\s\S]*grid-template-columns: 1fr;/);
   assert.match(styles, /\.destination \{[\s\S]*min-height: 68px;/);
   assert.match(styles, /\.skipCeremony \{[\s\S]*min-height: 44px;/);
   assert.match(styles, /env\(safe-area-inset-bottom\)/);

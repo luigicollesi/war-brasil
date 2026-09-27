@@ -2,6 +2,7 @@ import "server-only";
 
 import { pool } from "@/src/lib/server/db/pool";
 import { ensureEconomyState } from "@/src/lib/server/economy/economy-service";
+import { creditCampaignCreditReward } from "@/src/lib/server/economy/economy-repository";
 import type { PoolClient } from "pg";
 
 const REWARD_ID_MAX_LENGTH = 160;
@@ -244,37 +245,20 @@ async function grantCreditReward(
   }
 
   await ensureEconomyState(userId, client);
-  const wallet = await client.query(
-    `UPDATE economy.wallets
-        SET balance=balance+$2::bigint,
-            updated_at=NOW()
-      WHERE user_id=$1::uuid
-        AND currency_code='campaign-credit'
-      RETURNING balance`,
-    [userId, amount],
+  const updatedBalance = await creditCampaignCreditReward(
+    userId,
+    amount,
+    reward.id,
+    `battle-pass:${reward.season_id}:${userId}:${reward.id}`,
+    client,
   );
-  if ((wallet.rowCount ?? 0) !== 1) {
+  if (updatedBalance === null) {
     throw new BattlePassServiceError(
       "BATTLE_PASS_WALLET_UNAVAILABLE",
       "A carteira de Créditos de Campanha está indisponível.",
       503,
     );
   }
-
-  await client.query(
-    `INSERT INTO economy.ledger_entries(
-       user_id,currency_code,delta,reason,domain_reference,idempotency_key
-     )
-     VALUES(
-       $1::uuid,'campaign-credit',$2::bigint,'battle_pass_reward',$3,$4
-     )`,
-    [
-      userId,
-      amount,
-      reward.id,
-      `battle-pass:${reward.season_id}:${userId}:${reward.id}`,
-    ],
-  );
 
   return amount;
 }

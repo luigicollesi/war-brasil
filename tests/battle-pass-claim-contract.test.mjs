@@ -21,15 +21,23 @@ test("claim de Passe registra claim antes da concessão e mantém tudo na mesma 
   assert.match(service, /await client\.query\("ROLLBACK"\)/);
 });
 
-test("recompensa monetária usa wallet e ledger idempotente do Economy V2", () => {
+test("recompensa monetária delega wallet e ledger ao repository autoritativo da Economy V2", () => {
   const service = read(
     "src/lib/server/progression/battle-pass-reward-service.ts",
   );
+  const repository = read(
+    "src/lib/server/economy/economy-repository.ts",
+  );
 
-  assert.match(service, /balance=balance\+\$2::bigint/);
-  assert.match(service, /'battle_pass_reward'/);
+  assert.match(service, /creditCampaignCreditReward/);
   assert.match(service, /battle-pass:\$\{reward\.season_id\}/);
   assert.match(service, /ensureEconomyState\(userId, client\)/);
+  assert.doesNotMatch(service, /UPDATE\s+economy\.wallets/i);
+  assert.doesNotMatch(service, /INSERT\s+INTO\s+economy\.ledger_entries/i);
+
+  assert.match(repository, /export async function creditCampaignCreditReward/);
+  assert.match(repository, /balance=balance\+\$2::bigint/);
+  assert.match(repository, /'battle_pass_reward'/);
 });
 
 test("recompensas reutilizam ownership canônico com acquisition_source reward", () => {
@@ -51,8 +59,14 @@ test("claim-all deriva rewards elegíveis no servidor e não recebe valores do c
   assert.match(service, /reward\.level <= \$3/);
   assert.match(service, /reward\.track='free' OR \$4::boolean/);
   assert.match(service, /claimed\.reward_id IS NULL/);
+  const claimRoute = read(
+    "src/app/api/battle-pass/rewards/claim/route.ts",
+  );
+  const claimAllRoute = read(
+    "src/app/api/battle-pass/rewards/claim-all/route.ts",
+  );
   assert.doesNotMatch(
-    service,
-    /payload.*credit_amount|payload.*cosmetic_id|payload.*title_id|payload.*background_id/s,
+    `${claimRoute}\n${claimAllRoute}`,
+    /creditAmount|cosmeticId|titleId|backgroundId|credit_amount|cosmetic_id|title_id|background_id/,
   );
 });
