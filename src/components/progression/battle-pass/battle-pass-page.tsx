@@ -31,6 +31,12 @@ type ClaimReveal =
       reward: BattlePassRewardPresentation;
     }>
   | Readonly<{
+      kind: "group";
+      rewards: ReadonlyArray<BattlePassRewardPresentation>;
+      claimedCount: number;
+      alreadyClaimedCount: number;
+    }>
+  | Readonly<{
       kind: "batch";
       claimedCount: number;
       alreadyClaimedCount: number;
@@ -58,6 +64,44 @@ function stateLabel(reward: BattlePassRewardPresentation) {
   if (reward.state === "claimable") return "DISPONÍVEL";
   if (reward.state === "premium_locked") return "ELITE";
   return "BLOQUEADO";
+}
+
+function groupedRewards(
+  rewards: ReadonlyArray<BattlePassRewardPresentation>,
+) {
+  const groups = new Map<
+    string,
+    {
+      presentationGroupKey: string | null;
+      rewards: BattlePassRewardPresentation[];
+    }
+  >();
+
+  for (const reward of rewards) {
+    const mapKey = reward.presentationGroupKey
+      ? `group:${reward.presentationGroupKey}`
+      : `reward:${reward.id}`;
+    const current = groups.get(mapKey);
+    if (current) {
+      current.rewards.push(reward);
+    } else {
+      groups.set(mapKey, {
+        presentationGroupKey: reward.presentationGroupKey,
+        rewards: [reward],
+      });
+    }
+  }
+
+  return [...groups.values()];
+}
+
+function groupState(rewards: ReadonlyArray<BattlePassRewardPresentation>) {
+  if (rewards.every((reward) => reward.state === "claimed")) return "claimed";
+  if (rewards.some((reward) => reward.state === "claimable")) return "claimable";
+  if (rewards.some((reward) => reward.state === "premium_locked")) {
+    return "premium_locked";
+  }
+  return "locked";
 }
 
 function initialRailStart(snapshot: BattlePassSnapshot | null) {
@@ -170,6 +214,66 @@ function RewardCard({
   );
 }
 
+function RewardGroupCard({
+  rewards,
+  pending,
+  onClaim,
+}: {
+  rewards: ReadonlyArray<BattlePassRewardPresentation>;
+  pending: boolean;
+  onClaim: (rewards: ReadonlyArray<BattlePassRewardPresentation>) => void;
+}) {
+  const state = groupState(rewards);
+  const anchor = rewards[0];
+  if (!anchor) return null;
+
+  return (
+    <article
+      className={styles.rewardGroup}
+      data-state={pending ? "claiming" : state}
+    >
+      <span className={styles.rewardStatus}>
+        {state === "claimed" ? "✓ " : ""}
+        {pending
+          ? "COLETANDO..."
+          : state === "claimed"
+            ? "COLETADO"
+            : state === "claimable"
+              ? "CONJUNTO DISPONÍVEL"
+              : state === "premium_locked"
+                ? "ELITE"
+                : "BLOQUEADO"}
+      </span>
+      <div className={styles.rewardGroupVisuals}>
+        {rewards.map((reward) => (
+          <div key={reward.id} className={styles.rewardGroupVisual}>
+            <RewardVisual reward={reward} />
+          </div>
+        ))}
+      </div>
+      <div className={styles.rewardCopy}>
+        <strong>Conjunto Inicial de Elite</strong>
+        <small>{rewards.length} ITENS</small>
+      </div>
+      {state === "claimable" ? (
+        <button
+          type="button"
+          disabled={pending}
+          onClick={() => onClaim(rewards)}
+        >
+          {pending ? "PROCESSANDO..." : "COLETAR CONJUNTO"}
+        </button>
+      ) : state === "premium_locked" ? (
+        <span className={styles.rewardLock}>TRILHA DE ELITE</span>
+      ) : state === "locked" ? (
+        <span className={styles.rewardLock}>NÍVEL {anchor.level}</span>
+      ) : (
+        <span className={styles.rewardCollected}>✓ CONJUNTO COLETADO</span>
+      )}
+    </article>
+  );
+}
+
 export function BattlePassPage({
   snapshot,
   unavailable,
@@ -217,6 +321,47 @@ export function BattlePassPage({
       setFeedback({
         title: "RECOMPENSA INDISPONÍVEL",
         detail: "Não foi possível confirmar a coleta agora.",
+      });
+    } finally {
+      setPendingRewardId(null);
+    }
+  }
+
+  async function claimRewardGroup(
+    rewards: ReadonlyArray<BattlePassRewardPresentation>,
+  ) {
+    const anchor = rewards[0];
+    if (!anchor || pendingRewardId || claimAllPending) return;
+
+    setPendingRewardId(anchor.id);
+    setFeedback(null);
+    try {
+      const response = await fetch("/api/battle-pass/rewards/claim-group", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rewardId: anchor.id }),
+      });
+      if (!response.ok) throw new Error("claim_group_failed");
+
+      const result = (await response.json()) as {
+        claimedCount?: number;
+        alreadyClaimedCount?: number;
+      };
+      setFeedback({
+        title: "CONJUNTO OBTIDO",
+        detail: `${INTEGER.format(result.claimedCount ?? 0)} itens recebidos`,
+      });
+      setClaimReveal({
+        kind: "group",
+        rewards,
+        claimedCount: result.claimedCount ?? 0,
+        alreadyClaimedCount: result.alreadyClaimedCount ?? 0,
+      });
+      router.refresh();
+    } catch {
+      setFeedback({
+        title: "CONJUNTO INDISPONÍVEL",
+        detail: "Não foi possível confirmar a coleta do conjunto agora.",
       });
     } finally {
       setPendingRewardId(null);
@@ -617,14 +762,27 @@ export function BattlePassPage({
 
               <div className={styles.levelRewards} data-track="premium">
                 {level.premiumRewards.length > 0 ? (
-                  level.premiumRewards.map((reward) => (
-                    <RewardCard
-                      key={reward.id}
-                      reward={reward}
-                      pending={pendingRewardId === reward.id}
-                      onClaim={(item) => void claimReward(item)}
-                    />
-                  ))
+                  groupedRewards(level.premiumRewards).map((group) =>
+                    group.presentationGroupKey && group.rewards.length > 1 ? (
+                      <RewardGroupCard
+                        key={`group:${group.presentationGroupKey}`}
+                        rewards={group.rewards}
+                        pending={group.rewards.some(
+                          (reward) => pendingRewardId === reward.id,
+                        )}
+                        onClaim={(items) => void claimRewardGroup(items)}
+                      />
+                    ) : (
+                      group.rewards.map((reward) => (
+                        <RewardCard
+                          key={reward.id}
+                          reward={reward}
+                          pending={pendingRewardId === reward.id}
+                          onClaim={(item) => void claimReward(item)}
+                        />
+                      ))
+                    ),
+                  )
                 ) : (
                   <span className={styles.noReward}>SEM RECOMPENSA</span>
                 )}
@@ -688,6 +846,23 @@ export function BattlePassPage({
                   {claimReveal.reward.track === "premium"
                     ? "Trilha de Elite"
                     : "Trilha Livre"}
+                </span>
+              </>
+            ) : claimReveal.kind === "group" ? (
+              <>
+                <div className={styles.rewardRevealGroup}>
+                  {claimReveal.rewards.map((reward) => (
+                    <div key={reward.id}>
+                      <RewardVisual reward={reward} />
+                    </div>
+                  ))}
+                </div>
+                <strong>Conjunto Inicial de Elite</strong>
+                <span>
+                  {INTEGER.format(claimReveal.claimedCount)} itens recebidos
+                  {claimReveal.alreadyClaimedCount > 0
+                    ? ` · ${INTEGER.format(claimReveal.alreadyClaimedCount)} já coletados`
+                    : ""}
                 </span>
               </>
             ) : (
