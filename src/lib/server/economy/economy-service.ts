@@ -965,6 +965,26 @@ export async function purchaseOffer(
       );
     }
 
+    const battlePassRows = pricingRows.filter(
+      (item) => item.entitlement_kind === "battle_pass_access",
+    );
+    if (
+      battlePassRows.length > 0 &&
+      (
+        battlePassRows.length !== 1 ||
+        pricingRows.length !== 1 ||
+        offer.bundle_discount_bps !== 0 ||
+        promotionDiscountBps !== 0 ||
+        offer.collection_id !== null
+      )
+    ) {
+      throw new EconomyServiceError(
+        "ECONOMY_CATALOG_INVALID",
+        "A Trilha de Elite precisa ser uma oferta isolada e sem descontos.",
+        503,
+      );
+    }
+
     const quote = quoteEntitlements(
       pricingRows,
       offer.bundle_discount_bps,
