@@ -25,6 +25,7 @@ type RewardRow = {
   background_id: string | null;
   starts_at: Date;
   claim_ends_at: Date;
+  season_status: "active" | "ended" | "draft" | "announced" | "archived";
 };
 
 type ClaimContext = {
@@ -127,7 +128,7 @@ async function loadReward(
     `SELECT reward.id,reward.season_id,reward.level,reward.track,
             reward.presentation_group_key,reward.reward_kind,
             reward.credit_amount::text,reward.cosmetic_id,reward.title_id,reward.background_id,
-            season.starts_at,season.claim_ends_at
+            season.starts_at,season.claim_ends_at,season.status AS season_status
        FROM catalog.battle_pass_rewards reward
        JOIN catalog.battle_pass_seasons season ON season.id=reward.season_id
       WHERE reward.id=$1`,
@@ -187,6 +188,14 @@ async function loadClaimContext(
       "BATTLE_PASS_REWARD_NOT_FOUND",
       "A recompensa informada não existe.",
       404,
+    );
+  }
+
+  if (reward.season_status !== "active" && reward.season_status !== "ended") {
+    throw new BattlePassServiceError(
+      "BATTLE_PASS_NOT_ACTIVE",
+      "Esta Campanha não está disponível para coleta.",
+      409,
     );
   }
 
@@ -547,8 +556,9 @@ export async function claimAllBattlePassRewards(
     const season = await client.query<{
       starts_at: Date;
       claim_ends_at: Date;
+      status: "active" | "ended" | "draft" | "announced" | "archived";
     }>(
-      `SELECT starts_at,claim_ends_at
+      `SELECT starts_at,claim_ends_at,status
          FROM catalog.battle_pass_seasons
         WHERE id=$1
         FOR SHARE`,
@@ -562,6 +572,14 @@ export async function claimAllBattlePassRewards(
         404,
       );
     }
+    if (seasonRow.status !== "active" && seasonRow.status !== "ended") {
+      throw new BattlePassServiceError(
+        "BATTLE_PASS_NOT_ACTIVE",
+        "Esta Campanha não está disponível para coleta.",
+        409,
+      );
+    }
+
     const now = Date.now();
     if (
       seasonRow.starts_at.getTime() > now ||
