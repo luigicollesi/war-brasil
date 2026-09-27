@@ -85,6 +85,42 @@ export const BATTLE_PASS_V1_FREE_CREDIT_REWARDS = buildFreeCreditRewards();
 export const BATTLE_PASS_V1_PREMIUM_CREDIT_REWARDS =
   buildPremiumCreditRewards();
 
+export type BattlePassV1SeasonalRewardSpec = Readonly<{
+  level: number;
+  kind: "game_cosmetic" | "commander_title" | "profile_background";
+  slot:
+    | "dice_attack"
+    | "dice_defense"
+    | "dice_neutral"
+    | "territory_skin"
+    | null;
+}>;
+
+export const BATTLE_PASS_V1_FREE_COSMETIC_REWARDS = Object.freeze([
+  { level: 15, kind: "game_cosmetic", slot: "dice_attack" },
+  { level: 35, kind: "game_cosmetic", slot: "dice_defense" },
+  { level: 55, kind: "game_cosmetic", slot: "dice_neutral" },
+  { level: 75, kind: "game_cosmetic", slot: "territory_skin" },
+  { level: 90, kind: "profile_background", slot: null },
+  { level: 100, kind: "commander_title", slot: null },
+] satisfies ReadonlyArray<BattlePassV1SeasonalRewardSpec>);
+
+export const BATTLE_PASS_V1_PREMIUM_INITIAL_COSMETIC_REWARDS = Object.freeze([
+  { level: 1, kind: "game_cosmetic", slot: "dice_attack" },
+  { level: 1, kind: "game_cosmetic", slot: "dice_defense" },
+  { level: 1, kind: "game_cosmetic", slot: "dice_neutral" },
+  { level: 1, kind: "game_cosmetic", slot: "territory_skin" },
+] satisfies ReadonlyArray<BattlePassV1SeasonalRewardSpec>);
+
+export const BATTLE_PASS_V1_PREMIUM_FINAL_COSMETIC_REWARDS = Object.freeze([
+  { level: 60, kind: "game_cosmetic", slot: "dice_attack" },
+  { level: 70, kind: "game_cosmetic", slot: "dice_defense" },
+  { level: 80, kind: "game_cosmetic", slot: "dice_neutral" },
+  { level: 90, kind: "game_cosmetic", slot: "territory_skin" },
+  { level: 95, kind: "profile_background", slot: null },
+  { level: 100, kind: "commander_title", slot: null },
+] satisfies ReadonlyArray<BattlePassV1SeasonalRewardSpec>);
+
 export const BATTLE_PASS_V1_FREE_COSMETIC_LEVELS = Object.freeze([
   15, 35, 55, 75, 90, 100,
 ] as const);
