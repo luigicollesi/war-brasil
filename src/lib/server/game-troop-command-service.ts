@@ -19,6 +19,7 @@ import { evaluateGameVictory } from "@/src/lib/server/game-victory-service";
 import {
   recordBattlePassCardTrade,
   recordBattlePassTroopsPlaced,
+  type BattlePassActionXpResult,
 } from "@/src/lib/server/progression/battle-pass-match-action-xp-service";
 import { RoomError } from "@/src/lib/rooms";
 import {
@@ -113,6 +114,7 @@ export async function executeReinforcement(
   player: CommandPlayer,
   input: ReinforcementInput,
   xpSourceKey?: string | null,
+  xpResults?: BattlePassActionXpResult[],
 ): Promise<GameCommandPatch> {
   const room = await loadRoom(client, roomId);
   assertReinforcementTurn(room, player);
@@ -162,12 +164,13 @@ export async function executeReinforcement(
     [room.id, remaining],
   );
 
-  await recordBattlePassTroopsPlaced(client, {
+  const xpResult = await recordBattlePassTroopsPlaced(client, {
     roomId: room.id,
     playerId: player.id,
     sourceKey: xpSourceKey ? `reinforce:${xpSourceKey}` : null,
     troops: input.troops,
   });
+  if (xpResult) xpResults?.push(xpResult);
 
   const won = await evaluateGameVictory(
     client,
@@ -204,6 +207,7 @@ export async function executeTradeCards(
   player: CommandPlayer,
   ids: string[],
   xpSourceKey?: string | null,
+  xpResults?: BattlePassActionXpResult[],
 ) {
   const room = await loadRoom(client, roomId);
 
@@ -290,11 +294,12 @@ export async function executeTradeCards(
     [room.id, tradeValue(tradeProgress.trade_count_before)],
   );
 
-  await recordBattlePassCardTrade(client, {
+  const xpResult = await recordBattlePassCardTrade(client, {
     roomId: room.id,
     playerId: player.id,
     sourceKey: xpSourceKey ? `cards.trade:${xpSourceKey}` : null,
   });
+  if (xpResult) xpResults?.push(xpResult);
 
   if (changedTroops) {
     await evaluateGameVictory(client, room.id, player.id, "troops_changed");
@@ -316,6 +321,8 @@ export async function reinforceCommand(
   );
   const troops = positiveInteger(input.troops, "Quantidade de tropas inválida.");
   const normalizedInput = { territoryId, troops };
+  let playerId: string | null = null;
+  const xpResults: BattlePassActionXpResult[] = [];
 
   return playerGameCommand<GameCommandPatch>(
     roomId,
@@ -325,15 +332,31 @@ export async function reinforceCommand(
     normalizedInput,
     async (client) => {
       const player = await resolveCommandPlayerBySession(client, roomId, session);
+      playerId = player.id;
       return executeReinforcement(
         client,
         roomId,
         player,
         normalizedInput,
         metadata?.commandId,
+        xpResults,
       );
     },
-    { accountUserId },
+    {
+      accountUserId,
+      syncEffects: async () => {
+        const event = xpResults.find((result) => result.event)?.event;
+        if (!playerId || !event) return {};
+        return {
+          privatePatches: [
+            {
+              playerId,
+              patch: { battlePassXpEvents: [event] },
+            },
+          ],
+        };
+      },
+    },
   );
 }
 
@@ -355,6 +378,7 @@ export async function tradeCardsCommand(
 
   let playerId: string | null = null;
   let affectedTerritoryIds: number[] = [];
+  const xpResults: BattlePassActionXpResult[] = [];
 
   return playerGameCommand(
     roomId,
@@ -384,6 +408,7 @@ export async function tradeCardsCommand(
         player,
         ids,
         metadata?.commandId,
+        xpResults,
       );
     },
     {
@@ -403,7 +428,16 @@ export async function tradeCardsCommand(
           privatePatches: [
             {
               playerId: actorId,
-              patch: await readPlayerHandPrivatePatch(client, roomId, actorId),
+              patch: {
+                ...(await readPlayerHandPrivatePatch(client, roomId, actorId)),
+                ...(xpResults.some((result) => result.event)
+                  ? {
+                      battlePassXpEvents: xpResults.flatMap((result) =>
+                        result.event ? [result.event] : [],
+                      ),
+                    }
+                  : {}),
+              },
             },
           ],
         };
