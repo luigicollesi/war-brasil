@@ -162,6 +162,7 @@ export function BattlePassPage({
   const [pendingRewardId, setPendingRewardId] = useState<string | null>(null);
   const [claimAllPending, setClaimAllPending] = useState(false);
   const [premiumPending, setPremiumPending] = useState(false);
+  const [premiumConfirmationOpen, setPremiumConfirmationOpen] = useState(false);
   const [feedback, setFeedback] = useState<ClaimFeedback | null>(null);
   const [claimReveal, setClaimReveal] = useState<ClaimReveal | null>(null);
   const [railStart, setRailStart] = useState(0);
@@ -265,9 +266,13 @@ export function BattlePassPage({
         offerId: snapshot.premium.offerId,
         expectedPrice: snapshot.premium.price,
       });
+      setPremiumConfirmationOpen(false);
       setFeedback({
         title: "TRILHA DE ELITE ATIVADA",
-        detail: "As recompensas Elite dos níveis já alcançados estão disponíveis.",
+        detail:
+          snapshot.premium.retroactiveClaimableCount > 0
+            ? `${INTEGER.format(snapshot.premium.retroactiveClaimableCount)} recompensas Elite foram liberadas para coleta.`
+            : "A Trilha de Elite está ativa para os próximos níveis.",
       });
       router.refresh();
     } catch (error) {
@@ -396,23 +401,82 @@ export function BattlePassPage({
               <span>
                 Ative a trilha paga sem perder o progresso já conquistado.
               </span>
-              <button
-                type="button"
-                disabled={
-                  premiumPending ||
-                  snapshot.premium.offerId === null ||
-                  snapshot.walletBalance < snapshot.premium.price
-                }
-                onClick={() => void activatePremium()}
-              >
-                {premiumPending
-                  ? "ATIVANDO..."
-                  : snapshot.premium.offerId === null
+              {snapshot.premium.retroactiveClaimableCount > 0 ? (
+                <span className={styles.premiumRetroactive}>
+                  {INTEGER.format(snapshot.premium.retroactiveClaimableCount)}{" "}
+                  RECOMPENSAS JÁ DESBLOQUEADAS
+                </span>
+              ) : null}
+              {!premiumConfirmationOpen ? (
+                <button
+                  type="button"
+                  disabled={
+                    premiumPending ||
+                    snapshot.premium.offerId === null ||
+                    snapshot.walletBalance < snapshot.premium.price
+                  }
+                  onClick={() => setPremiumConfirmationOpen(true)}
+                >
+                  {snapshot.premium.offerId === null
                     ? "ELITE INDISPONÍVEL"
                     : snapshot.walletBalance < snapshot.premium.price
                       ? "CRÉDITOS INSUFICIENTES"
-                      : "ATIVAR ELITE · 3.000 CR"}
-              </button>
+                      : "REVISAR ATIVAÇÃO · 3.000 CR"}
+                </button>
+              ) : (
+                <div
+                  className={styles.premiumConfirmation}
+                  role="group"
+                  aria-label="Confirmar ativação da Trilha de Elite"
+                >
+                  <dl>
+                    <div>
+                      <dt>SALDO ATUAL</dt>
+                      <dd>{INTEGER.format(snapshot.walletBalance)} CR</dd>
+                    </div>
+                    <div>
+                      <dt>PREÇO</dt>
+                      <dd>{INTEGER.format(snapshot.premium.price)} CR</dd>
+                    </div>
+                    <div>
+                      <dt>APÓS A COMPRA</dt>
+                      <dd>
+                        {INTEGER.format(
+                          snapshot.walletBalance - snapshot.premium.price,
+                        )}{" "}
+                        CR
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>LIBERAÇÃO IMEDIATA</dt>
+                      <dd>
+                        {INTEGER.format(
+                          snapshot.premium.retroactiveClaimableCount,
+                        )}{" "}
+                        recompensas
+                      </dd>
+                    </div>
+                  </dl>
+                  <div className={styles.premiumConfirmationActions}>
+                    <button
+                      type="button"
+                      disabled={premiumPending}
+                      onClick={() => setPremiumConfirmationOpen(false)}
+                    >
+                      CANCELAR
+                    </button>
+                    <button
+                      type="button"
+                      disabled={premiumPending}
+                      onClick={() => void activatePremium()}
+                    >
+                      {premiumPending
+                        ? "ATIVANDO..."
+                        : "CONFIRMAR · 3.000 CR"}
+                    </button>
+                  </div>
+                </div>
+              )}
             </>
           )}
         </aside>
