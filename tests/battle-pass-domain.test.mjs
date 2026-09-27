@@ -169,6 +169,18 @@ test("matriz cosmética V1 forma um conjunto Free e dois conjuntos Elite complet
   );
 
   assert.deepEqual(
+    contract.BATTLE_PASS_V1_PREMIUM_INITIAL_COSMETIC_REWARDS.map(
+      (reward) => reward.presentationGroupKey,
+    ),
+    [
+      "premium-initial-set",
+      "premium-initial-set",
+      "premium-initial-set",
+      "premium-initial-set",
+    ],
+  );
+
+  assert.deepEqual(
     contract.BATTLE_PASS_V1_PREMIUM_FINAL_COSMETIC_REWARDS.map(
       (reward) => [reward.level, reward.slot, reward.kind],
     ),
