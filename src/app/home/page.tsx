@@ -7,6 +7,7 @@ import { CommandHomeContent } from "@/src/components/pre-game/home/command-home-
 import { getAuthenticatedSessionForReadHeaders } from "@/src/lib/server/auth/auth-guard";
 import { getCommandAccessState } from "@/src/lib/server/auth/command-access";
 import { findActiveParticipationForUser } from "@/src/lib/server/game-participation-service";
+import { getBetaTesterWelcomeRewardState } from "@/src/lib/server/profile/beta-tester-welcome-reward-service";
 import { getBattlePassHomeSummary } from "@/src/lib/server/progression/battle-pass-snapshot-service";
 
 export const metadata: Metadata = {
@@ -31,9 +32,14 @@ export default async function CommandHomePage() {
     redirect(participation.target);
   }
 
-  const [access, campaign] = await Promise.all([
+  const [access, campaign, betaTesterReward] = await Promise.all([
     getCommandAccessState(session),
     getBattlePassHomeSummary(session.user.id).catch(() => ({ active: false as const })),
+    getBetaTesterWelcomeRewardState(session.user.id).catch(() => ({
+      eligible: false,
+      claimed: false,
+      pending: false,
+    })),
   ]);
 
   return (
@@ -41,6 +47,7 @@ export default async function CommandHomePage() {
       mode="command"
       initialAccess={access}
       initialCampaign={campaign}
+      initialBetaTesterReward={betaTesterReward}
     >
       <CommandHomeContent />
     </CommandHomeClient>

@@ -6,9 +6,11 @@ import {
   type CommandAuthMode,
 } from "@/components/auth/command-auth-modal";
 import { CommandOnboardingModal } from "@/components/auth/command-onboarding-modal";
+import { BetaTesterWelcomeRewardModal } from "./beta-tester-welcome-reward-modal";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { AnimationEvent as ReactAnimationEvent, ReactNode } from "react";
+import type { BetaTesterWelcomeRewardState } from "@/src/lib/profile/beta-tester-welcome-reward";
 import type { BattlePassHomeSummary } from "@/src/lib/shared/progression/battle-pass-presentation";
 import {
   useCallback,
@@ -36,6 +38,7 @@ type HomeState =
   | "auth-check"
   | "auth-modal"
   | "onboarding"
+  | "beta-reward"
   | "command-open"
   | "destination-focus"
   | "transitioning";
@@ -65,6 +68,7 @@ type CommandHomeClientProps = {
   mode?: "landing" | "command";
   initialAccess?: CommandAccessResponse | null;
   initialCampaign?: BattlePassHomeSummary | null;
+  initialBetaTesterReward?: BetaTesterWelcomeRewardState | null;
 };
 
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
@@ -119,6 +123,7 @@ export function CommandHomeClient({
   mode = "landing",
   initialAccess = null,
   initialCampaign = null,
+  initialBetaTesterReward = null,
 }: CommandHomeClientProps) {
   const router = useRouter();
   const isCommandHome = mode === "command";
@@ -162,6 +167,12 @@ export function CommandHomeClient({
   const [onboardingDisplayName, setOnboardingDisplayName] = useState<
     string | null
   >(initialAccess?.profile?.displayName ?? initialAccess?.suggestedDisplayName ?? null);
+  const [betaTesterRewardClaimedLocally, setBetaTesterRewardClaimedLocally] =
+    useState(false);
+  const betaTesterRewardPending =
+    isCommandHome &&
+    initialBetaTesterReward?.pending === true &&
+    !betaTesterRewardClaimedLocally;
   const {
     data: authSession,
     isPending: authSessionPending,
@@ -469,7 +480,10 @@ export function CommandHomeClient({
 
     if (mode === "landing") {
       navigateToCommandHome();
+      return;
     }
+
+    router.refresh();
   };
 
   const handleUnderageAccountDeleted = async () => {
@@ -495,7 +509,9 @@ export function CommandHomeClient({
     ? "transitioning"
     : onboardingOpen
       ? "onboarding"
-      : authModalOpen
+      : betaTesterRewardPending
+        ? "beta-reward"
+        : authModalOpen
         ? "auth-modal"
         : authChecking
           ? "auth-check"
@@ -695,6 +711,15 @@ export function CommandHomeClient({
           className={styles.commandHomeRouteTransition}
           aria-hidden="true"
           onAnimationEnd={handleCommandHomeTransitionEnd}
+        />
+      ) : null}
+
+      {betaTesterRewardPending ? (
+        <BetaTesterWelcomeRewardModal
+          onClaimed={() => {
+            setBetaTesterRewardClaimedLocally(true);
+            router.refresh();
+          }}
         />
       ) : null}
 
