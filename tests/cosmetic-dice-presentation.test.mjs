@@ -55,6 +55,8 @@ test("combate usa skin de ataque do atacante e defesa do defensor", () => {
   const fullscreen = source(
     "src/components/dice-3d/fullscreen-dice-cinematic.tsx",
   );
+  const fallback2D = source("src/components/dice-3d/dice-2d-fallback.tsx");
+  const scene = source("src/components/dice-3d/dice-scene.tsx");
 
   assert.match(
     overlay,
@@ -78,6 +80,12 @@ test("combate usa skin de ataque do atacante e defesa do defensor", () => {
   assert.match(staticResults, /skin=\{side\}/);
   assert.match(staticResults, /assetRef=\{attackAssetRef\}/);
   assert.match(staticResults, /assetRef=\{defenseAssetRef\}/);
+  assert.match(staticResults, /pipColor=\{gameplayDicePipColor\(color, dicePipDark\)\}/);
+  assert.match(staticResults, /pipCompact=\{dicePipCompact\}/);
+  assert.match(fallback2D, /pipColor=\{pipColor\}/);
+  assert.match(fallback2D, /pipCompact=\{pipCompact\}/);
+  assert.match(scene, /pipColor=\{pipColor\}/);
+  assert.match(scene, /pipCompact=\{pipCompact\}/);
 });
 
 test("ordem de jogo usa o dado neutro congelado do jogador", () => {
