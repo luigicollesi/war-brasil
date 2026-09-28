@@ -11,15 +11,19 @@ const atmosphere = read(
 );
 const canvas = read("src/components/pre-game/foundation/command-scene-canvas.tsx");
 
-test("collection showcase publishes its canonical background through the shared canvas host", () => {
-  assert.match(showcase, /CollectionShowcaseAtmosphere/);
-  assert.match(showcase, /backgroundRef=\{showcase\.backgroundRef\}/);
-  assert.match(atmosphere, /host\.style\.backgroundImage/);
-  assert.match(atmosphere, /host\.style\.backgroundSize = "cover"/);
-  assert.match(atmosphere, /host\.dataset\.collectionBackdrop = "true"/);
-  assert.match(atmosphere, /delete host\.dataset\.collectionBackdrop/);
+test("collection showcase renders its canonical background in the store DOM", () => {
+  assert.match(showcase, /showcase\.mode === "collection" && showcase\.backgroundRef/);
+  assert.match(showcase, /className=\{styles\.collectionBackdrop\}/);
+  assert.match(showcase, /src=\{showcase\.backgroundRef\}/);
+  assert.match(showcase, /className=\{styles\.collectionBackdropScrim\}/);
+  assert.match(showcase, /<CollectionShowcaseAtmosphere \/>/);
 
-  assert.match(styles, /\.root\s*\{/);
+  assert.match(styles, /\.collectionBackdrop\s*\{/);
+  assert.match(styles, /\.collectionBackdrop img\s*\{/);
+  assert.match(styles, /object-fit: cover/);
+  assert.match(styles, /\.collectionBackdropScrim\s*\{/);
+
+  assert.doesNotMatch(atmosphere, /backgroundImage|collectionBackdrop|data-command-scene/);
 });
 
 test("collection identity exposes logo and authoritative promotion semantics", () => {
