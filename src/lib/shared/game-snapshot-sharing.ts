@@ -167,7 +167,11 @@ function sameCosmeticSelection(
   return (
     left.cosmeticId === right.cosmeticId &&
     left.assetRef === right.assetRef &&
-    left.effectKey === right.effectKey
+    left.effectKey === right.effectKey &&
+    left.bodyColor === right.bodyColor &&
+    left.bodyHighlightColor === right.bodyHighlightColor &&
+    left.dicePipDark === right.dicePipDark &&
+    left.dicePipCompact === right.dicePipCompact
   );
 }
 
