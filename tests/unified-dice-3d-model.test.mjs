@@ -74,8 +74,8 @@ test("jogo compõe a textura 3D com a mesma bodyColor usada pela loja", () => {
     assert.match(consumer, /bodyColor/);
     assert.match(consumer, /DICE_VISUAL_TEXTURE_RESOLUTION/);
   }
-  assert.match(showcase, /DICE_VISUAL_PIP_COLOR/);
-  assert.match(fullscreen, /pipColor: playerColorHex\(color\)/);
+  assert.match(showcase, /storeDicePipColor\(dicePipDark\)/);
+  assert.match(fullscreen, /gameplayDicePipColor\(color, dicePipDark\)/);
 });
 
 test("loja e jogo derivam a mesma geometria visual canônica", () => {
@@ -123,8 +123,8 @@ test("loja e cinematic 3D compartilham composição, mas jogo usa pips da cor do
     assert.match(consumer, /DICE_VISUAL_TEXTURE_RESOLUTION/);
   }
 
-  assert.match(showcase, /DICE_VISUAL_PIP_COLOR/);
-  assert.match(fullscreen, /playerColorHex\(color\)/);
+  assert.match(showcase, /storeDicePipColor\(dicePipDark\)/);
+  assert.match(fullscreen, /gameplayDicePipColor\(color, dicePipDark\)/);
   assert.doesNotMatch(fullscreen, /DICE_VISUAL_PIP_COLOR/);
   assert.doesNotMatch(fullscreen, /pipColor\?: string/);
 });
