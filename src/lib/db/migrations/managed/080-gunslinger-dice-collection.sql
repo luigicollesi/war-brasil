@@ -14,7 +14,8 @@
 -- ---------------------------------------------------------------------------
 
 INSERT INTO catalog.collections(
-  id, slug, name, description, active, sort_order
+  id, slug, name, description, active, sort_order,
+  featured, promotion_discount_bps
 )
 VALUES (
   'collection.gunslinger',
@@ -22,7 +23,9 @@ VALUES (
   'Gunslinger',
   'Coleção premium de dados com identidade Gunslinger.',
   TRUE,
-  80
+  80,
+  FALSE,
+  0
 )
 ON CONFLICT (id) DO UPDATE
 SET slug=EXCLUDED.slug,
@@ -30,6 +33,8 @@ SET slug=EXCLUDED.slug,
     description=EXCLUDED.description,
     active=TRUE,
     sort_order=EXCLUDED.sort_order,
+    featured=FALSE,
+    promotion_discount_bps=0,
     updated_at=NOW();
 
 UPDATE catalog.collection_assets
@@ -56,7 +61,8 @@ SET mime_type=EXCLUDED.mime_type,
 
 INSERT INTO catalog.cosmetics(
   id, slug, name, description, slot,
-  asset_ref, preview_ref, effect_key, status, is_default, collection_id
+  asset_ref, preview_ref, effect_key, status, is_default, collection_id,
+  body_color, body_highlight_color
 )
 VALUES
   (
@@ -70,7 +76,9 @@ VALUES
     NULL,
     'available',
     FALSE,
-    'collection.gunslinger'
+    'collection.gunslinger',
+    NULL,
+    NULL
   ),
   (
     'dice.defense.gunslinger',
@@ -83,7 +91,9 @@ VALUES
     NULL,
     'available',
     FALSE,
-    'collection.gunslinger'
+    'collection.gunslinger',
+    NULL,
+    NULL
   ),
   (
     'dice.neutral.gunslinger',
@@ -96,7 +106,9 @@ VALUES
     NULL,
     'available',
     FALSE,
-    'collection.gunslinger'
+    'collection.gunslinger',
+    NULL,
+    NULL
   )
 ON CONFLICT (id) DO UPDATE
 SET slug=EXCLUDED.slug,
@@ -180,10 +192,16 @@ SET pricing_model='fixed',
     updated_at=NOW();
 
 INSERT INTO catalog.cosmetic_stats(cosmetic_id, acquisition_count)
-VALUES
-  ('dice.attack.gunslinger', 0),
-  ('dice.defense.gunslinger', 0),
-  ('dice.neutral.gunslinger', 0)
+SELECT item.id,
+       COUNT(owned.user_id)::bigint
+  FROM catalog.cosmetics item
+  LEFT JOIN inventory.cosmetics owned ON owned.cosmetic_id=item.id
+ WHERE item.id IN (
+   'dice.attack.gunslinger',
+   'dice.defense.gunslinger',
+   'dice.neutral.gunslinger'
+ )
+ GROUP BY item.id
 ON CONFLICT (cosmetic_id) DO NOTHING;
 
 INSERT INTO catalog.products(
@@ -237,6 +255,21 @@ VALUES
   ('product.single.dice.neutral.gunslinger', 'dice.neutral.gunslinger', 0)
 ON CONFLICT (product_id, cosmetic_id) DO UPDATE
 SET position=0;
+
+-- Modern purchase authority mirrors product_items into generic entitlements.
+INSERT INTO catalog.product_entitlements(
+  product_id, position, entitlement_kind, cosmetic_id
+)
+VALUES
+  ('product.single.dice.attack.gunslinger', 0, 'game_cosmetic', 'dice.attack.gunslinger'),
+  ('product.single.dice.defense.gunslinger', 0, 'game_cosmetic', 'dice.defense.gunslinger'),
+  ('product.single.dice.neutral.gunslinger', 0, 'game_cosmetic', 'dice.neutral.gunslinger')
+ON CONFLICT (product_id, position) DO UPDATE
+SET entitlement_kind='game_cosmetic',
+    cosmetic_id=EXCLUDED.cosmetic_id,
+    title_id=NULL,
+    background_id=NULL,
+    battle_pass_season_id=NULL;
 
 INSERT INTO catalog.offers(
   id, slug, name, description, currency_code, price,
@@ -351,6 +384,20 @@ VALUES
   ('product.gunslinger', 'dice.neutral.gunslinger', 2)
 ON CONFLICT (product_id, cosmetic_id) DO UPDATE
 SET position=EXCLUDED.position;
+
+INSERT INTO catalog.product_entitlements(
+  product_id, position, entitlement_kind, cosmetic_id
+)
+VALUES
+  ('product.gunslinger', 0, 'game_cosmetic', 'dice.attack.gunslinger'),
+  ('product.gunslinger', 1, 'game_cosmetic', 'dice.defense.gunslinger'),
+  ('product.gunslinger', 2, 'game_cosmetic', 'dice.neutral.gunslinger')
+ON CONFLICT (product_id, position) DO UPDATE
+SET entitlement_kind='game_cosmetic',
+    cosmetic_id=EXCLUDED.cosmetic_id,
+    title_id=NULL,
+    background_id=NULL,
+    battle_pass_season_id=NULL;
 
 INSERT INTO catalog.offers(
   id, slug, name, description, currency_code, price,
