@@ -433,6 +433,20 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
       data-transition-phase={transitionPhase}
       aria-label="Expositor da Intendência"
     >
+      {showcase.mode === "collection" && showcase.backgroundRef ? (
+        <div className={styles.collectionBackdrop} aria-hidden="true">
+          <ProfileCosmeticImage
+            src={showcase.backgroundRef}
+            alt=""
+            fill
+            unoptimized
+            sizes="100vw"
+            priority
+          />
+          <span className={styles.collectionBackdropScrim} />
+        </div>
+      ) : null}
+
       <section style={SEMANTIC_MIRROR_STYLE} aria-live="polite">
         <h2>{selectedItem.name}</h2>
         <p>
