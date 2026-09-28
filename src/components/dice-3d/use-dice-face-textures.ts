@@ -16,16 +16,24 @@ type DiceTextureLoadState = {
 function optionsKey({
   skin,
   pipColor,
+  pipCompact,
   resolution,
   assetRef,
   bodyColor,
 }: DiceTextureOptions) {
-  return `${skin}:${assetRef ?? "native"}:${bodyColor ?? "default-body"}:${pipColor ?? "default"}:${resolution ?? "default"}`;
+  return `${skin}:${assetRef ?? "native"}:${bodyColor ?? "default-body"}:${pipColor ?? "default"}:${pipCompact ? "compact" : "spread"}:${resolution ?? "default"}`;
 }
 
 export function useDiceFaceTextures(options: DiceTextureOptions) {
-  const { skin, pipColor, resolution, assetRef, bodyColor } = options;
-  const key = optionsKey({ skin, pipColor, resolution, assetRef, bodyColor });
+  const { skin, pipColor, pipCompact, resolution, assetRef, bodyColor } = options;
+  const key = optionsKey({
+    skin,
+    pipColor,
+    pipCompact,
+    resolution,
+    assetRef,
+    bodyColor,
+  });
   const [state, setState] = useState<DiceTextureLoadState>({
     key: "",
     textures: null,
@@ -38,6 +46,7 @@ export function useDiceFaceTextures(options: DiceTextureOptions) {
     void getDiceFaceTextures({
       skin,
       pipColor,
+      pipCompact,
       resolution,
       assetRef,
       bodyColor,
@@ -61,7 +70,7 @@ export function useDiceFaceTextures(options: DiceTextureOptions) {
     return () => {
       active = false;
     };
-  }, [assetRef, bodyColor, key, skin, pipColor, resolution]);
+  }, [assetRef, bodyColor, key, skin, pipColor, pipCompact, resolution]);
 
   if (state.key !== key) {
     return { textures: null, error: null };
