@@ -299,7 +299,6 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
       failedTerritoryItemIds,
       selectedIndex,
       selectedItem,
-      showcase.backgroundRef,
       showcase.id,
       activeSceneItems,
       showcase.mode,
