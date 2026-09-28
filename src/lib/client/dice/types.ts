@@ -17,6 +17,7 @@ export type RoundedDieGeometryOptions = {
 export type DiceTextureOptions = {
   skin: DiceSkin;
   pipColor?: string;
+  pipCompact?: boolean;
   resolution?: number;
   /** Frozen game snapshot asset. Null/undefined uses the procedural fallback. */
   assetRef?: string | null;
