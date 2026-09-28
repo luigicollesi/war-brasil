@@ -162,7 +162,7 @@ export async function claimBetaTesterWelcomeReward(
       [diceIds],
     );
 
-    const expectedSlots = new Map(
+    const expectedSlots = new Map<string, string>(
       BETA_TESTER_WELCOME_REWARD.dice.map((item) => [item.id, item.slot]),
     );
     const validCatalog =
