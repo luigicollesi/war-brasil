@@ -36,8 +36,10 @@ test("modal terminal exibe XP e avanço de nível sem recalcular regra de progre
   assert.match(modal, /battlePassResult\.xpGranted/);
   assert.match(modal, /battlePassResult\.levelBefore/);
   assert.match(modal, /battlePassResult\.levelAfter/);
-  assert.match(modal, /Base \+/);
-  assert.match(modal, /Vitória \+/);
+  assert.match(modal, /battlePassResult\.breakdown\.actionXp/);
+  assert.match(modal, /battlePassResult\.breakdown\.completionXp/);
+  assert.match(modal, /battlePassResult\.breakdown\.victoryBonusXp/);
+  assert.match(modal, /battlePassResult\.breakdown\.multiplierBps/);
   assert.match(css, /\.victory-battle-pass-status/);
   assert.doesNotMatch(modal, /completionXp\s*\+\s*victoryBonusXp/);
 });
