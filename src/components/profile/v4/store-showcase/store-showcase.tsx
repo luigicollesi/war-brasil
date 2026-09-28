@@ -245,7 +245,7 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
       render: ({ reducedMotion }: { reducedMotion: boolean }) => (
         <>
           {showcase.mode === "collection" ? (
-            <CollectionShowcaseAtmosphere backgroundRef={showcase.backgroundRef} />
+            <CollectionShowcaseAtmosphere />
           ) : null}
 
           {activeSceneItems.map(({ item, itemIndex }) => (
@@ -437,11 +437,12 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
         <div className={styles.collectionBackdrop} aria-hidden="true">
           <ProfileCosmeticImage
             src={showcase.backgroundRef}
-            alt=""
-            fill
-            unoptimized
-            sizes="100vw"
+            alt={`Fundo da coleção ${showcase.title}`}
+            width={1920}
+            height={1080}
             priority
+            fallbackClassName={styles.collectionBackdropFallback}
+            fallbackLabel="FUNDO"
           />
           <span className={styles.collectionBackdropScrim} />
         </div>
