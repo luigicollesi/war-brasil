@@ -15,7 +15,7 @@ import { validateDiceValues } from "@/src/lib/client/dice/dice-values";
 import { installDice3DDependencyWarningFilter } from "@/src/lib/client/dice/install-3d-dependency-warning-filter";
 import { DICE_PHYSICS } from "@/src/lib/client/dice/physics/dice-physics-config";
 import type { DiceSkin, DiceValue } from "@/src/lib/client/dice/types";
-import { playerColorHex } from "@/src/lib/client/player-color";
+import { gameplayDicePipColor } from "@/src/lib/client/dice/pip-presentation";
 import type { PlayerColor } from "@/src/lib/lobby";
 import { DICE_VISUAL_TEXTURE_RESOLUTION } from "@/src/lib/client/dice/visual-config";
 import styles from "./battle-dice-cinematic.module.css";
@@ -96,6 +96,8 @@ function CinematicScene({
   assetRef,
   bodyColor,
   bodyHighlightColor,
+  dicePipDark,
+  dicePipCompact,
   replayDurationMs,
   visualScale,
   onComplete,
@@ -108,6 +110,8 @@ function CinematicScene({
   assetRef?: string | null;
   bodyColor?: string | null;
   bodyHighlightColor?: string | null;
+  dicePipDark: boolean;
+  dicePipCompact: boolean;
   replayDurationMs: number;
   visualScale: number;
   onComplete: () => void;
@@ -119,7 +123,8 @@ function CinematicScene({
     skin,
     assetRef,
     bodyColor,
-    pipColor: playerColorHex(color),
+    pipColor: gameplayDicePipColor(color, dicePipDark),
+    pipCompact: dicePipCompact,
     resolution: DICE_VISUAL_TEXTURE_RESOLUTION,
   });
   const portrait =
@@ -191,6 +196,8 @@ export function FullscreenDiceCinematic({
   assetRef,
   bodyColor,
   bodyHighlightColor,
+  dicePipDark = false,
+  dicePipCompact = false,
   label,
   replayDurationMs,
   resultHoldMs,
@@ -204,6 +211,8 @@ export function FullscreenDiceCinematic({
   assetRef?: string | null;
   bodyColor?: string | null;
   bodyHighlightColor?: string | null;
+  dicePipDark?: boolean;
+  dicePipCompact?: boolean;
   label: string;
   replayDurationMs: number;
   resultHoldMs: number;
@@ -304,6 +313,8 @@ export function FullscreenDiceCinematic({
               assetRef={assetRef}
               bodyColor={bodyColor}
               bodyHighlightColor={bodyHighlightColor}
+              dicePipDark={dicePipDark}
+              dicePipCompact={dicePipCompact}
               replayDurationMs={replayDurationMs}
               visualScale={visualScale}
               onComplete={handleReplayComplete}
