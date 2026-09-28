@@ -121,8 +121,14 @@ test("apresentação usa cor oficial da facção e acabamento físico com contor
   assert.match(staticResults, /battle\.stage === "awaiting_defender_roll"/);
   assert.match(staticResults, /skin: "attack"/);
   assert.match(staticResults, /skin: "defense"/);
-  assert.match(staticResults, /pipColor: playerColorHex\(attackerColor\)/);
-  assert.match(staticResults, /pipColor: playerColorHex\(defenderColor\)/);
+  assert.match(
+    staticResults,
+    /pipColor: gameplayDicePipColor\(attackerColor, attackDicePipDark\)/,
+  );
+  assert.match(
+    staticResults,
+    /pipColor: gameplayDicePipColor\(defenderColor, defenseDicePipDark\)/,
+  );
   assert.match(staticResults, /preloadDiceSourceImage/);
   assert.match(staticResults, /bodyColor: attackBodyColor/);
   assert.match(staticResults, /bodyColor: defenseBodyColor/);
