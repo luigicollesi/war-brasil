@@ -27,6 +27,7 @@ import {
   nextInitialTerritoryPresentationWakeAt,
 } from "@/src/lib/client/map/board-presentation";
 import { dispatchBattlePassXpEvents } from "@/src/lib/client/game-realtime-ephemeral-bus";
+import { gameplayDicePipColor } from "@/src/lib/client/dice/pip-presentation";
 import { runGameCommand } from "@/src/lib/game-command-client";
 import { isBattlePassGameXpEvent } from "@/src/lib/shared/progression/battle-pass-game-xp-event";
 import type { GameSnapshot } from "@/src/lib/game-contract";
@@ -518,6 +519,10 @@ function GameReadyClient({
           bodyHighlightColor={
             lastOrderRollPlayer.cosmetics.diceNeutral.bodyHighlightColor
           }
+          dicePipDark={lastOrderRollPlayer.cosmetics.diceNeutral.dicePipDark}
+          dicePipCompact={
+            lastOrderRollPlayer.cosmetics.diceNeutral.dicePipCompact
+          }
           onComplete={() => setCompletedOrderPresentationId(orderPresentationId)}
         />
       ) : null}
@@ -612,6 +617,11 @@ function OrderRollPanel({
           value={shownValue}
           color={shownPlayer?.color ?? currentColor ?? "forest"}
           assetRef={shownPlayer?.cosmetics.diceNeutral.assetRef}
+          pipColor={gameplayDicePipColor(
+            shownPlayer?.color ?? currentColor ?? "forest",
+            shownPlayer?.cosmetics.diceNeutral.dicePipDark ?? false,
+          )}
+          pipCompact={shownPlayer?.cosmetics.diceNeutral.dicePipCompact ?? false}
           size="lg"
         />
         <button
