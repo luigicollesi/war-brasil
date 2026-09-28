@@ -51,7 +51,7 @@ test("layout compacto preserva contagem e aproxima os pips externos do centro", 
     assert.deepEqual(spread, DICE_PIP_LAYOUT_PERCENT[value]);
   }
 
-  assert.deepEqual(dicePipLayout(1, "compact"), [[55, 48]]);
+  assert.deepEqual(dicePipLayout(1, "compact"), [[50, 48]]);
   assert.ok(dicePipLayout(4, "compact")[0][0] > DICE_PIP_LAYOUT_PERCENT[4][0][0]);
   assert.ok(dicePipLayout(4, "compact")[1][0] < DICE_PIP_LAYOUT_PERCENT[4][1][0]);
   assert.ok(dicePipLayout(6, "compact")[0][1] > DICE_PIP_LAYOUT_PERCENT[6][0][1]);
@@ -63,7 +63,7 @@ test("layout compacto preserva contagem e aproxima os pips externos do centro", 
       (sum, [x, y]) => [sum[0] + x, sum[1] + y],
       [0, 0],
     );
-    approximatelyEqual(centroid[0] / compact.length, 55);
+    approximatelyEqual(centroid[0] / compact.length, 50);
     approximatelyEqual(centroid[1] / compact.length, 48);
   }
 });
