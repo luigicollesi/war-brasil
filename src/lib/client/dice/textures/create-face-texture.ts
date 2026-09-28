@@ -5,7 +5,7 @@ import {
   SRGBColorSpace,
   type Texture,
 } from "three";
-import { DICE_PIP_LAYOUT_PERCENT } from "../pip-layout";
+import { dicePipLayout } from "../pip-layout";
 import type { DiceSkin, DiceValue } from "../types";
 import {
   DEFAULT_DICE_PIP_COLOR,
@@ -142,6 +142,7 @@ function drawPips(
   value: DiceValue,
   resolution: number,
   pipColor: string,
+  pipCompact: boolean,
 ) {
   const radius = resolution * 0.055;
   context.save();
@@ -152,7 +153,10 @@ function drawPips(
   context.shadowBlur = resolution * 0.022;
   context.shadowOffsetY = resolution * 0.01;
 
-  for (const [xPercent, yPercent] of DICE_PIP_LAYOUT_PERCENT[value]) {
+  for (const [xPercent, yPercent] of dicePipLayout(
+    value,
+    pipCompact ? "compact" : "spread",
+  )) {
     const x = (xPercent / 100) * resolution;
     const y = (yPercent / 100) * resolution;
     context.beginPath();
@@ -168,6 +172,7 @@ export async function createDiceFaceTexture({
   skin,
   value,
   pipColor = DEFAULT_DICE_PIP_COLOR,
+  pipCompact = false,
   resolution = DEFAULT_DICE_TEXTURE_RESOLUTION,
   assetRef,
   bodyColor,
@@ -175,6 +180,7 @@ export async function createDiceFaceTexture({
   skin: DiceSkin;
   value: DiceValue;
   pipColor?: string;
+  pipCompact?: boolean;
   resolution?: number;
   assetRef?: string | null;
   bodyColor?: string | null;
@@ -205,7 +211,7 @@ export async function createDiceFaceTexture({
     drawProceduralBase(context, skin, resolution);
   }
 
-  drawPips(context, value, resolution, pipColor);
+  drawPips(context, value, resolution, pipColor, pipCompact);
 
   const texture = new CanvasTexture(canvas);
   texture.colorSpace = SRGBColorSpace;
