@@ -35,49 +35,6 @@
   opacity: 0.08;
 }
 
-.collectionBackdrop {
-  position: absolute;
-  z-index: -2;
-  inset: 0;
-  overflow: hidden;
-  pointer-events: none;
-}
-
-.collectionBackdrop img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center;
-  opacity: 0.94;
-  mask-image: radial-gradient(
-    ellipse 42% 58% at 39% 49%,
-    transparent 0 24%,
-    rgb(0 0 0 / 22%) 41%,
-    #000 73%
-  );
-}
-
-.collectionBackdropFallback {
-  width: 100%;
-  height: 100%;
-  display: grid;
-  place-items: center;
-  color: rgb(240 234 220 / 24%);
-  background: linear-gradient(145deg, #07110d 0%, #030806 58%, #050b08 100%);
-  font-family: var(--font-geist-mono), monospace;
-  font-size: 0.68rem;
-  letter-spacing: 0.14em;
-}
-
-.collectionBackdropScrim {
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(ellipse 42% 58% at 39% 49%, transparent 0 35%, rgb(4 9 7 / 18%) 64%, transparent 78%),
-    linear-gradient(90deg, transparent 0 52%, rgb(3 8 6 / 25%) 70%, rgb(3 8 6 / 76%) 100%),
-    linear-gradient(180deg, rgb(3 8 6 / 50%) 0%, transparent 18%, transparent 68%, rgb(3 8 6 / 78%) 100%);
-}
-
 .header {
   min-height: 58px;
   display: grid;

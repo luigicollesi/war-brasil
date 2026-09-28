@@ -245,7 +245,7 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
       render: ({ reducedMotion }: { reducedMotion: boolean }) => (
         <>
           {showcase.mode === "collection" ? (
-            <CollectionShowcaseAtmosphere />
+            <CollectionShowcaseAtmosphere backgroundRef={showcase.backgroundRef} />
           ) : null}
 
           {activeSceneItems.map(({ item, itemIndex }) => (
@@ -299,6 +299,7 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
       failedTerritoryItemIds,
       selectedIndex,
       selectedItem,
+      showcase.backgroundRef,
       showcase.id,
       activeSceneItems,
       showcase.mode,
@@ -432,21 +433,6 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
       data-transition-phase={transitionPhase}
       aria-label="Expositor da Intendência"
     >
-      {showcase.mode === "collection" && showcase.backgroundRef ? (
-        <div className={styles.collectionBackdrop} aria-hidden="true">
-          <ProfileCosmeticImage
-            src={showcase.backgroundRef}
-            alt={`Fundo da coleção ${showcase.title}`}
-            width={1920}
-            height={1080}
-            priority
-            fallbackClassName={styles.collectionBackdropFallback}
-            fallbackLabel="FUNDO"
-          />
-          <span className={styles.collectionBackdropScrim} />
-        </div>
-      ) : null}
-
       <section style={SEMANTIC_MIRROR_STYLE} aria-live="polite">
         <h2>{selectedItem.name}</h2>
         <p>
