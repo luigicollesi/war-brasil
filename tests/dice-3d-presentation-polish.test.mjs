@@ -95,8 +95,16 @@ test("apresentação usa cor oficial da facção e acabamento físico com contor
   const overlay = readFileSync("src/components/battle-overlay.tsx", "utf8");
   const layout = readFileSync("src/app/layout.tsx", "utf8");
 
-  assert.match(arena, /pipColor: playerColorHex\(attackerColor\)/);
-  assert.match(arena, /pipColor: playerColorHex\(defenderColor\)/);
+  assert.match(
+    arena,
+    /pipColor: gameplayDicePipColor\(attackerColor, attackDicePipDark\)/,
+  );
+  assert.match(
+    arena,
+    /pipColor: gameplayDicePipColor\(defenderColor, defenseDicePipDark\)/,
+  );
+  assert.match(arena, /pipCompact: attackDicePipCompact/);
+  assert.match(arena, /pipCompact: defenseDicePipCompact/);
   assert.match(palette, /PLAYER_COLORS\.map/);
   assert.match(visual, /DICE_EDGE_COLOR = "#111111"/);
   assert.match(visual, /resolveDiceBodyColors/);
