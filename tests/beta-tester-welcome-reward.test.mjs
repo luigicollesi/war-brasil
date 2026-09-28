@@ -39,11 +39,11 @@ test("claim Beta Tester é server-side, promocional, transacional e idempotente"
   assert.match(service, /ensureEconomyState\(userId, client\)/);
   assert.match(service, /owned\.title_id=\$2/);
   assert.match(service, /creditCampaignCreditPromotion/);
-  assert.doesNotMatch(service, /UPDATE\\s+economy\\.wallets|INSERT\\s+INTO\\s+economy\\.ledger_entries/i);
+  assert.doesNotMatch(service, /UPDATE\s+economy\.wallets|INSERT\s+INTO\s+economy\.ledger_entries/i);
   assert.match(economyRepository, /export async function creditCampaignCreditPromotion/);
   assert.match(economyRepository, /'promotion'/);
   assert.match(economyRepository, /ON CONFLICT DO NOTHING/);
-  assert.match(economyRepository, /balance=balance\\+\\$2::bigint/);
+  assert.match(economyRepository, /balance=balance\+\$2::bigint/);
   assert.match(service, /catalog\.cosmetic_stats/);
   assert.match(service, /acquisition_count=acquisition_count\+1/);
   assert.doesNotMatch(service, /profile\.cosmetic_loadout/);
