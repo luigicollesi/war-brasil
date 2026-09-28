@@ -21,7 +21,10 @@ test("skin cosmética altera somente a fonte visual das texturas 3D", () => {
   assert.match(texture, /if \(assetRef\)/);
   assert.match(texture, /preloadDiceSourceImage\(assetRef\)/);
   assert.match(texture, /drawProceduralBase\(context, skin, resolution\)/);
-  assert.match(texture, /drawPips\(context, value, resolution, pipColor\)/);
+  assert.match(
+    texture,
+    /drawPips\(context, value, resolution, pipColor, pipCompact\)/,
+  );
   assert.match(assets, /options\.assetRef \?\? "procedural"/);
   assert.doesNotMatch(launch, /assetRef|cosmetic|catalog|profile/);
   assert.doesNotMatch(predetermined, /assetRef|cosmetic|catalog|profile/);
@@ -67,7 +70,8 @@ test("combate usa skin de ataque do atacante e defesa do defensor", () => {
   assert.match(cinematic, /assetRef=\{assetRef\}/);
   assert.match(cinematic, /color=\{color\}/);
   assert.match(fullscreen, /useDiceFaceTextures/);
-  assert.match(fullscreen, /pipColor: playerColorHex\(color\)/);
+  assert.match(fullscreen, /gameplayDicePipColor\(color, dicePipDark\)/);
+  assert.match(fullscreen, /pipCompact:\s*dicePipCompact/);
   assert.doesNotMatch(fullscreen, /DICE_VISUAL_PIP_COLOR/);
   assert.match(fullscreen, /DICE_VISUAL_TEXTURE_RESOLUTION/);
   assert.match(fullscreen, /bodyColor/);
@@ -93,6 +97,8 @@ test("ordem de jogo usa o dado neutro congelado do jogador", () => {
   );
   assert.match(cinematic, /assetRef=\{assetRef\}/);
   assert.match(cinematic, /color=\{color\}/);
+  assert.match(cinematic, /dicePipDark=\{dicePipDark\}/);
+  assert.match(cinematic, /dicePipCompact=\{dicePipCompact\}/);
   assert.match(die, /requestedAsset = assetRef\?\.trim\(\) \|\| null/);
 });
 
