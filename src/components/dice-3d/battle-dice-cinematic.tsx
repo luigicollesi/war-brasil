@@ -37,6 +37,8 @@ export function BattleDiceCinematic({
   assetRef,
   bodyColor,
   bodyHighlightColor,
+  dicePipDark = false,
+  dicePipCompact = false,
   onComplete,
 }: {
   battle: GameBattle;
@@ -45,6 +47,8 @@ export function BattleDiceCinematic({
   assetRef?: string | null;
   bodyColor?: string | null;
   bodyHighlightColor?: string | null;
+  dicePipDark?: boolean;
+  dicePipCompact?: boolean;
   onComplete: () => void;
 }) {
   const values = useMemo(
@@ -68,6 +72,8 @@ export function BattleDiceCinematic({
       assetRef={assetRef}
       bodyColor={bodyColor}
       bodyHighlightColor={bodyHighlightColor}
+      dicePipDark={dicePipDark}
+      dicePipCompact={dicePipCompact}
       label={side === "attack" ? "ATAQUE" : "DEFESA"}
       replayDurationMs={BATTLE_DICE_CINEMATIC_REPLAY_MS}
       resultHoldMs={BATTLE_DICE_CINEMATIC_RESULT_HOLD_MS}
