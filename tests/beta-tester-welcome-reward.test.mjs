@@ -8,6 +8,9 @@ const contract = read("src/lib/profile/beta-tester-welcome-reward.ts");
 const service = read(
   "src/lib/server/profile/beta-tester-welcome-reward-service.ts",
 );
+const economyRepository = read(
+  "src/lib/server/economy/economy-repository.ts",
+);
 const route = read(
   "src/app/api/profile/beta-tester-reward/claim/route.ts",
 );
@@ -35,10 +38,12 @@ test("claim Beta Tester é server-side, promocional, transacional e idempotente"
   assert.match(service, /FOR UPDATE/);
   assert.match(service, /ensureEconomyState\(userId, client\)/);
   assert.match(service, /owned\.title_id=\$2/);
-  assert.match(service, /'promotion'/);
-  assert.match(service, /idempotency_key/);
-  assert.match(service, /ON CONFLICT DO NOTHING/);
-  assert.match(service, /balance=balance\+\$2::bigint/);
+  assert.match(service, /creditCampaignCreditPromotion/);
+  assert.doesNotMatch(service, /UPDATE\\s+economy\\.wallets|INSERT\\s+INTO\\s+economy\\.ledger_entries/i);
+  assert.match(economyRepository, /export async function creditCampaignCreditPromotion/);
+  assert.match(economyRepository, /'promotion'/);
+  assert.match(economyRepository, /ON CONFLICT DO NOTHING/);
+  assert.match(economyRepository, /balance=balance\\+\\$2::bigint/);
   assert.match(service, /catalog\.cosmetic_stats/);
   assert.match(service, /acquisition_count=acquisition_count\+1/);
   assert.doesNotMatch(service, /profile\.cosmetic_loadout/);

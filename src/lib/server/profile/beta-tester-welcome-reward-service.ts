@@ -6,6 +6,7 @@ import {
   type BetaTesterWelcomeRewardClaimResult,
   type BetaTesterWelcomeRewardState,
 } from "@/src/lib/profile/beta-tester-welcome-reward";
+import { creditCampaignCreditPromotion } from "../economy/economy-repository";
 import { ensureEconomyState } from "../economy/economy-service";
 import { pool } from "../db/pool";
 
@@ -26,18 +27,6 @@ export class BetaTesterWelcomeRewardError extends Error {
     super(message);
     this.name = "BetaTesterWelcomeRewardError";
   }
-}
-
-async function currentWalletBalance(userId: string, db: RewardQueryable) {
-  const result = await db.query<{ balance: string }>(
-    `SELECT balance::text AS balance
-       FROM economy.wallets
-      WHERE user_id=$1::uuid
-        AND currency_code='campaign-credit'`,
-    [userId],
-  );
-  const balance = Number(result.rows[0]?.balance ?? 0);
-  return Number.isSafeInteger(balance) && balance >= 0 ? balance : 0;
 }
 
 export async function getBetaTesterWelcomeRewardState(
@@ -129,16 +118,31 @@ export async function claimBetaTesterWelcomeReward(
       );
     }
 
-    const previousClaim = await client.query(
-      `SELECT 1
-         FROM economy.ledger_entries
-        WHERE user_id=$1::uuid
-          AND idempotency_key=$2
-        LIMIT 1`,
-      [userId, key],
+    const credit = await creditCampaignCreditPromotion(
+      userId,
+      BETA_TESTER_WELCOME_REWARD.credits,
+      BETA_TESTER_WELCOME_REWARD.id,
+      key,
+      client,
     );
-    if (previousClaim.rowCount) {
-      const walletBalance = await currentWalletBalance(userId, client);
+    if (credit.balance === null) {
+      throw new BetaTesterWelcomeRewardError(
+        "BETA_REWARD_WALLET_MISSING",
+        "Não foi possível creditar a recompensa agora.",
+        503,
+      );
+    }
+
+    const walletBalance = Number(credit.balance);
+    if (!Number.isSafeInteger(walletBalance) || walletBalance < 0) {
+      throw new BetaTesterWelcomeRewardError(
+        "BETA_REWARD_WALLET_INVALID",
+        "O saldo retornado para a recompensa é inválido.",
+        503,
+      );
+    }
+
+    if (!credit.credited) {
       await client.query("COMMIT");
       return {
         ok: true,
@@ -209,67 +213,6 @@ export async function claimBetaTesterWelcomeReward(
                 updated_at=NOW()
           WHERE cosmetic_id=ANY($1::text[])`,
         [grantedCosmeticIds],
-      );
-    }
-
-    const ledger = await client.query(
-      `INSERT INTO economy.ledger_entries(
-         user_id,
-         currency_code,
-         delta,
-         reason,
-         domain_reference,
-         idempotency_key
-       )
-       VALUES(
-         $1::uuid,
-         'campaign-credit',
-         $2::bigint,
-         'promotion',
-         $3,
-         $4
-       )
-       ON CONFLICT DO NOTHING
-       RETURNING id`,
-      [
-        userId,
-        BETA_TESTER_WELCOME_REWARD.credits,
-        BETA_TESTER_WELCOME_REWARD.id,
-        key,
-      ],
-    );
-
-    if (!ledger.rowCount) {
-      throw new BetaTesterWelcomeRewardError(
-        "BETA_REWARD_ALREADY_CLAIMED",
-        "A recompensa Beta Tester já foi recebida.",
-        409,
-      );
-    }
-
-    const wallet = await client.query<{ balance: string }>(
-      `UPDATE economy.wallets
-          SET balance=balance+$2::bigint,
-              updated_at=NOW()
-        WHERE user_id=$1::uuid
-          AND currency_code='campaign-credit'
-        RETURNING balance::text AS balance`,
-      [userId, BETA_TESTER_WELCOME_REWARD.credits],
-    );
-    if (!wallet.rowCount) {
-      throw new BetaTesterWelcomeRewardError(
-        "BETA_REWARD_WALLET_MISSING",
-        "Não foi possível creditar a recompensa agora.",
-        503,
-      );
-    }
-
-    const walletBalance = Number(wallet.rows[0].balance);
-    if (!Number.isSafeInteger(walletBalance) || walletBalance < 0) {
-      throw new BetaTesterWelcomeRewardError(
-        "BETA_REWARD_WALLET_INVALID",
-        "O saldo retornado para a recompensa é inválido.",
-        503,
       );
     }
 

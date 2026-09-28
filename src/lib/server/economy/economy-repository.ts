@@ -638,6 +638,74 @@ export async function creditCampaignCreditReward(
   return balance;
 }
 
+export type CampaignCreditPromotionResult = Readonly<{
+  credited: boolean;
+  balance: string | null;
+}>;
+
+export async function creditCampaignCreditPromotion(
+  userId: string,
+  amount: number,
+  domainReference: string,
+  idempotencyKey: string,
+  db: EconomyQueryable,
+): Promise<CampaignCreditPromotionResult> {
+  if (!Number.isSafeInteger(amount) || amount <= 0) {
+    throw new Error("ECONOMY_CREDIT_PROMOTION_AMOUNT_INVALID");
+  }
+
+  const ledger = await db.query(
+    `INSERT INTO economy.ledger_entries(
+       user_id,
+       currency_code,
+       delta,
+       reason,
+       domain_reference,
+       idempotency_key
+     )
+     VALUES(
+       $1::uuid,
+       'campaign-credit',
+       $2::bigint,
+       'promotion',
+       $3,
+       $4
+     )
+     ON CONFLICT DO NOTHING
+     RETURNING id`,
+    [userId, amount, domainReference, idempotencyKey],
+  );
+
+  if (!ledger.rowCount) {
+    const current = await db.query<{ balance: string }>(
+      `SELECT balance::text AS balance
+         FROM economy.wallets
+        WHERE user_id=$1::uuid
+          AND currency_code='campaign-credit'`,
+      [userId],
+    );
+    return {
+      credited: false,
+      balance: current.rows[0]?.balance ?? null,
+    };
+  }
+
+  const wallet = await db.query<{ balance: string }>(
+    `UPDATE economy.wallets
+        SET balance=balance+$2::bigint,
+            updated_at=NOW()
+      WHERE user_id=$1::uuid
+        AND currency_code='campaign-credit'
+      RETURNING balance::text AS balance`,
+    [userId, amount],
+  );
+
+  return {
+    credited: true,
+    balance: wallet.rows[0]?.balance ?? null,
+  };
+}
+
 export async function grantPurchasedCosmetics(
   userId: string,
   purchaseId: string,
