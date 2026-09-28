@@ -93,6 +93,7 @@ export function DiceScene({
   values,
   skin = "neutral",
   pipColor,
+  pipCompact = false,
   assetRef,
   fallbackColor = "forest",
   animationSeed,
@@ -101,6 +102,7 @@ export function DiceScene({
   values: readonly number[];
   skin?: DiceSkin;
   pipColor?: string;
+  pipCompact?: boolean;
   assetRef?: string | null;
   fallbackColor?: PlayerColor;
   animationSeed?: string;
@@ -109,7 +111,12 @@ export function DiceScene({
   const safeValues = useMemo(() => validateDiceValues(values), [values]);
   const webglSupported = useDiceWebGLSupport();
   const reducedMotion = useReducedDiceMotion();
-  const { textures, error } = useDiceFaceTextures({ skin, pipColor, assetRef });
+  const { textures, error } = useDiceFaceTextures({
+    skin,
+    pipColor,
+    pipCompact,
+    assetRef,
+  });
   const resolvedSeed =
     animationSeed?.trim() || `dice-scene:${skin}:${safeValues.join("-")}`;
 
@@ -120,6 +127,8 @@ export function DiceScene({
         color={fallbackColor}
         skin={skin}
         assetRef={assetRef}
+        pipColor={pipColor}
+        pipCompact={pipCompact}
         className={className}
       />
     );
