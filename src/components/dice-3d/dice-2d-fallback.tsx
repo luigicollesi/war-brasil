@@ -10,12 +10,16 @@ export function Dice2DFallback({
   color = "forest",
   skin = "neutral",
   assetRef,
+  pipColor,
+  pipCompact = false,
   className = "",
 }: {
   values: readonly number[];
   color?: PlayerColor;
   skin?: DiceSkin;
   assetRef?: string | null;
+  pipColor?: string;
+  pipCompact?: boolean;
   className?: string;
 }) {
   const safeValues = validateDiceValues(values);
@@ -32,6 +36,8 @@ export function Dice2DFallback({
           color={color}
           skin={skin}
           assetRef={assetRef}
+          pipColor={pipColor}
+          pipCompact={pipCompact}
           size="md"
         />
       ))}
