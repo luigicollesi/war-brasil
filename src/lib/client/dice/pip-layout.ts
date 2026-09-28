@@ -15,18 +15,18 @@ export const DICE_PIP_LAYOUT_PERCENT: Readonly<
   6: [[30, 26], [70, 26], [30, 50], [70, 50], [30, 74], [70, 74]],
 };
 
-// Compact cosmetics use artwork whose usable face is slightly right/up from
-// the raw texture midpoint. Keep the compact cluster symmetric around this
-// optical center while preserving the tighter spacing between pips.
+// Compact cosmetics keep the horizontal center at 50%. Their artwork needs
+// only a slight upward optical correction, while preserving the tighter
+// spacing between pips.
 const DICE_PIP_COMPACT_LAYOUT_PERCENT: Readonly<
   Record<DiceValue, readonly (readonly [number, number])[]>
 > = {
-  1: [[55, 48]],
-  2: [[41, 34], [69, 62]],
-  3: [[41, 34], [55, 48], [69, 62]],
-  4: [[41, 34], [69, 34], [41, 62], [69, 62]],
-  5: [[41, 34], [69, 34], [55, 48], [41, 62], [69, 62]],
-  6: [[41, 30], [69, 30], [41, 48], [69, 48], [41, 66], [69, 66]],
+  1: [[50, 48]],
+  2: [[36, 34], [64, 62]],
+  3: [[36, 34], [50, 48], [64, 62]],
+  4: [[36, 34], [64, 34], [36, 62], [64, 62]],
+  5: [[36, 34], [64, 34], [50, 48], [36, 62], [64, 62]],
+  6: [[36, 30], [64, 30], [36, 48], [64, 48], [36, 66], [64, 66]],
 };
 
 export function dicePipLayout(
