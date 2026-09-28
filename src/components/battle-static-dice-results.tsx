@@ -7,7 +7,7 @@ import {
   preloadDiceSourceImage,
 } from "@/src/lib/client/dice/dice-assets-manager";
 import { validateDiceValues } from "@/src/lib/client/dice/dice-values";
-import { playerColorHex } from "@/src/lib/client/player-color";
+import { gameplayDicePipColor } from "@/src/lib/client/dice/pip-presentation";
 import { DICE_VISUAL_TEXTURE_RESOLUTION } from "@/src/lib/client/dice/visual-config";
 import type { PlayerColor } from "@/src/lib/lobby";
 import type { GameBattle } from "@/src/lib/game-contract";
@@ -18,12 +18,16 @@ function StaticDiceSide({
   color,
   side,
   assetRef,
+  dicePipDark,
+  dicePipCompact,
 }: {
   label: string;
   values: readonly number[];
   color: PlayerColor;
   side: "attack" | "defense";
   assetRef?: string | null;
+  dicePipDark: boolean;
+  dicePipCompact: boolean;
 }) {
   if (values.length === 0) return null;
 
@@ -43,6 +47,8 @@ function StaticDiceSide({
               color={color}
               skin={side}
               assetRef={assetRef}
+              pipColor={gameplayDicePipColor(color, dicePipDark)}
+              pipCompact={dicePipCompact}
               className="battle-die"
             />
           </div>
@@ -60,6 +66,10 @@ export function BattleStaticDiceResults({
   defenseAssetRef,
   attackBodyColor,
   defenseBodyColor,
+  attackDicePipDark = false,
+  attackDicePipCompact = false,
+  defenseDicePipDark = false,
+  defenseDicePipCompact = false,
 }: {
   battle: GameBattle;
   attackerColor?: PlayerColor;
@@ -68,6 +78,10 @@ export function BattleStaticDiceResults({
   defenseAssetRef?: string | null;
   attackBodyColor?: string | null;
   defenseBodyColor?: string | null;
+  attackDicePipDark?: boolean;
+  attackDicePipCompact?: boolean;
+  defenseDicePipDark?: boolean;
+  defenseDicePipCompact?: boolean;
 }) {
   useEffect(() => {
     for (const assetRef of [attackAssetRef, defenseAssetRef]) {
@@ -81,7 +95,8 @@ export function BattleStaticDiceResults({
       battle.stage === "awaiting_attacker_roll"
         ? {
             skin: "attack" as const,
-            pipColor: playerColorHex(attackerColor),
+            pipColor: gameplayDicePipColor(attackerColor, attackDicePipDark),
+            pipCompact: attackDicePipCompact,
             assetRef: attackAssetRef,
             bodyColor: attackBodyColor,
             resolution: DICE_VISUAL_TEXTURE_RESOLUTION,
@@ -89,7 +104,8 @@ export function BattleStaticDiceResults({
         : battle.stage === "awaiting_defender_roll"
           ? {
               skin: "defense" as const,
-              pipColor: playerColorHex(defenderColor),
+              pipColor: gameplayDicePipColor(defenderColor, defenseDicePipDark),
+              pipCompact: defenseDicePipCompact,
               assetRef: defenseAssetRef,
               bodyColor: defenseBodyColor,
               resolution: DICE_VISUAL_TEXTURE_RESOLUTION,
@@ -101,10 +117,14 @@ export function BattleStaticDiceResults({
   }, [
     attackAssetRef,
     attackBodyColor,
+    attackDicePipCompact,
+    attackDicePipDark,
     attackerColor,
     battle.stage,
     defenseAssetRef,
     defenseBodyColor,
+    defenseDicePipCompact,
+    defenseDicePipDark,
     defenderColor,
   ]);
 
@@ -123,6 +143,8 @@ export function BattleStaticDiceResults({
         color={attackerColor}
         side="attack"
         assetRef={attackAssetRef}
+        dicePipDark={attackDicePipDark}
+        dicePipCompact={attackDicePipCompact}
       />
       <StaticDiceSide
         label="Defesa"
@@ -130,6 +152,8 @@ export function BattleStaticDiceResults({
         color={defenderColor}
         side="defense"
         assetRef={defenseAssetRef}
+        dicePipDark={defenseDicePipDark}
+        dicePipCompact={defenseDicePipCompact}
       />
     </div>
   );

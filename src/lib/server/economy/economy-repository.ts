@@ -43,6 +43,8 @@ export type CosmeticSetItemRow = CosmeticRow & {
   set_status: CosmeticCatalogStatus;
   set_storage_slug: string | null;
   set_sort_order: number;
+  set_dice_pip_dark: boolean;
+  set_dice_pip_compact: boolean;
   position: number;
 };
 
@@ -305,6 +307,8 @@ export async function listStorefrontSetItems(
             cosmetic_set.status AS set_status,
             cosmetic_set.storage_slug AS set_storage_slug,
             cosmetic_set.sort_order AS set_sort_order,
+            cosmetic_set.dice_pip_dark AS set_dice_pip_dark,
+            cosmetic_set.dice_pip_compact AS set_dice_pip_compact,
             membership.position,
             item.id,
             item.slug,

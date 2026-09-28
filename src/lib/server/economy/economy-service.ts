@@ -219,6 +219,8 @@ function setsFromRows(
       description: row.set_description,
       status: row.set_status,
       previewRef: row.set_preview_ref,
+      dicePipDark: row.set_dice_pip_dark,
+      dicePipCompact: row.set_dice_pip_compact,
       items: [item],
     });
   }

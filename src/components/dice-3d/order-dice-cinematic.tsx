@@ -21,6 +21,8 @@ export function OrderDiceCinematic({
   assetRef,
   bodyColor,
   bodyHighlightColor,
+  dicePipDark = false,
+  dicePipCompact = false,
   onComplete,
 }: {
   roomId: string;
@@ -32,6 +34,8 @@ export function OrderDiceCinematic({
   assetRef?: string | null;
   bodyColor?: string | null;
   bodyHighlightColor?: string | null;
+  dicePipDark?: boolean;
+  dicePipCompact?: boolean;
   onComplete: () => void;
 }) {
   const seed = [
@@ -52,6 +56,8 @@ export function OrderDiceCinematic({
       assetRef={assetRef}
       bodyColor={bodyColor}
       bodyHighlightColor={bodyHighlightColor}
+      dicePipDark={dicePipDark}
+      dicePipCompact={dicePipCompact}
       label="ORDEM DE JOGO"
       replayDurationMs={ORDER_DICE_CINEMATIC_REPLAY_MS}
       resultHoldMs={ORDER_DICE_CINEMATIC_RESULT_HOLD_MS}

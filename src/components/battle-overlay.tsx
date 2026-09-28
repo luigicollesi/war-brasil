@@ -121,9 +121,15 @@ export function BattleOverlay({
   const attackBodyColor = attacker?.cosmetics.diceAttack.bodyColor ?? null;
   const attackBodyHighlightColor =
     attacker?.cosmetics.diceAttack.bodyHighlightColor ?? null;
+  const attackDicePipDark = attacker?.cosmetics.diceAttack.dicePipDark ?? false;
+  const attackDicePipCompact =
+    attacker?.cosmetics.diceAttack.dicePipCompact ?? false;
   const defenseBodyColor = defender?.cosmetics.diceDefense.bodyColor ?? null;
   const defenseBodyHighlightColor =
     defender?.cosmetics.diceDefense.bodyHighlightColor ?? null;
+  const defenseDicePipDark = defender?.cosmetics.diceDefense.dicePipDark ?? false;
+  const defenseDicePipCompact =
+    defender?.cosmetics.diceDefense.dicePipCompact ?? false;
   const attackerTerritory = territories.find(
     (territory) => territory.territoryId === battle.attackerTerritoryId,
   );
@@ -274,6 +280,10 @@ export function BattleOverlay({
       cinematicSide === "attack"
         ? attackBodyHighlightColor
         : defenseBodyHighlightColor;
+    const cinematicDicePipDark =
+      cinematicSide === "attack" ? attackDicePipDark : defenseDicePipDark;
+    const cinematicDicePipCompact =
+      cinematicSide === "attack" ? attackDicePipCompact : defenseDicePipCompact;
 
     return (
       <BattleDiceCinematic
@@ -284,6 +294,8 @@ export function BattleOverlay({
         assetRef={cinematicAssetRef}
         bodyColor={cinematicBodyColor}
         bodyHighlightColor={cinematicBodyHighlightColor}
+        dicePipDark={cinematicDicePipDark}
+        dicePipCompact={cinematicDicePipCompact}
         onComplete={() => finishCinematic(cinematicPresentationId)}
       />
     );
@@ -329,6 +341,10 @@ export function BattleOverlay({
         defenseAssetRef={defenseAssetRef}
         attackBodyColor={attackBodyColor}
         defenseBodyColor={defenseBodyColor}
+        attackDicePipDark={attackDicePipDark}
+        attackDicePipCompact={attackDicePipCompact}
+        defenseDicePipDark={defenseDicePipDark}
+        defenseDicePipCompact={defenseDicePipCompact}
       />
 
       {battle.stage === "show_comparison" ||

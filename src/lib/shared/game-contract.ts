@@ -53,6 +53,8 @@ export type GameCosmeticSelection = {
   effectKey: string | null;
   bodyColor: string | null;
   bodyHighlightColor: string | null;
+  dicePipDark: boolean;
+  dicePipCompact: boolean;
 };
 
 export type GamePlayerCosmetics = {

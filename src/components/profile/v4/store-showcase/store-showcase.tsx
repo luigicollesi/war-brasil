@@ -267,6 +267,8 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
                   slot={item.slot}
                   bodyColor={item.bodyColor}
                   bodyHighlightColor={item.bodyHighlightColor}
+                  dicePipDark={item.dicePipDark}
+                  dicePipCompact={item.dicePipCompact}
                 />
               ) : item.type === "territory" &&
                 !failedTerritoryItemIds.has(item.id) ? (

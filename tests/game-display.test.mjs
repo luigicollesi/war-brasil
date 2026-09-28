@@ -86,13 +86,13 @@ test("combate separa cinematic 3D do resultado SVG estático", () => {
   assert.match(fullscreen, /createPortal/);
   assert.match(cinematic, /skin=\{side\}/);
   assert.match(cinematic, /color=\{color\}/);
-  assert.match(fullscreen, /playerColorHex\(color\)/);
+  assert.match(fullscreen, /gameplayDicePipColor\(color, dicePipDark\)/);
   assert.doesNotMatch(fullscreen, /DICE_VISUAL_PIP_COLOR/);
   assert.match(fullscreen, /DICE_VISUAL_TEXTURE_RESOLUTION/);
   assert.match(staticResults, /<GameDie/);
   assert.doesNotMatch(staticResults, /rolling=/);
   assert.doesNotMatch(staticResults, /rollAnimation=/);
-  assert.match(die, /backgroundColor: playerColorHex\(color\)/);
+  assert.match(die, /backgroundColor: pipColor \?\? playerColorHex\(color\)/);
 });
 
 test("cinematic de combate deriva resultado do stage e bloqueia toda interação", () => {

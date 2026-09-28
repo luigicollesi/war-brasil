@@ -6,6 +6,7 @@ import { DICE_FACE_DEFINITIONS } from "../.test-build/client/dice/geometry/dice-
 import {
   DICE_PIP_LAYOUT_PERCENT,
   DICE_VALUES,
+  dicePipLayout,
 } from "../.test-build/client/dice/pip-layout.js";
 import { validateDiceValues } from "../.test-build/client/dice/dice-values.js";
 import {
@@ -40,6 +41,21 @@ test("layout de pips cobre os seis valores com coordenadas válidas", () => {
       assert.ok(y >= 0 && y <= 100);
     }
   }
+});
+
+test("layout compacto preserva contagem e aproxima os pips externos do centro", () => {
+  for (const value of DICE_VALUES) {
+    const spread = dicePipLayout(value, "spread");
+    const compact = dicePipLayout(value, "compact");
+    assert.equal(compact.length, value);
+    assert.deepEqual(spread, DICE_PIP_LAYOUT_PERCENT[value]);
+  }
+
+  assert.deepEqual(dicePipLayout(1, "compact"), [[50, 50]]);
+  assert.ok(dicePipLayout(4, "compact")[0][0] > DICE_PIP_LAYOUT_PERCENT[4][0][0]);
+  assert.ok(dicePipLayout(4, "compact")[1][0] < DICE_PIP_LAYOUT_PERCENT[4][1][0]);
+  assert.ok(dicePipLayout(6, "compact")[0][1] > DICE_PIP_LAYOUT_PERCENT[6][0][1]);
+  assert.ok(dicePipLayout(6, "compact")[4][1] < DICE_PIP_LAYOUT_PERCENT[6][4][1]);
 });
 
 test("faces canônicas são únicas e preservam pares opostos de um D6", () => {
@@ -202,7 +218,7 @@ test("fundação 3D é client-side, procedural e mantém fallback 2D sem SVG", (
   const skins = source("src/lib/client/dice/textures/dice-skins.ts");
   const texture = source("src/lib/client/dice/textures/create-face-texture.ts");
 
-  assert.match(gameDie, /DICE_PIP_LAYOUT_PERCENT/);
+  assert.match(gameDie, /dicePipLayout/);
   assert.doesNotMatch(gameDie, /const pipPositions/);
   assert.doesNotMatch(gameDie, /dado-[^"']+\.svg/);
 

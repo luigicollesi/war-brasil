@@ -38,6 +38,8 @@ export type StoreShowcaseItem = Readonly<{
   effectKey: string | null;
   bodyColor: string | null;
   bodyHighlightColor: string | null;
+  dicePipDark: boolean;
+  dicePipCompact: boolean;
   singleOffer: StoreShowcaseOffer | null;
 }>;
 
@@ -102,25 +104,50 @@ function singleOffersForItems(
   return result;
 }
 
+function dicePresentationForItem(
+  storefront: EconomyStorefrontSnapshot,
+  item: CosmeticCatalogItem,
+) {
+  if (item.slot === "territory_skin") {
+    return { dicePipDark: false, dicePipCompact: false } as const;
+  }
+
+  const cosmeticSet = storefront.sets.find((set) =>
+    set.items.some((candidate) => candidate.id === item.id),
+  );
+
+  return {
+    dicePipDark: cosmeticSet?.dicePipDark ?? false,
+    dicePipCompact: cosmeticSet?.dicePipCompact ?? false,
+  } as const;
+}
+
 function projectItems(
+  storefront: EconomyStorefrontSnapshot,
   items: ReadonlyArray<CosmeticCatalogItem>,
   singleOfferByItemId: Readonly<Record<string, StoreShowcaseOffer>>,
 ) {
-  return items.map((item): StoreShowcaseItem => ({
-    id: item.id,
-    name: item.name,
-    description: item.description,
-    slot: item.slot,
-    type: itemType(item),
-    owned: item.owned,
-    equipped: item.equipped,
-    previewRef: item.previewRef,
-    assetRef: item.assetRef,
-    effectKey: item.effectKey,
-    bodyColor: item.bodyColor,
-    bodyHighlightColor: item.bodyHighlightColor,
-    singleOffer: singleOfferByItemId[item.id] ?? null,
-  }));
+  return items.map((item): StoreShowcaseItem => {
+    const presentation = dicePresentationForItem(storefront, item);
+
+    return {
+      id: item.id,
+      name: item.name,
+      description: item.description,
+      slot: item.slot,
+      type: itemType(item),
+      owned: item.owned,
+      equipped: item.equipped,
+      previewRef: item.previewRef,
+      assetRef: item.assetRef,
+      effectKey: item.effectKey,
+      bodyColor: item.bodyColor,
+      bodyHighlightColor: item.bodyHighlightColor,
+      dicePipDark: presentation.dicePipDark,
+      dicePipCompact: presentation.dicePipCompact,
+      singleOffer: singleOfferByItemId[item.id] ?? null,
+    };
+  });
 }
 
 function resolveSelectedItemId(
@@ -160,7 +187,7 @@ function resolveOfferShowcase(
     logoRef: null,
     featured: offer.featured,
     promotionDiscountBps: offer.promotionDiscountBps,
-    items: projectItems(items, singleOfferByItemId),
+    items: projectItems(storefront, items, singleOfferByItemId),
     selectedItemId: resolvedSelectedItemId,
     bundleOffer,
     singleOfferByItemId,
@@ -197,7 +224,7 @@ function resolveCollectionShowcase(
     logoRef: collection.assets.logo,
     featured: collection.featured,
     promotionDiscountBps: collection.promotionDiscountBps,
-    items: projectItems(items, singleOfferByItemId),
+    items: projectItems(storefront, items, singleOfferByItemId),
     selectedItemId: resolvedSelectedItemId,
     bundleOffer: bundleOffer ? projectOffer(bundleOffer) : null,
     singleOfferByItemId,

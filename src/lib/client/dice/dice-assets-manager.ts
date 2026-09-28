@@ -27,6 +27,7 @@ function textureKey(options: DiceTextureOptions) {
     options.assetRef ?? "procedural",
     options.bodyColor ?? "default-body",
     options.pipColor ?? DEFAULT_DICE_PIP_COLOR,
+    options.pipCompact ? "compact" : "spread",
     options.resolution ?? DEFAULT_DICE_TEXTURE_RESOLUTION,
   ].join(":");
 }

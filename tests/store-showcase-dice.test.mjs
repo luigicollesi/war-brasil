@@ -12,7 +12,8 @@ test("showcase die reuses canonical geometry and face texture pipeline", () => {
   assert.match(model, /getSharedRoundedDieGeometry/);
   assert.match(model, /useDiceFaceTextures/);
   assert.match(model, /assetRef/);
-  assert.match(model, /pipColor:\s*DICE_VISUAL_PIP_COLOR/);
+  assert.match(model, /pipColor:\s*storeDicePipColor\(dicePipDark\)/);
+  assert.match(model, /pipCompact:\s*dicePipCompact/);
   assert.match(model, /resolution:\s*DICE_VISUAL_TEXTURE_RESOLUTION/);
 
   assert.doesNotMatch(model, /<boxGeometry\b/);
@@ -29,6 +30,8 @@ test("showcase mounts canonical dice only for the bounded active scene set", () 
   assert.match(showcase, /slot=\{item\.slot\}/);
   assert.match(showcase, /bodyColor=\{item\.bodyColor\}/);
   assert.match(showcase, /bodyHighlightColor=\{item\.bodyHighlightColor\}/);
+  assert.match(showcase, /dicePipDark=\{item\.dicePipDark\}/);
+  assert.match(showcase, /dicePipCompact=\{item\.dicePipCompact\}/);
   assert.doesNotMatch(
     showcase,
     /showcase\.items\.map\(\(item, itemIndex\) =>\s*\(\s*<ShowcaseObjectController/s,

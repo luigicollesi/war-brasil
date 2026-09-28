@@ -6,10 +6,10 @@ import { useDiceFaceTextures } from "@/src/components/dice-3d/use-dice-face-text
 import { getSharedRoundedDieGeometry } from "@/src/lib/client/dice/dice-assets-manager";
 import type { DiceSkin } from "@/src/lib/client/dice/types";
 import {
-  DICE_VISUAL_PIP_COLOR,
   DICE_VISUAL_TEXTURE_RESOLUTION,
   diceVisualGeometry,
 } from "@/src/lib/client/dice/visual-config";
+import { storeDicePipColor } from "@/src/lib/client/dice/pip-presentation";
 import type { CosmeticCatalogItem } from "@/src/lib/economy/economy-contract";
 
 const SHOWCASE_DIE_SIZE = 1;
@@ -33,11 +33,15 @@ export function DiceShowcaseModel({
   assetRef,
   bodyColor,
   bodyHighlightColor,
+  dicePipDark = false,
+  dicePipCompact = false,
 }: {
   slot: CosmeticCatalogItem["slot"];
   assetRef: string | null;
   bodyColor: string | null;
   bodyHighlightColor: string | null;
+  dicePipDark?: boolean;
+  dicePipCompact?: boolean;
 }) {
   const skin = skinForSlot(slot);
   const geometry = useMemo(
@@ -48,7 +52,8 @@ export function DiceShowcaseModel({
     skin,
     assetRef,
     bodyColor,
-    pipColor: DICE_VISUAL_PIP_COLOR,
+    pipColor: storeDicePipColor(dicePipDark),
+    pipCompact: dicePipCompact,
     resolution: DICE_VISUAL_TEXTURE_RESOLUTION,
   });
 

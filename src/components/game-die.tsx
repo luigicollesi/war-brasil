@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useState, type CSSProperties } from "react";
 import type { DieRollAnimation } from "@/src/lib/game-battle-display";
 import {
-  DICE_PIP_LAYOUT_PERCENT,
+  dicePipLayout,
   normalizeDiceValue,
 } from "@/src/lib/client/dice/pip-layout";
 import { DICE_PROCEDURAL_PALETTES } from "@/src/lib/client/dice/textures/dice-skins";
@@ -31,6 +31,8 @@ export function GameDie({
   color = "forest",
   skin = "neutral",
   assetRef,
+  pipColor,
+  pipCompact = false,
   rolling = false,
   rollAnimation,
   size = "lg",
@@ -40,6 +42,8 @@ export function GameDie({
   color?: PlayerColor;
   skin?: DiceSkin;
   assetRef?: string | null;
+  pipColor?: string;
+  pipCompact?: boolean;
   rolling?: boolean;
   rollAnimation?: DieRollAnimation;
   size?: keyof typeof sizeClass;
@@ -106,14 +110,17 @@ export function GameDie({
           />
         </>
       )}
-      {DICE_PIP_LAYOUT_PERCENT[safeValue].map(([x, y], index) => (
+      {dicePipLayout(
+        safeValue,
+        pipCompact ? "compact" : "spread",
+      ).map(([x, y], index) => (
         <span
           key={index}
           className={`absolute -translate-x-1/2 -translate-y-1/2 rounded-full border border-white/50 shadow-md ${pipClass[size]}`}
           style={{
             left: `${x}%`,
             top: `${y}%`,
-            backgroundColor: playerColorHex(color),
+            backgroundColor: pipColor ?? playerColorHex(color),
           }}
         />
       ))}

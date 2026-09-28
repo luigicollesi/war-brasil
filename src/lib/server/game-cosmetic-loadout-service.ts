@@ -34,6 +34,8 @@ type GameCosmeticSnapshotRow = {
   effect_key: string | null;
   body_color: string | null;
   body_highlight_color: string | null;
+  dice_pip_dark: boolean;
+  dice_pip_compact: boolean;
 };
 
 type GamePlayerSnapshotStateRow = {
@@ -49,6 +51,8 @@ type GamePlayerCosmeticSnapshotRow = GamePlayerSnapshotStateRow & {
   effect_key: string | null;
   body_color: string | null;
   body_highlight_color: string | null;
+  dice_pip_dark: boolean;
+  dice_pip_compact: boolean;
 };
 
 function projectedSnapshotAssetRef(row: GameCosmeticSnapshotRow) {
@@ -69,6 +73,8 @@ function selection(row: GameCosmeticSnapshotRow): GameCosmeticSelection {
     effectKey: row.effect_key,
     bodyColor: row.body_color,
     bodyHighlightColor: row.body_highlight_color,
+    dicePipDark: row.dice_pip_dark,
+    dicePipCompact: row.dice_pip_compact,
   };
 }
 
@@ -88,6 +94,8 @@ function territorySelection(row: GameCosmeticSnapshotRow): GameCosmeticSelection
     effectKey: territorySkinRuntimeEffectKey(snapshot),
     bodyColor: null,
     bodyHighlightColor: null,
+    dicePipDark: false,
+    dicePipCompact: false,
   };
 }
 
@@ -99,6 +107,8 @@ function defaultPlayerCosmetics(): GamePlayerCosmetics {
       effectKey: null,
       bodyColor: null,
       bodyHighlightColor: null,
+      dicePipDark: false,
+      dicePipCompact: false,
     },
     diceDefense: {
       cosmeticId: "dice.defense.default",
@@ -106,6 +116,8 @@ function defaultPlayerCosmetics(): GamePlayerCosmetics {
       effectKey: null,
       bodyColor: null,
       bodyHighlightColor: null,
+      dicePipDark: false,
+      dicePipCompact: false,
     },
     diceNeutral: {
       cosmeticId: "dice.neutral.default",
@@ -113,6 +125,8 @@ function defaultPlayerCosmetics(): GamePlayerCosmetics {
       effectKey: null,
       bodyColor: null,
       bodyHighlightColor: null,
+      dicePipDark: false,
+      dicePipCompact: false,
     },
     territoryEffect: {
       cosmeticId: "territory.effect.default",
@@ -120,6 +134,8 @@ function defaultPlayerCosmetics(): GamePlayerCosmetics {
       effectKey: "default",
       bodyColor: null,
       bodyHighlightColor: null,
+      dicePipDark: false,
+      dicePipCompact: false,
     },
   };
 }
@@ -280,20 +296,32 @@ export async function capturePlayerCosmeticLoadouts(
             ORDER BY random()
             LIMIT 1
          ) bot_cosmetic ON TRUE
+     ),
+     resolved_with_presentation AS (
+       SELECT resolved.*,
+              COALESCE(cosmetic_set.dice_pip_dark,FALSE) AS dice_pip_dark,
+              COALESCE(cosmetic_set.dice_pip_compact,FALSE) AS dice_pip_compact
+         FROM resolved
+         LEFT JOIN catalog.cosmetic_set_items membership
+           ON membership.cosmetic_id=resolved.cosmetic_id
+         LEFT JOIN catalog.cosmetic_sets cosmetic_set
+           ON cosmetic_set.id=membership.set_id
      )
      INSERT INTO game.player_cosmetic_loadouts(
        player_id,slot,cosmetic_id,asset_ref,effect_key,
-       body_color,body_highlight_color,captured_at
+       body_color,body_highlight_color,dice_pip_dark,dice_pip_compact,captured_at
      )
      SELECT player_id,slot,cosmetic_id,asset_ref,effect_key,
-            body_color,body_highlight_color,NOW()
-       FROM resolved
+            body_color,body_highlight_color,dice_pip_dark,dice_pip_compact,NOW()
+       FROM resolved_with_presentation
      ON CONFLICT (player_id,slot) DO UPDATE
      SET cosmetic_id=EXCLUDED.cosmetic_id,
          asset_ref=EXCLUDED.asset_ref,
          effect_key=EXCLUDED.effect_key,
          body_color=EXCLUDED.body_color,
          body_highlight_color=EXCLUDED.body_highlight_color,
+         dice_pip_dark=EXCLUDED.dice_pip_dark,
+         dice_pip_compact=EXCLUDED.dice_pip_compact,
          captured_at=EXCLUDED.captured_at`,
     [roomId],
   );
@@ -353,7 +381,9 @@ export async function loadRoomPlayerCosmetics(
               snapshot.asset_ref,
               snapshot.effect_key,
               snapshot.body_color,
-              snapshot.body_highlight_color
+              snapshot.body_highlight_color,
+              snapshot.dice_pip_dark,
+              snapshot.dice_pip_compact
          FROM game.players player
          JOIN game.rooms room ON room.id=player.room_id
          LEFT JOIN game.player_cosmetic_loadouts snapshot
@@ -387,6 +417,8 @@ export async function loadRoomPlayerCosmetics(
       effect_key: row.effect_key,
       body_color: row.body_color,
       body_highlight_color: row.body_highlight_color,
+      dice_pip_dark: row.dice_pip_dark,
+      dice_pip_compact: row.dice_pip_compact,
     };
     grouped.set(row.player_id, current);
   }

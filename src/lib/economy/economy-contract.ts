@@ -60,6 +60,8 @@ export type CosmeticSet = Readonly<{
   description: string | null;
   status: CosmeticCatalogStatus;
   previewRef: string | null;
+  dicePipDark: boolean;
+  dicePipCompact: boolean;
   items: ReadonlyArray<CosmeticCatalogItem>;
 }>;
 
