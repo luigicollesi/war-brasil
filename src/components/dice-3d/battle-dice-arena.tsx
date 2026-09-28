@@ -15,7 +15,7 @@ import {
 } from "@/src/lib/client/dice/battle-dice-layout";
 import { validateDiceValues } from "@/src/lib/client/dice/dice-values";
 import type { DiceFaceTextureSet, DiceValue } from "@/src/lib/client/dice/types";
-import { playerColorHex } from "@/src/lib/client/player-color";
+import { gameplayDicePipColor } from "@/src/lib/client/dice/pip-presentation";
 import type { GameBattle } from "@/src/lib/game-contract";
 import { DiceTraySurface } from "./dice-tray-surface";
 import { PredeterminedDiceRoll } from "./predetermined-dice-roll";
@@ -47,11 +47,19 @@ function BattleDiceFallback({
   defenseValues,
   attackerColor,
   defenderColor,
+  attackDicePipDark,
+  attackDicePipCompact,
+  defenseDicePipDark,
+  defenseDicePipCompact,
 }: {
   attackValues: readonly DiceValue[];
   defenseValues: readonly DiceValue[];
   attackerColor: PlayerColor;
   defenderColor: PlayerColor;
+  attackDicePipDark: boolean;
+  attackDicePipCompact: boolean;
+  defenseDicePipDark: boolean;
+  defenseDicePipCompact: boolean;
 }) {
   return (
     <div className="battle-dice-arena battle-dice-arena--fallback" aria-live="polite">
@@ -64,6 +72,8 @@ function BattleDiceFallback({
                 key={`attack-fallback-${index}-${value}`}
                 value={value}
                 color={attackerColor}
+                pipColor={gameplayDicePipColor(attackerColor, attackDicePipDark)}
+                pipCompact={attackDicePipCompact}
                 className="battle-die"
               />
             ))}
@@ -80,6 +90,8 @@ function BattleDiceFallback({
                 key={`defense-fallback-${index}-${value}`}
                 value={value}
                 color={defenderColor}
+                pipColor={gameplayDicePipColor(defenderColor, defenseDicePipDark)}
+                pipCompact={defenseDicePipCompact}
                 className="battle-die"
               />
             ))}
@@ -178,10 +190,18 @@ export function BattleDiceArena({
   battle,
   attackerColor = "forest",
   defenderColor = "ruby",
+  attackDicePipDark = false,
+  attackDicePipCompact = false,
+  defenseDicePipDark = false,
+  defenseDicePipCompact = false,
 }: {
   battle: GameBattle;
   attackerColor?: PlayerColor;
   defenderColor?: PlayerColor;
+  attackDicePipDark?: boolean;
+  attackDicePipCompact?: boolean;
+  defenseDicePipDark?: boolean;
+  defenseDicePipCompact?: boolean;
 }) {
   const attackValues = useMemo<DiceValue[]>(
     () => (battle.attacker.length ? validateDiceValues(battle.attacker) : []),
@@ -195,11 +215,13 @@ export function BattleDiceArena({
   const reducedMotion = useReducedDiceMotion();
   const attackTextureState = useDiceFaceTextures({
     skin: "attack",
-    pipColor: playerColorHex(attackerColor),
+    pipColor: gameplayDicePipColor(attackerColor, attackDicePipDark),
+    pipCompact: attackDicePipCompact,
   });
   const defenseTextureState = useDiceFaceTextures({
     skin: "defense",
-    pipColor: playerColorHex(defenderColor),
+    pipColor: gameplayDicePipColor(defenderColor, defenseDicePipDark),
+    pipCompact: defenseDicePipCompact,
   });
   const [physicsFailed, setPhysicsFailed] = useState(false);
   const handlePhysicsError = useCallback(() => setPhysicsFailed(true), []);
@@ -218,6 +240,10 @@ export function BattleDiceArena({
         defenseValues={defenseValues}
         attackerColor={attackerColor}
         defenderColor={defenderColor}
+        attackDicePipDark={attackDicePipDark}
+        attackDicePipCompact={attackDicePipCompact}
+        defenseDicePipDark={defenseDicePipDark}
+        defenseDicePipCompact={defenseDicePipCompact}
       />
     );
   }
