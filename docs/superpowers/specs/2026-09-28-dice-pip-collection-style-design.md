@@ -1,92 +1,138 @@
-# Dice Pip Collection Style — Design
+# Dice Pip Cosmetic Set Style — Design
 
 Date: 2026-09-28  
 Branch: `feat/dice-pip-collection-style`
 
 ## Goal
 
-Add two visual characteristics to a dice collection so all three dice in the collection share the same pip presentation:
+Add two presentation characteristics shared by the three dice of one canonical cosmetic set:
 
 1. `dice_pip_dark`
-   - `false`: current behavior.
-   - `true`: store preview uses white pips; gameplay uses a lighter variant of the owning player's color.
+   - `false`: keep the current dark/store pip treatment and normal player-color gameplay pips.
+   - `true`: store/showcase pips are white; gameplay pips use a lighter deterministic variant of the owning player's color.
 
 2. `dice_pip_compact`
-   - `false`: current spread pip layout.
-   - `true`: pips are pulled toward the center while retaining readable gaps.
+   - `false`: keep the current spread pip layout.
+   - `true`: move pips toward the center while retaining readable gaps.
 
-These settings are presentation-only. They must not affect dice RNG, physics, results, combat rules, ownership, pricing, or purchases.
+These settings are presentation-only. They must not affect dice RNG, physics, combat results, ownership, offers, collections, pricing, or purchases.
 
-## Compatibility
+## Source of truth
 
-Both fields default to `false`, so existing collections preserve today's behavior without data backfill:
+The canonical source of truth is `catalog.cosmetic_sets`.
 
-- light pip color mode
-- spread pip layout
+The settings do **not** belong to `catalog.collections` and do **not** belong to individual rows in `catalog.cosmetics`.
 
-Standalone/default dice outside collections also keep the current behavior.
+A commercial collection may contain a cosmetic set, but commercial grouping and dice visual grouping are different concerns. Dice outside a commercial collection still resolve presentation from their `cosmetic_set`.
+
+`catalog.cosmetic_set_items` must enforce one set per cosmetic through a unique constraint on `cosmetic_id`. This makes the effective set lookup unambiguous.
+
+Current invariant:
+
+- every dice cosmetic belongs to exactly one cosmetic set;
+- every dice cosmetic set contains exactly one `dice_attack`, one `dice_defense`, and one `dice_neutral`;
+- internal sets such as `set.default` and `set.brazil` may be `retired` commercially while remaining valid visual configuration sources.
 
 ## Persistence
 
-### catalog.collections
+### catalog.cosmetic_sets
 
-Add:
+Canonical fields:
 
 ```sql
 dice_pip_dark boolean NOT NULL DEFAULT false
 dice_pip_compact boolean NOT NULL DEFAULT false
 ```
 
-The setting belongs to the collection, not to each individual die.
+Initial configuration:
+
+```text
+set.cosmic-night   dark=true   compact=false
+set.black-dragon   dark=true   compact=false
+all other current sets
+                   dark=false  compact=false
+```
+
+### catalog.collections
+
+No pip presentation fields are stored here.
+
+Any transitional `dice_pip_dark` or `dice_pip_compact` columns must be removed.
+
+### catalog.cosmetic_set_items
+
+The membership relation is authoritative for resolving a die's visual set.
+
+Required invariant:
+
+```sql
+UNIQUE (cosmetic_id)
+```
 
 ### game.player_cosmetic_loadouts
 
-Add the same frozen presentation fields:
+Keep frozen presentation fields:
 
 ```sql
 dice_pip_dark boolean NOT NULL DEFAULT false
 dice_pip_compact boolean NOT NULL DEFAULT false
 ```
 
-Reason: gameplay currently freezes mutable cosmetic catalog state at match start. The runtime intentionally does not rejoin `catalog.*` after the match begins. These values therefore need to be captured alongside `asset_ref`, `body_color`, and `body_highlight_color`.
-
-For a cosmetic that has no collection, both values resolve to `false`.
+Reason: gameplay freezes mutable cosmetic catalog state at match start. Runtime intentionally does not rejoin `catalog.*` after a match begins.
 
 ## Database migration
 
 Create managed migration:
 
-`src/lib/db/migrations/managed/079-dice-pip-collection-style.sql`
+`src/lib/db/migrations/managed/079-dice-pip-cosmetic-set-style.sql`
 
-The migration must:
+The migration must be safe both for:
 
-- add both columns to `catalog.collections` with non-null false defaults;
-- add both columns to `game.player_cosmetic_loadouts` with non-null false defaults;
-- be safe for existing data;
-- avoid triggers or duplicated per-die configuration.
+- a clean database coming from migration 078; and
+- production where the structural change was already applied manually.
 
-No existing collection is switched to dark/compact by this migration. Collection-specific values are separate catalog data updates.
+It must:
+
+- add both fields to `catalog.cosmetic_sets` with non-null false defaults;
+- remove the obsolete fields from `catalog.collections` if they exist;
+- keep/add the two snapshot fields in `game.player_cosmetic_loadouts`;
+- create any missing internal/current cosmetic sets needed by the current catalog;
+- guarantee the three dice memberships for those sets;
+- enforce unique `cosmetic_id` membership;
+- set dark mode only for `set.cosmic-night` and `set.black-dragon`;
+- keep compact mode false for all current sets.
 
 ## Economy/storefront contract
 
-Extend `StorefrontCollection` with:
+`CosmeticSet` exposes:
 
 ```ts
 dicePipDark: boolean;
 dicePipCompact: boolean;
 ```
 
-Extend `StorefrontCollectionRow` and `listStorefrontCollections()` to select the two collection columns.
+`listStorefrontSetItems()` reads both fields from `catalog.cosmetic_sets`, and `setsFromRows()` projects them once per set.
 
-`collectionsFromRows()` projects them once per collection.
+Commercial `StorefrontCollection` remains unchanged. It represents merchandising, assets, promotion and bundle relationships only.
 
-Extend `StoreShowcaseView` with the same two booleans. Offer-only showcases use `false/false`; collection showcases inherit the collection values.
+### Effective showcase presentation
 
-The individual `CosmeticCatalogItem` contract does not receive these fields because the configuration is intentionally collection-level.
+`StoreShowcaseItem` exposes the effective presentation values:
+
+```ts
+dicePipDark: boolean;
+dicePipCompact: boolean;
+```
+
+For a dice item, `resolveStoreShowcaseView()` finds the canonical `CosmeticSet` containing the cosmetic and projects its flags.
+
+For territory cosmetics, both flags resolve to false.
+
+An offer that is not attached to a commercial collection still inherits the flags from its cosmetic set. No "offer-only = false/false" shortcut is allowed.
 
 ## Pip layout API
 
-Keep the existing public constant for backward compatibility, but introduce an explicit layout resolver in `src/lib/client/dice/pip-layout.ts`:
+Keep the existing public spread constant for backward compatibility and add an explicit resolver in `src/lib/client/dice/pip-layout.ts`:
 
 ```ts
 type DicePipSpacing = "spread" | "compact";
@@ -103,29 +149,27 @@ Use the exact existing coordinates.
 
 ### Compact
 
-Use a centered layout approximately equivalent to:
+Use centered coordinates approximately equivalent to:
 
 - horizontal columns: 36 / 64 instead of 30 / 70;
 - six-pip vertical rows: 32 / 50 / 68 instead of 26 / 50 / 74;
 - center remains 50 / 50.
 
-The layout topology and pip count never change.
+The topology and pip count never change.
 
-Both the CanvasTexture path and the 2D `GameDie` fallback must use the same resolver so 2D and 3D cannot drift.
+Both the CanvasTexture path and the 2D `GameDie` fallback must use the same resolver.
 
 ## Pip color API
 
-Introduce a single presentation helper, for example:
-
-`src/lib/client/dice/pip-presentation.ts`
+Add a single presentation helper in `src/lib/client/dice/pip-presentation.ts`.
 
 Responsibilities:
 
-- resolve store preview pip color;
+- resolve store/showcase pip color;
 - resolve gameplay pip color;
 - derive a lighter player color deterministically when dark mode is active.
 
-Suggested API:
+API:
 
 ```ts
 function storeDicePipColor(dark: boolean): string;
@@ -143,7 +187,7 @@ Rules:
 - gameplay + light => current `playerColorHex(playerColor)`;
 - gameplay + dark => lighter version of the same player color.
 
-The lightening function must preserve hue identity and raise luminance with a bounded deterministic transform. It must not depend on browser CSS parsing.
+The lightening transform must be deterministic and independent of browser CSS parsing.
 
 ## 3D texture pipeline
 
@@ -153,31 +197,22 @@ Extend `DiceTextureOptions` with:
 pipCompact?: boolean;
 ```
 
-Update cache keys in:
+Include compact/spread in every texture cache key.
 
-- `dice-assets-manager.ts`
-- `use-dice-face-textures.ts`
+`createDiceFaceTexture()` passes the effective spacing mode to the shared pip-layout resolver.
 
-so compact and spread textures can never share a stale cached CanvasTexture.
-
-`createDiceFaceTexture()` passes the spacing mode to `drawPips()`.
-
-No change is required to geometry or physics.
+No geometry or physics change is required.
 
 ## Store preview behavior
 
-`DiceShowcaseModel` receives collection-level pip flags through `StoreShowcaseView`.
+`DiceShowcaseModel` receives the effective `StoreShowcaseItem` flags.
 
-For collection showcases:
+For any dice, regardless of whether it belongs to a commercial collection:
 
 - `dicePipDark=true` => white pips;
 - `dicePipCompact=true` => compact layout.
 
-For offer-only/standalone showcases:
-
-- light + spread.
-
-All three dice in a collection therefore share the same presentation settings automatically.
+The three dice in the canonical set share the same settings through the set relationship.
 
 ## Game snapshot and runtime
 
@@ -188,82 +223,88 @@ dicePipDark: boolean;
 dicePipCompact: boolean;
 ```
 
-For territory selections these values remain false.
+At match start, `capturePlayerCosmeticLoadouts()` resolves each selected cosmetic and joins:
 
-At match start, `capturePlayerCosmeticLoadouts()` resolves each equipped/bot/default cosmetic and joins its collection to capture the two collection fields. The INSERT/UPSERT into `game.player_cosmetic_loadouts` persists them.
+```text
+resolved cosmetic
+  -> catalog.cosmetic_set_items
+  -> catalog.cosmetic_sets
+```
 
-`loadRoomPlayerCosmetics()` returns only the frozen snapshot values, preserving the existing no-catalog-read invariant during an active match.
+The two flags are copied into `game.player_cosmetic_loadouts`.
 
-Default in-memory cosmetic selections use false/false.
+Territory cosmetics and any defensive legacy row with no set resolve to false/false.
 
-## Battle rendering
+`loadRoomPlayerCosmetics()` reads only the frozen snapshot values. It must preserve the existing no-`catalog.*` runtime invariant.
 
-Every battle dice presentation path must consume the frozen flags:
+## Battle and order-roll rendering
 
-- cinematic 3D dice;
-- regular 3D dice;
-- static 2D results;
-- reduced-motion / WebGL fallback.
+Every gameplay dice presentation path consumes the frozen flags:
+
+- battle cinematic 3D dice;
+- static battle 2D results;
+- reduced-motion / WebGL fallback;
+- neutral order-roll cinematic;
+- neutral order-roll 2D result.
 
 For dark mode:
 
-```
+```ts
 pipColor = gameplayDicePipColor(player.color, true)
 ```
 
-For light mode:
+For normal mode:
 
+```ts
+pipColor = gameplayDicePipColor(player.color, false)
 ```
-pipColor = playerColorHex(player.color)
-```
 
-For compact mode, the same `pipCompact` flag is passed to both 3D CanvasTexture generation and `GameDie`.
+Compact mode is passed to both CanvasTexture generation and `GameDie`.
 
-The attacker and defender can have different settings in the same battle.
-
-## Store 2D previews
-
-Any store surface that renders pips separately from the 3D showcase must use the collection setting where collection context is available. A plain individual offer without collection context remains false/false.
+Attacker, defender and neutral/order dice may therefore use different frozen settings when their equipped sets differ.
 
 ## Tests
 
-Add or update tests to cover:
+Cover at least:
 
-1. migration contains both columns with `NOT NULL DEFAULT false`;
-2. storefront repository selects both collection fields;
-3. `StorefrontCollection` projection exposes both booleans;
-4. collection showcase inherits flags;
-5. offer showcase defaults to false/false;
-6. spread coordinates remain byte-for-byte equivalent to current coordinates;
-7. compact coordinates have correct pip counts and are closer to center;
-8. texture cache key differs between compact/spread;
-9. store dark mode resolves to white;
-10. gameplay dark mode produces a lighter variant while preserving player-color distinction;
-11. match snapshot captures collection settings;
-12. runtime load uses frozen snapshot values and does not need `catalog.*`;
-13. 2D `GameDie` and 3D texture generation both consume the shared layout resolver;
-14. existing dice without collection remain light + spread.
+1. migration adds fields to `catalog.cosmetic_sets`, not `catalog.collections`;
+2. migration keeps the snapshot fields;
+3. membership uniqueness is enforced on `cosmetic_id`;
+4. set repository selects both flags;
+5. `CosmeticSet` projection exposes both booleans;
+6. a collection showcase resolves flags from the cosmetic set, not the collection;
+7. an offer outside a collection also resolves flags from its cosmetic set;
+8. spread coordinates remain equivalent to the current layout;
+9. compact coordinates retain correct pip counts and move outer pips inward;
+10. texture cache keys differ between compact and spread;
+11. store dark mode resolves to white;
+12. gameplay dark mode produces a lighter deterministic player-color variant;
+13. match snapshot captures set settings;
+14. runtime load uses only frozen snapshot values;
+15. 2D and 3D rendering use the shared layout resolver;
+16. default/internal dice remain light + spread;
+17. Cosmic Night and Black Dragon are dark + spread.
 
 ## Non-goals
 
 - No changes to dice physics.
 - No changes to RNG or combat resolution.
-- No arbitrary per-die pip settings.
+- No arbitrary per-die persisted pip settings.
 - No user-facing toggle.
-- No automatic choice based on body color.
-- No changes to pricing or collection ownership.
-- No Black Dragon-specific hardcoding in React components.
+- No automatic mode selection from body colors.
+- No Black Dragon/Cosmic Night hardcoding in React components.
+- No use of commercial collections as the visual source of truth.
 
 ## Initial catalog usage
 
-After the architecture lands, collection rows can opt in independently with simple data updates, e.g.:
+Catalog configuration is data-driven:
 
 ```sql
-UPDATE catalog.collections
+UPDATE catalog.cosmetic_sets
 SET dice_pip_dark = true,
-    dice_pip_compact = true,
+    dice_pip_compact = false,
     updated_at = now()
-WHERE id = 'collection.black-dragon';
+WHERE id IN ('set.cosmic-night', 'set.black-dragon');
 ```
 
-The architecture itself must remain generic for future collections.
+Future sets can opt into either characteristic without changing rendering code.
