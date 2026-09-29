@@ -35,6 +35,7 @@ Use progressive context retrieval instead of broadly scanning the repository.
 - Do not preload, read, or summarize all installed skills.
 - Read only the selected skill and only the referenced resources needed.
 - If normal repository tools are sufficient, do not use a skill.
+- For catalog/store additions, collections, pricing, offers, entitlements or profile-background commerce, prefer `skills/catalog-store/SKILL.md`.
 
 ## Do not start the project
 
