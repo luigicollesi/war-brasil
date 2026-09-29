@@ -79,7 +79,6 @@
     var(--profile-title-ember-position),
     var(--profile-title-fill-position);
   background-repeat: no-repeat, repeat, no-repeat, no-repeat;
-  background-blend-mode: soft-light, screen, screen, normal;
   background-clip: text;
   -webkit-background-clip: text;
   text-shadow:
