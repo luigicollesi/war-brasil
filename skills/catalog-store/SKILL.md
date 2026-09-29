@@ -177,9 +177,12 @@ e ainda configure:
 - product_items;
 - product_entitlements;
 - offer;
-- offer_items.
+- offer_items;
+- `catalog.cosmetic_sets` + `catalog.cosmetic_set_items` quando o item for dado.
 
-O item aparecerá pelas superfícies de offers/categorias, não como card de collection.
+Estar fora de collection não remove a identidade visual do dado: ele continua pertencendo ao
+seu set canônico. O item aparecerá pelas superfícies de offers/categorias, não como card de
+collection.
 
 ### 3. Profile background dentro de collection
 
@@ -563,12 +566,13 @@ Para gameplay:
 
 1. `catalog.cosmetics` com `collection_id=NULL`;
 2. asset;
-3. pricing/stats;
-4. product single com `collection_id=NULL`;
-5. product_item;
-6. product_entitlement;
-7. offer;
-8. offer_item.
+3. se for dado, criar/associar o `cosmetic_set` canônico e seu `cosmetic_set_item`;
+4. pricing/stats;
+5. product single com `collection_id=NULL`;
+6. product_item;
+7. product_entitlement;
+8. offer;
+9. offer_item.
 
 Para background:
 
