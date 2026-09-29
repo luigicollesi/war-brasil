@@ -19,6 +19,56 @@
   pointer-events: none;
 }
 
+.guideLauncher {
+  position: fixed;
+  z-index: 70;
+  top: max(18px, env(safe-area-inset-top));
+  right: max(18px, env(safe-area-inset-right));
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgb(208 170 87 / 48%);
+  border-radius: 50%;
+  background: rgb(7 12 9 / 88%);
+  color: var(--command-brass-bright, #d0aa57);
+  box-shadow:
+    inset 0 1px rgb(255 255 255 / 4%),
+    0 12px 32px rgb(0 0 0 / 28%);
+  cursor: pointer;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: 1rem;
+  font-weight: 900;
+  line-height: 1;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease;
+}
+
+.guideLauncher:hover:not(:disabled) {
+  border-color: var(--command-brass-bright, #d0aa57);
+  background: rgb(17 27 20 / 94%);
+  color: var(--command-ivory, #eee8da);
+  box-shadow:
+    inset 0 1px rgb(255 255 255 / 5%),
+    0 12px 32px rgb(0 0 0 / 28%),
+    0 0 24px rgb(157 121 59 / 13%);
+}
+
+.guideLauncher:focus-visible {
+  outline: 2px solid var(--command-brass-bright, #d0aa57);
+  outline-offset: 4px;
+}
+
+.guideLauncher:disabled {
+  cursor: default;
+}
+
 .commandHomeRouteTransition {
   position: fixed;
   z-index: 95;
@@ -596,6 +646,10 @@
     font-size: .42rem;
   }
 
+  .root[data-home-guide-launcher="visible"] .footer {
+    right: 72px;
+  }
+
   .footer > span {
     display: none;
   }
@@ -653,7 +707,8 @@
   .destinationArrow,
   .campaignMiniProgress i,
   .openCommand,
-  .commandHomeRouteTransition {
+  .commandHomeRouteTransition,
+  .guideLauncher {
     animation: none !important;
     transition: none !important;
   }

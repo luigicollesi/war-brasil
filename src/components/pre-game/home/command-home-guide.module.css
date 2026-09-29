@@ -1,0 +1,225 @@
+.portal {
+  position: fixed;
+  z-index: 80;
+  inset: 0;
+  pointer-events: none;
+  color: var(--command-ivory, #eee8da);
+}
+
+.maskPanel {
+  position: fixed;
+  pointer-events: auto;
+  background: rgb(3 7 6 / 78%);
+  backdrop-filter: blur(2px);
+  animation: guideMaskIn 180ms ease-out both;
+}
+
+.spotlightFrame {
+  position: fixed;
+  pointer-events: none;
+  border: 1px solid rgb(208 170 87 / 68%);
+  box-shadow:
+    inset 0 0 0 1px rgb(238 232 218 / 5%),
+    0 0 28px rgb(157 121 59 / 16%);
+}
+
+.dialog {
+  position: fixed;
+  left: 50%;
+  width: min(540px, calc(100vw - 32px));
+  max-height: min(390px, calc(100dvh - 32px));
+  overflow: auto;
+  transform: translateX(-50%);
+  pointer-events: auto;
+  padding: 24px 26px 22px;
+  border: 1px solid rgb(208 170 87 / 44%);
+  background:
+    linear-gradient(135deg, rgb(208 170 87 / 6%), transparent 34%),
+    rgb(7 12 9 / 97%);
+  box-shadow:
+    0 30px 80px rgb(0 0 0 / 58%),
+    inset 0 1px rgb(255 255 255 / 4%);
+  animation: guideDialogIn 190ms cubic-bezier(.2, .78, .2, 1) both;
+}
+
+.dialog::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 24px;
+  width: 118px;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    var(--command-brass-bright, #d0aa57),
+    transparent
+  );
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.stepIndex {
+  color: var(--command-brass-bright, #d0aa57);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: .58rem;
+  font-weight: 800;
+  letter-spacing: .16em;
+}
+
+.closeButton,
+.secondaryAction,
+.primaryAction {
+  min-height: 44px;
+  border-radius: 0;
+  cursor: pointer;
+  font-family: var(--font-geist-mono), monospace;
+  font-size: .6rem;
+  font-weight: 800;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+}
+
+.closeButton {
+  min-width: 72px;
+  padding: 0 12px;
+  border: 1px solid rgb(238 232 218 / 18%);
+  background: rgb(238 232 218 / 3%);
+  color: rgb(238 232 218 / 68%);
+}
+
+.title {
+  margin: 18px 0 0;
+  outline: none;
+  color: var(--command-ivory, #eee8da);
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: clamp(1.55rem, 4vw, 2.25rem);
+  line-height: 1;
+  letter-spacing: .08em;
+}
+
+.title:focus-visible {
+  outline: 2px solid var(--command-brass-bright, #d0aa57);
+  outline-offset: 5px;
+}
+
+.body {
+  max-width: 48ch;
+  margin: 12px 0 0;
+  color: rgb(238 232 218 / 72%);
+  font-size: .78rem;
+  line-height: 1.65;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin-top: 22px;
+}
+
+.secondaryAction,
+.primaryAction {
+  padding: 0 16px;
+}
+
+.secondaryAction {
+  justify-self: start;
+  border: 1px solid rgb(238 232 218 / 20%);
+  background: transparent;
+  color: rgb(238 232 218 / 72%);
+}
+
+.primaryAction {
+  justify-self: end;
+  border: 1px solid rgb(208 170 87 / 58%);
+  background:
+    linear-gradient(90deg, rgb(208 170 87 / 12%), transparent),
+    rgb(15 22 16 / 96%);
+  color: var(--command-ivory, #eee8da);
+}
+
+.closeButton:hover,
+.secondaryAction:hover,
+.primaryAction:hover {
+  border-color: var(--command-brass-bright, #d0aa57);
+  color: var(--command-ivory, #eee8da);
+}
+
+.closeButton:focus-visible,
+.secondaryAction:focus-visible,
+.primaryAction:focus-visible {
+  outline: 2px solid var(--command-brass-bright, #d0aa57);
+  outline-offset: 3px;
+}
+
+@keyframes guideMaskIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes guideDialogIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+@media (max-width: 520px) {
+  .dialog {
+    width: calc(100vw - 24px);
+    max-height: min(360px, calc(100dvh - 24px));
+    padding: 20px 18px 18px;
+  }
+
+  .body {
+    font-size: .74rem;
+  }
+
+  .actions {
+    gap: 8px;
+  }
+
+  .secondaryAction,
+  .primaryAction {
+    width: 100%;
+    padding-inline: 10px;
+  }
+}
+
+@media (max-height: 620px) {
+  .dialog {
+    max-height: calc(100dvh - 24px);
+    padding-block: 16px;
+  }
+
+  .title {
+    margin-top: 12px;
+  }
+
+  .body {
+    margin-top: 8px;
+    line-height: 1.5;
+  }
+
+  .actions {
+    margin-top: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .maskPanel,
+  .dialog {
+    animation: none !important;
+    transition: none !important;
+  }
+}

@@ -7,6 +7,7 @@ import {
 } from "@/components/auth/command-auth-modal";
 import { CommandOnboardingModal } from "@/components/auth/command-onboarding-modal";
 import { BetaTesterWelcomeRewardModal } from "./beta-tester-welcome-reward-modal";
+import { CommandHomeGuide } from "./command-home-guide";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { AnimationEvent as ReactAnimationEvent, ReactNode } from "react";
@@ -15,6 +16,7 @@ import type { BattlePassHomeSummary } from "@/src/lib/shared/progression/battle-
 import {
   useCallback,
   useEffect,
+  useRef,
   useState,
   useSyncExternalStore,
 } from "react";
@@ -39,6 +41,7 @@ type HomeState =
   | "auth-modal"
   | "onboarding"
   | "beta-reward"
+  | "guide"
   | "command-open"
   | "destination-focus"
   | "transitioning";
@@ -169,10 +172,26 @@ export function CommandHomeClient({
   >(initialAccess?.profile?.displayName ?? initialAccess?.suggestedDisplayName ?? null);
   const [betaTesterRewardClaimedLocally, setBetaTesterRewardClaimedLocally] =
     useState(false);
+  const homeRootRef = useRef<HTMLElement | null>(null);
+  const guideLauncherRef = useRef<HTMLButtonElement | null>(null);
+  const destinationRefs = useRef<
+    Partial<Record<HomeDestinationId, HTMLAnchorElement | null>>
+  >({});
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [guideStepIndex, setGuideStepIndex] = useState(0);
   const betaTesterRewardPending =
     isCommandHome &&
     initialBetaTesterReward?.pending === true &&
     !betaTesterRewardClaimedLocally;
+  const guideAvailable =
+    isCommandHome &&
+    commandOpen &&
+    !onboardingOpen &&
+    !betaTesterRewardPending &&
+    !authModalOpen &&
+    !authChecking &&
+    !commandHomeNavigationPending &&
+    transitioningTo === null;
   const {
     data: authSession,
     isPending: authSessionPending,
@@ -505,6 +524,30 @@ export function CommandHomeClient({
     );
   };
 
+  const getGuideTarget = useCallback(
+    (destination: HomeDestinationId) =>
+      destinationRefs.current[destination] ?? null,
+    [],
+  );
+
+  const closeHomeGuide = useCallback(() => {
+    setGuideOpen(false);
+  }, []);
+
+  const openHomeGuide = () => {
+    if (!guideAvailable) return;
+    setKeyboardDestinationFocus(null);
+    setPointerDestinationFocus(null);
+    setGuideStepIndex(0);
+    setGuideOpen(true);
+  };
+
+  useEffect(() => {
+    if (guideOpen && !guideAvailable) {
+      setGuideOpen(false);
+    }
+  }, [guideAvailable, guideOpen]);
+
   const homeState: HomeState = transitioningTo
     ? "transitioning"
     : onboardingOpen
@@ -515,7 +558,9 @@ export function CommandHomeClient({
         ? "auth-modal"
         : authChecking
           ? "auth-check"
-          : commandOpen && destinationFocus
+          : guideOpen
+            ? "guide"
+            : commandOpen && destinationFocus
             ? "destination-focus"
             : commandOpen
               ? "command-open"
@@ -525,6 +570,7 @@ export function CommandHomeClient({
 
   return (
     <main
+      ref={homeRootRef}
       className={styles.root}
       data-home-state={homeState}
       data-landing-prelude={landingPreludeComplete ? "complete" : "active"}
@@ -540,6 +586,8 @@ export function CommandHomeClient({
       data-auth-checking={authChecking ? "true" : "false"}
       data-destination-focus={destinationFocus ?? "none"}
       data-transitioning-to={transitioningTo ?? "none"}
+      data-home-guide={guideOpen ? "open" : "closed"}
+      data-home-guide-launcher={guideAvailable || guideOpen ? "visible" : "hidden"}
     >
       {!landingPreludeComplete ? (
         <section
@@ -571,6 +619,20 @@ export function CommandHomeClient({
         >
           Pré-carregar comando
         </Link>
+      ) : null}
+
+      {guideAvailable || guideOpen ? (
+        <button
+          ref={guideLauncherRef}
+          type="button"
+          className={styles.guideLauncher}
+          aria-label="Abrir guia da tela inicial"
+          aria-expanded={guideOpen}
+          disabled={guideOpen}
+          onClick={openHomeGuide}
+        >
+          ?
+        </button>
       ) : null}
 
       {children}
@@ -637,6 +699,9 @@ export function CommandHomeClient({
               {DESTINATIONS.map((destination) => (
                 <Link
                   key={destination.id}
+                  ref={(element) => {
+                    destinationRefs.current[destination.id] = element;
+                  }}
                   href={destination.href}
                   className={styles.destination}
                   data-destination={destination.id}
@@ -722,6 +787,16 @@ export function CommandHomeClient({
           }}
         />
       ) : null}
+
+      <CommandHomeGuide
+        open={guideOpen}
+        stepIndex={guideStepIndex}
+        homeRootRef={homeRootRef}
+        returnFocusRef={guideLauncherRef}
+        getTarget={getGuideTarget}
+        onStepChange={setGuideStepIndex}
+        onClose={closeHomeGuide}
+      />
 
       <CommandAuthModal
         open={authModalOpen}
