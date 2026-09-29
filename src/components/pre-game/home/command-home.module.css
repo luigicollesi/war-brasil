@@ -22,7 +22,7 @@
 .guideLauncher {
   position: fixed;
   z-index: 70;
-  top: max(18px, env(safe-area-inset-top));
+  top: calc(88px + env(safe-area-inset-top));
   right: max(18px, env(safe-area-inset-right));
   display: grid;
   width: 42px;
