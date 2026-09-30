@@ -1,7 +1,9 @@
 import "server-only";
 
 import type {
+  ProfileAppearanceBattlePassReward,
   ProfileAppearanceCollectionUnlock,
+  ProfileAppearanceStoreBackground,
   ProfileAppearanceStoreItem,
   ProfileAppearanceStoreOffer,
   ProfileAppearanceStorefront,
@@ -10,6 +12,8 @@ import { quoteStorefrontProduct } from "@/src/lib/economy/storefront-pricing";
 import { profileAppearanceAssetDeliveryPath } from "../profile/profile-appearance-asset-storage";
 import {
   listActiveProfileAppearanceStoreRows,
+  listBattlePassProfileBackgroundRows,
+  type ProfileAppearanceBattlePassBackgroundRow,
   type ProfileAppearanceStoreRow,
 } from "./profile-appearance-store-repository";
 
@@ -21,8 +25,16 @@ function positiveSafePrice(value: string) {
   return price;
 }
 
+type CollectionUnlockRow = Pick<
+  ProfileAppearanceStoreRow,
+  | "collection_id"
+  | "collection_name"
+  | "collection_owned_count"
+  | "collection_total_count"
+>;
+
 function collectionUnlock(
-  row: ProfileAppearanceStoreRow,
+  row: CollectionUnlockRow,
 ): ProfileAppearanceCollectionUnlock | null {
   if (!row.collection_id) return null;
 
@@ -89,10 +101,32 @@ function storeItem(row: ProfileAppearanceStoreRow): ProfileAppearanceStoreItem {
   };
 }
 
+function battlePassBackgroundItem(
+  row: ProfileAppearanceBattlePassBackgroundRow,
+): ProfileAppearanceStoreBackground {
+  return {
+    kind: "profile_background",
+    id: row.background_id,
+    name: row.item_name,
+    description: row.item_description,
+    rarity: row.rarity,
+    collectionId: row.collection_id,
+    collectionUnlock: collectionUnlock(row),
+    assetRef: profileAppearanceAssetDeliveryPath(row.asset_ref),
+    previewRef: row.preview_ref
+      ? profileAppearanceAssetDeliveryPath(row.preview_ref)
+      : null,
+    owned: row.owned,
+  };
+}
+
 export async function getProfileAppearanceStorefront(
   userId: string,
 ): Promise<ProfileAppearanceStorefront> {
-  const rows = await listActiveProfileAppearanceStoreRows(userId);
+  const [rows, battlePassRows] = await Promise.all([
+    listActiveProfileAppearanceStoreRows(userId),
+    listBattlePassProfileBackgroundRows(userId),
+  ]);
   const grouped = new Map<string, ProfileAppearanceStoreRow[]>();
 
   for (const row of rows) {
@@ -152,5 +186,14 @@ export async function getProfileAppearanceStorefront(
     });
   }
 
-  return { offers };
+  const battlePassRewards: ProfileAppearanceBattlePassReward[] =
+    battlePassRows.map((row) => ({
+      seasonId: row.season_id,
+      seasonName: row.season_name,
+      track: row.track,
+      level: row.level,
+      item: battlePassBackgroundItem(row),
+    }));
+
+  return { offers, battlePassRewards };
 }
