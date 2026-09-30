@@ -112,6 +112,11 @@ export function ProfileStoreCategory({
     [appearanceStorefront.offers, category],
   );
 
+  const battlePassBackgroundRewards = useMemo(
+    () => (category === "backgrounds" ? appearanceStorefront.battlePassRewards : []),
+    [appearanceStorefront.battlePassRewards, category],
+  );
+
   async function handlePurchase(offer: EconomyOffer | ProfileAppearanceStoreOffer) {
     if (offer.fullyOwned || !offer.purchasable || pendingOfferId !== null) return;
     setPendingOfferId(offer.id);
@@ -288,11 +293,62 @@ export function ProfileStoreCategory({
               );
             })
           : null}
+
+        {category === "backgrounds"
+          ? battlePassBackgroundRewards.map((reward) => {
+              const item = reward.item;
+              return (
+                <article
+                  key={`${reward.seasonId}:${item.id}`}
+                  className={styles.product}
+                  data-battle-pass-reward="true"
+                >
+                  <div className={styles.visual} data-appearance-kind={item.kind}>
+                    <Image
+                      src={item.previewRef ?? item.assetRef}
+                      alt={`Prévia de ${item.name}`}
+                      width={520}
+                      height={300}
+                    />
+                  </div>
+                  <div className={styles.copy}>
+                    <small>{item.owned ? "POSSUÍDO" : "RECOMPENSA DO PASSE"}</small>
+                    <strong>{item.name}</strong>
+                    <span>{item.description ?? "Fundo de Dossiê"}</span>
+                    <div
+                      className={styles.collectionProgress}
+                      aria-label={`${reward.seasonName}, trilha ${reward.track === "free" ? "Livre" : "Elite"}, nível ${reward.level}`}
+                    >
+                      <small>{reward.seasonName.toUpperCase()}</small>
+                      <b>
+                        {reward.track === "free" ? "LIVRE" : "ELITE"} · NÍVEL {reward.level}
+                      </b>
+                    </div>
+                  </div>
+                  <div className={styles.commerce}>
+                    <span>PASSE // {reward.track === "free" ? "LIVRE" : "ELITE"}</span>
+                    {item.owned ? (
+                      <button type="button" disabled>
+                        POSSUÍDO
+                      </button>
+                    ) : (
+                      <Link className={styles.rewardLink} href="/campaign">
+                        VER NO PASSE
+                      </Link>
+                    )}
+                  </div>
+                </article>
+              );
+            })
+          : null}
       </section>
 
       {((category === "dice" && diceOffers.length === 0) ||
         (category === "territories" && territoryEntries.length === 0) ||
-        ((category === "backgrounds" || category === "titles") && appearanceOffers.length === 0)) ? (
+        (category === "backgrounds" &&
+          appearanceOffers.length === 0 &&
+          battlePassBackgroundRewards.length === 0) ||
+        (category === "titles" && appearanceOffers.length === 0)) ? (
         <div className={styles.empty}>
           <strong>Nenhum item disponível nesta categoria</strong>
           <span>Novas remessas aparecerão aqui quando entrarem no catálogo.</span>
