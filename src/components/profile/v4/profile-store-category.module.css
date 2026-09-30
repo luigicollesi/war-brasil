@@ -265,7 +265,8 @@
   font-weight: 900;
 }
 
-.commerce button {
+.commerce button,
+.commerce .rewardLink {
   min-height: 44px;
   padding: 0 14px;
   color: #101913;
@@ -276,13 +277,22 @@
   font-weight: 900;
   letter-spacing: 0.08em;
   cursor: pointer;
+  text-decoration: none;
 }
 
-.commerce button:not(:disabled):hover {
+.commerce .rewardLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.commerce button:not(:disabled):hover,
+.commerce .rewardLink:hover {
   filter: brightness(1.05);
 }
 
-.commerce button:not(:disabled):focus-visible {
+.commerce button:not(:disabled):focus-visible,
+.commerce .rewardLink:focus-visible {
   outline: 2px solid var(--brass);
   outline-offset: 2px;
 }
