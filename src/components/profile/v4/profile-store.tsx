@@ -530,13 +530,21 @@ export function ProfileStore({
                   </span>
                   <span className={styles.collectionBannerMeta}>
                     <span>
-                      <small>{collection.featured ? "DESTAQUE ESPECIAL" : "COLEÇÃO"}</small>
+                      <small>
+                        {collection.battlePassReward
+                          ? `PASSE // ${collection.battlePassReward.track === "free" ? "LIVRE" : "ELITE"}`
+                          : collection.featured
+                            ? "DESTAQUE ESPECIAL"
+                            : "COLEÇÃO"}
+                      </small>
                       <strong>{collection.name}</strong>
                     </span>
                     <em>
-                      {collection.promotionDiscountBps > 0
-                        ? promotionLabel(collection.promotionDiscountBps)
-                        : collectionProgressLabel(collection)}
+                      {collection.battlePassReward
+                        ? "RECOMPENSA DO PASSE"
+                        : collection.promotionDiscountBps > 0
+                          ? promotionLabel(collection.promotionDiscountBps)
+                          : collectionProgressLabel(collection)}
                     </em>
                   </span>
                 </Link>
