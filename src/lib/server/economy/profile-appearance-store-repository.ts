@@ -165,3 +165,79 @@ export async function listActiveProfileAppearanceStoreRows(
   );
   return result.rows;
 }
+
+
+export type ProfileAppearanceBattlePassBackgroundRow = {
+  season_id: string;
+  season_name: string;
+  track: "free" | "premium";
+  level: number;
+  background_id: string;
+  item_name: string;
+  item_description: string | null;
+  rarity: ProfileAppearanceRarity;
+  collection_id: string | null;
+  collection_name: string | null;
+  collection_owned_count: number | null;
+  collection_total_count: number | null;
+  asset_ref: string;
+  preview_ref: string | null;
+  owned: boolean;
+};
+
+export async function listBattlePassProfileBackgroundRows(
+  userId: string,
+  db: EconomyQueryable = pool,
+): Promise<ProfileAppearanceBattlePassBackgroundRow[]> {
+  const result = await db.query<ProfileAppearanceBattlePassBackgroundRow>(
+    `WITH collection_progress AS (
+       SELECT collection.id AS collection_id,
+              collection.name AS collection_name,
+              COUNT(item.id)::int AS total_count,
+              COUNT(owned.cosmetic_id)::int AS owned_count
+         FROM catalog.collections collection
+         LEFT JOIN catalog.cosmetics item
+           ON item.collection_id=collection.id
+          AND item.is_default=FALSE
+          AND item.status IN ('announced','available')
+         LEFT JOIN inventory.cosmetics owned
+           ON owned.user_id=$1::uuid
+          AND owned.cosmetic_id=item.id
+        GROUP BY collection.id,collection.name
+     )
+     SELECT season.id AS season_id,
+            season.name AS season_name,
+            reward.track,
+            reward.level,
+            background.id AS background_id,
+            background.name AS item_name,
+            background.description AS item_description,
+            background.rarity,
+            background.collection_id,
+            progress.collection_name,
+            progress.owned_count AS collection_owned_count,
+            progress.total_count AS collection_total_count,
+            background.asset_ref,
+            background.preview_ref,
+            (owned.background_id IS NOT NULL) AS owned
+       FROM catalog.battle_pass_rewards reward
+       JOIN catalog.battle_pass_seasons season
+         ON season.id=reward.season_id
+        AND season.status IN ('active','ended')
+        AND season.starts_at<=CURRENT_TIMESTAMP
+        AND season.claim_ends_at>CURRENT_TIMESTAMP
+       JOIN catalog.profile_backgrounds background
+         ON background.id=reward.background_id
+       LEFT JOIN collection_progress progress
+         ON progress.collection_id=background.collection_id
+       LEFT JOIN profile.commander_backgrounds owned
+         ON owned.user_id=$1::uuid
+        AND owned.background_id=background.id
+      WHERE reward.reward_kind='profile_background'
+        AND background.is_active=TRUE
+        AND background.is_default=FALSE
+      ORDER BY reward.level,reward.track,background.id`,
+    [userId],
+  );
+  return result.rows;
+}
