@@ -645,7 +645,18 @@ INSERT INTO catalog.battle_pass_rewards(
   id,season_id,level,track,position,reward_kind,credit_amount,
   cosmetic_id,title_id,background_id,presentation_group_key
 )
-SELECT *
+SELECT
+  reward.id,
+  reward.season_id,
+  reward.level::smallint,
+  reward.track::varchar,
+  reward.position::smallint,
+  reward.reward_kind::varchar,
+  NULL::bigint,
+  reward.cosmetic_id,
+  reward.title_id,
+  reward.background_id,
+  reward.presentation_group_key
 FROM (VALUES
   ('reward.season-1.free.first-blood.attack','battle-pass.season-1',15,'free',0,'game_cosmetic',NULL,'dice.attack.first-blood',NULL,NULL,NULL),
   ('reward.season-1.free.first-blood.defense','battle-pass.season-1',35,'free',0,'game_cosmetic',NULL,'dice.defense.first-blood',NULL,NULL,NULL),
@@ -667,7 +678,7 @@ FROM (VALUES
   ('reward.season-1.premium.prima-lux.background','battle-pass.season-1',95,'premium',1,'profile_background',NULL,NULL,NULL,'profile.background.prima-lux',NULL),
   ('reward.season-1.premium.portador-da-luz','battle-pass.season-1',100,'premium',0,'commander_title',NULL,NULL,'title.battle-pass.portador-da-luz',NULL,NULL)
 ) AS reward(
-  id,season_id,level,track,position,reward_kind,credit_amount,
+  id,season_id,level,track,position,reward_kind,ignored_credit_amount,
   cosmetic_id,title_id,background_id,presentation_group_key
 )
 WHERE EXISTS (
