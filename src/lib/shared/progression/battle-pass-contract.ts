@@ -125,7 +125,11 @@ export const BATTLE_PASS_V1_PREMIUM_INITIAL_COSMETIC_REWARDS = Object.freeze([
   { level: 1, kind: "game_cosmetic", slot: "dice_attack", presentationGroupKey: "premium-initial-set" },
   { level: 1, kind: "game_cosmetic", slot: "dice_defense", presentationGroupKey: "premium-initial-set" },
   { level: 1, kind: "game_cosmetic", slot: "dice_neutral", presentationGroupKey: "premium-initial-set" },
-  { level: 1, kind: "game_cosmetic", slot: "territory_skin", presentationGroupKey: "premium-initial-set" },
+] satisfies ReadonlyArray<BattlePassV1SeasonalRewardSpec>);
+
+export const BATTLE_PASS_V1_PREMIUM_PROGRESS_COSMETIC_REWARDS = Object.freeze([
+  { level: 25, kind: "game_cosmetic", slot: "territory_skin", presentationGroupKey: null },
+  { level: 50, kind: "profile_background", slot: null, presentationGroupKey: null },
 ] satisfies ReadonlyArray<BattlePassV1SeasonalRewardSpec>);
 
 export const BATTLE_PASS_V1_PREMIUM_FINAL_COSMETIC_REWARDS = Object.freeze([
@@ -139,6 +143,10 @@ export const BATTLE_PASS_V1_PREMIUM_FINAL_COSMETIC_REWARDS = Object.freeze([
 
 export const BATTLE_PASS_V1_FREE_COSMETIC_LEVELS = Object.freeze([
   15, 35, 55, 75, 90, 100,
+] as const);
+
+export const BATTLE_PASS_V1_PREMIUM_PROGRESS_COSMETIC_LEVELS = Object.freeze([
+  25, 50,
 ] as const);
 
 export const BATTLE_PASS_V1_PREMIUM_FINAL_COSMETIC_LEVELS = Object.freeze([
