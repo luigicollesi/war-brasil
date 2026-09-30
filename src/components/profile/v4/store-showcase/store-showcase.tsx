@@ -420,6 +420,7 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
 
   const itemPurchasePending = pendingOfferId === selectedOffer?.id;
   const bundlePurchasePending = pendingOfferId === showcase.bundleOffer?.id;
+  const battlePassReward = showcase.battlePassReward;
   const itemPurchaseDisabled =
     selectedItem.owned || !selectedOffer?.purchasable || pendingOfferId !== null;
   const bundlePurchaseDisabled =
@@ -446,6 +447,11 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
             ) : null}
             <p>Preço atual: {priceLabel(selectedOffer.price)}.</p>
           </>
+        ) : battlePassReward ? (
+          <p>
+            Recompensa do Passe de Campanha, trilha{" "}
+            {battlePassReward.track === "free" ? "Livre" : "Elite"}.
+          </p>
         ) : (
           <p>Sem oferta individual ativa.</p>
         )}
@@ -478,9 +484,11 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
             />
           ) : null}
           <small>
-            {showcase.mode === "collection"
-              ? "COLEÇÃO // EXPOSIÇÃO ESPECIAL"
-              : "INSPEÇÃO // ARSENAL"}
+            {battlePassReward
+              ? `PASSE // ${battlePassReward.track === "free" ? "LIVRE" : "ELITE"}`
+              : showcase.mode === "collection"
+                ? "COLEÇÃO // EXPOSIÇÃO ESPECIAL"
+                : "INSPEÇÃO // ARSENAL"}
           </small>
           <strong>{showcase.title}</strong>
           {showcase.mode === "collection" && showcase.promotionDiscountBps > 0 ? (
@@ -575,21 +583,35 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
           </p>
 
           <div className={styles.itemCommerce}>
-            <span>ITEM ATUAL</span>
-            <strong>{selectedOffer ? priceLabel(selectedOffer.price) : "SEM OFERTA"}</strong>
-            <button
-              type="button"
-              disabled={itemPurchaseDisabled}
-              onClick={() => void handlePurchase(selectedOffer)}
-            >
-              {selectedItem.owned
-                ? "POSSUÍDO"
-                : itemPurchasePending
+            <span>{battlePassReward ? "RECOMPENSA" : "ITEM ATUAL"}</span>
+            <strong>
+              {selectedOffer
+                ? priceLabel(selectedOffer.price)
+                : battlePassReward
+                  ? "RECOMPENSA DO PASSE"
+                  : "SEM OFERTA"}
+            </strong>
+            {selectedItem.owned ? (
+              <button type="button" disabled>
+                POSSUÍDO
+              </button>
+            ) : battlePassReward && !selectedOffer ? (
+              <Link className={styles.rewardLink} href="/campaign">
+                VER NO PASSE
+              </Link>
+            ) : (
+              <button
+                type="button"
+                disabled={itemPurchaseDisabled}
+                onClick={() => void handlePurchase(selectedOffer)}
+              >
+                {itemPurchasePending
                   ? "PROCESSANDO..."
                   : selectedOffer?.purchasable
                     ? "COMPRAR ITEM"
                     : "INDISPONÍVEL"}
-            </button>
+              </button>
+            )}
           </div>
         </aside>
       </section>
@@ -636,31 +658,46 @@ export function StoreShowcase({ showcase }: { showcase: StoreShowcaseView }) {
         <div className={styles.bundleAction}>
           <span>
             <small>
-              {showcase.mode === "collection" ? "COLEÇÃO" : "CONJUNTO"} {"//"} {collectionProgress}
+              {battlePassReward
+                ? `PASSE // ${battlePassReward.track === "free" ? "LIVRE" : "ELITE"}`
+                : showcase.mode === "collection"
+                  ? "COLEÇÃO"
+                  : "CONJUNTO"}{" "}
+              {"//"} {collectionProgress}
             </small>
             <strong>
               {showcase.bundleOffer
                 ? priceLabel(showcase.bundleOffer.price)
                 : showcase.fullyOwned
                   ? "COMPLETO"
-                  : "SEM OFERTA"}
+                  : battlePassReward
+                    ? "RECOMPENSA DO PASSE"
+                    : "SEM OFERTA"}
             </strong>
           </span>
-          <button
-            type="button"
-            disabled={bundlePurchaseDisabled}
-            onClick={() => void handlePurchase(showcase.bundleOffer)}
-          >
-            {showcase.fullyOwned
-              ? "COMPLETO"
-              : bundlePurchasePending
+          {showcase.fullyOwned ? (
+            <button type="button" disabled>
+              COMPLETO
+            </button>
+          ) : battlePassReward && !showcase.bundleOffer ? (
+            <Link className={styles.rewardLink} href="/campaign">
+              VER NO PASSE
+            </Link>
+          ) : (
+            <button
+              type="button"
+              disabled={bundlePurchaseDisabled}
+              onClick={() => void handlePurchase(showcase.bundleOffer)}
+            >
+              {bundlePurchasePending
                 ? "PROCESSANDO..."
                 : showcase.partiallyOwned
                   ? "COMPLETAR"
                   : showcase.bundleOffer?.purchasable
                     ? "COMPRAR TUDO"
                     : "INDISPONÍVEL"}
-          </button>
+            </button>
+          )}
         </div>
       </footer>
     </main>
