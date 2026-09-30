@@ -34,7 +34,7 @@ export default async function ProfileStorePage() {
   if (!profile) redirect("/profile");
 
   let storefront: EconomyStorefrontSnapshot | null = null;
-  let appearanceStorefront: ProfileAppearanceStorefront = { offers: [] };
+  let appearanceStorefront: ProfileAppearanceStorefront = { offers: [], battlePassRewards: [] };
 
   try {
     storefront = await getEconomyStorefront(session.user.id);
