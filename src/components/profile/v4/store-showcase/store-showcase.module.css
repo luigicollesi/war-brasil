@@ -284,7 +284,9 @@
 }
 
 .itemCommerce button,
-.bundleAction button {
+.itemCommerce .rewardLink,
+.bundleAction button,
+.bundleAction .rewardLink {
   min-height: 42px;
   color: #07100c;
   border: 1px solid var(--showcase-brass);
@@ -294,9 +296,17 @@
   font-weight: 900;
   letter-spacing: 0.08em;
   text-transform: uppercase;
+  text-decoration: none;
 }
 
-.itemCommerce button {
+.rewardLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.itemCommerce button,
+.itemCommerce .rewardLink {
   grid-column: 1 / -1;
   width: 100%;
 }
@@ -416,7 +426,8 @@
   font-size: clamp(0.82rem, 1.2vw, 1.02rem);
 }
 
-.bundleAction button {
+.bundleAction button,
+.bundleAction .rewardLink {
   min-width: 140px;
   padding: 0 16px;
 }
