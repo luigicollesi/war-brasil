@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 const migration = readFileSync(
-  "src/lib/db/migrations/managed/072-battle-pass-catalog-hardening.sql",
+  "src/lib/db/migrations/managed/082-battle-pass-season-1.sql",
   "utf8",
 );
 
@@ -30,13 +30,16 @@ test("ativação exige a matriz monetária V1 exata e nenhum crédito no nível 
   }
 });
 
-test("ativação exige os 16 cosméticos nas posições e slots do SPEC", () => {
+test("ativação exige os 17 cosméticos nas posições e slots do SPEC", () => {
   assert.match(migration, /free_cosmetic_count <> 6/);
-  assert.match(migration, /premium_cosmetic_count <> 10/);
+  assert.match(migration, /premium_cosmetic_count <> 11/);
   assert.match(migration, /premium-initial-set/);
   assert.match(migration, /\(15::smallint,'free'::varchar,'game_cosmetic'::varchar,'dice_attack'/);
   assert.match(migration, /\(75,'free','game_cosmetic','territory_skin'/);
   assert.match(migration, /\(100,'free','commander_title'/);
+  assert.match(migration, /\(1,'premium','game_cosmetic','dice_neutral','premium-initial-set'/);
+  assert.match(migration, /\(25,'premium','game_cosmetic','territory_skin',NULL/);
+  assert.match(migration, /\(50,'premium','profile_background',NULL,NULL/);
   assert.match(migration, /\(60,'premium','game_cosmetic','dice_attack'/);
   assert.match(migration, /\(95,'premium','profile_background'/);
   assert.match(migration, /\(100,'premium','commander_title'/);
