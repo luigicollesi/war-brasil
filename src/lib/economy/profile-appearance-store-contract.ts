@@ -55,6 +55,15 @@ export type ProfileAppearanceStoreOffer = Readonly<{
   items: ReadonlyArray<ProfileAppearanceStoreItem>;
 }>;
 
+export type ProfileAppearanceBattlePassReward = Readonly<{
+  seasonId: string;
+  seasonName: string;
+  track: "free" | "premium";
+  level: number;
+  item: ProfileAppearanceStoreBackground;
+}>;
+
 export type ProfileAppearanceStorefront = Readonly<{
   offers: ReadonlyArray<ProfileAppearanceStoreOffer>;
+  battlePassRewards: ReadonlyArray<ProfileAppearanceBattlePassReward>;
 }>;
