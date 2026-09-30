@@ -5,6 +5,7 @@ import test from "node:test";
 const read = (path) => readFileSync(path, "utf8");
 
 const migration = read("src/lib/db/migrations/managed/082-battle-pass-season-1.sql");
+const commerceGuards = read("src/lib/db/migrations/managed/083-battle-pass-reward-commerce-guards.sql");
 const economyContract = read("src/lib/economy/economy-contract.ts");
 const collectionRepository = read("src/lib/server/economy/economy-storefront-repository.ts");
 const collectionService = read("src/lib/server/economy/economy-service.ts");
@@ -23,6 +24,10 @@ test("Season 1 retires direct reward offers and guards against reopening them", 
   assert.match(migration, /reward\.reward_kind='game_cosmetic'/);
   assert.match(migration, /reward\.reward_kind='profile_background'/);
   assert.match(migration, /reward\.reward_kind='commander_title'/);
+  assert.match(commerceGuards, /battle_pass_reward_gameplay_membership_guard/);
+  assert.match(commerceGuards, /battle_pass_reward_entitlement_membership_guard/);
+  assert.match(commerceGuards, /catalog\.product_items/);
+  assert.match(commerceGuards, /catalog\.product_entitlements/);
 });
 
 test("collections derive Battle Pass provenance from rewards instead of offers", () => {
@@ -66,4 +71,8 @@ test("reward-only appearance projection does not expose completion titles in the
   assert.doesNotMatch(rewardQuery, /reward_kind='commander_title'/);
   assert.match(migration, /reject_battle_pass_exclusive_title_commerce/);
   assert.match(migration, /commander_titles_battle_pass_exclusive_no_collection_check/);
+  assert.match(migration, /title\.battle-pass\.primeiro-pecador/);
+  assert.match(migration, /title\.battle-pass\.portador-da-luz/);
+  assert.match(migration, /Primeiro Pecador/);
+  assert.match(migration, /Portador da Luz/);
 });
