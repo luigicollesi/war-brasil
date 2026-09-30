@@ -3,6 +3,7 @@ import type {
   CosmeticCatalogItem,
   EconomyOffer,
   EconomyStorefrontSnapshot,
+  StorefrontBattlePassRewardSource,
   StorefrontCollection,
 } from "./economy-contract";
 
@@ -54,6 +55,7 @@ export type StoreShowcaseView = Readonly<{
   logoRef: string | null;
   featured: boolean;
   promotionDiscountBps: number;
+  battlePassReward: StorefrontBattlePassRewardSource | null;
   items: ReadonlyArray<StoreShowcaseItem>;
   selectedItemId: string;
   bundleOffer: StoreShowcaseOffer | null;
@@ -187,6 +189,7 @@ function resolveOfferShowcase(
     logoRef: null,
     featured: offer.featured,
     promotionDiscountBps: offer.promotionDiscountBps,
+    battlePassReward: null,
     items: projectItems(storefront, items, singleOfferByItemId),
     selectedItemId: resolvedSelectedItemId,
     bundleOffer,
@@ -224,6 +227,7 @@ function resolveCollectionShowcase(
     logoRef: collection.assets.logo,
     featured: collection.featured,
     promotionDiscountBps: collection.promotionDiscountBps,
+    battlePassReward: collection.battlePassReward,
     items: projectItems(storefront, items, singleOfferByItemId),
     selectedItemId: resolvedSelectedItemId,
     bundleOffer: bundleOffer ? projectOffer(bundleOffer) : null,
