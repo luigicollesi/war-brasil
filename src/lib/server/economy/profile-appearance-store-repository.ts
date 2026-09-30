@@ -225,7 +225,6 @@ export async function listBattlePassProfileBackgroundRows(
          ON season.id=reward.season_id
         AND season.status IN ('active','ended')
         AND season.starts_at<=CURRENT_TIMESTAMP
-        AND season.claim_ends_at>CURRENT_TIMESTAMP
        JOIN catalog.profile_backgrounds background
          ON background.id=reward.background_id
        LEFT JOIN collection_progress progress
