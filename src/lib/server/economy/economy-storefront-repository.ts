@@ -40,6 +40,9 @@ export type StorefrontCollectionRow = CosmeticRow & {
   banner_object_key: string;
   background_object_key: string;
   logo_object_key: string;
+  battle_pass_season_id: string | null;
+  battle_pass_season_name: string | null;
+  battle_pass_track: "free" | "premium" | null;
 };
 
 export type StorefrontCampaignRow = {
@@ -82,6 +85,23 @@ export async function listStorefrontCollections(
           AND COUNT(*) FILTER (WHERE asset.role='background')=1
           AND COUNT(*) FILTER (WHERE asset.role='logo')=1
           AND COUNT(*)=3
+     ), battle_pass_collections AS (
+       SELECT item.collection_id,
+              season.id AS battle_pass_season_id,
+              season.name AS battle_pass_season_name,
+              MIN(reward.track)::varchar AS battle_pass_track
+         FROM catalog.battle_pass_rewards reward
+         JOIN catalog.battle_pass_seasons season
+           ON season.id=reward.season_id
+          AND season.status IN ('active','ended')
+          AND season.starts_at<=CURRENT_TIMESTAMP
+          AND season.claim_ends_at>CURRENT_TIMESTAMP
+         JOIN catalog.cosmetics item
+           ON item.id=reward.cosmetic_id
+        WHERE reward.reward_kind='game_cosmetic'
+          AND item.collection_id IS NOT NULL
+        GROUP BY item.collection_id,season.id,season.name
+       HAVING COUNT(DISTINCT reward.track)=1
      )
      SELECT collection.id AS collection_id,
             collection.slug AS collection_slug,
@@ -93,6 +113,9 @@ export async function listStorefrontCollections(
             assets.banner_object_key,
             assets.background_object_key,
             assets.logo_object_key,
+            battle_pass.battle_pass_season_id,
+            battle_pass.battle_pass_season_name,
+            battle_pass.battle_pass_track,
             item.id,
             item.slug,
             item.name,
@@ -110,6 +133,8 @@ export async function listStorefrontCollections(
             (loadout.cosmetic_id=item.id) AS equipped
        FROM catalog.collections collection
        JOIN active_assets assets ON assets.collection_id=collection.id
+       LEFT JOIN battle_pass_collections battle_pass
+         ON battle_pass.collection_id=collection.id
        JOIN catalog.cosmetics item ON item.collection_id=collection.id
        LEFT JOIN inventory.cosmetics owned
          ON owned.user_id=$1::uuid
