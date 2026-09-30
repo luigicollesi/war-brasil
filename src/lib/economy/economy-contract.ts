@@ -90,6 +90,12 @@ export type StorefrontCollectionAssets = Readonly<
   Record<CollectionAssetRole, string>
 >;
 
+export type StorefrontBattlePassRewardSource = Readonly<{
+  seasonId: string;
+  seasonName: string;
+  track: "free" | "premium";
+}>;
+
 export type StorefrontCollection = Readonly<{
   id: string;
   slug: string;
@@ -102,6 +108,7 @@ export type StorefrontCollection = Readonly<{
   offerIds: ReadonlyArray<string>;
   singleOfferIds: ReadonlyArray<string>;
   bundleOfferIds: ReadonlyArray<string>;
+  battlePassReward: StorefrontBattlePassRewardSource | null;
   ownedCount: number;
   totalCount: number;
   fullyOwned: boolean;
