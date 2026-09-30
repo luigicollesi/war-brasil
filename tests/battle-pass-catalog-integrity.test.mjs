@@ -2,18 +2,15 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
-const hardening = readFileSync(
-  "src/lib/db/migrations/managed/072-battle-pass-catalog-hardening.sql",
+const seasonOne = readFileSync(
+  "src/lib/db/migrations/managed/082-battle-pass-season-1.sql",
   "utf8",
 );
 const immutability = readFileSync(
   "src/lib/db/migrations/managed/073-battle-pass-catalog-immutability.sql",
   "utf8",
 );
-const rewardIdentity = readFileSync(
-  "src/lib/db/migrations/managed/076-battle-pass-reward-identity.sql",
-  "utf8",
-);
+const rewardIdentity = seasonOne;
 const xpV1Integrity = readFileSync(
   "src/lib/db/migrations/managed/078-battle-pass-xp-v1-integrity.sql",
   "utf8",
@@ -39,22 +36,22 @@ test("XP profiles são append-only e catálogo ativo/histórico é congelado", (
   );
 });
 
-test("072 mantém o validador V1 completo como última autoridade de ativação", () => {
-  assert.match(hardening, /level 1 must start at 0 XP/);
-  assert.match(hardening, /XP thresholds must increase strictly/);
-  assert.match(hardening, /credit matrix does not match V1/);
-  assert.match(hardening, /cosmetic matrix does not match V1/);
-  assert.match(hardening, /empty-level matrix does not match V1/);
-  assert.match(hardening, /premium-initial-set/);
-  assert.match(hardening, /pricing\.fixed_price=3000/);
-  assert.match(hardening, /requires exactly one Elite offer covering the season/);
+test("082 mantém o validador V1 completo como última autoridade de ativação", () => {
+  assert.match(seasonOne, /level 1 must start at 0 XP/);
+  assert.match(seasonOne, /XP thresholds must increase strictly/);
+  assert.match(seasonOne, /credit matrix does not match V1/);
+  assert.match(seasonOne, /cosmetic matrix does not match V1/);
+  assert.match(seasonOne, /empty-level matrix does not match V1/);
+  assert.match(seasonOne, /premium-initial-set/);
+  assert.match(seasonOne, /pricing\.fixed_price=3000/);
+  assert.match(seasonOne, /requires exactly one Elite offer covering the season/);
 });
 
 
 test("ativação exige rewards sazonais distintos por categoria", () => {
   assert.match(rewardIdentity, /distinct_dice_count <> 9/);
   assert.match(rewardIdentity, /distinct_territory_count <> 3/);
-  assert.match(rewardIdentity, /distinct_background_count <> 2/);
+  assert.match(rewardIdentity, /distinct_background_count <> 3/);
   assert.match(rewardIdentity, /distinct_title_count <> 2/);
   assert.match(rewardIdentity, /9 distinct seasonal dice rewards/);
   assert.match(rewardIdentity, /3 distinct seasonal territory skins/);
