@@ -49,6 +49,7 @@ export default async function StoreCategoryRoute({
   let wallet: Awaited<ReturnType<typeof getEconomyWallet>> | null = null;
   let appearanceStorefront: Awaited<ReturnType<typeof getProfileAppearanceStorefront>> = {
     offers: [],
+    battlePassRewards: [],
   };
 
   try {
@@ -97,7 +98,7 @@ export default async function StoreCategoryRoute({
           category={category}
           gameplayOffers={gameplay.offers}
           territorySkins={gameplay.territorySkins}
-          appearanceStorefront={{ offers: [] }}
+          appearanceStorefront={{ offers: [], battlePassRewards: [] }}
         />
       </ProfileShell>
     );
