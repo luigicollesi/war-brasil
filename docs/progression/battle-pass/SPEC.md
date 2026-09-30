@@ -814,22 +814,24 @@ Distribuição V1:
 | 55 | Dado Neutro Livre |
 | 75 | Skin de Território Livre |
 | 90 | Background Livre |
-| 100 | Título Livre da Temporada |
+| 100 | **Primeiro Pecador** |
 
-O título MUST ser a recompensa cosmética final da coleção Livre.
+O conjunto Livre da Temporada 1 é a collection **First Blood**.
+O título **Primeiro Pecador** MUST ser a recompensa cosmética final da trilha Livre.
 
 ### 14.2 Conjunto Elite Inicial
 
-Ao alcançar o nível 1 e possuir Elite, o jogador pode coletar um conjunto inicial contendo:
+A primeira collection Elite da Temporada 1 é **Alvorada**.
+
+Ao alcançar o nível 1 e possuir Elite, o jogador pode coletar imediatamente:
 
 - dado de ataque;
 - dado de defesa;
-- dado neutro;
-- skin de território.
+- dado neutro.
 
-Os quatro itens são ownerships independentes.
+Os três itens são ownerships independentes.
 
-Todos podem compartilhar:
+Os três dados podem compartilhar:
 
 ~~~text
 presentation_group_key = premium-initial-set
@@ -837,9 +839,16 @@ presentation_group_key = premium-initial-set
 
 A UI os apresenta como CONJUNTO ELITE INICIAL.
 
+A collection Alvorada é completada ao longo da progressão:
+
+| Nível | Recompensa Alvorada |
+| ---: | --- |
+| 25 | Skin de Território Alvorada |
+| 50 | Background Alvorada |
+
 ### 14.3 Conjunto Elite Final
 
-A segunda coleção Elite é construída na parte final do Passe:
+A segunda collection Elite é **Prima Lux** e é construída na parte final do Passe:
 
 | Nível | Recompensa Elite Final |
 | ---: | --- |
@@ -848,9 +857,9 @@ A segunda coleção Elite é construída na parte final do Passe:
 | 80 | Dado Neutro Elite Final |
 | 90 | Skin de Território Elite Final |
 | 95 | Background Elite Final |
-| 100 | Título Elite da Temporada |
+| 100 | **Portador da Luz** |
 
-O título Elite MUST ser a recompensa final dessa coleção.
+O título **Portador da Luz** MUST ser a recompensa final da trilha Elite.
 
 ### 14.4 Nível 100
 
@@ -858,11 +867,11 @@ No nível 100:
 
 Trilha Livre:
 
-- Título Livre.
+- **Primeiro Pecador**.
 
 Trilha Elite:
 
-- Título Elite.
+- **Portador da Luz**.
 
 Não há recompensa monetária no nível 100.
 
@@ -2208,7 +2217,7 @@ Antes de ativar uma temporada, testes/validação SHOULD garantir:
 - ambos os títulos no nível 100;
 - nenhum credit reward no nível 100;
 - conjunto Livre com os seis componentes esperados;
-- conjunto Elite inicial com 3 dados + território;
+- conjunto Elite inicial com 3 dados no nível 1, território Alvorada no nível 25 e background Alvorada no nível 50;
 - conjunto Elite final com 3 dados + território + background + título;
 - todas as referências de reward existentes;
 - nenhum reward_id duplicado;
@@ -2240,12 +2249,12 @@ Jogador Elite completo:
 - 3.500 Créditos;
 - 9 dados;
 - 3 territory skins;
-- 2 backgrounds;
+- 3 backgrounds;
 - 2 títulos.
 
 Total cosmético:
 
-16 itens.
+17 itens.
 
 ## 49. Histórico e exclusão de conta
 
@@ -2577,7 +2586,7 @@ A feature está concluída quando:
 21. nenhuma reward monetária é menor que 5;
 22. níveis vazios funcionam;
 23. coleção Livre entrega 3 dados, território, background e título;
-24. Elite inicial entrega 3 dados + território;
+24. Elite entrega 3 dados Alvorada no nível 1, território Alvorada no nível 25 e background Alvorada no nível 50;
 25. Elite final entrega 3 dados, território, background e título;
 26. Livre e Elite entregam títulos distintos no nível 100;
 27. nível 100 não entrega moeda;
@@ -2639,11 +2648,12 @@ TRILHA ELITE
 Preço: 3.000 CR
 Créditos adicionais: 2.500
 
-Conjunto Elite Inicial:
-  3 dados
-  1 território
+Alvorada:
+  nível 1: 3 dados
+  nível 25: 1 território
+  nível 50: 1 background
 
-Conjunto Elite Final:
+Prima Lux:
   3 dados
   1 território
   1 background
@@ -2651,7 +2661,7 @@ Conjunto Elite Final:
 
 TOTAL PARA ELITE COMPLETO:
   3.500 CR
-  16 cosméticos
+  17 cosméticos
   2 títulos finais distintos
 
 CLAIM:
