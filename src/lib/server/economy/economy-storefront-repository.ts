@@ -95,7 +95,6 @@ export async function listStorefrontCollections(
            ON season.id=reward.season_id
           AND season.status IN ('active','ended')
           AND season.starts_at<=CURRENT_TIMESTAMP
-          AND season.claim_ends_at>CURRENT_TIMESTAMP
          JOIN catalog.cosmetics item
            ON item.id=reward.cosmetic_id
         WHERE reward.reward_kind='game_cosmetic'
