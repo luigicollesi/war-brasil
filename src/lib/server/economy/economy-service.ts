@@ -265,6 +265,16 @@ function collectionsFromRows(
         logo: collectionAssetDeliveryPath(row.logo_object_key),
       },
       items: [item],
+      battlePassReward:
+        row.battle_pass_season_id &&
+        row.battle_pass_season_name &&
+        row.battle_pass_track
+          ? {
+              seasonId: row.battle_pass_season_id,
+              seasonName: row.battle_pass_season_name,
+              track: row.battle_pass_track,
+            }
+          : null,
       ownedCount: item.owned ? 1 : 0,
       totalCount: 1,
       fullyOwned: item.owned,
