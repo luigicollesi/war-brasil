@@ -165,7 +165,7 @@ test("matriz cosmética V1 forma um conjunto Free e dois conjuntos Elite complet
     contract.BATTLE_PASS_V1_PREMIUM_INITIAL_COSMETIC_REWARDS.map(
       (reward) => reward.slot,
     ),
-    ["dice_attack", "dice_defense", "dice_neutral", "territory_skin"],
+    ["dice_attack", "dice_defense", "dice_neutral"],
   );
 
   assert.deepEqual(
@@ -176,7 +176,16 @@ test("matriz cosmética V1 forma um conjunto Free e dois conjuntos Elite complet
       "premium-initial-set",
       "premium-initial-set",
       "premium-initial-set",
-      "premium-initial-set",
+    ],
+  );
+
+  assert.deepEqual(
+    contract.BATTLE_PASS_V1_PREMIUM_PROGRESS_COSMETIC_REWARDS.map(
+      (reward) => [reward.level, reward.slot, reward.kind],
+    ),
+    [
+      [25, "territory_skin", "game_cosmetic"],
+      [50, null, "profile_background"],
     ],
   );
 
@@ -201,6 +210,9 @@ test("união de créditos e cosméticos preserva exatamente os 19 níveis vazios
     ...contract.BATTLE_PASS_V1_PREMIUM_CREDIT_REWARDS.map((reward) => reward.level),
     ...contract.BATTLE_PASS_V1_FREE_COSMETIC_REWARDS.map((reward) => reward.level),
     ...contract.BATTLE_PASS_V1_PREMIUM_INITIAL_COSMETIC_REWARDS.map(
+      (reward) => reward.level,
+    ),
+    ...contract.BATTLE_PASS_V1_PREMIUM_PROGRESS_COSMETIC_REWARDS.map(
       (reward) => reward.level,
     ),
     ...contract.BATTLE_PASS_V1_PREMIUM_FINAL_COSMETIC_REWARDS.map(
