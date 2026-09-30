@@ -576,6 +576,11 @@ thresholds AS (
 INSERT INTO catalog.battle_pass_levels(season_id,level,required_total_xp)
 SELECT 'battle-pass.season-1',level,required_total_xp
   FROM thresholds
+ WHERE EXISTS (
+   SELECT 1 FROM catalog.battle_pass_seasons season
+    WHERE season.id='battle-pass.season-1'
+      AND season.status IN ('draft','announced')
+ )
 ON CONFLICT (season_id,level) DO NOTHING;
 
 WITH matrix(level,amount) AS (
@@ -600,6 +605,11 @@ SELECT
   'battle-pass.season-1',level,'free',0,'campaign_credit',amount,
   NULL,NULL,NULL,NULL
 FROM matrix
+WHERE EXISTS (
+  SELECT 1 FROM catalog.battle_pass_seasons season
+   WHERE season.id='battle-pass.season-1'
+     AND season.status IN ('draft','announced')
+)
 ON CONFLICT (id) DO NOTHING;
 
 WITH matrix(level,amount) AS (
@@ -624,13 +634,19 @@ SELECT
   'battle-pass.season-1',level,'premium',0,'campaign_credit',amount,
   NULL,NULL,NULL,NULL
 FROM matrix
+WHERE EXISTS (
+  SELECT 1 FROM catalog.battle_pass_seasons season
+   WHERE season.id='battle-pass.season-1'
+     AND season.status IN ('draft','announced')
+)
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO catalog.battle_pass_rewards(
   id,season_id,level,track,position,reward_kind,credit_amount,
   cosmetic_id,title_id,background_id,presentation_group_key
 )
-VALUES
+SELECT *
+FROM (VALUES
   ('reward.season-1.free.first-blood.attack','battle-pass.season-1',15,'free',0,'game_cosmetic',NULL,'dice.attack.first-blood',NULL,NULL,NULL),
   ('reward.season-1.free.first-blood.defense','battle-pass.season-1',35,'free',0,'game_cosmetic',NULL,'dice.defense.first-blood',NULL,NULL,NULL),
   ('reward.season-1.free.first-blood.neutral','battle-pass.season-1',55,'free',0,'game_cosmetic',NULL,'dice.neutral.first-blood',NULL,NULL,NULL),
@@ -650,10 +666,24 @@ VALUES
   ('reward.season-1.premium.prima-lux.territory','battle-pass.season-1',90,'premium',1,'game_cosmetic',NULL,'territory.effect.prima-lux',NULL,NULL,NULL),
   ('reward.season-1.premium.prima-lux.background','battle-pass.season-1',95,'premium',1,'profile_background',NULL,NULL,NULL,'profile.background.prima-lux',NULL),
   ('reward.season-1.premium.portador-da-luz','battle-pass.season-1',100,'premium',0,'commander_title',NULL,NULL,'title.battle-pass.portador-da-luz',NULL,NULL)
+) AS reward(
+  id,season_id,level,track,position,reward_kind,credit_amount,
+  cosmetic_id,title_id,background_id,presentation_group_key
+)
+WHERE EXISTS (
+  SELECT 1 FROM catalog.battle_pass_seasons season
+   WHERE season.id='battle-pass.season-1'
+     AND season.status IN ('draft','announced')
+)
 ON CONFLICT (id) DO NOTHING;
 
 INSERT INTO catalog.battle_pass_pricing(season_id,fixed_price)
-VALUES('battle-pass.season-1',3000)
+SELECT 'battle-pass.season-1',3000
+WHERE EXISTS (
+  SELECT 1 FROM catalog.battle_pass_seasons season
+   WHERE season.id='battle-pass.season-1'
+     AND season.status IN ('draft','announced')
+)
 ON CONFLICT (season_id) DO NOTHING;
 
 INSERT INTO catalog.battle_pass_stats(season_id,acquisition_count)
