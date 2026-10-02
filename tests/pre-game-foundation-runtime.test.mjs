@@ -33,6 +33,9 @@ test("runtime resolve scene mode pela rota sem expor câmera ou renderer", () =>
   assert.match(routes, /"\/matchmaking": "operations"/);
   assert.match(routes, /"\/rules": "doctrine"/);
   assert.match(routes, /"\/profile": "profile"/);
+  assert.match(routes, /"\/campaign": "campaign"/);
+  assert.match(routes, /territoryExplode:\s*0\.06/);
+  assert.match(routes, /orbitalAlignment:\s*1/);
   assert.match(routes, /startsWith\("\/lobby\/"\).*"lobby"/s);
   assert.match(routes, /return null/);
 });
