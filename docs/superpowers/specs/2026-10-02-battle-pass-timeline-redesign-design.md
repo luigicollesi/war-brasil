@@ -73,6 +73,20 @@ entranceState = settled
 
 O modo Campaign deve reutilizar o mesmo `CommandShell`/Canvas/scene runtime usado pelas superfícies de pré-jogo.
 
+O `RootLayout` já monta um único `PreGameCommandRuntime` persistente ao redor das páginas. Portanto, registrar `/campaign` em `resolvePreGameSceneIntent()` é suficiente para fazer a rota entrar na Foundation; a página Campaign MUST NOT criar outro wrapper ou `CommandShell`.
+
+Para continuidade sem snap, o estado estável da rota deve coincidir com o estado já usado por `DESTINATION_INTENTS.campaign` na Home:
+
+```text
+focus = table
+conflictLevel = 0
+territoryExplode = 0.06
+orbitalAlignment = 1
+entranceState = settled
+```
+
+A resolução de route intent deve preservar esses valores na troca de pathname, em vez de cair nos defaults genéricos `territoryExplode=0` / `orbitalAlignment=0`.
+
 ### 4.2 Continuidade Home → Campaign
 
 A Home já usa `transitioningTo` e um overlay curto durante navegação.
@@ -89,6 +103,34 @@ Para Campaign:
 - não executar novamente a Genesis da Home.
 
 A sensação deve ser equivalente à continuidade Home → Operações: mudança de superfície dentro do mesmo espaço de comando.
+
+### 4.4 Preset de câmera
+
+O preset Campaign deve ser geometricamente igual ao estado `entrance + focus=table` usado pela Home para que a troca de mode não altere o enquadramento no primeiro frame da nova rota.
+
+Desktop:
+
+```text
+camera = [0.55, 2.35, 10.2]
+target = [0.25, -0.15, -0.2]
+fov = 33
+```
+
+Compact/mobile:
+
+```text
+camera = [1, 2.8, 14.4]
+target = [1.05, 0.55, -0.2]
+fov = 39
+```
+
+Esses valores devem ser registrados em `scene-presets.ts` como preset de `campaign`, não duplicados na página.
+
+### 4.5 Chrome Foundation
+
+`COMMAND_SCENE_MODE_LABELS.campaign` deve ser `CAMPANHA`.
+
+O `CommandShell` continua sendo dono do brand chrome e mode rail. O conteúdo da Campaign não deve recriar branding estrutural equivalente; sua utility local fica restrita a navegação de retorno, wallet e controles próprios da Campanha.
 
 ### 4.3 Reduced motion
 
