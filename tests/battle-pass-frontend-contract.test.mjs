@@ -30,19 +30,33 @@ test("/campaign usa snapshot autoritativo, claims e reduced motion", () => {
   const css = read(
     "src/components/progression/battle-pass/battle-pass-page.module.css",
   );
+  const timeline = read(
+    "src/components/progression/battle-pass/battle-pass-timeline.tsx",
+  );
+  const timelineCss = read(
+    "src/components/progression/battle-pass/battle-pass-timeline.module.css",
+  );
+  const reward = read(
+    "src/components/progression/battle-pass/battle-pass-reward.tsx",
+  );
   const server = read(
     "src/lib/server/progression/battle-pass-snapshot-service.ts",
   );
 
-  assert.match(page, /TRILHA DE ELITE/);
-  assert.match(page, /TRILHA LIVRE/);
   assert.match(page, /COLETAR TODAS/);
-  assert.match(page, /NÍVEL ATUAL/);
-  assert.match(page, /PRÓXIMOS →/);
+  assert.match(page, /<BattlePassTimeline/);
+  assert.match(timeline, /TRILHA DE ELITE/);
+  assert.match(timeline, /TRILHA LIVRE/);
+  assert.match(timeline, /NÍVEL ATUAL/);
+  assert.match(timeline, /levels\.map/);
+  assert.doesNotMatch(page, /railStart|visibleLevels|PRÓXIMOS →|← ANTERIORES/);
+  assert.match(reward, /BattlePassRewardGroup/);
   assert.match(page, /rewardRevealBackdrop/);
   assert.match(page, /\/api\/battle-pass\/rewards\/claim/);
   assert.match(css, /overflow-x: clip/);
-  assert.match(css, /\.railControls/);
+  assert.match(timelineCss, /overflow-x:\s*auto/);
+  assert.match(timelineCss, /@media \(max-width: 760px\)/);
+  assert.match(timelineCss, /overflow-y:\s*auto/);
   assert.match(css, /@keyframes rewardClaimEnter/);
   assert.match(css, /\.rewardRevealBackdrop/);
   assert.match(css, /@media \(prefers-reduced-motion: reduce\)/);
@@ -66,16 +80,26 @@ test("nível 100 recebe apresentação de conclusão após claim confirmado", ()
 });
 
 
-test("tablet não oculta níveis da janela lógica de oito níveis", () => {
+test("timeline usa eixo horizontal no desktop e vertical no mobile", () => {
+  const timeline = read(
+    "src/components/progression/battle-pass/battle-pass-timeline.tsx",
+  );
   const css = read(
-    "src/components/progression/battle-pass/battle-pass-page.module.css",
+    "src/components/progression/battle-pass/battle-pass-timeline.module.css",
   );
 
-  const tablet = css.match(
-    /@media \(max-width: 1120px\) \{([\s\S]*?)\n\}/,
-  )?.[1] ?? "";
-  assert.match(tablet, /grid-template-columns: repeat\(4, minmax\(150px, 1fr\)\)/);
-  assert.doesNotMatch(tablet, /nth-child\(n \+ 5\)[\s\S]*display:\s*none/);
+  assert.match(timeline, /levels\.map/);
+  assert.match(timeline, /scrollIntoView/);
+  assert.match(css, /grid-auto-flow:\s*column/);
+  assert.match(css, /overflow-x:\s*auto/);
+  assert.match(
+    css,
+    /@media \(max-width: 760px\)[\s\S]*grid-template-columns:\s*minmax\(0, 1fr\) 54px minmax\(0, 1fr\)/,
+  );
+  assert.match(
+    css,
+    /@media \(max-width: 760px\)[\s\S]*overflow-y:\s*auto/,
+  );
 });
 
 
