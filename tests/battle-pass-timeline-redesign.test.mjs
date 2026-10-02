@@ -1,0 +1,90 @@
+import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import test from "node:test";
+
+const read = (path) => readFileSync(path, "utf8");
+
+const page = read(
+  "src/components/progression/battle-pass/battle-pass-page.tsx",
+);
+const timeline = read(
+  "src/components/progression/battle-pass/battle-pass-timeline.tsx",
+);
+const timelineCss = read(
+  "src/components/progression/battle-pass/battle-pass-timeline.module.css",
+);
+const reward = read(
+  "src/components/progression/battle-pass/battle-pass-reward.tsx",
+);
+const rewardCss = read(
+  "src/components/progression/battle-pass/battle-pass-reward.module.css",
+);
+const pageCss = read(
+  "src/components/progression/battle-pass/battle-pass-page.module.css",
+);
+
+test("Campanha renderiza os 100 níveis em uma única timeline contínua", () => {
+  assert.match(page, /levels=\{snapshot\.levels\}/);
+  assert.match(timeline, /levels\.map/);
+  assert.doesNotMatch(page, /railStart|visibleLevels|maxRailStart/);
+  assert.doesNotMatch(page, /showPreviousLevels|showNextLevels/);
+  assert.doesNotMatch(page, /PRÓXIMOS →|← ANTERIORES/);
+});
+
+test("desktop usa scroll horizontal com Elite acima e Livre abaixo", () => {
+  const premium = timeline.indexOf("className={styles.premiumZone}");
+  const axis = timeline.indexOf("className={styles.axisCell}");
+  const free = timeline.indexOf("className={styles.freeZone}");
+
+  assert.ok(premium >= 0 && axis > premium && free > axis);
+  assert.match(timelineCss, /\.viewport\s*\{[\s\S]*overflow-x:\s*auto/);
+  assert.match(timelineCss, /grid-auto-flow:\s*column/);
+  assert.match(
+    timelineCss,
+    /grid-template-rows:\s*minmax\(142px, auto\) 58px minmax\(142px, auto\)/,
+  );
+});
+
+test("mobile gira a timeline para vertical com Elite à esquerda e Livre à direita", () => {
+  const mobile = timelineCss.match(
+    /@media \(max-width: 760px\) \{([\s\S]*?)\n\}/,
+  )?.[1] ?? "";
+
+  assert.match(mobile, /overflow-x:\s*hidden/);
+  assert.match(mobile, /overflow-y:\s*auto/);
+  assert.match(
+    mobile,
+    /grid-template-columns:\s*minmax\(0, 1fr\) 54px minmax\(0, 1fr\)/,
+  );
+  assert.match(mobile, /\.premiumZone[\s\S]*grid-column:\s*1/);
+  assert.match(mobile, /\.axisCell[\s\S]*grid-column:\s*2/);
+  assert.match(mobile, /\.freeZone[\s\S]*grid-column:\s*3/);
+});
+
+test("nível atual usa navegação direta sem estado de scroll em React", () => {
+  assert.match(timeline, /scrollIntoView/);
+  assert.match(timeline, /NÍVEL ATUAL/);
+  assert.match(timeline, /requestAnimationFrame/);
+  assert.doesNotMatch(timeline, /addEventListener\(["']scroll/);
+});
+
+test("recompensas não usam cards nem bordas estruturais permanentes", () => {
+  assert.doesNotMatch(page, /RewardCard|RewardGroupCard/);
+  assert.match(reward, /BattlePassReward/);
+  assert.match(reward, /BattlePassRewardGroup/);
+  assert.match(rewardCss, /\.rewardItem\s*\{[\s\S]*background:\s*transparent/);
+  assert.doesNotMatch(rewardCss, /\.rewardItem\s*\{[\s\S]*?border:\s*1px/);
+  assert.match(pageCss, /\.premiumConfirmation\s*\{[\s\S]*border:\s*1px/);
+  assert.match(pageCss, /\.rewardRevealCard\s*\{[\s\S]*border:\s*1px/);
+});
+
+test("Campanha usa fundo Foundation e preserva reduced motion", () => {
+  assert.match(pageCss, /\.surface\s*\{[\s\S]*background:\s*transparent/);
+  assert.match(pageCss, /var\(--command-content-top/);
+  assert.match(pageCss, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(timelineCss, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.doesNotMatch(
+    `${page}\n${timeline}\n${reward}`,
+    /@react-three\/fiber|from "three"|<Canvas\b|<CommandShell\b/,
+  );
+});
