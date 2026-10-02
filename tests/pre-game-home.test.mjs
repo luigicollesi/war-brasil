@@ -305,6 +305,19 @@ test("Canvas nunca some durante Genesis e o fallback não simula a transformaç�
   assert.doesNotMatch(introStyles, /data-command-fallback-brazil/);
 });
 
+test("Campanha reutiliza a pose table da Home sem snap de câmera", () => {
+  assert.match(contract, /"campaign"/);
+  assert.match(contract, /campaign: "CAMPANHA"/);
+  assert.match(
+    presets,
+    /campaign:\s*\{[\s\S]*?camera:\s*\[0\.55, 2\.35, 10\.2\][\s\S]*?target:\s*\[0\.25, -0\.15, -0\.2\][\s\S]*?fov:\s*33/,
+  );
+  assert.match(
+    presets,
+    /campaign:\s*\{[\s\S]*?camera:\s*\[1, 2\.8, 14\.4\][\s\S]*?target:\s*\[1\.05, 0\.55, -0\.2\][\s\S]*?fov:\s*39/,
+  );
+});
+
 test("frame estável continua contendo a Foundation original", () => {
   assert.match(sceneHost, /<CommandSceneFallback intent=\{normalizedIntent\} \/>/);
   assert.match(sceneHost, /<CommandSceneCanvas/);
