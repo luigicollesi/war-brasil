@@ -13,8 +13,9 @@ import {
 } from "../assets/asset-storage-service";
 import {
   listEquippedProfileCosmetics,
-  type CosmeticRow,
+  type EquippedCosmeticRow,
 } from "../economy/economy-repository";
+import { diceBodyColorForSlot } from "@/src/lib/shared/dice-body-presentation";
 import { getPublicProfileAppearance } from "./profile-appearance-service";
 import { getPublicCommanderProfile } from "./profile-service";
 
@@ -22,7 +23,7 @@ function emptyHistory(): PublicPlayerMatchHistory {
   return { matches: [], hasMore: false, nextCursor: null };
 }
 
-function publicCosmetic(row: CosmeticRow): PublicProfileEquippedCosmetic {
+function publicCosmetic(row: EquippedCosmeticRow): PublicProfileEquippedCosmetic {
   const assetRef =
     row.asset_ref === null
       ? null
@@ -38,13 +39,13 @@ function publicCosmetic(row: CosmeticRow): PublicProfileEquippedCosmetic {
     slot: row.slot,
     assetRef,
     effectKey: row.effect_key,
-    bodyColor: row.body_color,
-    bodyHighlightColor: row.body_highlight_color,
+    bodyColor: diceBodyColorForSlot(row.slot, row.dice_pip_dark),
+    bodyHighlightColor: null,
   };
 }
 
 function requireCosmetic(
-  rows: CosmeticRow[],
+  rows: EquippedCosmeticRow[],
   slot: PublicProfileEquippedCosmetic["slot"],
 ) {
   const row = rows.find((item) => item.slot === slot);
