@@ -107,6 +107,11 @@ dice_pip_compact
 
 pertencem a `catalog.cosmetic_sets`, nunca a `catalog.collections`.
 
+`dice_pip_dark` também controla a luminosidade do corpo 3D. A família de cor é fixa por slot
+(ataque vermelho, defesa azul, neutro verde), e o runtime deriva a variante clara/escura.
+Não grave `body_color` ou `body_highlight_color` em cosméticos de dado; ambos devem
+permanecer `NULL` para slots `dice_attack/dice_defense/dice_neutral`.
+
 Dados de um mesmo tema devem apontar para um set canônico via
 `catalog.cosmetic_set_items`. Um dado não deve ser movido entre sets por efeito colateral
 de uma alteração comercial.
@@ -599,6 +604,8 @@ Depois da alteração, confirme no mínimo:
 - trio aponta para o set correto;
 - posições do set são determinísticas;
 - `dice_pip_dark/compact` estão no set;
+- dados mantêm `body_color/body_highlight_color=NULL`;
+- cor corporal é derivada por slot + `dice_pip_dark`;
 - asset refs respeitam o padrão WebP.
 
 ### Commerce
