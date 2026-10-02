@@ -46,9 +46,12 @@ test("desktop usa scroll horizontal com Elite acima e Livre abaixo", () => {
 });
 
 test("mobile gira a timeline para vertical com Elite à esquerda e Livre à direita", () => {
-  const mobile = timelineCss.match(
-    /@media \(max-width: 760px\) \{([\s\S]*?)\n\}/,
-  )?.[1] ?? "";
+  const mobileStart = timelineCss.indexOf("@media (max-width: 760px)");
+  const mobileEnd = timelineCss.indexOf("@media (max-width: 390px)", mobileStart);
+  const mobile = timelineCss.slice(
+    mobileStart,
+    mobileEnd > mobileStart ? mobileEnd : timelineCss.length,
+  );
 
   assert.match(mobile, /overflow-x:\s*hidden/);
   assert.match(mobile, /overflow-y:\s*auto/);
