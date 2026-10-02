@@ -215,8 +215,8 @@ export async function lockCampaignCreditWallet(
 export async function listOwnedCosmetics(
   userId: string,
   db: EconomyQueryable = pool,
-): Promise<EquippedCosmeticRow[]> {
-  const result = await db.query<EquippedCosmeticRow>(
+): Promise<CosmeticRow[]> {
+  const result = await db.query<CosmeticRow>(
     `SELECT item.id,
             item.slug,
             item.name,
@@ -247,8 +247,8 @@ export async function listOwnedCosmetics(
 export async function listEquippedProfileCosmetics(
   userId: string,
   db: EconomyQueryable = pool,
-): Promise<CosmeticRow[]> {
-  const result = await db.query<CosmeticRow>(
+): Promise<EquippedCosmeticRow[]> {
+  const result = await db.query<EquippedCosmeticRow>(
     `WITH defaults AS (
        SELECT DISTINCT ON (slot)
               id,slug,name,description,slot,rarity,asset_ref,
