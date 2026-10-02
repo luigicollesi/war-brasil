@@ -44,6 +44,8 @@ const profilePage = source("src/app/profile/page.tsx");
 const profileLoading = source("src/app/profile/loading.tsx");
 const profileError = source("src/app/profile/error.tsx");
 const profileV4Shell = source("src/components/profile/v4/profile-shell.tsx");
+const campaignPage = source("src/app/campaign/page.tsx");
+const battlePassPage = source("src/components/progression/battle-pass/battle-pass-page.tsx");
 
 const consumerSources = [
   homePage,
@@ -59,9 +61,11 @@ const consumerSources = [
   profileLoading,
   profileError,
   profileV4Shell,
+  campaignPage,
+  battlePassPage,
 ].join("\n");
 
-test("as cinco experiências compartilham um único runtime no RootLayout", () => {
+test("as experiências de comando compartilham um único runtime no RootLayout", () => {
   assert.equal((layout.match(/<PreGameCommandRuntime>/g) ?? []).length, 1);
   assert.match(layout, /<PreGameCommandRuntime>[\s\S]*<ActiveParticipationRuntime>\{children\}<\/ActiveParticipationRuntime>[\s\S]*<\/PreGameCommandRuntime>/);
 
@@ -71,6 +75,7 @@ test("as cinco experiências compartilham um único runtime no RootLayout", () =
   assert.match(routeIntent, /startsWith\("\/lobby\/"\).*"lobby"/s);
   assert.match(routeIntent, /"\/rules": "doctrine"/);
   assert.match(routeIntent, /"\/profile": "profile"/);
+  assert.match(routeIntent, /"\/campaign": "campaign"/);
 });
 
 test("páginas consumidoras não montam renderer, shell 3D ou câmera próprios", () => {
@@ -89,7 +94,7 @@ test("mode pertence à rota e clientes publicam somente diretivas semânticas", 
     ["Profile", profileV4Shell],
   ]) {
     assert.match(client, /useCommandSceneDirective/, `${name} não publica scene directive`);
-    assert.doesNotMatch(client, /\bmode\s*:\s*"(?:entrance|operations|lobby|doctrine|profile)"/, `${name} declarou mode local`);
+    assert.doesNotMatch(client, /\bmode\s*:\s*"(?:entrance|operations|lobby|doctrine|profile|campaign)"/, `${name} declarou mode local`);
   }
 });
 
