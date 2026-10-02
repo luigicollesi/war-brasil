@@ -132,6 +132,7 @@ git commit -m "feat(campaign): integrate battle pass with command foundation"
 
 **Files:**
 - Create: `src/components/progression/battle-pass/battle-pass-reward.tsx`
+- Create: `src/components/progression/battle-pass/battle-pass-reward.module.css`
 - Modify: `src/components/progression/battle-pass/battle-pass-page.tsx`
 - Modify: `tests/battle-pass-grouped-rewards.test.mjs`
 - Modify: `tests/battle-pass-frontend-contract.test.mjs`
@@ -208,6 +209,7 @@ Expected: PASS.
 
 ```bash
 git add src/components/progression/battle-pass/battle-pass-reward.tsx \
+  src/components/progression/battle-pass/battle-pass-reward.module.css \
   src/components/progression/battle-pass/battle-pass-page.tsx \
   tests/battle-pass-grouped-rewards.test.mjs \
   tests/battle-pass-frontend-contract.test.mjs
@@ -313,8 +315,9 @@ Required contract:
 
 At `max-width: 760px`:
 
-- vertical scroll viewport;
-- no horizontal page overflow;
+- internal vertical scroll viewport with `max-height: min(68dvh, 720px)` and a practical lower bound through layout sizing;
+- `overflow-y: auto` and `overflow-x: hidden`;
+- document/page itself must not gain horizontal overflow;
 - level node becomes `grid-template-columns: minmax(0,1fr) auto minmax(0,1fr)`;
 - premium on left;
 - axis center;
@@ -365,6 +368,7 @@ git commit -m "feat(campaign): add continuous responsive reward timeline"
 - Modify: `src/components/progression/battle-pass/battle-pass-page.module.css`
 - Modify: `src/components/progression/battle-pass/battle-pass-timeline.module.css`
 - Modify: `src/components/progression/battle-pass/battle-pass-reward.tsx`
+- Modify: `src/components/progression/battle-pass/battle-pass-reward.module.css`
 - Modify: `src/components/progression/battle-pass/battle-pass-page.tsx`
 - Modify: `tests/battle-pass-frontend-contract.test.mjs`
 - Modify: `tests/battle-pass-premium-contract.test.mjs`
@@ -444,6 +448,7 @@ Expected: PASS.
 git add src/components/progression/battle-pass/battle-pass-page.module.css \
   src/components/progression/battle-pass/battle-pass-timeline.module.css \
   src/components/progression/battle-pass/battle-pass-reward.tsx \
+  src/components/progression/battle-pass/battle-pass-reward.module.css \
   src/components/progression/battle-pass/battle-pass-page.tsx \
   tests/battle-pass-frontend-contract.test.mjs \
   tests/battle-pass-premium-contract.test.mjs \
