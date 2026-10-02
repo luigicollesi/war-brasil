@@ -6,7 +6,10 @@ const migration = readFileSync(
   "src/lib/db/migrations/managed/080-gunslinger-dice-collection.sql",
   "utf8",
 );
-const bodyColor = readFileSync("src/lib/client/dice/body-color.ts", "utf8");
+const bodyPresentation = readFileSync(
+  "src/lib/shared/dice-body-presentation.ts",
+  "utf8",
+);
 const gameCosmetics = readFileSync(
   "src/lib/server/game-cosmetic-loadout-service.ts",
   "utf8",
@@ -74,11 +77,10 @@ test("Gunslinger possui configuração completa para renderização congelada", 
     migration,
     /collection_id,[\s\S]*body_color, body_highlight_color/,
   );
-  assert.match(bodyColor, /DEFAULT_DICE_BODY_COLOR = "#D0AD5A"/);
-  assert.match(
-    bodyColor,
-    /normalizeHexColor\(bodyColor\) \?\? DEFAULT_DICE_BODY_COLOR/,
-  );
+  assert.match(bodyPresentation, /dice_attack: "#BF4D4D"/);
+  assert.match(bodyPresentation, /dice_defense: "#3984C6"/);
+  assert.match(bodyPresentation, /dice_neutral: "#3F8B68"/);
+  assert.match(bodyPresentation, /DARK_BODY_CHANNEL_RATIO = 0\.58/);
   assert.match(
     gameCosmetics,
     /COALESCE\(cosmetic_set\.dice_pip_dark,FALSE\) AS dice_pip_dark/,
