@@ -40,6 +40,11 @@ const MODE_PRESETS: Readonly<Record<CommandSceneMode, SceneModePreset>> = {
     target: [2.45, 0.65, 0],
     fov: 32,
   },
+  campaign: {
+    camera: [0.55, 2.35, 10.2],
+    target: [0.25, -0.15, -0.2],
+    fov: 33,
+  },
 };
 
 const COMPACT_MODE_PRESETS: Readonly<Record<CommandSceneMode, SceneModePreset>> = {
@@ -66,6 +71,11 @@ const COMPACT_MODE_PRESETS: Readonly<Record<CommandSceneMode, SceneModePreset>> 
   profile: {
     camera: [2.2, 2, 14.4],
     target: [1.8, 1.2, 0],
+    fov: 39,
+  },
+  campaign: {
+    camera: [1, 2.8, 14.4],
+    target: [1.05, 0.55, -0.2],
     fov: 39,
   },
 };
