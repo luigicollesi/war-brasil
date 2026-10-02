@@ -8,8 +8,9 @@ Branch: `feat/dice-pip-collection-style`
 Add two presentation characteristics shared by the three dice of one canonical cosmetic set:
 
 1. `dice_pip_dark`
-   - `false`: keep the current dark/store pip treatment and normal player-color gameplay pips.
-   - `true`: store/showcase pips are white; gameplay pips use a lighter deterministic variant of the owning player's color.
+   - `false`: use the light canonical die body for the slot; store pips stay dark and gameplay pips use the normal player color.
+   - `true`: use the dark canonical die body for the slot; store/showcase pips are white and gameplay pips use a lighter deterministic variant of the owning player's color.
+   - body color family is slot-driven: attack=red, defense=blue, neutral=green.
 
 2. `dice_pip_compact`
    - `false`: keep the current spread pip layout.
@@ -78,7 +79,7 @@ dice_pip_dark boolean NOT NULL DEFAULT false
 dice_pip_compact boolean NOT NULL DEFAULT false
 ```
 
-Reason: gameplay freezes mutable cosmetic catalog state at match start. Runtime intentionally does not rejoin `catalog.*` after a match begins.
+Reason: gameplay freezes mutable cosmetic set state at match start. Runtime intentionally does not rejoin `catalog.*` after a match begins. Per-die `body_color` is not frozen; it remains NULL and the runtime derives the body deterministically from frozen `slot + dice_pip_dark`.
 
 ## Database migration
 
@@ -291,7 +292,7 @@ Cover at least:
 - No changes to RNG or combat resolution.
 - No arbitrary per-die persisted pip settings.
 - No user-facing toggle.
-- No automatic mode selection from body colors.
+- No automatic mode selection from persisted body colors; dice body color is derived from slot + `dice_pip_dark`.
 - No Black Dragon/Cosmic Night hardcoding in React components.
 - No use of commercial collections as the visual source of truth.
 
@@ -308,3 +309,16 @@ WHERE id IN ('set.cosmic-night', 'set.black-dragon');
 ```
 
 Future sets can opt into either characteristic without changing rendering code.
+
+
+## Canonical body-color policy
+
+Per-cosmetic dice body colors are no longer catalog data.
+
+```text
+dice_attack  + dark=false -> #BF4D4D
+dice_defense + dark=false -> #3984C6
+dice_neutral + dark=false -> #3F8B68
+```
+
+For `dark=true`, each RGB channel is multiplied by `0.58`, yielding a deterministic darker variant of the same slot family. Both `catalog.cosmetics.body_color/body_highlight_color` and the equivalent dice snapshot fields remain NULL for dice slots and are protected by database constraints.
