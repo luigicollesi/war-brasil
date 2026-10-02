@@ -4,6 +4,7 @@ import test from "node:test";
 
 const read = (path) => readFileSync(path, "utf8");
 
+const seasonalCollections = read("src/lib/db/migrations/managed/081-battle-pass-seasonal-collections.sql");
 const migration = read("src/lib/db/migrations/managed/082-battle-pass-season-1.sql");
 const commerceGuards = read("src/lib/db/migrations/managed/083-battle-pass-reward-commerce-guards.sql");
 const economyContract = read("src/lib/economy/economy-contract.ts");
@@ -16,6 +17,41 @@ const appearanceContract = read("src/lib/economy/profile-appearance-store-contra
 const appearanceRepository = read("src/lib/server/economy/profile-appearance-store-repository.ts");
 const appearanceService = read("src/lib/server/economy/profile-appearance-store-service.ts");
 const category = read("src/components/profile/v4/profile-store-category.tsx");
+
+test("seasonal collection migration is safe to replay after Battle Pass activation", () => {
+  const offerBlocks = seasonalCollections
+    .split("INSERT INTO catalog.offers(")
+    .slice(1);
+
+  assert.equal(offerBlocks.length, 3);
+  for (const block of offerBlocks) {
+    const offerStatement = block.split(";", 1)[0];
+    assert.match(offerStatement, /'retired'/);
+    assert.match(offerStatement, /active[\s\S]*FALSE|active=FALSE/);
+    assert.doesNotMatch(offerStatement, /status='available'/);
+    assert.doesNotMatch(offerStatement, /active=TRUE/);
+  }
+});
+
+test("Season 1 replay skips immutable child inserts once the season is active", () => {
+  const guardedWrites = migration.match(
+    /status IN \('draft','announced'\)/g,
+  ) ?? [];
+
+  assert.ok(guardedWrites.length >= 4);
+  assert.match(
+    migration,
+    /INSERT INTO catalog\.battle_pass_levels[\s\S]*status IN \('draft','announced'\)/,
+  );
+  assert.match(
+    migration,
+    /INSERT INTO catalog\.battle_pass_rewards[\s\S]*status IN \('draft','announced'\)/,
+  );
+  assert.match(
+    migration,
+    /INSERT INTO catalog\.battle_pass_pricing[\s\S]*status IN \('draft','announced'\)/,
+  );
+});
 
 test("Season 1 retires direct reward offers and guards against reopening them", () => {
   assert.match(migration, /SET status='retired',[\s\S]*active=FALSE/);
