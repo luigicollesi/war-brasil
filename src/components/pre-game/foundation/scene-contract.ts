@@ -4,6 +4,7 @@ export const COMMAND_SCENE_MODES = [
   "lobby",
   "doctrine",
   "profile",
+  "campaign",
 ] as const;
 
 export type CommandSceneMode = (typeof COMMAND_SCENE_MODES)[number];
@@ -54,6 +55,7 @@ const DEFAULT_FOCUS_BY_MODE: Readonly<Record<CommandSceneMode, CommandSceneFocus
   lobby: "table",
   doctrine: "brazil",
   profile: "insignia",
+  campaign: "table",
 };
 
 export const DEFAULT_COMMAND_SCENE_INTENT: NormalizedCommandSceneIntent = {
@@ -89,4 +91,5 @@ export const COMMAND_SCENE_MODE_LABELS: Readonly<Record<CommandSceneMode, string
   lobby: "BRIEFING",
   doctrine: "DOUTRINA",
   profile: "SALÃO DE COMANDO",
+  campaign: "CAMPANHA",
 };
