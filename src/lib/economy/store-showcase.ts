@@ -1,3 +1,4 @@
+import { diceBodyColorForSlot } from "../shared/dice-body-presentation";
 import type {
   CampaignCreditWallet,
   CosmeticCatalogItem,
@@ -143,8 +144,8 @@ function projectItems(
       previewRef: item.previewRef,
       assetRef: item.assetRef,
       effectKey: item.effectKey,
-      bodyColor: item.bodyColor,
-      bodyHighlightColor: item.bodyHighlightColor,
+      bodyColor: diceBodyColorForSlot(item.slot, presentation.dicePipDark),
+      bodyHighlightColor: null,
       dicePipDark: presentation.dicePipDark,
       dicePipCompact: presentation.dicePipCompact,
       singleOffer: singleOfferByItemId[item.id] ?? null,
