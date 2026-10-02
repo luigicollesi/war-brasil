@@ -12,19 +12,12 @@
   gap: 18px;
 }
 
-.trackLabels {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+.desktopTrackLabel {
   color: rgb(208 170 87 / 64%);
   font-family: var(--font-geist-mono), monospace;
   font-size: .52rem;
   font-weight: 900;
   letter-spacing: .14em;
-}
-
-.trackLabels span:last-child {
-  text-align: right;
 }
 
 .timelineToolbar button {
@@ -159,6 +152,13 @@
   display: none;
 }
 
+.timelineFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
 .timelineHint {
   margin: 0;
   color: rgb(238 232 218 / 30%);
@@ -173,7 +173,7 @@
     align-items: center;
   }
 
-  .trackLabels {
+  .desktopTrackLabel {
     display: none;
   }
 
@@ -280,6 +280,10 @@
   .levelNode[data-current="true"] .axisMarker {
     min-width: 44px;
     min-height: 44px;
+  }
+
+  .timelineFooter {
+    display: block;
   }
 
   .timelineHint {
