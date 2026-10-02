@@ -34,6 +34,11 @@ export type CosmeticRow = {
   equipped: boolean;
 };
 
+export type EquippedCosmeticRow = CosmeticRow & {
+  dice_pip_dark: boolean;
+  dice_pip_compact: boolean;
+};
+
 export type CosmeticSetItemRow = CosmeticRow & {
   set_id: string;
   set_slug: string;
@@ -210,8 +215,8 @@ export async function lockCampaignCreditWallet(
 export async function listOwnedCosmetics(
   userId: string,
   db: EconomyQueryable = pool,
-): Promise<CosmeticRow[]> {
-  const result = await db.query<CosmeticRow>(
+): Promise<EquippedCosmeticRow[]> {
+  const result = await db.query<EquippedCosmeticRow>(
     `SELECT item.id,
             item.slug,
             item.name,
@@ -279,9 +284,15 @@ export async function listEquippedProfileCosmetics(
             item.status,
             item.is_default,
             TRUE AS owned,
-            TRUE AS equipped
+            TRUE AS equipped,
+            COALESCE(cosmetic_set.dice_pip_dark,FALSE) AS dice_pip_dark,
+            COALESCE(cosmetic_set.dice_pip_compact,FALSE) AS dice_pip_compact
        FROM resolved
        JOIN catalog.cosmetics item ON item.id=resolved.resolved_id
+       LEFT JOIN catalog.cosmetic_set_items membership
+         ON membership.cosmetic_id=item.id
+       LEFT JOIN catalog.cosmetic_sets cosmetic_set
+         ON cosmetic_set.id=membership.set_id
       ORDER BY CASE item.slot
         WHEN 'dice_attack' THEN 1
         WHEN 'dice_defense' THEN 2
