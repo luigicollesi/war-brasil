@@ -9,6 +9,7 @@ const EXACT_ROUTE_MODES: Readonly<Record<string, CommandSceneMode>> = {
   "/matchmaking": "operations",
   "/rules": "doctrine",
   "/profile": "profile",
+  "/campaign": "campaign",
 };
 
 function normalizePathname(pathname: string) {
@@ -39,6 +40,20 @@ export function resolvePreGameSceneMode(pathname: string): CommandSceneMode | nu
 }
 
 export function resolvePreGameSceneIntent(pathname: string): CommandSceneIntent | null {
-  const mode = resolvePreGameSceneMode(pathname);
-  return mode ? { mode } : null;
+  const normalizedPathname = normalizePathname(pathname);
+  const mode = resolvePreGameSceneMode(normalizedPathname);
+  if (!mode) return null;
+
+  if (normalizedPathname === "/campaign") {
+    return {
+      mode: "campaign",
+      focus: "table",
+      conflictLevel: 0,
+      territoryExplode: 0.06,
+      orbitalAlignment: 1,
+      entranceState: "settled",
+    };
+  }
+
+  return { mode };
 }
