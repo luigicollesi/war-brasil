@@ -45,10 +45,13 @@ test("showcase owns its chrome and derives object scale from the presentation co
   assert.doesNotMatch(controller, /DESKTOP_SHOWCASE_SCALE/);
 });
 
-test("showcase dice carries catalog colors in the DTO without a metadata round trip", () => {
+test("showcase dice derives body color from slot and set darkness without a metadata round trip", () => {
   const projection = read("src/lib/economy/store-showcase.ts");
-  assert.match(projection, /bodyColor: item\.bodyColor/);
-  assert.match(projection, /bodyHighlightColor: item\.bodyHighlightColor/);
+  assert.match(
+    projection,
+    /bodyColor: diceBodyColorForSlot\(item\.slot, presentation\.dicePipDark\)/,
+  );
+  assert.match(projection, /bodyHighlightColor: null/);
   assert.match(showcase, /bodyColor=\{item\.bodyColor\}/);
   assert.match(showcase, /bodyHighlightColor=\{item\.bodyHighlightColor\}/);
   assert.match(model, /bodyColor: string \| null/);
