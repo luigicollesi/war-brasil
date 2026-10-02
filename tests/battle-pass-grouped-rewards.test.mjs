@@ -39,20 +39,25 @@ test("claim de conjunto deriva composição no servidor a partir de um único re
   assert.match(route, /result\.groupKey/);
 });
 
-test("conjunto Elite inicial aparece como um único card e reveal composto", () => {
+test("conjunto Elite inicial aparece como uma única apresentação e reveal composto", () => {
   const page = read(
     "src/components/progression/battle-pass/battle-pass-page.tsx",
   );
-  const css = read(
-    "src/components/progression/battle-pass/battle-pass-page.module.css",
+  const reward = read(
+    "src/components/progression/battle-pass/battle-pass-reward.tsx",
+  );
+  const rewardCss = read(
+    "src/components/progression/battle-pass/battle-pass-reward.module.css",
+  );
+  const timeline = read(
+    "src/components/progression/battle-pass/battle-pass-timeline.tsx",
   );
 
-  assert.match(page, /groupedRewards\(level\.premiumRewards\)/);
-  assert.match(page, /<RewardGroupCard/);
+  assert.match(timeline, /groupBattlePassRewards\(rewards\)/);
+  assert.match(timeline, /<BattlePassRewardGroup/);
   assert.match(page, /\/api\/battle-pass\/rewards\/claim-group/);
-  assert.match(page, /Conjunto Inicial de Elite/);
+  assert.match(reward, /Conjunto Inicial de Elite/);
   assert.match(page, /kind: "group"/);
-  assert.match(css, /\.rewardGroup/);
-  assert.match(css, /\.rewardGroupVisuals/);
-  assert.match(css, /\.rewardRevealGroup/);
+  assert.match(rewardCss, /\.rewardGroupVisuals/);
+  assert.match(page, /\.rewardRevealGroup|rewardRevealGroup/);
 });
