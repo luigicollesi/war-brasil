@@ -9,6 +9,7 @@ import type {
   GameCosmeticSelection,
   GamePlayerCosmetics,
 } from "@/src/lib/game-contract";
+import { diceBodyColorForSlot } from "@/src/lib/shared/dice-body-presentation";
 import {
   diceAssetDeliveryPath,
   territorySkinAssetDeliveryPath,
@@ -71,8 +72,8 @@ function selection(row: GameCosmeticSnapshotRow): GameCosmeticSelection {
     cosmeticId: row.cosmetic_id,
     assetRef: projectedSnapshotAssetRef(row),
     effectKey: row.effect_key,
-    bodyColor: row.body_color,
-    bodyHighlightColor: row.body_highlight_color,
+    bodyColor: diceBodyColorForSlot(row.slot, row.dice_pip_dark),
+    bodyHighlightColor: null,
     dicePipDark: row.dice_pip_dark,
     dicePipCompact: row.dice_pip_compact,
   };
@@ -105,7 +106,7 @@ function defaultPlayerCosmetics(): GamePlayerCosmetics {
       cosmeticId: "dice.attack.default",
       assetRef: null,
       effectKey: null,
-      bodyColor: null,
+      bodyColor: diceBodyColorForSlot("dice_attack", false),
       bodyHighlightColor: null,
       dicePipDark: false,
       dicePipCompact: false,
@@ -114,7 +115,7 @@ function defaultPlayerCosmetics(): GamePlayerCosmetics {
       cosmeticId: "dice.defense.default",
       assetRef: null,
       effectKey: null,
-      bodyColor: null,
+      bodyColor: diceBodyColorForSlot("dice_defense", false),
       bodyHighlightColor: null,
       dicePipDark: false,
       dicePipCompact: false,
@@ -123,7 +124,7 @@ function defaultPlayerCosmetics(): GamePlayerCosmetics {
       cosmeticId: "dice.neutral.default",
       assetRef: null,
       effectKey: null,
-      bodyColor: null,
+      bodyColor: diceBodyColorForSlot("dice_neutral", false),
       bodyHighlightColor: null,
       dicePipDark: false,
       dicePipCompact: false,
@@ -213,8 +214,10 @@ async function lockRoomCommanderCosmeticStates(
  * match starts. Bots receive one independently randomized available cosmetic per
  * gameplay slot at the same boundary. After this function succeeds, runtime reads
  * no longer need profile, inventory, or mutable catalog rows for presentation.
- * Asset and body colors are frozen here; delivery URLs are projected only while
- * building DTOs.
+ * Asset identity plus the canonical set presentation flags are frozen here.
+ * Dice body colors are derived later from slot + dice_pip_dark and are never
+ * persisted as per-cosmetic catalog data. Delivery URLs are projected only
+ * while building DTOs.
  */
 export async function capturePlayerCosmeticLoadouts(
   client: PoolClient,
@@ -224,7 +227,7 @@ export async function capturePlayerCosmeticLoadouts(
 
   await client.query(
     `WITH defaults AS (
-       SELECT id, slot, asset_ref, effect_key, body_color, body_highlight_color
+       SELECT id, slot, asset_ref, effect_key
          FROM catalog.cosmetics
         WHERE is_default=TRUE
           AND slot IN ('dice_attack','dice_defense','dice_neutral','territory_skin')
@@ -236,9 +239,7 @@ export async function capturePlayerCosmeticLoadouts(
               defaults.id AS default_id,
               defaults.slot,
               defaults.asset_ref AS default_asset_ref,
-              defaults.effect_key AS default_effect_key,
-              defaults.body_color AS default_body_color,
-              defaults.body_highlight_color AS default_body_highlight_color
+              defaults.effect_key AS default_effect_key
          FROM game.players player
          CROSS JOIN defaults
         WHERE player.room_id=$1
@@ -262,18 +263,8 @@ export async function capturePlayerCosmeticLoadouts(
                 WHEN equipped.id IS NOT NULL THEN equipped.effect_key
                 ELSE player_slot.default_effect_key
               END AS effect_key,
-              CASE
-                WHEN player_slot.is_bot AND bot_cosmetic.id IS NOT NULL THEN bot_cosmetic.body_color
-                WHEN player_slot.is_bot THEN player_slot.default_body_color
-                WHEN equipped.id IS NOT NULL THEN equipped.body_color
-                ELSE player_slot.default_body_color
-              END AS body_color,
-              CASE
-                WHEN player_slot.is_bot AND bot_cosmetic.id IS NOT NULL THEN bot_cosmetic.body_highlight_color
-                WHEN player_slot.is_bot THEN player_slot.default_body_highlight_color
-                WHEN equipped.id IS NOT NULL THEN equipped.body_highlight_color
-                ELSE player_slot.default_body_highlight_color
-              END AS body_highlight_color
+              NULL::varchar(7) AS body_color,
+              NULL::varchar(7) AS body_highlight_color
          FROM player_slots player_slot
          LEFT JOIN profile.cosmetic_loadout loadout
            ON player_slot.is_bot=FALSE
@@ -285,9 +276,7 @@ export async function capturePlayerCosmeticLoadouts(
          LEFT JOIN LATERAL (
            SELECT candidate.id,
                   candidate.asset_ref,
-                  candidate.effect_key,
-                  candidate.body_color,
-                  candidate.body_highlight_color
+                  candidate.effect_key
              FROM catalog.cosmetics candidate
             WHERE player_slot.is_bot=TRUE
               AND candidate.slot=player_slot.slot
