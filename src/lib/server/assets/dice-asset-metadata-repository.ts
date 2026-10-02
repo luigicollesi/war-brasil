@@ -1,10 +1,11 @@
 import "server-only";
 
 import type { CosmeticSlot } from "@/src/lib/economy/economy-contract";
+import { diceBodyColorForSlot } from "@/src/lib/shared/dice-body-presentation";
 import { pool } from "../db/pool";
 
-type DiceBodyColorRow = {
-  body_color: string | null;
+type DiceBodyPresentationRow = {
+  dice_pip_dark: boolean;
 };
 
 export async function findDiceBodyColor(
@@ -13,16 +14,20 @@ export async function findDiceBodyColor(
     CosmeticSlot,
     "dice_attack" | "dice_defense" | "dice_neutral"
   >,
-): Promise<string | null> {
-  const result = await pool.query<DiceBodyColorRow>(
-    `SELECT body_color
-       FROM catalog.cosmetics
-      WHERE asset_ref=$1
-        AND slot=$2
-      ORDER BY is_default ASC, id
+): Promise<string> {
+  const result = await pool.query<DiceBodyPresentationRow>(
+    `SELECT COALESCE(cosmetic_set.dice_pip_dark,FALSE) AS dice_pip_dark
+       FROM catalog.cosmetics item
+       LEFT JOIN catalog.cosmetic_set_items membership
+         ON membership.cosmetic_id=item.id
+       LEFT JOIN catalog.cosmetic_sets cosmetic_set
+         ON cosmetic_set.id=membership.set_id
+      WHERE item.asset_ref=$1
+        AND item.slot=$2
+      ORDER BY item.is_default ASC,item.id
       LIMIT 1`,
     [assetRef, slot],
   );
 
-  return result.rows[0]?.body_color ?? null;
+  return diceBodyColorForSlot(slot, result.rows[0]?.dice_pip_dark ?? false)!;
 }
