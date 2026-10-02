@@ -630,7 +630,7 @@ SET slug=EXCLUDED.slug,
     pricing_model='itemized',
     starts_at=NULL,
     ends_at=NULL,
-    active=TRUE,
+    active=FALSE,
     priority=EXCLUDED.priority,
     updated_at=NOW();
 
