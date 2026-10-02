@@ -1,0 +1,211 @@
+.rewardItem {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  justify-items: center;
+  gap: 7px;
+  width: 100%;
+  padding: 8px 6px;
+  background: transparent;
+  text-align: center;
+  transition: opacity 180ms ease, filter 180ms ease, transform 180ms ease;
+}
+
+.rewardItem[data-state="claimable"] {
+  filter: drop-shadow(0 0 14px rgb(208 170 87 / 20%));
+}
+
+.rewardItem[data-state="claimed"] {
+  opacity: .46;
+}
+
+.rewardItem[data-state="locked"],
+.rewardItem[data-state="premium_locked"] {
+  opacity: .38;
+}
+
+.rewardItem[data-state="claiming"] {
+  opacity: .72;
+}
+
+.rewardStatus,
+.rewardStateText {
+  color: rgb(238 232 218 / 48%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: .46rem;
+  font-weight: 850;
+  letter-spacing: .09em;
+}
+
+.rewardItem[data-state="claimable"] .rewardStatus {
+  color: var(--campaign-brass, #d0aa57);
+}
+
+.rewardVisual {
+  min-width: 0;
+  width: 100%;
+  min-height: 80px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.rewardImage {
+  width: 100%;
+  height: 100%;
+  max-height: 106px;
+  object-fit: contain;
+}
+
+.rewardFallback,
+.titleVisual {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  min-height: 72px;
+  color: rgb(238 232 218 / 42%);
+  font-family: var(--font-wb-display), sans-serif;
+}
+
+.territoryVisual {
+  width: 100%;
+  max-height: 104px;
+}
+
+.creditVisual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  color: var(--campaign-ivory, #eee8da);
+}
+
+.creditVisual strong {
+  font-family: var(--font-wb-display), sans-serif;
+  font-size: 1.55rem;
+}
+
+.creditVisual small {
+  color: var(--campaign-brass, #d0aa57);
+  font-family: var(--font-geist-mono), monospace;
+}
+
+.rewardCopy {
+  min-width: 0;
+  width: 100%;
+  display: grid;
+  gap: 3px;
+}
+
+.rewardCopy strong {
+  overflow: hidden;
+  display: -webkit-box;
+  color: rgb(238 232 218 / 80%);
+  font-size: .66rem;
+  line-height: 1.24;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.rewardCopy small {
+  color: rgb(208 170 87 / 58%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: .44rem;
+}
+
+.rewardItem button {
+  min-width: 96px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  background: rgb(208 170 87 / 10%);
+  color: var(--campaign-ivory, #eee8da);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: .5rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  cursor: pointer;
+}
+
+.rewardItem button:hover,
+.rewardItem button:focus-visible {
+  background: var(--campaign-brass, #d0aa57);
+  color: #101913;
+  outline: 2px solid var(--campaign-brass, #d0aa57);
+  outline-offset: 3px;
+}
+
+.rewardItem button:disabled {
+  cursor: progress;
+}
+
+.rewardGroupVisuals {
+  min-width: 0;
+  width: 100%;
+  min-height: 82px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-items: center;
+  gap: 3px;
+}
+
+.rewardGroupVisual {
+  min-width: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+.rewardGroupVisual .rewardImage,
+.rewardGroupVisual .territoryVisual {
+  max-height: 58px;
+}
+
+.rewardGroupVisual .rewardFallback,
+.rewardGroupVisual .titleVisual {
+  min-height: 48px;
+  font-size: .52rem;
+}
+
+@media (max-width: 760px) {
+  .rewardItem {
+    padding: 7px 2px;
+    gap: 5px;
+  }
+
+  .rewardVisual {
+    min-height: 62px;
+  }
+
+  .rewardImage,
+  .territoryVisual {
+    max-height: 76px;
+  }
+
+  .rewardCopy strong {
+    font-size: .58rem;
+  }
+
+  .rewardGroupVisuals {
+    min-height: 58px;
+    gap: 1px;
+  }
+
+  .rewardGroupVisual .rewardImage,
+  .rewardGroupVisual .territoryVisual {
+    max-height: 44px;
+  }
+
+  .rewardItem button {
+    min-width: 88px;
+    max-width: 100%;
+    padding-inline: 8px;
+    font-size: .46rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rewardItem {
+    transition: none !important;
+  }
+}
