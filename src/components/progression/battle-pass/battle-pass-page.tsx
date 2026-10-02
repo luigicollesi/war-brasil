@@ -3,18 +3,17 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ShowcasePurchaseError,
   purchaseShowcaseOffer,
 } from "@/src/lib/client/store-showcase/purchase-showcase-offer";
-import { TerritorySkinPreview } from "@/src/components/economy/territory-skin-preview";
-import { ProfileTitleRenderer } from "@/src/components/profile/profile-title-renderer";
-import { ProfileCosmeticImage } from "@/src/components/profile/v4/profile-cosmetic-image";
 import type {
   BattlePassRewardPresentation,
   BattlePassSnapshot,
 } from "@/src/lib/shared/progression/battle-pass-presentation";
+import { BattlePassRewardVisual } from "./battle-pass-reward";
+import { BattlePassTimeline } from "./battle-pass-timeline";
 import styles from "./battle-pass-page.module.css";
 
 const INTEGER = new Intl.NumberFormat("pt-BR");
@@ -59,221 +58,6 @@ function progressPercent(snapshot: BattlePassSnapshot) {
   );
 }
 
-function stateLabel(reward: BattlePassRewardPresentation) {
-  if (reward.state === "claimed") return "COLETADO";
-  if (reward.state === "claimable") return "DISPONÍVEL";
-  if (reward.state === "premium_locked") return "ELITE";
-  return "BLOQUEADO";
-}
-
-function groupedRewards(
-  rewards: ReadonlyArray<BattlePassRewardPresentation>,
-) {
-  const groups = new Map<
-    string,
-    {
-      presentationGroupKey: string | null;
-      rewards: BattlePassRewardPresentation[];
-    }
-  >();
-
-  for (const reward of rewards) {
-    const mapKey = reward.presentationGroupKey
-      ? `group:${reward.presentationGroupKey}`
-      : `reward:${reward.id}`;
-    const current = groups.get(mapKey);
-    if (current) {
-      current.rewards.push(reward);
-    } else {
-      groups.set(mapKey, {
-        presentationGroupKey: reward.presentationGroupKey,
-        rewards: [reward],
-      });
-    }
-  }
-
-  return [...groups.values()];
-}
-
-function groupState(rewards: ReadonlyArray<BattlePassRewardPresentation>) {
-  if (rewards.every((reward) => reward.state === "claimed")) return "claimed";
-  if (rewards.some((reward) => reward.state === "claimable")) return "claimable";
-  if (rewards.some((reward) => reward.state === "premium_locked")) {
-    return "premium_locked";
-  }
-  return "locked";
-}
-
-function initialRailStart(snapshot: BattlePassSnapshot | null) {
-  if (!snapshot) return 0;
-  const currentIndex = Math.max(
-    0,
-    snapshot.levels.findIndex(
-      (level) => level.level === snapshot.progress.levelReached,
-    ),
-  );
-  const maxStart = Math.max(0, snapshot.levels.length - 8);
-  return Math.max(0, Math.min(maxStart, Math.max(0, currentIndex - 2)));
-}
-
-function RewardVisual({ reward }: { reward: BattlePassRewardPresentation }) {
-  if (reward.kind === "campaign_credit") {
-    return (
-      <span className={styles.creditVisual}>
-        <Image src="/coin.svg" alt="" width={42} height={42} aria-hidden="true" />
-        <strong>{INTEGER.format(reward.creditAmount ?? 0)}</strong>
-        <small>CR</small>
-      </span>
-    );
-  }
-
-  if (reward.kind === "commander_title" && reward.title) {
-    return (
-      <span className={styles.titleVisual}>
-        <ProfileTitleRenderer
-          title={{
-            id: reward.itemId ?? reward.id,
-            displayText: reward.title.displayText,
-            rarity: reward.title.rarity,
-            fontKey: reward.title.fontKey,
-            styleKey: reward.title.styleKey,
-            textureRef: reward.title.textureRef,
-          }}
-        />
-      </span>
-    );
-  }
-
-  if (reward.slot === "territory_skin") {
-    return (
-      <TerritorySkinPreview
-        assetRef={reward.previewRef}
-        className={styles.territoryVisual}
-        ariaLabel={`Prévia de ${reward.name}`}
-      />
-    );
-  }
-
-  return (
-    <ProfileCosmeticImage
-      src={reward.previewRef}
-      alt={reward.name}
-      width={240}
-      height={180}
-      className={styles.rewardImage}
-      fallbackClassName={styles.rewardFallback}
-      fallbackLabel={reward.kind === "profile_background" ? "FUNDO" : "ITEM"}
-    />
-  );
-}
-
-function RewardCard({
-  reward,
-  pending,
-  onClaim,
-}: {
-  reward: BattlePassRewardPresentation;
-  pending: boolean;
-  onClaim: (reward: BattlePassRewardPresentation) => void;
-}) {
-  const interactive = reward.state === "claimable";
-
-  return (
-    <article
-      className={styles.reward}
-      data-state={pending ? "claiming" : reward.state}
-      data-kind={reward.kind}
-    >
-      <span className={styles.rewardStatus}>
-        {reward.state === "claimed" ? "✓ " : ""}
-        {pending ? "COLETANDO..." : stateLabel(reward)}
-      </span>
-      <div className={styles.rewardVisual}>
-        <RewardVisual reward={reward} />
-      </div>
-      <div className={styles.rewardCopy}>
-        <strong>{reward.name}</strong>
-        {reward.rarity ? <small>{reward.rarity.toUpperCase()}</small> : null}
-      </div>
-      {interactive ? (
-        <button
-          type="button"
-          disabled={pending}
-          onClick={() => onClaim(reward)}
-        >
-          {pending ? "PROCESSANDO..." : "COLETAR"}
-        </button>
-      ) : reward.state === "premium_locked" ? (
-        <span className={styles.rewardLock}>TRILHA DE ELITE</span>
-      ) : reward.state === "locked" ? (
-        <span className={styles.rewardLock}>NÍVEL {reward.level}</span>
-      ) : (
-        <span className={styles.rewardCollected}>✓ COLETADO</span>
-      )}
-    </article>
-  );
-}
-
-function RewardGroupCard({
-  rewards,
-  pending,
-  onClaim,
-}: {
-  rewards: ReadonlyArray<BattlePassRewardPresentation>;
-  pending: boolean;
-  onClaim: (rewards: ReadonlyArray<BattlePassRewardPresentation>) => void;
-}) {
-  const state = groupState(rewards);
-  const anchor = rewards[0];
-  if (!anchor) return null;
-
-  return (
-    <article
-      className={styles.rewardGroup}
-      data-state={pending ? "claiming" : state}
-    >
-      <span className={styles.rewardStatus}>
-        {state === "claimed" ? "✓ " : ""}
-        {pending
-          ? "COLETANDO..."
-          : state === "claimed"
-            ? "COLETADO"
-            : state === "claimable"
-              ? "CONJUNTO DISPONÍVEL"
-              : state === "premium_locked"
-                ? "ELITE"
-                : "BLOQUEADO"}
-      </span>
-      <div className={styles.rewardGroupVisuals}>
-        {rewards.map((reward) => (
-          <div key={reward.id} className={styles.rewardGroupVisual}>
-            <RewardVisual reward={reward} />
-          </div>
-        ))}
-      </div>
-      <div className={styles.rewardCopy}>
-        <strong>Conjunto Inicial de Elite</strong>
-        <small>{rewards.length} ITENS</small>
-      </div>
-      {state === "claimable" ? (
-        <button
-          type="button"
-          disabled={pending}
-          onClick={() => onClaim(rewards)}
-        >
-          {pending ? "PROCESSANDO..." : "COLETAR CONJUNTO"}
-        </button>
-      ) : state === "premium_locked" ? (
-        <span className={styles.rewardLock}>TRILHA DE ELITE</span>
-      ) : state === "locked" ? (
-        <span className={styles.rewardLock}>NÍVEL {anchor.level}</span>
-      ) : (
-        <span className={styles.rewardCollected}>✓ CONJUNTO COLETADO</span>
-      )}
-    </article>
-  );
-}
-
 export function BattlePassPage({
   snapshot,
   unavailable,
@@ -288,7 +72,6 @@ export function BattlePassPage({
   const [premiumConfirmationOpen, setPremiumConfirmationOpen] = useState(false);
   const [feedback, setFeedback] = useState<ClaimFeedback | null>(null);
   const [claimReveal, setClaimReveal] = useState<ClaimReveal | null>(null);
-  const [railStart, setRailStart] = useState(() => initialRailStart(snapshot));
   const rewardDialogRef = useRef<HTMLDivElement>(null);
   const rewardDialogCloseRef = useRef<HTMLButtonElement>(null);
   const rewardDialogReturnFocusRef = useRef<HTMLElement | null>(null);
@@ -311,16 +94,6 @@ export function BattlePassPage({
       rewardDialogReturnFocusRef.current = null;
     });
   }, []);
-
-  const currentIndex = useMemo(() => {
-    if (!snapshot) return 0;
-    return Math.max(
-      0,
-      snapshot.levels.findIndex(
-        (level) => level.level === snapshot.progress.levelReached,
-      ),
-    );
-  }, [snapshot]);
 
   useEffect(() => {
     if (!claimReveal) return;
@@ -597,25 +370,6 @@ export function BattlePassPage({
   }
 
   const percent = progressPercent(snapshot);
-  const maxRailStart = Math.max(0, snapshot.levels.length - 8);
-  const visibleLevels = snapshot.levels.slice(
-    railStart,
-    Math.min(snapshot.levels.length, railStart + 8),
-  );
-
-  function showCurrentLevel() {
-    setRailStart(
-      Math.max(0, Math.min(maxRailStart, Math.max(0, currentIndex - 2))),
-    );
-  }
-
-  function showPreviousLevels() {
-    setRailStart((current) => Math.max(0, current - 4));
-  }
-
-  function showNextLevels() {
-    setRailStart((current) => Math.min(maxRailStart, current + 4));
-  }
 
   return (
     <main className={styles.surface}>
@@ -796,118 +550,13 @@ export function BattlePassPage({
           </div>
         ) : null}
 
-        <div className={styles.railControls}>
-          <button
-            type="button"
-            onClick={showPreviousLevels}
-            disabled={railStart === 0}
-          >
-            ← ANTERIORES
-          </button>
-          <button type="button" onClick={showCurrentLevel}>
-            NÍVEL ATUAL
-          </button>
-          <button
-            type="button"
-            onClick={showNextLevels}
-            disabled={railStart >= maxRailStart}
-          >
-            PRÓXIMOS →
-          </button>
-        </div>
-
-        <div className={styles.trackLabels} aria-hidden="true">
-          <span>TRILHA DE ELITE</span>
-          <span>TRILHA LIVRE</span>
-        </div>
-
-        <div className={styles.levelRail}>
-          {visibleLevels.map((level) => (
-            <article
-              key={level.level}
-              className={styles.level}
-              data-current={
-                level.level === snapshot.progress.levelReached
-                  ? "true"
-                  : undefined
-              }
-            >
-              <header>
-                <span>NÍVEL</span>
-                <strong>{level.level}</strong>
-                {level.level === snapshot.progress.levelReached ? (
-                  <small>ATUAL</small>
-                ) : null}
-              </header>
-
-              <div className={styles.levelRewards} data-track="premium">
-                {level.premiumRewards.length > 0 ? (
-                  groupedRewards(level.premiumRewards).map((group) =>
-                    group.presentationGroupKey && group.rewards.length > 1 ? (
-                      <RewardGroupCard
-                        key={`group:${group.presentationGroupKey}`}
-                        rewards={group.rewards}
-                        pending={group.rewards.some(
-                          (reward) => pendingRewardId === reward.id,
-                        )}
-                        onClaim={(items) => void claimRewardGroup(items)}
-                      />
-                    ) : (
-                      group.rewards.map((reward) => (
-                        <RewardCard
-                          key={reward.id}
-                          reward={reward}
-                          pending={pendingRewardId === reward.id}
-                          onClaim={(item) => void claimReward(item)}
-                        />
-                      ))
-                    ),
-                  )
-                ) : (
-                  <span className={styles.noReward}>SEM RECOMPENSA</span>
-                )}
-              </div>
-
-              <span className={styles.axisPoint} aria-hidden="true" />
-
-              <div className={styles.levelRewards} data-track="free">
-                {level.freeRewards.length > 0 ? (
-                  groupedRewards(level.freeRewards).map((group) =>
-                    group.presentationGroupKey && group.rewards.length > 1 ? (
-                      <RewardGroupCard
-                        key={`group:${group.presentationGroupKey}`}
-                        rewards={group.rewards}
-                        pending={group.rewards.some(
-                          (reward) => pendingRewardId === reward.id,
-                        )}
-                        onClaim={(items) => void claimRewardGroup(items)}
-                      />
-                    ) : (
-                      group.rewards.map((reward) => (
-                        <RewardCard
-                          key={reward.id}
-                          reward={reward}
-                          pending={pendingRewardId === reward.id}
-                          onClaim={(item) => void claimReward(item)}
-                        />
-                      ))
-                    ),
-                  )
-                ) : (
-                  <span className={styles.noReward}>SEM RECOMPENSA</span>
-                )}
-              </div>
-            </article>
-          ))}
-        </div>
-
-        <div className={styles.railHint}>
-          <span>
-            EXIBINDO NÍVEIS {visibleLevels[0]?.level ?? 1}–
-            {visibleLevels.at(-1)?.level ?? 1}
-          </span>
-          <span>O NÍVEL ATUAL É PRIORIZADO AO ABRIR A CAMPANHA</span>
-        </div>
+        <BattlePassTimeline
+          levels={snapshot.levels}
+          currentLevel={snapshot.progress.levelReached}
+          pendingRewardId={pendingRewardId}
+          onClaimReward={(reward) => void claimReward(reward)}
+          onClaimRewardGroup={(rewards) => void claimRewardGroup(rewards)}
+        />
       </section>
 
       {claimReveal ? (
@@ -932,7 +581,7 @@ export function BattlePassPage({
             {claimReveal.kind === "reward" ? (
               <>
                 <div className={styles.rewardRevealVisual}>
-                  <RewardVisual reward={claimReveal.reward} />
+                  <BattlePassRewardVisual reward={claimReveal.reward} />
                 </div>
                 <strong>{claimReveal.reward.name}</strong>
                 <span>
@@ -947,7 +596,7 @@ export function BattlePassPage({
                 <div className={styles.rewardRevealGroup}>
                   {claimReveal.rewards.map((reward) => (
                     <div key={reward.id}>
-                      <RewardVisual reward={reward} />
+                      <BattlePassRewardVisual reward={reward} />
                     </div>
                   ))}
                 </div>
