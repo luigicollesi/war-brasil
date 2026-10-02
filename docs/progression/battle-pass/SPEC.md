@@ -1506,43 +1506,66 @@ Não criar nova linguagem visual desconectada.
 
 ## 27. Visual das trilhas
 
+A progressão visual é uma timeline contínua de 100 níveis. A interface MUST NOT paginar artificialmente grupos de níveis nem representar cada nível como um card isolado.
+
 ### 27.1 Desktop
 
-Layout preferencial:
+Desktop usa um único viewport de scroll horizontal nativo:
 
 ~~~text
-ELITE
-[reward][reward][reward][reward]
+           TRILHA DE ELITE
 
----------- progress axis ----------
+ reward      reward                 reward
+   |           |                      |
+---01----02----03----04----05---------06---->
 
-LIVRE
-[reward][reward][reward][reward]
+        reward              reward
+
+           TRILHA LIVRE
 ~~~
 
-Elite acima.
+Regras:
 
-Livre abaixo.
-
-O nível atual deve possuir hierarquia visual superior.
+- Elite acima do eixo;
+- Livre abaixo do eixo;
+- todos os 100 níveis pertencem à mesma sequência;
+- nível atual usa marcador/halo/label, não uma caixa envolvendo o nível;
+- rewards e grupos não possuem borda estrutural permanente;
+- níveis sem reward continuam existindo no eixo sem renderizar card "SEM RECOMPENSA";
+- a ação NÍVEL ATUAL navega diretamente ao marcador atual.
 
 ### 27.2 Mobile
 
-Não reduzir o desktop por scale.
-
-Mobile deve transformar cada nível em unidade vertical:
+Mobile recompõe a mesma timeline em um viewport interno de scroll vertical; não é uma pilha de cards e não deve criar carrossel horizontal.
 
 ~~~text
-NÍVEL 38
+ELITE        EIXO        LIVRE
 
-LIVRE
-[reward / estado]
-
-ELITE
-[reward / estado]
+reward        01
+              |
+              02        reward
+              |
+reward        03
+              |
+              04        reward
 ~~~
 
-A composição deve continuar legível em viewport estreito.
+Regras:
+
+- Elite à esquerda;
+- eixo no centro;
+- Livre à direita;
+- o usuário percorre os níveis para cima/baixo;
+- o viewport da timeline usa overflow-y controlado e não cria overflow horizontal na página;
+- a ordem semântica dos dados permanece a mesma do desktop.
+
+### 27.3 Linguagem visual
+
+A separação visual deve preferir spacing, alinhamento, tipografia, opacidade e o próprio eixo.
+
+Bordas permanecem reservadas a foco visível, controles que precisam de affordance, confirmação de compra e reveal/modal.
+
+A rota /campaign MUST reutilizar a Pre-game Foundation como fundo/cena persistente. Não criar Canvas, mapa 3D ou background autoritativo paralelo. A transição Home -> Campaign deve iniciar no mesmo estado espacial usado pelo destino Campanha na Home.
 
 ## 28. Navegação de 100 níveis
 
