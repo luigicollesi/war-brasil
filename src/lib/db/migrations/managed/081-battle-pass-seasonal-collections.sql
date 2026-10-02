@@ -5,9 +5,13 @@
 --   Alvorada    -> Elite initial collection.
 --   Prima Lux   -> Elite final collection.
 --
--- This migration seeds catalog/store entities and commerce. It intentionally does
--- not create battle_pass_seasons/rewards: production has no season fixture yet,
--- and V1 activation also requires two explicit commander-title identities.
+-- This migration seeds catalog/store identities and pricing metadata for the
+-- three seasonal collections. Direct offers are deliberately born retired:
+-- acquisition is exclusive to battle_pass_rewards, while the permanent catalog
+-- identities remain reusable by the store after the season is archived.
+--
+-- It intentionally does not create battle_pass_seasons/rewards; those are
+-- activated by the dedicated Season 1 migration.
 --
 -- Canonical object-storage keys:
 --   cosmetics/dice/<slug>/{attack,defense,neutral}.webp
@@ -329,14 +333,14 @@ SELECT 'offer.single.' || item.id,
        item.description,
        'campaign-credit',
        500,
-       'available',
+       'retired',
        FALSE,
        item.offer_order,
        'product.single.' || item.id,
        'itemized',
        NULL,
        NULL,
-       TRUE,
+       FALSE,
        item.offer_order
   FROM items item
 ON CONFLICT (id) DO UPDATE
@@ -345,14 +349,14 @@ SET slug=EXCLUDED.slug,
     description=EXCLUDED.description,
     currency_code='campaign-credit',
     price=500,
-    status='available',
+    status='retired',
     is_featured=FALSE,
     sort_order=EXCLUDED.sort_order,
     product_id=EXCLUDED.product_id,
     pricing_model='itemized',
     starts_at=NULL,
     ends_at=NULL,
-    active=TRUE,
+    active=FALSE,
     priority=EXCLUDED.priority,
     updated_at=NOW();
 
@@ -439,16 +443,16 @@ INSERT INTO catalog.offers(
   product_id, pricing_model, starts_at, ends_at, active, priority
 )
 VALUES
-  ('offer.first-blood', 'first-blood', 'First Blood', 'Coleção First Blood com três dados e textura territorial.', 'campaign-credit', 1600, 'available', FALSE, 180, 'product.first-blood', 'itemized', NULL, NULL, TRUE, 180),
-  ('offer.alvorada', 'alvorada', 'Alvorada', 'Coleção Alvorada com três dados e textura territorial.', 'campaign-credit', 1600, 'available', FALSE, 190, 'product.alvorada', 'itemized', NULL, NULL, TRUE, 190),
-  ('offer.prima-lux', 'prima-lux', 'Prima Lux', 'Coleção Prima Lux com três dados e textura territorial.', 'campaign-credit', 1600, 'available', FALSE, 200, 'product.prima-lux', 'itemized', NULL, NULL, TRUE, 200)
+  ('offer.first-blood', 'first-blood', 'First Blood', 'Coleção First Blood com três dados e textura territorial.', 'campaign-credit', 1600, 'retired', FALSE, 180, 'product.first-blood', 'itemized', NULL, NULL, FALSE, 180),
+  ('offer.alvorada', 'alvorada', 'Alvorada', 'Coleção Alvorada com três dados e textura territorial.', 'campaign-credit', 1600, 'retired', FALSE, 190, 'product.alvorada', 'itemized', NULL, NULL, FALSE, 190),
+  ('offer.prima-lux', 'prima-lux', 'Prima Lux', 'Coleção Prima Lux com três dados e textura territorial.', 'campaign-credit', 1600, 'retired', FALSE, 200, 'product.prima-lux', 'itemized', NULL, NULL, FALSE, 200)
 ON CONFLICT (id) DO UPDATE
 SET slug=EXCLUDED.slug,
     name=EXCLUDED.name,
     description=EXCLUDED.description,
     currency_code='campaign-credit',
     price=1600,
-    status='available',
+    status='retired',
     is_featured=FALSE,
     sort_order=EXCLUDED.sort_order,
     product_id=EXCLUDED.product_id,
@@ -603,14 +607,14 @@ SELECT 'offer.single.' || background.id,
        background.description,
        'campaign-credit',
        300,
-       'available',
+       'retired',
        FALSE,
        background.offer_order,
        'product.single.' || background.id,
        'itemized',
        NULL,
        NULL,
-       TRUE,
+       FALSE,
        background.offer_order
   FROM backgrounds background
 ON CONFLICT (id) DO UPDATE
@@ -619,7 +623,7 @@ SET slug=EXCLUDED.slug,
     description=EXCLUDED.description,
     currency_code='campaign-credit',
     price=300,
-    status='available',
+    status='retired',
     is_featured=FALSE,
     sort_order=EXCLUDED.sort_order,
     product_id=EXCLUDED.product_id,
