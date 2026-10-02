@@ -119,10 +119,9 @@ export function BattlePassTimeline({
   return (
     <div className={styles.timeline}>
       <div className={styles.timelineToolbar}>
-        <div className={styles.trackLabels} aria-hidden="true">
-          <span>TRILHA DE ELITE</span>
-          <span>TRILHA LIVRE</span>
-        </div>
+        <span className={styles.desktopTrackLabel} aria-hidden="true">
+          TRILHA DE ELITE
+        </span>
         <button type="button" onClick={revealCurrentLevel}>
           NÍVEL ATUAL
         </button>
@@ -183,9 +182,14 @@ export function BattlePassTimeline({
         </div>
       </div>
 
-      <p className={styles.timelineHint}>
-        100 NÍVEIS · ARRASTE PARA EXPLORAR A CAMPANHA
-      </p>
+      <div className={styles.timelineFooter}>
+        <span className={styles.desktopTrackLabel} aria-hidden="true">
+          TRILHA LIVRE
+        </span>
+        <p className={styles.timelineHint}>
+          100 NÍVEIS · ARRASTE PARA EXPLORAR A CAMPANHA
+        </p>
+      </div>
     </div>
   );
 }
