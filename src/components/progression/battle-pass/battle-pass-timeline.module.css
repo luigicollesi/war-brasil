@@ -1,0 +1,304 @@
+.timeline {
+  min-width: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.timelineToolbar {
+  min-width: 0;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.trackLabels {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  color: rgb(208 170 87 / 64%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: .52rem;
+  font-weight: 900;
+  letter-spacing: .14em;
+}
+
+.trackLabels span:last-child {
+  text-align: right;
+}
+
+.timelineToolbar button {
+  min-height: 44px;
+  padding-inline: 14px;
+  border: 0;
+  background: rgb(208 170 87 / 8%);
+  color: rgb(238 232 218 / 68%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: .5rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  cursor: pointer;
+}
+
+.timelineToolbar button:hover,
+.timelineToolbar button:focus-visible,
+.viewport:focus-visible {
+  color: var(--campaign-brass, #d0aa57);
+  outline: 2px solid var(--campaign-brass, #d0aa57);
+  outline-offset: 3px;
+}
+
+.viewport {
+  min-width: 0;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-inline: contain;
+  scrollbar-width: thin;
+  scrollbar-color: rgb(208 170 87 / 38%) transparent;
+  scroll-behavior: smooth;
+}
+
+.rail {
+  position: relative;
+  width: max-content;
+  min-width: 100%;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(148px, 164px);
+  align-items: stretch;
+  padding: 8px max(4vw, 30px) 12px;
+}
+
+.levelNode {
+  min-width: 0;
+  display: grid;
+  grid-template-rows: minmax(142px, auto) 58px minmax(142px, auto);
+  align-items: stretch;
+  background: transparent;
+}
+
+.premiumZone,
+.freeZone {
+  min-width: 0;
+  display: grid;
+  align-content: end;
+  place-items: center;
+  padding: 6px 5px;
+}
+
+.freeZone {
+  align-content: start;
+}
+
+.axisCell {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+}
+
+.axisCell::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  right: 0;
+  left: 0;
+  height: 1px;
+  background: rgb(208 170 87 / 25%);
+  transform: translateY(-50%);
+}
+
+.axisMarker {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  gap: 2px;
+  min-width: 34px;
+  min-height: 34px;
+  padding: 4px;
+  border-radius: 50%;
+  background: rgb(7 18 13 / 88%);
+  box-shadow: 0 0 0 1px rgb(208 170 87 / 32%);
+  color: rgb(238 232 218 / 58%);
+  font-family: var(--font-geist-mono), monospace;
+}
+
+.axisMarker strong {
+  font-size: .62rem;
+  line-height: 1;
+}
+
+.axisMarker small {
+  display: none;
+}
+
+.levelNode[data-current="true"] .axisMarker {
+  min-width: 46px;
+  min-height: 46px;
+  background: rgb(208 170 87 / 14%);
+  box-shadow:
+    0 0 0 1px rgb(208 170 87 / 70%),
+    0 0 24px rgb(208 170 87 / 26%);
+  color: var(--campaign-brass, #d0aa57);
+}
+
+.levelNode[data-current="true"] .axisMarker strong {
+  font-size: .78rem;
+}
+
+.levelNode[data-current="true"] .axisMarker small {
+  display: block;
+  font-size: .34rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+}
+
+.mobileTrackLabels {
+  display: none;
+}
+
+.timelineHint {
+  margin: 0;
+  color: rgb(238 232 218 / 30%);
+  font-family: var(--font-geist-mono), monospace;
+  font-size: .46rem;
+  letter-spacing: .09em;
+  text-align: right;
+}
+
+@media (max-width: 760px) {
+  .timelineToolbar {
+    align-items: center;
+  }
+
+  .trackLabels {
+    display: none;
+  }
+
+  .timelineToolbar::before {
+    content: "PROGRESSÃO VERTICAL";
+    color: rgb(208 170 87 / 58%);
+    font-family: var(--font-geist-mono), monospace;
+    font-size: .48rem;
+    font-weight: 900;
+    letter-spacing: .12em;
+  }
+
+  .viewport {
+    position: relative;
+    max-height: min(68dvh, 720px);
+    min-height: 420px;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior-block: contain;
+    scroll-behavior: smooth;
+  }
+
+  .mobileTrackLabels {
+    position: sticky;
+    z-index: 5;
+    top: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 54px minmax(0, 1fr);
+    padding: 7px 0;
+    background: linear-gradient(180deg, rgb(7 10 8 / 96%), rgb(7 10 8 / 78%) 70%, transparent);
+    color: rgb(208 170 87 / 66%);
+    font-family: var(--font-geist-mono), monospace;
+    font-size: .45rem;
+    font-weight: 900;
+    letter-spacing: .11em;
+    pointer-events: none;
+  }
+
+  .mobileTrackLabels span:first-child {
+    grid-column: 1;
+    text-align: center;
+  }
+
+  .mobileTrackLabels span:last-child {
+    grid-column: 3;
+    text-align: center;
+  }
+
+  .rail {
+    width: 100%;
+    min-width: 0;
+    display: grid;
+    grid-auto-flow: row;
+    grid-auto-columns: unset;
+    grid-template-columns: 1fr;
+    padding: 10px 0 34px;
+  }
+
+  .levelNode {
+    min-height: 168px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 54px minmax(0, 1fr);
+    grid-template-rows: 1fr;
+    align-items: stretch;
+  }
+
+  .premiumZone,
+  .freeZone {
+    align-content: center;
+    padding: 7px 5px;
+  }
+
+  .premiumZone {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .axisCell {
+    grid-column: 2;
+    grid-row: 1;
+    min-height: 168px;
+  }
+
+  .freeZone {
+    grid-column: 3;
+    grid-row: 1;
+  }
+
+  .axisCell::before {
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 1px;
+    height: auto;
+    background: rgb(208 170 87 / 25%);
+    transform: translateX(-50%);
+  }
+
+  .axisMarker {
+    min-width: 32px;
+    min-height: 32px;
+  }
+
+  .levelNode[data-current="true"] .axisMarker {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .timelineHint {
+    text-align: left;
+  }
+}
+
+@media (max-width: 390px) {
+  .levelNode {
+    grid-template-columns: minmax(0, 1fr) 48px minmax(0, 1fr);
+  }
+
+  .mobileTrackLabels {
+    grid-template-columns: minmax(0, 1fr) 48px minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .viewport {
+    scroll-behavior: auto;
+  }
+}
