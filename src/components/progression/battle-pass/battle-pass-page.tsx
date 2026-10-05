@@ -434,15 +434,6 @@ export function BattlePassPage({
             </span>
           ) : (
             <>
-              <span>
-                Ative a trilha paga sem perder o progresso já conquistado.
-              </span>
-              {snapshot.premium.retroactiveClaimableCount > 0 ? (
-                <span className={styles.premiumRetroactive}>
-                  {INTEGER.format(snapshot.premium.retroactiveClaimableCount)}{" "}
-                  RECOMPENSAS JÁ DESBLOQUEADAS
-                </span>
-              ) : null}
               {!premiumConfirmationOpen ? (
                 <button
                   type="button"
@@ -457,7 +448,7 @@ export function BattlePassPage({
                     ? "ELITE INDISPONÍVEL"
                     : snapshot.walletBalance < snapshot.premium.price
                       ? "CRÉDITOS INSUFICIENTES"
-                      : "REVISAR ATIVAÇÃO · 3.000 CR"}
+                      : "ATIVAR"}
                 </button>
               ) : (
                 <div
