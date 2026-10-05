@@ -61,7 +61,7 @@
   grid-auto-flow: column;
   grid-auto-columns: minmax(148px, 164px);
   align-items: stretch;
-  padding: 8px var(--campaign-axis-gutter) 12px;
+  padding: 10px var(--campaign-axis-gutter);
 }
 
 .rail::before {
