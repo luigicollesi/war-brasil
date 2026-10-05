@@ -164,7 +164,8 @@ if (!databaseUrl) {
                     card_trade_xp,card_trade_cap_xp,
                     troop_lost_dice_xp,troop_lost_dice_cap_xp,
                     enemy_troop_defeated_xp,enemy_troop_defeated_cap_xp,
-                    territory_first_conquest_xp,territory_second_conquest_xp
+                    territory_first_conquest_xp,territory_second_conquest_xp,
+                    player_elimination_xp
                FROM catalog.battle_pass_xp_profiles
               WHERE id='bp-test-v1'`,
           )
@@ -181,6 +182,7 @@ if (!databaseUrl) {
           enemy_troop_defeated_cap_xp: 100,
           territory_first_conquest_xp: 25,
           territory_second_conquest_xp: 10,
+          player_elimination_xp: 100,
         });
 
         await expectPgError(
