@@ -40,6 +40,9 @@ test("perfil V1 acumulativo congela valores e caps definidos no SPEC", () => {
   const service = read(
     "src/lib/server/progression/battle-pass-match-xp-service.ts",
   );
+  const eliminationMigration = read(
+    "src/lib/db/migrations/managed/085-battle-pass-player-elimination-xp.sql",
+  );
 
   for (const fragment of [
     "troop_placed_xp INTEGER NOT NULL DEFAULT 1",
@@ -59,6 +62,10 @@ test("perfil V1 acumulativo congela valores e caps definidos no SPEC", () => {
   assert.match(service, /profile\.action_model_version/);
   assert.match(service, /troopPlacedXp/);
   assert.match(service, /territorySecondConquestXp/);
+  assert.match(
+    eliminationMigration,
+    /player_elimination_xp INTEGER NOT NULL DEFAULT 100/,
+  );
 });
 
 test("gameplay acumula XP nos pontos autoritativos e movimento continua sem XP", () => {
@@ -72,6 +79,7 @@ test("gameplay acumula XP nos pontos autoritativos e movimento continua sem XP",
 
   assert.match(battle, /recordBattlePassCombat/);
   assert.match(battle, /recordBattlePassTerritoryConquest/);
+  assert.match(battle, /recordBattlePassPlayerElimination/);
   assert.match(battle, /battle\.id/);
 
   assert.doesNotMatch(maneuver, /recordBattlePass/);
