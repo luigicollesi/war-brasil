@@ -14,7 +14,7 @@ test("Campanha ativa compra Elite exclusivamente pelo pipeline de purchase da Ec
 
   assert.match(page, /purchaseShowcaseOffer/);
   assert.match(page, /expectedPrice: snapshot\.premium\.price/);
-  assert.match(page, />\s*ATIVAR\s*</);
+  assert.match(page, /:\s*"ATIVAR"\}/);
   assert.match(page, /CONFIRMAR · 3\.000 CR/);
   assert.doesNotMatch(page, /Ative a trilha paga sem perder o progresso/);
   assert.match(snapshot, /entitlement_kind='battle_pass_access'/);
@@ -43,7 +43,7 @@ test("ativação Elite exige confirmação explícita com saldo, preço e retroa
   );
 
   assert.match(page, /premiumConfirmationOpen/);
-  assert.match(page, />\s*ATIVAR\s*</);
+  assert.match(page, /:\s*"ATIVAR"\}/);
   assert.match(page, /SALDO ATUAL/);
   assert.match(page, /PREÇO/);
   assert.match(page, /APÓS A COMPRA/);
