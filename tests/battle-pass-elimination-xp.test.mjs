@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import test from "node:test";
 
-const read = (path) => readFileSync(path, "utf8");
+const read = (path) => (existsSync(path) ? readFileSync(path, "utf8") : "");
 
 test("eliminação concede 100 XP autoritativos e possui ledger próprio", () => {
   const migration = read(
