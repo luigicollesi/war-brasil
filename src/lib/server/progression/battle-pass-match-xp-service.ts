@@ -27,6 +27,7 @@ type ActiveSeasonRow = {
   enemy_troop_defeated_cap_xp: number;
   territory_first_conquest_xp: number;
   territory_second_conquest_xp: number;
+  player_elimination_xp: number;
   completion_xp: number;
   victory_bonus_xp: number;
   solo_human_bot_multiplier_bps: number;
@@ -141,6 +142,7 @@ export async function resolveBattlePassMatchSnapshot(
               profile.enemy_troop_defeated_cap_xp,
               profile.territory_first_conquest_xp,
               profile.territory_second_conquest_xp,
+              profile.player_elimination_xp,
               profile.completion_xp,
               profile.victory_bonus_xp,
               profile.solo_human_bot_multiplier_bps
@@ -172,6 +174,7 @@ export async function resolveBattlePassMatchSnapshot(
       enemyTroopDefeatedCapXp: Number(row.enemy_troop_defeated_cap_xp),
       territoryFirstConquestXp: Number(row.territory_first_conquest_xp),
       territorySecondConquestXp: Number(row.territory_second_conquest_xp),
+      playerEliminationXp: Number(row.player_elimination_xp),
       completionXp: Number(row.completion_xp),
       victoryBonusXp: Number(row.victory_bonus_xp),
       soloHumanBotMultiplierBps: Number(row.solo_human_bot_multiplier_bps),
