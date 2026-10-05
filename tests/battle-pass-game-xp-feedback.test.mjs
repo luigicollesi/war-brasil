@@ -78,10 +78,10 @@ test("feedback de XP usa uma fila única, dedupe e reduced motion", () => {
 
   assert.match(hook, /seenRef\.current\.has\(event\.id\)/);
   assert.match(hook, /queueRef\.current\.push\(event\)/);
-  assert.match(hook, /micro: 650/);
-  assert.match(hook, /standard: 850/);
-  assert.match(hook, /major: 1_100/);
-  assert.match(hook, /terminal: 1_500/);
+  assert.match(hook, /micro: 1_800/);
+  assert.match(hook, /standard: 2_600/);
+  assert.match(hook, /major: 3_600/);
+  assert.match(hook, /terminal: 4_800/);
   const cinematicCss = read(
     "src/components/dice-3d/battle-dice-cinematic.module.css",
   );
@@ -169,7 +169,7 @@ test("fila de XP preserva eventos positivos durante suspensão sem envolver moda
   );
   assert.match(
     game,
-    /suspended:\s*orderCinematicActive \|\| battleCinematicActive/,
+    /suspended:\s*orderCinematicActive \|\| battleCinematicPending/,
   );
   assert.doesNotMatch(
     game,
@@ -201,5 +201,33 @@ test("novo stage de cinematic suspende XP antes do callback do overlay e libera 
   assert.match(
     game,
     /suspended:\s*orderCinematicActive \|\| battleCinematicPending/,
+  );
+});
+
+
+test("feedback de XP permanece legível por segundos e reduced motion não encurta o conteúdo", () => {
+  const hook = read("src/hooks/use-game-xp-feedback.ts");
+  const css = read(
+    "src/components/progression/battle-pass/game-xp-feedback.module.css",
+  );
+
+  assert.match(hook, /micro: 1_800/);
+  assert.match(hook, /standard: 2_600/);
+  assert.match(hook, /major: 3_600/);
+  assert.match(hook, /terminal: 4_800/);
+  assert.doesNotMatch(hook, /REDUCED_MOTION_DURATION_MS/);
+
+  assert.match(css, /--xp-feedback-duration:\s*2600ms/);
+  assert.match(css, /data-intensity="micro"[\s\S]*--xp-feedback-duration:\s*1800ms/);
+  assert.match(css, /data-intensity="major"[\s\S]*--xp-feedback-duration:\s*3600ms/);
+  assert.match(css, /data-intensity="terminal"[\s\S]*--xp-feedback-duration:\s*4800ms/);
+  assert.match(css, /animation-duration:\s*var\(--xp-feedback-duration\)/);
+  assert.match(
+    css,
+    /@media \(prefers-reduced-motion: reduce\)[\s\S]*animation-name:\s*xp-feedback-reduced/,
+  );
+  assert.doesNotMatch(
+    css,
+    /@media \(prefers-reduced-motion: reduce\)[\s\S]*animation:[^;]*800ms/,
   );
 });
