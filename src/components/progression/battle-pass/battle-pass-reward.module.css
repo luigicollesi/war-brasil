@@ -21,7 +21,7 @@
 
 .rewardItem[data-state="locked"],
 .rewardItem[data-state="premium_locked"] {
-  opacity: .38;
+  opacity: .62;
 }
 
 .rewardItem[data-state="claiming"] {
