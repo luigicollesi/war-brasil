@@ -1684,14 +1684,14 @@ A hierarquia de jogo V1 passa a reservar:
 80    backdrop de modal
 81    modal
 90    toast
-110   feedback de XP
+2147483647   feedback de XP
 120   cinematic de dados 3D
 ~~~
 
 Adicionar token equivalente a:
 
 ~~~css
---z-game-xp-feedback: 110;
+--z-game-xp-feedback: 2147483647;
 --z-game-cinematic: 120;
 ~~~
 
@@ -1701,7 +1701,7 @@ O root MUST ser renderizado em portal para `document.body` e fixo sobre a viewpo
 portal: document.body
 position: fixed
 inset: 0
-z-index: 110
+z-index: 2147483647
 pointer-events: none
 overflow: hidden
 ~~~
@@ -2401,7 +2401,7 @@ MUST cobrir os fluxos críticos:
 
 ### partida
 
-- feedback em portal global z-index 110;
+- feedback em portal global topmost z-index 2147483647;
 - modal < XP < cinematic;
 - queue de eventos;
 - agregação por comando;
