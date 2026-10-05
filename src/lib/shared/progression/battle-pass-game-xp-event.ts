@@ -4,6 +4,7 @@ export type BattlePassGameXpEventKind =
   | "combat"
   | "territory_conquered"
   | "territory_reconquered"
+  | "player_eliminated"
   | "match_completed"
   | "match_won"
   | "match_settled";
@@ -32,6 +33,7 @@ const KINDS = new Set<BattlePassGameXpEventKind>([
   "combat",
   "territory_conquered",
   "territory_reconquered",
+  "player_eliminated",
   "match_completed",
   "match_won",
   "match_settled",
