@@ -6,7 +6,7 @@
 .root {
   position: fixed;
   inset: 0;
-  z-index: var(--z-game-cinematic, 120);
+  z-index: 2147483647 !important;
   isolation: isolate;
   overflow: hidden;
   touch-action: none;
