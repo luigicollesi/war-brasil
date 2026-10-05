@@ -33,7 +33,6 @@ export function useGameXpFeedback(
   const seenRef = useRef(new Set<string>());
   const seenOrderRef = useRef<string[]>([]);
   const suspendedRef = useRef(options.suspended);
-  const reducedMotionRef = useRef(false);
   const timeoutRef = useRef<number | null>(null);
   const presentNextRef = useRef<() => void>(() => {});
 
@@ -75,16 +74,6 @@ export function useGameXpFeedback(
       return () => window.cancelAnimationFrame(frame);
     }
   }, [options.suspended]);
-
-  useEffect(() => {
-    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const sync = () => {
-      reducedMotionRef.current = media.matches;
-    };
-    sync();
-    media.addEventListener("change", sync);
-    return () => media.removeEventListener("change", sync);
-  }, []);
 
   useEffect(() => {
     return subscribeBattlePassXpEvents(roomId, (event) => {
