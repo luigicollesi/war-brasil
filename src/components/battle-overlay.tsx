@@ -96,6 +96,7 @@ export function BattleOverlay({
   territories,
   meId,
   onRefresh,
+  onCinematicStateChange,
 }: {
   roomId: string;
   battle: NonNullable<GameSnapshot["room"]["battle"]>;
@@ -103,6 +104,7 @@ export function BattleOverlay({
   territories: GameSnapshot["territories"];
   meId: string | undefined;
   onRefresh: (minimumRevision?: number) => Promise<void>;
+  onCinematicStateChange?: (active: boolean) => void;
 }) {
   const [error, setError] = useState("");
   const [rollingSide, setRollingSide] = useState<RollingSide | null>(null);
@@ -200,6 +202,13 @@ export function BattleOverlay({
       boardObject?.removeEventListener("load", syncTerritoryNames);
     };
   }, [battle.attackerTerritoryId, battle.defenderTerritoryId]);
+
+  useEffect(() => {
+    onCinematicStateChange?.(cinematicActive);
+    return () => {
+      onCinematicStateChange?.(false);
+    };
+  }, [cinematicActive, onCinematicStateChange]);
 
   useEffect(() => {
     if (!cinematicActive) return;
