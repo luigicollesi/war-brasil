@@ -21,7 +21,10 @@ import {
   isOrderRollPresentationDue,
 } from "@/src/lib/game-transitions";
 import { RoomError } from "@/src/lib/rooms";
-import type { BattlePassActionXpResult } from "@/src/lib/server/progression/battle-pass-match-action-xp-service";
+import {
+  composeBattlePassActionXpEvents,
+  type BattlePassActionXpResult,
+} from "@/src/lib/server/progression/battle-pass-match-action-xp-service";
 import { beginPlayerTurnPhase } from "./game-turn-service";
 
 type PresentationRoom = BattleRoomState & {
@@ -228,15 +231,15 @@ export async function advanceGamePresentationCommand(
         nowMs,
         xpResults,
       );
+      const composedEvents = composeBattlePassActionXpEvents(xpResults);
       const grouped = new Map<
         string,
         NonNullable<BattlePassActionXpResult["event"]>[]
       >();
-      for (const result of xpResults) {
-        if (!result.event) continue;
-        const events = grouped.get(result.playerId) ?? [];
-        events.push(result.event);
-        grouped.set(result.playerId, events);
+      for (const { playerId, event } of composedEvents) {
+        const events = grouped.get(playerId) ?? [];
+        events.push(event);
+        grouped.set(playerId, events);
       }
 
       return {
