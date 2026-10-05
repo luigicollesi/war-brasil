@@ -71,14 +71,36 @@ test("nível atual usa navegação direta sem estado de scroll em React", () => 
   assert.doesNotMatch(timeline, /addEventListener\(["']scroll/);
 });
 
-test("recompensas não usam cards nem bordas estruturais permanentes", () => {
+test("recompensas bloqueadas continuam legíveis sem perder hierarquia", () => {
   assert.doesNotMatch(page, /RewardCard|RewardGroupCard/);
   assert.match(reward, /BattlePassReward/);
   assert.match(reward, /BattlePassRewardGroup/);
   assert.match(rewardCss, /\.rewardItem\s*\{[\s\S]*background:\s*transparent/);
+  assert.match(
+    rewardCss,
+    /\.rewardItem\[data-state="locked"\],[\s\S]*?\.rewardItem\[data-state="premium_locked"\]\s*\{\s*opacity:\s*\.62;/,
+  );
   assert.doesNotMatch(rewardCss, /\.rewardItem\s*\{[\s\S]*?border:\s*1px/);
   assert.match(pageCss, /\.premiumConfirmation\s*\{[\s\S]*border:\s*1px/);
   assert.match(pageCss, /\.rewardRevealCard\s*\{[\s\S]*border:\s*1px/);
+});
+
+test("desktop desenha um único eixo contínuo independente da altura das recompensas", () => {
+  const mobileStart = timelineCss.indexOf("@media (max-width: 760px)");
+  const desktop = timelineCss.slice(0, mobileStart);
+
+  assert.match(desktop, /\.rail::before\s*\{/);
+  assert.match(desktop, /top:\s*50%/);
+  assert.match(desktop, /\.levelNode\s*\{[\s\S]*height:\s*480px/);
+  assert.match(
+    desktop,
+    /grid-template-rows:\s*minmax\(0, 1fr\) minmax\(0, 1fr\)/,
+  );
+  assert.match(
+    desktop,
+    /\.axisCell\s*\{[\s\S]*position:\s*absolute[\s\S]*top:\s*50%/,
+  );
+  assert.doesNotMatch(desktop, /\.axisCell::before/);
 });
 
 test("Campanha usa fundo Foundation e preserva reduced motion", () => {
