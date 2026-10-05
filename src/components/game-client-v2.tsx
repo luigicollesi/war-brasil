@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BattleOverlay } from "@/src/components/battle-overlay";
 import { OrderDiceCinematic } from "@/src/components/dice-3d/order-dice-cinematic";
 import { GameDie } from "@/src/components/game-die";
@@ -168,7 +168,9 @@ function GameReadyClient({
   const [isLeavingGame, setIsLeavingGame] = useState(false);
   const [isVotingRematch, setIsVotingRematch] = useState(false);
   const [isReturningToLobby, setIsReturningToLobby] = useState(false);
-  const [battleCinematicActive, setBattleCinematicActive] = useState(false);
+  const [battleCinematicState, setBattleCinematicState] = useState<
+    Readonly<{ key: string; active: boolean }> | null
+  >(null);
   const [completedOrderPresentationId, setCompletedOrderPresentationId] =
     useState<string | null>(null);
   const [presentationClockMs, setPresentationClockMs] = useState(() => Date.now());
@@ -288,8 +290,29 @@ function GameReadyClient({
   const orderCinematicActive = Boolean(
     orderPresentationId && orderPresentationId !== completedOrderPresentationId,
   );
+  const battleCinematicKey =
+    snapshot.room.battle &&
+    (snapshot.room.battle.stage === "show_attacker_result" ||
+      snapshot.room.battle.stage === "show_defender_result")
+      ? `${snapshot.room.battle.stage}:${snapshot.room.battle.stageStartedAt}`
+      : null;
+  const battleCinematicPending = Boolean(
+    battleCinematicKey &&
+      (battleCinematicState?.key !== battleCinematicKey ||
+        battleCinematicState.active),
+  );
+  const handleBattleCinematicStateChange = useCallback(
+    (active: boolean) => {
+      if (!battleCinematicKey) {
+        setBattleCinematicState(null);
+        return;
+      }
+      setBattleCinematicState({ key: battleCinematicKey, active });
+    },
+    [battleCinematicKey],
+  );
   const xpFeedback = useGameXpFeedback(roomId, {
-    suspended: orderCinematicActive || battleCinematicActive,
+    suspended: orderCinematicActive || battleCinematicPending,
   });
   const battleArrow = snapshot.room.battle
     ? {
@@ -497,7 +520,7 @@ function GameReadyClient({
           territories={snapshot.territories}
           meId={me?.id}
           onRefresh={refresh}
-          onCinematicStateChange={setBattleCinematicActive}
+          onCinematicStateChange={handleBattleCinematicStateChange}
         />
       ) : null}
 
