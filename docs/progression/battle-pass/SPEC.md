@@ -341,7 +341,6 @@ feedback:
 JOGADOR ELIMINADO
 +131 XP
 ~~~
-~~~
 
 Assim a soma dos deltas apresentados ao jogador coincide exatamente com o valor liquidado.
 
