@@ -168,6 +168,7 @@ function GameReadyClient({
   const [isLeavingGame, setIsLeavingGame] = useState(false);
   const [isVotingRematch, setIsVotingRematch] = useState(false);
   const [isReturningToLobby, setIsReturningToLobby] = useState(false);
+  const [battleCinematicActive, setBattleCinematicActive] = useState(false);
   const [completedOrderPresentationId, setCompletedOrderPresentationId] =
     useState<string | null>(null);
   const [presentationClockMs, setPresentationClockMs] = useState(() => Date.now());
@@ -287,11 +288,8 @@ function GameReadyClient({
   const orderCinematicActive = Boolean(
     orderPresentationId && orderPresentationId !== completedOrderPresentationId,
   );
-  const battleDiceCinematicPending =
-    snapshot.room.battle?.stage === "show_attacker_result" ||
-    snapshot.room.battle?.stage === "show_defender_result";
   const xpFeedback = useGameXpFeedback(roomId, {
-    suspended: orderCinematicActive || battleDiceCinematicPending,
+    suspended: orderCinematicActive || battleCinematicActive,
   });
   const battleArrow = snapshot.room.battle
     ? {
@@ -499,6 +497,7 @@ function GameReadyClient({
           territories={snapshot.territories}
           meId={me?.id}
           onRefresh={refresh}
+          onCinematicStateChange={setBattleCinematicActive}
         />
       ) : null}
 
