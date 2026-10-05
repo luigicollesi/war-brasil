@@ -31,6 +31,7 @@ export type BattlePassXpProfile = Readonly<{
   enemyTroopDefeatedCapXp: number;
   territoryFirstConquestXp: number;
   territorySecondConquestXp: number;
+  playerEliminationXp: number;
   completionXp: number;
   victoryBonusXp: number;
   soloHumanBotMultiplierBps: number;
