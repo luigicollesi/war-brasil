@@ -1754,7 +1754,7 @@ Mobile deve respeitar HUD, safe area e player rail sem causar overflow.
 
 A V1 usa quatro intensidades visuais, não uma animação diferente por action_kind.
 
-#### micro — 650 ms
+#### micro — 1.800 ms
 
 Para:
 
@@ -1768,7 +1768,7 @@ REFORÇOS POSICIONADOS
 +8 XP
 ~~~
 
-#### standard — 850 ms
+#### standard — 2.600 ms
 
 Para:
 
@@ -1783,12 +1783,14 @@ CONFRONTO
 2 tropas derrotadas · 1 perdida
 ~~~
 
-#### major — 1.000–1.100 ms
+#### major — 3.600 ms
 
 Para:
 
 - primeira conquista;
-- reconquista válida.
+- reconquista válida;
+- eliminação de jogador;
+- feedback agregado de combate + conquista + eliminação.
 
 Exemplos:
 
@@ -1802,7 +1804,7 @@ RECONQUISTA
 +10 XP
 ~~~
 
-#### terminal — 1.300–1.500 ms
+#### terminal — 4.800 ms
 
 Para:
 
@@ -1830,6 +1832,10 @@ Animações MUST preferir:
 - pseudo-elementos estáticos com opacity/transform.
 
 Evitar animação contínua de propriedades que provoquem layout/reflow.
+
+A maior parte da duração MUST permanecer em opacity 1 para leitura real do label, valor e detalhe. Fade-in/fade-out não devem consumir a maior parte do tempo de exposição.
+
+`prefers-reduced-motion` MUST remover/reduzir deslocamentos e escalas, mas MUST NOT encurtar o tempo de leitura do conteúdo.
 
 Direção visual:
 
