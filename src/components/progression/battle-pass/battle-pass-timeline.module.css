@@ -53,6 +53,7 @@
 }
 
 .rail {
+  --campaign-axis-gutter: max(4vw, 30px);
   position: relative;
   width: max-content;
   min-width: 100%;
@@ -60,13 +61,28 @@
   grid-auto-flow: column;
   grid-auto-columns: minmax(148px, 164px);
   align-items: stretch;
-  padding: 8px max(4vw, 30px) 12px;
+  padding: 8px var(--campaign-axis-gutter) 12px;
+}
+
+.rail::before {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: 50%;
+  right: var(--campaign-axis-gutter);
+  left: var(--campaign-axis-gutter);
+  height: 1px;
+  background: rgb(208 170 87 / 25%);
+  transform: translateY(-50%);
+  pointer-events: none;
 }
 
 .levelNode {
+  position: relative;
   min-width: 0;
+  height: 480px;
   display: grid;
-  grid-template-rows: minmax(142px, auto) 58px minmax(142px, auto);
+  grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
   align-items: stretch;
   background: transparent;
 }
@@ -75,30 +91,32 @@
 .freeZone {
   min-width: 0;
   display: grid;
-  align-content: end;
   place-items: center;
-  padding: 6px 5px;
+  padding: 8px 5px;
+}
+
+.premiumZone {
+  grid-row: 1;
+  align-content: end;
+  padding-bottom: 36px;
 }
 
 .freeZone {
+  grid-row: 2;
   align-content: start;
+  padding-top: 36px;
 }
 
 .axisCell {
-  position: relative;
-  display: grid;
-  place-items: center;
-  min-width: 0;
-}
-
-.axisCell::before {
-  content: "";
   position: absolute;
+  z-index: 2;
   top: 50%;
   right: 0;
   left: 0;
-  height: 1px;
-  background: rgb(208 170 87 / 25%);
+  height: 58px;
+  display: grid;
+  place-items: center;
+  min-width: 0;
   transform: translateY(-50%);
 }
 
@@ -232,8 +250,14 @@
     padding: 10px 0 34px;
   }
 
+  .rail::before {
+    content: none;
+  }
+
   .levelNode {
+    position: relative;
     min-height: 168px;
+    height: auto;
     display: grid;
     grid-template-columns: minmax(0, 1fr) 54px minmax(0, 1fr);
     grid-template-rows: 1fr;
@@ -252,9 +276,15 @@
   }
 
   .axisCell {
+    position: relative;
+    top: auto;
+    right: auto;
+    left: auto;
     grid-column: 2;
     grid-row: 1;
     min-height: 168px;
+    height: auto;
+    transform: none;
   }
 
   .freeZone {
