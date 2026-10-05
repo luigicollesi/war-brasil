@@ -89,14 +89,14 @@ test("feedback de XP usa uma fila única, dedupe e reduced motion", () => {
   assert.match(component, /createPortal/);
   assert.match(component, /document\.body/);
   assert.match(layer, /--z-game-modal:\s*81/);
-  assert.match(layer, /--z-game-xp-feedback:\s*2147483647/);
-  assert.match(layer, /--z-game-cinematic:\s*120/);
+  assert.match(layer, /--z-game-xp-feedback:\s*2147483000/);
+  assert.match(layer, /--z-game-cinematic:\s*2147483647/);
   assert.match(css, /position:\s*fixed/);
-  assert.match(css, /z-index:\s*2147483647\s*!important/);
+  assert.match(css, /z-index:\s*2147483000\s*!important/);
   assert.match(css, /pointer-events:\s*none/);
   assert.match(css, /contain:\s*layout paint/);
   assert.match(css, /prefers-reduced-motion:\s*reduce/);
-  assert.match(cinematicCss, /z-index:\s*var\(--z-game-cinematic, 120\)/);
+  assert.match(cinematicCss, /z-index:\s*2147483647\s*!important/);
   assert.match(component, /aria-live="polite"/);
   assert.match(component, /aria-hidden="true"/);
 });
