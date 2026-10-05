@@ -145,7 +145,8 @@ async function insertAction(
       | "troops_placed"
       | "card_trade"
       | "combat"
-      | "territory_conquest";
+      | "territory_conquest"
+      | "player_elimination";
     units: number;
     rawXp: number;
     awardedXp: number;
@@ -624,4 +625,143 @@ export async function recordBattlePassTerritoryConquest(
       intensity: "major",
     }),
   );
+}
+
+
+export async function recordBattlePassPlayerElimination(
+  client: PoolClient,
+  input: Readonly<{
+    roomId: string;
+    playerId: string;
+    eliminatedPlayerId: string;
+    sourceKey: string | null | undefined;
+  }>,
+): Promise<BattlePassActionXpResult | null> {
+  if (!input.sourceKey) return null;
+  const sourceKey = `${input.sourceKey}:elimination`;
+  const context = await lockProgressForPlayer(
+    client,
+    input.roomId,
+    input.playerId,
+  );
+  if (!context) return null;
+  const { row, profile } = context;
+  if (await existingAction(client, row, sourceKey)) {
+    return duplicateResult(row, input.playerId);
+  }
+
+  const rawXp = profile.playerEliminationXp;
+  const nextRaw = Number(row.raw_action_xp) + rawXp;
+  const nextScaledXp = scaleBattlePassXp(nextRaw, row.multiplier_bps);
+  const xpAwarded = nextScaledXp - Number(row.scaled_action_xp);
+  const inserted = await insertAction(client, {
+    row,
+    sourceKey,
+    actionKind: "player_elimination",
+    units: 1,
+    rawXp,
+    awardedXp: xpAwarded,
+    metadata: { eliminatedPlayerId: input.eliminatedPlayerId },
+  });
+  if (!inserted) return duplicateResult(row, input.playerId);
+
+  await updateProgress(client, row, {
+    rawXp,
+    nextScaledXp,
+  });
+
+  return baseResult(
+    row,
+    input.playerId,
+    rawXp,
+    xpAwarded,
+    false,
+    presentationEvent({
+      row,
+      sourceKey,
+      kind: "player_eliminated",
+      xp: xpAwarded,
+      label: "JOGADOR ELIMINADO",
+      intensity: "major",
+    }),
+  );
+}
+
+function presentationSourceKey(sourceKey: string) {
+  for (const suffix of [":combat", ":territory", ":elimination"] as const) {
+    if (sourceKey.endsWith(suffix)) {
+      return sourceKey.slice(0, -suffix.length);
+    }
+  }
+  return sourceKey;
+}
+
+export function composeBattlePassActionXpEvents(
+  results: ReadonlyArray<BattlePassActionXpResult>,
+): Array<Readonly<{ playerId: string; event: BattlePassGameXpEvent }>> {
+  const groups = new Map<
+    string,
+    {
+      playerId: string;
+      sourceKey: string;
+      events: BattlePassGameXpEvent[];
+    }
+  >();
+
+  for (const result of results) {
+    if (!result.event) continue;
+    const sourceKey = presentationSourceKey(result.event.sourceKey);
+    const key = `${result.playerId}:${sourceKey}`;
+    const group = groups.get(key);
+    if (group) {
+      group.events.push(result.event);
+    } else {
+      groups.set(key, {
+        playerId: result.playerId,
+        sourceKey,
+        events: [result.event],
+      });
+    }
+  }
+
+  return [...groups.values()].map((group) => {
+    const { events } = group;
+    if (events.length === 1) {
+      return { playerId: group.playerId, event: events[0]! };
+    }
+
+    const elimination = events.find(
+      (event) => event.kind === "player_eliminated",
+    );
+    const conquest = events.find(
+      (event) =>
+        event.kind === "territory_conquered" ||
+        event.kind === "territory_reconquered",
+    );
+    const combat = events.find((event) => event.kind === "combat");
+    const dominant = elimination ?? conquest ?? combat ?? events[events.length - 1]!;
+    const xp = events.reduce((total, event) => total + event.xp, 0);
+    const detail = [
+      combat?.detail ?? null,
+      conquest?.kind === "territory_conquered"
+        ? "Território dominado"
+        : conquest?.kind === "territory_reconquered"
+          ? "Reconquista"
+          : null,
+      elimination ? "Jogador eliminado" : null,
+    ]
+      .filter((value): value is string => Boolean(value))
+      .join(" · ");
+
+    return {
+      playerId: group.playerId,
+      event: {
+        ...dominant,
+        id: `${dominant.matchId}:${group.playerId}:${group.sourceKey}:feedback`,
+        sourceKey: `${group.sourceKey}:feedback`,
+        xp,
+        detail: detail || null,
+      },
+    };
+  });
 }
