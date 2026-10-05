@@ -41,7 +41,7 @@ test("desktop usa scroll horizontal com Elite acima e Livre abaixo", () => {
   assert.match(timelineCss, /grid-auto-flow:\s*column/);
   assert.match(
     timelineCss,
-    /grid-template-rows:\s*minmax\(142px, auto\) 58px minmax\(142px, auto\)/,
+    /grid-template-rows:\s*minmax\(0, 1fr\) minmax\(0, 1fr\)/,
   );
 });
 
