@@ -148,3 +148,36 @@ test("XP de combate suspende pela atividade real do cinematic e não pelo stage 
     /onCinematicStateChange\?\.\(false\)/,
   );
 });
+
+
+test("fila de XP preserva eventos positivos durante suspensão sem envolver modais", () => {
+  const hook = read("src/hooks/use-game-xp-feedback.ts");
+  const game = read("src/components/game-client-v2.tsx");
+  const css = read(
+    "src/components/progression/battle-pass/game-xp-feedback.module.css",
+  );
+
+  assert.match(hook, /if \(event\.xp <= 0 \|\| seenRef\.current\.has\(event\.id\)\) return/);
+  assert.match(hook, /queueRef\.current\.push\(event\)/);
+  assert.match(
+    hook,
+    /activeRef\.current \|\|[\s\S]*suspendedRef\.current \|\|[\s\S]*queueRef\.current\.length === 0/,
+  );
+  assert.match(
+    hook,
+    /if \(!options\.suspended\)[\s\S]*presentNextRef\.current\(\)/,
+  );
+  assert.match(
+    game,
+    /suspended:\s*orderCinematicActive \|\| battleCinematicActive/,
+  );
+  assert.doesNotMatch(
+    game,
+    /suspended:[^\n]*(?:leaveConfirmOpen|anomaly\.isOpen|room\.status === "finished")/,
+  );
+  assert.match(css, /radial-gradient\(/);
+  assert.match(
+    css,
+    /@media \(max-width: 767px\)[\s\S]*top:\s*calc\(env\(safe-area-inset-top, 0px\) \+ 88px\)/,
+  );
+});
