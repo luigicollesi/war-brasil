@@ -73,7 +73,7 @@ A V1 MUST obedecer às seguintes decisões:
 29. trocas entre jogadores não concedem XP;
 30. o Passe V1 exige exatamente 40.000 XP acumulados para alcançar o nível 100;
 31. toda apresentação de XP em partida usa delta confirmado pelo servidor, nunca cálculo local;
-32. feedback visual de XP é não bloqueante, usa camada absoluta z-index 99 e respeita reduced motion.
+32. feedback visual de XP é não bloqueante, vive em portal global acima dos modais, abaixo dos cinematics e respeita reduced motion.
 
 ## 3. Nomenclatura
 
@@ -1684,27 +1684,29 @@ A hierarquia de jogo V1 passa a reservar:
 80    backdrop de modal
 81    modal
 90    toast
-99    feedback de XP
+110   feedback de XP
 120   cinematic de dados 3D
 ~~~
 
 Adicionar token equivalente a:
 
 ~~~css
---z-game-xp-feedback: 99;
+--z-game-xp-feedback: 110;
+--z-game-cinematic: 120;
 ~~~
 
-O root SHOULD ser absoluto sobre a game viewport:
+O root MUST ser renderizado em portal para `document.body` e fixo sobre a viewport:
 
 ~~~text
-position: absolute
+portal: document.body
+position: fixed
 inset: 0
-z-index: 99
+z-index: 110
 pointer-events: none
 overflow: hidden
 ~~~
 
-A cinematic 3D continua acima em 120.
+A hierarquia obrigatória é `modal < XP < cinematic`. Modais de jogo não suspendem a apresentação do XP. Cinematics fullscreen podem suspender a fila; o timer do feedback só começa quando o evento realmente entra em apresentação. A cinematic 3D continua acima em 120.
 
 ### 31.3 Posição
 
@@ -2399,7 +2401,8 @@ MUST cobrir os fluxos críticos:
 
 ### partida
 
-- feedback z-index 99;
+- feedback em portal global z-index 110;
+- modal < XP < cinematic;
 - queue de eventos;
 - agregação por comando;
 - cinematic suspende apresentação sem perder evento;
@@ -2621,8 +2624,8 @@ A feature está concluída quando:
 33. feedback de XP e animações de claim só iniciam após confirmação autoritativa correspondente;
 34. claim-all não reproduz dezenas de overlays;
 35. feedback de XP em partida usa somente delta confirmado pelo servidor;
-36. feedback de XP usa queue, não sobrepõe eventos e não bloqueia interação;
-37. cinematic de dados posterga feedback correspondente até poder ser visto;
+36. feedback de XP usa queue, não sobrepõe eventos, aparece acima dos modais e não bloqueia interação;
+37. cinematic de dados posterga feedback correspondente até poder ser visto; modais não suspendem a fila;
 38. reduced motion preserva a informação sem movimento desnecessário;
 39. /home e /campaign não possuem overflow horizontal acidental;
 40. navegação por teclado e foco são preservados;
