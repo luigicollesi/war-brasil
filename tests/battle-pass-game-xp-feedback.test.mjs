@@ -181,3 +181,25 @@ test("fila de XP preserva eventos positivos durante suspensão sem envolver moda
     /@media \(max-width: 767px\)[\s\S]*top:\s*calc\(env\(safe-area-inset-top, 0px\) \+ 88px\)/,
   );
 });
+
+
+test("novo stage de cinematic suspende XP antes do callback do overlay e libera pelo mesmo key", () => {
+  const game = read("src/components/game-client-v2.tsx");
+
+  assert.match(
+    game,
+    /const battleCinematicKey =[\s\S]*?stageStartedAt/,
+  );
+  assert.match(
+    game,
+    /battleCinematicState\?\.key !== battleCinematicKey \|\|[\s\S]*battleCinematicState\.active/,
+  );
+  assert.match(
+    game,
+    /setBattleCinematicState\(\{ key: battleCinematicKey, active \}\)/,
+  );
+  assert.match(
+    game,
+    /suspended:\s*orderCinematicActive \|\| battleCinematicPending/,
+  );
+});
