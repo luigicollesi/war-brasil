@@ -189,7 +189,12 @@
 
 .premiumPanel > button {
   justify-self: start;
-  padding-inline: 16px;
+  min-width: 180px;
+  min-height: 56px;
+  padding-inline: 24px;
+  background: rgb(208 170 87 / 16%);
+  font-size: .76rem;
+  letter-spacing: .14em;
 }
 
 .premiumPanel button:hover,
