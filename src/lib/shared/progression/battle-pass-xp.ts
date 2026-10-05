@@ -87,6 +87,13 @@ export function parseBattlePassXpProfile(value: unknown): BattlePassXpProfile {
       "territorySecondConquestXp",
       "second conquest XP",
     ),
+    playerEliminationXp:
+      row.playerEliminationXp === undefined
+        ? 0
+        : nonNegativeInteger(
+            row.playerEliminationXp,
+            "player elimination XP",
+          ),
     completionXp,
     victoryBonusXp,
     soloHumanBotMultiplierBps,
