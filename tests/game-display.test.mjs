@@ -112,6 +112,8 @@ test("cinematic de combate deriva resultado do stage e bloqueia toda interação
 
   assert.match(overlay, /battleCinematicSide\(battle\)/);
   assert.match(overlay, /cinematicPresentationId !== completedPresentationId/);
+  assert.match(overlay, /onCinematicStateChange\?\.\(cinematicActive\)/);
+  assert.match(overlay, /onCinematicStateChange\?\.\(false\)/);
   assert.doesNotMatch(overlay, /setCinematicPresentation/);
   assert.match(overlay, /setAttribute\("inert", ""\)/);
   assert.match(overlay, /removeAttribute\("inert"\)/);
