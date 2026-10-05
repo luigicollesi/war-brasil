@@ -5,13 +5,11 @@ import { subscribeBattlePassXpEvents } from "@/src/lib/client/game-realtime-ephe
 import type { BattlePassGameXpEvent } from "@/src/lib/shared/progression/battle-pass-game-xp-event";
 
 const NORMAL_DURATION_MS = {
-  micro: 650,
-  standard: 850,
-  major: 1_100,
-  terminal: 1_500,
+  micro: 1_800,
+  standard: 2_600,
+  major: 3_600,
+  terminal: 4_800,
 } as const;
-
-const REDUCED_MOTION_DURATION_MS = 800;
 
 function liveMessage(event: BattlePassGameXpEvent) {
   const amount =
@@ -54,9 +52,7 @@ export function useGameXpFeedback(
     setActiveEvent(next);
     setAnnouncement(liveMessage(next));
 
-    const duration = reducedMotionRef.current
-      ? REDUCED_MOTION_DURATION_MS
-      : NORMAL_DURATION_MS[next.intensity];
+    const duration = NORMAL_DURATION_MS[next.intensity];
 
     timeoutRef.current = window.setTimeout(() => {
       timeoutRef.current = null;
