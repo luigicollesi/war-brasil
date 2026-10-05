@@ -251,6 +251,7 @@ catalog.battle_pass_xp_profiles
 - enemy_troop_defeated_cap_xp
 - territory_first_conquest_xp
 - territory_second_conquest_xp
+- player_elimination_xp
 - completion_xp
 - victory_bonus_xp
 - solo_human_bot_multiplier_bps
@@ -272,6 +273,7 @@ Perfis já usados por partidas/histórico permanecem append-only. Alterações f
 | 1ª conquista de um território pelo jogador naquele match | +25 XP | por território |
 | 2ª conquista do mesmo território pelo mesmo jogador | +10 XP | por território |
 | 3ª+ conquista do mesmo território pelo mesmo jogador | 0 XP | — |
+| Eliminar um jogador ao tomar seu último território | +100 XP | por jogador eliminado |
 | Partida concluída normalmente | +150 XP | uma vez |
 | Vitória | +200 XP adicionais | uma vez |
 
@@ -279,6 +281,8 @@ Regras fechadas:
 
 - vitória nos dados vale mais que derrota nos dados;
 - dominar território possui peso maior que microações;
+- eliminar um jogador concede +100 XP brutos ao conquistador que remove seu último território;
+- terceiros que apenas cumpram um objetivo de eliminação por consequência não recebem esse bônus;
 - posicionar tropas possui peso baixo;
 - movimentar tropas/manobra concede 0 XP;
 - deslocamento após conquista concede 0 XP;
@@ -311,6 +315,32 @@ Conceitualmente:
 ~~~text
 scaled_total = floor(raw_eligible_total * multiplier_bps / 10000)
 event_delta  = scaled_total_after - scaled_total_before
+~~~
+
+### 7.3 Composição do feedback durante a partida
+
+A persistência de XP MUST continuar separada por fonte autoritativa para auditoria, caps e idempotência.
+
+A apresentação, porém, segue uma unidade de ação:
+
+- uma ação lógica do jogador MUST produzir um único feedback visual;
+- eventos de combate, conquista e eliminação originados do mesmo `battle:<id>` e do mesmo jogador MUST ser agregados antes da publicação;
+- o valor exibido é a soma dos deltas `xpAwarded` já escalados de cada componente;
+- prioridade de label: `JOGADOR ELIMINADO` > `TERRITÓRIO DOMINADO/RECONQUISTA` > `CONFRONTO`;
+- o detalhe SHOULD preservar o resultado dos dados e indicar conquista/eliminação quando aplicável;
+- componentes com delta autoritativo 0 não adicionam popup nem alteram o label dominante.
+
+Exemplo:
+
+~~~text
+combate: +6 XP
+1ª conquista: +25 XP
+eliminação: +100 XP
+
+feedback:
+JOGADOR ELIMINADO
++131 XP
+~~~
 ~~~
 
 Assim a soma dos deltas apresentados ao jogador coincide exatamente com o valor liquidado.
