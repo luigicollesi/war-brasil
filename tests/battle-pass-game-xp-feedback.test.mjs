@@ -116,3 +116,35 @@ test("conclusão e saída reutilizam settlement persistido para feedback termina
   assert.match(game, /XP DA PARTIDA SALVO|battlePassXpEvent/);
   assert.match(game, /leaveXpFeedbackDelay/);
 });
+
+
+test("XP de combate suspende pela atividade real do cinematic e não pelo stage do snapshot", () => {
+  const game = read("src/components/game-client-v2.tsx");
+  const overlay = read("src/components/battle-overlay.tsx");
+
+  assert.match(game, /const \[battleCinematicActive, setBattleCinematicActive\] = useState\(false\)/);
+  assert.match(
+    game,
+    /suspended:\s*orderCinematicActive \|\| battleCinematicActive/,
+  );
+  assert.match(
+    game,
+    /onCinematicStateChange=\{setBattleCinematicActive\}/,
+  );
+  assert.doesNotMatch(
+    game,
+    /battleDiceCinematicPending|snapshot\.room\.battle\?\.stage === "show_attacker_result"/,
+  );
+  assert.match(
+    overlay,
+    /onCinematicStateChange\?: \(active: boolean\) => void/,
+  );
+  assert.match(
+    overlay,
+    /onCinematicStateChange\?\.\(cinematicActive\)/,
+  );
+  assert.match(
+    overlay,
+    /onCinematicStateChange\?\.\(false\)/,
+  );
+});
