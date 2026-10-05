@@ -1,5 +1,6 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import type { BattlePassGameXpEvent } from "@/src/lib/shared/progression/battle-pass-game-xp-event";
 import styles from "./game-xp-feedback.module.css";
 
@@ -10,7 +11,9 @@ export function GameXpFeedback({
   event: BattlePassGameXpEvent | null;
   announcement: string;
 }) {
-  return (
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <div className={styles.root}>
       {event ? (
         <div className={styles.positioner} aria-hidden="true">
@@ -38,6 +41,7 @@ export function GameXpFeedback({
       >
         {announcement}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
