@@ -122,14 +122,14 @@ test("XP de combate suspende pela atividade real do cinematic e não pelo stage 
   const game = read("src/components/game-client-v2.tsx");
   const overlay = read("src/components/battle-overlay.tsx");
 
-  assert.match(game, /const \[battleCinematicActive, setBattleCinematicActive\] = useState\(false\)/);
+  assert.match(game, /const \[battleCinematicState, setBattleCinematicState\]/);
   assert.match(
     game,
-    /suspended:\s*orderCinematicActive \|\| battleCinematicActive/,
+    /suspended:\s*orderCinematicActive \|\| battleCinematicPending/,
   );
   assert.match(
     game,
-    /onCinematicStateChange=\{setBattleCinematicActive\}/,
+    /onCinematicStateChange=\{handleBattleCinematicStateChange\}/,
   );
   assert.doesNotMatch(
     game,
