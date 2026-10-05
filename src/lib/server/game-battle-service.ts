@@ -10,6 +10,7 @@ import {
 import { evaluateGameVictory } from "@/src/lib/server/game-victory-service";
 import {
   recordBattlePassCombat,
+  recordBattlePassPlayerElimination,
   recordBattlePassTerritoryConquest,
   type BattlePassActionXpResult,
 } from "@/src/lib/server/progression/battle-pass-match-action-xp-service";
@@ -288,6 +289,14 @@ async function applyBattleOutcome(
       battle.defenderPlayerId,
       battle.attackerPlayerId,
     );
+
+    const eliminationXp = await recordBattlePassPlayerElimination(client, {
+      roomId: room.id,
+      playerId: battle.attackerPlayerId,
+      eliminatedPlayerId: battle.defenderPlayerId,
+      sourceKey: battleXpSourceKey,
+    });
+    if (eliminationXp) xpResults?.push(eliminationXp);
 
     const conquerorWon = await evaluateGameVictory(
       client,
