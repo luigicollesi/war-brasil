@@ -78,6 +78,7 @@ test("uma resolução de batalha agrega combate, conquista e eliminação em um 
     "src/lib/server/progression/battle-pass-match-action-xp-service.ts",
   );
   const automation = read("src/lib/server/game-automation-service.ts");
+  const presentation = read("src/lib/server/game-presentation-service.ts");
 
   assert.match(action, /composeBattlePassActionXpEvents/);
   assert.match(action, /player_eliminated/);
@@ -91,8 +92,16 @@ test("uma resolução de batalha agrega combate, conquista e eliminação em um 
     automation,
     /composeBattlePassActionXpEvents\(xpResults\)/,
   );
+  assert.match(
+    presentation,
+    /composeBattlePassActionXpEvents\(xpResults\)/,
+  );
   assert.doesNotMatch(
     automation,
+    /for \(const result of xpResults\)[\s\S]*events\.push\(result\.event\)/,
+  );
+  assert.doesNotMatch(
+    presentation,
     /for \(const result of xpResults\)[\s\S]*events\.push\(result\.event\)/,
   );
 });
