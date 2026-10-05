@@ -82,11 +82,21 @@ test("feedback de XP usa uma fila única, dedupe e reduced motion", () => {
   assert.match(hook, /standard: 850/);
   assert.match(hook, /major: 1_100/);
   assert.match(hook, /terminal: 1_500/);
-  assert.match(layer, /--z-game-xp-feedback: 99/);
-  assert.match(css, /position: absolute/);
-  assert.match(css, /pointer-events: none/);
-  assert.match(css, /contain: layout paint/);
-  assert.match(css, /prefers-reduced-motion: reduce/);
+  const cinematicCss = read(
+    "src/components/dice-3d/battle-dice-cinematic.module.css",
+  );
+
+  assert.match(component, /createPortal/);
+  assert.match(component, /document\.body/);
+  assert.match(layer, /--z-game-modal:\s*81/);
+  assert.match(layer, /--z-game-xp-feedback:\s*110/);
+  assert.match(layer, /--z-game-cinematic:\s*120/);
+  assert.match(css, /position:\s*fixed/);
+  assert.match(css, /z-index:\s*var\(--z-game-xp-feedback, 110\)/);
+  assert.match(css, /pointer-events:\s*none/);
+  assert.match(css, /contain:\s*layout paint/);
+  assert.match(css, /prefers-reduced-motion:\s*reduce/);
+  assert.match(cinematicCss, /z-index:\s*var\(--z-game-cinematic, 120\)/);
   assert.match(component, /aria-live="polite"/);
   assert.match(component, /aria-hidden="true"/);
 });
