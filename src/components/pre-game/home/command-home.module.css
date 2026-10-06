@@ -367,11 +367,13 @@
 
 .destination {
   position: relative;
+  isolation: isolate;
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 13px;
   min-height: 80px;
+  overflow: hidden;
   padding: 10px 20px;
   color: var(--command-ivory, #eee8da);
   text-decoration: none;
@@ -381,6 +383,11 @@
     background 180ms ease,
     color 180ms ease,
     transform 180ms ease;
+}
+
+.destination > span {
+  position: relative;
+  z-index: 2;
 }
 
 .destination + .destination {
@@ -458,10 +465,113 @@
   transform: translate(2px, -2px);
 }
 
+.destination[data-destination="operations"]::after {
+  content: "";
+  position: absolute;
+  z-index: 0;
+  top: 50%;
+  left: 50%;
+  width: min(190px, 78%);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%) scale(.72);
+  border: 1px solid rgb(209 74 80 / 28%);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgb(181 49 55 / 35%) 0 34%, rgb(139 32 38 / 20%) 35% 56%, transparent 72%);
+  box-shadow:
+    0 0 28px rgb(181 49 55 / 16%),
+    inset 0 0 24px rgb(181 49 55 / 10%);
+  opacity: .62;
+  pointer-events: none;
+  transition:
+    opacity 340ms ease,
+    transform 380ms cubic-bezier(.2, .78, .2, 1),
+    box-shadow 340ms ease;
+}
+
 .destination[data-destination="operations"]:hover,
 .destination[data-destination="operations"]:focus-visible {
   color: #f0dfd2;
   background: rgb(139 32 38 / 12%);
+}
+
+
+.destination[data-destination="operations"]:hover::after,
+.destination[data-destination="operations"]:focus-visible::after {
+  transform: translate(-50%, -50%) scale(1.18);
+  box-shadow:
+    0 0 42px rgb(181 49 55 / 28%),
+    inset 0 0 30px rgb(181 49 55 / 16%);
+  opacity: 1;
+}
+
+.destination[data-destination="doctrine"]::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  top: -35%;
+  right: 9%;
+  bottom: -35%;
+  left: 9%;
+  transform: translateY(-125%);
+  background:
+    linear-gradient(
+      180deg,
+      transparent 0 38%,
+      rgb(208 170 87 / 5%) 44%,
+      rgb(208 170 87 / 28%) 49%,
+      rgb(238 232 218 / 10%) 50%,
+      rgb(208 170 87 / 8%) 56%,
+      transparent 64% 100%
+    );
+  opacity: 0;
+  pointer-events: none;
+}
+
+.destination[data-destination="doctrine"]:hover::before,
+.destination[data-destination="doctrine"]:focus-visible::before {
+  border-color: rgb(208 170 87 / 44%);
+  box-shadow:
+    inset 12px 0 0 -11px rgb(208 170 87 / 55%),
+    inset -12px 0 0 -11px rgb(208 170 87 / 55%);
+}
+
+.destination[data-destination="doctrine"]:hover::after,
+.destination[data-destination="doctrine"]:focus-visible::after {
+  animation: doctrineScan 620ms cubic-bezier(.2, .78, .2, 1) both;
+}
+
+.destination[data-destination="campaign"]::after {
+  content: "";
+  position: absolute;
+  z-index: 1;
+  top: -45%;
+  bottom: -45%;
+  left: -34%;
+  width: 34%;
+  transform: translateX(-220%) skewX(-18deg);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgb(208 170 87 / 6%) 20%,
+    rgb(238 232 218 / 18%) 50%,
+    rgb(208 170 87 / 7%) 80%,
+    transparent
+  );
+  opacity: 0;
+  pointer-events: none;
+}
+
+.destination[data-destination="campaign"]:hover,
+.destination[data-destination="campaign"]:focus-visible {
+  background:
+    radial-gradient(circle at 50% 120%, rgb(208 170 87 / 10%), transparent 58%),
+    rgb(208 170 87 / 4%);
+}
+
+.destination[data-destination="campaign"]:hover::after,
+.destination[data-destination="campaign"]:focus-visible::after {
+  animation: campaignSweep 660ms cubic-bezier(.2, .78, .2, 1) both;
 }
 
 .destination[data-destination="operations"]:hover::before,
@@ -534,6 +644,46 @@
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes doctrineScan {
+  0% {
+    opacity: 0;
+    transform: translateY(-125%);
+  }
+
+  18% {
+    opacity: .86;
+  }
+
+  82% {
+    opacity: .72;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateY(125%);
+  }
+}
+
+@keyframes campaignSweep {
+  0% {
+    opacity: 0;
+    transform: translateX(-220%) skewX(-18deg);
+  }
+
+  18% {
+    opacity: .78;
+  }
+
+  82% {
+    opacity: .64;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateX(520%) skewX(-18deg);
   }
 }
 
@@ -705,6 +855,9 @@
   .enterButton,
   .destination,
   .destinationArrow,
+  .destination[data-destination="operations"]::after,
+  .destination[data-destination="doctrine"]::after,
+  .destination[data-destination="campaign"]::after,
   .campaignMiniProgress i,
   .openCommand,
   .commandHomeRouteTransition,

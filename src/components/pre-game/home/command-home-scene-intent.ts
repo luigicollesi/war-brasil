@@ -19,7 +19,7 @@ const DESTINATION_INTENTS: Readonly<
 > = {
   operations: {
     focus: "brazil",
-    conflictLevel: 1,
+    conflictLevel: 2,
     territoryExplode: 0.08,
     orbitalAlignment: 1,
     entranceState: "settled",
