@@ -1,4 +1,5 @@
 import type {
+  CommandCameraPoseId,
   CommandSceneFocus,
   CommandSceneMode,
   NormalizedCommandSceneIntent,
@@ -80,6 +81,38 @@ const COMPACT_MODE_PRESETS: Readonly<Record<CommandSceneMode, SceneModePreset>> 
   },
 };
 
+const CAMERA_POSE_PRESETS: Readonly<Record<CommandCameraPoseId, SceneModePreset>> = {
+  operations: MODE_PRESETS.operations,
+  "doctrine-overview": {
+    camera: [0.62, 5.15, 11.8],
+    target: [0.72, -0.18, 0],
+    fov: 36,
+  },
+  profile: MODE_PRESETS.profile,
+  "campaign-overview": {
+    camera: [0.42, 3.45, 13.25],
+    target: [0.5, -0.52, -0.28],
+    fov: 38,
+  },
+};
+
+const COMPACT_CAMERA_POSE_PRESETS: Readonly<
+  Record<CommandCameraPoseId, SceneModePreset>
+> = {
+  operations: COMPACT_MODE_PRESETS.operations,
+  "doctrine-overview": {
+    camera: [1.05, 4.35, 16.2],
+    target: [1.05, 0.48, 0],
+    fov: 42,
+  },
+  profile: COMPACT_MODE_PRESETS.profile,
+  "campaign-overview": {
+    camera: [1.05, 3.55, 16.85],
+    target: [1.05, 0.25, -0.25],
+    fov: 43,
+  },
+};
+
 const FOCUS_TARGETS: Readonly<Record<CommandSceneFocus, Vector3Tuple | null>> = {
   earth: [-2.8, 0.75, 0.15],
   brazil: [0.75, -0.25, 0.15],
@@ -152,6 +185,13 @@ export function resolveCommandCameraPose(
   intent: NormalizedCommandSceneIntent,
   compact = false,
 ): CommandCameraPose {
+  if (intent.cameraPose) {
+    const cameraPosePresets = compact
+      ? COMPACT_CAMERA_POSE_PRESETS
+      : CAMERA_POSE_PRESETS;
+    return cameraPosePresets[intent.cameraPose];
+  }
+
   if (intent.mode === "entrance") {
     const entrancePresets = compact
       ? COMPACT_ENTRANCE_FOCUS_PRESETS

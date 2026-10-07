@@ -22,6 +22,7 @@ export {
   resolvePreGameSceneMode,
 } from "./pre-game-route-intent";
 export {
+  COMMAND_CAMERA_POSES,
   COMMAND_ENTRANCE_STATES,
   COMMAND_SCENE_FOCUSES,
   COMMAND_SCENE_MODES,
@@ -30,6 +31,7 @@ export {
   normalizeCommandSceneIntent,
 } from "./scene-contract";
 export type {
+  CommandCameraPoseId,
   CommandConflictLevel,
   CommandEntranceState,
   CommandOrbitalAlignment,

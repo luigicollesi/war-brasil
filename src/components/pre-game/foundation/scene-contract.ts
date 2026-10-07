@@ -19,7 +19,15 @@ export const COMMAND_SCENE_FOCUSES = [
 
 export const COMMAND_ENTRANCE_STATES = ["primed", "playing", "settled"] as const;
 
+export const COMMAND_CAMERA_POSES = [
+  "operations",
+  "doctrine-overview",
+  "profile",
+  "campaign-overview",
+] as const;
+
 export type CommandSceneFocus = (typeof COMMAND_SCENE_FOCUSES)[number];
+export type CommandCameraPoseId = (typeof COMMAND_CAMERA_POSES)[number];
 export type CommandEntranceState = (typeof COMMAND_ENTRANCE_STATES)[number];
 export type CommandConflictLevel = 0 | 1 | 2 | 3;
 export type CommandOrbitalAlignment = 0 | 1;
@@ -34,6 +42,7 @@ export type CommandSceneState =
 export type CommandSceneIntent = Readonly<{
   mode: CommandSceneMode;
   focus?: CommandSceneFocus;
+  cameraPose?: CommandCameraPoseId;
   conflictLevel?: CommandConflictLevel;
   territoryExplode?: number;
   orbitalAlignment?: CommandOrbitalAlignment;
@@ -43,6 +52,7 @@ export type CommandSceneIntent = Readonly<{
 export type NormalizedCommandSceneIntent = Readonly<{
   mode: CommandSceneMode;
   focus: CommandSceneFocus;
+  cameraPose: CommandCameraPoseId | null;
   conflictLevel: CommandConflictLevel;
   territoryExplode: number;
   orbitalAlignment: CommandOrbitalAlignment;
@@ -61,6 +71,7 @@ const DEFAULT_FOCUS_BY_MODE: Readonly<Record<CommandSceneMode, CommandSceneFocus
 export const DEFAULT_COMMAND_SCENE_INTENT: NormalizedCommandSceneIntent = {
   mode: "entrance",
   focus: "table",
+  cameraPose: null,
   conflictLevel: 0,
   territoryExplode: 0,
   orbitalAlignment: 0,
@@ -77,6 +88,7 @@ export function normalizeCommandSceneIntent(
   return {
     mode: intent.mode,
     focus: intent.focus ?? DEFAULT_FOCUS_BY_MODE[intent.mode],
+    cameraPose: intent.cameraPose ?? null,
     conflictLevel: intent.conflictLevel ?? 0,
     territoryExplode: explode,
     orbitalAlignment: intent.orbitalAlignment ?? 0,

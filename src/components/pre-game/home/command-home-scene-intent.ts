@@ -19,6 +19,7 @@ const DESTINATION_INTENTS: Readonly<
 > = {
   operations: {
     focus: "brazil",
+    cameraPose: "operations",
     conflictLevel: 2,
     territoryExplode: 0.08,
     orbitalAlignment: 1,
@@ -26,20 +27,23 @@ const DESTINATION_INTENTS: Readonly<
   },
   doctrine: {
     focus: "brazil",
+    cameraPose: "doctrine-overview",
     conflictLevel: 0,
-    territoryExplode: 0.12,
+    territoryExplode: 0.22,
     orbitalAlignment: 0,
     entranceState: "settled",
   },
   campaign: {
     focus: "table",
+    cameraPose: "campaign-overview",
     conflictLevel: 0,
-    territoryExplode: 0.06,
+    territoryExplode: 0.04,
     orbitalAlignment: 1,
     entranceState: "settled",
   },
   profile: {
     focus: "insignia",
+    cameraPose: "profile",
     conflictLevel: 0,
     territoryExplode: 0,
     orbitalAlignment: 1,

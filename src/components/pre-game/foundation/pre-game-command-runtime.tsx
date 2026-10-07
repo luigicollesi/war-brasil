@@ -17,6 +17,7 @@ import {
   resolvePreGameSceneIntent,
 } from "./pre-game-route-intent";
 import type {
+  CommandCameraPoseId,
   CommandConflictLevel,
   CommandEntranceState,
   CommandOrbitalAlignment,
@@ -27,6 +28,7 @@ import type {
 
 export type CommandSceneDirective = Readonly<{
   focus?: CommandSceneFocus;
+  cameraPose?: CommandCameraPoseId;
   conflictLevel?: CommandConflictLevel;
   territoryExplode?: number;
   orbitalAlignment?: CommandOrbitalAlignment;
@@ -175,12 +177,14 @@ export function useCommandSceneDirective(
   const stableDirective = useMemo<CommandSceneDirective>(
     () => ({
       focus: directive.focus,
+      cameraPose: directive.cameraPose,
       conflictLevel: directive.conflictLevel,
       territoryExplode: directive.territoryExplode,
       orbitalAlignment: directive.orbitalAlignment,
       entranceState: directive.entranceState,
     }),
     [
+      directive.cameraPose,
       directive.conflictLevel,
       directive.entranceState,
       directive.focus,
