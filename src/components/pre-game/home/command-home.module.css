@@ -879,3 +879,91 @@
     letter-spacing: .025em;
   }
 }
+
+
+@media (min-width: 1600px) {
+  .guideLauncher {
+    top: calc(clamp(98px, 6vw, 142px) + env(safe-area-inset-top));
+    right: max(var(--command-content-inline, 64px), env(safe-area-inset-right));
+    width: clamp(42px, 2.35vw, 58px);
+    height: clamp(42px, 2.35vw, 58px);
+    font-size: clamp(1rem, .85rem + .12vw, 1.24rem);
+  }
+
+  .identity {
+    top: clamp(168px, 11.5vh, 260px);
+    width: min(clamp(760px, 43vw, 1160px), calc(100% - 96px));
+  }
+
+  .kicker {
+    margin-bottom: clamp(8px, .7vw, 14px);
+    font-size: clamp(.56rem, .47rem + .08vw, .72rem);
+  }
+
+  .subtitle {
+    max-width: 760px;
+    margin-top: clamp(14px, .9vw, 20px);
+    font-size: clamp(.76rem, .66rem + .09vw, .96rem);
+  }
+
+  .identityTelemetry {
+    gap: clamp(18px, 1.3vw, 28px);
+    margin-top: clamp(15px, 1vw, 22px);
+    font-size: clamp(.48rem, .4rem + .07vw, .62rem);
+  }
+
+  .commandDock {
+    bottom: max(clamp(58px, 4.8vh, 104px), calc(env(safe-area-inset-bottom) + 34px));
+    width: min(var(--command-content-max, 1560px), calc(100% - 128px));
+  }
+
+  .enterButton {
+    width: min(680px, 46vw);
+    min-height: clamp(60px, 4.4vw, 82px);
+    gap: clamp(20px, 1.4vw, 30px);
+    padding-inline: clamp(18px, 1.3vw, 28px);
+    font-size: clamp(1.08rem, .9rem + .16vw, 1.36rem);
+  }
+
+  .authorizationMeta,
+  .commandStatus {
+    font-size: clamp(.5rem, .42rem + .07vw, .64rem);
+  }
+
+  .destination {
+    min-height: clamp(80px, 5.1vw, 116px);
+    gap: clamp(13px, .9vw, 20px);
+    padding: clamp(10px, .7vw, 16px) clamp(20px, 1.3vw, 32px);
+  }
+
+  .destinationIndex {
+    font-size: clamp(.56rem, .46rem + .08vw, .72rem);
+  }
+
+  .destinationCopy {
+    gap: clamp(3px, .28vw, 6px);
+  }
+
+  .destinationCopy strong {
+    font-size: clamp(1.04rem, .86rem + .15vw, 1.34rem);
+  }
+
+  .destinationCopy span {
+    font-size: clamp(.56rem, .46rem + .08vw, .72rem);
+  }
+
+  .destinationArrow {
+    font-size: clamp(.9rem, .76rem + .12vw, 1.14rem);
+  }
+
+  .campaignMiniProgress {
+    height: clamp(3px, .2vw, 5px);
+  }
+
+  .footer {
+    right: var(--command-content-inline, 64px);
+    bottom: clamp(14px, 1.1vw, 26px);
+    left: var(--command-content-inline, 64px);
+    font-size: clamp(.45rem, .37rem + .07vw, .59rem);
+  }
+}

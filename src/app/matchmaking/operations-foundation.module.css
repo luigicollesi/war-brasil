@@ -122,3 +122,36 @@
     transform: none;
   }
 }
+
+
+@media (min-width: 1600px) {
+  .foundationPage {
+    padding-top: var(--command-content-top, clamp(118px, 7vw, 156px));
+    padding-bottom: max(clamp(64px, 4.8vw, 108px), var(--command-content-bottom, 36px));
+  }
+
+  .backLink {
+    gap: clamp(9px, .6vw, 14px);
+    margin-bottom: clamp(26px, 1.8vw, 38px);
+    font-size: clamp(.62rem, .52rem + .08vw, .78rem);
+  }
+
+  .foundationIntro,
+  .foundationStation {
+    width: min(58vw, 1080px);
+    max-width: 1080px;
+  }
+
+  .foundationIntro {
+    gap: clamp(15px, 1vw, 22px);
+    margin-bottom: clamp(28px, 2vw, 42px);
+  }
+
+  .foundationIntro > p {
+    max-width: 820px;
+  }
+
+  .foundationCommandBay {
+    min-height: clamp(448px, 39vh, 620px);
+  }
+}

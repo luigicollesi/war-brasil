@@ -336,3 +336,64 @@
     scroll-behavior: auto;
   }
 }
+
+
+@media (min-width: 1600px) {
+  .timeline {
+    gap: clamp(10px, .8vw, 16px);
+  }
+
+  .desktopTrackLabel {
+    font-size: clamp(.52rem, .44rem + .07vw, .66rem);
+  }
+
+  .timelineToolbar button {
+    min-height: var(--command-control-height, 50px);
+    padding-inline: clamp(14px, .9vw, 20px);
+    font-size: clamp(.5rem, .42rem + .07vw, .64rem);
+  }
+
+  .rail {
+    --campaign-axis-gutter: max(4vw, 46px);
+    grid-auto-columns: minmax(clamp(164px, 7.1vw, 204px), clamp(184px, 7.8vw, 224px));
+    padding-block: clamp(10px, .7vw, 16px);
+  }
+
+  .levelNode {
+    height: clamp(480px, 43vh, 640px);
+  }
+
+  .premiumZone {
+    padding-bottom: clamp(36px, 2.4vw, 52px);
+  }
+
+  .freeZone {
+    padding-top: clamp(36px, 2.4vw, 52px);
+  }
+
+  .axisCell {
+    height: clamp(58px, 3.6vw, 76px);
+  }
+
+  .axisMarker {
+    min-width: clamp(34px, 2vw, 46px);
+    min-height: clamp(34px, 2vw, 46px);
+  }
+
+  .axisMarker strong {
+    font-size: clamp(.62rem, .52rem + .08vw, .78rem);
+  }
+
+  .levelNode[data-current="true"] .axisMarker {
+    min-width: clamp(46px, 2.6vw, 60px);
+    min-height: clamp(46px, 2.6vw, 60px);
+  }
+
+  .levelNode[data-current="true"] .axisMarker strong {
+    font-size: clamp(.78rem, .65rem + .1vw, .98rem);
+  }
+
+  .timelineHint {
+    font-size: clamp(.46rem, .38rem + .07vw, .6rem);
+  }
+}

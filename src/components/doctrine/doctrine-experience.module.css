@@ -1344,3 +1344,77 @@
 
   .chapterNav { scroll-snap-type: none; }
 }
+
+
+@media (min-width: 1600px) {
+  .page {
+    --doctrine-micro: clamp(9px, .38vw, 11px);
+    --doctrine-small: clamp(10px, .44vw, 13px);
+    --doctrine-body: clamp(15px, .68vw, 19px);
+    --doctrine-content-max: clamp(1240px, 72vw, 1760px);
+  }
+
+  .page::after {
+    width: clamp(42rem, 38vw, 62rem);
+    height: clamp(42rem, 38vw, 62rem);
+  }
+
+  .ambientGrid {
+    background-size: clamp(72px, 4vw, 104px) clamp(72px, 4vw, 104px);
+  }
+
+  .topbar {
+    min-height: clamp(76px, 4.5vw, 98px);
+    padding: clamp(14px, .9vw, 20px) var(--command-content-inline, clamp(48px, 3.4vw, 88px));
+  }
+
+  .brand > span b {
+    font-size: clamp(17px, .82vw, 22px);
+  }
+
+  .brand > span small,
+  .status,
+  .chapterCode,
+  .sectionLabel,
+  .indexFooter {
+    font-size: var(--doctrine-micro);
+  }
+
+  .status b {
+    font-size: clamp(12px, .55vw, 15px);
+  }
+
+  .content {
+    padding: clamp(52px, 4vw, 92px) clamp(68px, 4vw, 108px) clamp(42px, 2.8vw, 64px);
+  }
+
+  .chapterHeader {
+    max-width: min(1320px, var(--doctrine-content-max));
+  }
+
+  .chapterHeader h2 {
+    font-size: clamp(64px, 4.3vw, 92px);
+  }
+
+  .chapterHeader > p {
+    max-width: 78ch;
+    font-size: var(--doctrine-body);
+  }
+
+  .chapterGrid {
+    grid-template-columns: minmax(340px, .72fr) minmax(560px, 1.28fr);
+    gap: clamp(48px, 3.5vw, 82px);
+    max-width: var(--doctrine-content-max);
+    padding-block: clamp(54px, 4vw, 86px);
+  }
+
+  .briefing li,
+  .briefing p,
+  .demonstration p {
+    font-size: clamp(13px, .62vw, 17px);
+  }
+
+  .prevNext {
+    max-width: var(--doctrine-content-max);
+  }
+}

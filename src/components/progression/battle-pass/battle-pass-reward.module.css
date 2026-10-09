@@ -209,3 +209,51 @@
     transition: none !important;
   }
 }
+
+
+@media (min-width: 1600px) {
+  .rewardItem {
+    gap: clamp(7px, .5vw, 11px);
+    padding: clamp(8px, .55vw, 12px) clamp(6px, .45vw, 10px);
+  }
+
+  .rewardStatus,
+  .rewardStateText {
+    font-size: clamp(.46rem, .38rem + .07vw, .6rem);
+  }
+
+  .rewardVisual {
+    min-height: clamp(80px, 7vh, 124px);
+  }
+
+  .rewardImage {
+    max-height: clamp(106px, 8.5vh, 152px);
+  }
+
+  .rewardFallback,
+  .titleVisual {
+    min-height: clamp(72px, 6.2vh, 108px);
+  }
+
+  .territoryVisual {
+    max-height: clamp(104px, 8.3vh, 148px);
+  }
+
+  .creditVisual strong {
+    font-size: clamp(1.55rem, 1.25rem + .22vw, 2rem);
+  }
+
+  .rewardCopy strong {
+    font-size: clamp(.66rem, .55rem + .09vw, .84rem);
+  }
+
+  .rewardCopy small {
+    font-size: clamp(.44rem, .36rem + .07vw, .58rem);
+  }
+
+  .rewardItem button {
+    min-width: clamp(96px, 6vw, 128px);
+    min-height: var(--command-control-height, 50px);
+    font-size: clamp(.5rem, .42rem + .07vw, .64rem);
+  }
+}

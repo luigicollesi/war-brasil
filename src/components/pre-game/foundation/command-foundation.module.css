@@ -534,3 +534,78 @@
     white-space: nowrap;
   }
 }
+
+
+/* Large desktop / high-resolution scaling. Keeps 1080p as baseline while
+   preserving visual density on 1440p, ultrawide and 4K displays. */
+@media (min-width: 1600px) {
+  .shell {
+    --command-content-inline: clamp(64px, 4.2vw, 112px);
+    --command-content-top: clamp(96px, 5.4vw, 144px);
+    --command-content-bottom: clamp(36px, 2.8vw, 72px);
+    --command-content-max: clamp(1480px, 76vw, 1840px);
+    --command-ui-sm: clamp(.58rem, .49rem + .08vw, .76rem);
+    --command-ui-md: clamp(.82rem, .68rem + .12vw, 1.06rem);
+    --command-control-height: clamp(44px, 2.8vw, 64px);
+  }
+
+  .shellChrome {
+    top: clamp(48px, 3.2vw, 72px);
+    right: var(--command-content-inline);
+    left: var(--command-content-inline);
+  }
+
+  .brandLockup {
+    max-width: min(44vw, 520px);
+    gap: clamp(13px, .9vw, 20px);
+  }
+
+  .brandSeal {
+    width: clamp(43px, 2.25vw, 64px);
+    height: clamp(43px, 2.25vw, 64px);
+    font-size: clamp(.68rem, .58rem + .09vw, .88rem);
+  }
+
+  .brandLockup small {
+    font-size: clamp(.5rem, .42rem + .07vw, .65rem);
+  }
+
+  .brandLockup strong {
+    font-size: clamp(.9rem, .76rem + .12vw, 1.16rem);
+  }
+
+  .modeRail {
+    gap: 6px;
+    padding-right: clamp(12px, .8vw, 18px);
+  }
+
+  .modeRail span {
+    font-size: clamp(.48rem, .4rem + .07vw, .62rem);
+  }
+
+  .modeRail strong {
+    font-size: clamp(.72rem, .6rem + .1vw, .94rem);
+  }
+
+  .fallbackTable {
+    width: min(58vw, 1120px);
+  }
+
+  .fallbackGlobe {
+    width: min(19vw, 420px);
+  }
+
+  .commandLabel,
+  .commandStatus {
+    font-size: var(--command-ui-sm);
+  }
+
+  .panelEyebrow {
+    font-size: clamp(.52rem, .43rem + .08vw, .68rem);
+  }
+
+  .insigniaMedallion {
+    width: clamp(58px, 3vw, 78px);
+    height: clamp(58px, 3vw, 78px);
+  }
+}

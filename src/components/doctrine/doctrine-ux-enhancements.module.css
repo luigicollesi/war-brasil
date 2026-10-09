@@ -1263,3 +1263,74 @@
     opacity: 0.65;
   }
 }
+
+
+@media (min-width: 1600px) {
+  .shell {
+    --doctrine-index-width: clamp(360px, 19vw, 480px);
+  }
+
+  .indexTitleRow {
+    gap: clamp(12px, .8vw, 18px);
+    margin-top: clamp(16px, 1vw, 24px);
+  }
+
+  .indexTitleRow h1 {
+    font-size: clamp(50px, 2.7vw, 66px);
+  }
+
+  .backButton {
+    min-height: clamp(36px, 2.2vw, 48px);
+    padding-inline: clamp(11px, .75vw, 16px);
+    font-size: clamp(8px, .36vw, 10px);
+  }
+
+  .chapterNav a {
+    grid-template-columns: 30px minmax(0, 1fr) 22px;
+    gap: clamp(6px, .45vw, 10px);
+    min-height: clamp(34px, 2.2vw, 46px);
+    padding: clamp(5px, .35vw, 8px) clamp(7px, .48vw, 11px);
+  }
+
+  .chapterNav a b {
+    font-size: clamp(10px, .44vw, 13px);
+  }
+
+  .machineSceneRail {
+    gap: clamp(12px, .8vw, 18px);
+    padding: clamp(32px, 2vw, 46px);
+  }
+
+  .phaseCard {
+    min-height: clamp(250px, 17vw, 340px);
+    padding: clamp(24px, 1.6vw, 34px) clamp(20px, 1.4vw, 30px);
+  }
+
+  .phaseCard strong {
+    margin-top: clamp(52px, 3.4vw, 72px);
+    font-size: clamp(30px, 1.65vw, 40px);
+  }
+
+  .phaseCard small {
+    font-size: clamp(9px, .4vw, 12px);
+  }
+
+  .machineSceneSplit,
+  .machineSceneCentered,
+  .machineSceneOverlay {
+    padding: clamp(32px, 2.2vw, 48px);
+  }
+
+  .sceneAside,
+  .barrierAside {
+    max-width: 680px;
+  }
+
+  .playerTradeStage {
+    min-height: clamp(430px, 31vw, 620px);
+  }
+
+  .departureStage {
+    min-height: clamp(620px, 42vw, 820px);
+  }
+}
