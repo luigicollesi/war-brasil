@@ -42,7 +42,7 @@ export type CommandSceneState =
 export type CommandSceneIntent = Readonly<{
   mode: CommandSceneMode;
   focus?: CommandSceneFocus;
-  cameraPose?: CommandCameraPoseId;
+  cameraPose?: CommandCameraPoseId | null;
   conflictLevel?: CommandConflictLevel;
   territoryExplode?: number;
   orbitalAlignment?: CommandOrbitalAlignment;
