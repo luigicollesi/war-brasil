@@ -99,7 +99,6 @@ export function LobbyReadyDock({
         aria-pressed={me.isReady}
         aria-describedby="ready-status"
       >
-        <span className={styles.buttonPrefix} aria-hidden="true">AUTH</span>
         <span>
           {readyPending
             ? "Confirmando…"

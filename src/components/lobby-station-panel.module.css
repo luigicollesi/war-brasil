@@ -628,3 +628,117 @@
     height: clamp(19px, 1vw, 24px);
   }
 }
+
+
+@media (min-width: 1800px) {
+  .consoleTitle {
+    font-size: clamp(2.1rem, 1.25rem + .64vw, 3.2rem);
+  }
+
+  .commandCredential {
+    min-height: clamp(126px, 7.4vw, 164px);
+    grid-template-columns: clamp(88px, 4.8vw, 112px) minmax(0, 1fr) 44px;
+  }
+
+  .credentialSeal {
+    width: clamp(84px, 4.5vw, 104px);
+    height: clamp(84px, 4.5vw, 104px);
+  }
+
+  .credentialSeal span {
+    font-size: clamp(1.35rem, .8rem + .4vw, 1.95rem);
+  }
+
+  .credentialName {
+    font-size: clamp(1.38rem, .78rem + .45vw, 2.05rem);
+  }
+
+  .credentialTitle {
+    --profile-title-size-legendary: clamp(1.08rem, .65rem + .32vw, 1.58rem);
+  }
+
+  .clearance,
+  .credentialLabel,
+  .credentialIdentity > span:last-child,
+  .credentialTelemetry small,
+  .hostStatus,
+  .displayIdentityValue span,
+  .colorLegend,
+  .consoleFeedback {
+    font-size: clamp(.66rem, .4rem + .2vw, .96rem);
+  }
+
+  .consoleStatus {
+    font-size: clamp(.84rem, .52rem + .24vw, 1.18rem);
+  }
+
+  .displayIdentityValue {
+    min-height: clamp(58px, 3.5vw, 76px);
+  }
+
+  .displayIdentityValue strong {
+    font-size: clamp(1.08rem, .66rem + .32vw, 1.56rem);
+  }
+
+  .colorChoice {
+    height: clamp(54px, 3.2vw, 70px);
+  }
+}
+
+@media (min-width: 2300px) {
+  .consoleTitle {
+    font-size: clamp(2.5rem, 1.55rem + .58vw, 3.7rem);
+  }
+
+  .credentialName {
+    font-size: clamp(1.6rem, .92rem + .42vw, 2.28rem);
+  }
+
+  .consoleStatus {
+    font-size: clamp(.96rem, .6rem + .22vw, 1.32rem);
+  }
+}
+
+@media (min-width: 3200px) {
+  .console {
+    padding: clamp(28px, .95vw, 38px);
+    gap: clamp(20px, .75vw, 28px);
+  }
+
+  .consoleTitle {
+    font-size: clamp(3.1rem, 2.45rem + .2vw, 4rem);
+  }
+
+  .commandCredential {
+    min-height: clamp(164px, 5.2vw, 198px);
+    grid-template-columns: clamp(112px, 3.5vw, 138px) minmax(0, 1fr) 54px;
+  }
+
+  .credentialSeal {
+    width: clamp(108px, 3.4vw, 132px);
+    height: clamp(108px, 3.4vw, 132px);
+  }
+
+  .credentialName {
+    font-size: clamp(2rem, 1.52rem + .15vw, 2.52rem);
+  }
+
+  .credentialTitle {
+    --profile-title-size-legendary: clamp(1.5rem, 1.15rem + .11vw, 1.9rem);
+  }
+
+  .clearance,
+  .credentialLabel,
+  .credentialIdentity > span:last-child,
+  .credentialTelemetry small,
+  .hostStatus,
+  .displayIdentityValue span,
+  .colorLegend,
+  .consoleFeedback {
+    font-size: clamp(.92rem, .7rem + .07vw, 1.16rem);
+  }
+
+  .consoleStatus {
+    font-size: clamp(1.18rem, .9rem + .09vw, 1.46rem);
+  }
+}

@@ -888,3 +888,124 @@
     font-size: clamp(.66rem, .54rem + .08vw, .82rem) !important;
   }
 }
+
+
+@media (min-width: 1800px) {
+  .stageHeader {
+    min-height: clamp(82px, 5vw, 104px);
+  }
+
+  .stageEyebrow {
+    font-size: clamp(.7rem, .44rem + .2vw, 1rem);
+  }
+
+  .stageTitle {
+    font-size: clamp(1.8rem, 1rem + .6vw, 2.7rem);
+  }
+
+  .authorization {
+    font-size: clamp(.72rem, .46rem + .2vw, 1.02rem);
+  }
+
+  .station {
+    min-height: clamp(142px, 12vh, 196px);
+    padding: clamp(14px, .9vw, 20px) clamp(16px, 1.05vw, 24px);
+  }
+
+  .stationNumber,
+  .stationStatus {
+    font-size: clamp(.68rem, .42rem + .2vw, .96rem);
+  }
+
+  .stationBody {
+    grid-template-columns: clamp(48px, 2.8vw, 64px) minmax(0, 1fr);
+    gap: clamp(14px, .9vw, 20px);
+  }
+
+  .insignia {
+    width: clamp(46px, 2.6vw, 60px);
+    height: clamp(46px, 2.6vw, 60px);
+  }
+
+  .stationName {
+    font-size: clamp(1.28rem, .72rem + .42vw, 1.9rem);
+  }
+
+  .stationTitle {
+    --profile-title-size-legendary: clamp(.9rem, .56rem + .26vw, 1.3rem);
+  }
+
+  .stationMeta {
+    font-size: clamp(.66rem, .4rem + .2vw, .96rem);
+  }
+
+  .botAction {
+    min-height: clamp(44px, 2.7vw, 58px) !important;
+    min-width: clamp(104px, 6.4vw, 148px);
+    padding-inline: clamp(14px, .8vw, 20px) !important;
+    font-size: clamp(.74rem, .46rem + .21vw, 1.04rem) !important;
+  }
+}
+
+@media (min-width: 2300px) {
+  .station {
+    min-height: clamp(158px, 11vh, 216px);
+  }
+
+  .stationName {
+    font-size: clamp(1.48rem, .86rem + .38vw, 2.1rem);
+  }
+
+  .stationMeta,
+  .stationNumber,
+  .stationStatus {
+    font-size: clamp(.78rem, .5rem + .17vw, 1.08rem);
+  }
+
+  .botAction {
+    min-height: clamp(52px, 2.5vw, 66px) !important;
+    min-width: clamp(124px, 6vw, 168px);
+    font-size: clamp(.86rem, .54rem + .2vw, 1.16rem) !important;
+  }
+}
+
+@media (min-width: 3200px) {
+  .stageHeader {
+    min-height: clamp(108px, 3.5vw, 134px);
+  }
+
+  .stageTitle {
+    font-size: clamp(2.35rem, 1.75rem + .18vw, 3rem);
+  }
+
+  .stageEyebrow,
+  .authorization {
+    font-size: clamp(.94rem, .72rem + .07vw, 1.2rem);
+  }
+
+  .station {
+    min-height: clamp(190px, 7.2vh, 236px);
+    padding: clamp(20px, .7vw, 28px);
+  }
+
+  .stationName {
+    font-size: clamp(1.9rem, 1.42rem + .15vw, 2.4rem);
+  }
+
+  .stationMeta,
+  .stationNumber,
+  .stationStatus {
+    font-size: clamp(1rem, .78rem + .07vw, 1.24rem);
+  }
+
+  .insignia {
+    width: clamp(62px, 2vw, 78px);
+    height: clamp(62px, 2vw, 78px);
+  }
+
+  .botAction {
+    min-height: clamp(64px, 2.1vw, 78px) !important;
+    min-width: clamp(160px, 5vw, 200px);
+    font-size: clamp(1.04rem, .82rem + .07vw, 1.3rem) !important;
+  }
+}
