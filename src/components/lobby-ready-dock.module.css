@@ -517,3 +517,46 @@
     height: clamp(62px, 2vw, 78px);
   }
 }
+
+
+/* Ready dock typography scales from the dock itself. */
+@media (min-width: 901px) {
+  .dock {
+    container-type: inline-size;
+  }
+
+  .readyCopy,
+  .authorizationRail {
+    container-type: inline-size;
+  }
+
+  .readyInsignia {
+    width: 7cqi;
+    height: 7cqi;
+  }
+
+  .railLabel,
+  .authorizationCell small {
+    font-size: calc(.45rem + .65cqi);
+  }
+
+  .readyTitle {
+    font-size: calc(.85rem + 2.1cqi);
+  }
+
+  .readyDetail {
+    font-size: calc(.55rem + 1cqi);
+  }
+
+  .authorizationCell {
+    min-height: 5.5cqi;
+    padding: 1cqi 1.4cqi;
+  }
+
+  .readyButton {
+    min-width: 22cqi;
+    min-height: 7cqi !important;
+    padding-inline: 2.2cqi !important;
+    font-size: calc(.65rem + 1.35cqi) !important;
+  }
+}

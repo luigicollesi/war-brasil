@@ -606,3 +606,64 @@
   .troop-quick-values { width: min(100%, 21.875rem); gap: .25rem; }
   .troop-quick-values button { min-height: 3rem; }
 }
+
+
+/* Quantity selector scales from modal width rather than viewport tiers. */
+@media (min-width: 1200px) {
+  .troop-quantity-selector {
+    container-type: inline-size;
+  }
+
+  .troop-flow-side strong {
+    font-size: calc(1rem + 3.2cqi);
+  }
+
+  .troop-flow-side small,
+  .troop-flow-caption,
+  .troop-flow-center small,
+  .troop-quantity-available,
+  .troop-range-limits,
+  .troop-quick-values span {
+    font-size: calc(.45rem + .7cqi);
+  }
+
+  .troop-flow-transfer-value {
+    font-size: calc(.8rem + 2cqi);
+  }
+
+  .troop-stepper {
+    grid-template-columns: 18cqi minmax(28cqi, 1fr) 18cqi;
+    gap: 3cqi;
+    width: 82cqi;
+  }
+
+  .troop-stepper-button {
+    width: 16cqi;
+    height: 16cqi;
+    font-size: calc(1rem + 3.5cqi);
+  }
+
+  .troop-stepper-value strong {
+    font-size: calc(1.8rem + 7cqi);
+  }
+
+  .troop-stepper-value span {
+    font-size: calc(.45rem + .8cqi);
+  }
+
+  .troop-range-wrap {
+    width: 84cqi;
+  }
+
+  .troop-quick-values {
+    width: 82cqi;
+  }
+
+  .troop-quick-values button {
+    min-height: 12cqi;
+  }
+
+  .troop-quick-values strong {
+    font-size: calc(.65rem + 1.5cqi);
+  }
+}

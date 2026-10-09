@@ -661,3 +661,73 @@
     font-size: var(--wb-type-micro-fluid);
   }
 }
+
+
+/* Component-driven Foundation sizing ------------------------------------- */
+@media (min-width: 901px) {
+  .shellChrome {
+    container-type: inline-size;
+    container-name: foundation-chrome;
+  }
+
+  .brandLockup,
+  .modeRail,
+  .commandPanel,
+  .insignia {
+    container-type: inline-size;
+  }
+
+  .brandSeal {
+    width: 10cqi;
+    height: 10cqi;
+    font-size: calc(.45rem + 1.6cqi);
+  }
+
+  .brandSeal img {
+    width: 7.4cqi !important;
+    height: 7.4cqi !important;
+  }
+
+  .brandLockup small {
+    font-size: calc(.42rem + .8cqi);
+  }
+
+  .brandLockup strong {
+    font-size: calc(.6rem + 1.8cqi);
+  }
+
+  .modeRail span {
+    font-size: calc(.42rem + 1.1cqi);
+  }
+
+  .modeRail strong {
+    font-size: calc(.58rem + 2.2cqi);
+  }
+
+  .commandLabel,
+  .commandStatus,
+  .panelEyebrow {
+    font-size: calc(.46rem + .65cqi);
+  }
+
+  .panelTitle {
+    font-size: calc(1rem + 5.5cqi);
+  }
+
+  .insigniaMedallion {
+    width: 13cqi;
+    height: 13cqi;
+  }
+
+  .insigniaMedallion strong {
+    font-size: calc(.55rem + 2cqi);
+  }
+
+  .insigniaCopy strong {
+    font-size: calc(.58rem + 1.8cqi);
+  }
+
+  .insigniaCopy small {
+    font-size: calc(.42rem + .75cqi);
+  }
+}

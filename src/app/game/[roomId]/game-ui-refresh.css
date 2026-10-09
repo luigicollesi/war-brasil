@@ -531,3 +531,59 @@
   .temporal-anomaly-effects li { gap: .625rem; padding: .625rem .6875rem; }
   .temporal-anomaly-effect-icon { flex-basis: 1.75rem; width: 1.75rem; height: 1.75rem; }
 }
+
+
+/* Desktop battle surfaces scale internally from their own available width. */
+@media (min-width: 1200px) {
+  .battle-modal,
+  .temporal-anomaly-modal {
+    container-type: inline-size;
+  }
+
+  .battle-player-name,
+  .battle-troop-count span,
+  .battle-side > p,
+  .battle-barrier-summary span,
+  .temporal-anomaly-effects-heading,
+  .temporal-anomaly-effect-copy small,
+  .temporal-anomaly-effect-copy > span {
+    font-size: calc(.45rem + .7cqi);
+  }
+
+  .battle-territory-name,
+  .battle-barrier-summary strong,
+  .battle-comparisons strong,
+  .battle-result,
+  .temporal-anomaly-effect-copy strong {
+    font-size: calc(.55rem + 1cqi);
+  }
+
+  .battle-troop-count strong {
+    font-size: calc(1rem + 2.6cqi);
+  }
+
+  .battle-context-arrow,
+  .battle-comparisons > div > span,
+  .battle-result strong {
+    font-size: calc(.8rem + 1.6cqi);
+  }
+
+  .battle-die {
+    width: 12cqi !important;
+  }
+
+  .temporal-anomaly-modal h3 {
+    font-size: calc(1rem + 3.2cqi);
+  }
+
+  .temporal-anomaly-description {
+    font-size: calc(.65rem + 1cqi);
+  }
+
+  .temporal-anomaly-effect-icon {
+    width: 6cqi;
+    height: 6cqi;
+    flex-basis: 6cqi;
+    font-size: calc(.6rem + 1.2cqi);
+  }
+}

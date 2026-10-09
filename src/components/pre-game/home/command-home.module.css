@@ -1006,3 +1006,93 @@
     gap: 1.2vmin;
   }
 }
+
+
+/* Component-driven responsive sizing -------------------------------------- */
+@media (min-width: 901px) {
+  .identity {
+    container-type: inline-size;
+    container-name: home-identity;
+  }
+
+  .commandDock {
+    container-type: inline-size;
+    container-name: home-dock;
+  }
+
+  .authorization,
+  .destinationRail {
+    container-type: inline-size;
+  }
+
+  .destination {
+    container-type: inline-size;
+  }
+
+  .title {
+    font-size: calc(2rem + 13cqi);
+  }
+
+  .kicker {
+    font-size: calc(.55rem + .55cqi);
+  }
+
+  .subtitle {
+    max-width: 62cqi;
+    font-size: calc(.7rem + .85cqi);
+  }
+
+  .identityTelemetry {
+    gap: 1.4cqi;
+    font-size: calc(.45rem + .42cqi);
+  }
+
+  .enterButton {
+    width: 58cqi;
+    min-height: 8cqb;
+    gap: 1.2cqi;
+    padding-inline: 1.4cqi;
+    font-size: calc(.85rem + 1.5cqi);
+  }
+
+  .enterButtonCode,
+  .authorizationMeta,
+  .commandStatus,
+  .ritualState {
+    font-size: calc(.45rem + .45cqi);
+  }
+
+  .enterButtonArrow {
+    font-size: calc(.9rem + 1.25cqi);
+  }
+
+  .destination {
+    min-height: 11vh;
+    gap: 4cqi;
+    padding: 1.4cqi 4cqi;
+  }
+
+  .destinationIndex {
+    font-size: calc(.45rem + 1.4cqi);
+  }
+
+  .destinationCopy {
+    gap: 1.1cqi;
+  }
+
+  .destinationCopy strong {
+    font-size: calc(.7rem + 4cqi);
+  }
+
+  .destinationCopy span {
+    font-size: calc(.52rem + 1.65cqi);
+  }
+
+  .destinationArrow {
+    font-size: calc(.8rem + 2.2cqi);
+  }
+
+  .campaignMiniProgress {
+    height: .9cqi;
+  }
+}
