@@ -543,9 +543,13 @@ export function CommandHomeClient({
   };
 
   useEffect(() => {
-    if (guideOpen && !guideAvailable) {
+    if (!guideOpen || guideAvailable) return;
+
+    const frame = window.requestAnimationFrame(() => {
       setGuideOpen(false);
-    }
+    });
+
+    return () => window.cancelAnimationFrame(frame);
   }, [guideAvailable, guideOpen]);
 
   const homeState: HomeState = transitioningTo

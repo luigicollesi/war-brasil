@@ -165,6 +165,7 @@ export function CommandHomeGuide({
     if (!open) return;
 
     const homeRoot = homeRootRef.current;
+    const returnFocusTarget = returnFocusRef.current;
     const hadInert = homeRoot?.hasAttribute("inert") ?? false;
     homeRoot?.setAttribute("inert", "");
 
@@ -174,15 +175,17 @@ export function CommandHomeGuide({
       }
 
       window.requestAnimationFrame(() => {
-        returnFocusRef.current?.focus();
+        returnFocusTarget?.focus();
       });
     };
   }, [homeRootRef, open, returnFocusRef]);
 
   useEffect(() => {
     if (!open) {
-      setSpotlight(null);
-      return;
+      const clearFrame = window.requestAnimationFrame(() => {
+        setSpotlight(null);
+      });
+      return () => window.cancelAnimationFrame(clearFrame);
     }
 
     let frame = 0;

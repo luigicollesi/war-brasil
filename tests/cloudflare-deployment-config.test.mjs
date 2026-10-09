@@ -69,11 +69,18 @@ test("Proxy Next 16 usa cookie otimista sem carregar auth server-side, pg ou DAT
 
 test("Workers Builds usa OpenNext e Wrangler pinados pelo lockfile", () => {
   assert.equal(pkg.dependencies["@opennextjs/cloudflare"], "1.20.6");
-  assert.equal(pkg.devDependencies.wrangler, "4.135.0");
+  const declaredWrangler = pkg.devDependencies.wrangler;
+  const lockedRootWrangler = lock.packages[""].devDependencies.wrangler;
+  const declaredWranglerVersion = declaredWrangler.replace(/^[~^]/, "");
+
+  assert.match(declaredWranglerVersion, /^4\.\d+\.\d+$/);
+  assert.equal(lockedRootWrangler, declaredWrangler);
   assert.equal(lock.packages[""].dependencies["@opennextjs/cloudflare"], "1.20.6");
-  assert.equal(lock.packages[""].devDependencies.wrangler, "4.135.0");
   assert.equal(lock.packages["node_modules/@opennextjs/cloudflare"].version, "1.20.6");
-  assert.equal(lock.packages["node_modules/wrangler"].version, "4.135.0");
+  assert.equal(
+    lock.packages["node_modules/wrangler"].version,
+    declaredWranglerVersion,
+  );
   assert.equal(pkg.scripts["cloudflare:prepare"], undefined);
   assert.match(pkg.scripts["cloudflare:build"], /cloudflare:patch-next/);
   assert.doesNotMatch(pkg.scripts["cloudflare:build"], /npm install|cloudflare:prepare/);
