@@ -517,6 +517,15 @@ html {
   --wb-text-heading: 2.2rem;
   --wb-text-display: max(3rem, 4.4vmin);
 
+  /* Continuous semantic typography. These are viewport-relative by design:
+     text should preserve visual occupancy as display resolution increases. */
+  --wb-type-micro-fluid: 1vmin;
+  --wb-type-small-fluid: 1.18vmin;
+  --wb-type-body-fluid: 1.42vmin;
+  --wb-type-control-fluid: 1.85vmin;
+  --wb-type-heading-fluid: 2.65vmin;
+  --wb-type-display-fluid: 15vmin;
+
   --wb-space-fluid-xs: max(.35rem, .18vmin);
   --wb-space-fluid-sm: max(.55rem, .26vmin);
   --wb-space-fluid-md: max(.8rem, .42vmin);

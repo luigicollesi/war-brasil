@@ -575,8 +575,8 @@
     --command-content-top: 5.5vh;
     --command-content-bottom: 2.8vh;
     --command-content-max: 92vw;
-    --command-ui-sm: .68vmin;
-    --command-ui-md: .92vmin;
+    --command-ui-sm: var(--wb-type-micro-fluid);
+    --command-ui-md: var(--wb-type-small-fluid);
     --command-control-height: 3.2vmin;
   }
 
@@ -594,7 +594,7 @@
   .brandSeal {
     width: 3.2vmin;
     height: 3.2vmin;
-    font-size: .72vmin;
+    font-size: var(--wb-type-small-fluid);
   }
 
   .brandSeal img {
@@ -603,11 +603,11 @@
   }
 
   .brandLockup small {
-    font-size: .58vmin;
+    font-size: var(--wb-type-micro-fluid);
   }
 
   .brandLockup strong {
-    font-size: 1.02vmin;
+    font-size: var(--wb-type-body-fluid);
   }
 
   .modeRail {
@@ -616,11 +616,11 @@
   }
 
   .modeRail span {
-    font-size: .58vmin;
+    font-size: var(--wb-type-micro-fluid);
   }
 
   .modeRail strong {
-    font-size: .9vmin;
+    font-size: var(--wb-type-small-fluid);
   }
 
   .fallbackTable {
@@ -637,11 +637,11 @@
   }
 
   .panelEyebrow {
-    font-size: .62vmin;
+    font-size: var(--wb-type-micro-fluid);
   }
 
   .panelTitle {
-    font-size: 3.4vmin;
+    font-size: var(--wb-type-heading-fluid);
   }
 
   .insigniaMedallion {
@@ -650,14 +650,14 @@
   }
 
   .insigniaMedallion strong {
-    font-size: .9vmin;
+    font-size: var(--wb-type-small-fluid);
   }
 
   .insigniaCopy strong {
-    font-size: .88vmin;
+    font-size: var(--wb-type-small-fluid);
   }
 
   .insigniaCopy small {
-    font-size: .56vmin;
+    font-size: var(--wb-type-micro-fluid);
   }
 }

@@ -907,7 +907,7 @@
     right: max(2.6vw, env(safe-area-inset-right));
     width: 2.6vmin;
     height: 2.6vmin;
-    font-size: 1.15vmin;
+    font-size: var(--wb-type-small-fluid);
   }
 
   .identity {
@@ -917,11 +917,11 @@
 
   .kicker {
     margin-bottom: .55vmin;
-    font-size: .72vmin;
+    font-size: var(--wb-type-micro-fluid);
   }
 
   .title {
-    font-size: 13.2vmin;
+    font-size: var(--wb-type-display-fluid);
     line-height: .86;
     letter-spacing: .032em;
   }
@@ -929,14 +929,14 @@
   .subtitle {
     max-width: 48vw;
     margin-top: 1vmin;
-    font-size: .95vmin;
+    font-size: var(--wb-type-body-fluid);
     line-height: 1.5;
   }
 
   .identityTelemetry {
     gap: 1.35vmin;
     margin-top: 1vmin;
-    font-size: .62vmin;
+    font-size: var(--wb-type-micro-fluid);
   }
 
   .commandDock {
@@ -949,18 +949,18 @@
     min-height: 6.8vh;
     gap: 1.4vmin;
     padding-inline: 1.5vmin;
-    font-size: 1.3vmin;
+    font-size: var(--wb-type-control-fluid);
   }
 
   .enterButtonCode,
   .authorizationMeta,
   .commandStatus,
   .ritualState {
-    font-size: .66vmin;
+    font-size: var(--wb-type-micro-fluid);
   }
 
   .enterButtonArrow {
-    font-size: 1.35vmin;
+    font-size: var(--wb-type-control-fluid);
   }
 
   .destination {
@@ -970,7 +970,7 @@
   }
 
   .destinationIndex {
-    font-size: .72vmin;
+    font-size: var(--wb-type-small-fluid);
   }
 
   .destinationCopy {
@@ -978,16 +978,16 @@
   }
 
   .destinationCopy strong {
-    font-size: 1.3vmin;
+    font-size: var(--wb-type-control-fluid);
   }
 
   .destinationCopy span {
-    font-size: .72vmin;
+    font-size: var(--wb-type-small-fluid);
     line-height: 1.35;
   }
 
   .destinationArrow {
-    font-size: 1.1vmin;
+    font-size: var(--wb-type-small-fluid);
   }
 
   .campaignMiniProgress {
@@ -999,7 +999,7 @@
     bottom: 1vh;
     left: 2.6vw;
     gap: 1.3vmin;
-    font-size: .58vmin;
+    font-size: .9vmin;
   }
 
   .legalLinks {
