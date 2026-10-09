@@ -478,62 +478,58 @@ textarea {
 
 
 /* ------------------------------------------------------------------ */
-/* Global high-resolution UI scale                                    */
+/* Continuous high-resolution UI scale                                */
 /* ------------------------------------------------------------------ */
 /*
-  The product baseline is 1080p. On large desktop displays the root rem grows
-  with the viewport so Tailwind rem utilities and component typography keep
-  approximately the same visual occupancy instead of shrinking relative to
-  the screen. Width breakpoints remain structural; this only affects large
-  desktop viewports.
+  Full HD (1920px) remains the visual baseline at 16px. Above that, rem-based
+  typography and component geometry grow continuously with viewport width:
+    1920px -> 16px
+    2560px -> 20px
+    3200px -> 24px
+    3840px -> 28px
+  The clamp prevents low-resolution regressions and unbounded 5K/8K growth.
 */
-@media (min-width: 1800px) {
+html {
+  font-size: 16px;
+}
+
+:root {
+  --wb-fluid-rem: 16px;
+  --wb-global-control-height: 3.125rem;
+  --wb-global-content-inline: clamp(1.25rem, 3vw, 4rem);
+  --wb-global-content-max: 82.5rem;
+
+  --wb-text-micro: .625rem;
+  --wb-text-xs: .75rem;
+  --wb-text-sm: .875rem;
+  --wb-text-md: 1rem;
+  --wb-text-lg: 1.25rem;
+  --wb-text-xl: 1.6rem;
+  --wb-text-heading: 2.2rem;
+  --wb-text-display: clamp(3rem, 4.4vw, 7rem);
+
+  --wb-space-fluid-xs: clamp(.35rem, .28rem + .18vw, .75rem);
+  --wb-space-fluid-sm: clamp(.55rem, .42rem + .26vw, 1rem);
+  --wb-space-fluid-md: clamp(.8rem, .58rem + .42vw, 1.5rem);
+  --wb-space-fluid-lg: clamp(1.1rem, .78rem + .62vw, 2.25rem);
+  --wb-space-fluid-xl: clamp(1.6rem, 1.05rem + 1vw, 3.5rem);
+}
+
+@media (min-width: 1920px) {
   html {
-    font-size: 18px;
+    font-size: clamp(16px, calc(.625vw + 4px), 28px);
   }
 
   :root {
-    --wb-global-ui-scale: 1.125;
-    --wb-global-control-height: 3.5rem;
-    --wb-global-content-inline: clamp(2.5rem, 3vw, 5rem);
+    --wb-fluid-rem: clamp(16px, calc(.625vw + 4px), 28px);
+    --wb-global-control-height: 3.25rem;
+    --wb-global-content-inline: clamp(2rem, 3.2vw, 6rem);
     --wb-global-content-max: 92rem;
   }
 }
 
-@media (min-width: 2300px) {
-  html {
-    font-size: 20px;
-  }
-
-  :root {
-    --wb-global-ui-scale: 1.25;
-    --wb-global-control-height: 3.75rem;
-    --wb-global-content-inline: clamp(3rem, 3.2vw, 6rem);
-    --wb-global-content-max: 102rem;
-  }
-}
-
 @media (min-width: 3200px) {
-  html {
-    font-size: 24px;
-  }
-
   :root {
-    --wb-global-ui-scale: 1.5;
-    --wb-global-control-height: 4rem;
-    --wb-global-content-inline: clamp(4rem, 3.4vw, 8rem);
-    --wb-global-content-max: 112rem;
-  }
-}
-
-@media (min-width: 4200px) {
-  html {
-    font-size: 26px;
-  }
-
-  :root {
-    --wb-global-ui-scale: 1.625;
-    --wb-global-control-height: 4.25rem;
-    --wb-global-content-max: 120rem;
+    --wb-global-content-max: 108rem;
   }
 }
