@@ -1580,3 +1580,34 @@
     font-size: clamp(80px, 3.55vw, 98px);
   }
 }
+
+
+/* Keep Doctrine visually centered inside the viewport area left after the fixed
+   index. On very wide displays the page already spans the viewport, but the
+   capped chapter blocks otherwise remain anchored to the left. */
+@media (min-width: 761px) {
+  .content {
+    width: calc(100% - var(--doctrine-index-width, 360px));
+    box-sizing: border-box;
+  }
+
+  .chapterHeader,
+  .chapterGrid,
+  .prevNext {
+    width: 100%;
+    margin-inline: auto;
+  }
+}
+
+@media (min-width: 1800px) {
+  .content {
+    padding-inline:
+      clamp(72px, 4.4vw, 120px);
+  }
+
+  .chapterHeader,
+  .chapterGrid,
+  .prevNext {
+    max-width: var(--doctrine-content-max);
+  }
+}

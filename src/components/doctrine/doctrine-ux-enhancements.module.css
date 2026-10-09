@@ -1417,3 +1417,28 @@
     font-size: clamp(64px, 2.7vw, 78px);
   }
 }
+
+
+@media (min-width: 761px) {
+  .content {
+    width: calc(100% - var(--doctrine-index-width));
+    margin-left: var(--doctrine-index-width);
+  }
+
+  .chapterSurface {
+    width: min(100%, var(--doctrine-content-max, 1240px));
+    margin-inline: auto;
+  }
+}
+
+@media (min-width: 1800px) {
+  .chapterSurface {
+    width: min(100%, var(--doctrine-content-max, 1940px));
+  }
+}
+
+@media (min-width: 2300px) {
+  .chapterSurface {
+    width: min(100%, var(--doctrine-content-max, 2140px));
+  }
+}
