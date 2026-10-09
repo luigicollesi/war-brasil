@@ -881,385 +881,128 @@
 }
 
 
-@media (min-width: 1600px) {
-  .guideLauncher {
-    top: calc(clamp(98px, 6vw, 142px) + env(safe-area-inset-top));
-    right: max(var(--command-content-inline, 64px), env(safe-area-inset-right));
-    width: clamp(42px, 2.35vw, 58px);
-    height: clamp(42px, 2.35vw, 58px);
-    font-size: clamp(1rem, .85rem + .12vw, 1.24rem);
-  }
-
-  .identity {
-    top: clamp(168px, 11.5vh, 260px);
-    width: min(clamp(760px, 43vw, 1160px), calc(100% - 96px));
-  }
-
-  .kicker {
-    margin-bottom: clamp(8px, .7vw, 14px);
-    font-size: clamp(.56rem, .47rem + .08vw, .72rem);
-  }
-
-  .subtitle {
-    max-width: 760px;
-    margin-top: clamp(14px, .9vw, 20px);
-    font-size: clamp(.76rem, .66rem + .09vw, .96rem);
-  }
-
-  .identityTelemetry {
-    gap: clamp(18px, 1.3vw, 28px);
-    margin-top: clamp(15px, 1vw, 22px);
-    font-size: clamp(.48rem, .4rem + .07vw, .62rem);
-  }
-
-  .commandDock {
-    bottom: max(clamp(58px, 4.8vh, 104px), calc(env(safe-area-inset-bottom) + 34px));
-    width: min(clamp(1080px, 68vw, 1560px), calc(100% - 128px));
-  }
-
-  .enterButton {
-    width: min(680px, 46vw);
-    min-height: clamp(60px, 4.4vw, 82px);
-    gap: clamp(20px, 1.4vw, 30px);
-    padding-inline: clamp(18px, 1.3vw, 28px);
-    font-size: clamp(1.08rem, .9rem + .16vw, 1.36rem);
-  }
-
-  .authorizationMeta,
-  .commandStatus {
-    font-size: clamp(.5rem, .42rem + .07vw, .64rem);
-  }
-
-  .destination {
-    min-height: clamp(80px, 5.1vw, 116px);
-    gap: clamp(13px, .9vw, 20px);
-    padding: clamp(10px, .7vw, 16px) clamp(20px, 1.3vw, 32px);
-  }
-
-  .destinationIndex {
-    font-size: clamp(.56rem, .46rem + .08vw, .72rem);
-  }
-
-  .destinationCopy {
-    gap: clamp(3px, .28vw, 6px);
-  }
-
-  .destinationCopy strong {
-    font-size: clamp(1.04rem, .86rem + .15vw, 1.34rem);
-  }
-
-  .destinationCopy span {
-    font-size: clamp(.56rem, .46rem + .08vw, .72rem);
-  }
-
-  .destinationArrow {
-    font-size: clamp(.9rem, .76rem + .12vw, 1.14rem);
-  }
-
-  .campaignMiniProgress {
-    height: clamp(3px, .2vw, 5px);
-  }
-
-  .footer {
-    right: var(--command-content-inline, 64px);
-    bottom: clamp(14px, 1.1vw, 26px);
-    left: var(--command-content-inline, 64px);
-    font-size: clamp(.45rem, .37rem + .07vw, .59rem);
-  }
-}
 
 
-@media (min-width: 1600px) {
-  .title {
-    font-size: clamp(6.35rem, 5.55rem + .6vw, 7.7rem);
-  }
 
-  .enterButtonCode {
-    font-size: clamp(.58rem, .48rem + .08vw, .74rem);
-  }
 
-  .enterButtonArrow {
-    font-size: clamp(1.05rem, .9rem + .12vw, 1.34rem);
-  }
-
-  .ritualState {
-    font-size: clamp(.5rem, .42rem + .07vw, .64rem);
-  }
-}
 
 
 /* The Home is intentionally scaled more aggressively than the generic
    Foundation because its UI is sparse and sits over a full-viewport scene. */
-@media (min-width: 1800px) {
-  .guideLauncher {
-    top: calc(clamp(110px, 6.2vw, 158px) + env(safe-area-inset-top));
-    right: max(var(--command-content-inline, 78px), env(safe-area-inset-right));
-    width: clamp(48px, 2.35vw, 62px);
-    height: clamp(48px, 2.35vw, 62px);
-    font-size: clamp(1.08rem, .88rem + .14vw, 1.34rem);
-  }
 
-  .identity {
-    top: clamp(170px, 10.7vh, 272px);
-    width: min(clamp(980px, 52vw, 1460px), calc(100% - 120px));
-  }
 
-  .title {
-    font-size: clamp(7.2rem, 5.9rem + 1.45vw, 10rem);
-    line-height: .9;
-  }
 
-  .kicker {
-    margin-bottom: clamp(10px, .7vw, 16px);
-    font-size: clamp(.62rem, .5rem + .1vw, .82rem);
-    letter-spacing: .24em;
-  }
-
-  .subtitle {
-    max-width: 880px;
-    margin-top: clamp(16px, 1vw, 24px);
-    font-size: clamp(.88rem, .72rem + .13vw, 1.14rem);
-    line-height: 1.65;
-  }
-
-  .identityTelemetry {
-    gap: clamp(22px, 1.5vw, 34px);
-    margin-top: clamp(18px, 1.1vw, 26px);
-    font-size: clamp(.56rem, .45rem + .09vw, .74rem);
-  }
-
-  .commandDock {
-    width: min(clamp(1280px, 72vw, 1820px), calc(100% - 144px));
-    bottom: max(clamp(62px, 5.2vh, 118px), calc(env(safe-area-inset-bottom) + 40px));
-  }
-
-  .enterButton {
-    width: min(780px, 48vw);
-    min-height: clamp(72px, 4.8vw, 96px);
-    gap: clamp(24px, 1.5vw, 34px);
-    padding-inline: clamp(24px, 1.6vw, 38px);
-    font-size: clamp(1.22rem, 1rem + .18vw, 1.54rem);
-  }
-
-  .enterButtonCode {
-    font-size: clamp(.64rem, .52rem + .1vw, .82rem);
-  }
-
-  .enterButtonArrow {
-    font-size: clamp(1.18rem, .96rem + .16vw, 1.5rem);
-  }
-
-  .authorizationMeta,
-  .commandStatus,
-  .ritualState {
-    font-size: clamp(.56rem, .45rem + .09vw, .74rem);
-  }
-
-  .destination {
-    min-height: clamp(96px, 5.8vw, 132px);
-    gap: clamp(16px, 1vw, 24px);
-    padding: clamp(14px, .85vw, 20px) clamp(24px, 1.55vw, 38px);
-  }
-
-  .destinationIndex {
-    font-size: clamp(.62rem, .5rem + .1vw, .8rem);
-  }
-
-  .destinationCopy {
-    gap: clamp(5px, .34vw, 8px);
-  }
-
-  .destinationCopy strong {
-    font-size: clamp(1.22rem, .98rem + .2vw, 1.58rem);
-    letter-spacing: .08em;
-  }
-
-  .destinationCopy span {
-    font-size: clamp(.66rem, .53rem + .11vw, .88rem);
-    line-height: 1.45;
-  }
-
-  .destinationArrow {
-    font-size: clamp(1rem, .82rem + .14vw, 1.28rem);
-  }
-
-  .campaignMiniProgress {
-    height: clamp(4px, .22vw, 6px);
-  }
-
-  .footer {
-    right: var(--command-content-inline, 78px);
-    bottom: clamp(16px, 1.2vw, 30px);
-    left: var(--command-content-inline, 78px);
-    font-size: clamp(.52rem, .42rem + .08vw, .68rem);
-  }
-}
-
-@media (min-width: 2300px) {
-  .identity {
-    top: clamp(190px, 10.5vh, 300px);
-    width: min(clamp(1120px, 54vw, 1640px), calc(100% - 160px));
-  }
-
-  .title {
-    font-size: clamp(8.4rem, 6.8rem + 1.55vw, 11.6rem);
-  }
-
-  .subtitle {
-    max-width: 980px;
-    font-size: clamp(1rem, .8rem + .13vw, 1.26rem);
-  }
-
-  .commandDock {
-    width: min(clamp(1500px, 74vw, 2060px), calc(100% - 176px));
-  }
-
-  .destination {
-    min-height: clamp(108px, 5vw, 146px);
-  }
-
-  .destinationCopy strong {
-    font-size: clamp(1.34rem, 1.08rem + .18vw, 1.72rem);
-  }
-
-  .destinationCopy span {
-    font-size: clamp(.72rem, .58rem + .1vw, .94rem);
-  }
-}
 
 
 /* Ultra-high-resolution occupancy.
    At 2400px+ the interface must occupy the viewport, not merely inherit a
    larger font. This intentionally removes the old 1640/2060px visual caps. */
-@media (min-width: 2400px) and (min-height: 1200px) {
-  .identity {
-    top: clamp(8rem, 9vh, 12rem);
-    width: min(74vw, calc(100% - 8rem));
+
+
+
+
+
+/* Continuous desktop composition.
+   Size follows viewport/rem continuously; breakpoints only switch composition. */
+@media (min-width: 901px) {
+  .guideLauncher {
+    top: calc(6vh + env(safe-area-inset-top));
+    right: max(3vw, env(safe-area-inset-right));
+    width: 2.35rem;
+    height: 2.35rem;
+    font-size: 1rem;
   }
 
-  .title {
-    font-size: clamp(10rem, 11.5vw, 18rem);
-    line-height: .86;
-    letter-spacing: .03em;
+  .identity {
+    top: 9vh;
+    width: 74vw;
   }
 
   .kicker {
-    margin-bottom: .8rem;
-    font-size: .8rem;
-  }
-
-  .subtitle {
-    max-width: 52rem;
-    margin-top: 1.1rem;
-    font-size: 1.05rem;
-    line-height: 1.55;
-  }
-
-  .identityTelemetry {
-    gap: 1.8rem;
-    margin-top: 1.2rem;
-    font-size: .7rem;
-  }
-
-  .commandDock {
-    width: min(86vw, calc(100% - 7rem));
-    bottom: max(4.25vh, calc(env(safe-area-inset-bottom) + 2.5rem));
-  }
-
-  .commandStatus {
-    margin-bottom: .9rem;
-    font-size: .72rem;
-  }
-
-  .destination {
-    min-height: clamp(8rem, 8.5vh, 11rem);
-    gap: 1.25rem;
-    padding: 1rem 2rem;
-  }
-
-  .destinationIndex {
-    font-size: .82rem;
-  }
-
-  .destinationCopy {
-    gap: .45rem;
-  }
-
-  .destinationCopy strong {
-    font-size: clamp(1.65rem, 1.4vw, 2.4rem);
-    letter-spacing: .075em;
-  }
-
-  .destinationCopy span {
-    font-size: clamp(.82rem, .68vw, 1.15rem);
-    line-height: 1.4;
-  }
-
-  .destinationArrow {
-    font-size: 1.45rem;
-  }
-
-  .campaignMiniProgress {
-    height: .32rem;
-  }
-
-  .enterButton {
-    width: min(52vw, 64rem);
-    min-height: clamp(5.5rem, 6.5vh, 8rem);
-    gap: 2rem;
-    padding-inline: 2rem;
-    font-size: clamp(1.5rem, 1.25vw, 2.1rem);
-  }
-
-  .enterButtonCode,
-  .authorizationMeta,
-  .ritualState {
-    font-size: .78rem;
-  }
-
-  .enterButtonArrow {
-    font-size: 1.65rem;
-  }
-
-  .guideLauncher {
-    width: 4rem;
-    height: 4rem;
-    font-size: 1.4rem;
-  }
-
-  .footer {
-    bottom: 1rem;
-    font-size: .62rem;
-  }
-}
-
-@media (min-width: 3600px) and (min-height: 1700px) {
-  .identity {
-    width: min(78vw, calc(100% - 10rem));
+    margin-bottom: .5rem;
+    font-size: .56rem;
   }
 
   .title {
-    font-size: clamp(14rem, 12vw, 21rem);
+    font-size: 11vmin;
+    line-height: .88;
+    letter-spacing: .035em;
   }
 
   .subtitle {
-    max-width: 60rem;
-    font-size: 1.15rem;
+    max-width: 42vw;
+    margin-top: .85rem;
+    font-size: .76rem;
+  }
+
+  .identityTelemetry {
+    gap: 1.1rem;
+    margin-top: .9rem;
+    font-size: .48rem;
   }
 
   .commandDock {
-    width: min(88vw, calc(100% - 9rem));
+    width: 86vw;
+    bottom: max(4.5vh, calc(env(safe-area-inset-bottom) + 1.75rem));
+  }
+
+  .enterButton {
+    width: 50vw;
+    min-height: 5.5vh;
+    gap: 1.25rem;
+    padding-inline: 1.2rem;
+    font-size: 1.08rem;
+  }
+
+  .enterButtonCode {
+    font-size: .58rem;
+  }
+
+  .enterButtonArrow {
+    font-size: 1.05rem;
+  }
+
+  .authorizationMeta,
+  .commandStatus,
+  .ritualState {
+    font-size: .5rem;
   }
 
   .destination {
-    min-height: clamp(9rem, 9vh, 12.5rem);
+    min-height: 8.5vh;
+    gap: .8rem;
+    padding: .65rem 1.25rem;
+  }
+
+  .destinationIndex {
+    font-size: .56rem;
+  }
+
+  .destinationCopy {
+    gap: .2rem;
   }
 
   .destinationCopy strong {
-    font-size: clamp(1.9rem, 1.45vw, 2.6rem);
+    font-size: 1.04rem;
   }
 
   .destinationCopy span {
-    font-size: clamp(.95rem, .72vw, 1.3rem);
+    font-size: .56rem;
+  }
+
+  .destinationArrow {
+    font-size: .9rem;
+  }
+
+  .campaignMiniProgress {
+    height: .2rem;
+  }
+
+  .footer {
+    right: 3vw;
+    bottom: 1.2vh;
+    left: 3vw;
+    gap: 1.5rem;
+    font-size: .45rem;
   }
 }

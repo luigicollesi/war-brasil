@@ -497,13 +497,13 @@ html {
     vmin prevents ultrawide layouts from scaling typography only because
     horizontal resolution increased.
   */
-  font-size: clamp(16px, 1.6vmin, 36px);
+  font-size: max(16px, 1.6vmin);
 }
 
 :root {
-  --wb-fluid-rem: clamp(16px, 1.6vmin, 36px);
+  --wb-fluid-rem: max(16px, 1.6vmin);
   --wb-global-control-height: 3.125rem;
-  --wb-global-content-inline: clamp(1.25rem, 3vw, 6rem);
+  --wb-global-content-inline: max(1.25rem, 3vw);
   --wb-global-content-max: 92rem;
 
   --wb-text-micro: .625rem;
@@ -513,12 +513,12 @@ html {
   --wb-text-lg: 1.25rem;
   --wb-text-xl: 1.6rem;
   --wb-text-heading: 2.2rem;
-  --wb-text-display: clamp(3rem, 4.4vw, 7rem);
+  --wb-text-display: max(3rem, 4.4vmin);
 
-  --wb-space-fluid-xs: clamp(.35rem, .28rem + .18vw, .75rem);
-  --wb-space-fluid-sm: clamp(.55rem, .42rem + .26vw, 1rem);
-  --wb-space-fluid-md: clamp(.8rem, .58rem + .42vw, 1.5rem);
-  --wb-space-fluid-lg: clamp(1.1rem, .78rem + .62vw, 2.25rem);
-  --wb-space-fluid-xl: clamp(1.6rem, 1.05rem + 1vw, 3.5rem);
+  --wb-space-fluid-xs: max(.35rem, .18vmin);
+  --wb-space-fluid-sm: max(.55rem, .26vmin);
+  --wb-space-fluid-md: max(.8rem, .42vmin);
+  --wb-space-fluid-lg: max(1.1rem, .62vmin);
+  --wb-space-fluid-xl: max(1.6rem, 1vmin);
 }
 

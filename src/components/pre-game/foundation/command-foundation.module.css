@@ -561,25 +561,36 @@
 
 /* Continuous Foundation sizing. Composition remains responsive, while the
    global root rem provides smooth 1080p -> QHD -> 4K visual growth. */
-@media (min-width: 1600px) {
+
+
+
+/* Ultra-high-resolution chrome occupancy. */
+
+
+
+
+
+/* Continuous desktop Foundation scale.
+   All growth comes from root rem + viewport units, not resolution tiers. */
+@media (min-width: 901px) {
   .shell {
-    --command-content-inline: clamp(3.5rem, 4.2vw, 6rem);
-    --command-content-top: clamp(5.5rem, 5.4vw, 8rem);
-    --command-content-bottom: clamp(2rem, 2.8vw, 4rem);
-    --command-content-max: min(82vw, var(--wb-global-content-max, 92rem));
+    --command-content-inline: 4vw;
+    --command-content-top: 6vh;
+    --command-content-bottom: 3vh;
+    --command-content-max: 88vw;
     --command-ui-sm: .58rem;
     --command-ui-md: .82rem;
     --command-control-height: 2.75rem;
   }
 
   .shellChrome {
-    top: clamp(2.75rem, 3.2vw, 4rem);
+    top: 3vh;
     right: var(--command-content-inline);
     left: var(--command-content-inline);
   }
 
   .brandLockup {
-    max-width: min(44vw, 32rem);
+    max-width: 48vw;
     gap: .85rem;
   }
 
@@ -616,11 +627,11 @@
   }
 
   .fallbackTable {
-    width: min(60vw, 70rem);
+    width: 60vw;
   }
 
   .fallbackGlobe {
-    width: min(20vw, 25rem);
+    width: 20vw;
   }
 
   .commandLabel,
@@ -633,7 +644,7 @@
   }
 
   .panelTitle {
-    font-size: clamp(2.35rem, 2.8vw, 3.6rem);
+    font-size: 3vmin;
   }
 
   .insigniaMedallion {
@@ -651,96 +662,5 @@
 
   .insigniaCopy small {
     font-size: .49rem;
-  }
-}
-
-
-/* Ultra-high-resolution chrome occupancy. */
-@media (min-width: 2400px) and (min-height: 1200px) {
-  .shell {
-    --command-content-inline: clamp(4rem, 4vw, 9rem);
-    --command-content-top: clamp(6rem, 6vh, 9rem);
-    --command-content-bottom: clamp(2.5rem, 3vh, 5rem);
-    --command-content-max: 88vw;
-    --command-ui-sm: .72rem;
-    --command-ui-md: 1rem;
-    --command-control-height: 3.4rem;
-  }
-
-  .shellChrome {
-    top: clamp(2.5rem, 3vh, 4rem);
-  }
-
-  .brandLockup {
-    max-width: min(48vw, 42rem);
-    gap: 1.1rem;
-  }
-
-  .brandSeal {
-    width: 3.75rem;
-    height: 3.75rem;
-    font-size: .95rem;
-  }
-
-  .brandSeal img {
-    width: 2.65rem !important;
-    height: 2.65rem !important;
-  }
-
-  .brandLockup small {
-    font-size: .66rem;
-  }
-
-  .brandLockup strong {
-    font-size: 1.2rem;
-    letter-spacing: .14em;
-  }
-
-  .modeRail {
-    gap: .45rem;
-    padding-right: 1rem;
-  }
-
-  .modeRail span {
-    font-size: .66rem;
-  }
-
-  .modeRail strong {
-    font-size: 1rem;
-  }
-
-  .panelEyebrow,
-  .commandLabel,
-  .commandStatus {
-    font-size: .7rem;
-  }
-
-  .panelTitle {
-    font-size: clamp(3rem, 3.2vw, 5rem);
-  }
-}
-
-@media (min-width: 3600px) and (min-height: 1700px) {
-  .brandSeal {
-    width: 4.25rem;
-    height: 4.25rem;
-  }
-
-  .brandSeal img {
-    width: 3rem !important;
-    height: 3rem !important;
-  }
-
-  .brandLockup strong {
-    font-size: 1.35rem;
-  }
-
-  .brandLockup small,
-  .modeRail span {
-    font-size: .72rem;
-  }
-
-  .modeRail strong {
-    font-size: 1.08rem;
   }
 }
