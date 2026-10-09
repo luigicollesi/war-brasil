@@ -621,3 +621,60 @@
     margin-bottom: clamp(18px, 1.4vw, 28px);
   }
 }
+
+
+@media (min-width: 1600px) {
+  .hero h1 {
+    font-size: clamp(7.1rem, 6rem + .72vw, 8.8rem);
+  }
+
+  .premiumPanel > strong {
+    font-size: clamp(3.5rem, 3rem + .35vw, 4.35rem);
+  }
+
+  .premiumRetroactive {
+    font-size: clamp(.53rem, .44rem + .07vw, .68rem) !important;
+  }
+
+  .premiumPanel button,
+  .claimAll {
+    font-size: clamp(.55rem, .46rem + .07vw, .7rem);
+  }
+
+  .premiumConfirmation dt {
+    font-size: clamp(.48rem, .4rem + .07vw, .62rem);
+  }
+
+  .premiumConfirmation dd {
+    font-size: clamp(.6rem, .5rem + .08vw, .76rem);
+  }
+
+  .sectionHeader h2 {
+    font-size: clamp(3.8rem, 3.2rem + .42vw, 4.8rem);
+  }
+
+  .feedback strong {
+    font-size: clamp(1rem, .86rem + .1vw, 1.2rem);
+  }
+
+  .feedback span {
+    font-size: clamp(.7rem, .59rem + .08vw, .86rem);
+  }
+
+  .rewardRevealCard > small {
+    font-size: clamp(.58rem, .48rem + .08vw, .74rem);
+  }
+
+  .rewardRevealCard > strong {
+    font-size: clamp(2.1rem, 1.75rem + .25vw, 2.7rem);
+  }
+
+  .rewardRevealCard > span {
+    font-size: clamp(.7rem, .59rem + .08vw, .88rem);
+  }
+
+  .rewardRevealCard > button {
+    min-height: var(--command-control-height, 50px);
+    font-size: clamp(.58rem, .48rem + .08vw, .74rem);
+  }
+}

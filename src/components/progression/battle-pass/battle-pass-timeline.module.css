@@ -397,3 +397,14 @@
     font-size: clamp(.46rem, .38rem + .07vw, .6rem);
   }
 }
+
+
+@media (min-width: 1600px) {
+  .levelNode[data-current="true"] .axisMarker small {
+    font-size: clamp(.34rem, .28rem + .05vw, .44rem);
+  }
+
+  .timelineFooter {
+    font-size: clamp(.5rem, .42rem + .07vw, .64rem);
+  }
+}

@@ -257,3 +257,15 @@
     font-size: clamp(.5rem, .42rem + .07vw, .64rem);
   }
 }
+
+
+@media (min-width: 1600px) {
+  .creditVisual small {
+    font-size: clamp(.6rem, .5rem + .08vw, .76rem);
+  }
+
+  .rewardGroupVisual .rewardFallback,
+  .rewardGroupVisual .titleVisual {
+    font-size: clamp(.52rem, .43rem + .07vw, .66rem);
+  }
+}

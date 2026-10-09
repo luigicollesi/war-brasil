@@ -1334,3 +1334,26 @@
     min-height: clamp(620px, 42vw, 820px);
   }
 }
+
+
+@media (min-width: 1600px) {
+  .chapterNav a span {
+    font-size: clamp(9px, .4vw, 12px);
+  }
+
+  .phaseCard small {
+    font-size: clamp(9px, .4vw, 12px);
+  }
+
+  .departureProtocol small,
+  .departureProtocol strong,
+  .departureStep p,
+  .departureBalanceRail,
+  .departureVictoryBanner small {
+    font-size: clamp(8px, .36vw, 11px);
+  }
+
+  .departureVictoryBanner strong {
+    font-size: clamp(15px, .72vw, 19px);
+  }
+}

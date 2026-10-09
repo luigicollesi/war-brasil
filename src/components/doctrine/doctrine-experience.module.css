@@ -1418,3 +1418,68 @@
     max-width: var(--doctrine-content-max);
   }
 }
+
+
+@media (min-width: 1600px) {
+  .indexHeader,
+  .demoFrame figcaption,
+  .metrics dt,
+  .phaseStep span,
+  .phaseStep small,
+  .reinforcementReadout span,
+  .reinforcementReadout small,
+  .tradeProgression > span,
+  .eventReadout span,
+  .eventReadout small,
+  .prevNext span {
+    font-size: var(--doctrine-micro);
+  }
+
+  .indexPanel h1 {
+    font-size: clamp(64px, 3.5vw, 82px);
+  }
+
+  .indexPanel > p {
+    max-width: 32ch;
+    font-size: clamp(12px, .56vw, 16px);
+  }
+
+  .chapterNav a span {
+    font-size: clamp(9px, .4vw, 12px);
+  }
+
+  .chapterNav a b {
+    font-size: clamp(12px, .54vw, 15px);
+  }
+
+  .briefing li {
+    font-size: clamp(13px, .6vw, 17px);
+  }
+
+  .metric dt {
+    font-size: clamp(8px, .36vw, 11px);
+  }
+
+  .metric dd {
+    font-size: clamp(13px, .62vw, 17px);
+  }
+
+  .demoFrame figcaption,
+  .phaseStep span,
+  .phaseStep small {
+    font-size: clamp(8px, .36vw, 11px);
+  }
+
+  .phaseStep strong {
+    font-size: clamp(25px, 1.35vw, 34px);
+  }
+
+  .reinforcementReadout b,
+  .eventReadout strong {
+    font-size: clamp(30px, 1.65vw, 42px);
+  }
+
+  .prevNext a {
+    font-size: clamp(12px, .54vw, 15px);
+  }
+}

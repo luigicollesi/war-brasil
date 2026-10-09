@@ -967,3 +967,22 @@
     font-size: clamp(.45rem, .37rem + .07vw, .59rem);
   }
 }
+
+
+@media (min-width: 1600px) {
+  .title {
+    font-size: clamp(6.35rem, 5.55rem + .6vw, 7.7rem);
+  }
+
+  .enterButtonCode {
+    font-size: clamp(.58rem, .48rem + .08vw, .74rem);
+  }
+
+  .enterButtonArrow {
+    font-size: clamp(1.05rem, .9rem + .12vw, 1.34rem);
+  }
+
+  .ritualState {
+    font-size: clamp(.5rem, .42rem + .07vw, .64rem);
+  }
+}

@@ -1031,3 +1031,104 @@
     transform: none;
   }
 }
+
+
+@media (min-width: 1600px) {
+  .backLink,
+  .eyebrow,
+  .machineCode,
+  .gameModeEyebrow,
+  .orderNumber {
+    font-size: clamp(.58rem, .48rem + .08vw, .76rem);
+  }
+
+  .title {
+    font-size: clamp(4.35rem, 3.6rem + .5vw, 5.6rem);
+  }
+
+  .lead {
+    max-width: 560px;
+    font-size: clamp(.92rem, .78rem + .1vw, 1.12rem);
+  }
+
+  .machineTitle {
+    font-size: clamp(1.55rem, 1.25rem + .2vw, 2rem);
+  }
+
+  .systemState {
+    font-size: clamp(.54rem, .45rem + .07vw, .69rem);
+  }
+
+  .gameModeIndex,
+  .modeIndex {
+    font-size: clamp(.67rem, .56rem + .08vw, .84rem);
+  }
+
+  .lockedBadge,
+  .activeBadge {
+    min-height: clamp(22px, 1.45vw, 30px);
+    padding-inline: clamp(8px, .55vw, 12px);
+    font-size: clamp(.49rem, .4rem + .07vw, .63rem);
+  }
+
+  .gameModeCopy h3 {
+    max-width: 430px;
+    font-size: clamp(5rem, 4.2rem + .52vw, 6.2rem);
+  }
+
+  .classicDescription {
+    max-width: 500px;
+    font-size: clamp(.88rem, .75rem + .09vw, 1.06rem);
+  }
+
+  .classicButton {
+    min-height: clamp(54px, 3.5vw, 72px);
+    font-size: clamp(.87rem, .72rem + .11vw, 1.08rem);
+  }
+
+  .classicButton small {
+    font-size: clamp(.48rem, .39rem + .07vw, .62rem);
+  }
+
+  .customHeader h3 {
+    font-size: clamp(3.15rem, 2.55rem + .4vw, 4.1rem);
+  }
+
+  .customDescription {
+    max-width: 430px;
+    font-size: clamp(.78rem, .66rem + .09vw, .96rem);
+  }
+
+  .modeTab {
+    min-height: clamp(58px, 3.8vw, 78px);
+  }
+
+  .modeCopy strong {
+    font-size: clamp(.88rem, .73rem + .11vw, 1.1rem);
+  }
+
+  .modeCopy small {
+    font-size: clamp(.5rem, .41rem + .07vw, .64rem);
+  }
+
+  .modePanel h4 {
+    max-width: 720px;
+    font-size: clamp(3.8rem, 3.15rem + .43vw, 4.85rem);
+  }
+
+  .modePanel > p {
+    max-width: 760px;
+    font-size: clamp(.86rem, .73rem + .09vw, 1.04rem);
+  }
+
+  .modePanel :global(.wb-button),
+  .modePanel :global(.wb-field) {
+    min-height: clamp(44px, 2.8vw, 58px);
+    font-size: clamp(.78rem, .66rem + .09vw, .96rem);
+  }
+
+  .stationStatus {
+    min-height: clamp(36px, 2.4vw, 48px);
+    font-size: clamp(.52rem, .43rem + .07vw, .67rem);
+  }
+}

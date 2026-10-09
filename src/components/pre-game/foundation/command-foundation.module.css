@@ -609,3 +609,22 @@
     height: clamp(58px, 3vw, 78px);
   }
 }
+
+
+@media (min-width: 1600px) {
+  .panelTitle {
+    font-size: clamp(2.5rem, 2rem + .35vw, 3.2rem);
+  }
+
+  .insigniaMedallion strong {
+    font-size: clamp(.84rem, .7rem + .1vw, 1.06rem);
+  }
+
+  .insigniaCopy strong {
+    font-size: clamp(.82rem, .68rem + .1vw, 1.04rem);
+  }
+
+  .insigniaCopy small {
+    font-size: clamp(.49rem, .4rem + .07vw, .64rem);
+  }
+}
