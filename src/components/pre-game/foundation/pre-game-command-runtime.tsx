@@ -28,7 +28,7 @@ import type {
 
 export type CommandSceneDirective = Readonly<{
   focus?: CommandSceneFocus;
-  cameraPose?: CommandCameraPoseId;
+  cameraPose?: CommandCameraPoseId | null;
   conflictLevel?: CommandConflictLevel;
   territoryExplode?: number;
   orbitalAlignment?: CommandOrbitalAlignment;
