@@ -269,3 +269,42 @@
     font-size: clamp(.52rem, .43rem + .07vw, .66rem);
   }
 }
+
+
+@media (min-width: 1800px) {
+  .rewardStatus,
+  .rewardStateText {
+    font-size: clamp(.54rem, .43rem + .09vw, .7rem);
+  }
+
+  .rewardVisual {
+    min-height: clamp(96px, 7.6vh, 136px);
+  }
+
+  .rewardImage {
+    max-height: clamp(122px, 9.4vh, 166px);
+  }
+
+  .territoryVisual {
+    max-height: clamp(118px, 9vh, 160px);
+  }
+
+  .rewardCopy strong {
+    font-size: clamp(.76rem, .61rem + .12vw, .98rem);
+  }
+
+  .rewardCopy small,
+  .creditVisual small {
+    font-size: clamp(.52rem, .42rem + .08vw, .68rem);
+  }
+
+  .creditVisual strong {
+    font-size: clamp(1.8rem, 1.45rem + .25vw, 2.3rem);
+  }
+
+  .rewardItem button {
+    min-width: clamp(108px, 6.5vw, 142px);
+    min-height: var(--command-control-height, 56px);
+    font-size: clamp(.58rem, .47rem + .09vw, .74rem);
+  }
+}

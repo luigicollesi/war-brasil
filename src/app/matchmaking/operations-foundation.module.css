@@ -163,3 +163,33 @@
     line-height: 1.6;
   }
 }
+
+
+@media (min-width: 1800px) {
+  .foundationIntro,
+  .foundationStation {
+    width: min(62vw, 1240px);
+    max-width: 1240px;
+  }
+
+  .foundationIntro > p {
+    max-width: 920px;
+    font-size: clamp(1rem, .82rem + .13vw, 1.24rem);
+  }
+
+  .foundationCommandBay {
+    min-height: clamp(520px, 42vh, 700px);
+  }
+}
+
+@media (min-width: 2300px) {
+  .foundationIntro,
+  .foundationStation {
+    width: min(64vw, 1400px);
+    max-width: 1400px;
+  }
+
+  .foundationCommandBay {
+    min-height: clamp(580px, 44vh, 780px);
+  }
+}

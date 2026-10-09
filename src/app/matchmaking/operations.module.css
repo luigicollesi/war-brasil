@@ -1132,3 +1132,83 @@
     font-size: clamp(.52rem, .43rem + .07vw, .67rem);
   }
 }
+
+
+@media (min-width: 1800px) {
+  .title {
+    font-size: clamp(5rem, 4.1rem + .7vw, 6.4rem);
+  }
+
+  .eyebrow,
+  .machineCode,
+  .gameModeEyebrow,
+  .orderNumber,
+  .backLink {
+    font-size: clamp(.66rem, .53rem + .1vw, .84rem);
+  }
+
+  .lead {
+    max-width: 620px;
+    font-size: clamp(1rem, .82rem + .13vw, 1.24rem);
+  }
+
+  .machineTitle {
+    font-size: clamp(1.8rem, 1.45rem + .26vw, 2.35rem);
+  }
+
+  .systemState,
+  .stationStatus {
+    font-size: clamp(.62rem, .5rem + .09vw, .78rem);
+  }
+
+  .gameModeCopy h3 {
+    max-width: 500px;
+    font-size: clamp(5.4rem, 4.5rem + .65vw, 6.8rem);
+  }
+
+  .classicDescription,
+  .customDescription,
+  .modePanel > p {
+    font-size: clamp(.94rem, .78rem + .12vw, 1.16rem);
+  }
+
+  .customHeader h3 {
+    font-size: clamp(3.55rem, 2.9rem + .46vw, 4.6rem);
+  }
+
+  .modeCopy strong {
+    font-size: clamp(.98rem, .8rem + .14vw, 1.24rem);
+  }
+
+  .modeCopy small,
+  .classicButton small,
+  .lockedBadge,
+  .activeBadge {
+    font-size: clamp(.56rem, .45rem + .09vw, .72rem);
+  }
+
+  .modePanel h4 {
+    max-width: 820px;
+    font-size: clamp(4.25rem, 3.5rem + .52vw, 5.4rem);
+  }
+
+  .classicButton,
+  .modePanel :global(.wb-button),
+  .modePanel :global(.wb-field) {
+    font-size: clamp(.9rem, .74rem + .12vw, 1.12rem);
+  }
+}
+
+@media (min-width: 2300px) {
+  .title {
+    font-size: clamp(5.8rem, 4.8rem + .66vw, 7.1rem);
+  }
+
+  .gameModeCopy h3 {
+    font-size: clamp(6rem, 5rem + .65vw, 7.6rem);
+  }
+
+  .modePanel h4 {
+    font-size: clamp(4.8rem, 4rem + .52vw, 6rem);
+  }
+}
