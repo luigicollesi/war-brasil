@@ -475,3 +475,65 @@ textarea {
     font-size: 0.68rem;
   }
 }
+
+
+/* ------------------------------------------------------------------ */
+/* Global high-resolution UI scale                                    */
+/* ------------------------------------------------------------------ */
+/*
+  The product baseline is 1080p. On large desktop displays the root rem grows
+  with the viewport so Tailwind rem utilities and component typography keep
+  approximately the same visual occupancy instead of shrinking relative to
+  the screen. Width breakpoints remain structural; this only affects large
+  desktop viewports.
+*/
+@media (min-width: 1800px) {
+  html {
+    font-size: 18px;
+  }
+
+  :root {
+    --wb-global-ui-scale: 1.125;
+    --wb-global-control-height: 3.5rem;
+    --wb-global-content-inline: clamp(2.5rem, 3vw, 5rem);
+    --wb-global-content-max: 92rem;
+  }
+}
+
+@media (min-width: 2300px) {
+  html {
+    font-size: 20px;
+  }
+
+  :root {
+    --wb-global-ui-scale: 1.25;
+    --wb-global-control-height: 3.75rem;
+    --wb-global-content-inline: clamp(3rem, 3.2vw, 6rem);
+    --wb-global-content-max: 102rem;
+  }
+}
+
+@media (min-width: 3200px) {
+  html {
+    font-size: 24px;
+  }
+
+  :root {
+    --wb-global-ui-scale: 1.5;
+    --wb-global-control-height: 4rem;
+    --wb-global-content-inline: clamp(4rem, 3.4vw, 8rem);
+    --wb-global-content-max: 112rem;
+  }
+}
+
+@media (min-width: 4200px) {
+  html {
+    font-size: 26px;
+  }
+
+  :root {
+    --wb-global-ui-scale: 1.625;
+    --wb-global-control-height: 4.25rem;
+    --wb-global-content-max: 120rem;
+  }
+}

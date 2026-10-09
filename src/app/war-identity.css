@@ -712,3 +712,237 @@
   .wb-color-choice { transition: none !important; }
   .wb-button:hover:not(:disabled) { transform: none; }
 }
+
+
+/* ------------------------------------------------------------------ */
+/* Shared high-resolution primitives                                  */
+/* ------------------------------------------------------------------ */
+/* These rules are intentionally global to every screen using WAR/Bellum
+   primitives. Page-specific CSS should only override composition, not invent
+   a separate text/control scale for 4K. */
+@media (min-width: 1800px) {
+  .wb-shell-inner {
+    width: min(
+      calc(100% - (var(--wb-global-content-inline, 3rem) * 2)),
+      var(--wb-global-content-max, 92rem)
+    );
+  }
+
+  .wb-header-inner {
+    min-height: clamp(82px, 4.8vw, 108px);
+    gap: clamp(24px, 1.5vw, 36px);
+  }
+
+  .wb-brand {
+    gap: clamp(13px, .8vw, 18px);
+  }
+
+  .wb-brand-mark {
+    width: clamp(44px, 2.4vw, 58px);
+    height: clamp(44px, 2.4vw, 58px);
+  }
+
+  .wb-brand-mark > span {
+    font-size: clamp(1.15rem, .95rem + .12vw, 1.38rem);
+  }
+
+  .wb-brand-copy {
+    font-size: clamp(1rem, .82rem + .12vw, 1.24rem);
+  }
+
+  .wb-header-title {
+    font-size: clamp(.82rem, .68rem + .1vw, 1.02rem);
+  }
+
+  .wb-header-actions {
+    gap: clamp(12px, .7vw, 18px);
+  }
+
+  .wb-back,
+  .wb-ghost-link {
+    min-height: clamp(46px, 2.6vw, 58px);
+    gap: clamp(9px, .55vw, 13px);
+    font-size: clamp(.72rem, .58rem + .1vw, .9rem);
+  }
+
+  .wb-page {
+    padding-block: clamp(64px, 5vw, 112px);
+  }
+
+  .wb-kicker {
+    font-size: clamp(.72rem, .56rem + .12vw, .94rem);
+  }
+
+  .wb-page-title {
+    max-width: min(68rem, 74vw);
+    margin-top: clamp(14px, .8vw, 20px);
+    font-size: clamp(4.7rem, 3.5rem + .9vw, 6.5rem);
+  }
+
+  .wb-page-lead {
+    max-width: 48rem;
+    margin-top: clamp(20px, 1.2vw, 28px);
+    font-size: clamp(1.08rem, .9rem + .13vw, 1.35rem);
+  }
+
+  .wb-button {
+    min-height: max(56px, var(--wb-global-control-height, 3.5rem));
+    gap: clamp(11px, .65vw, 16px);
+    padding-inline: clamp(26px, 1.5vw, 38px);
+    font-size: clamp(.76rem, .61rem + .11vw, .96rem);
+  }
+
+  .wb-button--ghost {
+    min-height: clamp(48px, 2.8vw, 60px);
+    padding-inline: clamp(14px, .8vw, 20px);
+  }
+
+  .wb-field {
+    min-height: max(56px, var(--wb-global-control-height, 3.5rem));
+    padding-inline: clamp(17px, 1vw, 24px);
+    font-size: clamp(.92rem, .76rem + .11vw, 1.14rem);
+  }
+
+  .wb-label,
+  .wb-status {
+    font-size: clamp(.72rem, .57rem + .11vw, .92rem);
+  }
+
+  .wb-status-dot {
+    width: clamp(8px, .48vw, 11px);
+    height: clamp(8px, .48vw, 11px);
+  }
+
+  .wb-error {
+    margin-top: clamp(12px, .7vw, 18px);
+    font-size: clamp(.86rem, .7rem + .11vw, 1.08rem);
+  }
+
+  .wb-card,
+  .wb-panel,
+  .wb-section {
+    font-size: 1rem;
+  }
+}
+
+@media (min-width: 2300px) {
+  .wb-header-inner {
+    min-height: clamp(94px, 4.2vw, 120px);
+  }
+
+  .wb-brand-mark {
+    width: clamp(52px, 2.2vw, 66px);
+    height: clamp(52px, 2.2vw, 66px);
+  }
+
+  .wb-brand-copy {
+    font-size: clamp(1.12rem, .9rem + .13vw, 1.38rem);
+  }
+
+  .wb-page-title {
+    max-width: min(76rem, 76vw);
+    font-size: clamp(5.5rem, 4.1rem + .85vw, 7.4rem);
+  }
+
+  .wb-page-lead {
+    max-width: 54rem;
+    font-size: clamp(1.2rem, .96rem + .14vw, 1.5rem);
+  }
+
+  .wb-button {
+    min-height: max(64px, var(--wb-global-control-height, 3.75rem));
+    padding-inline: clamp(30px, 1.45vw, 44px);
+    font-size: clamp(.86rem, .68rem + .11vw, 1.08rem);
+  }
+
+  .wb-field {
+    min-height: max(64px, var(--wb-global-control-height, 3.75rem));
+    font-size: clamp(1rem, .8rem + .12vw, 1.24rem);
+  }
+
+  .wb-label,
+  .wb-status {
+    font-size: clamp(.8rem, .64rem + .1vw, 1rem);
+  }
+}
+
+@media (min-width: 3200px) {
+  .wb-shell-inner {
+    width: min(
+      calc(100% - (var(--wb-global-content-inline, 5rem) * 2)),
+      var(--wb-global-content-max, 112rem)
+    );
+  }
+
+  .wb-header-inner {
+    min-height: clamp(118px, 3.8vw, 148px);
+  }
+
+  .wb-brand-mark {
+    width: clamp(68px, 2.15vw, 82px);
+    height: clamp(68px, 2.15vw, 82px);
+  }
+
+  .wb-brand-mark > span {
+    font-size: clamp(1.5rem, 1.18rem + .1vw, 1.8rem);
+  }
+
+  .wb-brand-copy {
+    font-size: clamp(1.45rem, 1.12rem + .1vw, 1.72rem);
+  }
+
+  .wb-header-title {
+    font-size: clamp(1.15rem, .9rem + .08vw, 1.38rem);
+  }
+
+  .wb-back,
+  .wb-ghost-link {
+    min-height: clamp(62px, 2vw, 76px);
+    font-size: clamp(1rem, .78rem + .07vw, 1.22rem);
+  }
+
+  .wb-page {
+    padding-block: clamp(90px, 3.8vw, 136px);
+  }
+
+  .wb-kicker {
+    font-size: clamp(1rem, .78rem + .07vw, 1.24rem);
+  }
+
+  .wb-page-title {
+    max-width: min(88rem, 78vw);
+    font-size: clamp(7rem, 5.6rem + .44vw, 8.6rem);
+  }
+
+  .wb-page-lead {
+    max-width: 64rem;
+    font-size: clamp(1.5rem, 1.16rem + .11vw, 1.82rem);
+  }
+
+  .wb-button {
+    min-height: max(82px, var(--wb-global-control-height, 4rem));
+    gap: clamp(16px, .55vw, 22px);
+    padding-inline: clamp(40px, 1.25vw, 52px);
+    font-size: clamp(1.1rem, .86rem + .08vw, 1.36rem);
+  }
+
+  .wb-button--ghost {
+    min-height: clamp(70px, 2.2vw, 86px);
+    padding-inline: clamp(22px, .7vw, 30px);
+  }
+
+  .wb-field {
+    min-height: max(82px, var(--wb-global-control-height, 4rem));
+    padding-inline: clamp(24px, .8vw, 32px);
+    font-size: clamp(1.28rem, 1rem + .09vw, 1.58rem);
+  }
+
+  .wb-label,
+  .wb-status {
+    font-size: clamp(1.02rem, .8rem + .07vw, 1.28rem);
+  }
+
+  .wb-error {
+    font-size: clamp(1.12rem, .88rem + .08vw, 1.38rem);
+  }
+}
