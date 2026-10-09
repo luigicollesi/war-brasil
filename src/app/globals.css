@@ -490,14 +490,21 @@ textarea {
   The clamp prevents low-resolution regressions and unbounded 5K/8K growth.
 */
 html {
-  font-size: 16px;
+  /*
+    1080p baseline: 1080 * 1.4815% ~= 16px.
+    QHD: 1440 -> ~21.3px.
+    4K: 2160 -> 32px.
+    vmin prevents ultrawide layouts from scaling typography only because
+    horizontal resolution increased.
+  */
+  font-size: clamp(16px, 1.4815vmin, 32px);
 }
 
 :root {
-  --wb-fluid-rem: 16px;
+  --wb-fluid-rem: clamp(16px, 1.4815vmin, 32px);
   --wb-global-control-height: 3.125rem;
-  --wb-global-content-inline: clamp(1.25rem, 3vw, 4rem);
-  --wb-global-content-max: 82.5rem;
+  --wb-global-content-inline: clamp(1.25rem, 3vw, 6rem);
+  --wb-global-content-max: 92rem;
 
   --wb-text-micro: .625rem;
   --wb-text-xs: .75rem;
@@ -515,21 +522,3 @@ html {
   --wb-space-fluid-xl: clamp(1.6rem, 1.05rem + 1vw, 3.5rem);
 }
 
-@media (min-width: 1920px) {
-  html {
-    font-size: clamp(16px, calc(.625vw + 4px), 28px);
-  }
-
-  :root {
-    --wb-fluid-rem: clamp(16px, calc(.625vw + 4px), 28px);
-    --wb-global-control-height: 3.25rem;
-    --wb-global-content-inline: clamp(2rem, 3.2vw, 6rem);
-    --wb-global-content-max: 92rem;
-  }
-}
-
-@media (min-width: 3200px) {
-  :root {
-    --wb-global-content-max: 108rem;
-  }
-}
