@@ -497,11 +497,11 @@ html {
     vmin prevents ultrawide layouts from scaling typography only because
     horizontal resolution increased.
   */
-  font-size: clamp(16px, 1.4815vmin, 32px);
+  font-size: clamp(16px, 1.6vmin, 36px);
 }
 
 :root {
-  --wb-fluid-rem: clamp(16px, 1.4815vmin, 32px);
+  --wb-fluid-rem: clamp(16px, 1.6vmin, 36px);
   --wb-global-control-height: 3.125rem;
   --wb-global-content-inline: clamp(1.25rem, 3vw, 6rem);
   --wb-global-content-max: 92rem;

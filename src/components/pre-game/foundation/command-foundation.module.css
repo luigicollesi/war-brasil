@@ -653,3 +653,94 @@
     font-size: .49rem;
   }
 }
+
+
+/* Ultra-high-resolution chrome occupancy. */
+@media (min-width: 2400px) and (min-height: 1200px) {
+  .shell {
+    --command-content-inline: clamp(4rem, 4vw, 9rem);
+    --command-content-top: clamp(6rem, 6vh, 9rem);
+    --command-content-bottom: clamp(2.5rem, 3vh, 5rem);
+    --command-content-max: 88vw;
+    --command-ui-sm: .72rem;
+    --command-ui-md: 1rem;
+    --command-control-height: 3.4rem;
+  }
+
+  .shellChrome {
+    top: clamp(2.5rem, 3vh, 4rem);
+  }
+
+  .brandLockup {
+    max-width: min(48vw, 42rem);
+    gap: 1.1rem;
+  }
+
+  .brandSeal {
+    width: 3.75rem;
+    height: 3.75rem;
+    font-size: .95rem;
+  }
+
+  .brandSeal img {
+    width: 2.65rem !important;
+    height: 2.65rem !important;
+  }
+
+  .brandLockup small {
+    font-size: .66rem;
+  }
+
+  .brandLockup strong {
+    font-size: 1.2rem;
+    letter-spacing: .14em;
+  }
+
+  .modeRail {
+    gap: .45rem;
+    padding-right: 1rem;
+  }
+
+  .modeRail span {
+    font-size: .66rem;
+  }
+
+  .modeRail strong {
+    font-size: 1rem;
+  }
+
+  .panelEyebrow,
+  .commandLabel,
+  .commandStatus {
+    font-size: .7rem;
+  }
+
+  .panelTitle {
+    font-size: clamp(3rem, 3.2vw, 5rem);
+  }
+}
+
+@media (min-width: 3600px) and (min-height: 1700px) {
+  .brandSeal {
+    width: 4.25rem;
+    height: 4.25rem;
+  }
+
+  .brandSeal img {
+    width: 3rem !important;
+    height: 3rem !important;
+  }
+
+  .brandLockup strong {
+    font-size: 1.35rem;
+  }
+
+  .brandLockup small,
+  .modeRail span {
+    font-size: .72rem;
+  }
+
+  .modeRail strong {
+    font-size: 1.08rem;
+  }
+}
