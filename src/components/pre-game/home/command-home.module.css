@@ -899,110 +899,110 @@
    larger font. This intentionally removes the old 1640/2060px visual caps. */
 
 
-
-
-
 /* Continuous desktop composition.
-   Size follows viewport/rem continuously; breakpoints only switch composition. */
+   Every major visual dimension is a fraction of the viewport. No 4K tier. */
 @media (min-width: 901px) {
   .guideLauncher {
-    top: calc(6vh + env(safe-area-inset-top));
-    right: max(3vw, env(safe-area-inset-right));
-    width: 2.35rem;
-    height: 2.35rem;
-    font-size: 1rem;
+    top: calc(5.2vh + env(safe-area-inset-top));
+    right: max(2.6vw, env(safe-area-inset-right));
+    width: 2.6vmin;
+    height: 2.6vmin;
+    font-size: 1.15vmin;
   }
 
   .identity {
-    top: 9vh;
-    width: 74vw;
+    top: 7.8vh;
+    width: 78vw;
   }
 
   .kicker {
-    margin-bottom: .5rem;
-    font-size: .56rem;
+    margin-bottom: .55vmin;
+    font-size: .72vmin;
   }
 
   .title {
-    font-size: 11vmin;
-    line-height: .88;
-    letter-spacing: .035em;
+    font-size: 13.2vmin;
+    line-height: .86;
+    letter-spacing: .032em;
   }
 
   .subtitle {
-    max-width: 42vw;
-    margin-top: .85rem;
-    font-size: .76rem;
+    max-width: 48vw;
+    margin-top: 1vmin;
+    font-size: .95vmin;
+    line-height: 1.5;
   }
 
   .identityTelemetry {
-    gap: 1.1rem;
-    margin-top: .9rem;
-    font-size: .48rem;
+    gap: 1.35vmin;
+    margin-top: 1vmin;
+    font-size: .62vmin;
   }
 
   .commandDock {
-    width: 86vw;
-    bottom: max(4.5vh, calc(env(safe-area-inset-bottom) + 1.75rem));
+    width: 90vw;
+    bottom: max(3.8vh, calc(env(safe-area-inset-bottom) + 1.2vmin));
   }
 
   .enterButton {
-    width: 50vw;
-    min-height: 5.5vh;
-    gap: 1.25rem;
-    padding-inline: 1.2rem;
-    font-size: 1.08rem;
+    width: 54vw;
+    min-height: 6.8vh;
+    gap: 1.4vmin;
+    padding-inline: 1.5vmin;
+    font-size: 1.3vmin;
   }
 
-  .enterButtonCode {
-    font-size: .58rem;
-  }
-
-  .enterButtonArrow {
-    font-size: 1.05rem;
-  }
-
+  .enterButtonCode,
   .authorizationMeta,
   .commandStatus,
   .ritualState {
-    font-size: .5rem;
+    font-size: .66vmin;
+  }
+
+  .enterButtonArrow {
+    font-size: 1.35vmin;
   }
 
   .destination {
-    min-height: 8.5vh;
-    gap: .8rem;
-    padding: .65rem 1.25rem;
+    min-height: 10.5vh;
+    gap: 1vmin;
+    padding: .9vmin 1.5vmin;
   }
 
   .destinationIndex {
-    font-size: .56rem;
+    font-size: .72vmin;
   }
 
   .destinationCopy {
-    gap: .2rem;
+    gap: .3vmin;
   }
 
   .destinationCopy strong {
-    font-size: 1.04rem;
+    font-size: 1.3vmin;
   }
 
   .destinationCopy span {
-    font-size: .56rem;
+    font-size: .72vmin;
+    line-height: 1.35;
   }
 
   .destinationArrow {
-    font-size: .9rem;
+    font-size: 1.1vmin;
   }
 
   .campaignMiniProgress {
-    height: .2rem;
+    height: .22vmin;
   }
 
   .footer {
-    right: 3vw;
-    bottom: 1.2vh;
-    left: 3vw;
-    gap: 1.5rem;
-    font-size: .45rem;
+    right: 2.6vw;
+    bottom: 1vh;
+    left: 2.6vw;
+    gap: 1.3vmin;
+    font-size: .58vmin;
+  }
+
+  .legalLinks {
+    gap: 1.2vmin;
   }
 }

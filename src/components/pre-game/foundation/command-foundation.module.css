@@ -567,71 +567,68 @@
 /* Ultra-high-resolution chrome occupancy. */
 
 
-
-
-
 /* Continuous desktop Foundation scale.
-   All growth comes from root rem + viewport units, not resolution tiers. */
+   Chrome occupies stable viewport proportions at any desktop resolution. */
 @media (min-width: 901px) {
   .shell {
-    --command-content-inline: 4vw;
-    --command-content-top: 6vh;
-    --command-content-bottom: 3vh;
-    --command-content-max: 88vw;
-    --command-ui-sm: .58rem;
-    --command-ui-md: .82rem;
-    --command-control-height: 2.75rem;
+    --command-content-inline: 3.4vw;
+    --command-content-top: 5.5vh;
+    --command-content-bottom: 2.8vh;
+    --command-content-max: 92vw;
+    --command-ui-sm: .68vmin;
+    --command-ui-md: .92vmin;
+    --command-control-height: 3.2vmin;
   }
 
   .shellChrome {
-    top: 3vh;
+    top: 2.6vh;
     right: var(--command-content-inline);
     left: var(--command-content-inline);
   }
 
   .brandLockup {
-    max-width: 48vw;
-    gap: .85rem;
+    max-width: 52vw;
+    gap: .85vmin;
   }
 
   .brandSeal {
-    width: 2.7rem;
-    height: 2.7rem;
-    font-size: .68rem;
+    width: 3.2vmin;
+    height: 3.2vmin;
+    font-size: .72vmin;
   }
 
   .brandSeal img {
-    width: 2rem !important;
-    height: 2rem !important;
+    width: 2.35vmin !important;
+    height: 2.35vmin !important;
   }
 
   .brandLockup small {
-    font-size: .5rem;
+    font-size: .58vmin;
   }
 
   .brandLockup strong {
-    font-size: .9rem;
+    font-size: 1.02vmin;
   }
 
   .modeRail {
-    gap: .35rem;
-    padding-right: .8rem;
+    gap: .3vmin;
+    padding-right: .8vmin;
   }
 
   .modeRail span {
-    font-size: .48rem;
+    font-size: .58vmin;
   }
 
   .modeRail strong {
-    font-size: .72rem;
+    font-size: .9vmin;
   }
 
   .fallbackTable {
-    width: 60vw;
+    width: 64vw;
   }
 
   .fallbackGlobe {
-    width: 20vw;
+    width: 22vw;
   }
 
   .commandLabel,
@@ -640,27 +637,27 @@
   }
 
   .panelEyebrow {
-    font-size: .52rem;
+    font-size: .62vmin;
   }
 
   .panelTitle {
-    font-size: 3vmin;
+    font-size: 3.4vmin;
   }
 
   .insigniaMedallion {
-    width: 3.7rem;
-    height: 3.7rem;
+    width: 4.1vmin;
+    height: 4.1vmin;
   }
 
   .insigniaMedallion strong {
-    font-size: .84rem;
+    font-size: .9vmin;
   }
 
   .insigniaCopy strong {
-    font-size: .82rem;
+    font-size: .88vmin;
   }
 
   .insigniaCopy small {
-    font-size: .49rem;
+    font-size: .56vmin;
   }
 }

@@ -497,11 +497,13 @@ html {
     vmin prevents ultrawide layouts from scaling typography only because
     horizontal resolution increased.
   */
-  font-size: max(16px, 1.6vmin);
+  font-size: max(16px, calc(3.5vmin - 22px));
 }
 
 :root {
-  --wb-fluid-rem: max(16px, 1.6vmin);
+  --wb-viewport-unit: 1vmin;
+  --wb-ui-scale: max(1, calc((3.5vmin - 22px) / 16px));
+  --wb-fluid-rem: max(16px, calc(3.5vmin - 22px));
   --wb-global-control-height: 3.125rem;
   --wb-global-content-inline: max(1.25rem, 3vw);
   --wb-global-content-max: 92rem;
