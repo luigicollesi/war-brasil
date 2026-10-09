@@ -428,7 +428,7 @@ function GameReadyClient({
         event={xpFeedback.activeEvent}
         announcement={xpFeedback.announcement}
       />
-      <section className="game-top-hud rounded-3xl border border-[#17372d]/10 bg-[#faf8f2] p-5 shadow-[0_18px_50px_rgba(42,55,50,0.07)] sm:p-6">
+      <section className="game-top-hud game-responsive-panel rounded-3xl border border-[#17372d]/10 bg-[#faf8f2] p-5 shadow-[0_18px_50px_rgba(42,55,50,0.07)] sm:p-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#9b7a27]">
@@ -632,7 +632,7 @@ function OrderRollPanel({
     shownPlayer?.rolls.find((roll) => roll.round === currentRound)?.value ?? 1;
 
   return (
-    <section className="grid gap-5 rounded-3xl bg-[#12392f] p-5 text-white shadow-[0_18px_50px_rgba(19,57,47,0.16)] lg:grid-cols-[14rem_1fr] sm:p-7">
+    <section className="game-order-roll-panel grid gap-5 rounded-3xl bg-[#12392f] p-5 text-white shadow-[0_18px_50px_rgba(19,57,47,0.16)] lg:grid-cols-[14rem_1fr] sm:p-7">
       <div className="flex flex-col items-center justify-center">
         <GameDie
           key={`${currentRound}-${shownPlayer?.id ?? "pending"}-${shownValue}`}
@@ -650,7 +650,7 @@ function OrderRollPanel({
           type="button"
           onClick={onRoll}
           disabled={!canRoll || isRolling}
-          className="mt-5 h-12 w-full rounded-xl bg-[#e4b94f] px-5 text-xs font-bold uppercase tracking-[0.14em] text-[#12392f] transition hover:bg-[#f1ca68] disabled:cursor-not-allowed disabled:opacity-45"
+          className="game-order-roll-button mt-5 h-12 w-full rounded-xl bg-[#e4b94f] px-5 text-xs font-bold uppercase tracking-[0.14em] text-[#12392f] transition hover:bg-[#f1ca68] disabled:cursor-not-allowed disabled:opacity-45"
         >
           {isRolling
             ? "Rolando…"
@@ -682,7 +682,7 @@ function OrderRollPanel({
             return (
               <li
                 key={player.id}
-                className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/6 p-3"
+                className="game-order-player-card flex items-center gap-3 rounded-2xl border border-white/10 bg-white/6 p-3"
               >
                 <span
                   className="h-8 w-8 rounded-lg ring-2 ring-white/15"
@@ -763,7 +763,7 @@ function TurnOrderStrip({
   const activePlayers = players.filter((player) => player.turnPosition !== null);
 
   return (
-    <section className="rounded-2xl border border-[#17372d]/10 bg-[#faf8f2] p-3 shadow-sm">
+    <section className="game-turn-order-panel rounded-2xl border border-[#17372d]/10 bg-[#faf8f2] p-3 shadow-sm">
       <p className="px-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[#9b7a27]">
         Ordem de jogo
       </p>
@@ -774,7 +774,7 @@ function TurnOrderStrip({
             <li
               key={player.id}
               className={
-                "flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition " +
+                "game-player-order-card flex items-center gap-2 rounded-xl px-3 py-2 text-sm transition " +
                 (active
                   ? "bg-[#12392f] font-semibold text-white shadow-md ring-2 ring-[#e4b94f]/70"
                   : "bg-[#e9e4d7] text-[#52635d]")

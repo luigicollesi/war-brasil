@@ -400,3 +400,66 @@
     transition: none;
   }
 }
+
+
+@media (min-width: 1800px) {
+  .dock {
+    min-height: clamp(88px, 5vw, 110px);
+    grid-template-columns: minmax(300px, .9fr) minmax(320px, .75fr) auto;
+    gap: clamp(16px, 1.2vw, 26px);
+    padding: clamp(11px, .7vw, 16px) clamp(14px, .9vw, 22px);
+  }
+
+  .readyCopy {
+    gap: clamp(14px, .9vw, 20px);
+  }
+
+  .readyInsignia {
+    width: clamp(42px, 2.3vw, 54px);
+    height: clamp(42px, 2.3vw, 54px);
+  }
+
+  .railLabel {
+    font-size: clamp(.44rem, .36rem + .06vw, .56rem);
+  }
+
+  .readyTitle {
+    font-size: clamp(1.08rem, .88rem + .15vw, 1.36rem);
+  }
+
+  .readyDetail {
+    font-size: clamp(.6rem, .49rem + .09vw, .76rem);
+  }
+
+  .authorizationCell {
+    height: clamp(42px, 2.4vw, 52px);
+    padding: clamp(5px, .35vw, 8px) clamp(7px, .45vw, 10px);
+  }
+
+  .authorizationCell small {
+    font-size: clamp(.44rem, .36rem + .06vw, .56rem);
+  }
+
+  .readyButton {
+    min-width: clamp(230px, 13vw, 290px);
+    min-height: clamp(58px, 3.3vw, 70px) !important;
+    font-size: clamp(.72rem, .58rem + .1vw, .9rem) !important;
+  }
+
+  .buttonPrefix {
+    height: 28px;
+    padding-right: 10px;
+    font-size: clamp(.44rem, .36rem + .06vw, .56rem);
+  }
+}
+
+@media (min-width: 2300px) {
+  .dock {
+    min-height: clamp(98px, 4.6vw, 122px);
+  }
+
+  .readyButton {
+    min-width: clamp(260px, 12vw, 320px);
+    min-height: clamp(64px, 3vw, 76px) !important;
+  }
+}

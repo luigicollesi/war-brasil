@@ -218,3 +218,151 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Large desktop game UI scaling. The board keeps its own safe-area sizing;
+   only HUD, player cards and controls grow so 1440p/4K remain readable. */
+@media (min-width: 1800px) {
+  .game-responsive-panel,
+  .game-turn-order-panel,
+  .game-order-roll-panel,
+  .game-turn-control-panel {
+    font-size: 1.08rem;
+  }
+
+  .game-top-hud {
+    padding: clamp(24px, 1.5vw, 34px) !important;
+  }
+
+  .game-top-hud p[class*="text-[10px]"] {
+    font-size: clamp(.72rem, .58rem + .1vw, .9rem) !important;
+  }
+
+  .game-top-hud h1 {
+    font-size: clamp(2rem, 1.6rem + .3vw, 2.6rem) !important;
+  }
+
+  .game-utility-bar {
+    gap: clamp(6px, .4vw, 10px) !important;
+  }
+
+  .game-utility-button {
+    min-width: clamp(64px, 4vw, 88px) !important;
+    min-height: clamp(48px, 2.8vw, 60px) !important;
+    padding: clamp(8px, .5vw, 12px) !important;
+  }
+
+  .game-utility-button svg {
+    width: clamp(20px, 1.15vw, 26px) !important;
+    height: clamp(20px, 1.15vw, 26px) !important;
+  }
+
+  .game-utility-label {
+    font-size: clamp(.58rem, .47rem + .08vw, .74rem) !important;
+  }
+
+  .game-turn-order-panel {
+    padding: clamp(16px, 1vw, 22px) !important;
+  }
+
+  .game-turn-order-panel > p {
+    font-size: clamp(.68rem, .55rem + .1vw, .86rem) !important;
+  }
+
+  .game-turn-order-panel ol {
+    gap: clamp(10px, .7vw, 16px) !important;
+  }
+
+  .game-player-order-card {
+    min-height: clamp(58px, 3.4vw, 72px);
+    gap: clamp(10px, .7vw, 14px) !important;
+    padding: clamp(10px, .65vw, 14px) clamp(14px, .9vw, 20px) !important;
+    font-size: clamp(.92rem, .75rem + .12vw, 1.14rem) !important;
+  }
+
+  .game-player-order-card > span:first-child {
+    font-size: clamp(.78rem, .64rem + .1vw, .96rem) !important;
+  }
+
+  .game-player-order-card > span:nth-child(2) {
+    width: clamp(16px, .9vw, 20px) !important;
+    height: clamp(16px, .9vw, 20px) !important;
+  }
+
+  .game-player-order-card > span:last-child {
+    font-size: clamp(.68rem, .55rem + .1vw, .86rem) !important;
+  }
+
+  .game-order-roll-panel {
+    grid-template-columns: minmax(18rem, 22rem) 1fr !important;
+    gap: clamp(28px, 2vw, 42px) !important;
+    padding: clamp(28px, 1.8vw, 40px) !important;
+  }
+
+  .game-order-roll-button {
+    height: clamp(58px, 3.4vw, 72px) !important;
+    padding-inline: clamp(20px, 1.2vw, 28px) !important;
+    font-size: clamp(.76rem, .62rem + .1vw, .96rem) !important;
+  }
+
+  .game-order-player-card {
+    min-height: clamp(72px, 4vw, 88px);
+    padding: clamp(14px, .85vw, 18px) !important;
+    gap: clamp(12px, .75vw, 18px) !important;
+  }
+
+  .game-order-player-card > span:first-child {
+    width: clamp(38px, 2vw, 46px) !important;
+    height: clamp(38px, 2vw, 46px) !important;
+  }
+
+  .game-order-player-card p:first-child {
+    font-size: clamp(1rem, .82rem + .13vw, 1.26rem) !important;
+  }
+
+  .game-order-player-card p:last-child {
+    font-size: clamp(.78rem, .64rem + .1vw, .98rem) !important;
+  }
+
+  .game-turn-control-panel {
+    padding: clamp(26px, 1.6vw, 36px) !important;
+  }
+
+  .game-turn-control-panel h2 {
+    font-size: clamp(1.55rem, 1.25rem + .22vw, 2rem) !important;
+  }
+
+  .game-turn-control-panel p,
+  .game-turn-control-panel span {
+    font-size: clamp(.86rem, .7rem + .12vw, 1.06rem);
+  }
+
+  .game-phase-action,
+  .game-primary-action {
+    min-height: clamp(52px, 3vw, 64px) !important;
+    padding-inline: clamp(20px, 1.2vw, 28px) !important;
+    font-size: clamp(.74rem, .6rem + .1vw, .94rem) !important;
+  }
+
+  .game-cancel-action {
+    min-height: 42px;
+    font-size: clamp(.68rem, .55rem + .1vw, .86rem) !important;
+  }
+}
+
+@media (min-width: 2300px) {
+  .game-player-order-card {
+    min-height: clamp(66px, 3vw, 80px);
+    font-size: clamp(1.02rem, .82rem + .12vw, 1.26rem) !important;
+  }
+
+  .game-order-player-card {
+    min-height: clamp(80px, 3.6vw, 96px);
+  }
+
+  .game-phase-action,
+  .game-primary-action {
+    min-height: clamp(60px, 2.8vw, 72px) !important;
+    font-size: clamp(.84rem, .68rem + .1vw, 1.04rem) !important;
+  }
+}

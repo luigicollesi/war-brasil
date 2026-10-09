@@ -452,7 +452,7 @@ export function GameTurnPanel({
       : 0;
 
   return (
-    <section className="rounded-3xl border border-[#17372d]/10 bg-[#faf8f2] p-5 shadow-[0_18px_50px_rgba(42,55,50,0.07)] sm:p-6">
+    <section className="game-turn-control-panel rounded-3xl border border-[#17372d]/10 bg-[#faf8f2] p-5 shadow-[0_18px_50px_rgba(42,55,50,0.07)] sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#9b7a27]">
@@ -530,7 +530,7 @@ export function GameTurnPanel({
           <button
             type="button"
             onClick={() => void action("phase", { action: "finishCards" })}
-            className="rounded-xl bg-[#12392f] px-4 py-3 text-xs font-bold uppercase tracking-wider text-white"
+            className="game-phase-action rounded-xl bg-[#12392f] px-4 py-3 text-xs font-bold uppercase tracking-wider text-white"
           >
             Iniciar reforços
           </button>
@@ -550,7 +550,7 @@ export function GameTurnPanel({
                 setSelectedCards([]);
                 setCardsOpen(true);
               }}
-              className="rounded-xl bg-[#e4b94f] px-4 py-3 text-xs font-bold uppercase tracking-wider text-[#12392f]"
+              className="game-phase-action game-phase-action--gold rounded-xl bg-[#e4b94f] px-4 py-3 text-xs font-bold uppercase tracking-wider text-[#12392f]"
             >
               Pedir reforços
             </button>
@@ -573,7 +573,7 @@ export function GameTurnPanel({
             type="button"
             disabled={Boolean(pendingConquest) || battleBusy}
             onClick={() => void action("phase", { action: "finishAttack" })}
-            className="rounded-xl bg-[#12392f] px-4 py-3 text-xs font-bold uppercase tracking-wider text-white disabled:opacity-40"
+            className="game-phase-action rounded-xl bg-[#12392f] px-4 py-3 text-xs font-bold uppercase tracking-wider text-white disabled:opacity-40"
           >
             Ir para deslocamento
           </button>
@@ -590,7 +590,7 @@ export function GameTurnPanel({
           <button
             type="button"
             onClick={() => void action("phase", { action: "endTurn" })}
-            className="rounded-xl bg-[#12392f] px-4 py-3 text-xs font-bold uppercase tracking-wider text-white"
+            className="game-phase-action rounded-xl bg-[#12392f] px-4 py-3 text-xs font-bold uppercase tracking-wider text-white"
           >
             Encerrar turno
           </button>

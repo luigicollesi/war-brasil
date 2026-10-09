@@ -790,3 +790,101 @@
     transition: none;
   }
 }
+
+
+@media (min-width: 1800px) {
+  .stageHeader {
+    min-height: clamp(68px, 4vw, 86px);
+    padding: clamp(10px, .65vw, 15px) clamp(18px, 1.2vw, 28px);
+  }
+
+  .stageEyebrow {
+    font-size: clamp(.56rem, .46rem + .08vw, .72rem);
+  }
+
+  .stageTitle {
+    font-size: clamp(1.42rem, 1.12rem + .22vw, 1.86rem);
+  }
+
+  .authorization {
+    font-size: clamp(.58rem, .48rem + .08vw, .74rem);
+  }
+
+  .stationField {
+    grid-template-columns: minmax(0, 1fr) minmax(240px, .8fr) minmax(0, 1fr);
+    gap: clamp(10px, 1.1vh, 16px) clamp(46px, 4vw, 82px);
+    padding: clamp(14px, 1.6vh, 24px) clamp(16px, 1.3vw, 28px);
+  }
+
+  .station {
+    min-height: clamp(118px, 10vh, 164px);
+    padding: clamp(11px, .75vw, 16px) clamp(12px, .9vw, 18px);
+  }
+
+  .stationNumber,
+  .stationStatus {
+    font-size: clamp(.54rem, .44rem + .08vw, .7rem);
+  }
+
+  .stationBody {
+    grid-template-columns: clamp(40px, 2.3vw, 52px) minmax(0, 1fr);
+    gap: clamp(11px, .7vw, 16px);
+    padding-block: clamp(7px, .55vw, 11px);
+  }
+
+  .insignia {
+    width: clamp(38px, 2.1vw, 48px);
+    height: clamp(38px, 2.1vw, 48px);
+  }
+
+  .stationName {
+    font-size: clamp(1rem, .82rem + .14vw, 1.28rem);
+  }
+
+  .stationTitle {
+    --profile-title-size-legendary: clamp(.72rem, .6rem + .09vw, .9rem);
+  }
+
+  .stationMeta {
+    font-size: clamp(.52rem, .42rem + .08vw, .68rem);
+  }
+
+  .botAction {
+    min-height: clamp(34px, 2vw, 44px) !important;
+    min-width: clamp(78px, 4.8vw, 108px);
+    padding-inline: clamp(10px, .65vw, 15px) !important;
+    font-size: clamp(.58rem, .48rem + .08vw, .76rem) !important;
+  }
+
+  .stationStatusMark {
+    width: 8px;
+    height: 8px;
+  }
+
+  .tacticalNexus {
+    height: min(76%, 390px);
+  }
+
+  .nexusReadout span {
+    font-size: clamp(.46rem, .38rem + .06vw, .58rem);
+  }
+
+  .nexusReadout strong {
+    font-size: clamp(.56rem, .46rem + .08vw, .72rem);
+  }
+}
+
+@media (min-width: 2300px) {
+  .station {
+    min-height: clamp(132px, 9vh, 178px);
+  }
+
+  .stationName {
+    font-size: clamp(1.14rem, .92rem + .13vw, 1.42rem);
+  }
+
+  .botAction {
+    min-height: clamp(40px, 1.9vw, 48px) !important;
+    font-size: clamp(.66rem, .54rem + .08vw, .82rem) !important;
+  }
+}
