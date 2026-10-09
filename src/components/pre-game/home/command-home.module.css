@@ -914,7 +914,7 @@
 
   .commandDock {
     bottom: max(clamp(58px, 4.8vh, 104px), calc(env(safe-area-inset-bottom) + 34px));
-    width: min(var(--command-content-max, 1560px), calc(100% - 128px));
+    width: min(clamp(1080px, 68vw, 1560px), calc(100% - 128px));
   }
 
   .enterButton {
