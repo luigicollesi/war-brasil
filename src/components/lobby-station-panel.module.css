@@ -558,6 +558,17 @@
 }
 
 
+
+
+
+
+
+
+
+
+
+
+/* Canonical high-resolution local station layout. */
 @media (min-width: 1800px) {
   .console {
     gap: clamp(12px, 1.25vh, 18px);
@@ -565,79 +576,14 @@
   }
 
   .consoleTitle {
-    font-size: clamp(1.7rem, 1.34rem + .26vw, 2.24rem);
-  }
-
-  .clearance,
-  .credentialLabel,
-  .credentialIdentity > span:last-child,
-  .credentialTelemetry small,
-  .hostStatus {
-    font-size: clamp(.5rem, .4rem + .08vw, .66rem);
-  }
-
-  .commandCredential {
-    min-height: clamp(104px, 6vw, 132px);
-    grid-template-columns: clamp(74px, 4vw, 92px) minmax(0, 1fr) 38px;
-    gap: clamp(14px, .85vw, 20px);
-    padding: clamp(12px, .8vw, 18px);
-  }
-
-  .credentialSeal {
-    width: clamp(70px, 3.7vw, 86px);
-    height: clamp(70px, 3.7vw, 86px);
-  }
-
-  .credentialSeal span {
-    font-size: clamp(1.08rem, .88rem + .14vw, 1.34rem);
-  }
-
-  .credentialName {
-    font-size: clamp(1.1rem, .9rem + .15vw, 1.4rem);
-  }
-
-  .credentialTitle {
-    --profile-title-size-legendary: clamp(.9rem, .74rem + .12vw, 1.14rem);
-  }
-
-  .consoleStatus {
-    font-size: clamp(.68rem, .56rem + .09vw, .86rem);
-  }
-
-  .displayIdentityValue {
-    min-height: clamp(48px, 2.8vw, 60px);
-    padding: clamp(9px, .6vw, 13px) clamp(11px, .75vw, 16px);
-  }
-
-  .displayIdentityValue strong {
-    font-size: clamp(.9rem, .74rem + .12vw, 1.12rem);
-  }
-
-  .displayIdentityValue span,
-  .colorLegend,
-  .consoleFeedback {
-    font-size: clamp(.56rem, .46rem + .08vw, .72rem);
-  }
-
-  .colorChoice {
-    height: clamp(44px, 2.5vw, 54px);
-  }
-
-  .colorSwatch {
-    width: clamp(19px, 1vw, 24px);
-    height: clamp(19px, 1vw, 24px);
-  }
-}
-
-
-@media (min-width: 1800px) {
-  .consoleTitle {
     font-size: clamp(2.1rem, 1.25rem + .64vw, 3.2rem);
   }
 
   .commandCredential {
     min-height: clamp(126px, 7.4vw, 164px);
     grid-template-columns: clamp(88px, 4.8vw, 112px) minmax(0, 1fr) 44px;
+    gap: clamp(14px, .85vw, 20px);
+    padding: clamp(12px, .8vw, 18px);
   }
 
   .credentialSeal {
@@ -674,6 +620,7 @@
 
   .displayIdentityValue {
     min-height: clamp(58px, 3.5vw, 76px);
+    padding: clamp(9px, .6vw, 13px) clamp(11px, .75vw, 16px);
   }
 
   .displayIdentityValue strong {
@@ -682,6 +629,11 @@
 
   .colorChoice {
     height: clamp(54px, 3.2vw, 70px);
+  }
+
+  .colorSwatch {
+    width: clamp(19px, 1vw, 24px);
+    height: clamp(19px, 1vw, 24px);
   }
 }
 

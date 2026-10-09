@@ -1,4 +1,12 @@
 .shell {
+  --command-content-top: clamp(88px, 10vw, 124px);
+  --command-content-inline: clamp(20px, 4vw, 64px);
+  --command-content-bottom: max(24px, env(safe-area-inset-bottom));
+  --command-content-max: 1320px;
+  --command-ui-sm: .58rem;
+  --command-ui-md: .82rem;
+  --command-control-height: 44px;
+
   position: relative;
   isolation: isolate;
   min-height: 100dvh;
