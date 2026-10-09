@@ -499,3 +499,15 @@
     grid-template-rows: 150px auto;
   }
 }
+
+
+@media (min-width: 1600px) {
+  .trigger { min-height: 2.5rem; }
+  .panel { width: min(26.25rem, calc(100vw - 2.5rem)); max-height: min(88dvh, 47.5rem); }
+  .header { min-height: 4.125rem; }
+  .close { width: 2.375rem; height: 2.375rem; }
+  .field input, .field select { min-height: 2.75rem; }
+  .secondaryAction, .submit, .applyAppearance { min-height: 2.75rem; }
+  .appearanceEntry { min-height: 4rem; }
+  .backgroundPreview { min-height: 5.125rem; }
+}

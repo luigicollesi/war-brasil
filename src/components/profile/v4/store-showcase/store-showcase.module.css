@@ -623,3 +623,15 @@
     animation-iteration-count: 1 !important;
   }
 }
+
+
+@media (min-width: 1600px) {
+  .header { min-height: 3.625rem; }
+  .stage { grid-template-columns: minmax(0, 1fr) minmax(13.75rem, clamp(15.625rem, 25vw, 24.375rem)); }
+  .stageObject { min-width: clamp(17.5rem, 48vw, 47.5rem); }
+  .stageArrow { width: 2.75rem; height: 4.25rem; }
+  .stageArrowNext { right: calc(clamp(13.75rem, 25vw, 24.375rem) + clamp(.625rem, 2vw, 1.75rem)); }
+  .dock { min-height: 5.75rem; grid-template-columns: minmax(0, 1fr) minmax(16.25rem, auto); }
+  .itemStrip button { min-width: clamp(9.375rem, 17vw, 14.375rem); }
+  .bundleAction { min-width: 16.25rem; }
+}

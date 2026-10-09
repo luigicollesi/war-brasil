@@ -594,3 +594,15 @@
     font-size: 3.15rem;
   }
 }
+
+
+@media (min-width: 1600px) {
+  .troop-stepper { grid-template-columns: 4.25rem minmax(6.875rem, 1fr) 4.25rem; gap: .75rem; width: min(100%, 21.875rem); }
+  .troop-stepper-button { width: 3.625rem; height: 3.625rem; }
+  .troop-range-wrap { width: min(100%, 22.5rem); }
+  .troop-range { height: 1.875rem; }
+  .troop-range::-webkit-slider-thumb { width: 1.375rem; height: 1.375rem; }
+  .troop-range::-moz-range-thumb { width: 1.375rem; height: 1.375rem; }
+  .troop-quick-values { width: min(100%, 21.875rem); gap: .25rem; }
+  .troop-quick-values button { min-height: 3rem; }
+}

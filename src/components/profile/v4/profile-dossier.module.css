@@ -541,3 +541,13 @@
     min-height: 0;
   }
 }
+
+
+@media (min-width: 1600px) {
+  .identityPanel { min-height: 17.5rem; grid-template-columns: 5.5rem minmax(21.25rem, 1.3fr) minmax(14.375rem, .58fr); }
+  .identityStatus > div { min-height: 4.25rem; }
+  .settingsSlot { min-height: 3.625rem !important; padding-block: .5rem !important; }
+  .module { min-height: 22.5rem; }
+  .moduleHeader { min-height: 4.25rem; }
+  .guestState { width: min(42.5rem, 100%); min-height: 26.25rem; }
+}

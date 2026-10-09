@@ -1181,3 +1181,17 @@
     border-left-color: Highlight;
   }
 }
+
+
+@media (min-width: 1600px) {
+  .page { width: min(calc(100% - (var(--command-content-inline, 2rem) * 2)), var(--wb-global-content-max, 96rem)); min-height: 45rem; }
+  .topBar { min-height: 3.625rem; }
+  .topIdentity > a { width: 2.625rem; height: 2.625rem; }
+  .walletButton { min-width: 7rem; min-height: 2.625rem; }
+  .commandGrid { grid-template-columns: minmax(15.625rem, .86fr) minmax(22.5rem, 1.34fr) minmax(17.5rem, .92fr); }
+  .stationHeader { min-height: 3.25rem; }
+  .stationHeader > span { width: 1.75rem; height: 1.75rem; }
+  .searchForm input, .searchForm button { min-height: 2.75rem; }
+  .storeArtwork { width: min(74%, 24.375rem); }
+  .guestState { width: min(92%, 30rem); }
+}

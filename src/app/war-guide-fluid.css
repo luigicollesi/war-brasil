@@ -1,0 +1,57 @@
+/* Continuous guide scaling --------------------------------------------------
+   The guide historically encoded many 1080p pixel dimensions. These
+   overrides keep mobile/tablet composition untouched while allowing diagrams,
+   controls, examples and tables to inherit the global vmin-driven rem scale. */
+
+@media (min-width: 1600px) {
+  .wb-guide-intro,
+  .wb-guide-heading p,
+  .wb-guide-victory p { max-width: 47.5rem; }
+
+  .wb-guide-chapter--split { grid-template-columns: minmax(0, .92fr) minmax(22.5rem, 1.08fr); }
+  .wb-guide-control { grid-template-columns: 2.625rem minmax(0, 1fr); min-height: 2.625rem; }
+  .wb-guide-control svg { width: 1.1875rem; height: 1.1875rem; }
+  .wb-guide-symbol { width: 2.375rem; height: 2.375rem; }
+
+  .wb-guide-flow li { min-height: 2.25rem; }
+  .wb-guide-rule-scale { grid-template-columns: minmax(6.875rem, .72fr) minmax(0, 1.28fr); }
+  .wb-guide-state-change { grid-template-columns: minmax(6rem, auto) minmax(4.5rem, 1fr) minmax(6rem, auto); }
+  .wb-guide-territory { min-width: 7.375rem; }
+  .wb-guide-territory--compact { min-width: 6rem; padding: .5625rem .6875rem; }
+  .wb-guide-connection { grid-template-columns: minmax(6rem, auto) minmax(4.5rem, 1fr) minmax(6rem, auto); }
+  .wb-guide-connection-endpoint { width: 1.6875rem; height: 1.6875rem; }
+  .wb-guide-dice-comparison-row { grid-template-columns: 4rem 2.125rem 4rem minmax(7.25rem, 1fr); }
+  .wb-guide-dice-comparison .game-die { width: 3.25rem; }
+
+  .wb-guide-geographic-chapter { grid-template-columns: minmax(0, .9fr) minmax(23.75rem, 1.1fr); }
+  .wb-guide-geographic-icon { width: 4.625rem; height: 4.625rem; }
+  .wb-guide-map-territory-name { font-size: .9375rem; }
+  .wb-guide-map-barrier-label text { font-size: .625rem; }
+  .wb-guide-map-troop-markers text { font-size: 1.0625rem; }
+  .wb-guide-map-reading-legend span { width: 2.375rem; height: 2.375rem; }
+  .wb-guide-reading-troop { width: 2.625rem; height: 2.625rem; }
+
+  .wb-guide-regional-domain { grid-template-columns: minmax(0, .9fr) minmax(17.5rem, 1.1fr); }
+  .wb-guide-region-table { min-width: 47.5rem; }
+  .wb-guide-region-table.wb-guide-region-table--rules { min-width: 32.5rem; }
+
+  .wb-guide-order-example { grid-template-columns: 2rem minmax(0, 1fr); }
+  .wb-guide-order-dice span { width: 1.875rem; height: 1.875rem; }
+  .wb-guide-core-split { grid-template-columns: minmax(0, .92fr) minmax(21.25rem, 1.08fr); }
+  .wb-guide-combat-scales { grid-template-columns: minmax(0, .72fr) minmax(26.25rem, 1.28fr); }
+  .wb-guide-barrier-comparison { grid-template-columns: 3.625rem minmax(0, 1fr); }
+  .wb-guide-barrier-signals img { width: 3.25rem; height: 3.25rem; }
+  .wb-guide-elimination-transfer { grid-template-columns: minmax(0, 1fr) auto minmax(8.125rem, .7fr); }
+
+  .wb-guide-cards-layout { grid-template-columns: minmax(0, 1fr) minmax(20rem, .9fr); }
+  .wb-guide-card-combination-list > div { grid-template-columns: minmax(8.125rem, .8fr) minmax(0, 1.2fr); min-height: 4.5rem; }
+  .wb-guide-anomaly-layout { grid-template-columns: minmax(21.25rem, .9fr) minmax(0, 1.1fr); }
+  .wb-guide-victory-objective { min-width: min(100%, 19.375rem); }
+
+  .wb-guide-board-scene { width: min(100%, 32.5rem); }
+  .wb-guide-board-scene--compact .wb-guide-board-scene-frame { width: min(100%, 20.625rem); }
+  .wb-guide-board-scene-marker { grid-template-columns: 1.375rem auto; min-width: 5.25rem; }
+  .wb-guide-board-scene-marker b { font-size: .9rem; }
+  .wb-guide-player-trade { max-width: 42.5rem; }
+  .wb-guide-trade-scene { grid-template-columns: minmax(0, 1fr) minmax(7.5rem, .46fr) minmax(0, 1fr); }
+}

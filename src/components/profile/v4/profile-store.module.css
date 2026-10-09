@@ -2740,3 +2740,25 @@
     display: none;
   }
 }
+
+
+@media (min-width: 1600px) {
+  .storeNav a { min-height: 2.5rem; }
+  .hero { min-height: 23.125rem; grid-template-columns: minmax(0, .9fr) minmax(22.5rem, 1.1fr); }
+  .heroVisual { min-height: 22.5rem; }
+  .heroVisual > img { width: min(86%, 45rem); height: min(82%, 26.875rem); }
+  .catalogGrid { grid-template-columns: repeat(auto-fit, minmax(min(14.375rem, 100%), 1fr)); }
+  .productCard { grid-template-rows: minmax(11.25rem, 1fr) auto; }
+  .productVisual { min-height: 11.25rem; padding: 1.125rem; }
+  .productVisual img { max-height: 13.125rem; }
+  .collectionGrid { grid-template-columns: repeat(auto-fit, minmax(min(32.5rem, 100%), 1fr)); }
+  .emptyCatalog { min-height: 11.875rem; }
+  .inspection { min-height: 26.875rem; grid-template-columns: minmax(20rem, .9fr) minmax(0, 1.1fr); }
+  .inspectionVisual { min-height: 26.875rem; padding: 2rem; }
+  .itemSelector button, .itemSelector > div { min-height: 3.625rem; grid-template-columns: 5.625rem minmax(0, 1fr) auto; }
+  .treasuryCoin { width: 5.125rem; height: 5.125rem; }
+  .treasuryCoin img { width: 4.25rem; height: 4.25rem; }
+  .quickGuideGrid a { min-height: 5.375rem; }
+  .categoryCard { grid-template-columns: minmax(11.25rem, .85fr) minmax(0, 1.15fr); min-height: 17.5rem; }
+  .categoryVisual { min-height: 15.625rem; }
+}

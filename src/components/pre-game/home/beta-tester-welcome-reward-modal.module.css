@@ -335,3 +335,14 @@
     transition: none !important;
   }
 }
+
+
+@media (min-width: 1600px) {
+  .modal { width: min(45rem, calc(100vw - 2rem)); }
+  .header h2 { font-size: clamp(1.9rem, 2.8vw, 3rem); }
+  .header p { max-width: 36.875rem; }
+  .rewards { min-height: 11.75rem; }
+  .die { width: 4.5rem; }
+  .claimButton { min-height: 3.625rem; }
+  .footnote { max-width: 38.75rem; }
+}

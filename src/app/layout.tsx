@@ -24,6 +24,7 @@ import "./war-guide-final-sections.css";
 import "./war-guide-scenes.css";
 import "./war-guide-responsive.css";
 import "./war-guide-mobile-map.css";
+import "./war-guide-fluid.css";
 
 function assetPublicOrigin() {
   const configured = process.env.ASSET_PUBLIC_BASE_URL?.trim();
